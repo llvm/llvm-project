@@ -1,8 +1,5 @@
 // This file contains test cases related to roundtripping.
 
-// Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: target=s390x-{{.*}}
-
 //===--------------------------------------------------------------------===//
 // Test roundtrip
 //===--------------------------------------------------------------------===//

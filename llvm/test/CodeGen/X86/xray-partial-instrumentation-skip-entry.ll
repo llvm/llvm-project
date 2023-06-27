@@ -21,12 +21,12 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-LINUX-NEXT:    .quad 1
 
 ; CHECK-MACOS-LABEL: .section __DATA,xray_instr_map,regular,live_support{{$}}
-; CHECK-MACOS-LABEL: Lxray_sleds_start0:
+; CHECK-MACOS-LABEL: lxray_sleds_start0:
 ; CHECK-MACOS:         .quad Lxray_sled_0
 ; CHECK-MACOS-LABEL: Lxray_sleds_end0:
 ; CHECK-MACOS-LABEL: .section __DATA,xray_fn_idx,regular,live_support{{$}}
 ; CHECK-MACOS:       [[IDX:lxray_fn_idx[0-9]+]]:
-; CHECK-MACOS-NEXT:    .quad Lxray_sleds_start0-[[IDX]]
+; CHECK-MACOS-NEXT:    .quad lxray_sleds_start0-[[IDX]]
 ; CHECK-MACOS-NEXT:    .quad 1
 
 
@@ -62,11 +62,11 @@ NotEqual:
 ; CHECK-LINUX-NEXT:    .quad 2
 
 ; CHECK-MACOS-LABEL: .section __DATA,xray_instr_map,regular,live_support{{$}}
-; CHECK-MACOS-LABEL: Lxray_sleds_start1:
+; CHECK-MACOS-LABEL: lxray_sleds_start1:
 ; CHECK-MACOS:         .quad Lxray_sled_1
 ; CHECK-MACOS:         .quad Lxray_sled_2
 ; CHECK-MACOS-LABEL: Lxray_sleds_end1:
 ; CHECK-MACOS-LABEL: .section __DATA,xray_fn_idx,regular,live_support{{$}}
 ; CHECK-MACOS:       [[IDX:lxray_fn_idx[0-9]+]]:
-; CHECK-MACOS-NEXT:    .quad Lxray_sleds_start1-[[IDX]]
+; CHECK-MACOS-NEXT:    .quad lxray_sleds_start1-[[IDX]]
 ; CHECK-MACOS-NEXT:    .quad 2

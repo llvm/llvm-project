@@ -602,10 +602,10 @@ Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                              MustSucceed);
 }
 
-Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
-                                 const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI, AAResults *AA,
-                                 bool MustSucceed) {
+Value *llvm::lowerObjectSizeCall(
+    IntrinsicInst *ObjectSize, const DataLayout &DL,
+    const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
+    SmallVectorImpl<Instruction *> *InsertedInstructions) {
   assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
          "ObjectSize must be a call to llvm.objectsize!");
 
@@ -640,7 +640,11 @@ Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
         Eval.compute(ObjectSize->getArgOperand(0));
 
     if (SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown()) {
-      IRBuilder<TargetFolder> Builder(Ctx, TargetFolder(DL));
+      IRBuilder<TargetFolder, IRBuilderCallbackInserter> Builder(
+          Ctx, TargetFolder(DL), IRBuilderCallbackInserter([&](Instruction *I) {
+            if (InsertedInstructions)
+              InsertedInstructions->push_back(I);
+          }));
       Builder.SetInsertPoint(ObjectSize);
 
       // If we've outside the end of the object, then we can always access

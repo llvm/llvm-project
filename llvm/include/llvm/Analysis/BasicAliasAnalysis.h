@@ -31,7 +31,6 @@ class GEPOperator;
 class PHINode;
 class SelectInst;
 class TargetLibraryInfo;
-class PhiValues;
 class Value;
 
 /// This is the AA result object for the basic, local, and stateless alias

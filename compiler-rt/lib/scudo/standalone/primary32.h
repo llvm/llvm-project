@@ -154,7 +154,6 @@ public:
       // if `populateFreeList` succeeded, we are supposed to get free blocks.
       DCHECK_NE(B, nullptr);
     }
-    Sci->FreeListInfo.PoppedBlocks += B->getCount();
     return B;
   }
 
@@ -175,7 +174,6 @@ public:
       if (Size == 1 && !populateFreeList(C, ClassId, Sci))
         return;
       pushBlocksImpl(C, ClassId, Sci, Array, Size);
-      Sci->FreeListInfo.PushedBlocks += Size;
       return;
     }
 
@@ -201,7 +199,6 @@ public:
     ScopedLock L(Sci->Mutex);
     pushBlocksImpl(C, ClassId, Sci, Array, Size, SameGroup);
 
-    Sci->FreeListInfo.PushedBlocks += Size;
     if (ClassId != SizeClassMap::BatchClassId)
       releaseToOSMaybe(Sci, ClassId);
   }
@@ -533,6 +530,7 @@ private:
       BG->PushedBlocks += Size;
     };
 
+    Sci->FreeListInfo.PushedBlocks += Size;
     BatchGroup *Cur = Sci->FreeListInfo.BlockList.front();
 
     if (ClassId == SizeClassMap::BatchClassId) {
@@ -635,6 +633,7 @@ private:
         C->deallocate(SizeClassMap::BatchClassId, BG);
     }
 
+    Sci->FreeListInfo.PoppedBlocks += B->getCount();
     return B;
   }
 
@@ -707,6 +706,12 @@ private:
       pushBlocksImpl(C, ClassId, Sci, ShuffleArray, NumberOfBlocks,
                      /*SameGroup=*/true);
     }
+
+    // Note that `PushedBlocks` and `PoppedBlocks` are supposed to only record
+    // the requests from `PushBlocks` and `PopBatch` which are external
+    // interfaces. `populateFreeList` is the internal interface so we should set
+    // the values back to avoid incorrectly setting the stats.
+    Sci->FreeListInfo.PushedBlocks -= NumberOfBlocks;
 
     const uptr AllocatedUser = Size * NumberOfBlocks;
     C->getStats().add(StatFree, AllocatedUser);

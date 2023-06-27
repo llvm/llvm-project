@@ -1599,13 +1599,13 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   EVT OrigType = N->getValueType(0);
   LoadSDNode *LdNode = dyn_cast<LoadSDNode>(N);
 
-  if (OrigType != EltVT && LdNode) {
+  if (OrigType != EltVT &&
+      (LdNode || (OrigType.isFloatingPoint() && EltVT.isFloatingPoint()))) {
     // We have an extending-load. The instruction we selected operates on the
     // smaller type, but the SDNode we are replacing has the larger type. We
     // need to emit a CVT to make the types match.
-    bool IsSigned = LdNode->getExtensionType() == ISD::SEXTLOAD;
-    unsigned CvtOpc = GetConvertOpcode(OrigType.getSimpleVT(),
-                                       EltVT.getSimpleVT(), IsSigned);
+    unsigned CvtOpc =
+        GetConvertOpcode(OrigType.getSimpleVT(), EltVT.getSimpleVT(), LdNode);
 
     // For each output value, apply the manual sign/zero-extension and make sure
     // all users of the load go through that CVT.
@@ -3601,7 +3601,8 @@ bool NVPTXDAGToDAGISel::SelectInlineAsmMemoryOperand(
 /// GetConvertOpcode - Returns the CVT_ instruction opcode that implements a
 /// conversion from \p SrcTy to \p DestTy.
 unsigned NVPTXDAGToDAGISel::GetConvertOpcode(MVT DestTy, MVT SrcTy,
-                                             bool IsSigned) {
+                                             LoadSDNode *LdNode) {
+  bool IsSigned = LdNode && LdNode->getExtensionType() == ISD::SEXTLOAD;
   switch (SrcTy.SimpleTy) {
   default:
     llvm_unreachable("Unhandled source type");
@@ -3648,6 +3649,15 @@ unsigned NVPTXDAGToDAGISel::GetConvertOpcode(MVT DestTy, MVT SrcTy,
       return IsSigned ? NVPTX::CVT_s16_s64 : NVPTX::CVT_u16_u64;
     case MVT::i32:
       return IsSigned ? NVPTX::CVT_s32_s64 : NVPTX::CVT_u32_u64;
+    }
+  case MVT::f16:
+    switch (DestTy.SimpleTy) {
+    default:
+      llvm_unreachable("Unhandled dest type");
+    case MVT::f32:
+      return NVPTX::CVT_f32_f16;
+    case MVT::f64:
+      return NVPTX::CVT_f64_f16;
     }
   }
 }

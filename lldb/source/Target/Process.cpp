@@ -6070,7 +6070,7 @@ void Process::MapSupportedStructuredDataPlugins(
     // For any of the remaining type names, map any that this plugin supports.
     std::vector<llvm::StringRef> names_to_remove;
     for (llvm::StringRef type_name : type_names) {
-      if (plugin_sp->SupportsStructuredDataType(ConstString(type_name))) {
+      if (plugin_sp->SupportsStructuredDataType(type_name)) {
         m_structured_data_plugin_map.insert(
             std::make_pair(type_name, plugin_sp));
         names_to_remove.push_back(type_name);
@@ -6110,8 +6110,7 @@ bool Process::RouteAsyncStructuredData(
   }
 
   // Route the structured data to the plugin.
-  find_it->second->HandleArrivalOfStructuredData(*this, ConstString(type_name),
-                                                 object_sp);
+  find_it->second->HandleArrivalOfStructuredData(*this, type_name, object_sp);
   return true;
 }
 

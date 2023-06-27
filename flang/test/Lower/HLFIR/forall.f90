@@ -52,7 +52,7 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare {{.*}}Estep
 ! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare {{.*}}Ex
 ! CHECK:  %[[VAL_10:.*]]:2 = hlfir.declare {{.*}}Ey
-! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<i32>
+! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:  hlfir.forall lb {
 ! CHECK:    hlfir.yield %[[VAL_2]] : i32
 ! CHECK:  } ub {

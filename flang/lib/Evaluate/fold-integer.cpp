@@ -1269,10 +1269,11 @@ Expr<TypeParamInquiry::Result> FoldOperation(
     }
   } else {
     // A "bare" type parameter: replace with its value, if that's now known
-    // in a current derived type instantiation, for KIND type parameters.
+    // in a current derived type instantiation.
     if (const auto *pdt{context.pdtInstance()}) {
+      auto restorer{context.WithoutPDTInstance()}; // don't loop
       bool isLen{false};
-      if (const semantics::Scope * scope{context.pdtInstance()->scope()}) {
+      if (const semantics::Scope * scope{pdt->scope()}) {
         auto iter{scope->find(parameterName)};
         if (iter != scope->end()) {
           const Symbol &symbol{*iter->second};

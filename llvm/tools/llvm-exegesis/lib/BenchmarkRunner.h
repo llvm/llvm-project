@@ -34,7 +34,7 @@ namespace exegesis {
 // Common code for all benchmark modes.
 class BenchmarkRunner {
 public:
-  enum ExecutionModeE { InProcess, SubProcess };
+  enum ExecutionModeE { InProcess };
 
   explicit BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
                            BenchmarkPhaseSelectorE BenchmarkPhaseSelector,

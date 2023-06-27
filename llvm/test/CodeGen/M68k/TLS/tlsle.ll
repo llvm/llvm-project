@@ -8,7 +8,7 @@ define dso_local ptr @get_addr() nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    jsr __m68k_read_tp@PLT
-; CHECK-NEXT:    adda.l myvar@TPOFF, %a0
+; CHECK-NEXT:    lea (myvar@TPOFF,%a0), %a0
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:

@@ -215,3 +215,8 @@ namespace PR16630 {
     b.y = 0; // expected-error {{'y' is a private member of 'PR16630::A'}}
   }
 }
+
+namespace GH48512 {
+  // This would previously cause an assertion in C++ mode.
+  static __attribute__((a)) union { int a; }; // expected-warning {{unknown attribute 'a' ignored}}
+}

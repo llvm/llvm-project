@@ -199,6 +199,15 @@ void ARMAsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
     O << ":lower16:";
   else if (TF & ARMII::MO_HI16)
     O << ":upper16:";
+  else if (TF & ARMII::MO_LO_0_7)
+    O << ":lower0_7:";
+  else if (TF & ARMII::MO_LO_8_15)
+    O << ":lower8_15:";
+  else if (TF & ARMII::MO_HI_0_7)
+    O << ":upper0_7:";
+  else if (TF & ARMII::MO_HI_8_15)
+    O << ":upper8_15:";
+
   GetARMGVSymbol(MO.getGlobal(), TF)->print(O, MAI);
   printOffset(MO.getOffset(), O);
 }
@@ -228,6 +237,14 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
       O << ":lower16:";
     else if (TF == ARMII::MO_HI16)
       O << ":upper16:";
+    else if (TF == ARMII::MO_LO_0_7)
+      O << ":lower0_7:";
+    else if (TF == ARMII::MO_LO_8_15)
+      O << ":lower8_15:";
+    else if (TF == ARMII::MO_HI_0_7)
+      O << ":upper0_7:";
+    else if (TF == ARMII::MO_HI_8_15)
+      O << ":upper8_15:";
     O << MO.getImm();
     break;
   }

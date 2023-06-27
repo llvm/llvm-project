@@ -651,6 +651,19 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
                                              exceptions.
  T __builtin_elementwise_trunc(T x)          return the integral value nearest to but no larger in            floating point types
                                              magnitude than x
+
+  T __builtin_elementwise_nearbyint(T x)     round x to the nearest  integer value in floating point format,      floating point types
+                                             rounding according to the current rounding direction.
+                                             May not raise the inexact floating-point exception. This is
+                                             treated the same as ``__builtin_elementwise_rint`` unless
+                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+
+ T __builtin_elementwise_rint(T x)           round x to the nearest  integer value in floating point format,      floating point types
+                                             rounding according to the current rounding
+                                             direction. May raise floating-point exceptions. This is treated
+                                             the same as ``__builtin_elementwise_nearbyint`` unless
+                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+
  T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types
                                              of a floating-point number
  T __builtin_elementwise_copysign(T x, T y)  return the magnitude of x with the sign of y.                    floating point types
@@ -4660,6 +4673,13 @@ The full syntax this pragma supports is
     #pragma clang fp eval_method(extended)
     a = b[i] * c[i] + e;
   }
+
+Note: ``math.h`` defines the typedefs ``float_t`` and ``double_t`` based on the active
+evaluation method at the point where the header is included, not where the
+typedefs are used.  Because of this, it is unwise to combine these typedefs with
+``#pragma clang fp eval_method``.  To catch obvious bugs, Clang will emit an
+error for any references to these typedefs within the scope of this pragma;
+however, this is not a fool-proof protection, and programmers must take care.
 
 The ``#pragma float_control`` pragma allows precise floating-point
 semantics and floating-point exception behavior to be specified

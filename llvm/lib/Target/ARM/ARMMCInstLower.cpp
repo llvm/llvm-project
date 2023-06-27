@@ -58,6 +58,22 @@ MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
         MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
     Expr = ARMMCExpr::createUpper16(Expr, OutContext);
     break;
+  case ARMII::MO_LO_0_7:
+    Expr = MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
+    Expr = ARMMCExpr::createLower0_7(Expr, OutContext);
+    break;
+  case ARMII::MO_LO_8_15:
+    Expr = MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
+    Expr = ARMMCExpr::createLower8_15(Expr, OutContext);
+    break;
+  case ARMII::MO_HI_0_7:
+    Expr = MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
+    Expr = ARMMCExpr::createUpper0_7(Expr, OutContext);
+    break;
+  case ARMII::MO_HI_8_15:
+    Expr = MCSymbolRefExpr::create(Symbol, SymbolVariant, OutContext);
+    Expr = ARMMCExpr::createUpper8_15(Expr, OutContext);
+    break;
   }
 
   if (!MO.isJTI() && MO.getOffset())

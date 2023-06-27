@@ -99,8 +99,7 @@ public:
 
   /// Add kind of accelerator tables to be generated.
   void addAccelTableKind(AccelTableKind Kind) override {
-    assert(std::find(Options.AccelTables.begin(), Options.AccelTables.end(),
-                     Kind) == Options.AccelTables.end());
+    assert(!llvm::is_contained(Options.AccelTables, Kind));
     Options.AccelTables.emplace_back(Kind);
   }
 

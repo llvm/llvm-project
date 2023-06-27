@@ -1,8 +1,5 @@
 // RUN: mlir-opt -emit-bytecode %s | mlir-opt | FileCheck %s
 
-// Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: target=s390x-{{.*}}
-
 // CHECK-LABEL: @TestDialectResources
 module @TestDialectResources attributes {
   // CHECK: bytecode.test = dense_resource<decl_resource> : tensor<2xui32>

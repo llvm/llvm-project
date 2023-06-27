@@ -7,8 +7,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#if !defined __X86INTRIN_H && !defined __IMMINTRIN_H
-#error "Never use <rdseedintrin.h> directly; include <x86intrin.h> instead."
+#ifndef __IMMINTRIN_H
+#error "Never use <rdseedintrin.h> directly; include <immintrin.h> instead."
 #endif
 
 #ifndef __RDSEEDINTRIN_H

@@ -13,6 +13,6 @@ end subroutine
 subroutine foo_designator(n)
   !CHECK:  %[[n:.*]]:2 = hlfir.declare %[[arg0]] {uniq_name = "_QFfoo_designatorEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   print *, n
-  ! CHECK: %[[nval:.*]] = fir.load %[[n]]#1 : !fir.ref<i32>
+  ! CHECK: %[[nval:.*]] = fir.load %[[n]]#0 : !fir.ref<i32>
   ! CHECK: fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[nval]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
 end subroutine

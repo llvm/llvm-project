@@ -30,6 +30,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest-matchers.h"
 #include "gtest/gtest.h"
@@ -322,16 +323,16 @@ TEST(PreamblePatchTest, Define) {
 
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Contents);
-    Annotations Modified(Case.Contents);
+    llvm::Annotations Modified(Case.Contents);
     EXPECT_THAT(getPreamblePatch("", Modified.code()),
                 MatchesRegex(Case.ExpectedPatch));
 
     auto AST = createPatchedAST("", Modified.code());
     ASSERT_TRUE(AST);
-    std::vector<Range> MacroRefRanges;
+    std::vector<llvm::Annotations::Range> MacroRefRanges;
     for (auto &M : AST->getMacros().MacroRefs) {
       for (auto &O : M.getSecond())
-        MacroRefRanges.push_back(O.Rng);
+        MacroRefRanges.push_back({O.StartOffset, O.EndOffset});
     }
     EXPECT_THAT(MacroRefRanges, Contains(Modified.range()));
   }

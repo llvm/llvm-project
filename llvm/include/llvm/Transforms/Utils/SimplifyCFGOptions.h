@@ -29,7 +29,7 @@ struct SimplifyCFGOptions {
   bool HoistCommonInsts = false;
   bool SinkCommonInsts = false;
   bool SimplifyCondBranch = true;
-  bool FoldTwoEntryPHINode = true;
+  bool SpeculateBlocks = true;
 
   AssumptionCache *AC = nullptr;
 
@@ -71,8 +71,8 @@ struct SimplifyCFGOptions {
     return *this;
   }
 
-  SimplifyCFGOptions &setFoldTwoEntryPHINode(bool B) {
-    FoldTwoEntryPHINode = B;
+  SimplifyCFGOptions &speculateBlocks(bool B) {
+    SpeculateBlocks = B;
     return *this;
   }
 };

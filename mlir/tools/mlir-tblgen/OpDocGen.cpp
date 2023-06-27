@@ -368,7 +368,7 @@ static void emitBlock(ArrayRef<Attribute> attributes,
   if (!ops.empty()) {
     os << "## Operation definition\n\n";
     for (const OpDocGroup &grouping : ops) {
-      bool nested = grouping.ops.size() > 1;
+      bool nested = !grouping.summary.empty();
       maybeNest(
           nested,
           [&](raw_ostream &os) {

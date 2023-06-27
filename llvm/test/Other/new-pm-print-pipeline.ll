@@ -4,7 +4,7 @@
 ; CHECK-0: function(adce),function(adce)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(rpo-function-attrs,require<globals-aa>,function(float2int,lower-constant-intrinsics,loop(loop-rotate)),invalidate<globals-aa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-1
-; CHECK-1: rpo-function-attrs,require<globals-aa>,function(float2int,lower-constant-intrinsics,loop(loop-rotate)),invalidate<globals-aa>
+; CHECK-1: rpo-function-attrs,require<globals-aa>,function(float2int,lower-constant-intrinsics,loop(loop-rotate<header-duplication;no-prepare-for-lto>)),invalidate<globals-aa>
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='repeat<5>(function(mem2reg)),invalidate<all>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-2
 ; CHECK-2: repeat<5>(function(mem2reg)),invalidate<all>
@@ -52,8 +52,8 @@
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(print<stack-lifetime><may>,print<stack-lifetime><must>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-17
 ; CHECK-17: function(print<stack-lifetime><may>,print<stack-lifetime><must>)
 
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts;fold-two-entry-phi;simplify-cond-branch>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts;no-fold-two-entry-phi;no-simplify-cond-branch>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-18
-; CHECK-18: function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;no-switch-range-to-icmp;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts;fold-two-entry-phi;simplify-cond-branch>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-range-to-icmp;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts;no-fold-two-entry-phi;no-simplify-cond-branch>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts;speculate-blocks;simplify-cond-branch>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts;no-speculate-blocks;no-simplify-cond-branch>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-18
+; CHECK-18: function(simplifycfg<bonus-inst-threshold=5;forward-switch-cond;no-switch-range-to-icmp;switch-to-lookup;keep-loops;hoist-common-insts;sink-common-insts;speculate-blocks;simplify-cond-branch>,simplifycfg<bonus-inst-threshold=7;no-forward-switch-cond;no-switch-range-to-icmp;no-switch-to-lookup;no-keep-loops;no-hoist-common-insts;no-sink-common-insts;no-speculate-blocks;no-simplify-cond-branch>)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-vectorize<no-interleave-forced-only;no-vectorize-forced-only>,loop-vectorize<interleave-forced-only;vectorize-forced-only>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-19
 ; CHECK-19: function(loop-vectorize<no-interleave-forced-only;no-vectorize-forced-only;>,loop-vectorize<interleave-forced-only;vectorize-forced-only;>)
@@ -69,7 +69,7 @@
 
 ;; Test that the loop-nest-pass lnicm is printed with the other loop-passes in the pipeline.
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-mssa(licm,loop-rotate,loop-deletion,lnicm,loop-rotate))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-23
-; CHECK-23: function(loop-mssa(licm<allowspeculation>,loop-rotate,loop-deletion,lnicm<allowspeculation>,loop-rotate))
+; CHECK-23: function(loop-mssa(licm<allowspeculation>,loop-rotate<header-duplication;no-prepare-for-lto>,loop-deletion,lnicm<allowspeculation>,loop-rotate<header-duplication;no-prepare-for-lto>))
 
 ;; Test that -debugify and -check-debugify is printed correctly.
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='debugify,no-op-function,check-debugify' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-24
@@ -111,3 +111,12 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='cgscc(function<no-rerun>(no-op-function))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-32
 ; CHECK-32: cgscc(function<no-rerun>(no-op-function))
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop(loop-rotate<no-header-duplication;no-prepare-for-lto>))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-33
+; CHECK-33: function(loop(loop-rotate<no-header-duplication;no-prepare-for-lto>))
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='globaldce' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-34
+; CHECK-34: globaldce
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='globaldce<vfe-linkage-unit-visibility>' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-35
+; CHECK-35: globaldce<vfe-linkage-unit-visibility>

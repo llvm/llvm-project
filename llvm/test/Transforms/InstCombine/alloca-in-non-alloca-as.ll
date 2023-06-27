@@ -12,7 +12,7 @@ define weak amdgpu_kernel void @__omp_offloading_802_ea0109_main_l8(ptr %a) {
 ; CHECK-LABEL: @__omp_offloading_802_ea0109_main_l8(
 ; CHECK-NEXT:  .master:
 ; CHECK-NEXT:    [[TMP0:%.*]] = alloca [8 x i8], align 1
-; CHECK-NEXT:    call void @use(ptr [[TMP0]], ptr [[TMP0]])
+; CHECK-NEXT:    call void @use(ptr nonnull [[TMP0]], ptr nonnull [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 .master:
@@ -28,13 +28,38 @@ define void @spam(ptr %arg1) {
 ; CHECK-LABEL: @spam(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[ALLOCA1:%.*]] = alloca [0 x [30 x %struct.widget]], align 16
-; CHECK-NEXT:    call void @zot(ptr [[ALLOCA1]])
+; CHECK-NEXT:    call void @zot(ptr nonnull [[ALLOCA1]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
   %alloca = alloca [30 x %struct.widget], i32 0, align 16
   call void @zot(ptr %alloca)
   ret void
+}
+
+define i1 @alloca_addrspace_0_nonnull() {
+; CHECK-LABEL: @alloca_addrspace_0_nonnull(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    call void @use(ptr nonnull [[ALLOCA]], ptr null)
+; CHECK-NEXT:    ret i1 true
+;
+  %alloca = alloca i8
+  call void @use(ptr %alloca)
+  %cmp = icmp ne ptr %alloca, null
+  ret i1 %cmp
+}
+
+define i1 @alloca_addrspace_5_nonnull() {
+; CHECK-LABEL: @alloca_addrspace_5_nonnull(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 1, addrspace(5)
+; CHECK-NEXT:    call void @use(ptr addrspace(5) [[ALLOCA]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr addrspace(5) [[ALLOCA]], null
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %alloca = alloca i8, addrspace(5)
+  call void @use(ptr addrspace(5) %alloca)
+  %cmp = icmp ne ptr addrspace(5) %alloca, null
+  ret i1 %cmp
 }
 
 declare hidden void @zot(ptr)
