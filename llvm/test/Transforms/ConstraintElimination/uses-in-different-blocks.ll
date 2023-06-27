@@ -9,7 +9,7 @@ define i1 @test_conds_single_use_in_different_blocks(i8 %x) {
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ugt i8 [[X]], 5
 ; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 [[C_2]]
 ;
@@ -38,7 +38,7 @@ define i1 @test_conds_single_use_in_different_blocks_2(i8 %x, i8 %y) {
 ; CHECK:       then.1:
 ; CHECK-NEXT:    br i1 [[C_2]], label [[THEN_2:%.*]], label [[ELSE]]
 ; CHECK:       then.2:
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 [[C_3]]
 ;

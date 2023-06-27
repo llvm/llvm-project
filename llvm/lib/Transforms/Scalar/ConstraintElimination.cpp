@@ -660,41 +660,68 @@ void ConstraintInfo::transferToOtherSystem(
   }
 }
 
+static Instruction *getContextInstForUse(Use &U) {
+  Instruction *UserI = cast<Instruction>(U.getUser());
+  if (auto *Phi = dyn_cast<PHINode>(UserI))
+    UserI = Phi->getIncomingBlock(U)->getTerminator();
+  return UserI;
+}
+
 namespace {
 /// Represents either
 ///  * a condition that holds on entry to a block (=conditional fact)
 ///  * an assume (=assume fact)
-///  * an instruction to simplify.
+///  * a use of a compare instruction to simplify.
 /// It also tracks the Dominator DFS in and out numbers for each entry.
 struct FactOrCheck {
-  Instruction *Inst;
+  union {
+    Instruction *Inst;
+    Use *U;
+  };
   unsigned NumIn;
   unsigned NumOut;
-  bool IsCheck;
+  bool HasInst;
   bool Not;
 
-  FactOrCheck(DomTreeNode *DTN, Instruction *Inst, bool IsCheck, bool Not)
+  FactOrCheck(DomTreeNode *DTN, Instruction *Inst, bool Not)
       : Inst(Inst), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        IsCheck(IsCheck), Not(Not) {}
+        HasInst(true), Not(Not) {}
+
+  FactOrCheck(DomTreeNode *DTN, Use *U)
+      : U(U), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
+        HasInst(false), Not(false) {}
 
   static FactOrCheck getFact(DomTreeNode *DTN, Instruction *Inst,
                              bool Not = false) {
-    return FactOrCheck(DTN, Inst, false, Not);
+    return FactOrCheck(DTN, Inst, Not);
   }
 
-  static FactOrCheck getCheck(DomTreeNode *DTN, Instruction *Inst) {
-    return FactOrCheck(DTN, Inst, true, false);
+  static FactOrCheck getCheck(DomTreeNode *DTN, Use *U) {
+    return FactOrCheck(DTN, U);
   }
 
-  bool isAssumeFact() const {
-    if (!IsCheck && isa<IntrinsicInst>(Inst)) {
-      assert(match(Inst, m_Intrinsic<Intrinsic::assume>()));
-      return true;
-    }
-    return false;
+  static FactOrCheck getCheck(DomTreeNode *DTN, CallInst *CI) {
+    return FactOrCheck(DTN, CI, false);
   }
 
-  bool isConditionFact() const { return !IsCheck && isa<CmpInst>(Inst); }
+  bool isCheck() const {
+    return !HasInst ||
+           match(Inst, m_Intrinsic<Intrinsic::ssub_with_overflow>());
+  }
+
+  Instruction *getContextInst() const {
+    if (HasInst)
+      return Inst;
+    return getContextInstForUse(*U);
+  }
+  Instruction *getInstructionToSimplify() const {
+    assert(isCheck());
+    if (HasInst)
+      return Inst;
+    // The use may have been simplified to a constant already.
+    return dyn_cast<Instruction>(*U);
+  }
+  bool isConditionFact() const { return !isCheck() && isa<CmpInst>(Inst); }
 };
 
 /// Keep state required to build worklist.
@@ -732,12 +759,19 @@ void State::addInfoFor(BasicBlock &BB) {
   // Queue conditions and assumes.
   for (Instruction &I : BB) {
     if (auto Cmp = dyn_cast<ICmpInst>(&I)) {
-      WorkList.push_back(FactOrCheck::getCheck(DT.getNode(&BB), Cmp));
+      for (Use &U : Cmp->uses()) {
+        auto *UserI = getContextInstForUse(U);
+        auto *DTN = DT.getNode(UserI->getParent());
+        if (!DTN)
+          continue;
+        WorkList.push_back(FactOrCheck::getCheck(DTN, &U));
+      }
       continue;
     }
 
     if (match(&I, m_Intrinsic<Intrinsic::ssub_with_overflow>())) {
-      WorkList.push_back(FactOrCheck::getCheck(DT.getNode(&BB), &I));
+      WorkList.push_back(
+          FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       continue;
     }
 
@@ -973,7 +1007,8 @@ static void generateReproducer(CmpInst *Cond, Module *M,
 }
 
 static bool checkAndReplaceCondition(
-    CmpInst *Cmp, ConstraintInfo &Info, Module *ReproducerModule,
+    CmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
+    Instruction *ContextInst, Module *ReproducerModule,
     ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT) {
   LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
 
@@ -1018,7 +1053,16 @@ static bool checkAndReplaceCondition(
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
-    Cmp->replaceUsesWithIf(ConstantC, [](Use &U) {
+    Cmp->replaceUsesWithIf(ConstantC, [&DT, NumIn, NumOut,
+                                       ContextInst](Use &U) {
+      auto *UserI = getContextInstForUse(U);
+      auto *DTN = DT.getNode(UserI->getParent());
+      if (!DTN || DTN->getDFSNumIn() < NumIn || DTN->getDFSNumOut() > NumOut)
+        return false;
+      if (UserI->getParent() == ContextInst->getParent() &&
+          UserI->comesBefore(ContextInst))
+        return false;
+
       // Conditions in an assume trivially simplify to true. Skip uses
       // in assume calls to not destroy the available information.
       auto *II = dyn_cast<IntrinsicInst>(U.getUser());
@@ -1206,7 +1250,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
         return true;
       if (B.isConditionFact())
         return false;
-      return A.Inst->comesBefore(B.Inst);
+      auto *InstA = A.getContextInst();
+      auto *InstB = B.getContextInst();
+      return InstA->comesBefore(InstB);
     }
     return A.NumIn < B.NumIn;
   });
@@ -1237,27 +1283,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
                            DFSInStack);
     }
 
-    LLVM_DEBUG({
-      dbgs() << "Processing ";
-      if (CB.IsCheck)
-        dbgs() << "condition to simplify: " << *CB.Inst;
-      else
-        dbgs() << "fact to add to the system: " << *CB.Inst;
-      dbgs() << "\n";
-    });
+    LLVM_DEBUG(dbgs() << "Processing ");
 
     // For a block, check if any CmpInsts become known based on the current set
     // of constraints.
-    if (CB.IsCheck) {
-      if (auto *II = dyn_cast<WithOverflowInst>(CB.Inst)) {
+    if (CB.isCheck()) {
+      Instruction *Inst = CB.getInstructionToSimplify();
+      if (!Inst)
+        continue;
+      LLVM_DEBUG(dbgs() << "condition to simplify: " << *Inst << "\n");
+      if (auto *II = dyn_cast<WithOverflowInst>(Inst)) {
         Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
-      } else if (auto *Cmp = dyn_cast<ICmpInst>(CB.Inst)) {
-        Changed |= checkAndReplaceCondition(Cmp, Info, ReproducerModule.get(),
-                                            ReproducerCondStack, S.DT);
+      } else if (auto *Cmp = dyn_cast<ICmpInst>(Inst)) {
+        Changed |= checkAndReplaceCondition(
+            Cmp, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
+            ReproducerModule.get(), ReproducerCondStack, S.DT);
       }
       continue;
     }
 
+    LLVM_DEBUG(dbgs() << "fact to add to the system: " << *CB.Inst << "\n");
     ICmpInst::Predicate Pred;
     Value *A, *B;
     Value *Cmp = CB.Inst;
