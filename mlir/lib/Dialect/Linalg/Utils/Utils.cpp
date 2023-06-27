@@ -167,7 +167,7 @@ auto red = utils::IteratorType::reduction;
 } // namespace
 
 bool mlir::linalg::containsMostMinorMatmul(LinalgOp linalgOp) {
-  FailureOr<EmbeddedMatmulDimsCandidates> res = inferMatmulDims(linalgOp);
+  FailureOr<EmbeddedContractionDimsCandidates> res = inferContractionDims(linalgOp);
   if (failed(res))
     return false;
   int64_t numLoops = linalgOp.getNumLoops();
@@ -180,8 +180,8 @@ bool mlir::linalg::containsMostMinorMatmul(LinalgOp linalgOp) {
   return true;
 }
 
-FailureOr<EmbeddedMatmulDimsCandidates>
-mlir::linalg::inferMatmulDims(LinalgOp linalgOp) {
+FailureOr<EmbeddedContractionDimsCandidates>
+mlir::linalg::inferContractionDims(LinalgOp linalgOp) {
   if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() != 2)
     return failure();
 
@@ -200,8 +200,10 @@ mlir::linalg::inferMatmulDims(LinalgOp linalgOp) {
   DenseSet<int64_t> bc = b;
   llvm::set_intersect(bc, c);
   llvm::set_subtract(bc, a);
-
-  // Note: if we ever need them, A & B & C would be "batch" dimensions.
+  // A & B & C are the "batch" dimensions.
+  DenseSet<int64_t> batches = a;
+  llvm::set_intersect(batches, b);
+  llvm::set_intersect(batches, c);
 
   // A & B red are the reduction dimensions.
   DenseSet<int64_t> ra = findPermutationsIndexingOperand(
@@ -215,7 +217,7 @@ mlir::linalg::inferMatmulDims(LinalgOp linalgOp) {
 
   // Pick the first one in each set.
   // TODO: Better heuristic (e.g pick dims based on packing-based metric).
-  return EmbeddedMatmulDimsCandidates{ac, bc, ra};
+  return EmbeddedContractionDimsCandidates{batches, ac, bc, ra};
 }
 
 //===----------------------------------------------------------------------===//
