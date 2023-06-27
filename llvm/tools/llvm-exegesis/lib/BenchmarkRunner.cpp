@@ -188,7 +188,6 @@ private:
              "the child process failed. This might be due running an older "
              "Linux kernel that doesn't support the pidfd_getfd system call "
              "(anything before Linux 5.6).";
-             "the child process failed";
     case ChildProcessExitCodeE::RSeqDisableFailed:
       return "Disabling restartable sequences failed";
     case ChildProcessExitCodeE::FunctionDataMappingFailed:
@@ -302,12 +301,12 @@ private:
       exit(ChildProcessExitCodeE::CounterFDReadFailed);
     }
 
+    pid_t ParentPID = getppid();
+
     // Make sure the following two syscalls are defined on the platform that
     // we're building on as they were introduced to the kernel fairly recently
     // (v5.6 for the second one).
-#if defined SYS_pidfd_open && defined SYS_pidfd_getfd
-    pid_t ParentPID = getppid();
-
+#if defined(SYS_pidfd_open) && defined(SYS_pidfd_getfd)
     int ParentPIDFD = syscall(SYS_pidfd_open, ParentPID, 0);
     int CounterFileDescriptor =
         syscall(SYS_pidfd_getfd, ParentPIDFD, ParentCounterFileDescriptor, 0);
