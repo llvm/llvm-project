@@ -720,6 +720,8 @@ static void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
     if (Clause.isValueOptional())
       OS << "maybe(";
     OS << "parenthesized(";
+    if (Clause.isValueList())
+      OS << "nonemptyList(";
 
     if (!Clause.getPrefix().empty())
       OS << "\"" << Clause.getPrefix() << ":\" >> ";
@@ -740,6 +742,8 @@ static void GenerateFlangClausesParser(const DirectiveLanguage &DirLang,
     OS << Parser;
     if (!Clause.getPrefix().empty() && Clause.isPrefixOptional())
       OS << " || " << Parser;
+    if (Clause.isValueList()) // close nonemptyList(.
+      OS << ")";
     OS << ")"; // close parenthesized(.
 
     if (Clause.isValueOptional()) // close maybe(.
