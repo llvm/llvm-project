@@ -121,9 +121,11 @@ namespace {
         
         // Iterate over predecessors of basic block
         for (BasicBlock *Pred : predecessors(BB)) {
-          // Get exit set for predecessor and add to entry set
-          unordered_set<Value *> exitSet = exitSets.at(Pred); 
-          entrySet.insert(exitSet.begin(), exitSet.end());
+          if (exitSets.find(Pred) != exitSets.end()) {
+            // Get exit set for predecessor and add to entry set
+            unordered_set<Value *> exitSet = exitSets.at(Pred); 
+            entrySet.insert(exitSet.begin(), exitSet.end());
+          }
         }
 
         // Iterate over instructions within basic block
