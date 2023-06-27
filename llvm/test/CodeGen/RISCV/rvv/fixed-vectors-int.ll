@@ -1444,10 +1444,10 @@ define void @mulhs_v6i16(ptr %x) {
 ; CHECK-NEXT:    vmerge.vim v9, v9, 7, v0
 ; CHECK-NEXT:    vdiv.vv v9, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 7
-; CHECK-NEXT:    vid.v v11
+; CHECK-NEXT:    vid.v v10
+; CHECK-NEXT:    vmv.v.i v11, 7
 ; CHECK-NEXT:    li a1, -14
-; CHECK-NEXT:    vmadd.vx v11, a1, v10
+; CHECK-NEXT:    vmacc.vx v11, a1, v10
 ; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
