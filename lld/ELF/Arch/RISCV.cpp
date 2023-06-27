@@ -608,7 +608,7 @@ static void initSymbolAnchors() {
   }
 }
 
-static bool relaxZcmt(const InputSection &sec, size_t i, uint64_t loc,
+static bool relaxTableJump(const InputSection &sec, size_t i, uint64_t loc,
                       Relocation &r, uint32_t &remove) {
   if (!in.riscvTableJumpSection || !in.riscvTableJumpSection->isFinalized)
     return false;
@@ -655,7 +655,7 @@ static void relaxCall(const InputSection &sec, size_t i, uint64_t loc,
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0x2001); // c.jal
     remove = 6;
-  } else if (!relaxZcmt(sec, i, loc, r, remove) && isInt<21>(displace)) {
+  } else if (!relaxTableJump(sec, i, loc, r, remove) && isInt<21>(displace)) {
     sec.relaxAux->relocTypes[i] = R_RISCV_JAL;
     sec.relaxAux->writes.push_back(0x6f | rd << 7); // jal
     remove = 4;
@@ -757,11 +757,10 @@ static bool relax(InputSection &sec) {
       if (i + 1 != sec.relocs().size() &&
           sec.relocs()[i + 1].type == R_RISCV_RELAX)
         relaxHi20Lo12(sec, i, loc, r, remove);
-
     case R_RISCV_JAL:
       if (i + 1 != sec.relocations.size() &&
           sec.relocations[i + 1].type == R_RISCV_RELAX)
-        relaxZcmt(sec, i, loc, r, remove);
+        relaxTableJump(sec, i, loc, r, remove);
       break;
     }
 
@@ -1185,7 +1184,7 @@ uint32_t TableJumpSection::getEntry(
   return i;
 }
 
-void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
+void TableJumpSection::scanTableJumpEntries(const InputSection &sec) const {
   for (auto [i, r] : llvm::enumerate(sec.relocations)) {
     Defined *definedSymbol = dyn_cast<Defined>(r.sym);
     if (!definedSymbol)

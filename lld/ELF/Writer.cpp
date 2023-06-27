@@ -1686,7 +1686,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
         // Jump table.
         if (in.riscvTableJumpSection) {
           for (InputSectionBase *inputSection : ctx.inputSections) {
-            in.riscvTableJumpSection->scanTableJumpEntrys(
+            in.riscvTableJumpSection->scanTableJumpEntries(
                 cast<InputSection>(*inputSection));
           }
           in.riscvTableJumpSection->finalizeContents();
