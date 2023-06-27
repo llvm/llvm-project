@@ -534,13 +534,12 @@ static bool areBOSTypesCompatible(int From, int To) {
 /// Returns a Value corresponding to the size of the given expression.
 /// This Value may be either of the following:
 ///
-///   - In LLVM: a llvm::Argument (if E is a param with the pass_object_size
-///   attribute on it), CIR: TBD
-///   - A call to a `cir.object_size`.
+///   - Reference an argument if `pass_object_size` is used.
+///   - A call to a `cir.objsize`.
 ///
 /// EmittedE is the result of emitting `E` as a scalar expr. If it's non-null
 /// and we wouldn't otherwise try to reference a pass_object_size parameter,
-/// we'll call `cir.object_size` on EmittedE, rather than emitting E.
+/// we'll call `cir.objsize` on EmittedE, rather than emitting E.
 mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
                                                   mlir::cir::IntType ResType,
                                                   mlir::Value EmittedE,
@@ -563,7 +562,26 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
                                getContext().getSizeType(), E->getBeginLoc());
     }
   }
-  llvm_unreachable("NYI");
+
+  // LLVM can't handle Type=3 appropriately, and __builtin_object_size shouldn't
+  // evaluate E for side-effects. In either case, just like original LLVM
+  // lowering, we shouldn't lower to `cir.objsize`.
+  if (Type == 3 || (!EmittedE && E->HasSideEffects(getContext())))
+    llvm_unreachable("NYI");
+
+  auto Ptr = EmittedE ? EmittedE : buildScalarExpr(E);
+  assert(Ptr.getType().isa<mlir::cir::PointerType>() &&
+         "Non-pointer passed to __builtin_object_size?");
+
+  // LLVM intrinsics (which CIR lowers to at some point, only supports 0
+  // and 2, account for that right now.
+  mlir::cir::SizeInfoType sizeInfoTy = ((Type & 2) != 0)
+                                           ? mlir::cir::SizeInfoType::min
+                                           : mlir::cir::SizeInfoType::max;
+  // TODO(cir): Heads up for LLVM lowering, For GCC compatibility,
+  // __builtin_object_size treat NULL as unknown size.
+  return builder.create<mlir::cir::ObjSizeOp>(
+      getLoc(E->getSourceRange()), ResType, Ptr, sizeInfoTy, IsDynamic);
 }
 
 mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(

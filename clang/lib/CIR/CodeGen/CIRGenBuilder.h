@@ -182,6 +182,21 @@ public:
     }
   }
 
+  mlir::cir::IntType getSIntNTy(int N) {
+    switch (N) {
+    case 8:
+      return getSInt8Ty();
+    case 16:
+      return getSInt16Ty();
+    case 32:
+      return getSInt32Ty();
+    case 64:
+      return getSInt64Ty();
+    default:
+      llvm_unreachable("Unknown bit-width");
+    }
+  }
+
   mlir::cir::VoidType getVoidTy() { return typeCache.VoidTy; }
 
   mlir::cir::IntType getSInt8Ty() { return typeCache.SInt8Ty; }
