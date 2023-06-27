@@ -35,41 +35,6 @@ namespace linalg {
 // Utilities for inferring various semantics properties of Linalg ops.
 //===----------------------------------------------------------------------===//
 
-/// Possible dimension candidates that define a contraction embedded in the
-/// indexing maps of a LinalgOp.
-struct EmbeddedContractionDimsCandidates {
-  DenseSet<int64_t> batchPos, mPos, nPos, kPos;
-};
-
-/// Given a `linalgOp` and one of its `opOperand`, returns the positions of the
-/// iterators of type `iter` that index the `opOperand` as a permutation.
-/// This is useful to infer various subcomputations on a given `linalgOp`.
-/// This is performed by looking up each result in the matching indexing map and
-/// determining whether:
-///   - It is a single AffineDimExpr.
-///   - It is the only result involving this AffineDimExpr.
-DenseSet<int64_t> findPermutationsIndexingOperand(LinalgOp linalgOp,
-                                                  OpOperand *opOperand,
-                                                  utils::IteratorType iter);
-
-/// Return true if `linalgOp` contains an embedded matmul subcomputation in its
-/// most minor dimensions.
-bool containsMostMinorMatmul(linalg::LinalgOp linalgOp);
-
-/// Find 2 parallel (m and n) and 1 reduction (k) dimension candidates that form
-/// a matmul subcomputation within `linalgOp`. These dimensions are such that:
-///   1. The m dimension is involved in an outer-product along LHS
-///      (i.e. it is a permutation on RES and LHS and does not appear in RHS).
-///   2. The n dimension is involved in an outer-product along RHS
-///      (i.e. it is a permutation on RES and RHS and does not appear in LHS).
-///   3. The k dimension appears as a permutation on LHS and RHS.
-///   4. m, n and k appear only once in any given indexing.
-///   5. Optional batch dimensions that appear in all operands are captured.
-/// This allows e.g. detecting that some contraction is embedded within
-/// `linalgOp` with some orthogonal heuristic.
-FailureOr<EmbeddedContractionDimsCandidates>
-inferContractionDims(linalg::LinalgOp linalgOp);
-
 //===----------------------------------------------------------------------===//
 // General utilities
 //===----------------------------------------------------------------------===//
