@@ -183,8 +183,7 @@ public:
                        const VarDecl *D,
                        ForDefinition_t IsForDefinition = NotForDefinition);
 
-  mlir::cir::GlobalOp buildGlobal(const VarDecl *D,
-                                  std::optional<mlir::Type> Ty,
+  mlir::cir::GlobalOp buildGlobal(const VarDecl *D, mlir::Type Ty,
                                   ForDefinition_t IsForDefinition);
 
   /// TODO(cir): once we have cir.module, add this as a convenience method
@@ -215,7 +214,7 @@ public:
   /// global with type Ty will be returned, not conversion of a variable with
   /// the same mangled name but some other type.
   mlir::Value
-  getAddrOfGlobalVar(const VarDecl *D, std::optional<mlir::Type> Ty = {},
+  getAddrOfGlobalVar(const VarDecl *D, mlir::Type Ty = {},
                      ForDefinition_t IsForDefinition = NotForDefinition);
 
   CharUnits

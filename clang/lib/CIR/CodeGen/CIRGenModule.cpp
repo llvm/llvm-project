@@ -661,8 +661,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
   return GV;
 }
 
-mlir::cir::GlobalOp CIRGenModule::buildGlobal(const VarDecl *D,
-                                              std::optional<mlir::Type> Ty,
+mlir::cir::GlobalOp CIRGenModule::buildGlobal(const VarDecl *D, mlir::Type Ty,
                                               ForDefinition_t IsForDefinition) {
   assert(D->hasGlobalStorage() && "Not a global variable");
   QualType ASTTy = D->getType();
@@ -670,7 +669,7 @@ mlir::cir::GlobalOp CIRGenModule::buildGlobal(const VarDecl *D,
     Ty = getTypes().convertTypeForMem(ASTTy);
 
   StringRef MangledName = getMangledName(D);
-  return getOrCreateCIRGlobal(MangledName, *Ty, ASTTy.getAddressSpace(), D,
+  return getOrCreateCIRGlobal(MangledName, Ty, ASTTy.getAddressSpace(), D,
                               IsForDefinition);
 }
 
@@ -680,8 +679,7 @@ mlir::cir::GlobalOp CIRGenModule::buildGlobal(const VarDecl *D,
 /// If IsForDefinition is true, it is guaranteed that an actual global with type
 /// Ty will be returned, not conversion of a variable with the same mangled name
 /// but some other type.
-mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *D,
-                                             std::optional<mlir::Type> Ty,
+mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *D, mlir::Type Ty,
                                              ForDefinition_t IsForDefinition) {
   assert(D->hasGlobalStorage() && "Not a global variable");
   QualType ASTTy = D->getType();
