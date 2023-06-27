@@ -29,7 +29,9 @@ policies LLVM will be adopting once the project starts using them.
 
 Creating Pull Requests
 ^^^^^^^^^^^^^^^^^^^^^^
-For pull requests, please push a branch to your fork of the llvm-project and
+For pull requests, please push a branch to your
+`fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks`_
+of the llvm-project and
 `create a pull request from the fork <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork>`_.
 
 Updating Pull Requests
