@@ -1442,6 +1442,44 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
   return mlir::success();
 }
 
+//===----------------------------------------------------------------------===//
+// CharExtremumOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::CharExtremumOp::verify() {
+  if (getStrings().size() < 2)
+    return emitOpError("must be provided at least two string operands");
+  unsigned kind = getCharacterKind(getResult().getType());
+  for (auto string : getStrings())
+    if (kind != getCharacterKind(string.getType()))
+      return emitOpError("strings must have the same KIND as the result type");
+  return mlir::success();
+}
+
+void hlfir::CharExtremumOp::build(mlir::OpBuilder &builder,
+                                  mlir::OperationState &result,
+                                  hlfir::CharExtremumPredicate predicate,
+                                  mlir::ValueRange strings) {
+
+  fir::CharacterType::LenType resultTypeLen = 0;
+  assert(!strings.empty() && "must contain operands");
+  unsigned kind = getCharacterKind(strings[0].getType());
+  for (auto string : strings)
+    if (auto cstLen = getCharacterLengthIfStatic(string.getType())) {
+      resultTypeLen = std::max(resultTypeLen, *cstLen);
+    } else {
+      resultTypeLen = fir::CharacterType::unknownLen();
+      break;
+    }
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind, resultTypeLen),
+      false);
+
+  build(builder, result, resultType, predicate, strings);
+}
+
 #include "flang/Optimizer/HLFIR/HLFIROpInterfaces.cpp.inc"
 #define GET_OP_CLASSES
+#include "flang/Optimizer/HLFIR/HLFIREnums.cpp.inc"
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"

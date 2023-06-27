@@ -285,3 +285,20 @@ struct HFA {
 double foo(HFA v) { return v.x + v.y; }
 // WOA64: define dso_local noundef double @"?foo@non_empty_field@@YANUHFA@1@@Z"([4 x double] %{{.*}})
 }
+
+namespace pr62223 {
+// HVAs don't follow the normal rules for return values. That means they can
+// have base classes, user-defined ctors, and protected/private members.
+// (The same restrictions that apply to HVA arguments still apply.)
+typedef double V __attribute((ext_vector_type(2)));
+struct base { V v; };
+struct test : base { test(double); protected: V v2;};
+test f(test *x) { return *x; }
+// WOA64: define dso_local %"struct.pr62223::test" @"?f@pr62223@@YA?AUtest@1@PEAU21@@Z"(ptr noundef %{{.*}})
+
+// The above rule only apples to HVAs, not HFAs.
+struct base2 { double v; };
+struct test2 : base2 { test2(double); protected: double v2;};
+test2 f(test2 *x) { return *x; }
+// WOA64: define dso_local void @"?f@pr62223@@YA?AUtest2@1@PEAU21@@Z"(ptr inreg noalias sret(%"struct.pr62223::test2") align 8 %{{.*}}, ptr noundef %{{.*}})
+}

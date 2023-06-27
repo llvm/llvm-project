@@ -31,16 +31,15 @@ entry:
 define void @f2() nounwind ssp {
 ; CHECK-LABEL: f2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    push {lr}
 ; CHECK-NEXT:    movw r0, :lower16:(L_foo$non_lazy_ptr-(LPC1_0+8))
 ; CHECK-NEXT:    movt r0, :upper16:(L_foo$non_lazy_ptr-(LPC1_0+8))
 ; CHECK-NEXT:  LPC1_0:
 ; CHECK-NEXT:    ldr r0, [pc, r0]
 ; CHECK-NEXT:    ldr r2, [r0]
 ; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    poplt {lr}
 ; CHECK-NEXT:    bxlt lr
 ; CHECK-NEXT:  LBB1_1: @ %for.body.lr.ph
+; CHECK-NEXT:    push {lr}
 ; CHECK-NEXT:    movw r0, :lower16:(L_bar$non_lazy_ptr-(LPC1_1+8))
 ; CHECK-NEXT:    movle r2, #1
 ; CHECK-NEXT:    movt r0, :upper16:(L_bar$non_lazy_ptr-(LPC1_1+8))

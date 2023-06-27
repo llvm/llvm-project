@@ -15,6 +15,7 @@
 #define FORTRAN_DIALECT_HLFIR_OP_BASE
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 
@@ -138,4 +139,12 @@ def IsFortranLogicalArrayPred
 def AnyFortranLogicalArrayObject : Type<IsFortranLogicalArrayPred,
     "any array-like object containing logicals">;
 
+def hlfir_CharExtremumPredicateAttr : I32EnumAttr<
+    "CharExtremumPredicate", "",
+    [
+      I32EnumAttrCase<"min", 0>,
+      I32EnumAttrCase<"max", 1>
+    ]> {
+  let cppNamespace = "hlfir";
+}
 #endif // FORTRAN_DIALECT_HLFIR_OP_BASE

@@ -86,7 +86,7 @@ directory structure will be created.  Additionally, the following special
   is specified, the runtime creates a pool of N raw profiles which are used for
   on-line profile merging. The runtime takes care of selecting a raw profile
   from the pool, locking it, and updating it before the program exits.  If N is
-  not specified (i.e the pattern is "%m"), it's assumed that ``N = 1``. The 
+  not specified (i.e the pattern is "%m"), it's assumed that ``N = 1``. The
   merge pool specifier can only occur once per filename pattern.
 
 * "%c" expands out to nothing, but enables a mode in which profile counter

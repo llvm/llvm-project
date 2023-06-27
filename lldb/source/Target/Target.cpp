@@ -2271,7 +2271,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
               message << " (uuid ";
 
               if (dump_uuid.IsValid())
-                dump_uuid.Dump(&message);
+                dump_uuid.Dump(message);
               else
                 message << "not specified";
 
@@ -4112,7 +4112,7 @@ TargetProperties::TargetProperties(Target *target)
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
     m_collection_sp->AppendProperty(
-        ConstString(Properties::GetExperimentalSettingsName()),
+        Properties::GetExperimentalSettingsName(),
         "Experimental settings - setting these won't produce "
         "errors if the setting is not present.",
         true, m_experimental_properties_up->GetValueProperties());
@@ -4123,12 +4123,12 @@ TargetProperties::TargetProperties(Target *target)
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
     m_collection_sp->AppendProperty(
-        ConstString(Properties::GetExperimentalSettingsName()),
+        Properties::GetExperimentalSettingsName(),
         "Experimental settings - setting these won't produce "
         "errors if the setting is not present.",
         true, m_experimental_properties_up->GetValueProperties());
     m_collection_sp->AppendProperty(
-        ConstString("process"), "Settings specific to processes.", true,
+        "process", "Settings specific to processes.", true,
         Process::GetGlobalProperties().GetValueProperties());
     m_collection_sp->SetValueChangedCallback(
         ePropertySaveObjectsDir, [this] { CheckJITObjectsDir(); });

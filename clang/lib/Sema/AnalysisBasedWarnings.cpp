@@ -2231,7 +2231,7 @@ public:
       unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
       const auto &FD = S.Diag(Variable->getLocation(),
                               diag::note_unsafe_buffer_variable_fixit_group);
-      
+
       FD << Variable << FixItStrategy;
       std::string AllVars = "";
       if (VarGroupForVD.size() > 1) {

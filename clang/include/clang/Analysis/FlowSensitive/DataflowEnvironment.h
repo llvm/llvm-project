@@ -226,8 +226,9 @@ public:
   /// Requirements:
   ///
   ///  `Other` and `this` must use the same `DataflowAnalysisContext`.
-  Environment join(const Environment &Other,
-                   Environment::ValueModel &Model) const;
+  LatticeJoinEffect join(const Environment &Other,
+                         Environment::ValueModel &Model);
+
 
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.

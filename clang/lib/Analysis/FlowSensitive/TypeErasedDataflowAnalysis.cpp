@@ -221,57 +221,6 @@ private:
   const char *Message;
 };
 
-// Builds a joined TypeErasedDataflowAnalysisState from 0 or more sources,
-// each of which may be an owned copy or an immutable reference.
-// Avoids unneccesary copies of the environment.
-class JoinedStateBuilder {
-  AnalysisContext &AC;
-  std::optional<TypeErasedDataflowAnalysisState> OwnedState;
-  const TypeErasedDataflowAnalysisState *CurrentState = nullptr;
-
-public:
-  JoinedStateBuilder(AnalysisContext &AC) : AC(AC) {}
-
-  void addOwned(TypeErasedDataflowAnalysisState State) {
-    if (!CurrentState) {
-      OwnedState = std::move(State);
-      CurrentState = &*OwnedState;
-    } else if (!OwnedState) {
-      OwnedState.emplace(std::move(CurrentState->Lattice),
-                         CurrentState->Env.join(State.Env, AC.Analysis));
-      AC.Analysis.joinTypeErased(OwnedState->Lattice, State.Lattice);
-    } else {
-      OwnedState->Env = CurrentState->Env.join(State.Env, AC.Analysis);
-      AC.Analysis.joinTypeErased(OwnedState->Lattice, State.Lattice);
-    }
-  }
-  void addUnowned(const TypeErasedDataflowAnalysisState &State) {
-    if (!CurrentState) {
-      CurrentState = &State;
-    } else if (!OwnedState) {
-      OwnedState.emplace(CurrentState->Lattice,
-                         CurrentState->Env.join(State.Env, AC.Analysis));
-      AC.Analysis.joinTypeErased(OwnedState->Lattice, State.Lattice);
-    } else {
-      OwnedState->Env = CurrentState->Env.join(State.Env, AC.Analysis);
-      AC.Analysis.joinTypeErased(OwnedState->Lattice, State.Lattice);
-    }
-  }
-  TypeErasedDataflowAnalysisState take() && {
-    if (!OwnedState) {
-      if (CurrentState)
-        OwnedState.emplace(CurrentState->Lattice, CurrentState->Env.fork());
-      else
-        // FIXME: Consider passing `Block` to Analysis.typeErasedInitialElement
-        // to enable building analyses like computation of dominators that
-        // initialize the state of each basic block differently.
-        OwnedState.emplace(AC.Analysis.typeErasedInitialElement(),
-                           AC.InitEnv.fork());
-    }
-    return std::move(*OwnedState);
-  }
-};
-
 } // namespace
 
 /// Computes the input state for a given basic block by joining the output
@@ -318,7 +267,9 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     }
   }
 
-  JoinedStateBuilder Builder(AC);
+  std::optional<TypeErasedDataflowAnalysisState> MaybeState;
+
+  auto &Analysis = AC.Analysis;
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
     if (!Pred || Pred->hasNoReturnElement())
@@ -331,30 +282,36 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     if (!MaybePredState)
       continue;
 
-    if (AC.Analysis.builtinOptions()) {
+    TypeErasedDataflowAnalysisState PredState = MaybePredState->fork();
+    if (Analysis.builtinOptions()) {
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
-        // We have a terminator: we need to mutate an environment to describe
-        // when the terminator is taken. Copy now.
-        TypeErasedDataflowAnalysisState Copy = MaybePredState->fork();
-
         const StmtToEnvMap StmtToEnv(AC.CFCtx, AC.BlockStates);
         auto [Cond, CondValue] =
-            TerminatorVisitor(StmtToEnv, Copy.Env,
+            TerminatorVisitor(StmtToEnv, PredState.Env,
                               blockIndexInPredecessor(*Pred, Block))
                 .Visit(PredTerminatorStmt);
         if (Cond != nullptr)
           // FIXME: Call transferBranchTypeErased even if BuiltinTransferOpts
           // are not set.
-          AC.Analysis.transferBranchTypeErased(CondValue, Cond, Copy.Lattice,
-                                               Copy.Env);
-        Builder.addOwned(std::move(Copy));
-        continue;
+          Analysis.transferBranchTypeErased(CondValue, Cond, PredState.Lattice,
+                                            PredState.Env);
       }
     }
-    Builder.addUnowned(*MaybePredState);
-    continue;
+
+    if (MaybeState) {
+      Analysis.joinTypeErased(MaybeState->Lattice, PredState.Lattice);
+      MaybeState->Env.join(PredState.Env, Analysis);
+    } else {
+      MaybeState = std::move(PredState);
+    }
   }
-  return std::move(Builder).take();
+  if (!MaybeState) {
+    // FIXME: Consider passing `Block` to `Analysis.typeErasedInitialElement()`
+    // to enable building analyses like computation of dominators that
+    // initialize the state of each basic block differently.
+    MaybeState.emplace(Analysis.typeErasedInitialElement(), AC.InitEnv.fork());
+  }
+  return std::move(*MaybeState);
 }
 
 /// Built-in transfer function for `CFGStmt`.

@@ -105,7 +105,7 @@
 // CHECK-NEXT: NoEscape (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: NoInline (SubjectMatchRule_function)
 // CHECK-NEXT: NoInstrumentFunction (SubjectMatchRule_function, SubjectMatchRule_objc_method)
-// CHECK-NEXT: NoMerge (SubjectMatchRule_function)
+// CHECK-NEXT: NoMerge (SubjectMatchRule_function, SubjectMatchRule_variable)
 // CHECK-NEXT: NoMicroMips (SubjectMatchRule_function)
 // CHECK-NEXT: NoMips16 (SubjectMatchRule_function)
 // CHECK-NEXT: NoProfileFunction (SubjectMatchRule_function)

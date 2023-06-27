@@ -101,12 +101,15 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
           << CM << A->getOption().getName();
     }
   }
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles))
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles, options::OPT_shared))
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(Crt1)));
   if (Entry) {
     CmdArgs.push_back(Args.MakeArgString("--entry"));
     CmdArgs.push_back(Args.MakeArgString(Entry));
   }
+
+  if (Args.hasArg(options::OPT_shared))
+    CmdArgs.push_back(Args.MakeArgString("-shared"));
 
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 

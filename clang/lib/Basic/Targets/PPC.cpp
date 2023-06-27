@@ -791,10 +791,10 @@ ArrayRef<TargetInfo::GCCRegAlias> PPCTargetInfo::getGCCRegAliases() const {
 
 // PPC ELFABIv2 DWARF Definitoin "Table 2.26. Mappings of Common Registers".
 // vs0 ~ vs31 is mapping to 32 - 63,
-// vs32 ~ vs63 is mapping to 77 - 108. 
+// vs32 ~ vs63 is mapping to 77 - 108.
 const TargetInfo::AddlRegName GCCAddlRegNames[] = {
     // Table of additional register names to use in user input.
-    {{"vs0"}, 32},   {{"vs1"}, 33},   {{"vs2"}, 34},   {{"vs3"}, 35}, 
+    {{"vs0"}, 32},   {{"vs1"}, 33},   {{"vs2"}, 34},   {{"vs3"}, 35},
     {{"vs4"}, 36},   {{"vs5"}, 37},   {{"vs6"}, 38},   {{"vs7"}, 39},
     {{"vs8"}, 40},   {{"vs9"}, 41},   {{"vs10"}, 42},  {{"vs11"}, 43},
     {{"vs12"}, 44},  {{"vs13"}, 45},  {{"vs14"}, 46},  {{"vs15"}, 47},
@@ -815,8 +815,8 @@ const TargetInfo::AddlRegName GCCAddlRegNames[] = {
 ArrayRef<TargetInfo::AddlRegName> PPCTargetInfo::getGCCAddlRegNames() const {
   if (ABI == "elfv2")
     return llvm::ArrayRef(GCCAddlRegNames);
-  else 
-    return TargetInfo::getGCCAddlRegNames(); 
+  else
+    return TargetInfo::getGCCAddlRegNames();
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {

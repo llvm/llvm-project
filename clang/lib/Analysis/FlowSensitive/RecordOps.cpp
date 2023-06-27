@@ -19,17 +19,15 @@ namespace dataflow {
 
 void copyRecord(AggregateStorageLocation &Src, AggregateStorageLocation &Dst,
                 Environment &Env) {
-  QualType Type = Src.getType();
-
   LLVM_DEBUG({
     if (Dst.getType().getCanonicalType().getUnqualifiedType() !=
-        Type.getCanonicalType().getUnqualifiedType()) {
-      llvm::dbgs() << "Source type " << Type << "\n";
+        Src.getType().getCanonicalType().getUnqualifiedType()) {
+      llvm::dbgs() << "Source type " << Src.getType() << "\n";
       llvm::dbgs() << "Destination type " << Dst.getType() << "\n";
     }
   });
   assert(Dst.getType().getCanonicalType().getUnqualifiedType() ==
-         Type.getCanonicalType().getUnqualifiedType());
+         Src.getType().getCanonicalType().getUnqualifiedType());
 
   for (auto [Field, SrcFieldLoc] : Src.children()) {
     assert(SrcFieldLoc != nullptr);
@@ -67,17 +65,15 @@ void copyRecord(AggregateStorageLocation &Src, AggregateStorageLocation &Dst,
 bool recordsEqual(const AggregateStorageLocation &Loc1, const Environment &Env1,
                   const AggregateStorageLocation &Loc2,
                   const Environment &Env2) {
-  QualType Type = Loc1.getType();
-
   LLVM_DEBUG({
     if (Loc2.getType().getCanonicalType().getUnqualifiedType() !=
-        Type.getCanonicalType().getUnqualifiedType()) {
-      llvm::dbgs() << "Loc1 type " << Type << "\n";
+        Loc1.getType().getCanonicalType().getUnqualifiedType()) {
+      llvm::dbgs() << "Loc1 type " << Loc1.getType() << "\n";
       llvm::dbgs() << "Loc2 type " << Loc2.getType() << "\n";
     }
   });
   assert(Loc2.getType().getCanonicalType().getUnqualifiedType() ==
-         Type.getCanonicalType().getUnqualifiedType());
+         Loc1.getType().getCanonicalType().getUnqualifiedType());
 
   for (auto [Field, FieldLoc1] : Loc1.children()) {
     assert(FieldLoc1 != nullptr);

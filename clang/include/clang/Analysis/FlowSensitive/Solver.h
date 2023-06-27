@@ -15,9 +15,13 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_SOLVER_H
 
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/LLVM.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
+#include <vector>
 
 namespace clang {
 namespace dataflow {
@@ -87,7 +91,12 @@ public:
   /// Requirements:
   ///
   ///  All elements in `Vals` must not be null.
-  virtual Result solve(llvm::DenseSet<BoolValue *> Vals) = 0;
+  virtual Result solve(llvm::ArrayRef<BoolValue *> Vals) = 0;
+
+  LLVM_DEPRECATED("Pass ArrayRef for determinism", "")
+  virtual Result solve(llvm::DenseSet<BoolValue *> Vals) {
+    return solve(ArrayRef(std::vector<BoolValue *>(Vals.begin(), Vals.end())));
+  }
 };
 
 } // namespace dataflow

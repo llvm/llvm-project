@@ -184,7 +184,8 @@ private:
 
   /// Convert a floating point type: `f16` to `f16`, `f32` to
   /// `f32` and `f64` to `f64`.  `bf16` is not supported
-  /// by LLVM.
+  /// by LLVM. 8-bit float types are converted to 8-bit integers as this is how
+  /// all LLVM backends that support them currently represent them.
   Type convertFloatType(FloatType type);
 
   /// Convert complex number type: `complex<f16>` to `!llvm<"{ half, half }">`,

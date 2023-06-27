@@ -1027,7 +1027,6 @@ class VPseudoNullaryPseudoM<string BaseInst>
   let BaseInstr = !cast<Instruction>(BaseInst);
 }
 
-// RetClass could be GPR or VReg.
 class VPseudoUnaryNoMask<DAGOperand RetClass, DAGOperand OpClass,
                          string Constraint = ""> :
         Pseudo<(outs RetClass:$rd),
@@ -1041,7 +1040,6 @@ class VPseudoUnaryNoMask<DAGOperand RetClass, DAGOperand OpClass,
   let HasSEWOp = 1;
 }
 
-// RetClass could be GPR or VReg.
 class VPseudoUnaryNoMaskTU<DAGOperand RetClass, DAGOperand OpClass,
                            string Constraint = ""> :
       Pseudo<(outs RetClass:$rd),
@@ -1058,20 +1056,6 @@ class VPseudoUnaryNoMaskTU<DAGOperand RetClass, DAGOperand OpClass,
 class VPseudoUnaryMask<VReg RetClass, VReg OpClass, string Constraint = ""> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2,
-                    VMaskOp:$vm, AVL:$vl, ixlenimm:$sew), []>,
-        RISCVVPseudo {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-  let UsesMaskPolicy = 1;
-}
-
-class VPseudoUnaryMaskTA<VReg RetClass, VReg OpClass, string Constraint = ""> :
-        Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-               (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2,
                     VMaskOp:$vm, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
@@ -1084,7 +1068,7 @@ class VPseudoUnaryMaskTA<VReg RetClass, VReg OpClass, string Constraint = ""> :
   let UsesMaskPolicy = 1;
 }
 
-class VPseudoUnaryMaskTA_NoExcept<VReg RetClass, VReg OpClass, string Constraint = ""> :
+class VPseudoUnaryMask_NoExcept<VReg RetClass, VReg OpClass, string Constraint = ""> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2, VMaskOp:$vm,
                     AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []> {
@@ -1099,7 +1083,7 @@ class VPseudoUnaryMaskTA_NoExcept<VReg RetClass, VReg OpClass, string Constraint
   let usesCustomInserter = 1;
 }
 
-class VPseudoUnaryMaskTA_FRM<VReg RetClass, VReg OpClass, string Constraint = ""> :
+class VPseudoUnaryMask_FRM<VReg RetClass, VReg OpClass, string Constraint = ""> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2,
                     VMaskOp:$vm, ixlenimm:$frm, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []> {
@@ -1114,8 +1098,18 @@ class VPseudoUnaryMaskTA_FRM<VReg RetClass, VReg OpClass, string Constraint = ""
   let usesCustomInserter = 1;
 }
 
-// mask unary operation without maskedoff
-class VPseudoMaskUnarySOutMask:
+class VPseudoUnaryNoMaskGPROut :
+        Pseudo<(outs GPR:$rd),
+               (ins VR:$rs2, AVL:$vl, ixlenimm:$sew), []>,
+        RISCVVPseudo {
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let HasVLOp = 1;
+  let HasSEWOp = 1;
+}
+
+class VPseudoUnaryMaskGPROut:
         Pseudo<(outs GPR:$rd),
                (ins VR:$rs1, VMaskOp:$vm, AVL:$vl, ixlenimm:$sew), []>,
         RISCVVPseudo {
@@ -1884,9 +1878,9 @@ multiclass VPseudoVPOP_M {
     defvar WriteVMPopV_MX = !cast<SchedWrite>("WriteVMPopV_" # mx);
     defvar ReadVMPopV_MX = !cast<SchedRead>("ReadVMPopV_" # mx);
     let VLMul = mti.LMul.value in {
-      def "_M_" # mti.BX : VPseudoUnaryNoMask<GPR, VR>,
+      def "_M_" # mti.BX : VPseudoUnaryNoMaskGPROut,
                            Sched<[WriteVMPopV_MX, ReadVMPopV_MX, ReadVMPopV_MX]>;
-      def "_M_" # mti.BX # "_MASK" : VPseudoMaskUnarySOutMask,
+      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
                                      Sched<[WriteVMPopV_MX, ReadVMPopV_MX, ReadVMPopV_MX]>;
     }
   }
@@ -1899,9 +1893,9 @@ multiclass VPseudoV1ST_M {
     defvar WriteVMFFSV_MX = !cast<SchedWrite>("WriteVMFFSV_" # mx);
     defvar ReadVMFFSV_MX = !cast<SchedRead>("ReadVMFFSV_" # mx);
     let VLMul = mti.LMul.value in {
-      def "_M_" # mti.BX : VPseudoUnaryNoMask<GPR, VR>,
+      def "_M_" # mti.BX : VPseudoUnaryNoMaskGPROut,
                            Sched<[WriteVMFFSV_MX, ReadVMFFSV_MX, ReadVMFFSV_MX]>;
-      def "_M_" # mti.BX # "_MASK" : VPseudoMaskUnarySOutMask,
+      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskGPROut,
                                      Sched<[WriteVMFFSV_MX, ReadVMFFSV_MX, ReadVMFFSV_MX]>;
     }
   }
@@ -1965,7 +1959,7 @@ multiclass VPseudoVIOT_M {
                        Sched<[WriteVMIotV_MX, ReadVMIotV_MX, ReadVMask]>;
       def "_" # m.MX # "_TU" : VPseudoUnaryNoMaskTU<m.vrclass, VR, constraint>,
                                Sched<[WriteVMIotV_MX, ReadVMIotV_MX, ReadVMask]>;
-      def "_" # m.MX # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, VR, constraint>,
+      def "_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
                                  RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                  Sched<[WriteVMIotV_MX, ReadVMIotV_MX, ReadVMask]>;
     }
@@ -2383,7 +2377,7 @@ multiclass VPseudoVCLS_V {
                        Sched<[WriteVFClassV_MX, ReadVFClassV_MX, ReadVMask]>;
       def "_V_" # mx # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.vrclass>,
                               Sched<[WriteVFClassV_MX, ReadVFClassV_MX, ReadVMask]>;
-      def "_V_" # mx # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, m.vrclass>,
+      def "_V_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, m.vrclass>,
                                  RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                  Sched<[WriteVFClassV_MX, ReadVFClassV_MX, ReadVMask]>;
     }
@@ -2407,7 +2401,7 @@ multiclass VPseudoVSQR_V {
         def "_V" # suffix # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.vrclass>,
                                    Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
                                           ReadVMask]>;
-        def "_V" # suffix # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, m.vrclass>,
+        def "_V" # suffix # "_MASK" : VPseudoUnaryMask<m.vrclass, m.vrclass>,
                                       RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                       Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
                                              ReadVMask]>;
@@ -2426,7 +2420,7 @@ multiclass VPseudoVRCP_V {
                          Sched<[WriteVFRecpV_MX, ReadVFRecpV_MX, ReadVMask]>;
       def "_V_" # mx # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.vrclass>,
                               Sched<[WriteVFRecpV_MX, ReadVFRecpV_MX, ReadVMask]>;
-      def "_V_" # mx # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, m.vrclass>,
+      def "_V_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, m.vrclass>,
                                  RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                  Sched<[WriteVFRecpV_MX, ReadVFRecpV_MX, ReadVMask]>;
     }
@@ -2447,7 +2441,7 @@ multiclass PseudoVEXT_VF2 {
       def "_" # mx # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.f2vrclass, constraints>,
                             Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
       def "_" # mx # "_MASK" :
-        VPseudoUnaryMaskTA<m.vrclass, m.f2vrclass, constraints>,
+        VPseudoUnaryMask<m.vrclass, m.f2vrclass, constraints>,
         RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
         Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
     }
@@ -2468,7 +2462,7 @@ multiclass PseudoVEXT_VF4 {
       def "_" # mx # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.f4vrclass, constraints>,
                             Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
       def "_" # mx # "_MASK" :
-        VPseudoUnaryMaskTA<m.vrclass, m.f4vrclass, constraints>,
+        VPseudoUnaryMask<m.vrclass, m.f4vrclass, constraints>,
         RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
         Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
     }
@@ -2489,7 +2483,7 @@ multiclass PseudoVEXT_VF8 {
       def "_" # mx # "_TU": VPseudoUnaryNoMaskTU<m.vrclass, m.f8vrclass, constraints>,
                             Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
       def "_" # mx # "_MASK" :
-        VPseudoUnaryMaskTA<m.vrclass, m.f8vrclass, constraints>,
+        VPseudoUnaryMask<m.vrclass, m.f8vrclass, constraints>,
         RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
         Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
     }
@@ -3563,8 +3557,8 @@ multiclass VPseudoConversion<VReg RetClass,
   let VLMul = MInfo.value in {
     def "_" # MInfo.MX : VPseudoUnaryNoMask<RetClass, Op1Class, Constraint>;
     def "_" # MInfo.MX # "_TU": VPseudoUnaryNoMaskTU<RetClass, Op1Class, Constraint>;
-    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMaskTA<RetClass, Op1Class,
-                                                      Constraint>,
+    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMask<RetClass, Op1Class,
+                                                    Constraint>,
                                    RISCVMaskedPseudo</*MaskOpIdx*/ 2>;
   }
 }
@@ -3574,8 +3568,8 @@ multiclass VPseudoConversionRM<VReg RetClass,
                                LMULInfo MInfo,
                                string Constraint = ""> {
   let VLMul = MInfo.value in {
-    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMaskTA_FRM<RetClass, Op1Class,
-                                                          Constraint>;
+    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMask_FRM<RetClass, Op1Class,
+                                                        Constraint>;
   }
 }
 
@@ -3584,7 +3578,7 @@ multiclass VPseudoConversionNoExcept<VReg RetClass,
                                      LMULInfo MInfo,
                                      string Constraint = ""> {
   let VLMul = MInfo.value in {
-    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMaskTA_NoExcept<RetClass, Op1Class, Constraint>;
+    def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMask_NoExcept<RetClass, Op1Class, Constraint>;
   }
 }
 
@@ -3982,31 +3976,11 @@ class VPatUnaryMask<string intrinsic_name,
                     ValueType result_type,
                     ValueType op2_type,
                     ValueType mask_type,
-                    int sew,
+                    int log2sew,
                     LMULInfo vlmul,
                     VReg result_reg_class,
-                    VReg op2_reg_class> :
-  Pat<(result_type (!cast<Intrinsic>(intrinsic_name#"_mask")
-                   (result_type result_reg_class:$merge),
-                   (op2_type op2_reg_class:$rs2),
-                   (mask_type V0),
-                   VLOpFrag)),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_MASK")
-                   (result_type result_reg_class:$merge),
-                   (op2_type op2_reg_class:$rs2),
-                   (mask_type V0), GPR:$vl, sew)>;
-
-class VPatUnaryMaskTA<string intrinsic_name,
-                      string inst,
-                      string kind,
-                      ValueType result_type,
-                      ValueType op2_type,
-                      ValueType mask_type,
-                      int log2sew,
-                      LMULInfo vlmul,
-                      VReg result_reg_class,
-                      VReg op2_reg_class,
-                      bit isSEWAware = 0> :
+                    VReg op2_reg_class,
+                    bit isSEWAware = 0> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name#"_mask")
                    (result_type result_reg_class:$merge),
                    (op2_type op2_reg_class:$rs2),
@@ -4041,7 +4015,7 @@ class VPatMaskUnaryMask<string intrinsic_name,
                 (!cast<Instruction>(inst#"_M_"#mti.BX#"_MASK")
                 (mti.Mask VR:$merge),
                 (mti.Mask VR:$rs2),
-                (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
+                (mti.Mask V0), GPR:$vl, mti.Log2SEW, TU_MU)>;
 
 class VPatUnaryAnyMask<string intrinsic,
                        string inst,
@@ -4508,8 +4482,8 @@ multiclass VPatUnaryV_M<string intrinsic, string instruction>
                             vti.Log2SEW, vti.LMul, VR>;
       def : VPatUnaryNoMaskTU<intrinsic, instruction, "M", vti.Vector, vti.Mask,
                               vti.Log2SEW, vti.LMul, vti.RegClass,VR>;
-      def : VPatUnaryMaskTA<intrinsic, instruction, "M", vti.Vector, vti.Mask,
-                            vti.Mask, vti.Log2SEW, vti.LMul, vti.RegClass, VR>;
+      def : VPatUnaryMask<intrinsic, instruction, "M", vti.Vector, vti.Mask,
+                          vti.Mask, vti.Log2SEW, vti.LMul, vti.RegClass, VR>;
     }
   }
 }
@@ -4529,9 +4503,9 @@ multiclass VPatUnaryV_VF<string intrinsic, string instruction, string suffix,
         def : VPatUnaryNoMaskTU<intrinsic, instruction, suffix,
                                 vti.Vector, fti.Vector,
                                 vti.Log2SEW, vti.LMul, vti.RegClass, fti.RegClass>;
-        def : VPatUnaryMaskTA<intrinsic, instruction, suffix,
-                              vti.Vector, fti.Vector, vti.Mask,
-                              vti.Log2SEW, vti.LMul, vti.RegClass, fti.RegClass>;
+        def : VPatUnaryMask<intrinsic, instruction, suffix,
+                            vti.Vector, fti.Vector, vti.Mask,
+                            vti.Log2SEW, vti.LMul, vti.RegClass, fti.RegClass>;
       }
   }
 }
@@ -4546,9 +4520,9 @@ multiclass VPatUnaryV_V<string intrinsic, string instruction,
       def : VPatUnaryNoMaskTU<intrinsic, instruction, "V",
                               vti.Vector, vti.Vector, vti.Log2SEW,
                               vti.LMul, vti.RegClass, vti.RegClass, isSEWAware>;
-      def : VPatUnaryMaskTA<intrinsic, instruction, "V",
-                            vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
-                            vti.LMul, vti.RegClass, vti.RegClass, isSEWAware>;
+      def : VPatUnaryMask<intrinsic, instruction, "V",
+                          vti.Vector, vti.Vector, vti.Mask, vti.Log2SEW,
+                          vti.LMul, vti.RegClass, vti.RegClass, isSEWAware>;
     }
   }
 }
@@ -4756,8 +4730,8 @@ multiclass VPatConversionTA<string intrinsic,
                         sew, vlmul, op1_reg_class>;
   def : VPatUnaryNoMaskTU<intrinsic, inst, kind, result_type, op1_type,
                           sew, vlmul, result_reg_class, op1_reg_class>;
-  def : VPatUnaryMaskTA<intrinsic, inst, kind, result_type, op1_type,
-                        mask_type, sew, vlmul, result_reg_class, op1_reg_class>;
+  def : VPatUnaryMask<intrinsic, inst, kind, result_type, op1_type,
+                      mask_type, sew, vlmul, result_reg_class, op1_reg_class>;
 }
 
 multiclass VPatBinaryV_VV<string intrinsic, string instruction,

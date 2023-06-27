@@ -3110,7 +3110,7 @@ static_assert(!__is_trivially_equality_comparable(ForwardDeclared), ""); // expe
 static_assert(!__is_trivially_equality_comparable(void), "");
 static_assert(__is_trivially_equality_comparable(int), "");
 static_assert(!__is_trivially_equality_comparable(int[]), "");
-static_assert(__is_trivially_equality_comparable(int[3]), "");
+static_assert(!__is_trivially_equality_comparable(int[3]), "");
 static_assert(!__is_trivially_equality_comparable(float), "");
 static_assert(!__is_trivially_equality_comparable(double), "");
 static_assert(!__is_trivially_equality_comparable(long double), "");
@@ -3133,6 +3133,13 @@ struct TriviallyEqualityComparable {
   bool operator==(const TriviallyEqualityComparable&) const = default;
 };
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparable), "");
+
+struct TriviallyEqualityComparableContainsArray {
+  int a[4];
+
+  bool operator==(const TriviallyEqualityComparableContainsArray&) const = default;
+};
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsArray));
 
 struct TriviallyEqualityComparableNonTriviallyCopyable {
   TriviallyEqualityComparableNonTriviallyCopyable(const TriviallyEqualityComparableNonTriviallyCopyable&);
