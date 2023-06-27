@@ -848,7 +848,8 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
          DefaultValuedAttr<I64ArrayAttr, "{}">:$pack_paddings,
          DefaultValuedAttr<
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
-          "{}">:$transpose_paddings);
+          "{}">:$transpose_paddings,
+         DefaultValuedAttr<BoolAttr, "true">:$copy_back);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =

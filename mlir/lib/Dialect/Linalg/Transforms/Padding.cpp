@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
@@ -138,7 +139,7 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
 FailureOr<SmallVector<Value>>
 linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
                           const LinalgPaddingOptions &options,
-                          LinalgOp &paddedOp) {
+                          LinalgOp &paddedOp, bool copyBack) {
   LLVM_DEBUG(DBGS() << "Start rewriteAsPaddedOp : " << opToPad << "\n");
   Location loc = opToPad->getLoc();
 
@@ -197,7 +198,21 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
         loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
         strides));
   }
-  return paddedSubtensorResults;
+
+  if (!copyBack)
+    return paddedSubtensorResults;
+
+  // Copy back unpadded results to the original destination (i.e., inits of the
+  // linalg op), so that the destination buffer of the computation does not
+  // change. If the padding folds away, this will materizalize as a memcpy
+  // between two identical buffers, which will then also fold away.
+  SmallVector<Value> copiedBack;
+  for (auto it :
+       llvm::zip(paddedSubtensorResults, opToPad.getDpsInitOperands())) {
+    copiedBack.push_back(rewriter.create<bufferization::CopyTensorOp>(
+        loc, std::get<0>(it), std::get<1>(it)->get()));
+  }
+  return copiedBack;
 }
 
 FailureOr<LinalgOp>
@@ -209,8 +224,8 @@ mlir::linalg::padAndHoistLinalgOp(RewriterBase &rewriter, LinalgOp linalgOp,
 
   // Pad the operation.
   LinalgOp paddedOp;
-  FailureOr<SmallVector<Value>> newResults =
-      rewriteAsPaddedOp(rewriter, linalgOp, options, paddedOp);
+  FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
+      rewriter, linalgOp, options, paddedOp, /*copyBack=*/false);
   if (failed(newResults))
     return rewriter.notifyMatchFailure(linalgOp,
                                        "failed to rewrite as a padded op");

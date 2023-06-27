@@ -1601,7 +1601,7 @@ transform::PadOp::applyToOne(transform::TransformRewriter &rewriter,
   options.paddingValues = paddingValues;
   options.packPaddings = packPaddings;
   FailureOr<SmallVector<Value>> result =
-      rewriteAsPaddedOp(rewriter, target, options, paddedOp);
+      rewriteAsPaddedOp(rewriter, target, options, paddedOp, getCopyBack());
   if (succeeded(result)) {
     // We need to perform our own replacement here because this API is still
     // used in patterns that "pad and hoist", for which the replacement values
