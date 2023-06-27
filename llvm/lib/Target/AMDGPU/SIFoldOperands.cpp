@@ -1642,6 +1642,46 @@ bool SIFoldOperands::tryFoldRegSequence(MachineInstr &MI) {
   return true;
 }
 
+/// Checks whether \p Copy is a AGPR -> VGPR copy. Returns `true` on success and
+/// stores the AGPR register in \p OutReg and the subreg in \p OutSubReg
+static bool isAGPRCopy(const SIRegisterInfo &TRI,
+                       const MachineRegisterInfo &MRI, const MachineInstr &Copy,
+                       Register &OutReg, unsigned &OutSubReg) {
+  assert(Copy.isCopy());
+
+  const MachineOperand &CopySrc = Copy.getOperand(1);
+  Register CopySrcReg = CopySrc.getReg();
+  if (!CopySrcReg.isVirtual())
+    return false;
+
+  // Common case: copy from AGPR directly, e.g.
+  //  %1:vgpr_32 = COPY %0:agpr_32
+  if (TRI.isAGPR(MRI, CopySrcReg)) {
+    OutReg = CopySrcReg;
+    OutSubReg = CopySrc.getSubReg();
+    return true;
+  }
+
+  // Sometimes it can also involve two copies, e.g.
+  //  %1:vgpr_256 = COPY %0:agpr_256
+  //  %2:vgpr_32 = COPY %1:vgpr_256.sub0
+  const MachineInstr *CopySrcDef = MRI.getVRegDef(CopySrcReg);
+  if (!CopySrcDef || !CopySrcDef->isCopy())
+    return false;
+
+  const MachineOperand &OtherCopySrc = CopySrcDef->getOperand(1);
+  Register OtherCopySrcReg = OtherCopySrc.getReg();
+  if (!OtherCopySrcReg.isVirtual() ||
+      CopySrcDef->getOperand(0).getSubReg() != AMDGPU::NoSubRegister ||
+      OtherCopySrc.getSubReg() != AMDGPU::NoSubRegister ||
+      !TRI.isAGPR(MRI, OtherCopySrcReg))
+    return false;
+
+  OutReg = OtherCopySrcReg;
+  OutSubReg = CopySrc.getSubReg();
+  return true;
+}
+
 // Try to hoist an AGPR to VGPR copy across a PHI.
 // This should allow folding of an AGPR into a consumer which may support it.
 //
@@ -1683,23 +1723,22 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
   const TargetRegisterClass *ARC = nullptr;
   for (unsigned K = 1; K < PHI.getNumExplicitOperands(); K += 2) {
     MachineOperand &MO = PHI.getOperand(K);
-
-    Register PhiIn = MO.getReg();
-    if (MO.getSubReg() || !TRI->isVGPR(*MRI, PhiIn))
-      return false;
-
-    MachineInstr *Copy = MRI->getVRegDef(PhiIn);
+    MachineInstr *Copy = MRI->getVRegDef(MO.getReg());
     if (!Copy || !Copy->isCopy())
       continue;
 
-    Register CopyIn = Copy->getOperand(1).getReg();
-    if (CopyIn.isVirtual() && TRI->isAGPR(*MRI, CopyIn)) {
-      const TargetRegisterClass *CopyInRC =
-          getRegOpRC(*MRI, *TRI, Copy->getOperand(1));
-      if (ARC && !ARC->hasSubClassEq(CopyInRC))
-        return false;
-      ARC = CopyInRC;
-    }
+    Register AGPRSrc;
+    unsigned AGPRRegMask = AMDGPU::NoSubRegister;
+    if (!isAGPRCopy(*TRI, *MRI, *Copy, AGPRSrc, AGPRRegMask))
+      continue;
+
+    const TargetRegisterClass *CopyInRC = MRI->getRegClass(AGPRSrc);
+    if (const auto *SubRC = TRI->getSubRegisterClass(CopyInRC, AGPRRegMask))
+      CopyInRC = SubRC;
+
+    if (ARC && !ARC->hasSubClassEq(CopyInRC))
+      return false;
+    ARC = CopyInRC;
   }
 
   if (!ARC)
@@ -1721,11 +1760,11 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
       // Look at pre-existing COPY instructions from ARC: Steal the operand. If
       // the copy was single-use, it will be removed by DCE later.
       if (Def->isCopy()) {
-        MachineOperand &CopyIn = Def->getOperand(1);
-        if (CopyIn.getReg().isVirtual() &&
-            getRegOpRC(*MRI, *TRI, CopyIn)->hasSubClassEq(ARC)) {
-          MO.setReg(CopyIn.getReg());
-          MO.setSubReg(CopyIn.getSubReg());
+        Register AGPRSrc;
+        unsigned AGPRSubReg = AMDGPU::NoSubRegister;
+        if (isAGPRCopy(*TRI, *MRI, *Def, AGPRSrc, AGPRSubReg)) {
+          MO.setReg(AGPRSrc);
+          MO.setSubReg(AGPRSubReg);
           continue;
         }
 
@@ -1733,6 +1772,7 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
         // GFX908 directly instead of a COPY. Otherwise, SIFoldOperand may try
         // to fold the sgpr -> vgpr -> agpr copy into a sgpr -> agpr copy which
         // is unlikely to be profitable.
+        MachineOperand &CopyIn = Def->getOperand(1);
         if (!ST->hasGFX90AInsts() && !MRI->hasOneNonDBGUse(Reg) &&
             TRI->isSGPRReg(*MRI, CopyIn.getReg()))
           UseAccVGPRWrite = true;
