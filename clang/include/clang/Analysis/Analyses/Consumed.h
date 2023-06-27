@@ -244,7 +244,7 @@ namespace consumed {
     ConsumedBlockInfo BlockInfo;
     std::unique_ptr<ConsumedStateMap> CurrStates;
 
-    ConsumedState ExpectedReturnState;
+    ConsumedState ExpectedReturnState = CS_None;
 
     void determineExpectedReturnState(AnalysisDeclContext &AC,
                                       const FunctionDecl *D);

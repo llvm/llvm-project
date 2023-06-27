@@ -3977,6 +3977,21 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
       CodeSections.emplace_back(&Section);
 
   auto compareSections = [&](const BinarySection *A, const BinarySection *B) {
+    // If both A and B have names starting with ".text.cold", then
+    // - if opts::HotFunctionsAtEnd is true, we want order
+    //   ".text.cold.T", ".text.cold.T-1", ... ".text.cold.1", ".text.cold"
+    // - if opts::HotFunctionsAtEnd is false, we want order
+    //   ".text.cold", ".text.cold.1", ... ".text.cold.T-1", ".text.cold.T"
+    if (A->getName().startswith(BC->getColdCodeSectionName()) &&
+        B->getName().startswith(BC->getColdCodeSectionName())) {
+      if (A->getName().size() != B->getName().size())
+        return (opts::HotFunctionsAtEnd)
+                   ? (A->getName().size() > B->getName().size())
+                   : (A->getName().size() < B->getName().size());
+      return (opts::HotFunctionsAtEnd) ? (A->getName() > B->getName())
+                                       : (A->getName() < B->getName());
+    }
+
     // Place movers before anything else.
     if (A->getName() == BC->getHotTextMoverSectionName())
       return true;

@@ -162,3 +162,39 @@ subroutine omp_target_thread_limit
    !$omp end target
    !CHECK: }
 end subroutine omp_target_thread_limit
+
+!===============================================================================
+! Target `use_device_ptr` clause
+!===============================================================================
+
+!CHECK-LABEL: func.func @_QPomp_target_device_ptr() {
+subroutine omp_target_device_ptr
+   use iso_c_binding, only : c_ptr, c_loc
+   type(c_ptr) :: a
+   integer, target :: b
+   !CHECK: omp.target_data map((tofrom -> %[[VAL_0:.*]] : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)) use_device_ptr(%[[VAL_0]] : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>)
+   !$omp target data map(tofrom: a) use_device_ptr(a)
+   !CHECK: ^bb0(%[[VAL_1:.*]]: !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>):
+   !CHECK: {{.*}} = fir.coordinate_of %[[VAL_1:.*]], {{.*}} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+      a = c_loc(b)
+   !CHECK: omp.terminator
+   !$omp end target data
+   !CHECK: }
+end subroutine omp_target_device_ptr
+
+ !===============================================================================
+ ! Target `use_device_addr` clause
+ !===============================================================================
+
+ !CHECK-LABEL: func.func @_QPomp_target_device_addr() {
+ subroutine omp_target_device_addr
+   integer, pointer :: a
+   !CHECK:   omp.target_data map((tofrom -> %[[VAL_0:.*]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)) use_device_addr(%[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
+   !$omp target data map(tofrom: a) use_device_addr(a)
+   !CHECK: ^bb0(%[[VAL_1:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>>):
+   !CHECK: {{.*}} = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+      a = 10
+   !CHECK: omp.terminator
+   !$omp end target data
+   !CHECK: }
+end subroutine omp_target_device_addr

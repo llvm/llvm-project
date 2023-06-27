@@ -341,6 +341,9 @@ def err_opt_not_valid_on_target : Error<
   "option '%0' cannot be specified on this target">;
 def err_invalid_feature_combination : Error<
   "invalid feature combination: %0">;
+def warn_target_unrecognized_env : Warning<
+  "mismatch between architecture and environment in target triple '%0'; did you mean '%1'?">,
+  InGroup<InvalidCommandLineArgument>;
 
 // Source manager
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;

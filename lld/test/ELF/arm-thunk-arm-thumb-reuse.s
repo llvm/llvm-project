@@ -7,6 +7,8 @@
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7aeb-none-linux-gnueabi -mcpu=cortex-a8 %t/test.s -o %t.o
 // RUN: ld.lld --script %t/script %t.o -o %t2
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t2 | FileCheck %s
+// RUN: ld.lld --be8 --script %t/script %t.o -o %t2
+// RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d %t2 | FileCheck %s
 
 /// Test that we can reuse thunks between Arm and Thumb callers
 /// using a BL. Expect two thunks, one for far, one for far2.

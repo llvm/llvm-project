@@ -55,12 +55,28 @@ define amdgpu_kernel void @log_f32(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s32) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 8388608
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[V_LOG_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_LOG_F32_e64 0, [[GLOBAL_LOAD_DWORD_SADDR]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 1060205080
-  ; CHECK-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, killed [[V_LOG_F32_e64_]], 0, killed [[S_MOV_B32_]], 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MUL_F32_e64_]]
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], killed [[COPY1]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s32) into %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[V_CMP_LT_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LT_F32_e64 0, [[GLOBAL_LOAD_DWORD_SADDR]], 0, killed [[S_MOV_B32_]], 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 1333788672
+  ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 1065353216
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY killed [[S_MOV_B32_1]]
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[S_MOV_B32_2]], 0, [[COPY1]], [[V_CMP_LT_F32_e64_]], implicit $exec
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, [[GLOBAL_LOAD_DWORD_SADDR]], 0, [[V_CNDMASK_B32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[V_LOG_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_LOG_F32_e64 0, killed [[V_MUL_F32_e64_]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sgpr_32 = S_MOV_B32 1107296256
+  ; CHECK-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[S_MOV_B32_3]]
+  ; CHECK-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[S_MOV_B32_4]], 0, [[COPY2]], [[V_CMP_LT_F32_e64_]], implicit $exec
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[V_SUB_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_SUB_F32_e64 0, [[V_LOG_F32_e64_]], 0, [[V_CNDMASK_B32_e64_1]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sgpr_32 = S_MOV_B32 1060205080
+  ; CHECK-NEXT:   [[V_MUL_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_MUL_F32_e64 0, killed [[V_SUB_F32_e64_]], 0, killed [[S_MOV_B32_5]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[V_MUL_F32_e64_1]]
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], killed [[COPY3]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s32) into %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   %val = load volatile float, ptr addrspace(1) %ptr
   %res = call float @llvm.log.f32(float %val)

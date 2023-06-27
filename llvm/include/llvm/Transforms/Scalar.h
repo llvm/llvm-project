@@ -204,19 +204,6 @@ Pass *createLowerGuardIntrinsicPass();
 
 //===----------------------------------------------------------------------===//
 //
-// LowerMatrixIntrinsics - Lower matrix intrinsics to vector operations.
-//
-Pass *createLowerMatrixIntrinsicsPass();
-
-//===----------------------------------------------------------------------===//
-//
-// LowerMatrixIntrinsicsMinimal - Lower matrix intrinsics to vector operations
-//                               (lightweight, does not require extra analysis)
-//
-Pass *createLowerMatrixIntrinsicsMinimalPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LowerWidenableCondition - Lower widenable condition to i1 true.
 //
 Pass *createLowerWidenableConditionPass();
@@ -286,16 +273,6 @@ FunctionPass *createSpeculativeExecutionIfHasBranchDivergencePass();
 // instruction patterns in straight-line code.
 //
 FunctionPass *createStraightLineStrengthReducePass();
-
-//===----------------------------------------------------------------------===//
-//
-// PlaceSafepoints - Rewrite any IR calls to gc.statepoints and insert any
-// safepoint polls (method entry, backedge) that might be required.  This pass
-// does not generate explicit relocation sequences - that's handled by
-// RewriteStatepointsForGC which can be run at an arbitrary point in the pass
-// order following this pass.
-//
-FunctionPass *createPlaceSafepointsPass();
 
 //===----------------------------------------------------------------------===//
 //

@@ -344,11 +344,13 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
       LLVM_DEBUG(dbgs() << "[AAUniformWorkGroupSize] Call " << Caller->getName()
                         << "->" << getAssociatedFunction()->getName() << "\n");
 
-      const auto &CallerInfo = A.getAAFor<AAUniformWorkGroupSize>(
+      const auto *CallerInfo = A.getAAFor<AAUniformWorkGroupSize>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      if (!CallerInfo)
+        return false;
 
       Change = Change | clampStateAndIndicateChange(this->getState(),
-                                                    CallerInfo.getState());
+                                                    CallerInfo->getState());
 
       return true;
     };
@@ -433,9 +435,9 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     auto OrigAssumed = getAssumed();
 
     // Check for Intrinsics and propagate attributes.
-    const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
+    const AACallEdges *AAEdges = A.getAAFor<AACallEdges>(
         *this, this->getIRPosition(), DepClassTy::REQUIRED);
-    if (AAEdges.hasNonAsmUnknownCallee())
+    if (!AAEdges || AAEdges->hasNonAsmUnknownCallee())
       return indicatePessimisticFixpoint();
 
     bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(F->getCallingConv());
@@ -446,12 +448,14 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     bool SupportsGetDoorbellID = InfoCache.supportsGetDoorbellID(*F);
     unsigned COV = InfoCache.getCodeObjectVersion();
 
-    for (Function *Callee : AAEdges.getOptimisticEdges()) {
+    for (Function *Callee : AAEdges->getOptimisticEdges()) {
       Intrinsic::ID IID = Callee->getIntrinsicID();
       if (IID == Intrinsic::not_intrinsic) {
-        const AAAMDAttributes &AAAMD = A.getAAFor<AAAMDAttributes>(
-          *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
-        *this &= AAAMD;
+        const AAAMDAttributes *AAAMD = A.getAAFor<AAAMDAttributes>(
+            *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
+        if (!AAAMD)
+          return indicatePessimisticFixpoint();
+        *this &= *AAAMD;
         continue;
       }
 
@@ -641,10 +645,12 @@ private:
       if (Call.getIntrinsicID() != Intrinsic::amdgcn_implicitarg_ptr)
         return true;
 
-      const auto &PointerInfoAA = A.getAAFor<AAPointerInfo>(
+      const auto *PointerInfoAA = A.getAAFor<AAPointerInfo>(
           *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
+      if (!PointerInfoAA)
+        return false;
 
-      return PointerInfoAA.forallInterferingAccesses(
+      return PointerInfoAA->forallInterferingAccesses(
           Range, [](const AAPointerInfo::Access &Acc, bool IsExact) {
             return Acc.getRemoteInst()->isDroppable();
           });
@@ -696,11 +702,13 @@ struct AAAMDSizeRangeAttribute
       LLVM_DEBUG(dbgs() << '[' << getName() << "] Call " << Caller->getName()
                         << "->" << getAssociatedFunction()->getName() << '\n');
 
-      const auto &CallerInfo = A.getAAFor<AttributeImpl>(
+      const auto *CallerInfo = A.getAAFor<AttributeImpl>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      if (!CallerInfo)
+        return false;
 
       Change |=
-          clampStateAndIndicateChange(this->getState(), CallerInfo.getState());
+          clampStateAndIndicateChange(this->getState(), CallerInfo->getState());
 
       return true;
     };
@@ -813,15 +821,17 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
-    const auto &AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
-        *this, IRPosition::function(*F), DepClassTy::REQUIRED);
-    unsigned Min, Max;
-    std::tie(Min, Max) = InfoCache.getWavesPerEU(
-        *F, {AssumedGroupSize.getAssumed().getLower().getZExtValue(),
-             AssumedGroupSize.getAssumed().getUpper().getZExtValue() - 1});
+    if (const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
+            *this, IRPosition::function(*F), DepClassTy::REQUIRED)) {
 
-    ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
-    intersectKnown(Range);
+      unsigned Min, Max;
+      std::tie(Min, Max) = InfoCache.getWavesPerEU(
+          *F, {AssumedGroupSize->getAssumed().getLower().getZExtValue(),
+               AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
+
+      ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
+      intersectKnown(Range);
+    }
 
     if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
       indicatePessimisticFixpoint();
@@ -837,18 +847,20 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
       LLVM_DEBUG(dbgs() << '[' << getName() << "] Call " << Caller->getName()
                         << "->" << Func->getName() << '\n');
 
-      const auto &CallerInfo = A.getAAFor<AAAMDWavesPerEU>(
+      const auto *CallerInfo = A.getAAFor<AAAMDWavesPerEU>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-      const auto &AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
+      const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
           *this, IRPosition::function(*Func), DepClassTy::REQUIRED);
+      if (!CallerInfo || !AssumedGroupSize)
+        return false;
 
       unsigned Min, Max;
       std::tie(Min, Max) = InfoCache.getEffectiveWavesPerEU(
           *Caller,
-          {CallerInfo.getAssumed().getLower().getZExtValue(),
-           CallerInfo.getAssumed().getUpper().getZExtValue() - 1},
-          {AssumedGroupSize.getAssumed().getLower().getZExtValue(),
-           AssumedGroupSize.getAssumed().getUpper().getZExtValue() - 1});
+          {CallerInfo->getAssumed().getLower().getZExtValue(),
+           CallerInfo->getAssumed().getUpper().getZExtValue() - 1},
+          {AssumedGroupSize->getAssumed().getLower().getZExtValue(),
+           AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
       ConstantRange CallerRange(APInt(32, Min), APInt(32, Max + 1));
       IntegerRangeState CallerRangeState(CallerRange);
       Change |= clampStateAndIndicateChange(this->getState(), CallerRangeState);

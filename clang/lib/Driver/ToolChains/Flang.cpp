@@ -140,6 +140,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
 
   if (Args.hasArg(options::OPT_flang_experimental_hlfir))
     CmdArgs.push_back("-flang-experimental-hlfir");
+  if (Args.hasArg(options::OPT_flang_experimental_polymorphism))
+    CmdArgs.push_back("-flang-experimental-polymorphism");
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 }

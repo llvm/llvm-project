@@ -16,6 +16,7 @@
 
 #include "asan_allocator.h"
 
+#include "asan_internal.h"
 #include "asan_mapping.h"
 #include "asan_poisoning.h"
 #include "asan_report.h"
@@ -24,6 +25,7 @@
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
@@ -190,28 +192,56 @@ class LargeChunkHeader {
   }
 };
 
+static void FillChunk(AsanChunk *m) {
+  // FIXME: Use ReleaseMemoryPagesToOS.
+  Flags &fl = *flags();
+
+  if (fl.max_free_fill_size > 0) {
+    // We have to skip the chunk header, it contains free_context_id.
+    uptr scribble_start = (uptr)m + kChunkHeaderSize + kChunkHeader2Size;
+    if (m->UsedSize() >= kChunkHeader2Size) {  // Skip Header2 in user area.
+      uptr size_to_fill = m->UsedSize() - kChunkHeader2Size;
+      size_to_fill = Min(size_to_fill, (uptr)fl.max_free_fill_size);
+      REAL(memset)((void *)scribble_start, fl.free_fill_byte, size_to_fill);
+    }
+  }
+}
+
 struct QuarantineCallback {
   QuarantineCallback(AllocatorCache *cache, BufferedStackTrace *stack)
       : cache_(cache),
         stack_(stack) {
   }
 
-  void Recycle(AsanChunk *m) {
-    void *p = get_allocator().GetBlockBegin(m);
-    if (p != m) {
-      // Clear the magic value, as allocator internals may overwrite the
-      // contents of deallocated chunk, confusing GetAsanChunk lookup.
-      reinterpret_cast<LargeChunkHeader *>(p)->Set(nullptr);
-    }
-
-    u8 old_chunk_state = CHUNK_QUARANTINE;
-    if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
-                                        CHUNK_INVALID, memory_order_acquire)) {
-      CHECK_EQ(old_chunk_state, CHUNK_QUARANTINE);
-    }
-
+  void PreQuarantine(AsanChunk *m) const {
+    FillChunk(m);
+    // Poison the region.
     PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
-                 kAsanHeapLeftRedzoneMagic);
+                 kAsanHeapFreeMagic);
+  }
+
+  void Recycle(AsanChunk *m) const {
+    void *p = get_allocator().GetBlockBegin(m);
+
+    // The secondary will immediately unpoison and unmap the memory, so this
+    // branch is unnecessary.
+    if (get_allocator().FromPrimary(p)) {
+      if (p != m) {
+        // Clear the magic value, as allocator internals may overwrite the
+        // contents of deallocated chunk, confusing GetAsanChunk lookup.
+        reinterpret_cast<LargeChunkHeader *>(p)->Set(nullptr);
+      }
+
+      u8 old_chunk_state = CHUNK_QUARANTINE;
+      if (!atomic_compare_exchange_strong(&m->chunk_state, &old_chunk_state,
+                                          CHUNK_INVALID,
+                                          memory_order_acquire)) {
+        CHECK_EQ(old_chunk_state, CHUNK_QUARANTINE);
+      }
+
+      PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
+                   kAsanHeapLeftRedzoneMagic);
+    }
 
     // Statistics.
     AsanStats &thread_stats = GetCurrentThreadStats();
@@ -221,7 +251,17 @@ struct QuarantineCallback {
     get_allocator().Deallocate(cache_, p);
   }
 
-  void *Allocate(uptr size) {
+  void RecyclePassThrough(AsanChunk *m) const {
+    // Recycle for the secondary will immediately unpoison and unmap the
+    // memory, so quarantine preparation is unnecessary.
+    if (get_allocator().FromPrimary(m)) {
+      // The primary allocation may need pattern fill if enabled.
+      FillChunk(m);
+    }
+    Recycle(m);
+  }
+
+  void *Allocate(uptr size) const {
     void *res = get_allocator().Allocate(cache_, size, 1);
     // TODO(alekseys): Consider making quarantine OOM-friendly.
     if (UNLIKELY(!res))
@@ -229,9 +269,7 @@ struct QuarantineCallback {
     return res;
   }
 
-  void Deallocate(void *p) {
-    get_allocator().Deallocate(cache_, p);
-  }
+  void Deallocate(void *p) const { get_allocator().Deallocate(cache_, p); }
 
  private:
   AllocatorCache* const cache_;
@@ -251,7 +289,13 @@ void AsanMapUnmapCallback::OnMap(uptr p, uptr size) const {
 
 void AsanMapUnmapCallback::OnMapSecondary(uptr p, uptr size, uptr user_begin,
                                           uptr user_size) const {
-  PoisonShadow(p, size, kAsanHeapLeftRedzoneMagic);
+  uptr user_end = RoundDownTo(user_begin + user_size, ASAN_SHADOW_GRANULARITY);
+  user_begin = RoundUpTo(user_begin, ASAN_SHADOW_GRANULARITY);
+  // The secondary mapping will be immediately returned to user, no value
+  // poisoning that with non-zero just before unpoisoning by Allocate(). So just
+  // poison head/tail invisible to Allocate().
+  PoisonShadow(p, user_begin - p, kAsanHeapLeftRedzoneMagic);
+  PoisonShadow(user_end, size - (user_end - p), kAsanHeapLeftRedzoneMagic);
   // Statistics.
   AsanStats &thread_stats = GetCurrentThreadStats();
   thread_stats.mmaps++;
@@ -513,9 +557,10 @@ struct Allocator {
     uptr needed_size = rounded_size + rz_size;
     if (alignment > min_alignment)
       needed_size += alignment;
+    bool from_primary = PrimaryAllocator::CanAllocate(needed_size, alignment);
     // If we are allocating from the secondary allocator, there will be no
     // automatic right redzone, so add the right redzone manually.
-    if (!PrimaryAllocator::CanAllocate(needed_size, alignment))
+    if (!from_primary)
       needed_size += rz_size;
     CHECK(IsAligned(needed_size, min_alignment));
     if (size > kMaxAllowedMallocSize || needed_size > kMaxAllowedMallocSize ||
@@ -547,15 +592,6 @@ struct Allocator {
       ReportOutOfMemory(size, stack);
     }
 
-    if (*(u8 *)MEM_TO_SHADOW((uptr)allocated) == 0 && CanPoisonMemory()) {
-      // Heap poisoning is enabled, but the allocator provides an unpoisoned
-      // chunk. This is possible if CanPoisonMemory() was false for some
-      // time, for example, due to flags()->start_disabled.
-      // Anyway, poison the block before using it for anything else.
-      uptr allocated_size = allocator.GetActuallyAllocatedSize(allocated);
-      PoisonShadow((uptr)allocated, allocated_size, kAsanHeapLeftRedzoneMagic);
-    }
-
     uptr alloc_beg = reinterpret_cast<uptr>(allocated);
     uptr alloc_end = alloc_beg + needed_size;
     uptr user_beg = alloc_beg + rz_size;
@@ -571,6 +607,17 @@ struct Allocator {
     m->user_requested_alignment_log = user_requested_alignment_log;
 
     m->SetAllocContext(t ? t->tid() : kMainTid, StackDepotPut(*stack));
+
+    if (!from_primary || *(u8 *)MEM_TO_SHADOW((uptr)allocated) == 0) {
+      // The allocator provides an unpoisoned chunk. This is possible for the
+      // secondary allocator, or if CanPoisonMemory() was false for some time,
+      // for example, due to flags()->start_disabled. Anyway, poison left and
+      // right of the block before using it for anything else.
+      uptr tail_beg = RoundUpTo(user_end, ASAN_SHADOW_GRANULARITY);
+      uptr tail_end = alloc_beg + allocator.GetActuallyAllocatedSize(allocated);
+      PoisonShadow(alloc_beg, user_beg - alloc_beg, kAsanHeapLeftRedzoneMagic);
+      PoisonShadow(tail_beg, tail_end - tail_beg, kAsanHeapLeftRedzoneMagic);
+    }
 
     uptr size_rounded_down_to_granularity =
         RoundDownTo(size, ASAN_SHADOW_GRANULARITY);
@@ -638,21 +685,6 @@ struct Allocator {
              CHUNK_QUARANTINE);
     AsanThread *t = GetCurrentThread();
     m->SetFreeContext(t ? t->tid() : 0, StackDepotPut(*stack));
-
-    Flags &fl = *flags();
-    if (fl.max_free_fill_size > 0) {
-      // We have to skip the chunk header, it contains free_context_id.
-      uptr scribble_start = (uptr)m + kChunkHeaderSize + kChunkHeader2Size;
-      if (m->UsedSize() >= kChunkHeader2Size) {  // Skip Header2 in user area.
-        uptr size_to_fill = m->UsedSize() - kChunkHeader2Size;
-        size_to_fill = Min(size_to_fill, (uptr)fl.max_free_fill_size);
-        REAL(memset)((void *)scribble_start, fl.free_fill_byte, size_to_fill);
-      }
-    }
-
-    // Poison the region.
-    PoisonShadow(m->Beg(), RoundUpTo(m->UsedSize(), ASAN_SHADOW_GRANULARITY),
-                 kAsanHeapFreeMagic);
 
     // Push into quarantine.
     if (t) {

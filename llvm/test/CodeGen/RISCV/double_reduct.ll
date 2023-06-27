@@ -44,15 +44,12 @@ define float @fmul_f32(<4 x float> %a, <4 x float> %b) {
 define float @fmin_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmin_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI2_0)
-; CHECK-NEXT:    flw fa5, %lo(.LCPI2_0)(a0)
+; CHECK-NEXT:    lui a0, 523264
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa5
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    vfredmin.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vfredmin.vs v8, v9, v10
-; CHECK-NEXT:    vfmv.f.s fa4, v8
-; CHECK-NEXT:    fmin.s fa0, fa5, fa4
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> %b)
@@ -63,15 +60,12 @@ define float @fmin_f32(<4 x float> %a, <4 x float> %b) {
 define float @fmax_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmax_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI3_0)
-; CHECK-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
+; CHECK-NEXT:    lui a0, 1047552
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfmv.s.f v10, fa5
+; CHECK-NEXT:    vmv.s.x v10, a0
+; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    vfredmax.vs v8, v8, v10
-; CHECK-NEXT:    vfmv.f.s fa5, v8
-; CHECK-NEXT:    vfredmax.vs v8, v9, v10
-; CHECK-NEXT:    vfmv.f.s fa4, v8
-; CHECK-NEXT:    fmax.s fa0, fa5, fa4
+; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> %a)
   %r2 = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> %b)
