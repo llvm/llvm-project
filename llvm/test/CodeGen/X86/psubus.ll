@@ -775,7 +775,7 @@ define <8 x i16> @test13(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [2147549183,2147549183,2147549183,2147549183]
 ; SSSE3-NEXT:    movdqa %xmm5, %xmm6
 ; SSSE3-NEXT:    pcmpgtd %xmm4, %xmm6
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
+; SSSE3-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSSE3-NEXT:    pand %xmm6, %xmm2
 ; SSSE3-NEXT:    pandn %xmm4, %xmm6
 ; SSSE3-NEXT:    por %xmm2, %xmm6
@@ -1041,7 +1041,7 @@ define <8 x i16> @test15(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [2147549183,2147549183,2147549183,2147549183]
 ; SSSE3-NEXT:    movdqa %xmm5, %xmm6
 ; SSSE3-NEXT:    pcmpgtd %xmm4, %xmm6
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
+; SSSE3-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSSE3-NEXT:    pand %xmm6, %xmm2
 ; SSSE3-NEXT:    pandn %xmm4, %xmm6
 ; SSSE3-NEXT:    por %xmm2, %xmm6
@@ -1564,7 +1564,7 @@ define <8 x i16> @psubus_8i32_max(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [2147549183,2147549183,2147549183,2147549183]
 ; SSSE3-NEXT:    movdqa %xmm5, %xmm6
 ; SSSE3-NEXT:    pcmpgtd %xmm4, %xmm6
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
+; SSSE3-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSSE3-NEXT:    pand %xmm6, %xmm2
 ; SSSE3-NEXT:    pandn %xmm4, %xmm6
 ; SSSE3-NEXT:    por %xmm2, %xmm6
@@ -1638,7 +1638,7 @@ define <8 x i16> @psubus_8i64_max(<8 x i16> %x, <8 x i64> %y) nounwind {
 ; SSE2OR3-NEXT:    pshufd {{.*#+}} xmm8 = xmm7[1,1,3,3]
 ; SSE2OR3-NEXT:    pcmpeqd %xmm5, %xmm8
 ; SSE2OR3-NEXT:    pand %xmm9, %xmm8
-; SSE2OR3-NEXT:    movdqa {{.*#+}} xmm7 = [65535,65535]
+; SSE2OR3-NEXT:    pcmpeqd %xmm7, %xmm7
 ; SSE2OR3-NEXT:    pand %xmm8, %xmm2
 ; SSE2OR3-NEXT:    pandn %xmm7, %xmm8
 ; SSE2OR3-NEXT:    por %xmm2, %xmm8
@@ -1936,7 +1936,7 @@ define <8 x i16> @psubus_i16_i32_max_swapped(<8 x i16> %x, <8 x i32> %y) nounwin
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [2147549183,2147549183,2147549183,2147549183]
 ; SSSE3-NEXT:    movdqa %xmm5, %xmm6
 ; SSSE3-NEXT:    pcmpgtd %xmm4, %xmm6
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
+; SSSE3-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSSE3-NEXT:    pand %xmm6, %xmm2
 ; SSSE3-NEXT:    pandn %xmm4, %xmm6
 ; SSSE3-NEXT:    por %xmm2, %xmm6
@@ -2031,7 +2031,7 @@ define <8 x i16> @psubus_i16_i32_min(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [2147549183,2147549183,2147549183,2147549183]
 ; SSSE3-NEXT:    movdqa %xmm5, %xmm6
 ; SSSE3-NEXT:    pcmpgtd %xmm4, %xmm6
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
+; SSSE3-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSSE3-NEXT:    pand %xmm6, %xmm2
 ; SSSE3-NEXT:    pandn %xmm4, %xmm6
 ; SSSE3-NEXT:    por %xmm2, %xmm6
@@ -2620,7 +2620,7 @@ define <8 x i16> @test32(<8 x i16> %a0, <8 x i32> %a1) {
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm5 = [2147549183,2147549183,2147549183,2147549183]
 ; SSSE3-NEXT:    movdqa %xmm5, %xmm6
 ; SSSE3-NEXT:    pcmpgtd %xmm4, %xmm6
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
+; SSSE3-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSSE3-NEXT:    pand %xmm6, %xmm2
 ; SSSE3-NEXT:    pandn %xmm4, %xmm6
 ; SSSE3-NEXT:    por %xmm2, %xmm6
