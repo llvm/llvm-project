@@ -339,7 +339,8 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
   auto InterceptFS = llvm::makeIntrusiveRefCnt<InterceptorFS>(VFS);
 
   DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
-                                    ScanningOutputFormat::Make);
+                                    ScanningOutputFormat::Make, CASOptions(),
+                                    nullptr, nullptr, nullptr);
   DependencyScanningTool ScanTool(Service, InterceptFS);
 
   // This will fail with "fatal error: module 'Foo' not found" but it doesn't
@@ -352,5 +353,5 @@ TEST(DependencyScanner, ScanDepsWithModuleLookup) {
 
   EXPECT_TRUE(llvm::find(InterceptFS->StatPaths, OtherPath) ==
               InterceptFS->StatPaths.end());
-  EXPECT_EQ(InterceptFS->ReadFiles, std::vector<std::string>{"test.m"});
+  EXPECT_EQ(InterceptFS->ReadFiles, std::vector<std::string>{"/root/test.m"});
 }
