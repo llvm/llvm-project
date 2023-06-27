@@ -14,11 +14,9 @@
 
 #define DEBUG_TYPE "dataflow"
 
-namespace clang {
-namespace dataflow {
-
-void copyRecord(AggregateStorageLocation &Src, AggregateStorageLocation &Dst,
-                Environment &Env) {
+void clang::dataflow::copyRecord(AggregateStorageLocation &Src,
+                                 AggregateStorageLocation &Dst,
+                                 Environment &Env) {
   LLVM_DEBUG({
     if (Dst.getType().getCanonicalType().getUnqualifiedType() !=
         Src.getType().getCanonicalType().getUnqualifiedType()) {
@@ -62,9 +60,10 @@ void copyRecord(AggregateStorageLocation &Src, AggregateStorageLocation &Dst,
   }
 }
 
-bool recordsEqual(const AggregateStorageLocation &Loc1, const Environment &Env1,
-                  const AggregateStorageLocation &Loc2,
-                  const Environment &Env2) {
+bool clang::dataflow::recordsEqual(const AggregateStorageLocation &Loc1,
+                                   const Environment &Env1,
+                                   const AggregateStorageLocation &Loc2,
+                                   const Environment &Env2) {
   LLVM_DEBUG({
     if (Loc2.getType().getCanonicalType().getUnqualifiedType() !=
         Loc1.getType().getCanonicalType().getUnqualifiedType()) {
@@ -124,6 +123,3 @@ bool recordsEqual(const AggregateStorageLocation &Loc1, const Environment &Env1,
 
   return true;
 }
-
-} // namespace dataflow
-} // namespace clang
