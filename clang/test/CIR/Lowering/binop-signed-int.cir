@@ -1,0 +1,65 @@
+// RUN: cir-tool %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.func @foo() {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init] {alignment = 4 : i64}
+    %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["b", init] {alignment = 4 : i64}
+    %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
+    %3 = cir.const(#cir.int<2> : !s32i) : !s32i    cir.store %3, %0 : !s32i, cir.ptr <!s32i>
+    %4 = cir.const(#cir.int<1> : !s32i) : !s32i    cir.store %4, %1 : !s32i, cir.ptr <!s32i>
+    %5 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    %6 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %7 = cir.binop(mul, %5, %6) : !s32i
+    // CHECK: = llvm.mul
+    cir.store %7, %2 : !s32i, cir.ptr <!s32i>
+    %8 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %9 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %10 = cir.binop(div, %8, %9) : !s32i
+      // CHECK: = llvm.sdiv
+    cir.store %10, %2 : !s32i, cir.ptr <!s32i>
+    %11 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %12 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %13 = cir.binop(rem, %11, %12) : !s32i
+    // CHECK: = llvm.srem
+    cir.store %13, %2 : !s32i, cir.ptr <!s32i>
+    %14 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %15 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %16 = cir.binop(add, %14, %15) : !s32i
+    // CHECK: = llvm.add
+    cir.store %16, %2 : !s32i, cir.ptr <!s32i>
+    %17 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %18 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %19 = cir.binop(sub, %17, %18) : !s32i
+    // CHECK: = llvm.sub
+    cir.store %19, %2 : !s32i, cir.ptr <!s32i>
+    %20 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %21 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %22 = cir.binop(shr, %20, %21) : !s32i
+    // CHECK: = llvm.ashr
+    cir.store %22, %2 : !s32i, cir.ptr <!s32i>
+    %23 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %24 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %25 = cir.binop(shl, %23, %24) : !s32i
+    // CHECK: = llvm.shl
+    cir.store %25, %2 : !s32i, cir.ptr <!s32i>
+    %26 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %27 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %28 = cir.binop(and, %26, %27) : !s32i
+    // CHECK: = llvm.and
+    cir.store %28, %2 : !s32i, cir.ptr <!s32i>
+    %29 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %30 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %31 = cir.binop(xor, %29, %30) : !s32i
+    // CHECK: = llvm.xor
+    cir.store %31, %2 : !s32i, cir.ptr <!s32i>
+    %32 = cir.load %2 : cir.ptr <!s32i>, !s32i
+    %33 = cir.load %1 : cir.ptr <!s32i>, !s32i
+    %34 = cir.binop(or, %32, %33) : !s32i
+    // CHECK: = llvm.or
+    cir.store %34, %2 : !s32i, cir.ptr <!s32i>
+    cir.return
+  }
+}
+
