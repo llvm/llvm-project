@@ -1036,7 +1036,7 @@ public:
         if (ty.isUnsigned())
           rewriter.replaceOpWithNewOp<mlir::LLVM::UDivOp>(op, llvmTy, lhs, rhs);
         else
-          llvm_unreachable("signed integer division binop lowering NYI");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::SDivOp>(op, llvmTy, lhs, rhs);
       } else
         rewriter.replaceOpWithNewOp<mlir::LLVM::FDivOp>(op, llvmTy, lhs, rhs);
       break;
@@ -1045,7 +1045,7 @@ public:
         if (ty.isUnsigned())
           rewriter.replaceOpWithNewOp<mlir::LLVM::URemOp>(op, llvmTy, lhs, rhs);
         else
-          llvm_unreachable("signed integer remainder binop lowering NYI");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::SRemOp>(op, llvmTy, lhs, rhs);
       } else
         rewriter.replaceOpWithNewOp<mlir::LLVM::FRemOp>(op, llvmTy, lhs, rhs);
       break;
@@ -1066,7 +1066,7 @@ public:
         if (ty.isUnsigned())
           rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, lhs, rhs);
         else
-          llvm_unreachable("signed integer shift binop lowering NYI");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, lhs, rhs);
         break;
       }
     }
