@@ -1583,15 +1583,18 @@ transform::PadOp::applyToOne(transform::TransformRewriter &rewriter,
     transposePaddings.push_back(
         extractFromI64ArrayAttr(cast<ArrayAttr>(transposeVector)));
 
+  // Set up options and pad.
   LinalgOp paddedOp;
-  SmallVector<int64_t> paddingDimensions =
-      extractFromI64ArrayAttr(getPaddingDimensions());
-  SmallVector<int64_t> padToMultipleOf(paddingDimensions.size(), 1);
+  LinalgPaddingOptions options;
+  options.paddingDimensions = extractFromI64ArrayAttr(getPaddingDimensions());
+  SmallVector<int64_t> padToMultipleOf(options.paddingDimensions.size(), 1);
   if (getPadToMultipleOf().has_value())
     padToMultipleOf = extractFromI64ArrayAttr(*getPadToMultipleOf());
+  options.padToMultipleOf = padToMultipleOf;
+  options.paddingValues = paddingValues;
+  options.packPaddings = packPaddings;
   FailureOr<SmallVector<Value>> result =
-      rewriteAsPaddedOp(rewriter, target, paddingDimensions, padToMultipleOf,
-                        paddingValues, packPaddings, paddedOp);
+      rewriteAsPaddedOp(rewriter, target, options, paddedOp);
   if (succeeded(result)) {
     // We need to perform our own replacement here because this API is still
     // used in patterns that "pad and hoist", for which the replacement values
