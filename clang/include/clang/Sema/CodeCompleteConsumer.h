@@ -333,7 +333,10 @@ public:
 
     /// An unknown context, in which we are recovering from a parsing
     /// error and don't know which completions we should give.
-    CCC_Recovery
+    CCC_Recovery,
+
+    /// Code completion in a @class forward declaration.
+    CCC_ObjCClassForwardDecl
   };
 
   using VisitedContextSet = llvm::SmallPtrSet<DeclContext *, 8>;
