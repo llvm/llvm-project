@@ -47,19 +47,6 @@ add_object_library(
 )
 
 add_object_library(
-  string_writer
-  SRCS
-    string_writer.cpp
-  HDRS
-    string_writer.h
-  DEPENDS
-    .core_structs
-    libc.src.__support.CPP.string_view
-    libc.src.string.memory_utils.inline_memcpy
-    libc.src.string.memory_utils.inline_memset
-)
-
-add_object_library(
   writer
   SRCS
     writer.cpp
@@ -67,6 +54,10 @@ add_object_library(
     writer.h
   DEPENDS
     libc.src.__support.CPP.string_view
+    libc.src.__support.macros.optimization
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+    .core_structs
 )
 
 add_object_library(
@@ -126,18 +117,6 @@ if(NOT (TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_header_library(
-  file_writer
-  HDRS
-    file_writer.h
-  DEPENDS
-    .core_structs
-    libc.include.stdio
-    libc.src.__support.CPP.string_view
-    libc.src.__support.File.file
-    libc.src.string.memory_utils.inline_memset
-)
-
-add_header_library(
   vfprintf_internal
   HDRS
     vfprintf_internal.h
@@ -146,6 +125,5 @@ add_header_library(
     libc.src.__support.File.file
     libc.src.__support.arg_list
     libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.file_writer
     libc.src.stdio.printf_core.writer
 )
