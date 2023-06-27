@@ -45,7 +45,7 @@ def GPRF64AsFPR : AsmOperandClass {
   let RenderMethod = "addRegOperands";
 }
 
-def FPR64INX : RegisterOperand<GPRF64> {
+def FPR64INX : RegisterOperand<GPR> {
   let ParserMatchClass = GPRF64AsFPR;
   let DecoderMethod = "DecodeGPRRegisterClass";
 }
@@ -394,76 +394,76 @@ foreach Ext = DExts in {
 
 // Match non-signaling FEQ_D
 foreach Ext = DExts in {
-  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_D,            Ext>;
-  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_D,            Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_D, Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_D, Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_D, Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_D, Ext>;
+  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_D,            Ext, f64>;
+  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_D,            Ext, f64>;
+  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_D, Ext, f64>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_D, Ext, f64>;
+  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_D, Ext, f64>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_D, Ext, f64>;
 }
 
 let Predicates = [HasStdExtD] in {
 // Match signaling FEQ_D
-def : Pat<(strict_fsetccs FPR64:$rs1, FPR64:$rs2, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR64:$rs1, FPR64:$rs2, SETEQ)),
           (AND (FLE_D $rs1, $rs2),
                (FLE_D $rs2, $rs1))>;
-def : Pat<(strict_fsetccs FPR64:$rs1, FPR64:$rs2, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR64:$rs1, FPR64:$rs2, SETOEQ)),
           (AND (FLE_D $rs1, $rs2),
                (FLE_D $rs2, $rs1))>;
 // If both operands are the same, use a single FLE.
-def : Pat<(strict_fsetccs FPR64:$rs1, FPR64:$rs1, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR64:$rs1, FPR64:$rs1, SETEQ)),
           (FLE_D $rs1, $rs1)>;
-def : Pat<(strict_fsetccs FPR64:$rs1, FPR64:$rs1, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR64:$rs1, FPR64:$rs1, SETOEQ)),
           (FLE_D $rs1, $rs1)>;
 
-def : PatSetCC<FPR64, any_fsetccs, SETLT, FLT_D>;
-def : PatSetCC<FPR64, any_fsetccs, SETOLT, FLT_D>;
-def : PatSetCC<FPR64, any_fsetccs, SETLE, FLE_D>;
-def : PatSetCC<FPR64, any_fsetccs, SETOLE, FLE_D>;
+def : PatSetCC<FPR64, any_fsetccs, SETLT, FLT_D, f64>;
+def : PatSetCC<FPR64, any_fsetccs, SETOLT, FLT_D, f64>;
+def : PatSetCC<FPR64, any_fsetccs, SETLE, FLE_D, f64>;
+def : PatSetCC<FPR64, any_fsetccs, SETOLE, FLE_D, f64>;
 } // Predicates = [HasStdExtD]
 
 let Predicates = [HasStdExtZdinx, IsRV64] in {
 // Match signaling FEQ_D
-def : Pat<(strict_fsetccs FPR64INX:$rs1, FPR64INX:$rs2, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs (f64 FPR64INX:$rs1), FPR64INX:$rs2, SETEQ)),
           (AND (FLE_D_INX $rs1, $rs2),
                (FLE_D_INX $rs2, $rs1))>;
-def : Pat<(strict_fsetccs FPR64INX:$rs1, FPR64INX:$rs2, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs (f64 FPR64INX:$rs1), FPR64INX:$rs2, SETOEQ)),
           (AND (FLE_D_INX $rs1, $rs2),
                (FLE_D_INX $rs2, $rs1))>;
 // If both operands are the same, use a single FLE.
-def : Pat<(strict_fsetccs FPR64INX:$rs1, FPR64INX:$rs1, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs (f64 FPR64INX:$rs1), FPR64INX:$rs1, SETEQ)),
           (FLE_D_INX $rs1, $rs1)>;
-def : Pat<(strict_fsetccs FPR64INX:$rs1, FPR64INX:$rs1, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs (f64 FPR64INX:$rs1), FPR64INX:$rs1, SETOEQ)),
           (FLE_D_INX $rs1, $rs1)>;
 
-def : PatSetCC<FPR64INX, any_fsetccs, SETLT,  FLT_D_INX>;
-def : PatSetCC<FPR64INX, any_fsetccs, SETOLT, FLT_D_INX>;
-def : PatSetCC<FPR64INX, any_fsetccs, SETLE,  FLE_D_INX>;
-def : PatSetCC<FPR64INX, any_fsetccs, SETOLE, FLE_D_INX>;
+def : PatSetCC<FPR64INX, any_fsetccs, SETLT,  FLT_D_INX, f64>;
+def : PatSetCC<FPR64INX, any_fsetccs, SETOLT, FLT_D_INX, f64>;
+def : PatSetCC<FPR64INX, any_fsetccs, SETLE,  FLE_D_INX, f64>;
+def : PatSetCC<FPR64INX, any_fsetccs, SETOLE, FLE_D_INX, f64>;
 } // Predicates = [HasStdExtZdinx, IsRV64]
 
 let Predicates = [HasStdExtZdinx, IsRV32] in {
 // Match signaling FEQ_D
-def : Pat<(strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs2, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs2, SETEQ)),
           (AND (FLE_D_IN32X $rs1, $rs2),
                (FLE_D_IN32X $rs2, $rs1))>;
-def : Pat<(strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs2, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs2, SETOEQ)),
           (AND (FLE_D_IN32X $rs1, $rs2),
                (FLE_D_IN32X $rs2, $rs1))>;
 // If both operands are the same, use a single FLE.
-def : Pat<(strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs1, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs1, SETEQ)),
           (FLE_D_IN32X $rs1, $rs1)>;
-def : Pat<(strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs1, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR64IN32X:$rs1, FPR64IN32X:$rs1, SETOEQ)),
           (FLE_D_IN32X $rs1, $rs1)>;
 
-def : PatSetCC<FPR64IN32X, any_fsetccs, SETLT,  FLT_D_IN32X>;
-def : PatSetCC<FPR64IN32X, any_fsetccs, SETOLT, FLT_D_IN32X>;
-def : PatSetCC<FPR64IN32X, any_fsetccs, SETLE,  FLE_D_IN32X>;
-def : PatSetCC<FPR64IN32X, any_fsetccs, SETOLE, FLE_D_IN32X>;
+def : PatSetCC<FPR64IN32X, any_fsetccs, SETLT,  FLT_D_IN32X, f64>;
+def : PatSetCC<FPR64IN32X, any_fsetccs, SETOLT, FLT_D_IN32X, f64>;
+def : PatSetCC<FPR64IN32X, any_fsetccs, SETLE,  FLE_D_IN32X, f64>;
+def : PatSetCC<FPR64IN32X, any_fsetccs, SETOLE, FLE_D_IN32X, f64>;
 } // Predicates = [HasStdExtZdinx, IsRV32]
 
 let Predicates = [HasStdExtD] in {
-defm Select_FPR64 : SelectCC_GPR_rrirr<FPR64>;
+defm Select_FPR64 : SelectCC_GPR_rrirr<FPR64, f64>;
 
 def PseudoFROUND_D : PseudoFROUND<FPR64>;
 
@@ -492,34 +492,32 @@ def SplitF64Pseudo
 } // Predicates = [HasStdExtD]
 
 let Predicates = [HasStdExtZdinx, IsRV64] in {
-defm Select_FPR64INX : SelectCC_GPR_rrirr<FPR64INX>;
+defm Select_FPR64INX : SelectCC_GPR_rrirr<FPR64INX, f64>;
 
 def PseudoFROUND_D_INX : PseudoFROUND<FPR64INX>;
 
 /// Loads
-def : Pat<(f64 (load (AddrRegImm GPR:$rs1, simm12:$imm12))),
-          (COPY_TO_REGCLASS (LD GPR:$rs1, simm12:$imm12), GPRF64)>;
+def : LdPat<load, LD, f64>;
 
 /// Stores
-def : Pat<(store (f64 FPR64INX:$rs2), (AddrRegImm GPR:$rs1, simm12:$imm12)),
-          (SD (COPY_TO_REGCLASS FPR64INX:$rs2, GPR), GPR:$rs1, simm12:$imm12)>;
+def : StPat<store, SD, GPR, f64>;
 } // Predicates = [HasStdExtZdinx, IsRV64]
 
 let Predicates = [HasStdExtZdinx, IsRV32] in {
-defm Select_FPR64IN32X : SelectCC_GPR_rrirr<FPR64IN32X>;
+defm Select_FPR64IN32X : SelectCC_GPR_rrirr<FPR64IN32X, f64>;
 
 def PseudoFROUND_D_IN32X : PseudoFROUND<FPR64IN32X>;
 
 /// Loads
 let isCall = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 1 in
 def PseudoRV32ZdinxLD : Pseudo<(outs GPRPF64:$dst), (ins GPR:$rs1, simm12:$imm12), []>;
-def : Pat<(f64 (load (AddrRegImmINX GPR:$rs1, simm12:$imm12))),
+def : Pat<(f64 (load (AddrRegImmINX (XLenVT GPR:$rs1), simm12:$imm12))),
           (PseudoRV32ZdinxLD GPR:$rs1, simm12:$imm12)>;
 
 /// Stores
 let isCall = 0, mayLoad = 0, mayStore = 1, Size = 8, isCodeGenOnly = 1 in
 def PseudoRV32ZdinxSD : Pseudo<(outs), (ins GPRPF64:$rs2, GPRNoX0:$rs1, simm12:$imm12), []>;
-def : Pat<(store (f64 GPRPF64:$rs2), (AddrRegImmINX GPR:$rs1, simm12:$imm12)),
+def : Pat<(store (f64 GPRPF64:$rs2), (AddrRegImmINX (XLenVT GPR:$rs1), simm12:$imm12)),
           (PseudoRV32ZdinxSD GPRPF64:$rs2, GPR:$rs1, simm12:$imm12)>;
 
 /// Pseudo-instructions needed for the soft-float ABI with RV32D
@@ -619,8 +617,8 @@ def : Pat<(any_uint_to_fp (i64 GPR:$rs1)), (FCVT_D_LU GPR:$rs1, FRM_DYN)>;
 let Predicates = [HasStdExtZdinx, IsRV64] in {
 
 // Moves (no conversion)
-def : Pat<(f64 (bitconvert (i64 GPR:$rs1))), (COPY_TO_REGCLASS GPR:$rs1, GPRF64)>;
-def : Pat<(i64 (bitconvert FPR64INX:$rs1)), (COPY_TO_REGCLASS FPR64INX:$rs1, GPR)>;
+def : Pat<(f64 (bitconvert (i64 GPR:$rs1))), (COPY_TO_REGCLASS GPR:$rs1, GPR)>;
+def : Pat<(i64 (bitconvert (f64 GPR:$rs1))), (COPY_TO_REGCLASS GPR:$rs1, GPR)>;
 
 // Use target specific isd nodes to help us remember the result is sign
 // extended. Matching sext_inreg+fptoui/fptosi may cause the conversion to be

@@ -1752,7 +1752,6 @@ public:
 
   void cvtMubuf(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, false); }
   void cvtMubufAtomic(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, true); }
-  void cvtMtbuf(MCInst &Inst, const OperandVector &Operands);
 
   OperandMatchResultTy parseOModSI(OperandVector &Operands);
 
@@ -7776,42 +7775,6 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
   }
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol, 0);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySWZ);
-}
-
-void AMDGPUAsmParser::cvtMtbuf(MCInst &Inst, const OperandVector &Operands) {
-  OptionalImmIndexMap OptionalIdx;
-
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
-
-    // Add the register arguments
-    if (Op.isReg()) {
-      Op.addRegOperands(Inst, 1);
-      continue;
-    }
-
-    // Handle the case where soffset is an immediate
-    if (Op.isImm() && Op.getImmTy() == AMDGPUOperand::ImmTyNone) {
-      Op.addImmOperands(Inst, 1);
-      continue;
-    }
-
-    // Handle tokens like 'offen' which are sometimes hard-coded into the
-    // asm string.  There are no MCInst operands for these.
-    if (Op.isToken()) {
-      continue;
-    }
-    assert(Op.isImm());
-
-    // Handle optional arguments
-    OptionalIdx[Op.getImmTy()] = i;
-  }
-
-  addOptionalImmOperand(Inst, Operands, OptionalIdx,
-                        AMDGPUOperand::ImmTyOffset);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyFORMAT);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol, 0);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySWZ);
 }

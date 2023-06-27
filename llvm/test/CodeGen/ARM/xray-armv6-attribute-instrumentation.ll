@@ -34,10 +34,10 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-LINUX-NEXT:    .long 2
 
 ; CHECK-IOS-LABEL: .section __DATA,xray_instr_map,regular,live_support{{$}}
-; CHECK-IOS-LABEL: Lxray_sleds_start0:
+; CHECK-IOS-LABEL: lxray_sleds_start0:
 ; CHECK-IOS:         .long Lxray_sled_0
 ; CHECK-IOS:         .long Lxray_sled_1
 ; CHECK-IOS-LABEL: Lxray_sleds_end0:
 ; CHECK-IOS-LABEL: .section __DATA,xray_fn_idx,regular,live_support{{$}}
-; CHECK-IOS:         .long Lxray_sleds_start0-lxray_fn_idx0
+; CHECK-IOS:         .long lxray_sleds_start0-lxray_fn_idx0
 ; CHECK-IOS-NEXT:    .long 2

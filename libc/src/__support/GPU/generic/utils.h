@@ -67,6 +67,10 @@ LIBC_INLINE void sync_threads() {}
 
 LIBC_INLINE void sync_lane(uint64_t) {}
 
+LIBC_INLINE uint64_t processor_clock() { return 0; }
+
+LIBC_INLINE uint64_t fixed_frequrency_clock() { return 0; }
+
 } // namespace gpu
 } // namespace __llvm_libc
 

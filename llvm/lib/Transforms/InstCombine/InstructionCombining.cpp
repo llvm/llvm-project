@@ -2397,8 +2397,11 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
-          Value *Result =
-              lowerObjectSizeCall(II, DL, &TLI, AA, /*MustSucceed=*/true);
+          SmallVector<Instruction *> InsertedInstructions;
+          Value *Result = lowerObjectSizeCall(
+              II, DL, &TLI, AA, /*MustSucceed=*/true, &InsertedInstructions);
+          for (Instruction *Inserted : InsertedInstructions)
+            Worklist.add(Inserted);
           replaceInstUsesWith(*I, Result);
           eraseInstFromFunction(*I);
           Users[i] = nullptr; // Skip examining in the next loop.
@@ -2611,20 +2614,21 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
-Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
+bool InstCombinerImpl::removeInstructionsBeforeUnreachable(Instruction &I) {
   // Try to remove the previous instruction if it must lead to unreachable.
   // This includes instructions like stores and "llvm.assume" that may not get
   // removed by simple dead code elimination.
+  bool Changed = false;
   while (Instruction *Prev = I.getPrevNonDebugInstruction()) {
     // While we theoretically can erase EH, that would result in a block that
     // used to start with an EH no longer starting with EH, which is invalid.
     // To make it valid, we'd need to fixup predecessors to no longer refer to
     // this block, but that changes CFG, which is not allowed in InstCombine.
     if (Prev->isEHPad())
-      return nullptr; // Can not drop any more instructions. We're done here.
+      break; // Can not drop any more instructions. We're done here.
 
     if (!isGuaranteedToTransferExecutionToSuccessor(Prev))
-      return nullptr; // Can not drop any more instructions. We're done here.
+      break; // Can not drop any more instructions. We're done here.
     // Otherwise, this instruction can be freely erased,
     // even if it is not side-effect free.
 
@@ -2632,9 +2636,13 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
     // another unreachable block), so convert those to poison.
     replaceInstUsesWith(*Prev, PoisonValue::get(Prev->getType()));
     eraseInstFromFunction(*Prev);
+    Changed = true;
   }
-  assert(I.getParent()->sizeWithoutDebug() == 1 && "The block is now empty.");
-  // FIXME: recurse into unconditional predecessors?
+  return Changed;
+}
+
+Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
+  removeInstructionsBeforeUnreachable(I);
   return nullptr;
 }
 

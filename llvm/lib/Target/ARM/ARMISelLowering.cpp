@@ -3956,9 +3956,12 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
   }
 
   // If we have T2 ops, we can materialize the address directly via movt/movw
-  // pair. This is always cheaper.
-  if (Subtarget->useMovt()) {
-    ++NumMovwMovt;
+  // pair. This is always cheaper. If need to generate Execute Only code, and we
+  // only have Thumb1 available, we can't use a constant pool and are forced to
+  // use immediate relocations.
+  if (Subtarget->useMovt() || Subtarget->genExecuteOnly()) {
+    if (Subtarget->useMovt())
+      ++NumMovwMovt;
     // FIXME: Once remat is capable of dealing with instructions with register
     // operands, expand this into two nodes.
     return DAG.getNode(ARMISD::Wrapper, dl, PtrVT,

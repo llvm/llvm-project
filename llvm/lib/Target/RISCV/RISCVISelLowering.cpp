@@ -126,7 +126,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f32, &RISCV::GPRF32RegClass);
   if (Subtarget.hasStdExtZdinx()) {
     if (Subtarget.is64Bit())
-      addRegisterClass(MVT::f64, &RISCV::GPRF64RegClass);
+      addRegisterClass(MVT::f64, &RISCV::GPRRegClass);
     else
       addRegisterClass(MVT::f64, &RISCV::GPRPF64RegClass);
   }
@@ -427,6 +427,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f32,
+                       Subtarget.isSoftFPABI() ? LibCall : Custom);
 
     if (Subtarget.hasStdExtZfa())
       setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
@@ -461,6 +464,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
     setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
+    setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
+    setOperationAction(ISD::FP_TO_BF16, MVT::f64,
+                       Subtarget.isSoftFPABI() ? LibCall : Custom);
   }
 
   if (Subtarget.is64Bit()) {
@@ -4923,6 +4929,35 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     return lowerFP_TO_INT_SAT(Op, DAG, Subtarget);
+  case ISD::FP_TO_BF16: {
+    // Custom lower to ensure the libcall return is passed in an FPR on hard
+    // float ABIs.
+    assert(!Subtarget.isSoftFPABI() && "Unexpected custom legalization");
+    SDLoc DL(Op);
+    MakeLibCallOptions CallOptions;
+    RTLIB::Libcall LC =
+        RTLIB::getFPROUND(Op.getOperand(0).getValueType(), MVT::bf16);
+    SDValue Res =
+        makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
+    if (Subtarget.is64Bit())
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res);
+    return DAG.getBitcast(MVT::i32, Res);
+  }
+  case ISD::BF16_TO_FP: {
+    assert(Subtarget.hasStdExtFOrZfinx() && "Unexpected custom legalization");
+    MVT VT = Op.getSimpleValueType();
+    SDLoc DL(Op);
+    Op = DAG.getNode(
+        ISD::SHL, DL, Op.getOperand(0).getValueType(), Op.getOperand(0),
+        DAG.getShiftAmountConstant(16, Op.getOperand(0).getValueType(), DL));
+    SDValue Res = Subtarget.is64Bit()
+                      ? DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32, Op)
+                      : DAG.getBitcast(MVT::f32, Op);
+    // fp_extend if the target VT is bigger than f32.
+    if (VT != MVT::f32)
+      return DAG.getNode(ISD::FP_EXTEND, DL, VT, Res);
+    return Res;
+  }
   case ISD::FTRUNC:
   case ISD::FCEIL:
   case ISD::FFLOOR:
@@ -13827,7 +13862,7 @@ static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
     I2FOpc = RISCV::FCVT_D_L_INX;
     FSGNJOpc = RISCV::FSGNJ_D_INX;
     FSGNJXOpc = RISCV::FSGNJX_D_INX;
-    RC = &RISCV::GPRF64RegClass;
+    RC = &RISCV::GPRRegClass;
     break;
   }
 
@@ -15360,17 +15395,24 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (Glue.getNode())
     Ops.push_back(Glue);
 
+  assert((!CLI.CFIType || CLI.CB->isIndirectCall()) &&
+         "Unexpected CFI type for a direct call");
+
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(RISCVISD::TAIL, DL, NodeTys, Ops);
+    if (CLI.CFIType)
+      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
     return Ret;
   }
 
   Chain = DAG.getNode(RISCVISD::CALL, DL, NodeTys, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   Glue = Chain.getValue(1);
 
@@ -16016,7 +16058,6 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   // Subtarget into account.
   if (Res.second == &RISCV::GPRF16RegClass ||
       Res.second == &RISCV::GPRF32RegClass ||
-      Res.second == &RISCV::GPRF64RegClass ||
       Res.second == &RISCV::GPRPF64RegClass)
     return std::make_pair(Res.first, &RISCV::GPRRegClass);
 
@@ -16108,6 +16149,9 @@ Instruction *RISCVTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 
   if (isa<LoadInst>(Inst) && isAcquireOrStronger(Ord))
     return Builder.CreateFence(AtomicOrdering::Acquire);
+  if (Subtarget.enableSeqCstTrailingFence() && isa<StoreInst>(Inst) &&
+      Ord == AtomicOrdering::SequentiallyConsistent)
+    return Builder.CreateFence(AtomicOrdering::SequentiallyConsistent);
   return nullptr;
 }
 
@@ -16544,9 +16588,10 @@ bool RISCVTargetLowering::splitValueIntoRegisterParts(
     unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
   bool IsABIRegCopy = CC.has_value();
   EVT ValueVT = Val.getValueType();
-  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
-    // Cast the f16 to i16, extend to i32, pad with ones to make a float nan,
-    // and cast to f32.
+  if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
+      PartVT == MVT::f32) {
+    // Cast the [b]f16 to i16, extend to i32, pad with ones to make a float
+    // nan, and cast to f32.
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Val);
     Val = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Val);
     Val = DAG.getNode(ISD::OR, DL, MVT::i32, Val,
@@ -16597,13 +16642,14 @@ SDValue RISCVTargetLowering::joinRegisterPartsIntoValue(
     SelectionDAG &DAG, const SDLoc &DL, const SDValue *Parts, unsigned NumParts,
     MVT PartVT, EVT ValueVT, std::optional<CallingConv::ID> CC) const {
   bool IsABIRegCopy = CC.has_value();
-  if (IsABIRegCopy && ValueVT == MVT::f16 && PartVT == MVT::f32) {
+  if (IsABIRegCopy && (ValueVT == MVT::f16 || ValueVT == MVT::bf16) &&
+      PartVT == MVT::f32) {
     SDValue Val = Parts[0];
 
-    // Cast the f32 to i32, truncate to i16, and cast back to f16.
+    // Cast the f32 to i32, truncate to i16, and cast back to [b]f16.
     Val = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Val);
     Val = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Val);
-    Val = DAG.getNode(ISD::BITCAST, DL, MVT::f16, Val);
+    Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
     return Val;
   }
 
@@ -16823,6 +16869,24 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   Builder.CreateCall(VssegNFunc, Ops);
 
   return true;
+}
+
+MachineInstr *
+RISCVTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::instr_iterator &MBBI,
+                                   const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+  assert(is_contained({RISCV::PseudoCALLIndirect, RISCV::PseudoTAILIndirect},
+                      MBBI->getOpcode()));
+
+  MachineOperand &Target = MBBI->getOperand(0);
+  Target.setIsRenamable(false);
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(RISCV::KCFI_CHECK))
+      .addReg(Target.getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
 }
 
 #define GET_REGISTER_MATCHER

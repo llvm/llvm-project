@@ -125,8 +125,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       setOperationAction(Op, T, Expand);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
-    for (auto Op :
-         {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT, ISD::FRINT})
+    for (auto Op : {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT,
+                    ISD::FRINT, ISD::FROUNDEVEN})
       setOperationAction(Op, T, Legal);
     // Support minimum and maximum, which otherwise default to expand.
     setOperationAction(ISD::FMINIMUM, T, Legal);
@@ -247,7 +247,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // Expand float operations supported for scalars but not SIMD
     for (auto Op : {ISD::FCOPYSIGN, ISD::FLOG, ISD::FLOG2, ISD::FLOG10,
-                    ISD::FEXP, ISD::FEXP2, ISD::FRINT})
+                    ISD::FEXP, ISD::FEXP2})
       for (auto T : {MVT::v4f32, MVT::v2f64})
         setOperationAction(Op, T, Expand);
 

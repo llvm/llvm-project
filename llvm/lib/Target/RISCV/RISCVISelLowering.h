@@ -759,6 +759,12 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
+  bool supportKCFIBundles() const override { return true; }
+
+  MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
+                              MachineBasicBlock::instr_iterator &MBBI,
+                              const TargetInstrInfo *TII) const override;
+
   /// RISCVCCAssignFn - This target-specific function extends the default
   /// CCValAssign with additional information used to lower RISC-V calling
   /// conventions.

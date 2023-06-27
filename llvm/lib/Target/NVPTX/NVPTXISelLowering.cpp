@@ -2465,6 +2465,10 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
                                       VT, *Store->getMemOperand()))
     return expandUnalignedStore(Store, DAG);
 
+  // v2f16 and v2bf16 don't need special handling.
+  if (VT == MVT::v2f16 || VT == MVT::v2bf16)
+    return SDValue();
+
   if (VT.isVector())
     return LowerSTOREVector(Op, DAG);
 
@@ -5146,7 +5150,8 @@ static void ReplaceLoadVector(SDNode *N, SelectionDAG &DAG,
 
   Align Alignment = LD->getAlign();
   auto &TD = DAG.getDataLayout();
-  Align PrefAlign = TD.getPrefTypeAlign(ResVT.getTypeForEVT(*DAG.getContext()));
+  Align PrefAlign =
+      TD.getPrefTypeAlign(LD->getMemoryVT().getTypeForEVT(*DAG.getContext()));
   if (Alignment < PrefAlign) {
     // This load is not sufficiently aligned, so bail out and let this vector
     // load be scalarized.  Note that we may still be able to emit smaller

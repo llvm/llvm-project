@@ -110,7 +110,6 @@ class MTBUF_Pseudo <string opName, dag outs, dag ins,
 
   Instruction BaseOpcode = !cast<Instruction>(MTBUFGetBaseOpcode<NAME>.ret);
   let MTBUF = 1;
-  let AsmMatchConverter = "cvtMtbuf";
 }
 
 class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :

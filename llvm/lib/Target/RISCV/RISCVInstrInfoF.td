@@ -436,13 +436,13 @@ def fpimm0    : PatLeaf<(fpimm), [{ return N->isExactlyValue(+0.0); }]>;
 
 /// Generic pattern classes
 class PatSetCC<DAGOperand Ty, SDPatternOperator OpNode, CondCode Cond,
-               RVInst Inst>
-    : Pat<(OpNode Ty:$rs1, Ty:$rs2, Cond), (Inst $rs1, $rs2)>;
+               RVInst Inst, ValueType vt>
+    : Pat<(XLenVT (OpNode (vt Ty:$rs1), Ty:$rs2, Cond)), (Inst $rs1, $rs2)>;
 multiclass PatSetCC_m<SDPatternOperator OpNode, CondCode Cond,
-                      RVInst Inst, ExtInfo Ext> {
+                      RVInst Inst, ExtInfo Ext, ValueType vt> {
   let Predicates = Ext.Predicates in
   def Ext.Suffix : PatSetCC<Ext.PrimaryTy, OpNode, Cond,
-                            !cast<RVInst>(Inst#Ext.Suffix)>;
+                            !cast<RVInst>(Inst#Ext.Suffix), vt>;
 }
 
 class PatFprFpr<SDPatternOperator OpNode, RVInstR Inst,
@@ -562,53 +562,53 @@ foreach Ext = FExts in {
 
 // Match non-signaling FEQ_S
 foreach Ext = FExts in {
-  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_S,            Ext>;
-  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_S,            Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_S, Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_S, Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_S, Ext>;
-  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_S, Ext>;
+  defm : PatSetCC_m<any_fsetcc,    SETEQ,  FEQ_S,            Ext, f32>;
+  defm : PatSetCC_m<any_fsetcc,    SETOEQ, FEQ_S,            Ext, f32>;
+  defm : PatSetCC_m<strict_fsetcc, SETLT,  PseudoQuietFLT_S, Ext, f32>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLT, PseudoQuietFLT_S, Ext, f32>;
+  defm : PatSetCC_m<strict_fsetcc, SETLE,  PseudoQuietFLE_S, Ext, f32>;
+  defm : PatSetCC_m<strict_fsetcc, SETOLE, PseudoQuietFLE_S, Ext, f32>;
 }
 
 let Predicates = [HasStdExtF] in {
 // Match signaling FEQ_S
-def : Pat<(strict_fsetccs FPR32:$rs1, FPR32:$rs2, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR32:$rs1, FPR32:$rs2, SETEQ)),
           (AND (FLE_S $rs1, $rs2),
                (FLE_S $rs2, $rs1))>;
-def : Pat<(strict_fsetccs FPR32:$rs1, FPR32:$rs2, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR32:$rs1, FPR32:$rs2, SETOEQ)),
           (AND (FLE_S $rs1, $rs2),
                (FLE_S $rs2, $rs1))>;
 // If both operands are the same, use a single FLE.
-def : Pat<(strict_fsetccs FPR32:$rs1, FPR32:$rs1, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR32:$rs1, FPR32:$rs1, SETEQ)),
           (FLE_S $rs1, $rs1)>;
-def : Pat<(strict_fsetccs FPR32:$rs1, FPR32:$rs1, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR32:$rs1, FPR32:$rs1, SETOEQ)),
           (FLE_S $rs1, $rs1)>;
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtZfinx] in {
 // Match signaling FEQ_S
-def : Pat<(strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs2, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs2, SETEQ)),
           (AND (FLE_S_INX $rs1, $rs2),
                (FLE_S_INX $rs2, $rs1))>;
-def : Pat<(strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs2, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs2, SETOEQ)),
           (AND (FLE_S_INX $rs1, $rs2),
                (FLE_S_INX $rs2, $rs1))>;
 // If both operands are the same, use a single FLE.
-def : Pat<(strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs1, SETEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs1, SETEQ)),
           (FLE_S_INX $rs1, $rs1)>;
-def : Pat<(strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs1, SETOEQ),
+def : Pat<(XLenVT (strict_fsetccs FPR32INX:$rs1, FPR32INX:$rs1, SETOEQ)),
           (FLE_S_INX $rs1, $rs1)>;
 } // Predicates = [HasStdExtZfinx]
 
 foreach Ext = FExts in {
-  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_S, Ext>;
-  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_S, Ext>;
-  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_S, Ext>;
-  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_S, Ext>;
+  defm : PatSetCC_m<any_fsetccs, SETLT,  FLT_S, Ext, f32>;
+  defm : PatSetCC_m<any_fsetccs, SETOLT, FLT_S, Ext, f32>;
+  defm : PatSetCC_m<any_fsetccs, SETLE,  FLE_S, Ext, f32>;
+  defm : PatSetCC_m<any_fsetccs, SETOLE, FLE_S, Ext, f32>;
 }
 
 let Predicates = [HasStdExtF] in {
-defm Select_FPR32 : SelectCC_GPR_rrirr<FPR32>;
+defm Select_FPR32 : SelectCC_GPR_rrirr<FPR32, f32>;
 
 def PseudoFROUND_S : PseudoFROUND<FPR32>;
 
@@ -623,16 +623,16 @@ def : StPat<store, FSW, FPR32, f32>;
 } // Predicates = [HasStdExtF]
 
 let Predicates = [HasStdExtZfinx] in {
-defm Select_FPR32INX : SelectCC_GPR_rrirr<FPR32INX>;
+defm Select_FPR32INX : SelectCC_GPR_rrirr<FPR32INX, f32>;
 
 def PseudoFROUND_S_INX : PseudoFROUND<FPR32INX>;
 
 /// Loads
-def : Pat<(f32 (load (AddrRegImm GPR:$rs1, simm12:$imm12))),
+def : Pat<(f32 (load (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12))),
           (COPY_TO_REGCLASS (LW GPR:$rs1, simm12:$imm12), GPRF32)>;
 
 /// Stores
-def : Pat<(store (f32 FPR32INX:$rs2), (AddrRegImm GPR:$rs1, simm12:$imm12)),
+def : Pat<(store (f32 FPR32INX:$rs2), (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12)),
           (SW (COPY_TO_REGCLASS FPR32INX:$rs2, GPR), GPR:$rs1, simm12:$imm12)>;
 } // Predicates = [HasStdExtZfinx]
 

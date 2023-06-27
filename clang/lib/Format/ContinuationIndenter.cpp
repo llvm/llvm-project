@@ -357,7 +357,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   if (Current.MustBreakBefore ||
       (Current.is(TT_InlineASMColon) &&
        (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_Always ||
-        Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline))) {
+        (Style.BreakBeforeInlineASMColon == FormatStyle::BBIAS_OnlyMultiline &&
+         Style.ColumnLimit > 0)))) {
     return true;
   }
   if (CurrentState.BreakBeforeClosingBrace &&

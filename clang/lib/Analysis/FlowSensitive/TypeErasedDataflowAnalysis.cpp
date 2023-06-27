@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include "clang/AST/ASTDumper.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtVisitor.h"
@@ -179,6 +180,47 @@ struct AnalysisContext {
   llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates;
 };
 
+class PrettyStackTraceAnalysis : public llvm::PrettyStackTraceEntry {
+public:
+  PrettyStackTraceAnalysis(const ControlFlowContext &CFCtx, const char *Message)
+      : CFCtx(CFCtx), Message(Message) {}
+
+  void print(raw_ostream &OS) const override {
+    OS << Message << "\n";
+    OS << "Decl:\n";
+    CFCtx.getDecl()->dump(OS);
+    OS << "CFG:\n";
+    CFCtx.getCFG().print(OS, LangOptions(), false);
+  }
+
+private:
+  const ControlFlowContext &CFCtx;
+  const char *Message;
+};
+
+class PrettyStackTraceCFGElement : public llvm::PrettyStackTraceEntry {
+public:
+  PrettyStackTraceCFGElement(const CFGElement &Element, int BlockIdx,
+                             int ElementIdx, const char *Message)
+      : Element(Element), BlockIdx(BlockIdx), ElementIdx(ElementIdx),
+        Message(Message) {}
+
+  void print(raw_ostream &OS) const override {
+    OS << Message << ": Element [B" << BlockIdx << "." << ElementIdx << "]\n";
+    if (auto Stmt = Element.getAs<CFGStmt>()) {
+      OS << "Stmt:\n";
+      ASTDumper Dumper(OS, false);
+      Dumper.Visit(Stmt->getStmt());
+    }
+  }
+
+private:
+  const CFGElement &Element;
+  int BlockIdx;
+  int ElementIdx;
+  const char *Message;
+};
+
 } // namespace
 
 /// Computes the input state for a given basic block by joining the output
@@ -269,7 +311,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     // initialize the state of each basic block differently.
     MaybeState.emplace(Analysis.typeErasedInitialElement(), AC.InitEnv);
   }
-  return *MaybeState;
+  return std::move(*MaybeState);
 }
 
 /// Built-in transfer function for `CFGStmt`.
@@ -357,7 +399,11 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   AC.Log.enterBlock(Block);
   auto State = computeBlockInputState(Block, AC);
   AC.Log.recordState(State);
+  int ElementIdx = 1;
   for (const auto &Element : Block) {
+    PrettyStackTraceCFGElement CrashInfo(Element, Block.getBlockID(),
+                                         ElementIdx++, "transferCFGBlock");
+
     AC.Log.enterElement(Element);
     // Built-in analysis
     if (AC.Analysis.builtinOptions()) {
@@ -395,6 +441,8 @@ runTypeErasedDataflowAnalysis(
     std::function<void(const CFGElement &,
                        const TypeErasedDataflowAnalysisState &)>
         PostVisitCFG) {
+  PrettyStackTraceAnalysis CrashInfo(CFCtx, "runTypeErasedDataflowAnalysis");
+
   PostOrderCFGView POV(&CFCtx.getCFG());
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 

@@ -94,6 +94,7 @@ def OpenACC_UpdateHost            : I64EnumAttrCase<"acc_update_host", 17>;
 def OpenACC_UpdateSelf            : I64EnumAttrCase<"acc_update_self", 18>;
 def OpenACC_UpdateDevice          : I64EnumAttrCase<"acc_update_device", 19>;
 def OpenACC_UseDevice             : I64EnumAttrCase<"acc_use_device", 20>;
+def OpenACC_Reduction             : I64EnumAttrCase<"acc_reduction", 21>;
 
 def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
     "data clauses supported by OpenACC",
@@ -104,6 +105,7 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
      OpenACC_PrivateClause, OpenACC_FirstPrivateClause,
      OpenACC_IsDevicePtrClause, OpenACC_GetDevicePtrClause, OpenACC_UpdateHost,
      OpenACC_UpdateSelf, OpenACC_UpdateDevice, OpenACC_UseDevice,
+     OpenACC_Reduction,
     ]> {
   let cppNamespace = "::mlir::acc";
 }
@@ -237,6 +239,14 @@ def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
     "mlir::acc::DataClause::acc_firstprivate"> {
   let summary = "Represents firstprivate semantic for the acc firstprivate "
                 "clause.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.5.15 reduction clause
+//===----------------------------------------------------------------------===//
+def OpenACC_ReductionOp : OpenACC_DataEntryOp<"reduction",
+    "mlir::acc::DataClause::acc_reduction"> {
+  let summary = "Represents reduction semantics for acc reduction clause.";
 }
 
 //===----------------------------------------------------------------------===//

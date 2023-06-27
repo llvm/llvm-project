@@ -44,6 +44,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       memcpy(Array, Batch, sizeof(Batch[0]) * Count);
     }
     u16 getCount() const { return Count; }
+    CompactPtrT *getRawArray() { return Batch; }
     CompactPtrT get(u16 I) const {
       DCHECK_LE(I, Count);
       return Batch[I];

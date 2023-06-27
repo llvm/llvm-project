@@ -98,49 +98,11 @@ using OffsetAndArgPart = std::pair<int64_t, ArgPart>;
 
 static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
                             Value *Ptr, Type *ResElemTy, int64_t Offset) {
-  // For non-opaque pointers, try to create a "nice" GEP if possible, otherwise
-  // fall back to an i8 GEP to a specific offset.
-  unsigned AddrSpace = Ptr->getType()->getPointerAddressSpace();
-  APInt OrigOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
-  if (!Ptr->getType()->isOpaquePointerTy()) {
-    Type *OrigElemTy = Ptr->getType()->getNonOpaquePointerElementType();
-    if (OrigOffset == 0 && OrigElemTy == ResElemTy)
-      return Ptr;
-
-    if (OrigElemTy->isSized()) {
-      APInt TmpOffset = OrigOffset;
-      Type *TmpTy = OrigElemTy;
-      SmallVector<APInt> IntIndices =
-          DL.getGEPIndicesForOffset(TmpTy, TmpOffset);
-      if (TmpOffset == 0) {
-        // Try to add trailing zero indices to reach the right type.
-        while (TmpTy != ResElemTy) {
-          Type *NextTy = GetElementPtrInst::getTypeAtIndex(TmpTy, (uint64_t)0);
-          if (!NextTy)
-            break;
-
-          IntIndices.push_back(APInt::getZero(
-              isa<StructType>(TmpTy) ? 32 : OrigOffset.getBitWidth()));
-          TmpTy = NextTy;
-        }
-
-        SmallVector<Value *> Indices;
-        for (const APInt &Index : IntIndices)
-          Indices.push_back(IRB.getInt(Index));
-
-        if (OrigOffset != 0 || TmpTy == ResElemTy) {
-          Ptr = IRB.CreateGEP(OrigElemTy, Ptr, Indices);
-          return IRB.CreateBitCast(Ptr, ResElemTy->getPointerTo(AddrSpace));
-        }
-      }
-    }
+  if (Offset != 0) {
+    APInt APOffset(DL.getIndexTypeSizeInBits(Ptr->getType()), Offset);
+    Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(APOffset));
   }
-
-  if (OrigOffset != 0) {
-    Ptr = IRB.CreateBitCast(Ptr, IRB.getInt8PtrTy(AddrSpace));
-    Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(OrigOffset));
-  }
-  return IRB.CreateBitCast(Ptr, ResElemTy->getPointerTo(AddrSpace));
+  return Ptr;
 }
 
 /// DoPromotion - This method actually performs the promotion of the specified

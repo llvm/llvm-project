@@ -4193,3 +4193,10 @@ def ReadOnlyPlacement : InheritableAttr {
   let Subjects = SubjectList<[Record]>;
   let Documentation = [ReadOnlyPlacementDocs];
 }
+
+def AvailableOnlyInDefaultEvalMethod : InheritableAttr {
+  let Spellings = [Clang<"available_only_in_default_eval_method">];
+  let Subjects = SubjectList<[TypedefName], ErrorDiag>;
+  let Documentation = [Undocumented];
+}
+

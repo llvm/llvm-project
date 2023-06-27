@@ -500,6 +500,13 @@ bool M68kDAGToDAGISel::matchAddressRecursively(SDValue N,
       return true;
     }
     break;
+
+  case ISD::TargetGlobalTLSAddress: {
+    GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(N);
+    AM.GV = GA->getGlobal();
+    AM.SymbolFlags = GA->getTargetFlags();
+    return true;
+  }
   }
 
   return matchAddressBase(N, AM);
@@ -724,6 +731,8 @@ bool M68kDAGToDAGISel::SelectARID(SDNode *Parent, SDValue N, SDValue &Disp,
     return false;
   }
 
+  Base = AM.BaseReg;
+
   if (getSymbolicDisplacement(AM, SDLoc(N), Disp)) {
     assert(!AM.Disp && "Should not be any displacement");
     LLVM_DEBUG(dbgs() << "SUCCESS, matched Symbol\n");
@@ -736,7 +745,6 @@ bool M68kDAGToDAGISel::SelectARID(SDNode *Parent, SDValue N, SDValue &Disp,
     return false;
   }
 
-  Base = AM.BaseReg;
   Disp = getI16Imm(AM.Disp, SDLoc(N));
 
   LLVM_DEBUG(dbgs() << "SUCCESS\n");

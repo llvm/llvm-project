@@ -577,7 +577,7 @@ define amdgpu_kernel void @v_clamp_neg_f16(ptr addrspace(1) %out, ptr addrspace(
   %gep0 = getelementptr half, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr half, ptr addrspace(1) %out, i32 %tid
   %a = load half, ptr addrspace(1) %gep0
-  %fneg.a = fsub half -0.0, %a
+  %fneg.a = fneg half %a
   %max = call half @llvm.maxnum.f16(half %fneg.a, half 0.0)
   %med = call half @llvm.minnum.f16(half %max, half 1.0)
 
@@ -647,7 +647,7 @@ define amdgpu_kernel void @v_clamp_negabs_f16(ptr addrspace(1) %out, ptr addrspa
   %out.gep = getelementptr half, ptr addrspace(1) %out, i32 %tid
   %a = load half, ptr addrspace(1) %gep0
   %fabs.a = call half @llvm.fabs.f16(half %a)
-  %fneg.fabs.a = fsub half -0.0, %fabs.a
+  %fneg.fabs.a = fneg half %fabs.a
 
   %max = call half @llvm.maxnum.f16(half %fneg.fabs.a, half 0.0)
   %med = call half @llvm.minnum.f16(half %max, half 1.0)
@@ -783,7 +783,7 @@ define amdgpu_kernel void @v_clamp_neg_f64(ptr addrspace(1) %out, ptr addrspace(
   %gep0 = getelementptr double, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
   %a = load double, ptr addrspace(1) %gep0
-  %fneg.a = fsub double -0.0, %a
+  %fneg.a = fneg double %a
   %max = call double @llvm.maxnum.f64(double %fneg.a, double 0.0)
   %med = call double @llvm.minnum.f64(double %max, double 1.0)
 
@@ -852,7 +852,7 @@ define amdgpu_kernel void @v_clamp_negabs_f64(ptr addrspace(1) %out, ptr addrspa
   %out.gep = getelementptr double, ptr addrspace(1) %out, i32 %tid
   %a = load double, ptr addrspace(1) %gep0
   %fabs.a = call double @llvm.fabs.f64(double %a)
-  %fneg.fabs.a = fsub double -0.0, %fabs.a
+  %fneg.fabs.a = fneg double %fabs.a
 
   %max = call double @llvm.maxnum.f64(double %fneg.fabs.a, double 0.0)
   %med = call double @llvm.minnum.f64(double %max, double 1.0)
@@ -2787,7 +2787,7 @@ define amdgpu_kernel void @v_clamp_neg_v2f16(ptr addrspace(1) %out, ptr addrspac
   %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
-  %fneg.a = fsub <2 x half> <half -0.0, half -0.0>, %a
+  %fneg.a = fneg <2 x half> %a
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %fneg.a, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
 
@@ -2868,7 +2868,7 @@ define amdgpu_kernel void @v_clamp_negabs_v2f16(ptr addrspace(1) %out, ptr addrs
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
   %fabs.a = call <2 x half> @llvm.fabs.v2f16(<2 x half> %a)
-  %fneg.fabs.a = fsub <2 x half> <half -0.0, half -0.0>, %fabs.a
+  %fneg.fabs.a = fneg <2 x half> %fabs.a
 
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %fneg.fabs.a, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
@@ -2947,7 +2947,7 @@ define amdgpu_kernel void @v_clamp_neglo_v2f16(ptr addrspace(1) %out, ptr addrsp
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
   %lo = extractelement <2 x half> %a, i32 0
-  %neg.lo = fsub half -0.0, %lo
+  %neg.lo = fneg half %lo
   %neg.lo.vec = insertelement <2 x half> %a, half %neg.lo, i32 0
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %neg.lo.vec, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)
@@ -3025,7 +3025,7 @@ define amdgpu_kernel void @v_clamp_neghi_v2f16(ptr addrspace(1) %out, ptr addrsp
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
   %hi = extractelement <2 x half> %a, i32 1
-  %neg.hi = fsub half -0.0, %hi
+  %neg.hi = fneg half %hi
   %neg.hi.vec = insertelement <2 x half> %a, half %neg.hi, i32 1
   %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %neg.hi.vec, <2 x half> zeroinitializer)
   %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half 1.0>)

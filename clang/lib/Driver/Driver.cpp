@@ -1437,6 +1437,36 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
         << TC.getTriple().str();
   }
 
+  // A common user mistake is specifying a target of aarch64-none-eabi or
+  // arm-none-elf whereas the correct names are aarch64-none-elf &
+  // arm-none-eabi. Detect these cases and issue a warning.
+  if (TC.getTriple().getOS() == llvm::Triple::UnknownOS &&
+      TC.getTriple().getVendor() == llvm::Triple::UnknownVendor) {
+    switch (TC.getTriple().getArch()) {
+    case llvm::Triple::arm:
+    case llvm::Triple::armeb:
+    case llvm::Triple::thumb:
+    case llvm::Triple::thumbeb:
+      if (TC.getTriple().getEnvironmentName() == "elf") {
+        Diag(diag::warn_target_unrecognized_env)
+            << TargetTriple
+            << (TC.getTriple().getArchName().str() + "-none-eabi");
+      }
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+    case llvm::Triple::aarch64_32:
+      if (TC.getTriple().getEnvironmentName().startswith("eabi")) {
+        Diag(diag::warn_target_unrecognized_env)
+            << TargetTriple
+            << (TC.getTriple().getArchName().str() + "-none-elf");
+      }
+      break;
+    default:
+      break;
+    }
+  }
+
   // The compilation takes ownership of Args.
   Compilation *C = new Compilation(*this, TC, UArgs.release(), TranslatedArgs,
                                    ContainsError);
