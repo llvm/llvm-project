@@ -1629,11 +1629,15 @@ int32_t __tgt_rtl_number_of_team_procs(int devid) {
   return DeviceRTL.getNumOfTeamProcs(devid);
 }
 
-int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
-  DP("Init requires flags to %" PRId64 "\n", RequiresFlags);
-  DeviceRTL.setRequiresFlag(RequiresFlags);
-  return RequiresFlags;
-}
+  bool __tgt_rtl_has_apu_device() { return false; }
+
+  bool __tgt_rtl_has_gfx90a_device() { return false; }
+
+  int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
+    DP("Init requires flags to %" PRId64 "\n", RequiresFlags);
+    DeviceRTL.setRequiresFlag(RequiresFlags);
+    return RequiresFlags;
+  }
 
 int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDevId, int DstDevId) {
   if (DeviceRTL.isValidDeviceId(SrcDevId) &&

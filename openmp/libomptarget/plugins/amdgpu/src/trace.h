@@ -46,6 +46,9 @@ cat(std::array<const char, N> const &x, std::array<const char, M> const &y,
 
 // Print pointers as 48 bit hex, integers as same width
 template <typename T> struct fmt;
+template <> struct fmt<bool> {
+  static constexpr auto value() { return toArray("%14" PRId8); }
+};
 template <> struct fmt<int32_t> {
   static constexpr auto value() { return toArray("%14" PRId32); }
 };
@@ -125,9 +128,9 @@ template <typename R, typename... Ts> struct log_t {
   std::tuple<Ts...> args;
   bool active;
   R result;
-  log_t(const char *func, Ts &&... args)
+  log_t(const char *func, Ts &&...args)
       : func(func), args(std::forward<Ts>(args)...) {
-    active = print_kernel_trace & RTL_TIMING;  // is bit 1 set ?
+    active = print_kernel_trace & RTL_TIMING; // is bit 1 set ?
 
     if (!active) {
       return;
@@ -143,8 +146,8 @@ template <typename R, typename... Ts> struct log_t {
                   std::index_sequence<Is...>) {
 
     return fprintf(print_kernel_trace & RTL_TO_STDOUT ? stdout : stderr,
-		  fmtStr<R, Ts...>::data(), func, t, result,
-                  std::get<Is>(tup)...);
+                   fmtStr<R, Ts...>::data(), func, t, result,
+                   std::get<Is>(tup)...);
   }
 
   ~log_t() {
@@ -161,7 +164,7 @@ template <typename R, typename... Ts> struct log_t {
 };
 
 template <typename R, typename... Ts>
-log_t<R, Ts...> log(const char *func, Ts &&... ts) {
+log_t<R, Ts...> log(const char *func, Ts &&...ts) {
   return log_t<R, Ts...>(func, std::forward<Ts>(ts)...);
 }
 
@@ -172,8 +175,10 @@ log_t<R, Ts...> log(const char *func, Ts &&... ts) {
 extern "C" {
 #endif
 
-static void *__tgt_rtl_data_alloc_impl(int device_id, int64_t size, void *ptr, int32_t kind);
-void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *ptr, int32_t Kind) {
+static void *__tgt_rtl_data_alloc_impl(int device_id, int64_t size, void *ptr,
+                                       int32_t kind);
+void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *ptr,
+                           int32_t Kind) {
   auto t = detail::log<void *>(__func__, device_id, size, ptr);
   void *r = __tgt_rtl_data_alloc_impl(device_id, size, ptr, Kind);
   t.res(r);
@@ -181,7 +186,8 @@ void *__tgt_rtl_data_alloc(int device_id, int64_t size, void *ptr, int32_t Kind)
 }
 #define __tgt_rtl_data_alloc(...) __tgt_rtl_data_alloc_impl(__VA_ARGS__)
 
-static int32_t __tgt_rtl_data_delete_impl(int device_id, void *tgt_ptr, int32_t Kind);
+static int32_t __tgt_rtl_data_delete_impl(int device_id, void *tgt_ptr,
+                                          int32_t Kind);
 int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr, int32_t Kind) {
   auto t = detail::log<int32_t>(__func__, device_id, tgt_ptr);
   int32_t r = __tgt_rtl_data_delete_impl(device_id, tgt_ptr, Kind);
@@ -294,6 +300,25 @@ int __tgt_rtl_number_of_devices() {
 #define __tgt_rtl_number_of_devices(...)                                       \
   __tgt_rtl_number_of_devices_impl(__VA_ARGS__)
 
+static bool __tgt_rtl_has_apu_device_impl();
+bool __tgt_rtl_has_apu_device() {
+  auto t = detail::log<bool>(__func__);
+  bool r = __tgt_rtl_has_apu_device_impl();
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_has_apu_device(...) __tgt_rtl_has_apu_device_impl(__VA_ARGS__)
+
+static bool __tgt_rtl_has_gfx90a_device_impl();
+bool __tgt_rtl_has_gfx90a_device() {
+  auto t = detail::log<bool>(__func__);
+  bool r = __tgt_rtl_has_gfx90a_device_impl();
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_has_gfx90a_device(...)                                       \
+  __tgt_rtl_has_gfx90a_device_impl(__VA_ARGS__)
+
 static int32_t __tgt_rtl_launch_kernel_sync_impl(int32_t device_id,
                                                  void *tgt_entry_ptr,
                                                  void **tgt_args,
@@ -347,9 +372,11 @@ int32_t __tgt_rtl_synchronize(int32_t device_id,
 }
 #define __tgt_rtl_synchronize(...) __tgt_rtl_synchronize_impl(__VA_ARGS__)
 
-static int32_t __tgt_rtl_set_coarse_grain_mem_region_impl(int32_t DeviceId, void *ptr,
+static int32_t __tgt_rtl_set_coarse_grain_mem_region_impl(int32_t DeviceId,
+                                                          void *ptr,
                                                           int64_t size);
-int32_t __tgt_rtl_set_coarse_grain_mem_region(int32_t DeviceId, void *ptr, int64_t size) {
+int32_t __tgt_rtl_set_coarse_grain_mem_region(int32_t DeviceId, void *ptr,
+                                              int64_t size) {
   auto t = detail::log<int32_t>(__func__, DeviceId, ptr, size);
   int32_t r = __tgt_rtl_set_coarse_grain_mem_region_impl(DeviceId, ptr, size);
   t.res(r);
@@ -358,9 +385,11 @@ int32_t __tgt_rtl_set_coarse_grain_mem_region(int32_t DeviceId, void *ptr, int64
 #define __tgt_rtl_set_coarse_grain_mem_region(...)                             \
   __tgt_rtl_set_coarse_grain_mem_region_impl(__VA_ARGS__)
 
-static int32_t __tgt_rtl_query_coarse_grain_mem_region_impl(int32_t DeviceId, const void *ptr,
+static int32_t __tgt_rtl_query_coarse_grain_mem_region_impl(int32_t DeviceId,
+                                                            const void *ptr,
                                                             int64_t size);
-int32_t __tgt_rtl_query_coarse_grain_mem_region(int32_t DeviceId, const void *ptr, int64_t size) {
+int32_t __tgt_rtl_query_coarse_grain_mem_region(int32_t DeviceId,
+                                                const void *ptr, int64_t size) {
   auto t = detail::log<int32_t>(__func__, DeviceId, ptr, size);
   int32_t r = __tgt_rtl_query_coarse_grain_mem_region_impl(DeviceId, ptr, size);
   t.res(r);

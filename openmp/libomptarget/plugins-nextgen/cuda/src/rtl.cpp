@@ -986,6 +986,10 @@ struct CUDAPluginTy final : public GenericPluginTy {
   /// Deinitialize the plugin.
   Error deinitImpl() override { return Plugin::success(); }
 
+  bool __tgt_rtl_has_apu_device() { return false; }
+
+  bool __tgt_rtl_has_gfx90a_device() { return false; }
+
   /// Get the ELF code for recognizing the compatible image binary.
   uint16_t getMagicElfBits() const override { return ELF::EM_CUDA; }
 

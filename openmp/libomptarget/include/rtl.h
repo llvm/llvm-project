@@ -38,6 +38,8 @@ struct RTLInfoTy {
   typedef int32_t(is_valid_binary_info_ty)(void *, void *);
   typedef int32_t(is_data_exchangable_ty)(int32_t, int32_t);
   typedef int32_t(number_of_devices_ty)();
+  typedef bool(has_apu_device_ty)();
+  typedef bool(has_gfx90a_device_ty)();
   typedef int32_t(init_device_ty)(int32_t);
   typedef int32_t(deinit_device_ty)(int32_t);
   typedef int32_t(number_of_team_procs_ty)(int32_t);
@@ -101,6 +103,8 @@ struct RTLInfoTy {
   is_valid_binary_info_ty *is_valid_binary_info = nullptr;
   is_data_exchangable_ty *is_data_exchangable = nullptr;
   number_of_devices_ty *number_of_devices = nullptr;
+  has_apu_device_ty *has_apu_device = nullptr;
+  has_gfx90a_device_ty *has_gfx90a_device = nullptr;
   init_device_ty *init_device = nullptr;
   deinit_device_ty *deinit_device = nullptr;
   number_of_team_procs_ty *number_of_team_procs = nullptr;
@@ -165,6 +169,9 @@ struct RTLsTy {
   // When active (default value), maps are ignored by the runtime
   bool NoUSMMapChecks = true;
 
+  bool IsAPUDevice = false;
+  bool IsGfx90aDevice = false;
+
   // Set by OMPX_DISABLE_USM_MAPS environment variable.
   // If set, fine graned memory is used for maps instead of coarse grained.
   bool EnableFineGrainedMemory = false;
@@ -195,14 +202,11 @@ struct RTLsTy {
   void loadRTLs();
 
   std::vector<std::string> archsSupportingManagedMemory = {
-      "gfx908", "gfx90a", "gfx940", "gfx941", "gfx942", "sm_35",
-      "sm_50",  "sm_60",  "sm_70",  "sm_61"};
+      "gfx908", "gfx90a", "gfx940", "gfx941", "gfx942",
+      "sm_35",  "sm_50",  "sm_60",  "sm_70",  "sm_61"};
   // Return whether the current system supports omp_get_target_memory_space
   bool SystemSupportManagedMemory();
 
-  // enable OMPX_APU_MAPS for gfx90a, gfx940, and gfx942
-  std::vector<std::string> archsAPU = {"gfx90a", "gfx940", "gfx942"};
-  bool IsAPUSystem();
   void disableAPUMapsForUSM(int64_t RequiresFlags);
 
   // List of pointers to be allocated when running in USM mode

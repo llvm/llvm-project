@@ -45,6 +45,8 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "hsakmt/hsakmt.h"
+
 #if defined(__has_include)
 #if __has_include("hsa/hsa.h")
 #include "hsa/hsa.h"
@@ -77,11 +79,24 @@
 #define OMPT_IF_TRACING_ENABLED(stmts)
 #endif
 
+#define CHECK_KMT_ERROR(val) kmtCheck((val), #val, __FILE__, __LINE__)
+template <typename T>
+int kmtCheck(T err, const char *const func, const char *const file,
+              const int line) {
+  if (err != HSAKMT_STATUS_SUCCESS) {
+    DP("HsaKmt Error at: %s : %u \n", file, line);
+    return -1;
+  }
+  return 0;
+}
+
 #ifdef OMPT_SUPPORT
 extern bool OmptEnabled;
 extern void OmptCallbackInit();
 extern void setOmptTimestamp(uint64_t Start, uint64_t End);
 extern void setOmptHostToDeviceRate(double Slope, double Offset);
+
+
 
 /// HSA system clock frequency
 double TicksToTime = 1.0;
@@ -716,7 +731,8 @@ private:
       return std::make_pair(false, NumThreads);
 
     // If tripcount not set or not low, do nothing.
-    if ((LoopTripCount == 0) || (LoopTripCount > GenericDevice.getOMPXLowTripCount()))
+    if ((LoopTripCount == 0) ||
+        (LoopTripCount > GenericDevice.getOMPXLowTripCount()))
       return std::make_pair(false, NumThreads);
 
     // Environment variable present, do nothing.
@@ -3425,6 +3441,101 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
   /// Get the ELF code for recognizing the compatible image binary.
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
+
+  bool hasAPUDevice() override final {
+
+    CHECK_KMT_ERROR(hsaKmtOpenKFD());
+
+    HsaSystemProperties sp;
+    int errSys = CHECK_KMT_ERROR(hsaKmtAcquireSystemProperties(&sp));
+    if (errSys) return false;
+
+    for (int i = 0; i < sp.NumNodes; ++i) {
+
+      HsaNodeProperties props;
+      CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, &props));
+
+      // Check for 'small' APU system
+      if (props.NumCPUCores && props.NumFComputeCores) {
+        CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+        CHECK_KMT_ERROR(hsaKmtCloseKFD());
+        return true;
+      }
+
+      // For an appAPU it is only neccesary to compare GPUs with all connected
+      // CPUs.
+      if (props.NumCPUCores) {
+        continue;
+      }
+
+      // Retrieving GPU's interconnect graph
+      std::vector<HsaIoLinkProperties> IoLinkProperties(props.NumIOLinks);
+      if (hsaKmtGetNodeIoLinkProperties(i, props.NumIOLinks,
+                                        IoLinkProperties.data())) {
+        DP("Unable to get Node IO Link Information for node %u\n", i);
+        continue;
+      }
+
+      // Checking connection weight between GPU and CPU.
+      // If connection weight is 13 (= KFD_CRAT_INTRA_SOCKET_WEIGHT), we found
+      // an AppAPU
+      for (int linkId = 0; linkId < props.NumIOLinks; linkId++) {
+        HsaNodeProperties linkProps;
+
+        if (hsaKmtGetNodeProperties(IoLinkProperties[linkId].NodeTo,
+                                    &linkProps)) {
+          DP("Unable to get IO Link informationen for connected node\n");
+          break;
+        }
+
+        if (linkProps.NumCPUCores && IoLinkProperties[linkId].Weight == 13) {
+          CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+          CHECK_KMT_ERROR(hsaKmtCloseKFD());
+          return true;
+        }
+      }
+    }
+
+    CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+    CHECK_KMT_ERROR(hsaKmtCloseKFD());
+    return false;
+  }
+
+#define ALDEBARAN_MAJOR 9
+#define ALDEBARAN_STEPPING 10
+
+  bool hasGfx90aDevice() override final {
+    CHECK_KMT_ERROR(hsaKmtOpenKFD());
+
+    HsaSystemProperties sp;
+    int errSys = CHECK_KMT_ERROR(hsaKmtAcquireSystemProperties(&sp));
+    if (errSys) return false;
+
+    for (int i = 0; i < sp.NumNodes; ++i) {
+
+      HsaNodeProperties props;
+      CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, &props));
+
+      // Ignoring CPUs
+      if (props.NumCPUCores) {
+        continue;
+      }
+
+      // Checking for Aldebaran arch
+      // Values are taken from:
+      // https://confluence.amd.com/display/ASLC/AMDGPU+Target+Names
+      if (props.EngineId.ui32.Major == ALDEBARAN_MAJOR &&
+          props.EngineId.ui32.Stepping == ALDEBARAN_STEPPING) {
+        CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+        CHECK_KMT_ERROR(hsaKmtCloseKFD());
+        return true;
+      }
+    }
+
+    CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+    CHECK_KMT_ERROR(hsaKmtCloseKFD());
+    return false;
+  }
 
   /// Check whether the image is compatible with an AMDGPU device.
   Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {

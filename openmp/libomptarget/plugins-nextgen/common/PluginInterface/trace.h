@@ -47,6 +47,9 @@ cat(std::array<const char, N> const &x, std::array<const char, M> const &y,
 
 // Print pointers as 48 bit hex, integers as same width
 template <typename T> struct fmt;
+template <> struct fmt<bool> {
+  static constexpr auto value() { return toArray("%14" PRId32); }
+};
 template <> struct fmt<int32_t> {
   static constexpr auto value() { return toArray("%14" PRId32); }
 };
@@ -297,6 +300,25 @@ int __tgt_rtl_number_of_devices() {
 }
 #define __tgt_rtl_number_of_devices(...)                                       \
   __tgt_rtl_number_of_devices_impl(__VA_ARGS__)
+
+static bool __tgt_rtl_is_apu_system_impl();
+bool __tgt_rtl_has_apu_device() {
+  auto t = detail::log<bool>(__func__);
+  bool r = __tgt_rtl_is_apu_system_impl();
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_has_apu_device(...) __tgt_rtl_is_apu_system_impl(__VA_ARGS__)
+
+static bool __tgt_rtl_has_gfx90a_device_impl();
+bool __tgt_rtl_has_gfx90a_device() {
+  auto t = detail::log<bool>(__func__);
+  bool r = __tgt_rtl_has_gfx90a_device_impl();
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_has_gfx90a_device(...)                                       \
+  __tgt_rtl_has_gfx90a_device_impl(__VA_ARGS__)
 
 static int32_t __tgt_rtl_launch_kernel_sync_impl(int32_t device_id,
                                                  void *tgt_entry_ptr,

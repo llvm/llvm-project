@@ -121,41 +121,10 @@ void RTLsTy::loadRTLs() {
       NoUSMMapChecks = std::stoi(NoMapChecksStr);
 
   // Parse environement variable OMPX_DISABLE_USM_MAPS (if set)
-  if (auto *disable_usm_maps{std::getenv("OMPX_DISABLE_USM_MAPS")}){
+  if (auto *disable_usm_maps{std::getenv("OMPX_DISABLE_USM_MAPS")}) {
     auto Value{std::stoi(disable_usm_maps)};
-    if(Value > 0){
+    if (Value > 0) {
       EnableFineGrainedMemory = true;
-    }
-  }
-
-  // On APU systems (e.g., gfx940), running with
-  // OMPX_APU_MAPS=1, in default mode and HSA_XNACK=1 triggers
-  // disabling of most map clauses
-  // (except for declare target variables).
-  // Disabling means no device memory allocation
-  // and h2d or d2h memory copies are performed,
-  // but host thread allocated memory is used on
-  // devices. This behavior is reset if user app
-  // calls register requires later with unified_shared_memory flag
-  if (IsAPUSystem()) {
-    auto *ApuMaps = getenv("OMPX_APU_MAPS");
-    auto *hsaXnack = getenv("HSA_XNACK");
-    if (ApuMaps && hsaXnack) {
-      auto ApuMapsVal = std::stoi(ApuMaps);
-      auto hsaXnackVal = std::stoi(hsaXnack);
-
-      // OMPX_APU_MAPS is a temporary env variable
-      // that should always be used with HSA_XNACK=1:
-      // error if it is not. Once this is made default behavior
-      // for USM=OFF, HSA_XNACK=1, then we can remove the error
-      // as the behavior is only triggered by HSA_XNACK value
-      if (ApuMapsVal > 0 && hsaXnackVal == 0) {
-	FATAL_MESSAGE0(
-		       1,
-		       "OMPX_APU_MAPS behavior requires HSA_XNACK=1");
-      }
-      if (ApuMapsVal > 0 && hsaXnackVal > 0)
-        DisableAllocationsForMapsOnApus = true;
     }
   }
 
@@ -173,8 +142,8 @@ void RTLsTy::loadRTLs() {
     const std::string BaseRTLName(Name);
     if (NextGenPlugins) {
       if (attemptLoadRTL(BaseRTLName + ".nextgen.so", RTL)) {
-	if (UseFirstGoodRTL)
-	  break;
+        if (UseFirstGoodRTL)
+          break;
         continue;
       }
       DP("Falling back to original plugin...\n");
@@ -185,6 +154,43 @@ void RTLsTy::loadRTLs() {
   }
 
   DP("RTLs loaded!\n");
+
+  // On APU systems (e.g., gfx940), running with
+  // OMPX_APU_MAPS=1, in default mode and HSA_XNACK=1 triggers
+  // disabling of most map clauses
+  // (except for declare target variables).
+  // Disabling means no device memory allocation
+  // and h2d or d2h memory copies are performed,
+  // but host thread allocated memory is used on
+  // devices. This behavior is reset if user app
+  // calls register requires later with unified_shared_memory flag
+
+  for (auto &RTL : PM->RTLs.AllRTLs) {
+    PM->RTLs.IsAPUDevice |= RTL.has_apu_device();
+    PM->RTLs.IsGfx90aDevice |= RTL.has_gfx90a_device();
+  }
+
+  if (PM->RTLs.IsAPUDevice || PM->RTLs.IsGfx90aDevice) {
+    auto *ApuMaps = getenv("OMPX_APU_MAPS");
+    auto *hsaXnack =
+        getenv("HSA_XNACK"); // TODO: Use ROCt API to query
+                             // xnack status. (requires merge of SWDEV-405757)
+    if (ApuMaps && hsaXnack) {
+      auto ApuMapsVal = std::stoi(ApuMaps);
+      auto hsaXnackVal = std::stoi(hsaXnack);
+
+      // OMPX_APU_MAPS is a temporary env variable
+      // that should always be used with HSA_XNACK=1:
+      // error if it is not. Once this is made default behavior
+      // for USM=OFF, HSA_XNACK=1, then we can remove the error
+      // as the behavior is only triggered by HSA_XNACK value
+      if (ApuMapsVal > 0 && hsaXnackVal == 0) {
+        FATAL_MESSAGE0(1, "OMPX_APU_MAPS behavior requires HSA_XNACK=1");
+      }
+      if (ApuMapsVal > 0 && hsaXnackVal > 0)
+        DisableAllocationsForMapsOnApus = true;
+    }
+  }
 }
 
 bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
@@ -224,7 +230,13 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
             DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_devices")))
     ValidPlugin = false;
   if (!(*((void **)&RTL.number_of_team_procs) =
-              DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_team_procs")))
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_team_procs")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.has_apu_device) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_has_apu_device")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.has_gfx90a_device) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_has_gfx90a_device")))
     ValidPlugin = false;
   if (!(*((void **)&RTL.init_device) =
             DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device")))
@@ -499,7 +511,7 @@ void RTLsTy::registerRequires(int64_t Flags) {
   }
 
   disableAPUMapsForUSM(RequiresFlags);
-  
+
   // TODO: insert any other missing checks
 
   DP("New requires flags %" PRId64 " compatible with existing %" PRId64 "!\n",
@@ -745,11 +757,4 @@ extern "C" char *global_allocate(uint32_t sz) { return (char *)malloc(sz); }
 extern "C" int global_free(void *ptr) {
   free(ptr);
   return 0;
-}
-
-bool RTLsTy::IsAPUSystem() {
-  for (auto it : archsAPU)
-    if (isHomogeneousSystemOf(it))
-      return true;
-  return false;
 }

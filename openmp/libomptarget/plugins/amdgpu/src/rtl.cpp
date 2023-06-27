@@ -49,6 +49,8 @@
 
 #include "utils.h"
 
+#include "hsakmt/hsakmt.h"
+
 using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::ELF;
@@ -72,6 +74,17 @@ using namespace llvm::omp::target::plugin::utils;
 #define OMPT_IF_ENABLED(stmts)
 #define OMPT_IF_TRACING_ENABLED(stmts)
 #endif
+
+#define CHECK_KMT_ERROR(val) kmtCheck((val), #val, __FILE__, __LINE__)
+template <typename T>
+int kmtCheck(T err, const char *const func, const char *const file,
+             const int line) {
+  if (err != HSAKMT_STATUS_SUCCESS) {
+    DP("HsaKmt Error at: %s : %u \n", file, line);
+    return -1;
+  }
+  return 0;
+}
 
 /// Libomptarget function that will be used to set num_teams in trace records.
 typedef void (*libomptarget_ompt_set_granted_teams_t)(uint32_t);
@@ -2971,6 +2984,101 @@ int __tgt_rtl_number_of_devices() {
   }
   DP("AMDGPU plugin construction failed. Zero devices available\n");
   return 0;
+}
+
+bool __tgt_rtl_has_apu_device() {
+
+  CHECK_KMT_ERROR(hsaKmtOpenKFD());
+
+  HsaSystemProperties sp;
+  int errSys = CHECK_KMT_ERROR(hsaKmtAcquireSystemProperties(&sp));
+  if (errSys) return false;
+
+  for (int i = 0; i < sp.NumNodes; ++i) {
+
+    HsaNodeProperties props;
+    CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, &props));
+
+    // Check for 'small' APU system
+    if (props.NumCPUCores && props.NumFComputeCores) {
+      CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+      CHECK_KMT_ERROR(hsaKmtCloseKFD());
+      return true;
+    }
+
+    // For an appAPU it is only neccesary to compare GPUs with all connected
+    // CPUs.
+    if (props.NumCPUCores) {
+      continue;
+    }
+
+    // Retrieving GPU's interconnect graph
+    std::vector<HsaIoLinkProperties> IoLinkProperties(props.NumIOLinks);
+    if (hsaKmtGetNodeIoLinkProperties(i, props.NumIOLinks,
+                                      IoLinkProperties.data())) {
+      DP("Unable to get Node IO Link Information for node %u\n", i);
+      continue;
+    }
+
+    // Checking connection weight between GPU and CPU.
+    // If connection weight is 13 (= KFD_CRAT_INTRA_SOCKET_WEIGHT), we found
+    // an AppAPU
+    for (int linkId = 0; linkId < props.NumIOLinks; linkId++) {
+      HsaNodeProperties linkProps;
+
+      if (hsaKmtGetNodeProperties(IoLinkProperties[linkId].NodeTo,
+                                  &linkProps)) {
+        DP("Unable to get IO Link informationen for connected node\n");
+        break;
+      }
+
+      if (linkProps.NumCPUCores && IoLinkProperties[linkId].Weight == 13) {
+        CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+        CHECK_KMT_ERROR(hsaKmtCloseKFD());
+        return true;
+      }
+    }
+  }
+
+  CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+  CHECK_KMT_ERROR(hsaKmtCloseKFD());
+  return false;
+}
+
+#define ALDEBARAN_MAJOR 9
+#define ALDEBARAN_STEPPING 10
+
+bool __tgt_rtl_has_gfx90a_device() {
+  CHECK_KMT_ERROR(hsaKmtOpenKFD());
+
+  HsaSystemProperties sp;
+  int errSys = CHECK_KMT_ERROR(hsaKmtAcquireSystemProperties(&sp));
+  if (errSys) return false;
+
+  for (int i = 0; i < sp.NumNodes; ++i) {
+
+    HsaNodeProperties props;
+    CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, &props));
+
+    // Ignoring CPUs
+    if (props.NumCPUCores) {
+      continue;
+    }
+
+    // Checking for Aldebaran arch
+    // Values are taken from:
+    // https://confluence.amd.com/display/ASLC/AMDGPU+Target+Names
+    if (props.EngineId.ui32.Major == ALDEBARAN_MAJOR &&
+        props.EngineId.ui32.Stepping == ALDEBARAN_STEPPING) {
+      CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+      CHECK_KMT_ERROR(hsaKmtCloseKFD());
+      return true;
+    }
+  }
+
+  CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+  CHECK_KMT_ERROR(hsaKmtCloseKFD());
+  return false;
 }
 
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {

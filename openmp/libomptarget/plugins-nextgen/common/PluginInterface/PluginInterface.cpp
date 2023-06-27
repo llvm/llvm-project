@@ -1350,6 +1350,10 @@ int __tgt_rtl_number_of_team_procs(int DeviceId) {
   return Plugin::get().getDevice(DeviceId).getDefaultNumThreads();
 }
 
+bool __tgt_rtl_has_apu_device() { return Plugin::get().hasAPUDevice(); }
+
+bool __tgt_rtl_has_gfx90a_device() { return Plugin::get().hasGfx90aDevice(); }
+
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   Plugin::get().setRequiresFlag(RequiresFlags);
   return RequiresFlags;

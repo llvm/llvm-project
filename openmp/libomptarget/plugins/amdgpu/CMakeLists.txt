@@ -19,6 +19,7 @@ if (NOT LIBOMPTARGET_BUILD_AMDGPU_PLUGIN)
   return()
 endif()
 
+
 # as of rocm-3.7, hsa is installed with cmake packages and kmt is found via hsa
 find_package(hsa-runtime64 QUIET 1.2.0 HINTS ${CMAKE_INSTALL_PREFIX} PATHS
   ${CMAKE_INSTALL_PREFIX} /opt/rocm)
@@ -31,6 +32,20 @@ if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$" AND CMAKE
   libomptarget_say("Not building AMDGPU plugin: only support AMDGPU in Linux x86_64, ppc64le, or aarch64 hosts")
   return()
 endif()
+
+# libhsakmt.a
+find_library (HSAKMT_LIB libhsakmt.a REQURIED HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+get_filename_component(HSAKMT_LIB_PATH ${HSAKMT_LIB} DIRECTORY)
+link_directories (${HSAKMT_LIB_PATH})
+
+# lib_drm_amdgpu
+pkg_check_modules(drm_amdgpu REQUIRED IMPORTED_TARGET libdrm_amdgpu)
+
+# lib_drm
+pkg_check_modules(drm REQUIRED IMPORTED_TARGET libdrm)
+
+# libnuma
+find_library(numa libnuma.so REQUIRED HINTS /usr/lib/x86_64-linux-gnu/)
 
 ################################################################################
 # Define the suffix for the runtime messaging dumps.
@@ -87,6 +102,10 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   Object
 
   LINK_LIBS
+  PRIVATE hsakmt
+  PRIVATE drm_amdgpu
+  PRIVATE drm
+  PRIVATE numa
   PRIVATE
   elf_common
   MemoryManager

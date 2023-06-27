@@ -412,8 +412,9 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
         // memory as coarse-grained. The usage of coarse-grained memory can be
         // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
         // This is not done for APUs.
-        if (!PM->RTLs.IsAPUSystem() && !PM->RTLs.EnableFineGrainedMemory &&
-            HstPtrBegin && RTL->set_coarse_grain_mem_region) {
+        if (!(PM->RTLs.IsAPUDevice || PM->RTLs.IsGfx90aDevice) &&
+            !PM->RTLs.EnableFineGrainedMemory && HstPtrBegin &&
+            RTL->set_coarse_grain_mem_region) {
           RTL->set_coarse_grain_mem_region(DeviceID, HstPtrBegin, Size);
         }
 

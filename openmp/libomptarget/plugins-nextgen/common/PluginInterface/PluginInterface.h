@@ -934,6 +934,12 @@ struct GenericPluginTy {
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
 
+  // Returns true if the system is equipped with an APU.
+  virtual bool hasAPUDevice() { return false; }
+
+  // Returns true if the system is equipped with a GFX90a
+  virtual bool hasGfx90aDevice() { return false; }
+
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
 
