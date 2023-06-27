@@ -419,8 +419,13 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 
 static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     memref::DeallocOp op) {
-  // Do nothing
-  // TODO: explicily call view destructor
+  // Assign an empty view
+  if(failed(emitter.emitValue(op.getMemref())))
+    return failure();
+  emitter << " = ";
+  if(failed(emitter.emitType(op.getLoc(), op.getMemref().getType())))
+    return failure();
+  emitter << "()";
   return success();
 }
 
@@ -942,6 +947,9 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whil
   emitter << "After block args:\n";
   for(auto a : whileOp.getAfterArguments())
     emitter << "  " << emitter.getOrCreateName(a) << "\n";
+  emitter << "Results:\n";
+  for(auto a : whileOp.getResults())
+    emitter << "  " << emitter.getOrCreateName(a) << "\n";
   emitter << "*/\n";
 
   emitter << "while(true) {\n";
@@ -953,11 +961,32 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whil
       return failure();
   }
 
+  for (auto pair : llvm::zip(whileOp.getAfterArguments(), whileOp.getConditionOp().getArgs())) {
+    // After args are initialized to the args passed by ConditionOp 
+    if(failed(emitter.emitType(whileOp.getLoc(), std::get<0>(pair).getType())))
+      return failure();
+    emitter << ' ' << emitter.getOrCreateName(std::get<0>(pair)) << " = ";
+    if(failed(emitter.emitValue(std::get<1>(pair))))
+      return failure();
+    emitter << ";\n";
+  }
+
   //Emit the "after" block(s)
   for (auto& afterOp : whileOp.getAfter().getOps()) {
     if (failed(emitter.emitOperation(afterOp, /*trailingSemicolon=*/true)))
       return failure();
   }
+
+  // Copy yield operands into before block args at the end of a loop iteration.
+  for (auto pair : llvm::zip(whileOp.getBeforeArguments(), whileOp.getYieldOp()->getOperands())) {
+    BlockArgument iterArg = std::get<0>(pair);
+    Value operand = std::get<1>(pair);
+    emitter << emitter.getOrCreateName(iterArg) << " = ";
+    if(failed(emitter.emitValue(operand)))
+      return failure();
+    emitter << ";\n";
+  }
+
   emitter.ostream().unindent();
   emitter << "}\n";
 
@@ -1628,9 +1657,9 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
   // Enforce types on all inputs (for Torch/NumPy only)
   if(!emitter.supportingSparse())
   {
-    for(size_t i = 0; i < numParams; i++)
-    {
-      auto paramType = ftype.getInput(i);
+  for(size_t i = 0; i < numParams; i++)
+  {
+    auto paramType = ftype.getInput(i);
       if(!paramType.isa<LLVM::LLVMPointerType>())
       {
         py_os << "param" << i << " = ";
@@ -1786,6 +1815,8 @@ void KokkosCppEmitter::populateSparseSupportFunctions()
   registerCIface(true, "sparseValuesF64");
   registerCIface(true, "sparseIndices0");
   registerCIface(true, "sparsePointers0");
+  registerCIface(true, "sparsePointers32");
+  registerCIface(true, "sparsePointers64");
   registerCIface(false, "lexInsertF32");
   registerCIface(false, "lexInsertF64");
   registerCIface(false, "expInsertF32");
