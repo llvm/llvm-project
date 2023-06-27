@@ -1203,10 +1203,26 @@ public:
                                      const clang::CallExpr *E,
                                      ReturnValueSlot ReturnValue);
 
-  /// Given an expression of pointer type, try to
-  /// derive a more accurate bound on the alignment of the pointer.
-  Address buildPointerWithAlignment(const clang::Expr *E,
-                                    LValueBaseInfo *BaseInfo = nullptr);
+  /// Given an expression with a pointer type, emit the value and compute our
+  /// best estimate of the alignment of the pointee.
+  ///
+  /// \param BaseInfo - If non-null, this will be initialized with
+  /// information about the source of the alignment and the may-alias
+  /// attribute.  Note that this function will conservatively fall back on
+  /// the type when it doesn't recognize the expression and may-alias will
+  /// be set to false.
+  ///
+  /// One reasonable way to use this information is when there's a language
+  /// guarantee that the pointer must be aligned to some stricter value, and
+  /// we're simply trying to ensure that sufficiently obvious uses of under-
+  /// aligned objects don't get miscompiled; for example, a placement new
+  /// into the address of a local variable.  In such a case, it's quite
+  /// reasonable to just ignore the returned alignment when it isn't from an
+  /// explicit source.
+  Address
+  buildPointerWithAlignment(const clang::Expr *E,
+                            LValueBaseInfo *BaseInfo = nullptr,
+                            KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal

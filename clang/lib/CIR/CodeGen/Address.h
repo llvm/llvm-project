@@ -23,18 +23,23 @@
 
 namespace cir {
 
+// Indicates whether a pointer is known not to be null.
+enum KnownNonNull_t { NotKnownNonNull, KnownNonNull };
+
 class Address {
-  mlir::Value Pointer;
+  llvm::PointerIntPair<mlir::Value, 1, bool> PointerAndKnownNonNull;
   mlir::Type ElementType;
   clang::CharUnits Alignment;
 
 protected:
-  Address(std::nullptr_t) : Pointer(nullptr), ElementType(nullptr) {}
+  Address(std::nullptr_t) : ElementType(nullptr) {}
 
 public:
   Address(mlir::Value pointer, mlir::Type elementType,
-          clang::CharUnits alignment)
-      : Pointer(pointer), ElementType(elementType), Alignment(alignment) {
+          clang::CharUnits alignment,
+          KnownNonNull_t IsKnownNonNull = NotKnownNonNull)
+      : PointerAndKnownNonNull(pointer, IsKnownNonNull),
+        ElementType(elementType), Alignment(alignment) {
     assert(pointer.getType().isa<mlir::cir::PointerType>() &&
            "Expected cir.ptr type");
 
@@ -52,17 +57,21 @@ public:
   }
 
   static Address invalid() { return Address(nullptr); }
-  bool isValid() const { return Pointer != nullptr; }
+  bool isValid() const {
+    return PointerAndKnownNonNull.getPointer() != nullptr;
+  }
 
   /// Return address with different pointer, but same element type and
   /// alignment.
-  Address withPointer(mlir::Value NewPointer) const {
-    return Address(NewPointer, getElementType(), getAlignment());
+  Address withPointer(mlir::Value NewPointer,
+                      KnownNonNull_t IsKnownNonNull) const {
+    return Address(NewPointer, getElementType(), getAlignment(),
+                   IsKnownNonNull);
   }
 
   mlir::Value getPointer() const {
-    // assert(isValid());
-    return Pointer;
+    assert(isValid());
+    return PointerAndKnownNonNull.getPointer();
   }
 
   /// Return the alignment of this pointer.
@@ -74,6 +83,19 @@ public:
   mlir::Type getElementType() const {
     assert(isValid());
     return ElementType;
+  }
+
+  /// Whether the pointer is known not to be null.
+  KnownNonNull_t isKnownNonNull() const {
+    assert(isValid());
+    return (KnownNonNull_t)PointerAndKnownNonNull.getInt();
+  }
+
+  /// Set the non-null bit.
+  Address setKnownNonNull() {
+    assert(isValid());
+    PointerAndKnownNonNull.setInt(true);
+    return *this;
   }
 };
 
