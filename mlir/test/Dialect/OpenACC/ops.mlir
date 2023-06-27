@@ -443,6 +443,8 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel num_gangs(%idxValue: index) {
   }
+  acc.parallel num_gangs(%i64value, %i64value, %idxValue : i64, i64, index) {
+  }
   acc.parallel num_workers(%i64value: i64) {
   }
   acc.parallel num_workers(%i32value: i32) {
@@ -493,6 +495,8 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK:      acc.parallel num_gangs([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel num_gangs([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.parallel num_gangs([[I64VALUE]], [[I64VALUE]], [[IDXVALUE]] : i64, i64, index) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel num_workers([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
