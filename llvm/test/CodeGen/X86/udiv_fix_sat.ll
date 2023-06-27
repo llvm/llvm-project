@@ -341,7 +341,7 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    pand %xmm7, %xmm10
 ; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm9[1,1,3,3]
 ; X64-NEXT:    por %xmm10, %xmm3
-; X64-NEXT:    movdqa {{.*#+}} xmm7 = [8589934591,8589934591]
+; X64-NEXT:    pcmpeqd %xmm7, %xmm7
 ; X64-NEXT:    pand %xmm3, %xmm8
 ; X64-NEXT:    pandn %xmm7, %xmm3
 ; X64-NEXT:    por %xmm8, %xmm3
