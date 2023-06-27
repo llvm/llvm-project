@@ -183,6 +183,7 @@ def ACCC_NoHost : Clause<"nohost"> {}
 // 2.5.9
 def ACCC_NumGangs : Clause<"num_gangs"> {
   let flangClass = "ScalarIntExpr";
+  let isValueList = 1;
 }
 
 // 2.5.10
