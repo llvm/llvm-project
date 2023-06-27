@@ -366,10 +366,7 @@ void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
 /// shaped results. If padding fails, return failure.
 FailureOr<SmallVector<Value>>
 rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
-                  ArrayRef<int64_t> paddingDimensions,
-                  ArrayRef<int64_t> padToMultipleOf,
-                  ArrayRef<Attribute> paddingValues,
-                  ArrayRef<bool> packPaddings, LinalgOp &paddedOp);
+                  const LinalgPaddingOptions &options, LinalgOp &paddedOp);
 
 namespace detail {
 
@@ -455,7 +452,7 @@ hoistPaddingOnTensors(tensor::PadOp opToHoist, int64_t numLoops,
 /// specified in `options`.
 FailureOr<LinalgOp> padAndHoistLinalgOp(RewriterBase &rewriter,
                                         LinalgOp linalgOp,
-                                        LinalgPaddingOptions options);
+                                        const LinalgPaddingOptions &options);
 
 /// Split the given `op` into two parts along the given iteration space
 /// `dimension` at the specified `splitPoint`, and return the two parts.
