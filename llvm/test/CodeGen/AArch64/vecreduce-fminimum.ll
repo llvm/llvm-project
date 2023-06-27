@@ -71,13 +71,7 @@ define half @test_v4f16(<4 x half> %a) nounwind {
 ;
 ; CHECK-FP-LABEL: test_v4f16:
 ; CHECK-FP:       // %bb.0:
-; CHECK-FP-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-FP-NEXT:    mov h1, v0.h[1]
-; CHECK-FP-NEXT:    mov h2, v0.h[2]
-; CHECK-FP-NEXT:    fmin h1, h0, h1
-; CHECK-FP-NEXT:    mov h0, v0.h[3]
-; CHECK-FP-NEXT:    fmin h1, h1, h2
-; CHECK-FP-NEXT:    fmin h0, h1, h0
+; CHECK-FP-NEXT:    fminv h0, v0.4h
 ; CHECK-FP-NEXT:    ret
   %b = call half @llvm.vector.reduce.fminimum.v4f16(<4 x half> %a)
   ret half %b
@@ -156,14 +150,7 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 ; CHECK-FP-NEXT:    mov v0.h[6], v6.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[7], v7.h[0]
 ; CHECK-FP-NEXT:    fmin v0.8h, v0.8h, v1.8h
-; CHECK-FP-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-FP-NEXT:    fmin v0.4h, v0.4h, v1.4h
-; CHECK-FP-NEXT:    mov h1, v0.h[1]
-; CHECK-FP-NEXT:    mov h2, v0.h[2]
-; CHECK-FP-NEXT:    fmin h1, h0, h1
-; CHECK-FP-NEXT:    mov h0, v0.h[3]
-; CHECK-FP-NEXT:    fmin h1, h1, h2
-; CHECK-FP-NEXT:    fmin h0, h1, h0
+; CHECK-FP-NEXT:    fminv h0, v0.8h
 ; CHECK-FP-NEXT:    ret
   %b = call half @llvm.vector.reduce.fminimum.v11f16(<11 x half> %a)
   ret half %b
@@ -177,10 +164,7 @@ define float @test_v3f32(<3 x float> %a) nounwind {
 ; CHECK-NEXT:    mov w8, #2139095040 // =0x7f800000
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    mov v0.s[3], v1.s[0]
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fmin v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fmin s0, s0, s1
+; CHECK-NEXT:    fminv s0, v0.4s
 ; CHECK-NEXT:    ret
   %b = call float @llvm.vector.reduce.fminimum.v3f32(<3 x float> %a)
   ret float %b
@@ -193,10 +177,7 @@ define float @test_v3f32_ninf(<3 x float> %a) nounwind {
 ; CHECK-NEXT:    mov w8, #2139095039 // =0x7f7fffff
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    mov v0.s[3], v1.s[0]
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fmin v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fmin s0, s0, s1
+; CHECK-NEXT:    fminv s0, v0.4s
 ; CHECK-NEXT:    ret
   %b = call ninf float @llvm.vector.reduce.fminimum.v3f32(<3 x float> %a)
   ret float %b
@@ -215,10 +196,7 @@ define float @test_v16f32(<16 x float> %a) nounwind {
 ; CHECK-NEXT:    fmin v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    fmin v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    fmin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    fmin v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    mov s1, v0.s[1]
-; CHECK-NEXT:    fmin s0, s0, s1
+; CHECK-NEXT:    fminv s0, v0.4s
 ; CHECK-NEXT:    ret
   %b = call float @llvm.vector.reduce.fminimum.v16f32(<16 x float> %a)
   ret float %b
@@ -227,8 +205,7 @@ define float @test_v16f32(<16 x float> %a) nounwind {
 define double @test_v2f64(<2 x double> %a) nounwind {
 ; CHECK-LABEL: test_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov d1, v0.d[1]
-; CHECK-NEXT:    fmin d0, d0, d1
+; CHECK-NEXT:    fminp d0, v0.2d
 ; CHECK-NEXT:    ret
   %b = call double @llvm.vector.reduce.fminimum.v2f64(<2 x double> %a)
   ret double %b

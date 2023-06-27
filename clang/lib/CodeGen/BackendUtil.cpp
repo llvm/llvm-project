@@ -631,7 +631,7 @@ static void addKCFIPass(const Triple &TargetTriple, const LangOptions &LangOpts,
                         PassBuilder &PB) {
   // If the back-end supports KCFI operand bundle lowering, skip KCFIPass.
   if (TargetTriple.getArch() == llvm::Triple::x86_64 ||
-      TargetTriple.isAArch64(64))
+      TargetTriple.isAArch64(64) || TargetTriple.isRISCV())
     return;
 
   // Ensure we lower KCFI operand bundles with -O0.
@@ -839,7 +839,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   StandardInstrumentations SI(
       TheModule->getContext(),
       (CodeGenOpts.DebugPassManager || DebugPassStructure),
-      /*VerifyEach*/ false, PrintPassOpts);
+      CodeGenOpts.VerifyEach, PrintPassOpts);
   SI.registerCallbacks(PIC, &MAM);
   PassBuilder PB(TM.get(), PTO, PGOOpt, &PIC);
 
@@ -1192,6 +1192,7 @@ static void runThinLTOBackend(
 
   Conf.ProfileRemapping = std::move(ProfileRemapping);
   Conf.DebugPassManager = CGOpts.DebugPassManager;
+  Conf.VerifyEach = CGOpts.VerifyEach;
   Conf.RemarksWithHotness = CGOpts.DiagnosticsWithHotness;
   Conf.RemarksFilename = CGOpts.OptRecordFile;
   Conf.RemarksPasses = CGOpts.OptRecordPasses;

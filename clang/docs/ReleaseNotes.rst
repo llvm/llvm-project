@@ -231,7 +231,12 @@ Non-comprehensive list of changes in this release
 - Added ``__builtin_elementwise_round`` for  builtin for floating
   point types. This allows access to ``llvm.round`` for
   arbitrary floating-point and vector of floating-point types.
-
+- Added ``__builtin_elementwise_rint`` for floating point types. This
+  allows access to ``llvm.rint`` for arbitrary floating-point and
+  vector of floating-point types.
+- Added ``__builtin_elementwise_nearbyint`` for floating point
+  types. This allows access to ``llvm.nearbyint`` for arbitrary
+  floating-point and vector of floating-point types.
 
 New Compiler Flags
 ------------------
@@ -524,6 +529,13 @@ Bug Fixes in This Version
   type by the default argument promotions, and thus this is UB. Clang's
   behavior now matches GCC's behavior in C++.
   (`#38717 <https://github.com/llvm/llvm-project/issues/38717>_`).
+- Fixed a failing assertion when implicitly defining a function within a GNU
+  statement expression that appears outside of a function block scope. The
+  assertion was benign outside of asserts builds and would only fire in C.
+  (`#48579 <https://github.com/llvm/llvm-project/issues/48579>_`).
+- Fixed a failing assertion when applying an attribute to an anonymous union.
+  The assertion was benign outside of asserts builds and would only fire in C++.
+  (`#48512 <https://github.com/llvm/llvm-project/issues/48512>_`).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

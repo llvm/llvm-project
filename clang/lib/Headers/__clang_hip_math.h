@@ -522,7 +522,7 @@ __DEVICE__
 float tgammaf(float __x) { return __ocml_tgamma_f32(__x); }
 
 __DEVICE__
-float truncf(float __x) { return __ocml_trunc_f32(__x); }
+float truncf(float __x) { return __builtin_truncf(__x); }
 
 __DEVICE__
 float y0f(float __x) { return __ocml_y0_f32(__x); }
@@ -1078,7 +1078,7 @@ __DEVICE__
 double tgamma(double __x) { return __ocml_tgamma_f64(__x); }
 
 __DEVICE__
-double trunc(double __x) { return __ocml_trunc_f64(__x); }
+double trunc(double __x) { return __builtin_trunc(__x); }
 
 __DEVICE__
 double y0(double __x) { return __ocml_y0_f64(__x); }

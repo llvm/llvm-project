@@ -744,7 +744,8 @@ void ThumbV6MABSLongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__Thumbv6MABSLongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
-  addSymbol("$d", STT_NOTYPE, 8, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 8, isec);
 }
 
 void ThumbV6MPILongThunk::writeLong(uint8_t *buf) {
@@ -767,7 +768,8 @@ void ThumbV6MPILongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__Thumbv6MPILongThunk_" + destination.getName()),
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
-  addSymbol("$d", STT_NOTYPE, 12, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 12, isec);
 }
 
 void ARMV5LongLdrPcThunk::writeLong(uint8_t *buf) {
@@ -780,7 +782,8 @@ void ARMV5LongLdrPcThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__ARMv5LongLdrPcThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
-  addSymbol("$d", STT_NOTYPE, 4, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 4, isec);
 }
 
 void ARMV4ABSLongBXThunk::writeLong(uint8_t *buf) {
@@ -794,7 +797,8 @@ void ARMV4ABSLongBXThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__ARMv4ABSLongBXThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
-  addSymbol("$d", STT_NOTYPE, 8, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 8, isec);
 }
 
 void ThumbV4ABSLongBXThunk::writeLong(uint8_t *buf) {
@@ -810,7 +814,8 @@ void ThumbV4ABSLongBXThunk::addSymbols(ThunkSection &isec) {
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
   addSymbol("$a", STT_NOTYPE, 4, isec);
-  addSymbol("$d", STT_NOTYPE, 8, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 8, isec);
 }
 
 void ThumbV4ABSLongThunk::writeLong(uint8_t *buf) {
@@ -827,7 +832,8 @@ void ThumbV4ABSLongThunk::addSymbols(ThunkSection &isec) {
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
   addSymbol("$a", STT_NOTYPE, 4, isec);
-  addSymbol("$d", STT_NOTYPE, 12, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 12, isec);
 }
 
 void ARMV4PILongBXThunk::writeLong(uint8_t *buf) {
@@ -844,7 +850,8 @@ void ARMV4PILongBXThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__ARMv4PILongBXThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
-  addSymbol("$d", STT_NOTYPE, 12, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 12, isec);
 }
 
 void ARMV4PILongThunk::writeLong(uint8_t *buf) {
@@ -860,7 +867,8 @@ void ARMV4PILongThunk::addSymbols(ThunkSection &isec) {
   addSymbol(saver().save("__ARMv4PILongThunk_" + destination.getName()),
             STT_FUNC, 0, isec);
   addSymbol("$a", STT_NOTYPE, 0, isec);
-  addSymbol("$d", STT_NOTYPE, 8, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 8, isec);
 }
 
 void ThumbV4PILongBXThunk::writeLong(uint8_t *buf) {
@@ -879,7 +887,8 @@ void ThumbV4PILongBXThunk::addSymbols(ThunkSection &isec) {
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
   addSymbol("$a", STT_NOTYPE, 4, isec);
-  addSymbol("$d", STT_NOTYPE, 12, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 12, isec);
 }
 
 void ThumbV4PILongThunk::writeLong(uint8_t *buf) {
@@ -899,7 +908,8 @@ void ThumbV4PILongThunk::addSymbols(ThunkSection &isec) {
             STT_FUNC, 1, isec);
   addSymbol("$t", STT_NOTYPE, 0, isec);
   addSymbol("$a", STT_NOTYPE, 4, isec);
-  addSymbol("$d", STT_NOTYPE, 16, isec);
+  if (!getMayUseShortThunk())
+    addSymbol("$d", STT_NOTYPE, 16, isec);
 }
 
 // Use the long jump which covers a range up to 8MiB.

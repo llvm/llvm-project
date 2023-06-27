@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Endian.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -538,7 +539,8 @@ void EncodingEmitter::emitMultiByteVarInt(uint64_t value) {
     if (LLVM_LIKELY(it >>= 7) == 0) {
       uint64_t encodedValue = (value << 1) | 0x1;
       encodedValue <<= (numBytes - 1);
-      emitBytes({reinterpret_cast<uint8_t *>(&encodedValue), numBytes});
+      llvm::support::ulittle64_t encodedValueLE(encodedValue);
+      emitBytes({reinterpret_cast<uint8_t *>(&encodedValueLE), numBytes});
       return;
     }
   }
@@ -546,7 +548,8 @@ void EncodingEmitter::emitMultiByteVarInt(uint64_t value) {
   // If the value is too large to encode in a single byte, emit a special all
   // zero marker byte and splat the value directly.
   emitByte(0);
-  emitBytes({reinterpret_cast<uint8_t *>(&value), sizeof(value)});
+  llvm::support::ulittle64_t valueLE(value);
+  emitBytes({reinterpret_cast<uint8_t *>(&valueLE), sizeof(valueLE)});
 }
 
 //===----------------------------------------------------------------------===//

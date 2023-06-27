@@ -276,7 +276,7 @@ define void @test4(i32 %arg) {
 ; CHECK-LABEL: 'test4'
 ; CHECK-NEXT:  Classifying expressions for: @test4
 ; CHECK-NEXT:    %array = alloca [10 x i32], align 4
-; CHECK-NEXT:    --> %array U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %array U: [0,-43) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %index = phi i32 [ %inc5, %for.body ], [ %arg, %entry ]
 ; CHECK-NEXT:    --> {%arg,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (-1 + (10 smax (1 + %arg)<nsw>))<nsw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %sub = add nsw i32 %index, -2

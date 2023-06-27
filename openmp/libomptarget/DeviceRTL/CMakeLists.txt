@@ -138,15 +138,17 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
     get_filename_component(infile ${src} ABSOLUTE)
     get_filename_component(outfile ${src} NAME)
     set(outfile "${outfile}-${target_cpu}.bc")
+    set(depfile "${outfile}.d")
 
     add_custom_command(OUTPUT ${outfile}
       COMMAND ${CLANG_TOOL}
       ${bc_flags}
       --offload-arch=${target_cpu}
       ${target_bc_flags}
+      -MD -MF ${depfile}
       ${infile} -o ${outfile}
-      DEPENDS ${infile} ${include_files}
-      IMPLICIT_DEPENDS CXX ${infile}
+      DEPENDS ${infile}
+      DEPFILE ${depfile}
       COMMENT "Building LLVM bitcode ${outfile}"
       VERBATIM
     )

@@ -1076,6 +1076,51 @@ transform::TransformState::Extension::replacePayloadValue(Value value,
 }
 
 //===----------------------------------------------------------------------===//
+// TransformState::RegionScope
+//===----------------------------------------------------------------------===//
+
+transform::TransformState::RegionScope::~RegionScope() {
+  // Remove handle invalidation notices as handles are going out of scope.
+  // The same region may be re-entered leading to incorrect invalidation
+  // errors.
+  for (Block &block : *region) {
+    for (Value handle : block.getArguments()) {
+      state.invalidatedHandles.erase(handle);
+    }
+    for (Operation &op : block) {
+      for (Value handle : op.getResults()) {
+        state.invalidatedHandles.erase(handle);
+      }
+    }
+  }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  // Remember pointers to payload ops referenced by the handles going out of
+  // scope.
+  SmallVector<Operation *> referencedOps =
+      llvm::to_vector(llvm::make_first_range(state.mappings[region].reverse));
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+
+  state.mappings.erase(region);
+  if (storedMappings.has_value())
+    state.mappings.swap(*storedMappings);
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  // If the last handle to a payload op has gone out of scope, we no longer
+  // need to store the cached name. Pointers may get reused, leading to
+  // incorrect associations in the cache.
+  for (Operation *op : referencedOps) {
+    SmallVector<Value> handles;
+    if (succeeded(state.getHandlesForPayloadOp(op, handles)))
+      continue;
+    state.cachedNames.erase(op);
+  }
+
+  state.regionStack.pop_back();
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+}
+
+//===----------------------------------------------------------------------===//
 // TransformResults
 //===----------------------------------------------------------------------===//
 

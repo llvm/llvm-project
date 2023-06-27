@@ -26,6 +26,8 @@ namespace affine {
 
 class AffineApplyOp;
 class AffineBound;
+class AffineMaxOp;
+class AffineMinOp;
 class AffineValueMap;
 
 /// A utility function to check if a value is defined at the top level of an
@@ -382,10 +384,9 @@ void canonicalizeSetAndOperands(IntegerSet *set,
 /// other AffineApplyOps supplying those operands. The operands of the resulting
 /// AffineApplyOp do not change the length of  AffineApplyOp chains.
 AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineMap map,
-                                      ValueRange operands);
-/// Variant of `makeComposedAffineApply` which infers the AffineMap from `e`.
+                                      ArrayRef<OpFoldResult> operands);
 AffineApplyOp makeComposedAffineApply(OpBuilder &b, Location loc, AffineExpr e,
-                                      ValueRange values);
+                                      ArrayRef<OpFoldResult> operands);
 
 /// Constructs an AffineApplyOp that applies `map` to `operands` after composing
 /// the map with the maps of any other AffineApplyOp supplying the operands,
@@ -407,8 +408,8 @@ SmallVector<OpFoldResult> makeComposedFoldedMultiResultAffineApply(
 
 /// Returns an AffineMinOp obtained by composing `map` and `operands` with
 /// AffineApplyOps supplying those operands.
-Value makeComposedAffineMin(OpBuilder &b, Location loc, AffineMap map,
-                            ValueRange operands);
+AffineMinOp makeComposedAffineMin(OpBuilder &b, Location loc, AffineMap map,
+                                  ArrayRef<OpFoldResult> operands);
 
 /// Constructs an AffineMinOp that computes a minimum across the results of
 /// applying `map` to `operands`, then immediately attempts to fold it. If

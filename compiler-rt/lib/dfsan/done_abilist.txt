@@ -88,6 +88,7 @@ fun:isalnum=functional
 fun:ispunct=functional
 fun:isspace=functional
 fun:tolower=functional
+fun:_tolower=functional
 fun:toupper=functional
 
 # Functions that return a value that is data-dependent on the input.

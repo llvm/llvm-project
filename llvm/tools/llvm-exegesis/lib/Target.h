@@ -75,8 +75,7 @@ public:
 
   // Targets can use this to create target-specific perf counters.
   virtual Expected<std::unique_ptr<pfm::Counter>>
-  createCounter(StringRef CounterName, const LLVMState &State,
-                const pid_t ProcessID = 0) const;
+  createCounter(StringRef CounterName, const LLVMState &State) const;
 
   // Targets can use this to add target-specific passes in assembleToStream();
   virtual void addTargetSpecificPasses(PassManagerBase &PM) const {}

@@ -85,6 +85,9 @@
 #ifndef PRAGMA_ANNOTATION
 #define PRAGMA_ANNOTATION(X) ANNOTATION(X)
 #endif
+#ifndef INTERESTING_IDENTIFIER
+#define INTERESTING_IDENTIFIER(X)
+#endif
 
 //===----------------------------------------------------------------------===//
 // Preprocessor keywords.
@@ -794,6 +797,17 @@ OBJC_AT_KEYWORD(dynamic)
 OBJC_AT_KEYWORD(import)
 OBJC_AT_KEYWORD(available)
 
+//===----------------------------------------------------------------------===//
+// Interesting identifiers.
+//===----------------------------------------------------------------------===//
+INTERESTING_IDENTIFIER(not_interesting)
+INTERESTING_IDENTIFIER(FILE)
+INTERESTING_IDENTIFIER(jmp_buf)
+INTERESTING_IDENTIFIER(sigjmp_buf)
+INTERESTING_IDENTIFIER(ucontext_t)
+INTERESTING_IDENTIFIER(float_t)
+INTERESTING_IDENTIFIER(double_t)
+
 // TODO: What to do about context-sensitive keywords like:
 //       bycopy/byref/in/inout/oneway/out?
 
@@ -974,3 +988,4 @@ ANNOTATION(repl_input_end)
 #undef TOK
 #undef C99_KEYWORD
 #undef C2X_KEYWORD
+#undef INTERESTING_IDENTIFIER

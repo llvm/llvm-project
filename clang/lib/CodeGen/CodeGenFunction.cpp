@@ -683,19 +683,6 @@ static bool matchesStlAllocatorFn(const Decl *D, const ASTContext &Ctx) {
   return true;
 }
 
-bool CodeGenFunction::isInAllocaArgument(CGCXXABI &ABI, QualType Ty) {
-  const CXXRecordDecl *RD = Ty->getAsCXXRecordDecl();
-  return RD && ABI.getRecordArgABI(RD) == CGCXXABI::RAA_DirectInMemory;
-}
-
-bool CodeGenFunction::hasInAllocaArg(const CXXMethodDecl *MD) {
-  return getTarget().getTriple().getArch() == llvm::Triple::x86 &&
-         getTarget().getCXXABI().isMicrosoft() &&
-         llvm::any_of(MD->parameters(), [&](ParmVarDecl *P) {
-           return isInAllocaArgument(CGM.getCXXABI(), P->getType());
-         });
-}
-
 /// Return the UBSan prologue signature for \p FD if one is available.
 static llvm::Constant *getPrologueSignature(CodeGenModule &CGM,
                                             const FunctionDecl *FD) {
@@ -1460,17 +1447,6 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     // The lambda static invoker function is special, because it forwards or
     // clones the body of the function call operator (but is actually static).
     EmitLambdaStaticInvokeBody(cast<CXXMethodDecl>(FD));
-
-  } else if (isa<CXXMethodDecl>(FD) &&
-             isLambdaCallOperator(cast<CXXMethodDecl>(FD)) &&
-             cast<CXXMethodDecl>(FD)->getParent()->getLambdaStaticInvoker() &&
-             hasInAllocaArg(cast<CXXMethodDecl>(FD)
-                                ->getParent()
-                                ->getLambdaStaticInvoker()) &&
-             !FnInfo.isDelegateCall()) {
-    // If emitting a lambda with static invoker on X86 Windows, change
-    // the call operator body.
-    EmitLambdaInAllocaCallOpBody(cast<CXXMethodDecl>(FD));
   } else if (FD->isDefaulted() && isa<CXXMethodDecl>(FD) &&
              (cast<CXXMethodDecl>(FD)->isCopyAssignmentOperator() ||
               cast<CXXMethodDecl>(FD)->isMoveAssignmentOperator())) {

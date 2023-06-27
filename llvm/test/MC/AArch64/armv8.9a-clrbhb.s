@@ -2,37 +2,37 @@
 // Assembly is always permitted for instructions in the hint space.
 
 // Optional, off by default
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi < %s | FileCheck %s --check-prefix=HINT_22
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v8a < %s | FileCheck %s --check-prefix=HINT_22
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v8.8a < %s | FileCheck %s --check-prefix=HINT_22
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v9a < %s | FileCheck %s --check-prefix=HINT_22
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v9.3a < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v8a < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v8.8a < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v9a < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v9.3a < %s | FileCheck %s --check-prefix=HINT_22
 
 // Optional, off by default, doubly disabled
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v8a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v8.8a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v9a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v9.3a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v8a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v8.8a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v9a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v9.3a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
 
 // Optional, off by default, manually enabled
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v8a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v8.8a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v9a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v9.3a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v8a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v8.8a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v9a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v9.3a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
 
 // Mandatory, enabled by default
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v8.9a < %s | FileCheck %s --check-prefix=CLRBHB
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v9.4a < %s | FileCheck %s --check-prefix=CLRBHB
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v8.9a < %s | FileCheck %s --check-prefix=CLRBHB
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v9.4a < %s | FileCheck %s --check-prefix=CLRBHB
 
 // Mandatory, on by default, doubly enabled
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v8.9a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v9.4a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v8.9a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v9.4a,+clrbhb < %s | FileCheck %s --check-prefix=CLRBHB
 
 // Mandatory, can't prevent disabling in LLVM
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v8.9a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
-// RUN: llvm-mc -show-encoding -triple aarch64-none-none-eabi -mattr=+v9.4a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v8.9a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
+// RUN: llvm-mc -show-encoding -triple aarch64-none-elf -mattr=+v9.4a,-clrbhb < %s | FileCheck %s --check-prefix=HINT_22
 
         clrbhb
         hint #22

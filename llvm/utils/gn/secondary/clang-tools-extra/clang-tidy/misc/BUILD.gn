@@ -35,6 +35,7 @@ static_library("misc") {
     "ConfusableIdentifierCheck.cpp",
     "ConstCorrectnessCheck.cpp",
     "DefinitionsInHeadersCheck.cpp",
+    "HeaderIncludeCycleCheck.cpp",
     "IncludeCleanerCheck.cpp",
     "MiscTidyModule.cpp",
     "MisleadingBidirectional.cpp",

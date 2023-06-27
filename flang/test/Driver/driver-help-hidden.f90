@@ -41,6 +41,8 @@
 ! CHECK-NEXT:                        Specify where to find the compiled intrinsic modules
 ! CHECK-NEXT: -flang-experimental-hlfir
 ! CHECK-NEXT:                        Use HLFIR lowering (experimental)
+! CHECK-NEXT: -flang-experimental-polymorphism
+! CHECK-NEXT:                        Enable Fortran 2003 polymorphism (experimental)
 ! CHECK-NEXT: -flarge-sizes          Use INTEGER(KIND=8) for the result type in size-related intrinsics
 ! CHECK-NEXT: -flogical-abbreviations Enable logical abbreviations
 ! CHECK-NEXT: -flto=<value> Set LTO mode

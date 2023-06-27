@@ -97,7 +97,7 @@ private:
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 
-  static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, bool IsSigned);
+  static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, LoadSDNode *N);
 };
 } // end namespace llvm
 

@@ -6,7 +6,7 @@
 # RUN: llvm-bolt %t.exe --relocs=0 --jump-tables=move --print-finalized \
 # RUN:    -o %t.out | FileCheck %s
 
-CHECK: BOLT-INFO: UCE removed 0 blocks and 0 bytes of code.
+CHECK-NOT: BOLT-INFO: UCE removed {{.*}} blocks and {{.*}}| bytes of code
 CHECK: Binary Function "main"
 CHECK:      .LFT0 (2 instructions, align : 1)
 CHECK-NEXT:   CFI State : 0

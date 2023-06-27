@@ -134,6 +134,20 @@ LIBC_INLINE uint32_t get_lane_size() { return LANE_SIZE; }
   __nvvm_bar_warp_sync(mask);
 }
 
+/// Returns the current value of the GPU's processor clock.
+LIBC_INLINE uint64_t processor_clock() {
+  uint64_t timestamp;
+  LIBC_INLINE_ASM("mov.u64  %0, %%clock64;" : "=l"(timestamp));
+  return timestamp;
+}
+
+/// Returns a global fixed-frequency timer at nanosecond frequency.
+LIBC_INLINE uint64_t fixed_frequrency_clock() {
+  uint64_t nsecs;
+  LIBC_INLINE_ASM("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
+  return nsecs;
+}
+
 } // namespace gpu
 } // namespace __llvm_libc
 

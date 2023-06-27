@@ -2397,8 +2397,11 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
-          Value *Result =
-              lowerObjectSizeCall(II, DL, &TLI, AA, /*MustSucceed=*/true);
+          SmallVector<Instruction *> InsertedInstructions;
+          Value *Result = lowerObjectSizeCall(
+              II, DL, &TLI, AA, /*MustSucceed=*/true, &InsertedInstructions);
+          for (Instruction *Inserted : InsertedInstructions)
+            Worklist.add(Inserted);
           replaceInstUsesWith(*I, Result);
           eraseInstFromFunction(*I);
           Users[i] = nullptr; // Skip examining in the next loop.
@@ -2611,20 +2614,21 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
-Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
+bool InstCombinerImpl::removeInstructionsBeforeUnreachable(Instruction &I) {
   // Try to remove the previous instruction if it must lead to unreachable.
   // This includes instructions like stores and "llvm.assume" that may not get
   // removed by simple dead code elimination.
+  bool Changed = false;
   while (Instruction *Prev = I.getPrevNonDebugInstruction()) {
     // While we theoretically can erase EH, that would result in a block that
     // used to start with an EH no longer starting with EH, which is invalid.
     // To make it valid, we'd need to fixup predecessors to no longer refer to
     // this block, but that changes CFG, which is not allowed in InstCombine.
     if (Prev->isEHPad())
-      return nullptr; // Can not drop any more instructions. We're done here.
+      break; // Can not drop any more instructions. We're done here.
 
     if (!isGuaranteedToTransferExecutionToSuccessor(Prev))
-      return nullptr; // Can not drop any more instructions. We're done here.
+      break; // Can not drop any more instructions. We're done here.
     // Otherwise, this instruction can be freely erased,
     // even if it is not side-effect free.
 
@@ -2632,9 +2636,13 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
     // another unreachable block), so convert those to poison.
     replaceInstUsesWith(*Prev, PoisonValue::get(Prev->getType()));
     eraseInstFromFunction(*Prev);
+    Changed = true;
   }
-  assert(I.getParent()->sizeWithoutDebug() == 1 && "The block is now empty.");
-  // FIXME: recurse into unconditional predecessors?
+  return Changed;
+}
+
+Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
+  removeInstructionsBeforeUnreachable(I);
   return nullptr;
 }
 
@@ -2667,24 +2675,21 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
   return nullptr;
 }
 
-/// If a block is dead due to a known branch condition, remove instructions
-/// in it.
-static bool handlePotentiallyDeadBlock(BasicBlock *BB, InstCombiner &IC) {
-  // We only know one edge to this block is dead, but there may be others.
-  // TODO: We could track dead edges globally.
-  if (!BB->getSinglePredecessor())
-    return false;
-
+// Under the assumption that I is unreachable, remove it and following
+// instructions.
+bool InstCombinerImpl::handleUnreachableFrom(Instruction *I) {
   bool Changed = false;
-  for (Instruction &Inst : make_early_inc_range(make_range(
-           std::next(BB->getTerminator()->getReverseIterator()), BB->rend()))) {
+  BasicBlock *BB = I->getParent();
+  for (Instruction &Inst : make_early_inc_range(
+           make_range(std::next(BB->getTerminator()->getReverseIterator()),
+                      std::next(I->getReverseIterator())))) {
     if (!Inst.use_empty() && !Inst.getType()->isTokenTy()) {
-      IC.replaceInstUsesWith(Inst, PoisonValue::get(Inst.getType()));
+      replaceInstUsesWith(Inst, PoisonValue::get(Inst.getType()));
       Changed = true;
     }
     if (Inst.isEHPad() || Inst.getType()->isTokenTy())
       continue;
-    IC.eraseInstFromFunction(Inst);
+    eraseInstFromFunction(Inst);
     Changed = true;
   }
 
@@ -2693,8 +2698,8 @@ static bool handlePotentiallyDeadBlock(BasicBlock *BB, InstCombiner &IC) {
     for (PHINode &PN : Succ->phis())
       for (Use &U : PN.incoming_values())
         if (PN.getIncomingBlock(U) == BB && !isa<PoisonValue>(U)) {
-          IC.replaceUse(U, PoisonValue::get(PN.getType()));
-          IC.addToWorklist(&PN);
+          replaceUse(U, PoisonValue::get(PN.getType()));
+          addToWorklist(&PN);
           Changed = true;
         }
 
@@ -2702,13 +2707,12 @@ static bool handlePotentiallyDeadBlock(BasicBlock *BB, InstCombiner &IC) {
   return Changed;
 }
 
-static bool handlePotentiallyDeadSuccessors(BasicBlock *BB,
-                                            BasicBlock *LiveSucc,
-                                            InstCombiner &IC) {
+bool InstCombinerImpl::handlePotentiallyDeadSuccessors(BasicBlock *BB,
+                                                       BasicBlock *LiveSucc) {
   bool Changed = false;
   for (BasicBlock *Succ : successors(BB))
-    if (Succ != LiveSucc)
-      Changed |= handlePotentiallyDeadBlock(Succ, IC);
+    if (Succ != LiveSucc && Succ->getSinglePredecessor())
+      Changed |= handleUnreachableFrom(&Succ->front());
   return Changed;
 }
 
@@ -2755,12 +2759,12 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return &BI;
   }
 
-  if (isa<UndefValue>(Cond) && handlePotentiallyDeadSuccessors(
-                                   BI.getParent(), /*LiveSucc*/ nullptr, *this))
+  if (isa<UndefValue>(Cond) &&
+      handlePotentiallyDeadSuccessors(BI.getParent(), /*LiveSucc*/ nullptr))
     return &BI;
   if (auto *CI = dyn_cast<ConstantInt>(Cond))
-    if (handlePotentiallyDeadSuccessors(
-            BI.getParent(), BI.getSuccessor(!CI->getZExtValue()), *this))
+    if (handlePotentiallyDeadSuccessors(BI.getParent(),
+                                        BI.getSuccessor(!CI->getZExtValue())))
       return &BI;
 
   return nullptr;
@@ -2781,12 +2785,12 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     return replaceOperand(SI, 0, Op0);
   }
 
-  if (isa<UndefValue>(Cond) && handlePotentiallyDeadSuccessors(
-                                   SI.getParent(), /*LiveSucc*/ nullptr, *this))
+  if (isa<UndefValue>(Cond) &&
+      handlePotentiallyDeadSuccessors(SI.getParent(), /*LiveSucc*/ nullptr))
     return &SI;
   if (auto *CI = dyn_cast<ConstantInt>(Cond))
     if (handlePotentiallyDeadSuccessors(
-            SI.getParent(), SI.findCaseValue(CI)->getCaseSuccessor(), *this))
+            SI.getParent(), SI.findCaseValue(CI)->getCaseSuccessor()))
       return &SI;
 
   KnownBits Known = computeKnownBits(Cond, 0, &SI);

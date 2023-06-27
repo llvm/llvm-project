@@ -100,6 +100,12 @@ on support follow.
      ``Zbkc``         Supported
      ``Zbkx``         Supported (`See note <#riscv-scalar-crypto-note1>`__)
      ``Zbs``          Supported
+     ``Zca``          Supported
+     ``Zcb``          Supported
+     ``Zcd``          Supported
+     ``Zcf``          Supported
+     ``Zcmp``         Assembly Support
+     ``Zcmt``         Assembly Support
      ``Zdinx``        Supported
      ``Zfh``          Supported
      ``Zfhmin``       Supported
@@ -183,29 +189,11 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-ssaia``
   LLVM implements the `Ratification candidate 3 <https://github.com/riscv/riscv-aia/releases/tag/1.0-RC3>`_.
 
-``experimental-zca``
-  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`__.
-
-``experimental-zcb``
-  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`__.
-
-``experimental-zcd``
-  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`__.
-
-``experimental-zcf``
-  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`__.
-
-``experimental-zcmp``
-  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`__.
-
-``experimental-zcmt``
-  LLVM implements the `1.0.1 draft specification <https://github.com/riscv/riscv-code-size-reduction/releases/tag/v1.0.1>`_.
-
 ``experimental-zfa``
   LLVM implements the `0.2 draft specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20230131-c0b298a/zfa-20230414.pdf>`__.
 
-``experimental-zfbfmin``
-  LLVM implements assembler support for the `0.6 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/main>`_.
+``experimental-zfbfmin``, ``experimental-zvfbfmin``, ``experimental-zvfbfwma``
+  LLVM implements assembler support for the `0.6.9 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/20230614>`_.
 
 ``experimental-zicond``
   LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zicond/releases/tag/v1.0-rc1>`__.
