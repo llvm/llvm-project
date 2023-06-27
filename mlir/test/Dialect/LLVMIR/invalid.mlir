@@ -857,6 +857,19 @@ module attributes {llvm.data_layout = "#vjkr32"} {
 
 // -----
 
+func.func @switch_superfluous_comma(%arg0 : i64) {
+  // expected-error@+3 {{custom op 'llvm.switch' expected integer value}}
+  llvm.switch %arg0 : i32, ^bb1 [
+    42: ^bb2,
+  ]
+^bb1:
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// -----
+
 func.func @switch_wrong_number_of_weights(%arg0 : i32) {
   // expected-error@+1 {{expects number of branch weights to match number of successors: 3 vs 2}}
   llvm.switch %arg0 : i32, ^bb1 [
