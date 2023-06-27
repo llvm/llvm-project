@@ -76,7 +76,7 @@ int main() {
 
     if (test__floatuntitf(0x8000000000000000ULL, 0x8p+60))
         return 1;
-    if (test__floatuntitf(0x8000000000000001ULL, 0x8.000000000000001p+60L))
+    if (test__floatuntitf(0x8000000000000001ULL, 0x8.000000000000001p+60Q))
         return 1;
 
     if (test__floatuntitf(0x0007FB72E8000000LL, 0x1.FEDCBAp+50))
@@ -106,102 +106,102 @@ int main() {
 
     if (test__floatuntitf(0x023479FD0E092DC0LL, 0x1.1A3CFE870496Ep+57))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DA1LL, 0x1.1A3CFE870496D08p+57L))
+    if (test__floatuntitf(0x023479FD0E092DA1LL, 0x1.1A3CFE870496D08p+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DB0LL, 0x1.1A3CFE870496D8p+57L))
+    if (test__floatuntitf(0x023479FD0E092DB0LL, 0x1.1A3CFE870496D8p+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DB8LL, 0x1.1A3CFE870496DCp+57L))
+    if (test__floatuntitf(0x023479FD0E092DB8LL, 0x1.1A3CFE870496DCp+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DB6LL, 0x1.1A3CFE870496DBp+57L))
+    if (test__floatuntitf(0x023479FD0E092DB6LL, 0x1.1A3CFE870496DBp+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DBFLL, 0x1.1A3CFE870496DF8p+57L))
+    if (test__floatuntitf(0x023479FD0E092DBFLL, 0x1.1A3CFE870496DF8p+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DC1LL, 0x1.1A3CFE870496E08p+57L))
+    if (test__floatuntitf(0x023479FD0E092DC1LL, 0x1.1A3CFE870496E08p+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DC7LL, 0x1.1A3CFE870496E38p+57L))
+    if (test__floatuntitf(0x023479FD0E092DC7LL, 0x1.1A3CFE870496E38p+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DC8LL, 0x1.1A3CFE870496E4p+57L))
+    if (test__floatuntitf(0x023479FD0E092DC8LL, 0x1.1A3CFE870496E4p+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DCFLL, 0x1.1A3CFE870496E78p+57L))
+    if (test__floatuntitf(0x023479FD0E092DCFLL, 0x1.1A3CFE870496E78p+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DD0LL, 0x1.1A3CFE870496E8p+57L))
+    if (test__floatuntitf(0x023479FD0E092DD0LL, 0x1.1A3CFE870496E8p+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DD1LL, 0x1.1A3CFE870496E88p+57L))
+    if (test__floatuntitf(0x023479FD0E092DD1LL, 0x1.1A3CFE870496E88p+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DD8LL, 0x1.1A3CFE870496ECp+57L))
+    if (test__floatuntitf(0x023479FD0E092DD8LL, 0x1.1A3CFE870496ECp+57Q))
         return 1;
-    if (test__floatuntitf(0x023479FD0E092DDFLL, 0x1.1A3CFE870496EF8p+57L))
+    if (test__floatuntitf(0x023479FD0E092DDFLL, 0x1.1A3CFE870496EF8p+57Q))
         return 1;
     if (test__floatuntitf(0x023479FD0E092DE0LL, 0x1.1A3CFE870496Fp+57))
         return 1;
 
-    if (test__floatuntitf(make_ti(0x023479FD0E092DC0LL, 0), 0x1.1A3CFE870496Ep+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DC0LL, 0), 0x1.1A3CFE870496Ep+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DA1LL, 1), 0x1.1A3CFE870496D08p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DA1LL, 1), 0x1.1A3CFE870496D08p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DB0LL, 2), 0x1.1A3CFE870496D8p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DB0LL, 2), 0x1.1A3CFE870496D8p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DB8LL, 3), 0x1.1A3CFE870496DCp+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DB8LL, 3), 0x1.1A3CFE870496DCp+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DB6LL, 4), 0x1.1A3CFE870496DBp+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DB6LL, 4), 0x1.1A3CFE870496DBp+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DBFLL, 5), 0x1.1A3CFE870496DF8p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DBFLL, 5), 0x1.1A3CFE870496DF8p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DC1LL, 6), 0x1.1A3CFE870496E08p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DC1LL, 6), 0x1.1A3CFE870496E08p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DC7LL, 7), 0x1.1A3CFE870496E38p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DC7LL, 7), 0x1.1A3CFE870496E38p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DC8LL, 8), 0x1.1A3CFE870496E4p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DC8LL, 8), 0x1.1A3CFE870496E4p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DCFLL, 9), 0x1.1A3CFE870496E78p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DCFLL, 9), 0x1.1A3CFE870496E78p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DD0LL, 0), 0x1.1A3CFE870496E8p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DD0LL, 0), 0x1.1A3CFE870496E8p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DD1LL, 11), 0x1.1A3CFE870496E88p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DD1LL, 11), 0x1.1A3CFE870496E88p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DD8LL, 12), 0x1.1A3CFE870496ECp+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DD8LL, 12), 0x1.1A3CFE870496ECp+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DDFLL, 13), 0x1.1A3CFE870496EF8p+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DDFLL, 13), 0x1.1A3CFE870496EF8p+121Q))
         return 1;
-    if (test__floatuntitf(make_ti(0x023479FD0E092DE0LL, 14), 0x1.1A3CFE870496Fp+121L))
+    if (test__floatuntitf(make_ti(0x023479FD0E092DE0LL, 14), 0x1.1A3CFE870496Fp+121Q))
         return 1;
 
-    if (test__floatuntitf(make_ti(0, 0xFFFFFFFFFFFFFFFFLL), 0x1.FFFFFFFFFFFFFFFEp+63L))
+    if (test__floatuntitf(make_ti(0, 0xFFFFFFFFFFFFFFFFLL), 0x1.FFFFFFFFFFFFFFFEp+63Q))
         return 1;
 
     if (test__floatuntitf(make_ti(0xFFFFFFFFFFFFFFFFLL, 0x0000000000000000LL),
-                          0x1.FFFFFFFFFFFFFFFEp+127L))
+                          0x1.FFFFFFFFFFFFFFFEp+127Q))
         return 1;
     if (test__floatuntitf(make_ti(0xFFFFFFFFFFFFFFFFLL, 0xFFFFFFFFFFFFFFFFLL),
-                          0x1.0000000000000000p+128L))
+                          0x1.0000000000000000p+128Q))
         return 1;
 
     if (test__floatuntitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC2801LL),
-                        0x1.23456789ABCDEF0123456789ABC3p+124L))
+                        0x1.23456789ABCDEF0123456789ABC3p+124Q))
         return 1;
     if (test__floatuntitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC3000LL),
-                        0x1.23456789ABCDEF0123456789ABC3p+124L))
+                        0x1.23456789ABCDEF0123456789ABC3p+124Q))
         return 1;
     if (test__floatuntitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC37FFLL),
-                        0x1.23456789ABCDEF0123456789ABC3p+124L))
+                        0x1.23456789ABCDEF0123456789ABC3p+124Q))
         return 1;
     if (test__floatuntitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC3800LL),
-                        0x1.23456789ABCDEF0123456789ABC4p+124L))
+                        0x1.23456789ABCDEF0123456789ABC4p+124Q))
         return 1;
     if (test__floatuntitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC4000LL),
-                        0x1.23456789ABCDEF0123456789ABC4p+124L))
+                        0x1.23456789ABCDEF0123456789ABC4p+124Q))
         return 1;
     if (test__floatuntitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC47FFLL),
-                        0x1.23456789ABCDEF0123456789ABC4p+124L))
+                        0x1.23456789ABCDEF0123456789ABC4p+124Q))
         return 1;
     if (test__floatuntitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC4800LL),
-                        0x1.23456789ABCDEF0123456789ABC4p+124L))
+                        0x1.23456789ABCDEF0123456789ABC4p+124Q))
         return 1;
     if (test__floatuntitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC4801LL),
-                        0x1.23456789ABCDEF0123456789ABC5p+124L))
+                        0x1.23456789ABCDEF0123456789ABC5p+124Q))
         return 1;
     if (test__floatuntitf(make_ti(0x123456789ABCDEF0LL, 0x123456789ABC57FFLL),
-                        0x1.23456789ABCDEF0123456789ABC5p+124L))
+                        0x1.23456789ABCDEF0123456789ABC5p+124Q))
         return 1;
 #else
     printf("skipped\n");
