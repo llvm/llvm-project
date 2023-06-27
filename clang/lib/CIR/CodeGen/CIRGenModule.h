@@ -515,6 +515,9 @@ public:
                                            getMLIRVisibilityFromCIRLinkage(L));
   }
 
+  mlir::cir::GlobalLinkageKind getCIRLinkageVarDefinition(const VarDecl *VD,
+                                                          bool IsConstant);
+
   void addReplacement(StringRef Name, mlir::Operation *Op);
 
   mlir::Location getLocForFunction(const clang::FunctionDecl *FD);

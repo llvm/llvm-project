@@ -17,3 +17,9 @@ int foo(void) {
 
 // LLVM: define internal i32 @bar(
 // LLVM: define i32 @foo(
+
+static int var = 0;
+// CIR: cir.global "private" internal @var = #cir.int<0> : !s32i
+int get_var(void) {
+  return var;
+}
