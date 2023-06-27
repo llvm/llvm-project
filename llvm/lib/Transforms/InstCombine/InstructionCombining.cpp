@@ -2667,6 +2667,38 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
   return nullptr;
 }
 
+// Under the assumption that I is unreachable, remove it and following
+// instructions.
+bool InstCombinerImpl::handleUnreachableFrom(Instruction *I) {
+  bool Changed = false;
+  BasicBlock *BB = I->getParent();
+  for (Instruction &Inst : make_early_inc_range(
+           make_range(std::next(BB->getTerminator()->getReverseIterator()),
+                      std::next(I->getReverseIterator())))) {
+    if (!Inst.use_empty() && !Inst.getType()->isTokenTy()) {
+      replaceInstUsesWith(Inst, PoisonValue::get(Inst.getType()));
+      Changed = true;
+    }
+    if (Inst.isEHPad() || Inst.getType()->isTokenTy())
+      continue;
+    eraseInstFromFunction(Inst);
+    Changed = true;
+  }
+
+  // Replace phi node operands in successor blocks with poison.
+  for (BasicBlock *Succ : successors(BB))
+    for (PHINode &PN : Succ->phis())
+      for (Use &U : PN.incoming_values())
+        if (PN.getIncomingBlock(U) == BB && !isa<PoisonValue>(U)) {
+          replaceUse(U, PoisonValue::get(PN.getType()));
+          addToWorklist(&PN);
+          Changed = true;
+        }
+
+  // TODO: Successor blocks may also be dead.
+  return Changed;
+}
+
 Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
   if (BI.isUnconditional())
     return visitUnconditionalBranchInst(BI);

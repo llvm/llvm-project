@@ -55,10 +55,9 @@ define void @test(i1 %c) {
 ; CHECK-NEXT:    [[TMP149:%.*]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    br label [[BB150]]
 ; CHECK:       bb150:
-; CHECK-NEXT:    [[DOTIN]] = phi ptr [ [[TMP184:%.*]], [[BB152]] ], [ [[TMP149]], [[BB147]] ]
+; CHECK-NEXT:    [[DOTIN]] = phi ptr [ poison, [[BB152]] ], [ [[TMP149]], [[BB147]] ]
 ; CHECK-NEXT:    br label [[BB47]]
 ; CHECK:       bb152:
-; CHECK-NEXT:    [[TMP184]] = load ptr, ptr inttoptr (i64 16 to ptr), align 16
 ; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    br label [[BB150]]
 ;

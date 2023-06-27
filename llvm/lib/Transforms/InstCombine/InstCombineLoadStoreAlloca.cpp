@@ -1560,8 +1560,12 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   }
 
   // This is a non-terminator unreachable marker. Don't remove it.
-  if (isa<UndefValue>(Ptr))
+  if (isa<UndefValue>(Ptr)) {
+    // Remove unreachable instructions after the marker.
+    if (handleUnreachableFrom(SI.getNextNode()))
+      return &SI;
     return nullptr;
+  }
 
   // store undef, Ptr -> noop
   // FIXME: This is technically incorrect because it might overwrite a poison
