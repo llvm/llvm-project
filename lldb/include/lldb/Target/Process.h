@@ -147,8 +147,8 @@ public:
 
   void SetResumeCount(uint32_t c) { m_resume_count = c; }
 
-  const char *GetProcessPluginName() const {
-    return (m_plugin_name.empty() ? nullptr : m_plugin_name.c_str());
+  llvm::StringRef GetProcessPluginName() const {
+    return llvm::StringRef(m_plugin_name);
   }
 
   void SetProcessPluginName(llvm::StringRef plugin) {
