@@ -648,8 +648,8 @@ LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
 
 /// Given an expression of pointer type, try to
 /// derive a more accurate bound on the alignment of the pointer.
-Address CIRGenFunction::buildPointerWithAlignment(const Expr *E,
-                                                  LValueBaseInfo *BaseInfo) {
+Address CIRGenFunction::buildPointerWithAlignment(
+    const Expr *E, LValueBaseInfo *BaseInfo, KnownNonNull_t IsKnownNonNull) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(E->getType()->isPointerType() ||
          E->getType()->isObjCObjectPointerType());
@@ -665,6 +665,18 @@ Address CIRGenFunction::buildPointerWithAlignment(const Expr *E,
       llvm::errs() << CE->getCastKindName() << "\n";
       assert(0 && "not implemented");
     }
+    // Non-converting casts (but not C's implicit conversion from void*).
+    case CK_BitCast:
+    case CK_NoOp:
+    case CK_AddressSpaceConversion:
+      if (auto PtrTy =
+              CE->getSubExpr()->getType()->getAs<clang::PointerType>()) {
+        if (PtrTy->getPointeeType()->isVoidType())
+          break;
+        llvm_unreachable("NYI");
+      }
+      break;
+
     // Nothing to do here...
     case CK_LValueToRValue:
       break;
@@ -1722,8 +1734,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
             // surrounded by cleanups.
             Address Addr = LV.getAddress();
             auto V = Addr.getPointer();
-            LV = LValue::makeAddr(Addr.withPointer(V), LV.getType(),
-                                  getContext(),
+            LV = LValue::makeAddr(Addr.withPointer(V, NotKnownNonNull),
+                                  LV.getType(), getContext(),
                                   LV.getBaseInfo() /*TODO(cir):TBAA*/);
           }
         });
