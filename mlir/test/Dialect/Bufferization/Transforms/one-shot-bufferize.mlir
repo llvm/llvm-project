@@ -208,3 +208,19 @@ func.func @from_unranked_to_unranked(%arg0: tensor<*xi32>) -> tensor<*xi32> {
   %0 = tensor.cast %arg0 : tensor<*xi32> to tensor<*xi32>
   return %0 : tensor<*xi32>
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor_copy(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<5xf32>)
+func.func @tensor_copy(%arg0: tensor<5xf32>) -> tensor<5xf32> {
+  // CHECK: %[[m:.*]] = bufferization.to_memref %[[arg0]]
+  // CHECK: %[[alloc:.*]] = memref.alloc() {{.*}} : memref<5xf32>
+  // CHECK: memref.copy %[[m]], %[[alloc]]
+  // CHECK: %[[r:.*]] = bufferization.to_tensor %[[alloc]]
+  // CHECK: memref.dealloc %[[alloc]]
+  // CHECK: return %[[r]]
+  %dest = bufferization.alloc_tensor() : tensor<5xf32>
+  %0 = bufferization.copy_tensor %arg0, %dest : tensor<5xf32>
+  return %0 : tensor<5xf32>
+}
