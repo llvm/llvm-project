@@ -116,6 +116,7 @@ typedef long double fp_t;
 // Note: Since there is no explicit way to tell compiler the constant is a
 // 128-bit integer, we let the constant be casted to 128-bit integer
 #define significandBits 112
+#define TF_MANT_DIG (significandBits + 1)
 
 static __inline int rep_clz(rep_t a) {
   const union {
