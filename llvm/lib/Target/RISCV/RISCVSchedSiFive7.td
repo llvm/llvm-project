@@ -914,7 +914,7 @@ def : InstRW<[WriteIALU], (instrs COPY)>;
 
 // Bypass and advance
 def : SiFive7AnyToGPRBypass<ReadJmp>;
-def : ReadAdvance<ReadJalr, 0>;
+def : SiFive7AnyToGPRBypass<ReadJalr>;
 def : ReadAdvance<ReadCSR, 0>;
 def : ReadAdvance<ReadStoreData, 0>;
 def : ReadAdvance<ReadMemBase, 0>;
