@@ -704,6 +704,9 @@ RISC-V Support
 - Added ``attribute(riscv_rvv_vector_bits(__riscv_v_fixed_vlen))`` to allow
   the size of a RVV (RISC-V Vector) scalable type to be specified. This allows
   RVV scalable vector types to be used in structs or in global variables.
+- The rules for ordering of extensions in ``-march`` strings were relaxed. A
+  canonical ordering is no longer enforced on ``z*``, ``s*``, and ``x*``
+  prefixed extensions.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
