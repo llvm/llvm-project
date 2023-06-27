@@ -328,27 +328,28 @@ public:
   void emitCFIBKeyFrame() override;
   void emitCFIMTETaggedFrame() override;
   void emitCFISections(bool EH, bool Debug) override;
-  void emitCFIDefCfa(int64_t Register, int64_t Offset) override;
-  void emitCFIDefCfaOffset(int64_t Offset) override;
-  void emitCFIDefCfaRegister(int64_t Register) override;
+  void emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc) override;
+  void emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc) override;
+  void emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) override;
   void emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
-                               int64_t AddressSpace) override;
-  void emitCFIOffset(int64_t Register, int64_t Offset) override;
+                               int64_t AddressSpace, SMLoc Loc) override;
+  void emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
   void emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding) override;
   void emitCFILsda(const MCSymbol *Sym, unsigned Encoding) override;
-  void emitCFIRememberState() override;
-  void emitCFIRestoreState() override;
-  void emitCFIRestore(int64_t Register) override;
-  void emitCFISameValue(int64_t Register) override;
-  void emitCFIRelOffset(int64_t Register, int64_t Offset) override;
-  void emitCFIAdjustCfaOffset(int64_t Adjustment) override;
-  void emitCFIEscape(StringRef Values) override;
-  void emitCFIGnuArgsSize(int64_t Size) override;
+  void emitCFIRememberState(SMLoc Loc) override;
+  void emitCFIRestoreState(SMLoc Loc) override;
+  void emitCFIRestore(int64_t Register, SMLoc Loc) override;
+  void emitCFISameValue(int64_t Register, SMLoc Loc) override;
+  void emitCFIRelOffset(int64_t Register, int64_t Offset, SMLoc Loc) override;
+  void emitCFIAdjustCfaOffset(int64_t Adjustment, SMLoc Loc) override;
+  void emitCFIEscape(StringRef Values, SMLoc Loc) override;
+  void emitCFIGnuArgsSize(int64_t Size, SMLoc Loc) override;
   void emitCFISignalFrame() override;
-  void emitCFIUndefined(int64_t Register) override;
-  void emitCFIRegister(int64_t Register1, int64_t Register2) override;
-  void emitCFIWindowSave() override;
-  void emitCFINegateRAState() override;
+  void emitCFIUndefined(int64_t Register, SMLoc Loc) override;
+  void emitCFIRegister(int64_t Register1, int64_t Register2,
+                       SMLoc Loc) override;
+  void emitCFIWindowSave(SMLoc Loc) override;
+  void emitCFINegateRAState(SMLoc Loc) override;
   void emitCFIReturnColumn(int64_t Register) override;
 
   void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
@@ -1897,23 +1898,23 @@ void MCAsmStreamer::EmitRegisterName(int64_t Register) {
   OS << Register;
 }
 
-void MCAsmStreamer::emitCFIDefCfa(int64_t Register, int64_t Offset) {
-  MCStreamer::emitCFIDefCfa(Register, Offset);
+void MCAsmStreamer::emitCFIDefCfa(int64_t Register, int64_t Offset, SMLoc Loc) {
+  MCStreamer::emitCFIDefCfa(Register, Offset, Loc);
   OS << "\t.cfi_def_cfa ";
   EmitRegisterName(Register);
   OS << ", " << Offset;
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIDefCfaOffset(int64_t Offset) {
-  MCStreamer::emitCFIDefCfaOffset(Offset);
+void MCAsmStreamer::emitCFIDefCfaOffset(int64_t Offset, SMLoc Loc) {
+  MCStreamer::emitCFIDefCfaOffset(Offset, Loc);
   OS << "\t.cfi_def_cfa_offset " << Offset;
   EmitEOL();
 }
 
 void MCAsmStreamer::emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
-                                            int64_t AddressSpace) {
-  MCStreamer::emitCFILLVMDefAspaceCfa(Register, Offset, AddressSpace);
+                                            int64_t AddressSpace, SMLoc Loc) {
+  MCStreamer::emitCFILLVMDefAspaceCfa(Register, Offset, AddressSpace, Loc);
   OS << "\t.cfi_llvm_def_aspace_cfa ";
   EmitRegisterName(Register);
   OS << ", " << Offset;
@@ -1931,14 +1932,14 @@ static void PrintCFIEscape(llvm::formatted_raw_ostream &OS, StringRef Values) {
   }
 }
 
-void MCAsmStreamer::emitCFIEscape(StringRef Values) {
-  MCStreamer::emitCFIEscape(Values);
+void MCAsmStreamer::emitCFIEscape(StringRef Values, SMLoc Loc) {
+  MCStreamer::emitCFIEscape(Values, Loc);
   PrintCFIEscape(OS, Values);
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIGnuArgsSize(int64_t Size) {
-  MCStreamer::emitCFIGnuArgsSize(Size);
+void MCAsmStreamer::emitCFIGnuArgsSize(int64_t Size, SMLoc Loc) {
+  MCStreamer::emitCFIGnuArgsSize(Size, Loc);
 
   uint8_t Buffer[16] = { dwarf::DW_CFA_GNU_args_size };
   unsigned Len = encodeULEB128(Size, Buffer + 1) + 1;
@@ -1947,15 +1948,15 @@ void MCAsmStreamer::emitCFIGnuArgsSize(int64_t Size) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIDefCfaRegister(int64_t Register) {
-  MCStreamer::emitCFIDefCfaRegister(Register);
+void MCAsmStreamer::emitCFIDefCfaRegister(int64_t Register, SMLoc Loc) {
+  MCStreamer::emitCFIDefCfaRegister(Register, Loc);
   OS << "\t.cfi_def_cfa_register ";
   EmitRegisterName(Register);
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIOffset(int64_t Register, int64_t Offset) {
-  this->MCStreamer::emitCFIOffset(Register, Offset);
+void MCAsmStreamer::emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc) {
+  MCStreamer::emitCFIOffset(Register, Offset, Loc);
   OS << "\t.cfi_offset ";
   EmitRegisterName(Register);
   OS << ", " << Offset;
@@ -1977,42 +1978,43 @@ void MCAsmStreamer::emitCFILsda(const MCSymbol *Sym, unsigned Encoding) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIRememberState() {
-  MCStreamer::emitCFIRememberState();
+void MCAsmStreamer::emitCFIRememberState(SMLoc Loc) {
+  MCStreamer::emitCFIRememberState(Loc);
   OS << "\t.cfi_remember_state";
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIRestoreState() {
-  MCStreamer::emitCFIRestoreState();
+void MCAsmStreamer::emitCFIRestoreState(SMLoc Loc) {
+  MCStreamer::emitCFIRestoreState(Loc);
   OS << "\t.cfi_restore_state";
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIRestore(int64_t Register) {
-  MCStreamer::emitCFIRestore(Register);
+void MCAsmStreamer::emitCFIRestore(int64_t Register, SMLoc Loc) {
+  MCStreamer::emitCFIRestore(Register, Loc);
   OS << "\t.cfi_restore ";
   EmitRegisterName(Register);
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFISameValue(int64_t Register) {
-  MCStreamer::emitCFISameValue(Register);
+void MCAsmStreamer::emitCFISameValue(int64_t Register, SMLoc Loc) {
+  MCStreamer::emitCFISameValue(Register, Loc);
   OS << "\t.cfi_same_value ";
   EmitRegisterName(Register);
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIRelOffset(int64_t Register, int64_t Offset) {
-  MCStreamer::emitCFIRelOffset(Register, Offset);
+void MCAsmStreamer::emitCFIRelOffset(int64_t Register, int64_t Offset,
+                                     SMLoc Loc) {
+  MCStreamer::emitCFIRelOffset(Register, Offset, Loc);
   OS << "\t.cfi_rel_offset ";
   EmitRegisterName(Register);
   OS << ", " << Offset;
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIAdjustCfaOffset(int64_t Adjustment) {
-  MCStreamer::emitCFIAdjustCfaOffset(Adjustment);
+void MCAsmStreamer::emitCFIAdjustCfaOffset(int64_t Adjustment, SMLoc Loc) {
+  MCStreamer::emitCFIAdjustCfaOffset(Adjustment, Loc);
   OS << "\t.cfi_adjust_cfa_offset " << Adjustment;
   EmitEOL();
 }
@@ -2023,15 +2025,16 @@ void MCAsmStreamer::emitCFISignalFrame() {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIUndefined(int64_t Register) {
-  MCStreamer::emitCFIUndefined(Register);
+void MCAsmStreamer::emitCFIUndefined(int64_t Register, SMLoc Loc) {
+  MCStreamer::emitCFIUndefined(Register, Loc);
   OS << "\t.cfi_undefined ";
   EmitRegisterName(Register);
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIRegister(int64_t Register1, int64_t Register2) {
-  MCStreamer::emitCFIRegister(Register1, Register2);
+void MCAsmStreamer::emitCFIRegister(int64_t Register1, int64_t Register2,
+                                    SMLoc Loc) {
+  MCStreamer::emitCFIRegister(Register1, Register2, Loc);
   OS << "\t.cfi_register ";
   EmitRegisterName(Register1);
   OS << ", ";
@@ -2039,14 +2042,14 @@ void MCAsmStreamer::emitCFIRegister(int64_t Register1, int64_t Register2) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFIWindowSave() {
-  MCStreamer::emitCFIWindowSave();
+void MCAsmStreamer::emitCFIWindowSave(SMLoc Loc) {
+  MCStreamer::emitCFIWindowSave(Loc);
   OS << "\t.cfi_window_save";
   EmitEOL();
 }
 
-void MCAsmStreamer::emitCFINegateRAState() {
-  MCStreamer::emitCFINegateRAState();
+void MCAsmStreamer::emitCFINegateRAState(SMLoc Loc) {
+  MCStreamer::emitCFINegateRAState(Loc);
   OS << "\t.cfi_negate_ra_state";
   EmitEOL();
 }

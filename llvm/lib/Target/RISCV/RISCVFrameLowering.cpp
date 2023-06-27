@@ -384,7 +384,7 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   DefCfaExpr.append(buffer, buffer + encodeULEB128(Expr.size(), buffer));
   DefCfaExpr.append(Expr.str());
 
-  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(),
+  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
                                         Comment.str());
 }
 
