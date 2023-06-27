@@ -103,6 +103,42 @@ def CastOp : CIR_Op<"cast", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ObjSizeOp
+//===----------------------------------------------------------------------===//
+
+def SizeInfoTypeMin : I32EnumAttrCase<"min", 0>;
+def SizeInfoTypeMax : I32EnumAttrCase<"max", 1>;
+
+def SizeInfoType : I32EnumAttr<
+    "SizeInfoType",
+    "size info type",
+    [SizeInfoTypeMin, SizeInfoTypeMax]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def ObjSizeOp : CIR_Op<"objsize", [Pure]> {
+  let summary = "Conversion between values of different types";
+  let description = [{
+  }];
+
+  let arguments = (ins CIR_PointerType:$ptr, SizeInfoType:$kind,
+                   UnitAttr:$dynamic);
+  let results = (outs CIR_IntType:$result);
+
+  let assemblyFormat = [{
+    `(`
+        $ptr `:` type($ptr) `,`
+        $kind
+        (`,` `dynamic` $dynamic^)?
+    `)`
+    `->` type($result) attr-dict
+  }];
+
+  // Nothing to verify that isn't already covered by constraints.
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // PtrStrideOp
 //===----------------------------------------------------------------------===//
 

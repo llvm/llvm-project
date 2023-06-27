@@ -2,6 +2,8 @@
 
 // RUN: cir-tool %s | cir-tool | FileCheck %s
 !s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+!u64i = !cir.int<u, 64>
 
 module  {
   cir.func @foo(%arg0: !s32i) -> !s32i {
@@ -45,6 +47,14 @@ module  {
     }
     cir.return
   }
+
+  cir.func @os() {
+    %0 = cir.alloca !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>, ["m", init] {alignment = 8 : i64}
+    %3 = cir.load %0 : cir.ptr <!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+    %4 = cir.objsize(%3 : <!s8i>, max) -> !u64i
+    %5 = cir.objsize(%3 : <!s8i>, min) -> !u64i
+    cir.return
+  }
 }
 
 // CHECK: module  {
@@ -79,5 +89,13 @@ module  {
 // CHECK-NEXT:     cir.scope {
 // CHECK-NEXT:       %1 = cir.alloca !s32i,  cir.ptr <!s32i>, ["y"] {alignment = 4 : i64}
 // CHECK-NEXT:     }
+
+// CHECK: cir.func @os() {
+// CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>, ["m", init] {alignment = 8 : i64}
+// CHECK-NEXT:   %1 = cir.load %0 : cir.ptr <!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+// CHECK-NEXT:   %2 = cir.objsize(%1 : <!s8i>, max) -> !u64i
+// CHECK-NEXT:   %3 = cir.objsize(%1 : <!s8i>, min) -> !u64i
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }
 
 // CHECK: }
