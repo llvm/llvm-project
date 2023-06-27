@@ -172,8 +172,10 @@ MetadataOp ModuleImport::getGlobalMetadataOp() {
 
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(mlirModule.getBody());
-  return globalMetadataOp = builder.create<MetadataOp>(
-             mlirModule.getLoc(), getGlobalMetadataOpName());
+  globalMetadataOp = builder.create<MetadataOp>(mlirModule.getLoc(),
+                                                getGlobalMetadataOpName());
+  globalInsertionOp = globalMetadataOp;
+  return globalMetadataOp;
 }
 
 ComdatOp ModuleImport::getGlobalComdatOp() {
@@ -181,9 +183,11 @@ ComdatOp ModuleImport::getGlobalComdatOp() {
     return globalComdatOp;
 
   OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToStart(mlirModule.getBody());
-  return globalComdatOp = builder.create<ComdatOp>(mlirModule.getLoc(),
-                                                   getGlobalComdatOpName());
+  builder.setInsertionPointToEnd(mlirModule.getBody());
+  globalComdatOp =
+      builder.create<ComdatOp>(mlirModule.getLoc(), getGlobalComdatOpName());
+  globalInsertionOp = globalComdatOp;
+  return globalComdatOp;
 }
 
 LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
@@ -559,17 +563,29 @@ LogicalResult ModuleImport::convertMetadata() {
   return success();
 }
 
-LogicalResult ModuleImport::convertComdats() {
-  ComdatOp comdat = getGlobalComdatOp();
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(&comdat.getBody().back());
-  for (auto &kv : llvmModule->getComdatSymbolTable()) {
-    StringRef name = kv.getKey();
-    llvm::Comdat::SelectionKind selector = kv.getValue().getSelectionKind();
-    builder.create<ComdatSelectorOp>(mlirModule.getLoc(), name,
-                                     convertComdatFromLLVM(selector));
-  }
+void ModuleImport::processComdat(const llvm::Comdat *comdat) {
+  if (comdatMapping.contains(comdat))
+    return;
 
+  ComdatOp comdatOp = getGlobalComdatOp();
+  OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&comdatOp.getBody().back());
+  auto selectorOp = builder.create<ComdatSelectorOp>(
+      mlirModule.getLoc(), comdat->getName(),
+      convertComdatFromLLVM(comdat->getSelectionKind()));
+  auto symbolRef =
+      SymbolRefAttr::get(builder.getContext(), getGlobalComdatOpName(),
+                         FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));
+  comdatMapping.try_emplace(comdat, symbolRef);
+}
+
+LogicalResult ModuleImport::convertComdats() {
+  for (llvm::GlobalVariable &globalVar : llvmModule->globals())
+    if (globalVar.hasComdat())
+      processComdat(globalVar.getComdat());
+  for (llvm::Function &func : llvmModule->functions())
+    if (func.hasComdat())
+      processComdat(func.getComdat());
   return success();
 }
 
@@ -892,18 +908,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
   globalOp.setVisibility_(
       convertVisibilityFromLLVM(globalVar->getVisibility()));
 
-  if (globalVar->hasComdat()) {
-    llvm::Comdat *llvmComdat = globalVar->getComdat();
-    ComdatOp comdat = getGlobalComdatOp();
-    if (ComdatSelectorOp selector = dyn_cast<ComdatSelectorOp>(
-            comdat.lookupSymbol(llvmComdat->getName()))) {
-      auto symbolRef =
-          SymbolRefAttr::get(builder.getContext(), getGlobalComdatOpName(),
-                             FlatSymbolRefAttr::get(selector.getSymNameAttr()));
-      globalOp.setComdatAttr(symbolRef);
-    } else
-      return failure();
-  }
+  if (globalVar->hasComdat())
+    globalOp.setComdatAttr(comdatMapping.lookup(globalVar->getComdat()));
 
   return success();
 }
@@ -1728,6 +1734,9 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
   funcOp.setVisibility_(convertVisibilityFromLLVM(func->getVisibility()));
 
+  if (func->hasComdat())
+    funcOp.setComdatAttr(comdatMapping.lookup(func->getComdat()));
+
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);
 
@@ -1831,9 +1840,9 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
     return {};
   if (failed(moduleImport.convertDataLayout()))
     return {};
-  if (failed(moduleImport.convertMetadata()))
-    return {};
   if (failed(moduleImport.convertComdats()))
+    return {};
+  if (failed(moduleImport.convertMetadata()))
     return {};
   if (failed(moduleImport.convertGlobals()))
     return {};
