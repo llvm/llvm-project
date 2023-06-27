@@ -1048,24 +1048,6 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp);
 // functional-stye API call.
 //===----------------------------------------------------------------------===//
 
-///
-/// Linalg padding pattern.
-///
-/// Apply the `padding` transformation as a pattern.
-/// See `padding` for more details.
-struct LinalgPaddingPattern : public OpInterfaceRewritePattern<LinalgOp> {
-  LinalgPaddingPattern(MLIRContext *context,
-                       LinalgPaddingOptions options = LinalgPaddingOptions(),
-                       PatternBenefit benefit = 1);
-
-  LogicalResult matchAndRewrite(LinalgOp op,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  /// Options to control padding and hoisting.
-  LinalgPaddingOptions options;
-};
-
 /// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
 /// convolution ops.
 template <typename Conv2DOp, typename Conv1DOp>
