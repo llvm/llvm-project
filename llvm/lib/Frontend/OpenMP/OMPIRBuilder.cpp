@@ -4084,7 +4084,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
     function_ref<MapInfosTy &(InsertPointTy CodeGenIP)> GenMapInfoCB,
     omp::RuntimeFunction *MapperFunc,
     function_ref<InsertPointTy(InsertPointTy CodeGenIP, BodyGenTy BodyGenType)>
-        BodyGenCB) {
+        BodyGenCB,
+    function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB,
+    function_ref<Value *(unsigned int)> CustomMapperCB) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -4095,9 +4097,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
   // arguments of the runtime call by reference because they are used in the
   // closing of the region.
   auto BeginThenGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
-    emitOffloadingArrays(AllocaIP, Builder.saveIP(),
-                         GenMapInfoCB(Builder.saveIP()), Info,
-                         /*IsNonContiguous=*/true);
+    emitOffloadingArrays(
+        AllocaIP, Builder.saveIP(), GenMapInfoCB(Builder.saveIP()), Info,
+        /*IsNonContiguous=*/true, DeviceAddrCB, CustomMapperCB);
 
     TargetDataRTArgs RTArgs;
     emitOffloadingArraysArgument(Builder, RTArgs, Info);
