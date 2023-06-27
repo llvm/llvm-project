@@ -850,10 +850,9 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   if (D->hasAttr<AnnotateAttr>())
     assert(0 && "not implemented");
 
-  // TODO(cir):
-  // Set the llvm linkage type as appropriate.
-  // llvm::GlobalValue::LinkageTypes Linkage =
-  //     getLLVMLinkageVarDefinition(D, GV->isConstant());
+  // Set CIR's linkage type as appropriate.
+  mlir::cir::GlobalLinkageKind Linkage =
+      getCIRLinkageVarDefinition(D, /*IsConstant=*/false);
 
   // TODO(cir):
   // CUDA B.2.1 "The __device__ qualifier declares a variable that resides on
@@ -903,25 +902,21 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
     assert(0 && "not implemented");
   }
 
-  // TODO(cir): set linkage, dll stuff and common linkage
-  // GV->setLinkage(Linkage);
-  // if (D->hasAttr<DLLImportAttr>())
-  //   GV->setDLLStorageClass(llvm::GlobalVariable::DLLImportStorageClass);
-  // else if (D->hasAttr<DLLExportAttr>())
-  //   GV->setDLLStorageClass(llvm::GlobalVariable::DLLExportStorageClass);
-  // else
-  //   GV->setDLLStorageClass(llvm::GlobalVariable::DefaultStorageClass);
-  //
-  // if (Linkage == llvm::GlobalVariable::CommonLinkage) {
-  //   // common vars aren't constant even if declared const.
-  //   GV->setConstant(false);
-  //   // Tentative definition of global variables may be initialized with
-  //   // non-zero null pointers. In this case they should have weak linkage
-  //   // since common linkage must have zero initializer and must not have
-  //   // explicit section therefore cannot have non-zero initial value.
-  //   if (!GV->getInitializer()->isNullValue())
-  //     GV->setLinkage(llvm::GlobalVariable::WeakAnyLinkage);
-  // }
+  // Set CIR linkage and DLL storage class.
+  GV.setLinkage(Linkage);
+  // FIXME(cir): setLinkage should likely set MLIR's visibility automatically.
+  GV.setVisibility(getMLIRVisibilityFromCIRLinkage(Linkage));
+  // TODO(cir): handle DLL storage classes in CIR?
+  if (D->hasAttr<DLLImportAttr>())
+    assert(!UnimplementedFeature::setDLLStorageClass());
+  else if (D->hasAttr<DLLExportAttr>())
+    assert(!UnimplementedFeature::setDLLStorageClass());
+  else
+    assert(!UnimplementedFeature::setDLLStorageClass());
+
+  if (Linkage == mlir::cir::GlobalLinkageKind::CommonLinkage) {
+    llvm_unreachable("common linkage is NYI");
+  }
 
   // TODO(cir): setNonAliasAttributes(D, GV);
 
@@ -1492,6 +1487,13 @@ void CIRGenModule::ReplaceUsesOfNonProtoTypeWithRealFunction(
   }
 }
 
+mlir::cir::GlobalLinkageKind
+CIRGenModule::getCIRLinkageVarDefinition(const VarDecl *VD, bool IsConstant) {
+  assert(!IsConstant && "constant variables NYI");
+  GVALinkage Linkage = astCtx.GetGVALinkageForVariable(VD);
+  return getCIRLinkageForDeclarator(VD, Linkage, IsConstant);
+}
+
 mlir::cir::GlobalLinkageKind CIRGenModule::getFunctionLinkage(GlobalDecl GD) {
   const auto *D = cast<FunctionDecl>(GD.getDecl());
 
@@ -2012,10 +2014,14 @@ void CIRGenModule::buildGlobalDecl(clang::GlobalDecl &D) {
     Op = getGlobalValue(getMangledName(D));
   }
 
+  // In case of different address spaces, we may still get a cast, even with
+  // IsForDefinition equal to true. Query mangled names table to get
+  // GlobalValue.
+  if (!Op)
+    llvm_unreachable("Address spaces NYI");
+
   // Make sure getGlobalValue returned non-null.
   assert(Op);
-  assert(isa<mlir::cir::FuncOp>(Op) &&
-         "not implemented, only supports FuncOp for now");
 
   // Check to see if we've already emitted this. This is necessary for a
   // couple of reasons: first, decls can end up in deferred-decls queue
@@ -2023,9 +2029,19 @@ void CIRGenModule::buildGlobalDecl(clang::GlobalDecl &D) {
   // ways (e.g. by an extern inline function acquiring a strong function
   // redefinition). Just ignore those cases.
   // TODO: Not sure what to map this to for MLIR
-  if (auto Fn = cast<mlir::cir::FuncOp>(Op))
+  if (auto Fn = dyn_cast<mlir::cir::FuncOp>(Op))
     if (!Fn.isDeclaration())
       return;
+
+  // TODO(cir): create a global value trait that allow us to uniformly handle
+  //       global variables and functions.
+  if (auto Gv = dyn_cast<mlir::cir::GetGlobalOp>(Op)) {
+    auto *result =
+        mlir::SymbolTable::lookupSymbolIn(getModule(), Gv.getNameAttr());
+    if (auto globalOp = dyn_cast<mlir::cir::GlobalOp>(result))
+      if (!globalOp.isDeclaration())
+        return;
+  }
 
   // If this is OpenMP, check if it is legal to emit this global normally.
   if (getLangOpts().OpenMP) {
