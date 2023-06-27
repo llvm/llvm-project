@@ -20,9 +20,12 @@
 #include <unordered_map>
 #include <vector>
 
-#ifndef __linux__
+#ifdef _MSC_VER
 typedef int pid_t;
-#endif // __linux__
+#else
+#include <sys/types.h>
+#endif // _MSC_VER
+
 
 namespace llvm {
 namespace exegesis {
