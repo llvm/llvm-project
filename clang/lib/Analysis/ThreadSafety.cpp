@@ -608,7 +608,7 @@ void VarMapBuilder::VisitDeclStmt(const DeclStmt *S) {
   bool modifiedCtx = false;
   const DeclGroupRef DGrp = S->getDeclGroup();
   for (const auto *D : DGrp) {
-    if (const auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+    if (const auto *VD = dyn_cast_if_present<VarDecl>(D)) {
       const Expr *E = VD->getInit();
 
       // Add local variables with trivial type to the variable map
@@ -1347,9 +1347,9 @@ void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
                                        Expr *BrE, bool Neg) {
   // Find out which branch has the lock
   bool branch = false;
-  if (const auto *BLE = dyn_cast_or_null<CXXBoolLiteralExpr>(BrE))
+  if (const auto *BLE = dyn_cast_if_present<CXXBoolLiteralExpr>(BrE))
     branch = BLE->getValue();
-  else if (const auto *ILE = dyn_cast_or_null<IntegerLiteral>(BrE))
+  else if (const auto *ILE = dyn_cast_if_present<IntegerLiteral>(BrE))
     branch = ILE->getValue().getBoolValue();
 
   int branchnum = branch ? 0 : 1;
@@ -1472,7 +1472,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
   if (!Exp)
     return;
 
-  auto *FunDecl = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
+  auto *FunDecl = dyn_cast_if_present<NamedDecl>(Exp->getCalleeDecl());
   if(!FunDecl || !FunDecl->hasAttrs())
     return;
 
@@ -1787,15 +1787,15 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     assert(!Self);
     const auto *TagT = Exp->getType()->getAs<TagType>();
     if (TagT && Exp->isPRValue()) {
-      std::pair<til::LiteralPtr *, StringRef> Placeholder =
+      auto [ThisPtr, DiagType] =
           Analyzer->SxBuilder.createThisPlaceholder(Exp);
       [[maybe_unused]] auto inserted =
-          ConstructedObjects.insert({Exp, Placeholder.first});
+          ConstructedObjects.insert({Exp, ThisPtr});
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
-        Self = Placeholder.first;
+        Self = ThisPtr;
       if (TagT->getDecl()->hasAttr<ScopedLockableAttr>())
-        Scp = CapabilityExpr(Placeholder.first, Placeholder.second, false);
+        Scp = CapabilityExpr(ThisPtr, DiagType, false);
     }
 
     assert(Loc.isInvalid());
@@ -2098,7 +2098,7 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
   LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
 
   for (auto *D : S->getDeclGroup()) {
-    if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+    if (auto *VD = dyn_cast_if_present<VarDecl>(D)) {
       const Expr *E = VD->getInit();
       if (!E)
         continue;
@@ -2215,10 +2215,10 @@ static bool neverReturns(const CFGBlock *B) {
     return false;
 
   CFGElement Last = B->back();
-  if (std::optional<CFGStmt> S = Last.getAs<CFGStmt>()) {
-    if (isa<CXXThrowExpr>(S->getStmt()))
-      return true;
-  }
+  if (std::optional<CFGStmt> S = Last.getAs<CFGStmt>();
+      isa<CXXThrowExpr>(S->getStmt()))
+    return true;
+
   return false;
 }
 
