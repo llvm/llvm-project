@@ -63,6 +63,8 @@ Changes to the LLVM IR
 
 * Introduced new ``llvm.ldexp`` and ``llvm.experimental.constrained.ldexp`` intrinsics.
 
+* Introduced new ``llvm.frexp`` intrinsic.
+
 * The constant expression variants of the following instructions have been
   removed:
 

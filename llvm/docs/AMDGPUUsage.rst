@@ -964,6 +964,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                              inputs. Backend will optimize out denormal scaling if
                                              marked with the :ref:`afn <fastmath_afn>` flag.
 
+  :ref:`llvm.frexp <int_frexp>`              Implemented for half, float and double.
 
   =========================================  ==========================================================
 

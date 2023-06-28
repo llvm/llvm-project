@@ -106,6 +106,7 @@ private:
   SDValue LowerFDIV32(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV64(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFFREXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTrig(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
