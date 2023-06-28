@@ -192,6 +192,27 @@ public:
     return false;
   }
 
+  bool Pre(const parser::AccClause::Device &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccDevice);
+    return false;
+  }
+
+  bool Pre(const parser::AccClause::Host &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccHost);
+    return false;
+  }
+
+  bool Pre(const parser::AccClause::Self &x) {
+    const std::optional<parser::AccSelfClause> &accSelfClause = x.v;
+    if (accSelfClause &&
+        std::holds_alternative<parser::AccObjectList>((*accSelfClause).u)) {
+      const auto &accObjectList =
+          std::get<parser::AccObjectList>((*accSelfClause).u);
+      ResolveAccObjectList(accObjectList, Symbol::Flag::AccSelf);
+    }
+    return false;
+  }
+
   void Post(const parser::Name &);
 
 private:
@@ -209,6 +230,9 @@ private:
   static constexpr Symbol::Flags accFlagsRequireNewSymbol{
       Symbol::Flag::AccPrivate, Symbol::Flag::AccFirstPrivate,
       Symbol::Flag::AccReduction};
+
+  static constexpr Symbol::Flags accDataMvtFlags{
+      Symbol::Flag::AccDevice, Symbol::Flag::AccHost, Symbol::Flag::AccSelf};
 
   static constexpr Symbol::Flags accFlagsRequireMark{};
 
