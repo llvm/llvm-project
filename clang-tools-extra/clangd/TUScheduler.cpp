@@ -943,7 +943,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
     // Emit diagnostics from (possibly) stale preamble while waiting for a
     // rebuild. Newly built preamble cannot emit diagnostics before this call
     // finishes (ast callbacks are called from astpeer thread), hence we
-    // gurantee eventual consistency.
+    // guarantee eventual consistency.
     if (LatestPreamble && WantDiags != WantDiagnostics::No)
       generateDiagnostics(std::move(Invocation), std::move(Inputs),
                           std::move(CompilerInvocationDiags));
