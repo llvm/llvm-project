@@ -52,7 +52,7 @@ vector<BasicBlock *> topoSortBBs(Function &F) {
 }
 
 namespace {
-  struct Assignment2 : public FunctionPass {
+  struct Assignment1 : public FunctionPass {
     static char ID;
 
     // Vector to store the line numbers at which undefined variable(s) is(are) used.
@@ -71,29 +71,39 @@ namespace {
       output_str = "";
     }
 
-    Assignment2() : FunctionPass(ID) {}
+    Assignment1() : FunctionPass(ID) {}
 
     // The function should insert the buggy line numbers in the "bugs" vector.
     void checkUseBeforeDef(Instruction *I, unordered_set<Value *> *entrySet) {
       bool isBug = false;
       Value *V = dyn_cast<Value>(I);
 
+      // If alloca instruction, add value to entry set
       if (isa<AllocaInst>(I)) {
         entrySet->insert(V);
-      } else if (isa<StoreInst>(I)) {
+      } 
+      // If store instruction, investigate further
+      else if (isa<StoreInst>(I)) {
+        // If 0th operand in entry set, add 1st operand to entry set (BUG)
         if (entrySet->find(I->getOperand(0)) != entrySet->end()) {
           entrySet->insert(I->getOperand(1));
           isBug = true;
-        } else if (entrySet->find(I->getOperand(1)) != entrySet->end()) {
+        }
+        // If 1st operand in entry set, remove 1st operand from entry set
+        else if (entrySet->find(I->getOperand(1)) != entrySet->end()) {
           entrySet->erase(I->getOperand(1));
         }
-      } else if (isa<LoadInst>(I)) {
+      } 
+      // If load instruction, investigate further
+      else if (isa<LoadInst>(I)) {
+        // If 0th operand in entry set, add value to entry set (BUG)
         if (entrySet->find(I->getOperand(0)) != entrySet->end()) {
           entrySet->insert(V);
           isBug = true;
         }
       }
 
+      // Add bug line to bugs vector
       if (isBug) {
         int line = getSourceCodeLine(I);
         if (line > 0 && std::find(bugs.begin(), bugs.end(), line) == bugs.end()) bugs.push_back(line);
@@ -155,5 +165,5 @@ namespace {
   };
 }
 
-char Assignment2::ID = 0;
-static RegisterPass<Assignment2> X("taintanalysis", "Pass to find tainted variables");
+char Assignment1::ID = 0;
+static RegisterPass<Assignment1> X("undeclvar", "Pass to find undeclared variables");

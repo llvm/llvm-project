@@ -1,1 +1,0 @@
-add_llvm_library(Assignments MODULE Assignment1.cpp PLUGIN_TOOL opt)
