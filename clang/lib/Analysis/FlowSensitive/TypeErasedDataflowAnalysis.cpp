@@ -227,50 +227,39 @@ private:
 // Avoids unneccesary copies of the environment.
 class JoinedStateBuilder {
   AnalysisContext &AC;
-  std::optional<TypeErasedDataflowAnalysisState> OwnedState;
-  // Points either to OwnedState, an external Environment, or nothing.
-  const TypeErasedDataflowAnalysisState *CurrentState = nullptr;
+  std::vector<const TypeErasedDataflowAnalysisState *> All;
+  std::deque<TypeErasedDataflowAnalysisState> Owned;
+
+  TypeErasedDataflowAnalysisState
+  join(const TypeErasedDataflowAnalysisState &L,
+       const TypeErasedDataflowAnalysisState &R) {
+    return {AC.Analysis.joinTypeErased(L.Lattice, R.Lattice),
+            Environment::join(L.Env, R.Env, AC.Analysis)};
+  }
 
 public:
   JoinedStateBuilder(AnalysisContext &AC) : AC(AC) {}
 
   void addOwned(TypeErasedDataflowAnalysisState State) {
-    if (!CurrentState) {
-      OwnedState = std::move(State);
-      CurrentState = &*OwnedState;
-    } else if (!OwnedState) {
-      OwnedState.emplace(std::move(CurrentState->Lattice),
-                         CurrentState->Env.join(State.Env, AC.Analysis));
-      AC.Analysis.joinTypeErased(OwnedState->Lattice, State.Lattice);
-    } else {
-      OwnedState->Env = CurrentState->Env.join(State.Env, AC.Analysis);
-      AC.Analysis.joinTypeErased(OwnedState->Lattice, State.Lattice);
-    }
+    Owned.push_back(std::move(State));
+    All.push_back(&Owned.back());
   }
   void addUnowned(const TypeErasedDataflowAnalysisState &State) {
-    if (!CurrentState) {
-      CurrentState = &State;
-    } else if (!OwnedState) {
-      OwnedState.emplace(CurrentState->Lattice,
-                         CurrentState->Env.join(State.Env, AC.Analysis));
-      AC.Analysis.joinTypeErased(OwnedState->Lattice, State.Lattice);
-    } else {
-      OwnedState->Env = CurrentState->Env.join(State.Env, AC.Analysis);
-      AC.Analysis.joinTypeErased(OwnedState->Lattice, State.Lattice);
-    }
+    All.push_back(&State);
   }
   TypeErasedDataflowAnalysisState take() && {
-    if (!OwnedState) {
-      if (CurrentState)
-        OwnedState.emplace(CurrentState->Lattice, CurrentState->Env.fork());
-      else
-        // FIXME: Consider passing `Block` to Analysis.typeErasedInitialElement
-        // to enable building analyses like computation of dominators that
-        // initialize the state of each basic block differently.
-        OwnedState.emplace(AC.Analysis.typeErasedInitialElement(),
-                           AC.InitEnv.fork());
-    }
-    return std::move(*OwnedState);
+    if (All.empty())
+      // FIXME: Consider passing `Block` to Analysis.typeErasedInitialElement
+      // to enable building analyses like computation of dominators that
+      // initialize the state of each basic block differently.
+      return {AC.Analysis.typeErasedInitialElement(), AC.InitEnv.fork()};
+    if (All.size() == 1)
+      return Owned.empty() ? All.front()->fork() : std::move(Owned.front());
+
+    auto Result = join(*All[0], *All[1]);
+    for (unsigned I = 2; I < All.size(); ++I)
+      Result = join(Result, *All[I]);
+    return Result;
   }
 };
 

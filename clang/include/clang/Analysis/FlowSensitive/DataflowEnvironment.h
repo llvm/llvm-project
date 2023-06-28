@@ -218,16 +218,15 @@ public:
   bool equivalentTo(const Environment &Other,
                     Environment::ValueModel &Model) const;
 
-  /// Joins the environment with `Other` by taking the intersection of storage
-  /// locations and values that are stored in them. Distinct values that are
-  /// assigned to the same storage locations in the environment and `Other` are
-  /// merged using `Model`.
+  /// Joins two environments by taking the intersection of storage locations and
+  /// values that are stored in them. Distinct values that are assigned to the
+  /// same storage locations in `EnvA` and `EnvB` are merged using `Model`.
   ///
   /// Requirements:
   ///
-  ///  `Other` and `this` must use the same `DataflowAnalysisContext`.
-  Environment join(const Environment &Other,
-                   Environment::ValueModel &Model) const;
+  ///  `EnvA` and `EnvB` must use the same `DataflowAnalysisContext`.
+  static Environment join(const Environment &EnvA, const Environment &EnvB,
+                          Environment::ValueModel &Model);
 
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.
