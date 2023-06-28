@@ -6,8 +6,8 @@
  *===------------------------------------------------------------------------*/
 
 #include "oclc.h"
-#include "irif.h"
 #include "ockl.h"
+#include "ockl_priv.h"
 
 #define ATTR __attribute__((always_inline))
 

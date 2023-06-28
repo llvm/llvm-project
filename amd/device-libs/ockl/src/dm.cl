@@ -6,8 +6,8 @@
  *===------------------------------------------------------------------------*/
 
 #include "oclc.h"
-#include "irif.h"
 #include "ockl.h"
+#include "ockl_priv.h"
 
 #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
