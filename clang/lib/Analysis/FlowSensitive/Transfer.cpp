@@ -598,7 +598,7 @@ public:
       const Expr *Arg = S->getArg(0);
       assert(Arg != nullptr);
 
-      auto *ArgLoc = cast<AggregateStorageLocation>(
+      auto *ArgLoc = cast_or_null<AggregateStorageLocation>(
           Env.getStorageLocation(*Arg, SkipPast::Reference));
       if (ArgLoc == nullptr)
         return;
