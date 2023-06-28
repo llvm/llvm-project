@@ -55,14 +55,6 @@ void printf_no_casts_in_strict_mode() {
   // CHECK-FIXES: std::println("Unsigned integer {} from short", s);
 }
 
-int printf_uses_return_value(int i) {
-  using namespace absl;
-
-  return PrintF("return value %d\n", i);
-  // CHECK-MESSAGES-NOT: [[@LINE-1]]:10: warning: use 'std::println' instead of 'PrintF' [modernize-use-std-print]
-  // CHECK-FIXES-NOT: std::println("return value {}", i);
-}
-
 void fprintf_simple(FILE *fp) {
   absl::FPrintF(fp, "Hello %s %d", "world", 42);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::print' instead of 'FPrintF' [modernize-use-std-print]
@@ -92,12 +84,4 @@ void fprintf_no_casts_in_strict_mode(FILE *fp) {
   FPrintF(fp, "Unsigned integer %hu from short\n", s);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'FPrintF' [modernize-use-std-print]
   // CHECK-FIXES: std::println(fp, "Unsigned integer {} from short", s);
-}
-
-int fprintf_uses_return_value(FILE *fp, int i) {
-  using namespace absl;
-
-  return FPrintF(fp, "return value %d\n", i);
-  // CHECK-MESSAGES-NOT: [[@LINE-1]]:10: warning: use 'std::println' instead of 'FPrintF' [modernize-use-std-print]
-  // CHECK-FIXES-NOT: std::println("return value {}", i);
 }

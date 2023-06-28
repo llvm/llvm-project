@@ -27,7 +27,7 @@
 typedef int pid_t;
 #else
 #include <sys/types.h>
-#endif // HAVE_LIBPFM
+#endif // _MSC_VER
 
 struct perf_event_attr;
 

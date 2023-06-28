@@ -16,7 +16,7 @@ DWARFDebugRanges::DWARFDebugRanges() : m_range_map() {}
 
 void DWARFDebugRanges::Extract(DWARFContext &context) {
   llvm::DWARFDataExtractor extractor =
-      context.getOrLoadRangesData().GetAsLLVM();
+      context.getOrLoadRangesData().GetAsLLVMDWARF();
   llvm::DWARFDebugRangeList extracted_list;
   uint64_t current_offset = 0;
   auto extract_next_list = [&] {

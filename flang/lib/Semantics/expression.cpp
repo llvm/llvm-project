@@ -2116,7 +2116,7 @@ static std::optional<parser::CharBlock> GetPassName(
       proc.details());
 }
 
-static int GetPassIndex(const Symbol &proc) {
+static std::optional<int> GetPassIndex(const Symbol &proc) {
   CHECK(!proc.attrs().test(semantics::Attr::NOPASS));
   std::optional<parser::CharBlock> passName{GetPassName(proc)};
   const auto *interface {
@@ -2133,7 +2133,7 @@ static int GetPassIndex(const Symbol &proc) {
     }
     ++index;
   }
-  DIE("PASS argument name not in dummy argument list");
+  return std::nullopt;
 }
 
 // Injects an expression into an actual argument list as the "passed object"
@@ -2146,10 +2146,13 @@ static void AddPassArg(ActualArguments &actuals, const Expr<SomeDerived> &expr,
   if (component.attrs().test(semantics::Attr::NOPASS)) {
     return;
   }
-  int passIndex{GetPassIndex(component)};
+  std::optional<int> passIndex{GetPassIndex(component)};
+  if (!passIndex) {
+    return; // error recovery
+  }
   auto iter{actuals.begin()};
   int at{0};
-  while (iter < actuals.end() && at < passIndex) {
+  while (iter < actuals.end() && at < *passIndex) {
     if (*iter && (*iter)->keyword()) {
       iter = actuals.end();
       break;
@@ -4296,7 +4299,7 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
   if (generic) {
     ExpressionAnalyzer::AdjustActuals adjustment{
         [&](const Symbol &proc, ActualArguments &) {
-          return passIndex == GetPassIndex(proc);
+          return passIndex == GetPassIndex(proc).value_or(-1);
         }};
     auto pair{
         context_.ResolveGeneric(*generic, actuals_, adjustment, isSubroutine)};
