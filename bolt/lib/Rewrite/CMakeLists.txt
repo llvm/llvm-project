@@ -17,6 +17,7 @@ add_llvm_library(LLVMBOLTRewrite
   MachORewriteInstance.cpp
   MetadataManager.cpp
   RewriteInstance.cpp
+  SDTRewriter.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
 

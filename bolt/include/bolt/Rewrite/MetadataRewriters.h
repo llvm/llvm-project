@@ -15,9 +15,11 @@ namespace llvm {
 namespace bolt {
 
 class MetadataRewriter;
+class BinaryContext;
 
-/// The list of rewriter build functions (e.g. createNewMetadataRewriter()) that
-/// return std::unique_ptr<MetadataRewriter>.
+// The list of rewriter build functions.
+
+std::unique_ptr<MetadataRewriter> createSDTRewriter(BinaryContext &);
 
 } // namespace bolt
 } // namespace llvm
