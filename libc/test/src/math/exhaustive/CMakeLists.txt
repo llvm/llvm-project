@@ -1,11 +1,9 @@
 add_libc_exhaustive_testsuite(libc_math_exhaustive_tests)
 
-add_object_library(
+add_header_library(
   exhaustive_test
   HDRS
     exhaustive_test.h
-  SRCS
-    exhaustive_test.cpp
 )
 
 add_fp_unittest(
