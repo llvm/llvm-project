@@ -512,10 +512,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
     case Instruction::Load: {
       Value *Ptr = cast<LoadInst>(Inst)->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
-      Type *VecPtrTy = VectorTy->getPointerTo(Alloca.getAddressSpace());
-      Value *BitCast = Builder.CreateBitCast(&Alloca, VecPtrTy);
       Value *VecValue =
-          Builder.CreateAlignedLoad(VectorTy, BitCast, Alloca.getAlign());
+          Builder.CreateAlignedLoad(VectorTy, &Alloca, Alloca.getAlign());
       Value *ExtractElement = Builder.CreateExtractElement(VecValue, Index);
       if (Inst->getType() != VecEltTy)
         ExtractElement =
@@ -528,15 +526,13 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       StoreInst *SI = cast<StoreInst>(Inst);
       Value *Ptr = SI->getPointerOperand();
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
-      Type *VecPtrTy = VectorTy->getPointerTo(Alloca.getAddressSpace());
-      Value *BitCast = Builder.CreateBitCast(&Alloca, VecPtrTy);
       Value *VecValue =
-          Builder.CreateAlignedLoad(VectorTy, BitCast, Alloca.getAlign());
+          Builder.CreateAlignedLoad(VectorTy, &Alloca, Alloca.getAlign());
       Value *Elt = SI->getValueOperand();
       if (Elt->getType() != VecEltTy)
         Elt = Builder.CreateBitOrPointerCast(Elt, VecEltTy);
       Value *NewVecValue = Builder.CreateInsertElement(VecValue, Elt, Index);
-      Builder.CreateAlignedStore(NewVecValue, BitCast, Alloca.getAlign());
+      Builder.CreateAlignedStore(NewVecValue, &Alloca, Alloca.getAlign());
       Inst->eraseFromParent();
       break;
     }
@@ -556,12 +552,10 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
             Mask.push_back(Idx);
           }
         }
-        Type *VecPtrTy = VectorTy->getPointerTo(Alloca.getAddressSpace());
-        Value *BitCast = Builder.CreateBitCast(&Alloca, VecPtrTy);
         Value *VecValue =
-            Builder.CreateAlignedLoad(VectorTy, BitCast, Alloca.getAlign());
+            Builder.CreateAlignedLoad(VectorTy, &Alloca, Alloca.getAlign());
         Value *NewVecValue = Builder.CreateShuffleVector(VecValue, Mask);
-        Builder.CreateAlignedStore(NewVecValue, BitCast, Alloca.getAlign());
+        Builder.CreateAlignedStore(NewVecValue, &Alloca, Alloca.getAlign());
 
         Inst->eraseFromParent();
       } else if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst)) {
