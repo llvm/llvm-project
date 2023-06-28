@@ -330,7 +330,7 @@ public:
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
-  StorageLocation *getThisPointeeStorageLocation() const;
+  AggregateStorageLocation *getThisPointeeStorageLocation() const;
 
   /// Returns the return value of the current function. This can be null if:
   /// - The function has a void return type
@@ -600,7 +600,7 @@ private:
   StorageLocation *ReturnLoc = nullptr;
   // The storage location of the `this` pointee. Should only be null if the
   // function being analyzed is only a function and not a method.
-  StorageLocation *ThisPointeeLoc = nullptr;
+  AggregateStorageLocation *ThisPointeeLoc = nullptr;
 
   // Maps from program declarations and statements to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these
