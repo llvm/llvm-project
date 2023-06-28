@@ -34,6 +34,7 @@ enum class Operation : int {
   Ceil,
   Cos,
   Cosh,
+  Erf,
   Exp,
   Exp2,
   Exp10,

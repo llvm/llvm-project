@@ -1151,6 +1151,15 @@ libc_support_library(
 )
 
 libc_math_function(
+    name = "erff",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+    ],
+)
+
+libc_math_function(
     name = "expm1f",
     additional_deps = [
         ":__support_fputil_fma",
