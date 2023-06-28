@@ -1365,11 +1365,11 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 }
 
 mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *E) {
-  assert(!E->getCallReturnType(CGF.getContext())->isReferenceType() && "NYI");
+  if (E->getCallReturnType(CGF.getContext())->isReferenceType())
+    return buildLoadOfLValue(E);
 
   auto V = CGF.buildCallExpr(E).getScalarVal();
-
-  // TODO: buildLValueAlignmentAssumption
+  assert(!UnimplementedFeature::buildLValueAlignmentAssumption());
   return V;
 }
 
