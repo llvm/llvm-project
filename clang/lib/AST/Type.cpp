@@ -2667,7 +2667,7 @@ HasNonDeletedDefaultedEqualityComparison(const CXXRecordDecl *Decl) {
   return llvm::all_of(Decl->bases(),
                       [](const CXXBaseSpecifier &BS) {
                         if (const auto *RD = BS.getType()->getAsCXXRecordDecl())
-                          HasNonDeletedDefaultedEqualityComparison(RD);
+                          return HasNonDeletedDefaultedEqualityComparison(RD);
                         return true;
                       }) &&
          llvm::all_of(Decl->fields(), [](const FieldDecl *FD) {
