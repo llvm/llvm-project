@@ -59,7 +59,9 @@ public:
 
   void update(const GlobalVariable &GV) {
     // used/compiler.used don't affect analyses.
-    if (GV.getName() == "llvm.compiler.used" || GV.getName() == "llvm.used")
+    // Same for llvm.embedded.object, which is always a metadata section.
+    if (GV.getName() == "llvm.compiler.used" || GV.getName() == "llvm.used" ||
+        GV.getName() == "llvm.embedded.object")
       return;
     hash(23456); // Global header
     hash(GV.getValueType()->getTypeID());
