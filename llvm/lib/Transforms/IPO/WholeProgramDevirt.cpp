@@ -567,6 +567,10 @@ struct DevirtModule {
   // optimize a call more than once.
   SmallPtrSet<CallBase *, 8> OptimizedCalls;
 
+  // Store calls that had their ptrauth bundle removed. They are to be deleted
+  // at the end of the optimization.
+  SmallVector<CallBase *, 8> CallsWithPtrAuthBundleRemoved;
+
   // This map keeps track of the number of "unsafe" uses of a loaded function
   // pointer. The key is the associated llvm.type.test intrinsic call generated
   // by this pass. An unsafe use is one that calls the loaded function pointer
@@ -1165,6 +1169,14 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         // !callees metadata.
         CB.setMetadata(LLVMContext::MD_prof, nullptr);
         CB.setMetadata(LLVMContext::MD_callees, nullptr);
+        if (CB.getCalledOperand() &&
+            CB.getOperandBundle(LLVMContext::OB_ptrauth)) {
+          auto *NewCS =
+              CallBase::removeOperandBundle(&CB, LLVMContext::OB_ptrauth, &CB);
+          CB.replaceAllUsesWith(NewCS);
+          // Schedule for deletion at the end of pass run.
+          CallsWithPtrAuthBundleRemoved.push_back(&CB);
+        }
       }
 
       // This use is no longer unsafe.
@@ -2348,6 +2360,9 @@ bool DevirtModule::run() {
   // pointers in GlobalDCE.
   for (GlobalVariable &GV : M.globals())
     GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
+
+  for (auto *CI : CallsWithPtrAuthBundleRemoved)
+    CI->eraseFromParent();
 
   return true;
 }
