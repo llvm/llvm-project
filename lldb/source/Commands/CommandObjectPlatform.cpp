@@ -1208,8 +1208,12 @@ protected:
       if (m_options.launch_info.GetExecutableFile()) {
         Debugger &debugger = GetDebugger();
 
-        if (argc == 0)
-          target->GetRunArguments(m_options.launch_info.GetArguments());
+        if (argc == 0) {
+          // If no arguments were given to the command, use target.run-args.
+          Args target_run_args;
+          target->GetRunArguments(target_run_args);
+          m_options.launch_info.GetArguments().AppendArguments(target_run_args);
+        }
 
         ProcessSP process_sp(platform_sp->DebugProcess(
             m_options.launch_info, debugger, *target, error));
@@ -1228,8 +1232,6 @@ protected:
         bool rebroadcast_first_stop =
             !synchronous_execution &&
             launch_info.GetFlags().Test(eLaunchFlagStopAtEntry);
-
-        assert(launch_info.GetHijackListener());
 
         EventSP first_stop_event_sp;
         StateType state = process_sp->WaitForProcessToStop(
