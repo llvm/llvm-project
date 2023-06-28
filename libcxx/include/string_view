@@ -261,7 +261,9 @@ template <class _Traits>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR
 inline size_t __char_traits_length_checked(const typename _Traits::char_type* __s) _NOEXCEPT {
   // This needs to be a single statement for C++11 constexpr
-  return _LIBCPP_ASSERT(__s != nullptr, "null pointer passed to non-null argument of char_traits<...>::length"), _Traits::length(__s);
+  return _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr,
+                                      "null pointer passed to non-null argument of char_traits<...>::length"),
+      _Traits::length(__s);
 }
 
 template<class _CharT, class _Traits>
@@ -307,8 +309,11 @@ public:
         : __data_(__s), __size_(__len)
     {
 #if _LIBCPP_STD_VER >= 14
-    _LIBCPP_ASSERT(__len <= static_cast<size_type>(numeric_limits<difference_type>::max()), "string_view::string_view(_CharT *, size_t): length does not fit in difference_type");
-    _LIBCPP_ASSERT(__len == 0 || __s != nullptr, "string_view::string_view(_CharT *, size_t): received nullptr");
+    _LIBCPP_ASSERT_UNCATEGORIZED(
+        __len <= static_cast<size_type>(numeric_limits<difference_type>::max()),
+        "string_view::string_view(_CharT *, size_t): length does not fit in difference_type");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__len == 0 || __s != nullptr,
+                                 "string_view::string_view(_CharT *, size_t): received nullptr");
 #endif
     }
 
@@ -318,7 +323,8 @@ public:
     constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
        : __data_(_VSTD::to_address(__begin)), __size_(__end - __begin)
     {
-      _LIBCPP_ASSERT((__end - __begin) >= 0, "std::string_view::string_view(iterator, sentinel) received invalid range");
+      _LIBCPP_ASSERT_UNCATEGORIZED((__end - __begin) >= 0,
+                                   "std::string_view::string_view(iterator, sentinel) received invalid range");
     }
 #endif // _LIBCPP_STD_VER >= 20
 
@@ -399,7 +405,7 @@ public:
     // [string.view.access], element access
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference operator[](size_type __pos) const _NOEXCEPT {
-      return _LIBCPP_ASSERT(__pos < size(), "string_view[] index out of bounds"), __data_[__pos];
+      return _LIBCPP_ASSERT_UNCATEGORIZED(__pos < size(), "string_view[] index out of bounds"), __data_[__pos];
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
@@ -413,13 +419,13 @@ public:
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference front() const _NOEXCEPT
     {
-        return _LIBCPP_ASSERT(!empty(), "string_view::front(): string is empty"), __data_[0];
+        return _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string_view::front(): string is empty"), __data_[0];
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference back() const _NOEXCEPT
     {
-        return _LIBCPP_ASSERT(!empty(), "string_view::back(): string is empty"), __data_[__size_-1];
+        return _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string_view::back(): string is empty"), __data_[__size_-1];
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
@@ -429,7 +435,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     void remove_prefix(size_type __n) _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__n <= size(), "remove_prefix() can't remove more than size()");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n <= size(), "remove_prefix() can't remove more than size()");
         __data_ += __n;
         __size_ -= __n;
     }
@@ -437,7 +443,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     void remove_suffix(size_type __n) _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__n <= size(), "remove_suffix() can't remove more than size()");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n <= size(), "remove_suffix() can't remove more than size()");
         __size_ -= __n;
     }
 
@@ -515,7 +521,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find(basic_string_view __s, size_type __pos = 0) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s.size() == 0 || __s.data() != nullptr, "string_view::find(): received nullptr");
         return std::__str_find<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
@@ -530,7 +536,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string_view::find(): received nullptr");
         return std::__str_find<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
@@ -538,7 +544,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find(const _CharT* __s, size_type __pos = 0) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s != nullptr, "string_view::find(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string_view::find(): received nullptr");
         return std::__str_find<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
@@ -547,7 +553,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type rfind(basic_string_view __s, size_type __pos = npos) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s.size() == 0 || __s.data() != nullptr, "string_view::find(): received nullptr");
         return std::__str_rfind<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
@@ -562,7 +568,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type rfind(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::rfind(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string_view::rfind(): received nullptr");
         return std::__str_rfind<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
@@ -570,7 +576,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type rfind(const _CharT* __s, size_type __pos=npos) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s != nullptr, "string_view::rfind(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string_view::rfind(): received nullptr");
         return std::__str_rfind<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
@@ -579,7 +585,8 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_first_of(basic_string_view __s, size_type __pos = 0) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find_first_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s.size() == 0 || __s.data() != nullptr,
+                                     "string_view::find_first_of(): received nullptr");
         return std::__str_find_first_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
@@ -591,7 +598,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_first_of(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find_first_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string_view::find_first_of(): received nullptr");
         return std::__str_find_first_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
@@ -599,7 +606,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_first_of(const _CharT* __s, size_type __pos=0) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s != nullptr, "string_view::find_first_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string_view::find_first_of(): received nullptr");
         return std::__str_find_first_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
@@ -608,7 +615,8 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_last_of(basic_string_view __s, size_type __pos=npos) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find_last_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s.size() == 0 || __s.data() != nullptr,
+                                     "string_view::find_last_of(): received nullptr");
         return std::__str_find_last_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
@@ -620,7 +628,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_last_of(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find_last_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string_view::find_last_of(): received nullptr");
         return std::__str_find_last_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
@@ -628,7 +636,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_last_of(const _CharT* __s, size_type __pos=npos) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s != nullptr, "string_view::find_last_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string_view::find_last_of(): received nullptr");
         return std::__str_find_last_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
@@ -637,7 +645,8 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_first_not_of(basic_string_view __s, size_type __pos=0) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find_first_not_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s.size() == 0 || __s.data() != nullptr,
+                                     "string_view::find_first_not_of(): received nullptr");
         return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
@@ -652,7 +661,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_first_not_of(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find_first_not_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string_view::find_first_not_of(): received nullptr");
         return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
@@ -660,7 +669,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_first_not_of(const _CharT* __s, size_type __pos=0) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s != nullptr, "string_view::find_first_not_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string_view::find_first_not_of(): received nullptr");
         return std::__str_find_first_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }
@@ -669,7 +678,8 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_last_not_of(basic_string_view __s, size_type __pos=npos) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s.size() == 0 || __s.data() != nullptr, "string_view::find_last_not_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s.size() == 0 || __s.data() != nullptr,
+                                     "string_view::find_last_not_of(): received nullptr");
         return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s.data(), __pos, __s.size());
     }
@@ -684,7 +694,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_last_not_of(const _CharT* __s, size_type __pos, size_type __n) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "string_view::find_last_not_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n == 0 || __s != nullptr, "string_view::find_last_not_of(): received nullptr");
         return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, __n);
     }
@@ -692,7 +702,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     size_type find_last_not_of(const _CharT* __s, size_type __pos=npos) const _NOEXCEPT
     {
-        _LIBCPP_ASSERT(__s != nullptr, "string_view::find_last_not_of(): received nullptr");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__s != nullptr, "string_view::find_last_not_of(): received nullptr");
         return std::__str_find_last_not_of<value_type, size_type, traits_type, npos>
             (data(), size(), __s, __pos, traits_type::length(__s));
     }

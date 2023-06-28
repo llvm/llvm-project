@@ -923,7 +923,7 @@ public:
     { }
 
     virtual __base<_Rp(_ArgTypes...)>* __clone() const {
-        _LIBCPP_ASSERT(false,
+        _LIBCPP_ASSERT_UNCATEGORIZED(false,
             "Block pointers are just pointers, so they should always fit into "
             "std::function's small buffer optimization. This function should "
             "never be invoked.");
@@ -943,7 +943,7 @@ public:
     }
 
     virtual void destroy_deallocate() _NOEXCEPT {
-        _LIBCPP_ASSERT(false,
+        _LIBCPP_ASSERT_UNCATEGORIZED(false,
             "Block pointers are just pointers, so they should always fit into "
             "std::function's small buffer optimization. This function should "
             "never be invoked.");

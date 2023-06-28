@@ -46,4 +46,6 @@
 #  define _LIBCPP_ASSERT(expression, message) ((void)0)
 #endif
 
+#define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message) _LIBCPP_ASSERT(expression, message)
+
 #endif // _LIBCPP___ASSERT
