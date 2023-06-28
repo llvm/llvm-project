@@ -116,11 +116,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
                          Res = PromoteIntRes_VECTOR_SHUFFLE(N); break;
   case ISD::VECTOR_SPLICE:
                          Res = PromoteIntRes_VECTOR_SPLICE(N); break;
-  case ISD::VECTOR_DEINTERLEAVE:
-    Res = PromoteIntRes_VECTOR_DEINTERLEAVE(N);
-    return;
   case ISD::VECTOR_INTERLEAVE:
-    Res = PromoteIntRes_VECTOR_INTERLEAVE(N);
+  case ISD::VECTOR_DEINTERLEAVE:
+    Res = PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(N);
     return;
   case ISD::INSERT_VECTOR_ELT:
                          Res = PromoteIntRes_INSERT_VECTOR_ELT(N); break;
@@ -5462,27 +5460,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   return DAG.getNode(ISD::VECTOR_SPLICE, dl, OutVT, V0, V1, N->getOperand(2));
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_DEINTERLEAVE(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {
   SDLoc dl(N);
 
   SDValue V0 = GetPromotedInteger(N->getOperand(0));
   SDValue V1 = GetPromotedInteger(N->getOperand(1));
   EVT ResVT = V0.getValueType();
-  SDValue Res = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, dl,
-                            DAG.getVTList(ResVT, ResVT), V0, V1);
-  SetPromotedInteger(SDValue(N, 0), Res.getValue(0));
-  SetPromotedInteger(SDValue(N, 1), Res.getValue(1));
-  return SDValue();
-}
-
-SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE(SDNode *N) {
-  SDLoc dl(N);
-
-  SDValue V0 = GetPromotedInteger(N->getOperand(0));
-  SDValue V1 = GetPromotedInteger(N->getOperand(1));
-
-  EVT ResVT = V0.getValueType();
-  SDValue Res = DAG.getNode(ISD::VECTOR_INTERLEAVE, dl,
+  SDValue Res = DAG.getNode(N->getOpcode(), dl,
                             DAG.getVTList(ResVT, ResVT), V0, V1);
   SetPromotedInteger(SDValue(N, 0), Res.getValue(0));
   SetPromotedInteger(SDValue(N, 1), Res.getValue(1));

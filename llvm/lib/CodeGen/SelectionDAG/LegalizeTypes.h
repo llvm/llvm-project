@@ -307,8 +307,7 @@ private:
   SDValue PromoteIntRes_VECTOR_REVERSE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SHUFFLE(SDNode *N);
   SDValue PromoteIntRes_VECTOR_SPLICE(SDNode *N);
-  SDValue PromoteIntRes_VECTOR_DEINTERLEAVE(SDNode *N);
-  SDValue PromoteIntRes_VECTOR_INTERLEAVE(SDNode *N);
+  SDValue PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N);
   SDValue PromoteIntRes_BUILD_VECTOR(SDNode *N);
   SDValue PromoteIntRes_ScalarOp(SDNode *N);
   SDValue PromoteIntRes_STEP_VECTOR(SDNode *N);
