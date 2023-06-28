@@ -29,7 +29,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
@@ -680,9 +679,6 @@ public:
   /// List of external addresses in the code that are not a function start
   /// and are referenced from BinaryFunction.
   std::list<std::pair<BinaryFunction *, uint64_t>> InterproceduralReferences;
-
-  /// PseudoProbe decoder
-  MCPseudoProbeDecoder ProbeDecoder;
 
   /// DWARF encoding. Available encoding types defined in BinaryFormat/Dwarf.h
   /// enum Constants, e.g. DW_EH_PE_omit.

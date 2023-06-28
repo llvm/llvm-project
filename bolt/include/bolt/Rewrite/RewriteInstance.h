@@ -201,12 +201,6 @@ private:
   /// Update LKMarkers' locations for the output binary.
   void updateLKMarkers();
 
-  /// Update address of MCDecodedPseudoProbe.
-  void updatePseudoProbes();
-
-  /// Encode MCDecodedPseudoProbe.
-  void encodePseudoProbes();
-
   /// Return the list of code sections in the output order.
   std::vector<BinarySection *> getCodeSections();
 
@@ -395,10 +389,6 @@ private:
   /// of appending contents to it.
   bool willOverwriteSection(StringRef SectionName);
 
-  /// Parse .pseudo_probe_desc section and .pseudo_probe section
-  /// Setup Pseudo probe decoder
-  void parsePseudoProbe();
-
 public:
   /// Standard ELF sections we overwrite.
   static constexpr const char *SectionsToOverwrite[] = {
@@ -579,15 +569,6 @@ private:
 
   /// .note.gnu.build-id section.
   ErrorOr<BinarySection &> BuildIDSection{std::errc::bad_address};
-
-  /// .pseudo_probe_desc section.
-  /// Contains information about pseudo probe description, like its related
-  /// function
-  ErrorOr<BinarySection &> PseudoProbeDescSection{std::errc::bad_address};
-
-  /// .pseudo_probe section.
-  /// Contains information about pseudo probe details, like its address
-  ErrorOr<BinarySection &> PseudoProbeSection{std::errc::bad_address};
 
   /// Helper for accessing sections by name.
   BinarySection *getSection(const Twine &Name) {
