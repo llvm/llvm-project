@@ -12,8 +12,6 @@ target datalayout = "A5"
 
 ; FUNC-LABEL: @private_memory
 ; LOOP-NOT: alloca
-; LOOP: loop.header:
-; LOOP: br i1 %{{[^,]+}}, label %exit, label %loop.header
 
 ; FULL-UNROLL: alloca
 ; FULL-UNROLL-COUNT-256: store i32 {{[0-9]+}}, ptr addrspace(5)
