@@ -15,6 +15,7 @@
 #ifndef LLVM_LIB_FILECHECK_FILECHECKIMPL_H
 #define LLVM_LIB_FILECHECK_FILECHECKIMPL_H
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/FileCheck/FileCheck.h"
@@ -120,15 +121,15 @@ public:
 /// Class representing a numeric value.
 class ExpressionValue {
 private:
-  uint64_t Value;
-  bool Negative;
+  APInt Value;
 
 public:
+  // Store signed and unsigned 64-bit integers in a signed 65-bit APInt.
   template <class T>
-  explicit ExpressionValue(T Val) : Value(Val), Negative(Val < 0) {}
+  explicit ExpressionValue(T Val) : Value(65, Val, /*isSigned=*/Val < 0) {}
 
   bool operator==(const ExpressionValue &Other) const {
-    return Value == Other.Value && isNegative() == Other.isNegative();
+    return Value == Other.Value;
   }
 
   bool operator!=(const ExpressionValue &Other) const {
@@ -136,10 +137,7 @@ public:
   }
 
   /// Returns true if value is signed and negative, false otherwise.
-  bool isNegative() const {
-    assert((Value != 0 || !Negative) && "Unexpected negative zero!");
-    return Negative;
-  }
+  bool isNegative() const { return Value.isNegative(); }
 
   /// \returns the value as a signed integer or an error if the value is out of
   /// range.

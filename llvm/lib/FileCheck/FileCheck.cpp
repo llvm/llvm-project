@@ -155,48 +155,25 @@ ExpressionFormat::valueFromStringRepr(StringRef StrVal,
   return ExpressionValue(UnsignedValue);
 }
 
-static int64_t getAsSigned(uint64_t UnsignedValue) {
-  // Use memcpy to reinterpret the bitpattern in Value since casting to
-  // signed is implementation-defined if the unsigned value is too big to be
-  // represented in the signed type and using an union violates type aliasing
-  // rules.
-  int64_t SignedValue;
-  memcpy(&SignedValue, &UnsignedValue, sizeof(SignedValue));
-  return SignedValue;
-}
-
 Expected<int64_t> ExpressionValue::getSignedValue() const {
-  if (Negative)
-    return getAsSigned(Value);
-
-  if (Value > (uint64_t)std::numeric_limits<int64_t>::max())
+  std::optional<int64_t> SignedValue = Value.trySExtValue();
+  if (!SignedValue)
     return make_error<OverflowError>();
-
-  // Value is in the representable range of int64_t so we can use cast.
-  return static_cast<int64_t>(Value);
+  return *SignedValue;
 }
 
 Expected<uint64_t> ExpressionValue::getUnsignedValue() const {
-  if (Negative)
+  std::optional<int64_t> UnsignedValue = Value.tryZExtValue();
+  if (!UnsignedValue)
     return make_error<OverflowError>();
 
-  return Value;
+  return *UnsignedValue;
 }
 
 ExpressionValue ExpressionValue::getAbsolute() const {
-  if (!Negative)
-    return *this;
-
-  int64_t SignedValue = getAsSigned(Value);
-  int64_t MaxInt64 = std::numeric_limits<int64_t>::max();
-  // Absolute value can be represented as int64_t.
-  if (SignedValue >= -MaxInt64)
-    return ExpressionValue(-getAsSigned(Value));
-
-  // -X == -(max int64_t + Rem), negate each component independently.
-  SignedValue += MaxInt64;
-  uint64_t RemainingValueAbsolute = -SignedValue;
-  return ExpressionValue(MaxInt64 + RemainingValueAbsolute);
+  unsigned bitwidth = Value.getBitWidth();
+  assert(!Value.isNegative() || Value.isSignedIntN(bitwidth - 1));
+  return ExpressionValue(Value.abs().getZExtValue());
 }
 
 Expected<ExpressionValue> llvm::operator+(const ExpressionValue &LeftOperand,
