@@ -14,6 +14,7 @@ add_llvm_library(LLVMBOLTRewrite
   DWARFRewriter.cpp
   ExecutableFileMemoryManager.cpp
   JITLinkLinker.cpp
+  LinuxKernelRewriter.cpp
   MachORewriteInstance.cpp
   MetadataManager.cpp
   PseudoProbeRewriter.cpp

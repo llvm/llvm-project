@@ -19,6 +19,8 @@ class BinaryContext;
 
 // The list of rewriter build functions.
 
+std::unique_ptr<MetadataRewriter> createLinuxKernelRewriter(BinaryContext &);
+
 std::unique_ptr<MetadataRewriter> createPseudoProbeRewriter(BinaryContext &);
 
 std::unique_ptr<MetadataRewriter> createSDTRewriter(BinaryContext &);

@@ -672,10 +672,6 @@ public:
   /// List of functions that always trap.
   std::vector<const BinaryFunction *> TrappedFunctions;
 
-  /// Map linux kernel program locations/instructions to their pointers in
-  /// special linux kernel sections
-  std::unordered_map<uint64_t, std::vector<LKInstructionMarkerInfo>> LKMarkers;
-
   /// List of external addresses in the code that are not a function start
   /// and are referenced from BinaryFunction.
   std::list<std::pair<BinaryFunction *, uint64_t>> InterproceduralReferences;
