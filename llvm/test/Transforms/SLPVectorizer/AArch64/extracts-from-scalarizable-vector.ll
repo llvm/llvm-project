@@ -4,9 +4,16 @@
 define i1 @degenerate() {
 ; CHECK-LABEL: define i1 @degenerate() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze <4 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP0]])
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x fp128> zeroinitializer, i32 0
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt fp128 [[TMP0]], 0xL00000000000000000000000000000000
+; CHECK-NEXT:    [[CMP3:%.*]] = fcmp olt fp128 [[TMP0]], 0xL00000000000000000000000000000000
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x fp128> zeroinitializer, i32 0
+; CHECK-NEXT:    [[CMP6:%.*]] = fcmp ogt fp128 [[TMP1]], 0xL00000000000000000000000000000000
+; CHECK-NEXT:    [[OR_COND29:%.*]] = select i1 [[OR_COND]], i1 [[CMP6]], i1 false
+; CHECK-NEXT:    [[CMP10:%.*]] = fcmp olt fp128 [[TMP1]], 0xL00000000000000000000000000000000
+; CHECK-NEXT:    [[OR_COND30:%.*]] = select i1 [[OR_COND29]], i1 [[CMP10]], i1 false
+; CHECK-NEXT:    ret i1 [[OR_COND30]]
 ;
 entry:
   %0 = extractelement <4 x fp128> zeroinitializer, i32 0
@@ -25,13 +32,16 @@ define i1 @with_inputs(<4 x fp128> %a) {
 ; CHECK-LABEL: define i1 @with_inputs
 ; CHECK-SAME: (<4 x fp128> [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x fp128> [[A]], <4 x fp128> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp olt <4 x fp128> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ogt <4 x fp128> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x fp128> [[A]], i32 0
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt fp128 [[TMP0]], 0xL00000000000000000000000000000000
+; CHECK-NEXT:    [[CMP3:%.*]] = fcmp olt fp128 [[TMP0]], 0xL00000000000000000000000000000000
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x fp128> [[A]], i32 1
+; CHECK-NEXT:    [[CMP6:%.*]] = fcmp ogt fp128 [[TMP1]], 0xL00000000000000000000000000000000
+; CHECK-NEXT:    [[OR_COND29:%.*]] = select i1 [[OR_COND]], i1 [[CMP6]], i1 false
+; CHECK-NEXT:    [[CMP10:%.*]] = fcmp olt fp128 [[TMP1]], 0xL00000000000000000000000000000000
+; CHECK-NEXT:    [[OR_COND30:%.*]] = select i1 [[OR_COND29]], i1 [[CMP10]], i1 false
+; CHECK-NEXT:    ret i1 [[OR_COND30]]
 ;
 entry:
   %0 = extractelement <4 x fp128> %a, i32 0
