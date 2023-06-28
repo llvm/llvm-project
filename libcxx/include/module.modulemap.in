@@ -911,6 +911,7 @@ module std [system] {
         private header "__filesystem/path.h"
         export functional.__functional.hash
         export functional.__functional.unary_function
+        export string
       }
       module path_iterator                { private header "__filesystem/path_iterator.h" }
       module perm_options                 { private header "__filesystem/perm_options.h" }

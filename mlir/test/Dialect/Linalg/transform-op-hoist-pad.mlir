@@ -19,7 +19,8 @@ transform.sequence failures(propagate) {
 
   %matmul_padded = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2]
+    padding_dimensions=[0, 1, 2],
+    copy_back = false
   } : (!transform.any_op) -> !transform.any_op
 
   // In this case, the pad op is actually empty: we only tile the first dimension
@@ -54,7 +55,8 @@ transform.sequence failures(propagate) {
 
   %matmul_padded = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2]
+    padding_dimensions=[0, 1, 2],
+    copy_back = false
   } : (!transform.any_op) -> !transform.any_op
 
   %pad = transform.get_producer_of_operand %matmul_padded[2]
@@ -96,7 +98,8 @@ transform.sequence failures(propagate) {
 
   %matmul_padded = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2]
+    padding_dimensions=[0, 1, 2],
+    copy_back = false
   } : (!transform.any_op) -> !transform.any_op
 
   %pad = transform.get_producer_of_operand %matmul_padded[0]
@@ -140,7 +143,8 @@ transform.sequence failures(propagate) {
 
   %matmul_padded = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2]
+    padding_dimensions=[0, 1, 2],
+    copy_back = false
   } : (!transform.any_op) -> !transform.any_op
 
   %pad = transform.get_producer_of_operand %matmul_padded[0]
@@ -183,7 +187,8 @@ transform.sequence failures(propagate) {
 
   %matmul_padded = transform.structured.pad %matmul_l1 {
     padding_values=[0.0: f32, 0.0 : f32, 0.0 : f32],
-    padding_dimensions=[0, 1, 2]
+    padding_dimensions=[0, 1, 2],
+    copy_back = false
   } : (!transform.any_op) -> !transform.any_op
 
   %pad = transform.get_producer_of_operand %matmul_padded[2]

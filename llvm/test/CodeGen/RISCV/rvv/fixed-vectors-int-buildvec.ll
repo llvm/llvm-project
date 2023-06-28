@@ -154,10 +154,10 @@ define <4 x i8> @buildvec_vid_stepn3_add3_v4i8() {
 ; CHECK-LABEL: buildvec_vid_stepn3_add3_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vmv.v.i v9, 3
-; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vmv.v.i v8, 3
 ; CHECK-NEXT:    li a0, -3
-; CHECK-NEXT:    vmadd.vx v8, a0, v9
+; CHECK-NEXT:    vmacc.vx v8, a0, v9
 ; CHECK-NEXT:    ret
   ret <4 x i8> <i8 3, i8 0, i8 -3, i8 -6>
 }
@@ -166,10 +166,10 @@ define void @buildvec_vid_stepn3_addn3_v4i32(ptr %z0, ptr %z1, ptr %z2, ptr %z3)
 ; CHECK-LABEL: buildvec_vid_stepn3_addn3_v4i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, -3
-; CHECK-NEXT:    vid.v v9
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vmv.v.i v9, -3
 ; CHECK-NEXT:    li a4, -3
-; CHECK-NEXT:    vmadd.vx v9, a4, v8
+; CHECK-NEXT:    vmacc.vx v9, a4, v8
 ; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    vse32.v v9, (a1)
 ; CHECK-NEXT:    vse32.v v9, (a2)

@@ -95,3 +95,11 @@ func.func @invalid_writable_on_op() {
   // expected-error @+1{{attribute '"bufferization.writable"' not supported as an op attribute by the bufferization dialect}}
   arith.constant {bufferization.writable = true} 0  : index
 }
+
+// -----
+
+// expected-note @below{{prior use here}}
+func.func @invalid_tensor_copy(%arg0: tensor<?xf32>, %arg1: tensor<5xf32>) {
+  // expected-error @below{{expects different type than prior uses: 'tensor<?xf32>' vs 'tensor<5xf32>'}}
+  bufferization.copy_tensor %arg0, %arg1 : tensor<?xf32>
+}

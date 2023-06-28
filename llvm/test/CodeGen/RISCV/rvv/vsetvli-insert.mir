@@ -419,12 +419,14 @@ body:             |
     ; CHECK-LABEL: name: vmv_v_i_different_lmuls
     ; CHECK: liveins: $x10, $v8, $x11
     ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %pt:vrm2 = IMPLICIT_DEF
     ; CHECK-NEXT: dead $x0 = PseudoVSETIVLI 4, 217 /* e64, m2, ta, ma */, implicit-def $vl, implicit-def $vtype
-    ; CHECK-NEXT: [[PseudoVID_V_M2_:%[0-9]+]]:vrm2 = PseudoVID_V_M2 4, 6 /* e64 */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: [[PseudoVID_V_M2_:%[0-9]+]]:vrm2 = PseudoVID_V_M2 %pt, 4, 6 /* e64 */, 3 /* ta, ma */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: dead $x0 = PseudoVSETVLIX0 killed $x0, 198 /* e8, mf4, ta, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
     ; CHECK-NEXT: [[PseudoVMV_V_I_MF4_:%[0-9]+]]:vr = PseudoVMV_V_I_MF4 0, 4, 3 /* e8 */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: PseudoRET
-    %0:vrm2 = PseudoVID_V_M2 4, 6
+    %pt:vrm2 = IMPLICIT_DEF
+    %0:vrm2 = PseudoVID_V_M2 %pt, 4, 6, 3
     %4:vr = PseudoVMV_V_I_MF4 0, 4, 3
     PseudoRET
 ...

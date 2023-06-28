@@ -38669,14 +38669,14 @@ X86TargetLowering::targetShrinkDemandedConstant(SDValue Op,
       return false;
     };
     // For vectors - if we have a constant, then try to sign extend.
-    // TODO: Handle AND/ANDN cases.
+    // TODO: Handle AND cases.
     unsigned ActiveBits = DemandedBits.getActiveBits();
     if (EltSize > ActiveBits && EltSize > 1 && isTypeLegal(VT) &&
-        (Opcode == ISD::OR || Opcode == ISD::XOR) &&
+        (Opcode == ISD::OR || Opcode == ISD::XOR || Opcode == X86ISD::ANDNP) &&
         NeedsSignExtension(Op.getOperand(1), ActiveBits)) {
       EVT ExtSVT = EVT::getIntegerVT(*TLO.DAG.getContext(), ActiveBits);
       EVT ExtVT = EVT::getVectorVT(*TLO.DAG.getContext(), ExtSVT,
-                                    VT.getVectorNumElements());
+                                   VT.getVectorNumElements());
       SDValue NewC =
           TLO.DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(Op), VT,
                           Op.getOperand(1), TLO.DAG.getValueType(ExtVT));
@@ -43816,6 +43816,31 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return TLO.CombineTo(
           Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, DemandedLHS, DemandedRHS));
     }
+    break;
+  }
+  case X86ISD::ANDNP: {
+    KnownBits Known2;
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    if (SimplifyDemandedBits(Op1, OriginalDemandedBits, OriginalDemandedElts,
+                             Known, TLO, Depth + 1))
+      return true;
+    assert(!Known.hasConflict() && "Bits known to be one AND zero?");
+
+    if (SimplifyDemandedBits(Op0, ~Known.Zero & OriginalDemandedBits,
+                             OriginalDemandedElts, Known2, TLO, Depth + 1))
+      return true;
+    assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
+
+    // If the RHS is a constant, see if we can simplify it.
+    if (ShrinkDemandedConstant(Op, ~Known2.One & OriginalDemandedBits,
+                               OriginalDemandedElts, TLO))
+      return true;
+
+    // ANDNP = (~Op0 & Op1);
+    Known.One &= Known2.Zero;
+    Known.Zero |= Known2.One;
     break;
   }
   case X86ISD::VSHLI: {
