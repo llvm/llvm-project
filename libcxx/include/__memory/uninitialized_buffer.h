@@ -36,9 +36,9 @@ class __uninitialized_buffer_deleter {
 
 public:
   template <class _Dummy = int, __enable_if_t<is_default_constructible<_Destructor>::value, _Dummy> = 0>
-  __uninitialized_buffer_deleter() : __count_(0) {}
+  _LIBCPP_HIDE_FROM_ABI __uninitialized_buffer_deleter() : __count_(0) {}
 
-  __uninitialized_buffer_deleter(size_t __count, _Destructor __destructor)
+  _LIBCPP_HIDE_FROM_ABI __uninitialized_buffer_deleter(size_t __count, _Destructor __destructor)
       : __count_(__count), __destructor_(std::move(__destructor)) {}
 
   template <class _Tp>
