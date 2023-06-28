@@ -11342,6 +11342,7 @@ void Sema::MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,
   // Take tokens to avoid allocations
   LPT->Toks.swap(Toks);
   LPT->D = FnD;
+  LPT->FPO = getCurFPFeatures();
   LateParsedTemplateMap.insert(std::make_pair(FD, std::move(LPT)));
 
   FD->setLateTemplateParsed(true);
