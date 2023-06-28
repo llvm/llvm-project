@@ -862,6 +862,11 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     RegRewriteTable[DestReg] = std::make_pair(Op1Reg, Op2Reg);
   }
 
+  // Reset the NoPHIs property if a PHI was inserted to prevent a conflict with
+  // the MachineVerifier during testing.
+  if (MIItBegin != MIItEnd)
+    F->getProperties().reset(MachineFunctionProperties::Property::NoPHIs);
+
   // Now remove the CMOV(s).
   MBB->erase(MIItBegin, MIItEnd);
 
