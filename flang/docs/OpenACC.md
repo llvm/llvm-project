@@ -15,3 +15,5 @@
 
 ## Intentional deviation from the specification
 * The end directive for combined construct can omit the `loop` keyword.
+* An `!$acc routine` with no parallelism clause is treated as if the `seq`
+  clause was present.
