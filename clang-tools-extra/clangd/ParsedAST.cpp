@@ -706,7 +706,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
   ASTDiags.EndSourceFile();
 
   std::vector<Diag> Diags = CompilerInvocationDiags;
-  // FIXME: Also skip generation of diagnostics alltogether to speed up ast
+  // FIXME: Also skip generation of diagnostics altogether to speed up ast
   // builds when we are patching a stale preamble.
   // Add diagnostics from the preamble, if any.
   if (Preamble)

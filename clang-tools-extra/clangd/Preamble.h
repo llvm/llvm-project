@@ -48,7 +48,7 @@
 namespace clang {
 namespace clangd {
 
-/// The captured AST conext.
+/// The captured AST context.
 /// Keeps necessary structs for an ASTContext and Preprocessor alive.
 /// This enables consuming them after context that produced the AST is gone.
 /// (e.g. indexing a preamble ast on a separate thread). ASTContext stored
@@ -186,7 +186,7 @@ public:
                                         const SourceManager &SM);
 
   /// Adjusts CI (which compiles the modified inputs) to be used with the
-  /// baseline preamble. This is done by inserting an artifical include to the
+  /// baseline preamble. This is done by inserting an artificial include to the
   /// \p CI that contains new directives calculated in create.
   void apply(CompilerInvocation &CI) const;
 
