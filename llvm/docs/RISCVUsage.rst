@@ -206,12 +206,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
 
-``experimental-zvfbfmin``
-  LLVM implements assembler support for the `0.6 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/main>`_.
-
-``experimental-zvfbfwma``
-  LLVM implements assembler support for the `0.6 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/main>`_.
-
 ``experimental-zvfh``
   LLVM implements `this draft text <https://github.com/riscv/riscv-v-spec/pull/780>`__.
 
