@@ -4,7 +4,7 @@
 ; FALLBACK: remark: <unknown>:0:0: unable to translate instruction: call: '  tail call void %p()' (in function: bti_enabled)
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-none-eabi"
+target triple = "aarch64"
 
 ; When BTI is enabled, all indirect tail-calls must use x16 or x17 (the intra
 ; procedure call scratch registers) to hold the address, as these instructions
