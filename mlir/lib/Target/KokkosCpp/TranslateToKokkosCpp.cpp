@@ -397,7 +397,14 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 
   if (failed(emitter.emitType(op.getLoc(), type)))
     return failure();
-  emitter << "(Kokkos::view_alloc(Kokkos::WithoutInitializing, \"" << emitter.getOrCreateName(result) << "\"))";
+  emitter << "(Kokkos::view_alloc(Kokkos::WithoutInitializing, \"" << emitter.getOrCreateName(result) << "\")";
+  for(auto dynSize : op.getDynamicSizes())
+  {
+    emitter << ", ";
+    if(failed(emitter.emitValue(dynSize)))
+      return failure();
+  }
+  emitter << ")";
   return success();
 }
 
@@ -490,78 +497,131 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
 static LogicalResult printOperation(KokkosCppEmitter &emitter,
                                     memref::SubViewOp op) {
   Value result = op.getResult();
+  auto sourceType = dyn_cast<MemRefType>(op.getSource().getType());
+  int sourceRank = sourceType.getRank();
   if(emitter.isStridedSubview(op.getSource()))
   {
     return op.emitError("NOT SUPPORTED YET: strided subview of strided subview. Would need to figure out how to get extents correct");
   }
+  //SubViewOp behavior
+  //  - Sizes/Offsets are required
+  //    - dynamic must take precedence over static, because sometimes both dynamic and static offsets are given but the static values are all -1.
+  //  - Strides are optional - if neither static nor dynamic strides are given, assume they are all 1
+  //  - Check the op.getDroppedDims() for a bit vector of which dimensions are kept (1) or discarded (0).
+  //    - This works just like the Kokkos::subview arguments - kept dims are given as a [begin, end) interval, and discarded as a single index.
+  emitter << "/* SubViewOp info\n";
+  emitter << "Source (rank-" << sourceRank << "): ";
+  if(failed(emitter.emitValue(op.getSource())))
+    return failure();
+  emitter << "\n";
+  emitter << "Sizes (dynamic): ";
+  for(auto s : op.getSizes())
+  {
+    (void) emitter.emitValue(s);
+    emitter << "  ";
+  }
+  emitter << "\n";
+  emitter << "Offsets (dynamic): ";
+  for(auto o : op.getOffsets())
+  {
+    (void) emitter.emitValue(o);
+    emitter << "  ";
+  }
+  emitter << "\n";
+  emitter << "Strides (dynamic): ";
+  for(auto s : op.getStrides())
+  {
+    (void) emitter.emitValue(s);
+    emitter << "  ";
+  }
+  emitter << "\n";
+  emitter << "Sizes (static): ";
+  for(auto s : op.getStaticSizes())
+  {
+    emitter << s << "  ";
+  }
+  emitter << "\n";
+  emitter << "Offsets (static): ";
+  for(auto o : op.getStaticOffsets())
+  {
+    emitter << o << "  ";
+  }
+  emitter << "\n";
+  emitter << "Strides (static): ";
+  for(auto s : op.getStaticStrides())
+  {
+    emitter << s << "  ";
+  }
+  emitter << "\n";
+  emitter << "Dropped Dims: ";
+  for(size_t i = 0; i < op.getDroppedDims().size(); i++)
+    emitter << op.getDroppedDims()[i] << " ";
+  emitter << "\n*/\n";
+  // TODO: what happens with sizes/staticSizes when a dimension is dropped?
+  // Is the size for dropped dimension just 1, or is the length of sizes one element shorter per dropped dim?
+  for(size_t i = 0; i < op.getDroppedDims().size(); i++)
+  {
+    if(op.getDroppedDims()[i])
+      return op.emitError("Do not yet support dropped dimensions in SubViewOp, see TODO.");
+  }
+  bool useDynamicSizes = op.getSizes().size();
+  bool useDynamicOffsets = op.getOffsets().size();
+  // TODO: need to carefully implement subviews with non-unit strides,
+  // since Kokkos::subview does not support this. Probably have to compute the strides per-dimension and then construct a LayoutStride object.
+  bool haveStrides = false;
+  if(op.getStrides().size())
+  {
+    //dynamic strides given, so they could be non-unit
+    haveStrides = true;
+  }
+  for(auto staticStride : op.getStaticStrides())
+  {
+    if(staticStride != 1)
+      haveStrides = true;
+  }
+  if(haveStrides)
+    return op.emitError("Do not yet support non-unit strides in SubViewOp, see TODO.");
+  auto emitSize = [&](int dim) -> LogicalResult
+  {
+    if(useDynamicSizes)
+    {
+      if(failed(emitter.emitValue(op.getSizes()[dim])))
+        return failure();
+    }
+    else
+      emitter << op.getStaticSizes()[dim];
+    return success();
+  };
+  auto emitOffset = [&](int dim) -> LogicalResult
+  {
+    if(useDynamicOffsets)
+    {
+      if(failed(emitter.emitValue(op.getOffsets()[dim])))
+        return failure();
+    }
+    else
+      emitter << op.getStaticOffsets()[dim];
+    return success();
+  };
   emitter << "auto " << emitter.getOrCreateName(result) << " = Kokkos::subview(";
   if(failed(emitter.emitValue(op.getSource())))
     return failure();
-  if(op.getOffsets().size())
+  for(int dim = 0; dim < sourceRank; dim++)
   {
-    //Subview has dynamic sizes/offsets/strides.
-    //NOTE: if the offsets (non-static) are populated, we assume that the sizes and strides are also non-static.
-    if(op.getSizes().size() != op.getOffsets().size())
-    {
-      return op.emitError("sizes and offsets of SubViewOp have different lengths");
-    }
-    if(op.getStrides().size() != op.getOffsets().size())
-    {
-      return op.emitError("strides and offsets of SubViewOp have different lengths");
-    }
-    //The subview in each dimension starts at the offset and goes to offset + size * stride.
-    for(auto dim : llvm::zip(op.getOffsets(), op.getSizes(), op.getStrides()))
-    {
-      emitter << ", Kokkos::make_pair<int64_t, int64_t>(";
-      if(failed(emitter.emitValue(std::get<0>(dim))))
-        return failure();
-      emitter << ", ";
-      if(failed(emitter.emitValue(std::get<0>(dim))))
-        return failure();
-      emitter << " + ";
-      if(failed(emitter.emitValue(std::get<1>(dim))))
-        return failure();
-      emitter << " * ";
-      if(failed(emitter.emitValue(std::get<2>(dim))))
-        return failure();
-      emitter << ")";
-    }
+    emitter << ", Kokkos::make_pair<int64_t, int64_t>(";
+    //interval for each dim is [offset, offset+size)
+    //TODO: this is only correct for unit strides, see above
+    if(failed(emitOffset(dim)))
+      return failure();
+    emitter << ", ";
+    if(failed(emitOffset(dim)))
+      return failure();
+    emitter << " + ";
+    if(failed(emitSize(dim)))
+      return failure();
     emitter << ")";
-    emitter.registerStridedSubview(result, op);
   }
-  else if(op.getStaticOffsets().size())
-  {
-    //Subview has static sizes/offsets/strides.
-    //NOTE: if the static offsets are populated, we assume that the sizes and strides are also static.
-    if(op.getStaticSizes().size() != op.getStaticOffsets().size())
-    {
-      return op.emitError("static_sizes of SubViewOp don't have same size as static_offsets");
-    }
-    if(op.getStaticStrides().size() != op.getStaticOffsets().size())
-    {
-      return op.emitError("static_strides of SubViewOp don't have same size as static_offsets");
-    }
-    //If all strides are 1, this doesn't need to be registered as a strided subview. Kokkos::subview is enough.
-    //Either way, the subview in each dimension starts at the offset and goes to offset + size * stride.
-    for(auto dim : llvm::zip(op.getStaticOffsets(), op.getStaticSizes(), op.getStaticStrides()))
-    {
-      emitter << ", Kokkos::make_pair<int64_t, int64_t>(";
-      emitter << std::get<0>(dim) << ", ";
-      emitter << std::get<0>(dim) << " + ";
-      emitter << std::get<1>(dim) << " * ";
-      emitter << std::get<2>(dim);
-      emitter << ")";
-    }
-    emitter << ")";
-    bool isStrided = false;
-    for(auto stride : op.getStaticStrides())
-    {
-      if(stride != 1)
-        isStrided = true;
-    }
-    if(isStrided)
-      emitter.registerStridedSubview(result, op);
-  }
+  emitter << ")";
   return success();
 }
 
