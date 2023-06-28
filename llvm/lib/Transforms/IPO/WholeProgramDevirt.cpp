@@ -1706,8 +1706,7 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
       Call.replaceAndErase("virtual-const-prop-1-bit", FnName, RemarksEnabled,
                            OREGetter, IsBitSet);
     } else {
-      Value *ValAddr = B.CreateBitCast(Addr, RetType->getPointerTo());
-      Value *Val = B.CreateLoad(RetType, ValAddr);
+      Value *Val = B.CreateLoad(RetType, Addr);
       NumVirtConstProp++;
       Call.replaceAndErase("virtual-const-prop", FnName, RemarksEnabled,
                            OREGetter, Val);

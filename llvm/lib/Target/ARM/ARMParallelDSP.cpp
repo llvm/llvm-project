@@ -760,12 +760,10 @@ LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
   IRBuilder<NoFolder> IRB(DomLoad->getParent(),
                           ++BasicBlock::iterator(DomLoad));
 
-  // Bitcast the pointer to a wider type and create the wide load, while making
-  // sure to maintain the original alignment as this prevents ldrd from being
-  // generated when it could be illegal due to memory alignment.
-  const unsigned AddrSpace = DomLoad->getPointerAddressSpace();
-  Value *VecPtr = IRB.CreateBitCast(Base->getPointerOperand(),
-                                    LoadTy->getPointerTo(AddrSpace));
+  // Create the wide load, while making sure to maintain the original alignment
+  // as this prevents ldrd from being generated when it could be illegal due to
+  // memory alignment.
+  Value *VecPtr = Base->getPointerOperand();
   LoadInst *WideLoad = IRB.CreateAlignedLoad(LoadTy, VecPtr, Base->getAlign());
 
   // Make sure everything is in the correct order in the basic block.
