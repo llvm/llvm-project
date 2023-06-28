@@ -160,6 +160,18 @@ void DiagnosticsEngine::ReportDelayed() {
   Report(ID) << DelayedDiagArg1 << DelayedDiagArg2 << DelayedDiagArg3;
 }
 
+DiagnosticMapping &
+DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
+  std::pair<iterator, bool> Result =
+      DiagMap.insert(std::make_pair(Diag, DiagnosticMapping()));
+
+  // Initialize the entry if we added it.
+  if (Result.second)
+    Result.first->second = DiagnosticIDs::getDefaultMapping(Diag);
+
+  return Result.first->second;
+}
+
 void DiagnosticsEngine::DiagStateMap::appendFirst(DiagState *State) {
   assert(Files.empty() && "not first");
   FirstDiagState = CurDiagState = State;
