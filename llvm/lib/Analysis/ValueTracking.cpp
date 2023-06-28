@@ -6961,7 +6961,8 @@ void llvm::getGuaranteedWellDefinedOps(
         Operands.push_back(CB->getCalledOperand());
       for (unsigned i = 0; i < CB->arg_size(); ++i) {
         if (CB->paramHasAttr(i, Attribute::NoUndef) ||
-            CB->paramHasAttr(i, Attribute::Dereferenceable))
+            CB->paramHasAttr(i, Attribute::Dereferenceable) ||
+            CB->paramHasAttr(i, Attribute::DereferenceableOrNull))
           Operands.push_back(CB->getArgOperand(i));
       }
       break;
