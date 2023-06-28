@@ -2033,15 +2033,6 @@ struct LessRecordFieldName {
   }
 };
 
-/// Sorting predicate to sort record pointers by their
-/// FieldName field.
-struct LessRecordFieldFieldName {
-  bool operator()(const Record *Rec1, const Record *Rec2) const {
-    return Rec1->getValueAsString("FieldName") <
-           Rec2->getValueAsString("FieldName");
-  }
-};
-
 struct LessRecordRegister {
   struct RecordParts {
     SmallVector<std::pair< bool, StringRef>, 4> Parts;

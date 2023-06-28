@@ -41,6 +41,15 @@ using namespace llvm;
 
 namespace {
 
+/// Sorting predicate to sort record pointers by their
+/// FieldName field.
+struct LessRecordFieldFieldName {
+  bool operator()(const Record *Rec1, const Record *Rec2) const {
+    return Rec1->getValueAsString("FieldName") <
+           Rec2->getValueAsString("FieldName");
+  }
+};
+
 class SubtargetEmitter {
   // Each processor has a SchedClassDesc table with an entry for each SchedClass.
   // The SchedClassDesc table indexes into a global write resource table, write
