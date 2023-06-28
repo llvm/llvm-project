@@ -66,7 +66,7 @@ define i64 @call_vararg_both0(i64 %arg0, double %arg1) {
 ; CHECK:       larl  1, @CPI5_0
 ; CHECK-NEXT:  ld    0, 0(1)
 ; CHECK-NEXT:  ld    2, 8(1)
-; CHECK:       lgdr  3, 0
+; CHECK-NEXT:  lgdr  3, 0
 ; CHECK:       lghi  1, 1
 ; CHECK:       lghi  2, 2
 ; CHECK:       std   0, 2192(4)
