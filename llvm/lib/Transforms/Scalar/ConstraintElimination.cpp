@@ -1099,6 +1099,41 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
     ReproducerCondStack.pop_back();
 }
 
+/// Check if the first condition for an AND implies the second.
+static bool checkAndSecondOpImpliedByFirst(
+    FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
+    SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
+    SmallVectorImpl<StackEntry> &DFSInStack) {
+  CmpInst::Predicate Pred;
+  Value *A, *B;
+  Instruction *And = CB.getContextInst();
+  if (!match(And->getOperand(0), m_ICmp(Pred, m_Value(A), m_Value(B))))
+    return false;
+
+  // Optimistically add fact from first condition.
+  unsigned OldSize = DFSInStack.size();
+  Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+  if (OldSize == DFSInStack.size())
+    return false;
+
+  bool Changed = false;
+  // Check if the second condition can be simplified now.
+  if (auto ImpliedCondition =
+          checkCondition(cast<ICmpInst>(And->getOperand(1)), Info, CB.NumIn,
+                         CB.NumOut, CB.getContextInst())) {
+    And->setOperand(1, ConstantInt::getBool(And->getType(), *ImpliedCondition));
+    Changed = true;
+  }
+
+  // Remove entries again.
+  while (OldSize < DFSInStack.size()) {
+    StackEntry E = DFSInStack.back();
+    removeEntryFromStack(E, Info, ReproducerModule, ReproducerCondStack,
+                         DFSInStack);
+  }
+  return Changed;
+}
+
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
@@ -1300,9 +1335,16 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
       if (auto *II = dyn_cast<WithOverflowInst>(Inst)) {
         Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
       } else if (auto *Cmp = dyn_cast<ICmpInst>(Inst)) {
-        Changed |= checkAndReplaceCondition(
+        bool Simplified = checkAndReplaceCondition(
             Cmp, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
             ReproducerModule.get(), ReproducerCondStack, S.DT);
+        if (!Simplified && match(CB.getContextInst(),
+                                 m_LogicalAnd(m_Value(), m_Specific(Inst)))) {
+          Simplified =
+              checkAndSecondOpImpliedByFirst(CB, Info, ReproducerModule.get(),
+                                             ReproducerCondStack, DFSInStack);
+        }
+        Changed |= Simplified;
       }
       continue;
     }
