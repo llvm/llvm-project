@@ -509,15 +509,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const BinarySection &Section) {
   return OS;
 }
 
-/// Linux Kernel special sections point to a specific instruction in many cases.
-/// Unlike SDTMarkerInfo, these markers can come from different sections.
-struct LKInstructionMarkerInfo {
-  uint64_t SectionOffset;
-  int32_t PCRelativeOffset;
-  bool IsPCRelative;
-  StringRef SectionName;
-};
-
 } // namespace bolt
 } // namespace llvm
 
