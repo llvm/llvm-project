@@ -30,6 +30,7 @@ static_library("FlowSensitive") {
     "DebugSupport.cpp",
     "HTMLLogger.cpp",
     "Logger.cpp",
+    "RecordOps.cpp",
     "Transfer.cpp",
     "TypeErasedDataflowAnalysis.cpp",
     "Value.cpp",

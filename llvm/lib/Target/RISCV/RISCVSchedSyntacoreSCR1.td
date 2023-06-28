@@ -41,7 +41,6 @@ def SCR1_CFU : ProcResource<1>;
 def : WriteRes<WriteJmp, [SCR1_CFU]>;
 def : WriteRes<WriteJal, [SCR1_CFU]>;
 def : WriteRes<WriteJalr, [SCR1_CFU]>;
-def : WriteRes<WriteJmpReg, [SCR1_CFU]>;
 
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU32, [SCR1_ALU]>;

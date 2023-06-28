@@ -957,13 +957,17 @@ namespace test51 {
 
   struct HIDDEN foo {
   };
-  DEFAULT foo x;
+  DEFAULT foo x, y;
   template<foo *z>
   void DEFAULT zed() {
   }
   template void zed<&x>();
   // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1xEEEEEvv
   // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1xEEEEEvv
+
+  template void HIDDEN zed<&y>();
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1yEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1yEEEEEvv(
 }
 
 namespace test52 {
@@ -1331,4 +1335,29 @@ namespace test70 {
   };
   B::~B() {}
   // Check lines at top of file.
+}
+
+// https://github.com/llvm/llvm-project/issues/31462
+namespace test71 {
+  template <class T>
+  struct foo {
+    static HIDDEN T zed();
+    template <class U> HIDDEN U bar();
+  };
+  template <class T>
+  T foo<T>::zed() { return {}; }
+  template <class T> template <class U>
+  U foo<T>::bar() { return {}; }
+
+  extern template struct DEFAULT foo<int>;
+
+  int use() {
+    foo<int> o;
+    return o.zed() + o.bar<int>();
+  }
+  /// FIXME: foo<int>::bar is hidden in GCC w/ or w/o -fvisibility=hidden.
+  // CHECK-LABEL: declare hidden noundef i32 @_ZN6test713fooIiE3zedEv(
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIiE3barIiEET_v(
+  // CHECK-HIDDEN-LABEL: declare hidden noundef i32 @_ZN6test713fooIiE3zedEv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIiE3barIiEET_v(
 }

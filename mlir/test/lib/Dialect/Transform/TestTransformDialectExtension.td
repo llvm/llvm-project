@@ -564,4 +564,15 @@ def TestReEnterRegionOp
   let hasVerifier = 1;
 }
 
+def TestNotifyPayloadOpReplacedOp
+  : Op<Transform_Dialect, "test_notify_payload_op_replaced",
+       [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+        DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins TransformHandleTypeInterface:$original,
+                       TransformHandleTypeInterface:$replacement);
+  let results = (outs);
+  let assemblyFormat = "$original `,` $replacement attr-dict `:` functional-type(operands, results)";
+  let cppNamespace = "::mlir::test";
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

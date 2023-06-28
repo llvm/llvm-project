@@ -28,6 +28,7 @@ class FoldingSetNodeID;
 class StringRef;
 class hash_code;
 class raw_ostream;
+struct Align;
 
 template <typename T> class SmallVectorImpl;
 template <typename T> class ArrayRef;
@@ -432,6 +433,10 @@ public:
     unsigned TZ = countr_zero();
     return (LO + TZ) == BitWidth;
   }
+
+  /// Checks if this APInt -interpreted as an address- is aligned to the
+  /// provided value.
+  bool isAligned(Align A) const;
 
   /// Check if the APInt's value is returned by getSignMask.
   ///
@@ -1570,8 +1575,8 @@ public:
 
   /// Count the number of trailing zero bits.
   ///
-  /// This function is an APInt version of std::countr_zero. It counts the number
-  /// of zeros from the least significant bit to the first set bit.
+  /// This function is an APInt version of std::countr_zero. It counts the
+  /// number of zeros from the least significant bit to the first set bit.
   ///
   /// \returns BitWidth if the value is zero, otherwise returns the number of
   /// zeros from the least significant bit to the first one bit.

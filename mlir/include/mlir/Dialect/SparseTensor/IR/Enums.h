@@ -198,7 +198,7 @@ enum class LevelFormat : uint8_t {
 };
 
 /// Returns string representation of the given dimension level type.
-inline std::string toMLIRString(DimLevelType dlt) {
+constexpr const char *toMLIRString(DimLevelType dlt) {
   switch (dlt) {
   // TODO: should probably raise an error instead of printing it...
   case DimLevelType::Undef:

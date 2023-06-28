@@ -583,7 +583,7 @@ install(
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT riscv-resource-headers)
-  
+
 install(
   FILES ${systemz_files}
   DESTINATION ${header_install_dir}

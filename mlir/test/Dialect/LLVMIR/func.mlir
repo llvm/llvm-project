@@ -204,6 +204,16 @@ module {
   llvm.func protected @protected() {
     llvm.return
   }
+
+  // CHECK: llvm.comdat @__llvm_comdat
+  llvm.comdat @__llvm_comdat {
+    // CHECK: llvm.comdat_selector @any any
+    llvm.comdat_selector @any any
+  }
+  // CHECK: @any() comdat(@__llvm_comdat::@any) attributes
+  llvm.func @any() comdat(@__llvm_comdat::@any) attributes { dso_local } {
+    llvm.return
+  }
 }
 
 // -----

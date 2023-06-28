@@ -30,7 +30,7 @@ def fold_global_offset : GICombineRule<
   (defs root:$root, fold_global_offset_matchdata:$matchinfo),
   (match (wip_match_opcode G_GLOBAL_VALUE):$root,
           [{ return matchFoldGlobalOffset(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{  return applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
+  (apply [{ applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
 >;
 
 def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
@@ -101,7 +101,7 @@ def shuf_to_ins: GICombineRule <
   (defs root:$root, shuf_to_ins_matchdata:$matchinfo),
   (match (wip_match_opcode G_SHUFFLE_VECTOR):$root,
          [{ return matchINS(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ return applyINS(*${root}, MRI, B, ${matchinfo}); }])
+  (apply [{ applyINS(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
 def vashr_vlshr_imm_matchdata : GIDefMatchData<"int64_t">;
@@ -163,7 +163,7 @@ def build_vector_to_dup : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_BUILD_VECTOR):$root,
           [{ return matchBuildVectorToDup(*${root}, MRI); }]),
-  (apply [{ return applyBuildVectorToDup(*${root}, MRI, B); }])
+  (apply [{ applyBuildVectorToDup(*${root}, MRI, B); }])
 >;
 
 def build_vector_lowering : GICombineGroup<[build_vector_to_dup]>;

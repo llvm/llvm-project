@@ -1359,7 +1359,6 @@ module std [system] {
       module common_view                { private header "__ranges/common_view.h" }
       module concepts                   { private header "__ranges/concepts.h" }
       module container_compatible_range { private header "__ranges/container_compatible_range.h" }
-      module copyable_box               { private header "__ranges/copyable_box.h" }
       module counted                    {
         private header "__ranges/counted.h"
         export span
@@ -1382,6 +1381,7 @@ module std [system] {
       }
       module join_view                  { private header "__ranges/join_view.h" }
       module lazy_split_view            { private header "__ranges/lazy_split_view.h" }
+      module movable_box                { private header "__ranges/movable_box.h" }
       module non_propagating_cache      { private header "__ranges/non_propagating_cache.h" }
       module owning_view                { private header "__ranges/owning_view.h" }
       module range_adaptor              { private header "__ranges/range_adaptor.h" }

@@ -906,6 +906,26 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresClausesAndConcepts) {
       annotate("auto bar() -> Template<type> requires(is_integral_v<T>) {}");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[9], tok::kw_requires, TT_RequiresClause);
+
+  Tokens = annotate("void foo() requires((A<T>) && C) {}");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[12], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("void foo() requires(((A<T>) && C)) {}");
+  ASSERT_EQ(Tokens.size(), 20u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[13], tok::ampamp, TT_BinaryOperator);
+
+  Tokens = annotate("void foo() requires([](T&&){}(t)) {}");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[10], tok::ampamp, TT_PointerOrReference);
+
+  Tokens = annotate("void foo() requires([](T&& u){}(t)) {}");
+  ASSERT_EQ(Tokens.size(), 22u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_requires, TT_RequiresClause);
+  EXPECT_TOKEN(Tokens[10], tok::ampamp, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {

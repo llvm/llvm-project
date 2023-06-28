@@ -700,10 +700,14 @@ cc_library(
     deps = [
         ":TestDialect",
         "//mlir:AffineDialect",
+        "//mlir:ArithDialect",
+        "//mlir:ArithTransforms",
+        "//mlir:FuncDialect",
         "//mlir:MemRefDialect",
         "//mlir:MemRefTransforms",
         "//mlir:Pass",
         "//mlir:Transforms",
+        "//mlir:VectorDialect",
     ],
 )
 

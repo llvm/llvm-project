@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
