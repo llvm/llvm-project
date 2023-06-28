@@ -69,7 +69,7 @@ struct UnimplementedFeature {
   // Missing Emissions
   static bool variablyModifiedTypeEmission() { return false; }
 
-  // Clang early optimizations
+  // Clang early optimizations or things defered to LLVM lowering.
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
   static bool shouldUseMemSetToInitialize() { return false; }
   static bool shouldSplitConstantStore() { return false; }
@@ -80,6 +80,7 @@ struct UnimplementedFeature {
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool mayHaveIntegerOverflow() { return false; }
+  static bool llvmLoweringPtrDiffConsidersPointee() { return false; }
 
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }

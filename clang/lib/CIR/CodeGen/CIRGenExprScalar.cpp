@@ -1085,14 +1085,17 @@ mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
   if (!Ops.RHS.getType().isa<mlir::cir::PointerType>())
     llvm_unreachable("NYI");
 
-  // Otherwise, this is a pointer subtraction.
+  // Otherwise, this is a pointer subtraction
 
   // Do the raw subtraction part.
-  llvm_unreachable("NYI");
-
-  return Builder.create<mlir::cir::BinOp>(
-      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Sub,
-      Ops.LHS, Ops.RHS);
+  //
+  // TODO(cir): note for LLVM lowering out of this; when expanding this into
+  // LLVM we shall take VLA's, division by element size, etc.
+  //
+  // See more in `EmitSub` in CGExprScalar.cpp.
+  assert(!UnimplementedFeature::llvmLoweringPtrDiffConsidersPointee());
+  return Builder.create<mlir::cir::PtrDiffOp>(CGF.getLoc(Ops.Loc),
+                                              CGF.PtrDiffTy, Ops.LHS, Ops.RHS);
 }
 mlir::Value ScalarExprEmitter::buildShl(const BinOpInfo &Ops) {
   return Builder.create<mlir::cir::BinOp>(
