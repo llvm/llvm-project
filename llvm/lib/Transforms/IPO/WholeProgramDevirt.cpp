@@ -1002,7 +1002,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
       return false;
 
     Constant *Ptr = getPointerAtOffset(TM.Bits->GV->getInitializer(),
-                                       TM.Offset + ByteOffset, M);
+                                       TM.Offset + ByteOffset, M, TM.Bits->GV);
     if (!Ptr)
       return false;
 
@@ -1990,9 +1990,23 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
     // This helps avoid unnecessary spills.
     IRBuilder<> LoadB(
         (LoadedPtrs.size() == 1 && !HasNonCallUses) ? LoadedPtrs[0] : CI);
-    Value *GEP = LoadB.CreateGEP(Int8Ty, Ptr, Offset);
-    Value *GEPPtr = LoadB.CreateBitCast(GEP, PointerType::getUnqual(Int8PtrTy));
-    Value *LoadedValue = LoadB.CreateLoad(Int8PtrTy, GEPPtr);
+
+    Value *LoadedValue = nullptr;
+    if (TypeCheckedLoadFunc->getIntrinsicID() ==
+        Intrinsic::type_checked_load_relative) {
+      Value *GEP = LoadB.CreateGEP(Int8Ty, Ptr, Offset);
+      Value *GEPPtr = LoadB.CreateBitCast(GEP, PointerType::getUnqual(Int32Ty));
+      LoadedValue = LoadB.CreateLoad(Int32Ty, GEPPtr);
+      LoadedValue = LoadB.CreateSExt(LoadedValue, IntPtrTy);
+      GEP = LoadB.CreatePtrToInt(GEP, IntPtrTy);
+      LoadedValue = LoadB.CreateAdd(GEP, LoadedValue);
+      LoadedValue = LoadB.CreateIntToPtr(LoadedValue, Int8PtrTy);
+    } else {
+      Value *GEP = LoadB.CreateGEP(Int8Ty, Ptr, Offset);
+      Value *GEPPtr =
+          LoadB.CreateBitCast(GEP, PointerType::getUnqual(Int8PtrTy));
+      LoadedValue = LoadB.CreateLoad(Int8PtrTy, GEPPtr);
+    }
 
     for (Instruction *LoadedPtr : LoadedPtrs) {
       LoadedPtr->replaceAllUsesWith(LoadedValue);
@@ -2173,6 +2187,8 @@ bool DevirtModule::run() {
       M.getFunction(Intrinsic::getName(Intrinsic::type_test));
   Function *TypeCheckedLoadFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
+  Function *TypeCheckedLoadRelativeFunc =
+      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
   Function *AssumeFunc = M.getFunction(Intrinsic::getName(Intrinsic::assume));
 
   // Normally if there are no users of the devirtualization intrinsics in the
@@ -2181,7 +2197,9 @@ bool DevirtModule::run() {
   if (!ExportSummary &&
       (!TypeTestFunc || TypeTestFunc->use_empty() || !AssumeFunc ||
        AssumeFunc->use_empty()) &&
-      (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()))
+      (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()) &&
+      (!TypeCheckedLoadRelativeFunc ||
+       TypeCheckedLoadRelativeFunc->use_empty()))
     return false;
 
   // Rebuild type metadata into a map for easy lookup.
@@ -2194,6 +2212,9 @@ bool DevirtModule::run() {
 
   if (TypeCheckedLoadFunc)
     scanTypeCheckedLoadUsers(TypeCheckedLoadFunc);
+
+  if (TypeCheckedLoadRelativeFunc)
+    scanTypeCheckedLoadUsers(TypeCheckedLoadRelativeFunc);
 
   if (ImportSummary) {
     for (auto &S : CallSlots)
