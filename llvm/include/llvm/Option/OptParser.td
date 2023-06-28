@@ -11,6 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_OPTION_OPTPARSER_TD
+#define LLVM_OPTION_OPTPARSER_TD
+
 // Define the kinds of options.
 
 class OptionKind<string name, int precedence = 0, bit sentinel = false> {
@@ -253,3 +256,5 @@ class ValueExtractor<code extractor> { code ValueExtractor = extractor; }
 // aren't duplicated).
 def INPUT : Option<[], "<input>", KIND_INPUT>;
 def UNKNOWN : Option<[], "<unknown>", KIND_UNKNOWN>;
+
+#endif // LLVM_OPTION_OPTPARSER_TD
