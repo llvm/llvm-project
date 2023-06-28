@@ -1702,6 +1702,8 @@ public:
   /// Indicate that another function body was merged with this function.
   void setHasFunctionsFoldedInto() { HasFunctionsFoldedInto = true; }
 
+  void setHasSDTMarker(bool V) { HasSDTMarker = V; }
+
   BinaryFunction &setPersonalityFunction(uint64_t Addr) {
     assert(!PersonalityFunction && "can't set personality function twice");
     PersonalityFunction = BC.getOrCreateGlobalSymbol(Addr, "FUNCat");

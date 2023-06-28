@@ -196,10 +196,6 @@ static cl::opt<bool> PrintLoopInfo("print-loops",
                                    cl::desc("print loop related information"),
                                    cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool> PrintSDTMarkers("print-sdt",
-                                     cl::desc("print all SDT markers"),
-                                     cl::Hidden, cl::cat(BoltCategory));
-
 enum PrintPseudoProbesOptions {
   PPP_None = 0,
   PPP_Probes_Section_Decode = 0x1,
@@ -634,51 +630,6 @@ Error RewriteInstance::discoverStorage() {
   return Error::success();
 }
 
-void RewriteInstance::parseSDTNotes() {
-  if (!SDTSection)
-    return;
-
-  StringRef Buf = SDTSection->getContents();
-  DataExtractor DE = DataExtractor(Buf, BC->AsmInfo->isLittleEndian(),
-                                   BC->AsmInfo->getCodePointerSize());
-  uint64_t Offset = 0;
-
-  while (DE.isValidOffset(Offset)) {
-    uint32_t NameSz = DE.getU32(&Offset);
-    DE.getU32(&Offset); // skip over DescSz
-    uint32_t Type = DE.getU32(&Offset);
-    Offset = alignTo(Offset, 4);
-
-    if (Type != 3)
-      errs() << "BOLT-WARNING: SDT note type \"" << Type
-             << "\" is not expected\n";
-
-    if (NameSz == 0)
-      errs() << "BOLT-WARNING: SDT note has empty name\n";
-
-    StringRef Name = DE.getCStr(&Offset);
-
-    if (!Name.equals("stapsdt"))
-      errs() << "BOLT-WARNING: SDT note name \"" << Name
-             << "\" is not expected\n";
-
-    // Parse description
-    SDTMarkerInfo Marker;
-    Marker.PCOffset = Offset;
-    Marker.PC = DE.getU64(&Offset);
-    Marker.Base = DE.getU64(&Offset);
-    Marker.Semaphore = DE.getU64(&Offset);
-    Marker.Provider = DE.getCStr(&Offset);
-    Marker.Name = DE.getCStr(&Offset);
-    Marker.Args = DE.getCStr(&Offset);
-    Offset = alignTo(Offset, 4);
-    BC->SDTMarkers[Marker.PC] = Marker;
-  }
-
-  if (opts::PrintSDTMarkers)
-    printSDTMarkers();
-}
-
 void RewriteInstance::parsePseudoProbe() {
   if (!PseudoProbeDescSection && !PseudoProbeSection) {
     // pesudo probe is not added to binary. It is normal and no warning needed.
@@ -725,19 +676,6 @@ void RewriteInstance::parsePseudoProbe() {
     outs() << "Report of decoding input pseudo probe binaries \n";
     BC->ProbeDecoder.printGUID2FuncDescMap(outs());
     BC->ProbeDecoder.printProbesForAllAddresses(outs());
-  }
-}
-
-void RewriteInstance::printSDTMarkers() {
-  outs() << "BOLT-INFO: Number of SDT markers is " << BC->SDTMarkers.size()
-         << "\n";
-  for (auto It : BC->SDTMarkers) {
-    SDTMarkerInfo &Marker = It.second;
-    outs() << "BOLT-INFO: PC: " << utohexstr(Marker.PC)
-           << ", Base: " << utohexstr(Marker.Base)
-           << ", Semaphore: " << utohexstr(Marker.Semaphore)
-           << ", Provider: " << Marker.Provider << ", Name: " << Marker.Name
-           << ", Args: " << Marker.Args << "\n";
   }
 }
 
@@ -1853,7 +1791,6 @@ Error RewriteInstance::readSpecialSections() {
   LSDASection = BC->getUniqueSectionByName(".gcc_except_table");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
   BuildIDSection = BC->getUniqueSectionByName(".note.gnu.build-id");
-  SDTSection = BC->getUniqueSectionByName(".note.stapsdt");
   PseudoProbeDescSection = BC->getUniqueSectionByName(".pseudo_probe_desc");
   PseudoProbeSection = BC->getUniqueSectionByName(".pseudo_probe");
 
@@ -1909,8 +1846,6 @@ Error RewriteInstance::readSpecialSections() {
   parseBuildID();
   if (std::optional<std::string> FileBuildID = getPrintableBuildID())
     BC->setFileBuildID(*FileBuildID);
-
-  parseSDTNotes();
 
   // Read .dynamic/PT_DYNAMIC.
   return readELFDynamic();
@@ -3245,7 +3180,7 @@ void RewriteInstance::preprocessProfileData() {
 }
 
 void RewriteInstance::initializeMetadataManager() {
-  // TODO
+  MetadataManager.registerRewriter(createSDTRewriter(*BC));
 }
 
 void RewriteInstance::processMetadataPreCFG() {
@@ -3621,7 +3556,6 @@ void RewriteInstance::updateMetadata() {
   MetadataManager.runFinalizersAfterEmit();
 
   // TODO: use MetadataManager for updates.
-  updateSDTMarkers();
   updateLKMarkers();
   parsePseudoProbe();
   updatePseudoProbes();
@@ -3899,29 +3833,6 @@ void RewriteInstance::encodePseudoProbes() {
         reinterpret_cast<const uint8_t *>(ProbeContents.data()),
         ProbeContents.size(), GuidFilter, FuncStartAddrs);
     DummyDecoder.printProbesForAllAddresses(outs());
-  }
-}
-
-void RewriteInstance::updateSDTMarkers() {
-  NamedRegionTimer T("updateSDTMarkers", "update SDT markers", TimerGroupName,
-                     TimerGroupDesc, opts::TimeRewrite);
-
-  if (!SDTSection)
-    return;
-  SDTSection->registerPatcher(std::make_unique<SimpleBinaryPatcher>());
-
-  SimpleBinaryPatcher *SDTNotePatcher =
-      static_cast<SimpleBinaryPatcher *>(SDTSection->getPatcher());
-  for (auto &SDTInfoKV : BC->SDTMarkers) {
-    const uint64_t OriginalAddress = SDTInfoKV.first;
-    SDTMarkerInfo &SDTInfo = SDTInfoKV.second;
-    const BinaryFunction *F =
-        BC->getBinaryFunctionContainingAddress(OriginalAddress);
-    if (!F)
-      continue;
-    const uint64_t NewAddress =
-        F->translateInputToOutputAddress(OriginalAddress);
-    SDTNotePatcher->addLE64Patch(SDTInfo.PCOffset, NewAddress);
   }
 }
 
