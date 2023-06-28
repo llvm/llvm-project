@@ -36,7 +36,7 @@ func.func @test_elsewhere_impure_mask(%x: !fir.ref<!fir.array<10xi32>>, %y: !fir
 // CHECK:           %[[VAL_12:.*]] = fir.call @impure() : () -> !fir.heap<!fir.array<10x!fir.logical<4>>>
 // CHECK:           %[[VAL_21:.*]] = fir.allocmem !fir.array<?x!fir.logical<4>>, %[[extent:[^ ]*]]
 // CHECK:           %[[VAL_22:.*]] = fir.shape %[[extent]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_21]](%{{.*}}) {uniq_name = ".tmp.forall"}
+// CHECK:           %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_21]](%{{.*}}) {uniq_name = ".tmp.where"}
 // CHECK:           fir.do_loop
 // CHECK:             fir.if {{.*}} {
 // CHECK:             } else {
