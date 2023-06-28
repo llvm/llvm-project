@@ -2494,63 +2494,63 @@ define <8 x i64> @test_signed_v8f16_v8i64(<8 x half> %f) {
 ; CHECK-CVT-LABEL: test_signed_v8f16_v8i64:
 ; CHECK-CVT:       // %bb.0:
 ; CHECK-CVT-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-CVT-NEXT:    mov h4, v0.h[2]
-; CHECK-CVT-NEXT:    fcvt s5, h0
-; CHECK-CVT-NEXT:    fcvt s2, h1
-; CHECK-CVT-NEXT:    mov h3, v1.h[1]
-; CHECK-CVT-NEXT:    mov h6, v1.h[2]
-; CHECK-CVT-NEXT:    fcvt s4, h4
-; CHECK-CVT-NEXT:    mov h1, v1.h[3]
-; CHECK-CVT-NEXT:    fcvtzs x9, s5
-; CHECK-CVT-NEXT:    fcvtzs x8, s2
-; CHECK-CVT-NEXT:    fcvt s2, h3
-; CHECK-CVT-NEXT:    mov h3, v0.h[1]
+; CHECK-CVT-NEXT:    mov h2, v0.h[2]
+; CHECK-CVT-NEXT:    fcvt s3, h0
+; CHECK-CVT-NEXT:    mov h7, v0.h[1]
 ; CHECK-CVT-NEXT:    mov h0, v0.h[3]
-; CHECK-CVT-NEXT:    fcvt s5, h6
-; CHECK-CVT-NEXT:    fcvt s6, h1
+; CHECK-CVT-NEXT:    mov h4, v1.h[1]
+; CHECK-CVT-NEXT:    mov h6, v1.h[2]
+; CHECK-CVT-NEXT:    fcvt s5, h1
+; CHECK-CVT-NEXT:    mov h1, v1.h[3]
+; CHECK-CVT-NEXT:    fcvt s2, h2
+; CHECK-CVT-NEXT:    fcvtzs x8, s3
+; CHECK-CVT-NEXT:    fcvt s3, h4
+; CHECK-CVT-NEXT:    fcvt s4, h6
+; CHECK-CVT-NEXT:    fcvtzs x9, s5
+; CHECK-CVT-NEXT:    fcvt s5, h7
+; CHECK-CVT-NEXT:    fcvt s6, h0
+; CHECK-CVT-NEXT:    fcvt s7, h1
 ; CHECK-CVT-NEXT:    fcvtzs x10, s2
-; CHECK-CVT-NEXT:    fmov d2, x8
-; CHECK-CVT-NEXT:    fcvtzs x8, s4
-; CHECK-CVT-NEXT:    fcvt s3, h3
-; CHECK-CVT-NEXT:    fcvt s4, h0
-; CHECK-CVT-NEXT:    fmov d0, x9
-; CHECK-CVT-NEXT:    mov v2.d[1], x10
-; CHECK-CVT-NEXT:    fcvtzs x10, s5
-; CHECK-CVT-NEXT:    fmov d1, x8
-; CHECK-CVT-NEXT:    fcvtzs x9, s3
-; CHECK-CVT-NEXT:    fcvtzs x8, s4
-; CHECK-CVT-NEXT:    fmov d3, x10
+; CHECK-CVT-NEXT:    fmov d0, x8
+; CHECK-CVT-NEXT:    fmov d2, x9
+; CHECK-CVT-NEXT:    fcvtzs x9, s4
+; CHECK-CVT-NEXT:    fcvtzs x11, s3
+; CHECK-CVT-NEXT:    fcvtzs x8, s5
+; CHECK-CVT-NEXT:    fmov d1, x10
 ; CHECK-CVT-NEXT:    fcvtzs x10, s6
-; CHECK-CVT-NEXT:    mov v0.d[1], x9
-; CHECK-CVT-NEXT:    mov v1.d[1], x8
-; CHECK-CVT-NEXT:    mov v3.d[1], x10
+; CHECK-CVT-NEXT:    fmov d3, x9
+; CHECK-CVT-NEXT:    fcvtzs x9, s7
+; CHECK-CVT-NEXT:    mov v2.d[1], x11
+; CHECK-CVT-NEXT:    mov v0.d[1], x8
+; CHECK-CVT-NEXT:    mov v1.d[1], x10
+; CHECK-CVT-NEXT:    mov v3.d[1], x9
 ; CHECK-CVT-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_signed_v8f16_v8i64:
 ; CHECK-FP16:       // %bb.0:
 ; CHECK-FP16-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-FP16-NEXT:    mov h3, v0.h[2]
-; CHECK-FP16-NEXT:    mov h5, v0.h[3]
-; CHECK-FP16-NEXT:    fcvtzs x9, h0
-; CHECK-FP16-NEXT:    mov h2, v1.h[1]
-; CHECK-FP16-NEXT:    fcvtzs x8, h1
+; CHECK-FP16-NEXT:    mov h2, v0.h[2]
+; CHECK-FP16-NEXT:    mov h5, v0.h[1]
+; CHECK-FP16-NEXT:    mov h6, v0.h[3]
+; CHECK-FP16-NEXT:    fcvtzs x8, h0
 ; CHECK-FP16-NEXT:    mov h4, v1.h[2]
-; CHECK-FP16-NEXT:    mov h6, v1.h[3]
+; CHECK-FP16-NEXT:    fcvtzs x9, h1
+; CHECK-FP16-NEXT:    mov h3, v1.h[1]
+; CHECK-FP16-NEXT:    mov h7, v1.h[3]
 ; CHECK-FP16-NEXT:    fcvtzs x10, h2
-; CHECK-FP16-NEXT:    fmov d2, x8
-; CHECK-FP16-NEXT:    fcvtzs x8, h3
-; CHECK-FP16-NEXT:    mov h3, v0.h[1]
-; CHECK-FP16-NEXT:    fmov d0, x9
-; CHECK-FP16-NEXT:    mov v2.d[1], x10
-; CHECK-FP16-NEXT:    fcvtzs x10, h4
-; CHECK-FP16-NEXT:    fmov d1, x8
-; CHECK-FP16-NEXT:    fcvtzs x9, h3
+; CHECK-FP16-NEXT:    fmov d0, x8
+; CHECK-FP16-NEXT:    fmov d2, x9
 ; CHECK-FP16-NEXT:    fcvtzs x8, h5
-; CHECK-FP16-NEXT:    fmov d3, x10
+; CHECK-FP16-NEXT:    fcvtzs x9, h4
+; CHECK-FP16-NEXT:    fcvtzs x11, h3
+; CHECK-FP16-NEXT:    fmov d1, x10
 ; CHECK-FP16-NEXT:    fcvtzs x10, h6
-; CHECK-FP16-NEXT:    mov v0.d[1], x9
-; CHECK-FP16-NEXT:    mov v1.d[1], x8
-; CHECK-FP16-NEXT:    mov v3.d[1], x10
+; CHECK-FP16-NEXT:    fmov d3, x9
+; CHECK-FP16-NEXT:    fcvtzs x9, h7
+; CHECK-FP16-NEXT:    mov v2.d[1], x11
+; CHECK-FP16-NEXT:    mov v0.d[1], x8
+; CHECK-FP16-NEXT:    mov v1.d[1], x10
+; CHECK-FP16-NEXT:    mov v3.d[1], x9
 ; CHECK-FP16-NEXT:    ret
     %x = call <8 x i64> @llvm.fptosi.sat.v8f16.v8i64(<8 x half> %f)
     ret <8 x i64> %x
