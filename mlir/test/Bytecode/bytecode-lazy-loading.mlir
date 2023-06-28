@@ -3,6 +3,9 @@
 
 
 func.func @op_with_passthrough_region_args() {
+  // Ensure we can handle nested non-isolated/non-lazy regions.
+  "test.one_region_op"() ({}) : () -> ()
+
   %0 = arith.constant 10 : index
   test.isolated_region %0 {
     "test.consumer"(%0) : (index) -> ()
@@ -36,6 +39,7 @@ func.func @op_with_passthrough_region_args() {
 // CHECK-NOT: arith
 // CHECK: Materializing...
 // CHECK: "func.func"() <{function_type = () -> (), sym_name = "op_with_passthrough_region_args"}> ({
+// CHECK: one_region_op
 // CHECK: arith
 // CHECK: isolated_region
 // CHECK-NOT: test.consumer

@@ -2943,64 +2943,118 @@ static std::pair<ISD::CondCode, ISD::NodeType> getExpandedMinMaxOps(int Op) {
 void DAGTypeLegalizer::ExpandIntRes_MINMAX(SDNode *N,
                                            SDValue &Lo, SDValue &Hi) {
   SDLoc DL(N);
-  ISD::NodeType LoOpc;
-  ISD::CondCode CondC;
-  std::tie(CondC, LoOpc) = getExpandedMinMaxOps(N->getOpcode());
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  // Expand the subcomponents.
-  SDValue LHSL, LHSH, RHSL, RHSH;
-  GetExpandedInteger(LHS, LHSL, LHSH);
-  GetExpandedInteger(RHS, RHSL, RHSH);
-
-  // Value types
-  EVT NVT = LHSL.getValueType();
-  EVT CCT = getSetCCResultType(NVT);
-
   // If the upper halves are all sign bits, then we can perform the MINMAX on
   // the lower half and sign-extend the result to the upper half.
-  unsigned NumHalfBits = NVT.getScalarSizeInBits();
+  unsigned NumBits = N->getValueType(0).getScalarSizeInBits();
+  unsigned NumHalfBits = NumBits / 2;
   if (DAG.ComputeNumSignBits(LHS) > NumHalfBits &&
       DAG.ComputeNumSignBits(RHS) > NumHalfBits) {
+    SDValue LHSL, LHSH, RHSL, RHSH;
+    GetExpandedInteger(LHS, LHSL, LHSH);
+    GetExpandedInteger(RHS, RHSL, RHSH);
+    EVT NVT = LHSL.getValueType();
+
     Lo = DAG.getNode(N->getOpcode(), DL, NVT, LHSL, RHSL);
     Hi = DAG.getNode(ISD::SRA, DL, NVT, Lo,
                      DAG.getShiftAmountConstant(NumHalfBits - 1, NVT, DL));
     return;
   }
 
-  // Hi part is always the same op
-  Hi = DAG.getNode(N->getOpcode(), DL, NVT, {LHSH, RHSH});
-
   // The Lo of smin(X, -1) is LHSL if X is negative. Otherwise it's -1.
-  if (N->getOpcode() == ISD::SMIN && isAllOnesConstant(RHS)) {
-    SDValue HiNeg =
-        DAG.getSetCC(DL, CCT, LHSH, DAG.getConstant(0, DL, NVT), ISD::SETLT);
-    Lo = DAG.getSelect(DL, NVT, HiNeg, LHSL, DAG.getConstant(-1, DL, NVT));
-    return;
-  }
-
   // The Lo of smax(X, 0) is 0 if X is negative. Otherwise it's LHSL.
-  if (N->getOpcode() == ISD::SMAX && isNullConstant(RHS)) {
+  if ((N->getOpcode() == ISD::SMAX && isNullConstant(RHS)) ||
+      (N->getOpcode() == ISD::SMIN && isAllOnesConstant(RHS))) {
+    SDValue LHSL, LHSH, RHSL, RHSH;
+    GetExpandedInteger(LHS, LHSL, LHSH);
+    GetExpandedInteger(RHS, RHSL, RHSH);
+    EVT NVT = LHSL.getValueType();
+    EVT CCT = getSetCCResultType(NVT);
+
     SDValue HiNeg =
         DAG.getSetCC(DL, CCT, LHSH, DAG.getConstant(0, DL, NVT), ISD::SETLT);
-    Lo = DAG.getSelect(DL, NVT, HiNeg, DAG.getConstant(0, DL, NVT), LHSL);
+    if (N->getOpcode() == ISD::SMIN) {
+      Lo = DAG.getSelect(DL, NVT, HiNeg, LHSL, DAG.getConstant(-1, DL, NVT));
+    } else {
+      Lo = DAG.getSelect(DL, NVT, HiNeg, DAG.getConstant(0, DL, NVT), LHSL);
+    }
+    Hi = DAG.getNode(N->getOpcode(), DL, NVT, {LHSH, RHSH});
     return;
   }
 
-  // We need to know whether to select Lo part that corresponds to 'winning'
-  // Hi part or if Hi parts are equal.
-  SDValue IsHiLeft = DAG.getSetCC(DL, CCT, LHSH, RHSH, CondC);
-  SDValue IsHiEq = DAG.getSetCC(DL, CCT, LHSH, RHSH, ISD::SETEQ);
+  const APInt *RHSVal = nullptr;
+  if (auto *RHSConst = dyn_cast<ConstantSDNode>(RHS))
+    RHSVal = &RHSConst->getAPIntValue();
 
-  // Lo part corresponding to the 'winning' Hi part
-  SDValue LoCmp = DAG.getSelect(DL, NVT, IsHiLeft, LHSL, RHSL);
+  // The high half of MIN/MAX is always just the the MIN/MAX of the
+  // high halves of the operands.  Expand this way if it appears profitable.
+  if (RHSVal && (N->getOpcode() == ISD::UMIN || N->getOpcode() == ISD::UMAX) &&
+                 (RHSVal->countLeadingOnes() >= NumHalfBits ||
+                  RHSVal->countLeadingZeros() >= NumHalfBits)) {
+    SDValue LHSL, LHSH, RHSL, RHSH;
+    GetExpandedInteger(LHS, LHSL, LHSH);
+    GetExpandedInteger(RHS, RHSL, RHSH);
+    EVT NVT = LHSL.getValueType();
+    EVT CCT = getSetCCResultType(NVT);
 
-  // Recursed Lo part if Hi parts are equal, this uses unsigned version
-  SDValue LoMinMax = DAG.getNode(LoOpc, DL, NVT, {LHSL, RHSL});
+    ISD::NodeType LoOpc;
+    ISD::CondCode CondC;
+    std::tie(CondC, LoOpc) = getExpandedMinMaxOps(N->getOpcode());
 
-  Lo = DAG.getSelect(DL, NVT, IsHiEq, LoMinMax, LoCmp);
+    Hi = DAG.getNode(N->getOpcode(), DL, NVT, {LHSH, RHSH});
+    // We need to know whether to select Lo part that corresponds to 'winning'
+    // Hi part or if Hi parts are equal.
+    SDValue IsHiLeft = DAG.getSetCC(DL, CCT, LHSH, RHSH, CondC);
+    SDValue IsHiEq = DAG.getSetCC(DL, CCT, LHSH, RHSH, ISD::SETEQ);
+
+    // Lo part corresponding to the 'winning' Hi part
+    SDValue LoCmp = DAG.getSelect(DL, NVT, IsHiLeft, LHSL, RHSL);
+
+    // Recursed Lo part if Hi parts are equal, this uses unsigned version
+    SDValue LoMinMax = DAG.getNode(LoOpc, DL, NVT, {LHSL, RHSL});
+
+    Lo = DAG.getSelect(DL, NVT, IsHiEq, LoMinMax, LoCmp);
+    return;
+  }
+
+  // Expand to "a < b ? a : b" etc.  Prefer ge/le if that simplifies
+  // the compare.
+  ISD::CondCode Pred;
+  switch (N->getOpcode()) {
+  default: llvm_unreachable("How did we get here?");
+  case ISD::SMAX:
+    if (RHSVal && RHSVal->countTrailingZeros() >= NumHalfBits)
+      Pred = ISD::SETGE;
+    else
+      Pred = ISD::SETGT;
+    break;
+  case ISD::SMIN:
+    if (RHSVal && RHSVal->countTrailingOnes() >= NumHalfBits)
+      Pred = ISD::SETLE;
+    else
+      Pred = ISD::SETLT;
+    break;
+  case ISD::UMAX:
+    if (RHSVal && RHSVal->countTrailingZeros() >= NumHalfBits)
+      Pred = ISD::SETUGE;
+    else
+      Pred = ISD::SETUGT;
+    break;
+  case ISD::UMIN:
+    if (RHSVal && RHSVal->countTrailingOnes() >= NumHalfBits)
+      Pred = ISD::SETULE;
+    else
+      Pred = ISD::SETULT;
+    break;
+  }
+  EVT VT = N->getValueType(0);
+  EVT CCT = getSetCCResultType(VT);
+  SDValue Cond = DAG.getSetCC(DL, CCT, LHS, RHS, Pred);
+  SDValue Result = DAG.getSelect(DL, VT, Cond, LHS, RHS);
+  SplitInteger(Result, Lo, Hi);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,

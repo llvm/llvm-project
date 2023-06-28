@@ -57,6 +57,12 @@ static cl::opt<bool> SamplePreInlineReplay(
     cl::desc(
         "Replay previous inlining and adjust context profile accordingly"));
 
+static cl::opt<int> CSPreinlMultiplierForPrevInl(
+    "csspgo-preinliner-multiplier-for-previous-inlining", cl::Hidden,
+    cl::init(100),
+    cl::desc(
+        "Multiplier to bump up callsite threshold for previous inlining."));
+
 CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
                            ProfiledBinary &Binary, ProfileSummary *Summary)
     : UseContextCost(UseContextCostForPreInliner),
@@ -153,11 +159,12 @@ uint32_t CSPreInliner::getFuncSize(const ContextTrieNode *ContextNode) {
 }
 
 bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
+  bool WasInlined =
+      Candidate.CalleeSamples->getContext().hasAttribute(ContextWasInlined);
   // If replay inline is requested, simply follow the inline decision of the
   // profiled binary.
   if (SamplePreInlineReplay)
-    return Candidate.CalleeSamples->getContext().hasAttribute(
-        ContextWasInlined);
+    return WasInlined;
 
   unsigned int SampleThreshold = SampleColdCallSiteThreshold;
   uint64_t ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
@@ -184,6 +191,12 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
     // want any inlining for cold callsites.
     SampleThreshold = SampleHotCallSiteThreshold * NormalizedHotness * 100 +
                       SampleColdCallSiteThreshold + 1;
+    // Bump up the threshold to favor previous compiler inline decision. The
+    // compiler has more insight and knowledge about functions based on their IR
+    // and attribures and should be able to make a more reasonable inline
+    // decision.
+    if (WasInlined)
+      SampleThreshold *= CSPreinlMultiplierForPrevInl;
   }
 
   return (Candidate.SizeCost < SampleThreshold);

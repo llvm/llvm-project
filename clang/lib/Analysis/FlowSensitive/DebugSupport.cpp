@@ -150,17 +150,10 @@ public:
     return formatv("{0}", fmt_pad(S, Indent, 0));
   }
 
-  std::string debugString(const llvm::DenseSet<BoolValue *> &Constraints) {
-    std::vector<std::string> ConstraintsStrings;
-    ConstraintsStrings.reserve(Constraints.size());
-    for (BoolValue *Constraint : Constraints) {
-      ConstraintsStrings.push_back(debugString(*Constraint));
-    }
-    llvm::sort(ConstraintsStrings);
-
+  std::string debugString(const llvm::ArrayRef<BoolValue *> &Constraints) {
     std::string Result;
-    for (const std::string &S : ConstraintsStrings) {
-      Result += S;
+    for (const BoolValue *S : Constraints) {
+      Result += debugString(*S);
       Result += '\n';
     }
     return Result;
@@ -247,7 +240,7 @@ debugString(const BoolValue &B,
 }
 
 std::string
-debugString(const llvm::DenseSet<BoolValue *> &Constraints,
+debugString(llvm::ArrayRef<BoolValue *> Constraints,
             llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames) {
   return DebugStringGenerator(std::move(AtomNames)).debugString(Constraints);
 }

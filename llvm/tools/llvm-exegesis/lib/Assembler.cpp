@@ -9,6 +9,7 @@
 #include "Assembler.h"
 
 #include "SnippetRepetitor.h"
+#include "SubprocessMemory.h"
 #include "Target.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -29,6 +30,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#ifdef HAVE_LIBPFM
+#include "perfmon/perf_event.h"
+#endif // HAVE_LIBPFM
+
 namespace llvm {
 namespace exegesis {
 
@@ -40,14 +45,31 @@ static const Align kFunctionAlignment(4096);
 // all registers could be setup correctly.
 static bool generateSnippetSetupCode(
     const ExegesisTarget &ET, const MCSubtargetInfo *const MSI,
-    ArrayRef<RegisterValue> RegisterInitialValues, BasicBlockFiller &BBF) {
+    ArrayRef<RegisterValue> RegisterInitialValues, BasicBlockFiller &BBF,
+    const BenchmarkKey &Key, bool GenerateMemoryInstructions) {
   bool IsSnippetSetupComplete = true;
+  if (GenerateMemoryInstructions) {
+    BBF.addInstructions(ET.generateMemoryInitialSetup());
+    for (const MemoryMapping &MM : Key.MemoryMappings) {
+      BBF.addInstructions(ET.generateMmap(
+          MM.Address, Key.MemoryValues.at(MM.MemoryValueName).SizeBytes,
+          ET.getAuxiliaryMemoryStartAddress() +
+              sizeof(int) * (Key.MemoryValues.at(MM.MemoryValueName).Index +
+                             SubprocessMemory::AuxiliaryMemoryOffset)));
+    }
+    BBF.addInstructions(ET.setStackRegisterToAuxMem());
+  }
   for (const RegisterValue &RV : RegisterInitialValues) {
     // Load a constant in the register.
     const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
     if (SetRegisterCode.empty())
       IsSnippetSetupComplete = false;
     BBF.addInstructions(SetRegisterCode);
+  }
+  if (GenerateMemoryInstructions) {
+#ifdef HAVE_LIBPFM
+    BBF.addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_RESET, true));
+#endif // HAVE_LIBPFM
   }
   return IsSnippetSetupComplete;
 }
@@ -123,7 +145,17 @@ void BasicBlockFiller::addInstructions(ArrayRef<MCInst> Insts,
     addInstruction(Inst, DL);
 }
 
-void BasicBlockFiller::addReturn(const DebugLoc &DL) {
+void BasicBlockFiller::addReturn(const ExegesisTarget &ET,
+                                 bool SubprocessCleanup, const DebugLoc &DL) {
+  // Insert cleanup code
+  if (SubprocessCleanup) {
+#ifdef HAVE_LIBPFM
+    addInstructions(ET.configurePerfCounter(PERF_EVENT_IOC_DISABLE, false));
+#endif // HAVE_LIBPFM
+#ifdef __linux__
+    addInstructions(ET.generateExitSyscall(0));
+#endif // __linux__
+  }
   // Insert the return code.
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   if (TII->getReturnOpcode() < TII->getNumOpcodes()) {
@@ -177,7 +209,9 @@ Error assembleToStream(const ExegesisTarget &ET,
                        std::unique_ptr<LLVMTargetMachine> TM,
                        ArrayRef<unsigned> LiveIns,
                        ArrayRef<RegisterValue> RegisterInitialValues,
-                       const FillFunction &Fill, raw_pwrite_stream &AsmStream) {
+                       const FillFunction &Fill, raw_pwrite_stream &AsmStream,
+                       const BenchmarkKey &Key,
+                       bool GenerateMemoryInstructions) {
   auto Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module =
       createModule(Context, TM->createDataLayout());
@@ -196,17 +230,37 @@ Error assembleToStream(const ExegesisTarget &ET,
   for (const unsigned Reg : LiveIns)
     MF.getRegInfo().addLiveIn(Reg);
 
+  if (GenerateMemoryInstructions) {
+    for (const unsigned Reg : ET.getArgumentRegisters())
+      MF.getRegInfo().addLiveIn(Reg);
+    // Add a live in for registers that need saving so that the machine verifier
+    // doesn't fail if the register is never defined.
+    for (const unsigned Reg : ET.getRegistersNeedSaving())
+      MF.getRegInfo().addLiveIn(Reg);
+  }
+
   std::vector<unsigned> RegistersSetUp;
   for (const auto &InitValue : RegisterInitialValues) {
     RegistersSetUp.push_back(InitValue.Register);
   }
   FunctionFiller Sink(MF, std::move(RegistersSetUp));
   auto Entry = Sink.getEntry();
+
   for (const unsigned Reg : LiveIns)
     Entry.MBB->addLiveIn(Reg);
 
+  if (GenerateMemoryInstructions) {
+    for (const unsigned Reg : ET.getArgumentRegisters())
+      Entry.MBB->addLiveIn(Reg);
+    // Add a live in for registers that need saving so that the machine verifier
+    // doesn't fail if the register is never defined.
+    for (const unsigned Reg : ET.getRegistersNeedSaving())
+      Entry.MBB->addLiveIn(Reg);
+  }
+
   const bool IsSnippetSetupComplete = generateSnippetSetupCode(
-      ET, TM->getMCSubtargetInfo(), RegisterInitialValues, Entry);
+      ET, TM->getMCSubtargetInfo(), RegisterInitialValues, Entry, Key,
+      GenerateMemoryInstructions);
 
   // If the snippet setup is not complete, we disable liveliness tracking. This
   // means that we won't know what values are in the registers.

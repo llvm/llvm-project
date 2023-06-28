@@ -131,7 +131,43 @@ transform.sequence failures(propagate) {
   transform.apply_patterns to %0 {
     transform.apply_patterns.transform.test_patterns
   } : !transform.any_op
+  // No marker should be printed.
   transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
+}
+
+// -----
+
+// CHECK-LABEL: func @erase_tracked_op_in_named_sequence()
+//       CHECK:   "test.container"() ({
+//  CHECK-NEXT:   ^bb0:
+//  CHECK-NEXT:   }) : () -> ()
+module {
+  func.func @erase_tracked_op_in_named_sequence() {
+    "test.container"() ({
+      // expected-remark @below {{matched op}}
+      %0 = "test.erase_op"() {replace_with_new_op = "test.foo"} : () -> (i32)
+    }) : () -> ()
+    return
+  }
+
+  module attributes { transform.with_named_sequence } {
+    transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> () {
+      transform.apply_patterns to %arg0 {
+        transform.apply_patterns.transform.test_patterns
+      } : !transform.any_op
+      transform.yield
+    }
+
+    transform.sequence failures(propagate) {
+    ^bb1(%arg1: !transform.any_op):
+      %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["test.erase_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      transform.test_print_remark_at_operand %1, "matched op" : !transform.any_op
+      include @foo failures(propagate) (%0) : (!transform.any_op) -> ()
+      // No marker should be printed.
+      transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
+    }
+  }
 }
 
 // -----

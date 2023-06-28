@@ -36,7 +36,7 @@ public:
 
     // [stringbuf.assign] Assign and swap:
     basic_stringbuf& operator=(basic_stringbuf&& rhs);
-    void swap(basic_stringbuf& rhs);
+    void swap(basic_stringbuf& rhs) noexcept(see below);                               // conditionally noexcept since C++20
 
     // [stringbuf.members] Member functions:
     basic_string<char_type, traits_type, allocator_type> str() const;
@@ -57,8 +57,8 @@ protected:
 
 // [stringbuf.assign] non member swap
 template <class charT, class traits, class Allocator>
-  void swap(basic_stringbuf<charT, traits, Allocator>& x,
-            basic_stringbuf<charT, traits, Allocator>& y);
+void swap(basic_stringbuf<charT, traits, Allocator>& x,
+          basic_stringbuf<charT, traits, Allocator>& y); // conditionally noexcept since C++20
 
 typedef basic_stringbuf<char>    stringbuf;
 typedef basic_stringbuf<wchar_t> wstringbuf;
@@ -97,8 +97,8 @@ public:
 };
 
 template <class charT, class traits, class Allocator>
-  void swap(basic_istringstream<charT, traits, Allocator>& x,
-            basic_istringstream<charT, traits, Allocator>& y);
+void swap(basic_istringstream<charT, traits, Allocator>& x,
+          basic_istringstream<charT, traits, Allocator>& y);
 
 typedef basic_istringstream<char>    istringstream;
 typedef basic_istringstream<wchar_t> wistringstream;
@@ -138,8 +138,8 @@ public:
 };
 
 template <class charT, class traits, class Allocator>
-  void swap(basic_ostringstream<charT, traits, Allocator>& x,
-            basic_ostringstream<charT, traits, Allocator>& y);
+void swap(basic_ostringstream<charT, traits, Allocator>& x,
+          basic_ostringstream<charT, traits, Allocator>& y);
 
 typedef basic_ostringstream<char>    ostringstream;
 typedef basic_ostringstream<wchar_t> wostringstream;
@@ -179,8 +179,8 @@ public:
 };
 
 template <class charT, class traits, class Allocator>
-  void swap(basic_stringstream<charT, traits, Allocator>& x,
-            basic_stringstream<charT, traits, Allocator>& y);
+void swap(basic_stringstream<charT, traits, Allocator>& x,
+          basic_stringstream<charT, traits, Allocator>& y);
 
 typedef basic_stringstream<char>    stringstream;
 typedef basic_stringstream<wchar_t> wstringstream;
@@ -252,7 +252,12 @@ public:
 
     // [stringbuf.assign] Assign and swap:
     basic_stringbuf& operator=(basic_stringbuf&& __rhs);
-    void swap(basic_stringbuf& __rhs);
+    void swap(basic_stringbuf& __rhs)
+#if _LIBCPP_STD_VER >= 20
+        noexcept(allocator_traits<allocator_type>::propagate_on_container_swap::value ||
+                 allocator_traits<allocator_type>::is_always_equal::value)
+#endif
+        ;
 
     // [stringbuf.members] Member functions:
     string_type str() const;
@@ -368,6 +373,10 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::operator=(basic_stringbuf&& __rhs)
 template <class _CharT, class _Traits, class _Allocator>
 void
 basic_stringbuf<_CharT, _Traits, _Allocator>::swap(basic_stringbuf& __rhs)
+#if _LIBCPP_STD_VER >= 20
+    noexcept(allocator_traits<_Allocator>::propagate_on_container_swap::value ||
+             allocator_traits<_Allocator>::is_always_equal::value)
+#endif
 {
     char_type* __p = const_cast<char_type*>(__rhs.__str_.data());
     ptrdiff_t __rbinp = -1;
@@ -447,6 +456,9 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 swap(basic_stringbuf<_CharT, _Traits, _Allocator>& __x,
      basic_stringbuf<_CharT, _Traits, _Allocator>& __y)
+#if _LIBCPP_STD_VER >= 20
+    noexcept(noexcept(__x.swap(__y)))
+#endif
 {
     __x.swap(__y);
 }

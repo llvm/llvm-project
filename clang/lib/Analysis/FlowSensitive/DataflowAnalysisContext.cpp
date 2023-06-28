@@ -18,6 +18,7 @@
 #include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -125,11 +126,10 @@ DataflowAnalysisContext::joinFlowConditions(AtomicBoolValue &FirstToken,
 }
 
 Solver::Result
-DataflowAnalysisContext::querySolver(llvm::DenseSet<BoolValue *> Constraints) {
+DataflowAnalysisContext::querySolver(llvm::SetVector<BoolValue *> Constraints) {
   Constraints.insert(&arena().makeLiteral(true));
-  Constraints.insert(
-      &arena().makeNot(arena().makeLiteral(false)));
-  return S->solve(std::move(Constraints));
+  Constraints.insert(&arena().makeNot(arena().makeLiteral(false)));
+  return S->solve(Constraints.getArrayRef());
 }
 
 bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
@@ -139,8 +139,9 @@ bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
   // reducing the problem to satisfiability checking. In other words, we attempt
   // to show that assuming `Val` is false makes the constraints induced by the
   // flow condition unsatisfiable.
-  llvm::DenseSet<BoolValue *> Constraints = {&Token,
-                                             &arena().makeNot(Val)};
+  llvm::SetVector<BoolValue *> Constraints;
+  Constraints.insert(&Token);
+  Constraints.insert(&arena().makeNot(Val));
   llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
   return isUnsatisfiable(std::move(Constraints));
@@ -149,8 +150,8 @@ bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
 bool DataflowAnalysisContext::flowConditionIsTautology(AtomicBoolValue &Token) {
   // Returns true if and only if we cannot prove that the flow condition can
   // ever be false.
-  llvm::DenseSet<BoolValue *> Constraints = {
-      &arena().makeNot(Token)};
+  llvm::SetVector<BoolValue *> Constraints;
+  Constraints.insert(&arena().makeNot(Token));
   llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
   return isUnsatisfiable(std::move(Constraints));
@@ -158,13 +159,13 @@ bool DataflowAnalysisContext::flowConditionIsTautology(AtomicBoolValue &Token) {
 
 bool DataflowAnalysisContext::equivalentBoolValues(BoolValue &Val1,
                                                    BoolValue &Val2) {
-  llvm::DenseSet<BoolValue *> Constraints = {
-      &arena().makeNot(arena().makeEquals(Val1, Val2))};
-  return isUnsatisfiable(Constraints);
+  llvm::SetVector<BoolValue*> Constraints;
+  Constraints.insert(&arena().makeNot(arena().makeEquals(Val1, Val2)));
+  return isUnsatisfiable(std::move(Constraints));
 }
 
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
-    AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
+    AtomicBoolValue &Token, llvm::SetVector<BoolValue *> &Constraints,
     llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) {
   auto Res = VisitedTokens.insert(&Token);
   if (!Res.second)
@@ -190,14 +191,15 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
 
 void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token,
                                                 llvm::raw_ostream &OS) {
-  llvm::DenseSet<BoolValue *> Constraints = {&Token};
+  llvm::SetVector<BoolValue *> Constraints;
+  Constraints.insert(&Token);
   llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
 
   llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {
       {&arena().makeLiteral(false), "False"},
       {&arena().makeLiteral(true), "True"}};
-  OS << debugString(Constraints, AtomNames);
+  OS << debugString(Constraints.getArrayRef(), AtomNames);
 }
 
 const ControlFlowContext *

@@ -59,6 +59,8 @@ void mlir::configureArmSMELegalizeForExportTarget(
   //   2. the 'arm_za' function attribute is present and the first op in the
   //      function is an 'arm_sme::aarch64_sme_za_enable' intrinsic.
   target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp funcOp) {
+    if (funcOp.isDeclaration())
+      return true;
     auto firstOp = funcOp.getBody().front().begin();
     return !funcOp->hasAttr("arm_za") ||
            isa<arm_sme::aarch64_sme_za_enable>(firstOp);

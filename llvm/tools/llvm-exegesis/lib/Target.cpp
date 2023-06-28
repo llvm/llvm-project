@@ -35,7 +35,8 @@ const ExegesisTarget *ExegesisTarget::lookup(Triple TT) {
 }
 
 Expected<std::unique_ptr<pfm::Counter>>
-ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &) const {
+ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &,
+                              const pid_t ProcessID) const {
   pfm::PerfEvent Event(CounterName);
   if (!Event.valid())
     return llvm::make_error<Failure>(
@@ -43,7 +44,7 @@ ExegesisTarget::createCounter(StringRef CounterName, const LLVMState &) const {
             .concat(CounterName)
             .concat("'"));
 
-  return std::make_unique<pfm::Counter>(std::move(Event));
+  return std::make_unique<pfm::Counter>(std::move(Event), ProcessID);
 }
 
 void ExegesisTarget::registerTarget(ExegesisTarget *Target) {

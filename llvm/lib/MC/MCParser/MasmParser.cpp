@@ -962,22 +962,22 @@ private:
 
   // .cfi directives
   bool parseDirectiveCFIRegister(SMLoc DirectiveLoc);
-  bool parseDirectiveCFIWindowSave();
+  bool parseDirectiveCFIWindowSave(SMLoc DirectiveLoc);
   bool parseDirectiveCFISections();
   bool parseDirectiveCFIStartProc();
   bool parseDirectiveCFIEndProc();
-  bool parseDirectiveCFIDefCfaOffset();
+  bool parseDirectiveCFIDefCfaOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIDefCfa(SMLoc DirectiveLoc);
-  bool parseDirectiveCFIAdjustCfaOffset();
+  bool parseDirectiveCFIAdjustCfaOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIDefCfaRegister(SMLoc DirectiveLoc);
   bool parseDirectiveCFIOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIRelOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIPersonalityOrLsda(bool IsPersonality);
-  bool parseDirectiveCFIRememberState();
-  bool parseDirectiveCFIRestoreState();
+  bool parseDirectiveCFIRememberState(SMLoc DirectiveLoc);
+  bool parseDirectiveCFIRestoreState(SMLoc DirectiveLoc);
   bool parseDirectiveCFISameValue(SMLoc DirectiveLoc);
   bool parseDirectiveCFIRestore(SMLoc DirectiveLoc);
-  bool parseDirectiveCFIEscape();
+  bool parseDirectiveCFIEscape(SMLoc DirectiveLoc);
   bool parseDirectiveCFIReturnColumn(SMLoc DirectiveLoc);
   bool parseDirectiveCFISignalFrame();
   bool parseDirectiveCFIUndefined(SMLoc DirectiveLoc);
@@ -2426,9 +2426,9 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_CFI_DEF_CFA:
       return parseDirectiveCFIDefCfa(IDLoc);
     case DK_CFI_DEF_CFA_OFFSET:
-      return parseDirectiveCFIDefCfaOffset();
+      return parseDirectiveCFIDefCfaOffset(IDLoc);
     case DK_CFI_ADJUST_CFA_OFFSET:
-      return parseDirectiveCFIAdjustCfaOffset();
+      return parseDirectiveCFIAdjustCfaOffset(IDLoc);
     case DK_CFI_DEF_CFA_REGISTER:
       return parseDirectiveCFIDefCfaRegister(IDLoc);
     case DK_CFI_OFFSET:
@@ -2440,15 +2440,15 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_CFI_LSDA:
       return parseDirectiveCFIPersonalityOrLsda(false);
     case DK_CFI_REMEMBER_STATE:
-      return parseDirectiveCFIRememberState();
+      return parseDirectiveCFIRememberState(IDLoc);
     case DK_CFI_RESTORE_STATE:
-      return parseDirectiveCFIRestoreState();
+      return parseDirectiveCFIRestoreState(IDLoc);
     case DK_CFI_SAME_VALUE:
       return parseDirectiveCFISameValue(IDLoc);
     case DK_CFI_RESTORE:
       return parseDirectiveCFIRestore(IDLoc);
     case DK_CFI_ESCAPE:
-      return parseDirectiveCFIEscape();
+      return parseDirectiveCFIEscape(IDLoc);
     case DK_CFI_RETURN_COLUMN:
       return parseDirectiveCFIReturnColumn(IDLoc);
     case DK_CFI_SIGNAL_FRAME:
@@ -2458,7 +2458,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     case DK_CFI_REGISTER:
       return parseDirectiveCFIRegister(IDLoc);
     case DK_CFI_WINDOW_SAVE:
-      return parseDirectiveCFIWindowSave();
+      return parseDirectiveCFIWindowSave(IDLoc);
     case DK_EXITM:
       Info.ExitValue = "";
       return parseDirectiveExitMacro(IDLoc, IDVal, *Info.ExitValue);
@@ -5531,12 +5531,12 @@ bool MasmParser::parseDirectiveCFIDefCfa(SMLoc DirectiveLoc) {
 
 /// parseDirectiveCFIDefCfaOffset
 /// ::= .cfi_def_cfa_offset offset
-bool MasmParser::parseDirectiveCFIDefCfaOffset() {
+bool MasmParser::parseDirectiveCFIDefCfaOffset(SMLoc DirectiveLoc) {
   int64_t Offset = 0;
   if (parseAbsoluteExpression(Offset))
     return true;
 
-  getStreamer().emitCFIDefCfaOffset(Offset);
+  getStreamer().emitCFIDefCfaOffset(Offset, DirectiveLoc);
   return false;
 }
 
@@ -5549,25 +5549,25 @@ bool MasmParser::parseDirectiveCFIRegister(SMLoc DirectiveLoc) {
       parseRegisterOrRegisterNumber(Register2, DirectiveLoc))
     return true;
 
-  getStreamer().emitCFIRegister(Register1, Register2);
+  getStreamer().emitCFIRegister(Register1, Register2, DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIWindowSave
 /// ::= .cfi_window_save
-bool MasmParser::parseDirectiveCFIWindowSave() {
-  getStreamer().emitCFIWindowSave();
+bool MasmParser::parseDirectiveCFIWindowSave(SMLoc DirectiveLoc) {
+  getStreamer().emitCFIWindowSave(DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIAdjustCfaOffset
 /// ::= .cfi_adjust_cfa_offset adjustment
-bool MasmParser::parseDirectiveCFIAdjustCfaOffset() {
+bool MasmParser::parseDirectiveCFIAdjustCfaOffset(SMLoc DirectiveLoc) {
   int64_t Adjustment = 0;
   if (parseAbsoluteExpression(Adjustment))
     return true;
 
-  getStreamer().emitCFIAdjustCfaOffset(Adjustment);
+  getStreamer().emitCFIAdjustCfaOffset(Adjustment, DirectiveLoc);
   return false;
 }
 
@@ -5607,7 +5607,7 @@ bool MasmParser::parseDirectiveCFIRelOffset(SMLoc DirectiveLoc) {
       parseAbsoluteExpression(Offset))
     return true;
 
-  getStreamer().emitCFIRelOffset(Register, Offset);
+  getStreamer().emitCFIRelOffset(Register, Offset, DirectiveLoc);
   return false;
 }
 
@@ -5661,15 +5661,15 @@ bool MasmParser::parseDirectiveCFIPersonalityOrLsda(bool IsPersonality) {
 
 /// parseDirectiveCFIRememberState
 /// ::= .cfi_remember_state
-bool MasmParser::parseDirectiveCFIRememberState() {
-  getStreamer().emitCFIRememberState();
+bool MasmParser::parseDirectiveCFIRememberState(SMLoc DirectiveLoc) {
+  getStreamer().emitCFIRememberState(DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIRestoreState
 /// ::= .cfi_remember_state
-bool MasmParser::parseDirectiveCFIRestoreState() {
-  getStreamer().emitCFIRestoreState();
+bool MasmParser::parseDirectiveCFIRestoreState(SMLoc DirectiveLoc) {
+  getStreamer().emitCFIRestoreState(DirectiveLoc);
   return false;
 }
 
@@ -5681,7 +5681,7 @@ bool MasmParser::parseDirectiveCFISameValue(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc))
     return true;
 
-  getStreamer().emitCFISameValue(Register);
+  getStreamer().emitCFISameValue(Register, DirectiveLoc);
   return false;
 }
 
@@ -5698,7 +5698,7 @@ bool MasmParser::parseDirectiveCFIRestore(SMLoc DirectiveLoc) {
 
 /// parseDirectiveCFIEscape
 /// ::= .cfi_escape expression[,...]
-bool MasmParser::parseDirectiveCFIEscape() {
+bool MasmParser::parseDirectiveCFIEscape(SMLoc DirectiveLoc) {
   std::string Values;
   int64_t CurrValue;
   if (parseAbsoluteExpression(CurrValue))
@@ -5715,7 +5715,7 @@ bool MasmParser::parseDirectiveCFIEscape() {
     Values.push_back((uint8_t)CurrValue);
   }
 
-  getStreamer().emitCFIEscape(Values);
+  getStreamer().emitCFIEscape(Values, DirectiveLoc);
   return false;
 }
 

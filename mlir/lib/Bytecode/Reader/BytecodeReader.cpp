@@ -1317,11 +1317,11 @@ private:
     regionStack.push_back(std::move(it->getSecond()->second));
     lazyLoadableOps.erase(it->getSecond());
     lazyLoadableOpsMap.erase(it);
-    auto result = parseRegions(regionStack, regionStack.back());
-    assert((regionStack.empty() || failed(result)) &&
-           "broken invariant: regionStack should be empty when parseRegions "
-           "succeeds");
-    return result;
+
+    while (!regionStack.empty())
+      if (failed(parseRegions(regionStack, regionStack.back())))
+        return failure();
+    return success();
   }
 
   /// Return the context for this config.
@@ -2094,14 +2094,11 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
             childState.owningReader =
                 std::make_unique<EncodingReader>(sectionData, fileLoc);
             childState.reader = childState.owningReader.get();
-          }
 
-          if (lazyLoading) {
-            // If the user has a callback set, they have the opportunity
-            // to control lazyloading as we go.
-            if (!lazyOpsCallback || !lazyOpsCallback(*op)) {
-              lazyLoadableOps.push_back(
-                  std::make_pair(*op, std::move(childState)));
+            // If the user has a callback set, they have the opportunity to
+            // control lazyloading as we go.
+            if (lazyLoading && (!lazyOpsCallback || !lazyOpsCallback(*op))) {
+              lazyLoadableOps.emplace_back(*op, std::move(childState));
               lazyLoadableOpsMap.try_emplace(*op,
                                              std::prev(lazyLoadableOps.end()));
               continue;

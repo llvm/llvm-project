@@ -2,6 +2,9 @@
 // RUN: mlir-opt %s -enable-arm-streaming -convert-vector-to-llvm="enable-arm-sme" | FileCheck %s -check-prefix=DISABLE-ZA
 // RUN: mlir-opt %s -convert-vector-to-llvm="enable-arm-sme" | FileCheck %s -check-prefix=NO-ARM-STREAMING
 
+// CHECK-LABEL: @declaration
+func.func private @declaration()
+
 // CHECK-LABEL: @arm_za
 func.func @arm_za() {
   // ENABLE-ZA: arm_sme.intr.za.enable

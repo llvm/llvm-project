@@ -710,6 +710,16 @@ mlir::Type hlfir::getVariableElementType(hlfir::Entity variable) {
   return fir::ReferenceType::get(eleTy);
 }
 
+mlir::Type hlfir::getEntityElementType(hlfir::Entity entity) {
+  if (entity.isVariable())
+    return getVariableElementType(entity);
+  if (entity.isScalar())
+    return entity.getType();
+  auto exprType = mlir::dyn_cast<hlfir::ExprType>(entity.getType());
+  assert(exprType && "array value must be an hlfir.expr");
+  return exprType.getElementExprType();
+}
+
 static hlfir::ExprType getArrayExprType(mlir::Type elementType,
                                         mlir::Value shape, bool isPolymorphic) {
   unsigned rank = shape.getType().cast<fir::ShapeType>().getRank();
@@ -766,36 +776,33 @@ hlfir::inlineElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
 
 mlir::Value hlfir::inlineElementalOp(
     mlir::Location loc, fir::FirOpBuilder &builder,
-    hlfir::ElementalOp elemental, mlir::ValueRange oneBasedIndices,
+    hlfir::ElementalOpInterface elemental, mlir::ValueRange oneBasedIndices,
     mlir::IRMapping &mapper,
     const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline) {
-  mlir::Region &region = elemental.getRegion();
+  mlir::Region &region = elemental.getElementalRegion();
   // hlfir.elemental region is a SizedRegion<1>.
   assert(region.hasOneBlock() && "elemental region must have one block");
   mapper.map(elemental.getIndices(), oneBasedIndices);
-  mlir::Block::OpListType &ops = region.back().getOperations();
-  assert(!ops.empty() && "elemental block cannot be empty");
-  auto end = ops.end();
-  for (auto opIt = ops.begin(); std::next(opIt) != end; ++opIt) {
-    if (auto apply = mlir::dyn_cast<hlfir::ApplyOp>(*opIt))
+  for (auto &op : region.front().without_terminator()) {
+    if (auto apply = mlir::dyn_cast<hlfir::ApplyOp>(op))
       if (auto appliedElemental =
               apply.getExpr().getDefiningOp<hlfir::ElementalOp>())
         if (mustRecursivelyInline(appliedElemental)) {
           llvm::SmallVector<mlir::Value> clonedApplyIndices;
           for (auto indice : apply.getIndices())
             clonedApplyIndices.push_back(mapper.lookupOrDefault(indice));
-          mlir::Value inlined = inlineElementalOp(
-              loc, builder, appliedElemental, clonedApplyIndices, mapper,
-              mustRecursivelyInline);
+          hlfir::ElementalOpInterface elementalIface =
+              mlir::cast<hlfir::ElementalOpInterface>(
+                  appliedElemental.getOperation());
+          mlir::Value inlined = inlineElementalOp(loc, builder, elementalIface,
+                                                  clonedApplyIndices, mapper,
+                                                  mustRecursivelyInline);
           mapper.map(apply.getResult(), inlined);
           continue;
         }
-    (void)builder.clone(*opIt, mapper);
+    (void)builder.clone(op, mapper);
   }
-  auto oldYield = mlir::dyn_cast_or_null<hlfir::YieldElementOp>(
-      region.back().getOperations().back());
-  assert(oldYield && "must terminate with yieldElementalOp");
-  return mapper.lookupOrDefault(oldYield.getElementValue());
+  return mapper.lookupOrDefault(elemental.getElementEntity());
 }
 
 hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,

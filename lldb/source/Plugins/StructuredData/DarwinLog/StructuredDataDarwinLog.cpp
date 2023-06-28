@@ -822,8 +822,8 @@ protected:
     // Send configuration to the feature by way of the process. Construct the
     // options we will use.
     auto config_sp = m_options_sp->BuildConfigurationData(m_enable);
-    const Status error = process_sp->ConfigureStructuredData(
-        ConstString(GetDarwinLogTypeName()), config_sp);
+    const Status error =
+        process_sp->ConfigureStructuredData(GetDarwinLogTypeName(), config_sp);
 
     // Report results.
     if (!error.Success()) {
@@ -1831,8 +1831,8 @@ void StructuredDataDarwinLog::EnableNow() {
 
   // We can run it directly.
   // Send configuration to the feature by way of the process.
-  const Status error = process_sp->ConfigureStructuredData(
-      ConstString(GetDarwinLogTypeName()), config_sp);
+  const Status error =
+      process_sp->ConfigureStructuredData(GetDarwinLogTypeName(), config_sp);
 
   // Report results.
   if (!error.Success()) {

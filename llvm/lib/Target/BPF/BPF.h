@@ -18,12 +18,8 @@ namespace llvm {
 class BPFTargetMachine;
 class PassRegistry;
 
-ModulePass *createBPFAdjustOpt();
 ModulePass *createBPFCheckAndAdjustIR();
 
-FunctionPass *createBPFAbstractMemberAccess(BPFTargetMachine *TM);
-FunctionPass *createBPFPreserveDIType();
-FunctionPass *createBPFIRPeephole();
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
 FunctionPass *createBPFMISimplifyPatchablePass();
 FunctionPass *createBPFMIPeepholePass();
@@ -31,17 +27,13 @@ FunctionPass *createBPFMIPeepholeTruncElimPass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
 FunctionPass *createBPFMIPreEmitCheckingPass();
 
-void initializeBPFAbstractMemberAccessLegacyPassPass(PassRegistry &);
-void initializeBPFAdjustOptPass(PassRegistry&);
 void initializeBPFCheckAndAdjustIRPass(PassRegistry&);
 void initializeBPFDAGToDAGISelPass(PassRegistry &);
-void initializeBPFIRPeepholePass(PassRegistry &);
 void initializeBPFMIPeepholePass(PassRegistry&);
 void initializeBPFMIPeepholeTruncElimPass(PassRegistry &);
 void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry &);
 void initializeBPFMISimplifyPatchablePass(PassRegistry &);
-void initializeBPFPreserveDITypePass(PassRegistry &);
 
 class BPFAbstractMemberAccessPass
     : public PassInfoMixin<BPFAbstractMemberAccessPass> {

@@ -42,6 +42,9 @@ set(libs)
 if(LLVM_ENABLE_LIBPFM AND HAVE_LIBPFM)
   list(APPEND libs pfm)
 endif()
+if(HAVE_LIBRT)
+  list(APPEND libs rt)
+endif()
 
 add_llvm_library(LLVMExegesis
   DISABLE_LLVM_LINK_LLVM_DYLIB
@@ -66,6 +69,7 @@ add_llvm_library(LLVMExegesis
   SnippetFile.cpp
   SnippetGenerator.cpp
   SnippetRepetitor.cpp
+  SubprocessMemory.cpp
   Target.cpp
   UopsBenchmarkRunner.cpp
 

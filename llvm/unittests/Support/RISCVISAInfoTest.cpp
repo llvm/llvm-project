@@ -192,7 +192,7 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_EQ(InfoRV64G.getFLen(), 64U);
 }
 
-TEST(ParseArchString, RequiresCanonicalOrderForExtensions) {
+TEST(ParseArchString, RequiresCanonicalOrderForSingleLetterExtensions) {
   EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rv64idf", true).takeError()),
       "standard user-level extension not given in canonical order 'f'");
@@ -203,12 +203,10 @@ TEST(ParseArchString, RequiresCanonicalOrderForExtensions) {
       toString(
           RISCVISAInfo::parseArchString("rv32i_zfinx_a", true).takeError()),
       "invalid extension prefix 'a'");
-  EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64i_svnapot_zicsr", true)
-                   .takeError()),
-      "standard user-level extension not given in canonical order 'zicsr'");
+  // Canonical ordering not required for z*, s*, and x* extensions.
   EXPECT_THAT_EXPECTED(
-      RISCVISAInfo::parseArchString("rv64imafdc_zicsr_svnapot", true),
+      RISCVISAInfo::parseArchString(
+          "rv64imafdc_xsfvcp_zicsr_xtheadba_svnapot_zawrs", true),
       Succeeded());
 }
 

@@ -36,8 +36,10 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 static LogicalResult generalizeNamedOpPrecondition(LinalgOp linalgOp) {
-  // Check if the operation is a LinalgOp but not a GenericOp.
-  if (isa<GenericOp>(linalgOp))
+  // Bailout if `linalgOp` is already a generic or a linalg.map. We cannot
+  // trivially generalize a `linalg.map`, as it does not use the output as
+  // region arguments in the block.
+  if (isa<GenericOp>(linalgOp) || isa<MapOp>(linalgOp))
     return failure();
   // Check if the operation has exactly one region.
   if (linalgOp->getNumRegions() != 1) {

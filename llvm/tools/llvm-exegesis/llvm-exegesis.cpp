@@ -15,6 +15,7 @@
 #include "lib/BenchmarkResult.h"
 #include "lib/BenchmarkRunner.h"
 #include "lib/Clustering.h"
+#include "lib/CodeTemplate.h"
 #include "lib/Error.h"
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
@@ -254,7 +255,11 @@ static cl::opt<BenchmarkRunner::ExecutionModeE> ExecutionMode(
     cl::cat(BenchmarkOptions),
     cl::values(clEnumValN(BenchmarkRunner::ExecutionModeE::InProcess,
                           "inprocess",
-                          "Executes the snippets within the same process")),
+                          "Executes the snippets within the same process"),
+               clEnumValN(BenchmarkRunner::ExecutionModeE::SubProcess,
+                          "subprocess",
+                          "Spawns a subprocess for each snippet execution, "
+                          "allows for the use of memory annotations")),
     cl::init(BenchmarkRunner::ExecutionModeE::InProcess));
 
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
@@ -517,6 +522,13 @@ void benchmarkMain() {
     }
   } else {
     Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
+    for (const auto &Configuration : Configurations) {
+      if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess &&
+          (Configuration.Key.MemoryMappings.size() != 0 ||
+           Configuration.Key.MemoryValues.size() != 0))
+        ExitWithError("Memory annotations are only supported in subprocess "
+                      "execution mode");
+    }
   }
 
   if (NumRepetitions == 0) {
