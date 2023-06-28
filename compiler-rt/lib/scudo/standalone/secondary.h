@@ -171,7 +171,7 @@ public:
     bool EntryCached = false;
     bool EmptyCache = false;
     const s32 Interval = atomic_load_relaxed(&ReleaseToOsIntervalMs);
-    const u64 Time = getMonotonicTime();
+    const u64 Time = getMonotonicTimeFast();
     const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
     CachedBlock Entry;
     Entry.CommitBase = H->CommitBase;
