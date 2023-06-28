@@ -293,19 +293,6 @@ let Predicates = [IsTargetXPLINK64] in {
   let isCall = 1, Defs = [R3D, CC], Uses = [FPC] in {
     def CallBASR_STACKEXT  : Alias<4, (outs), (ins ADDR64:$R2), []>;
   }
-
-  let hasNoSchedulingInfo = 1, Defs = [CC] in {
-    def ADA_ENTRY : Alias<12, (outs GR64:$Reg), (ins ADDR64:$addr,
-                              ADDR64:$ADA, imm64:$Offset),
-                            [(set i64:$Reg, (z_ada_entry i64:$addr,
-                              i64:$ADA, i64:$Offset))]>;
-  }
-  let mayLoad = 1, AddedComplexity = 20, hasNoSchedulingInfo = 1, Defs = [CC] in {
-    def ADA_ENTRY_VALUE : Alias<12, (outs GR64:$Reg), (ins ADDR64:$addr,
-                              ADDR64:$ADA, imm64:$Offset),
-                            [(set i64:$Reg, (load (z_ada_entry
-                              iPTR:$addr, iPTR:$ADA, i64:$Offset)))]>;
- }
 }
 
 // Regular calls.
