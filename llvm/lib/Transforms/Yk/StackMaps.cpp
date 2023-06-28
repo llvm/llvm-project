@@ -52,7 +52,7 @@ public:
       if (F.empty()) // skip declarations.
         continue;
       LivenessAnalysis LA(&F);
-      for (BasicBlock &BB : F)
+      for (BasicBlock &BB : F) {
         for (Instruction &I : BB) {
           if (isa<CallInst>(I)) {
             CallInst &CI = cast<CallInst>(I);
@@ -78,6 +78,7 @@ public:
             SMCalls.insert({&I, LA.getLiveVarsBefore(&I)});
           }
         }
+      }
     }
 
     Function *SMFunc = Intrinsic::getDeclaration(&M, SMFuncID);

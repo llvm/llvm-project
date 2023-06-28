@@ -119,13 +119,14 @@ LivenessAnalysis::LivenessAnalysis(Function *Func) {
     }
   }
 
-  // A function implicitly defines its arguments.
-  //
-  // To propagate the arguments properly we pretend that the first instruction
-  // in the entry block defines the arguments.
+  // Normally the live range of a variable starts at the instruction that
+  // defines it. No instruction defines the function's arguments, but it is
+  // important that we don't report them dead. We make function arguments live
+  // at the start of the function by adding them into the `In` set of the first
+  // instruction.
   Instruction *FirstInst = &*Func->getEntryBlock().begin();
   for (auto &Arg : Func->args())
-    Defs[FirstInst].insert(&Arg);
+    In[FirstInst].insert(&Arg);
 
   // Compute the live sets for each instruction.
   //
