@@ -774,6 +774,8 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     const TargetRegisterClass *RC = MRI->getRegClass(MI.getOperand(0).getReg());
     Register TmpReg = MRI->createVirtualRegister(RC);
 
+    // Retain debug instr number when unfolded.
+    unsigned OldDebugInstrNum = MI.peekDebugInstrNum();
     SmallVector<MachineInstr *, 4> NewMIs;
     bool Unfolded = TII->unfoldMemoryOperand(*MBB->getParent(), MI, TmpReg,
                                              /*UnfoldLoad*/ true,
@@ -790,6 +792,9 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     MBB->insert(MachineBasicBlock::iterator(MI), NewCMOV);
     if (&*MIItBegin == &MI)
       MIItBegin = MachineBasicBlock::iterator(NewCMOV);
+
+    if (OldDebugInstrNum)
+      NewCMOV->setDebugInstrNum(OldDebugInstrNum);
 
     // Sink whatever instructions were needed to produce the unfolded operand
     // into the false block.
@@ -857,6 +862,11 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
     (void)MIB;
     LLVM_DEBUG(dbgs() << "\tFrom: "; MIIt->dump());
     LLVM_DEBUG(dbgs() << "\tTo: "; MIB->dump());
+
+    // debug-info: we can just copy the instr-ref number from one instruction
+    // to the other, seeing how it's a one-for-one substitution.
+    if (unsigned InstrNum = MIIt->peekDebugInstrNum())
+      MIB->setDebugInstrNum(InstrNum);
 
     // Add this PHI to the rewrite table.
     RegRewriteTable[DestReg] = std::make_pair(Op1Reg, Op2Reg);
