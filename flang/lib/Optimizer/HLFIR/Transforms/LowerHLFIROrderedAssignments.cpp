@@ -979,6 +979,17 @@ computeLoopNestIterationNumber(mlir::Location loc, fir::FirOpBuilder &builder,
   return loopExtent;
 }
 
+/// Return a name for temporary storage that indicates in which context
+/// the temporary storage was created.
+static llvm::StringRef
+getTempName(hlfir::OrderedAssignmentTreeOpInterface root) {
+  if (mlir::isa<hlfir::ForallOp>(root.getOperation()))
+    return ".tmp.forall";
+  if (mlir::isa<hlfir::WhereOp>(root.getOperation()))
+    return ".tmp.where";
+  return ".tmp.assign";
+}
+
 void OrderedAssignmentRewriter::generateSaveEntity(
     hlfir::SaveEntity savedEntity, bool willUseSavedEntityInSameRun) {
   mlir::Region &region = *savedEntity.yieldRegion;
@@ -996,18 +1007,18 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     entity = hlfir::loadTrivialScalar(loc, builder, entity);
   mlir::Type entityType = entity.getType();
 
-  static constexpr char tempName[] = ".tmp.forall";
+  llvm::StringRef tempName = getTempName(root);
+  fir::factory::TemporaryStorage *temp = nullptr;
   if (constructStack.empty()) {
     // Value evaluated outside of any loops (this may be the first MASK of a
     // WHERE construct, or an LHS/RHS temp of hlfir.region_assign outside of
     // WHERE/FORALL).
-    insertSavedEntity(region,
-                      fir::factory::SimpleCopy(loc, builder, entity, tempName));
+    temp = insertSavedEntity(
+        region, fir::factory::SimpleCopy(loc, builder, entity, tempName));
   } else {
     // Need to create a temporary for values computed inside loops.
     // Create temporary storage outside of the loop nest given the entity
     // type (and the loop context).
-    fir::factory::TemporaryStorage *temp;
     llvm::SmallVector<fir::DoLoopOp> loopNest;
     bool loopShapeCanBePreComputed =
         currentLoopNestIterationNumberCanBeComputed(loopNest);
@@ -1042,8 +1053,13 @@ void OrderedAssignmentRewriter::generateSaveEntity(
   }
 
   // Delay the clean-up if the entity will be used in the same run (i.e., the
-  // parent construct will be visited and needs to be lowered).
-  if (willUseSavedEntityInSameRun) {
+  // parent construct will be visited and needs to be lowered). When possible,
+  // this is not done for hlfir.expr because this use would prevent the
+  // hlfir.expr storage from being moved when creating the temporary in
+  // bufferization, and that would lead to an extra copy.
+  if (willUseSavedEntityInSameRun &&
+      (!temp->canBeFetchedAfterPush() ||
+       !mlir::isa<hlfir::ExprType>(entity.getType()))) {
     auto inserted =
         savedInCurrentRunBeforeUse.try_emplace(&region, entity, oldYield);
     assert(inserted.second && "entity must have been emplaced");
