@@ -139,6 +139,38 @@ def ObjSizeOp : CIR_Op<"objsize", [Pure]> {
 }
 
 //===----------------------------------------------------------------------===//
+// PtrDiffOp
+//===----------------------------------------------------------------------===//
+
+def PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
+
+  let summary = "Pointer subtraction arithmetic";
+  let description = [{
+    `cir.ptr_diff` performs a subtraction between two pointer types with the
+    same element type and produces a `mlir::cir::IntType` result.
+
+    Note that the result considers the pointer size according to the ABI for
+    the pointee sizes, e.g. the subtraction between two `!cir.ptr<!u64i>` might
+    yield 1, meaning 8 bytes, whereas for `void` or function type pointees,
+    yielding 8 means 8 bytes.
+
+    ```mlir
+    %7 = "cir.ptr_diff"(%0, %1) : !cir.ptr<!u64i> -> !u64i
+    ```
+  }];
+
+  let results = (outs CIR_IntType:$result);
+  let arguments = (ins AnyType:$lhs, AnyType:$rhs);
+
+  let assemblyFormat = [{
+    `(` $lhs `,` $rhs  `)` `:` type($lhs) `->` type($result) attr-dict
+  }];
+
+  // Already covered by the traits
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // PtrStrideOp
 //===----------------------------------------------------------------------===//
 
