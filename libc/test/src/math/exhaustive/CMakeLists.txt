@@ -15,9 +15,12 @@ add_fp_unittest(
   SRCS
     sqrtf_test.cpp
   DEPENDS
+    .exhaustive_test
     libc.include.math
     libc.src.math.sqrtf
     libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
 )
 
 add_fp_unittest(
