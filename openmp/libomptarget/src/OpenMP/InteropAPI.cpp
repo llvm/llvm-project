@@ -70,8 +70,21 @@ const char *getVendorIdToStr(const omp_foreign_runtime_ids_t VendorId) {
     return ("hip");
   case level_zero:
     return ("level_zero");
+  case amdhsa:
+    return ("amdhsa");
+  default:
+    return ("unknown");
   }
-  return ("unknown");
+}
+
+const char *getBackendIdToStr(intptr_t BackendId) {
+  switch (BackendId) {
+  case omp_interop_backend_type_cuda:
+    return "cuda backend";
+  case omp_interop_backend_type_amdhsa:
+    return "amdhsa backend";
+  }
+  return "unknown backend";
 }
 
 template <typename PropertyTy>
@@ -105,6 +118,8 @@ const char *getProperty<const char *>(omp_interop_val_t &InteropVal,
                : "device+context";
   case omp_ipr_vendor_name:
     return getVendorIdToStr(InteropVal.vendor_id);
+  case omp_ipr_fr_name:
+    return getBackendIdToStr(InteropVal.backend_type_id);
   default:
     getTypeMismatch(Property, Err);
     return nullptr;
@@ -221,8 +236,11 @@ void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
                          NoaliasDepList);
   }
 
-  InteropPtr = new omp_interop_val_t(DeviceId, InteropType);
+  // Create interop value object
+  InteropPtr = new omp_interop_val_t(DeviceId, InteropType, invalid,
+                                     omp_interop_backend_type_invalid);
 
+  // Get an intitialized and ready device, or error
   auto DeviceOrErr = PM->getDevice(DeviceId);
   if (!DeviceOrErr) {
     InteropPtr->err_str = copyErrorString(DeviceOrErr.takeError());
@@ -230,12 +248,15 @@ void __tgt_interop_init(ident_t *LocRef, int32_t Gtid,
   }
 
   DeviceTy &Device = *DeviceOrErr;
-  if (!Device.RTL || !Device.RTL->init_device_info ||
-      Device.RTL->init_device_info(DeviceId, &(InteropPtr)->device_info,
-                                   &(InteropPtr)->err_str)) {
+  if (!Device.RTL || !Device.RTL->set_interop_info) {
     delete InteropPtr;
     InteropPtr = omp_interop_none;
+    return;
   }
+
+  // Retrieve the target specific interop value object
+  Device.RTL->set_interop_info(InteropPtr);
+
   if (InteropType == kmp_interop_type_tasksync) {
     if (!Device.RTL || !Device.RTL->init_async_info ||
         Device.RTL->init_async_info(DeviceId, &(InteropPtr)->async_info)) {

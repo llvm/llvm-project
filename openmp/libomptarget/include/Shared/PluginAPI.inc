@@ -35,6 +35,7 @@ PLUGIN_API_HANDLE(synchronize);
 PLUGIN_API_HANDLE(query_async);
 PLUGIN_API_HANDLE(set_info_flag);
 PLUGIN_API_HANDLE(print_device_info);
+PLUGIN_API_HANDLE(set_interop_info);
 PLUGIN_API_HANDLE(create_event);
 PLUGIN_API_HANDLE(record_event);
 PLUGIN_API_HANDLE(wait_event);

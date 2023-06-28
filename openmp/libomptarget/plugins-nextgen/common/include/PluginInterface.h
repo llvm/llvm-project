@@ -19,6 +19,7 @@
 #include <shared_mutex>
 #include <vector>
 
+#include "OpenMP/InteropAPI.h"
 #include "Shared/Debug.h"
 #include "Shared/Environment.h"
 #include "Shared/EnvironmentVar.h"
@@ -850,6 +851,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return 0;
   }
 
+  virtual Error setInteropInfo(omp_interop_val_t *InterOpPtr) {
+    return Error::success();
+  }
+
   virtual Error getDeviceStackSize(uint64_t &V) = 0;
 
   /// Returns true if current plugin architecture is an APU
@@ -1059,7 +1064,6 @@ struct GenericPluginTy {
   /// we could not move this function into GenericDeviceTy.
   virtual Expected<bool> isELFCompatible(StringRef Image) const = 0;
 
-protected:
   /// Indicate whether a device id is valid.
   bool isValidDeviceId(int32_t DeviceId) const {
     return (DeviceId >= 0 && DeviceId < getNumDevices());
