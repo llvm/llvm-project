@@ -69,7 +69,7 @@ struct UnimplementedFeature {
   // Missing Emissions
   static bool variablyModifiedTypeEmission() { return false; }
 
-  // Clang early struct optimizations
+  // Clang early optimizations
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
   static bool shouldUseMemSetToInitialize() { return false; }
   static bool shouldSplitConstantStore() { return false; }
@@ -79,6 +79,7 @@ struct UnimplementedFeature {
   static bool isTrivialAndisDefaultConstructor() { return false; }
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
+  static bool mayHaveIntegerOverflow() { return false; }
 
   static bool capturedByInit() { return false; }
   static bool tryEmitAsConstant() { return false; }
