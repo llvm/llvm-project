@@ -710,12 +710,6 @@ public:
     return result;
   }
 
-  void resetFPOptions(FPOptions FPO) {
-    CurFPFeatures = FPO;
-    FpPragmaStack.Stack.clear();
-    FpPragmaStack.CurrentValue = FPO.getChangesFrom(FPOptions(LangOpts));
-  }
-
   // RAII object to push / pop sentinel slots for all MS #pragma stacks.
   // Actions should be performed only if we enter / exit a C++ method body.
   class PragmaStackSentinelRAII {
@@ -14007,8 +14001,6 @@ struct LateParsedTemplate {
   CachedTokens Toks;
   /// The template function declaration to be late parsed.
   Decl *D;
-  /// Floating-point options in the point of definition.
-  FPOptions FPO;
 };
 
 template <>

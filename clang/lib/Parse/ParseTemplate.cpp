@@ -1742,10 +1742,6 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
       Actions.PushDeclContext(Actions.getCurScope(), DC);
   }
 
-  // Parsing should occur with empty FP pragma stack and FP options used in the
-  // point of the template definition.
-  Actions.resetFPOptions(LPT.FPO);
-
   assert(!LPT.Toks.empty() && "Empty body!");
 
   // Append the current token at the end of the new token stream so that it
