@@ -25,6 +25,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/ScriptedMetadata.h"
+#include "lldb/Utility/State.h"
 
 #include "llvm/ADT/SmallString.h"
 
@@ -1212,15 +1213,65 @@ protected:
 
         ProcessSP process_sp(platform_sp->DebugProcess(
             m_options.launch_info, debugger, *target, error));
+
+        if (!process_sp && error.Success()) {
+          result.AppendError("failed to launch or debug process");
+          return false;
+        } else if (!error.Success()) {
+          result.AppendError(error.AsCString());
+          return false;
+        }
+
+        const bool synchronous_execution =
+            debugger.GetCommandInterpreter().GetSynchronous();
+        auto launch_info = m_options.launch_info;
+        bool rebroadcast_first_stop =
+            !synchronous_execution &&
+            launch_info.GetFlags().Test(eLaunchFlagStopAtEntry);
+
+        assert(launch_info.GetHijackListener());
+
+        EventSP first_stop_event_sp;
+        StateType state = process_sp->WaitForProcessToStop(
+            std::nullopt, &first_stop_event_sp, rebroadcast_first_stop,
+            launch_info.GetHijackListener());
+        process_sp->RestoreProcessEvents();
+
+        if (rebroadcast_first_stop) {
+          assert(first_stop_event_sp);
+          process_sp->BroadcastEvent(first_stop_event_sp);
+          return true;
+        }
+
+        switch (state) {
+        case eStateStopped: {
+          if (launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
+            break;
+          if (synchronous_execution) {
+            // Now we have handled the stop-from-attach, and we are just
+            // switching to a synchronous resume.  So we should switch to the
+            // SyncResume hijacker.
+            process_sp->ResumeSynchronous(&result.GetOutputStream());
+          } else {
+            error = process_sp->Resume();
+            if (!error.Success()) {
+              result.AppendErrorWithFormat(
+                  "process resume at entry point failed: %s",
+                  error.AsCString());
+            }
+          }
+        } break;
+        default:
+          result.AppendErrorWithFormat(
+              "initial process state wasn't stopped: %s",
+              StateAsCString(state));
+          break;
+        }
+
         if (process_sp && process_sp->IsAlive()) {
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
           return true;
         }
-
-        if (error.Success())
-          result.AppendError("process launch failed");
-        else
-          result.AppendError(error.AsCString());
       } else {
         result.AppendError("'platform process launch' uses the current target "
                            "file and arguments, or the executable and its "

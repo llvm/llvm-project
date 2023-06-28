@@ -3423,7 +3423,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
 }
 
 // Transform (VMERGE_VVM_<LMUL>_TU false, false, true, allones, vl, sew) to
-// (MMV_V_V_<LMUL>_TU false, true, vl, sew). It may decrease uses of VMSET.
+// (VMV_V_V_<LMUL>_TU false, true, vl, sew). It may decrease uses of VMSET.
 bool RISCVDAGToDAGISel::performVMergeToVMv(SDNode *N) {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul##_TU:                                    \
