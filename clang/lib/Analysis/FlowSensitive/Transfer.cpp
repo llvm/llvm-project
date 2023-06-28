@@ -153,7 +153,7 @@ static void propagateStorageLocation(const Expr &From, const Expr &To,
     Env.setStorageLocationStrict(To, *Loc);
 }
 
-// Forwards the value or storage location of `From` to `To` in cases where
+// Propagates the value or storage location of `From` to `To` in cases where
 // `From` may be either a glvalue or a prvalue. `To` must be a glvalue iff
 // `From` is a glvalue.
 static void propagateValueOrStorageLocation(const Expr &From, const Expr &To,
@@ -572,18 +572,7 @@ public:
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
     const Expr *InitExpr = S->getExpr();
     assert(InitExpr != nullptr);
-
-    Value *InitExprVal = Env.getValue(*InitExpr, SkipPast::None);
-    if (InitExprVal == nullptr)
-      return;
-
-    const FieldDecl *Field = S->getField();
-    assert(Field != nullptr);
-
-    auto &ThisLoc =
-        *cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
-    auto &FieldLoc = ThisLoc.getChild(*Field);
-    Env.setValue(FieldLoc, *InitExprVal);
+    propagateValueOrStorageLocation(*InitExpr, *S, Env);
   }
 
   void VisitCXXConstructExpr(const CXXConstructExpr *S) {
