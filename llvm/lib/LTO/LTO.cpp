@@ -1087,11 +1087,16 @@ Error LTO::checkPartiallySplit() {
       Intrinsic::getName(Intrinsic::type_test));
   Function *TypeCheckedLoadFunc = RegularLTO.CombinedModule->getFunction(
       Intrinsic::getName(Intrinsic::type_checked_load));
+  Function *TypeCheckedLoadRelativeFunc =
+      RegularLTO.CombinedModule->getFunction(
+          Intrinsic::getName(Intrinsic::type_checked_load_relative));
 
   // First check if there are type tests / type checked loads in the
   // merged regular LTO module IR.
   if ((TypeTestFunc && !TypeTestFunc->use_empty()) ||
-      (TypeCheckedLoadFunc && !TypeCheckedLoadFunc->use_empty()))
+      (TypeCheckedLoadFunc && !TypeCheckedLoadFunc->use_empty()) ||
+      (TypeCheckedLoadRelativeFunc &&
+       !TypeCheckedLoadRelativeFunc->use_empty()))
     return make_error<StringError>(
         "inconsistent LTO Unit splitting (recompile with -fsplit-lto-unit)",
         inconvertibleErrorCode());
