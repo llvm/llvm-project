@@ -27,6 +27,7 @@
 #include "bolt/Rewrite/DWARFRewriter.h"
 #include "bolt/Rewrite/ExecutableFileMemoryManager.h"
 #include "bolt/Rewrite/JITLinkLinker.h"
+#include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/RuntimeLibs/HugifyRuntimeLibrary.h"
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -844,7 +845,7 @@ Error RewriteInstance::run() {
 
   disassembleFunctions();
 
-  processProfileDataPreCFG();
+  processMetadataPreCFG();
 
   buildFunctionsCFG();
 
@@ -3243,6 +3244,18 @@ void RewriteInstance::preprocessProfileData() {
   }
 }
 
+void RewriteInstance::initializeMetadataManager() {
+  // TODO
+}
+
+void RewriteInstance::processMetadataPreCFG() {
+  initializeMetadataManager();
+
+  MetadataManager.runInitializersPreCFG();
+
+  processProfileDataPreCFG();
+}
+
 void RewriteInstance::processProfileDataPreCFG() {
   if (!ProfileReader)
     return;
@@ -3605,6 +3618,9 @@ void RewriteInstance::emitAndLink() {
 }
 
 void RewriteInstance::updateMetadata() {
+  MetadataManager.runFinalizersAfterEmit();
+
+  // TODO: use MetadataManager for updates.
   updateSDTMarkers();
   updateLKMarkers();
   parsePseudoProbe();
