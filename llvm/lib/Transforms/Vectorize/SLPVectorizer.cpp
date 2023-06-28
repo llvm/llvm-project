@@ -14413,11 +14413,12 @@ static bool tryToVectorizeSequence(
 /// of the second cmp instruction.
 template <bool IsCompatibility>
 static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
-                       function_ref<bool(Instruction *)> IsDeleted) {
+                       const DominatorTree &DT) {
+  assert(isValidElementType(V->getType()) &&
+         isValidElementType(V2->getType()) &&
+         "Expected valid element types only.");
   auto *CI1 = cast<CmpInst>(V);
   auto *CI2 = cast<CmpInst>(V2);
-  if (IsDeleted(CI2) || !isValidElementType(CI2->getType()))
-    return false;
   if (CI1->getOperand(0)->getType()->getTypeID() <
       CI2->getOperand(0)->getType()->getTypeID())
     return !IsCompatibility;
@@ -14446,12 +14447,27 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
       return false;
     if (auto *I1 = dyn_cast<Instruction>(Op1))
       if (auto *I2 = dyn_cast<Instruction>(Op2)) {
-        if (I1->getParent() != I2->getParent())
-          return false;
+        if (IsCompatibility) {
+          if (I1->getParent() != I2->getParent())
+            return false;
+        } else {
+          // Try to compare nodes with same parent.
+          DomTreeNodeBase<BasicBlock> *NodeI1 = DT.getNode(I1->getParent());
+          DomTreeNodeBase<BasicBlock> *NodeI2 = DT.getNode(I2->getParent());
+          if (!NodeI1)
+            return NodeI2 != nullptr;
+          if (!NodeI2)
+            return false;
+          assert((NodeI1 == NodeI2) ==
+                     (NodeI1->getDFSNumIn() == NodeI2->getDFSNumIn()) &&
+                 "Different nodes should have different DFS numbers");
+          if (NodeI1 != NodeI2)
+            return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
+        }
         InstructionsState S = getSameOpcode({I1, I2}, TLI);
-        if (S.getOpcode())
+        if (S.getOpcode() && (IsCompatibility || !S.isAltShuffle()))
           continue;
-        return false;
+        return !IsCompatibility && I1->getOpcode() < I2->getOpcode();
       }
   }
   return IsCompatibility;
@@ -14478,18 +14494,23 @@ bool SLPVectorizerPass::vectorizeCmpInsts(iterator_range<ItT> CmpInsts,
   // Try to vectorize list of compares.
   // Sort by type, compare predicate, etc.
   auto CompareSorter = [&](Value *V, Value *V2) {
-    return compareCmp<false>(V, V2, *TLI,
-                             [&R](Instruction *I) { return R.isDeleted(I); });
+    if (V == V2)
+      return false;
+    return compareCmp<false>(V, V2, *TLI, *DT);
   };
 
   auto AreCompatibleCompares = [&](Value *V1, Value *V2) {
     if (V1 == V2)
       return true;
-    return compareCmp<true>(V1, V2, *TLI,
-                            [&R](Instruction *I) { return R.isDeleted(I); });
+    return compareCmp<true>(V1, V2, *TLI, *DT);
   };
 
-  SmallVector<Value *> Vals(CmpInsts.begin(), CmpInsts.end());
+  SmallVector<Value *> Vals;
+  for (Instruction *V : CmpInsts)
+    if (!R.isDeleted(V) && isValidElementType(V->getType()))
+      Vals.push_back(V);
+  if (Vals.size() <= 1)
+    return Changed;
   Changed |= tryToVectorizeSequence<Value>(
       Vals, CompareSorter, AreCompatibleCompares,
       [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
