@@ -12,9 +12,12 @@
 
 #include "flang/Lower/HlfirIntrinsics.h"
 
+#include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
@@ -37,12 +40,15 @@ public:
         const fir::IntrinsicArgumentLoweringRules *argLowering,
         mlir::Type stmtResultType) {
     mlir::Value res = lowerImpl(loweredActuals, argLowering, stmtResultType);
+    for (const hlfir::CleanupFunction &fn : cleanupFns)
+      fn();
     return {hlfir::EntityWithAttributes{res}};
   }
 
 protected:
   fir::FirOpBuilder &builder;
   mlir::Location loc;
+  llvm::SmallVector<hlfir::CleanupFunction, 3> cleanupFns;
 
   virtual mlir::Value
   lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
@@ -58,6 +64,14 @@ protected:
   template <typename OP, typename... BUILD_ARGS>
   inline OP createOp(BUILD_ARGS... args) {
     return builder.create<OP>(loc, args...);
+  }
+
+  mlir::Value loadBoxAddress(
+      const std::optional<Fortran::lower::PreparedActualArgument> &arg);
+
+  void addCleanup(std::optional<hlfir::CleanupFunction> cleanup) {
+    if (cleanup)
+      cleanupFns.emplace_back(std::move(*cleanup));
   }
 };
 
@@ -131,6 +145,39 @@ protected:
 
 } // namespace
 
+mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
+    const std::optional<Fortran::lower::PreparedActualArgument> &arg) {
+  if (!arg)
+    return mlir::Value{};
+
+  hlfir::Entity actual = arg->getOriginalActual();
+
+  if (!arg->handleDynamicOptional()) {
+    if (actual.isMutableBox()) {
+      // this is a box address type but is not dynamically optional. Just load
+      // the box, assuming it is well formed (!fir.ref<!fir.box<...>> ->
+      // !fir.box<...>)
+      return builder.create<fir::LoadOp>(loc, actual.getBase());
+    }
+    return actual;
+  }
+
+  auto [exv, cleanup] = hlfir::translateToExtendedValue(loc, builder, actual);
+  addCleanup(cleanup);
+
+  mlir::Value isPresent = arg->getIsPresent();
+  // createBox will not do create any invalid memory dereferences if exv is
+  // absent. The created fir.box will not be usable, but the SelectOp below
+  // ensures it won't be.
+  mlir::Value box = builder.createBox(loc, exv);
+  mlir::Type boxType = box.getType();
+  auto absent = builder.create<fir::AbsentOp>(loc, boxType);
+  auto boxOrAbsent = builder.create<mlir::arith::SelectOp>(
+      loc, boxType, isPresent, box, absent);
+
+  return boxOrAbsent;
+}
+
 llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
     const Fortran::lower::PreparedActualArguments &loweredActuals,
     const fir::IntrinsicArgumentLoweringRules *argLowering) {
@@ -152,9 +199,14 @@ llvm::SmallVector<mlir::Value> HlfirTransformationalIntrinsic::getOperandVector(
     } else {
       fir::ArgLoweringRule argRules =
           fir::lowerIntrinsicArgumentAs(*argLowering, i);
-      if (!argRules.handleDynamicOptional &&
-          argRules.lowerAs != fir::LowerIntrinsicArgAs::Inquired)
+      if (argRules.lowerAs == fir::LowerIntrinsicArgAs::Box)
+        valArg = loadBoxAddress(arg);
+      else if (!argRules.handleDynamicOptional &&
+               argRules.lowerAs != fir::LowerIntrinsicArgAs::Inquired)
         valArg = hlfir::derefPointersAndAllocatables(loc, builder, actual);
+      else if (argRules.handleDynamicOptional)
+        TODO(loc, "hlfir transformational intrinsic dynamically optional "
+                  "argument without box lowering");
       else
         valArg = actual.getBase();
     }
@@ -195,7 +247,8 @@ mlir::Value HlfirReductionIntrinsic<OP, HAS_MASK>::lowerImpl(
 
   OP op;
   if constexpr (HAS_MASK)
-    op = createOp<OP>(resultTy, array, dim, /*mask=*/operands[2]);
+    op = createOp<OP>(resultTy, array, dim,
+                      /*mask=*/operands[2]);
   else
     op = createOp<OP>(resultTy, array, dim);
   return op;
