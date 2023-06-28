@@ -14,18 +14,16 @@
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <__format/concepts.h>
-#include <__format/format_error.h>
 #include <__format/format_fwd.h>
 #include <__format/format_parse_context.h>
 #include <__functional/invoke.h>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/is_const.h>
-#include <__utility/declval.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <__variant/monostate.h>
-#include <string>
+#include <cstdint>
 #include <string_view>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
