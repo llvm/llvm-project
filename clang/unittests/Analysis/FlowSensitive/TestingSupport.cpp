@@ -154,9 +154,19 @@ test::buildStatementToAnnotationMapping(const FunctionDecl *Func,
 }
 
 const ValueDecl *test::findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name) {
-  auto TargetNodes = match(valueDecl(hasName(Name)).bind("v"), ASTCtx);
+  auto TargetNodes = match(
+      valueDecl(unless(indirectFieldDecl()), hasName(Name)).bind("v"), ASTCtx);
   assert(TargetNodes.size() == 1 && "Name must be unique");
   auto *const Result = selectFirst<ValueDecl>("v", TargetNodes);
+  assert(Result != nullptr);
+  return Result;
+}
+
+const IndirectFieldDecl *test::findIndirectFieldDecl(ASTContext &ASTCtx,
+                                                     llvm::StringRef Name) {
+  auto TargetNodes = match(indirectFieldDecl(hasName(Name)).bind("i"), ASTCtx);
+  assert(TargetNodes.size() == 1 && "Name must be unique");
+  const auto *Result = selectFirst<IndirectFieldDecl>("i", TargetNodes);
   assert(Result != nullptr);
   return Result;
 }
