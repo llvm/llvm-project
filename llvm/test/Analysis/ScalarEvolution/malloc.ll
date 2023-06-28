@@ -5,7 +5,7 @@ define ptr @f() {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:  Classifying expressions for: @f
 ; CHECK-NEXT:    %alloc = tail call dereferenceable(64) ptr @malloc(i64 64)
-; CHECK-NEXT:    --> %alloc U: full-set S: full-set
+; CHECK-NEXT:    --> %alloc U: [1,-64) S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ;
   %alloc = tail call dereferenceable(64) ptr @malloc(i64 64)
@@ -16,7 +16,7 @@ define ptr @f2() {
 ; CHECK-LABEL: 'f2'
 ; CHECK-NEXT:  Classifying expressions for: @f2
 ; CHECK-NEXT:    %alloc = tail call dereferenceable_or_null(64) ptr @malloc(i64 64)
-; CHECK-NEXT:    --> %alloc U: full-set S: full-set
+; CHECK-NEXT:    --> %alloc U: [0,-64) S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @f2
 ;
   %alloc = tail call dereferenceable_or_null(64) ptr @malloc(i64 64)
