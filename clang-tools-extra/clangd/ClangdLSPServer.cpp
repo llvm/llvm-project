@@ -650,7 +650,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                  CodeAction::INFO_KIND}}}
           : llvm::json::Value(true);
 
-
   std::vector<llvm::StringRef> Commands;
   for (llvm::StringRef Command : Handlers.CommandHandlers.keys())
     Commands.push_back(Command);
@@ -1744,7 +1743,7 @@ bool ClangdLSPServer::shouldRunCompletion(
 }
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                                         std::vector<Diag> Diagnostics) {
+                                         llvm::ArrayRef<Diag> Diagnostics) {
   PublishDiagnosticsParams Notification;
   Notification.version = decodeVersion(Version);
   Notification.uri = URIForFile::canonicalize(File, /*TUPath=*/File);

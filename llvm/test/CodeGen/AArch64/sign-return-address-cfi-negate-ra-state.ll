@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=aarch64-none-eabi < %s | FileCheck --check-prefixes CHECK,CHECK-V8A %s
-; RUN: llc -mtriple=aarch64-none-eabi -mattr=v8.3a < %s | FileCheck --check-prefixes CHECK,CHECK-V83A %s
-; RUN: llc -mtriple=aarch64-none-eabi -filetype=obj -o - <%s | llvm-dwarfdump -v - | FileCheck --check-prefix=CHECK-DUMP %s
+; RUN: llc -mtriple=aarch64 < %s | FileCheck --check-prefixes CHECK,CHECK-V8A %s
+; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefixes CHECK,CHECK-V83A %s
+; RUN: llc -mtriple=aarch64 -filetype=obj -o - <%s | llvm-dwarfdump -v - | FileCheck --check-prefix=CHECK-DUMP %s
 
 @.str = private unnamed_addr constant [15 x i8] c"some exception\00", align 1
 @_ZTIPKc = external dso_local constant ptr

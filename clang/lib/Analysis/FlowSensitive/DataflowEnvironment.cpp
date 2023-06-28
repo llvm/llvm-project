@@ -526,18 +526,18 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
   return Effect;
 }
 
-Environment Environment::join(const Environment &Other,
-                              Environment::ValueModel &Model) const {
-  assert(DACtx == Other.DACtx);
-  assert(ThisPointeeLoc == Other.ThisPointeeLoc);
-  assert(CallStack == Other.CallStack);
+Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
+                              Environment::ValueModel &Model) {
+  assert(EnvA.DACtx == EnvB.DACtx);
+  assert(EnvA.ThisPointeeLoc == EnvB.ThisPointeeLoc);
+  assert(EnvA.CallStack == EnvB.CallStack);
 
-  Environment JoinedEnv(*DACtx);
+  Environment JoinedEnv(*EnvA.DACtx);
 
-  JoinedEnv.CallStack = CallStack;
-  JoinedEnv.ThisPointeeLoc = ThisPointeeLoc;
+  JoinedEnv.CallStack = EnvA.CallStack;
+  JoinedEnv.ThisPointeeLoc = EnvA.ThisPointeeLoc;
 
-  if (ReturnVal == nullptr || Other.ReturnVal == nullptr) {
+  if (EnvA.ReturnVal == nullptr || EnvB.ReturnVal == nullptr) {
     // `ReturnVal` might not always get set -- for example if we have a return
     // statement of the form `return some_other_func()` and we decide not to
     // analyze `some_other_func()`.
@@ -546,22 +546,22 @@ Environment Environment::join(const Environment &Other,
     // it might not be the correct one.
     // This occurs for example in the test `ContextSensitiveMutualRecursion`.
     JoinedEnv.ReturnVal = nullptr;
-  } else if (areEquivalentValues(*ReturnVal, *Other.ReturnVal)) {
-    JoinedEnv.ReturnVal = ReturnVal;
+  } else if (areEquivalentValues(*EnvA.ReturnVal, *EnvB.ReturnVal)) {
+    JoinedEnv.ReturnVal = EnvA.ReturnVal;
   } else {
-    assert(!CallStack.empty());
+    assert(!EnvA.CallStack.empty());
     // FIXME: Make `CallStack` a vector of `FunctionDecl` so we don't need this
     // cast.
-    auto *Func = dyn_cast<FunctionDecl>(CallStack.back());
+    auto *Func = dyn_cast<FunctionDecl>(EnvA.CallStack.back());
     assert(Func != nullptr);
     if (Value *MergedVal =
-            mergeDistinctValues(Func->getReturnType(), *ReturnVal, *this,
-                                *Other.ReturnVal, Other, JoinedEnv, Model))
+            mergeDistinctValues(Func->getReturnType(), *EnvA.ReturnVal, EnvA,
+                                *EnvB.ReturnVal, EnvB, JoinedEnv, Model))
       JoinedEnv.ReturnVal = MergedVal;
   }
 
-  if (ReturnLoc == Other.ReturnLoc)
-    JoinedEnv.ReturnLoc = ReturnLoc;
+  if (EnvA.ReturnLoc == EnvB.ReturnLoc)
+    JoinedEnv.ReturnLoc = EnvA.ReturnLoc;
   else
     JoinedEnv.ReturnLoc = nullptr;
 
@@ -569,27 +569,27 @@ Environment Environment::join(const Environment &Other,
   // lifetime ends, add an assertion that there aren't any entries in
   // `DeclToLoc` and `Other.DeclToLoc` that map the same declaration to
   // different storage locations.
-  JoinedEnv.DeclToLoc = intersectDenseMaps(DeclToLoc, Other.DeclToLoc);
+  JoinedEnv.DeclToLoc = intersectDenseMaps(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
-  JoinedEnv.ExprToLoc = intersectDenseMaps(ExprToLoc, Other.ExprToLoc);
+  JoinedEnv.ExprToLoc = intersectDenseMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
 
   JoinedEnv.MemberLocToStruct =
-      intersectDenseMaps(MemberLocToStruct, Other.MemberLocToStruct);
+      intersectDenseMaps(EnvA.MemberLocToStruct, EnvB.MemberLocToStruct);
 
   // FIXME: update join to detect backedges and simplify the flow condition
   // accordingly.
-  JoinedEnv.FlowConditionToken = &DACtx->joinFlowConditions(
-      *FlowConditionToken, *Other.FlowConditionToken);
+  JoinedEnv.FlowConditionToken = &EnvA.DACtx->joinFlowConditions(
+      *EnvA.FlowConditionToken, *EnvB.FlowConditionToken);
 
-  for (auto &Entry : LocToVal) {
+  for (auto &Entry : EnvA.LocToVal) {
     const StorageLocation *Loc = Entry.first;
     assert(Loc != nullptr);
 
     Value *Val = Entry.second;
     assert(Val != nullptr);
 
-    auto It = Other.LocToVal.find(Loc);
-    if (It == Other.LocToVal.end())
+    auto It = EnvB.LocToVal.find(Loc);
+    if (It == EnvB.LocToVal.end())
       continue;
     assert(It->second != nullptr);
 
@@ -598,9 +598,8 @@ Environment Environment::join(const Environment &Other,
       continue;
     }
 
-    if (Value *MergedVal =
-            mergeDistinctValues(Loc->getType(), *Val, *this, *It->second, Other,
-                                JoinedEnv, Model)) {
+    if (Value *MergedVal = mergeDistinctValues(
+            Loc->getType(), *Val, EnvA, *It->second, EnvB, JoinedEnv, Model)) {
       JoinedEnv.LocToVal.insert({Loc, MergedVal});
     }
   }

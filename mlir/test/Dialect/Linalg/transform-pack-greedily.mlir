@@ -326,3 +326,25 @@ transform.sequence failures(propagate) {
       matmul_inner_dims_order = [1, 2, 0]
     : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
 }
+
+// -----
+
+!A = tensor<1023x255xf32>
+!X = tensor<255xf32>
+!Y = tensor<1023xf32>
+
+// CHECK-LABEL: @matvec_fail(
+func.func @matvec_fail(%A : !A, %x : !X, %y : !Y) -> !Y {
+  //      CHECK: linalg.matvec
+  %0 = linalg.matvec ins(%A, %x : !A, !X) outs(%y : !Y) -> !Y
+  return %0 : !Y
+}
+
+transform.sequence failures(propagate) {
+^bb1(%module_op: !transform.any_op):
+  %matmul = transform.structured.match ops{["linalg.matvec"]} in %module_op 
+    : (!transform.any_op) -> !transform.op<"linalg.matvec">
+  transform.structured.pack_greedily %matmul 
+      matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
+    : (!transform.op<"linalg.matvec">) -> !transform.any_op
+}

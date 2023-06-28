@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -o - -triple arm-arm-none-eabi %s | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm -o - -triple aarch64-arm-none-eabi %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -triple aarch64 %s | FileCheck %s
 
 // XFAIL: *
 

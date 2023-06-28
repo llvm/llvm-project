@@ -5434,4 +5434,38 @@ TEST(TransferTest, BuiltinFunctionModeled) {
       });
 }
 
+// Check that fields of anonymous records are modeled.
+TEST(TransferTest, AnonymousStruct) {
+  std::string Code = R"(
+    struct S {
+      struct {
+        bool b;
+      };
+    };
+    void target() {
+      S s;
+      s.b = true;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const ValueDecl *SDecl = findValueDecl(ASTCtx, "s");
+        const ValueDecl *BDecl = findValueDecl(ASTCtx, "b");
+        const IndirectFieldDecl *IndirectField =
+            findIndirectFieldDecl(ASTCtx, "b");
+
+        auto *S =
+            cast<AggregateStorageLocation>(Env.getStorageLocation(*SDecl));
+        auto &AnonStruct = cast<AggregateStorageLocation>(
+            S->getChild(*cast<ValueDecl>(IndirectField->chain().front())));
+
+        auto *B = cast<BoolValue>(Env.getValue(AnonStruct.getChild(*BDecl)));
+        ASSERT_TRUE(Env.flowConditionImplies(*B));
+      });
+}
+
 } // namespace

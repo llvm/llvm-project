@@ -126,7 +126,7 @@ protected:
     class CaptureDiags : public ParsingCallbacks {
     public:
       void onMainAST(PathRef File, ParsedAST &AST, PublishFn Publish) override {
-        reportDiagnostics(File, *AST.getDiagnostics(), Publish);
+        reportDiagnostics(File, AST.getDiagnostics(), Publish);
       }
 
       void onFailedAST(PathRef File, llvm::StringRef Version,
@@ -141,9 +141,8 @@ protected:
         if (!D)
           return;
         Publish([&]() {
-          const_cast<
-              llvm::unique_function<void(PathRef, std::vector<Diag>)> &> (*D)(
-              File, std::move(Diags));
+          const_cast<llvm::unique_function<void(PathRef, std::vector<Diag>)> &>(
+              *D)(File, Diags);
         });
       }
     };
@@ -230,20 +229,24 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
     Notification Ready;
     TUScheduler S(CDB, optsForTest(), captureDiags());
     auto Path = testPath("foo.cpp");
-    updateWithDiags(S, Path, "", WantDiagnostics::Yes,
+    // Semicolons here and in the following inputs are significant. They ensure
+    // preamble stays the same across runs. Otherwise we might get multiple
+    // diagnostics callbacks, once with the stale preamble and another with the
+    // fresh preamble.
+    updateWithDiags(S, Path, ";", WantDiagnostics::Yes,
                     [&](std::vector<Diag>) { Ready.wait(); });
-    updateWithDiags(S, Path, "request diags", WantDiagnostics::Yes,
+    updateWithDiags(S, Path, ";request diags", WantDiagnostics::Yes,
                     [&](std::vector<Diag>) { ++CallbackCount; });
-    updateWithDiags(S, Path, "auto (clobbered)", WantDiagnostics::Auto,
+    updateWithDiags(S, Path, ";auto (clobbered)", WantDiagnostics::Auto,
                     [&](std::vector<Diag>) {
                       ADD_FAILURE()
                           << "auto should have been cancelled by auto";
                     });
-    updateWithDiags(S, Path, "request no diags", WantDiagnostics::No,
+    updateWithDiags(S, Path, ";request no diags", WantDiagnostics::No,
                     [&](std::vector<Diag>) {
                       ADD_FAILURE() << "no diags should not be called back";
                     });
-    updateWithDiags(S, Path, "auto (produces)", WantDiagnostics::Auto,
+    updateWithDiags(S, Path, ";auto (produces)", WantDiagnostics::Auto,
                     [&](std::vector<Diag>) { ++CallbackCount; });
     Ready.notify();
 
@@ -833,7 +836,9 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   CDB.ExtraClangFlags.push_back("-DSOMETHING");
   ASSERT_TRUE(DoUpdate(SourceContents));
   ASSERT_FALSE(DoUpdate(SourceContents));
-  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 4u);
+  // This causes 2 AST builds always. We first build an AST with the stale
+  // preamble, and build a second AST once the fresh preamble is ready.
+  ASSERT_EQ(S.fileStats().lookup(Source).ASTBuilds, 5u);
   ASSERT_EQ(S.fileStats().lookup(Source).PreambleBuilds, 3u);
 }
 
@@ -1273,10 +1278,6 @@ TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
                           /*MainFileVersion*/ std::string>>
         DiagVersions;
   };
-
-  Config Cfg;
-  Cfg.Diagnostics.AllowStalePreamble = true;
-  WithContextValue WithCfg(Config::Key, std::move(Cfg));
 
   DiagCollector Collector;
   Notification UnblockPreamble;

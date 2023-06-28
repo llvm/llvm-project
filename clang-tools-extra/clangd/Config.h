@@ -105,9 +105,6 @@ struct Config {
       llvm::StringMap<std::string> CheckOptions;
     } ClangTidy;
 
-    /// Enable emitting diagnostics using stale preambles.
-    bool AllowStalePreamble = false;
-
     IncludesPolicy UnusedIncludes = IncludesPolicy::Strict;
     IncludesPolicy MissingIncludes = IncludesPolicy::None;
 

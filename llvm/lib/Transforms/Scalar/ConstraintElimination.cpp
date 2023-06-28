@@ -75,7 +75,86 @@ static int64_t addWithOverflow(int64_t A, int64_t B) {
   return Result;
 }
 
+static Instruction *getContextInstForUse(Use &U) {
+  Instruction *UserI = cast<Instruction>(U.getUser());
+  if (auto *Phi = dyn_cast<PHINode>(UserI))
+    UserI = Phi->getIncomingBlock(U)->getTerminator();
+  return UserI;
+}
+
 namespace {
+/// Represents either
+///  * a condition that holds on entry to a block (=conditional fact)
+///  * an assume (=assume fact)
+///  * a use of a compare instruction to simplify.
+/// It also tracks the Dominator DFS in and out numbers for each entry.
+struct FactOrCheck {
+  union {
+    Instruction *Inst;
+    Use *U;
+  };
+  unsigned NumIn;
+  unsigned NumOut;
+  bool HasInst;
+  bool Not;
+
+  FactOrCheck(DomTreeNode *DTN, Instruction *Inst, bool Not)
+      : Inst(Inst), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
+        HasInst(true), Not(Not) {}
+
+  FactOrCheck(DomTreeNode *DTN, Use *U)
+      : U(U), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
+        HasInst(false), Not(false) {}
+
+  static FactOrCheck getFact(DomTreeNode *DTN, Instruction *Inst,
+                             bool Not = false) {
+    return FactOrCheck(DTN, Inst, Not);
+  }
+
+  static FactOrCheck getCheck(DomTreeNode *DTN, Use *U) {
+    return FactOrCheck(DTN, U);
+  }
+
+  static FactOrCheck getCheck(DomTreeNode *DTN, CallInst *CI) {
+    return FactOrCheck(DTN, CI, false);
+  }
+
+  bool isCheck() const {
+    return !HasInst ||
+           match(Inst, m_Intrinsic<Intrinsic::ssub_with_overflow>());
+  }
+
+  Instruction *getContextInst() const {
+    if (HasInst)
+      return Inst;
+    return getContextInstForUse(*U);
+  }
+  Instruction *getInstructionToSimplify() const {
+    assert(isCheck());
+    if (HasInst)
+      return Inst;
+    // The use may have been simplified to a constant already.
+    return dyn_cast<Instruction>(*U);
+  }
+  bool isConditionFact() const { return !isCheck() && isa<CmpInst>(Inst); }
+};
+
+/// Keep state required to build worklist.
+struct State {
+  DominatorTree &DT;
+  SmallVector<FactOrCheck, 64> WorkList;
+
+  State(DominatorTree &DT) : DT(DT) {}
+
+  /// Process block \p BB and add known facts to work-list.
+  void addInfoFor(BasicBlock &BB);
+
+  /// Returns true if we can add a known condition from BB to its successor
+  /// block Succ.
+  bool canAddSuccessor(BasicBlock &BB, BasicBlock *Succ) const {
+    return DT.dominates(BasicBlockEdge(&BB, Succ), Succ);
+  }
+};
 
 class ConstraintInfo;
 
@@ -659,89 +738,6 @@ void ConstraintInfo::transferToOtherSystem(
     break;
   }
 }
-
-static Instruction *getContextInstForUse(Use &U) {
-  Instruction *UserI = cast<Instruction>(U.getUser());
-  if (auto *Phi = dyn_cast<PHINode>(UserI))
-    UserI = Phi->getIncomingBlock(U)->getTerminator();
-  return UserI;
-}
-
-namespace {
-/// Represents either
-///  * a condition that holds on entry to a block (=conditional fact)
-///  * an assume (=assume fact)
-///  * a use of a compare instruction to simplify.
-/// It also tracks the Dominator DFS in and out numbers for each entry.
-struct FactOrCheck {
-  union {
-    Instruction *Inst;
-    Use *U;
-  };
-  unsigned NumIn;
-  unsigned NumOut;
-  bool HasInst;
-  bool Not;
-
-  FactOrCheck(DomTreeNode *DTN, Instruction *Inst, bool Not)
-      : Inst(Inst), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        HasInst(true), Not(Not) {}
-
-  FactOrCheck(DomTreeNode *DTN, Use *U)
-      : U(U), NumIn(DTN->getDFSNumIn()), NumOut(DTN->getDFSNumOut()),
-        HasInst(false), Not(false) {}
-
-  static FactOrCheck getFact(DomTreeNode *DTN, Instruction *Inst,
-                             bool Not = false) {
-    return FactOrCheck(DTN, Inst, Not);
-  }
-
-  static FactOrCheck getCheck(DomTreeNode *DTN, Use *U) {
-    return FactOrCheck(DTN, U);
-  }
-
-  static FactOrCheck getCheck(DomTreeNode *DTN, CallInst *CI) {
-    return FactOrCheck(DTN, CI, false);
-  }
-
-  bool isCheck() const {
-    return !HasInst ||
-           match(Inst, m_Intrinsic<Intrinsic::ssub_with_overflow>());
-  }
-
-  Instruction *getContextInst() const {
-    if (HasInst)
-      return Inst;
-    return getContextInstForUse(*U);
-  }
-  Instruction *getInstructionToSimplify() const {
-    assert(isCheck());
-    if (HasInst)
-      return Inst;
-    // The use may have been simplified to a constant already.
-    return dyn_cast<Instruction>(*U);
-  }
-  bool isConditionFact() const { return !isCheck() && isa<CmpInst>(Inst); }
-};
-
-/// Keep state required to build worklist.
-struct State {
-  DominatorTree &DT;
-  SmallVector<FactOrCheck, 64> WorkList;
-
-  State(DominatorTree &DT) : DT(DT) {}
-
-  /// Process block \p BB and add known facts to work-list.
-  void addInfoFor(BasicBlock &BB);
-
-  /// Returns true if we can add a known condition from BB to its successor
-  /// block Succ.
-  bool canAddSuccessor(BasicBlock &BB, BasicBlock *Succ) const {
-    return DT.dominates(BasicBlockEdge(&BB, Succ), Succ);
-  }
-};
-
-} // namespace
 
 #ifndef NDEBUG
 
