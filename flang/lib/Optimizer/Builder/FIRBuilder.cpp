@@ -999,9 +999,7 @@ fir::ExtendedValue fir::factory::createStringLiteral(fir::FirOpBuilder &builder,
           auto stringLitOp = builder.createStringLitOp(loc, str);
           builder.create<fir::HasValueOp>(loc, stringLitOp);
         },
-        builder.createInternalLinkage());
-  // TODO: This can be changed to linkonce linkage once we have support for
-  // generating comdat sections
+        builder.createLinkOnceLinkage());
   auto addr = builder.create<fir::AddrOfOp>(loc, global.resultType(),
                                             global.getSymbol());
   auto len = builder.createIntegerConstant(

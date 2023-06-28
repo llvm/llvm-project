@@ -2856,6 +2856,14 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
     auto g = rewriter.create<mlir::LLVM::GlobalOp>(
         loc, tyAttr, isConst, linkage, global.getSymName(), initAttr);
 
+    auto module = global->getParentOfType<mlir::ModuleOp>();
+    // Add comdat if necessary
+    if (fir::getTargetTriple(module).supportsCOMDAT() &&
+        (linkage == mlir::LLVM::Linkage::Linkonce ||
+         linkage == mlir::LLVM::Linkage::LinkonceODR)) {
+      addComdat(g, rewriter, module);
+    }
+
     // Apply all non-Fir::GlobalOp attributes to the LLVM::GlobalOp, preserving
     // them; whilst taking care not to apply attributes that are lowered in
     // other ways.
@@ -2930,6 +2938,27 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
         return mlir::LLVM::Linkage::Weak;
     }
     return mlir::LLVM::Linkage::External;
+  }
+
+private:
+  static void addComdat(mlir::LLVM::GlobalOp &global,
+                        mlir::ConversionPatternRewriter &rewriter,
+                        mlir::ModuleOp &module) {
+    const char *comdatName = "__llvm_comdat";
+    mlir::LLVM::ComdatOp comdatOp =
+        module.lookupSymbol<mlir::LLVM::ComdatOp>(comdatName);
+    if (!comdatOp) {
+      comdatOp =
+          rewriter.create<mlir::LLVM::ComdatOp>(module.getLoc(), comdatName);
+    }
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToEnd(&comdatOp.getBody().back());
+    auto selectorOp = rewriter.create<mlir::LLVM::ComdatSelectorOp>(
+        comdatOp.getLoc(), global.getSymName(),
+        mlir::LLVM::comdat::Comdat::Any);
+    global.setComdatAttr(mlir::SymbolRefAttr::get(
+        rewriter.getContext(), comdatName,
+        mlir::FlatSymbolRefAttr::get(selectorOp.getSymNameAttr())));
   }
 };
 
