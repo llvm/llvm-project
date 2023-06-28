@@ -124,13 +124,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (FIndex)
       FIndex->updateMain(Path, AST);
 
-    assert(AST.getDiagnostics() &&
-           "We issue callback only with fresh preambles");
-    std::vector<Diag> Diagnostics = *AST.getDiagnostics();
     if (ServerCallbacks)
       Publish([&]() {
         ServerCallbacks->onDiagnosticsReady(Path, AST.version(),
-                                            std::move(Diagnostics));
+                                            AST.getDiagnostics());
         if (CollectInactiveRegions) {
           ServerCallbacks->onInactiveRegionsReady(Path,
                                                   getInactiveRegions(AST));
@@ -366,7 +363,7 @@ ClangdServer::createConfiguredContextProvider(const config::Provider *Provider,
         std::lock_guard<std::mutex> Lock(PublishMu);
         for (auto &Entry : ReportableDiagnostics)
           Publish->onDiagnosticsReady(Entry.first(), /*Version=*/"",
-                                      std::move(Entry.second));
+                                      Entry.second);
       }
       return Context::current().derive(Config::Key, std::move(C));
     }
@@ -1046,11 +1043,7 @@ void ClangdServer::diagnostics(PathRef File, Callback<std::vector<Diag>> CB) {
       [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
         if (!InpAST)
           return CB(InpAST.takeError());
-        if (auto Diags = InpAST->AST.getDiagnostics())
-          return CB(*Diags);
-        // FIXME: Use ServerCancelled error once it is settled in LSP-3.17.
-        return CB(llvm::make_error<LSPError>("server is busy parsing includes",
-                                             ErrorCode::InternalError));
+        return CB(InpAST->AST.getDiagnostics());
       };
 
   WorkScheduler->runWithAST("Diagnostics", File, std::move(Action));
