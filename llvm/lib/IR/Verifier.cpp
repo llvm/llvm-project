@@ -3927,6 +3927,12 @@ void Verifier::visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty) {
 
     APInt HighV = High->getValue();
     APInt LowV = Low->getValue();
+
+    // ConstantRange asserts if the ranges are the same except for the min/max
+    // value. Leave the cases it tolerates for the empty range error below.
+    Check(LowV != HighV || LowV.isMaxValue() || LowV.isMinValue(),
+          "The upper and lower limits cannot be the same value", &I);
+
     ConstantRange CurRange(LowV, HighV);
     Check(!CurRange.isEmptySet() && !CurRange.isFullSet(),
           "Range must not be empty!", Range);
