@@ -143,6 +143,17 @@ public:
   virtual void emitDwarfDebugLocListFooter(const CompileUnit &Unit,
                                            MCSymbol *EndLabel) = 0;
 
+  /// Emit .debug_addr header.
+  virtual MCSymbol *emitDwarfDebugAddrsHeader(const CompileUnit &Unit) = 0;
+
+  /// Emit the addresses described by \p Addrs into the .debug_addr section.
+  virtual void emitDwarfDebugAddrs(const SmallVector<uint64_t> &Addrs,
+                                   uint8_t AddrSize) = 0;
+
+  /// Emit .debug_addr footer.
+  virtual void emitDwarfDebugAddrsFooter(const CompileUnit &Unit,
+                                         MCSymbol *EndLabel) = 0;
+
   /// Emit .debug_aranges entries for \p Unit
   virtual void
   emitDwarfDebugArangesTable(const CompileUnit &Unit,
@@ -210,6 +221,9 @@ public:
 
   /// Returns size of generated .debug_loclists section.
   virtual uint64_t getLocListsSectionSize() const = 0;
+
+  /// Returns size of generated .debug_addr section.
+  virtual uint64_t getDebugAddrSectionSize() const = 0;
 
   /// Dump the file to the disk.
   virtual void finish() = 0;
@@ -623,6 +637,28 @@ private:
     OffsetsStringPool &DebugStrPool;
     OffsetsStringPool &DebugLineStrPool;
 
+    struct DebugAddrPool {
+      DenseMap<uint64_t, uint64_t> AddrIndexMap;
+      SmallVector<uint64_t> Addrs;
+
+      uint64_t getAddrIndex(uint64_t Addr) {
+        DenseMap<uint64_t, uint64_t>::iterator It = AddrIndexMap.find(Addr);
+        if (It == AddrIndexMap.end()) {
+          It = AddrIndexMap.insert(std::make_pair(Addr, Addrs.size())).first;
+          Addrs.push_back(Addr);
+        }
+        return It->second;
+      }
+
+      void clear() {
+        AddrIndexMap.clear();
+        Addrs.clear();
+      }
+
+    };
+
+    DebugAddrPool AddrPool;
+
     /// Allocator used for all the DIEValue objects.
     BumpPtrAllocator &DIEAlloc;
 
@@ -664,6 +700,10 @@ private:
     /// nothing to clone/emit.
     uint64_t cloneAllCompileUnits(DWARFContext &DwarfContext,
                                   const DWARFFile &File, bool IsLittleEndian);
+
+    /// Emit the .debug_addr section for the \p Unit.
+    void emitDebugAddrSection(CompileUnit &Unit,
+                              const uint16_t DwarfVersion) const;
 
   private:
     using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
