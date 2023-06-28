@@ -591,6 +591,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     // read from the image.
 
     // Get ConstWGSize for kernel from image
+    ConstWGSize = Device.getDefaultNumThreads();
     std::string WGSizeName(getName());
     WGSizeName += "_wg_size";
     GlobalTy HostConstWGSize(WGSizeName, sizeof(decltype(ConstWGSize)),
