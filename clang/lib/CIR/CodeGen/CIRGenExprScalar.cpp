@@ -1035,6 +1035,61 @@ mlir::Value ScalarExprEmitter::buildAdd(const BinOpInfo &Ops) {
       Ops.LHS, Ops.RHS);
 }
 mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
+  // The LHS is always a pointer if either side is.
+  if (!Ops.LHS.getType().isa<mlir::cir::PointerType>()) {
+    if (Ops.Ty->isSignedIntegerOrEnumerationType()) {
+      switch (CGF.getLangOpts().getSignedOverflowBehavior()) {
+      case LangOptions::SOB_Defined: {
+        llvm_unreachable("NYI");
+        return Builder.create<mlir::cir::BinOp>(
+            CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty),
+            mlir::cir::BinOpKind::Sub, Ops.LHS, Ops.RHS);
+      }
+      case LangOptions::SOB_Undefined:
+        if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
+          return Builder.create<mlir::cir::BinOp>(
+              CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty),
+              mlir::cir::BinOpKind::Sub, Ops.LHS, Ops.RHS);
+        [[fallthrough]];
+      case LangOptions::SOB_Trapping:
+        if (CanElideOverflowCheck(CGF.getContext(), Ops))
+          llvm_unreachable("NYI");
+        llvm_unreachable("NYI");
+      }
+    }
+
+    if (Ops.Ty->isConstantMatrixType()) {
+      llvm_unreachable("NYI");
+    }
+
+    if (Ops.Ty->isUnsignedIntegerType() &&
+        CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow) &&
+        !CanElideOverflowCheck(CGF.getContext(), Ops))
+      llvm_unreachable("NYI");
+
+    assert(!UnimplementedFeature::cirVectorType());
+    if (Ops.LHS.getType().isa<mlir::FloatType>()) {
+      llvm_unreachable("NYI");
+    }
+
+    if (Ops.isFixedPointOp())
+      llvm_unreachable("NYI");
+
+    return Builder.create<mlir::cir::BinOp>(
+        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Sub,
+        Ops.LHS, Ops.RHS);
+  }
+
+  // If the RHS is not a pointer, then we have normal pointer
+  // arithmetic.
+  if (!Ops.RHS.getType().isa<mlir::cir::PointerType>())
+    llvm_unreachable("NYI");
+
+  // Otherwise, this is a pointer subtraction.
+
+  // Do the raw subtraction part.
+  llvm_unreachable("NYI");
+
   return Builder.create<mlir::cir::BinOp>(
       CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Sub,
       Ops.LHS, Ops.RHS);
