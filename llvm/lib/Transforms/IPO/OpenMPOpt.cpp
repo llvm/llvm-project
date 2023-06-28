@@ -2959,11 +2959,11 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     } else {
       // For live non-entry blocks we only propagate
       // information via live edges.
-      if (LivenessAA->isAssumedDead(&BB))
+      if (LivenessAA && LivenessAA->isAssumedDead(&BB))
         continue;
 
       for (auto *PredBB : predecessors(&BB)) {
-        if (LivenessAA->isEdgeDead(PredBB, &BB))
+        if (LivenessAA && LivenessAA->isEdgeDead(PredBB, &BB))
           continue;
         bool InitialEdgeOnly = isInitialThreadOnlyEdge(
             A, dyn_cast<BranchInst>(PredBB->getTerminator()), BB);
@@ -3059,10 +3059,10 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         // alignment.
         Function *Callee = CB->getCalledFunction();
         if (!IsNoSync && Callee && !Callee->isDeclaration()) {
-          const auto &EDAA = *A.getAAFor<AAExecutionDomain>(
+          const auto *EDAA = A.getAAFor<AAExecutionDomain>(
               *this, IRPosition::function(*Callee), DepClassTy::OPTIONAL);
-          if (EDAA.getState().isValidState()) {
-            const auto &CalleeED = EDAA.getFunctionExecutionDomain();
+          if (EDAA && EDAA->getState().isValidState()) {
+            const auto &CalleeED = EDAA->getFunctionExecutionDomain();
             ED.IsReachedFromAlignedBarrierOnly =
                     CalleeED.IsReachedFromAlignedBarrierOnly;
             AlignedBarrierLastInBlock = ED.IsReachedFromAlignedBarrierOnly;
@@ -3189,7 +3189,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       continue;
     BasicBlock *SyncBB = SyncInst->getParent();
     for (auto *PredBB : predecessors(SyncBB)) {
-      if (LivenessAA->isEdgeDead(PredBB, SyncBB))
+      if (LivenessAA && LivenessAA->isEdgeDead(PredBB, SyncBB))
         continue;
       if (!Visited.insert(PredBB))
         continue;
