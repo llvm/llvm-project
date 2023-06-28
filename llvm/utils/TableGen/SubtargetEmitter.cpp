@@ -202,7 +202,7 @@ void SubtargetEmitter::EmitSubtargetInfoMacroCalls(raw_ostream &OS) {
 
   std::vector<Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
-  llvm::sort(FeatureList, LessRecordFieldName());
+  llvm::sort(FeatureList, LessRecordFieldFieldName());
 
   for (const Record *Feature : FeatureList) {
     const StringRef FieldName = Feature->getValueAsString("FieldName");
