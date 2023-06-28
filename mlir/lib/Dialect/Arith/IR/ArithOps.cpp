@@ -123,7 +123,6 @@ static Type getI1SameShape(Type type) {
     return UnrankedTensorType::get(i1Type);
   if (auto vectorType = llvm::dyn_cast<VectorType>(type))
     return VectorType::get(vectorType.getShape(), i1Type,
-                           vectorType.getNumScalableDims(),
                            vectorType.getScalableDims());
   return i1Type;
 }
