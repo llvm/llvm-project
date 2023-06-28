@@ -239,7 +239,7 @@ __DEVICE__
 float fdividef(float __x, float __y) { return __x / __y; }
 
 __DEVICE__
-float floorf(float __x) { return __ocml_floor_f32(__x); }
+float floorf(float __x) { return __builtin_floorf(__x); }
 
 __DEVICE__
 float fmaf(float __x, float __y, float __z) {
@@ -787,7 +787,7 @@ __DEVICE__
 double fdim(double __x, double __y) { return __ocml_fdim_f64(__x, __y); }
 
 __DEVICE__
-double floor(double __x) { return __ocml_floor_f64(__x); }
+double floor(double __x) { return __builtin_floor(__x); }
 
 __DEVICE__
 double fma(double __x, double __y, double __z) {
