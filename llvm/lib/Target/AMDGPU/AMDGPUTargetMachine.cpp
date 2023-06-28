@@ -990,6 +990,11 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPULowerModuleLDSPass());
   }
 
+  // AMDGPUAttributor infers lack of llvm.amdgcn.lds.kernel.id calls, so run
+  // after their introduction
+  if (TM.getOptLevel() > CodeGenOpt::None)
+    addPass(createAMDGPUAttributorPass());
+
   if (TM.getOptLevel() > CodeGenOpt::None)
     addPass(createInferAddressSpacesPass());
 
@@ -1045,9 +1050,6 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
   if (TM->getTargetTriple().getArch() == Triple::amdgcn) {
     if (RemoveIncompatibleFunctions)
       addPass(createAMDGPURemoveIncompatibleFunctionsPass(TM));
-
-    if (TM->getOptLevel() > CodeGenOpt::None)
-      addPass(createAMDGPUAttributorPass());
 
     // FIXME: This pass adds 2 hacky attributes that can be replaced with an
     // analysis, and should be removed.
