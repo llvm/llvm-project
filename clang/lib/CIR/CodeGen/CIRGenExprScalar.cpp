@@ -643,56 +643,16 @@ public:
     return Result;
   }
 
-  mlir::Value buildMul(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Mul,
-        Ops.LHS, Ops.RHS);
-  }
-  mlir::Value buildDiv(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Div,
-        Ops.LHS, Ops.RHS);
-  }
-  mlir::Value buildRem(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Rem,
-        Ops.LHS, Ops.RHS);
-  }
-  mlir::Value buildAdd(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Add,
-        Ops.LHS, Ops.RHS);
-  }
-  mlir::Value buildSub(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Sub,
-        Ops.LHS, Ops.RHS);
-  }
-  mlir::Value buildShl(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Shl,
-        Ops.LHS, Ops.RHS);
-  }
-  mlir::Value buildShr(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Shr,
-        Ops.LHS, Ops.RHS);
-  }
-  mlir::Value buildAnd(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::And,
-        Ops.LHS, Ops.RHS);
-  }
-  mlir::Value buildXor(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Xor,
-        Ops.LHS, Ops.RHS);
-  }
-  mlir::Value buildOr(const BinOpInfo &Ops) {
-    return Builder.create<mlir::cir::BinOp>(
-        CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Or,
-        Ops.LHS, Ops.RHS);
-  }
+  mlir::Value buildMul(const BinOpInfo &Ops);
+  mlir::Value buildDiv(const BinOpInfo &Ops);
+  mlir::Value buildRem(const BinOpInfo &Ops);
+  mlir::Value buildAdd(const BinOpInfo &Ops);
+  mlir::Value buildSub(const BinOpInfo &Ops);
+  mlir::Value buildShl(const BinOpInfo &Ops);
+  mlir::Value buildShr(const BinOpInfo &Ops);
+  mlir::Value buildAnd(const BinOpInfo &Ops);
+  mlir::Value buildXor(const BinOpInfo &Ops);
+  mlir::Value buildOr(const BinOpInfo &Ops);
 
   LValue buildCompoundAssignLValue(
       const CompoundAssignOperator *E,
@@ -968,6 +928,57 @@ mlir::Value CIRGenFunction::buildScalarExpr(const Expr *E) {
          "Invalid scalar expression to emit");
 
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(E));
+}
+
+mlir::Value ScalarExprEmitter::buildMul(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Mul,
+      Ops.LHS, Ops.RHS);
+}
+mlir::Value ScalarExprEmitter::buildDiv(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Div,
+      Ops.LHS, Ops.RHS);
+}
+mlir::Value ScalarExprEmitter::buildRem(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Rem,
+      Ops.LHS, Ops.RHS);
+}
+mlir::Value ScalarExprEmitter::buildAdd(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Add,
+      Ops.LHS, Ops.RHS);
+}
+mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Sub,
+      Ops.LHS, Ops.RHS);
+}
+mlir::Value ScalarExprEmitter::buildShl(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Shl,
+      Ops.LHS, Ops.RHS);
+}
+mlir::Value ScalarExprEmitter::buildShr(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Shr,
+      Ops.LHS, Ops.RHS);
+}
+mlir::Value ScalarExprEmitter::buildAnd(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::And,
+      Ops.LHS, Ops.RHS);
+}
+mlir::Value ScalarExprEmitter::buildXor(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Xor,
+      Ops.LHS, Ops.RHS);
+}
+mlir::Value ScalarExprEmitter::buildOr(const BinOpInfo &Ops) {
+  return Builder.create<mlir::cir::BinOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Or,
+      Ops.LHS, Ops.RHS);
 }
 
 // Emit code for an explicit or implicit cast.  Implicit
