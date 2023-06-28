@@ -36,11 +36,59 @@ bool canOpOperandsBeDroppedImpl(linalg::LinalgOp linalgOp,
                                 ArrayRef<OpOperand *> droppedOperands);
 } // namespace detail
 
+/// Positions of a Linalg op loops that correspond to different kinds of a
+/// contraction dimension.
+struct ContractionDimensions {
+  SmallVector<unsigned, 2> batch;
+  SmallVector<unsigned, 2> m;
+  SmallVector<unsigned, 2> n;
+  SmallVector<unsigned, 2> k;
+};
+
+/// Find at least 2 parallel (m and n) and 1 reduction (k) dimension candidates
+/// that form a matmul subcomputation within `linalgOp`.
+/// These dimensions are such that:
+///   1. The m dimension is involved in an outer-product along LHS
+///      (i.e. it is a permutation on RES and LHS and does not appear in RHS).
+///   2. The n dimension is involved in an outer-product along RHS
+///      (i.e. it is a permutation on RES and RHS and does not appear in LHS).
+///   3. The k dimension appears as a permutation on LHS and RHS.
+///   4. m, n and k appear only once in any given indexing.
+///   5. Optional batch dimensions that appear in all operands are captured.
+/// This allows e.g. detecting that some contraction is embedded within
+/// `linalgOp` with some orthogonal heuristic.
+/// When multiple dimension occurrences exist that match `batch`, `m`, `n`, or
+/// `k`, indices are returned in sorted order.
+/// Returns a failure if any of `m`, `n` or `k` is empty.
+FailureOr<ContractionDimensions> inferContractionDims(LinalgOp linalgOp);
+
 /// Checks whether `linalgOp` conforms to ContractionOpInterface.
 // TODO: embed within `isa<ContractionOpInterface>` if possible / natural.
 bool isaContractionOpInterface(LinalgOp linalgOp);
 
+/// Checks whether `linalgOp` conforms to ConvolutionOpInterface.
+// TODO: embed within `isa<ConvolutionOpInterface>` if possible / natural.
+bool isaConvolutionOpInterface(LinalgOp linalgOp);
+
 namespace detail {
+
+/// Result of matching a Linalg generic against the predicates of it being a
+/// contractiom.
+enum class MatchContractionResult;
+
+/// Checks whether `op` conforms to ContractionOpInterface and populates
+/// `dimensions` with indexes of the different kinds of dimensions when
+/// present.
+// TODO: Extract a standalone `inferConvolutionDims` that can also detect
+// whether a conv pattern exists within a bigger linalg op (see
+// inferContractionDims).
+MatchContractionResult
+isContractionInterfaceImpl(Operation *op,
+                           ContractionDimensions *dimensions = nullptr);
+
+/// Returns the error message corresponding to the contraction checking return
+/// code.
+StringRef getMatchContractionMessage(MatchContractionResult res);
 
 /// Result of matching a Linalg generic against the predicates of it being a
 /// convolution.
@@ -58,7 +106,8 @@ struct ConvolutionDimensions {
 };
 
 /// Checks whether `op` conforms to ConvolutionOpInterface and populates
-/// `dimensions` with indexes of the different kinds of dimensions when present.
+/// `dimensions` with indexes of the different kinds of dimensions when
+/// present.
 MatchConvolutionResult
 isConvolutionInterfaceImpl(Operation *op,
                            ConvolutionDimensions *dimensions = nullptr);

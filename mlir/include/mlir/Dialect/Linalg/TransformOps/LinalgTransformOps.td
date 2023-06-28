@@ -722,7 +722,7 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
                                  :$matmul_padded_sizes_next_multiple_of,
                    ConfinedAttr<DefaultValuedAttr<DenseI64ArrayAttr, "{}">,
                                  [DenseArrayCount<3>]>:$matmul_inner_dims_order);
-  let results = (outs Transform_ConcreteOpType<"linalg.generic">:$packed_op);
+  let results = (outs TransformHandleTypeInterface:$packed_op);
 
   let builders = [
     OpBuilder<(ins "Value":$target,

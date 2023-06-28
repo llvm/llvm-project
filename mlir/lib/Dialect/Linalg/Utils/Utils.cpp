@@ -33,7 +33,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -138,86 +137,6 @@ static void unpackRanges(OpBuilder &builder, Location loc,
     steps.emplace_back(
         getValueOrCreateConstantIndexOp(builder, loc, range.stride));
   }
-}
-
-//===----------------------------------------------------------------------===//
-// Utilities for inferring various semantics properties of Linalg ops.
-//===----------------------------------------------------------------------===//
-
-DenseSet<int64_t> mlir::linalg::findPermutationsIndexingOperand(
-    LinalgOp linalgOp, OpOperand *opOperand, utils::IteratorType iter) {
-  DenseSet<int64_t> res;
-  assert(linalgOp == opOperand->getOwner() && "expected linalgOp owner");
-  AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
-  for (AffineExpr e : indexingMap.getResults()) {
-    if (auto d = e.dyn_cast<AffineDimExpr>()) {
-      if (linalgOp.getIteratorTypesArray()[d.getPosition()] == iter &&
-          llvm::count_if(indexingMap.getResults(), [d](AffineExpr e) {
-            return e.isFunctionOfDim(d.getPosition());
-          }) == 1)
-        res.insert(d.getPosition());
-    }
-  }
-  return res;
-}
-
-namespace {
-auto par = utils::IteratorType::parallel;
-auto red = utils::IteratorType::reduction;
-} // namespace
-
-bool mlir::linalg::containsMostMinorMatmul(LinalgOp linalgOp) {
-  FailureOr<EmbeddedContractionDimsCandidates> res = inferContractionDims(linalgOp);
-  if (failed(res))
-    return false;
-  int64_t numLoops = linalgOp.getNumLoops();
-  for (const DenseSet<int64_t> &s : {res->mPos, res->nPos, res->kPos}) {
-    if (s.contains(numLoops - 3) || s.contains(numLoops - 2) ||
-        s.contains(numLoops - 1))
-      continue;
-    return false;
-  }
-  return true;
-}
-
-FailureOr<EmbeddedContractionDimsCandidates>
-mlir::linalg::inferContractionDims(LinalgOp linalgOp) {
-  if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() != 2)
-    return failure();
-
-  DenseSet<int64_t> a = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(0), par);
-  DenseSet<int64_t> b = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(1), par);
-  DenseSet<int64_t> c = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInitOperand(0), par);
-
-  // A & C - B are the iterators involved in an outer-product along A (the LHS).
-  DenseSet<int64_t> ac = a;
-  llvm::set_intersect(ac, c);
-  llvm::set_subtract(ac, b);
-  // B & C - A are the iterators involved in an outer-product along B (the RHS).
-  DenseSet<int64_t> bc = b;
-  llvm::set_intersect(bc, c);
-  llvm::set_subtract(bc, a);
-  // A & B & C are the "batch" dimensions.
-  DenseSet<int64_t> batches = a;
-  llvm::set_intersect(batches, b);
-  llvm::set_intersect(batches, c);
-
-  // A & B red are the reduction dimensions.
-  DenseSet<int64_t> ra = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(0), red);
-  DenseSet<int64_t> rb = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(1), red);
-  llvm::set_intersect(ra, rb);
-
-  if (ac.empty() || bc.empty() || ra.empty())
-    return failure();
-
-  // Pick the first one in each set.
-  // TODO: Better heuristic (e.g pick dims based on packing-based metric).
-  return EmbeddedContractionDimsCandidates{batches, ac, bc, ra};
 }
 
 //===----------------------------------------------------------------------===//
