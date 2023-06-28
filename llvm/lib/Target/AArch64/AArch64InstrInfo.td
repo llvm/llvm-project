@@ -4314,24 +4314,24 @@ defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fround, "FCVTAU">;
 
 let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (any_lround f16:$Rn)),
-            (!cast<Instruction>(FCVTASUWHr) f16:$Rn)>;
+            (FCVTASUWHr f16:$Rn)>;
   def : Pat<(i64 (any_lround f16:$Rn)),
-            (!cast<Instruction>(FCVTASUXHr) f16:$Rn)>;
+            (FCVTASUXHr f16:$Rn)>;
   def : Pat<(i64 (any_llround f16:$Rn)),
-            (!cast<Instruction>(FCVTASUXHr) f16:$Rn)>;
+            (FCVTASUXHr f16:$Rn)>;
 }
 def : Pat<(i32 (any_lround f32:$Rn)),
-          (!cast<Instruction>(FCVTASUWSr) f32:$Rn)>;
+          (FCVTASUWSr f32:$Rn)>;
 def : Pat<(i32 (any_lround f64:$Rn)),
-          (!cast<Instruction>(FCVTASUWDr) f64:$Rn)>;
+          (FCVTASUWDr f64:$Rn)>;
 def : Pat<(i64 (any_lround f32:$Rn)),
-          (!cast<Instruction>(FCVTASUXSr) f32:$Rn)>;
+          (FCVTASUXSr f32:$Rn)>;
 def : Pat<(i64 (any_lround f64:$Rn)),
-          (!cast<Instruction>(FCVTASUXDr) f64:$Rn)>;
+          (FCVTASUXDr f64:$Rn)>;
 def : Pat<(i64 (any_llround f32:$Rn)),
-          (!cast<Instruction>(FCVTASUXSr) f32:$Rn)>;
+          (FCVTASUXSr f32:$Rn)>;
 def : Pat<(i64 (any_llround f64:$Rn)),
-          (!cast<Instruction>(FCVTASUXDr) f64:$Rn)>;
+          (FCVTASUXDr f64:$Rn)>;
 
 //===----------------------------------------------------------------------===//
 // Scaled integer to floating point conversion instructions.
@@ -4406,24 +4406,24 @@ let Predicates = [HasFRInt3264] in {
 // in the FCVTZS as the output of FRINTX is an integer).
 let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (any_lrint f16:$Rn)),
-            (FCVTZSUWHr (!cast<Instruction>(FRINTXHr) f16:$Rn))>;
+            (FCVTZSUWHr (FRINTXHr f16:$Rn))>;
   def : Pat<(i64 (any_lrint f16:$Rn)),
-            (FCVTZSUXHr (!cast<Instruction>(FRINTXHr) f16:$Rn))>;
+            (FCVTZSUXHr (FRINTXHr f16:$Rn))>;
   def : Pat<(i64 (any_llrint f16:$Rn)),
-            (FCVTZSUXHr (!cast<Instruction>(FRINTXHr) f16:$Rn))>;
+            (FCVTZSUXHr (FRINTXHr f16:$Rn))>;
 }
 def : Pat<(i32 (any_lrint f32:$Rn)),
-          (FCVTZSUWSr (!cast<Instruction>(FRINTXSr) f32:$Rn))>;
+          (FCVTZSUWSr (FRINTXSr f32:$Rn))>;
 def : Pat<(i32 (any_lrint f64:$Rn)),
-          (FCVTZSUWDr (!cast<Instruction>(FRINTXDr) f64:$Rn))>;
+          (FCVTZSUWDr (FRINTXDr f64:$Rn))>;
 def : Pat<(i64 (any_lrint f32:$Rn)),
-          (FCVTZSUXSr (!cast<Instruction>(FRINTXSr) f32:$Rn))>;
+          (FCVTZSUXSr (FRINTXSr f32:$Rn))>;
 def : Pat<(i64 (any_lrint f64:$Rn)),
-          (FCVTZSUXDr (!cast<Instruction>(FRINTXDr) f64:$Rn))>;
+          (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 def : Pat<(i64 (any_llrint f32:$Rn)),
-          (FCVTZSUXSr (!cast<Instruction>(FRINTXSr) f32:$Rn))>;
+          (FCVTZSUXSr (FRINTXSr f32:$Rn))>;
 def : Pat<(i64 (any_llrint f64:$Rn)),
-          (FCVTZSUXDr (!cast<Instruction>(FRINTXDr) f64:$Rn))>;
+          (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
