@@ -85,6 +85,10 @@ public:
   hlfir::Entity moveStackAsArrayExpr(mlir::Location loc,
                                      fir::FirOpBuilder &builder);
 
+  ///  "fetch" cannot be called right after "pushValue" because the counter is
+  ///  both used for pushing and fetching.
+  bool canBeFetchedAfterPush() const { return false; }
+
 private:
   /// Allocate the temporary on the heap.
   const bool allocateOnHeap;
@@ -109,6 +113,7 @@ public:
     return copy.getBase();
   }
   void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  bool canBeFetchedAfterPush() const { return true; }
 
 public:
   /// Temporary storage for the copy.
@@ -130,6 +135,7 @@ public:
   void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
   mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
   void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  bool canBeFetchedAfterPush() const { return true; }
 
 private:
   /// Keep the original value type. Values may be stored by the runtime
@@ -164,6 +170,12 @@ public:
   }
   void destroy(mlir::Location loc, fir::FirOpBuilder &builder) {
     std::visit([&](auto &temp) { temp.destroy(loc, builder); }, impl);
+  }
+  /// Can "fetch" be called to get the last value pushed with
+  /// "pushValue"?
+  bool canBeFetchedAfterPush() const {
+    return std::visit([&](auto &temp) { return temp.canBeFetchedAfterPush(); },
+                      impl);
   }
 
 private:
