@@ -2535,6 +2535,14 @@ private:
     using VecTreeTy = SmallVector<std::unique_ptr<TreeEntry>, 8>;
     TreeEntry(VecTreeTy &Container) : Container(Container) {}
 
+    /// \returns Common mask for reorder indices and reused scalars.
+    SmallVector<int> getCommonMask() const {
+      SmallVector<int> Mask;
+      inversePermutation(ReorderIndices, Mask);
+      ::addMask(Mask, ReuseShuffleIndices);
+      return Mask;
+    }
+
     /// \returns true if the scalars in VL are equal to this entry.
     bool isSame(ArrayRef<Value *> VL) const {
       auto &&IsSame = [VL](ArrayRef<Value *> Scalars, ArrayRef<int> Mask) {
@@ -9751,16 +9759,23 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
             << "SLP: perfect diamond match for gather bundle that starts with "
             << *E->Scalars.front() << ".\n");
         // Restore the mask for previous partially matched values.
-        for (auto [I, V] : enumerate(E->Scalars)) {
-          if (isa<PoisonValue>(V)) {
-            Mask[I] = PoisonMaskElem;
-            continue;
-          }
-          if (Mask[I] == PoisonMaskElem)
+        if (Entries.front()->ReorderIndices.empty() &&
+            ((Entries.front()->ReuseShuffleIndices.empty() &&
+              E->Scalars.size() == Entries.front()->Scalars.size()) ||
+             (E->Scalars.size() ==
+              Entries.front()->ReuseShuffleIndices.size()))) {
+          std::iota(Mask.begin(), Mask.end(), 0);
+        } else {
+          for (auto [I, V] : enumerate(E->Scalars)) {
+            if (isa<PoisonValue>(V)) {
+              Mask[I] = PoisonMaskElem;
+              continue;
+            }
             Mask[I] = Entries.front()->findLaneForValue(V);
+          }
         }
         ShuffleBuilder.add(Entries.front()->VectorizedValue, Mask);
-        Res = ShuffleBuilder.finalize(E->ReuseShuffleIndices);
+        Res = ShuffleBuilder.finalize(E->getCommonMask());
         return Res;
       }
       if (!Resized) {
