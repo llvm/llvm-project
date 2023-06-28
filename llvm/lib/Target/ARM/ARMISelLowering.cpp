@@ -2660,13 +2660,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // those, the target's already in a register, so we don't need to do
     // anything extra.
     if (isa<GlobalAddressSDNode>(Callee)) {
-      // When generating execute-only code we use movw movt pair.
-      // Currently execute-only is only available for architectures that
-      // support movw movt, so we are safe to assume that.
       if (Subtarget->genExecuteOnly()) {
-        assert(Subtarget->useMovt() &&
-               "long-calls with execute-only requires movt and movw!");
-        ++NumMovwMovt;
+        if (Subtarget->useMovt())
+          ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
                              DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
       } else {
@@ -2685,13 +2681,9 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     } else if (ExternalSymbolSDNode *S=dyn_cast<ExternalSymbolSDNode>(Callee)) {
       const char *Sym = S->getSymbol();
 
-      // When generating execute-only code we use movw movt pair.
-      // Currently execute-only is only available for architectures that
-      // support movw movt, so we are safe to assume that.
       if (Subtarget->genExecuteOnly()) {
-        assert(Subtarget->useMovt() &&
-               "long-calls with execute-only requires movt and movw!");
-        ++NumMovwMovt;
+        if (Subtarget->useMovt())
+          ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
                              DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
       } else {
