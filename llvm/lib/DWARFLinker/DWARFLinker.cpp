@@ -192,7 +192,8 @@ bool DWARFLinker::DIECloner::getDIENames(const DWARFDie &Die,
   if (!Info.MangledName)
     Info.MangledName = Info.Name;
 
-  if (StripTemplate && Info.Name && Info.MangledName != Info.Name) {
+  if (StripTemplate && Linker.Options.CanStripTemplateName && Info.Name &&
+      Info.MangledName != Info.Name) {
     StringRef Name = Info.Name.getString();
     if (std::optional<StringRef> StrippedName = StripTemplateParameters(Name))
       Info.NameWithoutTemplate = StringPool.getEntry(*StrippedName);
