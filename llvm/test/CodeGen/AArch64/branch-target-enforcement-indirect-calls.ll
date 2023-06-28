@@ -1,5 +1,5 @@
-; RUN: llc -mtriple aarch64--none-eabi -mattr=+bti < %s | FileCheck %s
-; RUN: llc -mtriple aarch64--none-eabi -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mattr=+bti %s -verify-machineinstrs -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,FALLBACK
+; RUN: llc -mtriple aarch64 -mattr=+bti < %s | FileCheck %s
+; RUN: llc -mtriple aarch64 -global-isel -global-isel-abort=2 -pass-remarks-missed=gisel* -mattr=+bti %s -verify-machineinstrs -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,FALLBACK
 
 ; FALLBACK: remark: <unknown>:0:0: unable to translate instruction: call: '  tail call void %p()' (in function: bti_enabled)
 
