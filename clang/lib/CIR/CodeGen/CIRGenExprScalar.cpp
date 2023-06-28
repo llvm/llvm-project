@@ -30,6 +30,52 @@ using namespace clang;
 
 namespace {
 
+struct BinOpInfo {
+  mlir::Value LHS;
+  mlir::Value RHS;
+  SourceRange Loc;
+  QualType Ty;                   // Computation Type.
+  BinaryOperator::Opcode Opcode; // Opcode of BinOp to perform
+  FPOptions FPFeatures;
+  const Expr *E; // Entire expr, for error unsupported.  May not be binop.
+
+  /// Check if the binop computes a division or a remainder.
+  bool isDivremOp() const {
+    return Opcode == BO_Div || Opcode == BO_Rem || Opcode == BO_DivAssign ||
+           Opcode == BO_RemAssign;
+  }
+
+  /// Check if the binop can result in integer overflow.
+  bool mayHaveIntegerOverflow() const {
+    // Without constant input, we can't rule out overflow.
+    auto LHSCI = dyn_cast<mlir::cir::ConstantOp>(LHS.getDefiningOp());
+    auto RHSCI = dyn_cast<mlir::cir::ConstantOp>(RHS.getDefiningOp());
+    if (!LHSCI || !RHSCI)
+      return true;
+
+    llvm::APInt Result;
+    assert(!UnimplementedFeature::mayHaveIntegerOverflow());
+    llvm_unreachable("NYI");
+    return false;
+  }
+
+  /// Check if at least one operand is a fixed point type. In such cases,
+  /// this operation did not follow usual arithmetic conversion and both
+  /// operands might not be of the same type.
+  bool isFixedPointOp() const {
+    // We cannot simply check the result type since comparison operations
+    // return an int.
+    if (const auto *BinOp = llvm::dyn_cast<BinaryOperator>(E)) {
+      QualType LHSType = BinOp->getLHS()->getType();
+      QualType RHSType = BinOp->getRHS()->getType();
+      return LHSType->isFixedPointType() || RHSType->isFixedPointType();
+    }
+    if (const auto *UnOp = llvm::dyn_cast<UnaryOperator>(E))
+      return UnOp->getSubExpr()->getType()->isFixedPointType();
+    return false;
+  }
+};
+
 class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
   CIRGenFunction &CGF;
   CIRGenBuilderTy &Builder;
@@ -599,38 +645,6 @@ public:
                               QualType DstType, mlir::Type SrcTy,
                               mlir::Type DstTy, ScalarConversionOpts Opts);
 
-  struct BinOpInfo {
-    mlir::Value LHS;
-    mlir::Value RHS;
-    SourceRange Loc;
-    QualType Ty;                   // Computation Type.
-    BinaryOperator::Opcode Opcode; // Opcode of BinOp to perform
-    FPOptions FPFeatures;
-    const Expr *E; // Entire expr, for error unsupported.  May not be binop.
-
-    /// Check if the binop computes a division or a remainder.
-    bool isDivremOp() const {
-      return Opcode == BO_Div || Opcode == BO_Rem || Opcode == BO_DivAssign ||
-             Opcode == BO_RemAssign;
-    }
-
-    /// Check if at least one operand is a fixed point type. In such cases,
-    /// this operation did not follow usual arithmetic conversion and both
-    /// operands might not be of the same type.
-    bool isFixedPointOp() const {
-      // We cannot simply check the result type since comparison operations
-      // return an int.
-      if (const auto *BinOp = llvm::dyn_cast<BinaryOperator>(E)) {
-        QualType LHSType = BinOp->getLHS()->getType();
-        QualType RHSType = BinOp->getRHS()->getType();
-        return LHSType->isFixedPointType() || RHSType->isFixedPointType();
-      }
-      if (const auto *UnOp = llvm::dyn_cast<UnaryOperator>(E))
-        return UnOp->getSubExpr()->getType()->isFixedPointType();
-      return false;
-    }
-  };
-
   BinOpInfo buildBinOps(const BinaryOperator *E) {
     BinOpInfo Result;
     Result.LHS = Visit(E->getLHS());
@@ -928,6 +942,76 @@ mlir::Value CIRGenFunction::buildScalarExpr(const Expr *E) {
          "Invalid scalar expression to emit");
 
   return ScalarExprEmitter(*this, builder).Visit(const_cast<Expr *>(E));
+}
+
+[[maybe_unused]] static bool MustVisitNullValue(const Expr *E) {
+  // If a null pointer expression's type is the C++0x nullptr_t, then
+  // it's not necessarily a simple constant and it must be evaluated
+  // for its potential side effects.
+  return E->getType()->isNullPtrType();
+}
+
+/// If \p E is a widened promoted integer, get its base (unpromoted) type.
+static std::optional<QualType> getUnwidenedIntegerType(const ASTContext &Ctx,
+                                                       const Expr *E) {
+  const Expr *Base = E->IgnoreImpCasts();
+  if (E == Base)
+    return std::nullopt;
+
+  QualType BaseTy = Base->getType();
+  if (!Ctx.isPromotableIntegerType(BaseTy) ||
+      Ctx.getTypeSize(BaseTy) >= Ctx.getTypeSize(E->getType()))
+    return std::nullopt;
+
+  return BaseTy;
+}
+
+/// Check if \p E is a widened promoted integer.
+[[maybe_unused]] static bool IsWidenedIntegerOp(const ASTContext &Ctx,
+                                                const Expr *E) {
+  return getUnwidenedIntegerType(Ctx, E).has_value();
+}
+
+/// Check if we can skip the overflow check for \p Op.
+[[maybe_unused]] static bool CanElideOverflowCheck(const ASTContext &Ctx,
+                                                   const BinOpInfo &Op) {
+  assert((isa<UnaryOperator>(Op.E) || isa<BinaryOperator>(Op.E)) &&
+         "Expected a unary or binary operator");
+
+  // If the binop has constant inputs and we can prove there is no overflow,
+  // we can elide the overflow check.
+  if (!Op.mayHaveIntegerOverflow())
+    return true;
+
+  // If a unary op has a widened operand, the op cannot overflow.
+  if (const auto *UO = dyn_cast<UnaryOperator>(Op.E))
+    return !UO->canOverflow();
+
+  // We usually don't need overflow checks for binops with widened operands.
+  // Multiplication with promoted unsigned operands is a special case.
+  const auto *BO = cast<BinaryOperator>(Op.E);
+  auto OptionalLHSTy = getUnwidenedIntegerType(Ctx, BO->getLHS());
+  if (!OptionalLHSTy)
+    return false;
+
+  auto OptionalRHSTy = getUnwidenedIntegerType(Ctx, BO->getRHS());
+  if (!OptionalRHSTy)
+    return false;
+
+  QualType LHSTy = *OptionalLHSTy;
+  QualType RHSTy = *OptionalRHSTy;
+
+  // This is the simple case: binops without unsigned multiplication, and with
+  // widened operands. No overflow check is needed here.
+  if ((Op.Opcode != BO_Mul && Op.Opcode != BO_MulAssign) ||
+      !LHSTy->isUnsignedIntegerType() || !RHSTy->isUnsignedIntegerType())
+    return true;
+
+  // For unsigned multiplication the overflow check can be elided if either one
+  // of the unpromoted types are less than half the size of the promoted type.
+  unsigned PromotedSize = Ctx.getTypeSize(Op.E->getType());
+  return (2 * Ctx.getTypeSize(LHSTy)) < PromotedSize ||
+         (2 * Ctx.getTypeSize(RHSTy)) < PromotedSize;
 }
 
 mlir::Value ScalarExprEmitter::buildMul(const BinOpInfo &Ops) {
