@@ -38,16 +38,13 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#ifdef __GLIBC__
-#if __GLIBC_MINOR__ >= 35
-#define GLIBC_INITS_RSEQ
-#endif // __GLIBC__MINOR > 35
-#endif // __GLIBC__
-
-#ifdef GLIBC_INITS_RSEQ
+#if defined(__GLIBC__) && __has_include(<sys/rseq.h>)
 #include <sys/rseq.h>
-#endif // HAS_RSEQ
-#endif // __linux__
+#ifdef RSEQ_SIG
+#define GLIBC_INITS_RSEQ
+#endif
+#endif
+#endif
 
 namespace llvm {
 namespace exegesis {
