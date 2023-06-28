@@ -19,7 +19,7 @@
 namespace __llvm_libc {
 
 [[maybe_unused]] LIBC_INLINE void
-inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
+inline_memcpy_x86_avx(Ptr __restrict dst, CPtr __restrict src, size_t count) {
   if (count == 0)
     return;
   if (count == 1)
@@ -40,12 +40,47 @@ inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
     return builtin::Memcpy<32>::head_tail(dst, src, count);
   if (count < 128)
     return builtin::Memcpy<64>::head_tail(dst, src, count);
-  if (x86::kAvx && count < 256)
+  if (count < 256)
     return builtin::Memcpy<128>::head_tail(dst, src, count);
   builtin::Memcpy<32>::block(dst, src);
   align_to_next_boundary<32, Arg::Dst>(dst, src, count);
-  static constexpr size_t kBlockSize = x86::kAvx ? 64 : 32;
-  return builtin::Memcpy<kBlockSize>::loop_and_tail(dst, src, count);
+  return builtin::Memcpy<64>::loop_and_tail(dst, src, count);
+}
+
+[[maybe_unused]] LIBC_INLINE void inline_memcpy_x86_no_avx(Ptr __restrict dst,
+                                                           CPtr __restrict src,
+                                                           size_t count) {
+  if (count == 0)
+    return;
+  if (count == 1)
+    return builtin::Memcpy<1>::block(dst, src);
+  if (count == 2)
+    return builtin::Memcpy<2>::block(dst, src);
+  if (count == 3)
+    return builtin::Memcpy<3>::block(dst, src);
+  if (count == 4)
+    return builtin::Memcpy<4>::block(dst, src);
+  if (count < 8)
+    return builtin::Memcpy<4>::head_tail(dst, src, count);
+  if (count < 16)
+    return builtin::Memcpy<8>::head_tail(dst, src, count);
+  if (count < 32)
+    return builtin::Memcpy<16>::head_tail(dst, src, count);
+  if (count < 64)
+    return builtin::Memcpy<32>::head_tail(dst, src, count);
+  if (count < 128)
+    return builtin::Memcpy<64>::head_tail(dst, src, count);
+  builtin::Memcpy<32>::block(dst, src);
+  align_to_next_boundary<32, Arg::Dst>(dst, src, count);
+  return builtin::Memcpy<32>::loop_and_tail(dst, src, count);
+}
+
+[[maybe_unused]] LIBC_INLINE void
+inline_memcpy_x86(Ptr __restrict dst, CPtr __restrict src, size_t count) {
+  if constexpr (x86::kAvx)
+    return inline_memcpy_x86_avx(dst, src, count);
+  else
+    return inline_memcpy_x86_no_avx(dst, src, count);
 }
 
 [[maybe_unused]] LIBC_INLINE void
