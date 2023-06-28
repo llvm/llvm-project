@@ -1002,10 +1002,9 @@ static void generateReproducer(CmpInst *Cond, Module *M,
   assert(!verifyFunction(*F, &dbgs()));
 }
 
-static bool checkAndReplaceCondition(
-    CmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
-    Instruction *ContextInst, Module *ReproducerModule,
-    ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT) {
+static std::optional<bool> checkCondition(CmpInst *Cmp, ConstraintInfo &Info,
+                                          unsigned NumIn, unsigned NumOut,
+                                          Instruction *ContextInst) {
   LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
 
   CmpInst::Predicate Pred = Cmp->getPredicate();
@@ -1015,7 +1014,7 @@ static bool checkAndReplaceCondition(
   auto R = Info.getConstraintForSolving(Pred, A, B);
   if (R.empty() || !R.isValid(Info)){
     LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
-    return false;
+    return std::nullopt;
   }
 
   auto &CSToUse = Info.getCS(R.IsSigned);
@@ -1030,12 +1029,12 @@ static bool checkAndReplaceCondition(
       CSToUse.popLastConstraint();
   });
 
-  auto ReplaceCmpWithConstant = [&](CmpInst *Cmp, bool IsTrue) {
+  if (auto ImpliedCondition = R.isImpliedBy(CSToUse)) {
     if (!DebugCounter::shouldExecute(EliminatedCounter))
-      return false;
+      return std::nullopt;
 
     LLVM_DEBUG({
-      if (IsTrue) {
+      if (*ImpliedCondition) {
         dbgs() << "Condition " << *Cmp;
       } else {
         auto InversePred = Cmp->getInversePredicate();
@@ -1045,7 +1044,17 @@ static bool checkAndReplaceCondition(
       dbgs() << " implied by dominating constraints\n";
       CSToUse.dump();
     });
+    return ImpliedCondition;
+  }
 
+  return std::nullopt;
+}
+
+static bool checkAndReplaceCondition(
+    CmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
+    Instruction *ContextInst, Module *ReproducerModule,
+    ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT) {
+  auto ReplaceCmpWithConstant = [&](CmpInst *Cmp, bool IsTrue) {
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
@@ -1068,9 +1077,9 @@ static bool checkAndReplaceCondition(
     return true;
   };
 
-  if (auto ImpliedCondition = R.isImpliedBy(CSToUse))
+  if (auto ImpliedCondition =
+          checkCondition(Cmp, Info, NumIn, NumOut, ContextInst))
     return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
-
   return false;
 }
 
