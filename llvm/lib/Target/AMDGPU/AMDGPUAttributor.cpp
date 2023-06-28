@@ -942,7 +942,7 @@ public:
         {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
          &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
          &AAAMDWavesPerEU::ID, &AACallEdges::ID, &AAPointerInfo::ID,
-         &AAPotentialConstantValues::ID});
+         &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID});
 
     AttributorConfig AC(CGUpdater);
     AC.Allowed = &Allowed;
