@@ -9393,9 +9393,9 @@ public:
     // process to keep correct order.
     auto *VecTy = FixedVectorType::get(E->Scalars.front()->getType(),
                                        E->getVectorFactor());
-    Value *Vec = Builder.CreateAlignedLoad(
-        VecTy, PoisonValue::get(VecTy->getPointerTo()), MaybeAlign());
-    return Vec;
+    return Builder.CreateAlignedLoad(
+        VecTy, PoisonValue::get(PointerType::getUnqual(VecTy->getContext())),
+        MaybeAlign());
   }
   /// Adds 2 input vectors and the mask for their shuffling.
   void add(Value *V1, Value *V2, ArrayRef<int> Mask) {
@@ -10371,20 +10371,17 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       LoadInst *LI = cast<LoadInst>(VL0);
       Instruction *NewLI;
-      unsigned AS = LI->getPointerAddressSpace();
       Value *PO = LI->getPointerOperand();
       if (E->State == TreeEntry::Vectorize) {
-        Value *VecPtr = Builder.CreateBitCast(PO, VecTy->getPointerTo(AS));
-        NewLI = Builder.CreateAlignedLoad(VecTy, VecPtr, LI->getAlign());
+        NewLI = Builder.CreateAlignedLoad(VecTy, PO, LI->getAlign());
 
-        // The pointer operand uses an in-tree scalar so we add the new BitCast
-        // or LoadInst to ExternalUses list to make sure that an extract will
+        // The pointer operand uses an in-tree scalar so we add the new
+        // LoadInst to ExternalUses list to make sure that an extract will
         // be generated in the future.
         if (TreeEntry *Entry = getTreeEntry(PO)) {
           // Find which lane we need to extract.
           unsigned FoundLane = Entry->findLaneForValue(PO);
-          ExternalUses.emplace_back(
-              PO, PO != VecPtr ? cast<User>(VecPtr) : NewLI, FoundLane);
+          ExternalUses.emplace_back(PO, NewLI, FoundLane);
         }
       } else {
         assert(E->State == TreeEntry::ScatterVectorize && "Unhandled state");
