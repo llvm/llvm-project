@@ -30,6 +30,8 @@
 #include "UtilitiesRTL.h"
 #include "omptarget.h"
 
+#include "hsakmt/hsakmt.h"
+
 #include "print_tracing.h"
 
 #include "memtype.h"
@@ -45,8 +47,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "hsakmt/hsakmt.h"
 
 #if defined(__has_include)
 #if __has_include("hsa/hsa.h")
@@ -80,12 +80,12 @@
 #define OMPT_IF_TRACING_ENABLED(stmts)
 #endif
 
-#define CHECK_KMT_ERROR(val) kmtCheck((val), #val, __FILE__, __LINE__)
+#define KMT_EXPECT_SUCCESS(val) kmtExpectSucc((val), #val, __FILE__, __LINE__)
 template <typename T>
-int kmtCheck(T err, const char *const func, const char *const file,
-              const int line) {
+int kmtExpectSucc(T err, const char *const func, const char *const file,
+                  const int line) {
   if (err != HSAKMT_STATUS_SUCCESS) {
-    DP("HsaKmt Error at: %s : %u \n", file, line);
+    FAILURE_MESSAGE("HsaKmt Error at: %s : %u \n", file, line);
     return -1;
   }
   return 0;
@@ -94,8 +94,6 @@ int kmtCheck(T err, const char *const func, const char *const file,
 #ifdef OMPT_SUPPORT
 extern void setOmptTimestamp(uint64_t Start, uint64_t End);
 extern void setOmptHostToDeviceRate(double Slope, double Offset);
-
-
 
 /// HSA system clock frequency
 double TicksToTime = 1.0;
@@ -2504,7 +2502,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// AMDGPU returns the product of the number of compute units and the waves
   /// per compute unit.
-  uint64_t requestedRPCPortCount() const override  {
+  uint64_t requestedRPCPortCount() const override {
     return HardwareParallelism;
   }
 
@@ -3581,8 +3579,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
     NoMapChecks = BoolEnvar("OMPX_DISABLE_MAPS", true);
     DisableUsmMaps = BoolEnvar("OMPX_DISABLE_USM_MAPS", false);
-    APUMaps = BoolEnvar("OMPX_APU_MAPS", false);
-    HSAXnack = BoolEnvar("HSA_XNACK", false);
+    HsaXnack = BoolEnvar("HSA_XNACK", false);
+    IsHsaXnackDefined = HsaXnack.isPresent();
   }
 
   void setUpEnv() override final {
@@ -3594,36 +3592,13 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     if (DisableUsmMaps.get() == true) {
       EnableFineGrainedMemory = true;
     }
-
-    if (hasAPUDevice() || hasGfx90aDevice()) {
-      // OMPX_APU_MAPS is a temporary env variable
-      // that should always be used with HSA_XNACK=1:
-      // error if it is not. Once this is made default behavior
-      // for USM=OFF, HSA_XNACK=1, then we can remove the error
-      // as the behavior is only triggered by HSA_XNACK value
-      if ((APUMaps.get() == true) && (HSAXnack.get() == false)) {
-        FATAL_MESSAGE0(1, "OMPX_APU_MAPS behavior requires HSA_XNACK=1");
-      }
-
-      assert(!(Plugin::get().getRequiresFlags() & OMP_REQ_UNDEFINED));
-      // Last condition of the following if statement is a workaround due to
-      // the presence of OMPX_APU_MAPS to enable unified shared memory mode
-      // for default programs run with HSA_XNACK=1. Remove once the
-      // OMPX_APU_MAPS mode is made default. Formerly implemented in
-      // RTLsTy::disableAPUMapsForUSM
-
-      if ((APUMaps.get() == true) && (HSAXnack.get() == true) &&
-          !(Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
-        DisableAllocationsForMapsOnApus = true;
-      }
-    } else if (APUMaps.get() == true && HSAXnack == true) {
-      FATAL_MESSAGE0(1,
-                     "OMPX_APU_MAPS and HSA_XNACK enabled on non-APU system");
-    }
   }
 
   /// Check whether the image is compatible with an AMDGPU device.
-  Expected<bool> isImageCompatible(__tgt_image_info *Info) const override {
+  Expected<bool>
+  isImageCompatible(__tgt_image_info *Info,
+                    __tgt_device_image *TgtImage) const override {
+
     for (hsa_agent_t Agent : KernelAgents) {
       std::string Target;
       auto Err = utils::iterateAgentISAs(Agent, [&](hsa_isa_t ISA) {
@@ -3650,14 +3625,47 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       if (utils::isImageCompatibleWithEnv(Info, Target))
         return true;
     }
+
+    // Check if the system's XNACK mode matches the one required by the
+    // image. Print a warning if not.
+    utils::checkImageCompatibilityWithSystemXnackMode(TgtImage,
+                                                      IsXnackEnabled());
+
     return false;
   }
 
-  void
-  checkAndAdjustXnackStatus(__tgt_device_image *TgtImage) const override final {
-    if (utils::wasBinaryBuiltWithXnackEnabled(TgtImage)) {
-      // TODO: Implement me. This is part of another ticket. It requries methods
-      // to manipulate the XNACK status.
+  void checkAndAdjustUsmModeForTargetImage(
+      __tgt_device_image *TgtImage) override final {
+    assert((TgtImage != nullptr) && "TgtImage is nullptr");
+    assert(!(Plugin::get().getRequiresFlags() & OMP_REQ_UNDEFINED) &&
+           "Requires flags are not set.");
+
+    if (!(hasAPUDevice() || hasGfx90aDevice()))
+      return;
+
+    bool IsXnackRequired =
+        Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY;
+
+    utils::XnackBuildMode BinaryXnackMode =
+        utils::extractXnackModeFromBinary(TgtImage);
+
+    DisableAllocationsForMapsOnApus = false;
+
+    if (IsXnackEnabled()) {
+      if (!IsXnackRequired) {
+        switch (BinaryXnackMode) {
+        case utils::XnackBuildMode::XNACK_PLUS:
+        case utils::XnackBuildMode::XNACK_ANY:
+          DisableAllocationsForMapsOnApus = true; // Zero-copy
+        }
+        return;
+      }
+    } else {
+      if (IsXnackRequired) {
+        FAILURE_MESSAGE(
+            "XNACK is disabled. However, the program requires XNACK "
+            "support. Enable XNACK and re-run the program.\n");
+      }
     }
   }
 
@@ -3727,6 +3735,15 @@ private:
     return HSA_STATUS_ERROR;
   }
 
+  bool IsXnackEnabled() const {
+    // -1 instructs the runtime to query the XNACK status without modifying it.
+    int32_t enable = -1;
+    KMT_EXPECT_SUCCESS(hsaKmtOpenKFD());
+    KMT_EXPECT_SUCCESS(hsaKmtGetXNACKMode(&enable));
+    KMT_EXPECT_SUCCESS(hsaKmtCloseKFD());
+    return (enable > 0);
+  }
+
   bool checkForDeviceByGFXName(const llvm::StringRef GfxLookUpName) {
     bool CheckForMI300A =
         (GfxLookUpName.find_insensitive("gfx940") != llvm::StringRef::npos);
@@ -3776,8 +3793,8 @@ private:
 
   BoolEnvar NoMapChecks;
   BoolEnvar DisableUsmMaps;
-  BoolEnvar APUMaps;
-  BoolEnvar HSAXnack;
+  BoolEnvar HsaXnack;
+  bool IsHsaXnackDefined{false};
 
   // Set by OMPX_APU_MAPS environment variable.
   // If set, maps cause no copy operations. USM is used instead. Allocated

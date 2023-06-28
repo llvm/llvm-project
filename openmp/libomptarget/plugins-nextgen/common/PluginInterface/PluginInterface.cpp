@@ -476,8 +476,7 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
 uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint32_t NumTeamsClause[3],
                                        uint64_t LoopTripCount,
-                                       uint32_t &NumThreads
-				       ) const {
+                                       uint32_t &NumThreads) const {
   assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
          "Multi dimensional launch not supported yet.");
 
@@ -1501,21 +1500,15 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *TgtImage,
   if (!Plugin::isActive())
     return false;
 
-
   if (!__tgt_rtl_is_valid_binary(TgtImage))
     return false;
-
-  // Need to call this method before 'isImageCompatibleCheck' in order to adjust
-  // settings.
-  Plugin::get().checkAndAdjustXnackStatus(TgtImage);
-
   // A subarchitecture was not specified. Assume it is compatible.
   if (!Info->Arch)
     return true;
 
   // Check the compatibility with all the available devices. Notice the
   // devices may not be initialized yet.
-  auto CompatibleOrErr = Plugin::get().isImageCompatible(Info);
+  auto CompatibleOrErr = Plugin::get().isImageCompatible(Info, TgtImage);
   if (!CompatibleOrErr) {
     // This error should not abort the execution, so we just inform the user
     // through the debug system.
@@ -1624,6 +1617,8 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
            DeviceId, toString(std::move(Err)).data());
     return nullptr;
   }
+
+  Plugin::get().checkAndAdjustUsmModeForTargetImage(TgtImage);
 
   __tgt_target_table *Table = *TableOrErr;
   assert(Table != nullptr && "Invalid table");

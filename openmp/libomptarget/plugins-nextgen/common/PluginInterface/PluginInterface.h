@@ -1008,7 +1008,7 @@ struct GenericPluginTy {
 
   virtual void setUpEnv() {}
   virtual void
-  checkAndAdjustXnackStatus(__tgt_device_image *TgtImage) const {}
+  checkAndAdjustUsmModeForTargetImage(__tgt_device_image *TgtImage) {}
 
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
@@ -1059,7 +1059,9 @@ struct GenericPluginTy {
   /// Indicate if an image is compatible with the plugin devices. Notice that
   /// this function may be called before actually initializing the devices. So
   /// we could not move this function into GenericDeviceTy.
-  virtual Expected<bool> isImageCompatible(__tgt_image_info *Info) const = 0;
+  virtual Expected<bool>
+  isImageCompatible(__tgt_image_info *Info,
+                    __tgt_device_image *TgtImage) const = 0;
 
   /// Indicate whether the plugin supports empty images.
   virtual bool supportsEmptyImages() const { return false; }

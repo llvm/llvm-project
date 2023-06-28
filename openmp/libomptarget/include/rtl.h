@@ -19,8 +19,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DynamicLibrary.h"
 
-#include "omptarget.h"
-
 #include <list>
 #include <map>
 #include <mutex>

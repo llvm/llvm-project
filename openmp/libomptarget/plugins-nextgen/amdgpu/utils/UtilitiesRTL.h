@@ -81,6 +81,13 @@ enum COV_OFFSETS : uint32_t {
   PER_DEVICE_PREALLOC_SIZE = 131072
 };
 
+enum XnackBuildMode : short {
+  XNACK_UNSUPPORTED = -1,
+  XNACK_MINUS = 0,
+  XNACK_PLUS = 1,
+  XNACK_ANY = 2
+};
+
 /// Parse a TargetID to get processor arch and feature map.
 /// Returns processor subarch.
 /// Returns TargetID features in \p FeatureMap argument.
@@ -169,25 +176,41 @@ bool isImageCompatibleWithEnv(const __tgt_image_info *Info,
   return true;
 }
 
-// Check target image for XNACK option (XNACK+, XNACK-ANY, XNACK-)
-[[nodiscard]] bool
-wasBinaryBuiltWithXnackEnabled(__tgt_device_image *TgtImage) {
+// Check target image for XNACK mode (XNACK+, XNACK-ANY, XNACK-)
+[[nodiscard]] XnackBuildMode
+extractXnackModeFromBinary(__tgt_device_image *TgtImage) {
   assert((TgtImage != nullptr) && "TgtImage is nullptr.");
   u_int16_t EFlags = elf_get_eflags(TgtImage);
 
   unsigned XnackFlags = EFlags & ELF::EF_AMDGPU_FEATURE_XNACK_V4;
 
   switch (XnackFlags) {
-  case ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4:
   case ELF::EF_AMDGPU_FEATURE_XNACK_ON_V4:
-    return true;
+    return XnackBuildMode::XNACK_PLUS;
+  case ELF::EF_AMDGPU_FEATURE_XNACK_ANY_V4:
+    return XnackBuildMode::XNACK_ANY;
   case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
+    return XnackBuildMode::XNACK_MINUS;
   case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
-    return false;
+    return XnackBuildMode::XNACK_UNSUPPORTED;
   default:
     FAILURE_MESSAGE("Unknown XNACK flag!\n");
   }
-  return false;
+  return XNACK_MINUS;
+}
+
+void checkImageCompatibilityWithSystemXnackMode(__tgt_device_image *TgtImage,
+                                                bool IsXnackEnabled) {
+  XnackBuildMode ImageXnackMode = utils::extractXnackModeFromBinary(TgtImage);
+  if ((IsXnackEnabled && !ImageXnackMode)) {
+    FAILURE_MESSAGE(
+        "Image is not compatible with current XNACK mode! XNACK is enabled "
+        "on the system but image was compiled with xnack-.\n");
+  } else if (!IsXnackEnabled && (ImageXnackMode == 1)) {
+    FAILURE_MESSAGE("Image is not compatible with current XNACK mode! "
+                    "XNACK is disabled on the system. However, the image "
+                    "requires xnack+.\n");
+  }
 }
 
 struct KernelMetaDataTy {
