@@ -27,6 +27,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include <regex>
+
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
@@ -109,6 +111,37 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
     language = frame->GuessLanguage();
   // END SWIFT
   
+  // Add a hint if object description was requested, but no description
+  // function was implemented.
+  auto maybe_add_hint = [&](llvm::StringRef output) {
+    // Identify the default output of object description for Swift and
+    // Objective-C
+    // "<Name: 0x...>. The regex is:
+    // - Start with "<".
+    // - Followed by 1 or more non-whitespace characters.
+    // - Followed by ": 0x".
+    // - Followed by 5 or more hex digits.
+    // - Followed by ">".
+    // - End with zero or more whitespace characters.
+    const std::regex swift_class_regex("^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
+
+    if (GetDebugger().GetShowDontUsePoHint() && target_ptr &&
+        (language == lldb::eLanguageTypeSwift ||
+         language == lldb::eLanguageTypeObjC) &&
+        std::regex_match(output.data(), swift_class_regex)) {
+
+      static bool note_shown = false;
+      if (note_shown)
+        return;
+
+      result.GetOutputStream()
+          << "note: object description requested, but type doesn't implement "
+             "a custom object description. Consider using \"p\" instead of "
+             "\"po\" (this note will only be shown once per debug session).\n";
+      note_shown = true;
+    }
+  };
+
   // First, try `expr` as the name of a frame variable.
   if (frame) {
     auto valobj_sp = frame->FindVariable(ConstString(expr));
@@ -126,7 +159,15 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
                                         flags, expr);
       }
 
-      valobj_sp->Dump(result.GetOutputStream(), dump_options);
+      if (is_po) {
+        StreamString temp_result_stream;
+        valobj_sp->Dump(temp_result_stream, dump_options);
+        llvm::StringRef output = temp_result_stream.GetString();
+        maybe_add_hint(output);
+        result.GetOutputStream() << output;
+      } else {
+        valobj_sp->Dump(result.GetOutputStream(), dump_options);
+      }
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }
@@ -184,8 +225,17 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
                                         expr);
       }
 
-      if (valobj_sp->GetError().GetError() != UserExpression::kNoResult)
-        valobj_sp->Dump(result.GetOutputStream(), dump_options);
+      if (valobj_sp->GetError().GetError() != UserExpression::kNoResult) {
+        if (is_po) {
+          StreamString temp_result_stream;
+          valobj_sp->Dump(temp_result_stream, dump_options);
+          llvm::StringRef output = temp_result_stream.GetString();
+          maybe_add_hint(output);
+          result.GetOutputStream() << output;
+        } else {
+          valobj_sp->Dump(result.GetOutputStream(), dump_options);
+        }
+      }
 
       if (suppress_result)
         if (auto result_var_sp =
