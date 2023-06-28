@@ -2237,6 +2237,21 @@ TEST(TransferTest, CopyConstructorWithParens) {
       });
 }
 
+TEST(TransferTest, CopyConstructorArgIsRefReturnedByFunction) {
+  // This is a crash repro.
+  std::string Code = R"(
+    struct S {};
+    const S &returnsSRef();
+    void target() {
+      S s(returnsSRef());
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {});
+}
+
 TEST(TransferTest, MoveConstructor) {
   std::string Code = R"(
     namespace std {
