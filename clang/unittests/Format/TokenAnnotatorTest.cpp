@@ -554,6 +554,17 @@ TEST_F(TokenAnnotatorTest, UnderstandsCasts) {
   Tokens = annotate("throw (Foo)p;");
   EXPECT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_CastRParen);
+
+  Tokens = annotate("#define FOO(x) (((uint64_t)(x) * BAR) / 100)");
+  EXPECT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::r_paren, TT_CastRParen);
+  EXPECT_TOKEN(Tokens[13], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[14], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("return (Foo) & 10;");
+  EXPECT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsDynamicExceptionSpecifier) {
