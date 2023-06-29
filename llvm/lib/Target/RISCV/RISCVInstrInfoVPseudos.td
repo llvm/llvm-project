@@ -2036,7 +2036,7 @@ multiclass VPseudoBinaryEmul<VReg RetClass,
   let VLMul = lmul.value in {
     defvar suffix = !if(sew, "_" # lmul.MX # "_E" # sew, "_" # lmul.MX);
     def suffix # "_" # emul.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
-                                                            Constraint>;
+                                                     Constraint>;
     def suffix # "_" # emul.MX # "_TU": VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
                                                                      Constraint>;
     def suffix # "_" # emul.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
@@ -4008,14 +4008,14 @@ class VPatBinaryM<string intrinsic_name,
                    (op2_type op2_kind:$rs2),
                    GPR:$vl, sew)>;
 
-class VPatBinaryNoMaskTA<string intrinsic_name,
-                         string inst,
-                         ValueType result_type,
-                         ValueType op1_type,
-                         ValueType op2_type,
-                         int sew,
-                         VReg op1_reg_class,
-                         DAGOperand op2_kind> :
+class VPatBinaryNoMask<string intrinsic_name,
+                       string inst,
+                       ValueType result_type,
+                       ValueType op1_type,
+                       ValueType op2_type,
+                       int sew,
+                       VReg op1_reg_class,
+                       DAGOperand op2_kind> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
                    (result_type (undef)),
                    (op1_type op1_reg_class:$rs1),
@@ -4046,14 +4046,14 @@ class VPatBinaryNoMaskTU<string intrinsic_name,
                    (op2_type op2_kind:$rs2),
                    GPR:$vl, sew, TU_MU)>;
 
-class VPatBinaryNoMaskTARoundingMode<string intrinsic_name,
-                                     string inst,
-                                     ValueType result_type,
-                                     ValueType op1_type,
-                                     ValueType op2_type,
-                                     int sew,
-                                     VReg op1_reg_class,
-                                     DAGOperand op2_kind> :
+class VPatBinaryNoMaskRoundingMode<string intrinsic_name,
+                                   string inst,
+                                   ValueType result_type,
+                                   ValueType op1_type,
+                                   ValueType op2_type,
+                                   int sew,
+                                   VReg op1_reg_class,
+                                   DAGOperand op2_kind> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
                    (result_type (undef)),
                    (op1_type op1_reg_class:$rs1),
@@ -4517,19 +4517,19 @@ multiclass VPatBinaryM<string intrinsic,
                        op2_kind>;
 }
 
-multiclass VPatBinaryTA<string intrinsic,
-                        string inst,
-                        ValueType result_type,
-                        ValueType op1_type,
-                        ValueType op2_type,
-                        ValueType mask_type,
-                        int sew,
-                        VReg result_reg_class,
-                        VReg op1_reg_class,
-                        DAGOperand op2_kind>
+multiclass VPatBinary<string intrinsic,
+                      string inst,
+                      ValueType result_type,
+                      ValueType op1_type,
+                      ValueType op2_type,
+                      ValueType mask_type,
+                      int sew,
+                      VReg result_reg_class,
+                      VReg op1_reg_class,
+                      DAGOperand op2_kind>
 {
-  def : VPatBinaryNoMaskTA<intrinsic, inst, result_type, op1_type, op2_type,
-                           sew, op1_reg_class, op2_kind>;
+  def : VPatBinaryNoMask<intrinsic, inst, result_type, op1_type, op2_type,
+                         sew, op1_reg_class, op2_kind>;
   def : VPatBinaryNoMaskTU<intrinsic, inst, result_type, op1_type, op2_type,
                            sew, result_reg_class, op1_reg_class, op2_kind>;
   def : VPatBinaryMaskTA<intrinsic, inst, result_type, op1_type, op2_type,
@@ -4537,18 +4537,18 @@ multiclass VPatBinaryTA<string intrinsic,
                          op2_kind>;
 }
 
-multiclass VPatBinaryTARoundingMode<string intrinsic,
-                                    string inst,
-                                    ValueType result_type,
-                                    ValueType op1_type,
-                                    ValueType op2_type,
-                                    ValueType mask_type,
-                                    int sew,
-                                    VReg result_reg_class,
-                                    VReg op1_reg_class,
-                                    DAGOperand op2_kind>
+multiclass VPatBinaryRoundingMode<string intrinsic,
+                                  string inst,
+                                  ValueType result_type,
+                                  ValueType op1_type,
+                                  ValueType op2_type,
+                                  ValueType mask_type,
+                                  int sew,
+                                  VReg result_reg_class,
+                                  VReg op1_reg_class,
+                                  DAGOperand op2_kind>
 {
-  def : VPatBinaryNoMaskTARoundingMode<intrinsic, inst, result_type, op1_type, op2_type,
+  def : VPatBinaryNoMaskRoundingMode<intrinsic, inst, result_type, op1_type, op2_type,
                                        sew, op1_reg_class, op2_kind>;
   def : VPatBinaryNoMaskTURoundingMode<intrinsic, inst, result_type, op1_type, op2_type,
                                        sew, result_reg_class, op1_reg_class, op2_kind>;
@@ -4676,26 +4676,26 @@ multiclass VPatBinaryV_VV<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist, bit isSEWAware = 0> {
   foreach vti = vtilist in
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatBinaryTA<intrinsic,
-                        !if(isSEWAware,
-                            instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
-                            instruction # "_VV_" # vti.LMul.MX),
-                        vti.Vector, vti.Vector, vti.Vector,vti.Mask,
-                        vti.Log2SEW, vti.RegClass,
-                        vti.RegClass, vti.RegClass>;
+    defm : VPatBinary<intrinsic,
+                      !if(isSEWAware,
+                          instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
+                          instruction # "_VV_" # vti.LMul.MX),
+                      vti.Vector, vti.Vector, vti.Vector,vti.Mask,
+                      vti.Log2SEW, vti.RegClass,
+                      vti.RegClass, vti.RegClass>;
 }
 
 multiclass VPatBinaryV_VV_RM<string intrinsic, string instruction,
                              list<VTypeInfo> vtilist, bit isSEWAware = 0> {
   foreach vti = vtilist in
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatBinaryTARoundingMode<intrinsic,
-                                    !if(isSEWAware,
-                                        instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
-                                        instruction # "_VV_" # vti.LMul.MX),
-                                    vti.Vector, vti.Vector, vti.Vector,vti.Mask,
-                                    vti.Log2SEW, vti.RegClass,
-                                    vti.RegClass, vti.RegClass>;
+    defm : VPatBinaryRoundingMode<intrinsic,
+                                  !if(isSEWAware,
+                                      instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
+                                      instruction # "_VV_" # vti.LMul.MX),
+                                  vti.Vector, vti.Vector, vti.Vector,vti.Mask,
+                                  vti.Log2SEW, vti.RegClass,
+                                  vti.RegClass, vti.RegClass>;
 }
 
 multiclass VPatBinaryV_VV_INT<string intrinsic, string instruction,
@@ -4703,11 +4703,11 @@ multiclass VPatBinaryV_VV_INT<string intrinsic, string instruction,
   foreach vti = vtilist in {
     defvar ivti = GetIntVTypeInfo<vti>.Vti;
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatBinaryTA<intrinsic,
-                        instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
-                        vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
-                        vti.Log2SEW, vti.RegClass,
-                        vti.RegClass, vti.RegClass>;
+    defm : VPatBinary<intrinsic,
+                      instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW,
+                      vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
+                      vti.Log2SEW, vti.RegClass,
+                      vti.RegClass, vti.RegClass>;
   }
 }
 
@@ -4724,10 +4724,10 @@ multiclass VPatBinaryV_VV_INT_EEW<string intrinsic, string instruction,
       defvar inst = instruction # "_VV_" # vti.LMul.MX # "_E" # vti.SEW # "_" # emul_str;
       let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
                                    GetVTypePredicates<ivti>.Predicates) in
-      defm : VPatBinaryTA<intrinsic, inst,
-                          vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
-                          vti.Log2SEW, vti.RegClass,
-                          vti.RegClass, ivti.RegClass>;
+      defm : VPatBinary<intrinsic, inst,
+                        vti.Vector, vti.Vector, ivti.Vector, vti.Mask,
+                        vti.Log2SEW, vti.RegClass,
+                        vti.RegClass, ivti.RegClass>;
     }
   }
 }
@@ -4737,13 +4737,13 @@ multiclass VPatBinaryV_VX<string intrinsic, string instruction,
   foreach vti = vtilist in {
     defvar kind = "V"#vti.ScalarSuffix;
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatBinaryTA<intrinsic,
-                        !if(isSEWAware,
-                            instruction#"_"#kind#"_"#vti.LMul.MX#"_E"#vti.SEW,
-                            instruction#"_"#kind#"_"#vti.LMul.MX),
-                        vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
-                        vti.Log2SEW, vti.RegClass,
-                        vti.RegClass, vti.ScalarRegClass>;
+    defm : VPatBinary<intrinsic,
+                      !if(isSEWAware,
+                          instruction#"_"#kind#"_"#vti.LMul.MX#"_E"#vti.SEW,
+                          instruction#"_"#kind#"_"#vti.LMul.MX),
+                      vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
+                      vti.Log2SEW, vti.RegClass,
+                      vti.RegClass, vti.ScalarRegClass>;
   }
 }
 
@@ -4752,13 +4752,13 @@ multiclass VPatBinaryV_VX_RM<string intrinsic, string instruction,
   foreach vti = vtilist in {
     defvar kind = "V"#vti.ScalarSuffix;
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatBinaryTARoundingMode<intrinsic,
-                                    !if(isSEWAware,
-                                        instruction#"_"#kind#"_"#vti.LMul.MX#"_E"#vti.SEW,
-                                        instruction#"_"#kind#"_"#vti.LMul.MX),
-                                    vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
-                                    vti.Log2SEW, vti.RegClass,
-                                    vti.RegClass, vti.ScalarRegClass>;
+    defm : VPatBinaryRoundingMode<intrinsic,
+                                  !if(isSEWAware,
+                                      instruction#"_"#kind#"_"#vti.LMul.MX#"_E"#vti.SEW,
+                                      instruction#"_"#kind#"_"#vti.LMul.MX),
+                                  vti.Vector, vti.Vector, vti.Scalar, vti.Mask,
+                                  vti.Log2SEW, vti.RegClass,
+                                  vti.RegClass, vti.ScalarRegClass>;
   }
 }
 
@@ -4766,20 +4766,20 @@ multiclass VPatBinaryV_VX_INT<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist> {
   foreach vti = vtilist in
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatBinaryTA<intrinsic, instruction # "_VX_" # vti.LMul.MX,
-                        vti.Vector, vti.Vector, XLenVT, vti.Mask,
-                        vti.Log2SEW, vti.RegClass,
-                        vti.RegClass, GPR>;
+    defm : VPatBinary<intrinsic, instruction # "_VX_" # vti.LMul.MX,
+                      vti.Vector, vti.Vector, XLenVT, vti.Mask,
+                      vti.Log2SEW, vti.RegClass,
+                      vti.RegClass, GPR>;
 }
 
 multiclass VPatBinaryV_VI<string intrinsic, string instruction,
                           list<VTypeInfo> vtilist, Operand imm_type> {
   foreach vti = vtilist in
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatBinaryTA<intrinsic, instruction # "_VI_" # vti.LMul.MX,
-                        vti.Vector, vti.Vector, XLenVT, vti.Mask,
-                        vti.Log2SEW, vti.RegClass,
-                        vti.RegClass, imm_type>;
+    defm : VPatBinary<intrinsic, instruction # "_VI_" # vti.LMul.MX,
+                      vti.Vector, vti.Vector, XLenVT, vti.Mask,
+                      vti.Log2SEW, vti.RegClass,
+                      vti.RegClass, imm_type>;
 }
 
 multiclass VPatBinaryV_VI_RM<string intrinsic, string instruction,
@@ -4787,11 +4787,11 @@ multiclass VPatBinaryV_VI_RM<string intrinsic, string instruction,
                              Operand imm_type> {
   foreach vti = vtilist in
     let Predicates = GetVTypePredicates<vti>.Predicates in
-    defm : VPatBinaryTARoundingMode<intrinsic,
-                                    instruction # "_VI_" # vti.LMul.MX,
-                                    vti.Vector, vti.Vector, XLenVT, vti.Mask,
-                                    vti.Log2SEW, vti.RegClass,
-                                    vti.RegClass, imm_type>;
+    defm : VPatBinaryRoundingMode<intrinsic,
+                                  instruction # "_VI_" # vti.LMul.MX,
+                                  vti.Vector, vti.Vector, XLenVT, vti.Mask,
+                                  vti.Log2SEW, vti.RegClass,
+                                  vti.RegClass, imm_type>;
 }
 
 multiclass VPatBinaryM_MM<string intrinsic, string instruction> {
@@ -4809,10 +4809,10 @@ multiclass VPatBinaryW_VV<string intrinsic, string instruction,
     defvar Wti = VtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinaryTA<intrinsic, instruction # "_VV_" # Vti.LMul.MX,
-                        Wti.Vector, Vti.Vector, Vti.Vector, Vti.Mask,
-                        Vti.Log2SEW, Wti.RegClass,
-                        Vti.RegClass, Vti.RegClass>;
+    defm : VPatBinary<intrinsic, instruction # "_VV_" # Vti.LMul.MX,
+                      Wti.Vector, Vti.Vector, Vti.Vector, Vti.Mask,
+                      Vti.Log2SEW, Wti.RegClass,
+                      Vti.RegClass, Vti.RegClass>;
   }
 }
 
@@ -4824,10 +4824,10 @@ multiclass VPatBinaryW_VX<string intrinsic, string instruction,
     defvar kind = "V"#Vti.ScalarSuffix;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinaryTA<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
-                        Wti.Vector, Vti.Vector, Vti.Scalar, Vti.Mask,
-                        Vti.Log2SEW, Wti.RegClass,
-                        Vti.RegClass, Vti.ScalarRegClass>;
+    defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
+                      Wti.Vector, Vti.Vector, Vti.Scalar, Vti.Mask,
+                      Vti.Log2SEW, Wti.RegClass,
+                      Vti.RegClass, Vti.ScalarRegClass>;
   }
 }
 
@@ -4868,10 +4868,10 @@ multiclass VPatBinaryW_WX<string intrinsic, string instruction,
     defvar kind = "W"#Vti.ScalarSuffix;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinaryTA<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
-                        Wti.Vector, Wti.Vector, Vti.Scalar, Vti.Mask,
-                        Vti.Log2SEW, Wti.RegClass,
-                        Wti.RegClass, Vti.ScalarRegClass>;
+    defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
+                      Wti.Vector, Wti.Vector, Vti.Scalar, Vti.Mask,
+                      Vti.Log2SEW, Wti.RegClass,
+                      Wti.RegClass, Vti.ScalarRegClass>;
   }
 }
 
@@ -4882,10 +4882,10 @@ multiclass VPatBinaryV_WV<string intrinsic, string instruction,
     defvar Wti = VtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinaryTA<intrinsic, instruction # "_WV_" # Vti.LMul.MX,
-                        Vti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
-                        Vti.Log2SEW, Vti.RegClass,
-                        Wti.RegClass, Vti.RegClass>;
+    defm : VPatBinary<intrinsic, instruction # "_WV_" # Vti.LMul.MX,
+                      Vti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
+                      Vti.Log2SEW, Vti.RegClass,
+                      Wti.RegClass, Vti.RegClass>;
   }
 }
 
@@ -4896,11 +4896,11 @@ multiclass VPatBinaryV_WV_RM<string intrinsic, string instruction,
     defvar Wti = VtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinaryTARoundingMode<intrinsic,
-                                    instruction # "_WV_" # Vti.LMul.MX,
-                                    Vti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
-                                    Vti.Log2SEW, Vti.RegClass,
-                                    Wti.RegClass, Vti.RegClass>;
+    defm : VPatBinaryRoundingMode<intrinsic,
+                                  instruction # "_WV_" # Vti.LMul.MX,
+                                  Vti.Vector, Wti.Vector, Vti.Vector, Vti.Mask,
+                                  Vti.Log2SEW, Vti.RegClass,
+                                  Wti.RegClass, Vti.RegClass>;
   }
 }
 
@@ -4912,10 +4912,10 @@ multiclass VPatBinaryV_WX<string intrinsic, string instruction,
     defvar kind = "W"#Vti.ScalarSuffix;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinaryTA<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
-                        Vti.Vector, Wti.Vector, Vti.Scalar, Vti.Mask,
-                        Vti.Log2SEW, Vti.RegClass,
-                        Wti.RegClass, Vti.ScalarRegClass>;
+    defm : VPatBinary<intrinsic, instruction#"_"#kind#"_"#Vti.LMul.MX,
+                      Vti.Vector, Wti.Vector, Vti.Scalar, Vti.Mask,
+                      Vti.Log2SEW, Vti.RegClass,
+                      Wti.RegClass, Vti.ScalarRegClass>;
   }
 }
 
@@ -4927,11 +4927,11 @@ multiclass VPatBinaryV_WX_RM<string intrinsic, string instruction,
     defvar kind = "W"#Vti.ScalarSuffix;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinaryTARoundingMode<intrinsic,
-                                    instruction#"_"#kind#"_"#Vti.LMul.MX,
-                                    Vti.Vector, Wti.Vector, Vti.Scalar, Vti.Mask,
-                                    Vti.Log2SEW, Vti.RegClass,
-                                    Wti.RegClass, Vti.ScalarRegClass>;
+    defm : VPatBinaryRoundingMode<intrinsic,
+                                  instruction#"_"#kind#"_"#Vti.LMul.MX,
+                                  Vti.Vector, Wti.Vector, Vti.Scalar, Vti.Mask,
+                                  Vti.Log2SEW, Vti.RegClass,
+                                  Wti.RegClass, Vti.ScalarRegClass>;
   }
 }
 
@@ -4943,10 +4943,10 @@ multiclass VPatBinaryV_WI<string intrinsic, string instruction,
     defvar Wti = VtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinaryTA<intrinsic, instruction # "_WI_" # Vti.LMul.MX,
-                        Vti.Vector, Wti.Vector, XLenVT, Vti.Mask,
-                        Vti.Log2SEW, Vti.RegClass,
-                        Wti.RegClass, uimm5>;
+    defm : VPatBinary<intrinsic, instruction # "_WI_" # Vti.LMul.MX,
+                      Vti.Vector, Wti.Vector, XLenVT, Vti.Mask,
+                      Vti.Log2SEW, Vti.RegClass,
+                      Wti.RegClass, uimm5>;
   }
 }
 
@@ -4957,11 +4957,11 @@ multiclass VPatBinaryV_WI_RM<string intrinsic, string instruction,
     defvar Wti = VtiToWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<Vti>.Predicates,
                                  GetVTypePredicates<Wti>.Predicates) in
-    defm : VPatBinaryTARoundingMode<intrinsic,
-                                    instruction # "_WI_" # Vti.LMul.MX,
-                                    Vti.Vector, Wti.Vector, XLenVT, Vti.Mask,
-                                    Vti.Log2SEW, Vti.RegClass,
-                                    Wti.RegClass, uimm5>;
+    defm : VPatBinaryRoundingMode<intrinsic,
+                                  instruction # "_WI_" # Vti.LMul.MX,
+                                  Vti.Vector, Wti.Vector, XLenVT, Vti.Mask,
+                                  Vti.Log2SEW, Vti.RegClass,
+                                  Wti.RegClass, uimm5>;
   }
 }
 
