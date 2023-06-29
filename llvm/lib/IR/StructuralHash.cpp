@@ -58,9 +58,10 @@ public:
   }
 
   void update(const GlobalVariable &GV) {
-    // used/compiler.used don't affect analyses.
+    // Declarations and used/compiler.used don't affect analyses.
     // Same for llvm.embedded.object, which is always a metadata section.
-    if (GV.getName() == "llvm.compiler.used" || GV.getName() == "llvm.used" ||
+    if (GV.isDeclaration() ||
+        GV.getName() == "llvm.compiler.used" || GV.getName() == "llvm.used" ||
         GV.getName() == "llvm.embedded.object")
       return;
     hash(23456); // Global header
