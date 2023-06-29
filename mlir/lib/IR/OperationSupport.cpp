@@ -656,6 +656,10 @@ llvm::hash_code OperationEquivalence::computeHash(
       llvm::hash_combine(op->getName(), op->getDiscardableAttrDictionary(),
                          op->getResultTypes(), op->hashProperties());
 
+  //   - Location if required
+  if(!(flags & Flags::IgnoreLocations))
+    hash = llvm::hash_combine(hash, op->getLoc());
+
   //   - Operands
   ValueRange operands = op->getOperands();
   SmallVector<Value> operandStorage;
