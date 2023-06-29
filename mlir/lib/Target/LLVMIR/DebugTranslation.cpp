@@ -149,6 +149,12 @@ llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
                            getMDStringOrNull(attr.getDirectory()));
 }
 
+llvm::DILabel *DebugTranslation::translateImpl(DILabelAttr attr) {
+  return llvm::DILabel::get(llvmCtx, translate(attr.getScope()),
+                            getMDStringOrNull(attr.getName()),
+                            translate(attr.getFile()), attr.getLine());
+}
+
 llvm::DILexicalBlock *DebugTranslation::translateImpl(DILexicalBlockAttr attr) {
   return llvm::DILexicalBlock::getDistinct(llvmCtx, translate(attr.getScope()),
                                            translate(attr.getFile()),
@@ -247,7 +253,7 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
   llvm::DINode *node =
       TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
           .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
+                DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
                 DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
                 DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
                 DISubroutineTypeAttr>(
