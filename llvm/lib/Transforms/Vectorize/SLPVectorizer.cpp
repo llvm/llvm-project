@@ -7454,7 +7454,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       if (const auto *Base = dyn_cast<GetElementPtrInst>(BasePtr)) {
         SmallVector<const Value *> Indices(Base->indices());
         VecCost = TTI->getGEPCost(Base->getSourceElementType(),
-                                  Base->getPointerOperand(), Indices, CostKind);
+                                  Base->getPointerOperand(), Indices, nullptr,
+                                  CostKind);
       }
     }
 

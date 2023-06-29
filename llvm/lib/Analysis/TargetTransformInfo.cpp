@@ -226,11 +226,10 @@ int TargetTransformInfo::getInlinerVectorBonusPercent() const {
   return TTIImpl->getInlinerVectorBonusPercent();
 }
 
-InstructionCost
-TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
-                                ArrayRef<const Value *> Operands,
-                                TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, CostKind);
+InstructionCost TargetTransformInfo::getGEPCost(
+    Type *PointeeType, const Value *Ptr, ArrayRef<const Value *> Operands,
+    Type *AccessType, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
 }
 
 InstructionCost TargetTransformInfo::getPointersChainCost(
