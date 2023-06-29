@@ -60,20 +60,14 @@ define i32 @using_malloc() {
 ; CHECK-NEXT:    store i32 2, ptr [[GETELEMENTPTR]], align 4
 ; CHECK-NEXT:    [[GETELEMENTPTR1:%.*]] = getelementptr i32, ptr [[ALLOC]], i64 2
 ; CHECK-NEXT:    store i32 3, ptr [[GETELEMENTPTR1]], align 4
-; CHECK-NEXT:    [[GETELEMENTPTR2:%.*]] = getelementptr i32, ptr [[ALLOC]], i64 3
-; CHECK-NEXT:    br label [[BB11_I:%.*]]
-; CHECK:       bb11.i:
-; CHECK-NEXT:    [[PHI37_I:%.*]] = phi i32 [ [[ADD_I:%.*]], [[BB11_I]] ], [ 0, [[BB:%.*]] ]
-; CHECK-NEXT:    [[PHI6_I:%.*]] = phi ptr [ [[SPEC_SELECT_I:%.*]], [[BB11_I]] ], [ [[ALLOC]], [[BB]] ]
-; CHECK-NEXT:    [[SPEC_SELECT_I]] = getelementptr i32, ptr [[PHI6_I]], i64 1
-; CHECK-NEXT:    [[LOAD_I:%.*]] = load i32, ptr [[PHI6_I]], align 4
-; CHECK-NEXT:    [[ADD_I]] = add i32 [[LOAD_I]], [[PHI37_I]]
-; CHECK-NEXT:    [[ICMP4_I:%.*]] = icmp ne ptr [[SPEC_SELECT_I]], [[GETELEMENTPTR2]]
-; CHECK-NEXT:    [[ICMP102_I:%.*]] = icmp ne ptr [[SPEC_SELECT_I]], null
-; CHECK-NEXT:    [[ICMP10_NOT_I:%.*]] = and i1 [[ICMP102_I]], [[ICMP4_I]]
-; CHECK-NEXT:    br i1 [[ICMP10_NOT_I]], label [[BB11_I]], label [[LOOP_EXIT:%.*]]
-; CHECK:       loop.exit:
-; CHECK-NEXT:    ret i32 [[ADD_I]]
+; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = getelementptr i32, ptr [[ALLOC]], i64 1
+; CHECK-NEXT:    [[LOAD_I:%.*]] = load i32, ptr [[ALLOC]], align 4
+; CHECK-NEXT:    [[SPEC_SELECT_I_1:%.*]] = getelementptr i32, ptr [[ALLOC]], i64 2
+; CHECK-NEXT:    [[LOAD_I_1:%.*]] = load i32, ptr [[SPEC_SELECT_I]], align 4
+; CHECK-NEXT:    [[ADD_I_1:%.*]] = add i32 [[LOAD_I_1]], [[LOAD_I]]
+; CHECK-NEXT:    [[LOAD_I_2:%.*]] = load i32, ptr [[SPEC_SELECT_I_1]], align 4
+; CHECK-NEXT:    [[ADD_I_2:%.*]] = add i32 [[LOAD_I_2]], [[ADD_I_1]]
+; CHECK-NEXT:    ret i32 [[ADD_I_2]]
 ;
 bb:
   %alloc = call dereferenceable_or_null(64) ptr @malloc(i64 64)
