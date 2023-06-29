@@ -326,7 +326,6 @@ set(files
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
-  __debug
   __debug_utils/randomize_range.h
   __debug_utils/strict_weak_ordering_check.h
   __exception/exception.h

@@ -13,7 +13,6 @@
 #include <__algorithm/copy.h>
 #include <__availability>
 #include <__config>
-#include <__debug>
 #include <__format/concepts.h>
 #include <__format/format_error.h>
 #include <__format/format_parse_context.h>

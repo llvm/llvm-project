@@ -253,9 +253,9 @@ class _LIBCPP_TEMPLATE_VIS __direct_storage {};
 template <class _OutIt, class _CharT>
 concept __enable_direct_output = __fmt_char_type<_CharT> &&
     (same_as<_OutIt, _CharT*>
-#ifndef _LIBCPP_ENABLE_DEBUG_MODE
+     // TODO(hardening): the following check might not apply to hardened iterators and might need to be wrapped in an
+     // `#ifdef`.
      || same_as<_OutIt, __wrap_iter<_CharT*>>
-#endif
     );
 
 /// Write policy for directly writing to the underlying output.

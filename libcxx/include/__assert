@@ -17,13 +17,6 @@
 #  pragma GCC system_header
 #endif
 
-// Automatically enable assertions when the debug mode is enabled.
-#if defined(_LIBCPP_ENABLE_DEBUG_MODE)
-#  ifndef _LIBCPP_ENABLE_ASSERTIONS
-#    define _LIBCPP_ENABLE_ASSERTIONS 1
-#  endif
-#endif
-
 #ifndef _LIBCPP_ENABLE_ASSERTIONS
 #  define _LIBCPP_ENABLE_ASSERTIONS _LIBCPP_ENABLE_ASSERTIONS_DEFAULT
 #endif
