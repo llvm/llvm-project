@@ -693,7 +693,7 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
                               Value *B) const {
   auto R = getConstraintForSolving(Pred, A, B);
-  return R.Preconditions.empty() && !R.empty() &&
+  return R.isValid(*this) &&
          getCS(R.IsSigned).isConditionImplied(R.Coefficients);
 }
 
