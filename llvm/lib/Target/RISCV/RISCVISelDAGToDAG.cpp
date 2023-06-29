@@ -3423,7 +3423,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
 bool RISCVDAGToDAGISel::performVMergeToVMv(SDNode *N) {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul##_TU:                                    \
-    NewOpc = RISCV::PseudoVMV_V_V_##lmul##_TU;                                 \
+    NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                 \
     break;
   unsigned NewOpc;
   switch (N->getMachineOpcode()) {
@@ -3441,9 +3441,13 @@ bool RISCVDAGToDAGISel::performVMergeToVMv(SDNode *N) {
   if (!usesAllOnesMask(N, /* MaskOpIdx */ 3))
     return false;
 
+  SDLoc DL(N);
+  SDValue PolicyOp =
+    CurDAG->getTargetConstant(/*TUMU*/ 0, DL, Subtarget->getXLenVT());
   SDNode *Result = CurDAG->getMachineNode(
-      NewOpc, SDLoc(N), N->getValueType(0),
-      {N->getOperand(1), N->getOperand(2), N->getOperand(4), N->getOperand(5)});
+      NewOpc, DL, N->getValueType(0),
+      {N->getOperand(1), N->getOperand(2), N->getOperand(4), N->getOperand(5),
+       PolicyOp});
   ReplaceUses(N, Result);
   return true;
 }
