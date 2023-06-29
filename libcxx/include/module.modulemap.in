@@ -1174,6 +1174,8 @@ module std [system] {
 
     module __mdspan {
       module extents                         { private header "__mdspan/extents.h" }
+      module layout_right                    { private header "__mdspan/layout_right.h" }
+      module mdspan_fwd                      { private header "__fwd/mdspan.h" }
     }
   }
   module memory {

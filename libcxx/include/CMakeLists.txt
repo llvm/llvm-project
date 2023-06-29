@@ -418,6 +418,7 @@ set(files
   __fwd/hash.h
   __fwd/ios.h
   __fwd/istream.h
+  __fwd/mdspan.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
@@ -477,6 +478,7 @@ set(files
   __locale_dir/locale_base_api/locale_guard.h
   __mbstate_t.h
   __mdspan/extents.h
+  __mdspan/layout_right.h
   __memory/addressof.h
   __memory/align.h
   __memory/aligned_alloc.h

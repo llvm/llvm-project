@@ -2530,10 +2530,56 @@ TEST(TransferTest, NullToPointerCast) {
       });
 }
 
+TEST(TransferTest, PointerToMemberVariable) {
+  std::string Code = R"(
+    struct S {
+      int i;
+    };
+    void target() {
+      int S::*MemberPointer = &S::i;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *MemberPointerDecl =
+            findValueDecl(ASTCtx, "MemberPointer");
+        ASSERT_THAT(MemberPointerDecl, NotNull());
+        ASSERT_THAT(Env.getValue(*MemberPointerDecl), IsNull());
+      });
+}
+
+TEST(TransferTest, PointerToMemberFunction) {
+  std::string Code = R"(
+    struct S {
+      void Method();
+    };
+    void target() {
+      void (S::*MemberPointer)() = &S::Method;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *MemberPointerDecl =
+            findValueDecl(ASTCtx, "MemberPointer");
+        ASSERT_THAT(MemberPointerDecl, NotNull());
+        ASSERT_THAT(Env.getValue(*MemberPointerDecl), IsNull());
+      });
+}
+
 TEST(TransferTest, NullToMemberPointerCast) {
   std::string Code = R"(
     struct Foo {};
-    void target(Foo *Foo) {
+    void target() {
       int Foo::*MemberPointer = nullptr;
       // [[p]]
     }
@@ -2548,12 +2594,7 @@ TEST(TransferTest, NullToMemberPointerCast) {
         const ValueDecl *MemberPointerDecl =
             findValueDecl(ASTCtx, "MemberPointer");
         ASSERT_THAT(MemberPointerDecl, NotNull());
-
-        const auto *MemberPointerVal =
-            cast<PointerValue>(Env.getValue(*MemberPointerDecl));
-
-        const StorageLocation &MemberLoc = MemberPointerVal->getPointeeLoc();
-        EXPECT_THAT(Env.getValue(MemberLoc), IsNull());
+        ASSERT_THAT(Env.getValue(*MemberPointerDecl), IsNull());
       });
 }
 

@@ -8,7 +8,34 @@
 //===---------------------------------------------------------------------===//
 
 /*
-    extents synopsis
+
+// Overall mdspan synopsis
+
+namespace std {
+  // [mdspan.extents], class template extents
+  template<class IndexType, size_t... Extents>
+    class extents;
+
+  // [mdspan.extents.dextents], alias template dextents
+  template<class IndexType, size_t Rank>
+    using dextents = see below;
+
+  // [mdspan.layout], layout mapping
+  struct layout_left; // not implemented yet
+  struct layout_right;
+  struct layout_stride; // not implemented yet
+
+  // [mdspan.accessor.default], class template default_accessor
+  template<class ElementType>
+    class default_accessor; // not implemented yet
+
+  // [mdspan.mdspan], class template mdspan
+  template<class ElementType, class Extents, class LayoutPolicy = layout_right,
+           class AccessorPolicy = default_accessor<ElementType>>
+    class mdspan; // not implemented yet
+}
+
+// extents synopsis
 
 namespace std {
   template<class _IndexType, size_t... _Extents>
@@ -54,13 +81,70 @@ namespace std {
     explicit extents(Integrals...)
       -> see below;
 }
+
+// layout_right synopsis
+
+namespace std {
+  template<class Extents>
+  class layout_right::mapping {
+  public:
+    using extents_type = Extents;
+    using index_type = typename extents_type::index_type;
+    using size_type = typename extents_type::size_type;
+    using rank_type = typename extents_type::rank_type;
+    using layout_type = layout_right;
+
+    // [mdspan.layout.right.cons], constructors
+    constexpr mapping() noexcept = default;
+    constexpr mapping(const mapping&) noexcept = default;
+    constexpr mapping(const extents_type&) noexcept;
+    template<class OtherExtents>
+      constexpr explicit(!is_convertible_v<OtherExtents, extents_type>)
+        mapping(const mapping<OtherExtents>&) noexcept;
+    template<class OtherExtents>
+      constexpr explicit(!is_convertible_v<OtherExtents, extents_type>)
+        mapping(const layout_left::mapping<OtherExtents>&) noexcept;
+    template<class OtherExtents>
+      constexpr explicit(extents_type::rank() > 0)
+        mapping(const layout_stride::mapping<OtherExtents>&) noexcept;
+
+    constexpr mapping& operator=(const mapping&) noexcept = default;
+
+    // [mdspan.layout.right.obs], observers
+    constexpr const extents_type& extents() const noexcept { return extents_; }
+
+    constexpr index_type required_span_size() const noexcept;
+
+    template<class... Indices>
+      constexpr index_type operator()(Indices...) const noexcept;
+
+    static constexpr bool is_always_unique() noexcept { return true; }
+    static constexpr bool is_always_exhaustive() noexcept { return true; }
+    static constexpr bool is_always_strided() noexcept { return true; }
+
+    static constexpr bool is_unique() noexcept { return true; }
+    static constexpr bool is_exhaustive() noexcept { return true; }
+    static constexpr bool is_strided() noexcept { return true; }
+
+    constexpr index_type stride(rank_type) const noexcept;
+
+    template<class OtherExtents>
+      friend constexpr bool operator==(const mapping&, const mapping<OtherExtents>&) noexcept;
+
+  private:
+    extents_type extents_{};    // exposition only
+  };
+}
+
 */
 
 #ifndef _LIBCPP_MDSPAN
 #define _LIBCPP_MDSPAN
 
 #include <__config>
+#include <__fwd/mdspan.h>
 #include <__mdspan/extents.h>
+#include <__mdspan/layout_right.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

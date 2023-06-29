@@ -1252,6 +1252,66 @@ exit:
   ret void
 }
 
+define void @test_monotonic_ptr_iv_cond_doesnt_control_exit2(ptr %start, i16 %len) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_cond_doesnt_control_exit2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[C_0:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C_0]], label [[EXIT]], label [[LOOP_LATCH]]
+; CHECK:       then:
+; CHECK-NEXT:    [[T_1:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp slt i16 %len, 0
+  br i1 %len.neg, label %exit, label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c.1 = icmp ne ptr %ptr.iv, %upper
+  br i1 %c.1, label %then, label %for.body
+
+for.body:
+  %c.0 = call i1 @cond()
+  br i1 %c.0, label %exit, label %loop.latch
+
+then:
+  %t.1 = icmp uge ptr %ptr.iv, %start
+  %t.2 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %t.1, %t.2
+  call void @use.i1(i1 %and)
+  br label %loop.latch
+
+loop.latch:
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 1
+  br label %loop.header
+
+exit:
+  ret void
+}
 
 define void @test_monotonic_ptr_iv_cond_doesnt_dominate_checks(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_cond_doesnt_dominate_checks(
@@ -1603,5 +1663,61 @@ then:
   br label %exit.2
 
 exit.2:
+  ret void
+}
+
+define void @test_monotonic_ptr_iv_inc_1_loop_exits_on_ne(ptr %start, i16 %len) {
+; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_loop_exits_on_ne(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp sge i16 [[LEN]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LEN_NEG]])
+; CHECK-NEXT:    br label [[LOOP_PH:%.*]]
+; CHECK:       loop.ph:
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[LOOP_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i32, ptr [[PTR_IV]], i16 1
+; CHECK-NEXT:    br label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[PTR_IV]], [[START]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult ptr [[PTR_IV]], [[UPPER]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C_3]]
+; CHECK-NEXT:    call void @use.i1(i1 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %len.neg = icmp sge i16 %len, 0
+  call void @llvm.assume(i1 %len.neg)
+  br label %loop.ph
+
+loop.ph:
+  br label %loop.header
+
+loop.header:
+  %ptr.iv = phi ptr [ %start, %loop.ph ], [ %ptr.iv.next, %loop.latch ]
+  %c = icmp ne ptr %ptr.iv, %upper
+  br i1 %c, label %exit, label %for.body
+
+for.body:
+  br label %loop.latch
+
+loop.latch:
+  call void @use(ptr %ptr.iv)
+  %ptr.iv.next = getelementptr inbounds i32, ptr %ptr.iv, i16 1
+  br label %loop.header
+
+exit:
+  %c.2 = icmp uge ptr %ptr.iv, %start
+  %c.3 = icmp ult ptr %ptr.iv, %upper
+  %and = and i1 %c.2, %c.3
+  call void @use.i1(i1 %and)
   ret void
 }
