@@ -2048,6 +2048,16 @@ bool SampleProfileLoader::doInitialization(Module &M,
         UsePreInlinerDecision = true;
     }
 
+    // Enable stale profile matching by default for probe-based profile.
+    // Currently the matching relies on if the checksum mismatch is detected,
+    // which is currently only available for pseudo-probe mode. Removing the
+    // checksum check could cause regressions for some cases, so further tuning
+    // might be needed if we want to enable it for all cases.
+    if (Reader->profileIsProbeBased() &&
+        !SalvageStaleProfile.getNumOccurrences()) {
+      SalvageStaleProfile = true;
+    }
+
     if (!Reader->profileIsCS()) {
       // Non-CS profile should be fine without a function size budget for the
       // inliner since the contexts in the profile are either all from inlining
