@@ -97,7 +97,8 @@ MATH_MANGLE(exp)(float x)
     } else {
         if (UNSAFE_MATH_OPT()) {
 #if defined COMPILING_EXP2
-            return BUILTIN_AMDGPU_EXP2_F32(x);
+            bool s = x < -0x1.f80000p+6f;
+            return BUILTIN_AMDGPU_EXP2_F32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
 #elif defined COMPILING_EXP10
             bool s = x < -0x1.2f7030p+5f;
             x += s ? 0x1.0p+5f : 0.0f;
