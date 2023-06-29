@@ -4700,9 +4700,6 @@ def note_ovl_candidate_bad_cvr : Note<
     "%select{const|restrict|const and restrict|volatile|const and volatile|"
     "volatile and restrict|const, volatile, and restrict}4 qualifier"
     "%select{||s||s|s|s}4">;
-def note_ovl_candidate_bad_unaligned : Note<
-    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
-    "%ordinal5 argument (%3) would lose __unaligned qualifier">;
 def note_ovl_candidate_bad_base_to_derived_conv : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "cannot %select{convert from|convert from|bind}3 "
