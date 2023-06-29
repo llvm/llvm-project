@@ -18,6 +18,9 @@ struct SincosfChecker : public virtual __llvm_libc::testing::Test {
   using UIntType = uint32_t;
 
   uint64_t check(UIntType start, UIntType stop, mpfr::RoundingMode rounding) {
+    mpfr::ForceRoundingMode r(rounding);
+    if (!r.success)
+      return (stop > start);
     UIntType bits = start;
     uint64_t failed = 0;
     do {
