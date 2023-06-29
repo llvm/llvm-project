@@ -98,13 +98,12 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
           MF.getInfo<RISCVMachineFunctionInfo>();
       SDLoc DL(N);
 
-      // We use the same frame index we use for moving two i32s into 64-bit FPR.
-      // This is an analogous operation.
-      int FI = FuncInfo->getMoveF64FrameIndex(MF);
+      // Create temporary stack for each expanding node.
+      SDValue StackSlot =
+          CurDAG->CreateStackTemporary(TypeSize::Fixed(8), Align(4));
+      int FI = cast<FrameIndexSDNode>(StackSlot.getNode())->getIndex();
       MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
       const TargetLowering &TLI = CurDAG->getTargetLoweringInfo();
-      SDValue StackSlot =
-          CurDAG->getFrameIndex(FI, TLI.getPointerTy(CurDAG->getDataLayout()));
 
       SDValue Chain = CurDAG->getEntryNode();
       Lo = CurDAG->getStore(Chain, DL, Lo, StackSlot, MPI, Align(8));
