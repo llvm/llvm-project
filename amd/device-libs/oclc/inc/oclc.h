@@ -46,7 +46,11 @@ extern const __constant bool __oclc_unsafe_math_opt;
 extern const __constant bool __oclc_daz_opt;
 extern const __constant bool __oclc_correctly_rounded_sqrt32;
 extern const __constant bool __oclc_wavefrontsize64;
+extern const __constant uint __oclc_wavefrontsize_log2;
 extern const __constant int __oclc_ISA_version;
 extern const __constant int __oclc_ABI_version;
+
+#define OCLC_WAVEFRONT_SIZE (1u << __oclc_wavefrontsize_log2)
+
 
 #endif // OCLC_H

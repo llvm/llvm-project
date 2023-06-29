@@ -24,19 +24,13 @@ my_num_sub_groups(void)
     uint wgs = __ockl_mul24_i32((uint)__ockl_get_local_size(2),
                                 __ockl_mul24_i32((uint)__ockl_get_local_size(1),
                                                  (uint)__ockl_get_local_size(0)));
-    if (__oclc_wavefrontsize64)
-        return (wgs + 63U) >> 6U;
-    else
-        return (wgs + 31U) >> 5U;
+    return (wgs + OCLC_WAVEFRONT_SIZE - 1) >> __oclc_wavefrontsize_log2;
 }
 
 static uint
 my_sub_group_id(void)
 {
-    if (__oclc_wavefrontsize64)
-        return (uint)__ockl_get_local_linear_id() >> 6U;
-    else
-        return (uint)__ockl_get_local_linear_id() >> 5U;
+    return (uint)__ockl_get_local_linear_id() >> __oclc_wavefrontsize_log2;
 }
 
 static void

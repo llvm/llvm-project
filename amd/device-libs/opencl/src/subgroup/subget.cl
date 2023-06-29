@@ -15,46 +15,35 @@ get_sub_group_size(void)
 {
     uint wgs = mul24((uint)get_local_size(2), mul24((uint)get_local_size(1), (uint)get_local_size(0)));
     uint lid = (uint)get_local_linear_id();
-    if (__oclc_wavefrontsize64)
-        return min(64U, wgs - (lid & ~63U));
-    else
-        return min(32U, wgs - (lid & ~31U));
+    return min(OCLC_WAVEFRONT_SIZE, wgs - (lid & ~(OCLC_WAVEFRONT_SIZE - 1)));
 }
 
 CATTR uint
 get_max_sub_group_size(void)
 {
     uint wgs = mul24((uint)get_enqueued_local_size(2), mul24((uint)get_enqueued_local_size(1), (uint)get_enqueued_local_size(0)));
-    return min(__oclc_wavefrontsize64 ? 64u : 32u, wgs);
+    return min(OCLC_WAVEFRONT_SIZE, wgs);
 }
 
 CATTR uint
 get_num_sub_groups(void)
 {
     uint wgs = mul24((uint)get_local_size(2), mul24((uint)get_local_size(1), (uint)get_local_size(0)));
-    if (__oclc_wavefrontsize64)
-        return (wgs + 63U) >> 6U;
-    else
-        return (wgs + 31U) >> 5U;
+    return (wgs + OCLC_WAVEFRONT_SIZE - 1) >> __oclc_wavefrontsize_log2;
 }
 
 CATTR uint
 get_enqueued_num_sub_groups(void)
 {
     uint wgs = mul24((uint)get_enqueued_local_size(2), mul24((uint)get_enqueued_local_size(1), (uint)get_enqueued_local_size(0)));
-    if (__oclc_wavefrontsize64)
-        return (wgs + 63U) >> 6U;
-    else
-        return (wgs + 31U) >> 5U;
+    return (wgs + OCLC_WAVEFRONT_SIZE - 1) >> __oclc_wavefrontsize_log2;
 }
 
 CATTR uint
 get_sub_group_id(void)
 {
-    if (__oclc_wavefrontsize64)
-        return (uint)get_local_linear_id() >> 6U;
-    else
-        return (uint)get_local_linear_id() >> 5U;
+
+    return (uint)get_local_linear_id() >> __oclc_wavefrontsize_log2;
 }
 
 CATTR uint

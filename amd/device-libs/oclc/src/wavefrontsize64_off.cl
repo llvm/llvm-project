@@ -8,4 +8,4 @@
 #include "oclc.h"
 
 const __constant bool __oclc_wavefrontsize64 = 0;
-
+const __constant uint __oclc_wavefrontsize_log2 = 5;
