@@ -210,7 +210,12 @@ private:
 
 /// Used for allocating indirect call instrumentation counters. Initialized by
 /// __bolt_instr_setup, our initialization routine.
-BumpPtrAllocator GlobalAlloc;
+BumpPtrAllocator *GlobalAlloc;
+
+// Storage for GlobalAlloc which can be shared if not using
+// instrumentation-file-append-pid.
+void *GlobalMetadataStorage;
+
 } // anonymous namespace
 
 // User-defined placement new operators. We only use those (as opposed to
@@ -230,6 +235,10 @@ void *operator new[](size_t Sz, BumpPtrAllocator &A, char C) {
   memset(Ptr, C, Sz);
   return Ptr;
 }
+
+// Declaration for global allocator to construct it in shared memory if needed.
+// Needed because we can't #include <new>
+void *operator new(size_t, void *) noexcept;
 // Only called during exception unwinding (useless). We must manually dealloc.
 // C++ language weirdness
 void operator delete(void *Ptr, BumpPtrAllocator &A) { A.deallocate(Ptr); }
@@ -264,7 +273,17 @@ public:
   /// Increment by 1 the value of \p Key. If it is not in this table, it will be
   /// added to the table and its value set to 1.
   void incrementVal(uint64_t Key, BumpPtrAllocator &Alloc) {
-    ++get(Key, Alloc).Val;
+    if (!__bolt_instr_conservative) {
+      TryLock L(M);
+      if (!L.isLocked())
+        return;
+      auto &E = getOrAllocEntry(Key, Alloc);
+      ++E.Val;
+      return;
+    }
+    Lock L(M);
+    auto &E = getOrAllocEntry(Key, Alloc);
+    ++E.Val;
   }
 
   /// Basic member accessing interface. Here we pass the allocator explicitly to
@@ -308,10 +327,10 @@ private:
       if (Entry.Key == VacantMarker)
         continue;
       if (Entry.Key & FollowUpTableMarker) {
-        forEachElement(Callback, IncSize,
-                       reinterpret_cast<MapEntry *>(Entry.Key &
-                                                    ~FollowUpTableMarker),
-                       args...);
+        MapEntry *Next =
+            reinterpret_cast<MapEntry *>(Entry.Key & ~FollowUpTableMarker);
+        assert(Next != Entries, "Circular reference!");
+        forEachElement(Callback, IncSize, Next, args...);
         continue;
       }
       Callback(Entry, args...);
@@ -358,12 +377,18 @@ private:
     CurEntrySelector = CurEntrySelector % IncSize;
     NextLevelTbl[CurEntrySelector] = Entry;
     Entry.Key = reinterpret_cast<uint64_t>(NextLevelTbl) | FollowUpTableMarker;
+    assert((NextLevelTbl[CurEntrySelector].Key & ~FollowUpTableMarker) !=
+               uint64_t(Entries),
+           "circular reference created!\n");
     return getEntry(NextLevelTbl, Key, Remainder, Alloc, CurLevel + 1);
   }
 
   MapEntry &getOrAllocEntry(uint64_t Key, BumpPtrAllocator &Alloc) {
-    if (TableRoot)
-      return getEntry(TableRoot, Key, Key, Alloc, 0);
+    if (TableRoot) {
+      MapEntry &E = getEntry(TableRoot, Key, Key, Alloc, 0);
+      assert(!(E.Key & FollowUpTableMarker), "Invalid entry!");
+      return E;
+    }
     return firstAllocation(Key, Alloc);
   }
 };
@@ -1561,13 +1586,19 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
              MAP_ANONYMOUS | MapPrivateOrShared | MAP_FIXED, -1, 0);
   assert(Ret != MAP_FAILED, "__bolt_instr_setup: Failed to mmap counters!");
 
-  // Conservatively reserve 100MiB shared pages
-  GlobalAlloc.setMaxSize(0x6400000);
-  GlobalAlloc.setShared(Shared);
-  GlobalWriteProfileMutex = new (GlobalAlloc, 0) Mutex();
+  GlobalMetadataStorage = __mmap(0, 4096, PROT_READ | PROT_WRITE,
+                                 MapPrivateOrShared | MAP_ANONYMOUS, -1, 0);
+  assert(GlobalMetadataStorage != MAP_FAILED,
+         "__bolt_instr_setup: failed to mmap page for metadata!");
+
+  GlobalAlloc = new (GlobalMetadataStorage) BumpPtrAllocator;
+  // Conservatively reserve 100MiB
+  GlobalAlloc->setMaxSize(0x6400000);
+  GlobalAlloc->setShared(Shared);
+  GlobalWriteProfileMutex = new (*GlobalAlloc, 0) Mutex();
   if (__bolt_instr_num_ind_calls > 0)
     GlobalIndCallCounters =
-        new (GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
+        new (*GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
 
   if (__bolt_instr_sleep_time != 0) {
     // Separate instrumented process to the own process group
@@ -1582,7 +1613,7 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
 
 extern "C" __attribute((force_align_arg_pointer)) void
 instrumentIndirectCall(uint64_t Target, uint64_t IndCallID) {
-  GlobalIndCallCounters[IndCallID].incrementVal(Target, GlobalAlloc);
+  GlobalIndCallCounters[IndCallID].incrementVal(Target, *GlobalAlloc);
 }
 
 /// We receive as in-stack arguments the identifier of the indirect call site
