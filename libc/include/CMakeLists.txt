@@ -3,6 +3,11 @@ set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 include(LLVMLibCHeaderRules)
 
+# The GPU build wants to install files in the compiler's resource directory.
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  include(GetClangResourceDir)
+endif()
+
 add_subdirectory(llvm-libc-macros)
 add_subdirectory(llvm-libc-types)
 
@@ -539,4 +544,21 @@ foreach(target IN LISTS all_install_header_targets)
   install(FILES ${header_file}
           DESTINATION ${LIBC_INSTALL_INCLUDE_DIR}/${nested_dir}
           COMPONENT libc-headers)
+  # The GPU optionally provides the supported declarations externally so
+  # offloading languages like CUDA and OpenMP know what is supported by libc. We
+  # install these in the compiler's resource directory at a preset location.
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    get_target_property(decls_file ${target} DECLS_FILE_PATH)
+    if(NOT decls_file)
+      continue()
+    endif()
+    get_clang_resource_dir(resource_dir SUBDIR include)
+    file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_BINARY_DIR} ${decls_file})
+    get_filename_component(nested_dir ${relative_path} DIRECTORY)
+    set(install_dir
+        ${CMAKE_INSTALL_PREFIX}/${resource_dir}/llvm_libc_wrappers/${nested_dir})
+    install(FILES ${decls_file}
+            DESTINATION ${install_dir}
+            COMPONENT libc-headers)
+  endif()
 endforeach()
