@@ -1804,7 +1804,6 @@ module std [system] {
   module __assert            {         header "__assert"            export * }
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
-  module __debug             {         header "__debug"             export * }
   module __hash_table        {         header "__hash_table"        export * }
   module __locale            {
     @requires_LIBCXX_ENABLE_LOCALIZATION@

@@ -62,11 +62,6 @@ option(LIBCXX_ENABLE_FILESYSTEM
    available on the platform. This includes things like most parts of <filesystem> and
    others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
-option(LIBCXX_ENABLE_DEBUG_MODE
-  "Whether to build libc++ with the debug mode enabled.
-   By default, this is turned off. Turning it on results in a different ABI (additional
-   symbols but also potentially different layouts of types), and one should not mix code
-   built against a dylib that has debug mode and code built against a regular dylib." OFF)
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have
@@ -201,13 +196,6 @@ endif()
 set(LIBCXX_ABI_DEFINES "" CACHE STRING "A semicolon separated list of ABI macros to define in the site config header.")
 option(LIBCXX_EXTRA_SITE_DEFINES "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
-
-option(LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS
-  "Whether to include the old Debug mode symbols in the compiled library. This
-   is provided for backwards compatibility since the compiled library used to
-   always contain those symbols, regardless of whether the library was built
-   with the debug mode enabled. This is OFF by default, please contact the libc++
-   developers if you need to turn this on, as this will be removed in LLVM 16." OFF)
 
 # ABI Library options ---------------------------------------------------------
 if (LIBCXX_TARGETING_MSVC)
@@ -791,7 +779,6 @@ config_define_if_not(LIBCXX_ENABLE_LOCALIZATION _LIBCPP_HAS_NO_LOCALIZATION)
 config_define_if_not(LIBCXX_ENABLE_UNICODE _LIBCPP_HAS_NO_UNICODE)
 config_define_if_not(LIBCXX_ENABLE_WIDE_CHARACTERS _LIBCPP_HAS_NO_WIDE_CHARACTERS)
 config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
-config_define_if(LIBCXX_ENABLE_DEBUG_MODE _LIBCPP_ENABLE_DEBUG_MODE)
 if (LIBCXX_ENABLE_ASSERTIONS)
   config_define(1 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
 else()

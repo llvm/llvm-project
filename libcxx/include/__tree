@@ -13,7 +13,6 @@
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
-#include <__debug>
 #include <__functional/invoke.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -377,7 +376,7 @@ __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEPT
 {
     _LIBCPP_ASSERT_UNCATEGORIZED(__root != nullptr, "Root node should not be null");
     _LIBCPP_ASSERT_UNCATEGORIZED(__z != nullptr, "The node to remove should not be null");
-    _LIBCPP_DEBUG_ASSERT(std::__tree_invariant(__root), "The tree invariants should hold");
+    _LIBCPP_ASSERT_UNCATEGORIZED(std::__tree_invariant(__root), "The tree invariants should hold");
     // __z will be removed from the tree.  Client still needs to destruct/deallocate it
     // __y is either __z, or if __z has two children, __tree_next(__z).
     // __y will have at most one child.

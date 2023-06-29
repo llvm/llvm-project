@@ -195,7 +195,6 @@ template <class charT> class messages_byname;
 #include <__algorithm/unwrap_iter.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <__debug>
 #include <__iterator/access.h>
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/istreambuf_iterator.h>
@@ -1465,12 +1464,7 @@ num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob,
         return do_put(__s, __iob, __fl, (unsigned long)__v);
     const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.getloc());
     typedef typename numpunct<char_type>::string_type string_type;
-#ifdef _LIBCPP_ENABLE_DEBUG_MODE
-    string_type __tmp(__v ? __np.truename() : __np.falsename());
-    string_type __nm = _VSTD::move(__tmp);
-#else
     string_type __nm = __v ? __np.truename() : __np.falsename();
-#endif
     for (typename string_type::iterator __i = __nm.begin(); __i != __nm.end(); ++__i, ++__s)
         *__s = *__i;
     return __s;
