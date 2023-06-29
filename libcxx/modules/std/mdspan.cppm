@@ -19,7 +19,7 @@ export namespace std {
   using std::dextents;
 
   // [mdspan.layout], layout mapping
-  // using std::layout_left;
+  using std::layout_left;
   using std::layout_right;
   // using std::layout_stride;
 

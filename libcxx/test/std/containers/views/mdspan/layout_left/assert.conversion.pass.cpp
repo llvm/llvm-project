@@ -29,31 +29,31 @@
 int main(int, char**) {
   constexpr size_t D = std::dynamic_extent;
   std::extents<int, D, D> arg_exts{100, 5};
-  std::layout_right::mapping<std::extents<int, D, D>> arg(arg_exts);
+  std::layout_left::mapping<std::extents<int, D, D>> arg(arg_exts);
 
   // working case
   {
-    [[maybe_unused]] std::layout_right::mapping<std::extents<size_t, D, 5>> m(arg); // should work
+    [[maybe_unused]] std::layout_left::mapping<std::extents<size_t, D, 5>> m(arg); // should work
   }
   // mismatch of static extent
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_right::mapping<std::extents<int, D, 3>> m(arg); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_left::mapping<std::extents<int, D, 3>> m(arg); }()),
                                "extents construction: mismatch of provided arguments with static extents.");
   }
   // non-representability of extents itself
   {
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_right::mapping<std::extents<char, D>> m(
-                                 std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(500))); }()),
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_left::mapping<std::extents<char, D>> m(
+                                 std::layout_left::mapping<std::extents<int, D>>(std::extents<int, D>(500))); }()),
                                "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   // required_span_size not representable, while individual extents are
   {
     // check extents would be constructible
     [[maybe_unused]] std::extents<char, D, 5> e(arg_exts);
-    // but the product is not, so we can't use it for layout_right
+    // but the product is not, so we can't use it for layout_left
     TEST_LIBCPP_ASSERT_FAILURE(
-        ([=] { std::layout_right::template mapping<std::extents<char, D, 5>> m(arg); }()),
-        "layout_right::mapping converting ctor: other.required_span_size() must be representable as index_type.");
+        ([=] { std::layout_left::template mapping<std::extents<char, D, 5>> m(arg); }()),
+        "layout_left::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
   return 0;
 }
