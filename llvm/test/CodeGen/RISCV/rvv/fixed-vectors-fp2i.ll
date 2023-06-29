@@ -491,16 +491,17 @@ define void @fp2si_v8f32_v8i64(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    addi a2, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v8, (a2)
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
-; LMULMAX1-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vslidedown.vi v10, v8, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; LMULMAX1-NEXT:    vfwcvt.rtz.x.f.v v11, v10
-; LMULMAX1-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vslidedown.vi v10, v9, 2
-; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; LMULMAX1-NEXT:    vfwcvt.rtz.x.f.v v12, v10
 ; LMULMAX1-NEXT:    vfwcvt.rtz.x.f.v v10, v8
+; LMULMAX1-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; LMULMAX1-NEXT:    vslidedown.vi v8, v8, 2
+; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; LMULMAX1-NEXT:    vfwcvt.rtz.x.f.v v11, v8
 ; LMULMAX1-NEXT:    vfwcvt.rtz.x.f.v v8, v9
+; LMULMAX1-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; LMULMAX1-NEXT:    vslidedown.vi v9, v9, 2
+; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; LMULMAX1-NEXT:    vfwcvt.rtz.x.f.v v12, v9
 ; LMULMAX1-NEXT:    addi a0, a1, 16
 ; LMULMAX1-NEXT:    vse64.v v12, (a0)
 ; LMULMAX1-NEXT:    vse64.v v8, (a1)
@@ -530,16 +531,17 @@ define void @fp2ui_v8f32_v8i64(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    addi a2, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v8, (a2)
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
-; LMULMAX1-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vslidedown.vi v10, v8, 2
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; LMULMAX1-NEXT:    vfwcvt.rtz.xu.f.v v11, v10
-; LMULMAX1-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; LMULMAX1-NEXT:    vslidedown.vi v10, v9, 2
-; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; LMULMAX1-NEXT:    vfwcvt.rtz.xu.f.v v12, v10
 ; LMULMAX1-NEXT:    vfwcvt.rtz.xu.f.v v10, v8
+; LMULMAX1-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; LMULMAX1-NEXT:    vslidedown.vi v8, v8, 2
+; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; LMULMAX1-NEXT:    vfwcvt.rtz.xu.f.v v11, v8
 ; LMULMAX1-NEXT:    vfwcvt.rtz.xu.f.v v8, v9
+; LMULMAX1-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; LMULMAX1-NEXT:    vslidedown.vi v9, v9, 2
+; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; LMULMAX1-NEXT:    vfwcvt.rtz.xu.f.v v12, v9
 ; LMULMAX1-NEXT:    addi a0, a1, 16
 ; LMULMAX1-NEXT:    vse64.v v12, (a0)
 ; LMULMAX1-NEXT:    vse64.v v8, (a1)
