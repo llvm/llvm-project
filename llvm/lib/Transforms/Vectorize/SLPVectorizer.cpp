@@ -7446,15 +7446,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
       ScalarCost = TTI->getPointersChainCost(Ptrs, BasePtr, PtrsInfo, ScalarTy,
                                              CostKind);
-
-      // Remark: it not quite correct to use scalar GEP cost for a vector GEP,
-      // but it's not clear how to do that without having vector GEP arguments
-      // ready.
-      // Perhaps using just TTI::TCC_Free/TTI::TCC_Basic would be better option.
-      if (const auto *Base = dyn_cast<GetElementPtrInst>(BasePtr)) {
-        SmallVector<const Value *> Indices(Base->indices());
-        VecCost = TTI->getGEPCost(Base->getSourceElementType(),
-                                  Base->getPointerOperand(), Indices, nullptr,
+      if (auto *BaseGEP = dyn_cast<GEPOperator>(BasePtr)) {
+        SmallVector<const Value *> Indices(BaseGEP->indices());
+        VecCost = TTI->getGEPCost(BaseGEP->getSourceElementType(),
+                                  BaseGEP->getPointerOperand(), Indices, VecTy,
                                   CostKind);
       }
     }

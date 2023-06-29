@@ -2,8 +2,8 @@
 ; RUN: opt < %s -passes=slp-vectorizer -mtriple=riscv64 -mattr=+v \
 ; RUN: -riscv-v-slp-max-vf=0 -S | FileCheck %s
 
-; FIXME: This should not be vectorized, as the cost of computing the
-; offsets nullifies the benefits of vectorizing:
+; This should not be vectorized, as the cost of computing the offsets nullifies
+; the benefits of vectorizing:
 ;
 ; copy_with_offset_v2i8:
 ;         addi    a0, a0, 8
@@ -27,9 +27,13 @@ define void @copy_with_offset_v2i8(ptr noalias %p, ptr noalias %q) {
 ; CHECK-LABEL: @copy_with_offset_v2i8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 8
+; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
 ; CHECK-NEXT:    [[Q1:%.*]] = getelementptr i8, ptr [[Q:%.*]], i32 16
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr [[P1]], align 1
-; CHECK-NEXT:    store <2 x i8> [[TMP0]], ptr [[Q1]], align 1
+; CHECK-NEXT:    store i8 [[X1]], ptr [[Q1]], align 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 9
+; CHECK-NEXT:    [[X2:%.*]] = load i8, ptr [[P2]], align 1
+; CHECK-NEXT:    [[Q2:%.*]] = getelementptr i8, ptr [[Q]], i32 17
+; CHECK-NEXT:    store i8 [[X2]], ptr [[Q2]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
