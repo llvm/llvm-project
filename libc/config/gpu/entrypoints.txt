@@ -60,8 +60,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.atof
     libc.src.stdlib.atol
     libc.src.stdlib.atoll
+    libc.src.stdlib.div
     libc.src.stdlib.labs
+    libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
+    libc.src.stdlib.lldiv
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
     libc.src.stdlib.strtol
