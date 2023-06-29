@@ -28,6 +28,8 @@ template <> struct FloatProperties<float> {
   static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) * 8;
 
   static constexpr uint32_t MANTISSA_WIDTH = 23;
+  // The mantissa precision includes the implicit bit.
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH = 8;
   static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
   static constexpr BitsType SIGN_MASK = BitsType(1)
@@ -53,6 +55,7 @@ template <> struct FloatProperties<double> {
   static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) * 8;
 
   static constexpr uint32_t MANTISSA_WIDTH = 52;
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH = 11;
   static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
   static constexpr BitsType SIGN_MASK = BitsType(1)
@@ -82,6 +85,7 @@ template <> struct FloatProperties<long double> {
 
   static constexpr uint32_t MANTISSA_WIDTH =
       FloatProperties<double>::MANTISSA_WIDTH;
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH =
       FloatProperties<double>::EXPONENT_WIDTH;
   static constexpr BitsType MANTISSA_MASK =
@@ -115,6 +119,7 @@ template <> struct FloatProperties<long double> {
   static constexpr BitsType FULL_WIDTH_MASK = ((BitsType(1) << BIT_WIDTH) - 1);
 
   static constexpr uint32_t MANTISSA_WIDTH = 63;
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH = 15;
   static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
 
@@ -150,6 +155,7 @@ template <> struct FloatProperties<long double> {
   static constexpr uint32_t BIT_WIDTH = sizeof(BitsType) << 3;
 
   static constexpr uint32_t MANTISSA_WIDTH = 112;
+  static constexpr uint32_t MANTISSA_PRECISION = MANTISSA_WIDTH + 1;
   static constexpr uint32_t EXPONENT_WIDTH = 15;
   static constexpr BitsType MANTISSA_MASK = (BitsType(1) << MANTISSA_WIDTH) - 1;
   static constexpr BitsType SIGN_MASK = BitsType(1)
