@@ -1109,7 +1109,9 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(mlir::Location loc,
   if (OldGV && !OldGV.isDeclaration()) {
     assert(!OldGV.hasAvailableExternallyLinkage() &&
            "available_externally typeinfos not yet implemented");
-    llvm_unreachable("NYI");
+    return mlir::cir::GlobalViewAttr::get(
+        CGM.getBuilder().getUInt8PtrTy(),
+        mlir::FlatSymbolRefAttr::get(OldGV.getSymNameAttr()));
   }
 
   // Check if there is already an external RTTI descriptor for this type.

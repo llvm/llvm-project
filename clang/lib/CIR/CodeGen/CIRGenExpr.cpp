@@ -1385,7 +1385,23 @@ LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    assert(0 && "NYI");
+    const auto *DerivedClassTy =
+        E->getSubExpr()->getType()->castAs<RecordType>();
+    auto *DerivedClassDecl = cast<CXXRecordDecl>(DerivedClassTy->getDecl());
+
+    LValue LV = buildLValue(E->getSubExpr());
+    Address This = LV.getAddress();
+
+    // Perform the derived-to-base conversion
+    Address Base = getAddressOfBaseClass(
+        This, DerivedClassDecl, E->path_begin(), E->path_end(),
+        /*NullCheckValue=*/false, E->getExprLoc());
+
+    // TODO: Support accesses to members of base classes in TBAA. For now, we
+    // conservatively pretend that the complete object is of the base class
+    // type.
+    assert(!UnimplementedFeature::tbaa());
+    return makeAddrLValue(Base, E->getType(), LV.getBaseInfo());
   }
   case CK_ToUnion:
     assert(0 && "NYI");

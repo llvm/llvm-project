@@ -95,6 +95,15 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorCall(
                    CE && CE == MustTailCall, loc);
 }
 
+// TODO(cir): this can be shared with LLVM codegen
+static CXXRecordDecl *getCXXRecord(const Expr *E) {
+  QualType T = E->getType();
+  if (const PointerType *PTy = T->getAs<PointerType>())
+    T = PTy->getPointeeType();
+  const RecordType *Ty = T->castAs<RecordType>();
+  return cast<CXXRecordDecl>(Ty->getDecl());
+}
+
 RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
     const CallExpr *CE, const CXXMethodDecl *MD, ReturnValueSlot ReturnValue,
     bool HasQualifier, NestedNameSpecifier *Qualifier, bool IsArrow,
@@ -106,7 +115,31 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   const CXXMethodDecl *DevirtualizedMethod = nullptr;
   if (CanUseVirtualCall &&
       MD->getDevirtualizedMethod(Base, getLangOpts().AppleKext)) {
-    llvm_unreachable("NYI");
+    const CXXRecordDecl *BestDynamicDecl = Base->getBestDynamicClassType();
+    DevirtualizedMethod = MD->getCorrespondingMethodInClass(BestDynamicDecl);
+    assert(DevirtualizedMethod);
+    const CXXRecordDecl *DevirtualizedClass = DevirtualizedMethod->getParent();
+    const Expr *Inner = Base->IgnoreParenBaseCasts();
+    if (DevirtualizedMethod->getReturnType().getCanonicalType() !=
+        MD->getReturnType().getCanonicalType()) {
+      // If the return types are not the same, this might be a case where more
+      // code needs to run to compensate for it. For example, the derived
+      // method might return a type that inherits form from the return
+      // type of MD and has a prefix.
+      // For now we just avoid devirtualizing these covariant cases.
+      DevirtualizedMethod = nullptr;
+    } else if (getCXXRecord(Inner) == DevirtualizedClass) {
+      // If the class of the Inner expression is where the dynamic method
+      // is defined, build the this pointer from it.
+      Base = Inner;
+    } else if (getCXXRecord(Base) != DevirtualizedClass) {
+      // If the method is defined in a class that is not the best dynamic
+      // one or the one of the full expression, we would have to build
+      // a derived-to-base cast to compute the correct this pointer, but
+      // we don't have support for that yet, so do a virtual call.
+      assert(!UnimplementedFeature::buildDerivedToBaseCastForDevirt());
+      DevirtualizedMethod = nullptr;
+    }
   }
 
   bool TrivialForCodegen =
@@ -233,10 +266,12 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
     if (getLangOpts().AppleKext)
       llvm_unreachable("NYI");
     else if (!DevirtualizedMethod)
+      // TODO(cir): shouldn't this call getAddrOfCXXStructor instead?
       Callee = CIRGenCallee::forDirect(CGM.GetAddrOfFunction(MD, Ty),
                                        GlobalDecl(MD));
     else {
-      llvm_unreachable("NYI");
+      Callee = CIRGenCallee::forDirect(CGM.GetAddrOfFunction(MD, Ty),
+                                       GlobalDecl(MD));
     }
   }
 
