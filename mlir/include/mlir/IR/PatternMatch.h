@@ -627,12 +627,6 @@ public:
   /// in-place operation modification is about to happen.
   void replaceUsesWithIf(Value from, Value to,
                          function_ref<bool(OpOperand &)> functor);
-  void replaceUsesWithIf(ValueRange from, ValueRange to,
-                         function_ref<bool(OpOperand &)> functor) {
-    assert(from.size() == to.size() && "incorrect number of replacements");
-    for (auto it : llvm::zip(from, to))
-      replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor);
-  }
 
   /// Find uses of `from` and replace them with `to` except if the user is
   /// `exceptedUser`. It also marks every modified uses and notifies the
