@@ -3059,7 +3059,13 @@ TEST(Hover, Providers) {
                   }
                   ns::F^oo d;
                 )cpp",
-                [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }}};
+                [](HoverInfo &HI) { HI.Provider = "\"foo.h\""; }},
+                {R"cpp(
+                  namespace foo {};
+                  using namespace fo^o;
+                )cpp",
+                [](HoverInfo &HI) { HI.Provider = ""; }},
+                };
 
   for (const auto &Case : Cases) {
     Annotations Code{Case.Code};
