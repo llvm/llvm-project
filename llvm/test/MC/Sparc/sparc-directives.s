@@ -3,7 +3,10 @@
 
         ! '.proc' is documented to do nothing in the binutils assembler.
         ! so it should do nothing for clang either, i.e. not be an error.
-        .proc 1
+        .proc 1 x (
+
+        ! '.register' is currently ignored.
+        .register 8-)
 
         ! SPARC32: .byte 24
         ! SPARC64: .byte 24
