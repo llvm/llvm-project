@@ -732,14 +732,16 @@ static hlfir::ExprType getArrayExprType(mlir::Type elementType,
                               isPolymorphic);
 }
 
-hlfir::ElementalOp hlfir::genElementalOp(
-    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Type elementType,
-    mlir::Value shape, mlir::ValueRange typeParams,
-    const ElementalKernelGenerator &genKernel, mlir::Type exprType) {
+hlfir::ElementalOp
+hlfir::genElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
+                      mlir::Type elementType, mlir::Value shape,
+                      mlir::ValueRange typeParams,
+                      const ElementalKernelGenerator &genKernel,
+                      bool isUnordered, mlir::Type exprType) {
   if (!exprType)
     exprType = getArrayExprType(elementType, shape, false);
-  auto elementalOp =
-      builder.create<hlfir::ElementalOp>(loc, exprType, shape, typeParams);
+  auto elementalOp = builder.create<hlfir::ElementalOp>(
+      loc, exprType, shape, typeParams, isUnordered);
   auto insertPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(elementalOp.getBody());
   mlir::Value elementResult = genKernel(loc, builder, elementalOp.getIndices());
@@ -1013,5 +1015,5 @@ hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::Type elementType = scalarAddress.getFortranElementType();
   return hlfir::genElementalOp(loc, builder, elementType,
                                elementalAddrOp.getShape(), typeParams,
-                               genKernel);
+                               genKernel, !elementalAddrOp.isOrdered());
 }

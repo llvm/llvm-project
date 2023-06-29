@@ -97,7 +97,7 @@ end subroutine
 ! CHECK:      %[[VAL_3:.*]] = arith.constant 0 : index
 ! CHECK:      %[[VAL_4:.*]]:3 = fir.box_dims %[[VAL_1]]#0, %[[VAL_3]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:      %[[VAL_5:.*]] = fir.shape %[[VAL_4]]#1 : (index) -> !fir.shape<1>
-! CHECK:      %[[VAL_6:.*]] = hlfir.elemental %[[VAL_5]] : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
+! CHECK:      %[[VAL_6:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
 ! CHECK:      ^bb0(%[[VAL_7:.*]]: index):
 ! CHECK:        %[[VAL_8:.*]] = hlfir.designate %[[VAL_1]]#0 (%[[VAL_7]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! CHECK:        %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<f32>
@@ -136,7 +136,7 @@ end subroutine
 ! CHECK:        %[[VAL_6:.*]] = arith.constant 0 : index
 ! CHECK:        %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_4]]#0, %[[VAL_6]] : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> (index, index, index)
 ! CHECK:        %[[VAL_8:.*]] = fir.shape %[[VAL_7]]#1 : (index) -> !fir.shape<1>
-! CHECK:        %[[VAL_9:.*]] = hlfir.elemental %[[VAL_8]] : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
+! CHECK:        %[[VAL_9:.*]] = hlfir.elemental %[[VAL_8]] unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
 ! CHECK:        ^bb0(%[[VAL_10:.*]]: index):
 ! CHECK:          %[[VAL_11:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_10]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 ! CHECK:          %[[VAL_12:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_10]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>

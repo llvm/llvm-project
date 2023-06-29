@@ -1612,8 +1612,6 @@ public:
       return std::nullopt;
     }
     // Function case: generate call inside hlfir.elemental
-    if (mustBeOrdered)
-      TODO(loc, "ordered elemental calls in HLFIR");
     mlir::Type elementType =
         hlfir::getFortranElementType(*callContext.resultType);
     // Get result length parameters.
@@ -1645,8 +1643,9 @@ public:
       // use.
       return res;
     };
-    mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
-                                                  shape, typeParams, genKernel);
+    mlir::Value elemental =
+        hlfir::genElementalOp(loc, builder, elementType, shape, typeParams,
+                              genKernel, !mustBeOrdered);
     fir::FirOpBuilder *bldr = &builder;
     callContext.stmtCtx.attachCleanup(
         [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
