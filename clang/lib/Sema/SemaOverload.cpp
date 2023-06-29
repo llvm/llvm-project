@@ -10821,15 +10821,6 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       return;
     }
 
-    if (FromQs.hasUnaligned() != ToQs.hasUnaligned()) {
-      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_unaligned)
-          << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
-          << (FromExpr ? FromExpr->getSourceRange() : SourceRange()) << FromTy
-          << FromQs.hasUnaligned() << I + 1;
-      MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
-      return;
-    }
-
     if (FromQs.getPointerAuth() != ToQs.getPointerAuth()) {
       S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_ptrauth)
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
