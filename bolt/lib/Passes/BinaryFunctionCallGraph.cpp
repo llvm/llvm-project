@@ -135,32 +135,39 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
     uint64_t Offset = 0;
 
     auto recordCall = [&](const MCSymbol *DestSymbol, const uint64_t Count) {
-      if (BinaryFunction *DstFunc =
-              DestSymbol ? BC.getFunctionForSymbol(DestSymbol) : nullptr) {
-        if (DstFunc == Function) {
-          LLVM_DEBUG(dbgs() << "BOLT-INFO: recursive call detected in "
-                            << *DstFunc << "\n");
-          ++RecursiveCallsites;
-          if (IgnoreRecursiveCalls)
-            return false;
-        }
-        if (Filter(*DstFunc))
-          return false;
-
-        const CallGraph::NodeId DstId = lookupNode(DstFunc);
-        const bool IsValidCount = Count != COUNT_NO_PROFILE;
-        const uint64_t AdjCount = UseEdgeCounts && IsValidCount ? Count : 1;
-        if (!IsValidCount)
-          ++NoProfileCallsites;
-        Cg.incArcWeight(SrcId, DstId, AdjCount, Offset);
-        LLVM_DEBUG(if (opts::Verbosity > 1) {
-          dbgs() << "BOLT-DEBUG: buildCallGraph: call " << *Function << " -> "
-                 << *DstFunc << " @ " << Offset << "\n";
-        });
-        return true;
+      BinaryFunction *DstFunc =
+          DestSymbol ? BC.getFunctionForSymbol(DestSymbol) : nullptr;
+      if (!DstFunc) {
+        LLVM_DEBUG(if (opts::Verbosity > 1) dbgs()
+                   << "BOLT-DEBUG: buildCallGraph: no function for symbol\n");
+        return false;
       }
 
-      return false;
+      if (DstFunc == Function) {
+        LLVM_DEBUG(dbgs() << "BOLT-INFO: recursive call detected in "
+                          << *DstFunc << "\n");
+        ++RecursiveCallsites;
+        if (IgnoreRecursiveCalls)
+          return false;
+      }
+      if (Filter(*DstFunc)) {
+        LLVM_DEBUG(if (opts::Verbosity > 1) dbgs()
+                   << "BOLT-DEBUG: buildCallGraph: filtered " << *DstFunc
+                   << '\n');
+        return false;
+      }
+
+      const CallGraph::NodeId DstId = lookupNode(DstFunc);
+      const bool IsValidCount = Count != COUNT_NO_PROFILE;
+      const uint64_t AdjCount = UseEdgeCounts && IsValidCount ? Count : 1;
+      if (!IsValidCount)
+        ++NoProfileCallsites;
+      Cg.incArcWeight(SrcId, DstId, AdjCount, Offset);
+      LLVM_DEBUG(if (opts::Verbosity > 1) {
+        dbgs() << "BOLT-DEBUG: buildCallGraph: call " << *Function << " -> "
+               << *DstFunc << " @ " << Offset << "\n";
+      });
+      return true;
     };
 
     // Pairs of (symbol, count) for each target at this callsite.
