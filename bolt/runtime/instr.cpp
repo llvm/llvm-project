@@ -215,6 +215,12 @@ private:
 /// __bolt_instr_setup, our initialization routine.
 BumpPtrAllocator *GlobalAlloc;
 
+// Base address which we substract from recorded PC values when searching for
+// indirect call description entries. Needed because indCall descriptions are
+// mapped read-only and contain static addresses. Initialized in
+// __bolt_instr_setup.
+uint64_t TextBaseAddress = 0;
+
 // Storage for GlobalAlloc which can be shared if not using
 // instrumentation-file-append-pid.
 void *GlobalMetadataStorage;
@@ -1389,7 +1395,7 @@ void visitIndCallCounter(IndirectCallHashTable::MapEntry &Entry,
   const IndCallDescription *CallsiteDesc =
       &Ctx->IndCallDescriptions[CallsiteID];
   const IndCallTargetDescription *TargetDesc =
-      Ctx->lookupIndCallTarget(Entry.Key);
+      Ctx->lookupIndCallTarget(Entry.Key - TextBaseAddress);
   if (!TargetDesc) {
     DEBUG(report("Failed to lookup indirect call target\n"));
     char LineBuf[BufSize];
@@ -1609,6 +1615,7 @@ extern "C" void __bolt_instr_indirect_tailcall();
 extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
   __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
+  TextBaseAddress = getTextBaseAddress();
 
   const uint64_t CountersStart =
       reinterpret_cast<uint64_t>(&__bolt_instr_locations[0]);
