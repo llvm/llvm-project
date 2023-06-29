@@ -15,6 +15,7 @@
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
+#include <stdint.h> // SIZE_MAX
 
 namespace __llvm_libc {
 
@@ -89,7 +90,7 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
   // Whether to use rep;movsb exclusively, not at all, or only above a certain
   // threshold.
 #ifndef LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
-#define LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE -1
+#define LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE SIZE_MAX
 #endif
 
 #ifdef LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB
@@ -104,7 +105,7 @@ inline_memcpy_x86_maybe_interpose_repmovsb(Ptr __restrict dst,
       LIBC_COPT_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
   if constexpr (kRepMovsbThreshold == 0) {
     return x86::Memcpy::repmovsb(dst, src, count);
-  } else if constexpr (kRepMovsbThreshold == size_t(-1)) {
+  } else if constexpr (kRepMovsbThreshold == SIZE_MAX) {
     return inline_memcpy_x86(dst, src, count);
   } else {
     if (LIBC_UNLIKELY(count >= kRepMovsbThreshold))
