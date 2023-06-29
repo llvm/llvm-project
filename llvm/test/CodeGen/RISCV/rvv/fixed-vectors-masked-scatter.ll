@@ -10854,10 +10854,11 @@ define void @mscatter_baseidx_v32i8(<32 x i8> %val, ptr %base, <32 x i8> %idxs, 
 ; RV64-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    vsetivli zero, 16, e8, m2, ta, ma
-; RV64-NEXT:    vslidedown.vi v8, v8, 16
 ; RV64-NEXT:    vslidedown.vi v10, v10, 16
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v10
+; RV64-NEXT:    vsetivli zero, 16, e8, m2, ta, ma
+; RV64-NEXT:    vslidedown.vi v8, v8, 16
 ; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64-NEXT:    vslidedown.vi v0, v0, 2
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
