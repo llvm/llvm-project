@@ -6,18 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FormatTestUtils.h"
-#include "clang/Format/Format.h"
-#include "llvm/Support/Debug.h"
-#include "gtest/gtest.h"
+#include "FormatTestBase.h"
 
 #define DEBUG_TYPE "format-test"
 
 namespace clang {
 namespace format {
+namespace test {
+namespace {
 
-class FormatTestCSharp : public ::testing::Test {
+class FormatTestCSharp : public test::FormatTestBase {
 protected:
+  FormatStyle getDefaultStyle() const override {
+    return getMicrosoftStyle(FormatStyle::LK_CSharp);
+  }
+
   static std::string format(llvm::StringRef Code, unsigned Offset,
                             unsigned Length, const FormatStyle &Style) {
     LLVM_DEBUG(llvm::errs() << "---\n");
@@ -40,13 +43,6 @@ protected:
     FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_CSharp);
     Style.ColumnLimit = ColumnLimit;
     return Style;
-  }
-
-  static void verifyFormat(
-      llvm::StringRef Code,
-      const FormatStyle &Style = getMicrosoftStyle(FormatStyle::LK_CSharp)) {
-    EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
-    EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
   }
 };
 
@@ -129,9 +125,65 @@ TEST_F(FormatTestCSharp, AccessModifiers) {
 }
 
 TEST_F(FormatTestCSharp, NoStringLiteralBreaks) {
+  // Breaking of interpolated strings is not implemented.
+  auto Style = getDefaultStyle();
+  Style.ColumnLimit = 40;
+  Style.BreakStringLiterals = true;
+  verifyFormat("foo("
+               "$\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+               "aaaaaaa\");",
+               Style);
+}
+
+TEST_F(FormatTestCSharp, StringLiteralBreaks) {
+  // The line is 75 characters long.  The default limit for the Microsoft style
+  // is 120.
+  auto Style = getDefaultStyle();
+  Style.BreakStringLiterals = true;
   verifyFormat("foo("
                "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-               "aaaaaa\");");
+               "aaaaaa\");",
+               Style);
+  // When the column limit is smaller, the string should get broken.
+  Style.ColumnLimit = 40;
+  verifyFormat(R"(foo("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
+    "aaa");)",
+               "foo("
+               "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+               "aaaaaa\");",
+               Style);
+  // The new quotes should be the same as the original.
+  verifyFormat(R"(foo(@"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
+    @"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" +
+    @"aaaaa");)",
+               "foo("
+               "@\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+               "aaaaaaa\");",
+               Style);
+  // The operators can be on either line.
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+  verifyFormat(R"(foo("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    + "a");)",
+               "foo("
+               "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+               "aaaaaa\");",
+               Style);
+  Style.AlignOperands = FormatStyle::OAS_AlignAfterOperator;
+  verifyFormat(R"(foo("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    + "a");)",
+               "foo("
+               "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+               "aaaaaa\");",
+               Style);
+  verifyFormat(R"(x = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";)",
+               "x = "
+               "\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+               "aaaaaa\";",
+               Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpVerbatiumStringLiterals) {
@@ -166,7 +218,7 @@ TEST_F(FormatTestCSharp, CSharpInterpolatedStringLiterals) {
 }
 
 TEST_F(FormatTestCSharp, CSharpFatArrows) {
-  verifyFormat("Task serverTask = Task.Run(async() => {");
+  verifyIncompleteFormat("Task serverTask = Task.Run(async() => {");
   verifyFormat("public override string ToString() => \"{Name}\\{Age}\";");
 }
 
@@ -282,7 +334,7 @@ TEST_F(FormatTestCSharp, Attributes) {
                "listening on provided host\")]\n"
                "public string Host { set; get; }");
 
-  verifyFormat(
+  verifyIncompleteFormat(
       "[DllImport(\"Hello\", EntryPoint = \"hello_world\")]\n"
       "// The const char* returned by hello_world must not be deleted.\n"
       "private static extern IntPtr HelloFromCpp();)");
@@ -1138,7 +1190,8 @@ TEST_F(FormatTestCSharp, CSharpSpaces) {
                Style);
   verifyFormat(R"(Apply(x => x.Name, x => () => x.ID);)", Style);
   verifyFormat(R"(bool[] xs = { true, true };)", Style);
-  verifyFormat(R"(taskContext.Factory.Run(async () => doThing(args);)", Style);
+  verifyIncompleteFormat(
+      R"(taskContext.Factory.Run(async () => doThing(args);)", Style);
   verifyFormat(R"(catch (TestException) when (innerFinallyExecuted))", Style);
   verifyFormat(R"(private float[,] Values;)", Style);
   verifyFormat(R"(Result this[Index x] => Foo(x);)", Style);
@@ -1612,5 +1665,7 @@ TEST_F(FormatTestCSharp, BrokenBrackets) {
   EXPECT_NE("", format("int where b <")); // reduced from crasher
 }
 
+} // namespace
+} // namespace test
 } // namespace format
-} // end namespace clang
+} // namespace clang
