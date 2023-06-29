@@ -1478,6 +1478,9 @@ struct AttributorConfig {
 
   /// The name of the pass running the attributor, used to emit remarks.
   const char *PassName = nullptr;
+
+  using IPOAmendableCBTy = function_ref<bool(const Function &F)>;
+  IPOAmendableCBTy IPOAmendableCB;
 };
 
 /// The fixpoint analysis framework that orchestrates the attribute deduction.
@@ -1590,6 +1593,10 @@ struct Attributor {
       return AAPtr;
     }
 
+    bool ShouldUpdateAA;
+    if (!shouldInitialize<AAType>(IRP, ShouldUpdateAA))
+      return nullptr;
+
     // No matching attribute found, create one.
     // Use the static create method.
     auto &AA = AAType::createForPosition(IRP, *this);
@@ -1604,28 +1611,8 @@ struct Attributor {
       return &AA;
     }
 
-    // For now we ignore naked and optnone functions.
-    bool Invalidate =
-        Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID);
-    const Function *AnchorFn = IRP.getAnchorScope();
-    if (AnchorFn) {
-      Invalidate |=
-          AnchorFn->hasFnAttribute(Attribute::Naked) ||
-          AnchorFn->hasFnAttribute(Attribute::OptimizeNone) ||
-          (!isModulePass() && !getInfoCache().isInModuleSlice(*AnchorFn));
-    }
-
-    // Avoid too many nested initializations to prevent a stack overflow.
-    Invalidate |= InitializationChainLength > MaxInitializationChainLength;
-
     // Bootstrap the new attribute with an initial update to propagate
-    // information, e.g., function -> call site. If it is not on a given
-    // Allowed we will not perform updates at all.
-    if (Invalidate) {
-      AA.getState().indicatePessimisticFixpoint();
-      return &AA;
-    }
-
+    // information, e.g., function -> call site.
     {
       TimeTraceScope TimeScope("initialize", [&]() {
         return AA.getName() +
@@ -1636,18 +1623,7 @@ struct Attributor {
       --InitializationChainLength;
     }
 
-    // We update only AAs associated with functions in the Functions set or
-    // call sites of them.
-    if ((AnchorFn && !isRunOn(const_cast<Function *>(AnchorFn))) &&
-        !isRunOn(IRP.getAssociatedFunction())) {
-      AA.getState().indicatePessimisticFixpoint();
-      return &AA;
-    }
-
-    // If this is queried in the manifest stage, we force the AA to indicate
-    // pessimistic fixpoint immediately.
-    if (Phase == AttributorPhase::MANIFEST ||
-        Phase == AttributorPhase::CLEANUP) {
+    if (!ShouldUpdateAA) {
       AA.getState().indicatePessimisticFixpoint();
       return &AA;
     }
@@ -1761,6 +1737,51 @@ struct Attributor {
     return Functions.empty() || Functions.count(Fn);
   }
 
+  template <typename AAType> bool shouldUpdateAA(const IRPosition &IRP) {
+    // If this is queried in the manifest stage, we force the AA to indicate
+    // pessimistic fixpoint immediately.
+    if (Phase == AttributorPhase::MANIFEST || Phase == AttributorPhase::CLEANUP)
+      return false;
+
+    Function *AssociatedFn = IRP.getAssociatedFunction();
+
+    // Check if we require a callee but there is none.
+    if (!AssociatedFn && AAType::requiresCalleeForCallBase() &&
+        IRP.isAnyCallSitePosition())
+      return false;
+
+    if (!AAType::isValidIRPositionForUpdate(*this, IRP))
+      return false;
+
+    // We update only AAs associated with functions in the Functions set or
+    // call sites of them.
+    return (!AssociatedFn || isModulePass() || isRunOn(AssociatedFn) ||
+            isRunOn(IRP.getAnchorScope()));
+  }
+
+  template <typename AAType>
+  bool shouldInitialize(const IRPosition &IRP, bool &ShouldUpdateAA) {
+    if (!AAType::isValidIRPositionForInit(*this, IRP))
+      return false;
+
+    if (Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID))
+      return false;
+
+    // For now we skip anything in naked and optnone functions.
+    const Function *AnchorFn = IRP.getAnchorScope();
+    if (AnchorFn && (AnchorFn->hasFnAttribute(Attribute::Naked) ||
+                     AnchorFn->hasFnAttribute(Attribute::OptimizeNone)))
+      return false;
+
+    // Avoid too many nested initializations to prevent a stack overflow.
+    if (InitializationChainLength > MaxInitializationChainLength)
+      return false;
+
+    ShouldUpdateAA = shouldUpdateAA<AAType>(IRP);
+
+    return !AAType::hasTrivialInitializer() || ShouldUpdateAA;
+  }
+
   /// Determine opportunities to derive 'default' attributes in \p F and create
   /// abstract attribute objects for them.
   ///
@@ -1778,7 +1799,8 @@ struct Attributor {
   /// If a function is exactly defined or it has alwaysinline attribute
   /// and is viable to be inlined, we say it is IPO amendable
   bool isFunctionIPOAmendable(const Function &F) {
-    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F);
+    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F) ||
+           (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
   }
 
   /// Mark the internal function \p F as live.
@@ -3207,6 +3229,36 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// We eagerly return true here because all AADepGraphNodes except for the
   /// Synthethis Node are of type AbstractAttribute
   static bool classof(const AADepGraphNode *DGN) { return true; }
+
+  /// Return false if this AA does anything non-trivial (hence not done by
+  /// default) in its initializer.
+  static bool hasTrivialInitializer() { return false; }
+
+  /// Return true if this AA requires a "callee" (or an associted function) for
+  /// a call site positon. Default is optimistic to minimize AAs.
+  static bool requiresCalleeForCallBase() { return true; }
+
+  /// Return false if an AA should not be created for \p IRP.
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    return true;
+  }
+
+  /// Return false if an AA should not be updated for \p IRP.
+  static bool isValidIRPositionForUpdate(Attributor &A, const IRPosition &IRP) {
+    Function *AssociatedFn = IRP.getAssociatedFunction();
+    bool IsFnInterface = IRP.isFnInterfaceKind();
+    assert((!IsFnInterface || AssociatedFn) &&
+           "Function interface without a function?");
+
+    // TODO: Not all attributes require an exact definition. Find a way to
+    //       enable deduction for some but not all attributes in case the
+    //       definition might be changed at runtime, see also
+    //       http://lists.llvm.org/pipermail/llvm-dev/2018-February/121275.html.
+    // TODO: We could always determine abstract attributes and if sufficient
+    //       information was found we could duplicate the functions that do not
+    //       have an exact definition.
+    return !IsFnInterface || A.isFunctionIPOAmendable(*AssociatedFn);
+  }
 
   /// Initialize the state with the information in the Attributor \p A.
   ///
@@ -5086,6 +5138,10 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 
   AACallEdges(const IRPosition &IRP, Attributor &A)
       : Base(IRP), AACallGraphNode(A) {}
+
+  /// The callee value is tracked beyond a simple stripPointerCasts, so we allow
+  /// unknown callees.
+  static bool requiresCalleeForCallBase() { return false; }
 
   /// Get the optimistic edges.
   virtual const SetVector<Function *> &getOptimisticEdges() const = 0;

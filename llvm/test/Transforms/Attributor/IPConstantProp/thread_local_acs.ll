@@ -50,7 +50,7 @@ define dso_local void @caller() {
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@caller() {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    call void @broker(ptr nofree noundef nonnull readonly align 4 dereferenceable(4) @gtl, ptr noundef nonnull @callee, ptr nofree noundef nonnull readonly align 4 dereferenceable(4) @gsh)
+; CGSCC-NEXT:    call void @broker(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gtl, ptr noundef nonnull @callee, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) @gsh)
 ; CGSCC-NEXT:    ret void
 ;
 entry:

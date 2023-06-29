@@ -1342,35 +1342,20 @@ define weak_odr align 16 ptr @non_exact_4(ptr align 32 %a) {
 ; We can use the return information of the weak function non_exact_4.
 ; FIXME: %c2 and %c3 should be replaced but not %c0 or %c1!
 define i32 @exact(ptr align 8 %a, ptr align 8 %b) {
-; TUNIT-LABEL: define {{[^@]+}}@exact
-; TUNIT-SAME: (ptr align 8 [[A:%.*]], ptr align 8 [[B:%.*]]) {
-; TUNIT-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
-; TUNIT-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 noundef 1)
-; TUNIT-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 noundef 2)
-; TUNIT-NEXT:    [[C3:%.*]] = call align 32 ptr @non_exact_3(ptr align 32 [[A]])
-; TUNIT-NEXT:    [[C4:%.*]] = call align 16 ptr @non_exact_4(ptr align 32 [[B]])
-; TUNIT-NEXT:    [[C3L:%.*]] = load i32, ptr [[A]], align 32
-; TUNIT-NEXT:    [[C4L:%.*]] = load i32, ptr [[C4]], align 16
-; TUNIT-NEXT:    [[ADD1:%.*]] = add i32 [[C0]], [[C1]]
-; TUNIT-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], 2
-; TUNIT-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[C3L]]
-; TUNIT-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
-; TUNIT-NEXT:    ret i32 [[ADD4]]
-;
-; CGSCC-LABEL: define {{[^@]+}}@exact
-; CGSCC-SAME: (ptr align 8 [[A:%.*]], ptr align 8 [[B:%.*]]) {
-; CGSCC-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
-; CGSCC-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 noundef 1)
-; CGSCC-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 noundef 2)
-; CGSCC-NEXT:    [[C3:%.*]] = call align 32 ptr @non_exact_3(ptr align 32 [[A]])
-; CGSCC-NEXT:    [[C4:%.*]] = call align 16 ptr @non_exact_4(ptr align 32 [[B]])
-; CGSCC-NEXT:    [[C3L:%.*]] = load i32, ptr [[C3]], align 32
-; CGSCC-NEXT:    [[C4L:%.*]] = load i32, ptr [[C4]], align 16
-; CGSCC-NEXT:    [[ADD1:%.*]] = add i32 [[C0]], [[C1]]
-; CGSCC-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[C2]]
-; CGSCC-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[C3L]]
-; CGSCC-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
-; CGSCC-NEXT:    ret i32 [[ADD4]]
+; CHECK-LABEL: define {{[^@]+}}@exact
+; CHECK-SAME: (ptr align 8 [[A:%.*]], ptr align 8 [[B:%.*]]) {
+; CHECK-NEXT:    [[C0:%.*]] = call i32 @non_exact_0()
+; CHECK-NEXT:    [[C1:%.*]] = call i32 @non_exact_1(i32 noundef 1)
+; CHECK-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 noundef 2)
+; CHECK-NEXT:    [[C3:%.*]] = call align 32 ptr @non_exact_3(ptr align 32 [[A]])
+; CHECK-NEXT:    [[C4:%.*]] = call align 16 ptr @non_exact_4(ptr align 32 [[B]])
+; CHECK-NEXT:    [[C3L:%.*]] = load i32, ptr [[C3]], align 32
+; CHECK-NEXT:    [[C4L:%.*]] = load i32, ptr [[C4]], align 16
+; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[C0]], [[C1]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[C2]]
+; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[C3L]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
+; CHECK-NEXT:    ret i32 [[ADD4]]
 ;
   %c0 = call i32 @non_exact_0()
   %c1 = call i32 @non_exact_1(i32 1)

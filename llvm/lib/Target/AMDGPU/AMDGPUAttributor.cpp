@@ -948,6 +948,9 @@ public:
     AC.Allowed = &Allowed;
     AC.IsModulePass = true;
     AC.DefaultInitializeLiveInternals = false;
+    AC.IPOAmendableCB = [](const Function &F) {
+      return F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
+    };
 
     Attributor A(Functions, InfoCache, AC);
 

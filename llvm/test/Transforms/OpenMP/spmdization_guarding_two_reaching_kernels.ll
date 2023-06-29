@@ -376,7 +376,7 @@ attributes #5 = { convergent }
 !8 = !{i32 7, !"frame-pointer", i32 2}
 !9 = !{!"clang version 14.0.0"}
 ;.
-; CHECK: attributes #[[ATTR0]] = { noinline norecurse nounwind "frame-pointer"="all" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
+; CHECK: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind "frame-pointer"="all" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK: attributes #[[ATTR1]] = { noinline nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK: attributes #[[ATTR2]] = { noinline norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK: attributes #[[ATTR3]] = { nounwind }
@@ -387,7 +387,7 @@ attributes #5 = { convergent }
 ; CHECK: attributes #[[ATTR8]] = { convergent }
 ; CHECK: attributes #[[ATTR9]] = { convergent nosync nounwind }
 ;.
-; CHECK-DISABLE-SPMDIZATION: attributes #[[ATTR0]] = { noinline norecurse nounwind "frame-pointer"="all" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
+; CHECK-DISABLE-SPMDIZATION: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind "frame-pointer"="all" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK-DISABLE-SPMDIZATION: attributes #[[ATTR1]] = { noinline nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK-DISABLE-SPMDIZATION: attributes #[[ATTR2]] = { noinline norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="sm_53" "target-features"="+ptx32,+sm_53" }
 ; CHECK-DISABLE-SPMDIZATION: attributes #[[ATTR3]] = { nounwind }
