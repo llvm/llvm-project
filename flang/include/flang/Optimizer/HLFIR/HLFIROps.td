@@ -786,7 +786,9 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects, hlfir_Ele
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$shape,
-      CArg<"mlir::ValueRange", "{}">:$typeparams)>];
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"bool", "false">:$isUnordered)>
+  ];
 
 }
 
@@ -1216,7 +1218,7 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
                          MaxSizedRegion<1>:$cleanup);
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$shape)>
+    OpBuilder<(ins "mlir::Value":$shape, CArg<"bool", "false">:$isUnordered)>
   ];
 
   let assemblyFormat = [{
