@@ -105,7 +105,7 @@ static Address buildPointerWithAlignment(const Expr *E,
   // Casts:
   if (const CastExpr *CE = dyn_cast<CastExpr>(E)) {
     if (const auto *ECE = dyn_cast<ExplicitCastExpr>(CE))
-      assert(0 && "not implemented");
+      CGF.CGM.buildExplicitCastExprType(ECE, &CGF);
 
     switch (CE->getCastKind()) {
     default: {
@@ -1377,7 +1377,8 @@ LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
       if (V.isValid()) {
         auto T = getTypes().convertTypeForMem(E->getType());
         if (V.getElementType() != T)
-          assert(0 && "NYI");
+          LV.setAddress(
+              builder.createElementBitCast(getLoc(E->getSourceRange()), V, T));
       }
     }
     return LV;

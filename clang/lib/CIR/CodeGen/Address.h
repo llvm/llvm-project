@@ -69,6 +69,13 @@ public:
                    IsKnownNonNull);
   }
 
+  /// Return address with different alignment, but same pointer and element
+  /// type.
+  Address withAlignment(clang::CharUnits NewAlignment) const {
+    return Address(getPointer(), getElementType(), NewAlignment,
+                   isKnownNonNull());
+  }
+
   mlir::Value getPointer() const {
     assert(isValid());
     return PointerAndKnownNonNull.getPointer();
