@@ -105,6 +105,12 @@ add_executable(
   str_to_float_comparison_test.cpp
 )
 
+target_include_directories(
+  libc_str_to_float_comparison_test
+  PRIVATE
+    ${LIBC_INCLUDE_DIR}
+)
+
 target_link_libraries(libc_str_to_float_comparison_test
   PRIVATE
     "${LIBC_TARGET}"
