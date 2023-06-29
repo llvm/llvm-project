@@ -2221,7 +2221,8 @@ void ASTDeclReader::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   D->setExplicitSpecifier(Record.readExplicitSpec());
   D->Ctor = readDeclAs<CXXConstructorDecl>();
   VisitFunctionDecl(D);
-  D->setIsCopyDeductionCandidate(Record.readInt());
+  D->setDeductionCandidateKind(
+      static_cast<DeductionCandidate>(Record.readInt()));
 }
 
 void ASTDeclReader::VisitCXXMethodDecl(CXXMethodDecl *D) {

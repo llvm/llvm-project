@@ -12703,10 +12703,9 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   if (Init)
     DeduceInits = Init;
 
-  if (DirectInit) {
-    if (auto *PL = dyn_cast_or_null<ParenListExpr>(Init))
-      DeduceInits = PL->exprs();
-  }
+  auto *PL = dyn_cast_if_present<ParenListExpr>(Init);
+  if (DirectInit && PL)
+    DeduceInits = PL->exprs();
 
   if (isa<DeducedTemplateSpecializationType>(Deduced)) {
     assert(VDecl && "non-auto type for init capture deduction?");
@@ -12716,7 +12715,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     // FIXME: Initialization should not be taking a mutable list of inits.
     SmallVector<Expr*, 8> InitsCopy(DeduceInits.begin(), DeduceInits.end());
     return DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind,
-                                                       InitsCopy);
+                                                       InitsCopy, PL);
   }
 
   if (DirectInit) {

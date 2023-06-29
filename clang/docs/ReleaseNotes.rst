@@ -112,6 +112,8 @@ C++20 Feature Support
 - Clang now supports `requires cplusplus20` for module maps.
 - Implemented missing parts of `P2002R1: Consistent comparison operators <https://wg21.link/P2002R1>`_
 - Clang now defines `__cpp_consteval` macro.
+- Implemented `P1816R0: <https://wg21.link/p1816r0>`_ and `P2082R1: <https://wg21.link/p2082r1>`_,
+  which allows CTAD for aggregates.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
