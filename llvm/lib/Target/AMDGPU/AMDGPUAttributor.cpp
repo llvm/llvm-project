@@ -535,7 +535,8 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     raw_string_ostream OS(Str);
     OS << "AMDInfo[";
     for (auto Attr : ImplicitAttrs)
-      OS << ' ' << Attr.second;
+      if (isAssumed(Attr.first))
+        OS << ' ' << Attr.second;
     OS << " ]";
     return OS.str();
   }
