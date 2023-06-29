@@ -885,9 +885,9 @@ let Predicates = [iHasE2] in {
   def XTRB3 : R_XZ<0x1C, 0x8, "xtrb3.32">;
   def BTSTI32 : I_5_X<0x0A, 0x4, "btsti32", uimm5, []>;
   def BCLRI32 : I_5_XZ<0xA, 0x1, "bclri32",
-  (outs GPR:$rz), (ins GPR:$rx, uimm5:$imm5), []>;
+    (outs GPR:$rz), (ins GPR:$rx, uimm5:$imm5), []>;
   def BSETI32 : I_5_XZ<0xA, 0x2, "bseti32",
-  (outs GPR:$rz), (ins GPR:$rx, uimm5:$imm5), []>;
+    (outs GPR:$rz), (ins GPR:$rx, uimm5:$imm5), []>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1273,7 +1273,6 @@ defm : MOVTF32Pat1<setge, setle, CMPLT32, MOVF32>;
 let Predicates = [iHasE2] in
   def : Pat<(i32 imm:$imm),
             (ORI32 (MOVIH32 (uimm32_hi16 imm:$imm)), (uimm32_lo16 imm:$imm))>;
-
 
 // Other operations.
 let Predicates = [iHasE2] in {
