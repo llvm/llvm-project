@@ -1,5 +1,6 @@
 @AUTO_GEN_COMMENT@
 
+config.bin_llvm_tools_dir = "@CMAKE_BINARY_DIR@/bin"
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
 config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
 config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@
@@ -20,6 +21,10 @@ config.libomptarget_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
 config.libomptarget_not = "@OPENMP_NOT_EXECUTABLE@"
 config.libomptarget_debug = @LIBOMPTARGET_DEBUG@
 config.has_libomptarget_ompt = @LIBOMPTARGET_OMPT_SUPPORT@
+config.llvm_enabled_projects = "@LLVM_ENABLE_PROJECTS@".split(";")
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_CURRENT_SOURCE_DIR@/lit.cfg")

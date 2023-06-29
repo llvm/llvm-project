@@ -261,7 +261,7 @@ __DEVICE__
 float fdividef(float __x, float __y) { return __x / __y; }
 
 __DEVICE__
-float floorf(float __x) { return __ocml_floor_f32(__x); }
+float floorf(float __x) { return __builtin_floorf(__x); }
 
 __DEVICE__
 float fmaf(float __x, float __y, float __z) {
@@ -279,8 +279,7 @@ float fmodf(float __x, float __y) { return __ocml_fmod_f32(__x, __y); }
 
 __DEVICE_NOCE__
 float frexpf(float __x, int *__nptr) {
-  *__nptr = __builtin_amdgcn_frexp_expf(__x);
-  return __builtin_amdgcn_frexp_mantf(__x);
+  return __builtin_frexpf(__x, __nptr);
 }
 
 __DEVICE__
@@ -813,7 +812,7 @@ __DEVICE__
 double fdim(double __x, double __y) { return __ocml_fdim_f64(__x, __y); }
 
 __DEVICE__
-double floor(double __x) { return __ocml_floor_f64(__x); }
+double floor(double __x) { return __builtin_floor(__x); }
 
 __DEVICE__
 double fma(double __x, double __y, double __z) {
@@ -831,8 +830,7 @@ double fmod(double __x, double __y) { return __ocml_fmod_f64(__x, __y); }
 
 __DEVICE_NOCE__
 double frexp(double __x, int *__nptr) {
-  *__nptr = __builtin_amdgcn_frexp_exp(__x);
-  return __builtin_amdgcn_frexp_mant(__x);
+  return __builtin_frexp(__x, __nptr);
 }
 
 __DEVICE__

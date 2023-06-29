@@ -319,8 +319,8 @@ namespace ranges {
         : __value_(std::move(__value)), __bound_sentinel_(std::move(__bound_sentinel)) {
       // Validate the precondition if possible.
       if constexpr (totally_ordered_with<_Start, _BoundSentinel>) {
-        _LIBCPP_ASSERT(ranges::less_equal()(__value_, __bound_sentinel_),
-                       "Precondition violated: value is greater than bound.");
+        _LIBCPP_ASSERT_UNCATEGORIZED(ranges::less_equal()(__value_, __bound_sentinel_),
+                                     "Precondition violated: value is greater than bound.");
       }
     }
 

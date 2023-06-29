@@ -1,6 +1,6 @@
 # Use address that can't fit in a 64-bit number. Show that llvm-symbolizer
 # simply echoes it as per other malformed input addresses.
-RUN: llvm-symbolizer --obj=addr.exe 0x10000000000000000 | FileCheck --check-prefix=LARGE-ADDR %s
+RUN: llvm-symbolizer --obj=%p/Inputs/addr.exe 0x10000000000000000 | FileCheck --check-prefix=LARGE-ADDR %s
 
 LARGE-ADDR-NOT: {{.}}
 LARGE-ADDR:     0x10000000000000000

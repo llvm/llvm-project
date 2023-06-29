@@ -63,6 +63,8 @@ Changes to the LLVM IR
 
 * Introduced new ``llvm.ldexp`` and ``llvm.experimental.constrained.ldexp`` intrinsics.
 
+* Introduced new ``llvm.frexp`` intrinsic.
+
 * The constant expression variants of the following instructions have been
   removed:
 
@@ -79,6 +81,12 @@ Changes to LLVM infrastructure
 
 * InstructionSimplify APIs now require instructions be inserted into a
   parent function.
+
+* A new FatLTO pipeline was added to support generating object files that have
+  both machine code and LTO compatible bitcode. See the :doc:`FatLTO`
+  documentation and the original
+  `RFC  <https://discourse.llvm.org/t/rfc-ffat-lto-objects-support/63977>`_
+  for more details.
 
 Changes to building LLVM
 ------------------------

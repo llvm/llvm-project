@@ -206,17 +206,11 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
 
-``experimental-zvfbfmin``
-  LLVM implements assembler support for the `0.6 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/main>`_.
-
-``experimental-zvfbfwma``
-  LLVM implements assembler support for the `0.6 draft specification <https://github.com/riscv/riscv-bfloat16/releases/tag/main>`_.
-
 ``experimental-zvfh``
   LLVM implements `this draft text <https://github.com/riscv/riscv-v-spec/pull/780>`__.
 
 ``experimental-zvbb``, ``experimental-zvbc``, ``experimental-zvkg``, ``experimental-zvkn``, ``experimental-zvknc``, ``experimental-zvkned``, ``experimental-zvkng``, ``experimental-zvknha``, ``experimental-zvknhb``, ``experimental-zvks``, ``experimental-zvksc``, ``experimental-zvksed``, ``experimental-zvksg``, ``experimental-zvksh``, ``experimental-zvkt``
-  LLVM implements the `0.9.7 draft specification <https://github.com/riscv/riscv-crypto/releases/download/v20230531/riscv-crypto-spec-vector.pdf>`__. Note that current vector crypto extension version can be found in: <https://github.com/riscv/riscv-crypto>.
+  LLVM implements the `1.0.0-rc1 specification <https://github.com/riscv/riscv-crypto/releases/download/v20230620/riscv-crypto-spec-vector.pdf>`__. Note that current vector crypto extension version can be found in: <https://github.com/riscv/riscv-crypto>.
 
 To use an experimental extension from `clang`, you must add `-menable-experimental-extensions` to the command line, and specify the exact version of the experimental extension you are using.  To use an experimental extension with LLVM's internal developer tools (e.g. `llc`, `llvm-objdump`, `llvm-mc`), you must prefix the extension name with `experimental-`.  Note that you don't need to specify the version with internal tools, and shouldn't include the `experimental-` prefix with `clang`.
 

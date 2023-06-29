@@ -345,9 +345,9 @@ LogicalResult MultiDimReductionOp::verify() {
 /// Returns the mask type expected by this operation.
 Type MultiDimReductionOp::getExpectedMaskType() {
   auto vecType = getSourceVectorType();
-  return VectorType::get(
-      vecType.getShape(), IntegerType::get(vecType.getContext(), /*width=*/1),
-      vecType.getNumScalableDims(), vecType.getScalableDims());
+  return VectorType::get(vecType.getShape(),
+                         IntegerType::get(vecType.getContext(), /*width=*/1),
+                         vecType.getScalableDims());
 }
 
 namespace {
@@ -484,9 +484,9 @@ void ReductionOp::print(OpAsmPrinter &p) {
 /// Returns the mask type expected by this operation.
 Type ReductionOp::getExpectedMaskType() {
   auto vecType = getSourceVectorType();
-  return VectorType::get(
-      vecType.getShape(), IntegerType::get(vecType.getContext(), /*width=*/1),
-      vecType.getNumScalableDims(), vecType.getScalableDims());
+  return VectorType::get(vecType.getShape(),
+                         IntegerType::get(vecType.getContext(), /*width=*/1),
+                         vecType.getScalableDims());
 }
 
 Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
@@ -929,8 +929,7 @@ Type ContractionOp::getExpectedMaskType() {
   assert(!ShapedType::isDynamicShape(maskShape) &&
          "Mask shape couldn't be computed");
   // TODO: Extend the scalable vector type representation with a bit map.
-  assert(lhsType.getNumScalableDims() == 0 &&
-         rhsType.getNumScalableDims() == 0 &&
+  assert(!lhsType.isScalable() && !rhsType.isScalable() &&
          "Scalable vectors are not supported yet");
 
   return VectorType::get(maskShape,
@@ -2792,18 +2791,13 @@ ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
   if (vRHS) {
     SmallVector<bool> scalableDimsRes{vLHS.getScalableDims()[0],
                                       vRHS.getScalableDims()[0]};
-    auto numScalableDims =
-        count_if(scalableDimsRes, [](bool isScalable) { return isScalable; });
     resType = VectorType::get({vLHS.getDimSize(0), vRHS.getDimSize(0)},
-                              vLHS.getElementType(), numScalableDims,
-                              scalableDimsRes);
+                              vLHS.getElementType(), scalableDimsRes);
   } else {
     // Scalar RHS operand
     SmallVector<bool> scalableDimsRes{vLHS.getScalableDims()[0]};
-    auto numScalableDims =
-        count_if(scalableDimsRes, [](bool isScalable) { return isScalable; });
     resType = VectorType::get({vLHS.getDimSize(0)}, vLHS.getElementType(),
-                              numScalableDims, scalableDimsRes);
+                              scalableDimsRes);
   }
 
   if (!result.attributes.get(OuterProductOp::getKindAttrStrName())) {
@@ -2867,9 +2861,9 @@ LogicalResult OuterProductOp::verify() {
 /// verification purposes. It requires the operation to be vectorized."
 Type OuterProductOp::getExpectedMaskType() {
   auto vecType = this->getResultVectorType();
-  return VectorType::get(
-      vecType.getShape(), IntegerType::get(vecType.getContext(), /*width=*/1),
-      vecType.getNumScalableDims(), vecType.getScalableDims());
+  return VectorType::get(vecType.getShape(),
+                         IntegerType::get(vecType.getContext(), /*width=*/1),
+                         vecType.getScalableDims());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3528,8 +3522,7 @@ static VectorType inferTransferOpMaskType(VectorType vecType,
   SmallVector<bool> scalableDims =
       applyPermutationMap(invPermMap, vecType.getScalableDims());
 
-  return VectorType::get(maskShape, i1Type, vecType.getNumScalableDims(),
-                         scalableDims);
+  return VectorType::get(maskShape, i1Type, scalableDims);
 }
 
 ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -4487,9 +4480,9 @@ LogicalResult GatherOp::verify() {
 /// verification purposes. It requires the operation to be vectorized."
 Type GatherOp::getExpectedMaskType() {
   auto vecType = this->getIndexVectorType();
-  return VectorType::get(
-      vecType.getShape(), IntegerType::get(vecType.getContext(), /*width=*/1),
-      vecType.getNumScalableDims(), vecType.getScalableDims());
+  return VectorType::get(vecType.getShape(),
+                         IntegerType::get(vecType.getContext(), /*width=*/1),
+                         vecType.getScalableDims());
 }
 
 std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {

@@ -148,6 +148,9 @@ public:
   /// fails.
   DILocalVariableAttr matchLocalVariableAttr(llvm::Value *value);
 
+  /// Converts `value` to a label attribute. Asserts if the matching fails.
+  DILabelAttr matchLabelAttr(llvm::Value *value);
+
   /// Converts `value` to an array of symbol references pointing to alias scope
   /// operations, or returns failure if the conversion fails.
   FailureOr<SmallVector<SymbolRefAttr>>

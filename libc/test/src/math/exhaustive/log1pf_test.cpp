@@ -7,69 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "exhaustive_test.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/math/log1pf.h"
-#include "test/UnitTest/FPMatcher.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-
-using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-struct LlvmLibcLog1pfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
-  bool check(uint32_t start, uint32_t stop,
-             mpfr::RoundingMode rounding) override {
-    mpfr::ForceRoundingMode r(rounding);
-    if (!r.success)
-      return true;
-    uint32_t bits = start;
-    bool result = true;
-    do {
-      FPBits xbits(bits);
-      float x = float(xbits);
-      result &= TEST_MPFR_MATCH(mpfr::Operation::Log1p, x,
-                                __llvm_libc::log1pf(x), 0.5, rounding);
-    } while (bits++ < stop);
-    return result;
-  }
-};
+using LlvmLibcLog1pfExhaustiveTest =
+    LlvmLibcUnaryOpExhaustiveMathTest<float, mpfr::Operation::Log1p,
+                                      __llvm_libc::log1pf>;
 
-// Range: All non-negative;
-static constexpr uint32_t START = 0x0000'0000U;
-static constexpr uint32_t STOP = 0x7f80'0000U;
+// Range: [0, Inf];
+static constexpr uint32_t POS_START = 0x0000'0000U;
+static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
-TEST_F(LlvmLibcLog1pfExhaustiveTest, RoundNearestTieToEven) {
-  test_full_range(START, STOP, mpfr::RoundingMode::Nearest);
-}
-
-TEST_F(LlvmLibcLog1pfExhaustiveTest, RoundUp) {
-  test_full_range(START, STOP, mpfr::RoundingMode::Upward);
-}
-
-TEST_F(LlvmLibcLog1pfExhaustiveTest, RoundDown) {
-  test_full_range(START, STOP, mpfr::RoundingMode::Downward);
-}
-
-TEST_F(LlvmLibcLog1pfExhaustiveTest, RoundTowardZero) {
-  test_full_range(START, STOP, mpfr::RoundingMode::TowardZero);
+TEST_F(LlvmLibcLog1pfExhaustiveTest, PostiveRange) {
+  test_full_range_all_roundings(POS_START, POS_STOP);
 }
 
 // Range: [-1, 0];
-static constexpr uint32_t NEG_START = 0x8000'0000U;
+static constexpr uint32_t NEG_START = 0xb000'0000U;
 static constexpr uint32_t NEG_STOP = 0xbf7f'ffffU;
 
-TEST_F(LlvmLibcLog1pfExhaustiveTest, NegativeRoundNearestTieToEven) {
-  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Nearest);
-}
-
-TEST_F(LlvmLibcLog1pfExhaustiveTest, NegativeRoundUp) {
-  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Upward);
-}
-
-TEST_F(LlvmLibcLog1pfExhaustiveTest, NegativeRoundDown) {
-  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::Downward);
-}
-
-TEST_F(LlvmLibcLog1pfExhaustiveTest, NegativeRoundTowardZero) {
-  test_full_range(NEG_START, NEG_STOP, mpfr::RoundingMode::TowardZero);
+TEST_F(LlvmLibcLog1pfExhaustiveTest, NegativeRange) {
+  test_full_range_all_roundings(NEG_START, NEG_STOP);
 }

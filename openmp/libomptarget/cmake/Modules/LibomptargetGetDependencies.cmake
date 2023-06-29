@@ -134,7 +134,12 @@ endif()
 # Looking for AMD GPUs...
 ################################################################################
 
-find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch PATHS ${LLVM_BINARY_DIR}/bin)
+if(TARGET amdgpu-arch)
+  get_property(LIBOMPTARGET_AMDGPU_ARCH TARGET amdgpu-arch PROPERTY LOCATION)
+ else()
+   find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch PATHS ${LLVM_BINARY_DIR}/bin)
+endif()
+
 if(LIBOMPTARGET_AMDGPU_ARCH)
   execute_process(COMMAND ${LIBOMPTARGET_AMDGPU_ARCH}
                   OUTPUT_VARIABLE LIBOMPTARGET_AMDGPU_ARCH_OUTPUT

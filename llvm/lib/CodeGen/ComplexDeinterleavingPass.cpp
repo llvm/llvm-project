@@ -1046,7 +1046,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
     if (!FinalNode)
       return nullptr;
   }
-
+  assert(FinalNode && "FinalNode can not be nullptr here");
   // Set the Real and Imag fields of the final node and submit it
   FinalNode->Real = Real;
   FinalNode->Imag = Imag;

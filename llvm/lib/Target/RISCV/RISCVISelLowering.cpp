@@ -13147,6 +13147,11 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Known.One.setBit(Log2_32(MinVLenB));
     break;
   }
+  case RISCVISD::FPCLASS: {
+    // fclass will only set one of the low 10 bits.
+    Known.Zero.setBitsFrom(10);
+    break;
+  }
   case ISD::INTRINSIC_W_CHAIN:
   case ISD::INTRINSIC_WO_CHAIN: {
     unsigned IntNo =

@@ -418,9 +418,7 @@ def ACC_Routine : Directive<"routine"> {
   let allowedOnceClauses = [
     VersionedClause<ACCC_Bind>,
     VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_NoHost>
-  ];
-  let requiredClauses = [
+    VersionedClause<ACCC_NoHost>,
     VersionedClause<ACCC_Gang>,
     VersionedClause<ACCC_Seq>,
     VersionedClause<ACCC_Vector>,

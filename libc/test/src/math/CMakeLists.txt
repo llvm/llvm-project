@@ -1610,6 +1610,19 @@ add_fp_unittest(
     libc.src.__support.FPUtil.normal_float
 )
 
+add_fp_unittest(
+  erff_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    erff_test.cpp
+  DEPENDS
+    libc.include.math
+    libc.src.math.erff
+    libc.src.__support.FPUtil.fp_bits
+)
+
 add_subdirectory(generic)
 
 if(NOT LLVM_LIBC_FULL_BUILD)

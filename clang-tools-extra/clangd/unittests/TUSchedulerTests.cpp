@@ -1629,7 +1629,7 @@ TEST_F(TUSchedulerTests, PreambleThrottle) {
     // We haven't released anything yet, we're still waiting.
     EXPECT_THAT(Throttler.Releases, testing::IsEmpty());
 
-    // FIXME: This is flaky, becaues the request can be destroyed after shutdown
+    // FIXME: This is flaky, because the request can be destroyed after shutdown
     // if it hasn't been dequeued yet (stop() resets NextRequest).
 #if 0
     // Now close file A, which will shut down its AST worker.

@@ -463,11 +463,12 @@ Type LLVMTypeConverter::convertVectorType(VectorType type) {
     return {};
   if (type.getShape().empty())
     return VectorType::get({1}, elementType);
-  Type vectorType =
-      VectorType::get(type.getShape().back(), elementType,
-                      type.getNumScalableDims(), type.getScalableDims().back());
+  Type vectorType = VectorType::get(type.getShape().back(), elementType,
+                                    type.getScalableDims().back());
   assert(LLVM::isCompatibleVectorType(vectorType) &&
          "expected vector type compatible with the LLVM dialect");
+  assert((type.isScalable() == type.allDimsScalable()) &&
+         "expected scalable vector with all dims scalable");
   auto shape = type.getShape();
   for (int i = shape.size() - 2; i >= 0; --i)
     vectorType = LLVM::LLVMArrayType::get(vectorType, shape[i]);

@@ -272,6 +272,9 @@ public:
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
 
+  /// Return true if only a single workitem can be active in a wave.
+  bool isSingleLaneExecution(const Function &Kernel) const;
+
   /// Creates value range metadata on an workitemid.* intrinsic call or load.
   bool makeLIDRangeMetadata(Instruction *I) const;
 

@@ -443,9 +443,9 @@ private:
           || (same_as<_CharT, wchar_t> && sizeof(wchar_t) == 2)
 #    endif
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
-    _LIBCPP_ASSERT(__begin != __end,
-                   "when called with an empty input the function will cause "
-                   "undefined behavior by evaluating data not in the input");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__begin != __end,
+                                 "when called with an empty input the function will cause "
+                                 "undefined behavior by evaluating data not in the input");
     __unicode::__code_point_view<_CharT> __view{__begin, __end};
     __unicode::__consume_result __consumed = __view.__consume();
     if (__consumed.__status != __unicode::__consume_result::__ok)
@@ -475,9 +475,9 @@ private:
   template <contiguous_iterator _Iterator>
     requires(same_as<_CharT, wchar_t> && sizeof(wchar_t) == 4)
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
-    _LIBCPP_ASSERT(__begin != __end,
-                   "when called with an empty input the function will cause "
-                   "undefined behavior by evaluating data not in the input");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__begin != __end,
+                                 "when called with an empty input the function will cause "
+                                 "undefined behavior by evaluating data not in the input");
     if (__begin + 1 != __end && __parse_alignment(*(__begin + 1))) {
       if (!__unicode::__is_scalar_value(*__begin))
         std::__throw_format_error("The fill character contains an invalid value");
@@ -502,9 +502,9 @@ private:
   // range-fill and tuple-fill are identical
   template <contiguous_iterator _Iterator>
   _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_fill_align(_Iterator& __begin, _Iterator __end, bool __use_range_fill) {
-    _LIBCPP_ASSERT(__begin != __end,
-                   "when called with an empty input the function will cause "
-                   "undefined behavior by evaluating data not in the input");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__begin != __end,
+                                 "when called with an empty input the function will cause "
+                                 "undefined behavior by evaluating data not in the input");
     if (__begin + 1 != __end) {
       if (__parse_alignment(*(__begin + 1))) {
         __validate_fill_character(*__begin, __use_range_fill);
@@ -582,8 +582,8 @@ private:
 
     __format::__parse_number_result __r = __format::__parse_number(__begin, __end);
     __width_ = __r.__value;
-    _LIBCPP_ASSERT(__width_ != 0, "A zero value isn't allowed and should be impossible, "
-                                  "due to validations in this function");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__width_ != 0, "A zero value isn't allowed and should be impossible, "
+                                                "due to validations in this function");
     __begin = __r.__last;
     return true;
   }

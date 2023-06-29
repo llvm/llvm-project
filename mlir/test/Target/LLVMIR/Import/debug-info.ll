@@ -233,8 +233,10 @@ source_filename = "debug-info.ll"
 
 ; // -----
 
+; CHECK: #[[FILE:.+]] = #llvm.di_file<
 ; CHECK: #[[$SP:.+]] = #llvm.di_subprogram<
-; CHECK: #[[$VAR0:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg", file = #{{.*}}, line = 1, arg = 1, alignInBits = 32, type = #{{.*}}>
+; CHECK: #[[$LABEL:.+]] = #llvm.di_label<scope = #[[$SP]], name = "label", file = #[[FILE]], line = 42>
+; CHECK: #[[$VAR0:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg", file = #[[FILE]], line = 1, arg = 1, alignInBits = 32, type = #{{.*}}>
 ; CHECK: #[[$VAR1:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg">
 
 ; CHECK-LABEL: @intrinsic
@@ -245,6 +247,8 @@ define void @intrinsic(i64 %0, ptr %1) {
   call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression()), !dbg !7
   ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
   call void @llvm.dbg.declare(metadata ptr %1, metadata !6, metadata !DIExpression()), !dbg !9
+  ; CHECK: llvm.intr.dbg.label #[[$LABEL]] loc(#[[LOC1:.+]])
+  call void @llvm.dbg.label(metadata !10), !dbg !9
   ret void
 }
 
@@ -253,6 +257,7 @@ define void @intrinsic(i64 %0, ptr %1) {
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
+declare void @llvm.dbg.label(metadata)
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -266,6 +271,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !7 = !DILocation(line: 1, column: 2, scope: !3)
 !8 = !DILocation(line: 2, column: 2, scope: !3)
 !9 = !DILocation(line: 3, column: 2, scope: !3)
+!10 = !DILabel(scope: !3, name: "label", file: !2, line: 42)
 
 ; // -----
 

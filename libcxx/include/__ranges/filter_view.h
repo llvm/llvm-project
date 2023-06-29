@@ -82,7 +82,9 @@ namespace ranges {
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr __iterator begin() {
-      _LIBCPP_ASSERT(__pred_.__has_value(), "Trying to call begin() on a filter_view that does not have a valid predicate.");
+      _LIBCPP_ASSERT_UNCATEGORIZED(
+          __pred_.__has_value(),
+          "Trying to call begin() on a filter_view that does not have a valid predicate.");
       if constexpr (_UseCache) {
         if (!__cached_begin_.__has_value()) {
           __cached_begin_.__emplace(ranges::find_if(__base_, std::ref(*__pred_)));

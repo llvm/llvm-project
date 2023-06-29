@@ -8,14 +8,8 @@ define void @foo(ptr %0, ptr %1, ptr %2) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl (%rdx), %eax
-; CHECK-NEXT:    andl $15, %eax
 ; CHECK-NEXT:    movzwl (%rdi), %ecx
-; CHECK-NEXT:    vmovups (%rsi), %ymm0
-; CHECK-NEXT:    vmovups %ymm0, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movw %cx, -32(%rsp,%rax,2)
-; CHECK-NEXT:    vmovups -{{[0-9]+}}(%rsp), %ymm0
-; CHECK-NEXT:    vmovups %ymm0, (%rsi)
-; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    movw %cx, (%rsi,%rax,2)
 ; CHECK-NEXT:    retq
   %4 = bitcast ptr %2 to ptr
   %5 = load i64, ptr %4, align 8

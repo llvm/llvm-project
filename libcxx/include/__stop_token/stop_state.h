@@ -69,7 +69,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI __stop_state() noexcept = default;
 
   _LIBCPP_HIDE_FROM_ABI void __increment_stop_source_counter() noexcept {
-    _LIBCPP_ASSERT(
+    _LIBCPP_ASSERT_UNCATEGORIZED(
         __state_.load(std::memory_order_relaxed) <= static_cast<__state_t>(~(1 << __stop_source_counter_shift)),
         "stop_source's counter reaches the maximum. Incrementing the counter will overflow");
     __state_.fetch_add(1 << __stop_source_counter_shift, std::memory_order_relaxed);
@@ -78,8 +78,9 @@ public:
   // We are not destroying the object after counter decrements to zero, nor do we have
   // operations depend on the ordering of decrementing the counter. relaxed is enough.
   _LIBCPP_HIDE_FROM_ABI void __decrement_stop_source_counter() noexcept {
-    _LIBCPP_ASSERT(__state_.load(std::memory_order_relaxed) >= static_cast<__state_t>(1 << __stop_source_counter_shift),
-                   "stop_source's counter is 0. Decrementing the counter will underflow");
+    _LIBCPP_ASSERT_UNCATEGORIZED(
+        __state_.load(std::memory_order_relaxed) >= static_cast<__state_t>(1 << __stop_source_counter_shift),
+        "stop_source's counter is 0. Decrementing the counter will underflow");
     __state_.fetch_sub(1 << __stop_source_counter_shift, std::memory_order_relaxed);
   }
 
