@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple riscv64 -target-feature +v -ast-print %s \
-// RUN:    | FileCheck %s
+// RUN: %clang_cc1 -triple riscv64 -target-feature +v \
+// RUN: -target-feature +experimental-zvfh -ast-print %s | FileCheck %s
 
 void bar(void) {
   // CHECK: __rvv_int64m1_t x0;

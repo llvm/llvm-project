@@ -11,6 +11,7 @@
 // template <class T, class A>
 //   void swap(deque<T, A>& x, deque<T, A>& y);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include "test_macros.h"
@@ -49,6 +50,10 @@ void testN(int start, int N, int M)
     swap(c1, c2);
     assert(c1 == c2_save);
     assert(c2 == c1_save);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1_save));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2_save));
 }
 
 int main(int, char**)
@@ -72,6 +77,8 @@ int main(int, char**)
         assert(c1.get_allocator().get_id() == 1);
         assert((c2 == std::deque<int, A>(a1, a1+sizeof(a1)/sizeof(a1[0]))));
         assert(c2.get_allocator().get_id() == 2);
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     }
     {
         int a1[] = {1, 3, 7, 9, 10};
@@ -84,6 +91,8 @@ int main(int, char**)
         assert(c1.get_allocator() == A(2));
         assert((c2 == std::deque<int, A>(a1, a1+sizeof(a1)/sizeof(a1[0]))));
         assert(c2.get_allocator() == A(1));
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     }
 #if TEST_STD_VER >= 11
     {
@@ -105,6 +114,8 @@ int main(int, char**)
         assert(c1.get_allocator() == A());
         assert((c2 == std::deque<int, A>(a1, a1+sizeof(a1)/sizeof(a1[0]))));
         assert(c2.get_allocator() == A());
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c1));
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c2));
     }
 #endif
 

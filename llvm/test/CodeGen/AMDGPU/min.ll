@@ -549,8 +549,12 @@ define amdgpu_kernel void @s_test_imin_sle_i16(ptr addrspace(1) %out, i16 %a, i1
 ; FUNC-LABEL: {{^}}test_umin_ult_i64
 ; GCN: s_endpgm
 
-; EG: MIN_UINT
-; EG: MIN_UINT
+; EG: SETE_INT
+; EG: SETGT_UINT
+; EG: SETGT_UINT
+; EG: CNDE_INT
+; EG: CNDE_INT
+; EG: CNDE_INT
 define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
   %tmp = icmp ult i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
@@ -561,8 +565,12 @@ define amdgpu_kernel void @test_umin_ult_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; FUNC-LABEL: {{^}}test_umin_ule_i64
 ; GCN: s_endpgm
 
-; EG: MIN_UINT
-; EG: MIN_UINT
+; EG: SETE_INT
+; EG: SETGT_UINT
+; EG: SETGT_UINT
+; EG: CNDE_INT
+; EG: CNDE_INT
+; EG: CNDE_INT
 define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
   %tmp = icmp ule i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
@@ -573,8 +581,12 @@ define amdgpu_kernel void @test_umin_ule_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; FUNC-LABEL: {{^}}test_imin_slt_i64
 ; GCN: s_endpgm
 
-; EG-DAG: MIN_UINT
-; EG-DAG: MIN_INT
+; EG: SETE_INT
+; EG: SETGT_INT
+; EG: SETGT_UINT
+; EG: CNDE_INT
+; EG: CNDE_INT
+; EG: CNDE_INT
 define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
   %tmp = icmp slt i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b
@@ -585,8 +597,12 @@ define amdgpu_kernel void @test_imin_slt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; FUNC-LABEL: {{^}}test_imin_sle_i64
 ; GCN: s_endpgm
 
-; EG-DAG: MIN_UINT
-; EG-DAG: MIN_INT
+; EG: SETE_INT
+; EG: SETGT_INT
+; EG: SETGT_UINT
+; EG: CNDE_INT
+; EG: CNDE_INT
+; EG: CNDE_INT
 define amdgpu_kernel void @test_imin_sle_i64(ptr addrspace(1) %out, i64 %a, i64 %b) #0 {
   %tmp = icmp sle i64 %a, %b
   %val = select i1 %tmp, i64 %a, i64 %b

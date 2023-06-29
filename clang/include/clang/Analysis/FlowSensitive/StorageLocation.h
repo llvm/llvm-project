@@ -70,13 +70,12 @@ public:
 /// that all of the members of a given union have the same storage location.
 class AggregateStorageLocation final : public StorageLocation {
 public:
-  explicit AggregateStorageLocation(QualType Type)
-      : AggregateStorageLocation(
-            Type, llvm::DenseMap<const ValueDecl *, StorageLocation *>()) {}
+  using FieldToLoc = llvm::DenseMap<const ValueDecl *, StorageLocation *>;
 
-  AggregateStorageLocation(
-      QualType Type,
-      llvm::DenseMap<const ValueDecl *, StorageLocation *> Children)
+  explicit AggregateStorageLocation(QualType Type)
+      : AggregateStorageLocation(Type, FieldToLoc()) {}
+
+  AggregateStorageLocation(QualType Type, FieldToLoc Children)
       : StorageLocation(Kind::Aggregate, Type), Children(std::move(Children)) {}
 
   static bool classof(const StorageLocation *Loc) {
@@ -90,8 +89,12 @@ public:
     return *It->second;
   }
 
+  llvm::iterator_range<FieldToLoc::const_iterator> children() const {
+    return {Children.begin(), Children.end()};
+  }
+
 private:
-  llvm::DenseMap<const ValueDecl *, StorageLocation *> Children;
+  FieldToLoc Children;
 };
 
 } // namespace dataflow

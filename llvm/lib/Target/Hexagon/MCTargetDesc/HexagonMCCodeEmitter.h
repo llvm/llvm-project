@@ -17,7 +17,7 @@
 #include "MCTargetDesc/HexagonFixupKinds.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstddef>
 #include <cstdint>
 #include <memory>

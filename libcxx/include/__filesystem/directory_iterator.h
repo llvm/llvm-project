@@ -16,6 +16,7 @@
 #include <__filesystem/directory_entry.h>
 #include <__filesystem/directory_options.h>
 #include <__filesystem/path.h>
+#include <__iterator/default_sentinel.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/shared_ptr.h>
 #include <__ranges/enable_borrowed_range.h>
@@ -101,6 +102,12 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   directory_iterator& increment(error_code& __ec) { return __increment(&__ec); }
+
+#  if _LIBCPP_STD_VER >= 20
+
+  _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const noexcept { return *this == directory_iterator(); }
+
+#  endif
 
 private:
   inline _LIBCPP_HIDE_FROM_ABI friend bool

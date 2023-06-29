@@ -1438,7 +1438,7 @@ GetDebuggerPropertyForPlugins(Debugger &debugger, ConstString plugin_type_name,
   lldb::OptionValuePropertiesSP parent_properties_sp(
       debugger.GetValueProperties());
   if (parent_properties_sp) {
-    static ConstString g_property_name("plugin");
+    static constexpr llvm::StringLiteral g_property_name("plugin");
 
     OptionValuePropertiesSP plugin_properties_sp =
         parent_properties_sp->GetSubProperty(nullptr, g_property_name);
@@ -1471,7 +1471,7 @@ GetDebuggerPropertyForPlugins(Debugger &debugger, ConstString plugin_type_name,
 static lldb::OptionValuePropertiesSP GetDebuggerPropertyForPluginsOldStyle(
     Debugger &debugger, ConstString plugin_type_name,
     llvm::StringRef plugin_type_desc, bool can_create) {
-  static ConstString g_property_name("plugin");
+  static constexpr llvm::StringLiteral g_property_name("plugin");
   lldb::OptionValuePropertiesSP parent_properties_sp(
       debugger.GetValueProperties());
   if (parent_properties_sp) {

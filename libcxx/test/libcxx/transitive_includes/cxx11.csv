@@ -456,7 +456,6 @@ latch limits
 latch ratio
 latch type_traits
 latch version
-limits type_traits
 limits version
 list algorithm
 list atomic
@@ -572,8 +571,6 @@ mutex typeinfo
 mutex version
 new cstddef
 new cstdlib
-new exception
-new type_traits
 new version
 numbers concepts
 numbers type_traits
@@ -640,6 +637,7 @@ ostream version
 queue compare
 queue concepts
 queue cstddef
+queue cstdint
 queue cstdlib
 queue deque
 queue functional
@@ -775,6 +773,7 @@ sstream version
 stack compare
 stack concepts
 stack cstddef
+stack cstdint
 stack deque
 stack functional
 stack initializer_list
@@ -937,6 +936,7 @@ valarray algorithm
 valarray cmath
 valarray concepts
 valarray cstddef
+valarray cstdint
 valarray cstdlib
 valarray cstring
 valarray functional

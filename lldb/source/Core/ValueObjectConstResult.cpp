@@ -294,7 +294,7 @@ ValueObjectConstResult::GetDynamicValue(lldb::DynamicValueType use_dynamic) {
 }
 
 lldb::ValueObjectSP
-ValueObjectConstResult::Cast(const CompilerType &compiler_type) {
+ValueObjectConstResult::DoCast(const CompilerType &compiler_type) {
   return m_impl.Cast(compiler_type);
 }
 

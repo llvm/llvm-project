@@ -28,7 +28,7 @@
     __cpp_lib_invoke_r                 202106L [C++23]
     __cpp_lib_move_only_function       202110L [C++23]
     __cpp_lib_not_fn                   201603L [C++17]
-    __cpp_lib_ranges                   202106L [C++20]
+    __cpp_lib_ranges                   202207L [C++20]
     __cpp_lib_result_of_sfinae         201210L [C++14]
     __cpp_lib_transparent_operators    201210L [C++14]
                                        201510L [C++17]
@@ -293,8 +293,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++20"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++20"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++20"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae
@@ -399,8 +399,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++23"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++23"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++23"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae
@@ -523,8 +523,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++26"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++26"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++26"
 # endif
 
 # ifndef __cpp_lib_result_of_sfinae

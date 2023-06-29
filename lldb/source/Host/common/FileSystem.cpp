@@ -192,7 +192,7 @@ void FileSystem::EnumerateDirectory(Twine path, bool find_directories,
     const auto &Item = *Iter;
     ErrorOr<vfs::Status> Status = m_fs->status(Item.path());
     if (!Status)
-      break;
+      continue;
     if (!find_files && Status->isRegularFile())
       continue;
     if (!find_directories && Status->isDirectory())

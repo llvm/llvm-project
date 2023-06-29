@@ -2981,6 +2981,10 @@ def warn_attribute_ignored_no_calls_in_stmt: Warning<
   "statement">,
   InGroup<IgnoredAttributes>;
 
+def warn_attribute_ignored_non_function_pointer: Warning<
+  "%0 attribute is ignored because %1 is not a function pointer">,
+  InGroup<IgnoredAttributes>;
+
 def warn_function_attribute_ignored_in_stmt : Warning<
   "attribute is ignored on this statement as it only applies to functions; "
   "use '%0' on statements">,

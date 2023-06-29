@@ -36,16 +36,9 @@
 # define _LIBCPP_USE_UTIMENSAT
 #endif
 
-// TODO: Check whether these functions actually need internal linkage, or if they can be made normal header functions
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-template")
-
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
-namespace {
 
 using chrono::duration;
 using chrono::duration_cast;
@@ -284,8 +277,8 @@ inline bool posix_utimes(const path& p, std::array<TimeSpec, 2> const& TS,
 }
 
 #if defined(_LIBCPP_USE_UTIMENSAT)
-bool posix_utimensat(const path& p, std::array<TimeSpec, 2> const& TS,
-                     error_code& ec) {
+inline bool posix_utimensat(const path& p, std::array<TimeSpec, 2> const& TS,
+                            error_code& ec) {
   if (::utimensat(AT_FDCWD, p.c_str(), TS.data(), 0) == -1) {
     ec = capture_errno();
     return true;
@@ -294,8 +287,8 @@ bool posix_utimensat(const path& p, std::array<TimeSpec, 2> const& TS,
 }
 #endif
 
-bool set_file_times(const path& p, std::array<TimeSpec, 2> const& TS,
-                    error_code& ec) {
+inline bool set_file_times(const path& p, std::array<TimeSpec, 2> const& TS,
+                           error_code& ec) {
 #if !defined(_LIBCPP_USE_UTIMENSAT)
   return posix_utimes(p, TS, ec);
 #else
@@ -305,8 +298,8 @@ bool set_file_times(const path& p, std::array<TimeSpec, 2> const& TS,
 
 #endif // !_LIBCPP_WIN32API
 
-file_time_type __extract_last_write_time(const path& p, const StatT& st,
-                                         error_code* ec) {
+inline file_time_type __extract_last_write_time(const path& p, const StatT& st,
+                                                error_code* ec) {
   using detail::fs_time;
   ErrorHandler<file_time_type> err("last_write_time", ec, &p);
 
@@ -317,11 +310,8 @@ file_time_type __extract_last_write_time(const path& p, const StatT& st,
   return fs_time::convert_from_timespec(ts);
 }
 
-} // namespace
 } // end namespace detail
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
-
-_LIBCPP_DIAGNOSTIC_POP
 
 #endif // FILESYSTEM_TIME_UTILS_H

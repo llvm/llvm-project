@@ -31,22 +31,15 @@
 # include <unistd.h>
 #endif // defined(_LIBCPP_WIN32API)
 
-// TODO: Check whether these functions actually need internal linkage, or if they can be made normal header functions
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-template")
-
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
 namespace detail {
-namespace {
 
 #if !defined(_LIBCPP_WIN32API)
 
 #if defined(DT_BLK)
 template <class DirEntT, class = decltype(DirEntT::d_type)>
-static file_type get_file_type(DirEntT* ent, int) {
+file_type get_file_type(DirEntT* ent, int) {
   switch (ent->d_type) {
   case DT_BLK:
     return file_type::block;
@@ -73,11 +66,11 @@ static file_type get_file_type(DirEntT* ent, int) {
 #endif // defined(DT_BLK)
 
 template <class DirEntT>
-static file_type get_file_type(DirEntT*, long) {
+file_type get_file_type(DirEntT*, long) {
   return file_type::none;
 }
 
-static pair<string_view, file_type> posix_readdir(DIR* dir_stream,
+inline pair<string_view, file_type> posix_readdir(DIR* dir_stream,
                                                   error_code& ec) {
   struct dirent* dir_entry_ptr = nullptr;
   errno = 0; // zero errno in order to detect errors
@@ -93,7 +86,7 @@ static pair<string_view, file_type> posix_readdir(DIR* dir_stream,
 
 #else // _LIBCPP_WIN32API
 
-static file_type get_file_type(const WIN32_FIND_DATAW& data) {
+inline file_type get_file_type(const WIN32_FIND_DATAW& data) {
   if (data.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT &&
       data.dwReserved0 == IO_REPARSE_TAG_SYMLINK)
     return file_type::symlink;
@@ -101,10 +94,10 @@ static file_type get_file_type(const WIN32_FIND_DATAW& data) {
     return file_type::directory;
   return file_type::regular;
 }
-static uintmax_t get_file_size(const WIN32_FIND_DATAW& data) {
+inline uintmax_t get_file_size(const WIN32_FIND_DATAW& data) {
   return (static_cast<uint64_t>(data.nFileSizeHigh) << 32) + data.nFileSizeLow;
 }
-static file_time_type get_write_time(const WIN32_FIND_DATAW& data) {
+inline file_time_type get_write_time(const WIN32_FIND_DATAW& data) {
   ULARGE_INTEGER tmp;
   const FILETIME& time = data.ftLastWriteTime;
   tmp.u.LowPart = time.dwLowDateTime;
@@ -175,12 +168,12 @@ private:
   explicit FileDescriptor(const path* p, int descriptor = -1) : name(*p), fd(descriptor) {}
 };
 
-perms posix_get_perms(const StatT& st) noexcept {
+inline perms posix_get_perms(const StatT& st) noexcept {
   return static_cast<perms>(st.st_mode) & perms::mask;
 }
 
-file_status create_file_status(error_code& m_ec, path const& p,
-                               const StatT& path_stat, error_code* ec) {
+inline file_status create_file_status(error_code& m_ec, path const& p,
+                                      const StatT& path_stat, error_code* ec) {
   if (ec)
     *ec = m_ec;
   if (m_ec && (m_ec.value() == ENOENT || m_ec.value() == ENOTDIR)) {
@@ -215,32 +208,32 @@ file_status create_file_status(error_code& m_ec, path const& p,
   return fs_tmp;
 }
 
-file_status posix_stat(path const& p, StatT& path_stat, error_code* ec) {
+inline file_status posix_stat(path const& p, StatT& path_stat, error_code* ec) {
   error_code m_ec;
   if (detail::stat(p.c_str(), &path_stat) == -1)
     m_ec = detail::capture_errno();
   return create_file_status(m_ec, p, path_stat, ec);
 }
 
-file_status posix_stat(path const& p, error_code* ec) {
+inline file_status posix_stat(path const& p, error_code* ec) {
   StatT path_stat;
   return posix_stat(p, path_stat, ec);
 }
 
-file_status posix_lstat(path const& p, StatT& path_stat, error_code* ec) {
+inline file_status posix_lstat(path const& p, StatT& path_stat, error_code* ec) {
   error_code m_ec;
   if (detail::lstat(p.c_str(), &path_stat) == -1)
     m_ec = detail::capture_errno();
   return create_file_status(m_ec, p, path_stat, ec);
 }
 
-file_status posix_lstat(path const& p, error_code* ec) {
+inline file_status posix_lstat(path const& p, error_code* ec) {
   StatT path_stat;
   return posix_lstat(p, path_stat, ec);
 }
 
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/ftruncate.html
-bool posix_ftruncate(const FileDescriptor& fd, off_t to_size, error_code& ec) {
+inline bool posix_ftruncate(const FileDescriptor& fd, off_t to_size, error_code& ec) {
   if (detail::ftruncate(fd.fd, to_size) == -1) {
     ec = capture_errno();
     return true;
@@ -249,7 +242,7 @@ bool posix_ftruncate(const FileDescriptor& fd, off_t to_size, error_code& ec) {
   return false;
 }
 
-bool posix_fchmod(const FileDescriptor& fd, const StatT& st, error_code& ec) {
+inline bool posix_fchmod(const FileDescriptor& fd, const StatT& st, error_code& ec) {
   if (detail::fchmod(fd.fd, st.st_mode) == -1) {
     ec = capture_errno();
     return true;
@@ -258,11 +251,11 @@ bool posix_fchmod(const FileDescriptor& fd, const StatT& st, error_code& ec) {
   return false;
 }
 
-bool stat_equivalent(const StatT& st1, const StatT& st2) {
+inline bool stat_equivalent(const StatT& st1, const StatT& st2) {
   return (st1.st_dev == st2.st_dev && st1.st_ino == st2.st_ino);
 }
 
-file_status FileDescriptor::refresh_status(error_code& ec) {
+inline file_status FileDescriptor::refresh_status(error_code& ec) {
   // FD must be open and good.
   m_status = file_status{};
   m_stat = {};
@@ -273,11 +266,8 @@ file_status FileDescriptor::refresh_status(error_code& ec) {
   return m_status;
 }
 
-} // namespace
 } // end namespace detail
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
-
-_LIBCPP_DIAGNOSTIC_POP
 
 #endif // FILESYSTEM_FILE_DESCRIPTOR_H

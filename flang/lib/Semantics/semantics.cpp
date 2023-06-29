@@ -519,7 +519,7 @@ bool Semantics::Perform() {
       // Don't try to read the builtins module when we're actually building it.
     } else if (frontModule &&
         std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
-                .statement.v.source == "__fortran_ppc_intrinsics") {
+                .statement.v.source == "__ppc_intrinsics") {
       // The derived type definition for the vectors is needed.
       context_.UsePPCBuiltinTypesModule();
     } else {

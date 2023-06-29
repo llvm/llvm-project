@@ -239,7 +239,7 @@ the configuration (without a prefix: ``Auto``).
       )
 
 
-    .. warning:: 
+    .. warning::
 
      Note: This currently only applies to parentheses.
 
@@ -3318,7 +3318,7 @@ the configuration (without a prefix: ``Auto``).
   and ``while``) in C++ unless the control statements are inside macro
   definitions or the braces would enclose preprocessor directives.
 
-  .. warning:: 
+  .. warning::
 
    Setting this option to `true` could lead to incorrect code formatting due
    to clang-format's lack of complete semantic information. As such, extra
@@ -4109,7 +4109,7 @@ the configuration (without a prefix: ``Auto``).
 **QualifierAlignment** (``QualifierAlignmentStyle``) :versionbadge:`clang-format 14` :ref:`¶ <QualifierAlignment>`
   Different ways to arrange specifiers and qualifiers (e.g. const/volatile).
 
-  .. warning:: 
+  .. warning::
 
    Setting ``QualifierAlignment``  to something other than `Leave`, COULD
    lead to incorrect code formatting due to incorrect decisions made due to
@@ -4285,11 +4285,11 @@ the configuration (without a prefix: ``Auto``).
   Remove optional braces of control statements (``if``, ``else``, ``for``,
   and ``while``) in C++ according to the LLVM coding style.
 
-  .. warning:: 
+  .. warning::
 
    This option will be renamed and expanded to support other styles.
 
-  .. warning:: 
+  .. warning::
 
    Setting this option to `true` could lead to incorrect code formatting due
    to clang-format's lack of complete semantic information. As such, extra
@@ -4342,7 +4342,7 @@ the configuration (without a prefix: ``Auto``).
 **RemoveSemicolon** (``Boolean``) :versionbadge:`clang-format 16` :ref:`¶ <RemoveSemicolon>`
   Remove semicolons after the closing brace of a non-empty function.
 
-  .. warning:: 
+  .. warning::
 
    Setting this option to `true` could lead to incorrect code formatting due
    to clang-format's lack of complete semantic information. As such, extra

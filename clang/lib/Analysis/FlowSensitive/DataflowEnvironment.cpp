@@ -265,19 +265,10 @@ Environment::Environment(DataflowAnalysisContext &DACtx)
     : DACtx(&DACtx),
       FlowConditionToken(&DACtx.arena().makeFlowConditionToken()) {}
 
-Environment::Environment(const Environment &Other)
-    : DACtx(Other.DACtx), CallStack(Other.CallStack),
-      ReturnVal(Other.ReturnVal), ReturnLoc(Other.ReturnLoc),
-      ThisPointeeLoc(Other.ThisPointeeLoc), DeclToLoc(Other.DeclToLoc),
-      ExprToLoc(Other.ExprToLoc), LocToVal(Other.LocToVal),
-      MemberLocToStruct(Other.MemberLocToStruct),
-      FlowConditionToken(&DACtx->forkFlowCondition(*Other.FlowConditionToken)) {
-}
-
-Environment &Environment::operator=(const Environment &Other) {
-  Environment Copy(Other);
-  *this = std::move(Copy);
-  return *this;
+Environment Environment::fork() const {
+  Environment Copy(*this);
+  Copy.FlowConditionToken = &DACtx->forkFlowCondition(*FlowConditionToken);
+  return Copy;
 }
 
 Environment::Environment(DataflowAnalysisContext &DACtx,
@@ -745,6 +736,23 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
     const ValueDecl &Member = *It->second.second;
 
     StructVal.setChild(Member, Val);
+  }
+}
+
+void Environment::clearValue(const StorageLocation &Loc) {
+  LocToVal.erase(&Loc);
+
+  if (auto It = MemberLocToStruct.find(&Loc); It != MemberLocToStruct.end()) {
+    // `Loc` is the location of a struct member so we need to also clear the
+    // member in the corresponding `StructValue`.
+
+    assert(It->second.first != nullptr);
+    StructValue &StructVal = *It->second.first;
+
+    assert(It->second.second != nullptr);
+    const ValueDecl &Member = *It->second.second;
+
+    StructVal.clearChild(Member);
   }
 }
 

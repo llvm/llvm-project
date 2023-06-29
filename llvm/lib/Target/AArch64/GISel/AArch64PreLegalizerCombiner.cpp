@@ -91,7 +91,7 @@ static bool matchICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-static bool applyICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
+static void applyICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
                                     MachineIRBuilder &Builder,
                                     GISelChangeObserver &Observer,
                                     Register &WideReg) {
@@ -106,7 +106,6 @@ static bool applyICmpRedundantTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.getOperand(2).setReg(WideReg);
   MI.getOperand(3).setReg(WideZero.getReg(0));
   Observer.changedInstr(MI);
-  return true;
 }
 
 /// \returns true if it is possible to fold a constant into a G_GLOBAL_VALUE.
@@ -181,7 +180,7 @@ static bool matchFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   return true;
 }
 
-static bool applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
+static void applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
                                   MachineIRBuilder &B,
                                   GISelChangeObserver &Observer,
                                   std::pair<uint64_t, uint64_t> &MatchInfo) {
@@ -219,7 +218,6 @@ static bool applyFoldGlobalOffset(MachineInstr &MI, MachineRegisterInfo &MRI,
   B.buildPtrAdd(
       Dst, NewGVDst,
       B.buildConstant(LLT::scalar(64), -static_cast<int64_t>(MinOffset)));
-  return true;
 }
 
 static bool tryToSimplifyUADDO(MachineInstr &MI, MachineIRBuilder &B,

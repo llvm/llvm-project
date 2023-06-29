@@ -413,7 +413,6 @@ libcxx/include/__ranges/access.h
 libcxx/include/__ranges/all.h
 libcxx/include/__ranges/common_view.h
 libcxx/include/__ranges/concepts.h
-libcxx/include/__ranges/copyable_box.h
 libcxx/include/__ranges/counted.h
 libcxx/include/__ranges/data.h
 libcxx/include/__ranges/drop_view.h

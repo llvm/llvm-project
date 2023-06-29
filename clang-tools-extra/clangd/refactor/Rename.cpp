@@ -19,6 +19,7 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
@@ -140,6 +141,18 @@ const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
   return dyn_cast<NamedDecl>(D->getCanonicalDecl());
 }
 
+// Some AST nodes can reference multiple declarations. We try to pick the
+// relevant one to rename here.
+const NamedDecl *pickInterestingTarget(const NamedDecl *D) {
+  // We only support renaming the class name, not the category name. This has
+  // to be done outside of canonicalization since we don't want a category name
+  // reference to be canonicalized to the class.
+  if (const auto *CD = dyn_cast<ObjCCategoryDecl>(D))
+    if (const auto CI = CD->getClassInterface())
+      return CI;
+  return D;
+}
+
 llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
                                                SourceLocation TokenStartLoc) {
   unsigned Offset =
@@ -156,6 +169,7 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
        targetDecl(SelectedNode->ASTNode,
                   DeclRelation::Alias | DeclRelation::TemplatePattern,
                   AST.getHeuristicResolver())) {
+    D = pickInterestingTarget(D);
     Result.insert(canonicalRenameDecl(D));
   }
   return Result;

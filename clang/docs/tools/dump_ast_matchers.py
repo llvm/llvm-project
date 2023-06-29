@@ -474,7 +474,7 @@ Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
         # Parse free standing matcher functions, like:
         #   Matcher<ResultType> Name(Matcher<ArgumentType> InnerMatcher) {
         m = re.match(
-            r"""^\s*(?:template\s+<\s*(?:class|typename)\s+(.+)\s*>\s+)?   
+            r"""^\s*(?:template\s+<\s*(?:class|typename)\s+(.+)\s*>\s+)?
                      (.*)\s+
                      ([^\s\(]+)\s*\(
                      (.*)

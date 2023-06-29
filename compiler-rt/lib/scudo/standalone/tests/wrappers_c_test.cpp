@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "common.h"
 #include "memtag.h"
 #include "scudo/interface.h"
 #include "tests/scudo_unit_test.h"
@@ -15,6 +16,7 @@
 #include <malloc.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <vector>
 
 #ifndef __GLIBC_PREREQ
 #define __GLIBC_PREREQ(x, y) 0
@@ -115,15 +117,24 @@ TEST(ScudoWrappersCTest, Calloc) {
 }
 
 TEST(ScudoWrappersCTest, SmallAlign) {
-  void *P;
-  for (size_t Size = 1; Size <= 0x10000; Size <<= 1) {
-    for (size_t Align = 1; Align <= 0x10000; Align <<= 1) {
+  // Allocating pointers by the powers of 2 from 1 to 0x10000
+  // Using powers of 2 due to memalign using powers of 2 and test more sizes
+  constexpr size_t MaxSize = 0x10000;
+  std::vector<void *> ptrs;
+  // Reserving space to prevent further allocation during the test
+  ptrs.reserve((scudo::getLeastSignificantSetBitIndex(MaxSize) + 1) *
+               (scudo::getLeastSignificantSetBitIndex(MaxSize) + 1) * 3);
+  for (size_t Size = 1; Size <= MaxSize; Size <<= 1) {
+    for (size_t Align = 1; Align <= MaxSize; Align <<= 1) {
       for (size_t Count = 0; Count < 3; ++Count) {
-        P = memalign(Align, Size);
+        void *P = memalign(Align, Size);
         EXPECT_TRUE(reinterpret_cast<uintptr_t>(P) % Align == 0);
+        ptrs.push_back(P);
       }
     }
   }
+  for (void *ptr : ptrs)
+    free(ptr);
 }
 
 TEST(ScudoWrappersCTest, Memalign) {

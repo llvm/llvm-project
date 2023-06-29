@@ -26,8 +26,8 @@
 #include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
-#include <__ranges/copyable_box.h>
 #include <__ranges/empty.h>
+#include <__ranges/movable_box.h>
 #include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
@@ -62,13 +62,17 @@ concept __transform_view_constraints =
   regular_invocable<_Fn&, range_reference_t<_View>> &&
   __can_reference<invoke_result_t<_Fn&, range_reference_t<_View>>>;
 
-template<input_range _View, copy_constructible _Fn>
+#  if _LIBCPP_STD_VER >= 23
+template <input_range _View, move_constructible _Fn>
+#  else
+template <input_range _View, copy_constructible _Fn>
+#  endif
   requires __transform_view_constraints<_View, _Fn>
 class transform_view : public view_interface<transform_view<_View, _Fn>> {
   template<bool> class __iterator;
   template<bool> class __sentinel;
 
-  _LIBCPP_NO_UNIQUE_ADDRESS __copyable_box<_Fn> __func_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Fn> __func_;
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
 public:
@@ -161,11 +165,14 @@ struct __transform_view_iterator_category_base<_View, _Fn> {
   >;
 };
 
-template<input_range _View, copy_constructible _Fn>
+#  if _LIBCPP_STD_VER >= 23
+template <input_range _View, move_constructible _Fn>
+#  else
+template <input_range _View, copy_constructible _Fn>
+#  endif
   requires __transform_view_constraints<_View, _Fn>
-template<bool _Const>
-class transform_view<_View, _Fn>::__iterator
-  : public __transform_view_iterator_category_base<_View, _Fn> {
+template <bool _Const>
+class transform_view<_View, _Fn>::__iterator : public __transform_view_iterator_category_base<_View, _Fn> {
 
   using _Parent = __maybe_const<_Const, transform_view>;
   using _Base = __maybe_const<_Const, _View>;
@@ -357,9 +364,13 @@ public:
   }
 };
 
-template<input_range _View, copy_constructible _Fn>
+#  if _LIBCPP_STD_VER >= 23
+template <input_range _View, move_constructible _Fn>
+#  else
+template <input_range _View, copy_constructible _Fn>
+#  endif
   requires __transform_view_constraints<_View, _Fn>
-template<bool _Const>
+template <bool _Const>
 class transform_view<_View, _Fn>::__sentinel {
   using _Parent = __maybe_const<_Const, transform_view>;
   using _Base = __maybe_const<_Const, _View>;

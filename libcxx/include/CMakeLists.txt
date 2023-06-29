@@ -609,7 +609,6 @@ set(files
   __ranges/common_view.h
   __ranges/concepts.h
   __ranges/container_compatible_range.h
-  __ranges/copyable_box.h
   __ranges/counted.h
   __ranges/dangling.h
   __ranges/data.h
@@ -626,6 +625,7 @@ set(files
   __ranges/istream_view.h
   __ranges/join_view.h
   __ranges/lazy_split_view.h
+  __ranges/movable_box.h
   __ranges/non_propagating_cache.h
   __ranges/owning_view.h
   __ranges/range_adaptor.h
