@@ -89,6 +89,7 @@ atoi           |check|
 atof           |check|
 atol           |check|
 atoll          |check|
+exit           |check|    |check|
 labs           |check|
 llabs          |check|
 strtod         |check|
