@@ -172,6 +172,10 @@ cl::opt<bool> PrintAll("print-all",
                        cl::desc("print functions after each stage"), cl::Hidden,
                        cl::cat(BoltCategory));
 
+cl::opt<bool> PrintProfile("print-profile",
+                           cl::desc("print functions after attaching profile"),
+                           cl::Hidden, cl::cat(BoltCategory));
+
 cl::opt<bool> PrintCFG("print-cfg",
                        cl::desc("print functions after CFG construction"),
                        cl::Hidden, cl::cat(BoltCategory));
@@ -3259,6 +3263,16 @@ void RewriteInstance::processProfileData() {
 
   if (Error E = ProfileReader->readProfile(*BC.get()))
     report_error("cannot read profile", std::move(E));
+
+  if (opts::PrintProfile || opts::PrintAll) {
+    for (auto &BFI : BC->getBinaryFunctions()) {
+      BinaryFunction &Function = BFI.second;
+      if (Function.empty())
+        continue;
+
+      Function.print(outs(), "after attaching profile");
+    }
+  }
 
   if (!opts::SaveProfile.empty()) {
     YAMLProfileWriter PW(opts::SaveProfile);
