@@ -6810,8 +6810,8 @@ const ConstantRange &ScalarEvolution::getRangeRef(
           RangeType);
 
     if (U->getType()->isPointerTy() && SignHint == HINT_RANGE_UNSIGNED) {
-      // Strengthen the range if the underlying IR value is a global/alloca
-      // using the size of the object.
+      // Strengthen the range if the underlying IR value is a
+      // global/alloca/heap allocation using the size of the object.
       ObjectSizeOpts Opts;
       Opts.RoundToAlign = false;
       Opts.NullIsUnknownSize = true;
