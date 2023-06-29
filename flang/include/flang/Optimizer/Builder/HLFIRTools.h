@@ -385,11 +385,14 @@ struct LoopNest {
 };
 
 /// Generate a fir.do_loop nest looping from 1 to extents[i].
+/// \p isUnordered specifies whether the loops in the loop nest
+/// are unordered.
 LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                     mlir::ValueRange extents);
+                     mlir::ValueRange extents, bool isUnordered = false);
 inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                            mlir::Value shape) {
-  return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape));
+                            mlir::Value shape, bool isUnordered = false) {
+  return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
+                     isUnordered);
 }
 
 /// Inline the body of an hlfir.elemental at the current insertion point

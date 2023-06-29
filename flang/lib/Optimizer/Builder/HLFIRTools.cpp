@@ -807,7 +807,7 @@ mlir::Value hlfir::inlineElementalOp(
 
 hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
                                    fir::FirOpBuilder &builder,
-                                   mlir::ValueRange extents) {
+                                   mlir::ValueRange extents, bool isUnordered) {
   hlfir::LoopNest loopNest;
   assert(!extents.empty() && "must have at least one extent");
   auto insPt = builder.saveInsertionPoint();
@@ -818,7 +818,8 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
   unsigned dim = extents.size() - 1;
   for (auto extent : llvm::reverse(extents)) {
     auto ub = builder.createConvert(loc, indexType, extent);
-    loopNest.innerLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one);
+    loopNest.innerLoop =
+        builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered);
     builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
     // Reverse the indices so they are in column-major order.
     loopNest.oneBasedIndices[dim--] = loopNest.innerLoop.getInductionVar();
