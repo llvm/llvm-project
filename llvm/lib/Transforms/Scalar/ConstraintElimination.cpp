@@ -192,8 +192,10 @@ struct ConstraintTy {
 
   ConstraintTy() = default;
 
-  ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned, bool IsEq)
-      : Coefficients(Coefficients), IsSigned(IsSigned), IsEq(IsEq) {}
+  ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned, bool IsEq,
+               bool IsNe)
+      : Coefficients(Coefficients), IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe) {
+  }
 
   unsigned size() const { return Coefficients.size(); }
 
@@ -205,6 +207,8 @@ struct ConstraintTy {
 
   bool isEq() const { return IsEq; }
 
+  bool isNe() const { return IsNe; }
+
   /// Check if the current constraint is implied by the given ConstraintSystem.
   ///
   /// \return true or false if the constraint is proven to be respectively true,
@@ -214,6 +218,7 @@ struct ConstraintTy {
 
 private:
   bool IsEq = false;
+  bool IsNe = false;
 };
 
 /// Wrapper encapsulating separate constraint systems and corresponding value
@@ -502,6 +507,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                               SmallVectorImpl<Value *> &NewVariables) const {
   assert(NewVariables.empty() && "NewVariables must be empty when passed in");
   bool IsEq = false;
+  bool IsNe = false;
+
   // Try to convert Pred to one of ULE/SLT/SLE/SLT.
   switch (Pred) {
   case CmpInst::ICMP_UGT:
@@ -521,10 +528,13 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     }
     break;
   case CmpInst::ICMP_NE:
-    if (!match(Op1, m_Zero()))
-      return {};
-    Pred = CmpInst::getSwappedPredicate(CmpInst::ICMP_UGT);
-    std::swap(Op0, Op1);
+    if (match(Op1, m_Zero())) {
+      Pred = CmpInst::getSwappedPredicate(CmpInst::ICMP_UGT);
+      std::swap(Op0, Op1);
+    } else {
+      IsNe = true;
+      Pred = CmpInst::ICMP_ULE;
+    }
     break;
   default:
     break;
@@ -571,7 +581,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   // subtracting all coefficients from B.
   ConstraintTy Res(
       SmallVector<int64_t, 8>(Value2Index.size() + NewVariables.size() + 1, 0),
-      IsSigned, IsEq);
+      IsSigned, IsEq, IsNe);
   // Collect variables that are known to be positive in all uses in the
   // constraint.
   DenseMap<Value *, bool> KnownNonNegativeVariables;
@@ -653,15 +663,16 @@ std::optional<bool>
 ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
   bool IsConditionImplied = CS.isConditionImplied(Coefficients);
 
-  if (IsEq) {
+  if (IsEq || IsNe) {
     auto NegatedOrEqual = ConstraintSystem::negateOrEqual(Coefficients);
     bool IsNegatedOrEqualImplied =
         !NegatedOrEqual.empty() && CS.isConditionImplied(NegatedOrEqual);
 
-    // In order to check that `%a == %b` is true, we want to check that `%a >=
-    // %b` and `%a <= %b` must hold.
+    // In order to check that `%a == %b` is true (equality), both conditions `%a
+    // >= %b` and `%a <= %b` must hold true. When checking for equality (`IsEq`
+    // is true), we return true if they both hold, false in the other cases.
     if (IsConditionImplied && IsNegatedOrEqualImplied)
-      return true;
+      return IsEq;
 
     auto Negated = ConstraintSystem::negate(Coefficients);
     bool IsNegatedImplied = !Negated.empty() && CS.isConditionImplied(Negated);
@@ -670,10 +681,12 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
     bool IsStrictLessThanImplied =
         !StrictLessThan.empty() && CS.isConditionImplied(StrictLessThan);
 
-    // In order to check that `%a == %b` is false, we want to check whether
-    // either `%a > %b` or `%a < %b` holds.
+    // In order to check that `%a != %b` is true (non-equality), either
+    // condition `%a > %b` or `%a < %b` must hold true. When checking for
+    // non-equality (`IsNe` is true), we return true if one of the two holds,
+    // false in the other cases.
     if (IsNegatedImplied || IsStrictLessThanImplied)
-      return false;
+      return IsNe;
 
     return std::nullopt;
   }
@@ -1141,7 +1154,9 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
   // hold.
   SmallVector<Value *> NewVariables;
   auto R = getConstraint(Pred, A, B, NewVariables);
-  if (!R.isValid(*this))
+
+  // TODO: Support non-equality for facts as well.
+  if (!R.isValid(*this) || R.isNe())
     return;
 
   LLVM_DEBUG(dbgs() << "Adding '" << Pred << " ";
