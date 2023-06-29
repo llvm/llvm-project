@@ -122,3 +122,37 @@ void vcall(C1 &c1) {
 // CHECK:   %11 = cir.call %10(%4, %5, %6) : (!cir.ptr<!cir.func<!s32i (!cir.ptr<!ty_22class2EC122>, !s32i, !ty_22struct2Ebuffy22)>>, !cir.ptr<!ty_22class2EC122>, !s32i, !ty_22struct2Ebuffy22) -> !s32i
 // CHECK:   cir.return
 // CHECK: }
+
+class A {
+public:
+  int a;
+  virtual void foo() {a++;}
+};
+
+class B : public A {
+public:
+  int b;
+  void foo ()  { static_cast<A>(*this).foo();}
+};
+
+// CHECK: cir.func linkonce_odr @_ZN1B3fooEv(%arg0: !cir.ptr<!ty_22class2EB22>
+// CHECK:   %0 = cir.alloca !cir.ptr<!ty_22class2EB22>, cir.ptr <!cir.ptr<!ty_22class2EB22>>, ["this", init] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_22class2EB22>, cir.ptr <!cir.ptr<!ty_22class2EB22>>
+// CHECK:   %1 = cir.load deref %0 : cir.ptr <!cir.ptr<!ty_22class2EB22>>, !cir.ptr<!ty_22class2EB22>
+// CHECK:   cir.scope {
+// CHECK:     %2 = cir.alloca !ty_22class2EA22, cir.ptr <!ty_22class2EA22>, ["ref.tmp0"] {alignment = 8 : i64}
+// CHECK:     %3 = cir.base_class_addr(%1 : cir.ptr <!ty_22class2EB22>) -> cir.ptr <!ty_22class2EA22>
+
+// Call @A::A(A const&)
+// CHECK:     cir.call @_ZN1AC2ERKS_(%2, %3) : (!cir.ptr<!ty_22class2EA22>, !cir.ptr<!ty_22class2EA22>) -> ()
+
+// Call @A::foo()
+// CHECK:     cir.call @_ZN1A3fooEv(%2) : (!cir.ptr<!ty_22class2EA22>) -> ()
+// CHECK:   }
+// CHECK:   cir.return
+// CHECK: }
+
+void t() {
+  B b;
+  b.foo();
+}

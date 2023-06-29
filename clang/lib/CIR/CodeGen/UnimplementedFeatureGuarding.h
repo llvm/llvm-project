@@ -69,6 +69,7 @@ struct UnimplementedFeature {
   // Missing Emissions
   static bool variablyModifiedTypeEmission() { return false; }
   static bool buildLValueAlignmentAssumption() { return false; }
+  static bool buildDerivedToBaseCastForDevirt() { return false; }
 
   // Clang early optimizations or things defered to LLVM lowering.
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
