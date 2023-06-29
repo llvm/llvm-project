@@ -19,9 +19,18 @@
 
 #define DEBUG_TYPE "callgraph"
 
+using namespace llvm;
+
 namespace opts {
-extern llvm::cl::opt<bool> TimeOpts;
-extern llvm::cl::opt<unsigned> Verbosity;
+
+extern cl::opt<bool> TimeOpts;
+extern cl::opt<unsigned> Verbosity;
+extern cl::OptionCategory BoltCategory;
+
+static cl::opt<std::string>
+    DumpCGDot("dump-cg", cl::desc("dump callgraph to the given file"),
+              cl::cat(BoltCategory));
+
 } // namespace opts
 
 namespace llvm {
@@ -276,6 +285,12 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
                      Cg.numNodes(), TotalCallsites, RecursiveCallsites,
                      Cg.density(), NotProcessed, NoProfileCallsites,
                      NumFallbacks);
+
+  if (opts::DumpCGDot.getNumOccurrences()) {
+    Cg.printDot(opts::DumpCGDot, [&](CallGraph::NodeId Id) {
+      return Cg.nodeIdToFunc(Id)->getPrintName();
+    });
+  }
 
   return Cg;
 }
