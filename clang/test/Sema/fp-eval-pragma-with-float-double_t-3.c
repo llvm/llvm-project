@@ -1,15 +1,21 @@
-// RUN: %clang_cc1 -verify -fsyntax-only -verify -DNOERROR %s
-// RUN: %clang_cc1 -verify -fsyntax-only -x c++ -DCPP -DNOERROR %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -DNOERROR %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
+// RUN: -x c++ -DCPP -DNOERROR %s
 
-// RUN: %clang_cc1 -verify -fsyntax-only -ffp-eval-method=extended -DNOERROR %s
-// RUN: %clang_cc1 -verify -fsyntax-only -x c++ -DCPP \
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
+// RUN: -ffp-eval-method=extended -DNOERROR %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -x c++ -DCPP \
 // RUN: -ffp-eval-method=extended -DNOERROR %s
 
-// RUN: %clang_cc1 -verify -fsyntax-only -ffp-eval-method=source %s
-// RUN: %clang_cc1 -verify -fsyntax-only -x c++ -DCPP -ffp-eval-method=source %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
+// RUN: -ffp-eval-method=source %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -x c++ -DCPP \
+// RUN: -ffp-eval-method=source %s
 
-// RUN: %clang_cc1 -verify -fsyntax-only -ffp-eval-method=double %s
-// RUN: %clang_cc1 -verify -fsyntax-only -x c++ -DCPP -ffp-eval-method=double %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only \
+// RUN: -ffp-eval-method=double %s
+// RUN: %clang_cc1 -verify -triple x86_64-linux-gnu -fsyntax-only -x c++ -DCPP \
+// RUN: -ffp-eval-method=double %s
 
 
 #ifdef NOERROR
