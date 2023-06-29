@@ -128,28 +128,7 @@ public:
   template <class T>
   explicit ExpressionValue(T Val) : Value(65, Val, /*isSigned=*/Val < 0) {}
 
-  bool operator==(const ExpressionValue &Other) const {
-    return Value == Other.Value;
-  }
-
-  bool operator!=(const ExpressionValue &Other) const {
-    return !(*this == Other);
-  }
-
-  /// Returns true if value is signed and negative, false otherwise.
-  bool isNegative() const { return Value.isNegative(); }
-
-  /// \returns the value as a signed integer or an error if the value is out of
-  /// range.
-  Expected<int64_t> getSignedValue() const;
-
-  /// \returns the value as an unsigned integer or an error if the value is out
-  /// of range.
-  Expected<uint64_t> getUnsignedValue() const;
-
-  /// \returns an unsigned ExpressionValue instance whose value is the absolute
-  /// value to this object's value.
-  ExpressionValue getAbsolute() const;
+  APInt getAPIntValue() const { return Value; }
 };
 
 /// Performs operation and \returns its result or an error in case of failure,
