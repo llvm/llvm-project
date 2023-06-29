@@ -583,7 +583,7 @@ runTypeErasedDataflowAnalysis(
     }
   }
 
-  return BlockStates;
+  return std::move(BlockStates);
 }
 
 } // namespace dataflow
