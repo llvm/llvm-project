@@ -311,4 +311,13 @@ def OMPEarlyOutliningPass
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
+def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
+  let summary = "Filters out functions intended for the host when compiling "
+                "for the device and vice versa.";
+  let constructor = "::fir::createOMPFunctionFilteringPass()";
+  let dependentDialects = [
+    "mlir::func::FuncDialect"
+  ];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES
