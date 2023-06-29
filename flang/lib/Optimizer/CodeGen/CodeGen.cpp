@@ -1894,14 +1894,22 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
     llvm::SmallVector<mlir::Value, 2> lenParams;
     mlir::Type inputEleTy = getInputEleTy(rebox);
     if (auto charTy = inputEleTy.dyn_cast<fir::CharacterType>()) {
-      mlir::Value len = getElementSizeFromBox(
-          loc, idxTy, rebox.getBox().getType(), loweredBox, rewriter);
-      if (charTy.getFKind() != 1) {
-        mlir::Value width =
-            genConstantIndex(loc, idxTy, rewriter, charTy.getFKind());
-        len = rewriter.create<mlir::LLVM::SDivOp>(loc, idxTy, len, width);
+      if (charTy.hasConstantLen()) {
+        mlir::Value len =
+            genConstantIndex(loc, idxTy, rewriter, charTy.getLen());
+        lenParams.emplace_back(len);
+      } else {
+        mlir::Value len = getElementSizeFromBox(
+            loc, idxTy, rebox.getBox().getType(), loweredBox, rewriter);
+        if (charTy.getFKind() != 1) {
+          assert(!isInGlobalOp(rewriter) &&
+                 "character target in global op must have constant length");
+          mlir::Value width =
+              genConstantIndex(loc, idxTy, rewriter, charTy.getFKind());
+          len = rewriter.create<mlir::LLVM::SDivOp>(loc, idxTy, len, width);
+        }
+        lenParams.emplace_back(len);
       }
-      lenParams.emplace_back(len);
     } else if (auto recTy = inputEleTy.dyn_cast<fir::RecordType>()) {
       if (recTy.getNumLenParams() != 0)
         TODO(loc, "reboxing descriptor of derived type with length parameters");
