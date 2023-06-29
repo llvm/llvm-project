@@ -4875,6 +4875,21 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
     }
   }
 
+  // canoncalize:
+  // (icmp eq/ne (and X, C), X)
+  //    -> (icmp eq/ne (and X, ~C), 0)
+  {
+    Constant *CMask;
+    A = nullptr;
+    if (match(Op0, m_OneUse(m_And(m_Specific(Op1), m_ImmConstant(CMask)))))
+      A = Op1;
+    else if (match(Op1, m_OneUse(m_And(m_Specific(Op0), m_ImmConstant(CMask)))))
+      A = Op0;
+    if (A)
+      return new ICmpInst(Pred, Builder.CreateAnd(A, Builder.CreateNot(CMask)),
+                          Constant::getNullValue(A->getType()));
+  }
+
   if (match(Op1, m_Xor(m_Value(A), m_Value(B))) && (A == Op0 || B == Op0)) {
     // A == (A^B)  ->  B == 0
     Value *OtherVal = A == Op0 ? B : A;
