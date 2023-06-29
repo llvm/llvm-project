@@ -6763,6 +6763,13 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops,
   return false;
 }
 
+// Helper to check if we can access all the constituent subvectors without any
+// extract ops.
+static bool isFreeToSplitVector(SDNode *N, SelectionDAG &DAG) {
+  SmallVector<SDValue> Ops;
+  return collectConcatOps(N, Ops, DAG);
+}
+
 static std::pair<SDValue, SDValue> splitVector(SDValue Op, SelectionDAG &DAG,
                                                const SDLoc &dl) {
   EVT VT = Op.getValueType();
@@ -26904,9 +26911,7 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   if (StoreVT.is256BitVector() ||
       ((StoreVT == MVT::v32i16 || StoreVT == MVT::v64i8) &&
        !Subtarget.hasBWI())) {
-    SmallVector<SDValue, 4> CatOps;
-    if (StoredVal.hasOneUse() &&
-        collectConcatOps(StoredVal.getNode(), CatOps, DAG))
+    if (StoredVal.hasOneUse() && isFreeToSplitVector(StoredVal.getNode(), DAG))
       return splitVectorStore(St, DAG);
     return SDValue();
   }
@@ -46587,10 +46592,9 @@ static SDValue narrowVectorSelect(SDNode *N, SelectionDAG &DAG,
   SDValue Cond = N->getOperand(0);
   SDValue TVal = N->getOperand(1);
   SDValue FVal = N->getOperand(2);
-  SmallVector<SDValue, 4> CatOpsT, CatOpsF;
   if (!TVal.hasOneUse() || !FVal.hasOneUse() ||
-      !collectConcatOps(TVal.getNode(), CatOpsT, DAG) ||
-      !collectConcatOps(FVal.getNode(), CatOpsF, DAG))
+      !isFreeToSplitVector(TVal.getNode(), DAG) ||
+      !isFreeToSplitVector(FVal.getNode(), DAG))
     return SDValue();
 
   auto makeBlend = [Opcode](SelectionDAG &DAG, const SDLoc &DL,
@@ -53160,9 +53164,7 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
         InVT.is512BitVector())) {
     // PACK should still be worth it for 128-bit vectors if the sources were
     // originally concatenated from subvectors.
-    SmallVector<SDValue> ConcatOps;
-    if (VT.getSizeInBits() > 128 ||
-        !collectConcatOps(In.getNode(), ConcatOps, DAG))
+    if (VT.getSizeInBits() > 128 || !isFreeToSplitVector(In.getNode(), DAG))
       return SDValue();
   }
 
@@ -57280,9 +57282,8 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
 /// to get simple value types will assert).
 static SDValue narrowExtractedVectorSelect(SDNode *Ext, SelectionDAG &DAG) {
   SDValue Sel = Ext->getOperand(0);
-  SmallVector<SDValue, 4> CatOps;
   if (Sel.getOpcode() != ISD::VSELECT ||
-      !collectConcatOps(Sel.getOperand(0).getNode(), CatOps, DAG))
+      !isFreeToSplitVector(Sel.getOperand(0).getNode(), DAG))
     return SDValue();
 
   // Note: We assume simple value types because this should only be called with
