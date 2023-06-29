@@ -92,6 +92,9 @@ atoll          |check|
 exit           |check|    |check|
 labs           |check|
 llabs          |check|
+div            |check|
+ldiv           |check|
+lldiv          |check|
 strtod         |check|
 strtof         |check|
 strtol         |check|

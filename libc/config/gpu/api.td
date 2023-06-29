@@ -9,6 +9,9 @@ def StringAPI : PublicAPI<"string.h"> {
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {
   let Types = [
+    "div_t",
+    "ldiv_t",
+    "lldiv_t",
     "size_t",
     "__atexithandler_t",
   ];
