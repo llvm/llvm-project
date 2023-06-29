@@ -1277,9 +1277,9 @@ void AMDGPUInstPrinter::printInterpAttrChan(const MCInst *MI, unsigned OpNum,
   O << '.' << "xyzw"[Chan & 0x3];
 }
 
-void AMDGPUInstPrinter::printVGPRIndexMode(const MCInst *MI, unsigned OpNo,
-                                           const MCSubtargetInfo &STI,
-                                           raw_ostream &O) {
+void AMDGPUInstPrinter::printGPRIdxMode(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
   using namespace llvm::AMDGPU::VGPRIndexMode;
   unsigned Val = MI->getOperand(OpNo).getImm();
 
@@ -1486,7 +1486,7 @@ void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printWaitFlag(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printSWaitCnt(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
   AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(STI.getCPU());
@@ -1548,7 +1548,7 @@ void AMDGPUInstPrinter::printDepCtr(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printDelayFlag(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printSDelayALU(const MCInst *MI, unsigned OpNo,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
   const char *BadInstId = "/* invalid instid value */";
