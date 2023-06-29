@@ -2234,6 +2234,11 @@ def int_type_checked_load : DefaultAttrsIntrinsic<[llvm_ptr_ty, llvm_i1_ty],
                                       [llvm_ptr_ty, llvm_i32_ty, llvm_metadata_ty],
                                       [IntrNoMem, IntrWillReturn]>;
 
+// Safely loads a relative function pointer from a virtual table pointer using type metadata.
+def int_type_checked_load_relative : DefaultAttrsIntrinsic<[llvm_ptr_ty, llvm_i1_ty],
+                                      [llvm_ptr_ty, llvm_i32_ty, llvm_metadata_ty],
+                                      [IntrNoMem, IntrWillReturn]>;
+
 // Test whether a pointer is associated with a type metadata identifier. Used
 // for public visibility classes that may later be refined to private
 // visibility.

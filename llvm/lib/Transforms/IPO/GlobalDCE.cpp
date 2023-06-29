@@ -187,29 +187,36 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
   LLVM_DEBUG(dbgs() << "Scanning type.checked.load intrinsics\n");
   Function *TypeCheckedLoadFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
+  Function *TypeCheckedLoadRelativeFunc =
+      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
 
-  if (!TypeCheckedLoadFunc)
-    return;
+  auto scan = [&](Function *CheckedLoadFunc) {
+    if (!CheckedLoadFunc)
+      return;
 
-  for (auto *U : TypeCheckedLoadFunc->users()) {
-    auto CI = dyn_cast<CallInst>(U);
-    if (!CI)
-      continue;
+    for (auto *U : CheckedLoadFunc->users()) {
+      auto CI = dyn_cast<CallInst>(U);
+      if (!CI)
+        continue;
 
-    auto *Offset = dyn_cast<ConstantInt>(CI->getArgOperand(1));
-    Value *TypeIdValue = CI->getArgOperand(2);
-    auto *TypeId = cast<MetadataAsValue>(TypeIdValue)->getMetadata();
+      auto *Offset = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+      Value *TypeIdValue = CI->getArgOperand(2);
+      auto *TypeId = cast<MetadataAsValue>(TypeIdValue)->getMetadata();
 
-    if (Offset) {
-      ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
-    } else {
-      // type.checked.load with a non-constant offset, so assume every entry in
-      // every matching vtable is used.
-      for (const auto &VTableInfo : TypeIdMap[TypeId]) {
-        VFESafeVTables.erase(VTableInfo.first);
+      if (Offset) {
+        ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
+      } else {
+        // type.checked.load with a non-constant offset, so assume every entry
+        // in every matching vtable is used.
+        for (const auto &VTableInfo : TypeIdMap[TypeId]) {
+          VFESafeVTables.erase(VTableInfo.first);
+        }
       }
     }
-  }
+  };
+
+  scan(TypeCheckedLoadFunc);
+  scan(TypeCheckedLoadRelativeFunc);
 }
 
 void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
