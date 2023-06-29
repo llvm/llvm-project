@@ -59,6 +59,18 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
             program, runInTerminal=True, args=["foobar"], env=["FOO=bar"]
         )
 
+        self.assertEqual(
+            len(self.vscode.reverse_requests), 
+            1, 
+            "make sure we got a reverse request"
+        )
+
+        request = self.vscode.reverse_requests[0]
+        self.assertIn(self.lldbVSCodeExec, request["arguments"]["args"])
+        self.assertIn(program, request["arguments"]["args"])
+        self.assertIn("foobar", request["arguments"]["args"])
+        self.assertIn("FOO", request["arguments"]["env"])
+
         breakpoint_line = line_number(source, "// breakpoint")
 
         self.set_source_breakpoints(source, [breakpoint_line])

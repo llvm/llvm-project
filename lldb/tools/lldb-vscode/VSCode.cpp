@@ -41,10 +41,10 @@ VSCode::VSCode()
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
       stop_at_entry(false), is_attach(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
-      configuration_done_sent(false), reverse_request_seq(0),
-      waiting_for_run_in_terminal(false),
+      configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
-          [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }) {
+          [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
+      reverse_request_seq(0) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
 #if defined(_WIN32)
   // Windows opens stdout and stdin in text mode which converts \n to 13,10
@@ -505,24 +505,83 @@ bool VSCode::HandleObject(const llvm::json::Object &object) {
       return false; // Fail
     }
   }
+
+  if (packet_type == "response") {
+    auto id = GetSigned(object, "request_seq", 0);
+    ResponseCallback response_handler = [](llvm::Expected<llvm::json::Value>) {
+      llvm::errs() << "Unhandled response\n";
+    };
+
+    {
+      std::lock_guard<std::mutex> locker(call_mutex);
+      auto inflight = inflight_reverse_requests.find(id);
+      if (inflight != inflight_reverse_requests.end()) {
+        response_handler = std::move(inflight->second);
+        inflight_reverse_requests.erase(inflight);
+      }
+    }
+
+    // Result should be given, use null if not.
+    if (GetBoolean(object, "success", false)) {
+      llvm::json::Value Result = nullptr;
+      if (auto *B = object.get("body")) {
+        Result = std::move(*B);
+      }
+      response_handler(Result);
+    } else {
+      llvm::StringRef message = GetString(object, "message");
+      if (message.empty()) {
+        message = "Unknown error, response failed";
+      }
+      response_handler(llvm::createStringError(
+          std::error_code(-1, std::generic_category()), message));
+    }
+
+    return true;
+  }
+
   return false;
 }
 
-PacketStatus VSCode::SendReverseRequest(llvm::json::Object request,
-                                        llvm::json::Object &response) {
-  request.try_emplace("seq", ++reverse_request_seq);
-  SendJSON(llvm::json::Value(std::move(request)));
-  while (true) {
-    PacketStatus status = GetNextObject(response);
-    const auto packet_type = GetString(response, "type");
-    if (packet_type == "response")
-      return status;
-    else {
-      // Not our response, we got another packet
-      HandleObject(response);
+llvm::Error VSCode::Loop() {
+  while (!sent_terminated_event) {
+    llvm::json::Object object;
+    lldb_vscode::PacketStatus status = GetNextObject(object);
+
+    if (status == lldb_vscode::PacketStatus::EndOfFile) {
+      break;
+    }
+
+    if (status != lldb_vscode::PacketStatus::Success) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "failed to send packet");
+    }
+
+    if (!HandleObject(object)) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "unhandled packet");
     }
   }
-  return PacketStatus::EndOfFile;
+
+  return llvm::Error::success();
+}
+
+void VSCode::SendReverseRequest(llvm::StringRef command,
+                                llvm::json::Value arguments,
+                                ResponseCallback callback) {
+  int64_t id;
+  {
+    std::lock_guard<std::mutex> locker(call_mutex);
+    id = ++reverse_request_seq;
+    inflight_reverse_requests.emplace(id, std::move(callback));
+  }
+
+  SendJSON(llvm::json::Object{
+      {"type", "request"},
+      {"seq", id},
+      {"command", command},
+      {"arguments", std::move(arguments)},
+  });
 }
 
 void VSCode::RegisterRequestCallback(std::string request,
@@ -608,6 +667,65 @@ int64_t Variables::InsertExpandableVariable(lldb::SBValue variable,
   else
     expandable_variables.insert(std::make_pair(var_ref, variable));
   return var_ref;
+}
+
+bool StartDebuggingRequestHandler::DoExecute(
+    lldb::SBDebugger debugger, char **command,
+    lldb::SBCommandReturnObject &result) {
+  // Command format like: `startDebugging <launch|attach> <configuration>`
+  if (!command) {
+    result.SetError("Invalid use of startDebugging");
+    result.SetStatus(lldb::eReturnStatusFailed);
+    return false;
+  }
+
+  if (!command[0] || llvm::StringRef(command[0]).empty()) {
+    result.SetError("startDebugging request type missing.");
+    result.SetStatus(lldb::eReturnStatusFailed);
+    return false;
+  }
+
+  if (!command[1] || llvm::StringRef(command[1]).empty()) {
+    result.SetError("configuration missing.");
+    result.SetStatus(lldb::eReturnStatusFailed);
+    return false;
+  }
+
+  llvm::StringRef request{command[0]};
+  std::string raw_configuration{command[1]};
+
+  int i = 2;
+  while (command[i]) {
+    raw_configuration.append(" ").append(command[i]);
+  }
+
+  llvm::Expected<llvm::json::Value> configuration =
+      llvm::json::parse(raw_configuration);
+
+  if (!configuration) {
+    llvm::Error err = configuration.takeError();
+    std::string msg =
+        "Failed to parse json configuration: " + llvm::toString(std::move(err));
+    result.SetError(msg.c_str());
+    result.SetStatus(lldb::eReturnStatusFailed);
+    return false;
+  }
+
+  g_vsc.SendReverseRequest(
+      "startDebugging",
+      llvm::json::Object{{"request", request},
+                         {"configuration", std::move(*configuration)}},
+      [](llvm::Expected<llvm::json::Value> value) {
+        if (!value) {
+          llvm::Error err = value.takeError();
+          llvm::errs() << "reverse start debugging request failed: "
+                       << llvm::toString(std::move(err)) << "\n";
+        }
+      });
+
+  result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
+
+  return true;
 }
 
 } // namespace lldb_vscode
