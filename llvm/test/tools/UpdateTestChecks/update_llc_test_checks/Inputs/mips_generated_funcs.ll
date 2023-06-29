@@ -1,6 +1,4 @@
 ; RUN: llc -enable-machine-outliner -mtriple=mips-unknown-linux < %s | FileCheck %s
-;
-; NOTE: Machine outliner doesn't run.
 @x = global i32 0, align 4
 
 define dso_local i32 @check_boundaries() #0 {

@@ -122,6 +122,8 @@ class LLVMConfig(object):
             elif re.match(r'^arm.*', target_triple):
                 features.add('target-arm')
 
+        features.add('nanomips')
+
         use_gmalloc = lit_config.params.get('use_gmalloc', None)
         if lit.util.pythonize_bool(use_gmalloc):
             # Allow use of an explicit path for gmalloc library.
