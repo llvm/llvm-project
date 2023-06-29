@@ -74,11 +74,23 @@ class VOPD3e<bits<5> opX, bits<5> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   let Inst{43-41} = negX;
   let Inst{46-44} = negY;
   let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPDX, "$vsrc1X"), -1), 0, vsrc1X);
-  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPDX, "$vsrc2X"), -1), 0, vsrc2X);
+
+  // Set src2 to VCC for V_DUAL_CNDMASK_B32.
+  // SP3 allows to use an SGPR in place of VSRC2 operand for this instruction
+  // despite the fact the operand does not accept SGPRs.
+  // Actual HW behavior: it does not read and ignores the field, default VCC is
+  // used.
+  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPDX, "$vsrc2X"), -1),
+                            !if(!eq(VDX, V_CNDMASK_B32_e32),
+                                !cast<int>(VCC.HWEncoding), 0),
+                            vsrc2X);
   let Inst{71-64} = vdstX;
   let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPDY, "$vsrc1Y"), -1), 0, vsrc1Y);
   let Inst{87-80} = !if(!ne(!find(VDY.Pfl.AsmVOPDY, "bitop"), -1), bitop3,
-                        !if(!eq(!find(VDY.Pfl.AsmVOPDY, "$vsrc2Y"), -1), 0, vsrc2Y));
+                        !if(!eq(!find(VDY.Pfl.AsmVOPDY, "$vsrc2Y"), -1),
+                            !if(!eq(VDY, V_CNDMASK_B32_e32),
+                                !cast<int>(VCC.HWEncoding), 0),
+                            vsrc2Y));
   let Inst{95-88} = vdstY;
 }
 
