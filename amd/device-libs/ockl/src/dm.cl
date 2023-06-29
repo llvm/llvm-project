@@ -1180,7 +1180,7 @@ trim_kind(__global heap_t *hp, kind_t k, ulong iss, ulong ise, uint i, uint n, _
 __attribute__((weak, cold)) void
 __ockl_dm_trim(int *mem)
 {
-    __local uint *dsts = (__local uint *)OCKL_MANGLE_T(to,local)(mem);
+    __local uint *dsts = (__local uint *)mem;
     __local uint *srcs = dsts + (__oclc_wavefrontsize64 ? 2*64 : 2*32);
     __global heap_t *hp = get_heap_ptr();
     ulong iss = hp->initial_slabs_start;
