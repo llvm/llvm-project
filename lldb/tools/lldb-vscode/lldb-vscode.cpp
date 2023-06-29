@@ -1695,6 +1695,9 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     g_vsc.target.Launch(launch_info, error);
     g_vsc.debugger.SetAsync(true);
   } else {
+    // Set the launch info so that run commands can access the configured
+    // launch details.
+    g_vsc.target.SetLaunchInfo(launch_info);
     g_vsc.RunLLDBCommands("Running launchCommands:", launchCommands);
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
