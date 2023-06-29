@@ -2722,6 +2722,8 @@ the configuration (without a prefix: ``Auto``).
 **BreakStringLiterals** (``Boolean``) :versionbadge:`clang-format 3.9` :ref:`¶ <BreakStringLiterals>`
   Allow breaking string literals when formatting.
 
+  In C, C++, and Objective-C:
+
   .. code-block:: c++
 
      true:
@@ -2731,7 +2733,34 @@ the configuration (without a prefix: ``Auto``).
 
      false:
      const char* x =
-       "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+
+  In C#, Java, and JavaScript:
+
+  .. code-block:: c++
+
+     true:
+     var x = "veryVeryVeryVeryVeryVe" +
+             "ryVeryVeryVeryVeryVery" +
+             "VeryLongString";
+
+     false:
+     var x =
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
+  C# and JavaScript interpolated strings are not broken.
+
+  In Verilog:
+
+  .. code-block:: c++
+
+     true:
+     string x = {"veryVeryVeryVeryVeryVe",
+                 "ryVeryVeryVeryVeryVery",
+                 "VeryLongString"};
+
+     false:
+     string x =
+         "veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongString";
 
 .. _ColumnLimit:
 

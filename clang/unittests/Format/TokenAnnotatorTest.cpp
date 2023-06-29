@@ -1868,6 +1868,30 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_Unknown);
   EXPECT_TOKEN(Tokens[5], tok::comma, TT_Unknown);
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown);
+
+  // String literals in concatenation.
+  Tokens = Annotate("x = {\"\"};");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_StringInConcatenation);
+  Tokens = Annotate("x = {\"\", \"\"};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_StringInConcatenation);
+  EXPECT_TOKEN(Tokens[5], tok::string_literal, TT_StringInConcatenation);
+  Tokens = Annotate("x = '{{\"\"}};");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::string_literal, TT_StringInConcatenation);
+  // Cases where the string should not be annotated that type.  Fix the
+  // `TT_Unknown` if needed in the future.
+  Tokens = Annotate("x = {\"\" == \"\"};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_Unknown);
+  EXPECT_TOKEN(Tokens[5], tok::string_literal, TT_Unknown);
+  Tokens = Annotate("x = {(\"\")};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_Unknown);
+  Tokens = Annotate("x = '{\"\"};");
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_Unknown);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandConstructors) {
