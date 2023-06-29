@@ -1869,6 +1869,23 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     return Visit(E->getInit(0));
   }
 
+  if (isa<llvm::ScalableVectorType>(VType)) {
+    if (NumInitElements == 0) {
+      // C++11 value-initialization for the vector.
+      return EmitNullValue(E->getType());
+    }
+
+    if (NumInitElements == 1) {
+      Expr *InitVector = E->getInit(0);
+
+      // Initialize from another scalable vector of the same type.
+      if (InitVector->getType() == E->getType())
+        return Visit(InitVector);
+    }
+
+    llvm_unreachable("Unexpected initialization of a scalable vector!");
+  }
+
   unsigned ResElts = cast<llvm::FixedVectorType>(VType)->getNumElements();
 
   // Loop over initializers collecting the Value for each, and remembering
