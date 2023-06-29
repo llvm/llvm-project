@@ -215,7 +215,8 @@ public:
     mlir::Value one =
         builder.createIntegerConstant(loc, builder.getIndexType(), 1);
     elementalOp =
-        builder.create<hlfir::ElementalOp>(loc, exprType, shape, lengthParams);
+        builder.create<hlfir::ElementalOp>(loc, exprType, shape, lengthParams,
+                                           /*isUnordered=*/true);
     builder.setInsertionPointToStart(elementalOp.getBody());
     // implied-do-index = lower+((i-1)*stride)
     mlir::Value diff = builder.create<mlir::arith::SubIOp>(
@@ -686,9 +687,10 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
         loc, builder, stmtCtx, symMap, declaredType,
         extent ? std::optional<mlir::Value>(extent) : std::nullopt, lengths,
         needToEvaluateOneExprToGetLengthParameters);
-  // Note: array constructors containing impure ac-value expr are currently not
-  // rewritten to hlfir.elemental because impure expressions should be evaluated
-  // in order, and hlfir.elemental currently misses a way to indicate that.
+  // Note: the generated hlfir.elemental is always unordered, thus,
+  // AsElementalStrategy can only be used for array constructors without
+  // impure ac-value expressions. If/when this changes, make sure
+  // the 'unordered' attribute is set accordingly for the hlfir.elemental.
   if (analysis.isSingleImpliedDoWithOneScalarPureExpr())
     return AsElementalStrategy(loc, builder, stmtCtx, symMap, declaredType,
                                extent, lengths);

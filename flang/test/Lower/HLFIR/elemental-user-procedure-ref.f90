@@ -15,7 +15,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPby_addr(
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:.*]] {{.*}}x
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_1:.*]](%[[VAL_4:[^)]*]]) {{.*}}y
-! CHECK:  %[[VAL_6:.*]] = hlfir.elemental %[[VAL_4]] : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
+! CHECK:  %[[VAL_6:.*]] = hlfir.elemental %[[VAL_4]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
 ! CHECK:  ^bb0(%[[VAL_7:.*]]: index):
 ! CHECK:    %[[VAL_8:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_7]])  : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_9:.*]] = fir.call @_QPelem(%[[VAL_2]]#1, %[[VAL_8]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> f32
@@ -39,7 +39,7 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0:.*]] {{.*}}x
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1:.*]](%[[VAL_5:[^)]*]]) {{.*}}y
 ! CHECK:  %[[VAL_7:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
-! CHECK:  %[[VAL_8:.*]] = hlfir.elemental %[[VAL_5]] : (!fir.shape<2>) -> !hlfir.expr<10x20xf32> {
+! CHECK:  %[[VAL_8:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<2>) -> !hlfir.expr<10x20xf32> {
 ! CHECK:  ^bb0(%[[VAL_9:.*]]: index, %[[VAL_10:.*]]: index):
 ! CHECK:    %[[VAL_11:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_9]], %[[VAL_10]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_12:.*]] = fir.load %[[VAL_11]] : !fir.ref<f32>
@@ -64,7 +64,7 @@ end subroutine
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_2:.*]]#0 typeparams %[[VAL_2]]#1 {{.*}}x
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 100 : index
 ! CHECK:  %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_5:.*]](%[[VAL_7:.*]]) typeparams %[[VAL_4:.*]]#1 {{.*}}y
-! CHECK:  %[[VAL_9:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
+! CHECK:  %[[VAL_9:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
 ! CHECK:  ^bb0(%[[VAL_10:.*]]: index):
 ! CHECK:    %[[VAL_11:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_10]])  typeparams %[[VAL_4]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 ! CHECK:    %[[VAL_12:.*]] = fir.call @_QPchar_elem(%[[VAL_3]]#0, %[[VAL_11]]) fastmath<contract> : (!fir.boxchar<1>, !fir.boxchar<1>) -> f32

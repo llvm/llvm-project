@@ -20,7 +20,7 @@ end function test1
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:             %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_12]] : index
 ! CHECK:             %[[VAL_16:.*]] = arith.muli %[[VAL_15]], %[[VAL_11]] : index
@@ -31,13 +31,13 @@ end function test1
 ! CHECK:             %[[VAL_21:.*]] = arith.muli %[[VAL_18]], %[[VAL_20]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_21]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_23:.*]]: index):
 ! CHECK:             %[[VAL_24:.*]] = hlfir.apply %[[VAL_25:.*]], %[[VAL_23]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_26:.*]] = hlfir.no_reassoc %[[VAL_24]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_26]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi8> {
+! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi8> {
 ! CHECK:           ^bb0(%[[VAL_28:.*]]: index):
 ! CHECK:             %[[VAL_29:.*]] = hlfir.apply %[[VAL_30:.*]], %[[VAL_28]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_29]] : (i64) -> i8
@@ -70,7 +70,7 @@ end function test2
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:             %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_12]] : index
 ! CHECK:             %[[VAL_16:.*]] = arith.muli %[[VAL_15]], %[[VAL_11]] : index
@@ -81,13 +81,13 @@ end function test2
 ! CHECK:             %[[VAL_21:.*]] = arith.muli %[[VAL_18]], %[[VAL_20]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_21]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_23:.*]]: index):
 ! CHECK:             %[[VAL_24:.*]] = hlfir.apply %[[VAL_25:.*]], %[[VAL_23]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_26:.*]] = hlfir.no_reassoc %[[VAL_24]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_26]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi16> {
+! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi16> {
 ! CHECK:           ^bb0(%[[VAL_28:.*]]: index):
 ! CHECK:             %[[VAL_29:.*]] = hlfir.apply %[[VAL_30:.*]], %[[VAL_28]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_29]] : (i64) -> i16
@@ -120,7 +120,7 @@ end function test3
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:             %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_12]] : index
 ! CHECK:             %[[VAL_16:.*]] = arith.muli %[[VAL_15]], %[[VAL_11]] : index
@@ -131,13 +131,13 @@ end function test3
 ! CHECK:             %[[VAL_21:.*]] = arith.muli %[[VAL_18]], %[[VAL_20]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_21]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_22:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_23:.*]]: index):
 ! CHECK:             %[[VAL_24:.*]] = hlfir.apply %[[VAL_25:.*]], %[[VAL_23]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_26:.*]] = hlfir.no_reassoc %[[VAL_24]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_26]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi32> {
+! CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi32> {
 ! CHECK:           ^bb0(%[[VAL_28:.*]]: index):
 ! CHECK:             %[[VAL_29:.*]] = hlfir.apply %[[VAL_30:.*]], %[[VAL_28]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_29]] : (i64) -> i32
@@ -170,7 +170,7 @@ end function test4
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i64) -> index
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_13:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:             %[[VAL_15:.*]] = arith.subi %[[VAL_14]], %[[VAL_12]] : index
 ! CHECK:             %[[VAL_16:.*]] = arith.muli %[[VAL_15]], %[[VAL_11]] : index
@@ -180,7 +180,7 @@ end function test4
 ! CHECK:             %[[VAL_20:.*]] = arith.muli %[[VAL_18]], %[[VAL_19]] : i64
 ! CHECK:             hlfir.yield_element %[[VAL_20]] : i64
 ! CHECK:           }
-! CHECK:           %[[VAL_21:.*]] = hlfir.elemental %[[VAL_7]] : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
+! CHECK:           %[[VAL_21:.*]] = hlfir.elemental %[[VAL_7]] unordered : (!fir.shape<1>) -> !hlfir.expr<4xi64> {
 ! CHECK:           ^bb0(%[[VAL_22:.*]]: index):
 ! CHECK:             %[[VAL_23:.*]] = hlfir.apply %[[VAL_24:.*]], %[[VAL_22]] : (!hlfir.expr<4xi64>, index) -> i64
 ! CHECK:             %[[VAL_25:.*]] = hlfir.no_reassoc %[[VAL_23]] : i64

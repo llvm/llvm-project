@@ -1029,10 +1029,13 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
 void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
                                mlir::OperationState &odsState,
                                mlir::Type resultType, mlir::Value shape,
-                               mlir::ValueRange typeparams) {
+                               mlir::ValueRange typeparams, bool isUnordered) {
   odsState.addOperands(shape);
   odsState.addOperands(typeparams);
   odsState.addTypes(resultType);
+  if (isUnordered)
+    odsState.addAttribute(getUnorderedAttrName(odsState.name),
+                          isUnordered ? builder.getUnitAttr() : nullptr);
   mlir::Region *bodyRegion = odsState.addRegion();
   bodyRegion->push_back(new mlir::Block{});
   if (auto exprType = resultType.dyn_cast<hlfir::ExprType>()) {
@@ -1264,8 +1267,11 @@ static void printYieldOpCleanup(mlir::OpAsmPrinter &p, YieldOp yieldOp,
 
 void hlfir::ElementalAddrOp::build(mlir::OpBuilder &builder,
                                    mlir::OperationState &odsState,
-                                   mlir::Value shape) {
+                                   mlir::Value shape, bool isUnordered) {
   odsState.addOperands(shape);
+  if (isUnordered)
+    odsState.addAttribute(getUnorderedAttrName(odsState.name),
+                          isUnordered ? builder.getUnitAttr() : nullptr);
   mlir::Region *bodyRegion = odsState.addRegion();
   bodyRegion->push_back(new mlir::Block{});
   if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {

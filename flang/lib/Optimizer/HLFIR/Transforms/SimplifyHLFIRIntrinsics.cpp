@@ -60,7 +60,7 @@ public:
     };
     hlfir::ElementalOp elementalOp = hlfir::genElementalOp(
         loc, builder, elementType, resultShape, typeParams, genKernel,
-        transpose.getResult().getType());
+        /*isUnordered=*/true, transpose.getResult().getType());
 
     // it wouldn't be safe to replace block arguments with a different
     // hlfir.expr type. Types can differ due to differing amounts of shape

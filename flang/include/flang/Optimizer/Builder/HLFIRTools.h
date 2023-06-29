@@ -375,6 +375,7 @@ hlfir::ElementalOp genElementalOp(mlir::Location loc,
                                   mlir::Type elementType, mlir::Value shape,
                                   mlir::ValueRange typeParams,
                                   const ElementalKernelGenerator &genKernel,
+                                  bool isUnordered = false,
                                   mlir::Type exprType = mlir::Type{});
 
 /// Structure to describe a loop nest.
