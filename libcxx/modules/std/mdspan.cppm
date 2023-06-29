@@ -18,12 +18,12 @@ export namespace std {
   // [mdspan.extents.dextents], alias template dextents
   using std::dextents;
 
-#if 0
   // [mdspan.layout], layout mapping
-  using std::layout_left;
+  // using std::layout_left;
   using std::layout_right;
-  using std::layout_stride;
+  // using std::layout_stride;
 
+#if 0
   // [mdspan.accessor.default], class template default_­accessor
   using std::default_accessor;
 
