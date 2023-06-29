@@ -615,6 +615,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     reserveRegisterTuples(Reserved, ScratchRSrcReg);
   }
 
+  Register LongBranchReservedReg = MFI->getLongBranchReservedReg();
+  if (LongBranchReservedReg)
+    reserveRegisterTuples(Reserved, LongBranchReservedReg);
+
   // We have to assume the SP is needed in case there are calls in the function,
   // which is detected after the function is lowered. If we aren't really going
   // to need SP, don't bother reserving it.
@@ -2878,13 +2882,12 @@ bool SIRegisterInfo::opCanUseLiteralConstant(unsigned OpType) const {
 
 /// Returns a lowest register that is not used at any point in the function.
 ///        If all registers are used, then this function will return
-///         AMDGPU::NoRegister. If \p ReserveHighestVGPR = true, then return
+///         AMDGPU::NoRegister. If \p ReserveHighestRegister = true, then return
 ///         highest unused register.
-MCRegister SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
-                                              const TargetRegisterClass *RC,
-                                              const MachineFunction &MF,
-                                              bool ReserveHighestVGPR) const {
-  if (ReserveHighestVGPR) {
+MCRegister SIRegisterInfo::findUnusedRegister(
+    const MachineRegisterInfo &MRI, const TargetRegisterClass *RC,
+    const MachineFunction &MF, bool ReserveHighestRegister) const {
+  if (ReserveHighestRegister) {
     for (MCRegister Reg : reverse(*RC))
       if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg))
         return Reg;

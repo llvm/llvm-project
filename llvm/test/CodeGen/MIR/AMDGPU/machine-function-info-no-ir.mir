@@ -48,6 +48,7 @@
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT:  vgprForAGPRCopy: ''
+# FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -148,6 +149,7 @@ body:             |
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -219,6 +221,7 @@ body:             |
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -291,6 +294,7 @@ body:             |
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:

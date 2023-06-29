@@ -327,6 +327,9 @@ extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
 
+void initializeGCNPreRALongBranchRegPass(PassRegistry &);
+extern char &GCNPreRALongBranchRegID;
+
 void initializeGCNPreRAOptimizationsPass(PassRegistry &);
 extern char &GCNPreRAOptimizationsID;
 
