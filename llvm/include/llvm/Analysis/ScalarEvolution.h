@@ -831,13 +831,6 @@ public:
   /// Returns 0 if the trip count is unknown or not constant.
   unsigned getSmallConstantMaxTripCount(const Loop *L);
 
-  /// Returns the upper bound of the loop trip count infered from array size.
-  /// Can not access bytes starting outside the statically allocated size
-  /// without being immediate UB.
-  /// Returns SCEVCouldNotCompute if the trip count could not inferred
-  /// from array accesses.
-  const SCEV *getConstantMaxTripCountFromArray(const Loop *L);
-
   /// Returns the largest constant divisor of the trip count as a normal
   /// unsigned value, if possible. This means that the actual trip count is
   /// always a multiple of the returned value. Returns 1 if the trip count is
