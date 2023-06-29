@@ -22,7 +22,7 @@ const uint64_t RPC_MAXIMUM_PORT_COUNT = 64;
 
 /// The symbol name associated with the client for use with the LLVM C library
 /// implementation.
-static const char *rpc_client_symbol_name = "__llvm_libc_rpc_client";
+inline const char *rpc_client_symbol_name = "__llvm_libc_rpc_client";
 
 /// status codes.
 typedef enum {
