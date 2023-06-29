@@ -519,6 +519,31 @@ def LLVM_DISubroutineTypeAttr : LLVM_Attr<"DISubroutineType", "di_subroutine_typ
 }
 
 //===----------------------------------------------------------------------===//
+// DILabelAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DILabelAttr : LLVM_Attr<"DILabel", "di_label",
+                                 /*traits=*/[], "DINodeAttr"> {
+  let parameters = (ins
+    "DIScopeAttr":$scope,
+    OptionalParameter<"StringAttr">:$name,
+    OptionalParameter<"DIFileAttr">:$file,
+    OptionalParameter<"unsigned">:$line
+  );
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "DIScopeAttr":$scope, "StringRef":$name, "DIFileAttr":$file,
+      "unsigned":$line
+    ), [{
+      MLIRContext *ctx = scope.getContext();
+      return $_get(ctx, scope, StringAttr::get(ctx, name), file, line);
+    }]>
+  ];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // MemoryEffectsAttr
 //===----------------------------------------------------------------------===//
 
