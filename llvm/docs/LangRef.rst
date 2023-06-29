@@ -10923,14 +10923,12 @@ for the given testcase is equivalent to:
       ret ptr %t5
     }
 
-If the ``inbounds`` keyword is present, the result value of the
-``getelementptr`` is a :ref:`poison value <poisonvalues>` if one of the
-following rules is violated:
+If the ``inbounds`` keyword is present, the result value of a
+``getelementptr`` with any non-zero indices is a
+:ref:`poison value <poisonvalues>` if one of the following rules is violated:
 
 *  The base pointer has an *in bounds* address of an allocated object, which
-   means that it points into an allocated object, or to its end. The only
-   *in bounds* address for a null pointer in the default address-space is the
-   null pointer itself.
+   means that it points into an allocated object, or to its end.
 *  If the type of an index is larger than the pointer index type, the
    truncation to the pointer index type preserves the signed value.
 *  The multiplication of an index by the type size does not wrap the pointer
@@ -10944,6 +10942,11 @@ following rules is violated:
    wrap in an unsigned sense (``nuw``).
 *  In cases where the base is a vector of pointers, the ``inbounds`` keyword
    applies to each of the computations element-wise.
+
+Note that ``getelementptr`` with all-zero indices is always considered to be
+``inbounds``, even if the base pointer does not point to an allocated object.
+As a corollary, the only pointer in bounds of the null pointer in the default
+address space is the null pointer itself.
 
 These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
