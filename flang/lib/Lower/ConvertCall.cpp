@@ -616,6 +616,9 @@ struct CallContext {
   std::optional<mlir::Type> resultType;
   mlir::Location loc;
 };
+
+using ExvAndCleanup =
+    std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>;
 } // namespace
 
 // Helper to transform a fir::ExtendedValue to an hlfir::EntityWithAttributes.
@@ -1179,6 +1182,80 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   return extendedValueToHlfirEntity(loc, builder, result, ".tmp.func_result");
 }
 
+/// Create an optional dummy argument value from \p entity that may be
+/// absent. This can only be called with numerical or logical scalar \p entity.
+/// If \p entity is considered absent according to 15.5.2.12 point 1., the
+/// returned value is zero (or false), otherwise it is the value of \p entity.
+static ExvAndCleanup genOptionalValue(fir::FirOpBuilder &builder,
+                                      mlir::Location loc, hlfir::Entity entity,
+                                      mlir::Value isPresent) {
+  mlir::Type eleType = entity.getFortranElementType();
+  assert(entity.isScalar() && fir::isa_trivial(eleType) &&
+         "must be a numerical or logical scalar");
+  return {builder
+              .genIfOp(loc, {eleType}, isPresent,
+                       /*withElseRegion=*/true)
+              .genThen([&]() {
+                mlir::Value val =
+                    hlfir::loadTrivialScalar(loc, builder, entity);
+                builder.create<fir::ResultOp>(loc, val);
+              })
+              .genElse([&]() {
+                mlir::Value zero =
+                    fir::factory::createZeroValue(builder, loc, eleType);
+                builder.create<fir::ResultOp>(loc, zero);
+              })
+              .getResults()[0],
+          std::nullopt};
+}
+
+/// Create an optional dummy argument address from \p entity that may be
+/// absent. If \p entity is considered absent according to 15.5.2.12 point 1.,
+/// the returned value is a null pointer, otherwise it is the address of \p
+/// entity.
+static ExvAndCleanup genOptionalAddr(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, hlfir::Entity entity,
+                                     mlir::Value isPresent) {
+  auto [exv, cleanup] = hlfir::translateToExtendedValue(loc, builder, entity);
+  // If it is an exv pointer/allocatable, then it cannot be absent
+  // because it is passed to a non-pointer/non-allocatable.
+  if (const auto *box = exv.getBoxOf<fir::MutableBoxValue>())
+    return {fir::factory::genMutableBoxRead(builder, loc, *box), cleanup};
+  // If this is not a POINTER or ALLOCATABLE, then it is already an OPTIONAL
+  // address and can be passed directly.
+  return {exv, cleanup};
+}
+
+/// Create an optional dummy argument address from \p entity that may be
+/// absent. If \p entity is considered absent according to 15.5.2.12 point 1.,
+/// the returned value is an absent fir.box, otherwise it is a fir.box
+/// describing \p entity.
+static ExvAndCleanup genOptionalBox(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, hlfir::Entity entity,
+                                    mlir::Value isPresent) {
+  auto [exv, cleanup] = hlfir::translateToExtendedValue(loc, builder, entity);
+
+  // Non allocatable/pointer optional box -> simply forward
+  if (exv.getBoxOf<fir::BoxValue>())
+    return {exv, cleanup};
+
+  fir::ExtendedValue newExv = exv;
+  // Optional allocatable/pointer -> Cannot be absent, but need to translate
+  // unallocated/diassociated into absent fir.box.
+  if (const auto *box = exv.getBoxOf<fir::MutableBoxValue>())
+    newExv = fir::factory::genMutableBoxRead(builder, loc, *box);
+
+  // createBox will not do create any invalid memory dereferences if exv is
+  // absent. The created fir.box will not be usable, but the SelectOp below
+  // ensures it won't be.
+  mlir::Value box = builder.createBox(loc, newExv);
+  mlir::Type boxType = box.getType();
+  auto absent = builder.create<fir::AbsentOp>(loc, boxType);
+  auto boxOrAbsent = builder.create<mlir::arith::SelectOp>(
+      loc, boxType, isPresent, box, absent);
+  return {fir::BoxValue(boxOrAbsent), cleanup};
+}
+
 /// Lower calls to intrinsic procedures with actual arguments that have been
 /// pre-lowered but have not yet been prepared according to the interface.
 static std::optional<hlfir::EntityWithAttributes>
@@ -1187,6 +1264,11 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
                     const fir::IntrinsicArgumentLoweringRules *argLowering,
                     CallContext &callContext) {
   llvm::SmallVector<fir::ExtendedValue> operands;
+  llvm::SmallVector<hlfir::CleanupFunction> cleanupFns;
+  auto addToCleanups = [&cleanupFns](std::optional<hlfir::CleanupFunction> fn) {
+    if (fn)
+      cleanupFns.emplace_back(std::move(*fn));
+  };
   auto &stmtCtx = callContext.stmtCtx;
   auto &converter = callContext.converter;
   fir::FirOpBuilder &builder = callContext.getBuilder();
@@ -1196,8 +1278,6 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
       operands.emplace_back(fir::getAbsentIntrinsicArgument());
       continue;
     }
-    if (arg.value()->handleDynamicOptional())
-      TODO(loc, "intrinsic dynamically optional arguments");
     hlfir::Entity actual = arg.value()->getActual(loc, builder);
     if (!argLowering) {
       // No argument lowering instruction, lower by value.
@@ -1222,6 +1302,37 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
     // Ad-hoc argument lowering handling.
     fir::ArgLoweringRule argRules =
         fir::lowerIntrinsicArgumentAs(*argLowering, arg.index());
+    if (arg.value()->handleDynamicOptional()) {
+      mlir::Value isPresent = arg.value()->getIsPresent();
+      switch (argRules.lowerAs) {
+      case fir::LowerIntrinsicArgAs::Value: {
+        auto [exv, cleanup] = genOptionalValue(builder, loc, actual, isPresent);
+        addToCleanups(std::move(cleanup));
+        operands.emplace_back(exv);
+        continue;
+      }
+      case fir::LowerIntrinsicArgAs::Addr: {
+        auto [exv, cleanup] = genOptionalAddr(builder, loc, actual, isPresent);
+        addToCleanups(std::move(cleanup));
+        operands.emplace_back(exv);
+        continue;
+      }
+      case fir::LowerIntrinsicArgAs::Box: {
+        auto [exv, cleanup] = genOptionalBox(builder, loc, actual, isPresent);
+        addToCleanups(std::move(cleanup));
+        operands.emplace_back(exv);
+        continue;
+      }
+      case fir::LowerIntrinsicArgAs::Inquired: {
+        auto [exv, cleanup] =
+            hlfir::translateToExtendedValue(loc, builder, actual);
+        addToCleanups(std::move(cleanup));
+        operands.emplace_back(exv);
+        continue;
+      }
+      }
+      llvm_unreachable("bad switch");
+    }
     switch (argRules.lowerAs) {
     case fir::LowerIntrinsicArgAs::Value:
       operands.emplace_back(
@@ -1278,6 +1389,8 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
   // Let the intrinsic library lower the intrinsic procedure call.
   auto [resultExv, mustBeFreed] =
       genIntrinsicCall(builder, loc, intrinsicName, scalarResultType, operands);
+  for (const hlfir::CleanupFunction &fn : cleanupFns)
+    fn();
   if (!fir::getBase(resultExv))
     return std::nullopt;
   hlfir::EntityWithAttributes resultEntity = extendedValueToHlfirEntity(
