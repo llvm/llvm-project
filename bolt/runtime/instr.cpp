@@ -137,6 +137,8 @@ public:
       StackBase = reinterpret_cast<uint8_t *>(
           __mmap(0, MaxSize, PROT_READ | PROT_WRITE,
                  (Shared ? MAP_SHARED : MAP_PRIVATE) | MAP_ANONYMOUS, -1, 0));
+      assert(StackBase != MAP_FAILED,
+             "BumpPtrAllocator: failed to mmap stack!");
       StackSize = 0;
     }
 
@@ -708,6 +710,7 @@ ProfileWriterContext readDescriptions() {
   uint64_t Size = __lseek(FD, 0, 2 /*SEEK_END*/);
   uint8_t *BinContents = reinterpret_cast<uint8_t *>(
       __mmap(0, Size, PROT_READ, MAP_PRIVATE, FD, 0));
+  assert(BinContents != MAP_FAILED, "readDescriptions: Failed to mmap self!");
   Result.MMapPtr = BinContents;
   Result.MMapSize = Size;
   Elf64_Ehdr *Hdr = reinterpret_cast<Elf64_Ehdr *>(BinContents);
@@ -1596,6 +1599,7 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   void *Ret =
       __mmap(CountersStart, CountersEnd - CountersStart, PROT_READ | PROT_WRITE,
              MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED, -1, 0);
+  assert(Ret != MAP_FAILED, "__bolt_instr_setup: Failed to mmap counters!");
   __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
   __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
   // Conservatively reserve 100MiB shared pages
