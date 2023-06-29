@@ -2018,17 +2018,31 @@ amd_comgr_populate_name_expression_map(amd_comgr_data_t Data,
 
     Elf_Shdr_Impl<ELF64LE> dynsymShdr, relaShdr, rodataShdr;
     for (auto Shdr : Sections) {
-      if (Shdr.sh_type == llvm::ELF::SHT_DYNSYM)
+
+      if (Shdr.sh_type == ELF::SHT_DYNSYM)
         dynsymShdr = Shdr;
 
-      if (Shdr.sh_type == ELF::SHT_RELA)
+      // Check sh_info to differentiate .rela.dyn and not .rela
+      if (Shdr.sh_type == ELF::SHT_RELA && Shdr.sh_info == 0)
         relaShdr = Shdr;
 
-      if ((Shdr.sh_type == ELF::SHT_PROGBITS) &&
-          !(Shdr.sh_flags & ELF::SHF_WRITE) &&
-          !(Shdr.sh_flags & ELF::SHF_EXECINSTR) &&
-          !(Shdr.sh_flags & ELF::SHF_MASKPROC) )
-        rodataShdr = Shdr;
+      // We can't uniquely identify the .rodata section using the type and flag
+      // because other sections may use the exact same flags and type (i.e.
+      // .interp).  For correctness, we can check the name instead
+      if (Shdr.sh_type == ELF::SHT_PROGBITS &&
+          (Shdr.sh_flags & ELF::SHF_ALLOC)) {
+
+        Expected<StringRef> SecNameOrError = ELFFile.getSectionName(Shdr);
+        if (!SecNameOrError) {
+          llvm::logAllUnhandledErrors(SecNameOrError.takeError(),
+                                      llvm::errs(), "ELFObj creation error: ");
+          return AMD_COMGR_STATUS_ERROR;
+        }
+        StringRef SecName = std::move(SecNameOrError.get());
+
+        if (SecName.equals(StringRef(".rodata")))
+          rodataShdr = Shdr;
+      }
     }
 
     // .dynsym - Find name expressions with amdgcn_name_expr and store their
@@ -2110,9 +2124,9 @@ amd_comgr_populate_name_expression_map(amd_comgr_data_t Data,
 
     // Collect an unmangled name for each name expression
     for (auto expData : nameExpDataVec) {
-      // TODO: If/when an accessor API becomes availble to get the starting
+      // TODO: If/when an accessor API becomes available to get the starting
       // address for the section, switch to that
-      int offset = expData->RodataOffset - rodataShdr.sh_offset;
+      size_t offset = expData->RodataOffset - rodataShdr.sh_offset;
 
       // Store from the offset up until the first '\0'
       const char *unmangled =

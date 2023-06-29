@@ -131,8 +131,10 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  char *nameExpressions[] = {"my_kernel_BOO<static_cast<int>(2+1),float >"};
-  char *symbolNames[] = {"_Z13my_kernel_BOOILi3EfEvPT0_"};
+  char *nameExpressions[] = {"my_kernel_BOO<static_cast<int>(2+1),float >",
+                             "my_kernel_FOO<static_cast<int>(2+1),float >"};
+  char *symbolNames[] = {"_Z13my_kernel_BOOILi3EfEvPT0_",
+                         "_Z13my_kernel_FOOILi3EfEvPT0_"};
 
   for (size_t I = 0; I < numNames; ++I) {
     size_t Size;
