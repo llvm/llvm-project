@@ -581,6 +581,13 @@ end module
 * F18 allows `OPTIONAL` dummy arguments to interoperable procedures
   unless they are `VALUE` (C865).
 
+* F18 processes the `NAMELIST` group declarations in a scope after it
+  has resolved all of the names in that scope.  This means that names
+  that appear before their local declarations do not resolve to host
+  associated objects and do not elicit errors about improper redeclarations
+  of implicitly typed entities.
+
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
