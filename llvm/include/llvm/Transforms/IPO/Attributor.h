@@ -730,6 +730,17 @@ struct IRPosition {
     }
   }
 
+  /// Return true if this is a function or call site position.
+  bool isFunctionScope() const {
+    switch (getPositionKind()) {
+    case IRPosition::IRP_CALL_SITE:
+    case IRPosition::IRP_FUNCTION:
+      return true;
+    default:
+      return false;
+    };
+  }
+
   /// Return the Function surrounding the anchor value.
   Function *getAnchorScope() const {
     Value &V = getAnchorValue();
@@ -3462,6 +3473,14 @@ struct AANoSync
                          StateWrapper<BooleanState, AbstractAttribute>> {
   AANoSync(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   /// Returns true if "nosync" is assumed.
   bool isAssumedNoSync() const { return getAssumed(); }
 
@@ -3538,6 +3557,13 @@ struct AANonNull
     : public IRAttribute<Attribute::NonNull,
                          StateWrapper<BooleanState, AbstractAttribute>> {
   AANonNull(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const { return getAssumed(); }
@@ -3727,6 +3753,13 @@ struct AANoAlias
                          StateWrapper<BooleanState, AbstractAttribute>> {
   AANoAlias(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
                             ArrayRef<Attribute::AttrKind> AttrKinds,
                             bool IgnoreSubsumingPositions = false) {
@@ -3772,6 +3805,14 @@ struct AANoFree
     : public IRAttribute<Attribute::NoFree,
                          StateWrapper<BooleanState, AbstractAttribute>> {
   AANoFree(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Return true if "nofree" is assumed.
   bool isAssumedNoFree() const { return getAssumed(); }
@@ -4068,6 +4109,13 @@ struct AADereferenceable
                          StateWrapper<DerefState, AbstractAttribute>> {
   AADereferenceable(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const {
     return NonNullAA && NonNullAA->isAssumedNonNull();
@@ -4123,6 +4171,13 @@ struct AAAlign : public IRAttribute<
                      Attribute::Alignment,
                      StateWrapper<AAAlignmentStateType, AbstractAttribute>> {
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Return assumed alignment.
   Align getAssumedAlign() const { return Align(getAssumed()); }
@@ -4194,6 +4249,13 @@ struct AANoCapture
           Attribute::NoCapture,
           StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// NO_CAPTURE is the best possible state, 0 the worst possible state.
@@ -4406,6 +4468,13 @@ struct AAPrivatizablePtr
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAPrivatizablePtr(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   /// Returns true if pointer privatization is assumed to be possible.
   bool isAssumedPrivatizablePtr() const { return getAssumed(); }
 
@@ -4444,6 +4513,14 @@ struct AAMemoryBehavior
           Attribute::ReadNone,
           StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>> {
   AAMemoryBehavior(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// BEST_STATE is the best possible state, 0 the worst possible state.
@@ -4509,6 +4586,14 @@ struct AAMemoryLocation
   using MemoryLocationsKind = StateType::base_t;
 
   AAMemoryLocation(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Encoding of different locations that could be accessed by a memory
   /// access.
@@ -4676,6 +4761,13 @@ struct AAValueConstantRange
   using Base = StateWrapper<IntegerRangeState, AbstractAttribute, uint32_t>;
   AAValueConstantRange(const IRPosition &IRP, Attributor &A)
       : Base(IRP, IRP.getAssociatedType()->getIntegerBitWidth()) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isIntegerTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// See AbstractAttribute::getState(...).
   IntegerRangeState &getState() override { return *this; }
@@ -4939,6 +5031,13 @@ struct AAPotentialConstantValues
   using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
   AAPotentialConstantValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isIntegerTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   /// See AbstractAttribute::getState(...).
   PotentialConstantIntValuesState &getState() override { return *this; }
   const PotentialConstantIntValuesState &getState() const override {
@@ -5068,6 +5167,19 @@ struct AANoFPClass
                             AbstractAttribute>;
 
   AANoFPClass(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    Type *Ty = IRP.getAssociatedType();
+    do {
+      if (Ty->isFPOrFPVectorTy())
+        return IRAttribute::isValidIRPositionForInit(A, IRP);
+      if (!Ty->isArrayTy())
+        break;
+      Ty = Ty->getArrayElementType();
+    } while (true);
+    return false;
+  }
 
   /// Return true if we assume that the underlying value is nofpclass.
   FPClassTest getAssumedNoFPClass() const {
@@ -5405,6 +5517,13 @@ struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
 /// An abstract interface for struct information.
 struct AAPointerInfo : public AbstractAttribute {
   AAPointerInfo(const IRPosition &IRP) : AbstractAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   enum AccessKind {
     // First two bits to distinguish may and must accesses.
@@ -5827,6 +5946,13 @@ struct AAAssumptionInfo
 /// An abstract attribute for getting all assumption underlying objects.
 struct AAUnderlyingObjects : AbstractAttribute {
   AAUnderlyingObjects(const IRPosition &IRP) : AbstractAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Create an abstract attribute biew for the position \p IRP.
   static AAUnderlyingObjects &createForPosition(const IRPosition &IRP,
