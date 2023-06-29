@@ -70,6 +70,9 @@ public:
 
   unsigned getInliningThresholdMultiplier() const { return 1; }
   unsigned adjustInliningThreshold(const CallBase *CB) const { return 0; }
+  unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const {
+    return 0;
+  };
 
   int getInlinerVectorBonusPercent() const { return 150; }
 
