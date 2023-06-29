@@ -146,6 +146,14 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
     }
   }
 
+  if (Function *TypeCheckedLoadRelativeFunc = M.getFunction(
+          Intrinsic::getName(Intrinsic::type_checked_load_relative))) {
+    for (const Use &U : TypeCheckedLoadRelativeFunc->uses()) {
+      auto CI = cast<CallInst>(U.getUser());
+      ExternalizeTypeId(CI, 2);
+    }
+  }
+
   for (GlobalObject &GO : M.global_objects()) {
     SmallVector<MDNode *, 1> MDs;
     GO.getMetadata(LLVMContext::MD_type, MDs);
