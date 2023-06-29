@@ -94,8 +94,6 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
              Lo.getValueType() == MVT::i32 && Hi.getValueType() == MVT::i32 &&
              "Unexpected VTs!");
       MachineFunction &MF = CurDAG->getMachineFunction();
-      RISCVMachineFunctionInfo *FuncInfo =
-          MF.getInfo<RISCVMachineFunctionInfo>();
       SDLoc DL(N);
 
       // Create temporary stack for each expanding node.
@@ -103,7 +101,6 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
           CurDAG->CreateStackTemporary(TypeSize::Fixed(8), Align(4));
       int FI = cast<FrameIndexSDNode>(StackSlot.getNode())->getIndex();
       MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
-      const TargetLowering &TLI = CurDAG->getTargetLoweringInfo();
 
       SDValue Chain = CurDAG->getEntryNode();
       Lo = CurDAG->getStore(Chain, DL, Lo, StackSlot, MPI, Align(8));
