@@ -3069,6 +3069,7 @@ template <typename BaseTy> struct SetState : public AbstractState {
   /// Performs the set intersection between this set and \p RHS. Returns true if
   /// changes were made.
   bool getIntersection(const SetContents &RHS) {
+    bool IsUniversal = Assumed.isUniversal();
     unsigned SizeBefore = Assumed.getSet().size();
 
     // Get intersection and make sure that the known set is still a proper
@@ -3076,7 +3077,8 @@ template <typename BaseTy> struct SetState : public AbstractState {
     Assumed.getIntersection(RHS);
     Assumed.getUnion(Known);
 
-    return SizeBefore != Assumed.getSet().size();
+    return SizeBefore != Assumed.getSet().size() ||
+           IsUniversal != Assumed.isUniversal();
   }
 
   /// Performs the set union between this set and \p RHS. Returns true if
