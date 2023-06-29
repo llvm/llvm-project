@@ -657,7 +657,7 @@ llvm::hash_code OperationEquivalence::computeHash(
                          op->getResultTypes(), op->hashProperties());
 
   //   - Location if required
-  if(!(flags & Flags::IgnoreLocations))
+  if (!(flags & Flags::IgnoreLocations))
     hash = llvm::hash_combine(hash, op->getLoc());
 
   //   - Operands
