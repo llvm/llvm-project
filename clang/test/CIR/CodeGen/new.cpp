@@ -3,7 +3,6 @@
 
 #include "std-cxx.h"
 
-
 struct S {
   S(int, int);
 };
@@ -29,3 +28,31 @@ void m(int a, int b) {
 // CHECK:     cir.call @_ZN1SC1Eii(%6, %8, %10) : (!cir.ptr<!ty_22struct2ES22>, !s32i, !s32i) -> ()
 // CHECK:     cir.call @_ZNSt10shared_ptrI1SEC1EPS0_(%2, %6) : (!cir.ptr<!ty_22class2Estd3A3Ashared_ptr22>, !cir.ptr<!ty_22struct2ES22>) -> ()
 // CHECK:   }
+
+class B {
+public:
+  void construct(B* __p) {
+      ::new ((void*)__p) B;
+  }
+};
+
+// CHECK: cir.func linkonce_odr @_ZN1B9constructEPS_(%arg0: !cir.ptr<!ty_22class2EB22>
+// CHECK:   %0 = cir.alloca !cir.ptr<!ty_22class2EB22>, cir.ptr <!cir.ptr<!ty_22class2EB22>>, ["this", init] {alignment = 8 : i64}
+// CHECK:   %1 = cir.alloca !cir.ptr<!ty_22class2EB22>, cir.ptr <!cir.ptr<!ty_22class2EB22>>, ["__p", init] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_22class2EB22>, cir.ptr <!cir.ptr<!ty_22class2EB22>>
+// CHECK:   cir.store %arg1, %1 : !cir.ptr<!ty_22class2EB22>, cir.ptr <!cir.ptr<!ty_22class2EB22>>
+// CHECK:   %2 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22class2EB22>>, !cir.ptr<!ty_22class2EB22>
+// CHECK:   %3 = cir.const(#cir.int<1> : !u64i) : !u64i
+// CHECK:   %4 = cir.load %1 : cir.ptr <!cir.ptr<!ty_22class2EB22>>, !cir.ptr<!ty_22class2EB22>
+// CHECK:   %5 = cir.cast(bitcast, %4 : !cir.ptr<!ty_22class2EB22>), !cir.ptr<!void>
+// CHECK:   %6 = cir.cast(bitcast, %5 : !cir.ptr<!void>), !cir.ptr<!ty_22class2EB22>
+
+// cir.call @B::B()(%new_placament_ptr)
+// CHECK:   cir.call @_ZN1BC1Ev(%6) : (!cir.ptr<!ty_22class2EB22>) -> ()
+// CHECK:   cir.return
+// CHECK: }
+
+void t() {
+  B b;
+  b.construct(&b);
+}

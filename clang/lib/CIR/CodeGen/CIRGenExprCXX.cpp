@@ -661,9 +661,27 @@ mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
   Address allocation = Address::invalid();
   CallArgList allocatorArgs;
   if (allocator->isReservedGlobalPlacementOperator()) {
-    // In LLVM codegen: If the allocator is a global placement operator, just
+    // If the allocator is a global placement operator, just
     // "inline" it directly.
-    llvm_unreachable("NYI");
+    assert(E->getNumPlacementArgs() == 1);
+    const Expr *arg = *E->placement_arguments().begin();
+
+    LValueBaseInfo BaseInfo;
+    allocation = buildPointerWithAlignment(arg, &BaseInfo);
+
+    // The pointer expression will, in many cases, be an opaque void*.
+    // In these cases, discard the computed alignment and use the
+    // formal alignment of the allocated type.
+    if (BaseInfo.getAlignmentSource() != AlignmentSource::Decl)
+      allocation = allocation.withAlignment(allocAlign);
+
+    // Set up allocatorArgs for the call to operator delete if it's not
+    // the reserved global operator.
+    if (E->getOperatorDelete() &&
+        !E->getOperatorDelete()->isReservedGlobalPlacementOperator()) {
+      allocatorArgs.add(RValue::get(allocSize), getContext().getSizeType());
+      allocatorArgs.add(RValue::get(allocation.getPointer()), arg->getType());
+    }
   } else {
     const FunctionProtoType *allocatorType =
         allocator->getType()->castAs<FunctionProtoType>();
