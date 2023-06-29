@@ -90,9 +90,59 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 20 : index
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1:.*]](%[[VAL_5:[^)]*]]) {{.*}}y
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 1 : index
-! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_4]] step %[[VAL_7]] {
-! CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_3]] step %[[VAL_7]] {
+! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_4]] step %[[VAL_7]] unordered {
+! CHECK:    fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_3]] step %[[VAL_7]] unordered {
 ! CHECK:      %[[VAL_10:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_9]], %[[VAL_8]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
 ! CHECK:      fir.call @_QPelem_sub(%[[VAL_2]]#1, %[[VAL_10]]) fastmath<contract> : (!fir.ref<i32>, !fir.ref<f32>) -> ()
 ! CHECK:    }
 ! CHECK:  }
+
+subroutine impure_elemental(x)
+  real :: x(10, 20)
+  interface
+    impure elemental subroutine impure_elem(a)
+      real, intent(in) :: a
+    end subroutine
+  end interface
+  call impure_elem(x)
+end subroutine
+! CHECK-LABEL:   func.func @_QPimpure_elemental(
+! CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<!fir.array<10x20xf32>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
+! CHECK:           %[[VAL_2:.*]] = arith.constant 20 : index
+! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {uniq_name = "_QFimpure_elementalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
+! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
+! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] {
+! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] {
+! CHECK:               %[[VAL_8:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]], %[[VAL_6]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
+! CHECK:               fir.call @_QPimpure_elem(%[[VAL_8]]) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:             }
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }
+
+subroutine ordered_elemental(x)
+  real :: x(10, 20)
+  interface
+    elemental subroutine ordered_elem(a)
+      real, intent(inout) :: a
+    end subroutine
+  end interface
+  call ordered_elem(x)
+end subroutine
+! CHECK-LABEL:   func.func @_QPordered_elemental(
+! CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<!fir.array<10x20xf32>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
+! CHECK:           %[[VAL_2:.*]] = arith.constant 20 : index
+! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {uniq_name = "_QFordered_elementalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
+! CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
+! CHECK:           fir.do_loop %[[VAL_6:.*]] = %[[VAL_5]] to %[[VAL_2]] step %[[VAL_5]] {
+! CHECK:             fir.do_loop %[[VAL_7:.*]] = %[[VAL_5]] to %[[VAL_1]] step %[[VAL_5]] {
+! CHECK:               %[[VAL_8:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_7]], %[[VAL_6]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
+! CHECK:               fir.call @_QPordered_elem(%[[VAL_8]]) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:             }
+! CHECK:           }
+! CHECK:           return
+! CHECK:         }
