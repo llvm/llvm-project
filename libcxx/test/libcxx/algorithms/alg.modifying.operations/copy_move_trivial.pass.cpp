@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// When the debug mode is enabled, we don't unwrap iterators in `std::copy` and similar algorithms so we don't get this
-// optimization.
-// UNSUPPORTED: libcpp-has-debug-mode
 // In the modules build, adding another overload of `memmove` doesn't work.
 // UNSUPPORTED: modules-build
 // GCC complains about "ambiguating" `__builtin_memmove`.

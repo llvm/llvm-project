@@ -30,11 +30,6 @@
 // Sometimes std::sort does not go out of bounds as well, for example, right now if transitivity
 // of equivalence is not met, std::sort can only produce incorrect result but would not fail.
 
-// When the debug mode is enabled, this test fails because we actually catch on the fly that the comparator
-// is not a strict-weak ordering before we catch that we'd dereference out-of-bounds inside std::sort,
-// which leads to different errors than the ones tested below.
-// XFAIL: libcpp-has-debug-mode
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>

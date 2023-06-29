@@ -21,7 +21,6 @@
 #include <__bit/countl.h>
 #include <__bit/countr.h>
 #include <__config>
-#include <__debug>
 #include <__debug_utils/randomize_range.h>
 #include <__debug_utils/strict_weak_ordering_check.h>
 #include <__functional/operations.h>
@@ -30,6 +29,7 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/disjunction.h>
 #include <__type_traits/is_arithmetic.h>
+#include <__type_traits/is_constant_evaluated.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <climits>

@@ -63,7 +63,6 @@ private_headers_still_public_in_modules = [
     "__assert",
     "__config",
     "__config_site.in",
-    "__debug",
     "__hash_table",
     "__threading_support",
     "__tree",
