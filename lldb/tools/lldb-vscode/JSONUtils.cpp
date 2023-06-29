@@ -1104,10 +1104,6 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
                                   llvm::StringRef debug_adaptor_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid) {
-  llvm::json::Object reverse_request;
-  reverse_request.try_emplace("type", "request");
-  reverse_request.try_emplace("command", "runInTerminal");
-
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening the
   // terminal in a new window.
@@ -1143,9 +1139,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   run_in_terminal_args.try_emplace("env",
                                    llvm::json::Value(std::move(environment)));
 
-  reverse_request.try_emplace(
-      "arguments", llvm::json::Value(std::move(run_in_terminal_args)));
-  return reverse_request;
+  return run_in_terminal_args;
 }
 
 // Keep all the top level items from the statistics dump, except for the
