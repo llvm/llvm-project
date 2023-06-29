@@ -235,6 +235,10 @@ multiclass RVVFloatingBinVFBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "xfd",
                           [["vf", "v", "vve"]]>;
 
+multiclass RVVFloatingBinVFBuiltinSetRoundingMode
+    : RVVOutOp1BuiltinSet<NAME, "xfd",
+                          [["vf", "v", "vveu"]]>;
+
 multiclass RVVFloatingMaskOutBuiltinSet
     : RVVOp0Op1BuiltinSet<NAME, "xfd",
                           [["vv", "vm", "mvv"],
@@ -1876,7 +1880,6 @@ enum __RISCV_FRM {
 }] in def frm_enum : RVVHeader;
 
 let UnMaskedPolicyScheme = HasPassthruOperand in {
-// 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 let ManualCodegen = [{
   {
     // LLVM intrinsic
@@ -1923,12 +1926,16 @@ let ManualCodegen = [{
   }
 }] in {
   let HasFRMRoundModeOp = true in {
+    // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
     defm vfadd  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfsub  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfrsub : RVVFloatingBinVFBuiltinSetRoundingMode;
   }
+  // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
   defm vfadd  : RVVFloatingBinBuiltinSet;
+  defm vfsub  : RVVFloatingBinBuiltinSet;
+  defm vfrsub : RVVFloatingBinVFBuiltinSet;
 }
-defm vfsub  : RVVFloatingBinBuiltinSet;
-defm vfrsub : RVVFloatingBinVFBuiltinSet;
 
 // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
 // Widening FP add/subtract, 2*SEW = SEW +/- SEW

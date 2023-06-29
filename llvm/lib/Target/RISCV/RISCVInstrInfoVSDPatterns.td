@@ -262,6 +262,25 @@ multiclass VPatBinaryFPSDNode_R_VF<SDPatternOperator vop, string instruction_nam
                            fvti.AVL, fvti.Log2SEW, TA_MA)>;
 }
 
+multiclass VPatBinaryFPSDNode_R_VF_RM<SDPatternOperator vop, string instruction_name,
+                                   bit isSEWAware = 0> {
+  foreach fvti = AllFloatVectors in
+    let Predicates = GetVTypePredicates<fvti>.Predicates in
+    def : Pat<(fvti.Vector (vop (fvti.Vector (SplatFPOp fvti.Scalar:$rs2)),
+                                (fvti.Vector fvti.RegClass:$rs1))),
+              (!cast<Instruction>(
+                           !if(isSEWAware,
+                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW,
+                             instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX))
+                           (fvti.Vector (IMPLICIT_DEF)),
+                           fvti.RegClass:$rs1,
+                           (fvti.Scalar fvti.ScalarRegClass:$rs2),
+                           // Value to indicate no rounding mode change in
+                           // RISCVInsertReadWriteCSR
+                           FRM_DYN,
+                           fvti.AVL, fvti.Log2SEW, TA_MA)>;
+}
+
 multiclass VPatIntegerSetCCSDNode_VV<string instruction_name,
                                      CondCode cc> {
   foreach vti = AllIntegerVectors in {
@@ -1036,8 +1055,8 @@ foreach mti = AllMasks in {
 
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 defm : VPatBinaryFPSDNode_VV_VF_RM<any_fadd, "PseudoVFADD">;
-defm : VPatBinaryFPSDNode_VV_VF<any_fsub, "PseudoVFSUB">;
-defm : VPatBinaryFPSDNode_R_VF<any_fsub, "PseudoVFRSUB">;
+defm : VPatBinaryFPSDNode_VV_VF_RM<any_fsub, "PseudoVFSUB">;
+defm : VPatBinaryFPSDNode_R_VF_RM<any_fsub, "PseudoVFRSUB">;
 
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
 defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF<fadd, "PseudoVFWADD">;
