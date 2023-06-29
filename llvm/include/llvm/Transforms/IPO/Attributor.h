@@ -1453,6 +1453,9 @@ struct AttributorConfig {
   /// function marked live. See also: InitializationCallback>
   bool DefaultInitializeLiveInternals = true;
 
+  /// Flag to determine if we should skip all liveness checks early on.
+  bool UseLiveness = true;
+
   /// Callback function to be invoked on internal functions marked live.
   std::function<void(Attributor &A, const Function &F)> InitializationCallback =
       nullptr;
