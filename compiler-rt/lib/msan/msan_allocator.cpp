@@ -82,6 +82,22 @@ struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
 
 typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 
+#elif defined(__loongarch_lp64)
+const uptr kAllocatorSpace = 0x700000000000ULL;
+const uptr kMaxAllowedMallocSize = 8UL << 30;
+
+struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
+  static const uptr kSpaceBeg = kAllocatorSpace;
+  static const uptr kSpaceSize = 0x40000000000;  // 4T.
+  static const uptr kMetadataSize = sizeof(Metadata);
+  typedef DefaultSizeClassMap SizeClassMap;
+  typedef MsanMapUnmapCallback MapUnmapCallback;
+  static const uptr kFlags = 0;
+  using AddressSpaceView = LocalAddressSpaceView;
+};
+
+typedef SizeClassAllocator64<AP64> PrimaryAllocator;
+
 #elif defined(__powerpc64__)
 static const uptr kMaxAllowedMallocSize = 2UL << 30;  // 2G
 
