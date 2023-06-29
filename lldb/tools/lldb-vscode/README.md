@@ -11,6 +11,8 @@
 		- [Attach to process using process ID](#attach-using-pid)
 		- [Attach to process by name](#attach-by-name)
 		- [Loading a core file](#loading-a-core-file)
+- [Custom Debugger Commands](#custom-debugger-commands)
+  - [startDebugging](#startDebugging)
 
 # Introduction
 
@@ -201,5 +203,35 @@ This loads the coredump file `/cores/123.core` associated with the program
   "request": "attach",
   "coreFile": "/cores/123.core",
   "program": "/tmp/a.out"
+}
+```
+
+# Custom debugger commands
+
+The `lldb-vscode` tool includes additional custom commands to support the Debug
+Adapter Protocol features.
+
+## startDebugging
+
+Using the command `lldb-vscode startDebugging` it is possible to trigger a
+reverse request to the client requesting a child debug session with the
+specified configuration. For example, this can be used to attached to forked or
+spawned processes. For more information see
+[Reverse Requests StartDebugging](https://microsoft.github.io/debug-adapter-protocol/specification#Reverse_Requests_StartDebugging).
+
+The custom command has the following format:
+
+```
+lldb-vscode startDebugging <launch|attach> <configuration>
+```
+
+This will launch a server and then request a child debug session for a client.
+
+```javascript
+{
+  "program": "server",
+  "postRunCommand": [
+    "lldb-vscode startDebugging launch '{\"program\":\"client\"}'"
+  ]
 }
 ```

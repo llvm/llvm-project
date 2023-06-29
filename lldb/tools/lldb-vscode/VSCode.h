@@ -11,8 +11,10 @@
 
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 
+#include <atomic>
 #include <condition_variable>
 #include <cstdio>
+#include <future>
 #include <iosfwd>
 #include <map>
 #include <optional>
@@ -73,6 +75,7 @@ enum VSCodeBroadcasterBits {
 };
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
+typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
   Success = 0,
@@ -121,6 +124,11 @@ struct Variables {
   void Clear();
 };
 
+struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
+  bool DoExecute(lldb::SBDebugger debugger, char **command,
+                 lldb::SBCommandReturnObject &result) override;
+};
+
 struct VSCode {
   std::string debug_adaptor_path;
   InputStream input;
@@ -146,7 +154,7 @@ struct VSCode {
   // arguments if we get a RestartRequest.
   std::optional<llvm::json::Object> last_launch_or_attach_request;
   lldb::tid_t focus_tid;
-  bool sent_terminated_event;
+  std::atomic<bool> sent_terminated_event;
   bool stop_at_entry;
   bool is_attach;
   // The process event thread normally responds to process exited events by
@@ -154,13 +162,18 @@ struct VSCode {
   // the old process here so we can detect this case and keep running.
   lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  uint32_t reverse_request_seq;
   std::map<std::string, RequestCallback> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
+  uint32_t reverse_request_seq;
+  std::mutex call_mutex;
+  std::map<int /* request_seq */, ResponseCallback /* reply handler */>
+      inflight_reverse_requests;
+  StartDebuggingRequestHandler start_debugging_request_handler;
+
   VSCode();
   ~VSCode();
   VSCode(const VSCode &rhs) = delete;
@@ -224,19 +237,20 @@ struct VSCode {
   PacketStatus GetNextObject(llvm::json::Object &object);
   bool HandleObject(const llvm::json::Object &object);
 
-  /// Send a Debug Adapter Protocol reverse request to the IDE
+  llvm::Error Loop();
+
+  /// Send a Debug Adapter Protocol reverse request to the IDE.
   ///
-  /// \param[in] request
-  ///   The payload of the request to send.
+  /// \param[in] command
+  ///   The reverse request command.
   ///
-  /// \param[out] response
-  ///   The response of the IDE. It might be undefined if there was an error.
+  /// \param[in] arguments
+  ///   The reverse request arguements.
   ///
-  /// \return
-  ///   A \a PacketStatus object indicating the sucess or failure of the
-  ///   request.
-  PacketStatus SendReverseRequest(llvm::json::Object request,
-                                  llvm::json::Object &response);
+  /// \param[in] callback
+  ///   A callback to execute when the response arrives.
+  void SendReverseRequest(llvm::StringRef command, llvm::json::Value arguments,
+                          ResponseCallback callback);
 
   /// Registers a callback handler for a Debug Adapter Protocol request
   ///
