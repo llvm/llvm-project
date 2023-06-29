@@ -22986,6 +22986,29 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   if (VT.getVectorElementType() == MVT::i1)
     return LowerTruncateVecI1(Op, DAG, Subtarget);
 
+  unsigned NumPackedSignBits = std::min<unsigned>(VT.getScalarSizeInBits(), 16);
+  unsigned NumPackedZeroBits = Subtarget.hasSSE41() ? NumPackedSignBits : 8;
+
+  // Attempt to truncate with PACKUS/PACKSS even on AVX512 if we'd have to
+  // concat from subvectors to use VPTRUNC etc.
+  if (!Subtarget.hasAVX512() || isFreeToSplitVector(In.getNode(), DAG)) {
+    // Truncate with PACKUS if we are truncating a vector with leading zero
+    // bits that extend all the way to the packed/truncated value. Pre-SSE41
+    // we can only use PACKUSWB.
+    KnownBits Known = DAG.computeKnownBits(In);
+    if ((InNumEltBits - NumPackedZeroBits) <= Known.countMinLeadingZeros())
+      if (SDValue V = truncateVectorWithPACK(X86ISD::PACKUS, VT, In, DL, DAG,
+                                             Subtarget))
+        return V;
+
+    // Truncate with PACKSS if we are truncating a vector with sign-bits
+    // that extend all the way to the packed/truncated value.
+    if ((InNumEltBits - NumPackedSignBits) < DAG.ComputeNumSignBits(In))
+      if (SDValue V = truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG,
+                                             Subtarget))
+        return V;
+  }
+
   // vpmovqb/w/d, vpmovdb/w, vpmovwb
   if (Subtarget.hasAVX512()) {
     if (InVT == MVT::v32i16 && !Subtarget.hasBWI()) {
@@ -23001,25 +23024,6 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
         Subtarget.canExtendTo512DQ())
       return Op;
   }
-
-  unsigned NumPackedSignBits = std::min<unsigned>(VT.getScalarSizeInBits(), 16);
-  unsigned NumPackedZeroBits = Subtarget.hasSSE41() ? NumPackedSignBits : 8;
-
-  // Truncate with PACKUS if we are truncating a vector with leading zero bits
-  // that extend all the way to the packed/truncated value.
-  // Pre-SSE41 we can only use PACKUSWB.
-  KnownBits Known = DAG.computeKnownBits(In);
-  if ((InNumEltBits - NumPackedZeroBits) <= Known.countMinLeadingZeros())
-    if (SDValue V =
-            truncateVectorWithPACK(X86ISD::PACKUS, VT, In, DL, DAG, Subtarget))
-      return V;
-
-  // Truncate with PACKSS if we are truncating a vector with sign-bits that
-  // extend all the way to the packed/truncated value.
-  if ((InNumEltBits - NumPackedSignBits) < DAG.ComputeNumSignBits(In))
-    if (SDValue V =
-            truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG, Subtarget))
-      return V;
 
   // Handle truncation of V256 to V128 using shuffles.
   assert(VT.is128BitVector() && InVT.is256BitVector() && "Unexpected types!");
