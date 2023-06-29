@@ -742,8 +742,6 @@ findMethodDecl(const ObjCMessageExpr *MessageExpr,
   const ObjCMethodDecl *Method = nullptr;
 
   QualType ReceiverType = MessageExpr->getReceiverType();
-  const auto *ReceiverObjectPtrType =
-      ReceiverType->getAs<ObjCObjectPointerType>();
 
   // Do this "devirtualization" on instance and class methods only. Trust the
   // static type on super and super class calls.
@@ -753,7 +751,8 @@ findMethodDecl(const ObjCMessageExpr *MessageExpr,
     // type, look up the method in the tracked type, not in the receiver type.
     // This way we preserve more information.
     if (ReceiverType->isObjCIdType() || ReceiverType->isObjCClassType() ||
-        ASTCtxt.canAssignObjCInterfaces(ReceiverObjectPtrType, TrackedType)) {
+        ASTCtxt.canAssignObjCInterfaces(
+            ReceiverType->castAs<ObjCObjectPointerType>(), TrackedType)) {
       const ObjCInterfaceDecl *InterfaceDecl = TrackedType->getInterfaceDecl();
       // The method might not be found.
       Selector Sel = MessageExpr->getSelector();
