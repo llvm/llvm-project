@@ -227,8 +227,12 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   // constructor-initializers.
   if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FuncDecl)) {
     for (const auto *Init : CtorDecl->inits()) {
-      if (const auto *M = Init->getAnyMember())
-          Fields.insert(M);
+      if (Init->isMemberInitializer()) {
+        Fields.insert(Init->getMember());
+      } else if (Init->isIndirectMemberInitializer()) {
+        for (const auto *I : Init->getIndirectMember()->chain())
+          Fields.insert(cast<FieldDecl>(I));
+      }
       const Expr *E = Init->getInit();
       assert(E != nullptr);
       getFieldsGlobalsAndFuncs(*E, Fields, Vars, Funcs);

@@ -5483,4 +5483,35 @@ TEST(TransferTest, AnonymousStruct) {
       });
 }
 
+TEST(TransferTest, AnonymousStructWithInitializer) {
+  std::string Code = R"(
+    struct target {
+      target() {
+        (void)0;
+        // [[p]]
+      }
+      struct {
+        bool b = true;
+      };
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const ValueDecl *BDecl = findValueDecl(ASTCtx, "b");
+        const IndirectFieldDecl *IndirectField =
+            findIndirectFieldDecl(ASTCtx, "b");
+
+        auto *ThisLoc =
+            cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
+        auto &AnonStruct = cast<AggregateStorageLocation>(ThisLoc->getChild(
+            *cast<ValueDecl>(IndirectField->chain().front())));
+
+        auto *B = cast<BoolValue>(Env.getValue(AnonStruct.getChild(*BDecl)));
+        ASSERT_TRUE(Env.flowConditionImplies(*B));
+      });
+}
+
 } // namespace

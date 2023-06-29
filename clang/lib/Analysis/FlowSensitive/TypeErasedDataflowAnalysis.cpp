@@ -366,27 +366,41 @@ builtinTransferInitializer(const CFGInitializer &Elt,
   assert(Init != nullptr);
 
   auto &Env = InputState.Env;
-  const auto &ThisLoc =
+  auto &ThisLoc =
       *cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
 
-  const FieldDecl *Member = Init->getMember();
-  if (Member == nullptr)
-    // Not a field initializer.
+  if (!Init->isAnyMemberInitializer())
+    // FIXME: Handle base initialization
     return;
 
   auto *InitStmt = Init->getInit();
   assert(InitStmt != nullptr);
+
+  const FieldDecl *Member = nullptr;
+  StorageLocation *MemberLoc = nullptr;
+  if (Init->isMemberInitializer()) {
+    Member = Init->getMember();
+    MemberLoc = &ThisLoc.getChild(*Member);
+  } else {
+    IndirectFieldDecl *IndirectField = Init->getIndirectMember();
+    assert(IndirectField != nullptr);
+    MemberLoc = &ThisLoc;
+    for (const auto *I : IndirectField->chain()) {
+      Member = cast<FieldDecl>(I);
+      MemberLoc = &cast<AggregateStorageLocation>(MemberLoc)->getChild(*Member);
+    }
+  }
+  assert(Member != nullptr);
+  assert(MemberLoc != nullptr);
 
   if (Member->getType()->isReferenceType()) {
     auto *InitStmtLoc = Env.getStorageLocationStrict(*InitStmt);
     if (InitStmtLoc == nullptr)
       return;
 
-    auto &MemberLoc = ThisLoc.getChild(*Member);
-    Env.setValue(MemberLoc, Env.create<ReferenceValue>(*InitStmtLoc));
+    Env.setValue(*MemberLoc, Env.create<ReferenceValue>(*InitStmtLoc));
   } else if (auto *InitStmtVal = Env.getValueStrict(*InitStmt)) {
-    auto &MemberLoc = ThisLoc.getChild(*Member);
-    Env.setValue(MemberLoc, *InitStmtVal);
+    Env.setValue(*MemberLoc, *InitStmtVal);
   }
 }
 
