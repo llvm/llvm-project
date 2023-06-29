@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TEST_STD_CONTAINERS_CONVERTIBLE_TO_INTEGRAL_H
-#define TEST_STD_CONTAINERS_CONVERTIBLE_TO_INTEGRAL_H
+#ifndef TEST_STD_CONTAINERS_VIEWS_MDSPAN_LAYOUT_RIGHT_CONVERTIBLE_TO_INTEGRAL_H
+#define TEST_STD_CONTAINERS_VIEWS_MDSPAN_LAYOUT_RIGHT_CONVERTIBLE_TO_INTEGRAL_H
 
 struct IntType {
   int val;
@@ -16,7 +16,8 @@ struct IntType {
 
   constexpr bool operator==(const IntType& rhs) const { return val == rhs.val; }
   constexpr operator int() const noexcept { return val; }
-  constexpr operator unsigned char() const noexcept { return val; }
+  constexpr operator unsigned char() const { return val; }
+  constexpr operator char() const noexcept { return val; }
 };
 
-#endif // TEST_STD_CONTAINERS_CONVERTIBLE_TO_INTEGRAL_H
+#endif // TEST_STD_CONTAINERS_VIEWS_MDSPAN_LAYOUT_RIGHT_CONVERTIBLE_TO_INTEGRAL_H
