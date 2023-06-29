@@ -731,10 +731,9 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects, hlfir_Ele
     The shape and typeparams operands represent the extents and type
     parameters of the resulting array value.
 
-    Currently there is no way to control the iteration order of a hlfir
-    elemental operation and so operations in the body of the elemental must
-    not have side effects. If this is changed, an attribute must be added so
-    that the elemental inlining pass can skip these impure elementals.
+    The unordered attribute can be set to allow out of order processing
+    of the indices. This is safe only if the operations in the body
+    of the elemental do not have side effects.
 
 
     Example: Y + X,  with Integer :: X(10, 20), Y(10,20)
@@ -754,14 +753,15 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects, hlfir_Ele
 
   let arguments = (ins
     AnyShapeType:$shape,
-    Variadic<AnyIntegerType>:$typeparams
+    Variadic<AnyIntegerType>:$typeparams,
+    OptionalAttr<UnitAttr>:$unordered
   );
 
   let results = (outs hlfir_ExprType);
   let regions = (region SizedRegion<1>:$region);
 
   let assemblyFormat = [{
-    $shape (`typeparams` $typeparams^)?
+    $shape (`typeparams` $typeparams^)? (`unordered` $unordered^)?
     attr-dict `:` functional-type(operands, results)
     $region
     }];
@@ -775,13 +775,12 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects, hlfir_Ele
       }
       /// ElementalOpInterface implementation.
 
-      mlir::Region& getElementalRegion() {return getRegion();}
+      mlir::Region& getElementalRegion() { return getRegion(); }
       mlir::Value getElementEntity();
-      mlir::Region* getElementCleanup() {return nullptr;}
+      mlir::Region* getElementCleanup() { return nullptr; }
 
       /// Must this elemental be evaluated in order?
-      /// TODO: add attribute and set it in lowering.
-      bool isOrdered() {return true;}
+      bool isOrdered() { return !getUnordered(); }
   }];
 
   let skipDefaultBuilders = 1;
@@ -1209,7 +1208,9 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
 
   let arguments = (ins
     fir_ShapeType:$shape,
-    Variadic<AnyIntegerType>:$typeparams);
+    Variadic<AnyIntegerType>:$typeparams,
+    OptionalAttr<UnitAttr>:$unordered
+  );
 
   let regions = (region  SizedRegion<1>:$body,
                          MaxSizedRegion<1>:$cleanup);
@@ -1219,7 +1220,7 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
   ];
 
   let assemblyFormat = [{
-    $shape (`typeparams` $typeparams^)?
+    $shape (`typeparams` $typeparams^)? (`unordered` $unordered^)?
     attr-dict `:` type(operands) $body
     custom<YieldOpCleanup>($cleanup)}];
 
@@ -1235,13 +1236,12 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
 
     /// ElementalOpInterface implementation.
 
-    mlir::Region& getElementalRegion() {return getBody();}
+    mlir::Region& getElementalRegion() { return getBody(); }
     mlir::Value getElementEntity();
     mlir::Region* getElementCleanup();
 
     /// Must this elemental be evaluated in order?
-    /// TODO: add attribute and set it in lowering.
-    bool isOrdered() {return true;}
+    bool isOrdered() { return !getUnordered(); }
   }];
 
   let hasVerifier = 1;
