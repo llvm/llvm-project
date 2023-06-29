@@ -231,6 +231,15 @@ public:
   void VisitDeclRefExpr(const DeclRefExpr *S) {
     const ValueDecl *VD = S->getDecl();
     assert(VD != nullptr);
+
+    // `DeclRefExpr`s to fields and non-static methods aren't glvalues, and
+    // there's also no sensible `Value` we can assign to them, so skip them.
+    if (isa<FieldDecl>(VD))
+      return;
+    if (auto *Method = dyn_cast<CXXMethodDecl>(VD);
+        Method && !Method->isStatic())
+      return;
+
     auto *DeclLoc = Env.getStorageLocation(*VD);
     if (DeclLoc == nullptr)
       return;
@@ -397,8 +406,7 @@ public:
       propagateValueOrStorageLocation(*SubExpr, *S, Env);
       break;
     }
-    case CK_NullToPointer:
-    case CK_NullToMemberPointer: {
+    case CK_NullToPointer: {
       auto &Loc = Env.createStorageLocation(S->getType());
       Env.setStorageLocation(*S, Loc);
 
@@ -407,6 +415,10 @@ public:
       Env.setValue(Loc, NullPointerVal);
       break;
     }
+    case CK_NullToMemberPointer:
+      // FIXME: Implement pointers to members. For now, don't associate a value
+      // with this expression.
+      break;
     case CK_FunctionToPointerDecay:
     case CK_BuiltinFnToFnPtr: {
       StorageLocation *PointeeLoc =
@@ -440,14 +452,12 @@ public:
       break;
     }
     case UO_AddrOf: {
-      // Do not form a pointer to a reference. If `SubExpr` is assigned a
-      // `ReferenceValue` then form a value that points to the location of its
-      // pointee.
-      StorageLocation *PointeeLoc = Env.getStorageLocationStrict(*SubExpr);
-      if (PointeeLoc == nullptr)
+      // FIXME: Model pointers to members.
+      if (S->getType()->isMemberPointerType())
         break;
 
-      Env.setValueStrict(*S, Env.create<PointerValue>(*PointeeLoc));
+      if (StorageLocation *PointeeLoc = Env.getStorageLocationStrict(*SubExpr))
+        Env.setValueStrict(*S, Env.create<PointerValue>(*PointeeLoc));
       break;
     }
     case UO_LNot: {
