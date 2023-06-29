@@ -3720,6 +3720,12 @@ def meabi : Separate<["-"], "meabi">, Group<m_Group>, Flags<[CC1Option]>,
   NormalizedValues<["Default", "EABI4", "EABI5", "GNU"]>;
 def mtargetos_EQ : Joined<["-"], "mtargetos=">, Group<m_Group>,
   HelpText<"Set the deployment target to be the specified OS and OS version">;
+def mzos_hlq_le_EQ : Joined<["-"], "mzos-hlq-le=">, MetaVarName<"<LeHLQ>">,
+  HelpText<"High level qualifier for z/OS Language Environment datasets">;
+def mzos_hlq_clang_EQ : Joined<["-"], "mzos-hlq-clang=">, MetaVarName<"<ClangHLQ>">,
+  HelpText<"High level qualifier for z/OS C++RT side deck datasets">;
+def mzos_hlq_csslib_EQ : Joined<["-"], "mzos-hlq-csslib=">, MetaVarName<"<CsslibHLQ>">,
+  HelpText<"High level qualifier for z/OS CSSLIB dataset">;
 
 def mno_constant_cfstrings : Flag<["-"], "mno-constant-cfstrings">, Group<m_Group>;
 def mno_global_merge : Flag<["-"], "mno-global-merge">, Group<m_Group>, Flags<[CC1Option]>,
