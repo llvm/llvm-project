@@ -2,6 +2,7 @@
 
 ! CHECK-LABEL: func @_QQmain
 program bb ! block stack management and exits
+    ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca i32 {adapt.valuebyref}
     ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
     integer :: i, j
     ! CHECK:   fir.store %c0{{.*}} to %[[V_1]] : !fir.ref<i32>
@@ -61,7 +62,6 @@ program bb ! block stack management and exits
     ! CHECK:   fir.call @llvm.stackrestore(%[[V_3]])
     ! CHECK:   br ^bb19
     ! CHECK: ^bb19:  // 2 preds: ^bb13, ^bb18
-    ! CHECK:   return
     block
       i = i + 1 ! 1 increment
       do j = 1, 5
@@ -78,4 +78,21 @@ program bb ! block stack management and exits
       i = i + 1 ! 0 increments
 12  end block
 100 print*, i ! expect 21
+
+    ! CHECK: %[[V_51:[0-9]+]] = fir.call @llvm.stacksave() fastmath<contract> : () -> !fir.ref<i8>
+    ! CHECK: fir.store %c5{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK: fir.call @ss(%[[V_0]]) fastmath<contract> : (!fir.ref<i32>) -> ()
+    ! CHECK: fir.call @llvm.stackrestore(%[[V_51]]) fastmath<contract> : (!fir.ref<i8>) -> ()
+    block
+      interface
+        subroutine ss(n) bind(c)
+          integer :: n
+        end subroutine
+      end interface
+      call ss(5)
+    end block
 end
+
+subroutine ss(n) bind(c)
+    print*, n
+end subroutine
