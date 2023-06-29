@@ -152,6 +152,17 @@ module m
     !CHECK: error: NCOPIES= argument to REPEAT() should be nonnegative, but is -666
     print *, repeat(' ', -666)
   end subroutine
+  subroutine s14(n)
+    integer, intent(in) :: n
+    !CHECK: error: bit position for IBITS(POS=-1) is negative
+    print *, ibits(0, -1, n)
+    !CHECK: error: bit length for IBITS(LEN=-1) is negative
+    print *, ibits(0, n, -1)
+    !CHECK: error: IBITS() must have POS+LEN (>=33) no greater than 32
+    print *, ibits(0, n, 33)
+    !CHECK: error: IBITS() must have POS+LEN (>=33) no greater than 32
+    print *, ibits(0, 33, n)
+  end
   subroutine warnings
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
     real, parameter :: ok2 = scale(1.0, -99999) ! 0.0
