@@ -1266,6 +1266,22 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
     return CFI_attribute_other;
   }
 
+  mlir::Value getCharacterByteSize(mlir::Location loc,
+                                   mlir::ConversionPatternRewriter &rewriter,
+                                   fir::CharacterType charTy,
+                                   mlir::ValueRange lenParams) const {
+    auto i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+    mlir::Value size =
+        genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(charTy));
+    if (charTy.hasConstantLen())
+      return size; // Length accounted for in the genTypeStrideInBytes GEP.
+    // Otherwise,  multiply the single character size by the length.
+    assert(!lenParams.empty());
+    auto len64 = FIROpConversion<OP>::integerCast(loc, rewriter, i64Ty,
+                                                  lenParams.back());
+    return rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, size, len64);
+  }
+
   // Get the element size and CFI type code of the boxed value.
   std::tuple<mlir::Value, mlir::Value> getSizeAndTypeCode(
       mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
@@ -1286,18 +1302,9 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
       return {genTypeStrideInBytes(loc, i64Ty, rewriter,
                                    this->convertType(boxEleTy)),
               typeCodeVal};
-    if (auto charTy = boxEleTy.dyn_cast<fir::CharacterType>()) {
-      mlir::Value size =
-          genTypeStrideInBytes(loc, i64Ty, rewriter, this->convertType(charTy));
-      if (charTy.getLen() == fir::CharacterType::unknownLen()) {
-        // Multiply the single character size by the length.
-        assert(!lenParams.empty());
-        auto len64 = FIROpConversion<OP>::integerCast(loc, rewriter, i64Ty,
-                                                      lenParams.back());
-        size = rewriter.create<mlir::LLVM::MulOp>(loc, i64Ty, size, len64);
-      }
-      return {size, typeCodeVal};
-    };
+    if (auto charTy = boxEleTy.dyn_cast<fir::CharacterType>())
+      return {getCharacterByteSize(loc, rewriter, charTy, lenParams),
+              typeCodeVal};
     if (fir::isa_ref_type(boxEleTy)) {
       auto ptrTy = mlir::LLVM::LLVMPointerType::get(
           mlir::LLVM::LLVMVoidType::get(rewriter.getContext()));
@@ -1691,7 +1698,7 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       sourceBox = operands[xbox.getSourceBoxOffset()];
       sourceBoxType = xbox.getSourceBox().getType();
     }
-    auto [boxTy, dest, eleSize] = consDescriptorPrefix(
+    auto [boxTy, dest, resultEleSize] = consDescriptorPrefix(
         xbox, fir::unwrapRefType(xbox.getMemref().getType()), rewriter,
         xbox.getOutRank(), adaptor.getSubstr(), adaptor.getLenParams(),
         sourceBox, sourceBoxType);
@@ -1720,7 +1727,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     // Adjust the element scaling factor if the element is a dependent type.
     if (fir::hasDynamicSize(seqEleTy)) {
       if (auto charTy = seqEleTy.dyn_cast<fir::CharacterType>()) {
-        prevPtrOff = eleSize;
+        prevPtrOff =
+            getCharacterByteSize(loc, rewriter, charTy, adaptor.getLenParams());
       } else if (seqEleTy.isa<fir::RecordType>()) {
         // prevPtrOff = ;
         TODO(loc, "generate call to calculate size of PDT");
@@ -1734,8 +1742,10 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     const auto hasSubcomp = !xbox.getSubcomponent().empty();
     const bool hasSubstr = !xbox.getSubstr().empty();
     // Initial element stride that will be use to compute the step in
-    // each dimension.
-    mlir::Value prevDimByteStride = eleSize;
+    // each dimension. Initially, this is the size of the input element.
+    // Note that when there are no components/substring, the resultEleSize
+    // that was previously computed matches the input element size.
+    mlir::Value prevDimByteStride = resultEleSize;
     if (hasSubcomp) {
       // We have a subcomponent. The step value needs to be the number of
       // bytes per element (which is a derived type).
