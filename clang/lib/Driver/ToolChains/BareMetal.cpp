@@ -175,7 +175,7 @@ static void findMultilibsFromYAML(const ToolChain &TC, const Driver &D,
   Result.Multilibs = ErrorOrMultilibSet.get();
   if (Result.Multilibs.select(Flags, Result.SelectedMultilibs))
     return;
-  D.Diag(clang::diag::err_drv_no_matching_multilib) << llvm::join(Flags, " ");
+  D.Diag(clang::diag::warn_drv_missing_multilib) << llvm::join(Flags, " ");
   std::stringstream ss;
   for (const Multilib &Multilib : Result.Multilibs)
     ss << "\n" << llvm::join(Multilib.flags(), " ");
