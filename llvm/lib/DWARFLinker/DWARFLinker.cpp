@@ -427,7 +427,7 @@ static bool isTlsAddressCode(uint8_t DW_OP_Code) {
          DW_OP_Code == dwarf::DW_OP_GNU_push_tls_address;
 }
 
-std::optional<int64_t>
+std::pair<bool, std::optional<int64_t>>
 DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
                                         const DWARFDie &DIE) {
   assert((DIE.getTag() == dwarf::DW_TAG_variable ||
@@ -441,7 +441,7 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
   std::optional<uint32_t> LocationIdx =
       Abbrev->findAttributeIndex(dwarf::DW_AT_location);
   if (!LocationIdx)
-    return std::nullopt;
+    return std::make_pair(false, std::nullopt);
 
   // Get offset to the DW_AT_location attribute.
   uint64_t AttrOffset =
@@ -451,14 +451,14 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
   std::optional<DWARFFormValue> LocationValue =
       Abbrev->getAttributeValueFromOffset(*LocationIdx, AttrOffset, *U);
   if (!LocationValue)
-    return std::nullopt;
+    return std::make_pair(false, std::nullopt);
 
   // Check that DW_AT_location attribute is of 'exprloc' class.
   // Handling value of location expressions for attributes of 'loclist'
   // class is not implemented yet.
   std::optional<ArrayRef<uint8_t>> Expr = LocationValue->getAsBlock();
   if (!Expr)
-    return std::nullopt;
+    return std::make_pair(false, std::nullopt);
 
   // Parse 'exprloc' expression.
   DataExtractor Data(toStringRef(*Expr), U->getContext().isLittleEndian(),
@@ -466,6 +466,7 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
   DWARFExpression Expression(Data, U->getAddressByteSize(),
                              U->getFormParams().Format);
 
+  bool HasLocationAddress = false;
   uint64_t CurExprOffset = 0;
   for (DWARFExpression::iterator It = Expression.begin();
        It != Expression.end(); ++It) {
@@ -482,15 +483,17 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
         break;
       [[fallthrough]];
     case dwarf::DW_OP_addr: {
+      HasLocationAddress = true;
       // Check relocation for the address.
       if (std::optional<int64_t> RelocAdjustment =
               RelocMgr.getExprOpAddressRelocAdjustment(
                   *U, Op, AttrOffset + CurExprOffset,
                   AttrOffset + Op.getEndOffset()))
-        return *RelocAdjustment;
+        return std::make_pair(HasLocationAddress, *RelocAdjustment);
     } break;
     case dwarf::DW_OP_constx:
     case dwarf::DW_OP_addrx: {
+      HasLocationAddress = true;
       if (std::optional<uint64_t> AddressOffset =
               DIE.getDwarfUnit()->getIndexedAddressOffset(
                   Op.getRawOperand(0))) {
@@ -499,7 +502,7 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
                 RelocMgr.getExprOpAddressRelocAdjustment(
                     *U, Op, *AddressOffset,
                     *AddressOffset + DIE.getDwarfUnit()->getAddressByteSize()))
-          return *RelocAdjustment;
+          return std::make_pair(HasLocationAddress, *RelocAdjustment);
       }
     } break;
     default: {
@@ -509,7 +512,7 @@ DWARFLinker::getVariableRelocAdjustment(AddressesMap &RelocMgr,
     CurExprOffset = Op.getEndOffset();
   }
 
-  return std::nullopt;
+  return std::make_pair(HasLocationAddress, std::nullopt);
 }
 
 /// Check if a variable describing DIE should be kept.
@@ -532,16 +535,20 @@ unsigned DWARFLinker::shouldKeepVariableDIE(AddressesMap &RelocMgr,
   // if the variable has a valid relocation, so that the DIEInfo is filled.
   // However, we don't want a static variable in a function to force us to keep
   // the enclosing function, unless requested explicitly.
-  std::optional<int64_t> RelocAdjustment =
+  std::pair<bool, std::optional<int64_t>> LocExprAddrAndRelocAdjustment =
       getVariableRelocAdjustment(RelocMgr, DIE);
 
-  if (RelocAdjustment) {
-    MyInfo.AddrAdjust = *RelocAdjustment;
-    MyInfo.InDebugMap = true;
-  }
+  if (LocExprAddrAndRelocAdjustment.first)
+    MyInfo.HasLocationExpressionAddr = true;
 
-  if (!RelocAdjustment || ((Flags & TF_InFunctionScope) &&
-                           !LLVM_UNLIKELY(Options.KeepFunctionForStatic)))
+  if (!LocExprAddrAndRelocAdjustment.second)
+    return Flags;
+
+  MyInfo.AddrAdjust = *LocExprAddrAndRelocAdjustment.second;
+  MyInfo.InDebugMap = true;
+
+  if (((Flags & TF_InFunctionScope) &&
+       !LLVM_UNLIKELY(Options.KeepFunctionForStatic)))
     return Flags;
 
   if (Options.Verbose) {
@@ -1652,9 +1659,10 @@ void DWARFLinker::DIECloner::addObjCAccelerator(CompileUnit &Unit,
   }
 }
 
-static bool shouldSkipAttribute(
-    bool Update, DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
-    uint16_t Tag, bool InDebugMap, bool SkipPC, bool InFunctionScope) {
+static bool
+shouldSkipAttribute(bool Update,
+                    DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
+                    bool SkipPC) {
   switch (AttrSpec.Attr) {
   default:
     return false;
@@ -1682,15 +1690,7 @@ static bool shouldSkipAttribute(
     return !Update;
   case dwarf::DW_AT_location:
   case dwarf::DW_AT_frame_base:
-    // FIXME: for some reason dsymutil-classic keeps the location attributes
-    // when they are of block type (i.e. not location lists). This is totally
-    // wrong for globals where we will keep a wrong address. It is mostly
-    // harmless for locals, but there is no point in keeping these anyway when
-    // the function wasn't linked.
-    return !Update &&
-           (SkipPC || (!InFunctionScope && Tag == dwarf::DW_TAG_variable &&
-                       !InDebugMap)) &&
-           !DWARFFormValue(AttrSpec.Form).isFormClass(DWARFFormValue::FC_Block);
+    return !Update && SkipPC;
   }
 }
 
@@ -1770,11 +1770,15 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     // is not, e.g., inlined functions.
     if ((Flags & TF_InFunctionScope) && Info.InDebugMap)
       Flags &= ~TF_SkipPC;
+    // Location expressions referencing an address which is not in debug map
+    // should be deleted.
+    else if (!Info.InDebugMap && Info.HasLocationExpressionAddr &&
+             LLVM_LIKELY(!Update))
+      Flags |= TF_SkipPC;
   }
 
   for (const auto &AttrSpec : Abbrev->attributes()) {
-    if (shouldSkipAttribute(Update, AttrSpec, Die->getTag(), Info.InDebugMap,
-                            Flags & TF_SkipPC, Flags & TF_InFunctionScope)) {
+    if (shouldSkipAttribute(Update, AttrSpec, Flags & TF_SkipPC)) {
       DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
                                 U.getFormParams());
       continue;
