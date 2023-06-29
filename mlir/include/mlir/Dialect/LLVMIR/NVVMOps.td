@@ -249,6 +249,23 @@ def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.
   let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
 }
 
+def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_i64ptr_any:$addr, LLVM_Type:$token)> {
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_test_wait, {$addr, $token});
+  }];
+  let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
+}
+
+def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_i64ptr_shared:$addr, LLVM_Type:$token)> {
+  string llvmBuilder = [{
+      $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_test_wait_shared, {$addr, $token});
+  }];
+  let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
+}
 //===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
