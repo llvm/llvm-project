@@ -74,7 +74,7 @@ static int insertNamedMCOperand(MCInst &MI, const MCOperand &Op,
   return OpIdx;
 }
 
-static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
+static DecodeStatus decodeSOPPBrTarget(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr,
                                        const MCDisassembler *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
