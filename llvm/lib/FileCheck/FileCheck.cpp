@@ -134,15 +134,9 @@ static APInt toSigned(APInt AbsVal, bool Negative) {
   return Result;
 }
 
-Expected<APInt>
-ExpressionFormat::valueFromStringRepr(StringRef StrVal,
-                                      const SourceMgr &SM) const {
+APInt ExpressionFormat::valueFromStringRepr(StringRef StrVal,
+                                            const SourceMgr &SM) const {
   bool ValueIsSigned = Value == Kind::Signed;
-  // Both the FileCheck utility and library only call this method with a valid
-  // value in StrVal. This is guaranteed by the regex returned by
-  // getWildcardRegex() above. Only underflow and overflow errors can thus
-  // occur. However new uses of this method could be added in the future so
-  // the error message does not make assumptions about StrVal.
   bool Negative = StrVal.consume_front("-");
   bool Hex = Value == Kind::HexUpper || Value == Kind::HexLower;
   bool MissingFormPrefix =
@@ -150,10 +144,12 @@ ExpressionFormat::valueFromStringRepr(StringRef StrVal,
   (void)MissingFormPrefix;
   assert(!MissingFormPrefix && "missing alternate form prefix");
   APInt ResultValue;
-  bool ParseFailure = StrVal.getAsInteger(Hex ? 16 : 10, ResultValue);
-  if (ParseFailure)
-    return ErrorDiagnostic::get(SM, StrVal,
-                                "unable to represent numeric value");
+  [[maybe_unused]] bool ParseFailure =
+      StrVal.getAsInteger(Hex ? 16 : 10, ResultValue);
+  // Both the FileCheck utility and library only call this method with a valid
+  // value in StrVal. This is guaranteed by the regex returned by
+  // getWildcardRegex() above.
+  assert(!ParseFailure && "unable to represent numeric value");
   return toSigned(ResultValue, Negative);
 }
 
@@ -1176,10 +1172,8 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
 
     StringRef MatchedValue = MatchInfo[CaptureParenGroup];
     ExpressionFormat Format = DefinedNumericVariable->getImplicitFormat();
-    Expected<APInt> Value = Format.valueFromStringRepr(MatchedValue, SM);
-    if (!Value)
-      return MatchResult(TheMatch, Value.takeError());
-    DefinedNumericVariable->setValue(*Value, MatchedValue);
+    APInt Value = Format.valueFromStringRepr(MatchedValue, SM);
+    DefinedNumericVariable->setValue(Value, MatchedValue);
   }
 
   return MatchResult(TheMatch, Error::success());
