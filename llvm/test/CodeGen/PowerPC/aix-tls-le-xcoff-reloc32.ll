@@ -51,21 +51,21 @@ entry:
 ; RELOC-NEXT:       Length: 16
 ; RELOC-NEXT:       Type: R_TOC (0x3)
 ; RELOC-NEXT:     }
-; RELOC:       Virtual Address: 0x40
+; RELOC:       Virtual Address: 0x44
 ; RELOC-NEXT:       Symbol: .__get_tpointer (1)
 ; RELOC-NEXT:       IsSigned: No
 ; RELOC-NEXT:       FixupBitValue: 0
 ; RELOC-NEXT:       Length: 26
 ; RELOC-NEXT:       Type: R_RBA (0x18)
 ; RELOC-NEXT:     }
-; RELOC:       Virtual Address: 0x84
+; RELOC:       Virtual Address: 0x80
 ; RELOC-NEXT:       Symbol: IThreadLocalVarUninit (29)
 ; RELOC-NEXT:       IsSigned: No
 ; RELOC-NEXT:       FixupBitValue: 0
 ; RELOC-NEXT:       Length: 32
 ; RELOC-NEXT:       Type: R_TLS_LE (0x23)
 ; RELOC-NEXT:     }
-; RELOC:       Virtual Address: 0x88
+; RELOC:       Virtual Address: 0x84
 ; RELOC-NEXT:       Symbol: ThreadLocalVarInit (27)
 ; RELOC-NEXT:       IsSigned: No
 ; RELOC-NEXT:       FixupBitValue: 0
@@ -99,7 +99,7 @@ entry:
 ; SYM-NEXT:   }
 ; SYM:     Index: 19
 ; SYM-NEXT:     Name: IThreadLocalVarUninit
-; SYM-NEXT:     Value (RelocatableAddress): 0x84
+; SYM-NEXT:     Value (RelocatableAddress): 0x80
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -118,7 +118,7 @@ entry:
 ; SYM-NEXT:   }
 ; SYM:     Index: 21
 ; SYM-NEXT:     Name: ThreadLocalVarInit
-; SYM-NEXT:     Value (RelocatableAddress): 0x88
+; SYM-NEXT:     Value (RelocatableAddress): 0x84
 ; SYM-NEXT:     Section: .data
 ; SYM-NEXT:     Type: 0x0
 ; SYM-NEXT:     StorageClass: C_HIDEXT (0x6B)
@@ -185,8 +185,7 @@ entry:
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               bla 0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA (idx: 1)      .__get_tpointer[PR]
 ; DIS-NEXT:                                      stw 0, 40(1)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               add 3, 3, 5
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               stw 4, 0(3)
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               stwx 4, 3, 5
 ; DIS-NEXT:                                      addi 1, 1, 32
 ; DIS-NEXT:                                      lwz 0, 8(1)
 ; DIS-NEXT:                                      mtlr 0
@@ -198,12 +197,11 @@ entry:
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC        (idx: 21) ThreadLocalVarInit[TC]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwz 5, 8(2)
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOC        (idx: 23) VarInit[TC]
+; DIS-NEXT:                                      stw 0, 40(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               bla 0
 ; DIS-NEXT: {{0*}}[[#ADDR]]: R_RBA (idx: 1)      .__get_tpointer[PR]
-; DIS-NEXT:                                      stw 0, 40(1)
-; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               add 3, 3, 4
+; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}               lwzx 3, 3, 4
 ; DIS-NEXT:                                      lwz 4, 0(5)
-; DIS-NEXT:                                      lwz 3, 0(3)
 ; DIS-NEXT:                                      add 3, 4, 3
 ; DIS-NEXT:                                      addi 1, 1, 32
 ; DIS-NEXT:                                      lwz 0, 8(1)
@@ -211,29 +209,29 @@ entry:
 ; DIS-NEXT:                                      blr
 
 ; DIS:      Disassembly of section .data:
-; DIS:      00000068 (idx: 11) VarInit:
-; DIS-NEXT:       68: 00 00 00 57
-; DIS:      0000006c (idx: 13) storeITLUninit[DS]:
-; DIS-NEXT:       6c: 00 00 00 00
-; DIS-NEXT: 0000006c:  R_POS        (idx: 5) .storeITLUninit
-; DIS-NEXT:       70: 00 00 00 84
-; DIS-NEXT: 00000070:  R_POS        (idx: 17) TOC[TC0]
-; DIS-NEXT:       74: 00 00 00 00
-; DIS:      00000078 (idx: 15) loadTLInit[DS]:
-; DIS-NEXT:       78: 00 00 00 30
-; DIS-NEXT: 00000078:  R_POS        (idx: 7) .loadTLInit
-; DIS-NEXT:       7c: 00 00 00 84
-; DIS-NEXT: 0000007c:  R_POS        (idx: 17) TOC[TC0]
+; DIS:      00000064 (idx: 11) VarInit:
+; DIS-NEXT:       64: 00 00 00 57
+; DIS:      00000068 (idx: 13) storeITLUninit[DS]:
+; DIS-NEXT:       68: 00 00 00 00
+; DIS-NEXT: 00000068:  R_POS        (idx: 5) .storeITLUninit
+; DIS-NEXT:       6c: 00 00 00 80
+; DIS-NEXT: 0000006c:  R_POS        (idx: 17) TOC[TC0]
+; DIS-NEXT:       70: 00 00 00 00
+; DIS:      00000074 (idx: 15) loadTLInit[DS]:
+; DIS-NEXT:       74: 00 00 00 30
+; DIS-NEXT: 00000074:  R_POS        (idx: 7) .loadTLInit
+; DIS-NEXT:       78: 00 00 00 80
+; DIS-NEXT: 00000078:  R_POS        (idx: 17) TOC[TC0]
+; DIS-NEXT:       7c: 00 00 00 00
+; DIS:      00000080 (idx: 19) IThreadLocalVarUninit[TC]:
 ; DIS-NEXT:       80: 00 00 00 00
-; DIS:      00000084 (idx: 19) IThreadLocalVarUninit[TC]:
+; DIS-NEXT: 00000080:  R_TLS_LE     (idx: 29) IThreadLocalVarUninit[UL]
+; DIS:      00000084 (idx: 21) ThreadLocalVarInit[TC]:
 ; DIS-NEXT:       84: 00 00 00 00
-; DIS-NEXT: 00000084:  R_TLS_LE     (idx: 29) IThreadLocalVarUninit[UL]
-; DIS:      00000088 (idx: 21) ThreadLocalVarInit[TC]:
-; DIS-NEXT:       88: 00 00 00 00
-; DIS-NEXT: 00000088:  R_TLS_LE     (idx: 27) ThreadLocalVarInit
-; DIS:      0000008c (idx: 23) VarInit[TC]:
-; DIS-NEXT:       8c: 00 00 00 68
-; DIS-NEXT: 0000008c:  R_POS        (idx: 11) VarInit
+; DIS-NEXT: 00000084:  R_TLS_LE     (idx: 27) ThreadLocalVarInit
+; DIS:      00000088 (idx: 23) VarInit[TC]:
+; DIS-NEXT:       88: 00 00 00 64
+; DIS-NEXT: 00000088:  R_POS        (idx: 11) VarInit
 
 ; DIS:      Disassembly of section .tdata:
 ; DIS:      00000000 (idx: 27) ThreadLocalVarInit:
