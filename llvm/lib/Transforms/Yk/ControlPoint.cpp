@@ -199,23 +199,6 @@ public:
              OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
              InputStruct, FAddr});
 
-    // Once the control point returns we need to extract the (potentially
-    // mutated) values from the returned YkCtrlPointStruct and reassign them to
-    // their corresponding live variables. In LLVM IR we can do this by simply
-    // replacing all future references with the new values.
-    LvIdx = 0;
-    Instruction *New;
-    for (Value *LV : LiveVals) {
-      Value *FieldPtr =
-          Builder.CreateGEP(CtrlPointVarsTy, InputStruct,
-                            {Builder.getInt32(0), Builder.getInt32(LvIdx)});
-      New = Builder.CreateLoad(TypeParams[LvIdx], FieldPtr);
-      LV->replaceUsesWithIf(
-          New, [&](Use &U) { return DT.dominates(NewCtrlPointCallInst, U); });
-      assert(LvIdx != UINT_MAX);
-      LvIdx++;
-    }
-
     // Replace the call to the dummy control point.
     OldCtrlPointCall->eraseFromParent();
 
