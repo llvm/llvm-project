@@ -38,17 +38,17 @@ LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
 #if defined(LIBC_TARGET_ARCH_IS_X86) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 #if defined(__AVX512F__)
-  using uint128_t = uint8x16_t;
-  using uint256_t = uint8x32_t;
-  using uint512_t = uint8x64_t;
+  using uint128_t = generic_v128;
+  using uint256_t = generic_v256;
+  using uint512_t = generic_v512;
 #elif defined(__AVX__)
-  using uint128_t = uint8x16_t;
-  using uint256_t = uint8x32_t;
-  using uint512_t = cpp::array<uint8x32_t, 2>;
+  using uint128_t = generic_v128;
+  using uint256_t = generic_v256;
+  using uint512_t = cpp::array<generic_v256, 2>;
 #elif defined(__SSE2__)
-  using uint128_t = uint8x16_t;
-  using uint256_t = cpp::array<uint8x16_t, 2>;
-  using uint512_t = cpp::array<uint8x16_t, 4>;
+  using uint128_t = generic_v128;
+  using uint256_t = cpp::array<generic_v128, 2>;
+  using uint512_t = cpp::array<generic_v128, 4>;
 #else
   using uint128_t = cpp::array<uint64_t, 2>;
   using uint256_t = cpp::array<uint64_t, 4>;
@@ -56,9 +56,9 @@ LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
 #endif
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
   static_assert(aarch64::kNeon, "aarch64 supports vector types");
-  using uint128_t = uint8x16_t;
-  using uint256_t = uint8x32_t;
-  using uint512_t = uint8x64_t;
+  using uint128_t = generic_v128;
+  using uint256_t = generic_v256;
+  using uint512_t = generic_v512;
 #endif
   if (count == 0)
     return;
