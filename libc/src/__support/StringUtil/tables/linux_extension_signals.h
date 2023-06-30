@@ -18,7 +18,7 @@ namespace __llvm_libc {
 // The array being larger than necessary isn't a problem. The MsgMappings will
 // be set to their default state which maps 0 to an empty string. This will get
 // filtered out in the MessageMapper building stage.
-inline constexpr const MsgTable<3> LINUX_SIGNALS = {
+LIBC_INLINE_VAR constexpr const MsgTable<3> LINUX_SIGNALS = {
 #ifdef SIGSTKFLT
     MsgMapping(SIGSTKFLT, "Stack fault"), // unused
 #endif

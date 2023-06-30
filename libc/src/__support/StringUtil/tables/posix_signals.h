@@ -16,7 +16,7 @@
 
 namespace __llvm_libc {
 
-inline constexpr MsgTable<22> POSIX_SIGNALS = {
+LIBC_INLINE_VAR constexpr MsgTable<22> POSIX_SIGNALS = {
     MsgMapping(SIGHUP, "Hangup"),
     MsgMapping(SIGQUIT, "Quit"),
     MsgMapping(SIGTRAP, "Trace/breakpoint trap"),
