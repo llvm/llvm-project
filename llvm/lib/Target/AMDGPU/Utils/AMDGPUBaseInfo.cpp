@@ -510,14 +510,16 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
 }
 
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
+  bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(Opc) : 0;
+  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (Info) {
     // Check that Opc can be used as VOPDY for this encoding. V_MOV_B32 as a
     // VOPDX is just a placeholder here, it is supported on all encodings.
     // TODO: This can be optimized by creating tables of supported VOPDY
     // opcodes per encoding.
-    unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32);
-    bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc),
+    unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32, VOPD3);
+    bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc, VOPD3),
                                   EncodingFamily, VOPD3) != -1;
     return {VOPD3 ? Info->CanBeVOPD3X : Info->CanBeVOPDX, CanBeVOPDY};
   }
@@ -525,7 +527,9 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   return {false, false};
 }
 
-unsigned getVOPDOpcode(unsigned Opc) {
+unsigned getVOPDOpcode(unsigned Opc, bool VOPD3) {
+  bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(Opc) : 0;
+  Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   return Info ? Info->VOPDOp : ~0u;
 }
@@ -601,8 +605,25 @@ int getMCOpcode(uint16_t Opcode, unsigned Gen) {
   return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 
+unsigned getBitOp2(unsigned Opc) {
+  switch (Opc) {
+  default:
+    return 0;
+  case AMDGPU::V_AND_B32_e32:
+    return 0x40;
+  case AMDGPU::V_OR_B32_e32:
+    return 0x54;
+  case AMDGPU::V_XOR_B32_e32:
+    return 0x14;
+  case AMDGPU::V_XNOR_B32_e32:
+    return 0x41;
+  }
+}
+
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
                 bool VOPD3) {
+  bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(OpY) : 0;
+  OpY = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : OpY;
   const VOPDInfo *Info =
       getVOPDInfoFromComponentOpcodes(OpX, OpY, EncodingFamily, VOPD3);
   return Info ? Info->Opcode : -1;

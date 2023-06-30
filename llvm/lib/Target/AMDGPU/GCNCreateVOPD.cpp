@@ -76,8 +76,8 @@ public:
     unsigned Opc2 = SecondMI->getOpcode();
     unsigned EncodingFamily =
         AMDGPU::getVOPDEncodingFamily(SII->getSubtarget());
-    int NewOpcode = AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1),
-                                        AMDGPU::getVOPDOpcode(Opc2),
+    int NewOpcode = AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1, CI.IsVOPD3),
+                                        AMDGPU::getVOPDOpcode(Opc2, CI.IsVOPD3),
                                         EncodingFamily, CI.IsVOPD3);
     assert(NewOpcode != -1 &&
            "Should have previously determined this as a possible VOPD\n");
@@ -102,6 +102,11 @@ public:
         auto MCOprIdx = InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx);
         VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
       }
+    }
+
+    if (CI.IsVOPD3) {
+      if (unsigned BitOp2 = AMDGPU::getBitOp2(Opc2))
+        VOPDInst.addImm(BitOp2);
     }
 
     for (auto CompIdx : VOPD::COMPONENTS)

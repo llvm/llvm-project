@@ -512,6 +512,11 @@ bool getMAIIsDGEMM(unsigned Opc);
 LLVM_READONLY
 bool getMAIIsGFX940XDL(unsigned Opc);
 
+// Get an equivalent BitOp3 for a binary logical \p Opc.
+// \returns BitOp3 modifier for the logical operation or zero.
+// Used in VOPD3 conversion.
+unsigned getBitOp2(unsigned Opc);
+
 struct CanBeVOPD {
   bool X;
   bool Y;
@@ -533,7 +538,7 @@ LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
 
 LLVM_READONLY
-unsigned getVOPDOpcode(unsigned Opc);
+unsigned getVOPDOpcode(unsigned Opc, bool VOPD3);
 
 LLVM_READONLY
 int getVOPDFull(unsigned OpX, unsigned OpY, unsigned EncodingFamily,
