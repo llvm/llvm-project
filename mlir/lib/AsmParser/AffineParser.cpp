@@ -58,8 +58,6 @@ public:
   ParseResult parseAffineMapOfSSAIds(AffineMap &map,
                                      OpAsmParser::Delimiter delimiter);
   ParseResult parseAffineExprOfSSAIds(AffineExpr &expr);
-  void getDimsAndSymbolSSAIds(SmallVectorImpl<StringRef> &dimAndSymbolSSAIds,
-                              unsigned &numDims);
 
 private:
   // Binary affine op parsing.
