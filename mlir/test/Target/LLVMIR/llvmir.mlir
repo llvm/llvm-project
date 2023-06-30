@@ -1626,6 +1626,16 @@ llvm.func @hasGCFunction() attributes { garbageCollector = "statepoint-example" 
     llvm.return
 }
 
+// -----
+
+// CHECK-LABEL: @section_func
+// CHECK-SAME: section ".section.name"
+llvm.func @section_func() attributes { section = ".section.name" } {
+    llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: @callFreezeOp
 llvm.func @callFreezeOp(%x : i32) {
   // CHECK: freeze i32 %{{[0-9]+}}
