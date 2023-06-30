@@ -133,9 +133,9 @@ private:
                                      SDValue N1, SDValue N2,
                                      ArrayRef<int> Mask) const;
 
-  SDValue ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
+  std::pair<SDValue, SDValue> ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
                         TargetLowering::ArgListTy &&Args, bool isSigned);
-  SDValue ExpandLibCall(RTLIB::Libcall LC, SDNode *Node, bool isSigned);
+  std::pair<SDValue, SDValue> ExpandLibCall(RTLIB::Libcall LC, SDNode *Node, bool isSigned);
 
   void ExpandFrexpLibCall(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandFPLibCall(SDNode *Node, RTLIB::Libcall LC,
@@ -2027,11 +2027,12 @@ SDValue SelectionDAGLegalize::ExpandSPLAT_VECTOR(SDNode *Node) {
   return DAG.getSplatBuildVector(VT, DL, SplatVal);
 }
 
-// Expand a node into a call to a libcall.  If the result value
-// does not fit into a register, return the lo part and set the hi part to the
-// by-reg argument.  If it does fit into a single register, return the result
-// and leave the Hi part unset.
-SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
+// Expand a node into a call to a libcall, returning the value as the first
+// result and the chain as the second.  If the result value does not fit into a
+// register, return the lo part and set the hi part to the by-reg argument in
+// the first.  If it does fit into a single register, return the result and
+// leave the Hi part unset.
+std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
                                             TargetLowering::ArgListTy &&Args,
                                             bool isSigned) {
   SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
@@ -2072,14 +2073,14 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
   if (!CallInfo.second.getNode()) {
     LLVM_DEBUG(dbgs() << "Created tailcall: "; DAG.getRoot().dump(&DAG));
     // It's a tailcall, return the chain (which is the DAG root).
-    return DAG.getRoot();
+    return {DAG.getRoot(), DAG.getRoot()};
   }
 
   LLVM_DEBUG(dbgs() << "Created libcall: "; CallInfo.first.dump(&DAG));
-  return CallInfo.first;
+  return CallInfo;
 }
 
-SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
+std::pair<SDValue, SDValue> SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
                                             bool isSigned) {
   TargetLowering::ArgListTy Args;
   TargetLowering::ArgListEntry Entry;
@@ -2120,7 +2121,7 @@ void SelectionDAGLegalize::ExpandFrexpLibCall(
   TargetLowering::ArgListTy Args = {FPArgEntry, PtrArgEntry};
 
   RTLIB::Libcall LC = RTLIB::getFREXP(VT);
-  SDValue Call = ExpandLibCall(LC, Node, std::move(Args), false);
+  SDValue Call = ExpandLibCall(LC, Node, std::move(Args), false).first;
 
   Results.push_back(Call);
 
@@ -2153,7 +2154,7 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
     Results.push_back(Tmp.first);
     Results.push_back(Tmp.second);
   } else {
-    SDValue Tmp = ExpandLibCall(LC, Node, false);
+    SDValue Tmp = ExpandLibCall(LC, Node, false).first;
     Results.push_back(Tmp);
   }
 }
@@ -2187,7 +2188,7 @@ SDValue SelectionDAGLegalize::ExpandIntLibCall(SDNode* Node, bool isSigned,
   case MVT::i64:  LC = Call_I64; break;
   case MVT::i128: LC = Call_I128; break;
   }
-  return ExpandLibCall(LC, Node, isSigned);
+  return ExpandLibCall(LC, Node, isSigned).first;
 }
 
 /// Expand the node to a libcall based on first argument type (for instance
@@ -4577,7 +4578,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     break;
   case ISD::FP16_TO_FP:
     if (Node->getValueType(0) == MVT::f32) {
-      Results.push_back(ExpandLibCall(RTLIB::FPEXT_F16_F32, Node, false));
+      Results.push_back(ExpandLibCall(RTLIB::FPEXT_F16_F32, Node, false).first);
     }
     break;
   case ISD::STRICT_FP16_TO_FP: {
@@ -4595,14 +4596,14 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     RTLIB::Libcall LC =
         RTLIB::getFPROUND(Node->getOperand(0).getValueType(), MVT::f16);
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to expand fp_to_fp16");
-    Results.push_back(ExpandLibCall(LC, Node, false));
+    Results.push_back(ExpandLibCall(LC, Node, false).first);
     break;
   }
   case ISD::FP_TO_BF16: {
     RTLIB::Libcall LC =
         RTLIB::getFPROUND(Node->getOperand(0).getValueType(), MVT::bf16);
     assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unable to expand fp_to_bf16");
-    Results.push_back(ExpandLibCall(LC, Node, false));
+    Results.push_back(ExpandLibCall(LC, Node, false).first);
     break;
   }
   case ISD::STRICT_SINT_TO_FP:
@@ -4717,7 +4718,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     Results.push_back(
         ExpandLibCall(RTLIB::getFPEXT(Node->getOperand(0).getValueType(),
                                       Node->getValueType(0)),
-                      Node, false));
+                      Node, false).first);
     break;
   }
   case ISD::STRICT_FP_EXTEND:
@@ -4783,13 +4784,13 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     default:
       llvm_unreachable("LibCall explicitly requested, but not available");
     case MVT::i32:
-      Results.push_back(ExpandLibCall(RTLIB::CTLZ_I32, Node, false));
+      Results.push_back(ExpandLibCall(RTLIB::CTLZ_I32, Node, false).first);
       break;
     case MVT::i64:
-      Results.push_back(ExpandLibCall(RTLIB::CTLZ_I64, Node, false));
+      Results.push_back(ExpandLibCall(RTLIB::CTLZ_I64, Node, false).first);
       break;
     case MVT::i128:
-      Results.push_back(ExpandLibCall(RTLIB::CTLZ_I128, Node, false));
+      Results.push_back(ExpandLibCall(RTLIB::CTLZ_I128, Node, false).first);
       break;
     }
     break;
