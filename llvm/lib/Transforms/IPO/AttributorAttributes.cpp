@@ -613,16 +613,15 @@ static void followUsesInContext(AAType &AA, Attributor &A,
 template <class AAType, typename StateType = typename AAType::StateType>
 static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
                              Instruction &CtxI) {
+  MustBeExecutedContextExplorer *Explorer =
+      A.getInfoCache().getMustBeExecutedContextExplorer();
+  if (!Explorer)
+    return;
 
   // Container for (transitive) uses of the associated value.
   SetVector<const Use *> Uses;
   for (const Use &U : AA.getIRPosition().getAssociatedValue().uses())
     Uses.insert(&U);
-
-  MustBeExecutedContextExplorer *Explorer =
-      A.getInfoCache().getMustBeExecutedContextExplorer();
-  if (!Explorer)
-    return;
 
   followUsesInContext<AAType>(AA, A, *Explorer, &CtxI, Uses, S);
 
