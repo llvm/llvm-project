@@ -1610,6 +1610,8 @@ function(add_unittest test_suite test_name)
     endif()
   endif()
 
+  target_link_options(${test_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   # libpthreads overrides some standard library symbols, so main
