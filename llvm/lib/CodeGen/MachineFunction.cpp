@@ -212,6 +212,14 @@ void MachineFunction::init() {
     Alignment = std::max(Alignment,
                          STI->getTargetLowering()->getPrefFunctionAlignment());
 
+  // -fsanitize=function and -fsanitize=kcfi instrument indirect function calls
+  // to load a type hash before the function label. Ensure functions are aligned
+  // by a least 4 to avoid unaligned access, which is especially important for
+  // -mno-unaligned-access.
+  if (F.hasMetadata(LLVMContext::MD_func_sanitize) ||
+      F.getMetadata(LLVMContext::MD_kcfi_type))
+    Alignment = std::max(Alignment, Align(4));
+
   if (AlignAllFunctions)
     Alignment = Align(1ULL << AlignAllFunctions);
 
