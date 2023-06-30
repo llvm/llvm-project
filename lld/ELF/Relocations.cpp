@@ -693,6 +693,34 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
   return nullptr;
 }
 
+static Symbol &
+getSymAtOffset(InputSectionBase &sec, uint64_t off, Symbol &sym) {
+  ArrayRef<Symbol *> syms;
+  switch (config->ekind) {
+  case ELF32LEKind:
+    syms = sec.getFile<ELF32LE>()->getSymbols();
+    break;
+  case ELF32BEKind:
+    syms = sec.getFile<ELF32BE>()->getSymbols();
+    break;
+  case ELF64LEKind:
+    syms = sec.getFile<ELF64LE>()->getSymbols();
+    break;
+  case ELF64BEKind:
+    syms = sec.getFile<ELF64BE>()->getSymbols();
+    break;
+  default:
+    llvm_unreachable("");
+  }
+  // Get the symbol that contains this offset.
+  for (Symbol *b : syms)
+    if (auto *d = dyn_cast_or_null<Defined>(b))
+      if (d->section == &sec && d->value <= off && off < d->value + d->size)
+        return *d;
+  // Fall back to the supplied symbol otherwise.
+  return sym;
+}
+
 static void reportUndefinedSymbol(const UndefinedDiag &undef,
                                   bool correctSpelling) {
   Undefined &sym = *undef.sym;
@@ -739,7 +767,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &undef,
     uint64_t offset = l.offset;
 
     msg += "\n>>> referenced by ";
-    std::string src = sec.getSrcMsg(sym, offset);
+    std::string src = sec.getSrcMsg(getSymAtOffset(sec, offset, sym), offset);
     if (!src.empty())
       msg += src + "\n>>>               ";
     msg += sec.getObjMsg(offset);
