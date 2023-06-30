@@ -162,27 +162,27 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
 
     {"ztso", RISCVExtensionVersion{0, 1}},
 
-    {"zvbb", RISCVExtensionVersion{0, 9}},
-    {"zvbc", RISCVExtensionVersion{0, 9}},
+    {"zvbb", RISCVExtensionVersion{1, 0}},
+    {"zvbc", RISCVExtensionVersion{1, 0}},
 
     {"zvfbfmin", RISCVExtensionVersion{0, 6}},
     {"zvfbfwma", RISCVExtensionVersion{0, 6}},
     {"zvfh", RISCVExtensionVersion{0, 1}},
 
     // vector crypto
-    {"zvkg", RISCVExtensionVersion{0, 9}},
-    {"zvkn", RISCVExtensionVersion{0, 9}},
-    {"zvknc", RISCVExtensionVersion{0, 9}},
-    {"zvkned", RISCVExtensionVersion{0, 9}},
-    {"zvkng", RISCVExtensionVersion{0, 9}},
-    {"zvknha", RISCVExtensionVersion{0, 9}},
-    {"zvknhb", RISCVExtensionVersion{0, 9}},
-    {"zvks", RISCVExtensionVersion{0, 9}},
-    {"zvksc", RISCVExtensionVersion{0, 9}},
-    {"zvksed", RISCVExtensionVersion{0, 9}},
-    {"zvksg", RISCVExtensionVersion{0, 9}},
-    {"zvksh", RISCVExtensionVersion{0, 9}},
-    {"zvkt", RISCVExtensionVersion{0, 9}},
+    {"zvkg", RISCVExtensionVersion{1, 0}},
+    {"zvkn", RISCVExtensionVersion{1, 0}},
+    {"zvknc", RISCVExtensionVersion{1, 0}},
+    {"zvkned", RISCVExtensionVersion{1, 0}},
+    {"zvkng", RISCVExtensionVersion{1, 0}},
+    {"zvknha", RISCVExtensionVersion{1, 0}},
+    {"zvknhb", RISCVExtensionVersion{1, 0}},
+    {"zvks", RISCVExtensionVersion{1, 0}},
+    {"zvksc", RISCVExtensionVersion{1, 0}},
+    {"zvksed", RISCVExtensionVersion{1, 0}},
+    {"zvksg", RISCVExtensionVersion{1, 0}},
+    {"zvksh", RISCVExtensionVersion{1, 0}},
+    {"zvkt", RISCVExtensionVersion{1, 0}},
 };
 
 static void verifyTables() {

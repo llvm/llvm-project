@@ -287,7 +287,7 @@ def LLVM_MemcpyInlineOp :
       # setAliasAnalysisMetadataCode;
 }
 
-def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2], 
+def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
@@ -546,8 +546,16 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     // Drop the intrinsic when its operand could not be converted. This can
     // happen for use before definition cases that are allowed for debug
     // intrinsics.
+    // TODO: Implement a two pass solution that translates the debug intrinsics
+    // after the entire function as been translated.
     if (failed(argOperand))
       return success();
+
+    // Ensure that the debug instrinsic is inserted right after its operand is
+    // defined. Otherwise, the operand might not necessarily dominate the
+    // intrinsic.
+    OpBuilder::InsertionGuard guard($_builder);
+    $_builder.setInsertionPointAfterValue(*argOperand);
     $_op = $_builder.create<$_qualCppClassName>($_location,
         *argOperand, $_var_attr($varInfo));
   }];
@@ -557,15 +565,33 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
   }];
 }
 
-def LLVM_DbgDeclareOp : LLVM_DbgIntrOp< "dbg.declare", "addr",
+def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr",
     [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
-  let summary = "Declare the address of a local debug info variable.";
+  let summary = "Describes how the address relates to a source language variable.";
   let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
 }
 
 def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value"> {
-  let summary = "Describe the current value of a local debug info variable.";
+  let summary = "Describes how the value relates to a source language variable.";
   let arguments = (ins LLVM_Type:$value, LLVM_DILocalVariableAttr:$varInfo);
+}
+
+def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
+  let summary = "Relates the program to a debug information label.";
+  let arguments = (ins LLVM_DILabelAttr:$label);
+  let llvmBuilder = [{
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::LLVMContext &ctx = module->getContext();
+    llvm::Function *fn =
+      llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::dbg_label);
+    builder.CreateCall(fn, {
+        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($label))
+      });
+  }];
+  let mlirBuilder = [{
+    $_op = $_builder.create<$_qualCppClassName>($_location, $_label_attr($label));
+  }];
+  let assemblyFormat = "$label attr-dict";
 }
 
 //

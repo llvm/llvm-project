@@ -170,7 +170,7 @@ static Value createAllocationForTensor(RewriterBase &rewriter, Location loc,
 }
 
 Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
-                                    Attribute memorySpace) {
+                                    Attribute memorySpace, Value *replacement) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(padOp);
   Location loc = padOp.getLoc();
@@ -198,7 +198,10 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
   Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
       loc, alloc, /*restrict=*/true, /*writable=*/true);
   rewriter.replaceOp(padOp, toTensorOp);
-  return toTensorOp;
+
+  if (replacement)
+    *replacement = toTensorOp;
+  return alloc;
 }
 
 /// Lower tensor.from_elements to a sequence of chained tensor.insert.
@@ -329,10 +332,10 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
 }
 
 Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
-                                    Attribute memorySpace) {
+                                    Attribute memorySpace, Value *replacement) {
   // Call specialized overload for certain ops.
   if (auto padOp = value.getDefiningOp<PadOp>())
-    return bufferizeToAllocation(rewriter, padOp, memorySpace);
+    return bufferizeToAllocation(rewriter, padOp, memorySpace, replacement);
 
   // Collect all uses.
   SmallVector<OpOperand *> uses = llvm::to_vector(
@@ -362,7 +365,9 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
                                [&]() { use->set(toTensorOp); });
   }
 
-  return toTensorOp;
+  if (replacement)
+    *replacement = toTensorOp;
+  return alloc;
 }
 
 namespace {

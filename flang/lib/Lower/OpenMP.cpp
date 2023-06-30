@@ -562,13 +562,13 @@ static void genObjectList(const Fortran::parser::OmpObjectList &objectList,
 static mlir::Value
 getIfClauseOperand(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::StatementContext &stmtCtx,
-                   const Fortran::parser::OmpClause::If *ifClause) {
+                   const Fortran::parser::OmpClause::If *ifClause,
+                   mlir::Location clauseLocation) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::Location currentLocation = converter.getCurrentLocation();
   auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
   mlir::Value ifVal = fir::getBase(
       converter.genExprValue(*Fortran::semantics::GetExpr(expr), stmtCtx));
-  return firOpBuilder.createConvert(currentLocation, firOpBuilder.getI1Type(),
+  return firOpBuilder.createConvert(clauseLocation, firOpBuilder.getI1Type(),
                                     ifVal);
 }
 
@@ -768,6 +768,7 @@ static void createBodyOfTargetOp(
 static void createTargetOp(Fortran::lower::AbstractConverter &converter,
                            const Fortran::parser::OmpClauseList &opClauseList,
                            const llvm::omp::Directive &directive,
+                           mlir::Location currentLocation,
                            Fortran::lower::pft::Evaluation *eval = nullptr) {
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
@@ -782,16 +783,15 @@ static void createTargetOp(Fortran::lower::AbstractConverter &converter,
   SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
   /// Check for unsupported map operand types.
-  auto checkType = [](auto currentLocation, mlir::Type type) {
+  auto checkType = [](mlir::Location location, mlir::Type type) {
     if (auto refType = type.dyn_cast<fir::ReferenceType>())
       type = refType.getElementType();
     if (auto boxType = type.dyn_cast_or_null<fir::BoxType>())
       if (!boxType.getElementType().isa<fir::PointerType>())
-        TODO(currentLocation, "OMPD_target_data MapOperand BoxType");
+        TODO(location, "OMPD_target_data MapOperand BoxType");
   };
 
-  auto addMapClause = [&](const auto &mapClause,
-                          mlir::Location &currentLocation) {
+  auto addMapClause = [&](const auto &mapClause, mlir::Location &location) {
     auto mapType = std::get<Fortran::parser::OmpMapType::Type>(
         std::get<std::optional<Fortran::parser::OmpMapType>>(mapClause->v.t)
             ->t);
@@ -839,7 +839,7 @@ static void createTargetOp(Fortran::lower::AbstractConverter &converter,
       if (Fortran::parser::Unwrap<Fortran::parser::ArrayElement>(ompObject) ||
           Fortran::parser::Unwrap<Fortran::parser::StructureComponent>(
               ompObject))
-        TODO(currentLocation,
+        TODO(location,
              "OMPD_target_data for Array Expressions or Structure Components");
     }
     genObjectList(std::get<Fortran::parser::OmpObjectList>(mapClause->v.t),
@@ -866,10 +866,11 @@ static void createTargetOp(Fortran::lower::AbstractConverter &converter,
   };
 
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
-    mlir::Location currentLocation = converter.genLocation(clause.source);
+    mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto &ifClause =
             std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
-      ifClauseOperand = getIfClauseOperand(converter, stmtCtx, ifClause);
+      ifClauseOperand =
+          getIfClauseOperand(converter, stmtCtx, ifClause, clauseLocation);
     } else if (const auto &deviceClause =
                    std::get_if<Fortran::parser::OmpClause::Device>(&clause.u)) {
       if (auto deviceModifier = std::get<
@@ -877,7 +878,7 @@ static void createTargetOp(Fortran::lower::AbstractConverter &converter,
               deviceClause->v.t)) {
         if (deviceModifier ==
             Fortran::parser::OmpDeviceClause::DeviceModifier::Ancestor) {
-          TODO(currentLocation, "OMPD_target Device Modifier Ancestor");
+          TODO(clauseLocation, "OMPD_target Device Modifier Ancestor");
         }
       }
       if (const auto *deviceExpr = Fortran::semantics::GetExpr(
@@ -902,9 +903,9 @@ static void createTargetOp(Fortran::lower::AbstractConverter &converter,
       addUseDeviceClause(devAddrClause->v, deviceAddrOperands);
     } else if (const auto &mapClause =
                    std::get_if<Fortran::parser::OmpClause::Map>(&clause.u)) {
-      addMapClause(mapClause, currentLocation);
+      addMapClause(mapClause, clauseLocation);
     } else {
-      TODO(currentLocation, "OMPD_target unhandled clause");
+      TODO(clauseLocation, "OMPD_target unhandled clause");
     }
   }
 
@@ -912,7 +913,6 @@ static void createTargetOp(Fortran::lower::AbstractConverter &converter,
                                                   mapTypes.end());
   mlir::ArrayAttr mapTypesArrayAttr =
       ArrayAttr::get(firOpBuilder.getContext(), mapTypesAttr);
-  mlir::Location currentLocation = converter.getCurrentLocation();
 
   if (directive == llvm::omp::Directive::OMPD_target) {
     auto targetOp = firOpBuilder.create<omp::TargetOp>(
@@ -948,28 +948,29 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   const Fortran::parser::OmpClauseList &opClauseList =
       std::get<Fortran::parser::OmpClauseList>(simpleStandaloneConstruct.t);
+  mlir::Location currentLocation = converter.genLocation(directive.source);
 
   switch (directive.v) {
   default:
     break;
   case llvm::omp::Directive::OMPD_barrier:
-    firOpBuilder.create<omp::BarrierOp>(converter.getCurrentLocation());
+    firOpBuilder.create<omp::BarrierOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_taskwait:
-    firOpBuilder.create<omp::TaskwaitOp>(converter.getCurrentLocation());
+    firOpBuilder.create<omp::TaskwaitOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_taskyield:
-    firOpBuilder.create<omp::TaskyieldOp>(converter.getCurrentLocation());
+    firOpBuilder.create<omp::TaskyieldOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_target_data:
   case llvm::omp::Directive::OMPD_target_enter_data:
   case llvm::omp::Directive::OMPD_target_exit_data:
-    createTargetOp(converter, opClauseList, directive.v);
+    createTargetOp(converter, opClauseList, directive.v, currentLocation);
     break;
   case llvm::omp::Directive::OMPD_target_update:
-    TODO(converter.getCurrentLocation(), "OMPD_target_update");
+    TODO(currentLocation, "OMPD_target_update");
   case llvm::omp::Directive::OMPD_ordered:
-    TODO(converter.getCurrentLocation(), "OMPD_ordered");
+    TODO(currentLocation, "OMPD_ordered");
   }
 }
 
@@ -1126,9 +1127,11 @@ createCombinedParallelOp(Fortran::lower::AbstractConverter &converter,
   // 1. default
   // Note: rest of the clauses are handled when the inner operation is created
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
+    mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto &ifClause =
             std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
-      ifClauseOperand = getIfClauseOperand(converter, stmtCtx, ifClause);
+      ifClauseOperand =
+          getIfClauseOperand(converter, stmtCtx, ifClause, clauseLocation);
     } else if (const auto &numThreadsClause =
                    std::get_if<Fortran::parser::OmpClause::NumThreads>(
                        &clause.u)) {
@@ -1162,7 +1165,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   const auto &endBlockDirective =
       std::get<Fortran::parser::OmpEndBlockDirective>(blockConstruct.t);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::Location currentLocation = converter.getCurrentLocation();
+  mlir::Location currentLocation = converter.genLocation(blockDirective.source);
 
   Fortran::lower::StatementContext stmtCtx;
   llvm::ArrayRef<mlir::Type> argTy;
@@ -1176,9 +1179,11 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   const auto &opClauseList =
       std::get<Fortran::parser::OmpClauseList>(beginBlockDirective.t);
   for (const auto &clause : opClauseList.v) {
+    mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto &ifClause =
             std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
-      ifClauseOperand = getIfClauseOperand(converter, stmtCtx, ifClause);
+      ifClauseOperand =
+          getIfClauseOperand(converter, stmtCtx, ifClause, clauseLocation);
     } else if (const auto &numThreadsClause =
                    std::get_if<Fortran::parser::OmpClause::NumThreads>(
                        &clause.u)) {
@@ -1342,11 +1347,13 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     createBodyOfOp(taskGroupOp, converter, currentLocation, eval,
                    &opClauseList);
   } else if (blockDirective.v == llvm::omp::OMPD_target) {
-    createTargetOp(converter, opClauseList, blockDirective.v, &eval);
+    createTargetOp(converter, opClauseList, blockDirective.v, currentLocation,
+                   &eval);
   } else if (blockDirective.v == llvm::omp::OMPD_target_data) {
-    createTargetOp(converter, opClauseList, blockDirective.v, &eval);
+    createTargetOp(converter, opClauseList, blockDirective.v, currentLocation,
+                   &eval);
   } else {
-    TODO(converter.getCurrentLocation(), "Unhandled block directive");
+    TODO(currentLocation, "Unhandled block directive");
   }
 }
 
@@ -1689,7 +1696,6 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
 
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  mlir::Location currentLocation = converter.getCurrentLocation();
   llvm::SmallVector<mlir::Value> lowerBound, upperBound, step, linearVars,
       linearStepVars, reductionVars, alignedVars, nontemporalVars;
   mlir::Value scheduleChunkClauseOperand, ifClauseOperand;
@@ -1701,17 +1707,20 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   const auto &loopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
       std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t);
 
+  const auto &beginLoopDirective =
+      std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t);
+  mlir::Location currentLocation =
+      converter.genLocation(beginLoopDirective.source);
   const auto ompDirective =
-      std::get<Fortran::parser::OmpLoopDirective>(
-          std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t).t)
-          .v;
+      std::get<Fortran::parser::OmpLoopDirective>(beginLoopDirective.t).v;
+
   if (llvm::omp::OMPD_parallel_do == ompDirective) {
     createCombinedParallelOp<Fortran::parser::OmpBeginLoopDirective>(
         converter, eval,
         std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t));
   } else if (llvm::omp::OMPD_do != ompDirective &&
              llvm::omp::OMPD_simd != ompDirective) {
-    TODO(converter.getCurrentLocation(), "Construct enclosing do loop");
+    TODO(currentLocation, "Construct enclosing do loop");
   }
 
   DataSharingProcessor dsp(converter, loopOpClauseList, eval);
@@ -1721,8 +1730,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   auto *doConstructEval = &eval.getFirstNestedEvaluation();
   if (doConstructEval->getIf<Fortran::parser::DoConstruct>()
           ->IsDoConcurrent()) {
-    TODO(converter.getCurrentLocation(),
-         "Do Concurrent in Worksharing loop construct");
+    TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
   }
 
   std::int64_t collapseValue =
@@ -1760,6 +1768,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   } while (collapseValue > 0);
 
   for (const auto &clause : loopOpClauseList.v) {
+    mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (const auto &scheduleClause =
             std::get_if<Fortran::parser::OmpClause::Schedule>(&clause.u)) {
       if (const auto &chunkExpr =
@@ -1772,7 +1781,8 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       }
     } else if (const auto &ifClause =
                    std::get_if<Fortran::parser::OmpClause::If>(&clause.u)) {
-      ifClauseOperand = getIfClauseOperand(converter, stmtCtx, ifClause);
+      ifClauseOperand =
+          getIfClauseOperand(converter, stmtCtx, ifClause, clauseLocation);
     } else if (const auto &reductionClause =
                    std::get_if<Fortran::parser::OmpClause::Reduction>(
                        &clause.u)) {

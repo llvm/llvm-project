@@ -36,9 +36,9 @@ class __uninitialized_buffer_deleter {
 
 public:
   template <class _Dummy = int, __enable_if_t<is_default_constructible<_Destructor>::value, _Dummy> = 0>
-  __uninitialized_buffer_deleter() : __count_(0) {}
+  _LIBCPP_HIDE_FROM_ABI __uninitialized_buffer_deleter() : __count_(0) {}
 
-  __uninitialized_buffer_deleter(size_t __count, _Destructor __destructor)
+  _LIBCPP_HIDE_FROM_ABI __uninitialized_buffer_deleter(size_t __count, _Destructor __destructor)
       : __count_(__count), __destructor_(std::move(__destructor)) {}
 
   template <class _Tp>
@@ -61,7 +61,7 @@ template <class _Array, class _Destructor = __noop>
 using __uninitialized_buffer_t = unique_ptr<_Array, __uninitialized_buffer_deleter<_Destructor> >;
 
 template <class _Array, class _Destructor = __noop>
-_LIBCPP_HIDE_FROM_ABI __uninitialized_buffer_t<_Array, _Destructor>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI __uninitialized_buffer_t<_Array, _Destructor>
 __make_uninitialized_buffer(nothrow_t, size_t __count, _Destructor __destructor = __noop()) {
   static_assert(is_array<_Array>::value, "");
   using _Tp = __remove_extent_t<_Array>;

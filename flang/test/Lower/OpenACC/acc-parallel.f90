@@ -118,6 +118,13 @@ subroutine acc_parallel
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
+  !$acc parallel num_gangs(1, 1, 1)
+  !$acc end parallel
+
+!CHECK:      acc.parallel num_gangs(%{{.*}}, %{{.*}}, %{{.*}} : i32, i32, i32) {
+!CHECK:        acc.yield
+!CHECK-NEXT: }{{$}}
+
   !$acc parallel num_workers(10)
   !$acc end parallel
 

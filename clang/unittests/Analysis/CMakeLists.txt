@@ -8,6 +8,7 @@ add_clang_unittest(ClangAnalysisTests
   CFGTest.cpp
   CloneDetectionTest.cpp
   ExprMutationAnalyzerTest.cpp
+  IntervalPartitionTest.cpp
   MacroExpansionContextTest.cpp
   UnsafeBufferUsageTest.cpp
   )

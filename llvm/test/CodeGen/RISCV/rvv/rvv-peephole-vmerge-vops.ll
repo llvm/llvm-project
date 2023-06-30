@@ -905,8 +905,8 @@ define void @test_dag_loop() {
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m8, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (zero)
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmclr.m v0
 ; CHECK-NEXT:    vsetivli zero, 0, e8, m4, tu, mu
 ; CHECK-NEXT:    vmv4r.v v20, v16
 ; CHECK-NEXT:    vssubu.vx v20, v16, zero, v0.t

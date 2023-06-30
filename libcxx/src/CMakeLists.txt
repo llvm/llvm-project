@@ -12,6 +12,10 @@ set(LIBCXX_SOURCES
   condition_variable.cpp
   condition_variable_destructor.cpp
   exception.cpp
+  filesystem/filesystem_clock.cpp
+  filesystem/filesystem_error.cpp
+  filesystem/path_parser.h
+  filesystem/path.cpp
   functional.cpp
   future.cpp
   hash.cpp
@@ -64,13 +68,6 @@ set(LIBCXX_SOURCES
   verbose_abort.cpp
   )
 
-if (LIBCXX_ENABLE_DEBUG_MODE OR LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS)
-  list(APPEND LIBCXX_SOURCES
-    debug.cpp
-    legacy_debug_handler.cpp
-    )
-endif()
-
 if (LIBCXX_ENABLE_RANDOM_DEVICE)
   list(APPEND LIBCXX_SOURCES
     random.cpp
@@ -113,11 +110,7 @@ if (LIBCXX_ENABLE_FILESYSTEM)
     filesystem/directory_entry.cpp
     filesystem/directory_iterator.cpp
     filesystem/file_descriptor.h
-    filesystem/filesystem_clock.cpp
-    filesystem/filesystem_error.cpp
     filesystem/operations.cpp
-    filesystem/path_parser.h
-    filesystem/path.cpp
     filesystem/posix_compat.h
     filesystem/time_utils.h
     )

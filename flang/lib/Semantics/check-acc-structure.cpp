@@ -331,7 +331,6 @@ CHECK_SIMPLE_CLAUSE(Independent, ACCC_independent)
 CHECK_SIMPLE_CLAUSE(Link, ACCC_link)
 CHECK_SIMPLE_CLAUSE(NoCreate, ACCC_no_create)
 CHECK_SIMPLE_CLAUSE(Nohost, ACCC_nohost)
-CHECK_SIMPLE_CLAUSE(NumGangs, ACCC_num_gangs)
 CHECK_SIMPLE_CLAUSE(NumWorkers, ACCC_num_workers)
 CHECK_SIMPLE_CLAUSE(Present, ACCC_present)
 CHECK_SIMPLE_CLAUSE(Private, ACCC_private)
@@ -422,6 +421,14 @@ void AccStructureChecker::Enter(const parser::AccClause::Gang &g) {
       context_.Say(GetContext().clauseSource,
           "The num argument is not allowed when dim is specified"_err_en_US);
   }
+}
+
+void AccStructureChecker::Enter(const parser::AccClause::NumGangs &n) {
+  CheckAllowed(llvm::acc::Clause::ACCC_num_gangs);
+
+  if (n.v.size() > 3)
+    context_.Say(GetContext().clauseSource,
+        "NUM_GANGS clause accepts a maximum of 3 arguments"_err_en_US);
 }
 
 void AccStructureChecker::Enter(const parser::AccClause::Self &x) {

@@ -1832,6 +1832,13 @@ public:
     return buildInstr(TargetOpcode::G_FLDEXP, {Dst}, {Src0, Src1}, Flags);
   }
 
+  /// Build and insert \p Fract, \p Exp = G_FFREXP \p Src
+  MachineInstrBuilder
+  buildFFrexp(const DstOp &Fract, const DstOp &Exp, const SrcOp &Src,
+              std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FFREXP, {Fract, Exp}, {Src}, Flags);
+  }
+
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
   MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
                                      const SrcOp &Src1) {

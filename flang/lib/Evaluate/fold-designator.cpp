@@ -90,6 +90,8 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
                               result->Augment((at - lower) * stride);
                               which = quotient;
                               return true;
+                            } else {
+                              isEmpty_ = true;
                             }
                           }
                           return false;
@@ -100,16 +102,20 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
                           auto end{ToInt64(Fold(context_,
                               triplet.upper().value_or(ExtentExpr{upper})))};
                           auto step{ToInt64(Fold(context_, triplet.stride()))};
-                          if (start && end && step && *step != 0) {
-                            ConstantSubscript range{
-                                (*end - *start + *step) / *step};
-                            if (range > 0) {
-                              auto quotient{which / range};
-                              auto remainder{which - range * quotient};
-                              auto j{*start + remainder * *step};
-                              result->Augment((j - lower) * stride);
-                              which = quotient;
-                              return true;
+                          if (start && end && step) {
+                            if (*step != 0) {
+                              ConstantSubscript range{
+                                  (*end - *start + *step) / *step};
+                              if (range > 0) {
+                                auto quotient{which / range};
+                                auto remainder{which - range * quotient};
+                                auto j{*start + remainder * *step};
+                                result->Augment((j - lower) * stride);
+                                which = quotient;
+                                return true;
+                              } else {
+                                isEmpty_ = true;
+                              }
                             }
                           }
                           return false;

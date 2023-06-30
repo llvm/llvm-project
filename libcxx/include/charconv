@@ -79,7 +79,6 @@ namespace std {
 #include <__charconv/to_chars_result.h>
 #include <__charconv/traits.h>
 #include <__config>
-#include <__debug>
 #include <__system_error/errc.h>
 #include <cmath> // for log2f
 #include <cstdint>

@@ -85,8 +85,9 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
   let description = [{
     This transform materializes an allocation for the targeted tensor value. It
     replaces all original uses of the target with the newly allocated buffer,
-    wrapped in a `bufferization.to_tensor` op. It returns a handle to the result
-    of the `to_tensor` op.
+    wrapped in a `bufferization.to_tensor` op. It returns a handle to the newly
+    allocated buffer. Furthermore, it returns a handle to the result of the
+    `to_tensor` op.
 
     Example:
     ```
@@ -116,13 +117,14 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
 
     #### Return modes
 
-    This operation consumes the `target` handle and produces the `transformed`
-    handle. It always succeeds.
+    This operation consumes the `target` handle and produces the `replacement`
+    and `allocated_buffer` handles. It always succeeds.
   }];
 
   let arguments = (ins Transform_AnyValue:$target,
                        OptionalAttr<AnyAttr>:$memory_space);
-  let results = (outs Transform_AnyValue:$transformed);
+  let results = (outs Transform_AnyValue:$allocated_buffer,
+                      Transform_AnyValue:$replacement);
   let assemblyFormat = "$target attr-dict";
 }
 
@@ -720,7 +722,7 @@ def PackGreedilyOp : Op<Transform_Dialect, "structured.pack_greedily", [
                                  :$matmul_padded_sizes_next_multiple_of,
                    ConfinedAttr<DefaultValuedAttr<DenseI64ArrayAttr, "{}">,
                                  [DenseArrayCount<3>]>:$matmul_inner_dims_order);
-  let results = (outs Transform_ConcreteOpType<"linalg.generic">:$packed_op);
+  let results = (outs TransformHandleTypeInterface:$packed_op);
 
   let builders = [
     OpBuilder<(ins "Value":$target,
@@ -846,7 +848,8 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
          DefaultValuedAttr<I64ArrayAttr, "{}">:$pack_paddings,
          DefaultValuedAttr<
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
-          "{}">:$transpose_paddings);
+          "{}">:$transpose_paddings,
+         DefaultValuedAttr<BoolAttr, "true">:$copy_back);
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =

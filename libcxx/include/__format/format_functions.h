@@ -15,7 +15,6 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__debug>
 #include <__format/buffer.h>
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
@@ -36,7 +35,7 @@
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
-#include <__iterator/readable_traits.h> // iter_value_t
+#include <__iterator/iterator_traits.h> // iter_value_t
 #include <__variant/monostate.h>
 #include <array>
 #include <string>

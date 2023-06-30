@@ -781,7 +781,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     insert_return_type insert(node_type&& __nh)
     {
-        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to set::insert()");
         return __tree_.template __node_handle_insert_unique<
             node_type, insert_return_type>(_VSTD::move(__nh));
@@ -789,7 +789,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __hint, node_type&& __nh)
     {
-        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to set::insert()");
         return __tree_.template __node_handle_insert_unique<node_type>(
             __hint, _VSTD::move(__nh));
@@ -808,7 +808,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void merge(set<key_type, _Compare2, allocator_type>& __source)
     {
-        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_unique(__source.__tree_);
     }
@@ -816,7 +816,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void merge(set<key_type, _Compare2, allocator_type>&& __source)
     {
-        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_unique(__source.__tree_);
     }
@@ -824,7 +824,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void merge(multiset<key_type, _Compare2, allocator_type>& __source)
     {
-        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_unique(__source.__tree_);
     }
@@ -832,7 +832,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void merge(multiset<key_type, _Compare2, allocator_type>&& __source)
     {
-        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_unique(__source.__tree_);
     }
@@ -1329,7 +1329,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(node_type&& __nh)
     {
-        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to multiset::insert()");
         return __tree_.template __node_handle_insert_multi<node_type>(
             _VSTD::move(__nh));
@@ -1337,7 +1337,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     iterator insert(const_iterator __hint, node_type&& __nh)
     {
-        _LIBCPP_ASSERT(__nh.empty() || __nh.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__nh.empty() || __nh.get_allocator() == get_allocator(),
             "node_type with incompatible allocator passed to multiset::insert()");
         return __tree_.template __node_handle_insert_multi<node_type>(
             __hint, _VSTD::move(__nh));
@@ -1356,7 +1356,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void merge(multiset<key_type, _Compare2, allocator_type>& __source)
     {
-        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_multi(__source.__tree_);
     }
@@ -1364,7 +1364,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void merge(multiset<key_type, _Compare2, allocator_type>&& __source)
     {
-        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_multi(__source.__tree_);
     }
@@ -1372,7 +1372,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void merge(set<key_type, _Compare2, allocator_type>& __source)
     {
-        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_multi(__source.__tree_);
     }
@@ -1380,7 +1380,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void merge(set<key_type, _Compare2, allocator_type>&& __source)
     {
-        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_multi(__source.__tree_);
     }

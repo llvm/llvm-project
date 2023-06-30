@@ -114,20 +114,20 @@ def loongarch_movgr2fcsr : SDNode<"LoongArchISD::MOVGR2FCSR",
 def loongarch_syscall : SDNode<"LoongArchISD::SYSCALL", SDT_LoongArchVI,
                                 [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_csrrd : SDNode<"LoongArchISD::CSRRD", SDT_LoongArchCsrrd,
-                              [SDNPHasChain]>;
+                              [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_csrwr : SDNode<"LoongArchISD::CSRWR", SDT_LoongArchCsrwr,
                               [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_csrxchg : SDNode<"LoongArchISD::CSRXCHG",
                                 SDT_LoongArchCsrxchg,
                                 [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_iocsrrd_b : SDNode<"LoongArchISD::IOCSRRD_B", SDTUnaryOp,
-                                  [SDNPHasChain]>;
+                                  [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_iocsrrd_h : SDNode<"LoongArchISD::IOCSRRD_H", SDTUnaryOp,
-                                  [SDNPHasChain]>;
+                                  [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_iocsrrd_w : SDNode<"LoongArchISD::IOCSRRD_W", SDTUnaryOp,
-                                  [SDNPHasChain]>;
+                                  [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_iocsrrd_d : SDNode<"LoongArchISD::IOCSRRD_D", SDTUnaryOp,
-                                  [SDNPHasChain]>;
+                                  [SDNPHasChain, SDNPSideEffect]>;
 def loongarch_iocsrwr_b : SDNode<"LoongArchISD::IOCSRWR_B",
                                   SDT_LoongArchIocsrwr,
                                   [SDNPHasChain, SDNPSideEffect]>;

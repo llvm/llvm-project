@@ -34,7 +34,7 @@ constexpr _Tp* assume_aligned(_Tp* __ptr) {
   if (is_constant_evaluated()) {
     return __ptr;
   } else {
-    _LIBCPP_ASSERT(reinterpret_cast<uintptr_t>(__ptr) % _Np == 0, "Alignment assumption is violated");
+    _LIBCPP_ASSERT_UNCATEGORIZED(reinterpret_cast<uintptr_t>(__ptr) % _Np == 0, "Alignment assumption is violated");
     return static_cast<_Tp*>(__builtin_assume_aligned(__ptr, _Np));
   }
 }

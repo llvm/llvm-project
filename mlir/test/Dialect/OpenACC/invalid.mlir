@@ -486,3 +486,10 @@ acc.loop gang() {
   "test.openacc_dummy_op"() : () -> ()
   acc.yield
 }
+
+// -----
+
+%i64value = arith.constant 1 : i64
+// expected-error@+1 {{num_gangs expects a maximum of 3 values}}
+acc.parallel num_gangs(%i64value, %i64value, %i64value, %i64value : i64, i64, i64, i64) {
+}

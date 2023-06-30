@@ -67,8 +67,19 @@ Improvements and New Features
   in the specialization has not been implemented in libc++. This prevents the
   feature-test macro to be set.
 
+- Platforms that don't have support for a filesystem can now still take advantage of some parts of ``<filesystem>``.
+  Anything that does not rely on having an actual filesystem available will now work, such as ``std::filesystem::path``,
+  ``std::filesystem::perms`` and similar classes.
+
 Deprecations and Removals
 -------------------------
+
+- The legacy debug mode has been removed in this release. Defining the macro
+  `_LIBCPP_ENABLE_DEBUG_MODE` is now a no-op, and the `LIBCXX_ENABLE_DEBUG_MODE`
+  CMake variable has been removed. The legacy debug mode will be replaced by
+  finer-grained hardened modes. For additional context, refer to the `Discourse
+  post
+  <https://discourse.llvm.org/t/rfc-removing-the-legacy-debug-mode-from-libc/71026>`_.
 
 - The ``<experimental/coroutine>`` header has been removed in this release. The ``<coroutine>`` header
   has been shipping since LLVM 14, so the Coroutines TS implementation is being removed per our policy

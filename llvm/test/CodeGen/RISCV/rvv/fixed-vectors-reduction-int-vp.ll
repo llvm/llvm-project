@@ -1796,20 +1796,20 @@ define signext i8 @vpreduce_mul_v64i8(i8 signext %s, <64 x i8> %v, <64 x i1> %m,
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    li a3, 32
-; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV32-NEXT:    lui a2, %hi(.LCPI72_0)
 ; RV32-NEXT:    addi a2, a2, %lo(.LCPI72_0)
+; RV32-NEXT:    li a3, 32
+; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV32-NEXT:    vle32.v v16, (a2)
 ; RV32-NEXT:    mv a2, a0
-; RV32-NEXT:    vid.v v24
-; RV32-NEXT:    vmsltu.vx v12, v24, a1
+; RV32-NEXT:    vmsltu.vx v12, v16, a1
+; RV32-NEXT:    vid.v v16
 ; RV32-NEXT:    vmsltu.vx v13, v16, a1
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32-NEXT:    vslideup.vi v12, v13, 4
+; RV32-NEXT:    vslideup.vi v13, v12, 4
 ; RV32-NEXT:    li a0, 64
 ; RV32-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; RV32-NEXT:    vmand.mm v0, v12, v0
+; RV32-NEXT:    vmand.mm v0, v13, v0
 ; RV32-NEXT:    vmv.v.i v12, 1
 ; RV32-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; RV32-NEXT:    vslidedown.vx v12, v8, a3
@@ -1839,20 +1839,20 @@ define signext i8 @vpreduce_mul_v64i8(i8 signext %s, <64 x i8> %v, <64 x i1> %m,
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    li a3, 32
-; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV64-NEXT:    lui a2, %hi(.LCPI72_0)
 ; RV64-NEXT:    addi a2, a2, %lo(.LCPI72_0)
+; RV64-NEXT:    li a3, 32
+; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV64-NEXT:    vle32.v v16, (a2)
 ; RV64-NEXT:    mv a2, a0
-; RV64-NEXT:    vid.v v24
-; RV64-NEXT:    vmsltu.vx v12, v24, a1
+; RV64-NEXT:    vmsltu.vx v12, v16, a1
+; RV64-NEXT:    vid.v v16
 ; RV64-NEXT:    vmsltu.vx v13, v16, a1
 ; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV64-NEXT:    vslideup.vi v12, v13, 4
+; RV64-NEXT:    vslideup.vi v13, v12, 4
 ; RV64-NEXT:    li a0, 64
 ; RV64-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
-; RV64-NEXT:    vmand.mm v0, v12, v0
+; RV64-NEXT:    vmand.mm v0, v13, v0
 ; RV64-NEXT:    vmv.v.i v12, 1
 ; RV64-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; RV64-NEXT:    vslidedown.vx v12, v8, a3

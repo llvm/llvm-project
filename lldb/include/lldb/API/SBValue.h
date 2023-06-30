@@ -105,7 +105,8 @@ public:
 
   const char *GetLocation();
 
-  // Deprecated - use the one that takes SBError&
+  LLDB_DEPRECATED("Use the variant that takes an SBError &",
+                  "SetValueFromCString(const char *, SBError &)")
   bool SetValueFromCString(const char *value_str);
 
   bool SetValueFromCString(const char *value_str, lldb::SBError &error);
@@ -123,7 +124,7 @@ public:
   lldb::SBValue CreateChildAtOffset(const char *name, uint32_t offset,
                                     lldb::SBType type);
 
-  // Deprecated - use the expression evaluator to perform type casting
+  LLDB_DEPRECATED("Use the expression evaluator to perform type casting", "")
   lldb::SBValue Cast(lldb::SBType type);
 
   lldb::SBValue CreateValueFromExpression(const char *name,
@@ -294,7 +295,7 @@ public:
 
   lldb::SBValue Dereference();
 
-  // Deprecated - please use GetType().IsPointerType() instead.
+  LLDB_DEPRECATED("Use GetType().IsPointerType() instead", "")
   bool TypeIsPointerType();
 
   lldb::SBType GetType();

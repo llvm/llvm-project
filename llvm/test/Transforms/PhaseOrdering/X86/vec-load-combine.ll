@@ -48,7 +48,7 @@ define noundef <4 x float> @ConvertVectors_ByVal(ptr noundef nonnull align 16 de
 ; SSE-LABEL: @ConvertVectors_ByVal(
 ; SSE-NEXT:  entry:
 ; SSE-NEXT:    [[V_VAL20:%.*]] = load i64, ptr [[V:%.*]], align 16
-; SSE-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[V]], i64 8
+; SSE-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 8
 ; SSE-NEXT:    [[V_VAL421:%.*]] = load i64, ptr [[TMP0]], align 8
 ; SSE-NEXT:    [[TMP1:%.*]] = lshr i64 [[V_VAL20]], 32
 ; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> poison, i64 [[V_VAL20]], i64 0
@@ -65,7 +65,7 @@ define noundef <4 x float> @ConvertVectors_ByVal(ptr noundef nonnull align 16 de
 ; AVX-LABEL: @ConvertVectors_ByVal(
 ; AVX-NEXT:  entry:
 ; AVX-NEXT:    [[V_VAL20:%.*]] = load i64, ptr [[V:%.*]], align 16
-; AVX-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[V]], i64 8
+; AVX-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[V]], i64 8
 ; AVX-NEXT:    [[V_VAL421:%.*]] = load i64, ptr [[TMP0]], align 8
 ; AVX-NEXT:    [[TMP1:%.*]] = trunc i64 [[V_VAL20]] to i32
 ; AVX-NEXT:    [[TMP2:%.*]] = bitcast i32 [[TMP1]] to float

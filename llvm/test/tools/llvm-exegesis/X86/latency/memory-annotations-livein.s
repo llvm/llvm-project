@@ -9,8 +9,8 @@
 # CHECK-NEXT: value: {{.*}}, per_snippet_value: {{.*}}
 
 # LLVM-EXEGESIS-MEM-DEF test1 4096 2147483647
-# LLVM-EXEGESIS-MEM-MAP test1 8192
+# LLVM-EXEGESIS-MEM-MAP test1 1048576
 # LLVM-EXEGESIS-LIVEIN R14
 
-movq $8192, %rax
+movq $1048576, %rax
 movq %r14, (%rax)

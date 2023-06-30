@@ -102,6 +102,8 @@ private:
       break;
     }
     case RPC_EXIT: {
+      // Send a response to the client to signal that we are ready to exit.
+      port->recv_and_send([](rpc::Buffer *) {});
       port->recv([](rpc::Buffer *buffer) {
         int status = 0;
         std::memcpy(&status, buffer->data, sizeof(int));

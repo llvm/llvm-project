@@ -1,7 +1,8 @@
 name: Labeling closed issues
 on:
-  issues:
-    types: ['closed']
+  workflow_dispatch
+#  issues:
+#    types: ['closed']
 
 permissions:
   contents: read

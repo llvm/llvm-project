@@ -1020,16 +1020,18 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       }
 
       for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
+        // There are no extending loads or truncating stores.
+        for (MVT InnerVT : MVT::fp_fixedlen_vector_valuetypes()) {
+          setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Expand);
+          setTruncStoreAction(VT, InnerVT, Expand);
+        }
+
         if (!useRVVForFixedLengthVectorVT(VT))
           continue;
 
         // By default everything must be expanded.
         for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
           setOperationAction(Op, VT, Expand);
-        for (MVT OtherVT : MVT::fp_fixedlen_vector_valuetypes()) {
-          setLoadExtAction(ISD::EXTLOAD, OtherVT, VT, Expand);
-          setTruncStoreAction(VT, OtherVT, Expand);
-        }
 
         // Custom lower fixed vector undefs to scalable vector undefs to avoid
         // expansion to a build_vector of 0s.
@@ -13145,6 +13147,11 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero.setBitsFrom(Log2_32(MaxVLenB)+1);
     if (MaxVLenB == MinVLenB)
       Known.One.setBit(Log2_32(MinVLenB));
+    break;
+  }
+  case RISCVISD::FPCLASS: {
+    // fclass will only set one of the low 10 bits.
+    Known.Zero.setBitsFrom(10);
     break;
   }
   case ISD::INTRINSIC_W_CHAIN:

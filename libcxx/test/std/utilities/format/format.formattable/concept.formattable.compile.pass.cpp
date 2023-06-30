@@ -22,16 +22,17 @@
 #include <complex>
 #include <concepts>
 #include <deque>
+#include <filesystem>
 #include <format>
 #include <forward_list>
 #include <list>
-#include <memory>
 #include <map>
+#include <memory>
 #include <optional>
 #include <queue>
 #include <set>
-#include <stack>
 #include <span>
+#include <stack>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
@@ -42,9 +43,6 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-#ifndef TEST_HAS_NO_FILESYSTEM
-#  include <filesystem>
-#endif
 #ifndef TEST_HAS_NO_LOCALIZATION
 #  include <regex>
 #endif
@@ -196,9 +194,7 @@ void test_P1636() {
   assert_is_not_formattable<std::bitset<42>, CharT>();
   assert_is_not_formattable<std::complex<double>, CharT>();
   assert_is_not_formattable<std::error_code, CharT>();
-#ifndef TEST_HAS_NO_FILESYSTEM
   assert_is_not_formattable<std::filesystem::path, CharT>();
-#endif
   assert_is_not_formattable<std::shared_ptr<int>, CharT>();
 #ifndef TEST_HAS_NO_LOCALIZATION
   if constexpr (!std::same_as<CharT, int>) // sub_match only works with proper character types

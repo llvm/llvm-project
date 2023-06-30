@@ -3227,10 +3227,10 @@ define <32 x i1> @fcmps_uno_fv_v32f16(<32 x half> %va, half %b) nounwind strictf
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfmv.v.f v12, fa0
-; CHECK-NEXT:    vmfle.vv v16, v8, v8
-; CHECK-NEXT:    vmfle.vf v8, v12, fa0
-; CHECK-NEXT:    vmnot.m v8, v8
-; CHECK-NEXT:    vmorn.mm v0, v8, v16
+; CHECK-NEXT:    vmfle.vf v16, v12, fa0
+; CHECK-NEXT:    vmnot.m v12, v16
+; CHECK-NEXT:    vmfle.vv v13, v8, v8
+; CHECK-NEXT:    vmorn.mm v0, v12, v13
 ; CHECK-NEXT:    ret
   %head = insertelement <32 x half> poison, half %b, i32 0
   %splat = shufflevector <32 x half> %head, <32 x half> poison, <32 x i32> zeroinitializer

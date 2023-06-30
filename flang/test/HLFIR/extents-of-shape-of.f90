@@ -20,8 +20,8 @@ end subroutine
 ! CHECK-HLFIR-NEXT:    %[[EXT0:.*]] = arith.constant 2 : index
 ! CHECK-HLFIR-NEXT:    %[[EXT1:.*]] = hlfir.get_extent %[[SHAPE]] {dim = 1 : index} : (!fir.shape<2>) -> index
 ! CHECK-HLFIR-NEXT:    %[[C1:.*]] = arith.constant 1 : index
-! CHECK-HLFIR-NEXT:    fir.do_loop %[[ARG2:.*]] = %[[C1]] to %[[EXT1]] step %[[C1]] {
-! CHECK-HLFIR-NEXT:      fir.do_loop %[[ARG3:.*]] = %[[C1]] to %[[EXT0]] step %[[C1]] {
+! CHECK-HLFIR-NEXT:    fir.do_loop %[[ARG2:.*]] = %[[C1]] to %[[EXT1]] step %[[C1]] unordered {
+! CHECK-HLFIR-NEXT:      fir.do_loop %[[ARG3:.*]] = %[[C1]] to %[[EXT0]] step %[[C1]] unordered {
 ! CHECK-HLFIR-NEXT:        %[[ELE:.*]] = hlfir.apply %[[MUL]], %[[ARG3]], %[[ARG2]] : (!hlfir.expr<2x?xf32>, index, index) -> f32
 ! CHECK-HLFIR-NEXT:        %[[ASSOC:.*]]:3 = hlfir.associate %[[ELE]] {uniq_name = "adapt.valuebyref"} : (f32) -> (!fir.ref<f32>, !fir.ref<f32>, i1)
 ! CHECK-HLFIR-NEXT:        fir.call
@@ -41,8 +41,8 @@ end subroutine
 ! CHECK-FIR:           %[[SHAPE:.*]] = fir.shape %[[DIMS0]]#1, %[[DIMS1]]#1
 ! CHECK-FIR-NEXT:      %[[C2:.*]] = arith.constant 2 : index
 ! CHECK-FIR-NEXT:      %[[C1_1:.*]] = arith.constant 1 : index
-! CHECK-FIR-NEXT:      fir.do_loop %[[ARG2:.*]] = %[[C1_1]] to %[[DIMS1]]#1 step %[[C1_1]] {
-! CHECK-FIR-NEXT:        fir.do_loop %[[ARG3:.*]] = %[[C1_1]] to %[[C2]] step %[[C1_1]] {
+! CHECK-FIR-NEXT:      fir.do_loop %[[ARG2:.*]] = %[[C1_1]] to %[[DIMS1]]#1 step %[[C1_1]] unordered {
+! CHECK-FIR-NEXT:        fir.do_loop %[[ARG3:.*]] = %[[C1_1]] to %[[C2]] step %[[C1_1]] unordered {
 ! ...
 
 ! CHECK-ALL:           return

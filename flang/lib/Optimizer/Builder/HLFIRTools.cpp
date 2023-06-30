@@ -732,14 +732,16 @@ static hlfir::ExprType getArrayExprType(mlir::Type elementType,
                               isPolymorphic);
 }
 
-hlfir::ElementalOp hlfir::genElementalOp(
-    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Type elementType,
-    mlir::Value shape, mlir::ValueRange typeParams,
-    const ElementalKernelGenerator &genKernel, mlir::Type exprType) {
+hlfir::ElementalOp
+hlfir::genElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
+                      mlir::Type elementType, mlir::Value shape,
+                      mlir::ValueRange typeParams,
+                      const ElementalKernelGenerator &genKernel,
+                      bool isUnordered, mlir::Type exprType) {
   if (!exprType)
     exprType = getArrayExprType(elementType, shape, false);
-  auto elementalOp =
-      builder.create<hlfir::ElementalOp>(loc, exprType, shape, typeParams);
+  auto elementalOp = builder.create<hlfir::ElementalOp>(
+      loc, exprType, shape, typeParams, isUnordered);
   auto insertPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(elementalOp.getBody());
   mlir::Value elementResult = genKernel(loc, builder, elementalOp.getIndices());
@@ -807,7 +809,7 @@ mlir::Value hlfir::inlineElementalOp(
 
 hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
                                    fir::FirOpBuilder &builder,
-                                   mlir::ValueRange extents) {
+                                   mlir::ValueRange extents, bool isUnordered) {
   hlfir::LoopNest loopNest;
   assert(!extents.empty() && "must have at least one extent");
   auto insPt = builder.saveInsertionPoint();
@@ -818,7 +820,8 @@ hlfir::LoopNest hlfir::genLoopNest(mlir::Location loc,
   unsigned dim = extents.size() - 1;
   for (auto extent : llvm::reverse(extents)) {
     auto ub = builder.createConvert(loc, indexType, extent);
-    loopNest.innerLoop = builder.create<fir::DoLoopOp>(loc, one, ub, one);
+    loopNest.innerLoop =
+        builder.create<fir::DoLoopOp>(loc, one, ub, one, isUnordered);
     builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
     // Reverse the indices so they are in column-major order.
     loopNest.oneBasedIndices[dim--] = loopNest.innerLoop.getInductionVar();
@@ -1012,5 +1015,5 @@ hlfir::cloneToElementalOp(mlir::Location loc, fir::FirOpBuilder &builder,
   mlir::Type elementType = scalarAddress.getFortranElementType();
   return hlfir::genElementalOp(loc, builder, elementType,
                                elementalAddrOp.getShape(), typeParams,
-                               genKernel);
+                               genKernel, !elementalAddrOp.isOrdered());
 }

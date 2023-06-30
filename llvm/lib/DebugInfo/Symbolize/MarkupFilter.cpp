@@ -133,9 +133,8 @@ bool MarkupFilter::tryReset(const MarkupNode &Node,
     endAnyModuleInfoLine();
     for (const MarkupNode &Node : DeferredNodes)
       filterNode(Node);
-    highlight();
-    OS << "[[[reset]]]" << lineEnding();
-    restoreColor();
+    printRawElement(Node);
+    OS << lineEnding();
 
     Modules.clear();
     MMaps.clear();
@@ -239,8 +238,7 @@ bool MarkupFilter::tryPC(const MarkupNode &Node) {
     return false;
   if (!checkNumFieldsAtLeast(Node, 1))
     return true;
-  if (!checkNumFieldsAtMost(Node, 2))
-    return true;
+  warnNumFieldsAtMost(Node, 2);
 
   std::optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
   if (!Addr)
@@ -293,8 +291,7 @@ bool MarkupFilter::tryBackTrace(const MarkupNode &Node) {
     return false;
   if (!checkNumFieldsAtLeast(Node, 2))
     return true;
-  if (!checkNumFieldsAtMost(Node, 3))
-    return true;
+  warnNumFieldsAtMost(Node, 3);
 
   std::optional<uint64_t> FrameNumber = parseFrameNumber(Node.Fields[0]);
   if (!FrameNumber)
@@ -655,10 +652,12 @@ bool MarkupFilter::checkTag(const MarkupNode &Node) const {
 bool MarkupFilter::checkNumFields(const MarkupNode &Element,
                                   size_t Size) const {
   if (Element.Fields.size() != Size) {
-    WithColor::error(errs()) << "expected " << Size << " field(s); found "
-                             << Element.Fields.size() << "\n";
+    bool Warn = Element.Fields.size() > Size;
+    WithColor(errs(), Warn ? HighlightColor::Warning : HighlightColor::Error)
+        << (Warn ? "warning: " : "error: ") << "expected " << Size
+        << " field(s); found " << Element.Fields.size() << "\n";
     reportLocation(Element.Tag.end());
-    return false;
+    return Warn;
   }
   return true;
 }
@@ -675,16 +674,14 @@ bool MarkupFilter::checkNumFieldsAtLeast(const MarkupNode &Element,
   return true;
 }
 
-bool MarkupFilter::checkNumFieldsAtMost(const MarkupNode &Element,
-                                        size_t Size) const {
-  if (Element.Fields.size() > Size) {
-    WithColor::error(errs())
-        << "expected at most " << Size << " field(s); found "
-        << Element.Fields.size() << "\n";
-    reportLocation(Element.Tag.end());
-    return false;
-  }
-  return true;
+void MarkupFilter::warnNumFieldsAtMost(const MarkupNode &Element,
+                                       size_t Size) const {
+  if (Element.Fields.size() <= Size)
+    return;
+  WithColor::warning(errs())
+      << "expected at most " << Size << " field(s); found "
+      << Element.Fields.size() << "\n";
+  reportLocation(Element.Tag.end());
 }
 
 void MarkupFilter::reportTypeError(StringRef Str, StringRef TypeName) const {

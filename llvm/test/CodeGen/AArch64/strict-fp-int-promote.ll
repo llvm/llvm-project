@@ -2,7 +2,7 @@
 ; RUN: llc -O0 -o - %s | FileCheck %s
 ; RUN: llc -O3 -o - %s | FileCheck %s --check-prefix=SUBOPTIMAL
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-none-eabi"
+target triple = "aarch64"
 
 declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
 declare float @llvm.experimental.constrained.sitofp.f32.i16(i16, metadata, metadata)

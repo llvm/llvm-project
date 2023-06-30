@@ -94,25 +94,36 @@ public:
 /// in absence of convergence.
 ///
 /// Return success if the iterative process converged and no more patterns can
-/// be matched in the result operation regions.
+/// be matched in the result operation regions. `changed` is set to true if the
+/// IR was modified at all.
 ///
 /// Note: This does not apply patterns to the top-level operation itself.
 ///       These methods also perform folding and simple dead-code elimination
 ///       before attempting to match any of the provided patterns.
 ///
 /// You may configure several aspects of this with GreedyRewriteConfig.
-LogicalResult applyPatternsAndFoldGreedily(
-    Region &region, const FrozenRewritePatternSet &patterns,
-    GreedyRewriteConfig config = GreedyRewriteConfig());
+LogicalResult
+applyPatternsAndFoldGreedily(Region &region,
+                             const FrozenRewritePatternSet &patterns,
+                             GreedyRewriteConfig config = GreedyRewriteConfig(),
+                             bool *changed = nullptr);
 
 /// Rewrite ops in all regions of the given op, which must be isolated from
 /// above.
-inline LogicalResult applyPatternsAndFoldGreedily(
-    Operation *op, const FrozenRewritePatternSet &patterns,
-    GreedyRewriteConfig config = GreedyRewriteConfig()) {
+inline LogicalResult
+applyPatternsAndFoldGreedily(Operation *op,
+                             const FrozenRewritePatternSet &patterns,
+                             GreedyRewriteConfig config = GreedyRewriteConfig(),
+                             bool *changed = nullptr) {
   bool failed = false;
-  for (Region &region : op->getRegions())
-    failed |= applyPatternsAndFoldGreedily(region, patterns, config).failed();
+  for (Region &region : op->getRegions()) {
+    bool regionChanged;
+    failed |=
+        applyPatternsAndFoldGreedily(region, patterns, config, &regionChanged)
+            .failed();
+    if (changed)
+      *changed |= regionChanged;
+  }
   return failure(failed);
 }
 
