@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
-; XFAIL: *
-
 ; GCN-LABEL: {{^}}is_local_vgpr:
 ; GCN-DAG: {{flat|global|buffer}}_load_dwordx2 v{{\[[0-9]+}}:[[PTR_HI:[0-9]+]]]
 ; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10
@@ -53,3 +51,6 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i1 @llvm.amdgcn.is.shared(ptr nocapture) #0
 
 attributes #0 = { nounwind readnone speculatable }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

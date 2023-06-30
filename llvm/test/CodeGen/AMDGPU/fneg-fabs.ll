@@ -2,8 +2,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefixes=VI,FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -march=r600 -mcpu=redwood < %s | FileCheck --check-prefixes=R600,FUNC %s
 
-; XFAIL: *
-
 ; FUNC-LABEL: {{^}}fneg_fabsf_fadd_f32:
 ; SI-NOT: and
 ; SI: v_sub_f32_e64 {{v[0-9]+}}, {{s[0-9]+}}, |{{v[0-9]+}}|
@@ -111,3 +109,6 @@ declare float @fabsf(float) readnone
 declare float @llvm.fabs.f32(float) readnone
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>) readnone
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>) readnone
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

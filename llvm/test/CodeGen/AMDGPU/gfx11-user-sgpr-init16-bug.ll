@@ -1,8 +1,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,WORKAROUND %s
 
-; XFAIL: *
-
 ; Does not apply to wave64
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
 ; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-vopd=0 < %s | FileCheck -check-prefixes=GCN,NOWORKAROUND %s
@@ -190,3 +188,6 @@ declare align 4 ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #0
 declare i64 @llvm.amdgcn.dispatch.id() #0
 
 attributes #0 = { nounwind readnone speculatable willreturn }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

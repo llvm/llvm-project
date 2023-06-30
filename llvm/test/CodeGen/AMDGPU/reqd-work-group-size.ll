@@ -1,8 +1,6 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=amdgpu-lower-kernel-attributes,instcombine %s | FileCheck -enable-var-scope %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -S -passes=amdgpu-lower-kernel-attributes,instcombine %s | FileCheck -enable-var-scope %s
 
-; XFAIL: *
-
 target datalayout = "n32"
 
 ; CHECK-LABEL: @invalid_reqd_work_group_size(
@@ -458,3 +456,6 @@ attributes #3 = { nounwind "uniform-work-group-size"="false" }
 !1 = !{i32 8, i32 16}
 !2 = !{i64 8, i64 16, i64 2}
 !3 = !{i16 8, i16 16, i16 2}
+
+!llvm.module.flags = !{!4}
+!4 = !{i32 1, !"amdgpu_code_object_version", i32 400}
