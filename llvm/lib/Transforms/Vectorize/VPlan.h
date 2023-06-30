@@ -352,6 +352,9 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location in \p V.
   void setDebugLocFromInst(const Value *V);
 
+  /// Construct the vector value of a scalarized value \p V one lane at a time.
+  void packScalarIntoVectorValue(VPValue *Def, const VPIteration &Instance);
+
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
   struct CFGState {
