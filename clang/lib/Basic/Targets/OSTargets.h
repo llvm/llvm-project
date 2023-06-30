@@ -771,13 +771,11 @@ protected:
                     MacroBuilder &Builder) const override {
     // FIXME: _LONG_LONG should not be defined under -std=c89.
     Builder.defineMacro("_LONG_LONG");
-    Builder.defineMacro("_OPEN_DEFAULT");
-    // _UNIX03_WITHDRAWN is required to build libcxx.
-    Builder.defineMacro("_UNIX03_WITHDRAWN");
     Builder.defineMacro("__370__");
     Builder.defineMacro("__BFP__");
     // FIXME: __BOOL__ should not be defined under -std=c89.
     Builder.defineMacro("__BOOL__");
+    Builder.defineMacro("__COMPILER_VER__", "0x50000000");
     Builder.defineMacro("__LONGNAME__");
     Builder.defineMacro("__MVS__");
     Builder.defineMacro("__THW_370__");
@@ -788,17 +786,6 @@ protected:
 
     if (this->PointerWidth == 64)
       Builder.defineMacro("__64BIT__");
-
-    if (Opts.CPlusPlus) {
-      Builder.defineMacro("__DLL__");
-      // _XOPEN_SOURCE=600 is required to build libcxx.
-      Builder.defineMacro("_XOPEN_SOURCE", "600");
-    }
-
-    if (Opts.GNUMode) {
-      Builder.defineMacro("_MI_BUILTIN");
-      Builder.defineMacro("_EXT");
-    }
 
     if (Opts.CPlusPlus && Opts.WChar) {
       // Macro __wchar_t is defined so that the wchar_t data
@@ -818,6 +805,7 @@ public:
     this->UseZeroLengthBitfieldAlignment = true;
     this->UseLeadingZeroLengthBitfield = false;
     this->ZeroLengthBitfieldBoundary = 32;
+    this->TheCXXABI.set(TargetCXXABI::XL);
   }
 
   bool areDefaultedSMFStillPOD(const LangOptions &) const override {

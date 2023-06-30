@@ -59,11 +59,11 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
     auto staticBufferType =
         MemRefType::get(width * cst.value(), b.getIntegerType(8));
     if (options.useAlloca) {
-      return b.createOrFold<memref::AllocaOp>(staticBufferType, ValueRange{},
-                                              alignmentAttr);
+      return b.create<memref::AllocaOp>(staticBufferType, ValueRange{},
+                                        alignmentAttr);
     }
-    return b.createOrFold<memref::AllocOp>(staticBufferType, ValueRange{},
-                                           alignmentAttr);
+    return b.create<memref::AllocOp>(staticBufferType, ValueRange{},
+                                     alignmentAttr);
   }
 
   // Fallback dynamic buffer.
@@ -86,8 +86,8 @@ static std::optional<Value> defaultAllocBufferCallBack(
     std::optional<unsigned> alignment, DataLayout &layout) {
   ShapedType viewType = subView.getType();
   ImplicitLocOpBuilder b(subView.getLoc(), builder);
-  auto zero = b.createOrFold<arith::ConstantIndexOp>(0);
-  auto one = b.createOrFold<arith::ConstantIndexOp>(1);
+  auto zero = b.create<arith::ConstantIndexOp>(0);
+  auto one = b.create<arith::ConstantIndexOp>(1);
 
   Value allocSize = one;
   for (const auto &size : llvm::enumerate(boundingSubViewSize))

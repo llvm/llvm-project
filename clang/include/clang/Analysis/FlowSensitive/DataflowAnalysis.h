@@ -235,7 +235,7 @@ runDataflowAnalysis(
                   std::move(State.Env)};
             });
       });
-  return BlockStates;
+  return std::move(BlockStates);
 }
 
 /// Abstract base class for dataflow "models": reusable analysis components that

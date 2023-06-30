@@ -1214,7 +1214,6 @@ module std [system] {
       module temp_value                      { private header "__memory/temp_value.h" }
       module temporary_buffer                { private header "__memory/temporary_buffer.h" }
       module uninitialized_algorithms        { private header "__memory/uninitialized_algorithms.h" }
-      module uninitialized_buffer            { private header "__memory/uninitialized_buffer.h" }
       module unique_ptr                      { private header "__memory/unique_ptr.h" }
       module uses_allocator                  { private header "__memory/uses_allocator.h" }
       module uses_allocator_construction     { private header "__memory/uses_allocator_construction.h" }

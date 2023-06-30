@@ -1833,12 +1833,12 @@ def int_amdgcn_live_mask : DefaultAttrsIntrinsic <[llvm_i1_ty],
 def int_amdgcn_mbcnt_lo :
   ClangBuiltin<"__builtin_amdgcn_mbcnt_lo">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-   [IntrNoMem, IntrConvergent]>;
+   [IntrNoMem]>;
 
 def int_amdgcn_mbcnt_hi :
   ClangBuiltin<"__builtin_amdgcn_mbcnt_hi">,
   DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty],
-            [IntrNoMem, IntrConvergent]>;
+            [IntrNoMem]>;
 
 // llvm.amdgcn.ds.swizzle src offset
 def int_amdgcn_ds_swizzle :

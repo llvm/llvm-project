@@ -1644,7 +1644,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<LLVM_MemoryEffectsAttr>:$memory,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
     OptionalAttr<UnitAttr>:$arm_streaming,
-    OptionalAttr<UnitAttr>:$arm_locally_streaming
+    OptionalAttr<UnitAttr>:$arm_locally_streaming,
+    OptionalAttr<StrAttr>:$section
   );
 
   let regions = (region AnyRegion:$body);

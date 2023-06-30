@@ -181,14 +181,16 @@ private:
     std::optional<hlfir::YieldOp> elementalCleanup;
     mlir::Region *nonElementalCleanup = nullptr;
     std::optional<hlfir::LoopNest> vectorSubscriptLoopNest;
+    std::optional<mlir::Value> vectorSubscriptShape;
   };
 
   /// Generate the left-hand side. If the left-hand side is vector
   /// subscripted (hlfir.elemental_addr), this will create a loop nest
   /// (unless it was already created by a WHERE mask) and return the
   /// element address.
-  LhsValueAndCleanUp generateYieldedLHS(mlir::Location loc,
-                                        mlir::Region &lhsRegion);
+  LhsValueAndCleanUp
+  generateYieldedLHS(mlir::Location loc, mlir::Region &lhsRegion,
+                     std::optional<hlfir::Entity> loweredRhs = std::nullopt);
 
   /// If \p maybeYield is present and has a clean-up, generate the clean-up
   /// at the current insertion point (by cloning).
@@ -212,6 +214,8 @@ private:
   /// Save a value for subsequent runs.
   void generateSaveEntity(hlfir::SaveEntity savedEntity,
                           bool willUseSavedEntityInSameRun);
+  void saveLeftHandSide(hlfir::SaveEntity savedEntity,
+                        hlfir::RegionAssignOp regionAssignOp);
 
   /// Get a value if it was saved in this run or a previous run. Returns
   /// nullopt if it has not been saved.
@@ -421,9 +425,9 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   std::optional<hlfir::LoopNest> elementalLoopNest;
   auto [rhsValue, oldRhsYield] =
       generateYieldedEntity(regionAssignOp.getRhsRegion());
-  LhsValueAndCleanUp loweredLhs =
-      generateYieldedLHS(loc, regionAssignOp.getLhsRegion());
   hlfir::Entity rhsEntity{rhsValue};
+  LhsValueAndCleanUp loweredLhs =
+      generateYieldedLHS(loc, regionAssignOp.getLhsRegion(), rhsEntity);
   hlfir::Entity lhsEntity{loweredLhs.lhs};
   if (loweredLhs.vectorSubscriptLoopNest)
     rhsEntity = hlfir::getElementAt(
@@ -692,17 +696,53 @@ mlir::Value OrderedAssignmentRewriter::generateYieldedScalarValue(
 }
 
 OrderedAssignmentRewriter::LhsValueAndCleanUp
-OrderedAssignmentRewriter::generateYieldedLHS(mlir::Location loc,
-                                              mlir::Region &lhsRegion) {
+OrderedAssignmentRewriter::generateYieldedLHS(
+    mlir::Location loc, mlir::Region &lhsRegion,
+    std::optional<hlfir::Entity> loweredRhs) {
   LhsValueAndCleanUp loweredLhs;
   hlfir::ElementalAddrOp elementalAddrLhs =
       mlir::dyn_cast<hlfir::ElementalAddrOp>(lhsRegion.back().back());
+  if (auto temp = savedEntities.find(&lhsRegion); temp != savedEntities.end()) {
+    // The LHS address was computed and saved in a previous run. Fetch it.
+    doBeforeLoopNest([&]() { temp->second.resetFetchPosition(loc, builder); });
+    if (elementalAddrLhs && !whereLoopNest) {
+      // Vector subscripted designator address are saved element by element.
+      // If no "elemental" loops have been created yet, the shape of the
+      // RHS, if it is an array can be used, or the shape of the vector
+      // subscripted designator must be retrieved to generate the "elemental"
+      // loop nest.
+      if (loweredRhs && loweredRhs->isArray()) {
+        // The RHS shape can be used to create the elemental loops and avoid
+        // saving the LHS shape.
+        loweredLhs.vectorSubscriptShape =
+            hlfir::genShape(loc, builder, *loweredRhs);
+      } else {
+        // If the shape cannot be retrieved from the RHS, it must have been
+        // saved. Get it from the temporary.
+        auto &vectorTmp =
+            temp->second.cast<fir::factory::AnyVectorSubscriptStack>();
+        loweredLhs.vectorSubscriptShape = vectorTmp.fetchShape(loc, builder);
+      }
+      loweredLhs.vectorSubscriptLoopNest = hlfir::genLoopNest(
+          loc, builder, loweredLhs.vectorSubscriptShape.value());
+      builder.setInsertionPointToStart(
+          loweredLhs.vectorSubscriptLoopNest->innerLoop.getBody());
+    }
+    loweredLhs.lhs = temp->second.fetch(loc, builder);
+    return loweredLhs;
+  }
+  // The LHS has not yet been evaluated and saved. Evaluate it now.
   if (elementalAddrLhs && !whereLoopNest) {
+    // This is a vector subscripted entity. The address of elements must
+    // be returned. If no "elemental" loops have been created for a WHERE,
+    // create them now based on the vector subscripted designator shape.
     for (auto &op : lhsRegion.front().without_terminator())
       (void)builder.clone(op, mapper);
-    mlir::Value newShape = mapper.lookupOrDefault(elementalAddrLhs.getShape());
-    loweredLhs.vectorSubscriptLoopNest = hlfir::genLoopNest(
-        loc, builder, newShape, !elementalAddrLhs.isOrdered());
+    loweredLhs.vectorSubscriptShape =
+        mapper.lookupOrDefault(elementalAddrLhs.getShape());
+    loweredLhs.vectorSubscriptLoopNest =
+        hlfir::genLoopNest(loc, builder, *loweredLhs.vectorSubscriptShape,
+                           !elementalAddrLhs.isOrdered());
     builder.setInsertionPointToStart(
         loweredLhs.vectorSubscriptLoopNest->innerLoop.getBody());
     mapper.map(elementalAddrLhs.getIndices(),
@@ -713,6 +753,8 @@ OrderedAssignmentRewriter::generateYieldedLHS(mlir::Location loc,
     loweredLhs.lhs =
         mapper.lookupOrDefault(loweredLhs.elementalCleanup->getEntity());
   } else {
+    // This is a designator without vector subscripts. Generate it as
+    // it is done for other entities.
     auto [lhs, yield] = generateYieldedEntity(lhsRegion);
     loweredLhs.lhs = lhs;
     if (yield && !yield->getCleanup().empty())
@@ -932,9 +974,12 @@ void MaskedArrayExpr::generateNoneElementalCleanupIfAny(
   }
 }
 
-static bool isLeftHandSide(mlir::Region &region) {
+static hlfir::RegionAssignOp
+getAssignIfLeftHandSideRegion(mlir::Region &region) {
   auto assign = mlir::dyn_cast<hlfir::RegionAssignOp>(region.getParentOp());
-  return assign && (&assign.getLhsRegion() == &region);
+  if (assign && (&assign.getLhsRegion() == &region))
+    return assign;
+  return nullptr;
 }
 
 bool OrderedAssignmentRewriter::currentLoopNestIterationNumberCanBeComputed(
@@ -993,18 +1038,20 @@ getTempName(hlfir::OrderedAssignmentTreeOpInterface root) {
 void OrderedAssignmentRewriter::generateSaveEntity(
     hlfir::SaveEntity savedEntity, bool willUseSavedEntityInSameRun) {
   mlir::Region &region = *savedEntity.yieldRegion;
+
+  if (hlfir::RegionAssignOp regionAssignOp =
+          getAssignIfLeftHandSideRegion(region)) {
+    // Need to save the address, not the values.
+    assert(!willUseSavedEntityInSameRun &&
+           "lhs cannot be used in the loop nest where it is saved");
+    return saveLeftHandSide(savedEntity, regionAssignOp);
+  }
+
   mlir::Location loc = region.getParentOp()->getLoc();
-
-  if (!mlir::isa<hlfir::YieldOp>(region.back().back()))
-    TODO(loc, "creating temporary storage for vector subscripted LHS");
-
   // Evaluate the region inside the loop nest (if any).
   auto [clonedValue, oldYield] = generateYieldedEntity(region);
   hlfir::Entity entity{clonedValue};
-  if (isLeftHandSide(region)) // Need to save the address, not the values.
-    TODO(loc, "creating temporary storage for LHS");
-  else
-    entity = hlfir::loadTrivialScalar(loc, builder, entity);
+  entity = hlfir::loadTrivialScalar(loc, builder, entity);
   mlir::Type entityType = entity.getType();
 
   llvm::StringRef tempName = getTempName(root);
@@ -1066,6 +1113,72 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     (void)inserted;
   } else {
     generateCleanupIfAny(oldYield);
+  }
+}
+
+static bool rhsIsArray(hlfir::RegionAssignOp regionAssignOp) {
+  auto yieldOp = mlir::dyn_cast<hlfir::YieldOp>(
+      regionAssignOp.getRhsRegion().back().back());
+  return yieldOp && hlfir::Entity{yieldOp.getEntity()}.isArray();
+}
+
+void OrderedAssignmentRewriter::saveLeftHandSide(
+    hlfir::SaveEntity savedEntity, hlfir::RegionAssignOp regionAssignOp) {
+  mlir::Region &region = *savedEntity.yieldRegion;
+  mlir::Location loc = region.getParentOp()->getLoc();
+  LhsValueAndCleanUp loweredLhs = generateYieldedLHS(loc, region);
+  fir::factory::TemporaryStorage *temp = nullptr;
+  if (loweredLhs.vectorSubscriptLoopNest)
+    constructStack.push_back(loweredLhs.vectorSubscriptLoopNest->outerLoop);
+  if (loweredLhs.vectorSubscriptLoopNest && !rhsIsArray(regionAssignOp)) {
+    // Vector subscripted entity for which the shape must also be saved on top
+    // of the element addresses (e.g. the shape may change in each forall
+    // iteration and is needed to create the elemental loops).
+    mlir::Value shape = loweredLhs.vectorSubscriptShape.value();
+    int rank = mlir::cast<fir::ShapeType>(shape.getType()).getRank();
+    const bool shapeIsInvariant =
+        constructStack.empty() ||
+        dominanceInfo.properlyDominates(shape, constructStack[0]);
+    doBeforeLoopNest([&] {
+      // Outside of any forall/where/elemental loops, create a temporary that
+      // will both be able to save the vector subscripted designator shape(s)
+      // and element addresses.
+      temp =
+          insertSavedEntity(region, fir::factory::AnyVectorSubscriptStack{
+                                        loc, builder, loweredLhs.lhs.getType(),
+                                        shapeIsInvariant, rank});
+    });
+    // Save shape before the elemental loop nest created by the vector
+    // subscripted LHS.
+    auto &vectorTmp = temp->cast<fir::factory::AnyVectorSubscriptStack>();
+    auto insertionPoint = builder.saveInsertionPoint();
+    builder.setInsertionPoint(loweredLhs.vectorSubscriptLoopNest->outerLoop);
+    vectorTmp.pushShape(loc, builder, shape);
+    builder.restoreInsertionPoint(insertionPoint);
+  } else {
+    // Otherwise, only save the LHS address.
+    // If the LHS address dominates the constructs, its SSA value can
+    // simply be tracked and there is no need to save the address in memory.
+    // Otherwise, the addresses are stored at each iteration in memory with
+    // a descriptor stack.
+    if (constructStack.empty() ||
+        dominanceInfo.properlyDominates(loweredLhs.lhs, constructStack[0]))
+      doBeforeLoopNest([&] {
+        temp = insertSavedEntity(region, fir::factory::SSARegister{});
+      });
+    else
+      doBeforeLoopNest([&] {
+        temp = insertSavedEntity(
+            region, fir::factory::AnyVariableStack{loc, builder,
+                                                   loweredLhs.lhs.getType()});
+      });
+  }
+  temp->pushValue(loc, builder, loweredLhs.lhs);
+  generateCleanupIfAny(loweredLhs.elementalCleanup);
+  if (loweredLhs.vectorSubscriptLoopNest) {
+    constructStack.pop_back();
+    builder.setInsertionPointAfter(
+        loweredLhs.vectorSubscriptLoopNest->outerLoop);
   }
 }
 
