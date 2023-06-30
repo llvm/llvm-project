@@ -44,7 +44,7 @@ public:
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
-    auto *Ptr = &peek<T>();
+    auto *Ptr = &peekInternal<T>();
     auto Value = std::move(*Ptr);
     Ptr->~T();
     shrink(aligned_size<T>());
@@ -57,14 +57,18 @@ public:
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
-    auto *Ptr = &peek<T>();
+    auto *Ptr = &peekInternal<T>();
     Ptr->~T();
     shrink(aligned_size<T>());
   }
 
   /// Returns a reference to the value on the top of the stack.
   template <typename T> T &peek() const {
-    return *reinterpret_cast<T *>(peekData(aligned_size<T>()));
+#ifndef NDEBUG
+    assert(!ItemTypes.empty());
+    assert(ItemTypes.back() == toPrimType<T>());
+#endif
+    return peekInternal<T>();
   }
 
   template <typename T> T &peek(size_t Offset) const {
@@ -90,6 +94,11 @@ private:
   template <typename T> constexpr size_t aligned_size() const {
     constexpr size_t PtrAlign = alignof(void *);
     return ((sizeof(T) + PtrAlign - 1) / PtrAlign) * PtrAlign;
+  }
+
+  /// Like the public peek(), but without the debug type checks.
+  template <typename T> T &peekInternal() const {
+    return *reinterpret_cast<T *>(peekData(aligned_size<T>()));
   }
 
   /// Grows the stack to accommodate a value and returns a pointer to it.
