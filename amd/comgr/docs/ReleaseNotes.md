@@ -83,6 +83,10 @@ Removed APIs
 
 New Comgr Actions and Data Types
 --------------------------------
+- (Action) AMD\_COMGR\_ACTION\_COMPILE\_SOURCE\_TO\_RELOCATABLE
+  - This action performs compile-to-bitcode, linking device libraries, and
+codegen-to-relocatable in a single step. By doing so, clients are able to defer more
+of the flag handling to toolchain. Currently only supports HIP.
 - (Data Type) AMD\_COMGR\_DATA\_KIND\_BC\_BUNDLE
 - (Data Type) AMD\_COMGR\_DATA\_KIND\_AR\_BUNDLE
   - These data kinds can now be passed to an AMD\_COMGR\_ACTION\_LINK\_BC\_TO\_BC

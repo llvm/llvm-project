@@ -1070,6 +1070,28 @@ amd_comgr_status_t AMDGPUCompiler::addCompilationFlags() {
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+amd_comgr_status_t AMDGPUCompiler::addDeviceLibraries() {
+  llvm::SmallString<128> FakeRocmDir = TmpDir;
+  path::append(FakeRocmDir, "rocm");
+  llvm::SmallString<128> DeviceLibsDir = FakeRocmDir;
+  path::append(DeviceLibsDir, "amdgcn", "bitcode");
+  if (fs::create_directory(InputDir)) {
+    return AMD_COMGR_STATUS_ERROR;
+  }
+  Args.push_back(Saver.save(Twine("--rocm-path=") + FakeRocmDir).data());
+  NoGpuLib = false;
+
+  for (auto DeviceLib : getDeviceLibraries()) {
+    llvm::SmallString<128> DeviceLibPath = DeviceLibsDir;
+    path::append(DeviceLibPath, std::get<0>(DeviceLib));
+    if (auto Status = outputToFile(std::get<1>(DeviceLib), DeviceLibPath)) {
+      return Status;
+    }
+  }
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
 amd_comgr_status_t AMDGPUCompiler::preprocessToSource() {
   if (auto Status = createTmpDirs()) {
     return Status;
@@ -1121,26 +1143,51 @@ amd_comgr_status_t AMDGPUCompiler::compileToBitcode(bool WithDeviceLibs) {
 #endif
 
   if (WithDeviceLibs) {
-    llvm::SmallString<128> FakeRocmDir = TmpDir;
-    path::append(FakeRocmDir, "rocm");
-    llvm::SmallString<128> DeviceLibsDir = FakeRocmDir;
-    path::append(DeviceLibsDir, "amdgcn", "bitcode");
-    if (fs::create_directory(InputDir)) {
-      return AMD_COMGR_STATUS_ERROR;
-    }
-    Args.push_back(Saver.save(Twine("--rocm-path=") + FakeRocmDir).data());
-    NoGpuLib = false;
-
-    for (auto DeviceLib : getDeviceLibraries()) {
-      llvm::SmallString<128> DeviceLibPath = DeviceLibsDir;
-      path::append(DeviceLibPath, std::get<0>(DeviceLib));
-      if (auto Status = outputToFile(std::get<1>(DeviceLib), DeviceLibPath)) {
-        return Status;
-      }
+    if (auto Status = addDeviceLibraries()) {
+      return Status;
     }
   }
 
   return processFiles(AMD_COMGR_DATA_KIND_BC, ".bc");
+}
+
+amd_comgr_status_t AMDGPUCompiler::compileToRelocatable() {
+  if (auto Status = createTmpDirs()) {
+    return Status;
+  }
+
+  if (ActionInfo->Language != AMD_COMGR_LANGUAGE_HIP) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  if (ActionInfo->IsaName) {
+    if (auto Status = addTargetIdentifierFlags(ActionInfo->IsaName, true)) {
+      return Status;
+    }
+  }
+
+  Args.push_back("-c");
+  Args.push_back("-fhip-emit-relocatable");
+  Args.push_back("-mllvm");
+  Args.push_back("-amdgpu-internalize-symbols");
+
+  if (auto Status = addIncludeFlags()) {
+    return Status;
+  }
+
+  if (auto Status = addCompilationFlags()) {
+    return Status;
+  }
+
+#if _WIN32
+  Args.push_back("-fshort-wchar");
+#endif
+
+  if (auto Status = addDeviceLibraries()) {
+    return Status;
+  }
+
+  return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o");
 }
 
 amd_comgr_status_t AMDGPUCompiler::compileToFatBin() {

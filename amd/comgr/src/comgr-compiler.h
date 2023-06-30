@@ -129,6 +129,7 @@ class AMDGPUCompiler {
   amd_comgr_status_t addTargetIdentifierFlags(llvm::StringRef IdentStr,
                                               bool SrcToBC);
   amd_comgr_status_t addCompilationFlags();
+  amd_comgr_status_t addDeviceLibraries();
   amd_comgr_status_t
   executeOutOfProcessHIPCompilation(llvm::ArrayRef<const char *> Args);
 
@@ -141,6 +142,7 @@ public:
 
   amd_comgr_status_t preprocessToSource();
   amd_comgr_status_t compileToBitcode(bool WithDeviceLibs = false);
+  amd_comgr_status_t compileToRelocatable();
   amd_comgr_status_t linkBitcodeToBitcode();
   amd_comgr_status_t codeGenBitcodeToRelocatable();
   amd_comgr_status_t codeGenBitcodeToAssembly();
