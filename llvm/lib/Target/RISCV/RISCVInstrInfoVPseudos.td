@@ -731,16 +731,6 @@ class GetVRegNoV0<VReg VRegClass> {
                  true : VRegClass);
 }
 
-// Join strings in list using separator and ignoring empty elements
-class Join<list<string> strings, string separator> {
-  string ret = !foldl(!head(strings), !tail(strings), a, b,
-                      !cond(
-                        !and(!empty(a), !empty(b)) : "",
-                        !empty(a) : b,
-                        !empty(b) : a,
-                        1 : a#separator#b));
-}
-
 class VPseudo<Instruction instr, LMULInfo m, dag outs, dag ins> :
       Pseudo<outs, ins, []>, RISCVVPseudo {
   let BaseInstr = instr;
@@ -1028,7 +1018,7 @@ class VPseudoUnaryNoMask<DAGOperand RetClass, DAGOperand OpClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1042,7 +1032,7 @@ class VPseudoUnaryMask<VReg RetClass, VReg OpClass, string Constraint = ""> :
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1056,7 +1046,7 @@ class VPseudoUnaryMask_NoExcept<VReg RetClass, VReg OpClass, string Constraint =
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1071,7 +1061,7 @@ class VPseudoUnaryMask_FRM<VReg RetClass, VReg OpClass, string Constraint = ""> 
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1144,7 +1134,7 @@ class VPseudoBinaryNoMaskTU<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1175,7 +1165,7 @@ class VPseudoBinaryNoMaskTURoundingMode<VReg RetClass,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1194,7 +1184,7 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1215,7 +1205,7 @@ class VPseudoTiedBinaryNoMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $rs2"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $rs2"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1261,7 +1251,7 @@ class VPseudoBinaryMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
 }
@@ -1278,7 +1268,7 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1297,7 +1287,7 @@ class VPseudoTernaryMaskPolicy<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1316,7 +1306,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let UsesMaskPolicy = 1;
@@ -1336,7 +1326,7 @@ class VPseudoTiedBinaryMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
@@ -1380,7 +1370,7 @@ class VPseudoTiedBinaryCarryIn<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $merge"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 0;
@@ -1399,7 +1389,7 @@ class VPseudoTernaryNoMask<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $rs3"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $rs3"], ",");
   let HasVLOp = 1;
   let HasSEWOp = 1;
 }
@@ -1416,7 +1406,7 @@ class VPseudoTernaryNoMaskWithPolicy<VReg RetClass,
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $rs3"], ",">.ret;
+  let Constraints = !interleave([Constraint, "$rd = $rs3"], ",");
   let HasVecPolicyOp = 1;
   let HasVLOp = 1;
   let HasSEWOp = 1;
