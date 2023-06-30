@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_IS_EQUAILITY_COMPARABLE_H
-#define _LIBCPP___TYPE_TRAITS_IS_EQUAILITY_COMPARABLE_H
+#ifndef _LIBCPP___TYPE_TRAITS_IS_EQUALITY_COMPARABLE_H
+#define _LIBCPP___TYPE_TRAITS_IS_EQUALITY_COMPARABLE_H
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
@@ -75,4 +75,4 @@ using __libcpp_is_trivially_equality_comparable =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_IS_EQUAILITY_COMPARABLE_H
+#endif // _LIBCPP___TYPE_TRAITS_IS_EQUALITY_COMPARABLE_H
