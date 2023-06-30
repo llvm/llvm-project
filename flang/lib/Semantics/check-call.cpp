@@ -688,6 +688,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
     }
   }
+
+  // Breaking change warnings
+  if (intrinsic && dummy.intent != common::Intent::In) {
+    WarnOnDeferredLengthCharacterScalar(
+        context, &actual, messages.at(), dummyName.c_str());
+  }
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
