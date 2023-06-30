@@ -344,7 +344,7 @@ define i32 @memcpy_volatile(ptr %ptr1, ptr %ptr2) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@memcpy_volatile
 ; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], ptr nocapture nofree readonly [[PTR2:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree writeonly [[PTR1]], ptr noalias nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR20:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nocapture nofree writeonly [[PTR1]], ptr nocapture nofree readonly [[PTR2]], i32 noundef 8, i1 noundef true) #[[ATTR20:[0-9]+]]
 ; CHECK-NEXT:    ret i32 4
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %ptr1, ptr %ptr2, i32 8, i1 true)

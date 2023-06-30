@@ -291,7 +291,7 @@ define ptr @test8(ptr %0) nounwind uwtable {
 declare void @use_i8(ptr nocapture)
 define internal void @test9a(ptr %a, ptr %b) {
 ; CHECK-LABEL: define {{[^@]+}}@test9a() {
-; CHECK-NEXT:    call void @use_i8(ptr noalias nocapture noundef align 4294967296 null)
+; CHECK-NEXT:    call void @use_i8(ptr nocapture noundef align 4294967296 null)
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i8(ptr null)
@@ -360,7 +360,7 @@ define void @test10(ptr noalias %a) {
 ; CHECK-LABEL: define {{[^@]+}}@test10
 ; CHECK-SAME: (ptr noalias [[A:%.*]]) {
 ; CHECK-NEXT:    tail call void @test10_helper_1(ptr [[A]])
-; CHECK-NEXT:    tail call void @test10_helper_2(ptr noalias [[A]])
+; CHECK-NEXT:    tail call void @test10_helper_2(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
 ; FIXME: missing noalias
@@ -783,13 +783,13 @@ define void @test16_caller(ptr %p, i32 %c) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@test16_caller
 ; TUNIT-SAME: (ptr nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR7]] {
-; TUNIT-NEXT:    tail call void @test16_sub(ptr noalias nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR13]]
+; TUNIT-NEXT:    tail call void @test16_sub(ptr nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR13]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@test16_caller
 ; CGSCC-SAME: (ptr nofree writeonly [[P:%.*]], i32 [[C:%.*]]) #[[ATTR10]] {
-; CGSCC-NEXT:    tail call void @test16_sub(ptr noalias nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR14]]
+; CGSCC-NEXT:    tail call void @test16_sub(ptr nofree writeonly [[P]], i32 [[C]], i32 [[C]]) #[[ATTR14]]
 ; CGSCC-NEXT:    ret void
 ;
   tail call void @test16_sub(ptr %p, i32 %c, i32 %c)
