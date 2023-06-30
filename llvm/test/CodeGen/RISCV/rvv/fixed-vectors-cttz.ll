@@ -339,9 +339,8 @@ define void @cttz_v4i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32F-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-RV32F-NEXT:    vrsub.vi v9, v8, 0
 ; LMULMAX2-RV32F-NEXT:    vand.vv v9, v8, v9
-; LMULMAX2-RV32F-NEXT:    vmset.m v0
 ; LMULMAX2-RV32F-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV32F-NEXT:    vfcvt.f.xu.v v9, v9, v0.t
+; LMULMAX2-RV32F-NEXT:    vfcvt.f.xu.v v9, v9
 ; LMULMAX2-RV32F-NEXT:    fsrm a1
 ; LMULMAX2-RV32F-NEXT:    vsrl.vi v9, v9, 23
 ; LMULMAX2-RV32F-NEXT:    li a1, 127
@@ -358,9 +357,8 @@ define void @cttz_v4i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV64F-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-RV64F-NEXT:    vrsub.vi v9, v8, 0
 ; LMULMAX2-RV64F-NEXT:    vand.vv v9, v8, v9
-; LMULMAX2-RV64F-NEXT:    vmset.m v0
 ; LMULMAX2-RV64F-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV64F-NEXT:    vfcvt.f.xu.v v9, v9, v0.t
+; LMULMAX2-RV64F-NEXT:    vfcvt.f.xu.v v9, v9
 ; LMULMAX2-RV64F-NEXT:    fsrm a1
 ; LMULMAX2-RV64F-NEXT:    vsrl.vi v9, v9, 23
 ; LMULMAX2-RV64F-NEXT:    li a1, 127
@@ -520,26 +518,24 @@ define void @cttz_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32F-LABEL: cttz_v2i64:
 ; LMULMAX2-RV32F:       # %bb.0:
 ; LMULMAX2-RV32F-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX2-RV32F-NEXT:    vle64.v v9, (a0)
+; LMULMAX2-RV32F-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-RV32F-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX2-RV32F-NEXT:    vmv.v.i v10, 0
+; LMULMAX2-RV32F-NEXT:    vmv.v.i v9, 0
 ; LMULMAX2-RV32F-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX2-RV32F-NEXT:    vmseq.vv v8, v9, v10
-; LMULMAX2-RV32F-NEXT:    vsub.vv v10, v10, v9
-; LMULMAX2-RV32F-NEXT:    vand.vv v9, v9, v10
-; LMULMAX2-RV32F-NEXT:    vmset.m v0
+; LMULMAX2-RV32F-NEXT:    vmseq.vv v0, v8, v9
+; LMULMAX2-RV32F-NEXT:    vsub.vv v9, v9, v8
+; LMULMAX2-RV32F-NEXT:    vand.vv v8, v8, v9
 ; LMULMAX2-RV32F-NEXT:    fsrmi a1, 1
 ; LMULMAX2-RV32F-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; LMULMAX2-RV32F-NEXT:    vfncvt.f.xu.w v10, v9, v0.t
+; LMULMAX2-RV32F-NEXT:    vfncvt.f.xu.w v9, v8
 ; LMULMAX2-RV32F-NEXT:    fsrm a1
-; LMULMAX2-RV32F-NEXT:    vsrl.vi v9, v10, 23
+; LMULMAX2-RV32F-NEXT:    vsrl.vi v8, v9, 23
 ; LMULMAX2-RV32F-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; LMULMAX2-RV32F-NEXT:    vzext.vf2 v10, v9
+; LMULMAX2-RV32F-NEXT:    vzext.vf2 v9, v8
 ; LMULMAX2-RV32F-NEXT:    li a1, 127
-; LMULMAX2-RV32F-NEXT:    vsub.vx v9, v10, a1
+; LMULMAX2-RV32F-NEXT:    vsub.vx v8, v9, a1
 ; LMULMAX2-RV32F-NEXT:    li a1, 64
-; LMULMAX2-RV32F-NEXT:    vmv.v.v v0, v8
-; LMULMAX2-RV32F-NEXT:    vmerge.vxm v8, v9, a1, v0
+; LMULMAX2-RV32F-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; LMULMAX2-RV32F-NEXT:    vse64.v v8, (a0)
 ; LMULMAX2-RV32F-NEXT:    ret
 ;
@@ -549,10 +545,9 @@ define void @cttz_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV64F-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-RV64F-NEXT:    vrsub.vi v9, v8, 0
 ; LMULMAX2-RV64F-NEXT:    vand.vv v9, v8, v9
-; LMULMAX2-RV64F-NEXT:    vmset.m v0
 ; LMULMAX2-RV64F-NEXT:    fsrmi a1, 1
 ; LMULMAX2-RV64F-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; LMULMAX2-RV64F-NEXT:    vfncvt.f.xu.w v10, v9, v0.t
+; LMULMAX2-RV64F-NEXT:    vfncvt.f.xu.w v10, v9
 ; LMULMAX2-RV64F-NEXT:    fsrm a1
 ; LMULMAX2-RV64F-NEXT:    vsrl.vi v9, v10, 23
 ; LMULMAX2-RV64F-NEXT:    li a1, 127
@@ -567,24 +562,22 @@ define void @cttz_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32D-LABEL: cttz_v2i64:
 ; LMULMAX2-RV32D:       # %bb.0:
 ; LMULMAX2-RV32D-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX2-RV32D-NEXT:    vle64.v v9, (a0)
+; LMULMAX2-RV32D-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-RV32D-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX2-RV32D-NEXT:    vmv.v.i v10, 0
+; LMULMAX2-RV32D-NEXT:    vmv.v.i v9, 0
 ; LMULMAX2-RV32D-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX2-RV32D-NEXT:    vmseq.vv v8, v9, v10
-; LMULMAX2-RV32D-NEXT:    vsub.vv v10, v10, v9
-; LMULMAX2-RV32D-NEXT:    vand.vv v9, v9, v10
-; LMULMAX2-RV32D-NEXT:    vmset.m v0
+; LMULMAX2-RV32D-NEXT:    vmseq.vv v0, v8, v9
+; LMULMAX2-RV32D-NEXT:    vsub.vv v9, v9, v8
+; LMULMAX2-RV32D-NEXT:    vand.vv v8, v8, v9
 ; LMULMAX2-RV32D-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV32D-NEXT:    vfcvt.f.xu.v v9, v9, v0.t
+; LMULMAX2-RV32D-NEXT:    vfcvt.f.xu.v v8, v8
 ; LMULMAX2-RV32D-NEXT:    fsrm a1
 ; LMULMAX2-RV32D-NEXT:    li a1, 52
-; LMULMAX2-RV32D-NEXT:    vsrl.vx v9, v9, a1
+; LMULMAX2-RV32D-NEXT:    vsrl.vx v8, v8, a1
 ; LMULMAX2-RV32D-NEXT:    li a1, 1023
-; LMULMAX2-RV32D-NEXT:    vsub.vx v9, v9, a1
+; LMULMAX2-RV32D-NEXT:    vsub.vx v8, v8, a1
 ; LMULMAX2-RV32D-NEXT:    li a1, 64
-; LMULMAX2-RV32D-NEXT:    vmv.v.v v0, v8
-; LMULMAX2-RV32D-NEXT:    vmerge.vxm v8, v9, a1, v0
+; LMULMAX2-RV32D-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; LMULMAX2-RV32D-NEXT:    vse64.v v8, (a0)
 ; LMULMAX2-RV32D-NEXT:    ret
 ;
@@ -594,9 +587,8 @@ define void @cttz_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV64D-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-RV64D-NEXT:    vrsub.vi v9, v8, 0
 ; LMULMAX2-RV64D-NEXT:    vand.vv v9, v8, v9
-; LMULMAX2-RV64D-NEXT:    vmset.m v0
 ; LMULMAX2-RV64D-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV64D-NEXT:    vfcvt.f.xu.v v9, v9, v0.t
+; LMULMAX2-RV64D-NEXT:    vfcvt.f.xu.v v9, v9
 ; LMULMAX2-RV64D-NEXT:    fsrm a1
 ; LMULMAX2-RV64D-NEXT:    li a1, 52
 ; LMULMAX2-RV64D-NEXT:    vsrl.vx v9, v9, a1
@@ -611,24 +603,22 @@ define void @cttz_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-RV32-LABEL: cttz_v2i64:
 ; LMULMAX8-RV32:       # %bb.0:
 ; LMULMAX8-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX8-RV32-NEXT:    vle64.v v9, (a0)
+; LMULMAX8-RV32-NEXT:    vle64.v v8, (a0)
 ; LMULMAX8-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v10, 0
+; LMULMAX8-RV32-NEXT:    vmv.v.i v9, 0
 ; LMULMAX8-RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; LMULMAX8-RV32-NEXT:    vmseq.vv v8, v9, v10
-; LMULMAX8-RV32-NEXT:    vsub.vv v10, v10, v9
-; LMULMAX8-RV32-NEXT:    vand.vv v9, v9, v10
-; LMULMAX8-RV32-NEXT:    vmset.m v0
+; LMULMAX8-RV32-NEXT:    vmseq.vv v0, v8, v9
+; LMULMAX8-RV32-NEXT:    vsub.vv v9, v9, v8
+; LMULMAX8-RV32-NEXT:    vand.vv v8, v8, v9
 ; LMULMAX8-RV32-NEXT:    fsrmi a1, 1
-; LMULMAX8-RV32-NEXT:    vfcvt.f.xu.v v9, v9, v0.t
+; LMULMAX8-RV32-NEXT:    vfcvt.f.xu.v v8, v8
 ; LMULMAX8-RV32-NEXT:    fsrm a1
 ; LMULMAX8-RV32-NEXT:    li a1, 52
-; LMULMAX8-RV32-NEXT:    vsrl.vx v9, v9, a1
+; LMULMAX8-RV32-NEXT:    vsrl.vx v8, v8, a1
 ; LMULMAX8-RV32-NEXT:    li a1, 1023
-; LMULMAX8-RV32-NEXT:    vsub.vx v9, v9, a1
+; LMULMAX8-RV32-NEXT:    vsub.vx v8, v8, a1
 ; LMULMAX8-RV32-NEXT:    li a1, 64
-; LMULMAX8-RV32-NEXT:    vmv.v.v v0, v8
-; LMULMAX8-RV32-NEXT:    vmerge.vxm v8, v9, a1, v0
+; LMULMAX8-RV32-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; LMULMAX8-RV32-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-RV32-NEXT:    ret
 ;
@@ -638,9 +628,8 @@ define void @cttz_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-RV64-NEXT:    vle64.v v8, (a0)
 ; LMULMAX8-RV64-NEXT:    vrsub.vi v9, v8, 0
 ; LMULMAX8-RV64-NEXT:    vand.vv v9, v8, v9
-; LMULMAX8-RV64-NEXT:    vmset.m v0
 ; LMULMAX8-RV64-NEXT:    fsrmi a1, 1
-; LMULMAX8-RV64-NEXT:    vfcvt.f.xu.v v9, v9, v0.t
+; LMULMAX8-RV64-NEXT:    vfcvt.f.xu.v v9, v9
 ; LMULMAX8-RV64-NEXT:    fsrm a1
 ; LMULMAX8-RV64-NEXT:    li a1, 52
 ; LMULMAX8-RV64-NEXT:    vsrl.vx v9, v9, a1
@@ -999,9 +988,8 @@ define void @cttz_v8i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32F-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-RV32F-NEXT:    vrsub.vi v10, v8, 0
 ; LMULMAX2-RV32F-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-RV32F-NEXT:    vmset.m v0
 ; LMULMAX2-RV32F-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV32F-NEXT:    vfcvt.f.xu.v v10, v10, v0.t
+; LMULMAX2-RV32F-NEXT:    vfcvt.f.xu.v v10, v10
 ; LMULMAX2-RV32F-NEXT:    fsrm a1
 ; LMULMAX2-RV32F-NEXT:    vsrl.vi v10, v10, 23
 ; LMULMAX2-RV32F-NEXT:    li a1, 127
@@ -1018,9 +1006,8 @@ define void @cttz_v8i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV64F-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-RV64F-NEXT:    vrsub.vi v10, v8, 0
 ; LMULMAX2-RV64F-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-RV64F-NEXT:    vmset.m v0
 ; LMULMAX2-RV64F-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV64F-NEXT:    vfcvt.f.xu.v v10, v10, v0.t
+; LMULMAX2-RV64F-NEXT:    vfcvt.f.xu.v v10, v10
 ; LMULMAX2-RV64F-NEXT:    fsrm a1
 ; LMULMAX2-RV64F-NEXT:    vsrl.vi v10, v10, 23
 ; LMULMAX2-RV64F-NEXT:    li a1, 127
@@ -1037,9 +1024,8 @@ define void @cttz_v8i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32D-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-RV32D-NEXT:    vrsub.vi v10, v8, 0
 ; LMULMAX2-RV32D-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-RV32D-NEXT:    vmset.m v0
 ; LMULMAX2-RV32D-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV32D-NEXT:    vfcvt.f.xu.v v10, v10, v0.t
+; LMULMAX2-RV32D-NEXT:    vfcvt.f.xu.v v10, v10
 ; LMULMAX2-RV32D-NEXT:    fsrm a1
 ; LMULMAX2-RV32D-NEXT:    vsrl.vi v10, v10, 23
 ; LMULMAX2-RV32D-NEXT:    li a1, 127
@@ -1056,9 +1042,8 @@ define void @cttz_v8i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV64D-NEXT:    vle32.v v8, (a0)
 ; LMULMAX2-RV64D-NEXT:    vrsub.vi v10, v8, 0
 ; LMULMAX2-RV64D-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-RV64D-NEXT:    vmset.m v0
 ; LMULMAX2-RV64D-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV64D-NEXT:    vfcvt.f.xu.v v10, v10, v0.t
+; LMULMAX2-RV64D-NEXT:    vfcvt.f.xu.v v10, v10
 ; LMULMAX2-RV64D-NEXT:    fsrm a1
 ; LMULMAX2-RV64D-NEXT:    vsrl.vi v10, v10, 23
 ; LMULMAX2-RV64D-NEXT:    li a1, 127
@@ -1184,26 +1169,24 @@ define void @cttz_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32F-LABEL: cttz_v4i64:
 ; LMULMAX2-RV32F:       # %bb.0:
 ; LMULMAX2-RV32F-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; LMULMAX2-RV32F-NEXT:    vle64.v v10, (a0)
+; LMULMAX2-RV32F-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-RV32F-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX2-RV32F-NEXT:    vmv.v.i v12, 0
+; LMULMAX2-RV32F-NEXT:    vmv.v.i v10, 0
 ; LMULMAX2-RV32F-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; LMULMAX2-RV32F-NEXT:    vmseq.vv v8, v10, v12
-; LMULMAX2-RV32F-NEXT:    vsub.vv v12, v12, v10
-; LMULMAX2-RV32F-NEXT:    vand.vv v10, v10, v12
-; LMULMAX2-RV32F-NEXT:    vmset.m v0
+; LMULMAX2-RV32F-NEXT:    vmseq.vv v0, v8, v10
+; LMULMAX2-RV32F-NEXT:    vsub.vv v10, v10, v8
+; LMULMAX2-RV32F-NEXT:    vand.vv v8, v8, v10
 ; LMULMAX2-RV32F-NEXT:    fsrmi a1, 1
 ; LMULMAX2-RV32F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; LMULMAX2-RV32F-NEXT:    vfncvt.f.xu.w v9, v10, v0.t
+; LMULMAX2-RV32F-NEXT:    vfncvt.f.xu.w v10, v8
 ; LMULMAX2-RV32F-NEXT:    fsrm a1
-; LMULMAX2-RV32F-NEXT:    vsrl.vi v9, v9, 23
+; LMULMAX2-RV32F-NEXT:    vsrl.vi v8, v10, 23
 ; LMULMAX2-RV32F-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; LMULMAX2-RV32F-NEXT:    vzext.vf2 v10, v9
+; LMULMAX2-RV32F-NEXT:    vzext.vf2 v10, v8
 ; LMULMAX2-RV32F-NEXT:    li a1, 127
-; LMULMAX2-RV32F-NEXT:    vsub.vx v10, v10, a1
+; LMULMAX2-RV32F-NEXT:    vsub.vx v8, v10, a1
 ; LMULMAX2-RV32F-NEXT:    li a1, 64
-; LMULMAX2-RV32F-NEXT:    vmv1r.v v0, v8
-; LMULMAX2-RV32F-NEXT:    vmerge.vxm v8, v10, a1, v0
+; LMULMAX2-RV32F-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; LMULMAX2-RV32F-NEXT:    vse64.v v8, (a0)
 ; LMULMAX2-RV32F-NEXT:    ret
 ;
@@ -1213,10 +1196,9 @@ define void @cttz_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV64F-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-RV64F-NEXT:    vrsub.vi v10, v8, 0
 ; LMULMAX2-RV64F-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-RV64F-NEXT:    vmset.m v0
 ; LMULMAX2-RV64F-NEXT:    fsrmi a1, 1
 ; LMULMAX2-RV64F-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
-; LMULMAX2-RV64F-NEXT:    vfncvt.f.xu.w v12, v10, v0.t
+; LMULMAX2-RV64F-NEXT:    vfncvt.f.xu.w v12, v10
 ; LMULMAX2-RV64F-NEXT:    fsrm a1
 ; LMULMAX2-RV64F-NEXT:    vsrl.vi v10, v12, 23
 ; LMULMAX2-RV64F-NEXT:    li a1, 127
@@ -1231,24 +1213,22 @@ define void @cttz_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV32D-LABEL: cttz_v4i64:
 ; LMULMAX2-RV32D:       # %bb.0:
 ; LMULMAX2-RV32D-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; LMULMAX2-RV32D-NEXT:    vle64.v v10, (a0)
+; LMULMAX2-RV32D-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-RV32D-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX2-RV32D-NEXT:    vmv.v.i v12, 0
+; LMULMAX2-RV32D-NEXT:    vmv.v.i v10, 0
 ; LMULMAX2-RV32D-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; LMULMAX2-RV32D-NEXT:    vmseq.vv v8, v10, v12
-; LMULMAX2-RV32D-NEXT:    vsub.vv v12, v12, v10
-; LMULMAX2-RV32D-NEXT:    vand.vv v10, v10, v12
-; LMULMAX2-RV32D-NEXT:    vmset.m v0
+; LMULMAX2-RV32D-NEXT:    vmseq.vv v0, v8, v10
+; LMULMAX2-RV32D-NEXT:    vsub.vv v10, v10, v8
+; LMULMAX2-RV32D-NEXT:    vand.vv v8, v8, v10
 ; LMULMAX2-RV32D-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV32D-NEXT:    vfcvt.f.xu.v v10, v10, v0.t
+; LMULMAX2-RV32D-NEXT:    vfcvt.f.xu.v v8, v8
 ; LMULMAX2-RV32D-NEXT:    fsrm a1
 ; LMULMAX2-RV32D-NEXT:    li a1, 52
-; LMULMAX2-RV32D-NEXT:    vsrl.vx v10, v10, a1
+; LMULMAX2-RV32D-NEXT:    vsrl.vx v8, v8, a1
 ; LMULMAX2-RV32D-NEXT:    li a1, 1023
-; LMULMAX2-RV32D-NEXT:    vsub.vx v10, v10, a1
+; LMULMAX2-RV32D-NEXT:    vsub.vx v8, v8, a1
 ; LMULMAX2-RV32D-NEXT:    li a1, 64
-; LMULMAX2-RV32D-NEXT:    vmv1r.v v0, v8
-; LMULMAX2-RV32D-NEXT:    vmerge.vxm v8, v10, a1, v0
+; LMULMAX2-RV32D-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; LMULMAX2-RV32D-NEXT:    vse64.v v8, (a0)
 ; LMULMAX2-RV32D-NEXT:    ret
 ;
@@ -1258,9 +1238,8 @@ define void @cttz_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX2-RV64D-NEXT:    vle64.v v8, (a0)
 ; LMULMAX2-RV64D-NEXT:    vrsub.vi v10, v8, 0
 ; LMULMAX2-RV64D-NEXT:    vand.vv v10, v8, v10
-; LMULMAX2-RV64D-NEXT:    vmset.m v0
 ; LMULMAX2-RV64D-NEXT:    fsrmi a1, 1
-; LMULMAX2-RV64D-NEXT:    vfcvt.f.xu.v v10, v10, v0.t
+; LMULMAX2-RV64D-NEXT:    vfcvt.f.xu.v v10, v10
 ; LMULMAX2-RV64D-NEXT:    fsrm a1
 ; LMULMAX2-RV64D-NEXT:    li a1, 52
 ; LMULMAX2-RV64D-NEXT:    vsrl.vx v10, v10, a1
@@ -1275,24 +1254,22 @@ define void @cttz_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-RV32-LABEL: cttz_v4i64:
 ; LMULMAX8-RV32:       # %bb.0:
 ; LMULMAX8-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; LMULMAX8-RV32-NEXT:    vle64.v v10, (a0)
+; LMULMAX8-RV32-NEXT:    vle64.v v8, (a0)
 ; LMULMAX8-RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; LMULMAX8-RV32-NEXT:    vmv.v.i v12, 0
+; LMULMAX8-RV32-NEXT:    vmv.v.i v10, 0
 ; LMULMAX8-RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; LMULMAX8-RV32-NEXT:    vmseq.vv v8, v10, v12
-; LMULMAX8-RV32-NEXT:    vsub.vv v12, v12, v10
-; LMULMAX8-RV32-NEXT:    vand.vv v10, v10, v12
-; LMULMAX8-RV32-NEXT:    vmset.m v0
+; LMULMAX8-RV32-NEXT:    vmseq.vv v0, v8, v10
+; LMULMAX8-RV32-NEXT:    vsub.vv v10, v10, v8
+; LMULMAX8-RV32-NEXT:    vand.vv v8, v8, v10
 ; LMULMAX8-RV32-NEXT:    fsrmi a1, 1
-; LMULMAX8-RV32-NEXT:    vfcvt.f.xu.v v10, v10, v0.t
+; LMULMAX8-RV32-NEXT:    vfcvt.f.xu.v v8, v8
 ; LMULMAX8-RV32-NEXT:    fsrm a1
 ; LMULMAX8-RV32-NEXT:    li a1, 52
-; LMULMAX8-RV32-NEXT:    vsrl.vx v10, v10, a1
+; LMULMAX8-RV32-NEXT:    vsrl.vx v8, v8, a1
 ; LMULMAX8-RV32-NEXT:    li a1, 1023
-; LMULMAX8-RV32-NEXT:    vsub.vx v10, v10, a1
+; LMULMAX8-RV32-NEXT:    vsub.vx v8, v8, a1
 ; LMULMAX8-RV32-NEXT:    li a1, 64
-; LMULMAX8-RV32-NEXT:    vmv1r.v v0, v8
-; LMULMAX8-RV32-NEXT:    vmerge.vxm v8, v10, a1, v0
+; LMULMAX8-RV32-NEXT:    vmerge.vxm v8, v8, a1, v0
 ; LMULMAX8-RV32-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-RV32-NEXT:    ret
 ;
@@ -1302,9 +1279,8 @@ define void @cttz_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-RV64-NEXT:    vle64.v v8, (a0)
 ; LMULMAX8-RV64-NEXT:    vrsub.vi v10, v8, 0
 ; LMULMAX8-RV64-NEXT:    vand.vv v10, v8, v10
-; LMULMAX8-RV64-NEXT:    vmset.m v0
 ; LMULMAX8-RV64-NEXT:    fsrmi a1, 1
-; LMULMAX8-RV64-NEXT:    vfcvt.f.xu.v v10, v10, v0.t
+; LMULMAX8-RV64-NEXT:    vfcvt.f.xu.v v10, v10
 ; LMULMAX8-RV64-NEXT:    fsrm a1
 ; LMULMAX8-RV64-NEXT:    li a1, 52
 ; LMULMAX8-RV64-NEXT:    vsrl.vx v10, v10, a1
