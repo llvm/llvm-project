@@ -6078,7 +6078,8 @@ bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
   if (!section)
     return false;
   const bool is_dsym = (m_header.filetype == MH_DSYM);
-  if (section->GetFileSize() == 0 && !is_dsym)
+  if (section->GetFileSize() == 0 && !is_dsym &&
+      section->GetName() != GetSegmentNameDATA())
     return false;
   if (section->IsThreadSpecific())
     return false;
