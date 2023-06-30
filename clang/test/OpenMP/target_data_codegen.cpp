@@ -63,7 +63,9 @@ void foo(int arg) {
 
   // CK1: %{{.+}} = add nsw i32 %{{[^,]+}}, 1
 
-  // CK1-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV]], i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE00]], ptr [[MTYPE00]], ptr null, ptr null)
+  // CK1-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV:%[^,]+]], i32 1, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[SIZE00]], ptr [[MTYPE00]], ptr null, ptr null)
+  // CK1-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
+  // CK1-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
   // CK1-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
 // CK1-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
   #pragma omp target data if(1+3-5) device(arg) map(from: gc)
@@ -352,11 +354,11 @@ int bar(int arg){
 }
 
 // Region 00
-// CK2-DAG: [[DEV:%[^,]+]] = sext i32 [[DEVi32:%[^,]+]] to i64
-// CK2-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK2: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CK2: [[IFTHEN]]
-// CK2-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK2-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 [[DEV:%[^,]+]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK2-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
+// CK2-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK2-DAG: [[GEPBP]] = getelementptr inbounds [2 x ptr], ptr [[BP:%[^,]+]]
 // CK2-DAG: [[GEPP]] = getelementptr inbounds [2 x ptr], ptr [[P:%[^,]+]]
 // CK2-DAG: [[GEPS]] = getelementptr inbounds [2 x i64], ptr [[PS:%[^,]+]]
@@ -386,7 +388,9 @@ int bar(int arg){
 // CK2: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 
 // CK2: [[IFTHEN]]
-// CK2-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK2-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV:%[^,]+]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%[^,]+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK2-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
+// CK2-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK2-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
 // CK2-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
 // CK2-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PS]]
@@ -463,11 +467,11 @@ int bar(int arg){
 }
 
 // Region 00
-// CK4-DAG: [[DEV:%[^,]+]] = sext i32 [[DEVi32:%[^,]+]] to i64
-// CK4-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK4: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 // CK4: [[IFTHEN]]
-// CK4-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%.+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK4-DAG: call void @__tgt_target_data_begin_mapper(ptr @{{.+}}, i64 [[DEV:%[^,]+]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%.+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK4-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
+// CK4-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK4-DAG: [[GEPBP]] = getelementptr inbounds [2 x ptr], ptr [[BP:%[^,]+]]
 // CK4-DAG: [[GEPP]] = getelementptr inbounds [2 x ptr], ptr [[P:%[^,]+]]
 // CK4-DAG: [[GEPS]] = getelementptr inbounds [2 x i64], ptr [[PS:%[^,]+]]
@@ -497,7 +501,9 @@ int bar(int arg){
 // CK4: br i1 %{{[^,]+}}, label %[[IFTHEN:[^,]+]], label %[[IFELSE:[^,]+]]
 
 // CK4: [[IFTHEN]]
-// CK4-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%.+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK4-DAG: call void @__tgt_target_data_end_mapper(ptr @{{.+}}, i64 [[DEV:%[^,]+]], i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPS:%.+]], ptr [[MTYPE00]], ptr null, ptr null)
+// CK4-DAG: [[DEV]] = sext i32 [[DEVi32:%[^,]+]] to i64
+// CK4-DAG: [[DEVi32]] = load i32, ptr %{{[^,]+}},
 // CK4-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
 // CK4-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P]]
 // CK4-DAG: [[GEPS]] = getelementptr inbounds {{.+}}[[PS]]
