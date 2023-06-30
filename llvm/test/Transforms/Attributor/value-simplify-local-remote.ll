@@ -310,7 +310,7 @@ entry:
 define weak_odr void @t3() {
 ; CHECK-LABEL: define {{[^@]+}}@t3() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr noalias nocapture noundef align 4294967296 null, i8 noundef 0, i1 noundef false, i1 noundef false)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nocapture noundef align 4294967296 null, i8 noundef 0, i1 noundef false, i1 noundef false)
 ; CHECK-NEXT:    br label [[USER_CODE_ENTRY:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]

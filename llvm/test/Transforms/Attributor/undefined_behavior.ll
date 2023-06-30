@@ -763,7 +763,7 @@ define void @arg_nonnull_violation3_1(i1 %c) {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR7:[0-9]+]]
-; TUNIT-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr noalias nocapture nofree noundef writeonly align 4294967296 null) #[[ATTR7]]
+; TUNIT-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef writeonly align 4294967296 null) #[[ATTR7]]
 ; TUNIT-NEXT:    unreachable
 ; TUNIT:       f:
 ; TUNIT-NEXT:    unreachable
@@ -777,7 +777,7 @@ define void @arg_nonnull_violation3_1(i1 %c) {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR11:[0-9]+]]
-; CGSCC-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr noalias nocapture nofree noundef writeonly align 4294967296 null) #[[ATTR11]]
+; CGSCC-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef writeonly align 4294967296 null) #[[ATTR11]]
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       f:
 ; CGSCC-NEXT:    unreachable
@@ -810,7 +810,7 @@ define void @arg_nonnull_violation3_2(i1 %c) {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
 ; TUNIT-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR7]]
-; TUNIT-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr noalias nocapture nofree noundef writeonly align 4294967296 null) #[[ATTR7]]
+; TUNIT-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef writeonly align 4294967296 null) #[[ATTR7]]
 ; TUNIT-NEXT:    unreachable
 ; TUNIT:       f:
 ; TUNIT-NEXT:    unreachable
@@ -824,7 +824,7 @@ define void @arg_nonnull_violation3_2(i1 %c) {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
 ; CGSCC-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR11]]
-; CGSCC-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr noalias nocapture nofree noundef writeonly align 4294967296 null) #[[ATTR11]]
+; CGSCC-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef writeonly align 4294967296 null) #[[ATTR11]]
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       f:
 ; CGSCC-NEXT:    unreachable

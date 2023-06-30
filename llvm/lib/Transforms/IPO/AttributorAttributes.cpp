@@ -3892,6 +3892,34 @@ private:
 
 /// ------------------------ NoAlias Argument Attribute ------------------------
 
+bool AANoAlias::isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                              Attribute::AttrKind ImpliedAttributeKind,
+                              bool IgnoreSubsumingPositions) {
+  assert(ImpliedAttributeKind == Attribute::NoAlias &&
+         "Unexpected attribute kind");
+  Value *Val = &IRP.getAssociatedValue();
+  if (IRP.getPositionKind() != IRP_CALL_SITE_ARGUMENT) {
+    if (isa<AllocaInst>(Val))
+      return true;
+  } else {
+    IgnoreSubsumingPositions = true;
+  }
+
+  if (isa<UndefValue>(Val))
+    return true;
+
+  if (isa<ConstantPointerNull>(Val) &&
+      !NullPointerIsDefined(IRP.getAnchorScope(),
+                            Val->getType()->getPointerAddressSpace()))
+    return true;
+
+  if (A.hasAttr(IRP, {Attribute::ByVal, Attribute::NoAlias},
+                IgnoreSubsumingPositions, Attribute::NoAlias))
+    return true;
+
+  return false;
+}
+
 namespace {
 struct AANoAliasImpl : AANoAlias {
   AANoAliasImpl(const IRPosition &IRP, Attributor &A) : AANoAlias(IRP, A) {
@@ -3909,41 +3937,6 @@ struct AANoAliasFloating final : AANoAliasImpl {
   AANoAliasFloating(const IRPosition &IRP, Attributor &A)
       : AANoAliasImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    AANoAliasImpl::initialize(A);
-    Value *Val = &getAssociatedValue();
-    do {
-      CastInst *CI = dyn_cast<CastInst>(Val);
-      if (!CI)
-        break;
-      Value *Base = CI->getOperand(0);
-      if (!Base->hasOneUse())
-        break;
-      Val = Base;
-    } while (true);
-
-    if (!Val->getType()->isPointerTy()) {
-      indicatePessimisticFixpoint();
-      return;
-    }
-
-    if (isa<AllocaInst>(Val))
-      indicateOptimisticFixpoint();
-    else if (isa<ConstantPointerNull>(Val) &&
-             !NullPointerIsDefined(getAnchorScope(),
-                                   Val->getType()->getPointerAddressSpace()))
-      indicateOptimisticFixpoint();
-    else if (Val != &getAssociatedValue()) {
-      bool IsKnownNoAlias;
-      AA::hasAssumedIRAttr<Attribute::NoAlias>(A, this, IRPosition::value(*Val),
-                                               DepClassTy::OPTIONAL,
-                                               IsKnownNoAlias);
-      if (IsKnownNoAlias)
-        indicateOptimisticFixpoint();
-    }
-  }
-
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Implement this.
@@ -3958,17 +3951,13 @@ struct AANoAliasFloating final : AANoAliasImpl {
 
 /// NoAlias attribute for an argument.
 struct AANoAliasArgument final
-    : AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl> {
-  using Base = AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl>;
+    : AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl,
+                                      AANoAlias::StateType, false,
+                                      Attribute::NoAlias> {
+  using Base = AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl,
+                                               AANoAlias::StateType, false,
+                                               Attribute::NoAlias>;
   AANoAliasArgument(const IRPosition &IRP, Attributor &A) : Base(IRP, A) {}
-
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    Base::initialize(A);
-    // See callsite argument attribute and callee argument attribute.
-    if (A.hasAttr(getIRPosition(), {Attribute::ByVal}))
-      indicateOptimisticFixpoint();
-  }
 
   /// See AbstractAttribute::update(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -4013,19 +4002,6 @@ struct AANoAliasArgument final
 struct AANoAliasCallSiteArgument final : AANoAliasImpl {
   AANoAliasCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AANoAliasImpl(IRP, A) {}
-
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    // See callsite argument attribute and callee argument attribute.
-    const auto &CB = cast<CallBase>(getAnchorValue());
-    if (CB.paramHasAttr(getCallSiteArgNo(), Attribute::NoAlias))
-      indicateOptimisticFixpoint();
-    Value &Val = getAssociatedValue();
-    if (isa<ConstantPointerNull>(Val) &&
-        !NullPointerIsDefined(getAnchorScope(),
-                              Val.getType()->getPointerAddressSpace()))
-      indicateOptimisticFixpoint();
-  }
 
   /// Determine if the underlying value may alias with the call site argument
   /// \p OtherArgNo of \p ICS (= the underlying call site).
@@ -4075,10 +4051,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     return IsAliasing;
   }
 
-  bool
-  isKnownNoAliasDueToNoAliasPreservation(Attributor &A, AAResults *&AAR,
-                                         const AAMemoryBehavior &MemBehaviorAA,
-                                         const AANoAlias &NoAliasAA) {
+  bool isKnownNoAliasDueToNoAliasPreservation(
+      Attributor &A, AAResults *&AAR, const AAMemoryBehavior &MemBehaviorAA) {
     // We can deduce "noalias" if the following conditions hold.
     // (i)   Associated value is assumed to be noalias in the definition.
     // (ii)  Associated value is assumed to be no-capture in all the uses
@@ -4086,20 +4060,11 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // (iii) There is no other pointer argument which could alias with the
     //       value.
 
-    bool AssociatedValueIsNoAliasAtDef = NoAliasAA.isAssumedNoAlias();
-    if (!AssociatedValueIsNoAliasAtDef) {
-      LLVM_DEBUG(dbgs() << "[AANoAlias] " << getAssociatedValue()
-                        << " is not no-alias at the definition\n");
-      return false;
-    }
-
     auto IsDereferenceableOrNull = [&](Value *O, const DataLayout &DL) {
       const auto *DerefAA = A.getAAFor<AADereferenceable>(
           *this, IRPosition::value(*O), DepClassTy::OPTIONAL);
       return DerefAA ? DerefAA->getAssumedDereferenceableBytes() : 0;
     };
-
-    A.recordDependence(NoAliasAA, *this, DepClassTy::OPTIONAL);
 
     const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
     const Function *ScopeFn = VIRP.getAnchorScope();
@@ -4186,14 +4151,18 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       return ChangeStatus::UNCHANGED;
     }
 
+    bool IsKnownNoAlias;
     const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
-    const auto *NoAliasAA =
-        A.getAAFor<AANoAlias>(*this, VIRP, DepClassTy::NONE);
+    if (!AA::hasAssumedIRAttr<Attribute::NoAlias>(
+            A, this, VIRP, DepClassTy::REQUIRED, IsKnownNoAlias)) {
+      LLVM_DEBUG(dbgs() << "[AANoAlias] " << getAssociatedValue()
+                        << " is not no-alias at the definition\n");
+      return indicatePessimisticFixpoint();
+    }
 
     AAResults *AAR = nullptr;
-    if (MemBehaviorAA && NoAliasAA &&
-        isKnownNoAliasDueToNoAliasPreservation(A, AAR, *MemBehaviorAA,
-                                               *NoAliasAA)) {
+    if (MemBehaviorAA &&
+        isKnownNoAliasDueToNoAliasPreservation(A, AAR, *MemBehaviorAA)) {
       LLVM_DEBUG(
           dbgs() << "[AANoAlias] No-Alias deduced via no-alias preservation\n");
       return ChangeStatus::UNCHANGED;
@@ -8784,9 +8753,10 @@ void AAMemoryLocationImpl::categorizePtrValue(
     } else if (isa<AllocaInst>(&Obj)) {
       MLK = NO_LOCAL_MEM;
     } else if (const auto *CB = dyn_cast<CallBase>(&Obj)) {
-      const auto *NoAliasAA = A.getAAFor<AANoAlias>(
-          *this, IRPosition::callsite_returned(*CB), DepClassTy::OPTIONAL);
-      if (NoAliasAA && NoAliasAA->isAssumedNoAlias())
+      bool IsKnownNoAlias;
+      if (AA::hasAssumedIRAttr<Attribute::NoAlias>(
+              A, this, IRPosition::callsite_returned(*CB), DepClassTy::OPTIONAL,
+              IsKnownNoAlias))
         MLK = NO_MALLOCED_MEM;
       else
         MLK = NO_UNKOWN_MEM;

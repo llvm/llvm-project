@@ -3775,22 +3775,13 @@ struct AANoAlias
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
 
+  /// See IRAttribute::isImpliedByIR
   static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
                             Attribute::AttrKind ImpliedAttributeKind,
-                            bool IgnoreSubsumingPositions = false) {
-    if (IRAttribute::isImpliedByIR(A, IRP, ImpliedAttributeKind,
-                                   IgnoreSubsumingPositions))
-      return true;
+                            bool IgnoreSubsumingPositions = false);
 
-    Value &Val = IRP.getAnchorValue();
-    if (isa<AllocaInst>(Val))
-      return true;
-    if (isa<ConstantPointerNull>(Val) &&
-        !NullPointerIsDefined(IRP.getAnchorScope(),
-                              Val.getType()->getPointerAddressSpace()))
-      return true;
-    return false;
-  }
+  /// See AbstractAttribute::requiresCalleeForCallBase
+  static bool requiresCalleeForCallBase() { return false; }
 
   /// Return true if we assume that the underlying value is alias.
   bool isAssumedNoAlias() const { return getAssumed(); }
