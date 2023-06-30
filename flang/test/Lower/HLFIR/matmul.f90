@@ -48,7 +48,7 @@ endsubroutine
 ! CHECK-NEXT:    %[[C1:.*]] = arith.constant 1 : index
 ! CHECK-NEXT:    %[[B_DIMS_1:.*]]:3 = fir.box_dims %[[B_BOX]], %[[C1]]
 ! CHECK-NEXT:    %[[B_SHAPE:.*]] = fir.shape %[[B_DIMS_0]]#1, %[[B_DIMS_1]]#1
-! CHECK-NEXT:    %[[ELEMENTAL:.*]] = hlfir.elemental %[[B_SHAPE]] : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
+! CHECK-NEXT:    %[[ELEMENTAL:.*]] = hlfir.elemental %[[B_SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
 
 ! CHECK:         }
 ! CHECK-NEXT:    %[[A_BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>

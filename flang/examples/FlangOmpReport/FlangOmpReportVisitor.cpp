@@ -180,8 +180,8 @@ void OpenMPCounterVisitor::PostConstructsCommon() {
       clauseStrings[curConstruct].begin(), clauseStrings[curConstruct].end());
 
   SourcePosition s{getLocation(*curConstruct)};
-  LogRecord r{s.file.path(), s.line, getName(*curConstruct),
-      clauseStrings[curConstruct]};
+  LogRecord r{
+      s.path, s.line, getName(*curConstruct), clauseStrings[curConstruct]};
   constructClauses.push_back(r);
 
   auto it = clauseStrings.find(curConstruct);

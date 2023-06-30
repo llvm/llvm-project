@@ -8,7 +8,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPbinary(
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_3:[^)]*]]) {{.*}}x
 ! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_6:[^)]*]]) {{.*}}y
-! CHECK:  %[[VAL_8:.*]] = hlfir.elemental %[[VAL_3]] : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
+! CHECK:  %[[VAL_8:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
 ! CHECK:  ^bb0(%[[VAL_9:.*]]: index):
 ! CHECK:    %[[VAL_10:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:    %[[VAL_11:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
@@ -28,7 +28,7 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_3:[^)]*]]) {{.*}}x
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}} {{.*}}y
 ! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
-! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_3]] : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
+! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
 ! CHECK:  ^bb0(%[[VAL_8:.*]]: index):
 ! CHECK:    %[[VAL_9:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_8]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:    %[[VAL_10:.*]] = fir.load %[[VAL_9]] : !fir.ref<i32>
@@ -46,7 +46,7 @@ end subroutine
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_5:.*]]) typeparams %[[VAL_2:.*]]#1 {{.*}}x
 ! CHECK:  %[[VAL_11:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_10:.*]]) typeparams %[[VAL_7:.*]]#1 {{.*}}y
 ! CHECK:  %[[VAL_12:.*]] = arith.addi %[[VAL_2]]#1, %[[VAL_7]]#1 : index
-! CHECK:  %[[VAL_13:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_12]] : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
+! CHECK:  %[[VAL_13:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_12]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
 ! CHECK:  ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:    %[[VAL_15:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_14]])  typeparams %[[VAL_2]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 ! CHECK:    %[[VAL_16:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_14]])  typeparams %[[VAL_7]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
@@ -63,7 +63,7 @@ subroutine unary(x, n)
 end subroutine
 ! CHECK-LABEL: func.func @_QPunary(
 ! CHECK:  %[[VAL_10:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_9:[^)]*]]) {{.*}}x
-! CHECK:  %[[VAL_11:.*]] = hlfir.elemental %[[VAL_9]] : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
+! CHECK:  %[[VAL_11:.*]] = hlfir.elemental %[[VAL_9]] unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
 ! CHECK:  ^bb0(%[[VAL_12:.*]]: index):
 ! CHECK:    %[[VAL_13:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_12]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 ! CHECK:    %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.ref<!fir.logical<4>>
@@ -82,7 +82,7 @@ subroutine char_unary(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPchar_unary(
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_5:.*]]) typeparams %[[VAL_2:[^ ]*]] {{.*}}x
-! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_2]] : (!fir.shape<1>, index) -> !hlfir.expr<20x!fir.char<1,?>> {
+! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_2]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<20x!fir.char<1,?>> {
 ! CHECK:  ^bb0(%[[VAL_8:.*]]: index):
 ! CHECK:    %[[VAL_9:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_8]])  typeparams %[[VAL_2]] : (!fir.ref<!fir.array<20x!fir.char<1,10>>>, index, index) -> !fir.ref<!fir.char<1,10>>
 ! CHECK:    %[[VAL_10:.*]] = hlfir.as_expr %[[VAL_9]] : (!fir.ref<!fir.char<1,10>>) -> !hlfir.expr<!fir.char<1,10>>
@@ -99,7 +99,7 @@ end subroutine
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_4:[^)]*]]) {{.*}}x
 ! CHECK:  %[[VAL_8:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_7:[^)]*]]) {{.*}}y
 ! CHECK:  %[[VAL_11:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_10:[^)]*]]) {{.*}}z
-! CHECK:  %[[VAL_12:.*]] = hlfir.elemental %[[VAL_4]] : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
+! CHECK:  %[[VAL_12:.*]] = hlfir.elemental %[[VAL_4]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
 ! CHECK:  ^bb0(%[[VAL_13:.*]]: index):
 ! CHECK:    %[[VAL_14:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
 ! CHECK:    %[[VAL_15:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
@@ -108,7 +108,7 @@ end subroutine
 ! CHECK:    %[[VAL_18:.*]] = arith.addi %[[VAL_16]], %[[VAL_17]] : i32
 ! CHECK:    hlfir.yield_element %[[VAL_18]] : i32
 ! CHECK:  }
-! CHECK:  %[[VAL_19:.*]] = hlfir.elemental %[[VAL_4]] : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
+! CHECK:  %[[VAL_19:.*]] = hlfir.elemental %[[VAL_4]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
 ! CHECK:  ^bb0(%[[VAL_20:.*]]: index):
 ! CHECK:    %[[VAL_21:.*]] = hlfir.apply %[[VAL_22:.*]], %[[VAL_20]] : (!hlfir.expr<100xi32>, index) -> i32
 ! CHECK:    %[[VAL_23:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_20]])  : (!fir.ref<!fir.array<100xi32>>, index) -> !fir.ref<i32>
@@ -129,7 +129,7 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 100 : index
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %{{.*}}(%[[VAL_3:[^)]*]]) {{.*}}x
 ! CHECK:  %[[VAL_5:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_6:.*]] = hlfir.elemental %[[VAL_5]] : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
+! CHECK:  %[[VAL_6:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
 ! CHECK:  ^bb0(%[[VAL_7:.*]]: index):
 ! CHECK:    %[[VAL_8:.*]] = arith.constant 1 : index
 ! CHECK:    %[[VAL_9:.*]] = arith.subi %[[VAL_1]], %[[VAL_8]] : index

@@ -2112,21 +2112,21 @@ ExplicitSpecifier ExplicitSpecifier::getFromDecl(FunctionDecl *Function) {
   }
 }
 
-CXXDeductionGuideDecl *
-CXXDeductionGuideDecl::Create(ASTContext &C, DeclContext *DC,
-                              SourceLocation StartLoc, ExplicitSpecifier ES,
-                              const DeclarationNameInfo &NameInfo, QualType T,
-                              TypeSourceInfo *TInfo, SourceLocation EndLocation,
-                              CXXConstructorDecl *Ctor) {
+CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+    ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
+    TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
+    DeductionCandidate Kind) {
   return new (C, DC) CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T,
-                                           TInfo, EndLocation, Ctor);
+                                           TInfo, EndLocation, Ctor, Kind);
 }
 
 CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
                                                                  unsigned ID) {
   return new (C, ID) CXXDeductionGuideDecl(
       C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
-      QualType(), nullptr, SourceLocation(), nullptr);
+      QualType(), nullptr, SourceLocation(), nullptr,
+      DeductionCandidate::Normal);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(

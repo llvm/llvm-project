@@ -1108,7 +1108,6 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
 
   // Parallel operation operands
   mlir::Value async;
-  mlir::Value numGangs;
   mlir::Value numWorkers;
   mlir::Value vectorLength;
   mlir::Value ifCond;
@@ -1116,7 +1115,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value waitDevnum;
   llvm::SmallVector<mlir::Value> waitOperands, attachEntryOperands,
       copyEntryOperands, copyoutEntryOperands, createEntryOperands,
-      dataClauseOperands;
+      dataClauseOperands, numGangs;
 
   llvm::SmallVector<mlir::Value> reductionOperands, privateOperands,
       firstprivateOperands;
@@ -1147,8 +1146,9 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *numGangsClause =
                    std::get_if<Fortran::parser::AccClause::NumGangs>(
                        &clause.u)) {
-      numGangs = fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(numGangsClause->v), stmtCtx));
+      for (const Fortran::parser::ScalarIntExpr &expr : numGangsClause->v)
+        numGangs.push_back(fir::getBase(converter.genExprValue(
+            *Fortran::semantics::GetExpr(expr), stmtCtx)));
     } else if (const auto *numWorkersClause =
                    std::get_if<Fortran::parser::AccClause::NumWorkers>(
                        &clause.u)) {
@@ -1291,7 +1291,7 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
   addOperand(operands, operandSegments, async);
   addOperands(operands, operandSegments, waitOperands);
   if constexpr (!std::is_same_v<Op, mlir::acc::SerialOp>) {
-    addOperand(operands, operandSegments, numGangs);
+    addOperands(operands, operandSegments, numGangs);
     addOperand(operands, operandSegments, numWorkers);
     addOperand(operands, operandSegments, vectorLength);
   }

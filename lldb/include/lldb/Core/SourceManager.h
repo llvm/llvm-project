@@ -68,6 +68,9 @@ public:
     llvm::sys::TimePoint<> GetTimestamp() const { return m_mod_time; }
 
   protected:
+    /// Set file and update modification time.
+    void SetFileSpec(FileSpec file_spec);
+
     bool CalculateLineOffsets(uint32_t line = UINT32_MAX);
 
     FileSpec m_file_spec_orig; // The original file spec that was used (can be
@@ -101,7 +104,7 @@ public:
     SourceFileCache() = default;
     ~SourceFileCache() = default;
 
-    void AddSourceFile(const FileSP &file_sp);
+    void AddSourceFile(const FileSpec &file_spec, FileSP file_sp);
     FileSP FindSourceFile(const FileSpec &file_spec) const;
 
     // Removes all elements from the cache.
@@ -109,7 +112,9 @@ public:
 
     void Dump(Stream &stream) const;
 
-  protected:
+  private:
+    void AddSourceFileImpl(const FileSpec &file_spec, FileSP file_sp);
+
     typedef std::map<FileSpec, FileSP> FileCache;
     FileCache m_file_cache;
   };

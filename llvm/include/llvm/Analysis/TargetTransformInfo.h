@@ -39,6 +39,7 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
+class AllocaInst;
 class AssumptionCache;
 class BlockFrequencyInfo;
 class DominatorTree;
@@ -283,9 +284,19 @@ public:
   };
 
   /// Estimate the cost of a GEP operation when lowered.
+  ///
+  /// \p PointeeType is the source element type of the GEP.
+  /// \p Ptr is the base pointer operand.
+  /// \p Operands is the list of indices following the base pointer.
+  ///
+  /// \p AccessType is a hint as to what type of memory might be accessed by
+  /// users of the GEP. getGEPCost will use it to determine if the GEP can be
+  /// folded into the addressing mode of a load/store. If AccessType is null,
+  /// then the resulting target type based off of PointeeType will be used as an
+  /// approximation.
   InstructionCost
   getGEPCost(Type *PointeeType, const Value *Ptr,
-             ArrayRef<const Value *> Operands,
+             ArrayRef<const Value *> Operands, Type *AccessType = nullptr,
              TargetCostKind CostKind = TCK_SizeAndLatency) const;
 
   /// Describe known properties for a set of pointers.
@@ -339,6 +350,10 @@ public:
 
   /// \returns A value to be added to the inlining threshold.
   unsigned adjustInliningThreshold(const CallBase *CB) const;
+
+  /// \returns The cost of having an Alloca in the caller if not inlined, to be
+  /// added to the threshold
+  unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const;
 
   /// \returns Vector bonus in percent.
   ///
@@ -1675,6 +1690,7 @@ public:
   virtual const DataLayout &getDataLayout() const = 0;
   virtual InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
                                      ArrayRef<const Value *> Operands,
+                                     Type *AccessType,
                                      TTI::TargetCostKind CostKind) = 0;
   virtual InstructionCost
   getPointersChainCost(ArrayRef<const Value *> Ptrs, const Value *Base,
@@ -1683,6 +1699,8 @@ public:
   virtual unsigned getInliningThresholdMultiplier() const = 0;
   virtual unsigned adjustInliningThreshold(const CallBase *CB) = 0;
   virtual int getInlinerVectorBonusPercent() const = 0;
+  virtual unsigned getCallerAllocaCost(const CallBase *CB,
+                                       const AllocaInst *AI) const = 0;
   virtual InstructionCost getMemcpyCost(const Instruction *I) = 0;
   virtual uint64_t getMaxMemIntrinsicInlineSizeThreshold() const = 0;
   virtual unsigned
@@ -2034,9 +2052,9 @@ public:
 
   InstructionCost
   getGEPCost(Type *PointeeType, const Value *Ptr,
-             ArrayRef<const Value *> Operands,
+             ArrayRef<const Value *> Operands, Type *AccessType,
              TargetTransformInfo::TargetCostKind CostKind) override {
-    return Impl.getGEPCost(PointeeType, Ptr, Operands, CostKind);
+    return Impl.getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
   }
   InstructionCost getPointersChainCost(ArrayRef<const Value *> Ptrs,
                                        const Value *Base,
@@ -2053,6 +2071,10 @@ public:
   }
   int getInlinerVectorBonusPercent() const override {
     return Impl.getInlinerVectorBonusPercent();
+  }
+  unsigned getCallerAllocaCost(const CallBase *CB,
+                               const AllocaInst *AI) const override {
+    return Impl.getCallerAllocaCost(CB, AI);
   }
   InstructionCost getMemcpyCost(const Instruction *I) override {
     return Impl.getMemcpyCost(I);

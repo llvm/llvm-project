@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -84,6 +85,64 @@ def Linalg_IndexOp : Linalg_Op<"index", [Pure]>,
   }];
 
   let assemblyFormat = [{ $dim attr-dict `:` type($result) }];
+  let hasVerifier = 1;
+}
+
+def Linalg_SoftmaxOp : Linalg_Op<"softmax",
+    [DestinationStyleOpInterface,
+     PredOpTrait<"input and output have same element type", TCopVTEtIsSameAs<0, 1>>,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+  let summary = "Softmax operator";
+  let description = [{
+    linalg.softmax computes a numerically stable version of softmax.
+
+    For a given input tensor and a specified dimension `d`, compute:
+      1. the max `m` along that dimension `d`
+      2. f(x) = exp(x - m)
+      3. sum f(x) along dimension d to get l(x).
+      4. compute the final result f(x) / l(x).
+
+    This is an aggregate linalg operation that further reduces to a small DAG of
+    structured operations.
+  }];
+
+  let arguments = (ins AnyShaped:$input,
+                       AnyShaped:$output,
+                       I64Attr:$dimension
+  );
+
+  let results = (outs Variadic<AnyRankedTensor>:$result);
+  let hasFolder = 1;
+  let assemblyFormat = [{
+    attr-dict
+    `dimension` `(` $dimension `)`
+    `ins` `(` $input `:` type($input) `)`
+    `outs` `(` $output `:` type($output) `)`
+    (`->` type($result)^)?
+  }];
+
+  let extraClassDeclaration = [{
+    ShapedType getInputOperandType() {
+      return getInput().getType().cast<ShapedType>();
+    }
+    ShapedType getOutputOperandType() {
+      return getOutput().getType().cast<ShapedType>();
+    }
+    int64_t getInputOperandRank() {
+      return getInputOperandType().getRank();
+    }
+    int64_t getOutputOperandRank() {
+      return getOutputOperandType().getRank();
+    }
+    // Method to implement DestinationStyleOpInterface.
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
+      std::pair<unsigned, unsigned> outputsIndexAndLength =
+        getODSOperandIndexAndLength(1);
+      return std::make_pair<int64_t, int64_t>(
+          outputsIndexAndLength.first,
+          outputsIndexAndLength.first + outputsIndexAndLength.second);
+    }
+  }];
   let hasVerifier = 1;
 }
 

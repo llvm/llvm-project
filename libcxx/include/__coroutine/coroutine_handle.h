@@ -63,7 +63,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     bool done() const {
-        _LIBCPP_ASSERT(__is_suspended(), "done() can be called only on suspended coroutines");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "done() can be called only on suspended coroutines");
         return __builtin_coro_done(__handle_);
     }
 
@@ -73,14 +73,14 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     void resume() const {
-        _LIBCPP_ASSERT(__is_suspended(), "resume() can be called only on suspended coroutines");
-        _LIBCPP_ASSERT(!done(), "resume() has undefined behavior when the coroutine is done");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "resume() can be called only on suspended coroutines");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!done(), "resume() has undefined behavior when the coroutine is done");
         __builtin_coro_resume(__handle_);
     }
 
     _LIBCPP_HIDE_FROM_ABI
     void destroy() const {
-        _LIBCPP_ASSERT(__is_suspended(), "destroy() can be called only on suspended coroutines");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "destroy() can be called only on suspended coroutines");
         __builtin_coro_destroy(__handle_);
     }
 
@@ -152,7 +152,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     bool done() const {
-        _LIBCPP_ASSERT(__is_suspended(), "done() can be called only on suspended coroutines");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "done() can be called only on suspended coroutines");
         return __builtin_coro_done(__handle_);
     }
 
@@ -162,14 +162,14 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     void resume() const {
-        _LIBCPP_ASSERT(__is_suspended(), "resume() can be called only on suspended coroutines");
-        _LIBCPP_ASSERT(!done(), "resume() has undefined behavior when the coroutine is done");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "resume() can be called only on suspended coroutines");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!done(), "resume() has undefined behavior when the coroutine is done");
         __builtin_coro_resume(__handle_);
     }
 
     _LIBCPP_HIDE_FROM_ABI
     void destroy() const {
-        _LIBCPP_ASSERT(__is_suspended(), "destroy() can be called only on suspended coroutines");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__is_suspended(), "destroy() can be called only on suspended coroutines");
         __builtin_coro_destroy(__handle_);
     }
 

@@ -75,13 +75,10 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   if (!file_spec)
     return nullptr;
 
-  FileSpec resolved_fspec = file_spec;
-  resolve_tilde(resolved_fspec);
-
   DebuggerSP debugger_sp(m_debugger_wp.lock());
   FileSP file_sp;
   if (debugger_sp && debugger_sp->GetUseSourceCache())
-    file_sp = debugger_sp->GetSourceFileCache().FindSourceFile(resolved_fspec);
+    file_sp = debugger_sp->GetSourceFileCache().FindSourceFile(file_spec);
 
   TargetSP target_sp(m_target_wp.lock());
 
@@ -99,12 +96,12 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
   // If file_sp is no good or it points to a non-existent file, reset it.
   if (!file_sp || !FileSystem::Instance().Exists(file_sp->GetFileSpec())) {
     if (target_sp)
-      file_sp = std::make_shared<File>(resolved_fspec, target_sp.get());
+      file_sp = std::make_shared<File>(file_spec, target_sp.get());
     else
-      file_sp = std::make_shared<File>(resolved_fspec, debugger_sp);
+      file_sp = std::make_shared<File>(file_spec, debugger_sp);
 
     if (debugger_sp && debugger_sp->GetUseSourceCache())
-      debugger_sp->GetSourceFileCache().AddSourceFile(file_sp);
+      debugger_sp->GetSourceFileCache().AddSourceFile(file_spec, file_sp);
   }
   return file_sp;
 }
@@ -393,15 +390,13 @@ void SourceManager::FindLinesMatchingRegex(FileSpec &file_spec,
 
 SourceManager::File::File(const FileSpec &file_spec,
                           lldb::DebuggerSP debugger_sp)
-    : m_file_spec_orig(file_spec), m_file_spec(file_spec),
-      m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
+    : m_file_spec_orig(file_spec), m_file_spec(), m_mod_time(),
       m_debugger_wp(debugger_sp) {
   CommonInitializer(file_spec, nullptr);
 }
 
 SourceManager::File::File(const FileSpec &file_spec, Target *target)
-    : m_file_spec_orig(file_spec), m_file_spec(file_spec),
-      m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
+    : m_file_spec_orig(file_spec), m_file_spec(), m_mod_time(),
       m_debugger_wp(target ? target->GetDebugger().shared_from_this()
                            : DebuggerSP()) {
   CommonInitializer(file_spec, target);
@@ -409,13 +404,16 @@ SourceManager::File::File(const FileSpec &file_spec, Target *target)
 
 void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
                                             Target *target) {
+  // Set the file and update the modification time.
+  SetFileSpec(file_spec);
+
+  // File doesn't exist.
   if (m_mod_time == llvm::sys::TimePoint<>()) {
     if (target) {
       m_source_map_mod_id = target->GetSourcePathMap().GetModificationID();
 
+      // If this is just a file name, try finding it in the target.
       if (!file_spec.GetDirectory() && file_spec.GetFilename()) {
-        // If this is just a file name, lets see if we can find it in the
-        // target:
         bool check_inlines = false;
         SymbolContextList sc_list;
         size_t num_matches =
@@ -443,13 +441,12 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
             SymbolContext sc;
             sc_list.GetContextAtIndex(0, sc);
             if (sc.comp_unit)
-              m_file_spec = sc.comp_unit->GetPrimaryFile();
-            m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
+              SetFileSpec(sc.comp_unit->GetPrimaryFile());
           }
         }
       }
-      resolve_tilde(m_file_spec);
-      // Try remapping if m_file_spec does not correspond to an existing file.
+
+      // Try remapping the file if it doesn't exist.
       if (!FileSystem::Instance().Exists(m_file_spec)) {
         // Check target specific source remappings (i.e., the
         // target.source-map setting), then fall back to the module
@@ -460,16 +457,21 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
           if (target->GetImages().FindSourceFile(m_file_spec, new_spec))
             remapped = new_spec;
         }
-        if (remapped) {
-          m_file_spec = *remapped;
-          m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
-        }
+        if (remapped)
+          SetFileSpec(*remapped);
       }
     }
   }
 
+  // If the file exists, read in the data.
   if (m_mod_time != llvm::sys::TimePoint<>())
     m_data_sp = FileSystem::Instance().CreateDataBuffer(m_file_spec);
+}
+
+void SourceManager::File::SetFileSpec(FileSpec file_spec) {
+  resolve_tilde(file_spec);
+  m_file_spec = std::move(file_spec);
+  m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
 }
 
 uint32_t SourceManager::File::GetLineOffset(uint32_t line) {
@@ -708,12 +710,22 @@ bool SourceManager::File::GetLine(uint32_t line_no, std::string &buffer) {
   return true;
 }
 
-void SourceManager::SourceFileCache::AddSourceFile(const FileSP &file_sp) {
-  FileSpec file_spec = file_sp->GetFileSpec();
+void SourceManager::SourceFileCache::AddSourceFile(const FileSpec &file_spec,
+                                                   FileSP file_sp) {
+  assert(file_sp && "invalid FileSP");
+
+  AddSourceFileImpl(file_spec, file_sp);
+  const FileSpec &resolved_file_spec = file_sp->GetFileSpec();
+  if (file_spec != resolved_file_spec)
+    AddSourceFileImpl(file_sp->GetFileSpec(), file_sp);
+}
+
+void SourceManager::SourceFileCache::AddSourceFileImpl(
+    const FileSpec &file_spec, FileSP file_sp) {
   FileCache::iterator pos = m_file_cache.find(file_spec);
-  if (pos == m_file_cache.end())
+  if (pos == m_file_cache.end()) {
     m_file_cache[file_spec] = file_sp;
-  else {
+  } else {
     if (file_sp != pos->second)
       m_file_cache[file_spec] = file_sp;
   }

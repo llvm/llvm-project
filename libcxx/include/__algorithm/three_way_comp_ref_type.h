@@ -11,7 +11,6 @@
 
 #include <__compare/ordering.h>
 #include <__config>
-#include <__debug>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 
@@ -51,7 +50,7 @@ struct __debug_three_way_comp {
       __expected = _Order::greater;
     if (__o == _Order::greater)
       __expected = _Order::less;
-    _LIBCPP_DEBUG_ASSERT(__comp_(__l, __r) == __expected, "Comparator does not induce a strict weak ordering");
+    _LIBCPP_ASSERT(__comp_(__l, __r) == __expected, "Comparator does not induce a strict weak ordering");
     (void)__l;
     (void)__r;
   }
@@ -59,6 +58,7 @@ struct __debug_three_way_comp {
 
 // Pass the comparator by lvalue reference. Or in debug mode, using a
 // debugging wrapper that stores a reference.
+// TODO(varconst): update to be used in the new debug mode (or delete entirely).
 #  ifdef _LIBCPP_ENABLE_DEBUG_MODE
 template <class _Comp>
 using __three_way_comp_ref_type = __debug_three_way_comp<_Comp>;

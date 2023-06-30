@@ -17,7 +17,10 @@
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -112,6 +115,96 @@ static bool isAddMul(Block &block) {
   return success;
 }
 
+/// Given a `linalgOp` and one of its `opOperand`, returns the positions of the
+/// iterators of type `iter` that index the `opOperand` as a permutation.
+/// This is useful to infer various subcomputations on a given `linalgOp`.
+/// This is performed by looking up each result in the matching indexing map and
+/// determining whether:
+///   - It is a single AffineDimExpr.
+///   - It is the only result involving this AffineDimExpr.
+static DenseSet<int64_t>
+findPermutationsIndexingOperand(LinalgOp linalgOp, OpOperand *opOperand,
+                                utils::IteratorType iter) {
+  DenseSet<int64_t> res;
+  assert(linalgOp == opOperand->getOwner() && "expected linalgOp owner");
+  AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
+  for (AffineExpr e : indexingMap.getResults()) {
+    if (auto d = e.dyn_cast<AffineDimExpr>()) {
+      if (linalgOp.getIteratorTypesArray()[d.getPosition()] == iter &&
+          llvm::count_if(indexingMap.getResults(), [d](AffineExpr e) {
+            return e.isFunctionOfDim(d.getPosition());
+          }) == 1)
+        res.insert(d.getPosition());
+    }
+  }
+  return res;
+}
+
+namespace {
+auto par = utils::IteratorType::parallel;
+auto red = utils::IteratorType::reduction;
+} // namespace
+
+/// Find 2 parallel (m and n) and 1 reduction (k) dimension candidates that form
+/// a matmul subcomputation within `linalgOp`. These dimensions are such that:
+///   1. The m dimension is involved in an outer-product along LHS
+///      (i.e. it is a permutation on RES and LHS and does not appear in RHS).
+///   2. The n dimension is involved in an outer-product along RHS
+///      (i.e. it is a permutation on RES and RHS and does not appear in LHS).
+///   3. The k dimension appears as a permutation on LHS and RHS.
+///   4. m, n and k appear only once in any given indexing.
+///   5. Optional batch dimensions that appear in all operands are captured.
+/// This allows e.g. detecting that some contraction is embedded within
+/// `linalgOp` with some orthogonal heuristic.
+FailureOr<ContractionDimensions>
+mlir::linalg::inferContractionDims(LinalgOp linalgOp) {
+  if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() != 2)
+    return failure();
+
+  DenseSet<int64_t> a = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInputOperand(0), par);
+  DenseSet<int64_t> b = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInputOperand(1), par);
+  DenseSet<int64_t> c = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInitOperand(0), par);
+
+  // A & C - B are the iterators involved in an outer-product along A (the LHS).
+  DenseSet<int64_t> ac = a;
+  llvm::set_intersect(ac, c);
+  llvm::set_subtract(ac, b);
+  // B & C - A are the iterators involved in an outer-product along B (the RHS).
+  DenseSet<int64_t> bc = b;
+  llvm::set_intersect(bc, c);
+  llvm::set_subtract(bc, a);
+  // A & B & C are the "batch" dimensions.
+  DenseSet<int64_t> batches = a;
+  llvm::set_intersect(batches, b);
+  llvm::set_intersect(batches, c);
+
+  // A & B red are the reduction dimensions.
+  DenseSet<int64_t> ra = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInputOperand(0), red);
+  DenseSet<int64_t> rb = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInputOperand(1), red);
+  llvm::set_intersect(ra, rb);
+
+  if (ac.empty() || bc.empty() || ra.empty())
+    return failure();
+
+  // Return each set in sorted order.
+  ContractionDimensions dimensions{
+      SmallVector<unsigned, 2>(batches.begin(), batches.end()),
+      SmallVector<unsigned, 2>(ac.begin(), ac.end()),
+      SmallVector<unsigned, 2>(bc.begin(), bc.end()),
+      SmallVector<unsigned, 2>(ra.begin(), ra.end())};
+  std::sort(dimensions.batch.begin(), dimensions.batch.end());
+  std::sort(dimensions.m.begin(), dimensions.m.end());
+  std::sort(dimensions.n.begin(), dimensions.n.end());
+  std::sort(dimensions.k.begin(), dimensions.k.end());
+  return dimensions;
+}
+
+namespace mlir::linalg::detail {
 enum class MatchContractionResult {
   Success = 0,
   NotLinalgOp,
@@ -120,7 +213,11 @@ enum class MatchContractionResult {
   NotProjectedPermutations,
   NotAddMul
 };
-static MatchContractionResult isContractionInterfaceImpl(Operation *op) {
+} // namespace mlir::linalg::detail
+
+mlir::linalg::detail::MatchContractionResult
+mlir::linalg::detail::isContractionInterfaceImpl(
+    Operation *op, mlir::linalg::ContractionDimensions *dimensions) {
   auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
   if (!linalgOp)
     return MatchContractionResult::NotLinalgOp;
@@ -139,7 +236,32 @@ static MatchContractionResult isContractionInterfaceImpl(Operation *op) {
           linalgOp->getRegion(0).front()) &&
       !isAddMul<arith::OrIOp, arith::AndIOp>(linalgOp->getRegion(0).front()))
     return MatchContractionResult::NotAddMul;
+
+  if (dimensions) {
+    FailureOr<ContractionDimensions> res = inferContractionDims(linalgOp);
+    assert(succeeded(res) && "unexpected failure to infer contraction dims");
+    *dimensions = *res;
+  }
   return MatchContractionResult::Success;
+}
+
+StringRef
+mlir::linalg::detail::getMatchContractionMessage(MatchContractionResult res) {
+  switch (res) {
+  case MatchContractionResult::NotLinalgOp:
+    return "expected a LinalgOp";
+  case MatchContractionResult::WrongNumOperands:
+    return "expected op with 2 inputs and 1 output";
+  case MatchContractionResult::NoReduction:
+    return "expected at least 1 reduction";
+  case MatchContractionResult::NotProjectedPermutations:
+    return "expected indexing maps to be projected permutations";
+  case MatchContractionResult::NotAddMul:
+    return "expected add/mul op in the body";
+  case MatchContractionResult::Success:
+    return "";
+  }
+  llvm_unreachable("unhandled MatchContractionResult case");
 }
 
 bool mlir::linalg::isaContractionOpInterface(LinalgOp linalgOp) {
@@ -147,7 +269,8 @@ bool mlir::linalg::isaContractionOpInterface(LinalgOp linalgOp) {
     return false;
   Operation *op = linalgOp.getOperation();
   return isa<ContractionOpInterface>(op) ||
-         (isContractionInterfaceImpl(op) == MatchContractionResult::Success);
+         (mlir::linalg::detail::isContractionInterfaceImpl(op) ==
+          mlir::linalg::detail::MatchContractionResult::Success);
 }
 
 /// Verify that a LinalgOp `op` is a contraction.
@@ -165,16 +288,8 @@ bool mlir::linalg::isaContractionOpInterface(LinalgOp linalgOp) {
 /// constant operations that do not involve the reduction dimension(s).
 LogicalResult mlir::linalg::detail::verifyContractionInterface(Operation *op) {
   auto res = isContractionInterfaceImpl(op);
-  if (res == MatchContractionResult::NotLinalgOp)
-    return op->emitError("expected a LinalgOp");
-  if (res == MatchContractionResult::WrongNumOperands)
-    return op->emitError("expected op with 2 inputs and 1 outputs");
-  if (res == MatchContractionResult::NoReduction)
-    return op->emitError("expected at least a reduction loop");
-  if (res == MatchContractionResult::NotProjectedPermutations)
-    return op->emitError("expected all indexings to be projected permutations");
-  if (res == MatchContractionResult::NotAddMul)
-    return op->emitError("(add, mul) operations not found");
+  if (res != MatchContractionResult::Success)
+    return op->emitError(getMatchContractionMessage(res));
   return success();
 }
 
@@ -452,6 +567,11 @@ mlir::linalg::detail::getMatchConvolutionMessage(MatchConvolutionResult res) {
     return "";
   }
   llvm_unreachable("unhandled MatchConvolutionResult case");
+}
+
+bool mlir::linalg::isaConvolutionOpInterface(LinalgOp linalgOp) {
+  return linalg::detail::isConvolutionInterfaceImpl(linalgOp.getOperation()) ==
+         linalg::detail::MatchConvolutionResult::Success;
 }
 
 LogicalResult mlir::linalg::detail::verifyConvolutionInterface(Operation *op) {

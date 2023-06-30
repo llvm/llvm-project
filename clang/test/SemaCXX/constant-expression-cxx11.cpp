@@ -975,7 +975,7 @@ struct T : S {
   int n;
 };
 constexpr int S::f() const {
-  return static_cast<const T*>(this)->n; // expected-note {{cannot cast}}
+  return static_cast<const T*>(this)->n; // expected-note 5{{cannot cast}}
 }
 constexpr int S::g() const {
   // FIXME: Better diagnostic for this.
@@ -984,8 +984,20 @@ constexpr int S::g() const {
 // The T temporary is implicitly cast to an S subobject, but we can recover the
 // T full-object via a base-to-derived cast, or a derived-to-base-casted member
 // pointer.
-static_assert(S().f(), ""); // expected-error {{constant expression}} expected-note {{in call to '&S()->f()'}}
-static_assert(S().g(), ""); // expected-error {{constant expression}} expected-note {{in call to '&S()->g()'}}
+static_assert(S().f(), ""); // expected-error {{constant expression}} expected-note {{in call to 'S().f()'}}
+static_assert(S().g(), ""); // expected-error {{constant expression}} expected-note {{in call to 'S().g()'}}
+constexpr S sobj;
+constexpr const S& slref = sobj;
+constexpr const S&& srref = S();
+constexpr const S *sptr = &sobj;
+static_assert(sobj.f(), ""); // expected-error {{constant expression}} \
+                                expected-note {{in call to 'sobj.f()'}}
+static_assert(sptr->f(), ""); // expected-error {{constant expression}} \
+                                 expected-note {{in call to 'sptr->f()'}}
+static_assert(slref.f(), ""); // expected-error {{constant expression}} \
+                                 expected-note {{in call to 'slref.f()'}}
+static_assert(srref.f(), ""); // expected-error {{constant expression}} \
+                                 expected-note {{in call to 'srref.f()'}}
 static_assert(T(3).f() == 3, "");
 static_assert(T(4).g() == 4, "");
 

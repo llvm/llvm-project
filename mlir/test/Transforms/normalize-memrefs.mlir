@@ -352,3 +352,14 @@ func.func @neg_map() -> memref<2x3xf32, #neg> {
   %0 = memref.alloc() : memref<2x3xf32, #neg>
   return %0 : memref<2x3xf32, #neg>
 }
+
+// CHECK-LABEL: func @memref_with_strided_offset
+func.func @memref_with_strided_offset(%arg0: tensor<128x512xf32>, %arg1: index, %arg2: index) -> tensor<16x512xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = bufferization.to_memref %arg0 : memref<128x512xf32, strided<[?, ?], offset: ?>>
+  %subview = memref.subview %0[%arg2, 0] [%arg1, 512] [1, 1] : memref<128x512xf32, strided<[?, ?], offset: ?>> to memref<?x512xf32, strided<[?, ?], offset: ?>>
+  // CHECK: %{{.*}} = memref.cast %{{.*}} : memref<?x512xf32, strided<[?, ?], offset: ?>> to memref<16x512xf32, strided<[?, ?], offset: ?>>
+  %cast = memref.cast %subview : memref<?x512xf32, strided<[?, ?], offset: ?>> to memref<16x512xf32, strided<[?, ?], offset: ?>>
+  %1 = bufferization.to_tensor %cast : memref<16x512xf32, strided<[?, ?], offset: ?>>
+  return %1 : tensor<16x512xf32>
+}

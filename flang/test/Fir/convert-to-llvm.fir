@@ -1,7 +1,9 @@
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu" %s | FileCheck %s
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gn" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gn" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-pc-win32" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-apple-darwin" %s | FileCheck %s --check-prefixes=CHECK,CHECK-NO-COMDAT
 
 //=============================================================================
 // SUMMARY: Tests for FIR --> LLVM MLIR conversion independent of the target
@@ -49,7 +51,8 @@ fir.global weak @w_i86 (86:i32) : i32
 // -----
 
 fir.global linkonce @w_i86 (86:i32) : i32
-// CHECK: llvm.mlir.global linkonce @w_i86(86 : i32) {addr_space = 0 : i32} : i32
+// CHECK-COMDAT: llvm.mlir.global linkonce @w_i86(86 : i32) comdat(@__llvm_comdat::@w_i86) {addr_space = 0 : i32} : i32
+// CHECK-NO-COMDAT: llvm.mlir.global linkonce @w_i86(86 : i32) {addr_space = 0 : i32} : i32
 
 // -----
 
@@ -1678,7 +1681,8 @@ func.func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
   return
 }
 
-// CHECK: llvm.mlir.global linkonce constant @_QMtest_dinitE.dt.tseq() {addr_space = 0 : i32} : i8
+// CHECK-COMDAT: llvm.mlir.global linkonce constant @_QMtest_dinitE.dt.tseq() comdat(@__llvm_comdat::@_QMtest_dinitE.dt.tseq) {addr_space = 0 : i32} : i8
+// CHECK-NO-COMDAT: llvm.mlir.global linkonce constant @_QMtest_dinitE.dt.tseq() {addr_space = 0 : i32} : i8
 // CHECK-LABEL: llvm.func @embox1
 // CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(42 : i32) : i32
 // CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8

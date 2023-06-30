@@ -40,6 +40,7 @@
 #define GTEST_INCLUDE_GTEST_INTERNAL_CUSTOM_GTEST_PRINTERS_H_
 
 #if !GTEST_NO_LLVM_SUPPORT
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include <ostream>
@@ -63,6 +64,17 @@ inline void PrintTo(const SmallString<N> &S, std::ostream *OS) {
 inline void PrintTo(const SmallVectorImpl<char> &S, std::ostream *OS) {
   *OS << ::testing::PrintToString(std::string(S.data(), S.size()));
 }
+
+// DenseMap's entries inherit from std::pair, and should act like pairs.
+// However gTest's provided `PrintTo(pair<K,V>)` template won't deduce K and V
+// because of the needed derived-to-base conversion.
+namespace detail {
+template <typename K, typename V>
+inline void PrintTo(const DenseMapPair<K, V> &Pair, std::ostream *OS) {
+  *OS << ::testing::PrintToString(static_cast<const std::pair<K, V> &>(Pair));
+}
+} // namespace detail
+
 } // namespace llvm
 #endif // !GTEST_NO_LLVM_SUPPORT
 

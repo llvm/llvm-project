@@ -501,7 +501,7 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
   m_loclist_table_header.emplace(".debug_loclists", "locations");
   offset += loclists_base - header_size;
   if (llvm::Error E = m_loclist_table_header->extract(
-          m_dwarf.GetDWARFContext().getOrLoadLocListsData().GetAsLLVM(),
+          m_dwarf.GetDWARFContext().getOrLoadLocListsData().GetAsLLVMDWARF(),
           &offset)) {
     GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
         "Failed to extract location list table at offset {0:x16} (location "
@@ -564,7 +564,7 @@ DWARFUnit::GetRnglistTable() {
     m_rnglist_table_done = true;
     if (auto table_or_error =
             ParseListTableHeader<llvm::DWARFDebugRnglistTable>(
-                GetRnglistData().GetAsLLVM(), m_ranges_base, DWARF32))
+                GetRnglistData().GetAsLLVMDWARF(), m_ranges_base, DWARF32))
       m_rnglist_table = std::move(table_or_error.get());
     else
       GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
@@ -1040,7 +1040,7 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
     return llvm::createStringError(std::errc::invalid_argument,
                                    "missing or invalid range list table");
 
-  llvm::DWARFDataExtractor data = GetRnglistData().GetAsLLVM();
+  llvm::DWARFDataExtractor data = GetRnglistData().GetAsLLVMDWARF();
 
   // As DW_AT_rnglists_base may be missing we need to call setAddressSize.
   data.setAddressSize(m_header.GetAddressByteSize());

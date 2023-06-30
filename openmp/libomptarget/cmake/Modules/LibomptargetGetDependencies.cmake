@@ -110,7 +110,13 @@ set(LIBOMPTARGET_DEP_CUDA_FOUND ${CUDAToolkit_FOUND})
 ################################################################################
 set(LIBOMPTARGET_DEP_CUDA_ARCH "sm_35")
 
-find_program(LIBOMPTARGET_NVPTX_ARCH NAMES nvptx-arch PATHS ${LLVM_BINARY_DIR}/bin)
+if(TARGET nvptx-arch)
+  get_property(LIBOMPTARGET_NVPTX_ARCH TARGET nvptx-arch PROPERTY LOCATION)
+else()
+  find_program(LIBOMPTARGET_NVPTX_ARCH NAMES nvptx-arch
+               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+endif()
+
 if(LIBOMPTARGET_NVPTX_ARCH)
   execute_process(COMMAND ${LIBOMPTARGET_NVPTX_ARCH}
                   OUTPUT_VARIABLE LIBOMPTARGET_NVPTX_ARCH_OUTPUT
@@ -128,7 +134,13 @@ endif()
 # Looking for AMD GPUs...
 ################################################################################
 
-find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch PATHS ${LLVM_BINARY_DIR}/bin)
+if(TARGET amdgpu-arch)
+  get_property(LIBOMPTARGET_AMDGPU_ARCH TARGET amdgpu-arch PROPERTY LOCATION)
+else()
+  find_program(LIBOMPTARGET_AMDGPU_ARCH NAMES amdgpu-arch
+               PATHS ${LLVM_TOOLS_BINARY_DIR}/bin)
+endif()
+
 if(LIBOMPTARGET_AMDGPU_ARCH)
   execute_process(COMMAND ${LIBOMPTARGET_AMDGPU_ARCH}
                   OUTPUT_VARIABLE LIBOMPTARGET_AMDGPU_ARCH_OUTPUT

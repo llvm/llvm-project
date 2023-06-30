@@ -136,7 +136,9 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
+    return R_PLT_PC;
   case R_AARCH64_PLT32:
+    const_cast<Symbol &>(s).thunkAccessed = true;
     return R_PLT_PC;
   case R_AARCH64_PREL16:
   case R_AARCH64_PREL32:
@@ -910,8 +912,9 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
 
   // NEEDS_COPY indicates a non-ifunc canonical PLT entry whose address may
   // escape to shared objects. isInIplt indicates a non-preemptible ifunc. Its
-  // address may escape if referenced by a direct relocation. The condition is
-  // conservative.
+  // address may escape if referenced by a direct relocation. If relative
+  // vtables are used then if the vtable is in a shared object the offsets will
+  // be to the PLT entry. The condition is conservative.
   bool hasBti = btiHeader &&
                 (sym.hasFlag(NEEDS_COPY) || sym.isInIplt || sym.thunkAccessed);
   if (hasBti) {

@@ -47,7 +47,7 @@ class ProcessLaunchTestCase(TestBase):
         exe, outfile = self.setup()
         # When no arguments are passed via the command, use the setting.
         self.runCmd("settings set target.run-args D E")
-        self.runCmd("platform process launch --stdout {}".format(outfile))
+        self.runCmd("platform process launch --stdout {} -s".format(outfile))
         self.runCmd("continue")
 
         with open(outfile) as f:

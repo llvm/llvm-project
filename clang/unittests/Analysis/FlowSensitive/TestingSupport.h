@@ -428,6 +428,14 @@ runDataflowReturnError(llvm::StringRef Code, VerifyResultsT VerifyResults,
 ///   `Name` must be unique in `ASTCtx`.
 const ValueDecl *findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name);
 
+/// Returns the `IndirectFieldDecl` for the given identifier.
+///
+/// Requirements:
+///
+///   `Name` must be unique in `ASTCtx`.
+const IndirectFieldDecl *findIndirectFieldDecl(ASTContext &ASTCtx,
+                                               llvm::StringRef Name);
+
 /// Returns the storage location (of type `LocT`) for the given identifier.
 /// `LocT` must be a subclass of `StorageLocation` and must be of the
 /// appropriate type.

@@ -2,7 +2,7 @@
 ; RUN: llc < %s --mattr=+complxnum,+neon,+fullfp16 -o - | FileCheck %s
 ; RUN: llc < %s --mattr=+complxnum,+neon,+fullfp16,+sve -o - | FileCheck %s
 
-target triple = "aarch64-arm-none-eabi"
+target triple = "aarch64"
 
 ; Expected to not transform
 define <2 x half> @complex_add_v2f16(<2 x half> %a, <2 x half> %b) {

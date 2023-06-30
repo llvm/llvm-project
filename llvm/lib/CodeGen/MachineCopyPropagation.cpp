@@ -462,8 +462,7 @@ bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy,
 
   auto PrevCopyOperands = isCopyInstr(*PrevCopy, *TII, UseCopyInstr);
   // Check that the existing copy uses the correct sub registers.
-  if (PrevCopyOperands->Destination->isDead() ||
-      PrevCopyOperands->Source->isUndef())
+  if (PrevCopyOperands->Destination->isDead())
     return false;
   if (!isNopCopy(*PrevCopy, Src, Def, TRI, TII, UseCopyInstr))
     return false;
@@ -481,6 +480,12 @@ bool MachineCopyPropagation::eraseIfRedundant(MachineInstr &Copy,
   for (MachineInstr &MI :
        make_range(PrevCopy->getIterator(), Copy.getIterator()))
     MI.clearRegisterKills(CopyDef, TRI);
+
+  // Clear undef flag from remaining copy if needed.
+  if (!CopyOperands->Source->isUndef()) {
+    PrevCopy->getOperand(PrevCopyOperands->Source->getOperandNo())
+        .setIsUndef(false);
+  }
 
   Copy.eraseFromParent();
   Changed = true;

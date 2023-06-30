@@ -310,9 +310,14 @@ private:
       // If faced with "a.operator*(argument)" or "a->operator*(argument)",
       // i.e. the operator is called as a member function,
       // then the argument must be an expression.
-      bool OperatorCalledAsMemberFunction =
-          Prev->Previous && Prev->Previous->isOneOf(tok::period, tok::arrow);
-      Contexts.back().IsExpression = OperatorCalledAsMemberFunction;
+      // If faced with "operator+(argument)", i.e. the operator is called as
+      // a free function, then the argument is an expression only if the current
+      // line can't be a declaration.
+      bool IsOperatorCallSite =
+          (Prev->Previous &&
+           Prev->Previous->isOneOf(tok::period, tok::arrow)) ||
+          (!Line.MustBeDeclaration && !Line.InMacroBody);
+      Contexts.back().IsExpression = IsOperatorCallSite;
     } else if (OpeningParen.is(TT_VerilogInstancePortLParen)) {
       Contexts.back().IsExpression = true;
       Contexts.back().ContextType = Context::VerilogInstancePortList;
@@ -2428,10 +2433,14 @@ private:
     // If the next token after the parenthesis is a unary operator, assume
     // that this is cast, unless there are unexpected tokens inside the
     // parenthesis.
-    bool NextIsUnary =
-        Tok.Next->isUnaryOperator() || Tok.Next->isOneOf(tok::amp, tok::star);
-    if (!NextIsUnary || Tok.Next->is(tok::plus) ||
+    const bool NextIsAmpOrStar = Tok.Next->isOneOf(tok::amp, tok::star);
+    if (!(Tok.Next->isUnaryOperator() || NextIsAmpOrStar) ||
+        Tok.Next->is(tok::plus) ||
         !Tok.Next->Next->isOneOf(tok::identifier, tok::numeric_constant)) {
+      return false;
+    }
+    if (NextIsAmpOrStar &&
+        (Tok.Next->Next->is(tok::numeric_constant) || Line.InPPDirective)) {
       return false;
     }
     // Search for unexpected tokens.

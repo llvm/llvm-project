@@ -5,7 +5,7 @@
 #define ATTR(X) __declspec(X)
 #else
 #define ATTR(X) __attribute__((X))
-#endif // _MSC_VER
+#endif // _WIN64
 
 // Each version should have an IFunc and an alias.
 // LINUX: @SingleVersion = weak_odr alias void (), ptr @SingleVersion.ifunc
@@ -43,12 +43,18 @@ ATTR(cpu_dispatch(ivybridge))
 void SingleVersion(void);
 // LINUX: define weak_odr ptr @SingleVersion.resolver()
 // LINUX: call void @__cpu_indicator_init
+// LINUX: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
+// LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 1023
+// LINUX: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 1023
 // LINUX: ret ptr @SingleVersion.S
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
 
 // WINDOWS: define weak_odr dso_local void @SingleVersion() comdat
 // WINDOWS: call void @__cpu_indicator_init()
+// WINDOWS: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
+// WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 1023
+// WINDOWS: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 1023
 // WINDOWS: call void @SingleVersion.S()
 // WINDOWS-NEXT: ret void
 // WINDOWS: call void @llvm.trap
@@ -67,6 +73,9 @@ ATTR(cpu_dispatch(ivybridge, knl))
 void TwoVersions(void);
 // LINUX: define weak_odr ptr @TwoVersions.resolver()
 // LINUX: call void @__cpu_indicator_init
+// LINUX: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
+// LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 58836991
+// LINUX: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 58836991
 // LINUX: ret ptr @TwoVersions.Z
 // LINUX: ret ptr @TwoVersions.S
 // LINUX: call void @llvm.trap
@@ -74,6 +83,9 @@ void TwoVersions(void);
 
 // WINDOWS: define weak_odr dso_local void @TwoVersions() comdat
 // WINDOWS: call void @__cpu_indicator_init()
+// WINDOWS: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
+// WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 58836991
+// WINDOWS: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 58836991
 // WINDOWS: call void @TwoVersions.Z()
 // WINDOWS-NEXT: ret void
 // WINDOWS: call void @TwoVersions.S()

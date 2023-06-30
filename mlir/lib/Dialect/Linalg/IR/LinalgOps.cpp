@@ -2141,6 +2141,39 @@ struct InferStaticShapeOfOperands : public OpInterfaceRewritePattern<LinalgOp> {
 // .cpp.inc.
 
 //===----------------------------------------------------------------------===//
+// SoftmaxOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SoftmaxOp::verify() {
+  ShapedType inputType = getInputOperandType();
+  ShapedType outputType = getOutputOperandType();
+
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  if (failed(verifyCompatibleShape(inputShape, outputShape)))
+    return emitOpError("incompatible output shape");
+
+  int64_t inputRank = getInputOperandRank();
+  int64_t dimension = getDimension();
+  if ((dimension < 0) || (dimension >= inputRank))
+    return emitOpError("incorrect dimension specified");
+
+  return success();
+}
+
+// cast(dynamic) -> static.
+LogicalResult SoftmaxOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+  return memref::foldMemRefCast(*this);
+}
+
+LogicalResult
+SoftmaxOp::reifyResultShapes(OpBuilder &b,
+                             ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  return cast<LinalgOp>(getOperation())
+      .reifyResultShapes(b, reifiedReturnShapes);
+}
+
+//===----------------------------------------------------------------------===//
 // LinalgDialect
 //===----------------------------------------------------------------------===//
 

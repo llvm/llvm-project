@@ -451,13 +451,6 @@ struct FragmentCompiler {
       }
     }
 
-    if (F.AllowStalePreamble) {
-      if (auto Val = F.AllowStalePreamble)
-        Out.Apply.push_back([Val](const Params &, Config &C) {
-          C.Diagnostics.AllowStalePreamble = **Val;
-        });
-    }
-
     if (F.MissingIncludes)
       if (auto Val = compileEnum<Config::IncludesPolicy>("MissingIncludes",
                                                          **F.MissingIncludes)

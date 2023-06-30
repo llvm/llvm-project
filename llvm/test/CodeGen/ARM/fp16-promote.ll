@@ -865,8 +865,14 @@ define void @test_fmuladd(ptr %p, ptr %q, ptr %r) #0 {
 ; CHECK-VFP:	ldrh	
 ; CHECK-VFP:	stm	
 ; CHECK-VFP:	strh	
-; CHECK-VFP:	ldm	
-; CHECK-VFP:	stm	
+; CHECK-VFP:	ldrh	
+; CHECK-VFP:	ldrh	
+; CHECK-VFP:	ldrh
+; CHECK-VFP:	ldrh
+; CHECK-VFP:	strh
+; CHECK-VFP:	strh
+; CHECK-VFP:	strh
+; CHECK-VFP:	strh	
 
 ; CHECK-NOVFP: ldrh
 ; CHECK-NOVFP: ldrh
@@ -893,7 +899,7 @@ define void @test_insertelement(ptr %p, ptr %q, i32 %i) #0 {
   %a = load half, ptr %p, align 2
   %b = load <4 x half>, ptr %q, align 8
   %c = insertelement <4 x half> %b, half %a, i32 %i
-  store <4 x half> %c, ptr %q
+  store volatile <4 x half> %c, ptr %q
   ret void
 }
 

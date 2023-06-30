@@ -531,6 +531,9 @@ namespace {
     /// This - The binding for the this pointer in this call, if any.
     const LValue *This;
 
+    /// CallExpr - The syntactical structure of member function calls
+    const Expr *CallExpr;
+
     /// Information on how to find the arguments to this call. Our arguments
     /// are stored in our parent's CallStackFrame, using the ParmVarDecl* as a
     /// key and this value as the version.
@@ -584,7 +587,7 @@ namespace {
 
     CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
                    const FunctionDecl *Callee, const LValue *This,
-                   CallRef Arguments);
+                   const Expr *CallExpr, CallRef Arguments);
     ~CallStackFrame();
 
     // Return the temporary for Key whose version number is Version.
@@ -978,7 +981,9 @@ namespace {
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
           EnableNewConstInterp(C.getLangOpts().EnableNewConstInterp),
-          BottomFrame(*this, SourceLocation(), nullptr, nullptr, CallRef()),
+          BottomFrame(*this, SourceLocation(), /*Callee=*/nullptr,
+                      /*This=*/nullptr,
+                      /*CallExpr=*/nullptr, CallRef()),
           EvaluatingDecl((const ValueDecl *)nullptr),
           EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
           HasFoldFailureDiagnostic(false), EvalMode(Mode) {}
@@ -1436,9 +1441,10 @@ void SubobjectDesignator::diagnosePointerArithmetic(EvalInfo &Info,
 
 CallStackFrame::CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
                                const FunctionDecl *Callee, const LValue *This,
-                               CallRef Call)
+                               const Expr *CallExpr, CallRef Call)
     : Info(Info), Caller(Info.CurrentCall), Callee(Callee), This(This),
-      Arguments(Call), CallLoc(CallLoc), Index(Info.NextCallIndex++) {
+      CallExpr(CallExpr), Arguments(Call), CallLoc(CallLoc),
+      Index(Info.NextCallIndex++) {
   Info.CurrentCall = this;
   ++Info.CallStackDepth;
 }
@@ -1918,12 +1924,29 @@ void CallStackFrame::describe(raw_ostream &Out) {
     Out << *Callee << '(';
 
   if (This && IsMemberCall) {
-    APValue Val;
-    This->moveInto(Val);
-    Val.printPretty(Out, Info.Ctx,
-                    This->Designator.MostDerivedType);
-    // FIXME: Add parens around Val if needed.
-    Out << "->" << *Callee << '(';
+    if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
+      const Expr *Object = MCE->getImplicitObjectArgument();
+      Object->printPretty(Out, /*Helper=*/nullptr, Info.Ctx.getPrintingPolicy(),
+                          /*Indentation=*/0);
+      if (Object->getType()->isPointerType())
+          Out << "->";
+      else
+          Out << ".";
+    } else if (const auto *OCE =
+                   dyn_cast_if_present<CXXOperatorCallExpr>(CallExpr)) {
+      OCE->getArg(0)->printPretty(Out, /*Helper=*/nullptr,
+                                  Info.Ctx.getPrintingPolicy(),
+                                  /*Indentation=*/0);
+      Out << ".";
+    } else {
+      APValue Val;
+      This->moveInto(Val);
+      Val.printPretty(
+          Out, Info.Ctx,
+          Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
+      Out << ".";
+    }
+    Out << *Callee << '(';
     IsMemberCall = false;
   }
 
@@ -6161,13 +6184,13 @@ static bool handleTrivialCopy(EvalInfo &Info, const ParmVarDecl *Param,
 /// Evaluate a function call.
 static bool HandleFunctionCall(SourceLocation CallLoc,
                                const FunctionDecl *Callee, const LValue *This,
-                               ArrayRef<const Expr *> Args, CallRef Call,
-                               const Stmt *Body, EvalInfo &Info,
+                               const Expr *E, ArrayRef<const Expr *> Args,
+                               CallRef Call, const Stmt *Body, EvalInfo &Info,
                                APValue &Result, const LValue *ResultSlot) {
   if (!Info.CheckCallLimit(CallLoc))
     return false;
 
-  CallStackFrame Frame(Info, CallLoc, Callee, This, Call);
+  CallStackFrame Frame(Info, CallLoc, Callee, This, E, Call);
 
   // For a trivial copy or move assignment, perform an APValue copy. This is
   // essential for unions, where the operations performed by the assignment
@@ -6232,7 +6255,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       Info,
       ObjectUnderConstruction{This.getLValueBase(), This.Designator.Entries},
       RD->getNumBases());
-  CallStackFrame Frame(Info, CallLoc, Definition, &This, Call);
+  CallStackFrame Frame(Info, CallLoc, Definition, &This, E, Call);
 
   // FIXME: Creating an APValue just to hold a nonexistent return value is
   // wasteful.
@@ -6533,7 +6556,8 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
   if (!CheckConstexprFunction(Info, CallLoc, DD, Definition, Body))
     return false;
 
-  CallStackFrame Frame(Info, CallLoc, Definition, &This, CallRef());
+  CallStackFrame Frame(Info, CallLoc, Definition, &This, /*CallExpr=*/nullptr,
+                       CallRef());
 
   // We're now in the period of destruction of this object.
   unsigned BasesLeft = RD->getNumBases();
@@ -7802,7 +7826,7 @@ public:
     Stmt *Body = FD->getBody(Definition);
 
     if (!CheckConstexprFunction(Info, E->getExprLoc(), FD, Definition, Body) ||
-        !HandleFunctionCall(E->getExprLoc(), Definition, This, Args, Call,
+        !HandleFunctionCall(E->getExprLoc(), Definition, This, E, Args, Call,
                             Body, Info, Result, ResultSlot))
       return false;
 
@@ -16204,7 +16228,8 @@ bool Expr::EvaluateWithSubstitution(APValue &Value, ASTContext &Ctx,
   Info.EvalStatus.HasSideEffects = false;
 
   // Build fake call to Callee.
-  CallStackFrame Frame(Info, Callee->getLocation(), Callee, ThisPtr, Call);
+  CallStackFrame Frame(Info, Callee->getLocation(), Callee, ThisPtr, This,
+                       Call);
   // FIXME: Missing ExprWithCleanups in enable_if conditions?
   FullExpressionRAII Scope(Info);
   return Evaluate(Value, Info, this) && Scope.destroy() &&
@@ -16261,7 +16286,8 @@ bool Expr::isPotentialConstantExpr(const FunctionDecl *FD,
   } else {
     SourceLocation Loc = FD->getLocation();
     HandleFunctionCall(Loc, FD, (MD && MD->isInstance()) ? &This : nullptr,
-                       Args, CallRef(), FD->getBody(), Info, Scratch, nullptr);
+                       &VIE, Args, CallRef(), FD->getBody(), Info, Scratch,
+                       /*ResultSlot=*/nullptr);
   }
 
   return Diags.empty();
@@ -16283,7 +16309,8 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   Info.CheckingPotentialConstantExpression = true;
 
   // Fabricate a call stack frame to give the arguments a plausible cover story.
-  CallStackFrame Frame(Info, SourceLocation(), FD, /*This*/ nullptr, CallRef());
+  CallStackFrame Frame(Info, SourceLocation(), FD, /*This=*/nullptr,
+                       /*CallExpr=*/nullptr, CallRef());
 
   APValue ResultScratch;
   Evaluate(ResultScratch, Info, E);

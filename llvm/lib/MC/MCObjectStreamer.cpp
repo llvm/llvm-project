@@ -211,6 +211,11 @@ static bool canReuseDataFragment(const MCDataFragment &F,
                                  const MCSubtargetInfo *STI) {
   if (!F.hasInstructions())
     return true;
+  // Do not add data after a linker-relaxable instruction. The difference
+  // between a new label and a label at or before the linker-relaxable
+  // instruction cannot be resolved at assemble-time.
+  if (F.isLinkerRelaxable())
+    return false;
   // When bundling is enabled, we don't want to add data to a fragment that
   // already has instructions (see MCELFStreamer::emitInstToData for details)
   if (Assembler.isBundlingEnabled())

@@ -94,9 +94,9 @@ define i1 @test_ne() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T_0:%.*]] = icmp ne i8 10, 11
 ; CHECK-NEXT:    [[F_0:%.*]] = icmp ne i8 10, 10
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_0]], [[F_0]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ne i8 10, 9
-; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[T_1]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], true
 ; CHECK-NEXT:    ret i1 [[RES_2]]
 ;
 entry:

@@ -12,6 +12,9 @@
 // Hwasan requires tagging of new allocations, so needs RSS for shadow.
 // UNSUPPORTED: hwasan
 
+// FIXME: Something wrong with MADV_FREE or MAP_NORESERVE there.
+// UNSUPPORTED: solaris
+
 void *p;
 
 int main(int argc, char **argv) {

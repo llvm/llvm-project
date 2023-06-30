@@ -633,7 +633,7 @@ multiclass VPatTiedBinaryNoMaskVL_V<SDNode vop,
             (!cast<Instruction>(instruction_name#"_"#suffix#"_"# vlmul.MX#"_TIED")
                      result_reg_class:$rs1,
                      op2_reg_class:$rs2,
-                     GPR:$vl, sew, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
+                     GPR:$vl, sew, TU_MU)>;
 }
 
 class VPatBinaryVL_XI<SDPatternOperator vop,
@@ -1388,7 +1388,7 @@ multiclass VPatMultiplyAccVL_VV_VX<PatFrag op, string instruction_name> {
                             vti.RegClass:$rd, VLOpFrag),
               (!cast<Instruction>(instruction_name#"_VV_"# suffix #"_MASK")
                    vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
+                   (vti.Mask V0), GPR:$vl, vti.Log2SEW, TU_MU)>;
     def : Pat<(riscv_vp_merge_vl (vti.Mask V0),
                 (vti.Vector (op vti.RegClass:$rd,
                                 (riscv_mul_vl_oneuse (SplatPat XLenVT:$rs1), vti.RegClass:$rs2,
@@ -1397,7 +1397,7 @@ multiclass VPatMultiplyAccVL_VV_VX<PatFrag op, string instruction_name> {
                             vti.RegClass:$rd, VLOpFrag),
               (!cast<Instruction>(instruction_name#"_VX_"# suffix #"_MASK")
                    vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
+                   (vti.Mask V0), GPR:$vl, vti.Log2SEW, TU_MU)>;
     def : Pat<(riscv_vselect_vl (vti.Mask V0),
                 (vti.Vector (op vti.RegClass:$rd,
                                 (riscv_mul_vl_oneuse vti.RegClass:$rs1, vti.RegClass:$rs2,
@@ -1497,14 +1497,14 @@ multiclass VPatFPMulAccVL_VV_VF<PatFrag vop, string instruction_name> {
                             vti.RegClass:$rd, VLOpFrag),
               (!cast<Instruction>(instruction_name#"_VV_"# suffix #"_MASK")
                    vti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
+                   (vti.Mask V0), GPR:$vl, vti.Log2SEW, TU_MU)>;
     def : Pat<(riscv_vp_merge_vl (vti.Mask V0),
                            (vti.Vector (vop (SplatFPOp vti.ScalarRegClass:$rs1), vti.RegClass:$rs2,
                             vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
                             vti.RegClass:$rd, VLOpFrag),
               (!cast<Instruction>(instruction_name#"_V" # vti.ScalarSuffix # "_" # suffix # "_MASK")
                    vti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
-                   (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_UNDISTURBED_MASK_UNDISTURBED)>;
+                   (vti.Mask V0), GPR:$vl, vti.Log2SEW, TU_MU)>;
     def : Pat<(riscv_vselect_vl (vti.Mask V0),
                            (vti.Vector (vop vti.RegClass:$rs1, vti.RegClass:$rs2,
                             vti.RegClass:$rd, (vti.Mask true_mask), VLOpFrag)),
@@ -1788,32 +1788,21 @@ foreach vti = AllIntegerVectors in {
 // 11.16. Vector Integer Move Instructions
 foreach vti = AllVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-    def : Pat<(vti.Vector (riscv_vmv_v_v_vl (vti.Vector undef),
-                                            vti.RegClass:$rs2, VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX)
-               vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
     def : Pat<(vti.Vector (riscv_vmv_v_v_vl vti.RegClass:$passthru,
                                             vti.RegClass:$rs2, VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX#"_TU")
-               vti.RegClass:$passthru, vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
+              (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX)
+               vti.RegClass:$passthru, vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
 }
 
 foreach vti = AllIntegerVectors in {
-    def : Pat<(vti.Vector (riscv_vmv_v_x_vl (vti.Vector undef), GPR:$rs2, VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
-               GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
     def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.RegClass:$passthru, GPR:$rs2, VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX#"_TU")
-               vti.RegClass:$passthru, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
+              (!cast<Instruction>("PseudoVMV_V_X_"#vti.LMul.MX)
+               vti.RegClass:$passthru, GPR:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
     defvar ImmPat = !cast<ComplexPattern>("sew"#vti.SEW#"simm5");
-    def : Pat<(vti.Vector (riscv_vmv_v_x_vl (vti.Vector undef), (ImmPat simm5:$imm5),
-                                            VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
-               simm5:$imm5, GPR:$vl, vti.Log2SEW)>;
     def : Pat<(vti.Vector (riscv_vmv_v_x_vl vti.RegClass:$passthru, (ImmPat simm5:$imm5),
                                                 VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX#"_TU")
-               vti.RegClass:$passthru, simm5:$imm5, GPR:$vl, vti.Log2SEW)>;
+              (!cast<Instruction>("PseudoVMV_V_I_"#vti.LMul.MX)
+               vti.RegClass:$passthru, simm5:$imm5, GPR:$vl, vti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -1947,7 +1936,7 @@ foreach vti = AllFloatVectors in {
     def : Pat<(riscv_fclass_vl (vti.Vector vti.RegClass:$rs2), 
                                (vti.Mask true_mask), VLOpFrag),
               (!cast<Instruction>("PseudoVFCLASS_V_"# vti.LMul.MX)
-                 vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
+                 (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -2021,34 +2010,20 @@ foreach fvti = AllFloatVectors in {
     // 13.16. Vector Floating-Point Move Instruction
     // If we're splatting fpimm0, use vmv.v.x vd, x0.
     def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
-                           (fvti.Vector undef), (fvti.Scalar (fpimm0)), VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
-               0, GPR:$vl, fvti.Log2SEW)>;
-    def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                            fvti.Vector:$passthru, (fvti.Scalar (fpimm0)), VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX#"_TU")
-               $passthru, 0, GPR:$vl, fvti.Log2SEW)>;
-    def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
-                           (fvti.Vector undef), (fvti.Scalar (SelectFPImm (XLenVT GPR:$imm))), VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_X_"#fvti.LMul.MX)
-               GPR:$imm, GPR:$vl, fvti.Log2SEW)>;
+              (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
+               $passthru, 0, GPR:$vl, fvti.Log2SEW, TU_MU)>;
     def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                            fvti.Vector:$passthru, (fvti.Scalar (SelectFPImm (XLenVT GPR:$imm))), VLOpFrag)),
-              (!cast<Instruction>("PseudoVMV_V_X_"#fvti.LMul.MX#"_TU")
-               $passthru, GPR:$imm, GPR:$vl, fvti.Log2SEW)>;
+              (!cast<Instruction>("PseudoVMV_V_X_"#fvti.LMul.MX)
+               $passthru, GPR:$imm, GPR:$vl, fvti.Log2SEW, TU_MU)>;
 
-    def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
-                           (fvti.Vector undef), (fvti.Scalar fvti.ScalarRegClass:$rs2), VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMV_V_" # fvti.ScalarSuffix # "_" #
-                                  fvti.LMul.MX)
-               (fvti.Scalar fvti.ScalarRegClass:$rs2),
-               GPR:$vl, fvti.Log2SEW)>;
     def : Pat<(fvti.Vector (riscv_vfmv_v_f_vl
                            fvti.Vector:$passthru, (fvti.Scalar fvti.ScalarRegClass:$rs2), VLOpFrag)),
               (!cast<Instruction>("PseudoVFMV_V_" # fvti.ScalarSuffix # "_" #
-                                  fvti.LMul.MX # "_TU")
+                                  fvti.LMul.MX)
                $passthru, (fvti.Scalar fvti.ScalarRegClass:$rs2),
-               GPR:$vl, fvti.Log2SEW)>;
+               GPR:$vl, fvti.Log2SEW, TU_MU)>;
   }
 }
 

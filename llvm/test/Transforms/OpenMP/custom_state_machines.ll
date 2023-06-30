@@ -861,8 +861,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10:[0-9]+]]
-; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR11:[0-9]+]]
+; AMDGPU-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9:[0-9]+]]
+; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR10:[0-9]+]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -966,9 +966,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
-; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; AMDGPU-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10]]
+; AMDGPU-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9]]
 ; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; AMDGPU-NEXT:    ret void
 ;
@@ -979,7 +979,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p0() #[[ATTR12:[0-9]+]]
+; AMDGPU-NEXT:    call void @p0() #[[ATTR11:[0-9]+]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1002,7 +1002,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1090,11 +1090,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
-; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR10]]
-; AMDGPU-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10]]
+; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
+; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR9]]
+; AMDGPU-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9]]
 ; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR10]]
+; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR9]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1124,7 +1124,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1230,7 +1230,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; AMDGPU-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR12]]
+; AMDGPU-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR11]]
 ; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__8, ptr @__omp_outlined__8_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; AMDGPU-NEXT:    ret void
 ;
@@ -1241,7 +1241,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1264,7 +1264,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1348,7 +1348,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__10, ptr @__omp_outlined__10_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__11, ptr @__omp_outlined__11_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; AMDGPU-NEXT:    ret void
 ;
@@ -1359,7 +1359,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1382,7 +1382,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1465,7 +1465,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
-; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; AMDGPU-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__13, ptr @__omp_outlined__13_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
 ; AMDGPU-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__14, ptr @__omp_outlined__14_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; AMDGPU-NEXT:    ret void
@@ -1477,7 +1477,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1500,7 +1500,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1576,8 +1576,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR10]]
-; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR10]]
+; AMDGPU-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR9]]
+; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR9]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1595,8 +1595,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU:       if.end:
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 ; AMDGPU-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR10]]
-; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR10]]
+; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR9]]
+; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR9]]
 ; AMDGPU-NEXT:    br label [[RETURN]]
 ; AMDGPU:       return:
 ; AMDGPU-NEXT:    ret void
@@ -1616,16 +1616,16 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU:       if.end:
 ; AMDGPU-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 ; AMDGPU-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR12]]
-; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR11]]
+; AMDGPU-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR11]]
 ; AMDGPU-NEXT:    br label [[RETURN]]
 ; AMDGPU:       return:
 ; AMDGPU-NEXT:    ret void
 ;
 ;
-; AMDGPU: Function Attrs: noinline norecurse nounwind
+; AMDGPU: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; AMDGPU-SAME: () #[[ATTR9:[0-9]+]] {
+; AMDGPU-SAME: () #[[ATTR0]] {
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 ; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
@@ -1672,19 +1672,19 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:    ret void
 ;
 ;
-; AMDGPU: Function Attrs: noinline norecurse nounwind
+; AMDGPU: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU-LABEL: define {{[^@]+}}@__omp_outlined__16
-; AMDGPU-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR9]] {
+; AMDGPU-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @weak_callee_empty() #[[ATTR10]]
+; AMDGPU-NEXT:    call void @weak_callee_empty() #[[ATTR9]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
-; AMDGPU: Function Attrs: noinline nounwind
+; AMDGPU: Function Attrs: convergent noinline nounwind
 ; AMDGPU-LABEL: define {{[^@]+}}@weak_callee_empty
-; AMDGPU-SAME: () #[[ATTR6]] {
+; AMDGPU-SAME: () #[[ATTR1]] {
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    ret void
 ;
@@ -1695,7 +1695,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1718,7 +1718,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1761,7 +1761,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-NEXT:    ret void
 ;
 ;
@@ -1807,8 +1807,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10:[0-9]+]]
-; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR11:[0-9]+]]
+; NVPTX-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9:[0-9]+]]
+; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR10:[0-9]+]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -1911,9 +1911,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
-; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; NVPTX-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10]]
+; NVPTX-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9]]
 ; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; NVPTX-NEXT:    ret void
 ;
@@ -1924,7 +1924,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p0() #[[ATTR12:[0-9]+]]
+; NVPTX-NEXT:    call void @p0() #[[ATTR11:[0-9]+]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -1947,7 +1947,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2034,11 +2034,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
-; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR10]]
-; NVPTX-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10]]
+; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
+; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR9]]
+; NVPTX-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9]]
 ; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR10]]
+; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR9]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2068,7 +2068,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2173,7 +2173,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; NVPTX-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR12]]
+; NVPTX-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR11]]
 ; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__8, ptr @__omp_outlined__8_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; NVPTX-NEXT:    ret void
 ;
@@ -2184,7 +2184,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2207,7 +2207,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2290,7 +2290,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__10, ptr @__omp_outlined__10_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__11, ptr @__omp_outlined__11_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; NVPTX-NEXT:    ret void
 ;
@@ -2301,7 +2301,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2324,7 +2324,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2406,7 +2406,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
-; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; NVPTX-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__13, ptr @__omp_outlined__13_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
 ; NVPTX-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__14, ptr @__omp_outlined__14_wrapper.ID, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; NVPTX-NEXT:    ret void
@@ -2418,7 +2418,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2441,7 +2441,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2516,8 +2516,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR10]]
-; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR10]]
+; NVPTX-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR9]]
+; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR9]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2535,8 +2535,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX:       if.end:
 ; NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 ; NVPTX-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR10]]
-; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR10]]
+; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR9]]
+; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR9]]
 ; NVPTX-NEXT:    br label [[RETURN]]
 ; NVPTX:       return:
 ; NVPTX-NEXT:    ret void
@@ -2556,16 +2556,16 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX:       if.end:
 ; NVPTX-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 ; NVPTX-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR12]]
-; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR12]]
+; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR11]]
+; NVPTX-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR11]]
 ; NVPTX-NEXT:    br label [[RETURN]]
 ; NVPTX:       return:
 ; NVPTX-NEXT:    ret void
 ;
 ;
-; NVPTX: Function Attrs: noinline norecurse nounwind
+; NVPTX: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; NVPTX-SAME: () #[[ATTR9:[0-9]+]] {
+; NVPTX-SAME: () #[[ATTR0]] {
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
@@ -2611,19 +2611,19 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:    ret void
 ;
 ;
-; NVPTX: Function Attrs: noinline norecurse nounwind
+; NVPTX: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX-LABEL: define {{[^@]+}}@__omp_outlined__16
-; NVPTX-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR9]] {
+; NVPTX-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @weak_callee_empty() #[[ATTR10]]
+; NVPTX-NEXT:    call void @weak_callee_empty() #[[ATTR9]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
-; NVPTX: Function Attrs: noinline nounwind
+; NVPTX: Function Attrs: convergent noinline nounwind
 ; NVPTX-LABEL: define {{[^@]+}}@weak_callee_empty
-; NVPTX-SAME: () #[[ATTR6]] {
+; NVPTX-SAME: () #[[ATTR1]] {
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    ret void
 ;
@@ -2634,7 +2634,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2657,7 +2657,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2700,7 +2700,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-NEXT:    ret void
 ;
 ;
@@ -2746,8 +2746,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10:[0-9]+]]
-; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11:[0-9]+]]
+; AMDGPU-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9:[0-9]+]]
+; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10:[0-9]+]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2810,9 +2810,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
-; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; AMDGPU-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10]]
+; AMDGPU-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9]]
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
@@ -2823,7 +2823,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR12:[0-9]+]]
+; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR11:[0-9]+]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2846,7 +2846,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2887,11 +2887,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
-; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR10]]
-; AMDGPU-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10]]
+; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
+; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR9]]
+; AMDGPU-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9]]
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR10]]
+; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR9]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2921,7 +2921,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -2984,7 +2984,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; AMDGPU-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__8, ptr @__omp_outlined__8_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
@@ -2995,7 +2995,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3018,7 +3018,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3061,7 +3061,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__10, ptr @__omp_outlined__10_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__11, ptr @__omp_outlined__11_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
@@ -3072,7 +3072,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3095,7 +3095,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3137,7 +3137,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
-; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; AMDGPU-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__13, ptr @__omp_outlined__13_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
 ; AMDGPU-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__14, ptr @__omp_outlined__14_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3149,7 +3149,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3172,7 +3172,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3213,8 +3213,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR10]]
-; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR10]]
+; AMDGPU-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR9]]
+; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR9]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3232,8 +3232,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED:       if.end:
 ; AMDGPU-DISABLED-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 ; AMDGPU-DISABLED-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR10]]
-; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR10]]
+; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR9]]
+; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR9]]
 ; AMDGPU-DISABLED-NEXT:    br label [[RETURN]]
 ; AMDGPU-DISABLED:       return:
 ; AMDGPU-DISABLED-NEXT:    ret void
@@ -3253,16 +3253,16 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED:       if.end:
 ; AMDGPU-DISABLED-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 ; AMDGPU-DISABLED-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR12]]
-; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR11]]
+; AMDGPU-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    br label [[RETURN]]
 ; AMDGPU-DISABLED:       return:
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
-; AMDGPU-DISABLED: Function Attrs: noinline norecurse nounwind
+; AMDGPU-DISABLED: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU-DISABLED-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; AMDGPU-DISABLED-SAME: () #[[ATTR9:[0-9]+]] {
+; AMDGPU-DISABLED-SAME: () #[[ATTR0]] {
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; AMDGPU-DISABLED-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
@@ -3278,19 +3278,19 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
-; AMDGPU-DISABLED: Function Attrs: noinline norecurse nounwind
+; AMDGPU-DISABLED: Function Attrs: convergent noinline norecurse nounwind
 ; AMDGPU-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__16
-; AMDGPU-DISABLED-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR9]] {
+; AMDGPU-DISABLED-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @weak_callee_empty() #[[ATTR10]]
+; AMDGPU-DISABLED-NEXT:    call void @weak_callee_empty() #[[ATTR9]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
-; AMDGPU-DISABLED: Function Attrs: noinline nounwind
+; AMDGPU-DISABLED: Function Attrs: convergent noinline nounwind
 ; AMDGPU-DISABLED-LABEL: define {{[^@]+}}@weak_callee_empty
-; AMDGPU-DISABLED-SAME: () #[[ATTR6]] {
+; AMDGPU-DISABLED-SAME: () #[[ATTR1]] {
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
@@ -3301,7 +3301,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3324,7 +3324,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3367,7 +3367,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; AMDGPU-DISABLED-NEXT:  entry:
 ; AMDGPU-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; AMDGPU-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; AMDGPU-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; AMDGPU-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3413,8 +3413,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10:[0-9]+]]
-; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11:[0-9]+]]
+; NVPTX-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9:[0-9]+]]
+; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10:[0-9]+]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3477,9 +3477,9 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
-; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__2, ptr @__omp_outlined__2_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; NVPTX-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10]]
+; NVPTX-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9]]
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__3, ptr @__omp_outlined__3_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
@@ -3490,7 +3490,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR12:[0-9]+]]
+; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR11:[0-9]+]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3513,7 +3513,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3554,11 +3554,11 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
-; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR10]]
-; NVPTX-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR10]]
+; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
+; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_before.internalized() #[[ATTR9]]
+; NVPTX-DISABLED-NEXT:    call void @no_parallel_region_in_here.internalized() #[[ATTR9]]
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__5, ptr @__omp_outlined__5_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR10]]
+; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_after.internalized() #[[ATTR9]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3588,7 +3588,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3651,7 +3651,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__7, ptr @__omp_outlined__7_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; NVPTX-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @unknown() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__8, ptr @__omp_outlined__8_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
@@ -3662,7 +3662,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3685,7 +3685,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3728,7 +3728,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__10, ptr @__omp_outlined__10_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__11, ptr @__omp_outlined__11_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
@@ -3739,7 +3739,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3762,7 +3762,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3804,7 +3804,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; NVPTX-DISABLED-NEXT:    [[CAPTURED_VARS_ADDRS1:%.*]] = alloca [0 x ptr], align 8
-; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR11]]
+; NVPTX-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR10]]
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__13, ptr @__omp_outlined__13_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
 ; NVPTX-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 undef, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__14, ptr @__omp_outlined__14_wrapper, ptr [[CAPTURED_VARS_ADDRS1]], i64 0)
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -3816,7 +3816,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3839,7 +3839,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p1() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3880,8 +3880,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR10]]
-; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR10]]
+; NVPTX-DISABLED-NEXT:    [[CALL:%.*]] = call i32 @omp_get_thread_num() #[[ATTR9]]
+; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[CALL]]) #[[ATTR9]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3899,8 +3899,8 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED:       if.end:
 ; NVPTX-DISABLED-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 ; NVPTX-DISABLED-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR10]]
-; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR10]]
+; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after.internalized(i32 [[SUB]]) #[[ATTR9]]
+; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after.internalized() #[[ATTR9]]
 ; NVPTX-DISABLED-NEXT:    br label [[RETURN]]
 ; NVPTX-DISABLED:       return:
 ; NVPTX-DISABLED-NEXT:    ret void
@@ -3920,16 +3920,16 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED:       if.end:
 ; NVPTX-DISABLED-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_ADDR]], align 4
 ; NVPTX-DISABLED-NEXT:    [[SUB:%.*]] = sub nsw i32 [[TMP1]], 1
-; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR12]]
-; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after(i32 [[SUB]]) #[[ATTR11]]
+; NVPTX-DISABLED-NEXT:    call void @simple_state_machine_interprocedural_nested_recursive_after_after() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    br label [[RETURN]]
 ; NVPTX-DISABLED:       return:
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
-; NVPTX-DISABLED: Function Attrs: noinline norecurse nounwind
+; NVPTX-DISABLED: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX-DISABLED-LABEL: define {{[^@]+}}@__omp_offloading_14_a36502b_no_state_machine_weak_callee_l112
-; NVPTX-DISABLED-SAME: () #[[ATTR9:[0-9]+]] {
+; NVPTX-DISABLED-SAME: () #[[ATTR0]] {
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
 ; NVPTX-DISABLED-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
@@ -3945,19 +3945,19 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
-; NVPTX-DISABLED: Function Attrs: noinline norecurse nounwind
+; NVPTX-DISABLED: Function Attrs: convergent noinline norecurse nounwind
 ; NVPTX-DISABLED-LABEL: define {{[^@]+}}@__omp_outlined__16
-; NVPTX-DISABLED-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR9]] {
+; NVPTX-DISABLED-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) #[[ATTR0]] {
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @weak_callee_empty() #[[ATTR10]]
+; NVPTX-DISABLED-NEXT:    call void @weak_callee_empty() #[[ATTR9]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
-; NVPTX-DISABLED: Function Attrs: noinline nounwind
+; NVPTX-DISABLED: Function Attrs: convergent noinline nounwind
 ; NVPTX-DISABLED-LABEL: define {{[^@]+}}@weak_callee_empty
-; NVPTX-DISABLED-SAME: () #[[ATTR6]] {
+; NVPTX-DISABLED-SAME: () #[[ATTR1]] {
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
@@ -3968,7 +3968,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -3991,7 +3991,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;
@@ -4034,7 +4034,7 @@ attributes #9 = { convergent nounwind readonly willreturn }
 ; NVPTX-DISABLED-NEXT:  entry:
 ; NVPTX-DISABLED-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 ; NVPTX-DISABLED-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
-; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR12]]
+; NVPTX-DISABLED-NEXT:    call void @p0() #[[ATTR11]]
 ; NVPTX-DISABLED-NEXT:    ret void
 ;
 ;

@@ -217,15 +217,19 @@ TargetTransformInfo::adjustInliningThreshold(const CallBase *CB) const {
   return TTIImpl->adjustInliningThreshold(CB);
 }
 
+unsigned TargetTransformInfo::getCallerAllocaCost(const CallBase *CB,
+                                                  const AllocaInst *AI) const {
+  return TTIImpl->getCallerAllocaCost(CB, AI);
+}
+
 int TargetTransformInfo::getInlinerVectorBonusPercent() const {
   return TTIImpl->getInlinerVectorBonusPercent();
 }
 
-InstructionCost
-TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
-                                ArrayRef<const Value *> Operands,
-                                TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, CostKind);
+InstructionCost TargetTransformInfo::getGEPCost(
+    Type *PointeeType, const Value *Ptr, ArrayRef<const Value *> Operands,
+    Type *AccessType, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
 }
 
 InstructionCost TargetTransformInfo::getPointersChainCost(

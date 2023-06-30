@@ -59,7 +59,9 @@ transform::OperationType::checkPayload(Location loc,
   for (Operation *op : payload) {
     if (opName != op->getName()) {
       DiagnosedSilenceableFailure diag =
-          emitSilenceableError(loc) << "incompatible payload operation name";
+          emitSilenceableError(loc)
+          << "incompatible payload operation name expected " << opName << " vs "
+          << op->getName() << " -> " << *op;
       diag.attachNote(op->getLoc()) << "payload operation";
       return diag;
     }

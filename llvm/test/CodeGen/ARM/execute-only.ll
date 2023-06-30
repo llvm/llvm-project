@@ -1,5 +1,3 @@
-; UNSUPPORTED: expensive_checks
-
 ; RUN: llc -mtriple=thumbv8m.base-eabi -mattr=+execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2BASE %s
 ; RUN: llc -mtriple=thumbv8m.base-eabi -mcpu=cortex-m23 -mattr=+execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2BASE %s
 ; RUN: llc -mtriple=thumbv7m-eabi      -mattr=+execute-only %s -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-T2 %s
@@ -46,6 +44,27 @@ define i32 @jump_table(i32 %c, i32 %a, i32 %b) #0 {
 ; CHECK-NEXT: b.w
 ; CHECK-NEXT: b.w
 ; CHECK-NEXT: b.w
+
+; CHECK-T1-LABEL: jump_table:
+; CHECK-T1:      lsls [[REG_OFFSET:r[0-9]+]], {{r[0-9]+}}, #2
+; CHECK-T1-NEXT: movs [[REG_JT:r[0-9]+]], :upper8_15:.LJTI1_0
+; CHECK-T1-NEXT: lsls [[REG_JT]], [[REG_JT]], #8
+; CHECK-T1-NEXT: adds [[REG_JT]], :upper0_7:.LJTI1_0
+; CHECK-T1-NEXT: lsls [[REG_JT]], [[REG_JT]], #8
+; CHECK-T1-NEXT: adds [[REG_JT]], :lower8_15:.LJTI1_0
+; CHECK-T1-NEXT: lsls [[REG_JT]], [[REG_JT]], #8
+; CHECK-T1-NEXT: adds [[REG_JT]], :lower0_7:.LJTI1_0
+; CHECK-T1-NEXT: ldr  [[REG_ENTRY:r[0-9]+]], [[[REG_JT]], [[REG_OFFSET]]]
+; CHECK-T1-NEXT: mov  pc, [[REG_ENTRY]]
+; CHECK-T1:      .section .rodata,"a",%progbits
+; CHECK-T1-NEXT: .p2align 2, 0x0
+; CHECK-T1-NEXT: .LJTI1_0:
+; CHECK-T1-NEXT: .long
+; CHECK-T1-NEXT: .long
+; CHECK-T1-NEXT: .long
+; CHECK-T1-NEXT: .long
+; CHECK-T1-NEXT: .long
+; CHECK-T1-NEXT: .long
 
 entry:
   switch i32 %c, label %return [

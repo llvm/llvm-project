@@ -659,7 +659,6 @@ static void AttemptToFoldSymbolOffsetDifference(
 
     // Try to find a constant displacement from FA to FB, add the displacement
     // between the offset in FA of SA and the offset in FB of SB.
-    int64_t Displacement = SA.getOffset() - SB.getOffset();
     bool Reverse = false;
     if (FA == FB) {
       Reverse = SA.getOffset() < SB.getOffset();
@@ -667,14 +666,31 @@ static void AttemptToFoldSymbolOffsetDifference(
       Reverse = std::find_if(std::next(FA->getIterator()), SecA.end(),
                              [&](auto &I) { return &I == FB; }) != SecA.end();
     }
+
+    uint64_t SAOffset = SA.getOffset(), SBOffset = SB.getOffset();
+    int64_t Displacement = SA.getOffset() - SB.getOffset();
     if (Reverse) {
       std::swap(FA, FB);
+      std::swap(SAOffset, SBOffset);
       Displacement *= -1;
     }
 
     [[maybe_unused]] bool Found = false;
+    // Track whether B is before a relaxable instruction and whether A is after
+    // a relaxable instruction. If SA and SB are separated by a linker-relaxable
+    // instruction, the difference cannot be resolved as it may be changed by
+    // the linker.
+    bool BBeforeRelax = false, AAfterRelax = false;
     for (auto FI = FB->getIterator(), FE = SecA.end(); FI != FE; ++FI) {
       auto DF = dyn_cast<MCDataFragment>(FI);
+      if (DF && DF->isLinkerRelaxable()) {
+        if (&*FI != FB || SBOffset != DF->getContents().size())
+          BBeforeRelax = true;
+        if (&*FI != FA || SAOffset == DF->getContents().size())
+          AAfterRelax = true;
+        if (BBeforeRelax && AAfterRelax)
+          return;
+      }
       if (&*FI == FA) {
         Found = true;
         break;
