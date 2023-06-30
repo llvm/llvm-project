@@ -2132,7 +2132,7 @@ void SelectionDAGLegalize::ExpandFrexpLibCall(
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
 
   SDValue LoadExp =
-      DAG.getLoad(ExpVT, dl, Call.getValue(1), StackSlot, PtrInfo);
+      DAG.getLoad(ExpVT, dl, Chain, StackSlot, PtrInfo);
   Results.push_back(LoadExp);
 }
 
