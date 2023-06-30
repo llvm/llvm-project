@@ -107,6 +107,7 @@ COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b);
 #elif defined QUAD_PRECISION
 #if __LDBL_MANT_DIG__ == 113 && defined(__SIZEOF_INT128__)
 #define CRT_LDBL_128BIT
+#define TF_C(c) c##L
 typedef uint64_t half_rep_t;
 typedef __uint128_t rep_t;
 typedef __int128_t srep_t;
@@ -116,6 +117,7 @@ typedef long double fp_t;
 // Note: Since there is no explicit way to tell compiler the constant is a
 // 128-bit integer, we let the constant be casted to 128-bit integer
 #define significandBits 112
+#define TF_MANT_DIG (significandBits + 1)
 
 static __inline int rep_clz(rep_t a) {
   const union {

@@ -536,9 +536,9 @@ Standard. Libc++ retroactively updates the Unicode Standard in older C++
 versions. This allows the library to have better estimates for newly introduced
 Unicode code points, without requiring the user to use the latest C++ version
 in their code base.
-=======
+
 Turning off ASan annotation in containers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------------
 
 ``__asan_annotate_container_with_allocator`` is a customization point to allow users to disable
 `Address Sanitizer annotations for containers <https://github.com/google/sanitizers/wiki/AddressSanitizerContainerOverflow>`_ for specific allocators. This may be necessary for allocators that access allocated memory.
@@ -558,7 +558,7 @@ The annotations for a ``user_allocator`` can be disabled like this:
   #endif
 
 Why may I want to turn it off?
-------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are a few reasons why you may want to turn off annotations for an allocator.
 Unpoisoning may not be an option, if (for example) you are not maintaining the allocator.

@@ -933,10 +933,6 @@ PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
   return PP;
 }
 
-bool PreamblePatch::preserveDiagnostics() const {
-  return PatchContents.empty() ||
-         Config::current().Diagnostics.AllowStalePreamble;
-}
 llvm::ArrayRef<PragmaMark> PreamblePatch::marks() const {
   if (PatchContents.empty())
     return Baseline->Marks;

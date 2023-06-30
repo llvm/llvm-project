@@ -162,6 +162,9 @@ public:
   /// Read a blob from the bytecode.
   virtual LogicalResult readBlob(ArrayRef<char> &result) = 0;
 
+  /// Read a bool from the bytecode.
+  virtual LogicalResult readBool(bool &result) = 0;
+
 private:
   /// Read a handle to a dialect resource.
   virtual FailureOr<AsmDialectResourceHandle> readResourceHandle() = 0;
@@ -250,6 +253,9 @@ public:
   /// guaranteed to not die before the end of the bytecode process. The blob is
   /// written as-is, with no additional compression or compaction.
   virtual void writeOwnedBlob(ArrayRef<char> blob) = 0;
+
+  /// Write a bool to the output stream.
+  virtual void writeOwnedBool(bool value) = 0;
 
   /// Return the bytecode version being emitted for.
   virtual int64_t getBytecodeVersion() const = 0;

@@ -598,11 +598,11 @@ void test_get_local_id(int d, global int *out)
 
 // CHECK-LABEL: @test_get_workgroup_size(
 // CHECK: call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-// CHECK: getelementptr i8, ptr addrspace(4) %{{.*}}, i64 4
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 4
 // CHECK: load i16, ptr addrspace(4) %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr i8, ptr addrspace(4) %{{.*}}, i64 6
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 6
 // CHECK: load i16, ptr addrspace(4) %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
-// CHECK: getelementptr i8, ptr addrspace(4) %{{.*}}, i64 8
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 8
 // CHECK: load i16, ptr addrspace(4) %{{.*}}, align 4, !range [[$WS_RANGE:![0-9]*]], !invariant.load{{.*}}, !noundef
 void test_get_workgroup_size(int d, global int *out)
 {
@@ -616,11 +616,11 @@ void test_get_workgroup_size(int d, global int *out)
 
 // CHECK-LABEL: @test_get_grid_size(
 // CHECK: call align 4 dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-// CHECK: getelementptr i8, ptr addrspace(4) %{{.*}}, i64 12
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 12
 // CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !invariant.load
-// CHECK: getelementptr i8, ptr addrspace(4) %{{.*}}, i64 16
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 16
 // CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !invariant.load
-// CHECK: getelementptr i8, ptr addrspace(4) %{{.*}}, i64 20
+// CHECK: getelementptr inbounds i8, ptr addrspace(4) %{{.*}}, i64 20
 // CHECK: load i32, ptr addrspace(4) %{{.*}}, align 4, !invariant.load
 void test_get_grid_size(int d, global int *out)
 {

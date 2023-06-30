@@ -440,8 +440,9 @@ VectorType Parser::parseVectorType() {
     return nullptr;
 
   SmallVector<int64_t, 4> dimensions;
+  SmallVector<bool, 4> scalableDims;
   unsigned numScalableDims;
-  if (parseVectorDimensionList(dimensions, numScalableDims))
+  if (parseVectorDimensionList(dimensions, numScalableDims, scalableDims))
     return nullptr;
   if (any_of(dimensions, [](int64_t i) { return i <= 0; }))
     return emitError(getToken().getLoc(),
@@ -458,50 +459,42 @@ VectorType Parser::parseVectorType() {
     return emitError(typeLoc, "vector elements must be int/index/float type"),
            nullptr;
 
-  return VectorType::get(dimensions, elementType, numScalableDims);
+  return VectorType::get(dimensions, elementType, numScalableDims,
+                         scalableDims);
 }
 
-/// Parse a dimension list in a vector type. This populates the dimension list,
-/// and returns the number of scalable dimensions in `numScalableDims`.
+/// Parse a dimension list in a vector type. This populates the dimension list.
+/// For i-th dimension, `scalableDims[i]` contains either:
+///   * `false` for a non-scalable dimension (e.g. `4`),
+///   * `true` for a scalable dimension (e.g. `[4]`).
+/// This method also returns the number of scalable dimensions in
+/// `numScalableDims`.
 ///
-/// vector-dim-list := (static-dim-list `x`)? (`[` static-dim-list `]` `x`)?
-/// static-dim-list ::= decimal-literal (`x` decimal-literal)*
+/// vector-dim-list := (static-dim-list `x`)?
+/// static-dim-list ::= static-dim (`x` static-dim)*
+/// static-dim ::= (decimal-literal | `[` decimal-literal `]`)
 ///
 ParseResult
 Parser::parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
-                                 unsigned &numScalableDims) {
+                                 unsigned &numScalableDims,
+                                 SmallVectorImpl<bool> &scalableDims) {
   numScalableDims = 0;
   // If there is a set of fixed-length dimensions, consume it
-  while (getToken().is(Token::integer)) {
+  while (getToken().is(Token::integer) || getToken().is(Token::l_square)) {
     int64_t value;
+    bool scalable = consumeIf(Token::l_square);
     if (parseIntegerInDimensionList(value))
       return failure();
     dimensions.push_back(value);
+    if (scalable) {
+      if (!consumeIf(Token::r_square))
+        return emitWrongTokenError("missing ']' closing scalable dimension");
+      numScalableDims++;
+    }
+    scalableDims.push_back(scalable);
     // Make sure we have an 'x' or something like 'xbf32'.
     if (parseXInDimensionList())
       return failure();
-  }
-  // If there is a set of scalable dimensions, consume it
-  if (consumeIf(Token::l_square)) {
-    while (getToken().is(Token::integer)) {
-      int64_t value;
-      if (parseIntegerInDimensionList(value))
-        return failure();
-      dimensions.push_back(value);
-      numScalableDims++;
-      // Check if we have reached the end of the scalable dimension list
-      if (consumeIf(Token::r_square)) {
-        // Make sure we have something like 'xbf32'.
-        return parseXInDimensionList();
-      }
-      // Make sure we have an 'x'
-      if (parseXInDimensionList())
-        return failure();
-    }
-    // If we make it here, we've finished parsing the dimension list
-    // without finding ']' closing the set of scalable dimensions
-    return emitWrongTokenError(
-        "missing ']' closing set of scalable dimensions");
   }
 
   return success();

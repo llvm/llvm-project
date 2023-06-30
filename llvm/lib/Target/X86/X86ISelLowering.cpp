@@ -1098,8 +1098,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
 
     setOperationAction(ISD::ABDU,               MVT::v16i8, Custom);
+    setOperationAction(ISD::ABDS,               MVT::v16i8, Custom);
     setOperationAction(ISD::ABDU,               MVT::v8i16, Custom);
     setOperationAction(ISD::ABDS,               MVT::v8i16, Custom);
+    setOperationAction(ISD::ABDU,               MVT::v4i32, Custom);
+    setOperationAction(ISD::ABDS,               MVT::v4i32, Custom);
 
     setOperationAction(ISD::UADDSAT,            MVT::v16i8, Legal);
     setOperationAction(ISD::SADDSAT,            MVT::v16i8, Legal);
@@ -7162,6 +7165,14 @@ static SDValue getEXTEND_VECTOR_INREG(unsigned Opcode, const SDLoc &DL, EVT VT,
   return DAG.getNode(Opcode, DL, VT, In);
 }
 
+// Create OR(AND(LHS,MASK),AND(RHS,~MASK)) bit select pattern
+static SDValue getBitSelect(const SDLoc &DL, MVT VT, SDValue LHS, SDValue RHS,
+                            SDValue Mask, SelectionDAG &DAG) {
+  LHS = DAG.getNode(ISD::AND, DL, VT, LHS, Mask);
+  RHS = DAG.getNode(X86ISD::ANDNP, DL, VT, Mask, RHS);
+  return DAG.getNode(ISD::OR, DL, VT, LHS, RHS);
+}
+
 // Match (xor X, -1) -> X.
 // Match extract_subvector(xor X, -1) -> extract_subvector(X).
 // Match concat_vectors(xor X, -1, xor Y, -1) -> concat_vectors(X, Y).
@@ -13059,9 +13070,7 @@ static SDValue lowerShuffleAsBitBlend(const SDLoc &DL, MVT VT, SDValue V1,
   }
 
   SDValue V1Mask = DAG.getBuildVector(VT, DL, MaskOps);
-  V1 = DAG.getNode(ISD::AND, DL, VT, V1, V1Mask);
-  V2 = DAG.getNode(X86ISD::ANDNP, DL, VT, V1Mask, V2);
-  return DAG.getNode(ISD::OR, DL, VT, V1, V2);
+  return getBitSelect(DL, VT, V1, V2, V1Mask, DAG);
 }
 
 static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
@@ -30509,6 +30518,18 @@ static SDValue LowerABD(SDValue Op, const X86Subtarget &Subtarget,
       SDValue AbsDiff = DAG.getNode(ISD::ABS, dl, WideVT, Diff);
       return DAG.getNode(ISD::TRUNCATE, dl, VT, AbsDiff);
     }
+  }
+
+  // TODO: Move to TargetLowering expandABD().
+  if (!Subtarget.hasSSE41() &&
+      ((IsSigned && VT == MVT::v16i8) || VT == MVT::v4i32)) {
+    SDValue LHS = DAG.getFreeze(Op.getOperand(0));
+    SDValue RHS = DAG.getFreeze(Op.getOperand(1));
+    ISD::CondCode CC = IsSigned ? ISD::CondCode::SETGT : ISD::CondCode::SETUGT;
+    SDValue Cmp = DAG.getSetCC(dl, VT, LHS, RHS, CC);
+    SDValue Diff0 = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+    SDValue Diff1 = DAG.getNode(ISD::SUB, dl, VT, RHS, LHS);
+    return getBitSelect(dl, VT, Diff0, Diff1, Cmp, DAG);
   }
 
   // Default to expand.
@@ -54206,6 +54227,10 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   // ANDNP(x, 0) -> 0
   if (ISD::isBuildVectorAllZeros(N1.getNode()))
     return DAG.getConstant(0, SDLoc(N), VT);
+
+  // ANDNP(x, -1) -> NOT(x) -> XOR(x, -1)
+  if (ISD::isBuildVectorAllOnes(N1.getNode()))
+    return DAG.getNOT(SDLoc(N), N0, VT);
 
   // Turn ANDNP back to AND if input is inverted.
   if (SDValue Not = IsNOT(N0, DAG))

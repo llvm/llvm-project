@@ -47,7 +47,9 @@ public:
   const char *GetError();
 
 #ifndef SWIG
-  size_t PutOutput(FILE *fh); // DEPRECATED
+  LLDB_DEPRECATED("Use PutOutput(SBFile) or PutOutput(FileSP)",
+                  "PutOutput(SBFile)")
+  size_t PutOutput(FILE *fh);
 #endif
 
   size_t PutOutput(SBFile file);
@@ -59,7 +61,9 @@ public:
   size_t GetErrorSize();
 
 #ifndef SWIG
-  size_t PutError(FILE *fh); // DEPRECATED
+  LLDB_DEPRECATED("Use PutError(SBFile) or PutError(FileSP)",
+                  "PutError(SBFile)")
+  size_t PutError(FILE *fh);
 #endif
 
   size_t PutError(SBFile file);
@@ -83,13 +87,25 @@ public:
   bool GetDescription(lldb::SBStream &description);
 
 #ifndef SWIG
-  void SetImmediateOutputFile(FILE *fh); // DEPRECATED
+  LLDB_DEPRECATED(
+      "Use SetImmediateOutputFile(SBFile) or SetImmediateOutputFile(FileSP)",
+      "SetImmediateOutputFile(SBFile)")
+  void SetImmediateOutputFile(FILE *fh);
 
-  void SetImmediateErrorFile(FILE *fh); // DEPRECATED
+  LLDB_DEPRECATED(
+      "Use SetImmediateErrorFile(SBFile) or SetImmediateErrorFile(FileSP)",
+      "SetImmediateErrorFile(SBFile)")
+  void SetImmediateErrorFile(FILE *fh);
 
-  void SetImmediateOutputFile(FILE *fh, bool transfer_ownership); // DEPRECATED
+  LLDB_DEPRECATED(
+      "Use SetImmediateOutputFile(SBFile) or SetImmediateOutputFile(FileSP)",
+      "SetImmediateOutputFile(SBFile)")
+  void SetImmediateOutputFile(FILE *fh, bool transfer_ownership);
 
-  void SetImmediateErrorFile(FILE *fh, bool transfer_ownership); // DEPRECATED
+  LLDB_DEPRECATED(
+      "Use SetImmediateErrorFile(SBFile) or SetImmediateErrorFile(FileSP)",
+      "SetImmediateErrorFile(SBFile)")
+  void SetImmediateErrorFile(FILE *fh, bool transfer_ownership);
 #endif
 
   void SetImmediateOutputFile(SBFile file);

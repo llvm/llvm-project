@@ -163,35 +163,43 @@ def getTestsInSuite(
     if not os.path.isdir(source_path):
         test_dir_in_suite = path_in_suite[:-1]
         lc = getLocalConfig(ts, test_dir_in_suite, litConfig, localConfigCache)
-        test = Test.Test(ts, path_in_suite, lc)
 
-        # Issue a error if the specified test would not be run if
-        # the user had specified the containing directory instead of
-        # of naming the test directly. This helps to avoid writing
-        # tests which are not executed. The check adds some performance
-        # overhead which might be important if a large number of tests
-        # are being run directly.
-        # This check can be disabled by using --no-indirectly-run-check or
-        # setting the standalone_tests variable in the suite's configuration.
-        if (
-            indirectlyRunCheck
-            and lc.test_format is not None
-            and not lc.standalone_tests
-        ):
-            found = False
-            for res in lc.test_format.getTestsInDirectory(
-                ts, test_dir_in_suite, litConfig, lc
+        # TODO: Stop checking for indirectlyRunCheck and lc.standalone_tests here
+        #       once we remove --no-indirectly-run-check, which is not needed anymore
+        #       now that we error out when trying to run a test that wouldn't be
+        #       discovered in the directory.
+        fallbackOnSingleTest = lc.test_format is None or not indirectlyRunCheck or lc.standalone_tests
+        tests = [Test.Test(ts, path_in_suite, lc)] if fallbackOnSingleTest else \
+                lc.test_format.getTestsForPath(ts, path_in_suite, litConfig, lc)
+
+        for test in tests:
+            # Issue a error if the specified test would not be run if
+            # the user had specified the containing directory instead of
+            # of naming the test directly. This helps to avoid writing
+            # tests which are not executed. The check adds some performance
+            # overhead which might be important if a large number of tests
+            # are being run directly.
+            # This check can be disabled by using --no-indirectly-run-check or
+            # setting the standalone_tests variable in the suite's configuration.
+            if (
+                indirectlyRunCheck
+                and lc.test_format is not None
+                and not lc.standalone_tests
             ):
-                if test.getFullName() == res.getFullName():
-                    found = True
-                    break
-            if not found:
-                litConfig.error(
-                    "%r would not be run indirectly: change name or LIT config"
-                    "(e.g. suffixes or standalone_tests variables)" % test.getFullName()
-                )
+                found = False
+                for res in lc.test_format.getTestsInDirectory(
+                    ts, test_dir_in_suite, litConfig, lc
+                ):
+                    if test.getFullName() == res.getFullName():
+                        found = True
+                        break
+                if not found:
+                    litConfig.error(
+                        "%r would not be run indirectly: change name or LIT config"
+                        "(e.g. suffixes or standalone_tests variables)" % test.getFullName()
+                    )
 
-        yield test
+            yield test
         return
 
     # Otherwise we have a directory to search for tests, start by getting the

@@ -225,7 +225,8 @@ struct VectorizationState {
 
     // TODO: Extend scalable vector type to support a bit map.
     bool numScalableDims = !scalableVecDims.empty() && scalableVecDims.back();
-    return VectorType::get(vectorShape, elementType, numScalableDims);
+    return VectorType::get(vectorShape, elementType, numScalableDims,
+                           scalableDims);
   }
 
   /// Masks an operation with the canonical vector mask if the operation needs
@@ -1227,7 +1228,8 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
     if (firstMaxRankedType) {
       auto vecType = VectorType::get(firstMaxRankedType.getShape(),
                                      getElementTypeOrSelf(vecOperand.getType()),
-                                     firstMaxRankedType.getNumScalableDims());
+                                     firstMaxRankedType.getNumScalableDims(),
+                                     firstMaxRankedType.getScalableDims());
       vecOperands.push_back(broadcastIfNeeded(rewriter, vecOperand, vecType));
     } else {
       vecOperands.push_back(vecOperand);
@@ -1239,7 +1241,8 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
     resultTypes.push_back(
         firstMaxRankedType
             ? VectorType::get(firstMaxRankedType.getShape(), resultType,
-                              firstMaxRankedType.getNumScalableDims())
+                              firstMaxRankedType.getNumScalableDims(),
+                              firstMaxRankedType.getScalableDims())
             : resultType);
   }
   //   d. Build and return the new op.

@@ -17,6 +17,9 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "dataflow"
 
 namespace clang {
 namespace dataflow {
@@ -85,6 +88,17 @@ public:
   /// Returns the child storage location for `D`.
   StorageLocation &getChild(const ValueDecl &D) const {
     auto It = Children.find(&D);
+    LLVM_DEBUG({
+      if (It == Children.end()) {
+        llvm::dbgs() << "Couldn't find child " << D.getNameAsString()
+                     << " on StorageLocation " << this << " of type "
+                     << getType() << "\n";
+        llvm::dbgs() << "Existing children:\n";
+        for ([[maybe_unused]] auto [Field, Loc] : Children) {
+          llvm::dbgs() << Field->getNameAsString() << "\n";
+        }
+      }
+    });
     assert(It != Children.end());
     return *It->second;
   }
@@ -99,5 +113,7 @@ private:
 
 } // namespace dataflow
 } // namespace clang
+
+#undef DEBUG_TYPE
 
 #endif // LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_STORAGELOCATION_H

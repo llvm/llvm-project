@@ -560,7 +560,18 @@ void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
   // Initialize the "to" if it is of derived type that needs initialization.
   if (const DescriptorAddendum * addendum{to.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
-      if (!derived->noInitializationNeeded()) {
+      // Do not invoke the initialization, if the descriptor is unallocated.
+      // AssignTemporary() is used for component-by-component assignments,
+      // for example, for structure constructors. This means that the LHS
+      // may be an allocatable component with unallocated status.
+      // The initialization will just fail in this case. By skipping
+      // the initialization we let Assign() automatically allocate
+      // and initialize the component according to the RHS.
+      // So we only need to initialize the LHS here if it is allocated.
+      // Note that initializing already initialized entity has no visible
+      // effect, though, it is assumed that the compiler does not initialize
+      // the temporary and leaves the initialization to this runtime code.
+      if (!derived->noInitializationNeeded() && to.IsAllocated()) {
         if (ReturnError(terminator, Initialize(to, *derived, terminator)) !=
             StatOk) {
           return;

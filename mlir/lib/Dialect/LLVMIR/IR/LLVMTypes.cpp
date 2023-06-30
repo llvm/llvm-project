@@ -992,7 +992,13 @@ Type mlir::LLVM::getVectorType(Type elementType, unsigned numElements,
       return LLVMScalableVectorType::get(elementType, numElements);
     return LLVMFixedVectorType::get(elementType, numElements);
   }
-  return VectorType::get(numElements, elementType, (unsigned)isScalable);
+
+  // LLVM vectors are always 1-D, hence only 1 bool is required to mark it as
+  // scalable/non-scalable.
+  SmallVector<bool> scalableDims(1, isScalable);
+
+  return VectorType::get(numElements, elementType,
+                         static_cast<unsigned>(isScalable), scalableDims);
 }
 
 Type mlir::LLVM::getVectorType(Type elementType,

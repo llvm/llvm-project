@@ -177,3 +177,58 @@ func.func @im_neg(%arg0: f32, %arg1: f32) -> f32 {
   // CHECK-NEXT: return %[[NEG]]
   return %im : f32
 }
+
+// CHECK-LABEL: func @mul_one_f16
+//  CHECK-SAME: (%[[ARG0:.*]]: f16, %[[ARG1:.*]]: f16) -> complex<f16>
+func.func @mul_one_f16(%arg0: f16, %arg1: f16) -> complex<f16> {
+  %create = complex.create %arg0, %arg1: complex<f16>  
+  %one = complex.constant [1.0 : f16, 0.0 : f16] : complex<f16>
+  %mul = complex.mul %create, %one : complex<f16>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f16>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f16>
+}
+
+// CHECK-LABEL: func @mul_one_f32
+//  CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: f32) -> complex<f32>
+func.func @mul_one_f32(%arg0: f32, %arg1: f32) -> complex<f32> {
+  %create = complex.create %arg0, %arg1: complex<f32>  
+  %one = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  %mul = complex.mul %create, %one : complex<f32>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f32>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f32>
+}
+
+// CHECK-LABEL: func @mul_one_f64
+//  CHECK-SAME: (%[[ARG0:.*]]: f64, %[[ARG1:.*]]: f64) -> complex<f64>
+func.func @mul_one_f64(%arg0: f64, %arg1: f64) -> complex<f64> {
+  %create = complex.create %arg0, %arg1: complex<f64>  
+  %one = complex.constant [1.0 : f64, 0.0 : f64] : complex<f64>
+  %mul = complex.mul %create, %one : complex<f64>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f64>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f64>
+}
+
+// CHECK-LABEL: func @mul_one_f80
+//  CHECK-SAME: (%[[ARG0:.*]]: f80, %[[ARG1:.*]]: f80) -> complex<f80>
+func.func @mul_one_f80(%arg0: f80, %arg1: f80) -> complex<f80> {
+  %create = complex.create %arg0, %arg1: complex<f80>  
+  %one = complex.constant [1.0 : f80, 0.0 : f80] : complex<f80>
+  %mul = complex.mul %create, %one : complex<f80>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f80>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f80>
+}
+
+// CHECK-LABEL: func @mul_one_f128
+//  CHECK-SAME: (%[[ARG0:.*]]: f128, %[[ARG1:.*]]: f128) -> complex<f128>
+func.func @mul_one_f128(%arg0: f128, %arg1: f128) -> complex<f128> {
+  %create = complex.create %arg0, %arg1: complex<f128>  
+  %one = complex.constant [1.0 : f128, 0.0 : f128] : complex<f128>
+  %mul = complex.mul %create, %one : complex<f128>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f128>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f128>
+}

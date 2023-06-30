@@ -331,19 +331,19 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    movdqa {{.*#+}} xmm4 = [9223372039002259456,9223372039002259456]
 ; X64-NEXT:    movdqa %xmm8, %xmm3
 ; X64-NEXT:    pxor %xmm4, %xmm3
-; X64-NEXT:    pshufd {{.*#+}} xmm7 = xmm3[1,1,3,3]
-; X64-NEXT:    movdqa {{.*#+}} xmm6 = [2147483649,2147483649,2147483649,2147483649]
-; X64-NEXT:    pcmpeqd %xmm6, %xmm7
+; X64-NEXT:    pshufd {{.*#+}} xmm6 = xmm3[1,1,3,3]
+; X64-NEXT:    movdqa {{.*#+}} xmm7 = [2147483649,2147483649,2147483649,2147483649]
+; X64-NEXT:    pcmpeqd %xmm7, %xmm6
 ; X64-NEXT:    movdqa {{.*#+}} xmm5 = [9223372043297226751,9223372043297226751]
 ; X64-NEXT:    movdqa %xmm5, %xmm9
 ; X64-NEXT:    pcmpgtd %xmm3, %xmm9
 ; X64-NEXT:    pshufd {{.*#+}} xmm10 = xmm9[0,0,2,2]
-; X64-NEXT:    pand %xmm7, %xmm10
+; X64-NEXT:    pand %xmm6, %xmm10
 ; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm9[1,1,3,3]
 ; X64-NEXT:    por %xmm10, %xmm3
-; X64-NEXT:    pcmpeqd %xmm7, %xmm7
+; X64-NEXT:    pcmpeqd %xmm6, %xmm6
 ; X64-NEXT:    pand %xmm3, %xmm8
-; X64-NEXT:    pandn %xmm7, %xmm3
+; X64-NEXT:    pxor %xmm6, %xmm3
 ; X64-NEXT:    por %xmm8, %xmm3
 ; X64-NEXT:    psrlq $1, %xmm3
 ; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
@@ -362,15 +362,15 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    punpcklqdq {{.*#+}} xmm8 = xmm8[0],xmm0[0]
 ; X64-NEXT:    pxor %xmm8, %xmm4
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,3,3]
-; X64-NEXT:    pcmpeqd %xmm6, %xmm0
+; X64-NEXT:    pcmpeqd %xmm7, %xmm0
 ; X64-NEXT:    pcmpgtd %xmm4, %xmm5
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[0,0,2,2]
 ; X64-NEXT:    pand %xmm0, %xmm1
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,3,3]
 ; X64-NEXT:    por %xmm1, %xmm0
-; X64-NEXT:    pand %xmm0, %xmm8
-; X64-NEXT:    pandn %xmm7, %xmm0
-; X64-NEXT:    por %xmm8, %xmm0
+; X64-NEXT:    pxor %xmm0, %xmm6
+; X64-NEXT:    pand %xmm8, %xmm0
+; X64-NEXT:    por %xmm6, %xmm0
 ; X64-NEXT:    psrlq $1, %xmm0
 ; X64-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm3[0,2]
 ; X64-NEXT:    retq

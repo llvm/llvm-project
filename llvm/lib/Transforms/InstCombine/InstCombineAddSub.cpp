@@ -1610,6 +1610,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
         I, Builder.CreateIntrinsic(Intrinsic::ctpop, {I.getType()},
                                    {Builder.CreateOr(A, B)}));
 
+  if (Instruction *Res = foldBinOpOfDisplacedShifts(I))
+    return Res;
+
   return Changed ? &I : nullptr;
 }
 
