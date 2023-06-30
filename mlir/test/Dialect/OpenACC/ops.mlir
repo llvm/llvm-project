@@ -814,6 +814,14 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 
   acc.data {
   } attributes { defaultAttr = #acc<defaultvalue none> }
+
+  acc.data {
+  } attributes { defaultAttr = #acc<defaultvalue none>, async }
+
+  %a1 = arith.constant 1 : i64
+  acc.data async(%a1 : i64) {
+  } attributes { defaultAttr = #acc<defaultvalue none>, async }
+
   return
 }
 
@@ -912,6 +920,12 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 
 // CHECK:      acc.data {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+// CHECK:      acc.data {
+// CHECK-NEXT: } attributes {async, defaultAttr = #acc<defaultvalue none>}
+
+// CHECK:      acc.data async(%{{.*}} : i64) {
+// CHECK-NEXT: } attributes {async, defaultAttr = #acc<defaultvalue none>}
 
 // -----
 
