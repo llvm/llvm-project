@@ -16,7 +16,7 @@
 #include "Utils.h"
 
 #pragma omp begin declare target device_type(nohost)
-extern const uint16_t __oclc_ABI_version;
+
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 using namespace ompx;
