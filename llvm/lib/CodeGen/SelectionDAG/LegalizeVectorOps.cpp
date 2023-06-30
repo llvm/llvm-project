@@ -412,6 +412,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::SMULO:
   case ISD::UMULO:
   case ISD::FCANONICALIZE:
+  case ISD::FFREXP:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
@@ -979,7 +980,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     return;
   }
 
-  Results.push_back(DAG.UnrollVectorOp(Node));
+  SDValue Unrolled = DAG.UnrollVectorOp(Node);
+  for (unsigned I = 0, E = Unrolled->getNumValues(); I != E; ++I)
+    Results.push_back(Unrolled.getValue(I));
 }
 
 SDValue VectorLegalizer::ExpandSELECT(SDNode *Node) {

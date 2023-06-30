@@ -68,9 +68,7 @@ int main(int, char**) {
     std::sort_heap(first, last);
     LIBCPP_ASSERT(stats.copied == 0);
     LIBCPP_ASSERT(stats.moved <= 2 * n + n * logn);
-#ifndef _LIBCPP_ENABLE_DEBUG_MODE
     LIBCPP_ASSERT(stats.compared <= n * logn);
-#endif
     LIBCPP_ASSERT(std::is_sorted(first, last));
     LIBCPP_ASSERT(stats.compared <= 2 * n * logn + debug_comparisons);
   }

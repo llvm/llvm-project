@@ -227,8 +227,12 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   // constructor-initializers.
   if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FuncDecl)) {
     for (const auto *Init : CtorDecl->inits()) {
-      if (const auto *M = Init->getAnyMember())
-          Fields.insert(M);
+      if (Init->isMemberInitializer()) {
+        Fields.insert(Init->getMember());
+      } else if (Init->isIndirectMemberInitializer()) {
+        for (const auto *I : Init->getIndirectMember()->chain())
+          Fields.insert(cast<FieldDecl>(I));
+      }
       const Expr *E = Init->getInit();
       assert(E != nullptr);
       getFieldsGlobalsAndFuncs(*E, Fields, Vars, Funcs);
@@ -305,7 +309,8 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
     // FIXME: Initialize the ThisPointeeLoc of lambdas too.
     if (MethodDecl && !MethodDecl->isStatic()) {
       QualType ThisPointeeType = MethodDecl->getThisObjectType();
-      ThisPointeeLoc = &createStorageLocation(ThisPointeeType);
+      ThisPointeeLoc = &cast<AggregateStorageLocation>(
+          createStorageLocation(ThisPointeeType));
       if (Value *ThisPointeeVal = createValue(ThisPointeeType))
         setValue(*ThisPointeeLoc, *ThisPointeeVal);
     }
@@ -323,7 +328,8 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
-        Env.ThisPointeeLoc = getStorageLocation(*Arg, SkipPast::Reference);
+        Env.ThisPointeeLoc = cast<AggregateStorageLocation>(
+            getStorageLocation(*Arg, SkipPast::Reference));
       // Otherwise (when the argument is `this`), retain the current
       // environment's `ThisPointeeLoc`.
     }
@@ -338,7 +344,8 @@ Environment Environment::pushCall(const CallExpr *Call) const {
 Environment Environment::pushCall(const CXXConstructExpr *Call) const {
   Environment Env(*this);
 
-  Env.ThisPointeeLoc = &Env.createStorageLocation(Call->getType());
+  Env.ThisPointeeLoc = &cast<AggregateStorageLocation>(
+      Env.createStorageLocation(Call->getType()));
   if (Value *Val = Env.createValue(Call->getType()))
     Env.setValue(*Env.ThisPointeeLoc, *Val);
 
@@ -681,7 +688,7 @@ StorageLocation *Environment::getStorageLocationStrict(const Expr &E) const {
   return Loc;
 }
 
-StorageLocation *Environment::getThisPointeeStorageLocation() const {
+AggregateStorageLocation *Environment::getThisPointeeStorageLocation() const {
   return ThisPointeeLoc;
 }
 

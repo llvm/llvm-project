@@ -56,21 +56,21 @@ namespace __formatter {
 template <floating_point _Tp>
 _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value) {
   to_chars_result __r = _VSTD::to_chars(__first, __last, __value);
-  _LIBCPP_ASSERT(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
 template <floating_point _Tp>
 _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt) {
   to_chars_result __r = _VSTD::to_chars(__first, __last, __value, __fmt);
-  _LIBCPP_ASSERT(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
 template <floating_point _Tp>
 _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value, chars_format __fmt, int __precision) {
   to_chars_result __r = _VSTD::to_chars(__first, __last, __value, __fmt, __precision);
-  _LIBCPP_ASSERT(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
@@ -252,10 +252,10 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_default(const __float_buffe
     __result.__radix_point = __result.__last;
 
   // clang-format off
-  _LIBCPP_ASSERT((__result.__integral != __result.__last) &&
-                 (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                 (__result.__exponent == __result.__last || *__result.__exponent == 'e'),
-                 "Post-condition failure.");
+  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
+                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                               (__result.__exponent == __result.__last || *__result.__exponent == 'e'),
+                               "Post-condition failure.");
   // clang-format on
 
   return __result;
@@ -305,10 +305,10 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_hexadecimal_lower_case(cons
   }
 
   // clang-format off
-  _LIBCPP_ASSERT((__result.__integral != __result.__last) &&
-                 (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                 (__result.__exponent != __result.__last && *__result.__exponent == 'p'),
-                 "Post-condition failure.");
+  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
+                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                               (__result.__exponent != __result.__last && *__result.__exponent == 'p'),
+                               "Post-condition failure.");
   // clang-format on
 
   return __result;
@@ -335,7 +335,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_lower_case(const
       __formatter::__to_buffer(__integral, __buffer.end(), __value, chars_format::scientific, __precision);
 
   char* __first = __integral + 1;
-  _LIBCPP_ASSERT(__first != __result.__last, "No exponent present");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__first != __result.__last, "No exponent present");
   if (*__first == '.') {
     __result.__radix_point = __first;
     __result.__exponent    = __formatter::__find_exponent(__first + 1, __result.__last);
@@ -345,10 +345,10 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_scientific_lower_case(const
   }
 
   // clang-format off
-  _LIBCPP_ASSERT((__result.__integral != __result.__last) &&
-                 (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                 (__result.__exponent != __result.__last && *__result.__exponent == 'e'),
-                 "Post-condition failure.");
+  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
+                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                               (__result.__exponent != __result.__last && *__result.__exponent == 'e'),
+                               "Post-condition failure.");
   // clang-format on
   return __result;
 }
@@ -378,10 +378,10 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_fixed(const __float_buffer<
   __result.__exponent = __result.__last;
 
   // clang-format off
-  _LIBCPP_ASSERT((__result.__integral != __result.__last) &&
-                 (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                 (__result.__exponent == __result.__last),
-                 "Post-condition failure.");
+  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
+                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                               (__result.__exponent == __result.__last),
+                               "Post-condition failure.");
   // clang-format on
   return __result;
 }
@@ -415,10 +415,10 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_general_lower_case(__float_
   }
 
   // clang-format off
-  _LIBCPP_ASSERT((__result.__integral != __result.__last) &&
-                 (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
-                 (__result.__exponent == __result.__last || *__result.__exponent == 'e'),
-                 "Post-condition failure.");
+  _LIBCPP_ASSERT_UNCATEGORIZED((__result.__integral != __result.__last) &&
+                               (__result.__radix_point == __result.__last || *__result.__radix_point == '.') &&
+                               (__result.__exponent == __result.__last || *__result.__exponent == 'e'),
+                               "Post-condition failure.");
   // clang-format on
 
   return __result;
@@ -490,7 +490,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer(
     return __formatter::__format_buffer_general_upper_case(__buffer, __value, __buffer.__precision(), __first);
 
   default:
-    _LIBCPP_ASSERT(false, "The parser should have validated the type");
+    _LIBCPP_ASSERT_UNCATEGORIZED(false, "The parser should have validated the type");
     __libcpp_unreachable();
   }
 }

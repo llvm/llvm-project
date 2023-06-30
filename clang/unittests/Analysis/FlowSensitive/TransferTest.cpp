@@ -1517,8 +1517,7 @@ TEST(TransferTest, StructThisMember) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
-            Env.getThisPointeeStorageLocation());
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
         ASSERT_THAT(ThisLoc, NotNull());
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
@@ -1593,8 +1592,7 @@ TEST(TransferTest, ClassThisMember) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const auto *ThisLoc =
-            cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
@@ -1664,8 +1662,7 @@ TEST(TransferTest, UnionThisMember) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
-            Env.getThisPointeeStorageLocation());
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
         ASSERT_THAT(ThisLoc, NotNull());
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -1710,8 +1707,7 @@ TEST(TransferTest, StructThisInLambda) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p1");
 
-        const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
-            Env.getThisPointeeStorageLocation());
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
         ASSERT_THAT(ThisLoc, NotNull());
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
@@ -1749,8 +1745,7 @@ TEST(TransferTest, StructThisInLambda) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p2"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p2");
 
-        const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
-            Env.getThisPointeeStorageLocation());
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
         ASSERT_THAT(ThisLoc, NotNull());
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
@@ -1808,8 +1803,7 @@ TEST(TransferTest, ConstructorInitializer) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
-            Env.getThisPointeeStorageLocation());
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
         ASSERT_THAT(ThisLoc, NotNull());
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -1842,8 +1836,7 @@ TEST(TransferTest, DefaultInitializer) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
-            Env.getThisPointeeStorageLocation());
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
         ASSERT_THAT(ThisLoc, NotNull());
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -1876,8 +1869,7 @@ TEST(TransferTest, DefaultInitializerReference) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        const auto *ThisLoc = dyn_cast<AggregateStorageLocation>(
-            Env.getThisPointeeStorageLocation());
+        const auto *ThisLoc = Env.getThisPointeeStorageLocation();
         ASSERT_THAT(ThisLoc, NotNull());
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
@@ -2538,10 +2530,56 @@ TEST(TransferTest, NullToPointerCast) {
       });
 }
 
+TEST(TransferTest, PointerToMemberVariable) {
+  std::string Code = R"(
+    struct S {
+      int i;
+    };
+    void target() {
+      int S::*MemberPointer = &S::i;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *MemberPointerDecl =
+            findValueDecl(ASTCtx, "MemberPointer");
+        ASSERT_THAT(MemberPointerDecl, NotNull());
+        ASSERT_THAT(Env.getValue(*MemberPointerDecl), IsNull());
+      });
+}
+
+TEST(TransferTest, PointerToMemberFunction) {
+  std::string Code = R"(
+    struct S {
+      void Method();
+    };
+    void target() {
+      void (S::*MemberPointer)() = &S::Method;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *MemberPointerDecl =
+            findValueDecl(ASTCtx, "MemberPointer");
+        ASSERT_THAT(MemberPointerDecl, NotNull());
+        ASSERT_THAT(Env.getValue(*MemberPointerDecl), IsNull());
+      });
+}
+
 TEST(TransferTest, NullToMemberPointerCast) {
   std::string Code = R"(
     struct Foo {};
-    void target(Foo *Foo) {
+    void target() {
       int Foo::*MemberPointer = nullptr;
       // [[p]]
     }
@@ -2556,12 +2594,7 @@ TEST(TransferTest, NullToMemberPointerCast) {
         const ValueDecl *MemberPointerDecl =
             findValueDecl(ASTCtx, "MemberPointer");
         ASSERT_THAT(MemberPointerDecl, NotNull());
-
-        const auto *MemberPointerVal =
-            cast<PointerValue>(Env.getValue(*MemberPointerDecl));
-
-        const StorageLocation &MemberLoc = MemberPointerVal->getPointeeLoc();
-        EXPECT_THAT(Env.getValue(MemberLoc), IsNull());
+        ASSERT_THAT(Env.getValue(*MemberPointerDecl), IsNull());
       });
 }
 
@@ -5477,6 +5510,37 @@ TEST(TransferTest, AnonymousStruct) {
             cast<AggregateStorageLocation>(Env.getStorageLocation(*SDecl));
         auto &AnonStruct = cast<AggregateStorageLocation>(
             S->getChild(*cast<ValueDecl>(IndirectField->chain().front())));
+
+        auto *B = cast<BoolValue>(Env.getValue(AnonStruct.getChild(*BDecl)));
+        ASSERT_TRUE(Env.flowConditionImplies(*B));
+      });
+}
+
+TEST(TransferTest, AnonymousStructWithInitializer) {
+  std::string Code = R"(
+    struct target {
+      target() {
+        (void)0;
+        // [[p]]
+      }
+      struct {
+        bool b = true;
+      };
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const ValueDecl *BDecl = findValueDecl(ASTCtx, "b");
+        const IndirectFieldDecl *IndirectField =
+            findIndirectFieldDecl(ASTCtx, "b");
+
+        auto *ThisLoc =
+            cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
+        auto &AnonStruct = cast<AggregateStorageLocation>(ThisLoc->getChild(
+            *cast<ValueDecl>(IndirectField->chain().front())));
 
         auto *B = cast<BoolValue>(Env.getValue(AnonStruct.getChild(*BDecl)));
         ASSERT_TRUE(Env.flowConditionImplies(*B));

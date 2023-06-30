@@ -310,9 +310,14 @@ private:
       // If faced with "a.operator*(argument)" or "a->operator*(argument)",
       // i.e. the operator is called as a member function,
       // then the argument must be an expression.
-      bool OperatorCalledAsMemberFunction =
-          Prev->Previous && Prev->Previous->isOneOf(tok::period, tok::arrow);
-      Contexts.back().IsExpression = OperatorCalledAsMemberFunction;
+      // If faced with "operator+(argument)", i.e. the operator is called as
+      // a free function, then the argument is an expression only if the current
+      // line can't be a declaration.
+      bool IsOperatorCallSite =
+          (Prev->Previous &&
+           Prev->Previous->isOneOf(tok::period, tok::arrow)) ||
+          (!Line.MustBeDeclaration && !Line.InMacroBody);
+      Contexts.back().IsExpression = IsOperatorCallSite;
     } else if (OpeningParen.is(TT_VerilogInstancePortLParen)) {
       Contexts.back().IsExpression = true;
       Contexts.back().ContextType = Context::VerilogInstancePortList;

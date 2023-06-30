@@ -701,8 +701,8 @@ OrderedAssignmentRewriter::generateYieldedLHS(mlir::Location loc,
     for (auto &op : lhsRegion.front().without_terminator())
       (void)builder.clone(op, mapper);
     mlir::Value newShape = mapper.lookupOrDefault(elementalAddrLhs.getShape());
-    loweredLhs.vectorSubscriptLoopNest =
-        hlfir::genLoopNest(loc, builder, newShape);
+    loweredLhs.vectorSubscriptLoopNest = hlfir::genLoopNest(
+        loc, builder, newShape, !elementalAddrLhs.isOrdered());
     builder.setInsertionPointToStart(
         loweredLhs.vectorSubscriptLoopNest->innerLoop.getBody());
     mapper.map(elementalAddrLhs.getIndices(),

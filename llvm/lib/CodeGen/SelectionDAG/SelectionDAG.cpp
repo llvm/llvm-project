@@ -11638,22 +11638,51 @@ SelectionDAG::matchBinOpReduction(SDNode *Extract, ISD::NodeType &BinOp,
 }
 
 SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
-  assert(N->getNumValues() == 1 &&
-         "Can't unroll a vector with multiple results!");
-
   EVT VT = N->getValueType(0);
-  unsigned NE = VT.getVectorNumElements();
   EVT EltVT = VT.getVectorElementType();
-  SDLoc dl(N);
+  unsigned NE = VT.getVectorNumElements();
 
-  SmallVector<SDValue, 8> Scalars;
-  SmallVector<SDValue, 4> Operands(N->getNumOperands());
+  SDLoc dl(N);
 
   // If ResNE is 0, fully unroll the vector op.
   if (ResNE == 0)
     ResNE = NE;
   else if (NE > ResNE)
     NE = ResNE;
+
+  if (N->getNumValues() == 2) {
+    SmallVector<SDValue, 8> Scalars0, Scalars1;
+    SmallVector<SDValue, 4> Operands(N->getNumOperands());
+    EVT VT1 = N->getValueType(1);
+    EVT EltVT1 = VT1.getVectorElementType();
+
+    unsigned i;
+    for (i = 0; i != NE; ++i) {
+      for (unsigned j = 0, e = N->getNumOperands(); j != e; ++j) {
+        SDValue Operand = N->getOperand(j);
+        EVT OperandVT = Operand.getValueType();
+
+        // A vector operand; extract a single element.
+        EVT OperandEltVT = OperandVT.getVectorElementType();
+        Operands[j] = getNode(ISD::EXTRACT_VECTOR_ELT, dl, OperandEltVT,
+                              Operand, getVectorIdxConstant(i, dl));
+      }
+
+      SDValue EltOp = getNode(N->getOpcode(), dl, {EltVT, EltVT1}, Operands);
+      Scalars0.push_back(EltOp);
+      Scalars1.push_back(EltOp.getValue(1));
+    }
+
+    SDValue Vec0 = getBuildVector(VT, dl, Scalars0);
+    SDValue Vec1 = getBuildVector(VT1, dl, Scalars1);
+    return getMergeValues({Vec0, Vec1}, dl);
+  }
+
+  assert(N->getNumValues() == 1 &&
+         "Can't unroll a vector with multiple results!");
+
+  SmallVector<SDValue, 8> Scalars;
+  SmallVector<SDValue, 4> Operands(N->getNumOperands());
 
   unsigned i;
   for (i= 0; i != NE; ++i) {

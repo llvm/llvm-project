@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -1494,6 +1495,17 @@ void MachineConstantPool::print(raw_ostream &OS) const {
     OS << ", align=" << Constants[i].getAlign().value();
     OS << "\n";
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Template specialization for MachineFunction implementation of
+// ProfileSummaryInfo::getEntryCount().
+//===----------------------------------------------------------------------===//
+template <>
+std::optional<Function::ProfileCount>
+ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
+    const llvm::MachineFunction *F) const {
+  return F->getFunction().getEntryCount();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

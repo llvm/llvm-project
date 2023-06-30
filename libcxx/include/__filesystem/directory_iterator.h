@@ -83,7 +83,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   const directory_entry& operator*() const {
-    _LIBCPP_ASSERT(__imp_, "The end iterator cannot be dereferenced");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__imp_, "The end iterator cannot be dereferenced");
     return __dereference();
   }
 

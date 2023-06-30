@@ -13,7 +13,6 @@
 #include <__algorithm/copy.h>
 #include <__availability>
 #include <__config>
-#include <__debug>
 #include <__format/concepts.h>
 #include <__format/format_error.h>
 #include <__format/format_parse_context.h>
@@ -64,7 +63,7 @@ public:
           static_cast<unsigned>(__value), __ctx, __parser_.__get_parsed_std_specifications(__ctx));
 
     default:
-      _LIBCPP_ASSERT(false, "The parse function should have validated the type");
+      _LIBCPP_ASSERT_UNCATEGORIZED(false, "The parse function should have validated the type");
       __libcpp_unreachable();
     }
   }

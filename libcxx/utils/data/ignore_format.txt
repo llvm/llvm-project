@@ -156,7 +156,6 @@ libcxx/include/__coroutine/trivial_awaitables.h
 libcxx/include/cstddef
 libcxx/include/ctype.h
 libcxx/include/cuchar
-libcxx/include/__debug
 libcxx/include/__debug_utils/randomize_range.h
 libcxx/include/deque
 libcxx/include/errno.h
@@ -521,7 +520,6 @@ libcxx/src/charconv.cpp
 libcxx/src/chrono.cpp
 libcxx/src/condition_variable.cpp
 libcxx/src/condition_variable_destructor.cpp
-libcxx/src/debug.cpp
 libcxx/src/exception.cpp
 libcxx/src/experimental/memory_resource.cpp
 libcxx/src/filesystem/directory_entry.cpp

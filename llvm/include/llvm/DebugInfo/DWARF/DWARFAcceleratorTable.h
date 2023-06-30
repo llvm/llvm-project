@@ -314,6 +314,13 @@ public:
   /// Return the Atom description, which can be used to interpret the raw values
   /// of the Accelerator Entries in this table.
   ArrayRef<std::pair<HeaderData::AtomType, HeaderData::Form>> getAtomsDesc();
+
+  /// Returns true iff `AtomTy` is one of the atoms available in Entries of this
+  /// table.
+  bool containsAtomType(HeaderData::AtomType AtomTy) const {
+    return is_contained(make_first_range(HdrData.Atoms), AtomTy);
+  }
+
   bool validateForms();
 
   /// Return information related to the DWARF DIE we're looking for when

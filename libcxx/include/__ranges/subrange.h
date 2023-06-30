@@ -105,7 +105,7 @@ namespace ranges {
       : __begin_(std::move(__iter)), __end_(std::move(__sent)), __size_(__n)
     {
       if constexpr (sized_sentinel_for<_Sent, _Iter>)
-        _LIBCPP_ASSERT((__end_ - __begin_) == static_cast<iter_difference_t<_Iter>>(__n),
+        _LIBCPP_ASSERT_UNCATEGORIZED((__end_ - __begin_) == static_cast<iter_difference_t<_Iter>>(__n),
           "std::ranges::subrange was passed an invalid size hint");
     }
 

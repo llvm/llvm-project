@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -1039,6 +1040,15 @@ void ARMExpandPseudo::ExpandTMOV32BitImm(MachineBasicBlock &MBB,
     Upper0_7 = Upper0_7.addExternalSymbol(ES, TF | ARMII::MO_HI_0_7);
     Lower8_15 = Lower8_15.addExternalSymbol(ES, TF | ARMII::MO_LO_8_15);
     Lower0_7 = Lower0_7.addExternalSymbol(ES, TF | ARMII::MO_LO_0_7);
+    break;
+  }
+  case MachineOperand::MO_JumpTableIndex: {
+    unsigned Idx = MO.getIndex();
+    unsigned TF = MO.getTargetFlags();
+    Upper8_15 = Upper8_15.addJumpTableIndex(Idx, TF | ARMII::MO_HI_8_15);
+    Upper0_7 = Upper0_7.addJumpTableIndex(Idx, TF | ARMII::MO_HI_0_7);
+    Lower8_15 = Lower8_15.addJumpTableIndex(Idx, TF | ARMII::MO_LO_8_15);
+    Lower0_7 = Lower0_7.addJumpTableIndex(Idx, TF | ARMII::MO_LO_0_7);
     break;
   }
   default: {
@@ -2761,6 +2771,17 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
 
     case ARM::tMOVi32imm:
+      ExpandTMOV32BitImm(MBB, MBBI);
+      return true;
+
+    case ARM::tLEApcrelJT:
+      // Inline jump tables are handled in ARMAsmPrinter.
+      if (MI.getMF()->getJumpTableInfo()->getEntryKind() ==
+          MachineJumpTableInfo::EK_Inline)
+        return false;
+
+      // Use a 32-bit immediate move to generate the address of the jump table.
+      assert(STI->isThumb() && "Non-inline jump tables expected only in thumb");
       ExpandTMOV32BitImm(MBB, MBBI);
       return true;
 

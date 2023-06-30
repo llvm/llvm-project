@@ -1174,6 +1174,9 @@ module std [system] {
 
     module __mdspan {
       module extents                         { private header "__mdspan/extents.h" }
+      module layout_left                     { private header "__mdspan/layout_left.h" }
+      module layout_right                    { private header "__mdspan/layout_right.h" }
+      module mdspan_fwd                      { private header "__fwd/mdspan.h" }
     }
   }
   module memory {
@@ -1801,7 +1804,6 @@ module std [system] {
   module __assert            {         header "__assert"            export * }
   module __availability      { private header "__availability"      export * }
   module __bit_reference     { private header "__bit_reference"     export * }
-  module __debug             {         header "__debug"             export * }
   module __hash_table        {         header "__hash_table"        export * }
   module __locale            {
     @requires_LIBCXX_ENABLE_LOCALIZATION@

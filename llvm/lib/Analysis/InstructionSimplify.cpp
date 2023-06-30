@@ -2793,11 +2793,11 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
       }(LHS);
       Opts.NullIsUnknownSize = F ? NullPointerIsDefined(F) : true;
       if (getObjectSize(LHS, LHSSize, DL, TLI, Opts) &&
-          getObjectSize(RHS, RHSSize, DL, TLI, Opts) &&
-          !LHSOffset.isNegative() && !RHSOffset.isNegative() &&
-          LHSOffset.ult(LHSSize) && RHSOffset.ult(RHSSize)) {
-        return ConstantInt::get(getCompareTy(LHS),
-                                !CmpInst::isTrueWhenEqual(Pred));
+          getObjectSize(RHS, RHSSize, DL, TLI, Opts)) {
+        APInt Dist = LHSOffset - RHSOffset;
+        if (Dist.isNonNegative() ? Dist.ult(LHSSize) : (-Dist).ult(RHSSize))
+          return ConstantInt::get(getCompareTy(LHS),
+                                  !CmpInst::isTrueWhenEqual(Pred));
       }
     }
 
@@ -5465,6 +5465,15 @@ static Constant *propagateNaN(Constant *In) {
   // canonical NaN.
   if (!In->isNaN())
     return ConstantFP::getNaN(Ty);
+
+  // If we known this is a NaN, and it's scalable vector, we must have a splat
+  // on our hands. Grab that before splatting a QNaN constant.
+  if (isa<ScalableVectorType>(Ty)) {
+    auto *Splat = In->getSplatValue();
+    assert(Splat && Splat->isNaN() &&
+           "Found a scalable-vector NaN but not a splat");
+    In = Splat;
+  }
 
   // Propagate an existing QNaN constant. If it is an SNaN, make it quiet, but
   // preserve the sign/payload.

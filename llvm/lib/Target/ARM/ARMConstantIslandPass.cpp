@@ -605,6 +605,10 @@ void ARMConstantIslands::doInitialJumpTablePlacement(
   auto MJTI = MF->getJumpTableInfo();
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
 
+  // Only inline jump tables are placed in the function.
+  if (MJTI->getEntryKind() != MachineJumpTableInfo::EK_Inline)
+    return;
+
   MachineBasicBlock *LastCorrectlyNumberedBB = nullptr;
   for (MachineBasicBlock &MBB : *MF) {
     auto MI = MBB.getLastNonDebugInstr();
@@ -777,6 +781,11 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
   // Compute block offsets and known bits.
   BBUtils->adjustBBOffsetsAfter(&MF->front());
 
+  // We only care about jump table instructions when jump tables are inline.
+  MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
+  bool InlineJumpTables =
+      MJTI && MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline;
+
   // Now go back through the instructions and build up our data structures.
   for (MachineBasicBlock &MBB : *MF) {
     // If this block doesn't fall through into the next MBB, then this is
@@ -799,7 +808,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
           continue;  // Ignore other JT branches
         case ARM::t2BR_JT:
         case ARM::tBR_JTr:
-          T2JumpTables.push_back(&I);
+          if (InlineJumpTables)
+            T2JumpTables.push_back(&I);
           continue;   // Does not get an entry in ImmBranches
         case ARM::Bcc:
           isCond = true;
@@ -846,7 +856,8 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
 
       // Scan the instructions for constant pool operands.
       for (unsigned op = 0, e = I.getNumOperands(); op != e; ++op)
-        if (I.getOperand(op).isCPI() || I.getOperand(op).isJTI()) {
+        if (I.getOperand(op).isCPI() ||
+            (I.getOperand(op).isJTI() && InlineJumpTables)) {
           // We found one.  The addressing mode tells us the max displacement
           // from the PC that this instruction permits.
 

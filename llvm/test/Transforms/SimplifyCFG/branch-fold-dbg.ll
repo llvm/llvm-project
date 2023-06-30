@@ -5,7 +5,7 @@
 
 @0 = external hidden constant [5 x %0], align 4
 
-define void @foo(i32) nounwind ssp !dbg !0 {
+define i1 @foo(i32) nounwind ssp !dbg !0 {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  Entry:
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0:%.*]], 0
@@ -19,12 +19,12 @@ define void @foo(i32) nounwind ssp !dbg !0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [5 x %0], ptr @[[GLOB0:[0-9]+]], i32 0, i32 [[TMP0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[TMP6]], null
 ; CHECK-NEXT:    [[OR_COND2:%.*]] = select i1 [[TMP5]], i1 true, i1 [[TMP7]]
-; CHECK-NEXT:    br i1 [[OR_COND2]], label [[COMMON_RET]], label [[BB4:%.*]]
-; CHECK:       common.ret:
-; CHECK-NEXT:    ret void
-; CHECK:       BB4:
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt i32 [[TMP0]], 0
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[OR_COND2]], i1 false, i1 [[TMP8]]
 ; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[SPEC_SELECT]], [[BB2]] ]
+; CHECK-NEXT:    ret i1 [[COMMON_RET_OP]]
 ;
 Entry:
   %1 = icmp slt i32 %0, 0, !dbg !5
@@ -49,10 +49,10 @@ BB3:                                              ; preds = %BB2
 
 BB4:                                              ; preds = %BB3
   %8 = icmp slt i32 %0, 0, !dbg !5
-  ret void, !dbg !14
+  ret i1 %8, !dbg !14
 
 BB5:                                              ; preds = %BB3, %BB2, %BB1, %Entry
-  ret void, !dbg !14
+  ret i1 false, !dbg !14
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone

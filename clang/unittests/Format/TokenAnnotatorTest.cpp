@@ -668,6 +668,33 @@ TEST_F(TokenAnnotatorTest, UnderstandsOverloadedOperators) {
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[3], tok::r_paren, TT_OverloadedOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_OverloadedOperatorLParen);
+
+  Tokens = annotate("class Foo {\n"
+                    "  int operator+(a* b);\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::kw_operator, TT_FunctionDeclarationName);
+  EXPECT_TOKEN(Tokens[5], tok::plus, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_OverloadedOperatorLParen);
+  EXPECT_TOKEN(Tokens[8], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("void foo() {\n"
+                    "  operator+(a * b);\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 15u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::plus, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[7], tok::l_paren, TT_OverloadedOperatorLParen);
+  EXPECT_TOKEN(Tokens[9], tok::star, TT_BinaryOperator);
+
+  Tokens = annotate("class Foo {\n"
+                    "  void foo() {\n"
+                    "    operator+(a * b);\n"
+                    "  }\n"
+                    "}");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::plus, TT_OverloadedOperator);
+  EXPECT_TOKEN(Tokens[10], tok::l_paren, TT_OverloadedOperatorLParen);
+  EXPECT_TOKEN(Tokens[12], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, OverloadedOperatorInTemplate) {

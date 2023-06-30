@@ -3264,6 +3264,21 @@ struct NotTriviallyEqualityComparableHasReferenceMember {
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasReferenceMember));
 
+struct NotTriviallyEqualityComparableNonTriviallyComparableBaseBase {
+  int i;
+
+  bool operator==(const NotTriviallyEqualityComparableNonTriviallyComparableBaseBase&) const {
+    return true;
+  }
+};
+
+struct NotTriviallyEqualityComparableNonTriviallyComparableBase : NotTriviallyEqualityComparableNonTriviallyComparableBaseBase {
+  int i;
+
+  bool operator==(const NotTriviallyEqualityComparableNonTriviallyComparableBase&) const = default;
+};
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyComparableBase));
+
 enum E {
   a,
   b

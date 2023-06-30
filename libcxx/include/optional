@@ -409,7 +409,7 @@ struct __optional_storage_base : __optional_destruct_base<_Tp>
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_Args&&... __args)
     {
-        _LIBCPP_ASSERT(!has_value(), "__construct called for engaged __optional_storage");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!has_value(), "__construct called for engaged __optional_storage");
 #if _LIBCPP_STD_VER >= 20
         _VSTD::construct_at(_VSTD::addressof(this->__val_), _VSTD::forward<_Args>(__args)...);
 #else
@@ -504,7 +504,7 @@ struct __optional_storage_base<_Tp, true>
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct(_UArg&& __val)
     {
-        _LIBCPP_ASSERT(!has_value(), "__construct called for engaged __optional_storage");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!has_value(), "__construct called for engaged __optional_storage");
         static_assert(__can_bind_reference<_UArg>(),
             "Attempted to construct a reference element in tuple from a "
             "possible temporary");
@@ -993,7 +993,7 @@ public:
     add_pointer_t<value_type const>
     operator->() const
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator-> called on a disengaged value");
+        _LIBCPP_ASSERT_UNCATEGORIZED(this->has_value(), "optional operator-> called on a disengaged value");
         return _VSTD::addressof(this->__get());
     }
 
@@ -1002,7 +1002,7 @@ public:
     add_pointer_t<value_type>
     operator->()
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator-> called on a disengaged value");
+        _LIBCPP_ASSERT_UNCATEGORIZED(this->has_value(), "optional operator-> called on a disengaged value");
         return _VSTD::addressof(this->__get());
     }
 
@@ -1011,7 +1011,7 @@ public:
     const value_type&
     operator*() const& noexcept
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
+        _LIBCPP_ASSERT_UNCATEGORIZED(this->has_value(), "optional operator* called on a disengaged value");
         return this->__get();
     }
 
@@ -1020,7 +1020,7 @@ public:
     value_type&
     operator*() & noexcept
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
+        _LIBCPP_ASSERT_UNCATEGORIZED(this->has_value(), "optional operator* called on a disengaged value");
         return this->__get();
     }
 
@@ -1029,7 +1029,7 @@ public:
     value_type&&
     operator*() && noexcept
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
+        _LIBCPP_ASSERT_UNCATEGORIZED(this->has_value(), "optional operator* called on a disengaged value");
         return _VSTD::move(this->__get());
     }
 
@@ -1038,7 +1038,7 @@ public:
     const value_type&&
     operator*() const&& noexcept
     {
-        _LIBCPP_ASSERT(this->has_value(), "optional operator* called on a disengaged value");
+        _LIBCPP_ASSERT_UNCATEGORIZED(this->has_value(), "optional operator* called on a disengaged value");
         return _VSTD::move(this->__get());
     }
 

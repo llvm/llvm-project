@@ -112,6 +112,8 @@ C++20 Feature Support
 - Clang now supports `requires cplusplus20` for module maps.
 - Implemented missing parts of `P2002R1: Consistent comparison operators <https://wg21.link/P2002R1>`_
 - Clang now defines `__cpp_consteval` macro.
+- Implemented `P1816R0: <https://wg21.link/p1816r0>`_ and `P2082R1: <https://wg21.link/p2082r1>`_,
+  which allows CTAD for aggregates.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -375,6 +377,8 @@ Improvements to Clang's diagnostics
   by making use of the syntactical structure of function calls. This avoids display
   of syntactically invalid codes in diagnostics.
   (`#57081: <https://github.com/llvm/llvm-project/issues/57081>`_)
+- Clang no longer emits inappropriate notes about the loss of ``__unaligned`` qualifier
+  on overload resolution, when the actual reason for the failure is loss of other qualifiers.
 
 Bug Fixes in This Version
 -------------------------

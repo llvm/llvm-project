@@ -53,8 +53,6 @@ def generate_map(include):
             continue
         elif i == "__config":
             continue
-        elif i == "__debug":
-            continue
         elif i == "__errc":
             continue
         elif i == "__hash_table":

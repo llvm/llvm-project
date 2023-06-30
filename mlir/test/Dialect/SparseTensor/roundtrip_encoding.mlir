@@ -128,3 +128,20 @@ func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 // CHECK-LABEL: func private @sparse_slice(
 // CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimSlices = [ (1, ?, 1), (?, 4, 2) ] }>>
 func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
+
+// -----
+
+// Migration plan for new STEA surface syntax,
+// use the NEW_SYNTAX on selected examples
+// and then TODO: remove when fully migrated
+
+#NewSurfaceSyntax = #sparse_tensor.encoding<{
+  NEW_SYNTAX =
+  (d0, d1) -> (l0 = d0 : dense, l1 = d1 : compressed)
+}>
+
+// CHECK-LABEL: func private @foo(
+// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>
+func.func private @foo(%arg0: tensor<?x?xf64, #NewSurfaceSyntax>) {
+  return
+}

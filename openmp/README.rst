@@ -165,6 +165,12 @@ Options for ``libomp``
 **LIBOMP_FORTRAN_MODULES** = ``OFF|ON``
   Create the Fortran modules (requires Fortran compiler).
 
+  .. note::
+
+  If libomptarget is built in-tree with both flang and openmp in
+  `LLVM_ENABLE_PROJECTS`, flang will be used for Fortran offloading
+  tests.
+
 macOS* Fat Libraries
 """"""""""""""""""""
 On macOS* machines, it is possible to build universal (or fat) libraries which

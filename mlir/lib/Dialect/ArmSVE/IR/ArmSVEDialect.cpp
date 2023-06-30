@@ -30,7 +30,6 @@ static Type getI1SameShape(Type type) {
   auto i1Type = IntegerType::get(type.getContext(), 1);
   if (auto sVectorType = llvm::dyn_cast<VectorType>(type))
     return VectorType::get(sVectorType.getShape(), i1Type,
-                           sVectorType.getNumScalableDims(),
                            sVectorType.getScalableDims());
   return nullptr;
 }

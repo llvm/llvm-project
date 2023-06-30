@@ -1089,6 +1089,20 @@ define ptr @aligned_8_return_caller(ptr align(16) %a, i1 %c1, i1 %c2) {
   ret ptr %r
 }
 
+define i32 @implicit_cast_caller(ptr %ptr) {
+; CHECK-LABEL: define {{[^@]+}}@implicit_cast_caller
+; CHECK-SAME: (ptr [[PTR:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @implicit_cast_callee(ptr [[PTR]])
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %call = tail call i32 @implicit_cast_callee(ptr %ptr)
+  ret i32 0
+}
+
+declare void @implicit_cast_callee(i64)
+
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }
 attributes #2 = { null_pointer_is_valid }

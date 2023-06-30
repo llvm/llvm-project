@@ -31,7 +31,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DWARFIndex.cpp
   DWARFTypeUnit.cpp
   DWARFUnit.cpp
-  HashedNameToDIE.cpp
   LogChannelDWARF.cpp
   ManualDWARFIndex.cpp
   NameToDIE.cpp

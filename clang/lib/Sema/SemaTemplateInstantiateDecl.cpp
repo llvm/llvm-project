@@ -2129,9 +2129,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
     Function = CXXDeductionGuideDecl::Create(
         SemaRef.Context, DC, D->getInnerLocStart(),
         InstantiatedExplicitSpecifier, NameInfo, T, TInfo,
-        D->getSourceRange().getEnd());
-    if (DGuide->isCopyDeductionCandidate())
-      cast<CXXDeductionGuideDecl>(Function)->setIsCopyDeductionCandidate();
+        D->getSourceRange().getEnd(), /*Ctor=*/nullptr,
+        DGuide->getDeductionCandidateKind());
     Function->setAccess(D->getAccess());
   } else {
     Function = FunctionDecl::Create(

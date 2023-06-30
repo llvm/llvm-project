@@ -6,18 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def GPRIdxModeMatchClass : AsmOperandClass {
-  let Name = "GPRIdxMode";
-  let PredicateMethod = "isGPRIdxMode";
-  let ParserMethod = "parseGPRIdxMode";
-  let RenderMethod = "addImmOperands";
-}
-
-def GPRIdxMode : Operand<i32> {
-  let PrintMethod = "printVGPRIndexMode";
-  let ParserMatchClass = GPRIdxModeMatchClass;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+def GPRIdxMode : CustomOperand<i32>;
 
 class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
                   list<dag> pattern=[]> :
@@ -402,11 +391,11 @@ let SubtargetPredicate = isGFX11Plus in {
     // For s_sendmsg_rtn_* the src0 field encodes the message type directly; it
     // is not an SGPR number.
     def S_SENDMSG_RTN_B32 : SOP1_Pseudo<
-      "s_sendmsg_rtn_b32", (outs SReg_32:$sdst), (ins SendMsgImm:$src0),
+      "s_sendmsg_rtn_b32", (outs SReg_32:$sdst), (ins SendMsg:$src0),
       "$sdst, $src0", [(set i32:$sdst, (int_amdgcn_s_sendmsg_rtn timm:$src0))]
     >;
     def S_SENDMSG_RTN_B64 : SOP1_Pseudo<
-      "s_sendmsg_rtn_b64", (outs SReg_64:$sdst), (ins SendMsgImm:$src0),
+      "s_sendmsg_rtn_b64", (outs SReg_64:$sdst), (ins SendMsg:$src0),
       "$sdst, $src0", [(set i64:$sdst, (int_amdgcn_s_sendmsg_rtn timm:$src0))]
     >;
   }
@@ -1284,7 +1273,7 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
 }
 
 let hasSideEffects = 1 in
-def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins WAIT_FLAG:$simm16), "$simm16",
+def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
@@ -1305,12 +1294,12 @@ def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
 }
 
 let Uses = [EXEC, M0] in {
-def S_SENDMSG : SOPP_Pseudo <"s_sendmsg" , (ins SendMsgImm:$simm16), "$simm16",
+def S_SENDMSG : SOPP_Pseudo <"s_sendmsg" , (ins SendMsg:$simm16), "$simm16",
   [(int_amdgcn_s_sendmsg (i32 timm:$simm16), M0)]> {
   let hasSideEffects = 1;
 }
 
-def S_SENDMSGHALT : SOPP_Pseudo <"s_sendmsghalt" , (ins SendMsgImm:$simm16), "$simm16",
+def S_SENDMSGHALT : SOPP_Pseudo <"s_sendmsghalt" , (ins SendMsg:$simm16), "$simm16",
   [(int_amdgcn_s_sendmsghalt (i32 timm:$simm16), M0)]> {
   let hasSideEffects = 1;
 }
@@ -1367,7 +1356,7 @@ let SubtargetPredicate = isGFX10Plus in {
       let fixed_imm = 1;
     }
   def S_WAITCNT_DEPCTR :
-    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtrImm:$simm16), "$simm16">;
+    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtr:$simm16), "$simm16">;
 
   let hasSideEffects = 0, Uses = [MODE], Defs = [MODE] in {
     def S_ROUND_MODE :
@@ -1386,7 +1375,7 @@ let SubtargetPredicate = isGFX11Plus in {
                                  "$simm16"> {
                                    let hasSideEffects = 1;
                                  }
-  def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins DELAY_FLAG:$simm16),
+  def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins SDelayALU:$simm16),
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
 

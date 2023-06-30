@@ -151,7 +151,7 @@ end subroutine test4
 ! CHECK:           %[[VAL_23:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_24:.*]]:3 = fir.box_dims %[[VAL_21]], %[[VAL_23]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_25:.*]] = fir.shape %[[VAL_24]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_26:.*]] = hlfir.elemental %[[VAL_25]] typeparams %[[VAL_22]] : (!fir.shape<1>, i64) -> !hlfir.expr<?x!fir.char<1,?>> {
+! CHECK:           %[[VAL_26:.*]] = hlfir.elemental %[[VAL_25]] typeparams %[[VAL_22]] unordered : (!fir.shape<1>, i64) -> !hlfir.expr<?x!fir.char<1,?>> {
 ! CHECK:           ^bb0(%[[VAL_27:.*]]: index):
 ! CHECK:             %[[VAL_28:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_29:.*]]:3 = fir.box_dims %[[VAL_21]], %[[VAL_28]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>, index) -> (index, index, index)

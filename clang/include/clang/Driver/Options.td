@@ -1124,6 +1124,10 @@ def gpu_bundle_output : Flag<["--"], "gpu-bundle-output">,
   Group<f_Group>, HelpText<"Bundle output files of HIP device compilation">;
 def no_gpu_bundle_output : Flag<["--"], "no-gpu-bundle-output">,
   Group<f_Group>, HelpText<"Do not bundle output files of HIP device compilation">;
+def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">, Group<f_Group>,
+  HelpText<"Compile HIP source to relocatable">;
+def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">, Group<f_Group>,
+  HelpText<"Do not override toolchain to compile HIP source to relocatable">;
 def cuid_EQ : Joined<["-"], "cuid=">, Flags<[CC1Option]>,
   HelpText<"An ID for compilation unit, which should be the same for the same "
            "compilation unit but different for different compilation units. "
@@ -3720,6 +3724,12 @@ def meabi : Separate<["-"], "meabi">, Group<m_Group>, Flags<[CC1Option]>,
   NormalizedValues<["Default", "EABI4", "EABI5", "GNU"]>;
 def mtargetos_EQ : Joined<["-"], "mtargetos=">, Group<m_Group>,
   HelpText<"Set the deployment target to be the specified OS and OS version">;
+def mzos_hlq_le_EQ : Joined<["-"], "mzos-hlq-le=">, MetaVarName<"<LeHLQ>">,
+  HelpText<"High level qualifier for z/OS Language Environment datasets">;
+def mzos_hlq_clang_EQ : Joined<["-"], "mzos-hlq-clang=">, MetaVarName<"<ClangHLQ>">,
+  HelpText<"High level qualifier for z/OS C++RT side deck datasets">;
+def mzos_hlq_csslib_EQ : Joined<["-"], "mzos-hlq-csslib=">, MetaVarName<"<CsslibHLQ>">,
+  HelpText<"High level qualifier for z/OS CSSLIB dataset">;
 
 def mno_constant_cfstrings : Flag<["-"], "mno-constant-cfstrings">, Group<m_Group>;
 def mno_global_merge : Flag<["-"], "mno-global-merge">, Group<m_Group>, Flags<[CC1Option]>,

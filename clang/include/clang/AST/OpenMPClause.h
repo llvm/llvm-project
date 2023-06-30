@@ -9046,6 +9046,132 @@ public:
   Expr *getSize() const { return getStmtAs<Expr>(); }
 };
 
+/// This represents the 'doacross' clause for the '#pragma omp ordered'
+/// directive.
+///
+/// \code
+/// #pragma omp ordered doacross(sink: i-1, j-1)
+/// \endcode
+/// In this example directive '#pragma omp ordered' with clause 'doacross' with
+/// a dependence-type 'sink' and loop-iteration vector expressions i-1 and j-1.
+class OMPDoacrossClause final
+    : public OMPVarListClause<OMPDoacrossClause>,
+      private llvm::TrailingObjects<OMPDoacrossClause, Expr *> {
+  friend class OMPClauseReader;
+  friend OMPVarListClause;
+  friend TrailingObjects;
+
+  /// Dependence type (sink or source).
+  OpenMPDoacrossClauseModifier DepType = OMPC_DOACROSS_unknown;
+
+  /// Dependence type location.
+  SourceLocation DepLoc;
+
+  /// Colon location.
+  SourceLocation ColonLoc;
+
+  /// Number of loops, associated with the doacross clause.
+  unsigned NumLoops = 0;
+
+  /// Build clause with number of expressions \a N.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param N Number of expressions in the clause.
+  /// \param NumLoops Number of loops associated with the clause.
+  OMPDoacrossClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                    SourceLocation EndLoc, unsigned N, unsigned NumLoops)
+      : OMPVarListClause<OMPDoacrossClause>(llvm::omp::OMPC_doacross, StartLoc,
+                                            LParenLoc, EndLoc, N),
+        NumLoops(NumLoops) {}
+
+  /// Build an empty clause.
+  ///
+  /// \param N Number of expressions in the clause.
+  /// \param NumLoops Number of loops associated with the clause.
+  explicit OMPDoacrossClause(unsigned N, unsigned NumLoops)
+      : OMPVarListClause<OMPDoacrossClause>(llvm::omp::OMPC_doacross,
+                                            SourceLocation(), SourceLocation(),
+                                            SourceLocation(), N),
+        NumLoops(NumLoops) {}
+
+  /// Set dependence type.
+  void setDependenceType(OpenMPDoacrossClauseModifier M) { DepType = M; }
+
+  /// Set dependence type location.
+  void setDependenceLoc(SourceLocation Loc) { DepLoc = Loc; }
+
+  /// Set colon location.
+  void setColonLoc(SourceLocation Loc) { ColonLoc = Loc; }
+
+public:
+  /// Creates clause with a list of expressions \a VL.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param DepType The dependence type.
+  /// \param DepLoc Location of the dependence type.
+  /// \param ColonLoc Location of ':'.
+  /// \param VL List of references to the expressions.
+  /// \param NumLoops Number of loops that associated with the clause.
+  static OMPDoacrossClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, OpenMPDoacrossClauseModifier DepType,
+         SourceLocation DepLoc, SourceLocation ColonLoc, ArrayRef<Expr *> VL,
+         unsigned NumLoops);
+
+  /// Creates an empty clause with \a N expressions.
+  ///
+  /// \param C AST context.
+  /// \param N The number of expressions.
+  /// \param NumLoops Number of loops that is associated with this clause.
+  static OMPDoacrossClause *CreateEmpty(const ASTContext &C, unsigned N,
+                                        unsigned NumLoops);
+
+  /// Get dependence type.
+  OpenMPDoacrossClauseModifier getDependenceType() const { return DepType; }
+
+  /// Get dependence type location.
+  SourceLocation getDependenceLoc() const { return DepLoc; }
+
+  /// Get colon location.
+  SourceLocation getColonLoc() const { return ColonLoc; }
+
+  /// Get number of loops associated with the clause.
+  unsigned getNumLoops() const { return NumLoops; }
+
+  /// Set the loop data.
+  void setLoopData(unsigned NumLoop, Expr *Cnt);
+
+  /// Get the loop data.
+  Expr *getLoopData(unsigned NumLoop);
+  const Expr *getLoopData(unsigned NumLoop) const;
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  const_child_range children() const {
+    auto Children = const_cast<OMPDoacrossClause *>(this)->children();
+    return const_child_range(Children.begin(), Children.end());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_doacross;
+  }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

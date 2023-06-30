@@ -1173,7 +1173,15 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
   }
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())
     return State.Stack[State.Stack.size() - 2].LastSpace;
+  // Field labels in a nested type should be aligned to the brace. For example
+  // in ProtoBuf:
+  //   optional int32 b = 2 [(foo_options) = {aaaaaaaaaaaaaaaaaaa: 123,
+  //                                          bbbbbbbbbbbbbbbbbbbbbbbb:"baz"}];
+  // For Verilog, a quote following a brace is treated as an identifier.  And
+  // Both braces and colons get annotated as TT_DictLiteral.  So we have to
+  // check.
   if (Current.is(tok::identifier) && Current.Next &&
+      (!Style.isVerilog() || Current.Next->is(tok::colon)) &&
       (Current.Next->is(TT_DictLiteral) ||
        ((Style.Language == FormatStyle::LK_Proto ||
          Style.Language == FormatStyle::LK_TextProto) &&

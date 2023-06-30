@@ -72,8 +72,8 @@ struct _LIBCPP_EXPORTED_FROM_ABI __padding_size_result {
 
 _LIBCPP_HIDE_FROM_ABI constexpr __padding_size_result
 __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align) {
-  _LIBCPP_ASSERT(__width > __size, "don't call this function when no padding is required");
-  _LIBCPP_ASSERT(
+  _LIBCPP_ASSERT_UNCATEGORIZED(__width > __size, "don't call this function when no padding is required");
+  _LIBCPP_ASSERT_UNCATEGORIZED(
       __align != __format_spec::__alignment::__zero_padding, "the caller should have handled the zero-padding");
 
   size_t __fill = __width - __size;
@@ -238,8 +238,8 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, c
 
   auto __r = __grouping.rbegin();
   auto __e = __grouping.rend() - 1;
-  _LIBCPP_ASSERT(__r != __e, "The slow grouping formatting is used while "
-                             "there will be no separators written.");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__r != __e, "The slow grouping formatting is used while "
+                                           "there will be no separators written.");
   // The output is divided in small groups of numbers to write:
   // - A group before the first separator.
   // - A separator and a group, repeated for the number of separators.
@@ -314,7 +314,7 @@ __write(_Iterator __first,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs,
         ptrdiff_t __size) -> decltype(__out_it) {
-  _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
   return __formatter::__write(basic_string_view{__first, __last}, _VSTD::move(__out_it), __specs, __size);
 }
 
@@ -327,7 +327,7 @@ __write(_Iterator __first,
         _Iterator __last,
         output_iterator<const iter_value_t<_Iterator>&> auto __out_it,
         __format_spec::__parsed_specifications<_ParserCharT> __specs) -> decltype(__out_it) {
-  _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
   return __formatter::__write(__first, __last, _VSTD::move(__out_it), __specs, __last - __first);
 }
 
@@ -336,7 +336,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_transformed(const _CharT* __first, const _Cha
                                                output_iterator<const _CharT&> auto __out_it,
                                                __format_spec::__parsed_specifications<_ParserCharT> __specs,
                                                _UnaryOperation __op) -> decltype(__out_it) {
-  _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
 
   ptrdiff_t __size = __last - __first;
   if (__size >= __specs.__width_)
@@ -365,8 +365,9 @@ _LIBCPP_HIDE_FROM_ABI auto __write_using_trailing_zeros(
     size_t __size,
     const _CharT* __exponent,
     size_t __num_trailing_zeros) -> decltype(__out_it) {
-  _LIBCPP_ASSERT(__first <= __last, "Not a valid range");
-  _LIBCPP_ASSERT(__num_trailing_zeros > 0, "The overload not writing trailing zeros should have been used");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__first <= __last, "Not a valid range");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__num_trailing_zeros > 0,
+                               "The overload not writing trailing zeros should have been used");
 
   __padding_size_result __padding =
       __formatter::__padding_size(__size + __num_trailing_zeros, __specs.__width_, __specs.__alignment_);
@@ -388,7 +389,7 @@ _LIBCPP_HIDE_FROM_ABI auto __write_string_no_precision(
     basic_string_view<_CharT> __str,
     output_iterator<const _CharT&> auto __out_it,
     __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
-  _LIBCPP_ASSERT(!__specs.__has_precision(), "use __write_string");
+  _LIBCPP_ASSERT_UNCATEGORIZED(!__specs.__has_precision(), "use __write_string");
 
   // No padding -> copy the string
   if (!__specs.__has_width())
@@ -445,7 +446,7 @@ __write_escaped_code_unit(basic_string<_CharT>& __str, char32_t __value, const _
 
   char __buffer[8];
   to_chars_result __r = std::to_chars(std::begin(__buffer), std::end(__buffer), __value, 16);
-  _LIBCPP_ASSERT(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
   std::ranges::copy(std::begin(__buffer), __r.ptr, __out_it);
 
   __str += _CharT('}');

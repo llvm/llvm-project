@@ -2600,7 +2600,7 @@ template <class _Tp, class _Allocator>
 void
 deque<_Tp, _Allocator>::pop_back()
 {
-    _LIBCPP_ASSERT(!empty(), "deque::pop_back called on an empty deque");
+    _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "deque::pop_back called on an empty deque");
     size_type __old_sz    = size();
     size_type __old_start = __start_;
     allocator_type& __a = __alloc();

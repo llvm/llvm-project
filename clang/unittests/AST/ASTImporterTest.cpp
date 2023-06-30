@@ -7372,7 +7372,7 @@ TEST_P(ImportFunctions, CTADImplicit) {
       cxxDeductionGuideDecl(hasParameter(0, hasType(asString("A<T>")))));
   auto *ToD = Import(FromD, Lang_CXX17);
   ASSERT_TRUE(ToD);
-  EXPECT_TRUE(ToD->isCopyDeductionCandidate());
+  EXPECT_EQ(ToD->getDeductionCandidateKind(), DeductionCandidate::Copy);
   // Check that the deduced class template is also imported.
   EXPECT_TRUE(findFromTU(FromD)->Importer->GetAlreadyImportedOrNull(
       FromD->getDeducedTemplate()));

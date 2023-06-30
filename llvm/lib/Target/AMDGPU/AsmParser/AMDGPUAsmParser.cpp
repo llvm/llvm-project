@@ -864,7 +864,7 @@ public:
 
   bool isSWaitCnt() const;
   bool isDepCtr() const;
-  bool isSDelayAlu() const;
+  bool isSDelayALU() const;
   bool isHwreg() const;
   bool isSendMsg() const;
   bool isSwizzle() const;
@@ -1602,14 +1602,14 @@ public:
   void cvtExp(MCInst &Inst, const OperandVector &Operands);
 
   bool parseCnt(int64_t &IntVal);
-  OperandMatchResultTy parseSWaitCntOps(OperandVector &Operands);
+  OperandMatchResultTy parseSWaitCnt(OperandVector &Operands);
 
   bool parseDepCtr(int64_t &IntVal, unsigned &Mask);
   void depCtrError(SMLoc Loc, int ErrorId, StringRef DepCtrName);
-  OperandMatchResultTy parseDepCtrOps(OperandVector &Operands);
+  OperandMatchResultTy parseDepCtr(OperandVector &Operands);
 
   bool parseDelay(int64_t &Delay);
-  OperandMatchResultTy parseSDelayAluOps(OperandVector &Operands);
+  OperandMatchResultTy parseSDelayALU(OperandVector &Operands);
 
   OperandMatchResultTy parseHwreg(OperandVector &Operands);
 
@@ -1723,7 +1723,7 @@ public:
                                           unsigned MCK);
 
   OperandMatchResultTy parseExpTgt(OperandVector &Operands);
-  OperandMatchResultTy parseSendMsgOp(OperandVector &Operands);
+  OperandMatchResultTy parseSendMsg(OperandVector &Operands);
   OperandMatchResultTy parseInterpSlot(OperandVector &Operands);
   OperandMatchResultTy parseInterpAttr(OperandVector &Operands);
   OperandMatchResultTy parseSOppBrTarget(OperandVector &Operands);
@@ -1738,7 +1738,7 @@ public:
                             const unsigned MinVal,
                             const unsigned MaxVal,
                             const StringRef ErrMsg);
-  OperandMatchResultTy parseSwizzleOp(OperandVector &Operands);
+  OperandMatchResultTy parseSwizzle(OperandVector &Operands);
   bool parseSwizzleOffset(int64_t &Imm);
   bool parseSwizzleMacro(int64_t &Imm);
   bool parseSwizzleQuadPerm(int64_t &Imm);
@@ -6588,8 +6588,7 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
   return true;
 }
 
-OperandMatchResultTy
-AMDGPUAsmParser::parseSWaitCntOps(OperandVector &Operands) {
+OperandMatchResultTy AMDGPUAsmParser::parseSWaitCnt(OperandVector &Operands) {
   AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(getSTI().getCPU());
   int64_t Waitcnt = getWaitcntBitMask(ISA);
   SMLoc S = getLoc();
@@ -6670,8 +6669,7 @@ bool AMDGPUAsmParser::parseDelay(int64_t &Delay) {
   return true;
 }
 
-OperandMatchResultTy
-AMDGPUAsmParser::parseSDelayAluOps(OperandVector &Operands) {
+OperandMatchResultTy AMDGPUAsmParser::parseSDelayALU(OperandVector &Operands) {
   int64_t Delay = 0;
   SMLoc S = getLoc();
 
@@ -6694,7 +6692,7 @@ AMDGPUOperand::isSWaitCnt() const {
   return isImm();
 }
 
-bool AMDGPUOperand::isSDelayAlu() const { return isImm(); }
+bool AMDGPUOperand::isSDelayALU() const { return isImm(); }
 
 //===----------------------------------------------------------------------===//
 // DepCtr
@@ -6758,7 +6756,7 @@ bool AMDGPUAsmParser::parseDepCtr(int64_t &DepCtr, unsigned &UsedOprMask) {
   return true;
 }
 
-OperandMatchResultTy AMDGPUAsmParser::parseDepCtrOps(OperandVector &Operands) {
+OperandMatchResultTy AMDGPUAsmParser::parseDepCtr(OperandVector &Operands) {
   using namespace llvm::AMDGPU::DepCtr;
 
   int64_t DepCtr = getDefaultDepCtrEncoding(getSTI());
@@ -6972,8 +6970,7 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
   return true;
 }
 
-OperandMatchResultTy
-AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
+OperandMatchResultTy AMDGPUAsmParser::parseSendMsg(OperandVector &Operands) {
   using namespace llvm::AMDGPU::SendMsg;
 
   int64_t ImmVal = 0;
@@ -7567,8 +7564,7 @@ AMDGPUAsmParser::parseSwizzleMacro(int64_t &Imm) {
   return false;
 }
 
-OperandMatchResultTy
-AMDGPUAsmParser::parseSwizzleOp(OperandVector &Operands) {
+OperandMatchResultTy AMDGPUAsmParser::parseSwizzle(OperandVector &Operands) {
   SMLoc S = getLoc();
   int64_t Imm = 0;
 

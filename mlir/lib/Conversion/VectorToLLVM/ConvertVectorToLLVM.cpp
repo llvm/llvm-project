@@ -31,21 +31,15 @@ using namespace mlir::vector;
 // Helper to reduce vector type by one rank at front.
 static VectorType reducedVectorTypeFront(VectorType tp) {
   assert((tp.getRank() > 1) && "unlowerable vector type");
-  unsigned numScalableDims = tp.getNumScalableDims();
-  if (tp.getShape().size() == numScalableDims)
-    --numScalableDims;
   return VectorType::get(tp.getShape().drop_front(), tp.getElementType(),
-                         numScalableDims);
+                         tp.getScalableDims().drop_front());
 }
 
 // Helper to reduce vector type by *all* but one rank at back.
 static VectorType reducedVectorTypeBack(VectorType tp) {
   assert((tp.getRank() > 1) && "unlowerable vector type");
-  unsigned numScalableDims = tp.getNumScalableDims();
-  if (numScalableDims > 0)
-    --numScalableDims;
   return VectorType::get(tp.getShape().take_back(), tp.getElementType(),
-                         numScalableDims);
+                         tp.getScalableDims().take_back());
 }
 
 // Helper that picks the proper sequence for inserting.

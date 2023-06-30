@@ -192,8 +192,10 @@ struct ConstraintTy {
 
   ConstraintTy() = default;
 
-  ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned, bool IsEq)
-      : Coefficients(Coefficients), IsSigned(IsSigned), IsEq(IsEq) {}
+  ConstraintTy(SmallVector<int64_t, 8> Coefficients, bool IsSigned, bool IsEq,
+               bool IsNe)
+      : Coefficients(Coefficients), IsSigned(IsSigned), IsEq(IsEq), IsNe(IsNe) {
+  }
 
   unsigned size() const { return Coefficients.size(); }
 
@@ -205,6 +207,8 @@ struct ConstraintTy {
 
   bool isEq() const { return IsEq; }
 
+  bool isNe() const { return IsNe; }
+
   /// Check if the current constraint is implied by the given ConstraintSystem.
   ///
   /// \return true or false if the constraint is proven to be respectively true,
@@ -214,6 +218,7 @@ struct ConstraintTy {
 
 private:
   bool IsEq = false;
+  bool IsNe = false;
 };
 
 /// Wrapper encapsulating separate constraint systems and corresponding value
@@ -502,6 +507,8 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                               SmallVectorImpl<Value *> &NewVariables) const {
   assert(NewVariables.empty() && "NewVariables must be empty when passed in");
   bool IsEq = false;
+  bool IsNe = false;
+
   // Try to convert Pred to one of ULE/SLT/SLE/SLT.
   switch (Pred) {
   case CmpInst::ICMP_UGT:
@@ -521,10 +528,13 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     }
     break;
   case CmpInst::ICMP_NE:
-    if (!match(Op1, m_Zero()))
-      return {};
-    Pred = CmpInst::getSwappedPredicate(CmpInst::ICMP_UGT);
-    std::swap(Op0, Op1);
+    if (match(Op1, m_Zero())) {
+      Pred = CmpInst::getSwappedPredicate(CmpInst::ICMP_UGT);
+      std::swap(Op0, Op1);
+    } else {
+      IsNe = true;
+      Pred = CmpInst::ICMP_ULE;
+    }
     break;
   default:
     break;
@@ -571,7 +581,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   // subtracting all coefficients from B.
   ConstraintTy Res(
       SmallVector<int64_t, 8>(Value2Index.size() + NewVariables.size() + 1, 0),
-      IsSigned, IsEq);
+      IsSigned, IsEq, IsNe);
   // Collect variables that are known to be positive in all uses in the
   // constraint.
   DenseMap<Value *, bool> KnownNonNegativeVariables;
@@ -653,15 +663,16 @@ std::optional<bool>
 ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
   bool IsConditionImplied = CS.isConditionImplied(Coefficients);
 
-  if (IsEq) {
+  if (IsEq || IsNe) {
     auto NegatedOrEqual = ConstraintSystem::negateOrEqual(Coefficients);
     bool IsNegatedOrEqualImplied =
         !NegatedOrEqual.empty() && CS.isConditionImplied(NegatedOrEqual);
 
-    // In order to check that `%a == %b` is true, we want to check that `%a >=
-    // %b` and `%a <= %b` must hold.
+    // In order to check that `%a == %b` is true (equality), both conditions `%a
+    // >= %b` and `%a <= %b` must hold true. When checking for equality (`IsEq`
+    // is true), we return true if they both hold, false in the other cases.
     if (IsConditionImplied && IsNegatedOrEqualImplied)
-      return true;
+      return IsEq;
 
     auto Negated = ConstraintSystem::negate(Coefficients);
     bool IsNegatedImplied = !Negated.empty() && CS.isConditionImplied(Negated);
@@ -670,10 +681,12 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
     bool IsStrictLessThanImplied =
         !StrictLessThan.empty() && CS.isConditionImplied(StrictLessThan);
 
-    // In order to check that `%a == %b` is false, we want to check whether
-    // either `%a > %b` or `%a < %b` holds.
+    // In order to check that `%a != %b` is true (non-equality), either
+    // condition `%a > %b` or `%a < %b` must hold true. When checking for
+    // non-equality (`IsNe` is true), we return true if one of the two holds,
+    // false in the other cases.
     if (IsNegatedImplied || IsStrictLessThanImplied)
-      return false;
+      return IsNe;
 
     return std::nullopt;
   }
@@ -693,7 +706,7 @@ ConstraintTy::isImpliedBy(const ConstraintSystem &CS) const {
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
                               Value *B) const {
   auto R = getConstraintForSolving(Pred, A, B);
-  return R.Preconditions.empty() && !R.empty() &&
+  return R.isValid(*this) &&
          getCS(R.IsSigned).isConditionImplied(R.Coefficients);
 }
 
@@ -1002,10 +1015,9 @@ static void generateReproducer(CmpInst *Cond, Module *M,
   assert(!verifyFunction(*F, &dbgs()));
 }
 
-static bool checkAndReplaceCondition(
-    CmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
-    Instruction *ContextInst, Module *ReproducerModule,
-    ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT) {
+static std::optional<bool> checkCondition(CmpInst *Cmp, ConstraintInfo &Info,
+                                          unsigned NumIn, unsigned NumOut,
+                                          Instruction *ContextInst) {
   LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
 
   CmpInst::Predicate Pred = Cmp->getPredicate();
@@ -1015,7 +1027,7 @@ static bool checkAndReplaceCondition(
   auto R = Info.getConstraintForSolving(Pred, A, B);
   if (R.empty() || !R.isValid(Info)){
     LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
-    return false;
+    return std::nullopt;
   }
 
   auto &CSToUse = Info.getCS(R.IsSigned);
@@ -1030,12 +1042,12 @@ static bool checkAndReplaceCondition(
       CSToUse.popLastConstraint();
   });
 
-  auto ReplaceCmpWithConstant = [&](CmpInst *Cmp, bool IsTrue) {
+  if (auto ImpliedCondition = R.isImpliedBy(CSToUse)) {
     if (!DebugCounter::shouldExecute(EliminatedCounter))
-      return false;
+      return std::nullopt;
 
     LLVM_DEBUG({
-      if (IsTrue) {
+      if (*ImpliedCondition) {
         dbgs() << "Condition " << *Cmp;
       } else {
         auto InversePred = Cmp->getInversePredicate();
@@ -1045,7 +1057,17 @@ static bool checkAndReplaceCondition(
       dbgs() << " implied by dominating constraints\n";
       CSToUse.dump();
     });
+    return ImpliedCondition;
+  }
 
+  return std::nullopt;
+}
+
+static bool checkAndReplaceCondition(
+    CmpInst *Cmp, ConstraintInfo &Info, unsigned NumIn, unsigned NumOut,
+    Instruction *ContextInst, Module *ReproducerModule,
+    ArrayRef<ReproducerEntry> ReproducerCondStack, DominatorTree &DT) {
+  auto ReplaceCmpWithConstant = [&](CmpInst *Cmp, bool IsTrue) {
     generateReproducer(Cmp, ReproducerModule, ReproducerCondStack, Info, DT);
     Constant *ConstantC = ConstantInt::getBool(
         CmpInst::makeCmpResultType(Cmp->getType()), IsTrue);
@@ -1068,9 +1090,9 @@ static bool checkAndReplaceCondition(
     return true;
   };
 
-  if (auto ImpliedCondition = R.isImpliedBy(CSToUse))
+  if (auto ImpliedCondition =
+          checkCondition(Cmp, Info, NumIn, NumOut, ContextInst))
     return ReplaceCmpWithConstant(Cmp, *ImpliedCondition);
-
   return false;
 }
 
@@ -1090,6 +1112,41 @@ removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
     ReproducerCondStack.pop_back();
 }
 
+/// Check if the first condition for an AND implies the second.
+static bool checkAndSecondOpImpliedByFirst(
+    FactOrCheck &CB, ConstraintInfo &Info, Module *ReproducerModule,
+    SmallVectorImpl<ReproducerEntry> &ReproducerCondStack,
+    SmallVectorImpl<StackEntry> &DFSInStack) {
+  CmpInst::Predicate Pred;
+  Value *A, *B;
+  Instruction *And = CB.getContextInst();
+  if (!match(And->getOperand(0), m_ICmp(Pred, m_Value(A), m_Value(B))))
+    return false;
+
+  // Optimistically add fact from first condition.
+  unsigned OldSize = DFSInStack.size();
+  Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
+  if (OldSize == DFSInStack.size())
+    return false;
+
+  bool Changed = false;
+  // Check if the second condition can be simplified now.
+  if (auto ImpliedCondition =
+          checkCondition(cast<ICmpInst>(And->getOperand(1)), Info, CB.NumIn,
+                         CB.NumOut, CB.getContextInst())) {
+    And->setOperand(1, ConstantInt::getBool(And->getType(), *ImpliedCondition));
+    Changed = true;
+  }
+
+  // Remove entries again.
+  while (OldSize < DFSInStack.size()) {
+    StackEntry E = DFSInStack.back();
+    removeEntryFromStack(E, Info, ReproducerModule, ReproducerCondStack,
+                         DFSInStack);
+  }
+  return Changed;
+}
+
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
@@ -1097,7 +1154,9 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
   // hold.
   SmallVector<Value *> NewVariables;
   auto R = getConstraint(Pred, A, B, NewVariables);
-  if (!R.isValid(*this))
+
+  // TODO: Support non-equality for facts as well.
+  if (!R.isValid(*this) || R.isNe())
     return;
 
   LLVM_DEBUG(dbgs() << "Adding '" << Pred << " ";
@@ -1291,9 +1350,16 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
       if (auto *II = dyn_cast<WithOverflowInst>(Inst)) {
         Changed |= tryToSimplifyOverflowMath(II, Info, ToRemove);
       } else if (auto *Cmp = dyn_cast<ICmpInst>(Inst)) {
-        Changed |= checkAndReplaceCondition(
+        bool Simplified = checkAndReplaceCondition(
             Cmp, Info, CB.NumIn, CB.NumOut, CB.getContextInst(),
             ReproducerModule.get(), ReproducerCondStack, S.DT);
+        if (!Simplified && match(CB.getContextInst(),
+                                 m_LogicalAnd(m_Value(), m_Specific(Inst)))) {
+          Simplified =
+              checkAndSecondOpImpliedByFirst(CB, Info, ReproducerModule.get(),
+                                             ReproducerCondStack, DFSInStack);
+        }
+        Changed |= Simplified;
       }
       continue;
     }

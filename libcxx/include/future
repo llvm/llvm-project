@@ -1397,7 +1397,7 @@ template <class _Rp>
 void
 promise<_Rp>::set_exception(exception_ptr __p)
 {
-    _LIBCPP_ASSERT( __p != nullptr, "promise::set_exception: received nullptr" );
+    _LIBCPP_ASSERT_UNCATEGORIZED( __p != nullptr, "promise::set_exception: received nullptr" );
     if (__state_ == nullptr)
         __throw_future_error(future_errc::no_state);
     __state_->set_exception(__p);
@@ -1425,7 +1425,7 @@ template <class _Rp>
 void
 promise<_Rp>::set_exception_at_thread_exit(exception_ptr __p)
 {
-    _LIBCPP_ASSERT( __p != nullptr, "promise::set_exception_at_thread_exit: received nullptr" );
+    _LIBCPP_ASSERT_UNCATEGORIZED( __p != nullptr, "promise::set_exception_at_thread_exit: received nullptr" );
     if (__state_ == nullptr)
         __throw_future_error(future_errc::no_state);
     __state_->set_exception_at_thread_exit(__p);
@@ -1531,7 +1531,7 @@ template <class _Rp>
 void
 promise<_Rp&>::set_exception(exception_ptr __p)
 {
-    _LIBCPP_ASSERT( __p != nullptr, "promise::set_exception: received nullptr" );
+    _LIBCPP_ASSERT_UNCATEGORIZED( __p != nullptr, "promise::set_exception: received nullptr" );
     if (__state_ == nullptr)
         __throw_future_error(future_errc::no_state);
     __state_->set_exception(__p);
@@ -1550,7 +1550,7 @@ template <class _Rp>
 void
 promise<_Rp&>::set_exception_at_thread_exit(exception_ptr __p)
 {
-    _LIBCPP_ASSERT( __p != nullptr, "promise::set_exception_at_thread_exit: received nullptr" );
+    _LIBCPP_ASSERT_UNCATEGORIZED( __p != nullptr, "promise::set_exception_at_thread_exit: received nullptr" );
     if (__state_ == nullptr)
         __throw_future_error(future_errc::no_state);
     __state_->set_exception_at_thread_exit(__p);

@@ -85,9 +85,9 @@ _LIBCPP_HIDE_FROM_ABI inline char* __insert_sign(char* __buf, bool __negative, _
  * regardless whether the @c std::numpunct's type is @c char or @c wchar_t.
  */
 _LIBCPP_HIDE_FROM_ABI inline string __determine_grouping(ptrdiff_t __size, const string& __grouping) {
-  _LIBCPP_ASSERT(!__grouping.empty() && __size > __grouping[0],
-                 "The slow grouping formatting is used while there will be no "
-                 "separators written");
+  _LIBCPP_ASSERT_UNCATEGORIZED(!__grouping.empty() && __size > __grouping[0],
+                               "The slow grouping formatting is used while there will be no "
+                               "separators written");
   string __r;
   auto __end = __grouping.end() - 1;
   auto __ptr = __grouping.begin();
@@ -154,7 +154,7 @@ _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value
   // TODO FMT Evaluate code overhead due to not calling the internal function
   // directly. (Should be zero overhead.)
   to_chars_result __r = _VSTD::to_chars(__first, __last, __value, __base);
-  _LIBCPP_ASSERT(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
@@ -299,7 +299,7 @@ __format_integer(_Tp __value,
     return __formatter::__format_integer(__value, __ctx, __specs, __negative, __array.begin(), __array.end(), "0X", 16);
   }
   default:
-    _LIBCPP_ASSERT(false, "The parse function should have validated the type");
+    _LIBCPP_ASSERT_UNCATEGORIZED(false, "The parse function should have validated the type");
     __libcpp_unreachable();
   }
 }

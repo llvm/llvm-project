@@ -557,7 +557,8 @@ struct ElementalOpConversion
                         adaptor.getTypeparams());
     // Generate a loop nest looping around the fir.elemental shape and clone
     // fir.elemental region inside the inner loop.
-    hlfir::LoopNest loopNest = hlfir::genLoopNest(loc, builder, extents);
+    hlfir::LoopNest loopNest =
+        hlfir::genLoopNest(loc, builder, extents, !elemental.isOrdered());
     auto insPt = builder.saveInsertionPoint();
     builder.setInsertionPointToStart(loopNest.innerLoop.getBody());
     auto yield = hlfir::inlineElementalOp(loc, builder, elemental,
