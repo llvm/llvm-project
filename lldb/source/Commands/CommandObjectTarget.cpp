@@ -5123,6 +5123,29 @@ protected:
   }
 };
 
+#pragma mark CommandObjectTargetDumpSectionLoadList
+
+/// Dumps the SectionLoadList of the selected Target.
+class CommandObjectTargetDumpSectionLoadList : public CommandObjectParsed {
+public:
+  CommandObjectTargetDumpSectionLoadList(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target dump section-load-list",
+            "Dump the state of the target's internal section load list. "
+            "Intended to be used for debugging LLDB itself.",
+            nullptr, eCommandRequiresTarget) {}
+
+  ~CommandObjectTargetDumpSectionLoadList() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    Target &target = GetSelectedTarget();
+    target.GetSectionLoadList().Dump(result.GetOutputStream(), &target);
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return result.Succeeded();
+  }
+};
+
 #pragma mark CommandObjectTargetDump
 
 /// Multi-word command for 'target dump'.
@@ -5133,10 +5156,13 @@ public:
       : CommandObjectMultiword(
             interpreter, "target dump",
             "Commands for dumping information about the target.",
-            "target dump [typesystem]") {
+            "target dump [typesystem|section-load-list]") {
     LoadSubCommand(
         "typesystem",
         CommandObjectSP(new CommandObjectTargetDumpTypesystem(interpreter)));
+    LoadSubCommand("section-load-list",
+                   CommandObjectSP(new CommandObjectTargetDumpSectionLoadList(
+                       interpreter)));
   }
 
   ~CommandObjectTargetDump() override = default;
