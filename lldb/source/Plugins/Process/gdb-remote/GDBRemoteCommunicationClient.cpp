@@ -2590,6 +2590,9 @@ bool GDBRemoteCommunicationClient::LaunchGDBServer(
 
   if (SendPacketAndWaitForResponse(stream.GetString(), response) ==
       PacketResult::Success) {
+    if (response.IsErrorResponse())
+      return false;
+
     llvm::StringRef name;
     llvm::StringRef value;
     while (response.GetNameColonValue(name, value)) {
