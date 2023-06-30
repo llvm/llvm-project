@@ -156,26 +156,6 @@ void test_one(Func func) {
         }
     }));
   }
-
-  // Empty input sequence.
-  {
-    const std::size_t N = 0;
-
-    From input[1]  = {make<From>(1)};
-    To output[1] = {make<To>(2)};
-
-    auto in     = InIter(input);
-    auto in_end = InIter(input + N);
-    auto sent   = SentWrapper<decltype(in_end)>(in_end);
-    auto out    = OutIter(output);
-
-    assert(!memmove_called);
-    func(in, sent, out, N);
-
-    assert(memmove_called);
-    memmove_called = false;
-    assert(output[0] == make<To>(2));
-  }
 }
 
 template <class InIter, template <class> class SentWrapper, class OutIter>

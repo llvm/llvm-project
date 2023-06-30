@@ -21,6 +21,7 @@ any typeinfo
 any version
 array compare
 array cstddef
+array cstdint
 array initializer_list
 array limits
 array stdexcept
@@ -348,6 +349,7 @@ locale string
 locale version
 map compare
 map cstddef
+map cstdint
 map initializer_list
 map limits
 map new
@@ -501,6 +503,7 @@ semaphore ratio
 semaphore version
 set compare
 set cstddef
+set cstdint
 set initializer_list
 set limits
 set new
