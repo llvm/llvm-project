@@ -170,4 +170,4 @@ int test_foo_used_no_defn(void) {
 // CHECK: attributes #[[DEF]] =
 // Don't bother checking features, we verified it is the same as a normal function.
 // CHECK: attributes #[[SB]] =
-// CHECK-SAME: "target-features"="+avx,+crc32,+cx16,+cx8,+fxsr,+mmx,+pclmul,+popcnt,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"
+// CHECK-SAME: "target-features"="+avx,+cmov,+crc32,+cx16,+cx8,+fxsr,+mmx,+pclmul,+popcnt,+sahf,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave,+xsaveopt"

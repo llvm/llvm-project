@@ -3471,7 +3471,7 @@ struct OmpIfClause {
 struct OmpAlignedClause {
   TUPLE_CLASS_BOILERPLATE(OmpAlignedClause);
   CharBlock source;
-  std::tuple<std::list<Name>, std::optional<ScalarIntConstantExpr>> t;
+  std::tuple<OmpObjectList, std::optional<ScalarIntConstantExpr>> t;
 };
 
 // 2.9.5 order-clause -> ORDER ([order-modifier :]concurrent)

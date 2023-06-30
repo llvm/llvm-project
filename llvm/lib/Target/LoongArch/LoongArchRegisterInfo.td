@@ -17,6 +17,13 @@ class LoongArchReg<bits<16> Enc, string n, list<string> alt = []>
   let AltNames = alt;
 }
 
+class LoongArchRegWithSubRegs<bits<16> Enc, string n, list<Register> subregs,
+                              list<string> alt = []>
+    : RegisterWithSubRegs<n, subregs> {
+  let HWEncoding = Enc;
+  let AltNames = alt;
+}
+
 class LoongArchReg32<bits<16> Enc, string n, list<string> alt = []>
     : Register<n> {
   let HWEncoding = Enc;
@@ -25,12 +32,9 @@ class LoongArchReg32<bits<16> Enc, string n, list<string> alt = []>
 
 def sub_32 : SubRegIndex<32>;
 class LoongArchReg64<LoongArchReg32 subreg>
-    : Register<""> {
-  let HWEncoding = subreg.HWEncoding;
-  let SubRegs = [subreg];
+    : LoongArchRegWithSubRegs<subreg.HWEncoding, subreg.AsmName, [subreg],
+                              subreg.AltNames> {
   let SubRegIndices = [sub_32];
-  let AsmName = subreg.AsmName;
-  let AltNames = subreg.AltNames;
 }
 
 let FallbackRegAltNameIndex = NoRegAltName in

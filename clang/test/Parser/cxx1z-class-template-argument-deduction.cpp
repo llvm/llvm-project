@@ -247,3 +247,11 @@ struct A2 {
 };
 
 }
+
+namespace GH57495 {
+template <typename T> struct vector{};
+
+void f() {
+  GH57495::vector.d; // expected-error {{cannot use dot operator on a type}}
+}
+}

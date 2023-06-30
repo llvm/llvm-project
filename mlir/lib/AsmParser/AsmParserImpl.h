@@ -456,8 +456,16 @@ public:
     return parser.parseAffineMapReference(map);
   }
 
+  /// Parse an affine expr instance into 'expr' using the already computed
+  /// mapping from symbols to affine expressions in 'symbolSet'.
+  ParseResult
+  parseAffineExpr(SmallVectorImpl<std::pair<StringRef, AffineExpr>> &symbolSet,
+                  AffineExpr &expr) override {
+    return parser.parseAffineExprReference(symbolSet, expr);
+  }
+
   /// Parse an integer set instance into 'set'.
-  ParseResult printIntegerSet(IntegerSet &set) override {
+  ParseResult parseIntegerSet(IntegerSet &set) override {
     return parser.parseIntegerSetReference(set);
   }
 

@@ -29,8 +29,7 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
                                  LMULInfo vlmul,
                                  OutPatFrag avl,
                                  VReg reg_class,
-                                 int sew = !shl(1, log2sew)>
-{
+                                 int sew = !shl(1, log2sew)> {
   defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX);
   defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
   // Load
@@ -45,8 +44,7 @@ multiclass VPatUSLoadStoreWholeVRSDNode<ValueType type,
                                         int log2sew,
                                         LMULInfo vlmul,
                                         VReg reg_class,
-                                        int sew = !shl(1, log2sew)>
-{
+                                        int sew = !shl(1, log2sew)> {
   defvar load_instr =
     !cast<Instruction>("VL"#!substr(vlmul.MX, 1)#"RE"#sew#"_V");
   defvar store_instr =
@@ -60,8 +58,7 @@ multiclass VPatUSLoadStoreWholeVRSDNode<ValueType type,
             (store_instr reg_class:$rs2, GPR:$rs1)>;
 }
 
-multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
-{
+multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m> {
   defvar load_instr = !cast<Instruction>("PseudoVLM_V_"#m.BX);
   defvar store_instr = !cast<Instruction>("PseudoVSM_V_"#m.BX);
   // Load

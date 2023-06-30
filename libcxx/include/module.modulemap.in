@@ -117,8 +117,6 @@ module std [system] {
   }
   module tgmath_h {
     header "tgmath.h"
-    export ccomplex
-    export cmath
     export *
   }
 
@@ -226,7 +224,6 @@ module std [system] {
     module cwchar {
       @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
       header "cwchar"
-      export depr.stdio_h
       export *
     }
     module cwctype {
@@ -502,12 +499,11 @@ module std [system] {
       }
       module ranges_partial_sort {
         private header "__algorithm/ranges_partial_sort.h"
-        export algorithm.__algorithm.in_out_result
         export functional.__functional.ranges_operations
       }
       module ranges_partial_sort_copy {
         private header "__algorithm/ranges_partial_sort_copy.h"
-        export algorithm.__algorithm.in_out_out_result
+        export algorithm.__algorithm.in_out_result
         export functional.__functional.ranges_operations
       }
       module ranges_partition                { private header "__algorithm/ranges_partition.h" }
@@ -763,7 +759,6 @@ module std [system] {
         private header "__chrono/high_resolution_clock.h"
         export steady_clock
         export system_clock
-        export time_point
       }
       module literals               { private header "__chrono/literals.h" }
       module month                  { private header "__chrono/month.h" }
@@ -778,8 +773,14 @@ module std [system] {
         private header "__chrono/parser_std_format_spec.h"
       }
       module statically_widen       { private header "__chrono/statically_widen.h" }
-      module steady_clock           { private header "__chrono/steady_clock.h" }
-      module system_clock           { private header "__chrono/system_clock.h" }
+      module steady_clock           {
+        private header "__chrono/steady_clock.h"
+        export time_point
+      }
+      module system_clock           {
+        private header "__chrono/system_clock.h"
+        export time_point
+      }
       module time_point             { private header "__chrono/time_point.h" }
       module weekday                { private header "__chrono/weekday.h" }
       module year                   { private header "__chrono/year.h" }
@@ -939,7 +940,6 @@ module std [system] {
         private header "__format/format_context.h"
         export optional
         export locale
-        export __locale
       }
       module format_error                    { private header "__format/format_error.h" }
       module format_functions                {
@@ -1085,7 +1085,7 @@ module std [system] {
       module cpp17_iterator_concepts { private header "__iterator/cpp17_iterator_concepts.h" }
       module concepts {
         private header "__iterator/concepts.h"
-        export concepts.equality_comparable
+        export std.concepts.__concepts.equality_comparable
         export type_traits.common_reference
       }
       module counted_iterator      { private header "__iterator/counted_iterator.h" }
@@ -1120,10 +1120,7 @@ module std [system] {
       module permutable            { private header "__iterator/permutable.h" }
       module prev                  { private header "__iterator/prev.h" }
       module projected             { private header "__iterator/projected.h" }
-      module readable_traits       {
-        private header "__iterator/readable_traits.h"
-        export __iterator.iterator_traits
-      }
+      module readable_traits       { private header "__iterator/readable_traits.h" }
       module reverse_access        { private header "__iterator/reverse_access.h" }
       module reverse_iterator      { private header "__iterator/reverse_iterator.h" }
       module segmented_iterator    { private header "__iterator/segmented_iterator.h" }
@@ -1168,12 +1165,14 @@ module std [system] {
   }
   module mdspan {
     header "mdspan"
-    export array
-    export span
     export *
 
     module __mdspan {
-      module extents                         { private header "__mdspan/extents.h" }
+      module extents                         {
+        private header "__mdspan/extents.h"
+        export array
+        export span
+      }
       module layout_left                     { private header "__mdspan/layout_left.h" }
       module layout_right                    { private header "__mdspan/layout_right.h" }
       module mdspan_fwd                      { private header "__fwd/mdspan.h" }
@@ -1500,7 +1499,6 @@ module std [system] {
   }
   module string_view {
     header "string_view"
-    export initializer_list
     export *
     module string_view_fwd { private header "__fwd/string_view.h" }
   }
@@ -1511,7 +1509,6 @@ module std [system] {
   }
   module system_error {
     header "system_error"
-    export __errc
     export *
     module __system_error {
       module errc           { private header "__system_error/errc.h" }
@@ -1874,10 +1871,6 @@ module std [system] {
     }
     module set {
       header "experimental/set"
-      export *
-    }
-    module span {
-      header "span"
       export *
     }
     module string {
