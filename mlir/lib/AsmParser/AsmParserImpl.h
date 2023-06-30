@@ -457,7 +457,7 @@ public:
   }
 
   /// Parse an integer set instance into 'set'.
-  ParseResult printIntegerSet(IntegerSet &set) override {
+  ParseResult parseIntegerSet(IntegerSet &set) override {
     return parser.parseIntegerSetReference(set);
   }
 
