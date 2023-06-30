@@ -4354,6 +4354,10 @@ void DeclarationVisitor::Post(const parser::EntityDecl &x) {
   } else if (attrs.test(Attr::PARAMETER)) { // C882, C883
     Say(name, "Missing initialization for parameter '%s'"_err_en_US);
   }
+  if (auto *scopeSymbol{currScope().symbol()})
+    if (auto *details{scopeSymbol->detailsIf<DerivedTypeDetails>()})
+      if (details->isDECStructure())
+        details->add_component(symbol);
 }
 
 void DeclarationVisitor::Post(const parser::PointerDecl &x) {
