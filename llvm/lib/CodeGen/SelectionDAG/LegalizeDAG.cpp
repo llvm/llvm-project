@@ -2121,7 +2121,7 @@ void SelectionDAGLegalize::ExpandFrexpLibCall(
   TargetLowering::ArgListTy Args = {FPArgEntry, PtrArgEntry};
 
   RTLIB::Libcall LC = RTLIB::getFREXP(VT);
-  auto [Chain, Call] = ExpandLibCall(LC, Node, std::move(Args), false);
+  auto [Call, Chain] = ExpandLibCall(LC, Node, std::move(Args), false);
 
   Results.push_back(Call);
 
