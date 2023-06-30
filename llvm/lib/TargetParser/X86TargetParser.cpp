@@ -126,7 +126,7 @@ constexpr FeatureBitset FeaturesPentiumMMX =
 
 // Pentium 2 and 3.
 constexpr FeatureBitset FeaturesPentium2 =
-    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | FeatureFXSR;
+    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | FeatureFXSR | FeatureCMOV;
 constexpr FeatureBitset FeaturesPentium3 = FeaturesPentium2 | FeatureSSE;
 
 // Pentium 4 CPUs
@@ -321,8 +321,8 @@ constexpr ProcInfo Processors[] = {
   { {"pentium"}, CK_Pentium, ~0U, FeatureX87 | FeatureCMPXCHG8B },
   { {"pentium-mmx"}, CK_PentiumMMX, ~0U, FeaturesPentiumMMX },
   // i686-generation processors, P6 / Pentium M microarchitecture based.
-  { {"pentiumpro"}, CK_PentiumPro, ~0U, FeatureX87 | FeatureCMPXCHG8B },
-  { {"i686"}, CK_i686, ~0U, FeatureX87 | FeatureCMPXCHG8B },
+  { {"pentiumpro"}, CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B },
+  { {"i686"}, CK_i686, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B },
   { {"pentium2"}, CK_Pentium2, ~0U, FeaturesPentium2 },
   { {"pentium3"}, CK_Pentium3, ~0U, FeaturesPentium3 },
   { {"pentium3m"}, CK_Pentium3, ~0U, FeaturesPentium3 },

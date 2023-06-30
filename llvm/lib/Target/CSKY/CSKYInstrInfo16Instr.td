@@ -97,6 +97,9 @@ let Constraints = "$rZ = $rz", isReMaterializable = 1, isAsCheapAsAMove = 1 in {
   def SUBI16 : I16_Z_8<0b101, (ins mGPR:$rZ, oimm8:$imm8), "subi16\t$rz, $imm8">;
 }
 
+def : Pat<(add GPR:$rs1, (oimm8_neg:$im)),
+          (SUBI16 GPR:$rs1, (imm_neg_XFORM oimm8_neg:$im))>;
+
 let isAdd = 1 in
 def ADDI16ZSP : I16_Z_8<0b011, (ins GPRSP:$sp, uimm8_2:$imm8),
                         "addi16\t$rz, $sp, $imm8">;

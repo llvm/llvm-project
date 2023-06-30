@@ -1095,6 +1095,12 @@ static constexpr CombinedExtsEntry CombineIntoExts[] = {
     {{"zk"}, {ImpliedExtsZk}},
     {{"zkn"}, {ImpliedExtsZkn}},
     {{"zks"}, {ImpliedExtsZks}},
+    {{"zvkn"}, {ImpliedExtsZvkn}},
+    {{"zvknc"}, {ImpliedExtsZvknc}},
+    {{"zvkng"}, {ImpliedExtsZvkng}},
+    {{"zvks"}, {ImpliedExtsZvks}},
+    {{"zvksc"}, {ImpliedExtsZvksc}},
+    {{"zvksg"}, {ImpliedExtsZvksg}},
 };
 
 void RISCVISAInfo::updateCombination() {
