@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -45,6 +46,41 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
+
+/// Return a `memref.dim` or `tensor.dim` for the shape of `v` at `dim`.
+static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
+                                int64_t dim) {
+  auto type = cast<ShapedType>(v.getType());
+  if (!type.isDynamicDim(dim))
+    return builder.getIndexAttr(type.getDimSize(dim));
+
+  return getAsOpFoldResult(
+      TypeSwitch<Type, Value>(v.getType())
+          .Case<RankedTensorType>([&](RankedTensorType t) -> Value {
+            return builder.create<tensor::DimOp>(loc, v, dim);
+          })
+          .Case<MemRefType>([&](MemRefType t) -> Value {
+            return builder.create<memref::DimOp>(loc, v, dim);
+          }));
+}
+
+/// Returns a memref.subview or a tensor.extract_slice based on the type of the
+/// `source`.
+static Value getSlice(OpBuilder &b, Location loc, Value source,
+                      ArrayRef<OpFoldResult> offsets,
+                      ArrayRef<OpFoldResult> sizes,
+                      ArrayRef<OpFoldResult> strides) {
+  return TypeSwitch<Type, Value>(source.getType())
+      .Case<RankedTensorType>([&](RankedTensorType t) -> Value {
+        return b.create<tensor::ExtractSliceOp>(loc, source, offsets, sizes,
+                                                strides);
+      })
+      .Case<MemRefType>([&](MemRefType type) -> Value {
+        return b.create<memref::SubViewOp>(loc, source, offsets, sizes,
+                                           strides);
+      })
+      .Default([&](Type t) { return nullptr; });
+}
 
 //===----------------------------------------------------------------------===//
 // Helper functions
@@ -2180,6 +2216,62 @@ LogicalResult SoftmaxOp::verify() {
     return emitOpError("incorrect dimension specified");
 
   return success();
+}
+
+SmallVector<Range> SoftmaxOp::getIterationDomain(OpBuilder &builder) {
+  int64_t operandRank = getInputOperandRank();
+  SmallVector<Range> loopBounds(operandRank);
+  Location loc = getLoc();
+  Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  Value one = builder.create<arith::ConstantIndexOp>(loc, 1);
+  Value source = getInput();
+  for (auto dim : llvm::seq<int64_t>(0, operandRank)) {
+    loopBounds[dim].offset = zero;
+    loopBounds[dim].size = getDimValue(builder, loc, source, dim);
+    loopBounds[dim].stride = one;
+  }
+  return loopBounds;
+}
+
+SmallVector<utils::IteratorType> SoftmaxOp::getLoopIteratorTypes() {
+  SmallVector<utils::IteratorType> iteratorTypes(getInputOperandRank(),
+                                                 utils::IteratorType::parallel);
+  iteratorTypes[getDimension()] = utils::IteratorType::reduction;
+  return iteratorTypes;
+}
+
+FailureOr<TilingResult>
+SoftmaxOp::getTiledImplementation(OpBuilder &builder,
+                                  ArrayRef<OpFoldResult> offsets,
+                                  ArrayRef<OpFoldResult> sizes) {
+  int64_t rank = getInputOperandRank();
+  auto oneAttr = builder.getI64IntegerAttr(1);
+  SmallVector<OpFoldResult> strides(rank, oneAttr);
+  SmallVector<Value> tiledOperands;
+  tiledOperands.emplace_back(
+      getSlice(builder, getLoc(), getInput(), offsets, sizes, strides));
+  tiledOperands.emplace_back(
+      getSlice(builder, getLoc(), getOutput(), offsets, sizes, strides));
+
+  SmallVector<Type, 4> resultTypes;
+  if (hasTensorSemantics())
+    resultTypes.push_back(tiledOperands[1].getType());
+  Operation *tiledOp =
+      mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
+
+  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+}
+
+LogicalResult SoftmaxOp::getResultTilePosition(
+    OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
+    SmallVector<OpFoldResult> &resultSizes) {
+  if (resultNumber == 0) {
+    resultOffsets.assign(offsets.begin(), offsets.end());
+    resultSizes.assign(sizes.begin(), sizes.end());
+    return success();
+  }
+  return failure();
 }
 
 // cast(dynamic) -> static.
