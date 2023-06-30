@@ -483,9 +483,12 @@ struct cusparseLtDnMatHandleAndData {
   void *values{nullptr};
 };
 
-static_assert(sizeof(cusparseLtHandle_t) == 11024);
-static_assert(sizeof(cusparseLtSpMatHandleAndData) == 44104);
-static_assert(sizeof(cusparseLtDnMatHandleAndData) == 11032);
+static_assert(sizeof(cusparseLtHandle_t) == 11024,
+              "Unexpected cusparseLt handle size");
+static_assert(sizeof(cusparseLtSpMatHandleAndData) == 44104,
+              "Unexpected cusparseLt sparse matrix handle size");
+static_assert(sizeof(cusparseLtDnMatHandleAndData) == 11032,
+              "Unexpected cusparseLt dense matrix handle size");
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuCreateSparseLtEnv(void *h, CUstream /*stream*/) {
