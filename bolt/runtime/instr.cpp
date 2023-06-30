@@ -1586,9 +1586,6 @@ extern "C" void __bolt_instr_indirect_tailcall();
 
 /// Initialization code
 extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
-  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
-  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
-
   const uint64_t CountersStart =
       reinterpret_cast<uint64_t>(&__bolt_instr_locations[0]);
   const uint64_t CountersEnd = alignTo(
@@ -1596,19 +1593,18 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
       0x1000);
   DEBUG(reportNumber("replace mmap start: ", CountersStart, 16));
   DEBUG(reportNumber("replace mmap stop: ", CountersEnd, 16));
-  assert(CountersEnd > CountersStart, "no counters");
-
-  const bool Shared = !__bolt_instr_use_pid;
-  const uint64_t MapPrivateOrShared = Shared ? MAP_SHARED : MAP_PRIVATE;
-
+  assert (CountersEnd > CountersStart, "no counters");
+  // Maps our counters to be shared instead of private, so we keep counting for
+  // forked processes
   void *Ret =
       __mmap(CountersStart, CountersEnd - CountersStart, PROT_READ | PROT_WRITE,
-             MAP_ANONYMOUS | MapPrivateOrShared | MAP_FIXED, -1, 0);
+             MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED, -1, 0);
   assert(Ret != MAP_FAILED, "__bolt_instr_setup: Failed to mmap counters!");
-
+  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
+  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
   // Conservatively reserve 100MiB shared pages
   GlobalAlloc.setMaxSize(0x6400000);
-  GlobalAlloc.setShared(Shared);
+  GlobalAlloc.setShared(true);
   GlobalWriteProfileMutex = new (GlobalAlloc, 0) Mutex();
   if (__bolt_instr_num_ind_calls > 0)
     GlobalIndCallCounters =
