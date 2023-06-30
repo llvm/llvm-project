@@ -784,7 +784,7 @@ class SOPK_32 <string opName, list<dag> pattern=[]> : SOPK_Pseudo <
 class SOPK_32_BR <string opName, list<dag> pattern=[]> : SOPK_Pseudo <
   opName,
   (outs),
-  (ins sopp_brtarget:$simm16, SReg_32:$sdst),
+  (ins SOPPBrTarget:$simm16, SReg_32:$sdst),
   "$sdst, $simm16",
   pattern> {
   let Defs = [EXEC];
@@ -864,7 +864,7 @@ let isCommutable = 1, DisableEncoding = "$src0",
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9 in
 def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "s_cbranch_i_fork",
-  (outs), (ins SReg_64:$sdst, sopp_brtarget:$simm16),
+  (outs), (ins SReg_64:$sdst, SOPPBrTarget:$simm16),
   "$sdst, $simm16"
 >;
 
@@ -942,7 +942,7 @@ let SubtargetPredicate = isGFX9Plus in {
   def S_CALL_B64 : SOPK_Pseudo<
       "s_call_b64",
       (outs SReg_64:$sdst),
-      (ins sopp_brtarget:$simm16),
+      (ins SOPPBrTarget:$simm16),
       "$sdst, $simm16"> {
     let isCall = 1;
   }
@@ -1195,60 +1195,60 @@ let SubtargetPredicate = isGFX10Plus in {
 let isBranch = 1, SchedRW = [WriteBranch] in {
 let isBarrier = 1 in {
 defm S_BRANCH : SOPP_With_Relaxation<
-  "s_branch" , (ins sopp_brtarget:$simm16), "$simm16",
+  "s_branch" , (ins SOPPBrTarget:$simm16), "$simm16",
   [(br bb:$simm16)]>;
 }
 
 let Uses = [SCC] in {
 defm S_CBRANCH_SCC0 : SOPP_With_Relaxation<
-  "s_cbranch_scc0" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_scc0" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 defm S_CBRANCH_SCC1 : SOPP_With_Relaxation <
-  "s_cbranch_scc1" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_scc1" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 } // End Uses = [SCC]
 
 let Uses = [VCC] in {
 defm S_CBRANCH_VCCZ : SOPP_With_Relaxation <
-  "s_cbranch_vccz" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_vccz" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 defm S_CBRANCH_VCCNZ : SOPP_With_Relaxation <
-  "s_cbranch_vccnz" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_vccnz" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 } // End Uses = [VCC]
 
 let Uses = [EXEC] in {
 defm S_CBRANCH_EXECZ : SOPP_With_Relaxation <
-  "s_cbranch_execz" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_execz" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 defm S_CBRANCH_EXECNZ : SOPP_With_Relaxation <
-  "s_cbranch_execnz" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_execnz" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 } // End Uses = [EXEC]
 
 defm S_CBRANCH_CDBGSYS : SOPP_With_Relaxation <
-  "s_cbranch_cdbgsys" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_cdbgsys" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 
 defm S_CBRANCH_CDBGSYS_AND_USER : SOPP_With_Relaxation <
-  "s_cbranch_cdbgsys_and_user" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_cdbgsys_and_user" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 
 defm S_CBRANCH_CDBGSYS_OR_USER : SOPP_With_Relaxation <
-  "s_cbranch_cdbgsys_or_user" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_cdbgsys_or_user" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 
 defm S_CBRANCH_CDBGUSER : SOPP_With_Relaxation <
-  "s_cbranch_cdbguser" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_cdbguser" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 
