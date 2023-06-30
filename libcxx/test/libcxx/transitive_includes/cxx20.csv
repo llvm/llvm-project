@@ -294,6 +294,7 @@ filesystem concepts
 filesystem cstddef
 filesystem cstdint
 filesystem cstdlib
+filesystem cstring
 filesystem ctime
 filesystem iomanip
 filesystem iosfwd

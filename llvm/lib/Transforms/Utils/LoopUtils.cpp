@@ -641,18 +641,17 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
       }
 
     // After the loop has been deleted all the values defined and modified
-    // inside the loop are going to be unavailable.
-    // Since debug values in the loop have been deleted, inserting an undef
-    // dbg.value truncates the range of any dbg.value before the loop where the
-    // loop used to be. This is particularly important for constant values.
+    // inside the loop are going to be unavailable. Values computed in the
+    // loop will have been deleted, automatically causing their debug uses
+    // be be replaced with undef. Loop invariant values will still be available.
+    // Move dbg.values out the loop so that earlier location ranges are still
+    // terminated and loop invariant assignments are preserved.
     Instruction *InsertDbgValueBefore = ExitBlock->getFirstNonPHI();
     assert(InsertDbgValueBefore &&
            "There should be a non-PHI instruction in exit block, else these "
            "instructions will have no parent.");
-    for (auto *DVI : DeadDebugInst) {
-      DVI->setKillLocation();
+    for (auto *DVI : DeadDebugInst)
       DVI->moveBefore(InsertDbgValueBefore);
-    }
   }
 
   // Remove the block from the reference counting scheme, so that we can

@@ -191,6 +191,7 @@ experimental/vector vector
 filesystem compare
 filesystem cstddef
 filesystem cstdint
+filesystem cstring
 filesystem ctime
 filesystem iomanip
 filesystem iosfwd
