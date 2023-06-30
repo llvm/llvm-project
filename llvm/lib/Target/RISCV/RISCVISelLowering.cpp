@@ -352,7 +352,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   static const unsigned FPOpToExpand[] = {
       ISD::FSIN, ISD::FCOS,       ISD::FSINCOS,   ISD::FPOW,
-      ISD::FREM, ISD::FP16_TO_FP, ISD::FP_TO_FP16};
+      ISD::FREM};
 
   static const unsigned FPRndMode[] = {
       ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FRINT, ISD::FROUND,
@@ -430,6 +430,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
     setOperationAction(ISD::FP_TO_BF16, MVT::f32,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f32, Custom);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f32, Custom);
 
     if (Subtarget.hasStdExtZfa())
       setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
@@ -467,6 +469,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
     setOperationAction(ISD::FP_TO_BF16, MVT::f64,
                        Subtarget.isSoftFPABI() ? LibCall : Custom);
+    setOperationAction(ISD::FP_TO_FP16, MVT::f64, Custom);
+    setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
   }
 
   if (Subtarget.is64Bit()) {
@@ -4958,6 +4962,35 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     // fp_extend if the target VT is bigger than f32.
     if (VT != MVT::f32)
       return DAG.getNode(ISD::FP_EXTEND, DL, VT, Res);
+    return Res;
+  }
+  case ISD::FP_TO_FP16: {
+    // Custom lower to ensure the libcall return is passed in an FPR on hard
+    // float ABIs.
+    assert(Subtarget.hasStdExtFOrZfinx() && "Unexpected custom legalisation");
+    SDLoc DL(Op);
+    MakeLibCallOptions CallOptions;
+    RTLIB::Libcall LC =
+        RTLIB::getFPROUND(Op.getOperand(0).getValueType(), MVT::f16);
+    SDValue Res =
+        makeLibCall(DAG, LC, MVT::f32, Op.getOperand(0), CallOptions, DL).first;
+    if (Subtarget.is64Bit())
+      return DAG.getNode(RISCVISD::FMV_X_ANYEXTW_RV64, DL, MVT::i64, Res);
+    return DAG.getBitcast(MVT::i32, Res);
+  }
+  case ISD::FP16_TO_FP: {
+    // Custom lower to ensure the libcall argument is passed in an FPR on hard
+    // float ABIs.
+    assert(Subtarget.hasStdExtFOrZfinx() && "Unexpected custom legalisation");
+    SDLoc DL(Op);
+    MakeLibCallOptions CallOptions;
+    SDValue Arg = Subtarget.is64Bit()
+                      ? DAG.getNode(RISCVISD::FMV_W_X_RV64, DL, MVT::f32,
+                                    Op.getOperand(0))
+                      : DAG.getBitcast(MVT::f32, Op.getOperand(0));
+    SDValue Res =
+        makeLibCall(DAG, RTLIB::FPEXT_F16_F32, MVT::f32, Arg, CallOptions, DL)
+            .first;
     return Res;
   }
   case ISD::FTRUNC:
