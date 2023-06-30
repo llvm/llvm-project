@@ -1669,6 +1669,52 @@ OMPBindClause::Create(const ASTContext &C, OpenMPBindClauseKind K,
 OMPBindClause *OMPBindClause::CreateEmpty(const ASTContext &C) {
   return new (C) OMPBindClause();
 }
+
+OMPDoacrossClause *
+OMPDoacrossClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                          SourceLocation LParenLoc, SourceLocation EndLoc,
+                          OpenMPDoacrossClauseModifier DepType,
+                          SourceLocation DepLoc, SourceLocation ColonLoc,
+                          ArrayRef<Expr *> VL, unsigned NumLoops) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + NumLoops),
+                         alignof(OMPDoacrossClause));
+  OMPDoacrossClause *Clause = new (Mem)
+      OMPDoacrossClause(StartLoc, LParenLoc, EndLoc, VL.size(), NumLoops);
+  Clause->setDependenceType(DepType);
+  Clause->setDependenceLoc(DepLoc);
+  Clause->setColonLoc(ColonLoc);
+  Clause->setVarRefs(VL);
+  for (unsigned I = 0; I < NumLoops; ++I)
+    Clause->setLoopData(I, nullptr);
+  return Clause;
+}
+
+OMPDoacrossClause *OMPDoacrossClause::CreateEmpty(const ASTContext &C,
+                                                  unsigned N,
+                                                  unsigned NumLoops) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + NumLoops),
+                         alignof(OMPDoacrossClause));
+  return new (Mem) OMPDoacrossClause(N, NumLoops);
+}
+
+void OMPDoacrossClause::setLoopData(unsigned NumLoop, Expr *Cnt) {
+  assert(NumLoop < NumLoops && "Loop index must be less number of loops.");
+  auto *It = std::next(getVarRefs().end(), NumLoop);
+  *It = Cnt;
+}
+
+Expr *OMPDoacrossClause::getLoopData(unsigned NumLoop) {
+  assert(NumLoop < NumLoops && "Loop index must be less number of loops.");
+  auto *It = std::next(getVarRefs().end(), NumLoop);
+  return *It;
+}
+
+const Expr *OMPDoacrossClause::getLoopData(unsigned NumLoop) const {
+  assert(NumLoop < NumLoops && "Loop index must be less number of loops.");
+  const auto *It = std::next(getVarRefs().end(), NumLoop);
+  return *It;
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -2461,6 +2507,14 @@ void OMPClausePrinter::VisitOMPXDynCGroupMemClause(
     OMPXDynCGroupMemClause *Node) {
   OS << "ompx_dyn_cgroup_mem(";
   Node->getSize()->printPretty(OS, nullptr, Policy, 0);
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPDoacrossClause(OMPDoacrossClause *Node) {
+  OS << "doacross(";
+  OpenMPDoacrossClauseModifier DepType = Node->getDependenceType();
+  OS << (DepType == OMPC_DOACROSS_source ? "source:" : "sink:");
+  VisitOMPClauseList(Node, ' ');
   OS << ")";
 }
 

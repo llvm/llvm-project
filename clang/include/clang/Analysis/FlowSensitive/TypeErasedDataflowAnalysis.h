@@ -72,7 +72,7 @@ public:
   /// Joins two type-erased lattice elements by computing their least upper
   /// bound. Places the join result in the left element and returns an effect
   /// indicating whether any changes were made to it.
-  virtual LatticeJoinEffect joinTypeErased(TypeErasedLattice &,
+  virtual TypeErasedLattice joinTypeErased(const TypeErasedLattice &,
                                            const TypeErasedLattice &) = 0;
 
   /// Chooses a lattice element that approximates the current element at a

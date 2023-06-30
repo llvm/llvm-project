@@ -1942,13 +1942,13 @@ private:
                         ExplicitSpecifier ES,
                         const DeclarationNameInfo &NameInfo, QualType T,
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
-                        CXXConstructorDecl *Ctor)
+                        CXXConstructorDecl *Ctor, DeductionCandidate Kind)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, false, ConstexprSpecKind::Unspecified),
         Ctor(Ctor), ExplicitSpec(ES) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
-    setIsCopyDeductionCandidate(false);
+    setDeductionCandidateKind(Kind);
   }
 
   CXXConstructorDecl *Ctor;
@@ -1963,7 +1963,8 @@ public:
   Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
          ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
          TypeSourceInfo *TInfo, SourceLocation EndLocation,
-         CXXConstructorDecl *Ctor = nullptr);
+         CXXConstructorDecl *Ctor = nullptr,
+         DeductionCandidate Kind = DeductionCandidate::Normal);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -1980,16 +1981,15 @@ public:
 
   /// Get the constructor from which this deduction guide was generated, if
   /// this is an implicit deduction guide.
-  CXXConstructorDecl *getCorrespondingConstructor() const {
-    return Ctor;
+  CXXConstructorDecl *getCorrespondingConstructor() const { return Ctor; }
+
+  void setDeductionCandidateKind(DeductionCandidate K) {
+    FunctionDeclBits.DeductionCandidateKind = static_cast<unsigned char>(K);
   }
 
-  void setIsCopyDeductionCandidate(bool isCDC = true) {
-    FunctionDeclBits.IsCopyDeductionCandidate = isCDC;
-  }
-
-  bool isCopyDeductionCandidate() const {
-    return FunctionDeclBits.IsCopyDeductionCandidate;
+  DeductionCandidate getDeductionCandidateKind() const {
+    return static_cast<DeductionCandidate>(
+        FunctionDeclBits.DeductionCandidateKind);
   }
 
   // Implement isa/cast/dyncast/etc.

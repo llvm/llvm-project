@@ -937,6 +937,8 @@ bool Sema::LookupBuiltin(LookupResult &R) {
         if (!RVIntrinsicManager)
           RVIntrinsicManager = CreateRISCVIntrinsicManager(*this);
 
+        RVIntrinsicManager->InitIntrinsicList();
+
         if (RVIntrinsicManager->CreateIntrinsicIfFound(R, II, PP))
           return true;
       }

@@ -126,6 +126,7 @@ class DebugCommunication(object):
         self.thread_stop_reasons = {}
         self.breakpoint_events = []
         self.progress_events = []
+        self.reverse_requests = []
         self.sequence = 1
         self.threads = None
         self.recv_thread.start()
@@ -324,6 +325,7 @@ class DebugCommunication(object):
                 self.validate_response(command, response_or_request)
                 return response_or_request
             else:
+                self.reverse_requests.append(response_or_request)
                 if response_or_request["command"] == "runInTerminal":
                     subprocess.Popen(
                         response_or_request["arguments"]["args"],
@@ -340,8 +342,20 @@ class DebugCommunication(object):
                         },
                         set_sequence=False,
                     )
+                elif response_or_request["command"] == "startDebugging":
+                    self.send_packet(
+                        {
+                            "type": "response",
+                            "seq": -1,
+                            "request_seq": response_or_request["seq"],
+                            "success": True,
+                            "command": "startDebugging",
+                            "body": {},
+                        },
+                        set_sequence=False,
+                    )
                 else:
-                    desc = 'unkonwn reverse request "%s"' % (
+                    desc = 'unknown reverse request "%s"' % (
                         response_or_request["command"]
                     )
                     raise ValueError(desc)

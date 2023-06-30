@@ -377,6 +377,15 @@ public:
 
   bool runOnFunction(Function &F) override;
 
+  void releaseMemory() override {
+    // Clear per function information.
+    InsertedInsts.clear();
+    PromotedInsts.clear();
+    FreshBBs.clear();
+    BPI.reset();
+    BFI.reset();
+  }
+
   StringRef getPassName() const override { return "CodeGen Prepare"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -498,10 +507,6 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   DL = &F.getParent()->getDataLayout();
 
   bool EverMadeChange = false;
-  // Clear per function information.
-  InsertedInsts.clear();
-  PromotedInsts.clear();
-  FreshBBs.clear();
 
   TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   SubtargetInfo = TM->getSubtargetImpl(F);

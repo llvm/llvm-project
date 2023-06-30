@@ -348,9 +348,9 @@ body:             |
 # CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
 # CHECK-NEXT:   getNextResourceCycle (@0c): 
-# CHECK-NEXT:     Instance 0 available @0c
+# CHECK-NEXT:     Instance 0 available @1c
 # CHECK-NEXT:     Instance 1 available @0c
-# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:     selecting CortexA55UnitALU[1] available @0c
 # CHECK-NEXT:   *** Max MOps 2 at cycle 0
 # CHECK-NEXT: Cycle: 1 BotQ.A
 # CHECK-NEXT: BotQ.A @1c
@@ -360,7 +360,7 @@ body:             |
 # CHECK-NEXT:   ExpectedLatency: 0c
 # CHECK-NEXT:   - Latency limited.
 # CHECK-NEXT: CortexA55UnitALU(0) = 0
-# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
 # CHECK-NEXT: CortexA55UnitB(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
@@ -374,7 +374,7 @@ body:             |
 # CHECK-NEXT: ** ScheduleDAGMILive::schedule picking next node
 # CHECK-NEXT:   Resource booking (@1c): 
 # CHECK-NEXT: CortexA55UnitALU(0) = 0
-# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
 # CHECK-NEXT: CortexA55UnitB(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
@@ -387,8 +387,8 @@ body:             |
 # CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
 # CHECK-NEXT:   getNextResourceCycle (@1c): 
 # CHECK-NEXT:     Instance 0 available @1c
-# CHECK-NEXT:     Instance 1 available @0c
-# CHECK-NEXT:     selecting CortexA55UnitALU[1] available @0c
+# CHECK-NEXT:     Instance 1 available @1c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @1c
 # CHECK-NEXT: Queue BotQ.P: 
 # CHECK-NEXT: Queue BotQ.A: 0 
 # CHECK-NEXT: Scheduling SU(0) $x3 = ADDXrr $x0, $x0
@@ -396,7 +396,7 @@ body:             |
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
 # CHECK-NEXT:   Resource booking (@1c): 
 # CHECK-NEXT: CortexA55UnitALU(0) = 0
-# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
 # CHECK-NEXT: CortexA55UnitB(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
@@ -409,11 +409,11 @@ body:             |
 # CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
 # CHECK-NEXT:   getNextResourceCycle (@1c): 
 # CHECK-NEXT:     Instance 0 available @1c
-# CHECK-NEXT:     Instance 1 available @0c
-# CHECK-NEXT:     selecting CortexA55UnitALU[1] available @0c
+# CHECK-NEXT:     Instance 1 available @1c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @1c
 # CHECK-NEXT:   Resource booking (@1c): 
 # CHECK-NEXT: CortexA55UnitALU(0) = 0
-# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
 # CHECK-NEXT: CortexA55UnitB(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295
@@ -425,9 +425,9 @@ body:             |
 # CHECK-NEXT: CortexA55UnitMAC(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitSt(0) = 4294967295
 # CHECK-NEXT:   getNextResourceCycle (@1c): 
-# CHECK-NEXT:     Instance 0 available @0c
-# CHECK-NEXT:     Instance 1 available @0c
-# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
+# CHECK-NEXT:     Instance 0 available @1c
+# CHECK-NEXT:     Instance 1 available @1c
+# CHECK-NEXT:     selecting CortexA55UnitALU[0] available @1c
 # CHECK-NEXT: BotQ.A @1c
 # CHECK-NEXT:   Retired: 3
 # CHECK-NEXT:   Executed: 1c
@@ -435,7 +435,7 @@ body:             |
 # CHECK-NEXT:   ExpectedLatency: 0c
 # CHECK-NEXT:   - Latency limited.
 # CHECK-NEXT: CortexA55UnitALU(0) = 1
-# CHECK-NEXT: CortexA55UnitALU(1) = 4294967295
+# CHECK-NEXT: CortexA55UnitALU(1) = 0
 # CHECK-NEXT: CortexA55UnitB(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitDiv(0) = 4294967295
 # CHECK-NEXT: CortexA55UnitFPALU(0) = 4294967295

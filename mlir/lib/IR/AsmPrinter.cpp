@@ -2458,19 +2458,18 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         }
       })
       .Case<VectorType>([&](VectorType vectorTy) {
+        auto scalableDims = vectorTy.getScalableDims();
         os << "vector<";
         auto vShape = vectorTy.getShape();
         unsigned lastDim = vShape.size();
-        unsigned lastFixedDim = lastDim - vectorTy.getNumScalableDims();
         unsigned dimIdx = 0;
-        for (dimIdx = 0; dimIdx < lastFixedDim; dimIdx++)
-          os << vShape[dimIdx] << 'x';
-        if (vectorTy.isScalable()) {
-          os << '[';
-          unsigned secondToLastDim = lastDim - 1;
-          for (; dimIdx < secondToLastDim; dimIdx++)
-            os << vShape[dimIdx] << 'x';
-          os << vShape[dimIdx] << "]x";
+        for (dimIdx = 0; dimIdx < lastDim; dimIdx++) {
+          if (!scalableDims.empty() && scalableDims[dimIdx])
+            os << '[';
+          os << vShape[dimIdx];
+          if (!scalableDims.empty() && scalableDims[dimIdx])
+            os << ']';
+          os << 'x';
         }
         printType(vectorTy.getElementType());
         os << '>';

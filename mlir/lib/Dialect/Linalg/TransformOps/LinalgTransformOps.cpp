@@ -49,6 +49,7 @@ using namespace mlir::transform;
 #define DEBUG_TYPE "linalg-transforms"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
+#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 /// Attempts to apply the pattern specified as template argument to the given
 /// operation. The pattern is expected to have a `returningMatchAndRewrite`
@@ -174,18 +175,25 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   Attribute memorySpace =
       getMemorySpace().has_value() ? getMemorySpace().value() : Attribute();
-  auto transformed = llvm::to_vector(
-      llvm::map_range(state.getPayloadValues(getTarget()), [&](Value v) {
-        return linalg::bufferizeToAllocation(rewriter, v, memorySpace);
-      }));
-  results.setValues(cast<OpResult>(getTransformed()), transformed);
+  SmallVector<Value> replacements;
+  SmallVector<Value> allocatedBuffers;
+  for (Value value : state.getPayloadValues(getTarget())) {
+    Value replacement;
+    Value buffer = linalg::bufferizeToAllocation(rewriter, value, memorySpace,
+                                                 &replacement);
+    replacements.push_back(replacement);
+    allocatedBuffers.push_back(buffer);
+  }
+  results.setValues(cast<OpResult>(getReplacement()), replacements);
+  results.setValues(cast<OpResult>(getAllocatedBuffer()), allocatedBuffers);
   return DiagnosedSilenceableFailure::success();
 }
 
 void transform::BufferizeToAllocationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
-  producesHandle(getTransformed(), effects);
+  producesHandle(getReplacement(), effects);
+  producesHandle(getAllocatedBuffer(), effects);
   modifiesPayload(effects);
 }
 
@@ -1220,6 +1228,8 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
 
   int64_t numLoops = linalgOp.getNumLoops();
   if (numLoops <= 2) {
+    LDBG("need 3+ loops to find a matmul to pack, got "
+         << numLoops << "\nin: " << linalgOp << "\n");
     return rewriter.notifyMatchFailure(
         linalgOp, "need 3+ loops to find a matmul to pack");
   }
@@ -1240,17 +1250,21 @@ packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
   }
 
   // 1. Infer dims that are important for matmul.
-  FailureOr<EmbeddedContractionDimsCandidates> res = inferContractionDims(linalgOp);
-  if (failed(res)) {
+  FailureOr<ContractionDimensions> maybeDimensions =
+      inferContractionDims(linalgOp);
+  if (failed(maybeDimensions)) {
+    LDBG("couldn't infer matmul iterators in: " << linalgOp << "\n");
     return rewriter.notifyMatchFailure(linalgOp,
                                        "couldn't infer matmul iterators");
   }
 
   // 2. Normalize linalgOp to an kmn-matmul-like with [red, par, par] most
-  // minor iterators. If we wanted a different normalization order, this is
-  // where it would have to plug a heuristic.
-  int64_t mPos = *(res->mPos.begin()), nPos = *(res->nPos.begin()),
-          kPos = *(res->kPos.begin());
+  // minor iterators. In cases with multiple options for m, n, k bias towards
+  // the most minor embedding.
+  // If we wanted a different normalization order, this is where it would have
+  // to plug a heuristic.
+  int64_t mPos = maybeDimensions->m.back(), nPos = maybeDimensions->n.back(),
+          kPos = maybeDimensions->k.back();
   LLVM_DEBUG(DBGSNL(); DBGSNL(); DBGSNL();
              DBGS() << "Start packing generic op greedily with (m@" << mPos
                     << ", n@" << nPos << ", k@" << kPos << "): " << linalgOp
@@ -1583,15 +1597,18 @@ transform::PadOp::applyToOne(transform::TransformRewriter &rewriter,
     transposePaddings.push_back(
         extractFromI64ArrayAttr(cast<ArrayAttr>(transposeVector)));
 
+  // Set up options and pad.
   LinalgOp paddedOp;
-  SmallVector<int64_t> paddingDimensions =
-      extractFromI64ArrayAttr(getPaddingDimensions());
-  SmallVector<int64_t> padToMultipleOf(paddingDimensions.size(), 1);
+  LinalgPaddingOptions options;
+  options.paddingDimensions = extractFromI64ArrayAttr(getPaddingDimensions());
+  SmallVector<int64_t> padToMultipleOf(options.paddingDimensions.size(), 1);
   if (getPadToMultipleOf().has_value())
     padToMultipleOf = extractFromI64ArrayAttr(*getPadToMultipleOf());
+  options.padToMultipleOf = padToMultipleOf;
+  options.paddingValues = paddingValues;
+  options.packPaddings = packPaddings;
   FailureOr<SmallVector<Value>> result =
-      rewriteAsPaddedOp(rewriter, target, paddingDimensions, padToMultipleOf,
-                        paddingValues, packPaddings, paddedOp);
+      rewriteAsPaddedOp(rewriter, target, options, paddedOp, getCopyBack());
   if (succeeded(result)) {
     // We need to perform our own replacement here because this API is still
     // used in patterns that "pad and hoist", for which the replacement values
@@ -2645,71 +2662,71 @@ DiagnosedSilenceableFailure transform::tileToForallOpImpl(
     ArrayRef<OpFoldResult> mixedTileSizes, std::optional<ArrayAttr> mapping,
     linalg::ForallTilingResult &tilingResult) {
   // Transform all targets one by one.
-    auto tileableOp = dyn_cast<TilingInterface>(target);
-    if (!tileableOp) {
-      DiagnosedSilenceableFailure diag =
-          transformOp.emitSilenceableError()
-          << "only TilingInterface ops are supported";
-      diag.attachNote(target->getLoc()) << "target op";
-      return diag;
-    }
-    rewriter.setInsertionPoint(tileableOp);
-    FailureOr<linalg::ForallTilingResult> maybeTilingResult = failure();
-    if (!mixedNumThreads.empty()) {
-      maybeTilingResult = linalg::tileToForallOp(rewriter, tileableOp,
-                                                 mixedNumThreads, mapping);
-    } else {
-      maybeTilingResult = linalg::tileToForallOpUsingTileSizes(
-          rewriter, tileableOp, mixedTileSizes, mapping);
-    }
+  auto tileableOp = dyn_cast<TilingInterface>(target);
+  if (!tileableOp) {
+    DiagnosedSilenceableFailure diag =
+        transformOp.emitSilenceableError()
+        << "only TilingInterface ops are supported";
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
+  }
+  rewriter.setInsertionPoint(tileableOp);
+  FailureOr<linalg::ForallTilingResult> maybeTilingResult = failure();
+  if (!mixedNumThreads.empty()) {
+    maybeTilingResult =
+        linalg::tileToForallOp(rewriter, tileableOp, mixedNumThreads, mapping);
+  } else {
+    maybeTilingResult = linalg::tileToForallOpUsingTileSizes(
+        rewriter, tileableOp, mixedTileSizes, mapping);
+  }
 
-    if (failed(maybeTilingResult))
-      return transformOp.emitDefaultSilenceableFailure(tileableOp);
-    rewriter.replaceOp(tileableOp, maybeTilingResult->tileOp->getResults());
+  if (failed(maybeTilingResult))
+    return transformOp.emitDefaultSilenceableFailure(tileableOp);
+  rewriter.replaceOp(tileableOp, maybeTilingResult->tileOp->getResults());
 
-    tilingResult = *maybeTilingResult;
-    return DiagnosedSilenceableFailure::success();
+  tilingResult = *maybeTilingResult;
+  return DiagnosedSilenceableFailure::success();
 }
 
 DiagnosedSilenceableFailure
 transform::TileToForallOp::apply(transform::TransformRewriter &rewriter,
                                  transform::TransformResults &transformResults,
                                  transform::TransformState &state) {
-    auto transformOp = cast<TransformOpInterface>(getOperation());
+  auto transformOp = cast<TransformOpInterface>(getOperation());
 
-    // Result payload ops.
-    SmallVector<Operation *> tileOps;
-    SmallVector<Operation *> tiledOps;
+  // Result payload ops.
+  SmallVector<Operation *> tileOps;
+  SmallVector<Operation *> tiledOps;
 
-    // Unpack handles.
-    SmallVector<OpFoldResult> mixedNumThreads;
-    DiagnosedSilenceableFailure status =
-        getPackedNumThreads()
-            ? unpackSingleIndexResultPayloadOperations(
-                  state, transformOp, mixedNumThreads, getPackedNumThreads())
-            : unpackSingleIndexResultPayloadOperations(
-                  state, transformOp, mixedNumThreads, getMixedNumThreads());
-    if (!status.succeeded())
-      return status;
-    SmallVector<OpFoldResult> mixedTileSizes;
-    status = getPackedTileSizes()
-                 ? unpackSingleIndexResultPayloadOperations(
-                       state, transformOp, mixedTileSizes, getPackedTileSizes())
-                 : unpackSingleIndexResultPayloadOperations(
-                       state, transformOp, mixedTileSizes, getMixedTileSizes());
-    if (!status.succeeded())
-      return status;
+  // Unpack handles.
+  SmallVector<OpFoldResult> mixedNumThreads;
+  DiagnosedSilenceableFailure status =
+      getPackedNumThreads()
+          ? unpackSingleIndexResultPayloadOperations(
+                state, transformOp, mixedNumThreads, getPackedNumThreads())
+          : unpackSingleIndexResultPayloadOperations(
+                state, transformOp, mixedNumThreads, getMixedNumThreads());
+  if (!status.succeeded())
+    return status;
+  SmallVector<OpFoldResult> mixedTileSizes;
+  status = getPackedTileSizes()
+               ? unpackSingleIndexResultPayloadOperations(
+                     state, transformOp, mixedTileSizes, getPackedTileSizes())
+               : unpackSingleIndexResultPayloadOperations(
+                     state, transformOp, mixedTileSizes, getMixedTileSizes());
+  if (!status.succeeded())
+    return status;
 
-    for (Operation *target : state.getPayloadOps(getTarget())) {
-      linalg::ForallTilingResult tilingResult;
-      DiagnosedSilenceableFailure diag = tileToForallOpImpl(
-          rewriter, state, transformOp, target, mixedNumThreads, mixedTileSizes,
-          getMapping(), tilingResult);
-      if (!diag.succeeded())
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    linalg::ForallTilingResult tilingResult;
+    DiagnosedSilenceableFailure diag = tileToForallOpImpl(
+        rewriter, state, transformOp, target, mixedNumThreads, mixedTileSizes,
+        getMapping(), tilingResult);
+    if (!diag.succeeded())
       return diag;
     tileOps.push_back(tilingResult.tileOp);
     tiledOps.push_back(tilingResult.tiledOp);
-    }
+  }
 
   transformResults.set(cast<OpResult>(getForallOp()), tileOps);
   transformResults.set(cast<OpResult>(getTiledOp()), tiledOps);

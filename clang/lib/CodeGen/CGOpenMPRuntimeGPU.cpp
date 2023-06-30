@@ -2372,8 +2372,7 @@ static llvm::Value *emitListToGlobalReduceFunction(
     Address GlobAddr = GlobLVal.getAddress(CGF);
     llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(
         GlobAddr.getElementType(), GlobAddr.getPointer(), Idxs);
-    llvm::Value *Ptr = CGF.EmitCastToVoidPtr(BufferPtr);
-    CGF.EmitStoreOfScalar(Ptr, Elem, /*Volatile=*/false, C.VoidPtrTy);
+    CGF.EmitStoreOfScalar(BufferPtr, Elem, /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
       // Store array size.
       ++Idx;
@@ -2389,8 +2388,7 @@ static llvm::Value *emitListToGlobalReduceFunction(
   }
 
   // Call reduce_function(GlobalReduceList, ReduceList)
-  llvm::Value *GlobalReduceList =
-      CGF.EmitCastToVoidPtr(ReductionList.getPointer());
+  llvm::Value *GlobalReduceList = ReductionList.getPointer();
   Address AddrReduceListArg = CGF.GetAddrOfLocalVar(&ReduceListArg);
   llvm::Value *ReducedPtr = CGF.EmitLoadOfScalar(
       AddrReduceListArg, /*Volatile=*/false, C.VoidPtrTy, Loc);
@@ -2582,8 +2580,7 @@ static llvm::Value *emitGlobalToListReduceFunction(
     Address GlobAddr = GlobLVal.getAddress(CGF);
     llvm::Value *BufferPtr = Bld.CreateInBoundsGEP(
         GlobAddr.getElementType(), GlobAddr.getPointer(), Idxs);
-    llvm::Value *Ptr = CGF.EmitCastToVoidPtr(BufferPtr);
-    CGF.EmitStoreOfScalar(Ptr, Elem, /*Volatile=*/false, C.VoidPtrTy);
+    CGF.EmitStoreOfScalar(BufferPtr, Elem, /*Volatile=*/false, C.VoidPtrTy);
     if ((*IPriv)->getType()->isVariablyModifiedType()) {
       // Store array size.
       ++Idx;
@@ -2599,8 +2596,7 @@ static llvm::Value *emitGlobalToListReduceFunction(
   }
 
   // Call reduce_function(ReduceList, GlobalReduceList)
-  llvm::Value *GlobalReduceList =
-      CGF.EmitCastToVoidPtr(ReductionList.getPointer());
+  llvm::Value *GlobalReduceList = ReductionList.getPointer();
   Address AddrReduceListArg = CGF.GetAddrOfLocalVar(&ReduceListArg);
   llvm::Value *ReducedPtr = CGF.EmitLoadOfScalar(
       AddrReduceListArg, /*Volatile=*/false, C.VoidPtrTy, Loc);

@@ -23,7 +23,7 @@
 # RUN: %T/baremetal_multilib/bin/clang -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
 # RUN:     --target=thumbv7em-none-eabi -mfpu=fpv4-sp-d16 --sysroot= \
 # RUN:   | FileCheck --check-prefix=CHECK-NO-MATCH %s
-# CHECK-NO-MATCH: error: no multilib found matching flags:
+# CHECK-NO-MATCH: warning: no multilib found matching flags:
 # CHECK-NO-MATCH-SAME: --target=thumbv7em-none-unknown-eabi
 # CHECK-NO-MATCH: note: available multilibs are:
 # CHECK-NO-MATCH: --target=thumbv6m-none-unknown-eabi -mfpu=none

@@ -218,17 +218,15 @@ public:
   bool equivalentTo(const Environment &Other,
                     Environment::ValueModel &Model) const;
 
-  /// Joins the environment with `Other` by taking the intersection of storage
-  /// locations and values that are stored in them. Distinct values that are
-  /// assigned to the same storage locations in the environment and `Other` are
-  /// merged using `Model`.
+  /// Joins two environments by taking the intersection of storage locations and
+  /// values that are stored in them. Distinct values that are assigned to the
+  /// same storage locations in `EnvA` and `EnvB` are merged using `Model`.
   ///
   /// Requirements:
   ///
-  ///  `Other` and `this` must use the same `DataflowAnalysisContext`.
-  LatticeJoinEffect join(const Environment &Other,
-                         Environment::ValueModel &Model);
-
+  ///  `EnvA` and `EnvB` must use the same `DataflowAnalysisContext`.
+  static Environment join(const Environment &EnvA, const Environment &EnvB,
+                          Environment::ValueModel &Model);
 
   /// Widens the environment point-wise, using `PrevEnv` as needed to inform the
   /// approximation.
@@ -332,7 +330,7 @@ public:
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
-  StorageLocation *getThisPointeeStorageLocation() const;
+  AggregateStorageLocation *getThisPointeeStorageLocation() const;
 
   /// Returns the return value of the current function. This can be null if:
   /// - The function has a void return type
@@ -602,7 +600,7 @@ private:
   StorageLocation *ReturnLoc = nullptr;
   // The storage location of the `this` pointee. Should only be null if the
   // function being analyzed is only a function and not a method.
-  StorageLocation *ThisPointeeLoc = nullptr;
+  AggregateStorageLocation *ThisPointeeLoc = nullptr;
 
   // Maps from program declarations and statements to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these

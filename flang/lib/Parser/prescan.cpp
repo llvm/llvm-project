@@ -349,7 +349,7 @@ void Prescanner::EnforceStupidEndStatementRules(const TokenSequence &tokens) {
   if (!start || !end) {
     return;
   }
-  if (&start->file == &end->file && start->line == end->line) {
+  if (&*start->sourceFile == &*end->sourceFile && start->line == end->line) {
     return; // no continuation
   }
   j += 3;
@@ -377,9 +377,11 @@ void Prescanner::EnforceStupidEndStatementRules(const TokenSequence &tokens) {
       auto endOfPrefixPos{
           allSources_.GetSourcePosition(tokens.GetCharProvenance(endOfPrefix))};
       auto next{allSources_.GetSourcePosition(tokens.GetCharProvenance(j))};
-      if (endOfPrefixPos && next && &endOfPrefixPos->file == &start->file &&
+      if (endOfPrefixPos && next &&
+          &*endOfPrefixPos->sourceFile == &*start->sourceFile &&
           endOfPrefixPos->line == start->line &&
-          (&next->file != &start->file || next->line != start->line)) {
+          (&*next->sourceFile != &*start->sourceFile ||
+              next->line != start->line)) {
         Say(range,
             "Initial line of continued statement must not appear to be a program unit END in fixed form source"_err_en_US);
       }

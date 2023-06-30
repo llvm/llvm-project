@@ -175,7 +175,7 @@ define i1 @test_if_then_2(i1 %c, i8 %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP1]])
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP2]], [[IF]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ true, [[IF]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[PHI]]
 ;
 entry:
@@ -203,7 +203,7 @@ define i1 @test_if_then_3(i1 %c.0, i8 %x) {
 ; CHECK:       then.1:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP2]], [[IF]] ], [ [[CMP2]], [[THEN_1]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP2]], [[IF]] ], [ true, [[THEN_1]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[PHI]]
 ;
 entry:
@@ -235,7 +235,7 @@ define i1 @test_if_then_4(i1 %c.0, i8 %x) {
 ; CHECK:       else.1:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP2]], [[ELSE_1]] ], [ [[CMP2]], [[THEN_1]] ], [ false, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ false, [[ELSE_1]] ], [ true, [[THEN_1]] ], [ false, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i1 [[PHI]]
 ;
 entry:

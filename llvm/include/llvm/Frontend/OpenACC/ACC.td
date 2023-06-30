@@ -183,6 +183,7 @@ def ACCC_NoHost : Clause<"nohost"> {}
 // 2.5.9
 def ACCC_NumGangs : Clause<"num_gangs"> {
   let flangClass = "ScalarIntExpr";
+  let isValueList = 1;
 }
 
 // 2.5.10
@@ -269,8 +270,13 @@ def ACC_Atomic : Directive<"atomic"> {}
 // 2.6.5
 def ACC_Data : Directive<"data"> {
   let allowedOnceClauses = [
+    VersionedClause<ACCC_Async, 32>,
     VersionedClause<ACCC_If>,
     VersionedClause<ACCC_Default>
+  ];
+  let allowedClauses = [
+    VersionedClause<ACCC_DeviceType, 32>,
+    VersionedClause<ACCC_Wait, 32>
   ];
   let requiredClauses = [
     VersionedClause<ACCC_Attach>,
@@ -417,9 +423,7 @@ def ACC_Routine : Directive<"routine"> {
   let allowedOnceClauses = [
     VersionedClause<ACCC_Bind>,
     VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_NoHost>
-  ];
-  let requiredClauses = [
+    VersionedClause<ACCC_NoHost>,
     VersionedClause<ACCC_Gang>,
     VersionedClause<ACCC_Seq>,
     VersionedClause<ACCC_Vector>,

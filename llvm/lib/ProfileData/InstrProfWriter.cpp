@@ -650,12 +650,16 @@ Error InstrProfWriter::write(raw_fd_ostream &OS) {
   return writeImpl(POS);
 }
 
+Error InstrProfWriter::write(raw_string_ostream &OS) {
+  ProfOStream POS(OS);
+  return writeImpl(POS);
+}
+
 std::unique_ptr<MemoryBuffer> InstrProfWriter::writeBuffer() {
   std::string Data;
   raw_string_ostream OS(Data);
-  ProfOStream POS(OS);
   // Write the hash table.
-  if (Error E = writeImpl(POS))
+  if (Error E = write(OS))
     return nullptr;
   // Return this in an aligned memory buffer.
   return MemoryBuffer::getMemBufferCopy(Data);

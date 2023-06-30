@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=arm-eabi %s -o /dev/null
+; RUN: llc -mtriple=thumbv6m-eabi -mattr=+execute-only %s -o -
 
 define void @test1() {
     %tmp = alloca [ 64 x i32 ] , align 4

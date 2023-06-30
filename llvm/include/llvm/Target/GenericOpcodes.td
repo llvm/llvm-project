@@ -930,6 +930,13 @@ def G_FLDEXP : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point frexp
+def G_FFREXP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst0, type1:$dst1);
+  let InOperandList = (ins type0:$src0);
+  let hasSideEffects = false;
+}
+
 // Floating point ceiling of a value.
 def G_FCEIL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);

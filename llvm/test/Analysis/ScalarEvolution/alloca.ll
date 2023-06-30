@@ -5,9 +5,9 @@ define i64 @alloca_non_null() {
 ; CHECK-LABEL: 'alloca_non_null'
 ; CHECK-NEXT:  Classifying expressions for: @alloca_non_null
 ; CHECK-NEXT:    %alloca = alloca i32, align 4
-; CHECK-NEXT:    --> %alloca U: [0,-7) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %alloca U: [4,-7) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %int = ptrtoint ptr %alloca to i64
-; CHECK-NEXT:    --> (ptrtoint ptr %alloca to i64) U: [0,-7) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (ptrtoint ptr %alloca to i64) U: [4,-7) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:  Determining loop execution counts for: @alloca_non_null
 ;
   %alloca = alloca i32, align 4
@@ -33,22 +33,22 @@ define void @alloca_icmp_null_exit_count() {
 ; CHECK-LABEL: 'alloca_icmp_null_exit_count'
 ; CHECK-NEXT:  Classifying expressions for: @alloca_icmp_null_exit_count
 ; CHECK-NEXT:    %alloca = alloca [3 x i32], align 4
-; CHECK-NEXT:    --> %alloca U: [0,-15) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %alloca U: [4,-15) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %alloca.end = getelementptr inbounds i32, ptr %alloca, i64 3
-; CHECK-NEXT:    --> (12 + %alloca)<nuw> U: [12,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> (12 + %alloca)<nuw> U: [16,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %ptr = phi ptr [ %ptr.next, %loop ], [ %alloca, %entry ]
-; CHECK-NEXT:    --> {%alloca,+,4}<nuw><%loop> U: [0,-7) S: [-9223372036854775808,9223372036854775805) Exits: ((4 * (2 umin ((-4 + (-1 * (ptrtoint ptr %alloca to i64))) /u 4)))<nuw><nsw> + %alloca) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%alloca,+,4}<nuw><%loop> U: [4,-7) S: [-9223372036854775808,9223372036854775805) Exits: (8 + %alloca)<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %ptr.next = getelementptr i32, ptr %ptr, i64 1
-; CHECK-NEXT:    --> {(4 + %alloca)<nuw>,+,4}<nuw><%loop> U: [4,-3) S: [-9223372036854775808,9223372036854775805) Exits: (4 + (4 * (2 umin ((-4 + (-1 * (ptrtoint ptr %alloca to i64))) /u 4)))<nuw><nsw> + %alloca) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {(4 + %alloca)<nuw>,+,4}<nuw><%loop> U: [8,-3) S: [-9223372036854775808,9223372036854775805) Exits: (12 + %alloca)<nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %and = and i1 %cmp1, %cmp2
 ; CHECK-NEXT:    --> (%cmp2 umin %cmp1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @alloca_icmp_null_exit_count
-; CHECK-NEXT:  Loop %loop: backedge-taken count is (2 umin ((-4 + (-1 * (ptrtoint ptr %alloca to i64))) /u 4))
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 2
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 2
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (2 umin ((-4 + (-1 * (ptrtoint ptr %alloca to i64))) /u 4))
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (2 umin ((-4 + (-1 * (ptrtoint ptr %alloca to i64))) /u 4))
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 2
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 2
 ; CHECK-NEXT:   Predicates:
-; CHECK:       Loop %loop: Trip multiple is 1
+; CHECK:       Loop %loop: Trip multiple is 3
 ;
 entry:
   %alloca = alloca [3 x i32], align 4

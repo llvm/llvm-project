@@ -169,6 +169,8 @@ void MCSectionELF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     OS << "llvm_bb_addr_map_v0";
   else if (Type == ELF::SHT_LLVM_OFFLOADING)
     OS << "llvm_offloading";
+  else if (Type == ELF::SHT_LLVM_LTO)
+    OS << "llvm_lto";
   else
     report_fatal_error("unsupported type 0x" + Twine::utohexstr(Type) +
                        " for section " + getName());

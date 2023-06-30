@@ -23,8 +23,8 @@ llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
                              DWARFDataExtractor debug_str,
                              SymbolFileDWARF &dwarf) {
-  auto index_up = std::make_unique<DebugNames>(debug_names.GetAsLLVM(),
-                                                debug_str.GetAsLLVM());
+  auto index_up = std::make_unique<DebugNames>(debug_names.GetAsLLVMDWARF(),
+                                               debug_str.GetAsLLVM());
   if (llvm::Error E = index_up->extract())
     return std::move(E);
 

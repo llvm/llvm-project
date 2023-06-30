@@ -241,3 +241,54 @@ transform.sequence failures(propagate) {
     pack_paddings=[1, 1, 1]
   } : (!transform.any_op) -> !transform.any_op
 }
+
+// -----
+
+#map = affine_map<()[s0] -> (-s0 + 12, 7)>
+
+// CHECK-LABEL: @pack_everything
+func.func @pack_everything(%arg0: tensor<24x12xf32>,
+                           %arg1: tensor<12x25xf32>,
+                           %arg2: tensor<24x25xf32>,
+                           %iv0 : index, %iv1 : index, %iv2 : index) -> tensor<24x25xf32> {
+  %0 = affine.min #map()[%iv2]
+
+  //      CHECK: %[[T0:.*]] = tensor.extract_slice %
+  //      CHECK: %[[T1:.*]] = tensor.extract_slice %
+  //      CHECK: %[[T2:.*]] = tensor.extract_slice %
+  %1 = tensor.extract_slice %arg0[%iv0, %iv2] [4, %0] [1, 1] : tensor<24x12xf32> to tensor<4x?xf32>
+  %2 = tensor.extract_slice %arg1[%iv2, %iv1] [%0, 5] [1, 1] : tensor<12x25xf32> to tensor<?x5xf32>
+  %3 = tensor.extract_slice %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<24x25xf32> to tensor<4x5xf32>
+
+  //  CHECK-DAG: %[[CST:.*]] = arith.constant 0.
+  //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+
+  //      CHECK: %[[PAD0:.*]] = tensor.pad %[[T0]] nofold
+  //      CHECK: %[[PAD1:.*]] = tensor.pad %[[T1]] nofold
+  //      CHECK: %[[PAD2:.*]] = tensor.pad %[[T2]] nofold
+
+  //      CHECK: %[[T5:.*]] = linalg.matmul
+  // CHECK-SAME:              ins(%[[PAD0]], %[[PAD1]] : tensor<4x7xf32>, tensor<7x5xf32>)
+  // CHECK-SAME:              outs(%[[PAD2]] : tensor<4x5xf32>)
+
+  // Get unpadded result (no-op in this example).
+  //      CHECK: %[[T6:.*]] = tensor.extract_slice %[[T5]]
+  // Copy back result to the original buffer, so that the destination of the
+  // computation does not change.
+  //      CHECK: %[[T7:.*]] = bufferization.copy_tensor %[[T6]], %[[T2]]
+  %4 = linalg.matmul ins(%1, %2 : tensor<4x?xf32>, tensor<?x5xf32>) outs(%3 : tensor<4x5xf32>) -> tensor<4x5xf32>
+
+  //      CHECK: %[[T8:.*]] = tensor.insert_slice %[[T7]] into %{{.*}}
+  %5 = tensor.insert_slice %4 into %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<4x5xf32> into tensor<24x25xf32>
+  func.return %5 : tensor<24x25xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.pad %0 {
+    padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+    padding_dimensions=[0, 1, 2],
+    pack_paddings=[1, 1, 1]
+  } : (!transform.any_op) -> !transform.any_op
+}

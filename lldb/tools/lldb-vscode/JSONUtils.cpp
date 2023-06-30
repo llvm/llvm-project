@@ -613,7 +613,9 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
 llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
   disasm_line = 0;
   auto line_entry = frame.GetLineEntry();
-  if (line_entry.GetFileSpec().IsValid())
+  // A line entry of 0 indicates the line is compiler generated i.e. no source
+  // file so don't return early with the line entry.
+  if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
     return CreateSource(line_entry);
 
   llvm::json::Object object;
@@ -650,7 +652,11 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
   }
   const auto num_insts = insts.GetSize();
   if (low_pc != LLDB_INVALID_ADDRESS && num_insts > 0) {
-    EmplaceSafeString(object, "name", frame.GetFunctionName());
+    if (line_entry.GetLine() == 0) {
+      EmplaceSafeString(object, "name", "<compiler-generated>");
+    } else {
+      EmplaceSafeString(object, "name", frame.GetDisplayFunctionName());
+    }
     SourceReference source;
     llvm::raw_string_ostream src_strm(source.content);
     std::string line;
@@ -1104,10 +1110,6 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
                                   llvm::StringRef debug_adaptor_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid) {
-  llvm::json::Object reverse_request;
-  reverse_request.try_emplace("type", "request");
-  reverse_request.try_emplace("command", "runInTerminal");
-
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening the
   // terminal in a new window.
@@ -1143,9 +1145,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   run_in_terminal_args.try_emplace("env",
                                    llvm::json::Value(std::move(environment)));
 
-  reverse_request.try_emplace(
-      "arguments", llvm::json::Value(std::move(run_in_terminal_args)));
-  return reverse_request;
+  return run_in_terminal_args;
 }
 
 // Keep all the top level items from the statistics dump, except for the

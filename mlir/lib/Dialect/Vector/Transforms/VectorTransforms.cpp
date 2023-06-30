@@ -1024,7 +1024,7 @@ public:
     Value mask = rewriter.create<vector::CreateMaskOp>(
         loc,
         VectorType::get(vtp.getShape(), rewriter.getI1Type(),
-                        vtp.getNumScalableDims()),
+                        vtp.getScalableDims()),
         b);
     if (xferOp.getMask()) {
       // Intersect the in-bounds with the mask specified as an op parameter.

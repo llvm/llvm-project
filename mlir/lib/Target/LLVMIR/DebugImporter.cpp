@@ -87,6 +87,12 @@ DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
   return DIFileAttr::get(context, node->getFilename(), node->getDirectory());
 }
 
+DILabelAttr DebugImporter::translateImpl(llvm::DILabel *node) {
+  return DILabelAttr::get(context, translate(node->getScope()),
+                          getStringAttrOrNull(node->getRawName()),
+                          translate(node->getFile()), node->getLine());
+}
+
 DILexicalBlockAttr DebugImporter::translateImpl(llvm::DILexicalBlock *node) {
   return DILexicalBlockAttr::get(context, translate(node->getScope()),
                                  translate(node->getFile()), node->getLine(),
@@ -199,6 +205,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     if (auto *casted = dyn_cast<llvm::DIDerivedType>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIFile>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DILabel>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DILexicalBlock>(node))
       return translateImpl(casted);

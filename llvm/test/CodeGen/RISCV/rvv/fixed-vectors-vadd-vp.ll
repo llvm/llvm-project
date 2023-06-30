@@ -1649,16 +1649,17 @@ define <32 x i64> @vadd_vx_v32i64_evl12(<32 x i64> %va, <32 x i1> %m) {
 define <32 x i64> @vadd_vx_v32i64_evl27(<32 x i64> %va, <32 x i1> %m) {
 ; RV32-LABEL: vadd_vx_v32i64_evl27:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    vmv1r.v v1, v0
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vi v1, v0, 2
+; RV32-NEXT:    vslidedown.vi v0, v0, 2
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.i v24, -1
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV32-NEXT:    vadd.vv v8, v8, v24, v0.t
 ; RV32-NEXT:    vsetivli zero, 11, e64, m8, ta, ma
-; RV32-NEXT:    vmv1r.v v0, v1
 ; RV32-NEXT:    vadd.vv v16, v16, v24, v0.t
+; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV32-NEXT:    vmv1r.v v0, v1
+; RV32-NEXT:    vadd.vv v8, v8, v24, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vadd_vx_v32i64_evl27:

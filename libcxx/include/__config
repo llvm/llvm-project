@@ -86,6 +86,8 @@
 // ... add new file formats here ...
 #  endif
 
+// ABI {
+
 #  if _LIBCPP_ABI_VERSION >= 2
 // Change short string representation so that string data starts at offset 0,
 // improving its alignment in some cases.
@@ -190,6 +192,19 @@
 // using that class define their own copies.
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #  endif
+
+// Changes the iterator type of select containers (see below) to a bounded iterator that keeps track of whether it's
+// within the bounds of the original container and asserts it on every dereference.
+//
+// ABI impact: changes the iterator type of the relevant containers.
+//
+// Supported containers:
+// - `span`;
+// - `string_view`;
+// - `array`.
+// #define _LIBCPP_ABI_BOUNDED_ITERATORS
+
+// } ABI
 
 #  define _LIBCPP_TOSTRING2(x) #x
 #  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)

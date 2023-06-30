@@ -1279,7 +1279,7 @@ bool LLParser::parseGlobal(const std::string &Name, LocTy NameLoc,
   GV->setUnnamedAddr(UnnamedAddr);
 
   if (GVal) {
-    if (GVal->getType() != Ty->getPointerTo(AddrSpace))
+    if (GVal->getAddressSpace() != AddrSpace)
       return error(
           TyLoc,
           "forward reference and definition of global have different types");

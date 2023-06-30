@@ -285,6 +285,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::FLDEXP:                     return "fldexp";
   case ISD::STRICT_FLDEXP:              return "strict_fldexp";
+  case ISD::FFREXP:                     return "ffrexp";
   case ISD::FPOWI:                      return "fpowi";
   case ISD::STRICT_FPOWI:               return "strict_fpowi";
   case ISD::SETCC:                      return "setcc";

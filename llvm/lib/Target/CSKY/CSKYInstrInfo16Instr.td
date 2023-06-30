@@ -483,39 +483,34 @@ def : Pat<(brcond CARRY:$ca, bb:$offset),
 
 def : Pat<(br bb:$offset), (BR16 bb:$offset)>;
 
-def : Pat<(brcond (i32 (setne mGPR:$rs1, uimm5:$rs2)), bb:$offset),
-          (BT16 (CMPNEI16 mGPR:$rs1, uimm5:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (seteq mGPR:$rs1, uimm5:$rs2)), bb:$offset),
-          (BF16 (CMPNEI16 mGPR:$rs1, uimm5:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (setuge mGPR:$rs1, oimm5:$rs2)), bb:$offset),
-          (BT16 (CMPHSI16 mGPR:$rs1, oimm5:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (setult mGPR:$rs1, oimm5:$rs2)), bb:$offset),
-          (BF16 (CMPHSI16 mGPR:$rs1, oimm5:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (setlt mGPR:$rs1, oimm5:$rs2)), bb:$offset),
-          (BT16 (CMPLTI16 mGPR:$rs1, oimm5:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (setge mGPR:$rs1, oimm5:$rs2)), bb:$offset),
-          (BF16 (CMPLTI16 mGPR:$rs1, oimm5:$rs2), bb:$offset)>;
+multiclass BTF16Pat0<PatFrag cond0, PatFrag cond1, ImmLeaf imm_ty, Instruction inst> {
+  def : Pat<(brcond (i32 (cond0 mGPR:$rs1, imm_ty:$rs2)), bb:$offset),
+            (BT16 (inst mGPR:$rs1, imm_ty:$rs2), bb:$offset)>;
+  def : Pat<(brcond (i32 (cond1 mGPR:$rs1, imm_ty:$rs2)), bb:$offset),
+            (BF16 (inst mGPR:$rs1, imm_ty:$rs2), bb:$offset)>;
+}
+
+defm : BTF16Pat0<setne, seteq, uimm5, CMPNEI16>;
+defm : BTF16Pat0<setuge, setult, oimm5, CMPHSI16>;
+defm : BTF16Pat0<setlt, setge, oimm5, CMPLTI16>;
 
 def : Pat<(brcond (i32 (setne sGPR:$rs1, sGPR:$rs2)), bb:$offset),
           (BT16 (CMPNE16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
 def : Pat<(brcond (i32 (seteq sGPR:$rs1, sGPR:$rs2)), bb:$offset),
           (BF16 (CMPNE16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (setuge sGPR:$rs1, sGPR:$rs2)), bb:$offset),
-          (BT16 (CMPHS16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (setule sGPR:$rs1, sGPR:$rs2)), bb:$offset),
-          (BT16 (CMPHS16 sGPR:$rs2, sGPR:$rs1), bb:$offset)>;
-def : Pat<(brcond (i32 (setult sGPR:$rs1, sGPR:$rs2)), bb:$offset),
-          (BF16 (CMPHS16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (setugt sGPR:$rs1, sGPR:$rs2)), bb:$offset),
-          (BF16 (CMPHS16 sGPR:$rs2, sGPR:$rs1), bb:$offset)>;
-def : Pat<(brcond (i32 (setlt sGPR:$rs1, sGPR:$rs2)), bb:$offset),
-          (BT16 (CMPLT16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (setgt sGPR:$rs1, sGPR:$rs2)), bb:$offset),
-          (BT16 (CMPLT16 sGPR:$rs2, sGPR:$rs1), bb:$offset)>;
-def : Pat<(brcond (i32 (setge sGPR:$rs1, sGPR:$rs2)), bb:$offset),
-          (BF16 (CMPLT16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
-def : Pat<(brcond (i32 (setle sGPR:$rs1, sGPR:$rs2)), bb:$offset),
-          (BF16 (CMPLT16 sGPR:$rs2, sGPR:$rs1), bb:$offset)>;
+
+multiclass BTF16Pat1<PatFrag cond0, PatFrag cond1, Instruction cmp,
+                     Instruction br>  {
+  def : Pat<(brcond (i32 (cond0 sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+            (br (cmp sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
+  def : Pat<(brcond (i32 (cond1 sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+            (br (cmp sGPR:$rs2, sGPR:$rs1), bb:$offset)>;
+}
+
+defm : BTF16Pat1<setuge, setule, CMPHS16, BT16>;
+defm : BTF16Pat1<setult, setugt, CMPHS16, BF16>;
+defm : BTF16Pat1<setlt, setgt, CMPLT16, BT16>;
+defm : BTF16Pat1<setge, setle, CMPLT16, BF16>;
 
 // Compare Patterns.
 def : Pat<(setne sGPR:$rs1, sGPR:$rs2),

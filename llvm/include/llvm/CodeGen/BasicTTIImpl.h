@@ -420,9 +420,9 @@ public:
   }
 
   InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
-                             ArrayRef<const Value *> Operands,
+                             ArrayRef<const Value *> Operands, Type *AccessType,
                              TTI::TargetCostKind CostKind) {
-    return BaseT::getGEPCost(PointeeType, Ptr, Operands, CostKind);
+    return BaseT::getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
   }
 
   unsigned getEstimatedNumberOfCaseClusters(const SwitchInst &SI,
@@ -538,6 +538,9 @@ public:
 
   unsigned getInliningThresholdMultiplier() const { return 1; }
   unsigned adjustInliningThreshold(const CallBase *CB) { return 0; }
+  unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const {
+    return 0;
+  }
 
   int getInlinerVectorBonusPercent() const { return 150; }
 

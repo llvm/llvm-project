@@ -742,8 +742,8 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
   // where %obj is the object pointer and %sel is the selector.
   //
   // @"OBJC_SELECTOR_REFERENCES_" is a pointer to a character array called
-  // @"\01L_OBJC_llvm_moduleETH_VAR_NAllvm_moduleE_".
-  // @"\01L_OBJC_llvm_moduleETH_VAR_NAllvm_moduleE_" contains the string.
+  // @"\01L_OBJC_METH_VAR_NAME_".
+  // @"\01L_OBJC_METH_VAR_NAME_" contains the string.
 
   // Find the pointer's initializer and get the string from its target.
 

@@ -52,6 +52,12 @@ define void @asm_mixed_sgpr_vgpr(i32 %divergent) {
   ret void
 }
 
+; CHECK-LABEL: for function 'single_lane_func_arguments':
+; CHECK-NOT: DIVERGENT
+define void @single_lane_func_arguments(i32 %i32, i1 %i1) #2 {
+ ret void
+}
+
 ; CHECK-LABEL: for function 'global_sreg':
 ; CHECK: DIVERGENT: i32 %divergent
 ; CHECK-NOT: DIVERGENT
@@ -71,3 +77,4 @@ declare i32 @llvm.amdgcn.s.swap.to.global.i32(i16, i32, i32)
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }
+attributes #2 = { "amdgpu-flat-work-group-size"="1,1" }

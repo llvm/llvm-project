@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-eabi -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS
 // RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-DARWIN
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - -x c %s | FileCheck %s --check-prefixes=CHECK,CHECK-AAPCS
 

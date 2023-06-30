@@ -18,6 +18,8 @@
  * implementation.
  */
 
+#include "Runtime/api-attrs.h"
+
 #ifdef __cplusplus
 namespace Fortran {
 namespace ISO {
@@ -121,8 +123,8 @@ namespace cfi_internal {
 // care of getting the memory storage. Note that it already contains one element
 // because a struct cannot be empty.
 template <typename T> struct FlexibleArray : T {
-  T &operator[](int index) { return *(this + index); }
-  const T &operator[](int index) const { return *(this + index); }
+  RT_API_ATTRS T &operator[](int index) { return *(this + index); }
+  const RT_API_ATTRS T &operator[](int index) const { return *(this + index); }
   operator T *() { return this; }
   operator const T *() const { return this; }
 };
@@ -174,11 +176,11 @@ extern "C" {
 void *CFI_address(const CFI_cdesc_t *, const CFI_index_t subscripts[]);
 int CFI_allocate(CFI_cdesc_t *, const CFI_index_t lower_bounds[],
     const CFI_index_t upper_bounds[], size_t elem_len);
-int CFI_deallocate(CFI_cdesc_t *);
+RT_API_ATTRS int CFI_deallocate(CFI_cdesc_t *);
 int CFI_establish(CFI_cdesc_t *, void *base_addr, CFI_attribute_t, CFI_type_t,
     size_t elem_len, CFI_rank_t, const CFI_index_t extents[]);
 int CFI_is_contiguous(const CFI_cdesc_t *);
-int CFI_section(CFI_cdesc_t *, const CFI_cdesc_t *source,
+RT_API_ATTRS int CFI_section(CFI_cdesc_t *, const CFI_cdesc_t *source,
     const CFI_index_t lower_bounds[], const CFI_index_t upper_bounds[],
     const CFI_index_t strides[]);
 int CFI_select_part(CFI_cdesc_t *, const CFI_cdesc_t *source,

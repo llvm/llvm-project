@@ -2107,12 +2107,6 @@ struct AAICVTracker : public StateWrapper<BooleanState, AbstractAttribute> {
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAICVTracker(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
-  void initialize(Attributor &A) override {
-    Function *F = getAnchorScope();
-    if (!F || !A.isFunctionIPOAmendable(*F))
-      indicatePessimisticFixpoint();
-  }
-
   /// Returns true if value is assumed to be tracked.
   bool isAssumedTracked() const { return getAssumed(); }
 
@@ -2421,8 +2415,7 @@ struct AAICVTrackerCallSite : AAICVTracker {
 
   void initialize(Attributor &A) override {
     Function *F = getAnchorScope();
-    if (!F || !A.isFunctionIPOAmendable(*F))
-      indicatePessimisticFixpoint();
+    assert(F && "Expected anchor function");
 
     // We only initialize this AA for getters, so we need to know which ICV it
     // gets.
@@ -2546,11 +2539,9 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   ~AAExecutionDomainFunction() { delete RPOT; }
 
   void initialize(Attributor &A) override {
-    if (getAnchorScope()->isDeclaration()) {
-      indicatePessimisticFixpoint();
-      return;
-    }
-    RPOT = new ReversePostOrderTraversal<Function *>(getAnchorScope());
+    Function *F = getAnchorScope();
+    assert(F && "Expected anchor function");
+    RPOT = new ReversePostOrderTraversal<Function *>(F);
   }
 
   const std::string getAsStr() const override {
@@ -2959,11 +2950,11 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     } else {
       // For live non-entry blocks we only propagate
       // information via live edges.
-      if (LivenessAA->isAssumedDead(&BB))
+      if (LivenessAA && LivenessAA->isAssumedDead(&BB))
         continue;
 
       for (auto *PredBB : predecessors(&BB)) {
-        if (LivenessAA->isEdgeDead(PredBB, &BB))
+        if (LivenessAA && LivenessAA->isEdgeDead(PredBB, &BB))
           continue;
         bool InitialEdgeOnly = isInitialThreadOnlyEdge(
             A, dyn_cast<BranchInst>(PredBB->getTerminator()), BB);
@@ -3059,10 +3050,10 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
         // alignment.
         Function *Callee = CB->getCalledFunction();
         if (!IsNoSync && Callee && !Callee->isDeclaration()) {
-          const auto &EDAA = *A.getAAFor<AAExecutionDomain>(
+          const auto *EDAA = A.getAAFor<AAExecutionDomain>(
               *this, IRPosition::function(*Callee), DepClassTy::OPTIONAL);
-          if (EDAA.getState().isValidState()) {
-            const auto &CalleeED = EDAA.getFunctionExecutionDomain();
+          if (EDAA && EDAA->getState().isValidState()) {
+            const auto &CalleeED = EDAA->getFunctionExecutionDomain();
             ED.IsReachedFromAlignedBarrierOnly =
                     CalleeED.IsReachedFromAlignedBarrierOnly;
             AlignedBarrierLastInBlock = ED.IsReachedFromAlignedBarrierOnly;
@@ -3189,7 +3180,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       continue;
     BasicBlock *SyncBB = SyncInst->getParent();
     for (auto *PredBB : predecessors(SyncBB)) {
-      if (LivenessAA->isEdgeDead(PredBB, SyncBB))
+      if (LivenessAA && LivenessAA->isEdgeDead(PredBB, SyncBB))
         continue;
       if (!Visited.insert(PredBB))
         continue;
@@ -5471,6 +5462,9 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IPOAmendableCB = [](const Function &F) {
+    return F.hasFnAttribute("kernel");
+  };
 
   Attributor A(Functions, InfoCache, AC);
 

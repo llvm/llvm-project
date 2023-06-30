@@ -85,9 +85,11 @@ Matcher<MCInst> IsMovImmediate(unsigned Opcode, int64_t Reg, int64_t Value) {
   return AllOf(OpcodeIs(Opcode), ElementsAre(IsReg(Reg), IsImm(Value)));
 }
 
+#ifdef __linux__
 Matcher<MCInst> IsMovRegToReg(unsigned Opcode, int64_t Reg1, int64_t Reg2) {
   return AllOf(OpcodeIs(Opcode), ElementsAre(IsReg(Reg1), IsReg(Reg2)));
 }
+#endif
 
 Matcher<MCInst> IsMovValueToStack(unsigned Opcode, int64_t Value,
                                   size_t Offset) {

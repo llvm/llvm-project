@@ -143,6 +143,10 @@ set(LIBUNWIND_C_FLAGS "")
 set(LIBUNWIND_CXX_FLAGS "")
 set(LIBUNWIND_COMPILE_FLAGS "")
 set(LIBUNWIND_LINK_FLAGS "")
+set(LIBUNWIND_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
+    "Additional Compile only flags which can be provided in cache")
+set(LIBUNWIND_ADDITIONAL_LIBRARIES "" CACHE STRING
+    "Additional libraries libunwind is linked to which can be provided in cache")
 
 # Include macros for adding and removing libunwind flags.
 include(HandleLibunwindFlags)

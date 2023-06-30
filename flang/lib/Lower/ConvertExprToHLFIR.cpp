@@ -783,7 +783,9 @@ private:
     // of the whole designator (not the ones of the vector subscripted part).
     // These are not yet known and will be added when finalizing the designator
     // lowering.
-    auto elementalAddrOp = builder.create<hlfir::ElementalAddrOp>(loc, shape);
+    auto elementalAddrOp =
+        builder.create<hlfir::ElementalAddrOp>(loc, shape,
+                                               /*isUnordered=*/true);
     setVectorSubscriptElementAddrOp(elementalAddrOp);
     builder.setInsertionPointToEnd(&elementalAddrOp.getBody().front());
     mlir::Region::BlockArgListType indices = elementalAddrOp.getIndices();
@@ -1512,7 +1514,8 @@ private:
       return unaryOp.gen(l, b, op.derived(), leftVal);
     };
     mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
-                                                  shape, typeParams, genKernel);
+                                                  shape, typeParams, genKernel,
+                                                  /*isUnordered=*/true);
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
         [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
@@ -1557,7 +1560,8 @@ private:
       return binaryOp.gen(l, b, op.derived(), leftVal, rightVal);
     };
     mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
-                                                  shape, typeParams, genKernel);
+                                                  shape, typeParams, genKernel,
+                                                  /*isUnordered=*/true);
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
         [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
@@ -1743,10 +1747,40 @@ private:
           attrs &&
           bitEnumContainsAny(attrs.getFlags(),
                              fir::FortranVariableFlagsEnum::allocatable);
-      auto rhs = gen(expr);
-      builder.create<hlfir::AssignOp>(loc, rhs, lhs, allowRealloc,
-                                      /*keep_lhs_length_if_realloc=*/false,
-                                      /*temporary_lhs=*/true);
+      hlfir::Entity rhs = gen(expr);
+      // If the component is allocatable, then we have to check
+      // whether the RHS value is allocatable or not.
+      // If it is not allocatable, then AssignOp can be used directly.
+      // If it is allocatable, then using AssignOp for unallocated RHS
+      // will cause illegal dereference. When an unallocated allocatable
+      // value is used to construct an allocatable component, the component
+      // must just stay unallocated.
+      if (!allowRealloc || !rhs.isMutableBox()) {
+        rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
+        builder.create<hlfir::AssignOp>(loc, rhs, lhs, allowRealloc,
+                                        /*keep_lhs_length_if_realloc=*/false,
+                                        /*temporary_lhs=*/true);
+        continue;
+      }
+
+      auto [rhsExv, cleanup] =
+          hlfir::translateToExtendedValue(loc, builder, rhs);
+      assert(!cleanup && "unexpected cleanup");
+      auto *fromBox = rhsExv.getBoxOf<fir::MutableBoxValue>();
+      if (!fromBox)
+        fir::emitFatalError(loc, "allocatable entity could not be lowered "
+                                 "to mutable box");
+      mlir::Value isAlloc =
+          fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, *fromBox);
+      builder.genIfThen(loc, isAlloc)
+          .genThen([&]() {
+            rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
+            builder.create<hlfir::AssignOp>(
+                loc, rhs, lhs, allowRealloc,
+                /*keep_lhs_length_if_realloc=*/false,
+                /*temporary_lhs=*/true);
+          })
+          .end();
     }
 
     return varOp;

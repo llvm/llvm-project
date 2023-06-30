@@ -10,7 +10,7 @@ func.func @inline_to_elemental(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_nam
   %c0 = arith.constant 0 : index
   %4:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
-  %6 = hlfir.elemental %5 : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+  %6 = hlfir.elemental %5 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
   ^bb0(%arg4: index):
     %8 = hlfir.designate %1#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %9 = hlfir.designate %2#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
@@ -72,7 +72,7 @@ func.func @inline_to_loop(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "
   %c0 = arith.constant 0 : index
   %4:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
-  %6 = hlfir.elemental %5 : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+  %6 = hlfir.elemental %5 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
   ^bb0(%arg4: index):
     %8 = hlfir.designate %1#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %9 = hlfir.designate %2#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
@@ -137,7 +137,7 @@ func.func @inline_to_apply(%arg0: !fir.ref<i32> {fir.bindc_name = "a"}, %arg1: !
   %c0 = arith.constant 0 : index
   %4:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
   %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
-  %6 = hlfir.elemental %5 : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+  %6 = hlfir.elemental %5 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
   ^bb0(%arg4: index):
     %8 = hlfir.designate %1#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %9 = hlfir.designate %2#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
@@ -182,14 +182,14 @@ func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
   %c0 = arith.constant 0 : index
   %1:3 = fir.box_dims %0#0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
   %2 = fir.shape %1#1 : (index) -> !fir.shape<1>
-  %3 = hlfir.elemental %2 : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  %3 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
   ^bb0(%arg1: index):
     %9 = hlfir.designate %0#0 (%arg1)  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
     %10 = fir.load %9 : !fir.ref<f32>
     %11 = arith.subf %10, %cst fastmath<contract> : f32
     hlfir.yield_element %11 : f32
   }
-  %4 = hlfir.elemental %2 : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  %4 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
   ^bb0(%arg1: index):
     %9 = hlfir.apply %3, %arg1 : (!hlfir.expr<?xf32>, index) -> f32
     %10 = hlfir.no_reassoc %9 : f32
@@ -198,7 +198,7 @@ func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
   %c0_0 = arith.constant 0 : index
   %5:3 = fir.box_dims %0#0, %c0_0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
   %6 = fir.shape %5#1 : (index) -> !fir.shape<1>
-  %7 = hlfir.elemental %6 : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+  %7 = hlfir.elemental %6 unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
   ^bb0(%arg1: index):
     %9 = hlfir.designate %0#0 (%arg1)  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
     %10 = hlfir.apply %4, %arg1 : (!hlfir.expr<?xf32>, index) -> f32
@@ -243,3 +243,70 @@ func.func @_QPreproducer(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
 // CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 // CHECK-NEXT:    return
 // CHECK-NEXT:  }
+
+// Check that the ordered elemental is not inlined into another:
+// a = b + c + d
+func.func @noinline_ordered(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}, %arg2: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "c"}, %arg3: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "d"}) {
+  %0:2 = hlfir.declare %arg0 {uniq_name = "a"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %1:2 = hlfir.declare %arg1 {uniq_name = "b"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %2:2 = hlfir.declare %arg2 {uniq_name = "c"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %3:2 = hlfir.declare %arg3 {uniq_name = "d"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+  %c0 = arith.constant 0 : index
+  %4:3 = fir.box_dims %1#0, %c0 : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+  %5 = fir.shape %4#1 : (index) -> !fir.shape<1>
+  %6 = hlfir.elemental %5 : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+  ^bb0(%arg4: index):
+    %8 = hlfir.designate %1#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    %9 = hlfir.designate %2#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    %10 = fir.load %8 : !fir.ref<i32>
+    %11 = fir.load %9 : !fir.ref<i32>
+    %12 = arith.muli %10, %11 : i32
+    hlfir.yield_element %12 : i32
+  }
+  %7 = hlfir.elemental %5 unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+  ^bb0(%arg4: index):
+    %8 = hlfir.apply %6, %arg4 : (!hlfir.expr<?xi32>, index) -> i32
+    %9 = hlfir.designate %3#0 (%arg4)  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+    %10 = fir.load %9 : !fir.ref<i32>
+    %11 = arith.addi %8, %10 : i32
+    hlfir.yield_element %11 : i32
+  }
+  hlfir.assign %7 to %0#0 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
+  hlfir.destroy %7 : !hlfir.expr<?xi32>
+  hlfir.destroy %6 : !hlfir.expr<?xi32>
+  return
+}
+// CHECK-LABEL:   func.func @noinline_ordered(
+// CHECK-SAME:      %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
+// CHECK-SAME:      %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"},
+// CHECK-SAME:      %[[VAL_2:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "c"},
+// CHECK-SAME:      %[[VAL_3:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "d"}) {
+// CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "a"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "b"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2]] {uniq_name = "c"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "d"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+// CHECK:           %[[VAL_9:.*]]:3 = fir.box_dims %[[VAL_6]]#0, %[[VAL_4]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_9]]#1 : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_11:.*]] = hlfir.elemental %[[VAL_10]] : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+// CHECK:           ^bb0(%[[VAL_12:.*]]: index):
+// CHECK:             %[[VAL_13:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_12]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_12]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             %[[VAL_15:.*]] = fir.load %[[VAL_13]] : !fir.ref<i32>
+// CHECK:             %[[VAL_16:.*]] = fir.load %[[VAL_14]] : !fir.ref<i32>
+// CHECK:             %[[VAL_17:.*]] = arith.muli %[[VAL_15]], %[[VAL_16]] : i32
+// CHECK:             hlfir.yield_element %[[VAL_17]] : i32
+// CHECK:           }
+// CHECK:           %[[VAL_18:.*]] = hlfir.elemental %[[VAL_10]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32> {
+// CHECK:           ^bb0(%[[VAL_19:.*]]: index):
+// CHECK:             %[[VAL_20:.*]] = hlfir.apply %[[VAL_21:.*]], %[[VAL_19]] : (!hlfir.expr<?xi32>, index) -> i32
+// CHECK:             %[[VAL_22:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_19]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             %[[VAL_23:.*]] = fir.load %[[VAL_22]] : !fir.ref<i32>
+// CHECK:             %[[VAL_24:.*]] = arith.addi %[[VAL_20]], %[[VAL_23]] : i32
+// CHECK:             hlfir.yield_element %[[VAL_24]] : i32
+// CHECK:           }
+// CHECK:           hlfir.assign %[[VAL_25:.*]] to %[[VAL_5]]#0 : !hlfir.expr<?xi32>, !fir.box<!fir.array<?xi32>>
+// CHECK:           hlfir.destroy %[[VAL_25]] : !hlfir.expr<?xi32>
+// CHECK:           hlfir.destroy %[[VAL_26:.*]] : !hlfir.expr<?xi32>
+// CHECK:           return
+// CHECK:         }

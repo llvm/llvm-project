@@ -4852,6 +4852,8 @@ void CodeGenFunction::EmitOMPTaskBasedDirective(
       // a pointer to this memory.
       for (auto &Pair : UntiedLocalVars) {
         QualType VDType = Pair.first->getType().getNonReferenceType();
+        if (Pair.first->getType()->isLValueReferenceType())
+          VDType = CGF.getContext().getPointerType(VDType);
         if (isAllocatableDecl(Pair.first)) {
           llvm::Value *Ptr = CGF.Builder.CreateLoad(Pair.second.first);
           Address Replacement(

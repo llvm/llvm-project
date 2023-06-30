@@ -94,17 +94,13 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
              Lo.getValueType() == MVT::i32 && Hi.getValueType() == MVT::i32 &&
              "Unexpected VTs!");
       MachineFunction &MF = CurDAG->getMachineFunction();
-      RISCVMachineFunctionInfo *FuncInfo =
-          MF.getInfo<RISCVMachineFunctionInfo>();
       SDLoc DL(N);
 
-      // We use the same frame index we use for moving two i32s into 64-bit FPR.
-      // This is an analogous operation.
-      int FI = FuncInfo->getMoveF64FrameIndex(MF);
-      MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
-      const TargetLowering &TLI = CurDAG->getTargetLoweringInfo();
+      // Create temporary stack for each expanding node.
       SDValue StackSlot =
-          CurDAG->getFrameIndex(FI, TLI.getPointerTy(CurDAG->getDataLayout()));
+          CurDAG->CreateStackTemporary(TypeSize::Fixed(8), Align(4));
+      int FI = cast<FrameIndexSDNode>(StackSlot.getNode())->getIndex();
+      MachinePointerInfo MPI = MachinePointerInfo::getFixedStack(MF, FI);
 
       SDValue Chain = CurDAG->getEntryNode();
       Lo = CurDAG->getStore(Chain, DL, Lo, StackSlot, MPI, Align(8));
@@ -3423,11 +3419,11 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
 }
 
 // Transform (VMERGE_VVM_<LMUL>_TU false, false, true, allones, vl, sew) to
-// (MMV_V_V_<LMUL>_TU false, true, vl, sew). It may decrease uses of VMSET.
+// (VMV_V_V_<LMUL>_TU false, true, vl, sew). It may decrease uses of VMSET.
 bool RISCVDAGToDAGISel::performVMergeToVMv(SDNode *N) {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
   case RISCV::PseudoVMERGE_VVM_##lmul##_TU:                                    \
-    NewOpc = RISCV::PseudoVMV_V_V_##lmul##_TU;                                 \
+    NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                 \
     break;
   unsigned NewOpc;
   switch (N->getMachineOpcode()) {
@@ -3445,9 +3441,13 @@ bool RISCVDAGToDAGISel::performVMergeToVMv(SDNode *N) {
   if (!usesAllOnesMask(N, /* MaskOpIdx */ 3))
     return false;
 
+  SDLoc DL(N);
+  SDValue PolicyOp =
+    CurDAG->getTargetConstant(/*TUMU*/ 0, DL, Subtarget->getXLenVT());
   SDNode *Result = CurDAG->getMachineNode(
-      NewOpc, SDLoc(N), N->getValueType(0),
-      {N->getOperand(1), N->getOperand(2), N->getOperand(4), N->getOperand(5)});
+      NewOpc, DL, N->getValueType(0),
+      {N->getOperand(1), N->getOperand(2), N->getOperand(4), N->getOperand(5),
+       PolicyOp});
   ReplaceUses(N, Result);
   return true;
 }

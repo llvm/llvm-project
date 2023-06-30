@@ -306,17 +306,25 @@ public:
   /// Build from another VectorType.
   explicit Builder(VectorType other)
       : shape(other.getShape()), elementType(other.getElementType()),
-        numScalableDims(other.getNumScalableDims()) {}
+        scalableDims(other.getScalableDims()) {}
 
   /// Build from scratch.
   Builder(ArrayRef<int64_t> shape, Type elementType,
-          unsigned numScalableDims = 0)
-      : shape(shape), elementType(elementType),
-        numScalableDims(numScalableDims) {}
+          unsigned numScalableDims = 0, ArrayRef<bool> scalableDims = {})
+      : shape(shape), elementType(elementType) {
+    if (scalableDims.empty())
+      scalableDims = SmallVector<bool>(shape.size(), false);
+    else
+      this->scalableDims = scalableDims;
+  }
 
   Builder &setShape(ArrayRef<int64_t> newShape,
-                    unsigned newNumScalableDims = 0) {
-    numScalableDims = newNumScalableDims;
+                    ArrayRef<bool> newIsScalableDim = {}) {
+    if (newIsScalableDim.empty())
+      scalableDims = SmallVector<bool>(shape.size(), false);
+    else
+      scalableDims = newIsScalableDim;
+
     shape = newShape;
     return *this;
   }
@@ -329,12 +337,15 @@ public:
   /// Erase a dim from shape @pos.
   Builder &dropDim(unsigned pos) {
     assert(pos < shape.size() && "overflow");
-    if (pos >= shape.size() - numScalableDims)
-      numScalableDims--;
     if (storage.empty())
       storage.append(shape.begin(), shape.end());
+    if (storageScalableDims.empty())
+      storageScalableDims.append(scalableDims.begin(), scalableDims.end());
     storage.erase(storage.begin() + pos);
+    storageScalableDims.erase(storageScalableDims.begin() + pos);
     shape = {storage.data(), storage.size()};
+    scalableDims =
+        ArrayRef<bool>(storageScalableDims.data(), storageScalableDims.size());
     return *this;
   }
 
@@ -344,7 +355,7 @@ public:
   operator Type() {
     if (shape.empty())
       return elementType;
-    return VectorType::get(shape, elementType, numScalableDims);
+    return VectorType::get(shape, elementType, scalableDims);
   }
 
 private:
@@ -352,7 +363,9 @@ private:
   // Owning shape data for copy-on-write operations.
   SmallVector<int64_t> storage;
   Type elementType;
-  unsigned numScalableDims;
+  ArrayRef<bool> scalableDims;
+  // Owning scalableDims data for copy-on-write operations.
+  SmallVector<bool> storageScalableDims;
 };
 
 /// Given an `originalShape` and a `reducedShape` assumed to be a subset of

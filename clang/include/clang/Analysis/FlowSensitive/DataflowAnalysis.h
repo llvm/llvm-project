@@ -61,6 +61,7 @@ namespace dataflow {
 ///     argument by computing their least upper bound, modifies the object if
 ///     necessary, and returns an effect indicating whether any changes were
 ///     made to it;
+///     FIXME: make it `static LatticeT join(const LatticeT&, const LatticeT&)`
 ///   * `bool operator==(const LatticeT &) const` - returns true if and only if
 ///     the object is equal to the argument.
 ///
@@ -98,11 +99,13 @@ public:
     return {static_cast<Derived *>(this)->initialElement()};
   }
 
-  LatticeJoinEffect joinTypeErased(TypeErasedLattice &E1,
+  TypeErasedLattice joinTypeErased(const TypeErasedLattice &E1,
                                    const TypeErasedLattice &E2) final {
-    Lattice &L1 = llvm::any_cast<Lattice &>(E1.Value);
+    // FIXME: change the signature of join() to avoid copying here.
+    Lattice L1 = llvm::any_cast<const Lattice &>(E1.Value);
     const Lattice &L2 = llvm::any_cast<const Lattice &>(E2.Value);
-    return L1.join(L2);
+    L1.join(L2);
+    return {std::move(L1)};
   }
 
   LatticeJoinEffect widenTypeErased(TypeErasedLattice &Current,

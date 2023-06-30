@@ -176,6 +176,7 @@ llvm.func @empty_types() {
 #di_local_variable0 = #llvm.di_local_variable<scope = #di_subprogram, name = "a", file = #di_file, type = #di_basic_type>
 #di_lexical_block_file = #llvm.di_lexical_block_file<scope = #di_subprogram1, file = #di_file, discriminator = 0>
 #di_local_variable1 = #llvm.di_local_variable<scope = #di_lexical_block_file, name = "b", file = #di_file, type = #di_basic_type>
+#di_label = #llvm.di_label<scope = #di_lexical_block_file, name = "label", file = #di_file, line = 42>
 
 #loc0 = loc("foo.mlir":0:0)
 #loc1 = loc(callsite(#loc0 at fused<#di_subprogram>["foo.mlir":4:2]))
@@ -187,6 +188,8 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
   llvm.intr.dbg.value #di_local_variable0 = %arg0 : i32 loc(fused<#di_subprogram>[#loc0])
   // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC1:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC1:.*]]
   llvm.intr.dbg.value #di_local_variable1 = %arg0 : i32 loc(fused<#di_lexical_block_file>[#loc1])
+  // CHECK: call void @llvm.dbg.label(metadata ![[LABEL:[0-9]+]]), !dbg ![[DBG_LOC1:.*]]
+  llvm.intr.dbg.label #di_label loc(fused<#di_lexical_block_file>[#loc1])
   llvm.return %arg0 : i32
 } loc(fused<#di_subprogram>["caller"])
 
@@ -196,3 +199,4 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 // CHECK-DAG: ![[LEXICAL_BLOCK_FILE:.*]] = distinct !DILexicalBlockFile(scope: ![[INNER_FUNC]], file: ![[FILE]], discriminator: 0)
 // CHECK-DAG: ![[VAR_LOC0]] = !DILocalVariable(name: "a", scope: ![[OUTER_FUNC]], file: ![[FILE]]
 // CHECK-DAG: ![[VAR_LOC1]] = !DILocalVariable(name: "b", scope: ![[LEXICAL_BLOCK_FILE]], file: ![[FILE]]
+// CHECK-DAG  ![[LABEL]] = !DILabel(scope: ![[LEXICAL_BLOCK_FILE]], name: "label", file: ![[FILE]], line: 42)

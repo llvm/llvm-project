@@ -14,7 +14,6 @@
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/sort.h>
 #include <__config>
-#include <__debug>
 #include <__debug_utils/randomize_range.h>
 #include <__iterator/iterator_traits.h>
 #include <__utility/move.h>
