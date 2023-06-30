@@ -14,6 +14,7 @@ add_clang_unittest(FrontendTests
   CodeGenActionTest.cpp
   ParsedSourceLocationTest.cpp
   PCHPreambleTest.cpp
+  ReparseWorkingDirTest.cpp
   OutputStreamTest.cpp
   TextDiagnosticTest.cpp
   UtilsTest.cpp
