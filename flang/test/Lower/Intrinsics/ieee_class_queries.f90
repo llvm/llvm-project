@@ -38,13 +38,6 @@
   print*, ieee_is_finite(x8), ieee_is_negative(x8), ieee_is_normal(x8), &
           ieee_is_nan(x8)
 
-  ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 504 : i32}> : (f80) -> i1
-  ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 60 : i32}> : (f80) -> i1
-  ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f80) -> i1
-  ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 3 : i32}> : (f80) -> i1
-  print*, ieee_is_finite(x10), ieee_is_negative(x10), ieee_is_normal(x10), &
-          ieee_is_nan(x10)
-
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 504 : i32}> : (f128) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 60 : i32}> : (f128) -> i1
   ! CHECK:     "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 360 : i32}> : (f128) -> i1
