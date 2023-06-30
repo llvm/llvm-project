@@ -921,16 +921,11 @@ def set_glc : SDNodeXForm<timm, [{
 // Custom Operands
 //===----------------------------------------------------------------------===//
 
-def SoppBrTarget : AsmOperandClass {
-  let Name = "SoppBrTarget";
-  let ParserMethod = "parseSOppBrTarget";
-}
-
-def sopp_brtarget : Operand<OtherVT> {
+def SOPPBrTarget : CustomOperand<OtherVT> {
+  let PrintMethod = "printOperand";
   let EncoderMethod = "getSOPPBrEncoding";
-  let DecoderMethod = "decodeSoppBrTarget";
+  let DecoderMethod = "decodeSOPPBrTarget";
   let OperandType = "OPERAND_PCREL";
-  let ParserMatchClass = SoppBrTarget;
 }
 
 def si_ga : Operand<iPTR>;
