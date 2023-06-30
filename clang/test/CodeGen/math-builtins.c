@@ -12,30 +12,6 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // NO__ERRNO: frem float
 // NO__ERRNO: frem x86_fp80
 // NO__ERRNO: frem fp128
-
-// NO__ERRNO: [[FREXP_F64:%.+]] = call { double, i32 } @llvm.frexp.f64.i32(double %{{.+}})
-// NO__ERRNO-NEXT: [[FREXP_F64_1:%.+]] = extractvalue { double, i32 } [[FREXP_F64]], 1
-// NO__ERRNO-NEXT: store i32 [[FREXP_F64_1]], ptr %{{.+}}, align 4
-// NO__ERRNO-NEXT: [[FREXP_F64_0:%.+]] = extractvalue { double, i32 } [[FREXP_F64]], 0
-
-// NO__ERRNO: [[FREXP_F32:%.+]] = call { float, i32 } @llvm.frexp.f32.i32(float %{{.+}})
-// NO__ERRNO-NEXT: [[FREXP_F32_1:%.+]] = extractvalue { float, i32 } [[FREXP_F32]], 1
-// NO__ERRNO-NEXT: store i32 [[FREXP_F32_1]], ptr %{{.+}}, align 4
-// NO__ERRNO-NEXT: [[FREXP_F32_0:%.+]] = extractvalue { float, i32 } [[FREXP_F32]], 0
-
-
-// NO__ERRNO: [[FREXP_F80:%.+]] = call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %{{.+}})
-// NO__ERRNO-NEXT: [[FREXP_F80_1:%.+]] = extractvalue { x86_fp80, i32 } [[FREXP_F80]], 1
-// NO__ERRNO-NEXT: store i32 [[FREXP_F80_1]], ptr %{{.+}}, align 4
-// NO__ERRNO-NEXT: [[FREXP_F80_0:%.+]] = extractvalue { x86_fp80, i32 } [[FREXP_F80]], 0
-
-
-// NO__ERRNO: [[FREXP_F128:%.+]] = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
-// NO__ERRNO-NEXT: [[FREXP_F128_1:%.+]] = extractvalue { fp128, i32 } [[FREXP_F128]], 1
-// NO__ERRNO-NEXT: store i32 [[FREXP_F128_1]], ptr %{{.+}}, align 4
-// NO__ERRNO-NEXT: [[FREXP_F128_0:%.+]] = extractvalue { fp128, i32 } [[FREXP_F128]], 0
-
-
 // HAS_ERRNO: declare double @fmod(double noundef, double noundef) [[NOT_READNONE:#[0-9]+]]
 // HAS_ERRNO: declare float @fmodf(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @fmodl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
@@ -76,14 +52,14 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_frexp(f,i);    __builtin_frexpf(f,i);   __builtin_frexpl(f,i); __builtin_frexpf128(f,i);
 
-// NO__ERRNO: declare { double, i32 } @llvm.frexp.f64.i32(double) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare { float, i32 } @llvm.frexp.f32.i32(float) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80) [[READNONE_INTRINSIC]]
-// NO__ERRNO: declare { fp128, i32 } @llvm.frexp.f128.i32(fp128) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare { double, i32 } @llvm.frexp.f64.i32(double) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare { float, i32 } @llvm.frexp.f32.i32(float) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80) [[READNONE_INTRINSIC]]
-// HAS_ERRNO: declare { fp128, i32 } @llvm.frexp.f128.i32(fp128) [[READNONE_INTRINSIC]]
+// NO__ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
+// NO__ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare fp128 @frexpf128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare fp128 @frexpf128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
 
   __builtin_huge_val();    __builtin_huge_valf();   __builtin_huge_vall(); __builtin_huge_valf128();
 
@@ -112,7 +88,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   __builtin_modf(f,d);       __builtin_modff(f,fp);      __builtin_modfl(f,l); __builtin_modff128(f,l);
 
-// NO__ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
+// NO__ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
 // NO__ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
 // NO__ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
 // NO__ERRNO: declare fp128 @modff128(fp128 noundef, ptr noundef) [[NOT_READNONE]]
