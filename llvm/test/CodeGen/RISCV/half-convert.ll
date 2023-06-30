@@ -19,6 +19,14 @@
 ; RUN:   < %s | FileCheck -check-prefix=RV32I %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs \
 ; RUN:   < %s | FileCheck -check-prefix=RV64I %s
+; RUN: llc -mtriple=riscv32 -mattr=+d -target-abi=ilp32 -verify-machineinstrs \
+; RUN:   < %s | FileCheck %s -check-prefix=RV32ID-ILP32
+; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi=lp64 -verify-machineinstrs \
+; RUN:   < %s | FileCheck %s -check-prefix=RV64ID-LP64
+; RUN: llc -mtriple=riscv32 -mattr=+d -target-abi=ilp32d -verify-machineinstrs \
+; RUN:   < %s | FileCheck %s -check-prefix=RV32ID
+; RUN: llc -mtriple=riscv64 -mattr=+d -target-abi=lp64d -verify-machineinstrs \
+; RUN:   < %s  | FileCheck %s -check-prefix=RV64ID
 ; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -target-abi ilp32f < %s | FileCheck -check-prefixes=CHECK32-IZFHMIN,RV32IFZFHMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
@@ -100,6 +108,50 @@ define i16 @fcvt_si_h(half %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_si_h:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_si_h:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_si_h:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_si_h:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_si_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -343,6 +395,86 @@ define i16 @fcvt_si_h_sat(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_si_h_sat:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    feq.s a0, fa5, fa5
+; RV32ID-ILP32-NEXT:    neg a0, a0
+; RV32ID-ILP32-NEXT:    lui a1, %hi(.LCPI1_0)
+; RV32ID-ILP32-NEXT:    flw fa4, %lo(.LCPI1_0)(a1)
+; RV32ID-ILP32-NEXT:    lui a1, 815104
+; RV32ID-ILP32-NEXT:    fmv.w.x fa3, a1
+; RV32ID-ILP32-NEXT:    fmax.s fa5, fa5, fa3
+; RV32ID-ILP32-NEXT:    fmin.s fa5, fa5, fa4
+; RV32ID-ILP32-NEXT:    fcvt.w.s a1, fa5, rtz
+; RV32ID-ILP32-NEXT:    and a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_si_h_sat:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    feq.s a0, fa5, fa5
+; RV64ID-LP64-NEXT:    lui a1, %hi(.LCPI1_0)
+; RV64ID-LP64-NEXT:    flw fa4, %lo(.LCPI1_0)(a1)
+; RV64ID-LP64-NEXT:    lui a1, 815104
+; RV64ID-LP64-NEXT:    fmv.w.x fa3, a1
+; RV64ID-LP64-NEXT:    fmax.s fa5, fa5, fa3
+; RV64ID-LP64-NEXT:    neg a0, a0
+; RV64ID-LP64-NEXT:    fmin.s fa5, fa5, fa4
+; RV64ID-LP64-NEXT:    fcvt.l.s a1, fa5, rtz
+; RV64ID-LP64-NEXT:    and a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_si_h_sat:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    feq.s a0, fa0, fa0
+; RV32ID-NEXT:    neg a0, a0
+; RV32ID-NEXT:    lui a1, %hi(.LCPI1_0)
+; RV32ID-NEXT:    flw fa5, %lo(.LCPI1_0)(a1)
+; RV32ID-NEXT:    lui a1, 815104
+; RV32ID-NEXT:    fmv.w.x fa4, a1
+; RV32ID-NEXT:    fmax.s fa4, fa0, fa4
+; RV32ID-NEXT:    fmin.s fa5, fa4, fa5
+; RV32ID-NEXT:    fcvt.w.s a1, fa5, rtz
+; RV32ID-NEXT:    and a0, a0, a1
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_si_h_sat:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    feq.s a0, fa0, fa0
+; RV64ID-NEXT:    lui a1, %hi(.LCPI1_0)
+; RV64ID-NEXT:    flw fa5, %lo(.LCPI1_0)(a1)
+; RV64ID-NEXT:    lui a1, 815104
+; RV64ID-NEXT:    fmv.w.x fa4, a1
+; RV64ID-NEXT:    fmax.s fa4, fa0, fa4
+; RV64ID-NEXT:    neg a0, a0
+; RV64ID-NEXT:    fmin.s fa5, fa4, fa5
+; RV64ID-NEXT:    fcvt.l.s a1, fa5, rtz
+; RV64ID-NEXT:    and a0, a0, a1
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_si_h_sat:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
@@ -498,6 +630,50 @@ define i16 @fcvt_ui_h(half %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_ui_h:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_ui_h:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_ui_h:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_ui_h:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.lu.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_ui_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -699,6 +875,70 @@ define i16 @fcvt_ui_h_sat(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_ui_h_sat:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, %hi(.LCPI3_0)
+; RV32ID-ILP32-NEXT:    flw fa5, %lo(.LCPI3_0)(a1)
+; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a0
+; RV32ID-ILP32-NEXT:    fmv.w.x fa3, zero
+; RV32ID-ILP32-NEXT:    fmax.s fa4, fa4, fa3
+; RV32ID-ILP32-NEXT:    fmin.s fa5, fa4, fa5
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_ui_h_sat:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    lui a1, %hi(.LCPI3_0)
+; RV64ID-LP64-NEXT:    flw fa5, %lo(.LCPI3_0)(a1)
+; RV64ID-LP64-NEXT:    fmv.w.x fa4, a0
+; RV64ID-LP64-NEXT:    fmv.w.x fa3, zero
+; RV64ID-LP64-NEXT:    fmax.s fa4, fa4, fa3
+; RV64ID-LP64-NEXT:    fmin.s fa5, fa4, fa5
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_ui_h_sat:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    lui a0, %hi(.LCPI3_0)
+; RV32ID-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
+; RV32ID-NEXT:    fmv.w.x fa4, zero
+; RV32ID-NEXT:    fmax.s fa4, fa0, fa4
+; RV32ID-NEXT:    fmin.s fa5, fa4, fa5
+; RV32ID-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_ui_h_sat:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    lui a0, %hi(.LCPI3_0)
+; RV64ID-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
+; RV64ID-NEXT:    fmv.w.x fa4, zero
+; RV64ID-NEXT:    fmax.s fa4, fa0, fa4
+; RV64ID-NEXT:    fmin.s fa5, fa4, fa5
+; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_ui_h_sat:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
 ; CHECK32-IZFHMIN-NEXT:    lui a0, %hi(.LCPI3_0)
@@ -815,6 +1055,50 @@ define i32 @fcvt_w_h(half %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_w_h:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_w_h:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_w_h:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_w_h:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_w_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -991,6 +1275,66 @@ define i32 @fcvt_w_h_sat(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_w_h_sat:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    feq.s a1, fa5, fa5
+; RV32ID-ILP32-NEXT:    seqz a1, a1
+; RV32ID-ILP32-NEXT:    addi a1, a1, -1
+; RV32ID-ILP32-NEXT:    and a0, a1, a0
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_w_h_sat:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    feq.s a1, fa5, fa5
+; RV64ID-LP64-NEXT:    seqz a1, a1
+; RV64ID-LP64-NEXT:    addi a1, a1, -1
+; RV64ID-LP64-NEXT:    and a0, a1, a0
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_w_h_sat:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32ID-NEXT:    feq.s a1, fa0, fa0
+; RV32ID-NEXT:    seqz a1, a1
+; RV32ID-NEXT:    addi a1, a1, -1
+; RV32ID-NEXT:    and a0, a1, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_w_h_sat:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV64ID-NEXT:    feq.s a1, fa0, fa0
+; RV64ID-NEXT:    seqz a1, a1
+; RV64ID-NEXT:    addi a1, a1, -1
+; RV64ID-NEXT:    and a0, a1, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_w_h_sat:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
@@ -1106,6 +1450,50 @@ define i32 @fcvt_wu_h(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_wu_h:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_wu_h:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_wu_h:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_wu_h:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.lu.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
@@ -1210,6 +1598,58 @@ define i32 @fcvt_wu_h_multiple_use(half %x, ptr %y) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_wu_h_multiple_use:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    seqz a1, a0
+; RV32ID-ILP32-NEXT:    add a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_wu_h_multiple_use:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    seqz a1, a0
+; RV64ID-LP64-NEXT:    add a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_wu_h_multiple_use:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32ID-NEXT:    seqz a1, a0
+; RV32ID-NEXT:    add a0, a0, a1
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_wu_h_multiple_use:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.lu.s a0, fa0, rtz
+; RV64ID-NEXT:    seqz a1, a0
+; RV64ID-NEXT:    add a0, a0, a1
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_h_multiple_use:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -1415,6 +1855,70 @@ define i32 @fcvt_wu_h_sat(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_wu_h_sat:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    feq.s a1, fa5, fa5
+; RV32ID-ILP32-NEXT:    seqz a1, a1
+; RV32ID-ILP32-NEXT:    addi a1, a1, -1
+; RV32ID-ILP32-NEXT:    and a0, a1, a0
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_wu_h_sat:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    feq.s a1, fa5, fa5
+; RV64ID-LP64-NEXT:    seqz a1, a1
+; RV64ID-LP64-NEXT:    addiw a1, a1, -1
+; RV64ID-LP64-NEXT:    and a0, a0, a1
+; RV64ID-LP64-NEXT:    slli a0, a0, 32
+; RV64ID-LP64-NEXT:    srli a0, a0, 32
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_wu_h_sat:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32ID-NEXT:    feq.s a1, fa0, fa0
+; RV32ID-NEXT:    seqz a1, a1
+; RV32ID-NEXT:    addi a1, a1, -1
+; RV32ID-NEXT:    and a0, a1, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_wu_h_sat:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV64ID-NEXT:    feq.s a1, fa0, fa0
+; RV64ID-NEXT:    seqz a1, a1
+; RV64ID-NEXT:    addiw a1, a1, -1
+; RV64ID-NEXT:    and a0, a0, a1
+; RV64ID-NEXT:    slli a0, a0, 32
+; RV64ID-NEXT:    srli a0, a0, 32
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_h_sat:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
@@ -1566,6 +2070,49 @@ define i64 @fcvt_l_h(half %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_l_h:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    call __fixsfdi@plt
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_l_h:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_l_h:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    call __fixsfdi@plt
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_l_h:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_l_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -1919,6 +2466,116 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_l_h_sat:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a0
+; RV32ID-ILP32-NEXT:    lui a1, 913408
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a1
+; RV32ID-ILP32-NEXT:    fsw fa4, 4(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    fle.s s0, fa5, fa4
+; RV32ID-ILP32-NEXT:    call __fixsfdi@plt
+; RV32ID-ILP32-NEXT:    lui a4, 524288
+; RV32ID-ILP32-NEXT:    lui a2, 524288
+; RV32ID-ILP32-NEXT:    beqz s0, .LBB10_2
+; RV32ID-ILP32-NEXT:  # %bb.1: # %start
+; RV32ID-ILP32-NEXT:    mv a2, a1
+; RV32ID-ILP32-NEXT:  .LBB10_2: # %start
+; RV32ID-ILP32-NEXT:    lui a1, %hi(.LCPI10_0)
+; RV32ID-ILP32-NEXT:    flw fa5, %lo(.LCPI10_0)(a1)
+; RV32ID-ILP32-NEXT:    flw fa4, 4(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    flt.s a3, fa5, fa4
+; RV32ID-ILP32-NEXT:    fmv.s fa5, fa4
+; RV32ID-ILP32-NEXT:    beqz a3, .LBB10_4
+; RV32ID-ILP32-NEXT:  # %bb.3:
+; RV32ID-ILP32-NEXT:    addi a2, a4, -1
+; RV32ID-ILP32-NEXT:  .LBB10_4: # %start
+; RV32ID-ILP32-NEXT:    feq.s a1, fa5, fa5
+; RV32ID-ILP32-NEXT:    neg a4, a1
+; RV32ID-ILP32-NEXT:    and a1, a4, a2
+; RV32ID-ILP32-NEXT:    neg a2, a3
+; RV32ID-ILP32-NEXT:    neg a3, s0
+; RV32ID-ILP32-NEXT:    and a0, a3, a0
+; RV32ID-ILP32-NEXT:    or a0, a2, a0
+; RV32ID-ILP32-NEXT:    and a0, a4, a0
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_l_h_sat:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    feq.s a1, fa5, fa5
+; RV64ID-LP64-NEXT:    seqz a1, a1
+; RV64ID-LP64-NEXT:    addi a1, a1, -1
+; RV64ID-LP64-NEXT:    and a0, a1, a0
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_l_h_sat:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fsd fs0, 0(sp) # 8-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fmv.s fs0, fa0
+; RV32ID-NEXT:    lui a0, 913408
+; RV32ID-NEXT:    fmv.w.x fa5, a0
+; RV32ID-NEXT:    fle.s s0, fa5, fa0
+; RV32ID-NEXT:    call __fixsfdi@plt
+; RV32ID-NEXT:    lui a4, 524288
+; RV32ID-NEXT:    lui a2, 524288
+; RV32ID-NEXT:    beqz s0, .LBB10_2
+; RV32ID-NEXT:  # %bb.1: # %start
+; RV32ID-NEXT:    mv a2, a1
+; RV32ID-NEXT:  .LBB10_2: # %start
+; RV32ID-NEXT:    lui a1, %hi(.LCPI10_0)
+; RV32ID-NEXT:    flw fa5, %lo(.LCPI10_0)(a1)
+; RV32ID-NEXT:    flt.s a3, fa5, fs0
+; RV32ID-NEXT:    beqz a3, .LBB10_4
+; RV32ID-NEXT:  # %bb.3:
+; RV32ID-NEXT:    addi a2, a4, -1
+; RV32ID-NEXT:  .LBB10_4: # %start
+; RV32ID-NEXT:    feq.s a1, fs0, fs0
+; RV32ID-NEXT:    neg a4, a1
+; RV32ID-NEXT:    and a1, a4, a2
+; RV32ID-NEXT:    neg a2, a3
+; RV32ID-NEXT:    neg a3, s0
+; RV32ID-NEXT:    and a0, a3, a0
+; RV32ID-NEXT:    or a0, a2, a0
+; RV32ID-NEXT:    and a0, a4, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_l_h_sat:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64ID-NEXT:    feq.s a1, fa0, fa0
+; RV64ID-NEXT:    seqz a1, a1
+; RV64ID-NEXT:    addi a1, a1, -1
+; RV64ID-NEXT:    and a0, a1, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; RV32IFZFHMIN-LABEL: fcvt_l_h_sat:
 ; RV32IFZFHMIN:       # %bb.0: # %start
 ; RV32IFZFHMIN-NEXT:    addi sp, sp, -16
@@ -2201,6 +2858,49 @@ define i64 @fcvt_lu_h(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_lu_h:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    call __fixunssfdi@plt
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_lu_h:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_lu_h:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    call __fixunssfdi@plt
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_lu_h:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.lu.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_lu_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    addi sp, sp, -16
@@ -2448,6 +3148,88 @@ define i64 @fcvt_lu_h_sat(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_lu_h_sat:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, %hi(.LCPI12_0)
+; RV32ID-ILP32-NEXT:    flw fa5, %lo(.LCPI12_0)(a1)
+; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a0
+; RV32ID-ILP32-NEXT:    flt.s a1, fa5, fa4
+; RV32ID-ILP32-NEXT:    neg s0, a1
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, zero
+; RV32ID-ILP32-NEXT:    fle.s a1, fa5, fa4
+; RV32ID-ILP32-NEXT:    neg s1, a1
+; RV32ID-ILP32-NEXT:    call __fixunssfdi@plt
+; RV32ID-ILP32-NEXT:    and a0, s1, a0
+; RV32ID-ILP32-NEXT:    or a0, s0, a0
+; RV32ID-ILP32-NEXT:    and a1, s1, a1
+; RV32ID-ILP32-NEXT:    or a1, s0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_lu_h_sat:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    feq.s a1, fa5, fa5
+; RV64ID-LP64-NEXT:    seqz a1, a1
+; RV64ID-LP64-NEXT:    addi a1, a1, -1
+; RV64ID-LP64-NEXT:    and a0, a1, a0
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_lu_h_sat:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    lui a0, %hi(.LCPI12_0)
+; RV32ID-NEXT:    flw fa5, %lo(.LCPI12_0)(a0)
+; RV32ID-NEXT:    flt.s a0, fa5, fa0
+; RV32ID-NEXT:    neg s0, a0
+; RV32ID-NEXT:    fmv.w.x fa5, zero
+; RV32ID-NEXT:    fle.s a0, fa5, fa0
+; RV32ID-NEXT:    neg s1, a0
+; RV32ID-NEXT:    call __fixunssfdi@plt
+; RV32ID-NEXT:    and a0, s1, a0
+; RV32ID-NEXT:    or a0, s0, a0
+; RV32ID-NEXT:    and a1, s1, a1
+; RV32ID-NEXT:    or a1, s0, a1
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_lu_h_sat:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.lu.s a0, fa0, rtz
+; RV64ID-NEXT:    feq.s a1, fa0, fa0
+; RV64ID-NEXT:    seqz a1, a1
+; RV64ID-NEXT:    addi a1, a1, -1
+; RV64ID-NEXT:    and a0, a1, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_lu_h_sat:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
 ; CHECK32-IZFHMIN-NEXT:    addi sp, sp, -16
@@ -2637,6 +3419,66 @@ define half @fcvt_h_si(i16 %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_h_si:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    slli a0, a0, 16
+; RV32ID-ILP32-NEXT:    srai a0, a0, 16
+; RV32ID-ILP32-NEXT:    fcvt.s.w fa5, a0
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_si:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    slli a0, a0, 48
+; RV64ID-LP64-NEXT:    srai a0, a0, 48
+; RV64ID-LP64-NEXT:    fcvt.s.w fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_si:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    slli a0, a0, 16
+; RV32ID-NEXT:    srai a0, a0, 16
+; RV32ID-NEXT:    fcvt.s.w fa0, a0
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_si:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    slli a0, a0, 48
+; RV64ID-NEXT:    srai a0, a0, 48
+; RV64ID-NEXT:    fcvt.s.w fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_si:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    slli a0, a0, 16
@@ -2733,6 +3575,58 @@ define half @fcvt_h_si_signext(i16 signext %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_h_si_signext:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    fcvt.s.w fa5, a0
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_si_signext:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    fcvt.s.w fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_si_signext:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fcvt.s.w fa0, a0
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_si_signext:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fcvt.s.w fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_si_signext:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -2854,6 +3748,66 @@ define half @fcvt_h_ui(i16 %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_h_ui:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    slli a0, a0, 16
+; RV32ID-ILP32-NEXT:    srli a0, a0, 16
+; RV32ID-ILP32-NEXT:    fcvt.s.wu fa5, a0
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_ui:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    slli a0, a0, 48
+; RV64ID-LP64-NEXT:    srli a0, a0, 48
+; RV64ID-LP64-NEXT:    fcvt.s.wu fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_ui:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    slli a0, a0, 16
+; RV32ID-NEXT:    srli a0, a0, 16
+; RV32ID-NEXT:    fcvt.s.wu fa0, a0
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_ui:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    slli a0, a0, 48
+; RV64ID-NEXT:    srli a0, a0, 48
+; RV64ID-NEXT:    fcvt.s.wu fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_ui:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    slli a0, a0, 16
@@ -2951,6 +3905,58 @@ define half @fcvt_h_ui_zeroext(i16 zeroext %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_h_ui_zeroext:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    fcvt.s.wu fa5, a0
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_ui_zeroext:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    fcvt.s.wu fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_ui_zeroext:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fcvt.s.wu fa0, a0
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_ui_zeroext:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fcvt.s.wu fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_ui_zeroext:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.wu fa5, a0
@@ -3036,6 +4042,58 @@ define half @fcvt_h_w(i32 %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_h_w:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    fcvt.s.w fa5, a0
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_w:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    fcvt.s.w fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_w:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fcvt.s.w fa0, a0
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_w:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fcvt.s.w fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_w:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -3132,6 +4190,62 @@ define half @fcvt_h_w_load(ptr %p) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_h_w_load:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    lw a0, 0(a0)
+; RV32ID-ILP32-NEXT:    fcvt.s.w fa5, a0
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_w_load:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    lw a0, 0(a0)
+; RV64ID-LP64-NEXT:    fcvt.s.w fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_w_load:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    lw a0, 0(a0)
+; RV32ID-NEXT:    fcvt.s.w fa0, a0
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_w_load:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    lw a0, 0(a0)
+; RV64ID-NEXT:    fcvt.s.w fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_w_load:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    lw a0, 0(a0)
@@ -3224,6 +4338,58 @@ define half @fcvt_h_wu(i32 %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_h_wu:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    fcvt.s.wu fa5, a0
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_wu:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    fcvt.s.wu fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_wu:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fcvt.s.wu fa0, a0
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_wu:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fcvt.s.wu fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_wu:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -3340,6 +4506,62 @@ define half @fcvt_h_wu_load(ptr %p) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_h_wu_load:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    lw a0, 0(a0)
+; RV32ID-ILP32-NEXT:    fcvt.s.wu fa5, a0
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_wu_load:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    lwu a0, 0(a0)
+; RV64ID-LP64-NEXT:    fcvt.s.wu fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_wu_load:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    lw a0, 0(a0)
+; RV32ID-NEXT:    fcvt.s.wu fa0, a0
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_wu_load:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    lwu a0, 0(a0)
+; RV64ID-NEXT:    fcvt.s.wu fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_wu_load:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -3463,6 +4685,57 @@ define half @fcvt_h_l(i64 %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_h_l:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __floatdisf@plt
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_l:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    fcvt.s.l fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_l:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    call __floatdisf@plt
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_l:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fcvt.s.l fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_l:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -3589,6 +4862,57 @@ define half @fcvt_h_lu(i64 %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_h_lu:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __floatundisf@plt
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_lu:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    fcvt.s.lu fa5, a0
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_lu:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    call __floatundisf@plt
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_lu:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fcvt.s.lu fa0, a0
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_lu:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    addi sp, sp, -16
@@ -3681,6 +5005,52 @@ define half @fcvt_h_s(float %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_h_s:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_s:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_s:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_s:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_s:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fcvt.h.s fa0, fa0
@@ -3757,6 +5127,29 @@ define float @fcvt_s_h(half %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_s_h:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    tail __extendhfsf2@plt
+;
+; RV64ID-LP64-LABEL: fcvt_s_h:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_s_h:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    tail __extendhfsf2@plt
+;
+; RV64ID-LABEL: fcvt_s_h:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    tail __extendhfsf2@plt
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_s_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -3871,6 +5264,52 @@ define half @fcvt_h_d(double %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_h_d:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __truncdfhf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_d:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __truncdfhf2@plt
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_d:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    call __truncdfhf2@plt
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_d:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    call __truncdfhf2@plt
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; RV32IFZFHMIN-LABEL: fcvt_h_d:
 ; RV32IFZFHMIN:       # %bb.0:
@@ -4024,6 +5463,54 @@ define double @fcvt_d_h(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_d_h:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.d.s fa5, fa5
+; RV32ID-ILP32-NEXT:    fsd fa5, 0(sp)
+; RV32ID-ILP32-NEXT:    lw a0, 0(sp)
+; RV32ID-ILP32-NEXT:    lw a1, 4(sp)
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_d_h:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.d.s fa5, fa5
+; RV64ID-LP64-NEXT:    fmv.x.d a0, fa5
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_d_h:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.d.s fa0, fa0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_d_h:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.d.s fa0, fa0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; RV32IFZFHMIN-LABEL: fcvt_d_h:
 ; RV32IFZFHMIN:       # %bb.0:
 ; RV32IFZFHMIN-NEXT:    addi sp, sp, -16
@@ -4125,6 +5612,32 @@ define half @bitcast_h_i16(i16 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: bitcast_h_i16:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    lui a1, 1048560
+; RV32ID-ILP32-NEXT:    or a0, a0, a1
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: bitcast_h_i16:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    lui a1, 1048560
+; RV64ID-LP64-NEXT:    or a0, a0, a1
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: bitcast_h_i16:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    lui a1, 1048560
+; RV32ID-NEXT:    or a0, a0, a1
+; RV32ID-NEXT:    fmv.w.x fa0, a0
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: bitcast_h_i16:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    lui a1, 1048560
+; RV64ID-NEXT:    or a0, a0, a1
+; RV64ID-NEXT:    fmv.w.x fa0, a0
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: bitcast_h_i16:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    fmv.h.x fa0, a0
@@ -4185,6 +5698,24 @@ define i16 @bitcast_i16_h(half %a) nounwind {
 ; RV64I-LABEL: bitcast_i16_h:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: bitcast_i16_h:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: bitcast_i16_h:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: bitcast_i16_h:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: bitcast_i16_h:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: bitcast_i16_h:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -4314,6 +5845,80 @@ define signext i32 @fcvt_h_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_h_w_demanded_bits:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    mv s0, a1
+; RV32ID-ILP32-NEXT:    addi s1, a0, 1
+; RV32ID-ILP32-NEXT:    fcvt.s.w fa5, s1
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    sh a0, 0(s0)
+; RV32ID-ILP32-NEXT:    mv a0, s1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_w_demanded_bits:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -32
+; RV64ID-LP64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    mv s0, a1
+; RV64ID-LP64-NEXT:    addiw s1, a0, 1
+; RV64ID-LP64-NEXT:    fcvt.s.w fa5, s1
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    sh a0, 0(s0)
+; RV64ID-LP64-NEXT:    mv a0, s1
+; RV64ID-LP64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 32
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_w_demanded_bits:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    mv s0, a1
+; RV32ID-NEXT:    addi s1, a0, 1
+; RV32ID-NEXT:    fcvt.s.w fa0, s1
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    sh a0, 0(s0)
+; RV32ID-NEXT:    mv a0, s1
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_w_demanded_bits:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -32
+; RV64ID-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    mv s0, a1
+; RV64ID-NEXT:    addiw s1, a0, 1
+; RV64ID-NEXT:    fcvt.s.w fa0, s1
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    sh a0, 0(s0)
+; RV64ID-NEXT:    mv a0, s1
+; RV64ID-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 32
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_w_demanded_bits:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -4464,6 +6069,80 @@ define signext i32 @fcvt_h_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_h_wu_demanded_bits:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    mv s0, a1
+; RV32ID-ILP32-NEXT:    addi s1, a0, 1
+; RV32ID-ILP32-NEXT:    fcvt.s.wu fa5, s1
+; RV32ID-ILP32-NEXT:    fmv.x.w a0, fa5
+; RV32ID-ILP32-NEXT:    call __truncsfhf2@plt
+; RV32ID-ILP32-NEXT:    sh a0, 0(s0)
+; RV32ID-ILP32-NEXT:    mv a0, s1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_h_wu_demanded_bits:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -32
+; RV64ID-LP64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    mv s0, a1
+; RV64ID-LP64-NEXT:    addiw s1, a0, 1
+; RV64ID-LP64-NEXT:    fcvt.s.wu fa5, s1
+; RV64ID-LP64-NEXT:    fmv.x.w a0, fa5
+; RV64ID-LP64-NEXT:    call __truncsfhf2@plt
+; RV64ID-LP64-NEXT:    sh a0, 0(s0)
+; RV64ID-LP64-NEXT:    mv a0, s1
+; RV64ID-LP64-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 32
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_h_wu_demanded_bits:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    mv s0, a1
+; RV32ID-NEXT:    addi s1, a0, 1
+; RV32ID-NEXT:    fcvt.s.wu fa0, s1
+; RV32ID-NEXT:    call __truncsfhf2@plt
+; RV32ID-NEXT:    sh a0, 0(s0)
+; RV32ID-NEXT:    mv a0, s1
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_h_wu_demanded_bits:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -32
+; RV64ID-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    mv s0, a1
+; RV64ID-NEXT:    addiw s1, a0, 1
+; RV64ID-NEXT:    fcvt.s.wu fa0, s1
+; RV64ID-NEXT:    call __truncsfhf2@plt
+; RV64ID-NEXT:    sh a0, 0(s0)
+; RV64ID-NEXT:    mv a0, s1
+; RV64ID-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 32
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_h_wu_demanded_bits:
 ; CHECK32-IZFHMIN:       # %bb.0:
 ; CHECK32-IZFHMIN-NEXT:    addi a0, a0, 1
@@ -4587,6 +6266,50 @@ define signext i16 @fcvt_w_s_i16(half %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_w_s_i16:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_w_s_i16:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_w_s_i16:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_w_s_i16:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_w_s_i16:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -4834,6 +6557,86 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_w_s_sat_i16:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    feq.s a0, fa5, fa5
+; RV32ID-ILP32-NEXT:    neg a0, a0
+; RV32ID-ILP32-NEXT:    lui a1, %hi(.LCPI32_0)
+; RV32ID-ILP32-NEXT:    flw fa4, %lo(.LCPI32_0)(a1)
+; RV32ID-ILP32-NEXT:    lui a1, 815104
+; RV32ID-ILP32-NEXT:    fmv.w.x fa3, a1
+; RV32ID-ILP32-NEXT:    fmax.s fa5, fa5, fa3
+; RV32ID-ILP32-NEXT:    fmin.s fa5, fa5, fa4
+; RV32ID-ILP32-NEXT:    fcvt.w.s a1, fa5, rtz
+; RV32ID-ILP32-NEXT:    and a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_w_s_sat_i16:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    feq.s a0, fa5, fa5
+; RV64ID-LP64-NEXT:    lui a1, %hi(.LCPI32_0)
+; RV64ID-LP64-NEXT:    flw fa4, %lo(.LCPI32_0)(a1)
+; RV64ID-LP64-NEXT:    lui a1, 815104
+; RV64ID-LP64-NEXT:    fmv.w.x fa3, a1
+; RV64ID-LP64-NEXT:    fmax.s fa5, fa5, fa3
+; RV64ID-LP64-NEXT:    neg a0, a0
+; RV64ID-LP64-NEXT:    fmin.s fa5, fa5, fa4
+; RV64ID-LP64-NEXT:    fcvt.l.s a1, fa5, rtz
+; RV64ID-LP64-NEXT:    and a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_w_s_sat_i16:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    feq.s a0, fa0, fa0
+; RV32ID-NEXT:    neg a0, a0
+; RV32ID-NEXT:    lui a1, %hi(.LCPI32_0)
+; RV32ID-NEXT:    flw fa5, %lo(.LCPI32_0)(a1)
+; RV32ID-NEXT:    lui a1, 815104
+; RV32ID-NEXT:    fmv.w.x fa4, a1
+; RV32ID-NEXT:    fmax.s fa4, fa0, fa4
+; RV32ID-NEXT:    fmin.s fa5, fa4, fa5
+; RV32ID-NEXT:    fcvt.w.s a1, fa5, rtz
+; RV32ID-NEXT:    and a0, a0, a1
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_w_s_sat_i16:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    feq.s a0, fa0, fa0
+; RV64ID-NEXT:    lui a1, %hi(.LCPI32_0)
+; RV64ID-NEXT:    flw fa5, %lo(.LCPI32_0)(a1)
+; RV64ID-NEXT:    lui a1, 815104
+; RV64ID-NEXT:    fmv.w.x fa4, a1
+; RV64ID-NEXT:    fmax.s fa4, fa0, fa4
+; RV64ID-NEXT:    neg a0, a0
+; RV64ID-NEXT:    fmin.s fa5, fa4, fa5
+; RV64ID-NEXT:    fcvt.l.s a1, fa5, rtz
+; RV64ID-NEXT:    and a0, a0, a1
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_w_s_sat_i16:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
@@ -4988,6 +6791,50 @@ define zeroext i16 @fcvt_wu_s_i16(half %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_wu_s_i16:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_wu_s_i16:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_wu_s_i16:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_wu_s_i16:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.lu.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_s_i16:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -5195,6 +7042,70 @@ define zeroext i16 @fcvt_wu_s_sat_i16(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_wu_s_sat_i16:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    lui a1, %hi(.LCPI34_0)
+; RV32ID-ILP32-NEXT:    flw fa5, %lo(.LCPI34_0)(a1)
+; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a0
+; RV32ID-ILP32-NEXT:    fmv.w.x fa3, zero
+; RV32ID-ILP32-NEXT:    fmax.s fa4, fa4, fa3
+; RV32ID-ILP32-NEXT:    fmin.s fa5, fa4, fa5
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_wu_s_sat_i16:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    lui a1, %hi(.LCPI34_0)
+; RV64ID-LP64-NEXT:    flw fa5, %lo(.LCPI34_0)(a1)
+; RV64ID-LP64-NEXT:    fmv.w.x fa4, a0
+; RV64ID-LP64-NEXT:    fmv.w.x fa3, zero
+; RV64ID-LP64-NEXT:    fmax.s fa4, fa4, fa3
+; RV64ID-LP64-NEXT:    fmin.s fa5, fa4, fa5
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_wu_s_sat_i16:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    lui a0, %hi(.LCPI34_0)
+; RV32ID-NEXT:    flw fa5, %lo(.LCPI34_0)(a0)
+; RV32ID-NEXT:    fmv.w.x fa4, zero
+; RV32ID-NEXT:    fmax.s fa4, fa0, fa4
+; RV32ID-NEXT:    fmin.s fa5, fa4, fa5
+; RV32ID-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_wu_s_sat_i16:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    lui a0, %hi(.LCPI34_0)
+; RV64ID-NEXT:    flw fa5, %lo(.LCPI34_0)(a0)
+; RV64ID-NEXT:    fmv.w.x fa4, zero
+; RV64ID-NEXT:    fmax.s fa4, fa0, fa4
+; RV64ID-NEXT:    fmin.s fa5, fa4, fa5
+; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_s_sat_i16:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
 ; CHECK32-IZFHMIN-NEXT:    lui a0, %hi(.LCPI34_0)
@@ -5325,6 +7236,50 @@ define signext i8 @fcvt_w_s_i8(half %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_w_s_i8:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_w_s_i8:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_w_s_i8:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_w_s_i8:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_w_s_i8:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -5564,6 +7519,86 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_w_s_sat_i8:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    feq.s a0, fa5, fa5
+; RV32ID-ILP32-NEXT:    neg a0, a0
+; RV32ID-ILP32-NEXT:    lui a1, 798720
+; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a1
+; RV32ID-ILP32-NEXT:    fmax.s fa5, fa5, fa4
+; RV32ID-ILP32-NEXT:    lui a1, 274400
+; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a1
+; RV32ID-ILP32-NEXT:    fmin.s fa5, fa5, fa4
+; RV32ID-ILP32-NEXT:    fcvt.w.s a1, fa5, rtz
+; RV32ID-ILP32-NEXT:    and a0, a0, a1
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_w_s_sat_i8:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    feq.s a0, fa5, fa5
+; RV64ID-LP64-NEXT:    neg a0, a0
+; RV64ID-LP64-NEXT:    lui a1, 798720
+; RV64ID-LP64-NEXT:    fmv.w.x fa4, a1
+; RV64ID-LP64-NEXT:    fmax.s fa5, fa5, fa4
+; RV64ID-LP64-NEXT:    lui a1, 274400
+; RV64ID-LP64-NEXT:    fmv.w.x fa4, a1
+; RV64ID-LP64-NEXT:    fmin.s fa5, fa5, fa4
+; RV64ID-LP64-NEXT:    fcvt.l.s a1, fa5, rtz
+; RV64ID-LP64-NEXT:    and a0, a0, a1
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_w_s_sat_i8:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    feq.s a0, fa0, fa0
+; RV32ID-NEXT:    neg a0, a0
+; RV32ID-NEXT:    lui a1, 798720
+; RV32ID-NEXT:    fmv.w.x fa5, a1
+; RV32ID-NEXT:    fmax.s fa5, fa0, fa5
+; RV32ID-NEXT:    lui a1, 274400
+; RV32ID-NEXT:    fmv.w.x fa4, a1
+; RV32ID-NEXT:    fmin.s fa5, fa5, fa4
+; RV32ID-NEXT:    fcvt.w.s a1, fa5, rtz
+; RV32ID-NEXT:    and a0, a0, a1
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_w_s_sat_i8:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    feq.s a0, fa0, fa0
+; RV64ID-NEXT:    neg a0, a0
+; RV64ID-NEXT:    lui a1, 798720
+; RV64ID-NEXT:    fmv.w.x fa5, a1
+; RV64ID-NEXT:    fmax.s fa5, fa0, fa5
+; RV64ID-NEXT:    lui a1, 274400
+; RV64ID-NEXT:    fmv.w.x fa4, a1
+; RV64ID-NEXT:    fmin.s fa5, fa5, fa4
+; RV64ID-NEXT:    fcvt.l.s a1, fa5, rtz
+; RV64ID-NEXT:    and a0, a0, a1
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_w_s_sat_i8:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
@@ -5715,6 +7750,50 @@ define zeroext i8 @fcvt_wu_s_i8(half %a) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_wu_s_i8:
+; RV32ID-ILP32:       # %bb.0:
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_wu_s_i8:
+; RV64ID-LP64:       # %bb.0:
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_wu_s_i8:
+; RV32ID:       # %bb.0:
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_wu_s_i8:
+; RV64ID:       # %bb.0:
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.lu.s a0, fa0, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_s_i8:
 ; CHECK32-IZFHMIN:       # %bb.0:
@@ -5909,6 +7988,70 @@ define zeroext i8 @fcvt_wu_s_sat_i8(half %a) nounwind {
 ; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_wu_s_sat_i8:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fmv.w.x fa4, zero
+; RV32ID-ILP32-NEXT:    fmax.s fa5, fa5, fa4
+; RV32ID-ILP32-NEXT:    lui a0, 276464
+; RV32ID-ILP32-NEXT:    fmv.w.x fa4, a0
+; RV32ID-ILP32-NEXT:    fmin.s fa5, fa5, fa4
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_wu_s_sat_i8:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fmv.w.x fa4, zero
+; RV64ID-LP64-NEXT:    fmax.s fa5, fa5, fa4
+; RV64ID-LP64-NEXT:    lui a0, 276464
+; RV64ID-LP64-NEXT:    fmv.w.x fa4, a0
+; RV64ID-LP64-NEXT:    fmin.s fa5, fa5, fa4
+; RV64ID-LP64-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_wu_s_sat_i8:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fmv.w.x fa5, zero
+; RV32ID-NEXT:    fmax.s fa5, fa0, fa5
+; RV32ID-NEXT:    lui a0, 276464
+; RV32ID-NEXT:    fmv.w.x fa4, a0
+; RV32ID-NEXT:    fmin.s fa5, fa5, fa4
+; RV32ID-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_wu_s_sat_i8:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fmv.w.x fa5, zero
+; RV64ID-NEXT:    fmax.s fa5, fa0, fa5
+; RV64ID-NEXT:    lui a0, 276464
+; RV64ID-NEXT:    fmv.w.x fa4, a0
+; RV64ID-NEXT:    fmin.s fa5, fa5, fa4
+; RV64ID-NEXT:    fcvt.lu.s a0, fa5, rtz
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_s_sat_i8:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
@@ -6126,6 +8269,70 @@ define zeroext i32 @fcvt_wu_h_sat_zext(half %a) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
 ;
+; RV32ID-ILP32-LABEL: fcvt_wu_h_sat_zext:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    feq.s a1, fa5, fa5
+; RV32ID-ILP32-NEXT:    seqz a1, a1
+; RV32ID-ILP32-NEXT:    addi a1, a1, -1
+; RV32ID-ILP32-NEXT:    and a0, a1, a0
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_wu_h_sat_zext:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.wu.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    feq.s a1, fa5, fa5
+; RV64ID-LP64-NEXT:    seqz a1, a1
+; RV64ID-LP64-NEXT:    addiw a1, a1, -1
+; RV64ID-LP64-NEXT:    and a0, a0, a1
+; RV64ID-LP64-NEXT:    slli a0, a0, 32
+; RV64ID-LP64-NEXT:    srli a0, a0, 32
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_wu_h_sat_zext:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV32ID-NEXT:    feq.s a1, fa0, fa0
+; RV32ID-NEXT:    seqz a1, a1
+; RV32ID-NEXT:    addi a1, a1, -1
+; RV32ID-NEXT:    and a0, a1, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_wu_h_sat_zext:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.wu.s a0, fa0, rtz
+; RV64ID-NEXT:    feq.s a1, fa0, fa0
+; RV64ID-NEXT:    seqz a1, a1
+; RV64ID-NEXT:    addiw a1, a1, -1
+; RV64ID-NEXT:    and a0, a0, a1
+; RV64ID-NEXT:    slli a0, a0, 32
+; RV64ID-NEXT:    srli a0, a0, 32
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
+;
 ; CHECK32-IZFHMIN-LABEL: fcvt_wu_h_sat_zext:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
 ; CHECK32-IZFHMIN-NEXT:    fcvt.s.h fa5, fa0
@@ -6332,6 +8539,66 @@ define signext i32 @fcvt_w_h_sat_sext(half %a) nounwind {
 ; RV64I-NEXT:    ld s3, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 48
 ; RV64I-NEXT:    ret
+;
+; RV32ID-ILP32-LABEL: fcvt_w_h_sat_sext:
+; RV32ID-ILP32:       # %bb.0: # %start
+; RV32ID-ILP32-NEXT:    addi sp, sp, -16
+; RV32ID-ILP32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-ILP32-NEXT:    call __extendhfsf2@plt
+; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a0
+; RV32ID-ILP32-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV32ID-ILP32-NEXT:    feq.s a1, fa5, fa5
+; RV32ID-ILP32-NEXT:    seqz a1, a1
+; RV32ID-ILP32-NEXT:    addi a1, a1, -1
+; RV32ID-ILP32-NEXT:    and a0, a1, a0
+; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-ILP32-NEXT:    addi sp, sp, 16
+; RV32ID-ILP32-NEXT:    ret
+;
+; RV64ID-LP64-LABEL: fcvt_w_h_sat_sext:
+; RV64ID-LP64:       # %bb.0: # %start
+; RV64ID-LP64-NEXT:    addi sp, sp, -16
+; RV64ID-LP64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-LP64-NEXT:    call __extendhfsf2@plt
+; RV64ID-LP64-NEXT:    fmv.w.x fa5, a0
+; RV64ID-LP64-NEXT:    fcvt.w.s a0, fa5, rtz
+; RV64ID-LP64-NEXT:    feq.s a1, fa5, fa5
+; RV64ID-LP64-NEXT:    seqz a1, a1
+; RV64ID-LP64-NEXT:    addi a1, a1, -1
+; RV64ID-LP64-NEXT:    and a0, a1, a0
+; RV64ID-LP64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-LP64-NEXT:    addi sp, sp, 16
+; RV64ID-LP64-NEXT:    ret
+;
+; RV32ID-LABEL: fcvt_w_h_sat_sext:
+; RV32ID:       # %bb.0: # %start
+; RV32ID-NEXT:    addi sp, sp, -16
+; RV32ID-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32ID-NEXT:    fmv.x.w a0, fa0
+; RV32ID-NEXT:    call __extendhfsf2@plt
+; RV32ID-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32ID-NEXT:    feq.s a1, fa0, fa0
+; RV32ID-NEXT:    seqz a1, a1
+; RV32ID-NEXT:    addi a1, a1, -1
+; RV32ID-NEXT:    and a0, a1, a0
+; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32ID-NEXT:    addi sp, sp, 16
+; RV32ID-NEXT:    ret
+;
+; RV64ID-LABEL: fcvt_w_h_sat_sext:
+; RV64ID:       # %bb.0: # %start
+; RV64ID-NEXT:    addi sp, sp, -16
+; RV64ID-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64ID-NEXT:    fmv.x.w a0, fa0
+; RV64ID-NEXT:    call __extendhfsf2@plt
+; RV64ID-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV64ID-NEXT:    feq.s a1, fa0, fa0
+; RV64ID-NEXT:    seqz a1, a1
+; RV64ID-NEXT:    addi a1, a1, -1
+; RV64ID-NEXT:    and a0, a1, a0
+; RV64ID-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64ID-NEXT:    addi sp, sp, 16
+; RV64ID-NEXT:    ret
 ;
 ; CHECK32-IZFHMIN-LABEL: fcvt_w_h_sat_sext:
 ; CHECK32-IZFHMIN:       # %bb.0: # %start
