@@ -74,6 +74,7 @@ namespace {
     Assignment2() : FunctionPass(ID) {}
 
     void updateWorklist(Value *V, Instruction *I) {
+      output << "Tainted: " << V << " at " << getSourceCodeLine(I) << "\n";
       tainted.insert(make_pair(V, getSourceCodeLine(I)));
       for (User *U : V->users()) {
         if (Instruction *Inst = dyn_cast<Instruction>(U)) {
@@ -84,29 +85,26 @@ namespace {
 
     void checkTainted(Instruction *I) {
       Value *V = dyn_cast<Value>(I);
-      output << "Checking: " << getSourceCodeLine(I) << "\n";
       if (isa<StoreInst>(I)) {
-        output << "Store Inst" << "\n";
+        output << "Store Inst: " << getSourceCodeLine(I) << "\n";
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          output << "Tainted" << "\n";
           updateWorklist(I->getOperand(1), I);
         } else if (tainted.find(I->getOperand(1)) != tainted.end()) {
-          output << "Untainted" << "\n";
+          output << "Untainted: " << I->getOperand(1) << " at " << getSourceCodeLine(I) << "\n";
           tainted.erase(I->getOperand(1));
         }
       } else if (isa<LoadInst>(I)) {
-        output << "Load Inst" << "\n";
+        output << "Load Inst: " << getSourceCodeLine(I) << "\n";
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          output << "Tainted" << "\n";
           updateWorklist(V, I);
         }
       } else if (isa<CmpInst>(I)) {
-        output << "Cmp Inst" << "\n";
+        output << "Cmp Inst: " << getSourceCodeLine(I) << "\n";
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          output << "Untainted" << "\n";
+          output << "Untainted: " << I->getOperand(0) << " at " << getSourceCodeLine(I) << "\n";
           tainted.erase(I->getOperand(0));
         } else if (tainted.find(I->getOperand(1)) != tainted.end()) {
-          output << "Untainted" << "\n";
+          output << "Untainted: " << I->getOperand(1) << " at " << getSourceCodeLine(I) << "\n";
           tainted.erase(I->getOperand(1));
         }
       }
