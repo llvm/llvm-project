@@ -1738,7 +1738,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCompilerInvocation(
   return AST;
 }
 
-ASTUnit *ASTUnit::LoadFromCommandLine(
+std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
     const char **ArgBegin, const char **ArgEnd,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
@@ -1841,7 +1841,7 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     return nullptr;
   }
 
-  return AST.release();
+  return AST;
 }
 
 bool ASTUnit::Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
