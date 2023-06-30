@@ -277,7 +277,7 @@ public:
   }
 
   mlir::Value VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E) {
-    llvm_unreachable("NYI");
+    return buildNullValue(E->getType(), CGF.getLoc(E->getSourceRange()));
   }
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *E) {
     return VisitCastExpr(E);

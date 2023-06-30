@@ -1224,6 +1224,9 @@ public:
                             LValueBaseInfo *BaseInfo = nullptr,
                             KnownNonNull_t IsKnownNonNull = NotKnownNonNull);
 
+  LValue
+  buildConditionalOperatorLValue(const AbstractConditionalOperator *expr);
+
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal
   /// initializer for the object, and the address is not necessarily
@@ -1608,6 +1611,15 @@ public:
     /// evaluation of the conditional code.
     // llvm::BasicBlock *getStartingBlock() const { return StartBB; }
   };
+
+  struct ConditionalInfo {
+    std::optional<LValue> LHS{}, RHS{};
+    mlir::Value Result{};
+  };
+
+  template <typename FuncTy>
+  ConditionalInfo buildConditionalBlocks(const AbstractConditionalOperator *E,
+                                         const FuncTy &BranchGenFunc);
 
   // Return true if we're currently emitting one branch or the other of a
   // conditional expression.

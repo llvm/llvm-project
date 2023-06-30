@@ -1727,6 +1727,189 @@ CIRGenFunction::getOrCreateOpaqueRValueMapping(const OpaqueValueExpr *e) {
   return buildAnyExpr(e->getSourceExpr());
 }
 
+namespace {
+// Handle the case where the condition is a constant evaluatable simple integer,
+// which means we don't have to separately handle the true/false blocks.
+std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
+    CIRGenFunction &CGF, const AbstractConditionalOperator *E) {
+  const Expr *condExpr = E->getCond();
+  bool CondExprBool;
+  if (CGF.ConstantFoldsToSimpleInteger(condExpr, CondExprBool)) {
+    const Expr *Live = E->getTrueExpr(), *Dead = E->getFalseExpr();
+    if (!CondExprBool)
+      std::swap(Live, Dead);
+
+    if (!CGF.ContainsLabel(Dead)) {
+      // If the true case is live, we need to track its region.
+      if (CondExprBool) {
+        assert(!UnimplementedFeature::incrementProfileCounter());
+      }
+      // If a throw expression we emit it and return an undefined lvalue
+      // because it can't be used.
+      if (auto *ThrowExpr = dyn_cast<CXXThrowExpr>(Live->IgnoreParens())) {
+        llvm_unreachable("NYI");
+      }
+      return CGF.buildLValue(Live);
+    }
+  }
+  return std::nullopt;
+}
+} // namespace
+
+/// Emit the operand of a glvalue conditional operator. This is either a glvalue
+/// or a (possibly-parenthesized) throw-expression. If this is a throw, no
+/// LValue is returned and the current block has been terminated.
+static std::optional<LValue> buildLValueOrThrowExpression(CIRGenFunction &CGF,
+                                                          const Expr *Operand) {
+  if (auto *ThrowExpr = dyn_cast<CXXThrowExpr>(Operand->IgnoreParens())) {
+    llvm_unreachable("NYI");
+  }
+
+  return CGF.buildLValue(Operand);
+}
+
+// Create and generate the 3 blocks for a conditional operator.
+// Leaves the 'current block' in the continuation basic block.
+template <typename FuncTy>
+CIRGenFunction::ConditionalInfo
+CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
+                                       const FuncTy &BranchGenFunc) {
+  ConditionalInfo Info;
+  auto &CGF = *this;
+  ConditionalEvaluation eval(CGF);
+  auto loc = CGF.getLoc(E->getSourceRange());
+  auto &builder = CGF.getBuilder();
+  auto *trueExpr = E->getTrueExpr();
+  auto *falseExpr = E->getFalseExpr();
+
+  mlir::Value condV =
+      CGF.buildOpOnBoolExpr(E->getCond(), loc, trueExpr, falseExpr);
+  SmallVector<mlir::OpBuilder::InsertPoint, 2> insertPoints{};
+  mlir::Type yieldTy{};
+
+  auto patchVoidOrThrowSites = [&]() {
+    if (insertPoints.empty())
+      return;
+    // If both arms are void, so be it.
+    if (!yieldTy)
+      yieldTy = CGF.VoidTy;
+
+    // Insert required yields.
+    for (auto &toInsert : insertPoints) {
+      mlir::OpBuilder::InsertionGuard guard(builder);
+      builder.restoreInsertionPoint(toInsert);
+
+      // Block does not return: build empty yield.
+      if (yieldTy.isa<mlir::cir::VoidType>()) {
+        builder.create<mlir::cir::YieldOp>(loc);
+      } else { // Block returns: set null yield value.
+        mlir::Value op0 = builder.getNullValue(yieldTy, loc);
+        builder.create<mlir::cir::YieldOp>(loc, op0);
+      }
+    }
+  };
+
+  Info.Result =
+      builder
+          .create<mlir::cir::TernaryOp>(
+              loc, condV, /*trueBuilder=*/
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                // FIXME: abstract all this massive location handling elsewhere.
+                SmallVector<mlir::Location, 2> locs;
+                if (loc.isa<mlir::FileLineColLoc>()) {
+                  locs.push_back(loc);
+                  locs.push_back(loc);
+                } else if (loc.isa<mlir::FusedLoc>()) {
+                  auto fusedLoc = loc.cast<mlir::FusedLoc>();
+                  locs.push_back(fusedLoc.getLocations()[0]);
+                  locs.push_back(fusedLoc.getLocations()[1]);
+                }
+                CIRGenFunction::LexicalScopeContext lexScope{
+                    locs[0], locs[1], b.getInsertionBlock()};
+                CIRGenFunction::LexicalScopeGuard lexThenGuard{CGF, &lexScope};
+                CGF.currLexScope->setAsTernary();
+
+                assert(!UnimplementedFeature::incrementProfileCounter());
+                eval.begin(CGF);
+                Info.LHS = BranchGenFunc(CGF, trueExpr);
+                auto lhs = Info.LHS->getPointer();
+                eval.end(CGF);
+
+                if (lhs) {
+                  yieldTy = lhs.getType();
+                  b.create<mlir::cir::YieldOp>(loc, lhs);
+                  return;
+                }
+                // If LHS or RHS is a throw or void expression we need to patch
+                // arms as to properly match yield types.
+                insertPoints.push_back(b.saveInsertionPoint());
+              },
+              /*falseBuilder=*/
+              [&](mlir::OpBuilder &b, mlir::Location loc) {
+                auto fusedLoc = loc.cast<mlir::FusedLoc>();
+                auto locBegin = fusedLoc.getLocations()[0];
+                auto locEnd = fusedLoc.getLocations()[1];
+                CIRGenFunction::LexicalScopeContext lexScope{
+                    locBegin, locEnd, b.getInsertionBlock()};
+                CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
+                CGF.currLexScope->setAsTernary();
+
+                assert(!UnimplementedFeature::incrementProfileCounter());
+                eval.begin(CGF);
+                Info.RHS = BranchGenFunc(CGF, falseExpr);
+                auto rhs = Info.RHS->getPointer();
+                eval.end(CGF);
+
+                if (rhs) {
+                  yieldTy = rhs.getType();
+                  b.create<mlir::cir::YieldOp>(loc, rhs);
+                } else {
+                  // If LHS or RHS is a throw or void expression we need to
+                  // patch arms as to properly match yield types.
+                  insertPoints.push_back(b.saveInsertionPoint());
+                }
+
+                patchVoidOrThrowSites();
+              })
+          .getResult();
+  return Info;
+}
+
+LValue CIRGenFunction::buildConditionalOperatorLValue(
+    const AbstractConditionalOperator *expr) {
+  if (!expr->isGLValue()) {
+    llvm_unreachable("NYI");
+  }
+
+  OpaqueValueMapping binding(*this, expr);
+  if (std::optional<LValue> Res =
+          HandleConditionalOperatorLValueSimpleCase(*this, expr))
+    return *Res;
+
+  ConditionalInfo Info =
+      buildConditionalBlocks(expr, [](CIRGenFunction &CGF, const Expr *E) {
+        return buildLValueOrThrowExpression(CGF, E);
+      });
+
+  if ((Info.LHS && !Info.LHS->isSimple()) ||
+      (Info.RHS && !Info.RHS->isSimple()))
+    llvm_unreachable("unsupported conditional operator");
+
+  if (Info.LHS && Info.RHS) {
+    Address lhsAddr = Info.LHS->getAddress();
+    Address rhsAddr = Info.RHS->getAddress();
+    Address result(Info.Result, lhsAddr.getElementType(),
+                   std::min(lhsAddr.getAlignment(), rhsAddr.getAlignment()));
+    AlignmentSource alignSource =
+        std::max(Info.LHS->getBaseInfo().getAlignmentSource(),
+                 Info.RHS->getBaseInfo().getAlignmentSource());
+    assert(!UnimplementedFeature::tbaa());
+    return makeAddrLValue(result, expr->getType(), LValueBaseInfo(alignSource));
+  } else {
+    llvm_unreachable("NYI");
+  }
+}
+
 /// Emit code to compute a designator that specifies the location
 /// of the expression.
 /// FIXME: document this function better.
@@ -1738,6 +1921,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
         << E->getStmtClassName() << "'";
     assert(0 && "not implemented");
   }
+  case Expr::ConditionalOperatorClass:
+    return buildConditionalOperatorLValue(cast<ConditionalOperator>(E));
   case Expr::ArraySubscriptExprClass:
     return buildArraySubscriptExpr(cast<ArraySubscriptExpr>(E));
   case Expr::BinaryOperatorClass:
