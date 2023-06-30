@@ -10301,8 +10301,8 @@ struct AANoFPClassImpl : AANoFPClass {
 
     SmallVector<Attribute> Attrs;
     A.getAttrs(getIRPosition(), {Attribute::NoFPClass}, Attrs, false);
-    if (!Attrs.empty()) {
-      addKnownBits(Attrs[0].getNoFPClass());
+    for (const auto &Attr : Attrs) {
+      addKnownBits(Attr.getNoFPClass());
       return;
     }
 
