@@ -195,12 +195,6 @@ if (target_os == "zos") {
     "support/ibm/xlocale_zos.cpp",
   ]
 }
-if (libcxx_enable_debug_mode) {
-  cxx_sources += [
-    "debug.cpp",
-    "legacy_debug_handler.cpp",
-  ]
-}
 if (libcxx_enable_filesystem) {
   cxx_sources += [
     "filesystem/directory_entry.cpp",

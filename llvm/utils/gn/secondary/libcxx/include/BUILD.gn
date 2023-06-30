@@ -49,11 +49,6 @@ if (current_toolchain == default_toolchain) {
     } else {
       values += [ "_LIBCPP_ABI_NAMESPACE=__" + libcxx_abi_version ]
     }
-    if (libcxx_enable_debug_mode) {
-      values += [ "_LIBCPP_ENABLE_DEBUG_MODE=1" ]
-    } else {
-      values += [ "_LIBCPP_ENABLE_DEBUG_MODE=" ]
-    }
   }
 
   write_cmake_config("write_modulemap") {
@@ -400,7 +395,6 @@ if (current_toolchain == default_toolchain) {
       "__coroutine/coroutine_traits.h",
       "__coroutine/noop_coroutine_handle.h",
       "__coroutine/trivial_awaitables.h",
-      "__debug",
       "__debug_utils/randomize_range.h",
       "__debug_utils/strict_weak_ordering_check.h",
       "__exception/exception.h",
