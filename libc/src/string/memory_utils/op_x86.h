@@ -129,7 +129,7 @@ LIBC_INLINE __m128i bytewise_reverse(__m128i value) {
                                               8, 9, 10, 11, 12, 13, 14, 15));
 }
 LIBC_INLINE uint16_t big_endian_cmp_mask(__m128i max, __m128i value) {
-  return _mm_movemask_epi8(bytewise_reverse(_mm_cmpeq_epi8(max, value)));
+  return static_cast<uint16_t>(_mm_movemask_epi8(bytewise_reverse(_mm_cmpeq_epi8(max, value))));
 }
 template <> LIBC_INLINE bool eq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
   const auto a = load<__m128i>(p1, offset);
