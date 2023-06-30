@@ -136,11 +136,12 @@ mlir::Location CIRGenFunction::getLoc(SourceRange SLoc) {
     SmallVector<mlir::Location, 2> locs = {B, E};
     mlir::Attribute metadata;
     return mlir::FusedLoc::get(locs, metadata, builder.getContext());
-  } else {
-    // Do our best...
-    assert(currSrcLoc && "expected to inherit some source location");
+  } else if (currSrcLoc) {
     return *currSrcLoc;
   }
+
+  // We're brave, but time to give up.
+  return builder.getUnknownLoc();
 }
 
 mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {

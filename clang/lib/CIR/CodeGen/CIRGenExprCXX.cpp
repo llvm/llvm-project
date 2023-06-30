@@ -585,8 +585,8 @@ static void StoreAnyExprIntoOneUnit(CIRGenFunction &CGF, const Expr *Init,
   // FIXME: Refactor with buildExprAsInit.
   switch (CGF.getEvaluationKind(AllocType)) {
   case TEK_Scalar:
-    CGF.buildScalarInit(Init, nullptr, CGF.makeAddrLValue(NewPtr, AllocType),
-                        false);
+    CGF.buildScalarInit(Init, CGF.getLoc(Init->getSourceRange()),
+                        CGF.makeAddrLValue(NewPtr, AllocType), false);
     return;
   case TEK_Complex:
     llvm_unreachable("NYI");
