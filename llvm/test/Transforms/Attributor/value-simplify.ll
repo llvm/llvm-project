@@ -457,7 +457,7 @@ define ptr @complicated_args_preallocated() {
 ; TUNIT-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; TUNIT-SAME: () #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1)
-; TUNIT-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4294967296 dereferenceable(4) ptr @test_preallocated(ptr noalias nocapture nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR10:[0-9]+]] [ "preallocated"(token [[C]]) ]
+; TUNIT-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4294967296 dereferenceable(4) ptr @test_preallocated(ptr noalias nocapture nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR9]] [ "preallocated"(token [[C]]) ]
 ; TUNIT-NEXT:    ret ptr [[CALL]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
@@ -496,7 +496,7 @@ define void @complicated_args_sret(ptr %b) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@complicated_args_sret
 ; TUNIT-SAME: (ptr nocapture nofree writeonly [[B:%.*]]) #[[ATTR3]] {
-; TUNIT-NEXT:    call void @test_sret(ptr noalias nocapture nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 null, ptr nocapture nofree writeonly align 8 [[B]]) #[[ATTR9]]
+; TUNIT-NEXT:    call void @test_sret(ptr noalias nocapture nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 null, ptr nocapture nofree writeonly align 8 [[B]]) #[[ATTR10:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: write)
@@ -558,7 +558,7 @@ define void @complicated_args_byval() {
 ; TUNIT-LABEL: define {{[^@]+}}@complicated_args_byval
 ; TUNIT-SAME: () #[[ATTR4:[0-9]+]] {
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load ptr, ptr @S, align 8
-; TUNIT-NEXT:    call void @test_byval(ptr [[TMP1]]) #[[ATTR9]]
+; TUNIT-NEXT:    call void @test_byval(ptr [[TMP1]]) #[[ATTR10]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
@@ -1247,7 +1247,7 @@ define i8 @memcpy_uses_store_caller(i8 %arg) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@memcpy_uses_store_caller
 ; TUNIT-SAME: (i8 [[ARG:%.*]]) #[[ATTR1]] {
-; TUNIT-NEXT:    [[R:%.*]] = call i8 @memcpy_uses_store(i8 [[ARG]]) #[[ATTR9]]
+; TUNIT-NEXT:    [[R:%.*]] = call i8 @memcpy_uses_store(i8 [[ARG]]) #[[ATTR12:[0-9]+]]
 ; TUNIT-NEXT:    ret i8 [[R]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -1272,7 +1272,7 @@ define i32 @test_speculatable_expr() norecurse {
 ; TUNIT-NEXT:    [[PLUS1:%.*]] = add i32 [[SPEC_RESULT]], 1
 ; TUNIT-NEXT:    store i32 [[PLUS1]], ptr [[STACK]], align 4
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[STACK]], align 4
-; TUNIT-NEXT:    [[RSPEC:%.*]] = call i32 @ret_speculatable_expr(i32 [[TMP1]]) #[[ATTR12:[0-9]+]]
+; TUNIT-NEXT:    [[RSPEC:%.*]] = call i32 @ret_speculatable_expr(i32 [[TMP1]]) #[[ATTR13:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[RSPEC]]
 ;
 ; CGSCC: Function Attrs: norecurse nosync memory(none)
@@ -1437,10 +1437,11 @@ define i1 @constexpr_icmp2() {
 ; TUNIT: attributes #[[ATTR6]] = { norecurse nosync memory(none) }
 ; TUNIT: attributes #[[ATTR7]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; TUNIT: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR9]] = { nofree nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR10]] = { nofree nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR9]] = { nofree nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR10]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR11]] = { memory(readwrite) }
-; TUNIT: attributes #[[ATTR12]] = { nosync nounwind memory(read) }
+; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR13]] = { nosync nounwind memory(read) }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
@@ -1455,6 +1456,6 @@ define i1 @constexpr_icmp2() {
 ; CGSCC: attributes #[[ATTR10]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR11:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR12]] = { nofree nounwind willreturn }
-; CGSCC: attributes #[[ATTR13]] = { nounwind }
+; CGSCC: attributes #[[ATTR13]] = { nounwind memory(write) }
 ; CGSCC: attributes #[[ATTR14]] = { memory(readwrite) }
 ;.

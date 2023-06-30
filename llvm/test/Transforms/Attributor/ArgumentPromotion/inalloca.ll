@@ -46,7 +46,7 @@ define i32 @main() {
 ; CGSCC-NEXT:    [[F1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; CGSCC-NEXT:    store i32 1, ptr [[S]], align 4
 ; CGSCC-NEXT:    store i32 2, ptr [[F1]], align 4
-; CGSCC-NEXT:    [[R:%.*]] = call i32 @f(ptr noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]])
+; CGSCC-NEXT:    [[R:%.*]] = call i32 @f(ptr noalias nocapture nofree noundef nonnull inalloca([[STRUCT_SS]]) align 4 dereferenceable(8) [[S]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -92,9 +92,10 @@ entry:
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn memory(read) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR3]] = { memory(read) }
 ;.

@@ -2669,7 +2669,7 @@ define dso_local void @test_nested_memory(ptr %dst, ptr %src) {
 ; CGSCC-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 8
 ; CGSCC-NEXT:    store ptr [[SRC]], ptr [[SRC2]], align 8
 ; CGSCC-NEXT:    store ptr [[CALL]], ptr getelementptr inbounds ([[STRUCT_STY]], ptr @global, i64 0, i32 2), align 8
-; CGSCC-NEXT:    call fastcc void @nested_memory_callee(ptr nofree nonnull align 4294967296 undef, ptr nofree nonnull align 4294967296 undef, ptr nofree noundef nonnull align 8 dereferenceable(24) @global) #[[ATTR20]]
+; CGSCC-NEXT:    call fastcc void @nested_memory_callee(ptr nofree nonnull align 4294967296 undef, ptr nofree nonnull align 4294967296 undef, ptr nofree noundef nonnull align 8 dereferenceable(24) @global) #[[ATTR23:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -2930,7 +2930,7 @@ define i1 @alloca_non_unique_caller(i32 %in, i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@alloca_non_unique_caller
 ; CGSCC-SAME: (i32 [[IN:%.*]], i1 noundef [[C:%.*]]) #[[ATTR15:[0-9]+]] {
-; CGSCC-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(ptr undef, i32 [[IN]], i1 noundef [[C]]) #[[ATTR20]]
+; CGSCC-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(ptr undef, i32 [[IN]], i1 noundef [[C]]) #[[ATTR23]]
 ; CGSCC-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @alloca_non_unique(ptr undef, i32 %in, i1 %c)
@@ -2944,7 +2944,7 @@ define i32 @scope_value_traversal(i32 %bad, i1 %c, i1 %c2) {
 ; TUNIT-SAME: (i32 [[BAD:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) #[[ATTR4]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    store i32 [[BAD]], ptr [[A]], align 4
-; TUNIT-NEXT:    call void @scope_value_traversal_helper(ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]], i1 [[C2]]) #[[ATTR17]]
+; TUNIT-NEXT:    call void @scope_value_traversal_helper(ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]], i1 [[C2]]) #[[ATTR21:[0-9]+]]
 ; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr [[A]], align 4
 ; TUNIT-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 [[BAD]], i32 [[L]]
 ; TUNIT-NEXT:    ret i32 [[SEL]]
@@ -2954,7 +2954,7 @@ define i32 @scope_value_traversal(i32 %bad, i1 %c, i1 %c2) {
 ; CGSCC-SAME: (i32 [[BAD:%.*]], i1 [[C:%.*]], i1 [[C2:%.*]]) #[[ATTR16:[0-9]+]] {
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 [[BAD]], ptr [[A]], align 4
-; CGSCC-NEXT:    call void @scope_value_traversal_helper(ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]], i1 [[C2]]) #[[ATTR20]]
+; CGSCC-NEXT:    call void @scope_value_traversal_helper(ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]], i1 [[C2]]) #[[ATTR23]]
 ; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr [[A]], align 4
 ; CGSCC-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 [[BAD]], i32 [[L]]
 ; CGSCC-NEXT:    ret i32 [[SEL]]
@@ -3171,10 +3171,11 @@ declare void @llvm.assume(i1 noundef)
 ; TUNIT: attributes #[[ATTR14]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR15:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; TUNIT: attributes #[[ATTR16:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR17]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR17]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR18]] = { nocallback }
 ; TUNIT: attributes #[[ATTR19]] = { norecurse }
 ; TUNIT: attributes #[[ATTR20]] = { nounwind }
+; TUNIT: attributes #[[ATTR21]] = { nofree nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
@@ -3196,9 +3197,10 @@ declare void @llvm.assume(i1 noundef)
 ; CGSCC: attributes #[[ATTR17]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR18:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR19:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR20]] = { nounwind }
+; CGSCC: attributes #[[ATTR20]] = { nounwind memory(write) }
 ; CGSCC: attributes #[[ATTR21]] = { nocallback }
 ; CGSCC: attributes #[[ATTR22]] = { norecurse }
+; CGSCC: attributes #[[ATTR23]] = { nounwind }
 ;.
 ; TUNIT: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; TUNIT: [[META1:![0-9]+]] = !{i32 7, !"uwtable", i32 1}

@@ -41,6 +41,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -930,10 +931,23 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
   }
   if (Attr.isIntAttribute()) {
     Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    if (Attrs.hasAttributeAtIndex(AttrIdx, Kind))
+    if (Attrs.hasAttributeAtIndex(AttrIdx, Kind)) {
+      if (!ForceReplace && Kind == Attribute::Memory) {
+        MemoryEffects ExistingME =
+            Attrs.getAttributeAtIndex(AttrIdx, Attribute::Memory)
+                .getMemoryEffects();
+        MemoryEffects ME = Attr.getMemoryEffects() & ExistingME;
+        if (ME == ExistingME)
+          return false;
+        Attrs = Attrs.removeAttributeAtIndex(Ctx, AttrIdx, Kind);
+        Attrs = Attrs.addAttributesAtIndex(Ctx, AttrIdx,
+                                           AttrBuilder(Ctx).addMemoryAttr(ME));
+        return true;
+      }
       if (!ForceReplace &&
           isEqualOrWorse(Attr, Attrs.getAttributeAtIndex(AttrIdx, Kind)))
         return false;
+    }
     Attrs = Attrs.removeAttributeAtIndex(Ctx, AttrIdx, Kind);
     Attrs = Attrs.addAttributeAtIndex(Ctx, AttrIdx, Attr);
     return true;
