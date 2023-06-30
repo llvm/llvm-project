@@ -1,8 +1,10 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,NOC
 ; RUN: llc -mtriple=riscv64 -mattr=+c -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,C
 
-; NOC:            .p2align 2
-; C:              .p2align 1
+;; The alignment is at least 4 to avoid unaligned type hash loads when this
+;; instrumented function is indirectly called.
+; CHECK-LABEL:    .globl f1
+; CHECK:          .p2align 2
 ; CHECK-NOT:        nop
 ; CHECK:          .word   12345678
 ; CHECK-LABEL:    f1:
@@ -12,6 +14,7 @@ define void @f1(ptr noundef %x) !kcfi_type !1 {
   ret void
 }
 
+; CHECK-LABEL:    .globl f2
 ; NOC:            .p2align 2
 ; C:              .p2align 1
 ; CHECK-NOT:       .word
@@ -23,8 +26,8 @@ define void @f2(ptr noundef %x) {
   ret void
 }
 
-; NOC:            .p2align 2
-; C:              .p2align 1
+; CHECK-LABEL:    .globl f3
+; CHECK:          .p2align 2
 ; CHECK:          .word   12345678
 ; CHECK-COUNT-11:   nop
 ; CHECK-LABEL:    f3:
@@ -35,6 +38,7 @@ define void @f3(ptr noundef %x) #0 !kcfi_type !1 {
   ret void
 }
 
+; CHECK-LABEL:    .globl f4
 ; NOC:            .p2align 2
 ; C:              .p2align 1
 ; CHECK-NOT:      .word

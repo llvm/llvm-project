@@ -329,4 +329,16 @@ subroutine acc_parallel
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
+!$acc parallel default(none)
+!$acc end parallel
+
+! CHECK: acc.parallel {
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+!$acc parallel default(present)
+!$acc end parallel
+
+! CHECK: acc.parallel {
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue present>}
+
 end subroutine acc_parallel
