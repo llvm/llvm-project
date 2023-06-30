@@ -257,7 +257,8 @@ float fmodf(float __x, float __y) { return __ocml_fmod_f32(__x, __y); }
 
 __DEVICE__
 float frexpf(float __x, int *__nptr) {
-  return __builtin_frexpf(__x, __nptr);
+  *__nptr = __builtin_amdgcn_frexp_expf(__x);
+  return __builtin_amdgcn_frexp_mantf(__x);
 }
 
 __DEVICE__
@@ -805,7 +806,8 @@ double fmod(double __x, double __y) { return __ocml_fmod_f64(__x, __y); }
 
 __DEVICE__
 double frexp(double __x, int *__nptr) {
-  return __builtin_frexp(__x, __nptr);
+  *__nptr = __builtin_amdgcn_frexp_exp(__x);
+  return __builtin_amdgcn_frexp_mant(__x);
 }
 
 __DEVICE__
