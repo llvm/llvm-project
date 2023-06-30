@@ -174,5 +174,19 @@ subroutine acc_data
 ! CHECK: acc.data dataOperands(%{{.*}}) wait_devnum(%{{.*}} : i32) wait(%{{.*}} : i32) {
 ! CHECK: }{{$}}
 
+  !$acc data default(none)
+  !$acc end data
+
+! CHECK: acc.data {
+! CHECK:   acc.terminator
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+  !$acc data default(present)
+  !$acc end data
+
+! CHECK: acc.data {
+! CHECK:   acc.terminator
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue present>}
+
 end subroutine acc_data
 
