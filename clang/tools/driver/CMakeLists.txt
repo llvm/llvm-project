@@ -72,8 +72,22 @@ if (CLANG_ENABLE_HLSL)
 endif()
 
 foreach(link ${CLANG_LINKS_TO_CREATE} ${HLSL_LINK})
+# We need to separate classic flang from the new llvm flang
+# that is in development. Until the new llvm flang replaces
+# classic, we need to have a flang -> flang-legacy symlink
+# instead of flang -> clang. Flang-legacy is built later during
+# openmp-extras and is based of llvm archives from ROCm 5.5.
+# This can be removed once llvm flang is in production.
   if(CLANG_LINK_FLANG_LEGACY AND "${link}" STREQUAL "flang")
-    add_clang_symlink(${link} flang-legacy)
+    foreach(path ${CMAKE_MODULE_PATH})
+      if(EXISTS ${path}/LLVMInstallSymlink.cmake)
+        set(INSTALL_SYMLINK ${path}/LLVMInstallSymlink.cmake)
+        break()
+      endif()
+    endforeach()
+    install(SCRIPT ${INSTALL_SYMLINK}
+            CODE "install_symlink(flang flang-legacy bin create_symlink)"
+            COMPONENT ${component})
   else()
     add_clang_symlink(${link} clang)
   endif()
