@@ -331,6 +331,35 @@ BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
   return splitBB(Builder, CreateBranch, Old->getName() + Suffix);
 }
 
+void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
+                                          IRBuilderBase &Builder,
+                                          SmallVector<Value *> &ArgsVector) {
+  Value *Version = Builder.getInt32(OMP_KERNEL_ARG_VERSION);
+  Value *PointerNum = Builder.getInt32(KernelArgs.NumTargetItems);
+  auto Int32Ty = Type::getInt32Ty(Builder.getContext());
+  Value *ZeroArray = Constant::getNullValue(ArrayType::get(Int32Ty, 3));
+  Value *Flags = Builder.getInt64(KernelArgs.HasNoWait);
+
+  Value *NumTeams3D =
+      Builder.CreateInsertValue(ZeroArray, KernelArgs.NumTeams, {0});
+  Value *NumThreads3D =
+      Builder.CreateInsertValue(ZeroArray, KernelArgs.NumThreads, {0});
+
+  ArgsVector = {Version,
+                PointerNum,
+                KernelArgs.RTArgs.BasePointersArray,
+                KernelArgs.RTArgs.PointersArray,
+                KernelArgs.RTArgs.SizesArray,
+                KernelArgs.RTArgs.MapTypesArray,
+                KernelArgs.RTArgs.MapNamesArray,
+                KernelArgs.RTArgs.MappersArray,
+                KernelArgs.NumIterations,
+                Flags,
+                NumTeams3D,
+                NumThreads3D,
+                KernelArgs.DynCGGroupMem};
+}
+
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
   Triple T(M.getTargetTriple());
@@ -877,6 +906,67 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
       getOrCreateRuntimeFunction(M, OMPRTL___tgt_target_kernel),
       OffloadingArgs);
 
+  return Builder.saveIP();
+}
+
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitKernelLaunch(
+    const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
+    EmitFallbackCallbackTy emitTargetCallFallbackCB, TargetKernelArgs &Args,
+    Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP) {
+
+  if (!updateToLocation(Loc))
+    return Loc.IP;
+
+  Builder.restoreIP(Loc.IP);
+  // On top of the arrays that were filled up, the target offloading call
+  // takes as arguments the device id as well as the host pointer. The host
+  // pointer is used by the runtime library to identify the current target
+  // region, so it only has to be unique and not necessarily point to
+  // anything. It could be the pointer to the outlined function that
+  // implements the target region, but we aren't using that so that the
+  // compiler doesn't need to keep that, and could therefore inline the host
+  // function if proven worthwhile during optimization.
+
+  // From this point on, we need to have an ID of the target region defined.
+  assert(OutlinedFnID && "Invalid outlined function ID!");
+  (void)OutlinedFnID;
+
+  // Return value of the runtime offloading call.
+  Value *Return;
+
+  // Arguments for the target kernel.
+  SmallVector<Value *> ArgsVector;
+  getKernelArgsVector(Args, Builder, ArgsVector);
+
+  // The target region is an outlined function launched by the runtime
+  // via calls to __tgt_target_kernel().
+  //
+  // Note that on the host and CPU targets, the runtime implementation of
+  // these calls simply call the outlined function without forking threads.
+  // The outlined functions themselves have runtime calls to
+  // __kmpc_fork_teams() and __kmpc_fork() for this purpose, codegen'd by
+  // the compiler in emitTeamsCall() and emitParallelCall().
+  //
+  // In contrast, on the NVPTX target, the implementation of
+  // __tgt_target_teams() launches a GPU kernel with the requested number
+  // of teams and threads so no additional calls to the runtime are required.
+  // Check the error code and execute the host version if required.
+  Builder.restoreIP(emitTargetKernel(Builder, AllocaIP, Return, RTLoc, DeviceID,
+                                     Args.NumTeams, Args.NumThreads,
+                                     OutlinedFnID, ArgsVector));
+
+  BasicBlock *OffloadFailedBlock =
+      BasicBlock::Create(Builder.getContext(), "omp_offload.failed");
+  BasicBlock *OffloadContBlock =
+      BasicBlock::Create(Builder.getContext(), "omp_offload.cont");
+  Value *Failed = Builder.CreateIsNotNull(Return);
+  Builder.CreateCondBr(Failed, OffloadFailedBlock, OffloadContBlock);
+
+  auto CurFn = Builder.GetInsertBlock()->getParent();
+  emitBlock(OffloadFailedBlock, CurFn);
+  Builder.restoreIP(emitTargetCallFallbackCB(Builder.saveIP()));
+  emitBranch(OffloadContBlock);
+  emitBlock(OffloadContBlock, CurFn, /*IsFinished=*/true);
   return Builder.saveIP();
 }
 

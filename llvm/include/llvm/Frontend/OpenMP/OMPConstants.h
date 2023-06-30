@@ -72,6 +72,9 @@ enum class IdentFlag {
 #define OMP_IDENT_FLAG(Enum, ...) constexpr auto Enum = omp::IdentFlag::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
+// Version of the kernel argument format used by the omp runtime.
+#define OMP_KERNEL_ARG_VERSION 2
+
 /// \note This needs to be kept in sync with kmp.h enum sched_type.
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h
 enum class OMPScheduleType {
