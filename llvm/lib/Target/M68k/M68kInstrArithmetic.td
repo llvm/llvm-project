@@ -589,6 +589,22 @@ class MxDiMuOp_DD<string MN, bits<4> CMD, bit SIGNED = false,
   );
 }
 
+// $dreg <- $dreg op $dreg
+class MxDiMuOp_DD_Long<string MN, bits<10> CMD, bit SIGNED = false>
+    : MxInst<(outs MxDRD32:$dst), (ins MxDRD32:$src, MxDRD32:$opd), MN#"\t$opd, $dst", []> {
+  let Inst = (ascend
+    (descend CMD,
+      /*MODE*/0b000, /*REGISTER*/(operand "$opd", 3)),
+    (descend 0b0,
+      // REGISTER
+      (operand "$dst", 3),
+      !if(SIGNED, 0b1, 0b0),
+      /*SIZE*/0b0, 0b0000000,
+      // Dr REGISTER
+      0b000)
+  );
+}
+
 // $reg <- $reg op $imm
 class MxDiMuOp_DI<string MN, bits<4> CMD, bit SIGNED = false,
                   MxOperand DST, MxOperand OPD>
@@ -617,6 +633,9 @@ multiclass MxDiMuOp<string MN, bits<4> CMD, bit isComm = 0> {
 }
 
 defm DIV : MxDiMuOp<"div", 0x8>;
+
+def SDIVd32d32 : MxDiMuOp_DD_Long<"divs.l", 0x131, /*SIGNED*/true>;
+def UDIVd32d32 : MxDiMuOp_DD_Long<"divu.l", 0x131, /*SIGNED*/false>;
 
 // This is used to cast immediates to 16-bits for operations which don't
 // support smaller immediate sizes.
@@ -667,6 +686,12 @@ def : Pat<(urem i16:$dst, i16:$opd),
              MxSubRegIndex16Lo)>;
 
 
+// RR i32
+def : Pat<(sdiv i32:$dst, i32:$opd), (SDIVd32d32 $dst, $opd)>;
+
+def : Pat<(udiv i32:$dst, i32:$opd), (UDIVd32d32 $dst, $opd)>;
+
+
 // RI i8
 def : Pat<(sdiv i8:$dst, MximmSExt8:$opd),
           (EXTRACT_SUBREG
@@ -712,6 +737,9 @@ def : Pat<(urem i16:$dst, MximmSExt16:$opd),
 
 defm MUL : MxDiMuOp<"mul", 0xC, 1>;
 
+def SMULd32d32 : MxDiMuOp_DD_Long<"muls.l", 0x130, /*SIGNED*/true>;
+def UMULd32d32 : MxDiMuOp_DD_Long<"mulu.l", 0x130, /*SIGNED*/false>;
+
 // RR
 def : Pat<(mul i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
@@ -727,6 +755,8 @@ def : Pat<(mulhu i16:$dst, i16:$opd),
           (EXTRACT_SUBREG
             (LSR32di (LSR32di (UMULd32d16 (MOVXd32d16 $dst), $opd), 8), 8),
              MxSubRegIndex16Lo)>;
+
+def : Pat<(mul i32:$dst, i32:$opd), (SMULd32d32 $dst, $opd)>;
 
 
 // RI
