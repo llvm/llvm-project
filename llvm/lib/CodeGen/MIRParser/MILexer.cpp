@@ -281,6 +281,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("ir-block-address-taken", MIToken::kw_ir_block_address_taken)
       .Case("machine-block-address-taken",
             MIToken::kw_machine_block_address_taken)
+      .Case("sp-adjustment", MIToken::kw_sp_adjustment)
       .Default(MIToken::Identifier);
 }
 
