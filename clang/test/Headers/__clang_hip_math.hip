@@ -1061,37 +1061,25 @@ extern "C" __device__ double test_fmod(double x, double y) {
   return fmod(x, y);
 }
 
-// DEFAULT-LABEL: @test_frexpf(
-// DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[X:%.*]])
-// DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12:![0-9]+]]
-// DEFAULT-NEXT:    [[TMP1:%.*]] = tail call contract float @llvm.amdgcn.frexp.mant.f32(float [[X]])
-// DEFAULT-NEXT:    ret float [[TMP1]]
-//
-// FINITEONLY-LABEL: @test_frexpf(
-// FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.frexp.exp.i32.f32(float [[X:%.*]])
-// FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12:![0-9]+]]
-// FINITEONLY-NEXT:    [[TMP1:%.*]] = tail call nnan ninf contract float @llvm.amdgcn.frexp.mant.f32(float [[X]])
-// FINITEONLY-NEXT:    ret float [[TMP1]]
+// CHECK-LABEL: @test_frexpf(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { float, i32 } @llvm.frexp.f32.i32(float [[X:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { float, i32 } [[TMP0]], 1
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12:![0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { float, i32 } [[TMP0]], 0
+// CHECK-NEXT:    ret float [[TMP2]]
 //
 extern "C" __device__ float test_frexpf(float x, int* y) {
   return frexpf(x, y);
 }
 
-// DEFAULT-LABEL: @test_frexp(
-// DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.frexp.exp.i32.f64(double [[X:%.*]])
-// DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12]]
-// DEFAULT-NEXT:    [[TMP1:%.*]] = tail call contract double @llvm.amdgcn.frexp.mant.f64(double [[X]])
-// DEFAULT-NEXT:    ret double [[TMP1]]
-//
-// FINITEONLY-LABEL: @test_frexp(
-// FINITEONLY-NEXT:  entry:
-// FINITEONLY-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.frexp.exp.i32.f64(double [[X:%.*]])
-// FINITEONLY-NEXT:    store i32 [[TMP0]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12]]
-// FINITEONLY-NEXT:    [[TMP1:%.*]] = tail call nnan ninf contract double @llvm.amdgcn.frexp.mant.f64(double [[X]])
-// FINITEONLY-NEXT:    ret double [[TMP1]]
+// CHECK-LABEL: @test_frexp(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call { double, i32 } @llvm.frexp.f64.i32(double [[X:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { double, i32 } [[TMP0]], 1
+// CHECK-NEXT:    store i32 [[TMP1]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA12]]
+// CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { double, i32 } [[TMP0]], 0
+// CHECK-NEXT:    ret double [[TMP2]]
 //
 extern "C" __device__ double test_frexp(double x, int* y) {
   return frexp(x, y);
