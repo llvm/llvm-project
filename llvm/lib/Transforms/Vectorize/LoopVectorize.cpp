@@ -1565,14 +1565,14 @@ public:
 
   /// Returns true if we're required to use a scalar epilogue for at least
   /// the final iteration of the original loop.
-  bool requiresScalarEpilogue(ElementCount VF) const {
+  bool requiresScalarEpilogue(bool IsVectorizing) const {
     if (!isScalarEpilogueAllowed())
       return false;
     // If we might exit from anywhere but the latch, must run the exiting
     // iteration in scalar form.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch())
       return true;
-    return VF.isVector() && InterleaveInfo.requiresScalarEpilogue();
+    return IsVectorizing && InterleaveInfo.requiresScalarEpilogue();
   }
 
   /// Returns true if we're required to use a scalar epilogue for at least
@@ -1581,7 +1581,7 @@ public:
   /// none.
   bool requiresScalarEpilogue(VFRange Range) const {
     auto RequiresScalarEpilogue = [this](ElementCount VF) {
-      return requiresScalarEpilogue(VF);
+      return requiresScalarEpilogue(VF.isVector());
     };
     bool IsRequired = all_of(Range, RequiresScalarEpilogue);
     assert(
@@ -2943,7 +2943,7 @@ InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
   // the step does not evenly divide the trip count, no adjustment is necessary
   // since there will already be scalar iterations. Note that the minimum
   // iterations check ensures that N >= Step.
-  if (Cost->requiresScalarEpilogue(VF)) {
+  if (Cost->requiresScalarEpilogue(VF.isVector())) {
     auto *IsZero = Builder.CreateICmpEQ(R, ConstantInt::get(R->getType(), 0));
     R = Builder.CreateSelect(IsZero, Step, R);
   }
@@ -2996,8 +2996,8 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   // vector trip count is zero. This check also covers the case where adding one
   // to the backedge-taken count overflowed leading to an incorrect trip count
   // of zero. In this case we will also jump to the scalar loop.
-  auto P = Cost->requiresScalarEpilogue(VF) ? ICmpInst::ICMP_ULE
-                                            : ICmpInst::ICMP_ULT;
+  auto P = Cost->requiresScalarEpilogue(VF.isVector()) ? ICmpInst::ICMP_ULE
+                                                       : ICmpInst::ICMP_ULT;
 
   // If tail is to be folded, vector loop takes care of all iterations.
   Type *CountTy = Count->getType();
@@ -3046,7 +3046,7 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
 
   // Update dominator for Bypass & LoopExit (if needed).
   DT->changeImmediateDominator(Bypass, TCCheckBlock);
-  if (!Cost->requiresScalarEpilogue(VF))
+  if (!Cost->requiresScalarEpilogue(VF.isVector()))
     // If there is an epilogue which must run, there's no edge from the
     // middle block to exit blocks  and thus no need to update the immediate
     // dominator of the exit blocks.
@@ -3073,7 +3073,7 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   // Update dominator only if this is first RT check.
   if (LoopBypassBlocks.empty()) {
     DT->changeImmediateDominator(Bypass, SCEVCheckBlock);
-    if (!Cost->requiresScalarEpilogue(VF))
+    if (!Cost->requiresScalarEpilogue(VF.isVector()))
       // If there is an epilogue which must run, there's no edge from the
       // middle block to exit blocks  and thus no need to update the immediate
       // dominator of the exit blocks.
@@ -3126,7 +3126,7 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopVectorPreHeader = OrigLoop->getLoopPreheader();
   assert(LoopVectorPreHeader && "Invalid loop structure");
   LoopExitBlock = OrigLoop->getUniqueExitBlock(); // may be nullptr
-  assert((LoopExitBlock || Cost->requiresScalarEpilogue(VF)) &&
+  assert((LoopExitBlock || Cost->requiresScalarEpilogue(VF.isVector())) &&
          "multiple exit loop without required epilogue?");
 
   LoopMiddleBlock =
@@ -3146,17 +3146,18 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   //    branch from the middle block to the loop scalar preheader, and the
   //    exit block.  completeLoopSkeleton will update the condition to use an
   //    iteration check, if required to decide whether to execute the remainder.
-  BranchInst *BrInst = Cost->requiresScalarEpilogue(VF) ?
-    BranchInst::Create(LoopScalarPreHeader) :
-    BranchInst::Create(LoopExitBlock, LoopScalarPreHeader,
-                       Builder.getTrue());
+  BranchInst *BrInst =
+      Cost->requiresScalarEpilogue(VF.isVector())
+          ? BranchInst::Create(LoopScalarPreHeader)
+          : BranchInst::Create(LoopExitBlock, LoopScalarPreHeader,
+                               Builder.getTrue());
   BrInst->setDebugLoc(ScalarLatchTerm->getDebugLoc());
   ReplaceInstWithInst(LoopMiddleBlock->getTerminator(), BrInst);
 
   // Update dominator for loop exit. During skeleton creation, only the vector
   // pre-header and the middle block are created. The vector loop is entirely
   // created during VPlan exection.
-  if (!Cost->requiresScalarEpilogue(VF))
+  if (!Cost->requiresScalarEpilogue(VF.isVector()))
     // If there is an epilogue which must run, there's no edge from the
     // middle block to exit blocks  and thus no need to update the immediate
     // dominator of the exit blocks.
@@ -3270,7 +3271,8 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton() {
   //    Thus if tail is to be folded, we know we don't need to run the
   //    remainder and we can use the previous value for the condition (true).
   // 3) Otherwise, construct a runtime check.
-  if (!Cost->requiresScalarEpilogue(VF) && !Cost->foldTailByMasking()) {
+  if (!Cost->requiresScalarEpilogue(VF.isVector()) &&
+      !Cost->foldTailByMasking()) {
     Instruction *CmpN = CmpInst::Create(Instruction::ICmp, CmpInst::ICMP_EQ,
                                         Count, VectorTripCount, "cmp.n",
                                         LoopMiddleBlock->getTerminator());
@@ -3744,7 +3746,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
 
   VPBasicBlock *LatchVPBB = Plan.getVectorLoopRegion()->getExitingBasicBlock();
   Loop *VectorLoop = LI->getLoopFor(State.CFG.VPBB2IRBB[LatchVPBB]);
-  if (Cost->requiresScalarEpilogue(VF)) {
+  if (Cost->requiresScalarEpilogue(VF.isVector())) {
     // No edge from the middle block to the unique exit block has been inserted
     // and there is nothing to fix from vector loop; phis should have incoming
     // from scalar loop only.
@@ -3909,7 +3911,7 @@ void InnerLoopVectorizer::fixFixedOrderRecurrence(
     }
 
     for (VPLiveOut *LiveOut : LiveOuts) {
-      assert(!Cost->requiresScalarEpilogue(VF));
+      assert(!Cost->requiresScalarEpilogue(VF.isVector()));
       PHINode *LCSSAPhi = LiveOut->getPhi();
       LCSSAPhi->addIncoming(ExtractForPhiUsedOutsideLoop, LoopMiddleBlock);
       State.Plan->removeLiveOut(LCSSAPhi);
@@ -4111,7 +4113,7 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // We know that the loop is in LCSSA form. We need to update the PHI nodes
   // in the exit blocks.  See comment on analogous loop in
   // fixFixedOrderRecurrence for a more complete explaination of the logic.
-  if (!Cost->requiresScalarEpilogue(VF))
+  if (!Cost->requiresScalarEpilogue(VF.isVector()))
     for (PHINode &LCSSAPhi : LoopExitBlock->phis())
       if (llvm::is_contained(LCSSAPhi.incoming_values(), LoopExitInst)) {
         LCSSAPhi.addIncoming(ReducedPartRdx, LoopMiddleBlock);
@@ -7918,8 +7920,10 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 
   // Generate code to check if the loop's trip count is less than VF * UF of the
   // main vector loop.
-  auto P = Cost->requiresScalarEpilogue(ForEpilogue ? EPI.EpilogueVF : VF) ?
-      ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+  auto P = Cost->requiresScalarEpilogue(ForEpilogue ? EPI.EpilogueVF.isVector()
+                                                    : VF.isVector())
+               ? ICmpInst::ICMP_ULE
+               : ICmpInst::ICMP_ULT;
 
   Value *CheckMinIters = Builder.CreateICmp(
       P, Count, createStepForVF(Builder, Count->getType(), VFactor, UFactor),
@@ -7939,7 +7943,7 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 
     // Update dominator for Bypass & LoopExit.
     DT->changeImmediateDominator(Bypass, TCCheckBlock);
-    if (!Cost->requiresScalarEpilogue(EPI.EpilogueVF))
+    if (!Cost->requiresScalarEpilogue(EPI.EpilogueVF.isVector()))
       // For loops with multiple exits, there's no edge from the middle block
       // to exit blocks (as the epilogue must run) and thus no need to update
       // the immediate dominator of the exit blocks.
@@ -8007,7 +8011,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton(
 
   DT->changeImmediateDominator(LoopScalarPreHeader,
                                EPI.EpilogueIterationCountCheck);
-  if (!Cost->requiresScalarEpilogue(EPI.EpilogueVF))
+  if (!Cost->requiresScalarEpilogue(EPI.EpilogueVF.isVector()))
     // If there is an epilogue which must run, there's no edge from the
     // middle block to exit blocks  and thus no need to update the immediate
     // dominator of the exit blocks.
@@ -8089,8 +8093,9 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   // Generate code to check if the loop's trip count is less than VF * UF of the
   // vector epilogue loop.
-  auto P = Cost->requiresScalarEpilogue(EPI.EpilogueVF) ?
-      ICmpInst::ICMP_ULE : ICmpInst::ICMP_ULT;
+  auto P = Cost->requiresScalarEpilogue(EPI.EpilogueVF.isVector())
+               ? ICmpInst::ICMP_ULE
+               : ICmpInst::ICMP_ULT;
 
   Value *CheckMinIters =
       Builder.CreateICmp(P, Count,
