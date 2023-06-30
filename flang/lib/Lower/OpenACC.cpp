@@ -1459,6 +1459,13 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
           /*structured=*/true);
       attachEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                  dataClauseOperands.end());
+    } else if (const auto *asyncClause =
+                   std::get_if<Fortran::parser::AccClause::Async>(&clause.u)) {
+      genAsyncClause(converter, asyncClause, async, addAsyncAttr, stmtCtx);
+    } else if (const auto *waitClause =
+                   std::get_if<Fortran::parser::AccClause::Wait>(&clause.u)) {
+      genWaitClause(converter, waitClause, waitOperands, waitDevnum,
+                    addWaitAttr, stmtCtx);
     }
   }
 
@@ -1475,7 +1482,7 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
       builder, currentLocation, operands, operandSegments);
 
   dataOp.setAsyncAttr(addAsyncAttr);
-  dataOp.setAsyncAttr(addWaitAttr);
+  dataOp.setWaitAttr(addWaitAttr);
 
   auto insPt = builder.saveInsertionPoint();
   builder.setInsertionPointAfter(dataOp);
