@@ -132,6 +132,10 @@ public:
       else
         Region->TryReleaseThreshold = PageSize;
       Region->ReleaseInfo.LastReleaseAtNs = Time;
+
+      Region->MemMapInfo.MemMap = ReservedMemory.dispatch(
+          PrimaryBase + (I << Config::Primary::RegionSizeLog), RegionSize);
+      CHECK(Region->MemMapInfo.MemMap.isAllocated());
     }
     shuffle(RegionInfoArray, NumClasses, &Seed);
 
@@ -822,12 +826,6 @@ private:
         Region->Exhausted = true;
         return nullptr;
       }
-      // TODO: Consider allocating MemMap in init().
-      if (!Region->MemMapInfo.MemMap.isAllocated()) {
-        Region->MemMapInfo.MemMap = ReservedMemory.dispatch(
-            getRegionBaseByClassId(ClassId), RegionSize);
-      }
-      DCHECK(Region->MemMapInfo.MemMap.isAllocated());
 
       if (UNLIKELY(!Region->MemMapInfo.MemMap.remap(
               RegionBeg + MappedUser, MapSize, "scudo:primary",
