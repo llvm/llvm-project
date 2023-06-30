@@ -265,4 +265,16 @@ subroutine acc_serial
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
 
+!$acc serial default(none)
+!$acc end serial
+
+! CHECK: acc.serial {
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+!$acc serial default(present)
+!$acc end serial
+
+! CHECK: acc.serial {
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue present>}
+
 end subroutine
