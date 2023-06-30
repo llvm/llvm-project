@@ -11,6 +11,8 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <map>
+#include <set>
 using namespace llvm;
 using namespace std;
 
@@ -55,62 +57,71 @@ namespace {
   struct Assignment2 : public FunctionPass {
     static char ID;
 
-    // Vector to store the line numbers at which undefined variable(s) is(are) used.
-    vector<int> bugs;
-
     // Keep track of all the functions we have encountered so far.
     unordered_map<string, bool> funcNames;
 
-    // All Basic Block exit sets
-    unordered_map<BasicBlock *, unordered_set<Value *>> exitSets;
+    map<Value *, int> tainted;
+
+    set<Instruction *> worklist;
 
     // Reset all global variables when a new function is called.
     void cleanGlobalVariables() {
-      bugs.clear();
-      exitSets.clear();
       output_str = "";
+      tainted.clear();
+      worklist.clear();
     }
 
     Assignment2() : FunctionPass(ID) {}
 
-    // The function should insert the buggy line numbers in the "bugs" vector.
-    void checkUseBeforeDef(Instruction *I, unordered_set<Value *> *entrySet) {
-      bool isBug = false;
+    void updateWorklist(Value *V, Instruction *I) {
+      tainted.insert(make_pair(V, getSourceCodeLine(I)));
+      for (User *U : V->users()) {
+        if (Instruction *Inst = dyn_cast<Instruction>(U)) {
+          worklist.insert(Inst);
+        }
+      }
+    }
+
+    void checkTainted(Instruction *I) {
       Value *V = dyn_cast<Value>(I);
-
-      if (CallInst* call = dyn_cast<CallInst>(I)) {
-        Function* function = call->getCalledFunction();
-        output << function->getName() << '\n';
-      }
-
-      // If store instruction, investigate further
+      output << "Checking: " << getSourceCodeLine(I) << "\n";
       if (isa<StoreInst>(I)) {
-        // If 0th operand in entry set, add 1st operand to entry set (BUG)
-        if (entrySet->find(I->getOperand(0)) != entrySet->end()) {
-          entrySet->insert(I->getOperand(1));
-          isBug = true;
+        output << "Store Inst" << "\n";
+        if (tainted.find(I->getOperand(0)) != tainted.end()) {
+          output << "Tainted" << "\n";
+          updateWorklist(I->getOperand(1), I);
+        } else if (tainted.find(I->getOperand(1)) != tainted.end()) {
+          output << "Untainted" << "\n";
+          tainted.erase(I->getOperand(1));
         }
-        // If 1st operand in entry set, remove 1st operand from entry set
-        else if (entrySet->find(I->getOperand(1)) != entrySet->end()) {
-          entrySet->erase(I->getOperand(1));
+      } else if (isa<LoadInst>(I)) {
+        output << "Load Inst" << "\n";
+        if (tainted.find(I->getOperand(0)) != tainted.end()) {
+          output << "Tainted" << "\n";
+          updateWorklist(V, I);
         }
-      } 
-      // If load instruction, investigate further
-      else if (isa<LoadInst>(I)) {
-        // If 0th operand in entry set, add value to entry set (BUG)
-        if (entrySet->find(I->getOperand(0)) != entrySet->end()) {
-          entrySet->insert(V);
-          isBug = true;
+      } else if (isa<CmpInst>(I)) {
+        output << "Cmp Inst" << "\n";
+        if (tainted.find(I->getOperand(0)) != tainted.end()) {
+          output << "Untainted" << "\n";
+          tainted.erase(I->getOperand(0));
+        } else if (tainted.find(I->getOperand(1)) != tainted.end()) {
+          output << "Untainted" << "\n";
+          tainted.erase(I->getOperand(1));
         }
       }
+    }
 
-      // Add bug line to bugs vector
-      if (isBug) {
-        int line = getSourceCodeLine(I);
-        if (line > 0 && std::find(bugs.begin(), bugs.end(), line) == bugs.end()) bugs.push_back(line);
-      }
-
-      return;
+    void findSource(Function &F) {   
+      // Iterate over basic blocks within function
+      for (BasicBlock *BB : topoSortBBs(F)) {
+        // Iterate over instructions within basic block
+        for (Instruction &I : *BB) {
+          if (isa<CallInst>(I) && demangle(I.getOperand(0)->getName().str().c_str()) == "std::__1::cin") {
+            updateWorklist(I.getOperand(1), &I);
+          }
+        }
+      }  
     }
 
     // Function to return the line numbers that uses an undefined variable.
@@ -125,36 +136,17 @@ namespace {
 
       funcNames.insert(make_pair(funcName, true));
 
-      // Iterate over basic blocks within function
-      for (BasicBlock *BB : topoSortBBs(F)) {
-        // Entry set formed from union of predecessors exit sets
-        unordered_set<Value *> entrySet;
-        
-        // Iterate over predecessors of basic block
-        for (BasicBlock *Pred : predecessors(BB)) {
-          if (exitSets.find(Pred) != exitSets.end()) {
-            // Get exit set for predecessor and add to entry set
-            unordered_set<Value *> exitSet = exitSets.at(Pred); 
-            entrySet.insert(exitSet.begin(), exitSet.end());
-          }
-        }
+      findSource(F);
 
-        // Iterate over instructions within basic block
-        for (Instruction &I : *BB) checkUseBeforeDef(&I, &entrySet);
-
-        // Exit set for basic block set to entry set
-        exitSets.insert(make_pair(BB, entrySet));
+      while (worklist.size() > 0) {
+        set<Instruction *>::iterator curr = worklist.begin();
+        checkTainted(*curr);
+        worklist.erase(curr);
       }
 
-      // Export data from Set to Vector
-      vector<int> temp;
-      for (auto line : bugs) temp.push_back(line);
-
-      // Sort vector
-      std::sort(temp.begin(), temp.end());
-
-      // Print the source code line number(s).
-      for (auto line : temp) output << "Line " << line << ": " << "\n";
+      for (auto &taint : tainted) {
+        output << "Line " << taint.second << ": " << taint.first << "\n";
+      }
 
       // Print output
       errs() << output.str();
