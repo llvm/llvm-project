@@ -285,7 +285,14 @@ private:
         0}},
   };
 
+  /// Expanded value of EOF, empty before initialization.
   mutable std::optional<int> EofVal;
+  /// Expanded value of SEEK_SET, 0 if not found.
+  mutable int SeekSetVal = 0;
+  /// Expanded value of SEEK_CUR, 1 if not found.
+  mutable int SeekCurVal = 1;
+  /// Expanded value of SEEK_END, 2 if not found.
+  mutable int SeekEndVal = 2;
 
   void evalFopen(const FnDescription *Desc, const CallEvent &Call,
                  CheckerContext &C) const;
@@ -432,7 +439,7 @@ private:
     });
   }
 
-  void initEof(CheckerContext &C) const {
+  void initMacroValues(CheckerContext &C) const {
     if (EofVal)
       return;
 
@@ -441,6 +448,15 @@ private:
       EofVal = *OptInt;
     else
       EofVal = -1;
+    if (const std::optional<int> OptInt =
+            tryExpandAsInteger("SEEK_SET", C.getPreprocessor()))
+      SeekSetVal = *OptInt;
+    if (const std::optional<int> OptInt =
+            tryExpandAsInteger("SEEK_END", C.getPreprocessor()))
+      SeekEndVal = *OptInt;
+    if (const std::optional<int> OptInt =
+            tryExpandAsInteger("SEEK_CUR", C.getPreprocessor()))
+      SeekCurVal = *OptInt;
   }
 
   /// Searches for the ExplodedNode where the file descriptor was acquired for
@@ -488,7 +504,7 @@ const ExplodedNode *StreamChecker::getAcquisitionSite(const ExplodedNode *N,
 
 void StreamChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
-  initEof(C);
+  initMacroValues(C);
 
   const FnDescription *Desc = lookupFn(Call);
   if (!Desc || !Desc->PreFn)
@@ -786,6 +802,11 @@ void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
   if (!State->get<StreamMap>(StreamSym))
     return;
 
+  const llvm::APSInt *PosV =
+      C.getSValBuilder().getKnownValue(State, Call.getArgSVal(1));
+  const llvm::APSInt *WhenceV =
+      C.getSValBuilder().getKnownValue(State, Call.getArgSVal(2));
+
   DefinedSVal RetVal = makeRetVal(C, CE);
 
   // Make expression result.
@@ -804,9 +825,12 @@ void StreamChecker::evalFseek(const FnDescription *Desc, const CallEvent &Call,
   // It is possible that fseek fails but sets none of the error flags.
   // If fseek failed, assume that the file position becomes indeterminate in any
   // case.
+  StreamErrorState NewErrS = ErrorNone | ErrorFError;
+  // Setting the position to start of file never produces EOF error.
+  if (!(PosV && *PosV == 0 && WhenceV && *WhenceV == SeekSetVal))
+    NewErrS = NewErrS | ErrorFEof;
   StateFailed = StateFailed->set<StreamMap>(
-      StreamSym,
-      StreamState::getOpened(Desc, ErrorNone | ErrorFEof | ErrorFError, true));
+      StreamSym, StreamState::getOpened(Desc, NewErrS, true));
 
   C.addTransition(StateNotFailed);
   C.addTransition(StateFailed, constructSetEofNoteTag(C, StreamSym));
@@ -1153,7 +1177,7 @@ StreamChecker::ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
     return State;
 
   int64_t X = CI->getValue().getSExtValue();
-  if (X >= 0 && X <= 2)
+  if (X == SeekSetVal || X == SeekCurVal || X == SeekEndVal)
     return State;
 
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {

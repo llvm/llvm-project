@@ -553,6 +553,14 @@ Bug Fixes in This Version
   (`#48512 <https://github.com/llvm/llvm-project/issues/48512>`_).
 - Fixed a failing assertion when parsing incomplete destructor.
   (`#63503 <https://github.com/llvm/llvm-project/issues/63503>`_)
+- Fix C++17 mode assert when parsing malformed code and the compiler is
+  attempting to see if it could be type template for class template argument
+  deduction. This fixes
+  (`Issue 57495 <https://github.com/llvm/llvm-project/issues/57495>`_)
+- Fix missing destructor calls and therefore memory leaks in generated code
+  when an immediate invocation appears as a part of an expression that produces
+  temporaries.
+  (`#60709 <https://github.com/llvm/llvm-project/issues/60709>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

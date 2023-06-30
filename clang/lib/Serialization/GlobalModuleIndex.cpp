@@ -25,12 +25,12 @@
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 using namespace clang;
 using namespace serialization;
@@ -907,8 +907,10 @@ GlobalModuleIndex::writeIndex(FileManager &FileMgr,
                                      "failed writing index");
   }
 
-  return llvm::writeFileAtomically((IndexPath + "-%%%%%%%%").str(), IndexPath,
-                                   OutputBuffer);
+  return llvm::writeToOutput(IndexPath, [&OutputBuffer](llvm::raw_ostream &OS) {
+    OS << OutputBuffer;
+    return llvm::Error::success();
+  });
 }
 
 namespace {

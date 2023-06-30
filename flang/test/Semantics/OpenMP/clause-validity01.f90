@@ -6,7 +6,10 @@ use omp_lib
 !    2.7.1 Loop construct
 !    ...
 
+  use iso_c_binding
   integer :: b = 128
+  integer, allocatable :: allc
+  type(C_PTR) :: cpt
   integer :: z, c = 32
   integer, parameter :: num = 16
   real(8) :: arrayA(256), arrayB(512)
@@ -367,7 +370,7 @@ use omp_lib
   enddo
 
   !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
-  !$omp simd aligned(b:-2)
+  !$omp simd aligned(cpt:-2)
   do i = 1, N
      a = 3.14
   enddo
@@ -550,11 +553,12 @@ use omp_lib
      a = 3.14
   enddo
 
+  allocate(allc)
   !ERROR: The parameter of the SIMDLEN clause must be a constant positive integer expression
   !ERROR: The parameter of the ALIGNED clause must be a constant positive integer expression
-  !$omp taskloop simd simdlen(-1) aligned(a:-2)
+  !$omp taskloop simd simdlen(-1) aligned(allc:-2)
   do i = 1, N
-     a = 3.14
+     allc = 3.14
   enddo
 
   !$omp target enter data map(alloc:A) device(0) 
