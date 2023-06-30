@@ -34,10 +34,10 @@ void foo(long double f, long double *l, int *i, const char *c) {
   // PPCF128: call fp128 @llvm.fabs.f128(fp128 %{{.+}})
   __builtin_fabsl(f);
 
-  // F80: call x86_fp80 @frexpl(x86_fp80 noundef %{{.+}}, ptr noundef %{{.+}})
-  // PPC: call ppc_fp128 @frexpl(ppc_fp128 noundef %{{.+}}, ptr noundef %{{.+}})
-  // X86F128: call fp128 @frexpl(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
-  // PPCF128: call fp128 @frexpf128(fp128 noundef %{{.+}}, ptr noundef %{{.+}})
+  // F80: call { x86_fp80, i32 } @llvm.frexp.f80.i32(x86_fp80 %{{.+}})
+  // PPC: call { ppc_fp128, i32 } @llvm.frexp.ppcf128.i32(ppc_fp128 %{{.+}})
+  // X86F128: call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
+  // PPCF128: call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %{{.+}})
   __builtin_frexpl(f,i);
 
   // F80: store x86_fp80 0xK7FFF8000000000000000, ptr
