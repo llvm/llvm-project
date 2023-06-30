@@ -394,3 +394,16 @@ llvm.func private @mbarrier_arrive_nocomplete_shared(%barrier: !llvm.ptr<3>) {
   %0 = nvvm.mbarrier.arrive.nocomplete.shared %barrier, %count : !llvm.ptr<3>, i32  -> i64
   llvm.return
 }
+
+llvm.func private @mbarrier_test_wait(%barrier: !llvm.ptr, %token : i64) -> i1 {  
+  // CHECK:   nvvm.mbarrier.test.wait %{{.*}}
+  %isComplete = nvvm.mbarrier.test.wait %barrier, %token : !llvm.ptr, i64 -> i1
+  llvm.return %isComplete : i1
+}
+
+llvm.func private @mbarrier_test_wait_shared(%barrier: !llvm.ptr<3>, %token : i64) {
+  %count = nvvm.read.ptx.sreg.ntid.x : i32
+  // CHECK:   nvvm.mbarrier.test.wait.shared %{{.*}}
+  %isComplete = nvvm.mbarrier.test.wait.shared %barrier, %token : !llvm.ptr<3>, i64 -> i1
+  llvm.return
+}
