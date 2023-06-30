@@ -71,6 +71,12 @@ private:
   /// Registers that have been sign extended from i32.
   SmallVector<Register, 8> SExt32Registers;
 
+  /// Size of stack frame for Zcmp PUSH/POP
+  unsigned RVPushStackSize = 0;
+  unsigned RVPushRegs = 0;
+  int RVPushRlist = llvm::RISCVZC::RLISTENCODE::INVALID_RLIST;
+  bool RVPushable = false;
+
 public:
   RISCVMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
 
@@ -121,6 +127,21 @@ public:
 
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
+
+  uint64_t isPushable(const MachineFunction &MF) const {
+    return (!useSaveRestoreLibCalls(MF) &&
+            MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
+            !MF.getTarget().Options.DisableFramePointerElim(MF));
+  }
+
+  int getRVPushRlist() const { return RVPushRlist; }
+  void setRVPushRlist(int Rlist) { RVPushRlist = Rlist; }
+
+  unsigned getRVPushRegs() const { return RVPushRegs; }
+  void setRVPushRegs(unsigned Regs) { RVPushRegs = Regs; }
+
+  unsigned getRVPushStackSize() const { return RVPushStackSize; }
+  void setRVPushStackSize(unsigned Size) { RVPushStackSize = Size; }
 
   void initializeBaseYamlFields(const yaml::RISCVMachineFunctionInfo &YamlMFI);
 
