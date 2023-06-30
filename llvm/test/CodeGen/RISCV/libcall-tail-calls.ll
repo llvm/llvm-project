@@ -120,10 +120,10 @@ define half @sin_f16(half %a) nounwind {
 ; RV32IFD-ILP32D:       # %bb.0:
 ; RV32IFD-ILP32D-NEXT:    addi sp, sp, -16
 ; RV32IFD-ILP32D-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-ILP32D-NEXT:    fmv.x.w a0, fa0
 ; RV32IFD-ILP32D-NEXT:    call __extendhfsf2@plt
 ; RV32IFD-ILP32D-NEXT:    call sinf@plt
 ; RV32IFD-ILP32D-NEXT:    call __truncsfhf2@plt
+; RV32IFD-ILP32D-NEXT:    fmv.x.w a0, fa0
 ; RV32IFD-ILP32D-NEXT:    lui a1, 1048560
 ; RV32IFD-ILP32D-NEXT:    or a0, a0, a1
 ; RV32IFD-ILP32D-NEXT:    fmv.w.x fa0, a0
@@ -135,10 +135,10 @@ define half @sin_f16(half %a) nounwind {
 ; RV32IF-ILP32F:       # %bb.0:
 ; RV32IF-ILP32F-NEXT:    addi sp, sp, -16
 ; RV32IF-ILP32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-ILP32F-NEXT:    fmv.x.w a0, fa0
 ; RV32IF-ILP32F-NEXT:    call __extendhfsf2@plt
 ; RV32IF-ILP32F-NEXT:    call sinf@plt
 ; RV32IF-ILP32F-NEXT:    call __truncsfhf2@plt
+; RV32IF-ILP32F-NEXT:    fmv.x.w a0, fa0
 ; RV32IF-ILP32F-NEXT:    lui a1, 1048560
 ; RV32IF-ILP32F-NEXT:    or a0, a0, a1
 ; RV32IF-ILP32F-NEXT:    fmv.w.x fa0, a0
@@ -177,9 +177,11 @@ define half @sin_f16(half %a) nounwind {
 ; RV64IFD-LP64D-NEXT:    addi sp, sp, -16
 ; RV64IFD-LP64D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IFD-LP64D-NEXT:    fmv.x.w a0, fa0
+; RV64IFD-LP64D-NEXT:    fmv.w.x fa0, a0
 ; RV64IFD-LP64D-NEXT:    call __extendhfsf2@plt
 ; RV64IFD-LP64D-NEXT:    call sinf@plt
 ; RV64IFD-LP64D-NEXT:    call __truncsfhf2@plt
+; RV64IFD-LP64D-NEXT:    fmv.x.w a0, fa0
 ; RV64IFD-LP64D-NEXT:    lui a1, 1048560
 ; RV64IFD-LP64D-NEXT:    or a0, a0, a1
 ; RV64IFD-LP64D-NEXT:    fmv.w.x fa0, a0
@@ -192,9 +194,11 @@ define half @sin_f16(half %a) nounwind {
 ; RV64IF-LP64F-NEXT:    addi sp, sp, -16
 ; RV64IF-LP64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64IF-LP64F-NEXT:    fmv.x.w a0, fa0
+; RV64IF-LP64F-NEXT:    fmv.w.x fa0, a0
 ; RV64IF-LP64F-NEXT:    call __extendhfsf2@plt
 ; RV64IF-LP64F-NEXT:    call sinf@plt
 ; RV64IF-LP64F-NEXT:    call __truncsfhf2@plt
+; RV64IF-LP64F-NEXT:    fmv.x.w a0, fa0
 ; RV64IF-LP64F-NEXT:    lui a1, 1048560
 ; RV64IF-LP64F-NEXT:    or a0, a0, a1
 ; RV64IF-LP64F-NEXT:    fmv.w.x fa0, a0

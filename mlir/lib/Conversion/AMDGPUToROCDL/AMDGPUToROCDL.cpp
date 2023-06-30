@@ -29,7 +29,7 @@ using namespace mlir::amdgpu;
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int32_t value) {
   Type llvmI32 = rewriter.getI32Type();
-  return rewriter.createOrFold<LLVM::ConstantOp>(loc, llvmI32, value);
+  return rewriter.create<LLVM::ConstantOp>(loc, llvmI32, value);
 }
 
 namespace {
@@ -317,14 +317,14 @@ static Value mfmaConcatIfNeeded(ConversionPatternRewriter &rewriter,
       return input;
     int64_t numBytes = vectorType.getNumElements();
     Type destType = rewriter.getIntegerType(numBytes * 8);
-    Value result = rewriter.createOrFold<LLVM::ConstantOp>(
+    Value result = rewriter.create<LLVM::ConstantOp>(
         loc, destType, rewriter.getIntegerAttr(destType, 0));
     for (int64_t i = 0; i < numBytes; ++i) {
       Value idxConst = createI32Constant(rewriter, loc, i);
       Value element =
           rewriter.create<LLVM::ExtractElementOp>(loc, input, idxConst);
       Value extended = rewriter.create<LLVM::ZExtOp>(loc, destType, element);
-      Value shiftConst = rewriter.createOrFold<LLVM::ConstantOp>(
+      Value shiftConst = rewriter.create<LLVM::ConstantOp>(
           loc, destType, rewriter.getIntegerAttr(destType, i * 8));
       Value shifted = rewriter.create<LLVM::ShlOp>(loc, extended, shiftConst);
       result = rewriter.create<LLVM::OrOp>(loc, result, shifted);

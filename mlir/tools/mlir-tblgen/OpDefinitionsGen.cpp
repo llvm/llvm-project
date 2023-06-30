@@ -1123,11 +1123,11 @@ void OpEmitter::genPropertiesSupport() {
   // Convert the property to the attribute form.
 
   setPropMethod << R"decl(
-  ::mlir::DictionaryAttr dict = dyn_cast<::mlir::DictionaryAttr>(attr);
+  ::mlir::DictionaryAttr dict = ::llvm::dyn_cast<::mlir::DictionaryAttr>(attr);
   if (!dict) {
     if (diag)
       *diag << "expected DictionaryAttr to set properties";
-    return failure();
+    return ::mlir::failure();
   }
     )decl";
   // TODO: properties might be optional as well.
@@ -1142,9 +1142,10 @@ void OpEmitter::genPropertiesSupport() {
         if (diag)
           *diag << "expected key entry for {1} in DictionaryAttr to set "
                    "Properties.";
-        return failure();
+        return ::mlir::failure();
       }
-      if (failed(setFromAttr(prop.{1}, attr, diag))) return ::mlir::failure();
+      if (::mlir::failed(setFromAttr(prop.{1}, attr, diag)))
+        return ::mlir::failure();
     }
 )decl";
   for (const auto &attrOrProp : attrOrProperties) {
@@ -1171,15 +1172,15 @@ void OpEmitter::genPropertiesSupport() {
         if (diag)
           *diag << "expected key entry for {0} in DictionaryAttr to set "
                    "Properties.";
-        return failure();
+        return ::mlir::failure();
       }
-      auto convertedAttr = dyn_cast<std::remove_reference_t<decltype(propStorage)>>(attr);
+      auto convertedAttr = ::llvm::dyn_cast<std::remove_reference_t<decltype(propStorage)>>(attr);
       if (convertedAttr) {{
         propStorage = convertedAttr;
       } else {{
         if (diag)
           *diag << "Invalid attribute `{0}` in property conversion: " << attr;
-        return failure();
+        return ::mlir::failure();
       }
     }
   }
@@ -1340,7 +1341,7 @@ void OpEmitter::genPropertiesSupport() {
       {1};
       return ::mlir::success();
     };
-    if (failed(readProp()))
+    if (::mlir::failed(readProp()))
       return ::mlir::failure();
   }
 )",
@@ -1360,16 +1361,16 @@ void OpEmitter::genPropertiesSupport() {
     StringRef name = namedAttr->attrName;
     if (namedAttr->isRequired) {
       readPropertiesMethod << formatv(R"(
-  if (failed(reader.readAttribute(prop.{0})))
-    return failure();
+  if (::mlir::failed(reader.readAttribute(prop.{0})))
+    return ::mlir::failure();
 )",
                                       name);
       writePropertiesMethod
           << formatv("  writer.writeAttribute(prop.{0});\n", name);
     } else {
       readPropertiesMethod << formatv(R"(
-  if (failed(reader.readOptionalAttribute(prop.{0})))
-    return failure();
+  if (::mlir::failed(reader.readOptionalAttribute(prop.{0})))
+    return ::mlir::failure();
 )",
                                       name);
       writePropertiesMethod << formatv(R"(
@@ -1378,7 +1379,7 @@ void OpEmitter::genPropertiesSupport() {
                                        name);
     }
   }
-  readPropertiesMethod << "  return success();";
+  readPropertiesMethod << "  return ::mlir::success();";
 }
 
 void OpEmitter::genAttrGetters() {

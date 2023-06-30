@@ -1392,33 +1392,6 @@ mlir::affine::makeComposedFoldedAffineMax(OpBuilder &b, Location loc,
   return makeComposedFoldedMinMax<AffineMaxOp>(b, loc, map, operands);
 }
 
-/// Fully compose map with operands and canonicalize the result.
-/// Return the `createOrFold`'ed AffineApply op.
-static Value createFoldedComposedAffineApply(OpBuilder &b, Location loc,
-                                             AffineMap map,
-                                             ValueRange operandsRef) {
-  SmallVector<Value, 4> operands(operandsRef.begin(), operandsRef.end());
-  fullyComposeAffineMapAndOperands(&map, &operands);
-  canonicalizeMapAndOperands(&map, &operands);
-  return b.createOrFold<AffineApplyOp>(loc, map, operands);
-}
-
-SmallVector<Value, 4> mlir::affine::applyMapToValues(OpBuilder &b, Location loc,
-                                                     AffineMap map,
-                                                     ValueRange values) {
-  SmallVector<Value, 4> res;
-  res.reserve(map.getNumResults());
-  unsigned numDims = map.getNumDims(), numSym = map.getNumSymbols();
-  // For each `expr` in `map`, applies the `expr` to the values extracted from
-  // ranges. If the resulting application can be folded into a Value, the
-  // folding occurs eagerly.
-  for (auto expr : map.getResults()) {
-    AffineMap map = AffineMap::get(numDims, numSym, expr);
-    res.push_back(createFoldedComposedAffineApply(b, loc, map, values));
-  }
-  return res;
-}
-
 // A symbol may appear as a dim in affine.apply operations. This function
 // canonicalizes dims that are valid symbols into actual symbols.
 template <class MapOrSet>
