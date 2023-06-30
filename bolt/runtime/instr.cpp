@@ -134,11 +134,16 @@ public:
     Lock L(M);
 
     if (StackBase == nullptr) {
+#if defined(__APPLE__)
+    int MAP_PRIVATE_MAP_ANONYMOUS = 0x1002;
+#else
+    int MAP_PRIVATE_MAP_ANONYMOUS = 0x22;
+#endif
       StackBase = reinterpret_cast<uint8_t *>(
-          __mmap(0, MaxSize, PROT_READ | PROT_WRITE,
-                 (Shared ? MAP_SHARED : MAP_PRIVATE) | MAP_ANONYMOUS, -1, 0));
-      assert(StackBase != MAP_FAILED,
-             "BumpPtrAllocator: failed to mmap stack!");
+          __mmap(0, MaxSize, 0x3 /* PROT_READ | PROT_WRITE*/,
+                 Shared ? 0x21 /*MAP_SHARED | MAP_ANONYMOUS*/
+                        : MAP_PRIVATE_MAP_ANONYMOUS /* MAP_PRIVATE | MAP_ANONYMOUS*/,
+                 -1, 0));
       StackSize = 0;
     }
 
@@ -210,12 +215,7 @@ private:
 
 /// Used for allocating indirect call instrumentation counters. Initialized by
 /// __bolt_instr_setup, our initialization routine.
-BumpPtrAllocator *GlobalAlloc;
-
-// Storage for GlobalAlloc which can be shared if not using
-// instrumentation-file-append-pid.
-void *GlobalMetadataStorage;
-
+BumpPtrAllocator GlobalAlloc;
 } // anonymous namespace
 
 // User-defined placement new operators. We only use those (as opposed to
@@ -235,10 +235,6 @@ void *operator new[](size_t Sz, BumpPtrAllocator &A, char C) {
   memset(Ptr, C, Sz);
   return Ptr;
 }
-
-// Declaration for global allocator to construct it in shared memory if needed.
-// Needed because we can't #include <new>
-void *operator new(size_t, void *) noexcept;
 // Only called during exception unwinding (useless). We must manually dealloc.
 // C++ language weirdness
 void operator delete(void *Ptr, BumpPtrAllocator &A) { A.deallocate(Ptr); }
@@ -304,17 +300,7 @@ public:
   /// Increment by 1 the value of \p Key. If it is not in this table, it will be
   /// added to the table and its value set to 1.
   void incrementVal(uint64_t Key, BumpPtrAllocator &Alloc) {
-    if (!__bolt_instr_conservative) {
-      TryLock L(M);
-      if (!L.isLocked())
-        return;
-      auto &E = getOrAllocEntry(Key, Alloc);
-      ++E.Val;
-      return;
-    }
-    Lock L(M);
-    auto &E = getOrAllocEntry(Key, Alloc);
-    ++E.Val;
+    ++get(Key, Alloc).Val;
   }
 
   /// Basic member accessing interface. Here we pass the allocator explicitly to
@@ -358,10 +344,10 @@ private:
       if (Entry.Key == VacantMarker)
         continue;
       if (Entry.Key & FollowUpTableMarker) {
-        MapEntry *Next =
-            reinterpret_cast<MapEntry *>(Entry.Key & ~FollowUpTableMarker);
-        assert(Next != Entries, "Circular reference!");
-        forEachElement(Callback, IncSize, Next, args...);
+        forEachElement(Callback, IncSize,
+                       reinterpret_cast<MapEntry *>(Entry.Key &
+                                                    ~FollowUpTableMarker),
+                       args...);
         continue;
       }
       Callback(Entry, args...);
@@ -426,11 +412,8 @@ private:
   }
 
   MapEntry &getOrAllocEntry(uint64_t Key, BumpPtrAllocator &Alloc) {
-    if (TableRoot) {
-      MapEntry &E = getEntry(TableRoot, Key, Key, Alloc, 0);
-      assert(!(E.Key & FollowUpTableMarker), "Invalid entry!");
-      return E;
-    }
+    if (TableRoot)
+      return getEntry(TableRoot, Key, Key, Alloc, 0);
     return firstAllocation(Key, Alloc);
   }
 };
@@ -731,8 +714,7 @@ ProfileWriterContext readDescriptions() {
   // mmap our binary to memory
   uint64_t Size = __lseek(FD, 0, 2 /*SEEK_END*/);
   uint8_t *BinContents = reinterpret_cast<uint8_t *>(
-      __mmap(0, Size, PROT_READ, MAP_PRIVATE, FD, 0));
-  assert(BinContents != MAP_FAILED, "readDescriptions: Failed to mmap self!");
+      __mmap(0, Size, 0x1 /* PROT_READ*/, 0x2 /* MAP_PRIVATE*/, FD, 0));
   Result.MMapPtr = BinContents;
   Result.MMapSize = Size;
   Elf64_Ehdr *Hdr = reinterpret_cast<Elf64_Ehdr *>(BinContents);
@@ -1608,9 +1590,6 @@ extern "C" void __bolt_instr_indirect_tailcall();
 
 /// Initialization code
 extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
-  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
-  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
-
   const uint64_t CountersStart =
       reinterpret_cast<uint64_t>(&__bolt_instr_locations[0]);
   const uint64_t CountersEnd = alignTo(
@@ -1618,29 +1597,22 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
       0x1000);
   DEBUG(reportNumber("replace mmap start: ", CountersStart, 16));
   DEBUG(reportNumber("replace mmap stop: ", CountersEnd, 16));
-  assert(CountersEnd > CountersStart, "no counters");
+  assert (CountersEnd > CountersStart, "no counters");
+  // Maps our counters to be shared instead of private, so we keep counting for
+  // forked processes
+  __mmap(CountersStart, CountersEnd - CountersStart,
+         0x3 /*PROT_READ|PROT_WRITE*/,
+         0x31 /*MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED*/, -1, 0);
 
-  const bool Shared = !__bolt_instr_use_pid;
-  const uint64_t MapPrivateOrShared = Shared ? MAP_SHARED : MAP_PRIVATE;
-
-  void *Ret =
-      __mmap(CountersStart, CountersEnd - CountersStart, PROT_READ | PROT_WRITE,
-             MAP_ANONYMOUS | MapPrivateOrShared | MAP_FIXED, -1, 0);
-  assert(Ret != MAP_FAILED, "__bolt_instr_setup: Failed to mmap counters!");
-
-  GlobalMetadataStorage = __mmap(0, 4096, PROT_READ | PROT_WRITE,
-                                 MapPrivateOrShared | MAP_ANONYMOUS, -1, 0);
-  assert(GlobalMetadataStorage != MAP_FAILED,
-         "__bolt_instr_setup: failed to mmap page for metadata!");
-
-  GlobalAlloc = new (GlobalMetadataStorage) BumpPtrAllocator;
-  // Conservatively reserve 100MiB
-  GlobalAlloc->setMaxSize(0x6400000);
-  GlobalAlloc->setShared(Shared);
-  GlobalWriteProfileMutex = new (*GlobalAlloc, 0) Mutex();
+  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
+  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
+  // Conservatively reserve 100MiB shared pages
+  GlobalAlloc.setMaxSize(0x6400000);
+  GlobalAlloc.setShared(true);
+  GlobalWriteProfileMutex = new (GlobalAlloc, 0) Mutex();
   if (__bolt_instr_num_ind_calls > 0)
     GlobalIndCallCounters =
-        new (*GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
+        new (GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
 
   if (__bolt_instr_sleep_time != 0) {
     // Separate instrumented process to the own process group
@@ -1655,7 +1627,7 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
 
 extern "C" __attribute((force_align_arg_pointer)) void
 instrumentIndirectCall(uint64_t Target, uint64_t IndCallID) {
-  GlobalIndCallCounters[IndCallID].incrementVal(Target, *GlobalAlloc);
+  GlobalIndCallCounters[IndCallID].incrementVal(Target, GlobalAlloc);
 }
 
 /// We receive as in-stack arguments the identifier of the indirect call site
