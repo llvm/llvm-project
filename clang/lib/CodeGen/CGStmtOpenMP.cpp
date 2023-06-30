@@ -5839,37 +5839,46 @@ static llvm::Function *emitOutlinedOrderedFunction(CodeGenModule &CGM,
   return Fn;
 }
 
+template <typename T>
+static void emitRestoreIP(CodeGenFunction &CGF, const T *C,
+                          llvm::OpenMPIRBuilder::InsertPointTy AllocaIP,
+                          llvm::OpenMPIRBuilder &OMPBuilder) {
+
+  unsigned NumLoops = C->getNumLoops();
+  QualType Int64Ty = CGF.CGM.getContext().getIntTypeForBitwidth(
+      /*DestWidth=*/64, /*Signed=*/1);
+  llvm::SmallVector<llvm::Value *> StoreValues;
+  for (unsigned I = 0; I < NumLoops; I++) {
+    const Expr *CounterVal = C->getLoopData(I);
+    assert(CounterVal);
+    llvm::Value *StoreValue = CGF.EmitScalarConversion(
+        CGF.EmitScalarExpr(CounterVal), CounterVal->getType(), Int64Ty,
+        CounterVal->getExprLoc());
+    StoreValues.emplace_back(StoreValue);
+  }
+  OMPDoacrossKind<T> ODK;
+  bool IsDependSource = ODK.isSource(C);
+  CGF.Builder.restoreIP(
+      OMPBuilder.createOrderedDepend(CGF.Builder, AllocaIP, NumLoops,
+                                     StoreValues, ".cnt.addr", IsDependSource));
+}
+
 void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
   if (CGM.getLangOpts().OpenMPIRBuilder) {
     llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
     using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
 
-    if (S.hasClausesOfKind<OMPDependClause>()) {
+    if (S.hasClausesOfKind<OMPDependClause>() ||
+        S.hasClausesOfKind<OMPDoacrossClause>()) {
       // The ordered directive with depend clause.
-      assert(!S.hasAssociatedStmt() &&
-             "No associated statement must be in ordered depend construct.");
+      assert(!S.hasAssociatedStmt() && "No associated statement must be in "
+                                       "ordered depend|doacross construct.");
       InsertPointTy AllocaIP(AllocaInsertPt->getParent(),
                              AllocaInsertPt->getIterator());
-      for (const auto *DC : S.getClausesOfKind<OMPDependClause>()) {
-        unsigned NumLoops = DC->getNumLoops();
-        QualType Int64Ty = CGM.getContext().getIntTypeForBitwidth(
-            /*DestWidth=*/64, /*Signed=*/1);
-        llvm::SmallVector<llvm::Value *> StoreValues;
-        for (unsigned I = 0; I < NumLoops; I++) {
-          const Expr *CounterVal = DC->getLoopData(I);
-          assert(CounterVal);
-          llvm::Value *StoreValue = EmitScalarConversion(
-              EmitScalarExpr(CounterVal), CounterVal->getType(), Int64Ty,
-              CounterVal->getExprLoc());
-          StoreValues.emplace_back(StoreValue);
-        }
-        bool IsDependSource = false;
-        if (DC->getDependencyKind() == OMPC_DEPEND_source)
-          IsDependSource = true;
-        Builder.restoreIP(OMPBuilder.createOrderedDepend(
-            Builder, AllocaIP, NumLoops, StoreValues, ".cnt.addr",
-            IsDependSource));
-      }
+      for (const auto *DC : S.getClausesOfKind<OMPDependClause>())
+        emitRestoreIP(*this, DC, AllocaIP, OMPBuilder);
+      for (const auto *DC : S.getClausesOfKind<OMPDoacrossClause>())
+        emitRestoreIP(*this, DC, AllocaIP, OMPBuilder);
     } else {
       // The ordered directive with threads or simd clause, or without clause.
       // Without clause, it behaves as if the threads clause is specified.
@@ -5913,6 +5922,13 @@ void CodeGenFunction::EmitOMPOrderedDirective(const OMPOrderedDirective &S) {
     assert(!S.hasAssociatedStmt() &&
            "No associated statement must be in ordered depend construct.");
     for (const auto *DC : S.getClausesOfKind<OMPDependClause>())
+      CGM.getOpenMPRuntime().emitDoacrossOrdered(*this, DC);
+    return;
+  }
+  if (S.hasClausesOfKind<OMPDoacrossClause>()) {
+    assert(!S.hasAssociatedStmt() &&
+           "No associated statement must be in ordered doacross construct.");
+    for (const auto *DC : S.getClausesOfKind<OMPDoacrossClause>())
       CGM.getOpenMPRuntime().emitDoacrossOrdered(*this, DC);
     return;
   }
