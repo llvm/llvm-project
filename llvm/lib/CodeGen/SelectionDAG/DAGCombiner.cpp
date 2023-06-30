@@ -23720,10 +23720,6 @@ static SDValue foldExtractSubvectorFromShuffleVector(SDNode *N,
       continue;
     }
 
-    // Profitability check: only deal with extractions from the first subvector.
-    if (OpSubvecIdx != 0)
-      return SDValue();
-
     const std::pair<SDValue, int> DemandedSubvector =
         std::make_pair(Op, OpSubvecIdx);
 
@@ -23752,6 +23748,14 @@ static SDValue foldExtractSubvectorFromShuffleVector(SDNode *N,
   // Did we discover that the shuffle does not actually depend on operands?
   if (DemandedSubvectors.empty())
     return DAG.getUNDEF(NarrowVT);
+
+  // Profitability check: only deal with extractions from the first subvector
+  // unless the mask becomes an identity mask.
+  if (!ShuffleVectorInst::isIdentityMask(NewMask) ||
+      any_of(NewMask, [](int M) { return M < 0; }))
+    for (auto &DemandedSubvector : DemandedSubvectors)
+      if (DemandedSubvector.second != 0)
+        return SDValue();
 
   // We still perform the exact same EXTRACT_SUBVECTOR,  just on different
   // operand[s]/index[es], so there is no point in checking for it's legality.
