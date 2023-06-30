@@ -13011,6 +13011,13 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::SIGN_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND)
     return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N0.getOperand(0));
 
+  // fold (sext (aext_extend_vector_inreg x)) -> (sext_extend_vector_inreg x)
+  // fold (sext (sext_extend_vector_inreg x)) -> (sext_extend_vector_inreg x)
+  if (N0.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
+      N0.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG)
+    return DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, SDLoc(N), VT,
+                       N0.getOperand(0));
+
   // fold (sext (sext_inreg x)) -> (sext (trunc x))
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     SDValue N00 = N0.getOperand(0);
@@ -13268,6 +13275,13 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // fold (zext (aext x)) -> (zext x)
   if (N0.getOpcode() == ISD::ZERO_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND)
     return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
+
+  // fold (zext (aext_extend_vector_inreg x)) -> (zext_extend_vector_inreg x)
+  // fold (zext (zext_extend_vector_inreg x)) -> (zext_extend_vector_inreg x)
+  if (N0.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
+      N0.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG)
+    return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(N), VT,
+                       N0.getOperand(0));
 
   // fold (zext (truncate x)) -> (zext x) or
   //      (zext (truncate x)) -> (truncate x)
@@ -13533,6 +13547,14 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::ANY_EXTEND  ||
       N0.getOpcode() == ISD::ZERO_EXTEND ||
       N0.getOpcode() == ISD::SIGN_EXTEND)
+    return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, N0.getOperand(0));
+
+  // fold (aext (aext_extend_vector_inreg x)) -> (aext_extend_vector_inreg x)
+  // fold (aext (zext_extend_vector_inreg x)) -> (zext_extend_vector_inreg x)
+  // fold (aext (sext_extend_vector_inreg x)) -> (sext_extend_vector_inreg x)
+  if (N0.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
+      N0.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG ||
+      N0.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG)
     return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, N0.getOperand(0));
 
   // fold (aext (truncate (load x))) -> (aext (smaller load x))
