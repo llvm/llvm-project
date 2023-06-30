@@ -1576,6 +1576,7 @@ module std [system] {
     module conjunction                               { private header "__type_traits/conjunction.h" }
     module copy_cv                                   { private header "__type_traits/copy_cv.h" }
     module copy_cvref                                { private header "__type_traits/copy_cvref.h" }
+    module datasizeof                                { private header "__type_traits/datasizeof.h" }
     module decay                                     { private header "__type_traits/decay.h" }
     module dependent_type                            { private header "__type_traits/dependent_type.h" }
     module disjunction                               { private header "__type_traits/disjunction.h" }
