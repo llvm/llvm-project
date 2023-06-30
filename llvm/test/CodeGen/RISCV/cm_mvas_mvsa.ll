@@ -36,22 +36,14 @@ define i32 @zcmp_mv(i32 %num, i32 %f) nounwind {
 ;
 ; CHECK32ZCMP-LABEL: zcmp_mv:
 ; CHECK32ZCMP:       # %bb.0:
-; CHECK32ZCMP-NEXT:    addi sp, sp, -16
-; CHECK32ZCMP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32ZCMP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK32ZCMP-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
-; CHECK32ZCMP-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; CHECK32ZCMP-NEXT:    cm.push {ra, s0-s2}, -16
 ; CHECK32ZCMP-NEXT:    cm.mvsa01 s1, s0
 ; CHECK32ZCMP-NEXT:    call func@plt
 ; CHECK32ZCMP-NEXT:    mv s2, a0
 ; CHECK32ZCMP-NEXT:    cm.mva01s s1, s0
 ; CHECK32ZCMP-NEXT:    call func@plt
 ; CHECK32ZCMP-NEXT:    add a0, s2, s0
-; CHECK32ZCMP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32ZCMP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK32ZCMP-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; CHECK32ZCMP-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
-; CHECK32ZCMP-NEXT:    addi sp, sp, 16
+; CHECK32ZCMP-NEXT:    cm.pop {ra, s0-s2}, 16
 ; CHECK32ZCMP-NEXT:    ret
 ;
 ; CHECK64I-LABEL: zcmp_mv:
@@ -78,22 +70,14 @@ define i32 @zcmp_mv(i32 %num, i32 %f) nounwind {
 ;
 ; CHECK64ZCMP-LABEL: zcmp_mv:
 ; CHECK64ZCMP:       # %bb.0:
-; CHECK64ZCMP-NEXT:    addi sp, sp, -32
-; CHECK64ZCMP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK64ZCMP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK64ZCMP-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
-; CHECK64ZCMP-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; CHECK64ZCMP-NEXT:    cm.push {ra, s0-s2}, -32
 ; CHECK64ZCMP-NEXT:    cm.mvsa01 s1, s0
 ; CHECK64ZCMP-NEXT:    call func@plt
 ; CHECK64ZCMP-NEXT:    mv s2, a0
 ; CHECK64ZCMP-NEXT:    cm.mva01s s1, s0
 ; CHECK64ZCMP-NEXT:    call func@plt
 ; CHECK64ZCMP-NEXT:    addw a0, s2, s0
-; CHECK64ZCMP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK64ZCMP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK64ZCMP-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK64ZCMP-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; CHECK64ZCMP-NEXT:    addi sp, sp, 32
+; CHECK64ZCMP-NEXT:    cm.pop {ra, s0-s2}, 32
 ; CHECK64ZCMP-NEXT:    ret
   %call = call i32 @func(i32 %num, i32 %f)
   %call1 = call i32 @func(i32 %num, i32 %f)
@@ -126,10 +110,7 @@ define i32 @not_zcmp_mv(i32 %num, i32 %f) nounwind {
 ;
 ; CHECK32ZCMP-LABEL: not_zcmp_mv:
 ; CHECK32ZCMP:       # %bb.0:
-; CHECK32ZCMP-NEXT:    addi sp, sp, -16
-; CHECK32ZCMP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; CHECK32ZCMP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
-; CHECK32ZCMP-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; CHECK32ZCMP-NEXT:    cm.push {ra, s0-s1}, -16
 ; CHECK32ZCMP-NEXT:    mv s0, a1
 ; CHECK32ZCMP-NEXT:    call foo@plt
 ; CHECK32ZCMP-NEXT:    mv s1, a0
@@ -140,10 +121,7 @@ define i32 @not_zcmp_mv(i32 %num, i32 %f) nounwind {
 ; CHECK32ZCMP-NEXT:    li a0, 1
 ; CHECK32ZCMP-NEXT:    mv a1, s0
 ; CHECK32ZCMP-NEXT:    call func@plt
-; CHECK32ZCMP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK32ZCMP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
-; CHECK32ZCMP-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
-; CHECK32ZCMP-NEXT:    addi sp, sp, 16
+; CHECK32ZCMP-NEXT:    cm.pop {ra, s0-s1}, 16
 ; CHECK32ZCMP-NEXT:    ret
 ;
 ; CHECK64I-LABEL: not_zcmp_mv:
@@ -170,10 +148,7 @@ define i32 @not_zcmp_mv(i32 %num, i32 %f) nounwind {
 ;
 ; CHECK64ZCMP-LABEL: not_zcmp_mv:
 ; CHECK64ZCMP:       # %bb.0:
-; CHECK64ZCMP-NEXT:    addi sp, sp, -32
-; CHECK64ZCMP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
-; CHECK64ZCMP-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
-; CHECK64ZCMP-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; CHECK64ZCMP-NEXT:    cm.push {ra, s0-s1}, -32
 ; CHECK64ZCMP-NEXT:    mv s0, a1
 ; CHECK64ZCMP-NEXT:    call foo@plt
 ; CHECK64ZCMP-NEXT:    mv s1, a0
@@ -184,10 +159,7 @@ define i32 @not_zcmp_mv(i32 %num, i32 %f) nounwind {
 ; CHECK64ZCMP-NEXT:    li a0, 1
 ; CHECK64ZCMP-NEXT:    mv a1, s0
 ; CHECK64ZCMP-NEXT:    call func@plt
-; CHECK64ZCMP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
-; CHECK64ZCMP-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
-; CHECK64ZCMP-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
-; CHECK64ZCMP-NEXT:    addi sp, sp, 32
+; CHECK64ZCMP-NEXT:    cm.pop {ra, s0-s1}, 32
 ; CHECK64ZCMP-NEXT:    ret
   %call = call i32 @foo(i32 %num)
   %call1 = call i32 @foo(i32 %f)
