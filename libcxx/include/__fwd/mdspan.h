@@ -30,14 +30,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 23
 
-/*
-// Will be implemented with follow on revision
 // Layout policy with a mapping which corresponds to FORTRAN-style array layouts
 struct layout_left {
-  template<class Extents>
-    class mapping;
+  template <class Extents>
+  class mapping;
 };
-*/
 
 // Layout policy with a mapping which corresponds to C-style array layouts
 struct layout_right {

@@ -81,6 +81,7 @@
 #include "llvm/IR/SafepointIRVerifier.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
+#include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -639,6 +640,17 @@ static bool checkParametrizedPassName(StringRef Name, StringRef PassName) {
   return Name.startswith("<") && Name.endswith(">");
 }
 
+static std::optional<OptimizationLevel> parseOptLevel(StringRef S) {
+  return StringSwitch<std::optional<OptimizationLevel>>(S)
+      .Case("O0", OptimizationLevel::O0)
+      .Case("O1", OptimizationLevel::O1)
+      .Case("O2", OptimizationLevel::O2)
+      .Case("O3", OptimizationLevel::O3)
+      .Case("Os", OptimizationLevel::Os)
+      .Case("Oz", OptimizationLevel::Oz)
+      .Default(std::nullopt);
+}
+
 namespace {
 
 /// This performs customized parsing of pass name with parameters.
@@ -725,14 +737,10 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   while (!Params.empty()) {
     StringRef ParamName;
     std::tie(ParamName, Params) = Params.split(';');
-    int OptLevel = StringSwitch<int>(ParamName)
-                       .Case("O0", 0)
-                       .Case("O1", 1)
-                       .Case("O2", 2)
-                       .Case("O3", 3)
-                       .Default(-1);
-    if (OptLevel >= 0) {
-      UnrollOpts.setOptLevel(OptLevel);
+    std::optional<OptimizationLevel> OptLevel = parseOptLevel(ParamName);
+    // Don't accept -Os/-Oz.
+    if (OptLevel && !OptLevel->isOptimizingForSize()) {
+      UnrollOpts.setOptLevel(OptLevel->getSpeedupLevel());
       continue;
     }
     if (ParamName.consume_front("full-unroll-max=")) {
@@ -1158,6 +1166,18 @@ Expected<bool> parseSeparateConstOffsetFromGEPPassOptions(StringRef Params) {
                                "SeparateConstOffsetFromGEP");
 }
 
+Expected<OptimizationLevel>
+parseFunctionSimplificationPipelineOptions(StringRef Params) {
+  std::optional<OptimizationLevel> L = parseOptLevel(Params);
+  if (!L || *L == OptimizationLevel::O0) {
+    return make_error<StringError>(
+        formatv("invalid function-simplification parameter '{0}' ", Params)
+            .str(),
+        inconvertibleErrorCode());
+  };
+  return *L;
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline
@@ -1454,13 +1474,7 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
 
     assert(Matches.size() == 3 && "Must capture two matched strings!");
 
-    OptimizationLevel L = StringSwitch<OptimizationLevel>(Matches[2])
-                              .Case("O0", OptimizationLevel::O0)
-                              .Case("O1", OptimizationLevel::O1)
-                              .Case("O2", OptimizationLevel::O2)
-                              .Case("O3", OptimizationLevel::O3)
-                              .Case("Os", OptimizationLevel::Os)
-                              .Case("Oz", OptimizationLevel::Oz);
+    OptimizationLevel L = *parseOptLevel(Matches[2]);
 
     // This is consistent with old pass manager invoked via opt, but
     // inconsistent with clang. Clang doesn't enable loop vectorization

@@ -1098,7 +1098,7 @@ public:
         SmallVector<const Value *> Indices(GEP->indices());
         Cost += static_cast<T *>(this)->getGEPCost(GEP->getSourceElementType(),
                                                    GEP->getPointerOperand(),
-                                                   Indices, nullptr, CostKind);
+                                                   Indices, AccessTy, CostKind);
       }
     }
     return Cost;

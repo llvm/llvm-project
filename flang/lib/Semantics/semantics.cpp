@@ -557,9 +557,9 @@ void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   for (const auto &pair : symbols) {
     const Symbol &symbol{pair.second};
     if (auto sourceInfo{allCooked.GetSourcePositionRange(symbol.name())}) {
-      os << symbol.name().ToString() << ": " << sourceInfo->first.file.path()
-         << ", " << sourceInfo->first.line << ", " << sourceInfo->first.column
-         << "-" << sourceInfo->second.column << "\n";
+      os << symbol.name().ToString() << ": " << sourceInfo->first.path << ", "
+         << sourceInfo->first.line << ", " << sourceInfo->first.column << "-"
+         << sourceInfo->second.column << "\n";
     } else if (symbol.has<semantics::UseDetails>()) {
       os << symbol.name().ToString() << ": "
          << symbol.GetUltimate().owner().symbol()->name().ToString() << "\n";

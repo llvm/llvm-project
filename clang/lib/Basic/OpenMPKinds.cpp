@@ -50,6 +50,11 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
       return OMPC_DEPEND_unknown;
     return Type;
   }
+  case OMPC_doacross:
+    return llvm::StringSwitch<OpenMPDoacrossClauseModifier>(Str)
+#define OPENMP_DOACROSS_MODIFIER(Name) .Case(#Name, OMPC_DOACROSS_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_DOACROSS_unknown);
   case OMPC_linear:
     return llvm::StringSwitch<OpenMPLinearClauseKind>(Str)
 #define OPENMP_LINEAR_KIND(Name) .Case(#Name, OMPC_LINEAR_##Name)
@@ -282,6 +287,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'depend' clause type");
+  case OMPC_doacross:
+    switch (Type) {
+    case OMPC_DOACROSS_unknown:
+      return "unknown";
+#define OPENMP_DOACROSS_MODIFIER(Name)                                         \
+  case OMPC_DOACROSS_##Name:                                                   \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'doacross' clause type");
   case OMPC_linear:
     switch (Type) {
     case OMPC_LINEAR_unknown:

@@ -42,7 +42,7 @@ define dso_local i16 @foo(i16 %a) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noundef i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i16 [[CALL]]
 ;
   %call = call i16 bitcast (i16 (i16, i16) * @bar to i16 (i16) *)(i16 %a)

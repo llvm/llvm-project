@@ -209,7 +209,7 @@ TYPE_CONTEXT_PARSER("Omp LINEAR clause"_en_US,
 
 // 2.8.1 ALIGNED (list: alignment)
 TYPE_PARSER(construct<OmpAlignedClause>(
-    nonemptyList(name), maybe(":" >> scalarIntConstantExpr)))
+    Parser<OmpObjectList>{}, maybe(":" >> scalarIntConstantExpr)))
 
 // 2.9.5 ORDER ([order-modifier :]concurrent)
 TYPE_PARSER(construct<OmpOrderModifier>(

@@ -190,8 +190,32 @@ void OmpStructureChecker::CheckMultListItems() {
   for (auto itr = alignedClauses.first; itr != alignedClauses.second; ++itr) {
     const auto &alignedClause{
         std::get<parser::OmpClause::Aligned>(itr->second->u)};
-    const auto &alignedNameList{
-        std::get<std::list<parser::Name>>(alignedClause.v.t)};
+    const auto &alignedList{std::get<0>(alignedClause.v.t)};
+    std::list<parser::Name> alignedNameList;
+    for (const auto &ompObject : alignedList.v) {
+      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+        if (name->symbol) {
+          if (FindCommonBlockContaining(*(name->symbol))) {
+            context_.Say(itr->second->source,
+                "'%s' is a common block name and can not appear in an "
+                "ALIGNED clause"_err_en_US,
+                name->ToString());
+          } else if (!(IsBuiltinCPtr(*(name->symbol)) ||
+                         IsAllocatableOrPointer(
+                             (name->symbol->GetUltimate())))) {
+            context_.Say(itr->second->source,
+                "'%s' in ALIGNED clause must be of type C_PTR, POINTER or "
+                "ALLOCATABLE"_err_en_US,
+                name->ToString());
+          } else {
+            alignedNameList.push_back(*name);
+          }
+        } else {
+          // The symbol is null, return early
+          return;
+        }
+      }
+    }
     checkMultipleOcurrence(alignedNameList, itr->second->source, "ALIGNED");
   }
 
@@ -1937,6 +1961,7 @@ CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
 CHECK_SIMPLE_CLAUSE(Align, OMPC_align)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
 CHECK_SIMPLE_CLAUSE(CancellationConstructType, OMPC_cancellation_construct_type)
+CHECK_SIMPLE_CLAUSE(Doacross, OMPC_doacross)
 
 CHECK_REQ_SCALAR_INT_CLAUSE(Grainsize, OMPC_grainsize)
 CHECK_REQ_SCALAR_INT_CLAUSE(NumTasks, OMPC_num_tasks)
@@ -2814,8 +2839,9 @@ const parser::OmpObjectList *OmpStructureChecker::GetOmpObjectList(
       parser::OmpClause::UseDevicePtr, parser::OmpClause::UseDeviceAddr>;
 
   // Clauses with OmpObjectList in the tuple
-  using TupleObjectListClauses = std::tuple<parser::OmpClause::Allocate,
-      parser::OmpClause::Map, parser::OmpClause::Reduction>;
+  using TupleObjectListClauses =
+      std::tuple<parser::OmpClause::Allocate, parser::OmpClause::Map,
+          parser::OmpClause::Reduction, parser::OmpClause::Aligned>;
 
   // TODO:: Generate the tuples using TableGen.
   // Handle other constructs with OmpObjectList such as OpenMPThreadprivate.

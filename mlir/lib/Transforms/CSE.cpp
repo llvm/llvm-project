@@ -11,13 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/CSE.h"
+#include "mlir/Transforms/Passes.h"
 
 #include "mlir/IR/Dominance.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/ScopedHashTable.h"
@@ -58,18 +56,7 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
 
 namespace {
 /// Simple common sub-expression elimination.
-class CSEDriver {
-public:
-  CSEDriver(RewriterBase &rewriter, DominanceInfo &domInfo)
-      : rewriter(rewriter), domInfo(domInfo) {}
-
-  /// Simplify all operations within the given op.
-  void simplify(Operation *op, bool *changed = nullptr);
-
-  int64_t getNumCSE() const { return numCSE; }
-  int64_t getNumDCE() const { return numDCE; }
-
-private:
+struct CSE : public impl::CSEBase<CSE> {
   /// Shared implementation of operation elimination and scoped map definitions.
   using AllocatorTy = llvm::RecyclingAllocator<
       llvm::BumpPtrAllocator,
@@ -107,6 +94,9 @@ private:
   void simplifyBlock(ScopedMapTy &knownValues, Block *bb, bool hasSSADominance);
   void simplifyRegion(ScopedMapTy &knownValues, Region &region);
 
+  void runOnOperation() override;
+
+private:
   void replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
                             Operation *existing, bool hasSSADominance);
 
@@ -114,54 +104,29 @@ private:
   /// between the two operations.
   bool hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp);
 
-  /// A rewriter for modifying the IR.
-  RewriterBase &rewriter;
-
   /// Operations marked as dead and to be erased.
   std::vector<Operation *> opsToErase;
-  DominanceInfo &domInfo;
+  DominanceInfo *domInfo = nullptr;
   MemEffectsCache memEffectsCache;
-
-  // Various statistics.
-  int64_t numCSE = 0;
-  int64_t numDCE = 0;
 };
 } // namespace
 
-void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
-                                     Operation *existing,
-                                     bool hasSSADominance) {
+void CSE::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
+                               Operation *existing, bool hasSSADominance) {
   // If we find one then replace all uses of the current operation with the
   // existing one and mark it for deletion. We can only replace an operand in
   // an operation if it has not been visited yet.
   if (hasSSADominance) {
     // If the region has SSA dominance, then we are guaranteed to have not
     // visited any use of the current operation.
-    if (auto *rewriteListener =
-            dyn_cast_if_present<RewriterBase::Listener>(rewriter.getListener()))
-      rewriteListener->notifyOperationReplaced(op, existing);
-    // Replace all uses, but do not remote the operation yet. This does not
-    // notify the listener because the original op is not erased.
-    rewriter.replaceAllUsesWith(op->getResults(), existing->getResults());
+    op->replaceAllUsesWith(existing);
     opsToErase.push_back(op);
   } else {
     // When the region does not have SSA dominance, we need to check if we
     // have visited a use before replacing any use.
-    auto wasVisited = [&](OpOperand &operand) {
+    op->replaceUsesWithIf(existing->getResults(), [&](OpOperand &operand) {
       return !knownValues.count(operand.getOwner());
-    };
-    if (auto *rewriteListener = dyn_cast_if_present<RewriterBase::Listener>(
-            rewriter.getListener())) {
-      for (Value v : op->getResults()) {
-        if (all_of(v.getUses(), wasVisited)) {
-          rewriteListener->notifyOperationReplaced(op, existing);
-        }
-      }
-    }
-    // Replace all uses, but do not remote the operation yet. This does not
-    // notify the listener because the original op is not erased.
-    rewriter.replaceUsesWithIf(op->getResults(), existing->getResults(),
-                               wasVisited);
+    });
 
     // There may be some remaining uses of the operation.
     if (op->use_empty())
@@ -177,8 +142,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
   ++numCSE;
 }
 
-bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
-                                                 Operation *toOp) {
+bool CSE::hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp) {
   assert(fromOp->getBlock() == toOp->getBlock());
   assert(
       isa<MemoryEffectOpInterface>(fromOp) &&
@@ -219,9 +183,8 @@ bool CSEDriver::hasOtherSideEffectingOpInBetween(Operation *fromOp,
 }
 
 /// Attempt to eliminate a redundant operation.
-LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
-                                           Operation *op,
-                                           bool hasSSADominance) {
+LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op,
+                                     bool hasSSADominance) {
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
@@ -277,8 +240,8 @@ LogicalResult CSEDriver::simplifyOperation(ScopedMapTy &knownValues,
   return failure();
 }
 
-void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
-                              bool hasSSADominance) {
+void CSE::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
+                        bool hasSSADominance) {
   for (auto &op : *bb) {
     // Most operations don't have regions, so fast path that case.
     if (op.getNumRegions() != 0) {
@@ -304,12 +267,12 @@ void CSEDriver::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
   memEffectsCache.clear();
 }
 
-void CSEDriver::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
+void CSE::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
   // If the region is empty there is nothing to do.
   if (region.empty())
     return;
 
-  bool hasSSADominance = domInfo.hasSSADominance(&region);
+  bool hasSSADominance = domInfo->hasSSADominance(&region);
 
   // If the region only contains one block, then simplify it directly.
   if (region.hasOneBlock()) {
@@ -334,7 +297,7 @@ void CSEDriver::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
 
   // Process the nodes of the dom tree for this region.
   stack.emplace_back(std::make_unique<CFGStackNode>(
-      knownValues, domInfo.getRootNode(&region)));
+      knownValues, domInfo->getRootNode(&region)));
 
   while (!stack.empty()) {
     auto &currentNode = stack.back();
@@ -359,55 +322,29 @@ void CSEDriver::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
   }
 }
 
-void CSEDriver::simplify(Operation *op, bool *changed) {
-  /// Simplify all regions.
+void CSE::runOnOperation() {
+  /// A scoped hash table of defining operations within a region.
   ScopedMapTy knownValues;
-  for (auto &region : op->getRegions())
+
+  domInfo = &getAnalysis<DominanceInfo>();
+  Operation *rootOp = getOperation();
+
+  for (auto &region : rootOp->getRegions())
     simplifyRegion(knownValues, region);
+
+  // If no operations were erased, then we mark all analyses as preserved.
+  if (opsToErase.empty())
+    return markAllAnalysesPreserved();
 
   /// Erase any operations that were marked as dead during simplification.
   for (auto *op : opsToErase)
-    rewriter.eraseOp(op);
-  if (changed)
-    *changed = !opsToErase.empty();
-
-  /// Invalidate dominance info if the IR was changed.
-  if (!opsToErase.empty())
-    domInfo.invalidate();
-}
-
-void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,
-                                         DominanceInfo &domInfo, Operation *op,
-                                         bool *changed) {
-  CSEDriver driver(rewriter, domInfo);
-  driver.simplify(op, changed);
-}
-
-namespace {
-/// CSE pass.
-struct CSE : public impl::CSEBase<CSE> {
-  void runOnOperation() override;
-};
-} // namespace
-
-void CSE::runOnOperation() {
-  // Simplify the IR.
-  IRRewriter rewriter(&getContext());
-  CSEDriver driver(rewriter, getAnalysis<DominanceInfo>());
-  bool changed = false;
-  driver.simplify(getOperation(), &changed);
-
-  // Set statistics.
-  numCSE = driver.getNumCSE();
-  numDCE = driver.getNumDCE();
-
-  // If there was no change to the IR, we mark all analyses as preserved.
-  if (!changed)
-    return markAllAnalysesPreserved();
+    op->erase();
+  opsToErase.clear();
 
   // We currently don't remove region operations, so mark dominance as
   // preserved.
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
+  domInfo = nullptr;
 }
 
 std::unique_ptr<Pass> mlir::createCSEPass() { return std::make_unique<CSE>(); }

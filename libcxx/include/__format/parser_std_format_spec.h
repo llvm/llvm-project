@@ -23,7 +23,6 @@
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__debug>
 #include <__format/format_arg.h>
 #include <__format/format_error.h>
 #include <__format/format_parse_context.h>

@@ -68,13 +68,6 @@ set(LIBCXX_SOURCES
   verbose_abort.cpp
   )
 
-if (LIBCXX_ENABLE_DEBUG_MODE OR LIBCXX_ENABLE_BACKWARDS_COMPATIBILITY_DEBUG_MODE_SYMBOLS)
-  list(APPEND LIBCXX_SOURCES
-    debug.cpp
-    legacy_debug_handler.cpp
-    )
-endif()
-
 if (LIBCXX_ENABLE_RANDOM_DEVICE)
   list(APPEND LIBCXX_SOURCES
     random.cpp

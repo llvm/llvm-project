@@ -1015,29 +1015,18 @@ ChangeStatus
 IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
                                    const ArrayRef<Attribute> &DeducedAttrs,
                                    bool ForceReplace) {
-  Function *ScopeFn = IRP.getAnchorScope();
-  IRPosition::Kind PK = IRP.getPositionKind();
+  switch (IRP.getPositionKind()) {
+  case IRPosition::IRP_FLOAT:
+  case IRPosition::IRP_INVALID:
+    return ChangeStatus::UNCHANGED;
+  default:
+    break;
+  };
 
   // In the following some generic code that will manifest attributes in
   // DeducedAttrs if they improve the current IR. Due to the different
   // annotation positions we use the underlying AttributeList interface.
-
-  AttributeList Attrs;
-  switch (PK) {
-  case IRPosition::IRP_INVALID:
-  case IRPosition::IRP_FLOAT:
-    return ChangeStatus::UNCHANGED;
-  case IRPosition::IRP_ARGUMENT:
-  case IRPosition::IRP_FUNCTION:
-  case IRPosition::IRP_RETURNED:
-    Attrs = ScopeFn->getAttributes();
-    break;
-  case IRPosition::IRP_CALL_SITE:
-  case IRPosition::IRP_CALL_SITE_RETURNED:
-  case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    Attrs = cast<CallBase>(IRP.getAnchorValue()).getAttributes();
-    break;
-  }
+  AttributeList Attrs = IRP.getAttrList();
 
   ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
@@ -1051,22 +1040,7 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
   if (HasChanged == ChangeStatus::UNCHANGED)
     return HasChanged;
 
-  switch (PK) {
-  case IRPosition::IRP_ARGUMENT:
-  case IRPosition::IRP_FUNCTION:
-  case IRPosition::IRP_RETURNED:
-    ScopeFn->setAttributes(Attrs);
-    break;
-  case IRPosition::IRP_CALL_SITE:
-  case IRPosition::IRP_CALL_SITE_RETURNED:
-  case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    cast<CallBase>(IRP.getAnchorValue()).setAttributes(Attrs);
-    break;
-  case IRPosition::IRP_INVALID:
-  case IRPosition::IRP_FLOAT:
-    break;
-  }
-
+  IRP.setAttrList(Attrs);
   return HasChanged;
 }
 
@@ -1183,11 +1157,7 @@ bool IRPosition::getAttrsFromIRAttr(Attribute::AttrKind AK,
   if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
     return false;
 
-  AttributeList AttrList;
-  if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
-    AttrList = CB->getAttributes();
-  else
-    AttrList = getAssociatedFunction()->getAttributes();
+  AttributeList AttrList = getAttrList();
 
   bool HasAttr = AttrList.hasAttributeAtIndex(getAttrIdx(), AK);
   if (HasAttr)
@@ -1407,6 +1377,8 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
                                const AAIsDead *FnLivenessAA,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  if (!Configuration.UseLiveness)
+    return false;
   const IRPosition &IRP = AA.getIRPosition();
   if (!Functions.count(IRP.getAnchorScope()))
     return false;
@@ -1419,6 +1391,8 @@ bool Attributor::isAssumedDead(const Use &U,
                                const AAIsDead *FnLivenessAA,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  if (!Configuration.UseLiveness)
+    return false;
   Instruction *UserI = dyn_cast<Instruction>(U.getUser());
   if (!UserI)
     return isAssumedDead(IRPosition::value(*U.get()), QueryingAA, FnLivenessAA,
@@ -1467,6 +1441,8 @@ bool Attributor::isAssumedDead(const Instruction &I,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass,
                                bool CheckForDeadStore) {
+  if (!Configuration.UseLiveness)
+    return false;
   const IRPosition::CallBaseContext *CBCtx =
       QueryingAA ? QueryingAA->getCallBaseContext() : nullptr;
 
@@ -1527,6 +1503,8 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
                                const AAIsDead *FnLivenessAA,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  if (!Configuration.UseLiveness)
+    return false;
   // Don't check liveness for constants, e.g. functions, used as (floating)
   // values since the context instruction and such is here meaningless.
   if (IRP.getPositionKind() == IRPosition::IRP_FLOAT &&
@@ -1572,6 +1550,8 @@ bool Attributor::isAssumedDead(const BasicBlock &BB,
                                const AbstractAttribute *QueryingAA,
                                const AAIsDead *FnLivenessAA,
                                DepClassTy DepClass) {
+  if (!Configuration.UseLiveness)
+    return false;
   const Function &F = *BB.getParent();
   if (!FnLivenessAA || FnLivenessAA->getAnchorScope() != &F)
     FnLivenessAA = getOrCreateAAFor<AAIsDead>(IRPosition::function(F),

@@ -63,6 +63,16 @@ void InstrumentationRuntimeLibrary::adjustCommandLineOptions(
               "DT_FINI to write the profile\n";
     exit(1);
   }
+
+  if ((opts::InstrumentationWaitForks || opts::InstrumentationSleepTime) &&
+      opts::InstrumentationFileAppendPID) {
+    errs()
+        << "BOLT-ERROR: instrumentation-file-append-pid is not compatible with "
+           "instrumentation-sleep-time and instrumentation-wait-forks. If you "
+           "want a separate profile for each fork, it can only be dumped in "
+           "the end of process when instrumentation-file-append-pid is used.\n";
+    exit(1);
+  }
 }
 
 void InstrumentationRuntimeLibrary::emitBinary(BinaryContext &BC,

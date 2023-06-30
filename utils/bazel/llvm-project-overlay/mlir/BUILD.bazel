@@ -2557,7 +2557,18 @@ cc_library(
 
 cc_library(
     name = "SparseTensorDialect",
-    srcs = ["lib/Dialect/SparseTensor/IR/SparseTensorDialect.cpp"],
+    srcs = [
+        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMap.cpp",
+        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMap.h",
+        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMapParser.cpp",
+        "lib/Dialect/SparseTensor/IR/Detail/DimLvlMapParser.h",
+        "lib/Dialect/SparseTensor/IR/Detail/LvlTypeParser.cpp",
+        "lib/Dialect/SparseTensor/IR/Detail/LvlTypeParser.h",
+        "lib/Dialect/SparseTensor/IR/Detail/TemplateExtras.h",
+        "lib/Dialect/SparseTensor/IR/Detail/Var.cpp",
+        "lib/Dialect/SparseTensor/IR/Detail/Var.h",
+        "lib/Dialect/SparseTensor/IR/SparseTensorDialect.cpp",
+    ],
     hdrs = [
         "include/mlir/Dialect/SparseTensor/IR/SparseTensor.h",
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h",

@@ -55,18 +55,6 @@ using namespace CodeGen;
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
 
-llvm::Value *CodeGenFunction::EmitCastToVoidPtr(llvm::Value *value) {
-  unsigned addressSpace =
-      cast<llvm::PointerType>(value->getType())->getAddressSpace();
-
-  llvm::PointerType *destType = Int8PtrTy;
-  if (addressSpace)
-    destType = llvm::Type::getInt8PtrTy(getLLVMContext(), addressSpace);
-
-  if (value->getType() == destType) return value;
-  return Builder.CreateBitCast(value, destType);
-}
-
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
 Address CodeGenFunction::CreateTempAllocaWithoutCast(llvm::Type *Ty,
@@ -3367,7 +3355,7 @@ void CodeGenFunction::EmitCheck(
           CGM.getDataLayout().getDefaultGlobalsAddressSpace());
       InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
       CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-      Args.push_back(EmitCastToVoidPtr(InfoPtr));
+      Args.push_back(InfoPtr);
       ArgTypes.push_back(Args.back()->getType());
     }
 

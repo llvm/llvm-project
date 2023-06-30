@@ -169,3 +169,46 @@ func.func @where_vector_subscripts(%arg0: !fir.ref<!fir.array<10x!fir.logical<4>
 // CHECK:               hlfir.assign %[[VAL_3]] to %[[VAL_18]] : f32, !fir.ref<f32>
 // CHECK:             }
 // CHECK:           }
+
+func.func @unordered(%arg0: !fir.ref<!fir.array<100xf32>> , %arg1: !fir.ref<!fir.array<10xi64>> , %arg2: !fir.ref<!fir.array<10xf32>> ) {
+  %c10 = arith.constant 10 : index
+  %c100 = arith.constant 100 : index
+  %0 = fir.shape %c100 : (index) -> !fir.shape<1>
+  %1:2 = hlfir.declare %arg0(%0) {uniq_name = "_QFsimpleEx"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+  %2 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %3:2 = hlfir.declare %arg1(%2) {uniq_name = "y"} : (!fir.ref<!fir.array<10xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10xi64>>)
+  %4:2 = hlfir.declare %arg2(%2) {uniq_name = "z"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+  hlfir.region_assign {
+    hlfir.yield %4#0 : !fir.ref<!fir.array<10xf32>>
+  } to {
+    hlfir.elemental_addr %2 unordered : !fir.shape<1> {
+    ^bb0(%arg3: index):
+      %5 = hlfir.designate %3#0 (%arg3)  : (!fir.ref<!fir.array<10xi64>>, index) -> !fir.ref<i64>
+      %6 = fir.load %5 : !fir.ref<i64>
+      %7 = hlfir.designate %1#0 (%6)  : (!fir.ref<!fir.array<100xf32>>, i64) -> !fir.ref<f32>
+      hlfir.yield %7 : !fir.ref<f32>
+    }
+  }
+  return
+}
+// CHECK-LABEL:   func.func @unordered(
+// CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<!fir.array<100xf32>>,
+// CHECK-SAME:      %[[VAL_1:.*]]: !fir.ref<!fir.array<10xi64>>,
+// CHECK-SAME:      %[[VAL_2:.*]]: !fir.ref<!fir.array<10xf32>>) {
+// CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_4:.*]] = arith.constant 100 : index
+// CHECK:           %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_5]]) {uniq_name = "_QFsimpleEx"} : (!fir.ref<!fir.array<100xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>)
+// CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_7]]) {uniq_name = "y"} : (!fir.ref<!fir.array<10xi64>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10xi64>>)
+// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_7]]) {uniq_name = "z"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
+// CHECK:           %[[VAL_10:.*]] = arith.constant 1 : index
+// CHECK:           fir.do_loop %[[VAL_11:.*]] = %[[VAL_10]] to %[[VAL_3]] step %[[VAL_10]] unordered {
+// CHECK:             %[[VAL_12:.*]] = hlfir.designate %[[VAL_8]]#0 (%[[VAL_11]])  : (!fir.ref<!fir.array<10xi64>>, index) -> !fir.ref<i64>
+// CHECK:             %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.ref<i64>
+// CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_13]])  : (!fir.ref<!fir.array<100xf32>>, i64) -> !fir.ref<f32>
+// CHECK:             %[[VAL_15:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_11]])  : (!fir.ref<!fir.array<10xf32>>, index) -> !fir.ref<f32>
+// CHECK:             hlfir.assign %[[VAL_15]] to %[[VAL_14]] : !fir.ref<f32>, !fir.ref<f32>
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }

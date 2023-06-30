@@ -10868,7 +10868,7 @@ def note_omp_previous_named_if_clause : Note<
 def err_omp_ordered_directive_with_param : Error<
   "'ordered' directive %select{without any clauses|with 'threads' clause}0 cannot be closely nested inside ordered region with specified parameter">;
 def err_omp_ordered_directive_without_param : Error<
-  "'ordered' directive with 'depend' clause cannot be closely nested inside ordered region without specified parameter">;
+  "'ordered' directive with '%0' clause cannot be closely nested inside ordered region without specified parameter">;
 def note_omp_ordered_param : Note<
   "'ordered' clause%select{| with specified parameter}0">;
 def err_omp_expected_base_var_name : Error<
@@ -10900,7 +10900,7 @@ def note_omp_critical_hint_here : Note<
 def note_omp_critical_no_hint : Note<
   "%select{|previous }0directive with no 'hint' clause specified">;
 def err_omp_depend_clause_thread_simd : Error<
-  "'depend' clauses cannot be mixed with '%0' clause">;
+  "'%0' clauses cannot be mixed with '%1' clause">;
 def err_omp_depend_sink_expected_loop_iteration : Error<
   "expected%select{| %1}0 loop iteration variable">;
 def err_omp_depend_sink_unexpected_expr : Error<
@@ -10909,8 +10909,8 @@ def err_omp_depend_sink_expected_plus_minus : Error<
   "expected '+' or '-' operation">;
 def err_omp_taskwait_depend_mutexinoutset_not_allowed : Error<
   "'mutexinoutset' modifier not allowed in 'depend' clause on 'taskwait' directive">;
-def err_omp_depend_sink_source_not_allowed : Error<
-  "'depend(%select{source|sink:vec}0)' clause%select{|s}0 cannot be mixed with 'depend(%select{sink:vec|source}0)' clause%select{s|}0">;
+def err_omp_sink_and_source_not_allowed : Error<
+  "'%0(%select{source|sink:vec}1)' clause%select{|s}1 cannot be mixed with '%0(%select{sink:vec|source}1)' clause%select{s|}1">;
 def err_omp_depend_zero_length_array_section_not_allowed : Error<
   "zero-length array section is not allowed in 'depend' clause">;
 def err_omp_depend_sink_source_with_modifier : Error<

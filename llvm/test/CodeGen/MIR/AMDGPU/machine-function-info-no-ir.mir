@@ -49,6 +49,7 @@
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT:  vgprForAGPRCopy: ''
 # FULL-NEXT:  sgprForEXECCopy: ''
+# FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -150,6 +151,7 @@ body:             |
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
+# FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -222,6 +224,7 @@ body:             |
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
+# FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -295,6 +298,7 @@ body:             |
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
+# FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -544,7 +548,6 @@ body:             |
 
 ---
 # ALL-LABEL: name: sgpr_for_exec_copy
-# ALL: sgprForEXECCopy: '$sgpr2_sgpr3'
 name: sgpr_for_exec_copy
 machineFunctionInfo:
   sgprForEXECCopy: '$sgpr2_sgpr3'

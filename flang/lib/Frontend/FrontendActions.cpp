@@ -606,10 +606,10 @@ void GetDefinitionAction::executeAction() {
   }
 
   llvm::outs() << "Found symbol name: " << symbol->name().ToString() << "\n";
-  llvm::outs() << symbol->name().ToString() << ": "
-               << sourceInfo->first.file.path() << ", "
-               << sourceInfo->first.line << ", " << sourceInfo->first.column
-               << "-" << sourceInfo->second.column << "\n";
+  llvm::outs() << symbol->name().ToString() << ": " << sourceInfo->first.path
+               << ", " << sourceInfo->first.line << ", "
+               << sourceInfo->first.column << "-" << sourceInfo->second.column
+               << "\n";
 }
 
 void GetSymbolsSourcesAction::executeAction() {

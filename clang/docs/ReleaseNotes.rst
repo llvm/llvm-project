@@ -112,6 +112,8 @@ C++20 Feature Support
 - Clang now supports `requires cplusplus20` for module maps.
 - Implemented missing parts of `P2002R1: Consistent comparison operators <https://wg21.link/P2002R1>`_
 - Clang now defines `__cpp_consteval` macro.
+- Implemented `P1816R0: <https://wg21.link/p1816r0>`_ and `P2082R1: <https://wg21.link/p2082r1>`_,
+  which allows CTAD for aggregates.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -561,6 +563,10 @@ Bug Fixes in This Version
   (`#48512 <https://github.com/llvm/llvm-project/issues/48512>`_).
 - Fixed a failing assertion when parsing incomplete destructor.
   (`#63503 <https://github.com/llvm/llvm-project/issues/63503>`_)
+- Fix C++17 mode assert when parsing malformed code and the compiler is
+  attempting to see if it could be type template for class template argument
+  deduction. This fixes
+  (`Issue 57495 <https://github.com/llvm/llvm-project/issues/57495>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -88,12 +88,18 @@ public:
         "layout_right::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
 
+  template <class _OtherExtents>
+    requires(is_constructible_v<extents_type, _OtherExtents> && _OtherExtents::rank() <= 1)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
+      mapping(const layout_left::mapping<_OtherExtents>& __other) noexcept
+      : __extents_(__other.extents()) {
+    _LIBCPP_ASSERT(
+        __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
+        "layout_right::mapping converting ctor: other.required_span_size() must be representable as index_type.");
+  }
+
 // FIXME: add when we add other layouts
 #  if 0
-    template<class _OtherExtents>
-      constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
-        mapping(const layout_left::mapping<_OtherExtents>&) noexcept {}
-
     template<class _OtherExtents>
       constexpr explicit(extents_type::rank() > 0)
         mapping(const layout_stride::mapping_<OtherExtents>&) noexcept;

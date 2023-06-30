@@ -40,7 +40,13 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_right::mapping<std::extents<int, D, 3>> m(arg); }()),
                                "extents construction: mismatch of provided arguments with static extents.");
   }
-  // value out of range
+  // non-representability of extents itself
+  {
+    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::layout_right::mapping<std::extents<char, D>> m(
+                                 std::layout_right::mapping<std::extents<int, D>>(std::extents<int, D>(500))); }()),
+                               "extents ctor: arguments must be representable as index_type and nonnegative");
+  }
+  // required_span_size not representable, while individual extents are
   {
     // check extents would be constructible
     [[maybe_unused]] std::extents<char, D, 5> e(arg_exts);
