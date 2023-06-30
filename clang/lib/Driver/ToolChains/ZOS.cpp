@@ -11,13 +11,17 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/WithColor.h"
 
+using namespace clang;
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
+using namespace llvm;
 using namespace llvm::opt;
-using namespace clang;
+using namespace llvm::sys;
 
 ZOS::ZOS(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : ToolChain(D, Triple, Args) {}
@@ -241,3 +245,97 @@ void ZOS::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
 auto ZOS::buildAssembler() const -> Tool * { return new zos::Assembler(*this); }
 
 auto ZOS::buildLinker() const -> Tool * { return new zos::Linker(*this); }
+
+void ZOS::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                    ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  const Driver &D = getDriver();
+
+  // resolve ResourceDir
+  std::string ResourceDir(D.ResourceDir);
+
+  // zos_wrappers must take highest precedence
+
+  // - <clang>/lib/clang/<ver>/include/zos_wrappers
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> P(ResourceDir);
+    path::append(P, "include", "zos_wrappers");
+    addSystemInclude(DriverArgs, CC1Args, P.str());
+
+    // - <clang>/lib/clang/<ver>/include
+    SmallString<128> P2(ResourceDir);
+    path::append(P2, "include");
+    addSystemInclude(DriverArgs, CC1Args, P2.str());
+  }
+
+  // - /usr/include
+  if (Arg *SysIncludeArg =
+          DriverArgs.getLastArg(options::OPT_mzos_sys_include_EQ)) {
+    StringRef SysInclude = SysIncludeArg->getValue();
+
+    // fall back to the default include path
+    if (!SysInclude.empty()) {
+
+      // -mzos-sys-include opton can have colon separated
+      // list of paths, so we need to parse the value.
+      StringRef PathLE(SysInclude);
+      size_t Colon = PathLE.find(':');
+      if (Colon == StringRef::npos) {
+        addSystemInclude(DriverArgs, CC1Args, PathLE.str());
+        return;
+      }
+
+      while (Colon != StringRef::npos) {
+        SmallString<128> P = PathLE.substr(0, Colon);
+        addSystemInclude(DriverArgs, CC1Args, P.str());
+        PathLE = PathLE.substr(Colon + 1);
+        Colon = PathLE.find(':');
+      }
+      if (PathLE.size())
+        addSystemInclude(DriverArgs, CC1Args, PathLE.str());
+
+      return;
+    }
+  }
+
+  addSystemInclude(DriverArgs, CC1Args, "/usr/include");
+}
+
+void ZOS::TryAddIncludeFromPath(llvm::SmallString<128> Path,
+                                const llvm::opt::ArgList &DriverArgs,
+                                llvm::opt::ArgStringList &CC1Args) const {
+  if (!getVFS().exists(Path)) {
+    if (DriverArgs.hasArg(options::OPT_v))
+      WithColor::warning(errs(), "Clang")
+          << "ignoring nonexistent directory \"" << Path << "\"\n";
+    if (!DriverArgs.hasArg(options::OPT__HASH_HASH_HASH))
+      return;
+  }
+  addSystemInclude(DriverArgs, CC1Args, Path);
+}
+
+void ZOS::AddClangCXXStdlibIncludeArgs(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx) ||
+      DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx: {
+    // <install>/bin/../include/c++/v1
+    llvm::SmallString<128> InstallBin =
+        llvm::StringRef(getDriver().getInstalledDir());
+    llvm::sys::path::append(InstallBin, "..", "include", "c++", "v1");
+    TryAddIncludeFromPath(InstallBin, DriverArgs, CC1Args);
+    break;
+  }
+  case ToolChain::CST_Libstdcxx:
+    llvm::report_fatal_error(
+        "picking up libstdc++ headers is unimplemented on z/OS");
+    break;
+  }
+}
