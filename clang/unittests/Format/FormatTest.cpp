@@ -11580,13 +11580,11 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
                    "  }",
                    getLLVMStyleWithColumns(50)));
 
-// FIXME: We should be able to figure out this is an operator call
-#if 0
   verifyFormat("#define FOO             \\\n"
                "  void foo() {          \\\n"
                "    operator+(a * b);   \\\n"
-               "  }", getLLVMStyleWithColumns(25));
-#endif
+               "  }",
+               getLLVMStyleWithColumns(25));
 
   // FIXME: We cannot handle this case yet; we might be able to figure out that
   // foo<x> d > v; doesn't make sense.
