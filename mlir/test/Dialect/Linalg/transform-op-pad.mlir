@@ -17,7 +17,6 @@ func.func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
   %3 = tensor.extract_slice %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<24x25xf32> to tensor<4x5xf32>
 
   //  CHECK-DAG: %[[CST:.*]] = arith.constant 0.
-  //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 
   //      CHECK: %[[T3:.*]] = tensor.pad %[[T0]] nofold
   //      CHECK: tensor.yield %[[CST]]
@@ -92,7 +91,6 @@ func.func @static_sizes_output_divisible_on_empty_op(%arg0: tensor<24x12xf32>,
   %3 = tensor.empty() : tensor<4x5xf32>
 
   //  CHECK-DAG: %[[CST:.*]] = arith.constant 0.
-  //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 
   //      CHECK: %[[T3:.*]] = tensor.pad %[[T0]] nofold
   //      CHECK: tensor.yield %[[CST]]
@@ -188,7 +186,6 @@ transform.sequence failures(suppress) {
 // linalg op is not produced by an empty op or an extract_slice op.
 
 // CHECK-DAG: #[[$MAP_MIN:.*]] = affine_map<(d0) -> (-d0 + 2044, 16)>
-// CHECK-DAG: #[[$MAP_C0:.*]] = affine_map<() -> (0)>
 // CHECK-DAG: #[[$MAP_TO_16:.*]] = affine_map<(d0) -> (-d0 + 16)>
 // CHECK-LABEL: @outs_not_produced_by_empty_or_extract_slice(
 // CHECK-SAME: %[[A:[^: ]*]]: tensor<128x2044xf32>,
@@ -210,18 +207,14 @@ func.func @outs_not_produced_by_empty_or_extract_slice(%a : tensor<128x2044xf32>
     %extracted_slice_2 = tensor.extract_slice %a[0, %arg3] [128, %11] [1, 1] : tensor<128x2044xf32> to tensor<128x?xf32>
     %extracted_slice_3 = tensor.extract_slice %b[%arg3, 0] [%11, 128] [1, 1] : tensor<2044x128xf32> to tensor<?x128xf32>
     // CHECK-DAG: %[[CST:.*]] = arith.constant 0.
-    // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 
-    // CHECK-DAG: %[[ZERO:.*]] = affine.apply #[[$MAP_C0]]()
     // CHECK-DAG: %[[TO_16:.*]] = affine.apply #[[$MAP_TO_16]](%[[MIN]])
-    // CHECK: %[[PADDED_A_SLICE:.*]] = tensor.pad %[[A_SLICE]] nofold low[%[[C0]], %[[C0]]] high[%[[ZERO]], %[[TO_16]]]
+    // CHECK: %[[PADDED_A_SLICE:.*]] = tensor.pad %[[A_SLICE]] nofold low[0, 0] high[0, %[[TO_16]]]
     // CHECK: tensor.yield %[[CST]]
     // CHECK: %[[PADDED_B_SLICE:.*]] = tensor.pad %[[B_SLICE]] nofold
     // The output shape is already padded, so actually we shouldn't
     // add anything to the upper bound.
-    // CHECK: %[[ZERO0:.*]] = affine.apply #[[$MAP_C0]]()
-    // CHECK: %[[ZERO1:.*]] = affine.apply #[[$MAP_C0]]()
-    // CHECK: %[[PADDED_ARG4:.*]] = tensor.pad %[[ARG4]] nofold low[{{.*}}] high[%[[ZERO0]], %[[ZERO1]]]
+    // CHECK: %[[PADDED_ARG4:.*]] = tensor.pad %[[ARG4]] nofold low[{{.*}}] high[0, 0]
 
     //      CHECK: %[[T5:.*]] = linalg.matmul
     // CHECK-SAME:              ins(%[[PADDED_A_SLICE]], %[[PADDED_B_SLICE]] : tensor<128x16xf32>, tensor<16x128xf32>)
@@ -261,7 +254,6 @@ func.func @pack_everything(%arg0: tensor<24x12xf32>,
   %3 = tensor.extract_slice %arg2[%iv0, %iv1] [4, 5] [1, 1] : tensor<24x25xf32> to tensor<4x5xf32>
 
   //  CHECK-DAG: %[[CST:.*]] = arith.constant 0.
-  //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 
   //      CHECK: %[[PAD0:.*]] = tensor.pad %[[T0]] nofold
   //      CHECK: %[[PAD1:.*]] = tensor.pad %[[T1]] nofold

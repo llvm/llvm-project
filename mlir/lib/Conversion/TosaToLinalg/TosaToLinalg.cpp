@@ -2124,8 +2124,8 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
         affineDimsExpr(rewriter, 0, 1, 2)});
 
     // Width and height dimensions of the original input.
-    auto dimH = linalg::createOrFoldDimOp(rewriter, loc, input, 1);
-    auto dimW = linalg::createOrFoldDimOp(rewriter, loc, input, 2);
+    auto dimH = rewriter.createOrFold<tensor::DimOp>(loc, input, 1);
+    auto dimW = rewriter.createOrFold<tensor::DimOp>(loc, input, 2);
 
     // Constants and dimension sizes
     auto twoPiAttr = rewriter.getFloatAttr(elementType, 6.283185307179586);

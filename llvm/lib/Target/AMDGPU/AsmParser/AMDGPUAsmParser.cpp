@@ -884,9 +884,7 @@ public:
     return Kind == Expression;
   }
 
-  bool isSoppBrTarget() const {
-    return isExpr() || isImm();
-  }
+  bool isSOPPBrTarget() const { return isExpr() || isImm(); }
 
   bool isSWaitCnt() const;
   bool isDepCtr() const;
@@ -1000,8 +998,6 @@ public:
   void addRegOrImmOperands(MCInst &Inst, unsigned N) const {
     if (isRegKind())
       addRegOperands(Inst, N);
-    else if (isExpr())
-      Inst.addOperand(MCOperand::createExpr(Expr));
     else
       addImmOperands(Inst, N);
   }
@@ -1041,15 +1037,6 @@ public:
   void addRegWithIntInputModsOperands(MCInst &Inst, unsigned N) const {
     assert(!hasFPModifiers());
     addRegWithInputModsOperands(Inst, N);
-  }
-
-  void addSoppBrTargetOperands(MCInst &Inst, unsigned N) const {
-    if (isImm())
-      addImmOperands(Inst, N);
-    else {
-      assert(isExpr());
-      Inst.addOperand(MCOperand::createExpr(Expr));
-    }
   }
 
   static void printImmTy(raw_ostream& OS, ImmTy Type) {
@@ -1792,7 +1779,7 @@ public:
   OperandMatchResultTy parseSendMsg(OperandVector &Operands);
   OperandMatchResultTy parseInterpSlot(OperandVector &Operands);
   OperandMatchResultTy parseInterpAttr(OperandVector &Operands);
-  OperandMatchResultTy parseSOppBrTarget(OperandVector &Operands);
+  OperandMatchResultTy parseSOPPBrTarget(OperandVector &Operands);
   OperandMatchResultTy parseBoolReg(OperandVector &Operands);
 
   bool parseSwizzleOperand(int64_t &Op,
@@ -2153,6 +2140,11 @@ uint64_t AMDGPUOperand::applyInputFPModifiers(uint64_t Val, unsigned Size) const
 }
 
 void AMDGPUOperand::addImmOperands(MCInst &Inst, unsigned N, bool ApplyModifiers) const {
+  if (isExpr()) {
+    Inst.addOperand(MCOperand::createExpr(Expr));
+    return;
+  }
+
   if (AMDGPU::isSISrcOperand(AsmParser->getMII()->get(Inst.getOpcode()),
                              Inst.getNumOperands())) {
     addLiteralImmOperand(Inst, Imm.Val,
@@ -8158,7 +8150,7 @@ bool AMDGPUOperand::isGPRIdxMode() const {
 //===----------------------------------------------------------------------===//
 
 OperandMatchResultTy
-AMDGPUAsmParser::parseSOppBrTarget(OperandVector &Operands) {
+AMDGPUAsmParser::parseSOPPBrTarget(OperandVector &Operands) {
 
   // Make sure we are not parsing something
   // that looks like a label or an expression but is not.
@@ -9649,8 +9641,8 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     return Operand.isSSrcB32() ? Match_Success : Match_InvalidOperand;
   case MCK_SSrcF32:
     return Operand.isSSrcF32() ? Match_Success : Match_InvalidOperand;
-  case MCK_SoppBrTarget:
-    return Operand.isSoppBrTarget() ? Match_Success : Match_InvalidOperand;
+  case MCK_SOPPBrTarget:
+    return Operand.isSOPPBrTarget() ? Match_Success : Match_InvalidOperand;
   case MCK_VReg32OrOff:
     return Operand.isVReg32OrOff() ? Match_Success : Match_InvalidOperand;
   case MCK_InterpSlot:

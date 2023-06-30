@@ -24,9 +24,8 @@ using namespace mlir::tensor;
 PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
                                     Value pad, bool nofold, Location loc,
                                     OpBuilder &b) {
-  auto zero = b.createOrFold<arith::ConstantIndexOp>(loc, 0);
-  SmallVector<OpFoldResult> low(type.getRank(), zero);
-  SmallVector<OpFoldResult> high(type.getRank(), zero);
+  SmallVector<OpFoldResult> low(type.getRank(), b.getIndexAttr(0));
+  SmallVector<OpFoldResult> high(type.getRank(), b.getIndexAttr(0));
   for (const auto &en : enumerate(type.getShape())) {
     // Pad only the static dimensions of the result tensor type.
     if (ShapedType::isDynamic(en.value()))
@@ -36,8 +35,7 @@ PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
     bindDims(b.getContext(), d0);
     OpFoldResult sz = tensor::getMixedSize(b, loc, source, en.index());
     high[en.index()] =
-        affine::makeComposedAffineApply(b, loc, en.value() - d0, {sz})
-            .getResult();
+        affine::makeComposedFoldedAffineApply(b, loc, en.value() - d0, {sz});
   }
   return b.create<PadOp>(loc, type, source, low, high, pad, nofold);
 }
