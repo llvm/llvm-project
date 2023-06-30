@@ -865,6 +865,8 @@ def OpenACC_DataOp : OpenACC_Op<"data",
 
 
   let arguments = (ins Optional<I1>:$ifCond,
+                       Optional<IntOrIndex>:$async,
+                       UnitAttr:$asyncAttr,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
 
@@ -881,6 +883,7 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
+      | `async` `(` $async `:` type($async) `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
     $region attr-dict-with-keyword

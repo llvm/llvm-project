@@ -867,6 +867,7 @@ unsigned DataOp::getNumDataOperands() { return getDataClauseOperands().size(); }
 
 Value DataOp::getDataOperand(unsigned i) {
   unsigned numOptional = getIfCond() ? 1 : 0;
+  numOptional += getAsync() ? 1 : 0;
   return getOperand(numOptional + i);
 }
 
