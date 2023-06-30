@@ -561,6 +561,8 @@ Bug Fixes in This Version
   when an immediate invocation appears as a part of an expression that produces
   temporaries.
   (`#60709 <https://github.com/llvm/llvm-project/issues/60709>`_).
+- Fixed a missed integer overflow warning with temporary values.
+  (`#63629 <https://github.com/llvm/llvm-project/issues/63629>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
