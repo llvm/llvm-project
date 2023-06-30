@@ -26,7 +26,7 @@
 
 namespace __llvm_libc::aarch64 {
 
-static inline constexpr bool kNeon = LLVM_LIBC_IS_DEFINED(__ARM_NEON);
+LIBC_INLINE_VAR constexpr bool kNeon = LLVM_LIBC_IS_DEFINED(__ARM_NEON);
 
 namespace neon {
 
@@ -52,7 +52,7 @@ struct BzeroCacheLine {
   }
 };
 
-LIBC_INLINE static bool hasZva() {
+LIBC_INLINE bool hasZva() {
   uint64_t zva_val;
   asm("mrs %[zva_val], dczid_el0" : [zva_val] "=r"(zva_val));
   // DC ZVA is permitted if DZP, bit [4] is zero.
