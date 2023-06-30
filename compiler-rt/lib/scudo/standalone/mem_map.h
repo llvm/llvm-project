@@ -21,6 +21,8 @@
 #include "linux.h"
 #include "trusty.h"
 
+#include "mem_map_fuchsia.h"
+
 namespace scudo {
 
 // This will be deprecated when every allocator has been supported by each
@@ -74,7 +76,7 @@ private:
 using ReservedMemoryT = ReservedMemoryDefault;
 using MemMapT = ReservedMemoryT::MemMapT;
 #elif SCUDO_FUCHSIA
-using ReservedMemoryT = ReservedMemoryDefault;
+using ReservedMemoryT = ReservedMemoryFuchsia;
 using MemMapT = ReservedMemoryT::MemMapT;
 #elif SCUDO_TRUSTY
 using ReservedMemoryT = ReservedMemoryDefault;
