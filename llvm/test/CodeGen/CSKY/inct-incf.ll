@@ -4,9 +4,8 @@
 define i32 @select_by_icmp_ugt(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_ugt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmphs16 a1, a0
-; CHECK-NEXT:    movf32 a3, a2
+; CHECK-NEXT:    incf32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp ugt i32 %t0, %t1
@@ -18,9 +17,8 @@ define i32 @select_by_icmp_ugt(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_sgt(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_sgt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    movt32 a3, a2
+; CHECK-NEXT:    inct32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp sgt i32 %t0, %t1
@@ -32,9 +30,8 @@ define i32 @select_by_icmp_sgt(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_uge(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_uge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmphs16 a0, a1
-; CHECK-NEXT:    movt32 a3, a2
+; CHECK-NEXT:    inct32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp uge i32 %t0, %t1
@@ -46,9 +43,8 @@ define i32 @select_by_icmp_uge(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_sge(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_sge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmplt16 a0, a1
-; CHECK-NEXT:    movf32 a3, a2
+; CHECK-NEXT:    incf32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp sge i32 %t0, %t1
@@ -60,9 +56,8 @@ define i32 @select_by_icmp_sge(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_ult(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmphs16 a0, a1
-; CHECK-NEXT:    movf32 a3, a2
+; CHECK-NEXT:    incf32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp ult i32 %t0, %t1
@@ -74,9 +69,8 @@ define i32 @select_by_icmp_ult(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_slt(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_slt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmplt16 a0, a1
-; CHECK-NEXT:    movt32 a3, a2
+; CHECK-NEXT:    inct32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp slt i32 %t0, %t1
@@ -88,9 +82,8 @@ define i32 @select_by_icmp_slt(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_ule(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmphs16 a1, a0
-; CHECK-NEXT:    movt32 a3, a2
+; CHECK-NEXT:    inct32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp ule i32 %t0, %t1
@@ -102,9 +95,8 @@ define i32 @select_by_icmp_ule(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_sle(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    movf32 a3, a2
+; CHECK-NEXT:    incf32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp sle i32 %t0, %t1
@@ -116,9 +108,8 @@ define i32 @select_by_icmp_sle(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_ne(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmpne16 a0, a1
-; CHECK-NEXT:    movt32 a3, a2
+; CHECK-NEXT:    inct32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp ne i32 %t0, %t1
@@ -130,9 +121,8 @@ define i32 @select_by_icmp_ne(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_eq(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a2, 10
 ; CHECK-NEXT:    cmpne16 a0, a1
-; CHECK-NEXT:    movf32 a3, a2
+; CHECK-NEXT:    incf32 a3, a2, 10
 ; CHECK-NEXT:    mov16 a0, a3
 ; CHECK-NEXT:    rts16
   %t4 = icmp eq i32 %t0, %t1
@@ -144,10 +134,9 @@ define i32 @select_by_icmp_eq(i32 %t0, i32 %t1, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_ugt_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_ugt_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    movi16 a3, 128
 ; CHECK-NEXT:    cmphs16 a3, a0
-; CHECK-NEXT:    movf32 a2, a1
+; CHECK-NEXT:    incf32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp ugt i32 %t0, 128
@@ -159,10 +148,9 @@ define i32 @select_by_icmp_ugt_imm(i32 %t0, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_sgt_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_sgt_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    movi16 a3, 128
 ; CHECK-NEXT:    cmplt16 a3, a0
-; CHECK-NEXT:    movt32 a2, a1
+; CHECK-NEXT:    inct32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp sgt i32 %t0, 128
@@ -174,10 +162,9 @@ define i32 @select_by_icmp_sgt_imm(i32 %t0, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_uge_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_uge_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    movi16 a3, 127
 ; CHECK-NEXT:    cmphs16 a3, a0
-; CHECK-NEXT:    movf32 a2, a1
+; CHECK-NEXT:    incf32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp uge i32 %t0, 128
@@ -189,10 +176,9 @@ define i32 @select_by_icmp_uge_imm(i32 %t0, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_sge_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_sge_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    movi16 a3, 127
 ; CHECK-NEXT:    cmplt16 a3, a0
-; CHECK-NEXT:    movt32 a2, a1
+; CHECK-NEXT:    inct32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp sge i32 %t0, 128
@@ -204,9 +190,8 @@ define i32 @select_by_icmp_sge_imm(i32 %t0, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_ult_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_ult_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    cmphsi32 a0, 128
-; CHECK-NEXT:    movf32 a2, a1
+; CHECK-NEXT:    incf32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp ult i32 %t0, 128
@@ -218,9 +203,8 @@ define i32 @select_by_icmp_ult_imm(i32 %t0, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_slt_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_slt_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    cmplti32 a0, 128
-; CHECK-NEXT:    movt32 a2, a1
+; CHECK-NEXT:    inct32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp slt i32 %t0, 128
@@ -232,9 +216,8 @@ define i32 @select_by_icmp_slt_imm(i32 %t0, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_ule_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_ule_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    cmphsi32 a0, 129
-; CHECK-NEXT:    movf32 a2, a1
+; CHECK-NEXT:    incf32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp ule i32 %t0, 128
@@ -246,9 +229,8 @@ define i32 @select_by_icmp_ule_imm(i32 %t0, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_sle_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_sle_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    cmplti32 a0, 129
-; CHECK-NEXT:    movt32 a2, a1
+; CHECK-NEXT:    inct32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp sle i32 %t0, 128
@@ -260,9 +242,8 @@ define i32 @select_by_icmp_sle_imm(i32 %t0, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_ne_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_ne_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    cmpnei32 a0, 128
-; CHECK-NEXT:    movt32 a2, a1
+; CHECK-NEXT:    inct32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp ne i32 %t0, 128
@@ -274,9 +255,8 @@ define i32 @select_by_icmp_ne_imm(i32 %t0, i32 %t2, i32 %t3) {
 define i32 @select_by_icmp_eq_imm(i32 %t0, i32 %t2, i32 %t3) {
 ; CHECK-LABEL: select_by_icmp_eq_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi16 a1, 10
 ; CHECK-NEXT:    cmpnei32 a0, 128
-; CHECK-NEXT:    movf32 a2, a1
+; CHECK-NEXT:    incf32 a2, a1, 10
 ; CHECK-NEXT:    mov16 a0, a2
 ; CHECK-NEXT:    rts16
   %t4 = icmp eq i32 %t0, 128
@@ -300,9 +280,8 @@ define i32 @select_by_call_t(i32 %t0, i32 %t1, i32 %t2) {
 ; CHECK-NEXT:    mov16 l0, a2
 ; CHECK-NEXT:    mov16 l1, a1
 ; CHECK-NEXT:    jsri32 [.LCPI20_0]
-; CHECK-NEXT:    addi32 a1, l1, 10
 ; CHECK-NEXT:    btsti16 a0, 0
-; CHECK-NEXT:    movt32 l0, a1
+; CHECK-NEXT:    inct32 l0, l1, 10
 ; CHECK-NEXT:    mov16 a0, l0
 ; CHECK-NEXT:    ld32.w lr, (sp, 0) # 4-byte Folded Reload
 ; CHECK-NEXT:    ld16.w l0, (sp, 4) # 4-byte Folded Reload
@@ -335,10 +314,9 @@ define i32 @select_by_call_f(i32 %t0, i32 %t1, i32 %t2) {
 ; CHECK-NEXT:    mov16 l0, a2
 ; CHECK-NEXT:    mov16 l1, a1
 ; CHECK-NEXT:    jsri32 [.LCPI21_0]
-; CHECK-NEXT:    addi32 a1, l1, 10
 ; CHECK-NEXT:    btsti16 a0, 0
-; CHECK-NEXT:    movt32 a1, l0
-; CHECK-NEXT:    mov16 a0, a1
+; CHECK-NEXT:    incf32 l0, l1, 10
+; CHECK-NEXT:    mov16 a0, l0
 ; CHECK-NEXT:    ld32.w lr, (sp, 0) # 4-byte Folded Reload
 ; CHECK-NEXT:    ld16.w l0, (sp, 4) # 4-byte Folded Reload
 ; CHECK-NEXT:    ld16.w l1, (sp, 8) # 4-byte Folded Reload
