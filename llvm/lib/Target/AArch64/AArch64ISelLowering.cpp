@@ -18531,6 +18531,250 @@ static SDValue performAddSubIntoVectorOp(SDNode *N, SelectionDAG &DAG) {
                      DAG.getConstant(0, DL, MVT::i64));
 }
 
+static bool isLoadOrMultipleLoads(SDValue B, SmallVector<LoadSDNode *> &Loads) {
+  SDValue BV = peekThroughOneUseBitcasts(B);
+  if (!BV->hasOneUse())
+    return false;
+  if (auto *Ld = dyn_cast<LoadSDNode>(BV)) {
+    if (!Ld || !Ld->isSimple())
+      return false;
+    Loads.push_back(Ld);
+    return true;
+  } else if (BV.getOpcode() == ISD::BUILD_VECTOR ||
+             BV.getOpcode() == ISD::CONCAT_VECTORS) {
+    for (unsigned Op = 0; Op < BV.getNumOperands(); Op++) {
+      auto *Ld = dyn_cast<LoadSDNode>(BV.getOperand(Op));
+      if (!Ld || !Ld->isSimple() || !BV.getOperand(Op).hasOneUse())
+        return false;
+      Loads.push_back(Ld);
+    }
+    return true;
+  } else if (B.getOpcode() == ISD::VECTOR_SHUFFLE) {
+    // Try to find a tree of shuffles and concats from how IR shuffles of loads
+    // are lowered. Note that this only comes up because we do not always visit
+    // operands before uses. After that is fixed this can be removed and in the
+    // meantime this is fairly specific to the lowering we expect from IR.
+    // t46: v16i8 = vector_shuffle<0,1,2,3,4,5,6,7,8,9,10,11,16,17,18,19> t44, t45
+    //   t44: v16i8 = vector_shuffle<0,1,2,3,4,5,6,7,16,17,18,19,u,u,u,u> t42, t43
+    //     t42: v16i8 = concat_vectors t40, t36, undef:v4i8, undef:v4i8
+    //       t40: v4i8,ch = load<(load (s32) from %ir.17)> t0, t22, undef:i64
+    //       t36: v4i8,ch = load<(load (s32) from %ir.13)> t0, t18, undef:i64
+    //     t43: v16i8 = concat_vectors t32, undef:v4i8, undef:v4i8, undef:v4i8
+    //       t32: v4i8,ch = load<(load (s32) from %ir.9)> t0, t14, undef:i64
+    //   t45: v16i8 = concat_vectors t28, undef:v4i8, undef:v4i8, undef:v4i8
+    //     t28: v4i8,ch = load<(load (s32) from %ir.0)> t0, t2, undef:i64
+    if (B.getOperand(0).getOpcode() != ISD::VECTOR_SHUFFLE ||
+        B.getOperand(0).getOperand(0).getOpcode() != ISD::CONCAT_VECTORS ||
+        B.getOperand(0).getOperand(1).getOpcode() != ISD::CONCAT_VECTORS ||
+        B.getOperand(1).getOpcode() != ISD::CONCAT_VECTORS ||
+        B.getOperand(1).getNumOperands() != 4)
+      return false;
+    auto SV1 = cast<ShuffleVectorSDNode>(B);
+    auto SV2 = cast<ShuffleVectorSDNode>(B.getOperand(0));
+    int NumElts = B.getValueType().getVectorNumElements();
+    int NumSubElts = NumElts / 4;
+    for (int I = 0; I < NumSubElts; I++) {
+      // <0,1,2,3,4,5,6,7,8,9,10,11,16,17,18,19>
+      if (SV1->getMaskElt(I) != I ||
+          SV1->getMaskElt(I + NumSubElts) != I + NumSubElts ||
+          SV1->getMaskElt(I + NumSubElts * 2) != I + NumSubElts * 2 ||
+          SV1->getMaskElt(I + NumSubElts * 3) != I + NumElts)
+        return false;
+      // <0,1,2,3,4,5,6,7,16,17,18,19,u,u,u,u>
+      if (SV2->getMaskElt(I) != I ||
+          SV2->getMaskElt(I + NumSubElts) != I + NumSubElts ||
+          SV2->getMaskElt(I + NumSubElts * 2) != I + NumElts)
+        return false;
+    }
+    auto *Ld0 = dyn_cast<LoadSDNode>(SV2->getOperand(0).getOperand(0));
+    auto *Ld1 = dyn_cast<LoadSDNode>(SV2->getOperand(0).getOperand(1));
+    auto *Ld2 = dyn_cast<LoadSDNode>(SV2->getOperand(1).getOperand(0));
+    auto *Ld3 = dyn_cast<LoadSDNode>(B.getOperand(1).getOperand(0));
+    if (!Ld0 || !Ld1 || !Ld2 || !Ld3 || !Ld0->isSimple() || !Ld1->isSimple() ||
+        !Ld2->isSimple() || !Ld3->isSimple())
+      return false;
+    Loads.push_back(Ld0);
+    Loads.push_back(Ld1);
+    Loads.push_back(Ld2);
+    Loads.push_back(Ld3);
+    return true;
+  }
+  return false;
+}
+
+static bool areLoadedOffsetButOtherwiseSame(SDValue Op0, SDValue Op1,
+                                            SelectionDAG &DAG,
+                                            unsigned &NumSubLoads) {
+  if (!Op0.hasOneUse() || !Op1.hasOneUse())
+    return false;
+
+  SmallVector<LoadSDNode *> Loads0, Loads1;
+  if (isLoadOrMultipleLoads(Op0, Loads0) &&
+      isLoadOrMultipleLoads(Op1, Loads1)) {
+    if (NumSubLoads && Loads0.size() != NumSubLoads)
+      return false;
+    NumSubLoads = Loads0.size();
+    return Loads0.size() == Loads1.size() &&
+           all_of(zip(Loads0, Loads1), [&DAG](auto L) {
+             unsigned Size = get<0>(L)->getValueType(0).getSizeInBits();
+             return Size == get<1>(L)->getValueType(0).getSizeInBits() &&
+                    DAG.areNonVolatileConsecutiveLoads(get<1>(L), get<0>(L),
+                                                       Size / 8, 1);
+           });
+  }
+
+  if (Op0.getOpcode() != Op1.getOpcode())
+    return false;
+
+  switch (Op0.getOpcode()) {
+  case ISD::ADD:
+  case ISD::SUB:
+    return areLoadedOffsetButOtherwiseSame(Op0.getOperand(0), Op1.getOperand(0),
+                                           DAG, NumSubLoads) &&
+           areLoadedOffsetButOtherwiseSame(Op0.getOperand(1), Op1.getOperand(1),
+                                           DAG, NumSubLoads);
+  case ISD::SIGN_EXTEND:
+  case ISD::ANY_EXTEND:
+  case ISD::ZERO_EXTEND:
+    EVT XVT = Op0.getOperand(0).getValueType();
+    if (XVT.getScalarSizeInBits() != 8 && XVT.getScalarSizeInBits() != 16 &&
+        XVT.getScalarSizeInBits() != 32)
+      return false;
+    return areLoadedOffsetButOtherwiseSame(Op0.getOperand(0), Op1.getOperand(0),
+                                           DAG, NumSubLoads);
+  }
+  return false;
+}
+
+// This method attempts to fold trees of add(ext(load p), shl(ext(load p+4))
+// into a single load of twice the size, that we extract the bottom part and top
+// part so that the shl can use a shll2 instruction. The two loads in that
+// example can also be larger trees of instructions, which are identical except
+// for the leaves which are all loads offset from the LHS, including
+// buildvectors of multiple loads. For example the RHS tree could be
+// sub(zext(buildvec(load p+4, load q+4)), zext(buildvec(load r+4, load s+4)))
+// Whilst it can be common for the larger loads to replace LDP instructions
+// (which doesn't gain anything on it's own), the larger loads can help create
+// more efficient code, and in buildvectors prevent the need for ld1 lane
+// inserts which can be slower than normal loads.
+static SDValue performExtBinopLoadFold(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isFixedLengthVector() ||
+      (VT.getScalarSizeInBits() != 16 && VT.getScalarSizeInBits() != 32 &&
+       VT.getScalarSizeInBits() != 64))
+    return SDValue();
+
+  SDValue Other = N->getOperand(0);
+  SDValue Shift = N->getOperand(1);
+  if (Shift.getOpcode() != ISD::SHL && N->getOpcode() != ISD::SUB)
+    std::swap(Shift, Other);
+  APInt ShiftAmt;
+  if (Shift.getOpcode() != ISD::SHL || !Shift.hasOneUse() ||
+      !ISD::isConstantSplatVector(Shift.getOperand(1).getNode(), ShiftAmt))
+    return SDValue();
+
+  if (!ISD::isExtOpcode(Shift.getOperand(0).getOpcode()) ||
+      !ISD::isExtOpcode(Other.getOpcode()) ||
+      Shift.getOperand(0).getOperand(0).getValueType() !=
+          Other.getOperand(0).getValueType() ||
+      !Other.hasOneUse() || !Shift.getOperand(0).hasOneUse())
+    return SDValue();
+
+  SDValue Op0 = Other.getOperand(0);
+  SDValue Op1 = Shift.getOperand(0).getOperand(0);
+
+  unsigned NumSubLoads = 0;
+  if (!areLoadedOffsetButOtherwiseSame(Op0, Op1, DAG, NumSubLoads))
+    return SDValue();
+
+  // Attempt to rule out some unprofitable cases using heuristics (some working
+  // around suboptimal code generation), notably if the extend not be able to
+  // use ushll2 instructions as the types are not large enough. Otherwise zip's
+  // will need to be created which can increase the instruction count.
+  unsigned NumElts = Op0.getValueType().getVectorNumElements();
+  unsigned NumSubElts = NumElts / NumSubLoads;
+  if (NumSubElts * VT.getScalarSizeInBits() < 128 ||
+      (Other.getOpcode() != Shift.getOperand(0).getOpcode() &&
+       Op0.getValueType().getSizeInBits() < 128 &&
+       !DAG.getTargetLoweringInfo().isTypeLegal(Op0.getValueType())))
+    return SDValue();
+
+  // Recreate the tree with the new combined loads.
+  std::function<SDValue(SDValue, SDValue, SelectionDAG &)> GenCombinedTree =
+      [&GenCombinedTree](SDValue Op0, SDValue Op1, SelectionDAG &DAG) {
+        EVT DVT =
+            Op0.getValueType().getDoubleNumVectorElementsVT(*DAG.getContext());
+
+        SmallVector<LoadSDNode *> Loads0, Loads1;
+        if (isLoadOrMultipleLoads(Op0, Loads0) &&
+            isLoadOrMultipleLoads(Op1, Loads1)) {
+          EVT LoadVT = EVT::getVectorVT(
+              *DAG.getContext(), Op0.getValueType().getScalarType(),
+              Op0.getValueType().getVectorNumElements() / Loads0.size());
+          EVT DLoadVT = LoadVT.getDoubleNumVectorElementsVT(*DAG.getContext());
+
+          SmallVector<SDValue> NewLoads;
+          for (const auto &[L0, L1] : zip(Loads0, Loads1)) {
+            SDValue Load = DAG.getLoad(DLoadVT, SDLoc(L0), L0->getChain(),
+                                       L0->getBasePtr(), L0->getPointerInfo(),
+                                       L0->getOriginalAlign());
+            DAG.makeEquivalentMemoryOrdering(L0, Load.getValue(1));
+            DAG.makeEquivalentMemoryOrdering(L1, Load.getValue(1));
+            NewLoads.push_back(Load);
+          }
+          return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op0), DVT, NewLoads);
+        }
+
+        SmallVector<SDValue> Ops;
+        for (const auto &[O0, O1] : zip(Op0->op_values(), Op1->op_values()))
+          Ops.push_back(GenCombinedTree(O0, O1, DAG));
+        return DAG.getNode(Op0.getOpcode(), SDLoc(Op0), DVT, Ops);
+      };
+  SDValue NewOp = GenCombinedTree(Op0, Op1, DAG);
+
+  SmallVector<int> LowMask(NumElts, 0), HighMask(NumElts, 0);
+  int Hi = NumSubElts, Lo = 0;
+  for (unsigned i = 0; i < NumSubLoads; i++) {
+    for (unsigned j = 0; j < NumSubElts; j++) {
+      LowMask[i * NumSubElts + j] = Lo++;
+      HighMask[i * NumSubElts + j] = Hi++;
+    }
+    Lo += NumSubElts;
+    Hi += NumSubElts;
+  }
+  SDLoc DL(N);
+  SDValue Ext0, Ext1;
+  // Extract the top and bottom lanes, then extend the result. Possibly extend
+  // the result then extract the lanes if the two operands match as it produces
+  // slightly smaller code.
+  if (Other.getOpcode() != Shift.getOperand(0).getOpcode()) {
+    SDValue SubL = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, Op0.getValueType(),
+                               NewOp, DAG.getConstant(0, DL, MVT::i64));
+    SDValue SubH =
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, Op0.getValueType(), NewOp,
+                    DAG.getConstant(NumSubElts * NumSubLoads, DL, MVT::i64));
+    SDValue Extr0 =
+        DAG.getVectorShuffle(Op0.getValueType(), DL, SubL, SubH, LowMask);
+    SDValue Extr1 =
+        DAG.getVectorShuffle(Op0.getValueType(), DL, SubL, SubH, HighMask);
+    Ext0 = DAG.getNode(Other.getOpcode(), DL, VT, Extr0);
+    Ext1 = DAG.getNode(Shift.getOperand(0).getOpcode(), DL, VT, Extr1);
+  } else {
+    EVT DVT = VT.getDoubleNumVectorElementsVT(*DAG.getContext());
+    SDValue Ext = DAG.getNode(Other.getOpcode(), DL, DVT, NewOp);
+    SDValue SubL = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Ext,
+                               DAG.getConstant(0, DL, MVT::i64));
+    SDValue SubH =
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Ext,
+                    DAG.getConstant(NumSubElts * NumSubLoads, DL, MVT::i64));
+    Ext0 = DAG.getVectorShuffle(VT, DL, SubL, SubH, LowMask);
+    Ext1 = DAG.getVectorShuffle(VT, DL, SubL, SubH, HighMask);
+  }
+  SDValue NShift =
+      DAG.getNode(Shift.getOpcode(), DL, VT, Ext1, Shift.getOperand(1));
+  return DAG.getNode(N->getOpcode(), DL, VT, Ext0, NShift);
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -18551,6 +18795,9 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performSVEMulAddSubCombine(N, DCI))
     return Val;
   if (SDValue Val = performAddSubIntoVectorOp(N, DCI.DAG))
+    return Val;
+
+  if (SDValue Val = performExtBinopLoadFold(N, DCI.DAG))
     return Val;
 
   return performAddSubLongCombine(N, DCI);
