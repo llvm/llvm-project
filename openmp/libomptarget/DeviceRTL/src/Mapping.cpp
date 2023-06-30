@@ -48,7 +48,7 @@ const llvm::omp::GV &getGridValue() {
 }
 
 uint32_t getNumHardwareThreadsInBlock() {
-    return external_get_local_size(0);
+  return __builtin_amdgcn_workgroup_size_x();
 }
 
 LaneMaskTy activemask() { return __builtin_amdgcn_read_exec(); }
@@ -80,7 +80,7 @@ uint32_t getKernelSize() { return __builtin_amdgcn_grid_size_x(); }
 uint32_t getBlockId() { return __builtin_amdgcn_workgroup_id_x(); }
 
 uint32_t getNumberOfBlocks() {
-    return external_get_num_groups(0);
+  return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();
 }
 
 uint32_t getWarpId() {
