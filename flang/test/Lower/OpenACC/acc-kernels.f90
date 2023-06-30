@@ -277,4 +277,16 @@ subroutine acc_kernels
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
 
+!$acc kernels default(none)
+!$acc end kernels
+
+! CHECK: acc.kernels {
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+!$acc kernels default(present)
+!$acc end kernels
+
+! CHECK: acc.kernels {
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue present>}
+
 end subroutine acc_kernels

@@ -1129,6 +1129,9 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
   bool addWaitAttr = false;
   bool addSelfAttr = false;
 
+  bool hasDefaultNone = false;
+  bool hasDefaultPresent = false;
+
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   // Lower clauses values mapped to operands.
@@ -1282,6 +1285,14 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
                        &clause.u)) {
       genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
                     reductionOperands, reductionRecipes);
+    } else if (const auto *defaultClause =
+                   std::get_if<Fortran::parser::AccClause::Default>(
+                       &clause.u)) {
+      if ((defaultClause->v).v == llvm::acc::DefaultValue::ACC_Default_none)
+        hasDefaultNone = true;
+      else if ((defaultClause->v).v ==
+               llvm::acc::DefaultValue::ACC_Default_present)
+        hasDefaultPresent = true;
     }
   }
 
@@ -1318,6 +1329,11 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     computeOp.setWaitAttrAttr(builder.getUnitAttr());
   if (addSelfAttr)
     computeOp.setSelfAttrAttr(builder.getUnitAttr());
+
+  if (hasDefaultNone)
+    computeOp.setDefaultAttr(mlir::acc::ClauseDefaultValue::None);
+  if (hasDefaultPresent)
+    computeOp.setDefaultAttr(mlir::acc::ClauseDefaultValue::Present);
 
   if constexpr (!std::is_same_v<Op, mlir::acc::KernelsOp>) {
     if (!privatizations.empty())
