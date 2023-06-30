@@ -1738,6 +1738,9 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   if (func->hasGC())
     funcOp.setGarbageCollector(StringRef(func->getGC()));
 
+  if (func->hasSection())
+    funcOp.setSection(StringRef(func->getSection()));
+
   funcOp.setVisibility_(convertVisibilityFromLLVM(func->getVisibility()));
 
   if (func->hasComdat())
