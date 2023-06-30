@@ -15,6 +15,7 @@
 
 #include "llvm/Transforms/IPO/Attributor.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
@@ -24,6 +25,7 @@
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MustExecute.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantFold.h"
@@ -34,6 +36,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -905,51 +908,42 @@ static bool isEqualOrWorse(const Attribute &New, const Attribute &Old) {
 }
 
 /// Return true if the information provided by \p Attr was added to the
-/// attribute list \p Attrs. This is only the case if it was not already present
-/// in \p Attrs at the position describe by \p PK and \p AttrIdx.
+/// attribute set \p AttrSet. This is only the case if it was not already
+/// present in \p AttrSet.
 static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
-                             AttributeList &Attrs, int AttrIdx,
-                             bool ForceReplace = false) {
+                             AttributeSet AttrSet, bool ForceReplace,
+                             AttrBuilder &AB) {
 
   if (Attr.isEnumAttribute()) {
     Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    if (Attrs.hasAttributeAtIndex(AttrIdx, Kind))
-      if (!ForceReplace &&
-          isEqualOrWorse(Attr, Attrs.getAttributeAtIndex(AttrIdx, Kind)))
-        return false;
-    Attrs = Attrs.addAttributeAtIndex(Ctx, AttrIdx, Attr);
+    if (AttrSet.hasAttribute(Kind))
+      return false;
+    AB.addAttribute(Kind);
     return true;
   }
   if (Attr.isStringAttribute()) {
     StringRef Kind = Attr.getKindAsString();
-    if (Attrs.hasAttributeAtIndex(AttrIdx, Kind))
-      if (!ForceReplace &&
-          isEqualOrWorse(Attr, Attrs.getAttributeAtIndex(AttrIdx, Kind)))
+    if (AttrSet.hasAttribute(Kind)) {
+      if (!ForceReplace)
         return false;
-    Attrs = Attrs.addAttributeAtIndex(Ctx, AttrIdx, Attr);
+    }
+    AB.addAttribute(Kind, Attr.getValueAsString());
     return true;
   }
   if (Attr.isIntAttribute()) {
     Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    if (Attrs.hasAttributeAtIndex(AttrIdx, Kind)) {
-      if (!ForceReplace && Kind == Attribute::Memory) {
-        MemoryEffects ExistingME =
-            Attrs.getAttributeAtIndex(AttrIdx, Attribute::Memory)
-                .getMemoryEffects();
-        MemoryEffects ME = Attr.getMemoryEffects() & ExistingME;
-        if (ME == ExistingME)
-          return false;
-        Attrs = Attrs.removeAttributeAtIndex(Ctx, AttrIdx, Kind);
-        Attrs = Attrs.addAttributesAtIndex(Ctx, AttrIdx,
-                                           AttrBuilder(Ctx).addMemoryAttr(ME));
-        return true;
-      }
-      if (!ForceReplace &&
-          isEqualOrWorse(Attr, Attrs.getAttributeAtIndex(AttrIdx, Kind)))
+    if (!ForceReplace && Kind == Attribute::Memory) {
+      MemoryEffects ME = Attr.getMemoryEffects() & AttrSet.getMemoryEffects();
+      if (ME == AttrSet.getMemoryEffects())
+        return false;
+      AB.addMemoryAttr(ME);
+      return true;
+    }
+    if (AttrSet.hasAttribute(Kind)) {
+      if (!ForceReplace && isEqualOrWorse(Attr, AttrSet.getAttribute(Kind)))
         return false;
     }
-    Attrs = Attrs.removeAttributeAtIndex(Ctx, AttrIdx, Kind);
-    Attrs = Attrs.addAttributeAtIndex(Ctx, AttrIdx, Attr);
+    AB.addAttribute(Attr);
     return true;
   }
 
@@ -1025,11 +1019,44 @@ ChangeStatus AbstractAttribute::update(Attributor &A) {
   return HasChanged;
 }
 
+bool Attributor::getAttrsFromAssumes(const IRPosition &IRP,
+                                     Attribute::AttrKind AK,
+                                     SmallVectorImpl<Attribute> &Attrs) {
+  assert(IRP.getPositionKind() != IRPosition::IRP_INVALID &&
+         "Did expect a valid position!");
+  MustBeExecutedContextExplorer *Explorer =
+      getInfoCache().getMustBeExecutedContextExplorer();
+  if (!Explorer)
+    return false;
+
+  Value &AssociatedValue = IRP.getAssociatedValue();
+
+  const Assume2KnowledgeMap &A2K =
+      getInfoCache().getKnowledgeMap().lookup({&AssociatedValue, AK});
+
+  // Check if we found any potential assume use, if not we don't need to create
+  // explorer iterators.
+  if (A2K.empty())
+    return false;
+
+  LLVMContext &Ctx = AssociatedValue.getContext();
+  unsigned AttrsSize = Attrs.size();
+  auto EIt = Explorer->begin(IRP.getCtxI()),
+       EEnd = Explorer->end(IRP.getCtxI());
+  for (const auto &It : A2K)
+    if (Explorer->findInContextOf(It.first, EIt, EEnd))
+      Attrs.push_back(Attribute::get(Ctx, AK, It.second.Max));
+  return AttrsSize != Attrs.size();
+}
+
+template <typename DescTy>
 ChangeStatus
-IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
-                                   const ArrayRef<Attribute> &DeducedAttrs,
-                                   bool ForceReplace) {
-  if (DeducedAttrs.empty())
+Attributor::updateAttrMap(const IRPosition &IRP,
+                          const ArrayRef<DescTy> &AttrDescs,
+                          function_ref<bool(const DescTy &, AttributeSet,
+                                            AttributeMask &, AttrBuilder &)>
+                              CB) {
+  if (AttrDescs.empty())
     return ChangeStatus::UNCHANGED;
   switch (IRP.getPositionKind()) {
   case IRPosition::IRP_FLOAT:
@@ -1039,25 +1066,121 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
     break;
   };
 
-  // In the following some generic code that will manifest attributes in
-  // DeducedAttrs if they improve the current IR. Due to the different
-  // annotation positions we use the underlying AttributeList interface.
-  AttributeList Attrs = IRP.getAttrList();
+  AttributeList AL;
+  Value *AttrListAnchor = IRP.getAttrListAnchor();
+  auto It = AttrsMap.find(AttrListAnchor);
+  if (It == AttrsMap.end())
+    AL = IRP.getAttrList();
+  else
+    AL = It->getSecond();
+
+  LLVMContext &Ctx = IRP.getAnchorValue().getContext();
+  auto AttrIdx = IRP.getAttrIdx();
+  AttributeSet AS = AL.getAttributes(AttrIdx);
+  AttributeMask AM;
+  AttrBuilder AB(Ctx);
 
   ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
-  LLVMContext &Ctx = IRP.getAnchorValue().getContext();
-  for (const Attribute &Attr : DeducedAttrs) {
-    if (!addIfNotExistent(Ctx, Attr, Attrs, IRP.getAttrIdx(), ForceReplace))
-      continue;
-
-    HasChanged = ChangeStatus::CHANGED;
-  }
+  for (const DescTy &AttrDesc : AttrDescs)
+    if (CB(AttrDesc, AS, AM, AB))
+      HasChanged = ChangeStatus::CHANGED;
 
   if (HasChanged == ChangeStatus::UNCHANGED)
-    return HasChanged;
+    return ChangeStatus::UNCHANGED;
 
-  IRP.setAttrList(Attrs);
-  return HasChanged;
+  AL = AL.removeAttributesAtIndex(Ctx, AttrIdx, AM);
+  AL = AL.addAttributesAtIndex(Ctx, AttrIdx, AB);
+  AttrsMap[AttrListAnchor] = AL;
+  return ChangeStatus::CHANGED;
+}
+
+bool Attributor::hasAttr(const IRPosition &IRP,
+                         ArrayRef<Attribute::AttrKind> AttrKinds,
+                         bool IgnoreSubsumingPositions,
+                         Attribute::AttrKind ImpliedAttributeKind) {
+  bool Implied = false;
+  bool HasAttr = false;
+  auto HasAttrCB = [&](const Attribute::AttrKind &Kind, AttributeSet AttrSet,
+                       AttributeMask &, AttrBuilder &) {
+    if (AttrSet.hasAttribute(Kind)) {
+      Implied |= Kind != ImpliedAttributeKind;
+      HasAttr = true;
+    }
+    return false;
+  };
+  for (const IRPosition &EquivIRP : SubsumingPositionIterator(IRP)) {
+    updateAttrMap<Attribute::AttrKind>(EquivIRP, AttrKinds, HasAttrCB);
+    if (HasAttr)
+      break;
+    // The first position returned by the SubsumingPositionIterator is
+    // always the position itself. If we ignore subsuming positions we
+    // are done after the first iteration.
+    if (IgnoreSubsumingPositions)
+      break;
+    Implied = true;
+  }
+  if (!HasAttr) {
+    Implied = true;
+    SmallVector<Attribute> Attrs;
+    for (Attribute::AttrKind AK : AttrKinds)
+      if (getAttrsFromAssumes(IRP, AK, Attrs)) {
+        HasAttr = true;
+        break;
+      }
+  }
+
+  // Check if we should manifest the implied attribute kind at the IRP.
+  if (ImpliedAttributeKind != Attribute::None && HasAttr && Implied)
+    manifestAttrs(IRP, {Attribute::get(IRP.getAnchorValue().getContext(),
+                                       ImpliedAttributeKind)});
+  return HasAttr;
+}
+
+void Attributor::getAttrs(const IRPosition &IRP,
+                          ArrayRef<Attribute::AttrKind> AttrKinds,
+                          SmallVectorImpl<Attribute> &Attrs,
+                          bool IgnoreSubsumingPositions) {
+  auto CollectAttrCB = [&](const Attribute::AttrKind &Kind,
+                           AttributeSet AttrSet, AttributeMask &,
+                           AttrBuilder &) {
+    if (AttrSet.hasAttribute(Kind))
+      Attrs.push_back(AttrSet.getAttribute(Kind));
+    return false;
+  };
+  for (const IRPosition &EquivIRP : SubsumingPositionIterator(IRP)) {
+    updateAttrMap<Attribute::AttrKind>(EquivIRP, AttrKinds, CollectAttrCB);
+    // The first position returned by the SubsumingPositionIterator is
+    // always the position itself. If we ignore subsuming positions we
+    // are done after the first iteration.
+    if (IgnoreSubsumingPositions)
+      break;
+  }
+  for (Attribute::AttrKind AK : AttrKinds)
+    getAttrsFromAssumes(IRP, AK, Attrs);
+}
+
+ChangeStatus
+Attributor::removeAttrs(const IRPosition &IRP,
+                        const ArrayRef<Attribute::AttrKind> &AttrKinds) {
+  auto RemoveAttrCB = [&](const Attribute::AttrKind &Kind, AttributeSet AttrSet,
+                          AttributeMask &AM, AttrBuilder &) {
+    if (!AttrSet.hasAttribute(Kind))
+      return false;
+    AM.addAttribute(Kind);
+    return true;
+  };
+  return updateAttrMap<Attribute::AttrKind>(IRP, AttrKinds, RemoveAttrCB);
+}
+
+ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
+                                       const ArrayRef<Attribute> &Attrs,
+                                       bool ForceReplace) {
+  LLVMContext &Ctx = IRP.getAnchorValue().getContext();
+  auto AddAttrCB = [&](const Attribute &Attr, AttributeSet AttrSet,
+                       AttributeMask &, AttrBuilder &AB) {
+    return addIfNotExistent(Ctx, Attr, AttrSet, ForceReplace, AB);
+  };
+  return updateAttrMap<Attribute>(IRP, Attrs, AddAttrCB);
 }
 
 const IRPosition IRPosition::EmptyKey(DenseMapInfo<void *>::getEmptyKey());
@@ -1129,83 +1252,6 @@ SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
     return;
   }
   }
-}
-
-bool IRPosition::hasAttr(ArrayRef<Attribute::AttrKind> AKs,
-                         bool IgnoreSubsumingPositions, Attributor *A) const {
-  SmallVector<Attribute, 4> Attrs;
-  for (const IRPosition &EquivIRP : SubsumingPositionIterator(*this)) {
-    for (Attribute::AttrKind AK : AKs)
-      if (EquivIRP.getAttrsFromIRAttr(AK, Attrs))
-        return true;
-    // The first position returned by the SubsumingPositionIterator is
-    // always the position itself. If we ignore subsuming positions we
-    // are done after the first iteration.
-    if (IgnoreSubsumingPositions)
-      break;
-  }
-  if (A)
-    for (Attribute::AttrKind AK : AKs)
-      if (getAttrsFromAssumes(AK, Attrs, *A))
-        return true;
-  return false;
-}
-
-void IRPosition::getAttrs(ArrayRef<Attribute::AttrKind> AKs,
-                          SmallVectorImpl<Attribute> &Attrs,
-                          bool IgnoreSubsumingPositions, Attributor *A) const {
-  for (const IRPosition &EquivIRP : SubsumingPositionIterator(*this)) {
-    for (Attribute::AttrKind AK : AKs)
-      EquivIRP.getAttrsFromIRAttr(AK, Attrs);
-    // The first position returned by the SubsumingPositionIterator is
-    // always the position itself. If we ignore subsuming positions we
-    // are done after the first iteration.
-    if (IgnoreSubsumingPositions)
-      break;
-  }
-  if (A)
-    for (Attribute::AttrKind AK : AKs)
-      getAttrsFromAssumes(AK, Attrs, *A);
-}
-
-bool IRPosition::getAttrsFromIRAttr(Attribute::AttrKind AK,
-                                    SmallVectorImpl<Attribute> &Attrs) const {
-  if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
-    return false;
-
-  AttributeList AttrList = getAttrList();
-
-  bool HasAttr = AttrList.hasAttributeAtIndex(getAttrIdx(), AK);
-  if (HasAttr)
-    Attrs.push_back(AttrList.getAttributeAtIndex(getAttrIdx(), AK));
-  return HasAttr;
-}
-
-bool IRPosition::getAttrsFromAssumes(Attribute::AttrKind AK,
-                                     SmallVectorImpl<Attribute> &Attrs,
-                                     Attributor &A) const {
-  assert(getPositionKind() != IRP_INVALID && "Did expect a valid position!");
-  Value &AssociatedValue = getAssociatedValue();
-
-  const Assume2KnowledgeMap &A2K =
-      A.getInfoCache().getKnowledgeMap().lookup({&AssociatedValue, AK});
-
-  // Check if we found any potential assume use, if not we don't need to create
-  // explorer iterators.
-  if (A2K.empty())
-    return false;
-
-  LLVMContext &Ctx = AssociatedValue.getContext();
-  unsigned AttrsSize = Attrs.size();
-  MustBeExecutedContextExplorer *Explorer =
-      A.getInfoCache().getMustBeExecutedContextExplorer();
-  if (!Explorer)
-    return false;
-  auto EIt = Explorer->begin(getCtxI()), EEnd = Explorer->end(getCtxI());
-  for (const auto &It : A2K)
-    if (Explorer->findInContextOf(It.first, EIt, EEnd))
-      Attrs.push_back(Attribute::get(Ctx, AK, It.second.Max));
-  return AttrsSize != Attrs.size();
 }
 
 void IRPosition::verify() {
@@ -2202,6 +2248,16 @@ ChangeStatus Attributor::manifestAttributes() {
     llvm_unreachable("Expected the final number of abstract attributes to "
                      "remain unchanged!");
   }
+
+  for (auto &It : AttrsMap) {
+    AttributeList &AL = It.getSecond();
+    const IRPosition &IRP =
+        isa<Function>(It.getFirst())
+            ? IRPosition::function(*cast<Function>(It.getFirst()))
+            : IRPosition::callsite_function(*cast<CallBase>(It.getFirst()));
+    IRP.setAttrList(AL);
+  }
+
   return ManifestChange;
 }
 
