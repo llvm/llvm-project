@@ -1015,6 +1015,8 @@ ChangeStatus
 IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
                                    const ArrayRef<Attribute> &DeducedAttrs,
                                    bool ForceReplace) {
+  if (DeducedAttrs.empty())
+    return ChangeStatus::UNCHANGED;
   switch (IRP.getPositionKind()) {
   case IRPosition::IRP_FLOAT:
   case IRPosition::IRP_INVALID:
