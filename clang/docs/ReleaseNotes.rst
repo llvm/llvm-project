@@ -557,6 +557,10 @@ Bug Fixes in This Version
   attempting to see if it could be type template for class template argument
   deduction. This fixes
   (`Issue 57495 <https://github.com/llvm/llvm-project/issues/57495>`_)
+- Fix missing destructor calls and therefore memory leaks in generated code
+  when an immediate invocation appears as a part of an expression that produces
+  temporaries.
+  (`#60709 <https://github.com/llvm/llvm-project/issues/60709>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
