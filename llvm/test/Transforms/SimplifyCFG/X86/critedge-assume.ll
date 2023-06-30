@@ -45,6 +45,7 @@ _ZN10unique_ptrD2Ev.exit:
   %vtable.i.i = load ptr, ptr %call8, align 8
   %x3 = tail call i1 @llvm.type.test(ptr %vtable.i.i, metadata !"foo")
   ; CHECK: call void @llvm.assume
+  ; CHECK: call void @llvm.assume
   tail call void @llvm.assume(i1 %x3) #5
   br i1 %cmp, label %while.end.loopexit, label %while.body
 
