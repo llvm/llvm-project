@@ -359,7 +359,7 @@ define i32 @memset_non_volatile(ptr %ptr1, i8 %val) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@memset_non_volatile
 ; CHECK-SAME: (ptr nocapture nofree writeonly [[PTR1:%.*]], i8 [[VAL:%.*]]) #[[ATTR13:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nocapture nofree writeonly [[PTR1]], i8 [[VAL]], i32 noundef 8, i1 noundef false) #[[ATTR20:[0-9]+]]
 ; CHECK-NEXT:    ret i32 4
 ;
   call void @llvm.memset.p0.i32(ptr %ptr1, i8 %val, i32 8, i1 false)
@@ -455,4 +455,5 @@ define float @cos_test2(float %x) {
 ; CHECK: attributes #[[ATTR17:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR18]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR19]] = { nofree nounwind }
+; CHECK: attributes #[[ATTR20]] = { memory(write) }
 ;.

@@ -1056,7 +1056,7 @@ define noundef i32 @assumed_undef_is_ok_caller(i1 %c) {
 ; TUNIT: attributes #[[ATTR4]] = { mustprogress nofree norecurse nounwind null_pointer_is_valid willreturn }
 ; TUNIT: attributes #[[ATTR5]] = { mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR6]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR7]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR7]] = { nofree nosync nounwind willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none) }
@@ -1068,5 +1068,5 @@ define noundef i32 @assumed_undef_is_ok_caller(i1 %c) {
 ; CGSCC: attributes #[[ATTR7]] = { mustprogress nofree nounwind willreturn }
 ; CGSCC: attributes #[[ATTR8]] = { mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR9]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR10]] = { nounwind }
+; CGSCC: attributes #[[ATTR10]] = { nounwind memory(write) }
 ;.
