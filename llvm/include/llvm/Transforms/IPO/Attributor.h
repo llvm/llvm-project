@@ -821,6 +821,13 @@ struct IRPosition {
         "There is no attribute index for a floating or invalid position!");
   }
 
+  /// Return the value attributes are attached to.
+  Value *getAttrListAnchor() const {
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB;
+    return getAssociatedFunction();
+  }
+
   /// Return the attributes associated with this function or call site scope.
   AttributeList getAttrList() const {
     if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
@@ -876,51 +883,6 @@ struct IRPosition {
       return isReturnPosition(EncodingBits) ? IRP_CALL_SITE_RETURNED
                                             : IRP_CALL_SITE;
     return IRP_FLOAT;
-  }
-
-  /// TODO: Figure out if the attribute related helper functions should live
-  ///       here or somewhere else.
-
-  /// Return true if any kind in \p AKs existing in the IR at a position that
-  /// will affect this one. See also getAttrs(...).
-  /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
-  ///                                 e.g., the function position if this is an
-  ///                                 argument position, should be ignored.
-  bool hasAttr(ArrayRef<Attribute::AttrKind> AKs,
-               bool IgnoreSubsumingPositions = false,
-               Attributor *A = nullptr) const;
-
-  /// Return the attributes of any kind in \p AKs existing in the IR at a
-  /// position that will affect this one. While each position can only have a
-  /// single attribute of any kind in \p AKs, there are "subsuming" positions
-  /// that could have an attribute as well. This method returns all attributes
-  /// found in \p Attrs.
-  /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
-  ///                                 e.g., the function position if this is an
-  ///                                 argument position, should be ignored.
-  void getAttrs(ArrayRef<Attribute::AttrKind> AKs,
-                SmallVectorImpl<Attribute> &Attrs,
-                bool IgnoreSubsumingPositions = false,
-                Attributor *A = nullptr) const;
-
-  /// Remove the attribute of kind \p AKs existing in the IR at this position.
-  void removeAttrs(ArrayRef<Attribute::AttrKind> AKs) const {
-    if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
-      return;
-
-    AttributeList AttrList = getAttrList();
-
-    bool Changed = false;
-    unsigned Idx = getAttrIdx();
-    LLVMContext &Ctx = getAnchorValue().getContext();
-    for (Attribute::AttrKind AK : AKs) {
-      if (!AttrList.hasAttributeAtIndex(Idx, AK))
-        continue;
-      Changed = true;
-      AttrList = AttrList.removeAttributeAtIndex(Ctx, Idx, AK);
-    }
-    if (Changed)
-      setAttrList(AttrList);
   }
 
   bool isAnyCallSitePosition() const {
@@ -1040,16 +1002,6 @@ private:
 
   /// Verify internal invariants.
   void verify();
-
-  /// Return the attributes of kind \p AK existing in the IR as attribute.
-  bool getAttrsFromIRAttr(Attribute::AttrKind AK,
-                          SmallVectorImpl<Attribute> &Attrs) const;
-
-  /// Return the attributes of kind \p AK existing in the IR as operand bundles
-  /// of an llvm.assume.
-  bool getAttrsFromAssumes(Attribute::AttrKind AK,
-                           SmallVectorImpl<Attribute> &Attrs,
-                           Attributor &A) const;
 
   /// Return the underlying pointer as Value *, valid for all positions but
   /// IRP_CALL_SITE_ARGUMENT.
@@ -1893,6 +1845,52 @@ struct Attributor {
       ToBeDeletedFunctions.insert(&F);
   }
 
+  /// Return the attributes of kind \p AK existing in the IR as operand bundles
+  /// of an llvm.assume.
+  bool getAttrsFromAssumes(const IRPosition &IRP, Attribute::AttrKind AK,
+                           SmallVectorImpl<Attribute> &Attrs);
+
+  /// Return true if any kind in \p AKs existing in the IR at a position that
+  /// will affect this one. See also getAttrs(...).
+  /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
+  ///                                 e.g., the function position if this is an
+  ///                                 argument position, should be ignored.
+  bool hasAttr(const IRPosition &IRP, ArrayRef<Attribute::AttrKind> AKs,
+               bool IgnoreSubsumingPositions = false,
+               Attribute::AttrKind ImpliedAttributeKind = Attribute::None);
+
+  /// Return the attributes of any kind in \p AKs existing in the IR at a
+  /// position that will affect this one. While each position can only have a
+  /// single attribute of any kind in \p AKs, there are "subsuming" positions
+  /// that could have an attribute as well. This method returns all attributes
+  /// found in \p Attrs.
+  /// \param IgnoreSubsumingPositions Flag to determine if subsuming positions,
+  ///                                 e.g., the function position if this is an
+  ///                                 argument position, should be ignored.
+  void getAttrs(const IRPosition &IRP, ArrayRef<Attribute::AttrKind> AKs,
+                SmallVectorImpl<Attribute> &Attrs,
+                bool IgnoreSubsumingPositions = false);
+
+  ChangeStatus removeAttrs(const IRPosition &IRP,
+                           const ArrayRef<Attribute::AttrKind> &AttrKinds);
+
+  ChangeStatus manifestAttrs(const IRPosition &IRP,
+                             const ArrayRef<Attribute> &DeducedAttrs,
+                             bool ForceReplace = false);
+
+private:
+  /// Helper to apply \p CB on all attributes of type \p AttrDescs of \p IRP.
+  template <typename DescTy>
+  ChangeStatus updateAttrMap(const IRPosition &IRP,
+                             const ArrayRef<DescTy> &AttrDescs,
+                             function_ref<bool(const DescTy &, AttributeSet,
+                                               AttributeMask &, AttrBuilder &)>
+                                 CB);
+
+  /// Mapping from functions/call sites to their attributes.
+  DenseMap<Value *, AttributeList> AttrsMap;
+
+public:
   /// If \p IRP is assumed to be a constant, return it, if it is unclear yet,
   /// return std::nullopt, otherwise return `nullptr`.
   std::optional<Constant *> getAssumedConstant(const IRPosition &IRP,
@@ -3095,14 +3093,6 @@ private:
   bool IsAtFixedpoint;
 };
 
-/// Helper struct necessary as the modular build fails if the virtual method
-/// IRAttribute::manifest is defined in the Attributor.cpp.
-struct IRAttributeManifest {
-  static ChangeStatus manifestAttrs(Attributor &A, const IRPosition &IRP,
-                                    const ArrayRef<Attribute> &DeducedAttrs,
-                                    bool ForceReplace = false);
-};
-
 /// Helper to tie a abstract state implementation to an abstract attribute.
 template <typename StateTy, typename BaseType, class... Ts>
 struct StateWrapper : public BaseType, public StateTy {
@@ -3129,7 +3119,7 @@ struct IRAttribute : public BaseType {
                             bool IgnoreSubsumingPositions = false) {
     if (isa<UndefValue>(IRP.getAssociatedValue()))
       return true;
-    return IRP.hasAttr(AttrKinds, IgnoreSubsumingPositions, &A);
+    return A.hasAttr(IRP, AttrKinds, IgnoreSubsumingPositions);
   }
 
   /// See AbstractAttribute::initialize(...).
@@ -3147,8 +3137,9 @@ struct IRAttribute : public BaseType {
       return ChangeStatus::UNCHANGED;
     SmallVector<Attribute, 4> DeducedAttrs;
     getDeducedAttributes(this->getAnchorValue().getContext(), DeducedAttrs);
-    return IRAttributeManifest::manifestAttrs(A, this->getIRPosition(),
-                                              DeducedAttrs);
+    if (DeducedAttrs.empty())
+      return ChangeStatus::UNCHANGED;
+    return A.manifestAttrs(this->getIRPosition(), DeducedAttrs);
   }
 
   /// Return the kind that identifies the abstract attribute implementation.
@@ -3627,8 +3618,8 @@ struct AAWillReturn
       return false;
 
     SmallVector<Attribute, 1> Attrs;
-    IRP.getAttrs({Attribute::Memory}, Attrs,
-                 /* IgnoreSubsumingPositions */ false);
+    A.getAttrs(IRP, {Attribute::Memory}, Attrs,
+               /* IgnoreSubsumingPositions */ false);
 
     MemoryEffects ME = MemoryEffects::unknown();
     for (const Attribute &Attr : Attrs)
