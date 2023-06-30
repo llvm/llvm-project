@@ -62,9 +62,7 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
     for (int i = 0; i < memrefType.getRank(); ++i) {
       if (!memrefType.isDynamicDim(i))
         continue;
-      Value size = rewriter.createOrFold<arith::ConstantIndexOp>(loc, i);
-      Value dim =
-          rewriter.createOrFold<memref::DimOp>(loc, op.getInput(), size);
+      Value dim = rewriter.createOrFold<memref::DimOp>(loc, op.getInput(), i);
       dynamicOperands.push_back(dim);
     }
 
