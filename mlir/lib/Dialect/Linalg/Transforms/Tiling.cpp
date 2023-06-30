@@ -529,7 +529,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
     procInfo.resize(
         iteratorTypes.size(),
         linalg::ProcInfo{nullptr, nullptr, linalg::DistributionMethod::None});
-    // Collect loop ranges of tiled loopss, loops that are parallel.
+    // Collect loop ranges of tiled loops, loops that are parallel.
     SmallVector<Range> parallelLoopRanges;
     for (const auto &iteratorType : llvm::enumerate(iteratorTypes)) {
       if (!isParallelIterator(iteratorType.value()))
@@ -559,10 +559,13 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
     // loop ranges and the iterator types. Apply its inverse to the
     // resulting loop `ivs` to match the op definition.
     SmallVector<Value, 4> interchangedIvs;
-    if (!options.interchangeVector.empty())
-      interchangedIvs = applyMapToValues(b, loc, invPermutationMap, ivs);
-    else
+    if (!options.interchangeVector.empty()) {
+      for (AffineExpr result : invPermutationMap.getResults())
+        interchangedIvs.push_back(
+            ivs[result.cast<AffineDimExpr>().getPosition()]);
+    } else {
       interchangedIvs.assign(ivs.begin(), ivs.end());
+    }
 
     // Tile the `operandValuesToUse` that either match the `op` operands
     // themselves or the tile loop arguments forwarding them.
