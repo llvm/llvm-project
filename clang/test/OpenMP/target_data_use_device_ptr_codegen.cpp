@@ -131,6 +131,7 @@ void foo(float *&lr, T *&tr) {
     ++l;
   }
   // CK1:     [[BEND]]:
+  // CK1:     [[CMP:%.+]] = icmp ne ptr %{{.+}}, null
   // CK1:     br i1 [[CMP]], label %[[BTHEN:.+]], label %[[BELSE:.+]]
 
   // CK1:     [[BTHEN]]:
