@@ -1231,10 +1231,8 @@ struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
                    BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
                    bool UseExplorer = true)
-      : DL(M.getDataLayout()), Allocator(Allocator), AG(AG),
+      : CGSCC(CGSCC), DL(M.getDataLayout()), Allocator(Allocator), AG(AG),
         TargetTriple(M.getTargetTriple()) {
-    if (CGSCC)
-      initializeModuleSlice(*CGSCC);
     if (UseExplorer)
       Explorer = new (Allocator) MustBeExecutedContextExplorer(
           /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
@@ -1286,46 +1284,8 @@ struct InformationCache {
     }
   }
 
-  /// Initialize the ModuleSlice member based on \p SCC. ModuleSlices contains
-  /// (a subset of) all functions that we can look at during this SCC traversal.
-  /// This includes functions (transitively) called from the SCC and the
-  /// (transitive) callers of SCC functions. We also can look at a function if
-  /// there is a "reference edge", i.a., if the function somehow uses (!=calls)
-  /// a function in the SCC or a caller of a function in the SCC.
-  void initializeModuleSlice(SetVector<Function *> &SCC) {
-    ModuleSlice.insert(SCC.begin(), SCC.end());
-
-    SmallPtrSet<Function *, 16> Seen;
-    SmallVector<Function *, 16> Worklist(SCC.begin(), SCC.end());
-    while (!Worklist.empty()) {
-      Function *F = Worklist.pop_back_val();
-      ModuleSlice.insert(F);
-
-      for (Instruction &I : instructions(*F))
-        if (auto *CB = dyn_cast<CallBase>(&I))
-          if (auto *Callee =
-                  dyn_cast_if_present<Function>(CB->getCalledOperand()))
-            if (Seen.insert(Callee).second)
-              Worklist.push_back(Callee);
-    }
-
-    Seen.clear();
-    Worklist.append(SCC.begin(), SCC.end());
-    while (!Worklist.empty()) {
-      Function *F = Worklist.pop_back_val();
-      ModuleSlice.insert(F);
-
-      // Traverse all transitive uses.
-      foreachUse(*F, [&](Use &U) {
-        if (auto *UsrI = dyn_cast<Instruction>(U.getUser()))
-          if (Seen.insert(UsrI->getFunction()).second)
-            Worklist.push_back(UsrI->getFunction());
-      });
-    }
-  }
-
-  /// The slice of the module we are allowed to look at.
-  SmallPtrSet<Function *, 8> ModuleSlice;
+  /// The CG-SCC the pass is run on, or nullptr if it is a module pass.
+  const SetVector<Function *> *const CGSCC = nullptr;
 
   /// A vector type to hold instructions.
   using InstructionVectorTy = SmallVector<Instruction *, 8>;
@@ -1389,11 +1349,6 @@ struct InformationCache {
     (void)Success;
     assert(Success && "Expected only new entries to be added");
     return UniqueBES;
-  }
-
-  /// Check whether \p F is part of module slice.
-  bool isInModuleSlice(const Function &F) {
-    return ModuleSlice.empty() || ModuleSlice.count(const_cast<Function *>(&F));
   }
 
   /// Return true if the stack (llvm::Alloca) can be accessed by other threads.
