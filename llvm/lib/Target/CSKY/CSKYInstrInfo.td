@@ -102,6 +102,14 @@ class oimm<int num> : Operand<i32>,
   let DecoderMethod = "decodeOImmOperand<"#num#">";
 }
 
+def imm_neg_XFORM : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getSExtValue(), SDLoc(N), MVT::i32);
+}]>;
+
+class oimm_neg<int num> : Operand<i32>,
+  ImmLeaf<i32, "return isUInt<"#num#">(-Imm - 1);"> {
+}
+
 class uimm<int num, int shift = 0> : Operand<i32>,
   ImmLeaf<i32, "return isShiftedUInt<"#num#", "#shift#">(Imm);"> {
   let EncoderMethod = "getImmOpValue<"#shift#">";
@@ -255,6 +263,23 @@ def oimm16 : oimm<16> {
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isUInt<16>(Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+
+def oimm8_neg : oimm_neg<8> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<8>(-Imm - 1);
+    return MCOp.isBareSymbolRef();
+  }];
+}
+def oimm12_neg : oimm_neg<12> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<12>(-Imm - 1);
     return MCOp.isBareSymbolRef();
   }];
 }
@@ -517,6 +542,9 @@ let Predicates = [iHasE2] in {
 
   let Size = 8 in
   def RSUBI32 : CSKYPseudo<(outs GPR:$rd), (ins GPR:$rx, uimm12:$imm12), "rsubi32 $rd, $rx, $imm12", []>;
+
+  def : Pat<(add GPR:$rs1, (oimm12_neg:$im)),
+            (SUBI32 GPR:$rs1, (imm_neg_XFORM oimm12_neg:$im))>;
 
   def LSL32 : R_YXZ_SP_F1<0x10, 0x1,
     BinOpFrag<(shl node:$LHS, node:$RHS)>, "lsl32">;

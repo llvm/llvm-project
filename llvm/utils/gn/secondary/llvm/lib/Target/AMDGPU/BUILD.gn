@@ -190,6 +190,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "GCNIterativeScheduler.cpp",
     "GCNMinRegStrategy.cpp",
     "GCNNSAReassign.cpp",
+    "GCNPreRALongBranchReg.cpp",
     "GCNPreRAOptimizations.cpp",
     "GCNRegPressure.cpp",
     "GCNRewritePartialRegUses.cpp",

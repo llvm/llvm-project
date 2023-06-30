@@ -231,11 +231,20 @@ struct IntrinsicLibrary {
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genFindloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genIeeeClass(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeCopySign(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genIeeeGetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeeeIsFinite(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeIsNegative(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeeeIsNormal(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genIeeeSetRoundingMode(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genIeeeSignbit(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeSupportRounding(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <mlir::arith::CmpIPredicate pred>
-  fir::ExtendedValue genIeeeTypeCompare(mlir::Type,
-                                        llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genIeeeTypeCompare(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeUnordered(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeeeValue(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -244,7 +253,6 @@ struct IntrinsicLibrary {
                                      llvm::ArrayRef<fir::ExtendedValue>);
   template <Fortran::runtime::io::Iostat value>
   mlir::Value genIsIostatValue(mlir::Type, llvm::ArrayRef<mlir::Value>);
-  mlir::Value genIsNan(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIsFPClass(mlir::Type, llvm::ArrayRef<mlir::Value>,
                            int fpclass);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
