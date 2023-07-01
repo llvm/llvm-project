@@ -416,11 +416,11 @@ public:
     if (EntryPath.empty())
       return;
 
-    if (auto Err = handleErrors(llvm::writeToOutput(
+    if (auto Err = llvm::writeToOutput(
             EntryPath, [&OutputBuffer](llvm::raw_ostream &OS) -> llvm::Error {
               OS << OutputBuffer.getBuffer();
               return llvm::Error::success();
-            })))
+            }))
       report_fatal_error(llvm::formatv("ThinLTO: Can't write file {0}: {1}",
                                        EntryPath,
                                        toString(std::move(Err)).c_str()));
