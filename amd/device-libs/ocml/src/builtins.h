@@ -158,11 +158,11 @@
 
 #define BUILTIN_AMDGPU_RCP_F32 __builtin_amdgcn_rcpf
 #define BUILTIN_AMDGPU_RCP_F64 __builtin_amdgcn_rcp
-#define BUILTIN_AMDGPU_RCP_F16 __builtin_amdgcn_rcph
+#define BUILTIN_RCP_F16(X) (1.0h / (X))
 
 #define BUILTIN_AMDGPU_RSQRT_F32 __builtin_amdgcn_rsqf
 #define BUILTIN_AMDGPU_RSQRT_F64 __builtin_amdgcn_rsq
-#define BUILTIN_AMDGPU_RSQRT_F16 __builtin_amdgcn_rsqh
+#define BUILTIN_RSQRT_F16(X) (1.0h / __builtin_sqrtf16(X))
 
 #define BUILTIN_AMDGPU_SIN_F32 __builtin_amdgcn_sinf
 
