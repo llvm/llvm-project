@@ -62,7 +62,7 @@ class VEAsmParser : public MCTargetAsmParser {
                                         SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
@@ -998,7 +998,7 @@ bool VEAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-bool VEAsmParser::ParseDirective(AsmToken DirectiveID) {
+ParseStatus VEAsmParser::parseDirective(AsmToken DirectiveID) {
   std::string IDVal = DirectiveID.getIdentifier().lower();
 
   // Defines VE specific directives.  Reference is "Vector Engine Assembly
@@ -1018,7 +1018,7 @@ bool VEAsmParser::ParseDirective(AsmToken DirectiveID) {
     return parseLiteralValues(8, DirectiveID.getLoc());
 
   // Let the MC layer to handle other directives.
-  return true;
+  return ParseStatus::NoMatch;
 }
 
 /// parseLiteralValues
