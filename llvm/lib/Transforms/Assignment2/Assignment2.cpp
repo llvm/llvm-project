@@ -60,66 +60,52 @@ namespace {
     // Keep track of all the functions we have encountered so far.
     unordered_map<string, bool> funcNames;
 
-    map<Value *, int> tainted;
+    map<Value *, int> variables;
 
-    set<Instruction *> worklist;
+    set<Value *> tainted;
 
     // Reset all global variables when a new function is called.
     void cleanGlobalVariables() {
       output_str = "";
+      variables.clear();
       tainted.clear();
-      worklist.clear();
     }
 
     Assignment2() : FunctionPass(ID) {}
 
-    void updateWorklist(Value *V, Instruction *I) {
-      output << "Tainted: " << V << " at " << getSourceCodeLine(I) << "\n";
-      tainted.insert(make_pair(V, getSourceCodeLine(I)));
-      for (User *U : V->users()) {
-        if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-          worklist.insert(Inst);
-        }
-      }
-    }
-
     void checkTainted(Instruction *I) {
       Value *V = dyn_cast<Value>(I);
-      if (isa<StoreInst>(I)) {
+
+      if (isa<AllocaInst>(I)) {
+        variables.insert(make_pair(V, -1));
+      } else if (isa<CallInst>(I)) {
+        output << "Call Inst: " << getSourceCodeLine(I) << "\n";
+        if (demangle(I->getOperand(0)->getName().str().c_str()) == "std::__1::cin") {
+          output << "Tainted: " << I->getOperand(1) << " at " << getSourceCodeLine(I) << "\n";
+          tainted.insert(I->getOperand(1));
+          map<Value *, int>::iterator it = variables.find(I->getOperand(1));
+          if (it != variables.end()) it->second = getSourceCodeLine(I);
+        }
+      } else if (isa<StoreInst>(I)) {
         output << "Store Inst: " << getSourceCodeLine(I) << "\n";
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          updateWorklist(I->getOperand(1), I);
+          output << "Tainted: " << I->getOperand(1) << " at " << getSourceCodeLine(I) << "\n";
+          tainted.insert(I->getOperand(1));
+          map<Value *, int>::iterator it = variables.find(I->getOperand(1));
+          if (it != variables.end()) it->second = getSourceCodeLine(I);
         } else if (tainted.find(I->getOperand(1)) != tainted.end()) {
           output << "Untainted: " << I->getOperand(1) << " at " << getSourceCodeLine(I) << "\n";
           tainted.erase(I->getOperand(1));
+          map<Value *, int>::iterator it = variables.find(I->getOperand(1));
+          if (it != variables.end()) it->second = -1;
         }
       } else if (isa<LoadInst>(I)) {
         output << "Load Inst: " << getSourceCodeLine(I) << "\n";
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          updateWorklist(V, I);
-        }
-      } else if (isa<CmpInst>(I)) {
-        output << "Cmp Inst: " << getSourceCodeLine(I) << "\n";
-        if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          output << "Untainted: " << I->getOperand(0) << " at " << getSourceCodeLine(I) << "\n";
-          tainted.erase(I->getOperand(0));
-        } else if (tainted.find(I->getOperand(1)) != tainted.end()) {
-          output << "Untainted: " << I->getOperand(1) << " at " << getSourceCodeLine(I) << "\n";
-          tainted.erase(I->getOperand(1));
+          output << "Tainted: " << V << " at " << getSourceCodeLine(I) << "\n";
+          tainted.insert(V);
         }
       }
-    }
-
-    void findSource(Function &F) {   
-      // Iterate over basic blocks within function
-      for (BasicBlock *BB : topoSortBBs(F)) {
-        // Iterate over instructions within basic block
-        for (Instruction &I : *BB) {
-          if (isa<CallInst>(I) && demangle(I.getOperand(0)->getName().str().c_str()) == "std::__1::cin") {
-            updateWorklist(I.getOperand(1), &I);
-          }
-        }
-      }  
     }
 
     // Function to return the line numbers that uses an undefined variable.
@@ -134,16 +120,14 @@ namespace {
 
       funcNames.insert(make_pair(funcName, true));
 
-      findSource(F);
+      // Iterate over basic blocks within function
+      for (BasicBlock *BB : topoSortBBs(F)) {
+        // Iterate over instructions within basic block
+        for (Instruction &I : *BB) checkTainted(&I);
+      }  
 
-      while (worklist.size() > 0) {
-        set<Instruction *>::iterator curr = worklist.begin();
-        checkTainted(*curr);
-        worklist.erase(curr);
-      }
-
-      for (auto &taint : tainted) {
-        output << "Line " << taint.second << ": " << taint.first << "\n";
+      for (auto &var : variables) {
+        if (var.second != -1) output << "Line " << var.second << ": " << var.first << "\n";
       }
 
       // Print output
