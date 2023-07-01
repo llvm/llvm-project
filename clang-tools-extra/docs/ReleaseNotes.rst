@@ -360,6 +360,10 @@ Changes in existing checks
   <clang-tidy/checks/misc/definitions-in-headers>` to avoid warning on
   declarations inside anonymous namespaces.
 
+- Fixed false-positive in :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check where expressions like
+  ``alignof`` or ``sizeof`` were incorrectly flagged as identical.
+
 - Improved :doc:`misc-unused-parameters
   <clang-tidy/checks/misc/unused-parameters>` check with new `IgnoreVirtual`
   option to optionally ignore virtual methods.
