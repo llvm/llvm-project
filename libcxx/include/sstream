@@ -30,18 +30,41 @@ public:
     explicit basic_stringbuf(ios_base::openmode which = ios_base::in | ios_base::out); // before C++20
     basic_stringbuf() : basic_stringbuf(ios_base::in | ios_base::out) {}               // C++20
     explicit basic_stringbuf(ios_base::openmode which);                                // C++20
-    explicit basic_stringbuf(const basic_string<char_type, traits_type, allocator_type>& str,
+    explicit basic_stringbuf(const basic_string<char_type, traits_type, allocator_type>& s,
                              ios_base::openmode which = ios_base::in | ios_base::out);
+    explicit basic_stringbuf(const allocator_type& a)
+        : basic_stringbuf(ios_base::in | ios_base::out, a) {}                          // C++20
+    basic_stringbuf(ios_base::openmode which, const allocator_type& a);                // C++20
+    explicit basic_stringbuf(basic_string<char_type, traits_type, allocator_type>&& s,
+                             ios_base::openmode which = ios_base::in | ios_base::out); // C++20
+    template <class SAlloc>
+    basic_stringbuf(const basic_string<char_type, traits_type, SAlloc>& s, const allocator_type& a)
+        : basic_stringbuf(s, ios_base::in | ios_base::out, a) {}                       // C++20
+    template <class SAlloc>
+    basic_stringbuf(const basic_string<char_type, traits_type, SAlloc>& s,
+                    ios_base::openmode which, const allocator_type& a);                // C++20
+    template <class SAlloc>
+    explicit basic_stringbuf(const basic_string<char_type, traits_type, SAlloc>& s,
+                             ios_base::openmode which = ios_base::in | ios_base::out); // C++20
     basic_stringbuf(basic_stringbuf&& rhs);
+    basic_stringbuf(basic_stringbuf&& rhs, const allocator_type& a);                   // C++20
 
     // [stringbuf.assign] Assign and swap:
     basic_stringbuf& operator=(basic_stringbuf&& rhs);
     void swap(basic_stringbuf& rhs) noexcept(see below);                               // conditionally noexcept since C++20
 
     // [stringbuf.members] Member functions:
-    basic_string<char_type, traits_type, allocator_type> str() const;
+    allocator_type get_allocator() const noexcept;                                     // C++20
+    basic_string<char_type, traits_type, allocator_type> str() const;                  // before C++20
+    basic_string<char_type, traits_type, allocator_type> str() const &;                // C++20
+    template <class SAlloc>
+    basic_string<char_type, traits_type, SAlloc> str(const SAlloc& sa) const;          // C++20
+    basic_string<char_type, traits_type, allocator_type> str() &&;                     // C++20
+    basic_string_view<char_type, traits_type> view() const noexcept;                   // C++20
     void str(const basic_string<char_type, traits_type, allocator_type>& s);
-    basic_string_view<char_type, traits_type> view() const noexcept; // C++20
+    template <class SAlloc>
+    void str(const basic_string<char_type, traits_type, SAlloc>& s);                   // C++20
+    void str(basic_string<char_type, traits_type, allocator_type>&& s);                // C++20
 
 protected:
     // [stringbuf.virtuals] Overridden virtual functions:
@@ -229,6 +252,8 @@ private:
     string_type __str_;
     mutable char_type* __hm_;
     ios_base::openmode __mode_;
+    _LIBCPP_HIDE_FROM_ABI void __init_buf_ptrs();
+    _LIBCPP_HIDE_FROM_ABI void __move_init(basic_stringbuf&& __rhs);
 
 public:
     // [stringbuf.cons] constructors:
@@ -248,7 +273,48 @@ public:
         str(__s);
     }
 
-    basic_stringbuf(basic_stringbuf&& __rhs);
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI explicit basic_stringbuf(const allocator_type& __a)
+        : basic_stringbuf(ios_base::in | ios_base::out, __a) {}
+
+    _LIBCPP_HIDE_FROM_ABI basic_stringbuf(ios_base::openmode __wch, const allocator_type& __a)
+        : __str_(__a), __hm_(nullptr), __mode_(__wch) {}
+
+    _LIBCPP_HIDE_FROM_ABI explicit basic_stringbuf(string_type&& __s,
+                                                   ios_base::openmode __wch = ios_base::in | ios_base::out)
+        : __str_(std::move(__s)), __hm_(nullptr), __mode_(__wch) {
+        __init_buf_ptrs();
+    }
+
+    template <class _SAlloc>
+    _LIBCPP_HIDE_FROM_ABI
+    basic_stringbuf(const basic_string<char_type, traits_type, _SAlloc>& __s, const allocator_type& __a)
+        : basic_stringbuf(__s, ios_base::in | ios_base::out, __a) {}
+
+    template <class _SAlloc>
+    _LIBCPP_HIDE_FROM_ABI basic_stringbuf(
+        const basic_string<char_type, traits_type, _SAlloc>& __s, ios_base::openmode __wch, const allocator_type& __a)
+        : __str_(__s, __a), __hm_(nullptr), __mode_(__wch) {
+        __init_buf_ptrs();
+    }
+
+    template <class _SAlloc>
+      requires (!is_same_v<_SAlloc, allocator_type>)
+    _LIBCPP_HIDE_FROM_ABI explicit basic_stringbuf(const basic_string<char_type, traits_type, _SAlloc>& __s,
+                                                   ios_base::openmode __wch = ios_base::in | ios_base::out)
+        : __str_(__s), __hm_(nullptr), __mode_(__wch) {
+        __init_buf_ptrs();
+    }
+#endif // _LIBCPP_STD_VER >= 20
+
+    basic_stringbuf(basic_stringbuf&& __rhs) : __mode_(__rhs.__mode_) { __move_init(std::move(__rhs)); }
+
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI basic_stringbuf(basic_stringbuf&& __rhs, const allocator_type& __a)
+        : basic_stringbuf(__rhs.__mode_, __a) {
+        __move_init(std::move(__rhs));
+    }
+#endif
 
     // [stringbuf.assign] Assign and swap:
     basic_stringbuf& operator=(basic_stringbuf&& __rhs);
@@ -260,12 +326,53 @@ public:
         ;
 
     // [stringbuf.members] Member functions:
-    string_type str() const;
-    void str(const string_type& __s);
+
 #if _LIBCPP_STD_VER >= 20
-    _LIBCPP_HIDE_FROM_ABI
-    basic_string_view<char_type, traits_type> view() const noexcept;
+    _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const noexcept { return __str_.get_allocator(); }
 #endif
+
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
+    string_type str() const;
+#else
+    _LIBCPP_HIDE_FROM_ABI string_type str() const & { return str(__str_.get_allocator()); }
+
+    template <class _SAlloc>
+      requires __is_allocator<_SAlloc>::value
+    _LIBCPP_HIDE_FROM_ABI basic_string<char_type, traits_type, _SAlloc> str(const _SAlloc& __sa) const {
+        return basic_string<_CharT, _Traits, _SAlloc>(view(), __sa);
+    }
+
+    _LIBCPP_HIDE_FROM_ABI string_type str() && {
+        const basic_string_view<_CharT, _Traits> __view = view();
+        string_type __result(std::move(__str_), __view.data() - __str_.data(), __view.size());
+        __str_.clear();
+        __init_buf_ptrs();
+        return __result;
+    }
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
+
+#if _LIBCPP_STD_VER >= 20
+    _LIBCPP_HIDE_FROM_ABI basic_string_view<char_type, traits_type> view() const noexcept;
+#endif
+
+    void str(const string_type& __s) {
+        __str_ = __s;
+        __init_buf_ptrs();
+    }
+
+#if _LIBCPP_STD_VER >= 20
+    template <class _SAlloc>
+      requires (!is_same_v<_SAlloc, allocator_type>)
+    _LIBCPP_HIDE_FROM_ABI void str(const basic_string<char_type, traits_type, _SAlloc>& __s) {
+        __str_ = __s;
+        __init_buf_ptrs();
+    }
+
+    _LIBCPP_HIDE_FROM_ABI void str(string_type&& __s) {
+        __str_ = std::move(__s);
+        __init_buf_ptrs();
+    }
+#endif // _LIBCPP_STD_VER >= 20
 
 protected:
     // [stringbuf.virtuals] Overridden virtual functions:
@@ -282,9 +389,7 @@ protected:
 };
 
 template <class _CharT, class _Traits, class _Allocator>
-basic_stringbuf<_CharT, _Traits, _Allocator>::basic_stringbuf(basic_stringbuf&& __rhs)
-    : __mode_(__rhs.__mode_)
-{
+_LIBCPP_HIDE_FROM_ABI void basic_stringbuf<_CharT, _Traits, _Allocator>::__move_init(basic_stringbuf&& __rhs) {
     char_type* __p = const_cast<char_type*>(__rhs.__str_.data());
     ptrdiff_t __binp = -1;
     ptrdiff_t __ninp = -1;
@@ -463,49 +568,35 @@ swap(basic_stringbuf<_CharT, _Traits, _Allocator>& __x,
     __x.swap(__y);
 }
 
+#if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
 template <class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>
-basic_stringbuf<_CharT, _Traits, _Allocator>::str() const
-{
-#if _LIBCPP_STD_VER >= 20
-    return string_type(view(), __str_.get_allocator());
-#else // _LIBCPP_STD_VER >= 20
-    if (__mode_ & ios_base::out)
-    {
+basic_stringbuf<_CharT, _Traits, _Allocator>::str() const {
+    if (__mode_ & ios_base::out) {
         if (__hm_ < this->pptr())
             __hm_ = this->pptr();
         return string_type(this->pbase(), __hm_, __str_.get_allocator());
-    }
-    else if (__mode_ & ios_base::in)
+    } else if (__mode_ & ios_base::in)
         return string_type(this->eback(), this->egptr(), __str_.get_allocator());
     return string_type(__str_.get_allocator());
-#endif // _LIBCPP_STD_VER >= 20
 }
+#endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
 
 template <class _CharT, class _Traits, class _Allocator>
-void
-basic_stringbuf<_CharT, _Traits, _Allocator>::str(const string_type& __s)
-{
-    __str_ = __s;
+_LIBCPP_HIDE_FROM_ABI void basic_stringbuf<_CharT, _Traits, _Allocator>::__init_buf_ptrs() {
     __hm_ = nullptr;
-    if (__mode_ & ios_base::in)
-    {
-        __hm_ = const_cast<char_type*>(__str_.data()) + __str_.size();
-        this->setg(const_cast<char_type*>(__str_.data()),
-                   const_cast<char_type*>(__str_.data()),
-                   __hm_);
-    }
-    if (__mode_ & ios_base::out)
-    {
+    char_type* __data = const_cast<char_type*>(__str_.data());
         typename string_type::size_type __sz = __str_.size();
-        __hm_ = const_cast<char_type*>(__str_.data()) + __sz;
+    if (__mode_ & ios_base::in) {
+        __hm_ = __data + __sz;
+        this->setg(__data, __data, __hm_);
+    }
+    if (__mode_ & ios_base::out) {
+        __hm_ = __data + __sz;
         __str_.resize(__str_.capacity());
-        this->setp(const_cast<char_type*>(__str_.data()),
-                   const_cast<char_type*>(__str_.data()) + __str_.size());
-        if (__mode_ & (ios_base::app | ios_base::ate))
-        {
-            while (__sz > INT_MAX)
-            {
+        this->setp(__data, __data + __str_.size());
+        if (__mode_ & (ios_base::app | ios_base::ate)) {
+            while (__sz > INT_MAX) {
                 this->pbump(INT_MAX);
                 __sz -= INT_MAX;
             }
