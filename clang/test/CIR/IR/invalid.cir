@@ -163,7 +163,7 @@ cir.func @cast4(%p: !cir.ptr<!u32i>) {
 #true = #cir.bool<true> : !cir.bool
 cir.func @b0() {
   cir.scope {
-    cir.loop while(cond :  {  // expected-error {{cond region must be terminated with 'cir.yield' or 'cir.yield continue'}}
+    cir.loop while(cond :  {  // expected-error {{cond region must yield a single boolean value}}
       %0 = cir.const(#true) : !cir.bool
       cir.brcond %0 ^bb1, ^bb2
       ^bb1:
@@ -177,6 +177,72 @@ cir.func @b0() {
     ^bb1:
       cir.return
     }
+  }
+  cir.return
+}
+
+// -----
+
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
+cir.func @b0() {
+  cir.loop while(cond :  {  // expected-error {{cond and step regions must be terminated with 'cir.yield'}}
+    %0 = cir.const(#true) : !cir.bool
+    cir.return %0 : !cir.bool
+  }, step :  {
+    cir.yield
+  })  {
+    cir.yield
+  }
+  cir.return
+}
+
+// -----
+
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
+cir.func @b0() {
+  cir.loop while(cond :  {  // expected-error {{cond and step regions must be terminated with 'cir.yield'}}
+    %0 = cir.const(#true) : !cir.bool
+    cir.yield %0 : !cir.bool
+  }, step :  {
+    cir.return
+  })  {
+    cir.return
+  }
+  cir.return
+}
+
+// -----
+
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
+cir.func @b0() {
+  cir.loop while(cond :  {  // expected-error {{step region should not yield values}}
+    %0 = cir.const(#true) : !cir.bool
+    cir.yield %0 : !cir.bool
+  }, step :  {
+    %1 = cir.const(#true) : !cir.bool
+    cir.yield %1 : !cir.bool
+  })  {
+    cir.return
+  }
+  cir.return
+}
+
+// -----
+
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
+cir.func @b0() {
+  cir.loop while(cond :  {  // expected-error {{body region must not yield values}}
+    %0 = cir.const(#true) : !cir.bool
+    cir.yield %0 : !cir.bool
+  }, step :  {
+    cir.yield
+  })  {
+    %1 = cir.const(#true) : !cir.bool
+    cir.yield %1 : !cir.bool
   }
   cir.return
 }

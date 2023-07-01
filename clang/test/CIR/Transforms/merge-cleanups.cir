@@ -65,11 +65,7 @@ module  {
     cir.scope {
       cir.loop while(cond :  {
         %0 = cir.const(#true) : !cir.bool
-        cir.brcond %0 ^bb1, ^bb2
-        ^bb1:
-          cir.yield continue
-        ^bb2:
-          cir.yield
+        cir.yield %0 : !cir.bool
       }, step :  {
         cir.yield
       })  {
@@ -85,11 +81,7 @@ module  {
     cir.scope {
       cir.loop while(cond :  {
         %0 = cir.const(#false) : !cir.bool
-        cir.brcond %0 ^bb1, ^bb2
-        ^bb1:
-          cir.yield continue
-        ^bb2:
-          cir.yield
+        cir.yield %0 : !cir.bool
       }, step :  {
         cir.yield
       })  {
@@ -141,7 +133,8 @@ module  {
 // CHECK: cir.func @l0
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
-// CHECK-NEXT:      cir.yield continue
+// CHECK-NEXT:      %0 = cir.const(#true) : !cir.bool
+// CHECK-NEXT:      cir.yield %0 : !cir.bool
 // CHECK-NEXT:    }, step :  {
 // CHECK-NEXT:      cir.yield
 // CHECK-NEXT:    })  {
@@ -154,7 +147,8 @@ module  {
 // CHECK: cir.func @l1
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
-// CHECK-NEXT:      cir.yield
+// CHECK-NEXT:      %0 = cir.const(#false) : !cir.bool
+// CHECK-NEXT:      cir.yield %0 : !cir.bool
 // CHECK-NEXT:    }, step :  {
 // CHECK-NEXT:      cir.yield
 // CHECK-NEXT:    })  {

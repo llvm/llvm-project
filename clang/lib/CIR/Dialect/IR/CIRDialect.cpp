@@ -14,6 +14,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/ADT/SmallVector.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -1098,12 +1099,9 @@ void LoopOp::build(OpBuilder &builder, OperationState &result,
 /// operand is not a constant.
 void LoopOp::getSuccessorRegions(mlir::RegionBranchPoint point,
                                  SmallVectorImpl<RegionSuccessor> &regions) {
-  // If any index all the underlying regions branch back to the parent
-  // operation.
-  if (!point.isParent()) {
-    regions.push_back(RegionSuccessor());
+  // If any index, do nothing.
+  if (!point.isParent())
     return;
-  }
 
   // FIXME: we want to look at cond region for getting more accurate results
   // if the other regions will get a chance to execute.
@@ -1115,26 +1113,29 @@ void LoopOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 llvm::SmallVector<Region *> LoopOp::getLoopRegions() { return {&getBody()}; }
 
 LogicalResult LoopOp::verify() {
-  // Cond regions should only terminate with plain 'cir.yield' or
-  // 'cir.yield continue'.
-  auto terminateError = [&]() {
-    return emitOpError() << "cond region must be terminated with "
-                            "'cir.yield' or 'cir.yield continue'";
-  };
 
-  auto &blocks = getCond().getBlocks();
-  for (Block &block : blocks) {
-    if (block.empty())
-      continue;
-    auto &op = block.back();
-    if (isa<BrCondOp>(op))
-      continue;
-    if (!isa<YieldOp>(op))
-      terminateError();
-    auto y = cast<YieldOp>(op);
-    if (!(y.isPlain() || y.isContinue()))
-      terminateError();
-  }
+  if (getCond().empty() || getStep().empty() || getBody().empty())
+    return emitOpError("regions must not be empty");
+
+  auto condYield = dyn_cast<YieldOp>(getCond().back().getTerminator());
+  auto stepYield = dyn_cast<YieldOp>(getStep().back().getTerminator());
+
+  if (!condYield || !stepYield)
+    return emitOpError(
+        "cond and step regions must be terminated with 'cir.yield'");
+
+  if (condYield.getNumOperands() != 1 ||
+      !condYield.getOperand(0).getType().isa<cir::BoolType>())
+    return emitOpError("cond region must yield a single boolean value");
+
+  if (stepYield.getNumOperands() != 0)
+    return emitOpError("step region should not yield values");
+
+  // Body may yield or return.
+  auto *bodyTerminator = getBody().back().getTerminator();
+
+  if (isa<YieldOp>(bodyTerminator) && bodyTerminator->getNumOperands() != 0)
+    return emitOpError("body region must not yield values");
 
   return success();
 }
@@ -1261,8 +1262,8 @@ void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
 
 LogicalResult
 GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
-  // Verify that the result type underlying pointer type matches the type of the
-  // referenced cir.global or cir.func op.
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
   auto op = symbolTable.lookupNearestSymbolFrom(*this, getNameAttr());
   if (!(isa<GlobalOp>(op) || isa<FuncOp>(op)))
     return emitOpError("'")
@@ -1296,8 +1297,8 @@ VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return success();
   auto name = *getName();
 
-  // Verify that the result type underlying pointer type matches the type of the
-  // referenced cir.global or cir.func op.
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
   auto op = dyn_cast_or_null<GlobalOp>(
       symbolTable.lookupNearestSymbolFrom(*this, getNameAttr()));
   if (!op)
@@ -1555,7 +1556,6 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
        getFunctionTypeAttrName(), getLinkageAttrName(), getBuiltinAttrName(),
        getNoProtoAttrName(), getExtraAttrsAttrName()});
 
-
   if (auto aliaseeName = getAliasee()) {
     p << " alias(";
     p.printSymbolName(*aliaseeName);
@@ -1785,7 +1785,8 @@ LogicalResult UnaryOp::verify() {
   case cir::UnaryOpKind::Inc:
     LLVM_FALLTHROUGH;
   case cir::UnaryOpKind::Dec: {
-    // TODO: Consider looking at the memory interface instead of LoadOp/StoreOp.
+    // TODO: Consider looking at the memory interface instead of
+    // LoadOp/StoreOp.
     auto loadOp = getInput().getDefiningOp<cir::LoadOp>();
     if (!loadOp)
       return emitOpError() << "requires input to be defined by a memory load";
