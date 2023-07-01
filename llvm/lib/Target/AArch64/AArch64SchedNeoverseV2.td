@@ -889,8 +889,8 @@ def V2Write_Logical : SchedWriteVariant<[
                         SchedVar<NoSchedPred,   [V2Write_2cyc_1M]>]>;
 
 def V2Write_Extr : SchedWriteVariant<[
-                     SchedVar<NeoverseOneRegEXTR,  [V2Write_1cyc_1I]>,
-                     SchedVar<NoSchedPred,         [V2Write_3cyc_1I_1M]>]>;
+                     SchedVar<IsRORImmIdiomPred, [V2Write_1cyc_1I]>,
+                     SchedVar<NoSchedPred,       [V2Write_3cyc_1I_1M]>]>;
 
 def V2Write_LdrHQ : SchedWriteVariant<[
                       SchedVar<NeoverseHQForm,  [V2Write_7cyc_1I_1L]>,

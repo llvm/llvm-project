@@ -37,11 +37,6 @@ def NeoverseReg3IsZero : MCSchedPredicate<
                                 [CheckRegOperand<3, WZR>,
                                  CheckRegOperand<3, XZR>]>]>>;
 
-// Identify EXTR with one register (alias for ROR immediate)
-def NeoverseOneRegEXTR : MCSchedPredicate<
-                           CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
-                                     CheckSameRegOperand<1, 2>]>>;
-
 // Identify LDR/STR H/Q-form scaled (and potentially extended) FP instructions
 def NeoverseHQForm : MCSchedPredicate<
                        CheckAll<[
