@@ -235,10 +235,15 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
                                              lldb::user_id_t break_loc_id) {
   // Let the event know that the images have changed
   // DYLD passes three arguments to the notification breakpoint.
-  // Arg1: enum dyld_notify_mode mode - 0 = adding, 1 = removing, 2 = remove
-  // all Arg2: unsigned long icount        - Number of shared libraries
-  // added/removed Arg3: uint64_t mach_headers[]     - Array of load addresses
-  // of binaries added/removed
+  //
+  // Arg1: enum dyld_notify_mode mode
+  // 0 = adding, 1 = removing, 2 = remove all, 3 = dyld moved
+  //
+  // Arg2: unsigned long count
+  // Number of shared libraries added/removed
+  //
+  // Arg3: struct dyld_image_info mach_headers[]
+  // Array of load addresses of binaries added/removed
 
   DynamicLoaderMacOS *dyld_instance = (DynamicLoaderMacOS *)baton;
 
@@ -268,9 +273,10 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
     ValueList argument_values;
 
     Value mode_value;    // enum dyld_notify_mode { dyld_notify_adding=0,
-                         // dyld_notify_removing=1, dyld_notify_remove_all=2 };
+                         // dyld_notify_removing=1, dyld_notify_remove_all=2,
+                         // dyld_notify_dyld_moved=3 };
     Value count_value;   // unsigned long count
-    Value headers_value; // uint64_t machHeaders[] (aka void*)
+    Value headers_value; // struct dyld_image_info machHeaders[]
 
     CompilerType clang_void_ptr_type =
         scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
@@ -299,6 +305,9 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
     argument_values.PushValue(count_value);
     argument_values.PushValue(headers_value);
 
+    // void lldb_image_notifier(enum dyld_image_mode mode, uint32_t infoCount,
+    // const dyld_image_info info[])
+
     if (abi->GetArgumentValues(exe_ctx.GetThreadRef(), argument_values)) {
       uint32_t dyld_mode =
           argument_values.GetValueAtIndex(0)->GetScalar().UInt(-1);
@@ -312,12 +321,32 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
               argument_values.GetValueAtIndex(2)->GetScalar().ULongLong(-1);
           if (header_array != static_cast<uint64_t>(-1)) {
             std::vector<addr_t> image_load_addresses;
+
+            // struct dyld_image_info_32 {
+            //     uint32_t                    imageLoadAddress;
+            //     uint32_t                    imageFilePath;
+            //     uint32_t                    imageFileModDate;
+            // };
+            // struct dyld_image_info_64 {
+            //     uint64_t                    imageLoadAddress;
+            //     uint64_t                    imageFilePath;
+            //     uint64_t                    imageFileModDate;
+            // };
+
+            uint32_t addr_size =
+                process->GetTarget().GetArchitecture().GetAddressByteSize();
             for (uint64_t i = 0; i < image_infos_count; i++) {
               Status error;
-              addr_t addr = process->ReadUnsignedIntegerFromMemory(
-                  header_array + (8 * i), 8, LLDB_INVALID_ADDRESS, error);
-              if (addr != LLDB_INVALID_ADDRESS) {
+              addr_t dyld_image_info = header_array + (3 * addr_size * i);
+              addr_t addr =
+                  process->ReadPointerFromMemory(dyld_image_info, error);
+              if (error.Success()) {
                 image_load_addresses.push_back(addr);
+              } else {
+                Debugger::ReportWarning(
+                    "DynamicLoaderMacOS::NotifyBreakpointHit unable "
+                    "to read binary mach-o load address at 0x%" PRIx64,
+                    addr);
               }
             }
             if (dyld_mode == 0) {
@@ -362,10 +391,18 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
               Status error;
               addr_t notification_addr =
                   process->ReadPointerFromMemory(notification_location, error);
-              if (ABISP abi_sp = process->GetABI())
-                notification_addr = abi_sp->FixCodeAddress(notification_addr);
+              if (!error.Success()) {
+                Debugger::ReportWarning(
+                    "DynamicLoaderMacOS::NotifyBreakpointHit unable "
+                    "to read address of dyld-handover notification function at "
+                    "0x%" PRIx64,
+                    notification_location);
+              } else {
+                if (ABISP abi_sp = process->GetABI())
+                  notification_addr = abi_sp->FixCodeAddress(notification_addr);
 
-              dyld_instance->SetDYLDHandoverBreakpoint(notification_addr);
+                dyld_instance->SetDYLDHandoverBreakpoint(notification_addr);
+              }
             }
           }
         }
@@ -431,9 +468,9 @@ bool DynamicLoaderMacOS::SetNotificationBreakpoint() {
       Breakpoint *breakpoint =
           m_process->GetTarget()
               .CreateBreakpoint(&dyld_filelist, source_files,
-                                "_dyld_debugger_notification",
-                                eFunctionNameTypeFull, eLanguageTypeC, 0,
-                                skip_prologue, internal, hardware)
+                                "lldb_image_notifier", eFunctionNameTypeFull,
+                                eLanguageTypeC, 0, skip_prologue, internal,
+                                hardware)
               .get();
       breakpoint->SetCallback(DynamicLoaderMacOS::NotifyBreakpointHit, this,
                               true);
