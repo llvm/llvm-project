@@ -1101,6 +1101,9 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
 ///
 ParseResult OperationParser::parseOperation() {
   auto loc = getToken().getLoc();
+  unsigned locLine = state.lex.getLineNumber();
+  state.operandLocs_.push_back(OperandLocationList());
+
   SmallVector<ResultRecord, 1> resultIDs;
   size_t numExpectedResults = 0;
   if (getToken().is(Token::percent_identifier)) {
@@ -1195,6 +1198,63 @@ ParseResult OperationParser::parseOperation() {
     state.asmState->finalizeOperationDefinition(op, nameTok.getLocRange(),
                                                 /*endLoc=*/getToken().getLoc());
   }
+
+Builder builder(state.config.getContext());
+  auto endLoc = getPreviousTokenEndLoc();
+  auto startLocAttr =
+      builder.getIntegerAttr(builder.getIntegerType(64, false),
+                     loc.getPointer() - state.lex.getBufferBegin());
+op->setAttr("irx_start_offset", startLocAttr);
+auto endLocAttr =
+    builder.getIntegerAttr(builder.getIntegerType(64, false),
+                     endLoc.getPointer() - state.lex.getBufferBegin());
+op->setAttr("irx_end_offset", endLocAttr);
+auto lineAttr = builder.getIntegerAttr(builder.getIntegerType(64, false), locLine);
+op->setAttr("irx_line", lineAttr);
+
+ auto &operandLocs = state.operandLocs_[state.operandLocs_.size() - 1];
+
+  if (operandLocs.size() > 0) {
+  SmallVector<Attribute> opLocAttrs;
+
+  for (auto &sourceInfo : operandLocs) {
+    auto opLoc = sourceInfo.second;
+    auto startLocAttr =
+        builder.getIntegerAttr(builder.getIntegerType(64, false),
+                         opLoc.Start.getPointer() - state.lex.getBufferBegin());
+    auto endLocAttr =
+        builder.getIntegerAttr(builder.getIntegerType(64, false),
+                         opLoc.End.getPointer() - state.lex.getBufferBegin());
+    opLocAttrs.push_back(startLocAttr);
+    opLocAttrs.push_back(endLocAttr);
+  }
+
+  auto opLocAttrib = builder.getArrayAttr(opLocAttrs);
+  op->setAttr("irx_ops", opLocAttrib);
+}
+
+if (resultIDs.size() > 0) {
+  SmallVector<Attribute> opLocAttrs;
+
+  for (auto &record : resultIDs) {
+    auto opLoc = std::get<2>(record);
+    auto opRange = AsmParserState::convertIdLocToRange(opLoc);
+    auto startLocAttr = builder.getIntegerAttr(
+        builder.getIntegerType(64, false),
+                                         opRange.Start.getPointer() -
+                                             state.lex.getBufferBegin());
+    auto endLocAttr =
+        builder.getIntegerAttr(builder.getIntegerType(64, false),
+                         opRange.End.getPointer() - state.lex.getBufferBegin());
+    opLocAttrs.push_back(startLocAttr);
+    opLocAttrs.push_back(endLocAttr);
+  }
+
+  auto opLocAttrib = builder.getArrayAttr(opLocAttrs);
+  op->setAttr("irx_results", opLocAttrib);
+}
+
+state.operandLocs_.pop_back();
 
   return success();
 }
@@ -1356,6 +1416,9 @@ ParseResult OperationParser::parseGenericOperationAfterOpName(
   for (unsigned i = 0, e = parsedOperandUseInfo->size(); i != e; ++i) {
     result.operands.push_back(
         resolveSSAUse((*parsedOperandUseInfo)[i], operandTypes[i]));
+    auto opRange = AsmParserState::convertIdLocToRange((*parsedOperandUseInfo)[i].location);
+    state.operandLocs_[state.operandLocs_.size() - 1].push_back(
+        std::make_pair((unsigned)state.operandLocs_.size(), opRange));
     if (!result.operands.back())
       return failure();
   }
@@ -1636,6 +1699,10 @@ public:
   ParseResult resolveOperand(const UnresolvedOperand &operand, Type type,
                              SmallVectorImpl<Value> &result) override {
     if (auto value = parser.resolveSSAUse(operand, type)) {
+      auto opRange = AsmParserState::convertIdLocToRange(operand.location);
+      parser.state.operandLocs_[parser.state.operandLocs_.size() - 1].push_back(
+          std::make_pair((unsigned)parser.state.operandLocs_.size(), opRange));
+
       result.push_back(value);
       return success();
     }
@@ -2696,6 +2763,38 @@ ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
       auto &destOps = topLevelBlock->getOperations();
       destOps.splice(destOps.end(), parsedOps, parsedOps.begin(),
                      parsedOps.end());
+
+      // ...
+      size_t blockDefCount = 0;
+
+      for (auto &blockDef : state.asmState->getBlockDefs()) {
+        blockDefCount++;
+      }
+
+      // Block Count | Block1 | Block1 ArgCount | Arg1 | Arg2... | Block2 | ...
+      SmallVector<Attribute> blockArgs;
+      blockArgs.push_back(
+          builder.getIntegerAttr(builder.getIntegerType(64, false), blockDefCount));
+
+      for (auto &blockDef : state.asmState->getBlockDefs()) {
+        blockArgs.push_back(builder.getIntegerAttr(
+            builder.getIntegerType(64, false), (int64_t)blockDef.block));
+        blockArgs.push_back(builder.getIntegerAttr(
+            builder.getIntegerType(64, false), blockDef.arguments.size()));
+        for (auto &blockArg : blockDef.arguments) {
+          blockArgs.push_back(builder.getIntegerAttr(
+              builder.getIntegerType(64, false),
+              blockArg.loc.Start.getPointer() - state.lex.getBufferBegin()));
+          blockArgs.push_back(builder.getIntegerAttr(
+              builder.getIntegerType(64, false),
+              blockArg.loc.End.getPointer() - state.lex.getBufferBegin()));
+        }
+      }
+
+      for (auto &op : destOps) {
+        op.setAttr("irx_blockargs", ArrayAttr::get(state.config.getContext(), blockArgs));
+      }
+
       return success();
     }
 

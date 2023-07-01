@@ -100,6 +100,12 @@ public:
 
   /// Return the current token the parser is inspecting.
   const Token &getToken() const { return state.curToken; }
+
+  const SMLoc &getPreviousTokenEndLoc() const {
+    return state.prevToken.getKind() != Token::eof ? state.prevToken.getEndLoc()
+                                                   : state.curToken.getLoc();
+  }
+
   StringRef getTokenSpelling() const { return state.curToken.getSpelling(); }
 
   /// If the current token has the specified kind, consume it and return true.
@@ -115,6 +121,7 @@ public:
   void consumeToken() {
     assert(state.curToken.isNot(Token::eof, Token::error) &&
            "shouldn't advance past EOF or errors");
+    state.prevToken = state.curToken;
     state.curToken = state.lex.lexToken();
   }
 
@@ -129,6 +136,7 @@ public:
   /// Reset the parser to the given lexer position.
   void resetToken(const char *tokPos) {
     state.lex.resetPointer(tokPos);
+    state.prevToken = Token(Token::eof, "");
     state.curToken = state.lex.lexToken();
   }
 
@@ -341,7 +349,7 @@ public:
   codeCompleteDialectSymbol(const llvm::StringMap<Attribute> &aliases);
   Type codeCompleteDialectSymbol(const llvm::StringMap<Type> &aliases);
 
-protected:
+public:
   /// The Parser is subclassed and reinstantiated.  Do not add additional
   /// non-trivial state here, add it to the ParserState class.
   ParserState &state;

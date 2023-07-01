@@ -45,6 +45,8 @@ struct SymbolState {
 // ParserState
 //===----------------------------------------------------------------------===//
 
+  typedef std::vector<std::pair<unsigned, llvm::SMRange>> OperandLocationList;
+
 /// This class refers to all of the state maintained globally by the parser,
 /// such as the current lexer position etc.
 struct ParserState {
@@ -53,7 +55,8 @@ struct ParserState {
               AsmParserCodeCompleteContext *codeCompleteContext)
       : config(config),
         lex(sourceMgr, config.getContext(), codeCompleteContext),
-        curToken(lex.lexToken()), symbols(symbols), asmState(asmState),
+        curToken(lex.lexToken()), prevToken(Token::eof, ""), symbols(symbols),
+        asmState(asmState),
         codeCompleteContext(codeCompleteContext) {}
   ParserState(const ParserState &) = delete;
   void operator=(const ParserState &) = delete;
@@ -66,6 +69,7 @@ struct ParserState {
 
   /// This is the next token that hasn't been consumed yet.
   Token curToken;
+  Token prevToken;
 
   /// The current state for symbol parsing.
   SymbolState &symbols;
@@ -73,6 +77,10 @@ struct ParserState {
   /// An optional pointer to a struct containing high level parser state to be
   /// populated during parsing.
   AsmParserState *asmState;
+
+  std::vector<OperandLocationList> operandLocs_;
+  
+  std::vector<Operation *> operationStack_;
 
   /// An optional code completion context.
   AsmParserCodeCompleteContext *codeCompleteContext;
