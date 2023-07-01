@@ -309,8 +309,8 @@ def : SchedAlias<WriteIEReg, N1Write_2c_1M>;
 // Arithmetic, flagset, LSL shift, shift <= 4
 // Arithmetic, LSR/ASR/ROR shift or LSL shift > 4
 def N1WriteISReg : SchedWriteVariant<[
-                     SchedVar<NeoverseCheapLSL, [N1Write_1c_1I]>,
-                     SchedVar<NoSchedPred,      [N1Write_2c_1M]>]>;
+                     SchedVar<IsCheapLSL,  [N1Write_1c_1I]>,
+                     SchedVar<NoSchedPred, [N1Write_2c_1M]>]>;
 def              : SchedAlias<WriteISReg, N1WriteISReg>;
 
 // Logical, shift, no flagset

@@ -13,17 +13,6 @@
 
 // Auxiliary predicates.
 
-// Check for LSL shift <= 4
-def NeoverseCheapLSL : MCSchedPredicate<
-                         CheckAll<
-                           [CheckShiftLSL,
-                            CheckAny<
-                              [CheckShiftBy0,
-                               CheckShiftBy1,
-                               CheckShiftBy2,
-                               CheckShiftBy3,
-                               CheckShiftBy4]>]>>;
-
 // Check for LSL shift == 0
 def NeoverseNoLSL : MCSchedPredicate<
                       CheckAll<[CheckShiftLSL,
