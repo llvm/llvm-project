@@ -7,17 +7,13 @@ cir.func @b0() {
   cir.scope {
     cir.loop while(cond :  {
       %0 = cir.const(#true) : !cir.bool
-      cir.brcond %0 ^bb1, ^bb2
-      ^bb1:
-        cir.yield continue
-      ^bb2:
-        cir.yield
+      cir.yield %0 : !cir.bool
     }, step :  {
       cir.yield
     })  {
       cir.br ^bb1
     ^bb1:
-      cir.return
+      cir.yield
     }
   }
   cir.return
@@ -27,17 +23,13 @@ cir.func @b0() {
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
 // CHECK-NEXT:      %0 = cir.const(#true) : !cir.bool
-// CHECK-NEXT:      cir.brcond %0 ^bb1, ^bb2
-// CHECK-NEXT:      ^bb1:
-// CHECK-NEXT:        cir.yield continue
-// CHECK-NEXT:      ^bb2:
-// CHECK-NEXT:        cir.yield
+// CHECK-NEXT:      cir.yield %0 : !cir.bool
 // CHECK-NEXT:    }, step :  {
 // CHECK-NEXT:      cir.yield
 // CHECK-NEXT:    })  {
 // CHECK-NEXT:      cir.br ^bb1
 // CHECK-NEXT:    ^bb1:
-// CHECK-NEXT:      cir.return
+// CHECK-NEXT:      cir.yield
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
 // CHECK-NEXT:  cir.return
