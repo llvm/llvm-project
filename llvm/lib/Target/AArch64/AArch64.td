@@ -671,7 +671,6 @@ include "AArch64Schedule.td"
 include "AArch64InstrInfo.td"
 include "AArch64SchedPredicates.td"
 include "AArch64SchedPredExynos.td"
-include "AArch64SchedPredAmpere.td"
 include "AArch64SchedPredNeoverse.td"
 include "AArch64Combine.td"
 
