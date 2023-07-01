@@ -64,9 +64,9 @@ define void @andcmp() {
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a16 = and i16 undef, undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c16 = icmp ne i16 %a16, 0
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a32 = and i32 undef, undef
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c32 = icmp eq i32 %a32, 0
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c32 = icmp eq i32 %a32, 0
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %a64 = and i64 undef, undef
-; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %c64 = icmp ne i64 %a64, 0
+; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %c64 = icmp ne i64 %a64, 0
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %a128 = and i128 undef, undef
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %c128 = icmp eq i128 %a128, 0
 ; CHECK-THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %av16i8 = and <16 x i8> undef, undef
