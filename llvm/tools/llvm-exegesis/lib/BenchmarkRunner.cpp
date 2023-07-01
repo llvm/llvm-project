@@ -34,6 +34,7 @@
 #endif
 #include <sys/mman.h>
 #include <sys/ptrace.h>
+#include <sys/socket.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -169,22 +170,15 @@ public:
 private:
   enum ChildProcessExitCodeE {
     CounterFDReadFailed = 1,
-    TranslatingCounterFDFailed,
     RSeqDisableFailed,
     FunctionDataMappingFailed,
     AuxiliaryMemorySetupFailed
-
   };
 
   StringRef childProcessExitCodeToString(int ExitCode) const {
     switch (ExitCode) {
     case ChildProcessExitCodeE::CounterFDReadFailed:
       return "Counter file descriptor read failed";
-    case ChildProcessExitCodeE::TranslatingCounterFDFailed:
-      return "Translating counter file descriptor into a file descriptor in "
-             "the child process failed. This might be due running an older "
-             "Linux kernel that doesn't support the pidfd_getfd system call "
-             "(anything before Linux 5.6).";
     case ChildProcessExitCodeE::RSeqDisableFailed:
       return "Disabling restartable sequences failed";
     case ChildProcessExitCodeE::FunctionDataMappingFailed:
@@ -196,10 +190,59 @@ private:
     }
   }
 
+  Error sendFileDescriptorThroughSocket(int SocketFD, int FD) const {
+    struct msghdr Message = {};
+    char Buffer[CMSG_SPACE(sizeof(FD))];
+    memset(Buffer, 0, sizeof(Buffer));
+    Message.msg_control = Buffer;
+    Message.msg_controllen = sizeof(Buffer);
+
+    struct cmsghdr *ControlMessage = CMSG_FIRSTHDR(&Message);
+    ControlMessage->cmsg_level = SOL_SOCKET;
+    ControlMessage->cmsg_type = SCM_RIGHTS;
+    ControlMessage->cmsg_len = CMSG_LEN(sizeof(FD));
+
+    memcpy(CMSG_DATA(ControlMessage), &FD, sizeof(FD));
+
+    Message.msg_controllen = CMSG_SPACE(sizeof(FD));
+
+    ssize_t BytesWritten = sendmsg(SocketFD, &Message, 0);
+
+    if (BytesWritten < 0)
+      return make_error<Failure>("Failed to write FD to socket");
+
+    return Error::success();
+  }
+
+  Expected<int> getFileDescriptorFromSocket(int SocketFD) const {
+    struct msghdr Message = {};
+
+    char ControlBuffer[256];
+    Message.msg_control = ControlBuffer;
+    Message.msg_controllen = sizeof(ControlBuffer);
+
+    size_t BytesRead = recvmsg(SocketFD, &Message, 0);
+
+    if (BytesRead < 0)
+      return make_error<Failure>("Failed to read FD from socket");
+
+    struct cmsghdr *ControlMessage = CMSG_FIRSTHDR(&Message);
+
+    int FD;
+
+    if (ControlMessage->cmsg_len != CMSG_LEN(sizeof(FD)))
+      return make_error<Failure>("Failed to get correct number of bytes for "
+                                 "file descriptor from socket.");
+
+    memcpy(&FD, CMSG_DATA(ControlMessage), sizeof(FD));
+
+    return FD;
+  }
+
   Error createSubProcessAndRunBenchmark(
       StringRef CounterName, SmallVectorImpl<int64_t> &CounterValues) const {
     int PipeFiles[2];
-    int PipeSuccessOrErr = pipe(PipeFiles);
+    int PipeSuccessOrErr = socketpair(AF_UNIX, SOCK_DGRAM, 0, PipeFiles);
     if (PipeSuccessOrErr != 0) {
       return make_error<Failure>(
           "Failed to create a pipe for interprocess communication between "
@@ -241,13 +284,11 @@ private:
     close(PipeFiles[0]);
 
     int CounterFileDescriptor = Counter->getFileDescriptor();
-    ssize_t BytesWritten =
-        write(PipeFiles[1], &CounterFileDescriptor, sizeof(int));
+    Error SendError =
+        sendFileDescriptorThroughSocket(PipeFiles[1], CounterFileDescriptor);
 
-    if (BytesWritten != sizeof(int))
-      return make_error<Failure>("Writing peformance counter file descriptor "
-                                 "to child process failed: " +
-                                 Twine(strerror(errno)));
+    if (SendError)
+      return SendError;
 
     if (ptrace(PTRACE_ATTACH, ParentOrChildPID, NULL, NULL) != 0)
       return make_error<Failure>("Failed to attach to the child process: " +
@@ -301,31 +342,15 @@ private:
   [[noreturn]] void prepareAndRunBenchmark(int Pipe,
                                            const BenchmarkKey &Key) const {
     // The following occurs within the benchmarking subprocess
-
-    int ParentCounterFileDescriptor = -1;
-    ssize_t BytesRead = read(Pipe, &ParentCounterFileDescriptor, sizeof(int));
-
-    if (BytesRead != sizeof(int)) {
-      exit(ChildProcessExitCodeE::CounterFDReadFailed);
-    }
-
     pid_t ParentPID = getppid();
 
-    // Make sure the following two syscalls are defined on the platform that
-    // we're building on as they were introduced to the kernel fairly recently
-    // (v5.6 for the second one).
-#if defined(SYS_pidfd_open) && defined(SYS_pidfd_getfd)
-    int ParentPIDFD = syscall(SYS_pidfd_open, ParentPID, 0);
-    int CounterFileDescriptor =
-        syscall(SYS_pidfd_getfd, ParentPIDFD, ParentCounterFileDescriptor, 0);
-#else
-    int CounterFileDescriptor = 0;
-    exit(ChildProcessExitCodeE::TranslatingCounterFDFailed);
-#endif
+    Expected<int> CounterFileDescriptorOrError =
+        getFileDescriptorFromSocket(Pipe);
 
-    if (CounterFileDescriptor == -1) {
-      exit(ChildProcessExitCodeE::TranslatingCounterFDFailed);
-    }
+    if (!CounterFileDescriptorOrError)
+      exit(ChildProcessExitCodeE::CounterFDReadFailed);
+
+    int CounterFileDescriptor = *CounterFileDescriptorOrError;
 
 // Glibc versions greater than 2.35 automatically call rseq during
 // initialization. Unmapping the region that glibc sets up for this causes
