@@ -265,6 +265,28 @@ define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(ptr addrspace(1) %out) #0 {
   ret void
 }
 
+; GCN-LABEL: {{^}}v_fdiv_f16_arcp:
+; SI: v_rcp_f32
+; SI: v_mul_f32
+
+; GFX8PLUS: v_rcp_f32
+; GFX8PLUS: v_mul_f32
+define half @v_fdiv_f16_arcp(half %x, half %y) {
+  %fdiv = fdiv arcp half %x, %y
+  ret half %fdiv
+}
+
+; GCN-LABEL: {{^}}v_fdiv_f16_afn_nsz:
+; SI: v_rcp_f32
+; SI: v_mul_f32
+
+; GFX8PLUS: v_rcp_f16
+; GFX8PLUS: v_mul_f16
+define half @v_fdiv_f16_afn_nsz(half %x, half %y) {
+  %fdiv = fdiv afn nsz half %x, %y
+  ret half %fdiv
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #2
 declare half @llvm.sqrt.f16(half) #2
 declare half @llvm.fabs.f16(half) #2
