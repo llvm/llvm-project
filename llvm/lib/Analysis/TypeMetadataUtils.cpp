@@ -99,7 +99,9 @@ void llvm::findDevirtualizableCallsForTypeCheckedLoad(
     SmallVectorImpl<Instruction *> &Preds, bool &HasNonCallUses,
     const CallInst *CI, DominatorTree &DT) {
   assert(CI->getCalledFunction()->getIntrinsicID() ==
-         Intrinsic::type_checked_load);
+             Intrinsic::type_checked_load ||
+         CI->getCalledFunction()->getIntrinsicID() ==
+             Intrinsic::type_checked_load_relative);
 
   auto *Offset = dyn_cast<ConstantInt>(CI->getArgOperand(1));
   if (!Offset) {

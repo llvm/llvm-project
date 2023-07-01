@@ -954,16 +954,11 @@ def set_glc : SDNodeXForm<timm, [{
 // Custom Operands
 //===----------------------------------------------------------------------===//
 
-def SoppBrTarget : AsmOperandClass {
-  let Name = "SoppBrTarget";
-  let ParserMethod = "parseSOppBrTarget";
-}
-
-def sopp_brtarget : Operand<OtherVT> {
+def SOPPBrTarget : CustomOperand<OtherVT> {
+  let PrintMethod = "printOperand";
   let EncoderMethod = "getSOPPBrEncoding";
-  let DecoderMethod = "decodeSoppBrTarget";
+  let DecoderMethod = "decodeSOPPBrTarget";
   let OperandType = "OPERAND_PCREL";
-  let ParserMatchClass = SoppBrTarget;
 }
 
 def si_ga : Operand<iPTR>;
@@ -989,39 +984,6 @@ def SplitBarrierImm : Operand<i32> {
   let DecoderMethod = "decodeSplitBarrierImm";
 }
 
-def SendMsgMatchClass : AsmOperandClass {
-  let Name = "SendMsg";
-  let PredicateMethod = "isSendMsg";
-  let ParserMethod = "parseSendMsgOp";
-  let RenderMethod = "addImmOperands";
-}
-
-def SwizzleMatchClass : AsmOperandClass {
-  let Name = "Swizzle";
-  let PredicateMethod = "isSwizzle";
-  let ParserMethod = "parseSwizzleOp";
-  let RenderMethod = "addImmOperands";
-  let IsOptional = 1;
-}
-
-def SWaitMatchClass : AsmOperandClass {
-  let Name = "SWaitCnt";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseSWaitCntOps";
-}
-
-def DepCtrMatchClass : AsmOperandClass {
-  let Name = "DepCtr";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseDepCtrOps";
-}
-
-def SDelayMatchClass : AsmOperandClass {
-  let Name = "SDelayAlu";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseSDelayAluOps";
-}
-
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
@@ -1039,33 +1001,17 @@ def GlobalSReg64ImmClass : AsmOperandClass {
   let ParserMethod = "parseGlobalSReg64Imm";
 }
 
-let OperandType = "OPERAND_IMMEDIATE" in {
-def SendMsgImm : Operand<i32> {
-  let PrintMethod = "printSendMsg";
-  let ParserMatchClass = SendMsgMatchClass;
-}
+def SendMsg : CustomOperand<i32>;
 
-def SwizzleImm : Operand<i16> {
-  let PrintMethod = "printSwizzle";
-  let ParserMatchClass = SwizzleMatchClass;
-}
+def Swizzle : CustomOperand<i16, 1>;
 
 def Endpgm : CustomOperand<i16, 1>;
 
-def WAIT_FLAG : Operand <i32> {
-  let ParserMatchClass = SWaitMatchClass;
-  let PrintMethod = "printWaitFlag";
-}
+def SWaitCnt : CustomOperand<i32>;
 
-def DepCtrImm : Operand <i32> {
-  let ParserMatchClass = DepCtrMatchClass;
-  let PrintMethod = "printDepCtr";
-}
+def DepCtr : CustomOperand<i32>;
 
-def DELAY_FLAG : Operand <i32> {
-  let ParserMatchClass = SDelayMatchClass;
-  let PrintMethod = "printDelayFlag";
-}
+def SDelayALU : CustomOperand<i32>;
 
 // Global register references are represented as immediate operands but printed
 // and parsed like registers.
@@ -1078,7 +1024,6 @@ def globalSReg64imm : Operand<i16> {
   let ParserMatchClass = GlobalSReg64ImmClass;
   let PrintMethod = "printGlobalSReg64ImmOperand";
 }
-} // End OperandType = "OPERAND_IMMEDIATE"
 
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"

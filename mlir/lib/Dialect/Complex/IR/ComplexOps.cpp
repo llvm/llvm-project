@@ -249,6 +249,29 @@ OpFoldResult ConjOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// MulOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
+  auto constant = getRhs().getDefiningOp<ConstantOp>();
+  if (!constant)
+    return {};
+
+  ArrayAttr arrayAttr = constant.getValue();
+  APFloat real = cast<FloatAttr>(arrayAttr[0]).getValue();
+  APFloat imag = cast<FloatAttr>(arrayAttr[1]).getValue();
+
+  if (!imag.isZero())
+    return {};
+
+  // complex.mul(a, complex.constant<1.0, 0.0>) -> a
+  if (real == APFloat(real.getSemantics(), 1))
+    return getLhs();
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 

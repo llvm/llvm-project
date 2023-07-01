@@ -329,6 +329,7 @@ private:
   Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
   Instruction *matchSAddSubSat(IntrinsicInst &MinMax1);
   Instruction *foldNot(BinaryOperator &I);
+  Instruction *foldBinOpOfDisplacedShifts(BinaryOperator &I);
 
   void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
 

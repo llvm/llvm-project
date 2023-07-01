@@ -383,9 +383,9 @@ inline int statvfs(const wchar_t *p, StatVFS *buf) {
 
 inline wchar_t *getcwd(wchar_t *buff, size_t size) { return _wgetcwd(buff, size); }
 
-inline wchar_t *realpath(const wchar_t *path, wchar_t *resolved_name) {
+inline wchar_t *realpath(const wchar_t *path, [[maybe_unused]] wchar_t *resolved_name) {
   // Only expected to be used with us allocating the buffer.
-  _LIBCPP_ASSERT(resolved_name == nullptr,
+  _LIBCPP_ASSERT_UNCATEGORIZED(resolved_name == nullptr,
                  "Windows realpath() assumes a null resolved_name");
 
   WinHandle h(path, FILE_READ_ATTRIBUTES, 0);

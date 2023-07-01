@@ -85,6 +85,10 @@ public:
   hlfir::Entity moveStackAsArrayExpr(mlir::Location loc,
                                      fir::FirOpBuilder &builder);
 
+  ///  "fetch" cannot be called right after "pushValue" because the counter is
+  ///  both used for pushing and fetching.
+  bool canBeFetchedAfterPush() const { return false; }
+
 private:
   /// Allocate the temporary on the heap.
   const bool allocateOnHeap;
@@ -109,10 +113,35 @@ public:
     return copy.getBase();
   }
   void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  bool canBeFetchedAfterPush() const { return true; }
 
 public:
   /// Temporary storage for the copy.
   hlfir::AssociateOp copy;
+};
+
+/// Structure to keep track of a simple mlir::Value. This is useful
+/// when a value does not need an in memory copy because it is
+/// already saved in an SSA value that will be accessible at the fetching
+/// point.
+class SSARegister {
+public:
+  SSARegister(){};
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value) {
+    ssaRegister = value;
+  }
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder){};
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder) {
+    return ssaRegister;
+  }
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder) {}
+  bool canBeFetchedAfterPush() const { return true; }
+
+public:
+  /// Temporary storage for the copy.
+  mlir::Value ssaRegister;
 };
 
 /// Data structure to stack any kind of values with the same static type and
@@ -130,6 +159,7 @@ public:
   void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
   mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
   void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  bool canBeFetchedAfterPush() const { return true; }
 
 private:
   /// Keep the original value type. Values may be stored by the runtime
@@ -142,6 +172,61 @@ private:
   Counter counter;
   /// Allocatable box passed to the runtime when fetching the values.
   mlir::Value retValueBox;
+};
+
+/// Data structure to stack any kind of variables with the same static type and
+/// rank. Each variable may have different type parameters, bounds, and dynamic
+/// type. Fetching variable N will return a variable with the same address,
+/// dynamic type, bounds, and type parameters as the Nth variable that was
+/// pushed. It is implemented using runtime.
+class AnyVariableStack {
+public:
+  AnyVariableStack(mlir::Location loc, fir::FirOpBuilder &builder,
+                   mlir::Type valueStaticType);
+
+  void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value value);
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
+  mlir::Value fetch(mlir::Location loc, fir::FirOpBuilder &builder);
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  bool canBeFetchedAfterPush() const { return true; }
+
+private:
+  /// Keep the original variable type.
+  mlir::Type variableStaticType;
+  /// Runtime cookie created by the runtime. It is a pointer to an opaque
+  /// runtime data structure that manages the stack.
+  mlir::Value opaquePtr;
+  /// Counter to keep track of the fetching position.
+  Counter counter;
+  /// Pointer box passed to the runtime when fetching the values.
+  mlir::Value retValueBox;
+};
+
+class TemporaryStorage;
+
+/// Data structure to stack vector subscripted entity shape and
+/// element addresses. AnyVariableStack allows saving vector subscripted
+/// entities element addresses, but when saving several vector subscripted
+/// entities on a stack, and if the context does not allow retrieving the
+/// vector subscript entities shapes, these shapes must be saved too.
+class AnyVectorSubscriptStack : public AnyVariableStack {
+public:
+  AnyVectorSubscriptStack(mlir::Location loc, fir::FirOpBuilder &builder,
+                          mlir::Type valueStaticType,
+                          bool shapeCanBeSavedAsRegister, int rank);
+  void pushShape(mlir::Location loc, fir::FirOpBuilder &builder,
+                 mlir::Value shape);
+  void resetFetchPosition(mlir::Location loc, fir::FirOpBuilder &builder);
+  mlir::Value fetchShape(mlir::Location loc, fir::FirOpBuilder &builder);
+  void destroy(mlir::Location loc, fir::FirOpBuilder &builder);
+  bool canBeFetchedAfterPush() const { return true; }
+
+private:
+  std::unique_ptr<TemporaryStorage> shapeTemp;
+  // If the shape is saved inside a descriptor (as extents),
+  // keep track of the descriptor type.
+  std::optional<mlir::Type> boxType;
 };
 
 /// Generic wrapper over the different sorts of temporary storages.
@@ -165,9 +250,22 @@ public:
   void destroy(mlir::Location loc, fir::FirOpBuilder &builder) {
     std::visit([&](auto &temp) { temp.destroy(loc, builder); }, impl);
   }
+  /// Can "fetch" be called to get the last value pushed with
+  /// "pushValue"?
+  bool canBeFetchedAfterPush() const {
+    return std::visit([&](auto &temp) { return temp.canBeFetchedAfterPush(); },
+                      impl);
+  }
+
+  template <typename T>
+  T &cast() {
+    return std::get<T>(impl);
+  }
 
 private:
-  std::variant<HomogeneousScalarStack, SimpleCopy, AnyValueStack> impl;
+  std::variant<HomogeneousScalarStack, SimpleCopy, SSARegister, AnyValueStack,
+               AnyVariableStack, AnyVectorSubscriptStack>
+      impl;
 };
 } // namespace fir::factory
 #endif // FORTRAN_OPTIMIZER_BUILDER_TEMPORARYSTORAGE_H

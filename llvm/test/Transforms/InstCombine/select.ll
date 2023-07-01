@@ -846,8 +846,8 @@ define i32 @test52(i32 %n, i32 %m) {
 
 define i32 @test53(i32 %x) {
 ; CHECK-LABEL: @test53(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 2, i32 1
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;

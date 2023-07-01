@@ -91,12 +91,12 @@ def LLVM_AnyTargetExt : Type<CPred<"::llvm::isa<::mlir::LLVM::LLVMTargetExtType>
 // Type constraint accepting LLVM target extension types with no support for
 // memory operations such as alloca, load and store.
 def LLVM_NonLoadableTargetExtType : Type<
-  And<[LLVM_AnyTargetExt.predicate, 
+  And<[LLVM_AnyTargetExt.predicate,
         CPred<"!::llvm::cast<::mlir::LLVM::LLVMTargetExtType>($_self).supportsMemOps()">]
         >>;
 
 // Type constraint accepting any LLVM type that can be loaded or stored, i.e. a
-// type that has size (not void, function, opaque struct type or target 
+// type that has size (not void, function, opaque struct type or target
 // extension type which does not support memory operations).
 def LLVM_LoadableType : Type<
   Or<[And<[LLVM_PrimitiveType.predicate, Neg<LLVM_OpaqueStruct.predicate>,
@@ -174,6 +174,7 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //   - $_int_attr - substituted by a call to an integer attribute matcher;
   //   - $_float_attr - substituted by a call to a float attribute matcher;
   //   - $_var_attr - substituted by a call to a variable attribute matcher;
+  //   - $_label_attr - substituted by a call to a label attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;
   //   - $_builder - substituted with the MLIR builder;

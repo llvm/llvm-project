@@ -1255,6 +1255,12 @@ DILocalVariableAttr ModuleImport::matchLocalVariableAttr(llvm::Value *value) {
   return debugImporter->translate(node);
 }
 
+DILabelAttr ModuleImport::matchLabelAttr(llvm::Value *value) {
+  auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
+  auto *node = cast<llvm::DILabel>(nodeAsVal->getMetadata());
+  return debugImporter->translate(node);
+}
+
 FailureOr<SmallVector<SymbolRefAttr>>
 ModuleImport::matchAliasScopeAttrs(llvm::Value *value) {
   auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
@@ -1731,6 +1737,9 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
   if (func->hasGC())
     funcOp.setGarbageCollector(StringRef(func->getGC()));
+
+  if (func->hasSection())
+    funcOp.setSection(StringRef(func->getSection()));
 
   funcOp.setVisibility_(convertVisibilityFromLLVM(func->getVisibility()));
 

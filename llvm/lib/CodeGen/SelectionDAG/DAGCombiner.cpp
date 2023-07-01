@@ -516,6 +516,7 @@ namespace {
 
     SDValue replaceStoreChain(StoreSDNode *ST, SDValue BetterChain);
     SDValue replaceStoreOfFPConstant(StoreSDNode *ST);
+    SDValue replaceStoreOfInsertLoad(StoreSDNode *ST);
 
     bool refineExtractVectorEltIntoMultipleNarrowExtractVectorElts(SDNode *N);
 
@@ -13010,6 +13011,13 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::SIGN_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND)
     return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N0.getOperand(0));
 
+  // fold (sext (aext_extend_vector_inreg x)) -> (sext_extend_vector_inreg x)
+  // fold (sext (sext_extend_vector_inreg x)) -> (sext_extend_vector_inreg x)
+  if (N0.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
+      N0.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG)
+    return DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, SDLoc(N), VT,
+                       N0.getOperand(0));
+
   // fold (sext (sext_inreg x)) -> (sext (trunc x))
   if (N0.getOpcode() == ISD::SIGN_EXTEND_INREG) {
     SDValue N00 = N0.getOperand(0);
@@ -13267,6 +13275,13 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // fold (zext (aext x)) -> (zext x)
   if (N0.getOpcode() == ISD::ZERO_EXTEND || N0.getOpcode() == ISD::ANY_EXTEND)
     return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, N0.getOperand(0));
+
+  // fold (zext (aext_extend_vector_inreg x)) -> (zext_extend_vector_inreg x)
+  // fold (zext (zext_extend_vector_inreg x)) -> (zext_extend_vector_inreg x)
+  if (N0.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
+      N0.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG)
+    return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(N), VT,
+                       N0.getOperand(0));
 
   // fold (zext (truncate x)) -> (zext x) or
   //      (zext (truncate x)) -> (truncate x)
@@ -13532,6 +13547,14 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
   if (N0.getOpcode() == ISD::ANY_EXTEND  ||
       N0.getOpcode() == ISD::ZERO_EXTEND ||
       N0.getOpcode() == ISD::SIGN_EXTEND)
+    return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, N0.getOperand(0));
+
+  // fold (aext (aext_extend_vector_inreg x)) -> (aext_extend_vector_inreg x)
+  // fold (aext (zext_extend_vector_inreg x)) -> (zext_extend_vector_inreg x)
+  // fold (aext (sext_extend_vector_inreg x)) -> (sext_extend_vector_inreg x)
+  if (N0.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG ||
+      N0.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG ||
+      N0.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG)
     return DAG.getNode(N0.getOpcode(), SDLoc(N), VT, N0.getOperand(0));
 
   // fold (aext (truncate (load x))) -> (aext (smaller load x))
@@ -20409,6 +20432,62 @@ SDValue DAGCombiner::replaceStoreOfFPConstant(StoreSDNode *ST) {
   }
 }
 
+// (store (insert_vector_elt (load p), x, i), p) -> (store x, p+offset)
+//
+// If a store of a load with an element inserted into it has no other
+// uses in between the chain, then we can consider the vector store
+// dead and replace it with just the single scalar element store.
+SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
+  SDLoc DL(ST);
+  SDValue Value = ST->getValue();
+  SDValue Ptr = ST->getBasePtr();
+  SDValue Chain = ST->getChain();
+  if (Value.getOpcode() != ISD::INSERT_VECTOR_ELT || !Value.hasOneUse())
+    return SDValue();
+
+  SDValue Elt = Value.getOperand(1);
+  SDValue Idx = Value.getOperand(2);
+
+  // If the element isn't byte sized then we can't compute an offset
+  EVT EltVT = Elt.getValueType();
+  if (!EltVT.isByteSized())
+    return SDValue();
+
+  auto *Ld = dyn_cast<LoadSDNode>(Value.getOperand(0));
+  if (!Ld || Ld->getBasePtr() != Ptr ||
+      ST->getMemoryVT() != Ld->getMemoryVT() || !ST->isSimple() ||
+      !ISD::isNormalStore(ST) ||
+      Ld->getAddressSpace() != ST->getAddressSpace() ||
+      !Chain.reachesChainWithoutSideEffects(SDValue(Ld, 1)))
+    return SDValue();
+
+  unsigned IsFast;
+  if (!TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+                              Elt.getValueType(), ST->getAddressSpace(),
+                              ST->getAlign(), ST->getMemOperand()->getFlags(),
+                              &IsFast) ||
+      !IsFast)
+    return SDValue();
+  EVT PtrVT = Ptr.getValueType();
+
+  SDValue Offset =
+      DAG.getNode(ISD::MUL, DL, PtrVT, Idx,
+                  DAG.getConstant(EltVT.getSizeInBits() / 8, DL, PtrVT));
+  SDValue NewPtr = DAG.getNode(ISD::ADD, DL, PtrVT, Ptr, Offset);
+  MachinePointerInfo PointerInfo(ST->getAddressSpace());
+
+  // If the offset is a known constant then try to recover the pointer
+  // info
+  if (auto *CIdx = dyn_cast<ConstantSDNode>(Idx)) {
+    unsigned COffset = CIdx->getSExtValue() * EltVT.getSizeInBits() / 8;
+    NewPtr = DAG.getMemBasePlusOffset(Ptr, TypeSize::Fixed(COffset), DL);
+    PointerInfo = ST->getPointerInfo().getWithOffset(COffset);
+  }
+
+  return DAG.getStore(Chain, DL, Elt, NewPtr, PointerInfo, ST->getAlign(),
+                      ST->getMemOperand()->getFlags());
+}
+
 SDValue DAGCombiner::visitSTORE(SDNode *N) {
   StoreSDNode *ST  = cast<StoreSDNode>(N);
   SDValue Chain = ST->getChain();
@@ -20547,6 +20626,10 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
       return Chain;
     }
   }
+
+  // Try scalarizing vector stores of loads where we only change one element
+  if (SDValue NewST = replaceStoreOfInsertLoad(ST))
+    return NewST;
 
   // TODO: Can relax for unordered atomics (see D66309)
   if (StoreSDNode *ST1 = dyn_cast<StoreSDNode>(Chain)) {
@@ -23159,7 +23242,13 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
 
     // If the input is a concat_vectors, just make a larger concat by padding
     // with smaller undefs.
-    if (In.getOpcode() == ISD::CONCAT_VECTORS && In.hasOneUse()) {
+    //
+    // Legalizing in AArch64TargetLowering::LowerCONCAT_VECTORS() and combining
+    // here could cause an infinite loop. That legalizing happens when LegalDAG
+    // is true and input of AArch64TargetLowering::LowerCONCAT_VECTORS() is
+    // scalable.
+    if (In.getOpcode() == ISD::CONCAT_VECTORS && In.hasOneUse() &&
+        !(LegalDAG && In.getValueType().isScalableVector())) {
       unsigned NumOps = N->getNumOperands() * In.getNumOperands();
       SmallVector<SDValue, 4> Ops(In->op_begin(), In->op_end());
       Ops.resize(NumOps, DAG.getUNDEF(Ops[0].getValueType()));
@@ -23653,10 +23742,6 @@ static SDValue foldExtractSubvectorFromShuffleVector(SDNode *N,
       continue;
     }
 
-    // Profitability check: only deal with extractions from the first subvector.
-    if (OpSubvecIdx != 0)
-      return SDValue();
-
     const std::pair<SDValue, int> DemandedSubvector =
         std::make_pair(Op, OpSubvecIdx);
 
@@ -23685,6 +23770,14 @@ static SDValue foldExtractSubvectorFromShuffleVector(SDNode *N,
   // Did we discover that the shuffle does not actually depend on operands?
   if (DemandedSubvectors.empty())
     return DAG.getUNDEF(NarrowVT);
+
+  // Profitability check: only deal with extractions from the first subvector
+  // unless the mask becomes an identity mask.
+  if (!ShuffleVectorInst::isIdentityMask(NewMask) ||
+      any_of(NewMask, [](int M) { return M < 0; }))
+    for (auto &DemandedSubvector : DemandedSubvectors)
+      if (DemandedSubvector.second != 0)
+        return SDValue();
 
   // We still perform the exact same EXTRACT_SUBVECTOR,  just on different
   // operand[s]/index[es], so there is no point in checking for it's legality.

@@ -461,10 +461,21 @@ void RocmInstallationDetector::detectHIPRuntime() {
     SharePath = InstallPath;
     llvm::sys::path::append(SharePath, "share");
 
+    // Get parent of InstallPath and append "share"
+    SmallString<0> ParentSharePath = llvm::sys::path::parent_path(InstallPath);
+    llvm::sys::path::append(ParentSharePath, "share");
+
+    auto Append = [](SmallString<0> &path, const Twine &a, const Twine &b = "",
+                     const Twine &c = "", const Twine &d = "") {
+      SmallString<0> newpath = path;
+      llvm::sys::path::append(newpath, a, b, c, d);
+      return newpath;
+    };
     // If HIP version file can be found and parsed, use HIP version from there.
     for (const auto &VersionFilePath :
-         {std::string(SharePath) + "/hip/version",
-          std::string(BinPath) + "/.hipVersion"}) {
+         {Append(SharePath, "hip", "version"),
+          Append(ParentSharePath, "hip", "version"),
+          Append(BinPath, ".hipVersion")}) {
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
           FS.getBufferForFile(VersionFilePath);
       if (!VersionFile)
@@ -545,6 +556,9 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (C.getDriver().isUsingLTO())
     addLTOOptions(getToolChain(), Args, CmdArgs, Output, Inputs[0],
                   C.getDriver().getLTOMode() == LTOK_Thin);
+  else if (Args.hasArg(options::OPT_mcpu_EQ))
+    CmdArgs.push_back(Args.MakeArgString(
+        "-plugin-opt=mcpu=" + Args.getLastArgValue(options::OPT_mcpu_EQ)));
   CmdArgs.push_back("--no-undefined");
   CmdArgs.push_back("-shared");
   CmdArgs.push_back("-o");

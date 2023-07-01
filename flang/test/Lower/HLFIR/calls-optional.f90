@@ -77,7 +77,7 @@ end subroutine
 ! CHECK:  %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]]#0, %[[VAL_9]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:  %[[VAL_12:.*]] = arith.constant 1 : index
-! CHECK:  fir.do_loop %[[VAL_13:.*]] = %[[VAL_12]] to %[[VAL_10]]#1 step %[[VAL_12]] {
+! CHECK:  fir.do_loop %[[VAL_13:.*]] = %[[VAL_12]] to %[[VAL_10]]#1 step %[[VAL_12]] unordered {
 ! CHECK:    %[[VAL_14:.*]] = hlfir.designate %[[VAL_2]]#0 (%[[VAL_13]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_15:.*]] = fir.if %[[VAL_8]] -> (!fir.ref<f32>) {
 ! CHECK:      %[[VAL_16:.*]] = arith.constant 0 : index
@@ -109,7 +109,7 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_3:.*]]:3 = fir.box_dims %[[VAL_1]]#0, %[[VAL_2]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 1 : index
-! CHECK:  fir.do_loop %[[VAL_5:.*]] = %[[VAL_4]] to %[[VAL_3]]#1 step %[[VAL_4]] {
+! CHECK:  fir.do_loop %[[VAL_5:.*]] = %[[VAL_4]] to %[[VAL_3]]#1 step %[[VAL_4]] unordered {
 ! CHECK:    %[[VAL_6:.*]] = hlfir.designate %[[VAL_1]]#0 (%[[VAL_5]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! CHECK:    fir.call @_QPelem_takes_one_optional(%[[VAL_6]]) {{.*}} : (!fir.ref<f32>) -> ()
 ! CHECK:  }
@@ -131,7 +131,7 @@ end subroutine
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_6:.*]]:3 = fir.box_dims %[[VAL_2]]#0, %[[VAL_5]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 1 : index
-! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_6]]#1 step %[[VAL_7]] {
+! CHECK:  fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_6]]#1 step %[[VAL_7]] unordered {
 ! CHECK:    %[[VAL_9:.*]] = hlfir.designate %[[VAL_2]]#0 (%[[VAL_8]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_10:.*]] = fir.embox %[[VAL_9]] : (!fir.ref<f32>) -> !fir.box<f32>
 ! CHECK:    %[[VAL_11:.*]] = fir.rebox %[[VAL_10]] : (!fir.box<f32>) -> !fir.class<none>

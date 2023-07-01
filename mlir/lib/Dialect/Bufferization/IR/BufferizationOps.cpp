@@ -71,8 +71,7 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
   for (int i = 0; i < destType.getRank(); ++i) {
     if (destType.getShape()[i] != ShapedType::kDynamic)
       continue;
-    auto index = b.createOrFold<arith::ConstantIndexOp>(loc, i);
-    Value size = b.create<memref::DimOp>(loc, value, index);
+    Value size = b.create<memref::DimOp>(loc, value, i);
     dynamicOperands.push_back(size);
   }
   // TODO: Use alloc/memcpy callback from BufferizationOptions if called via
@@ -442,6 +441,49 @@ Value AllocTensorOp::getDynamicSize(OpBuilder &b, unsigned idx) {
   if (getCopy())
     return b.create<tensor::DimOp>(getLoc(), getCopy(), idx);
   return getOperand(getIndexOfDynamicSize(idx));
+}
+
+//===----------------------------------------------------------------------===//
+// CopyTensorOp
+//===----------------------------------------------------------------------===//
+
+bool CopyTensorOp::bufferizesToMemoryRead(OpOperand &opOperand,
+                                          const AnalysisState &state) {
+  if (&opOperand == &getOperation()->getOpOperand(0) /*source*/)
+    return true;
+  return false;
+}
+
+bool CopyTensorOp::bufferizesToMemoryWrite(OpOperand &opOperand,
+                                           const AnalysisState &state) {
+  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
+    return true;
+  return false;
+}
+
+AliasingOpResultList
+CopyTensorOp::getAliasingOpResults(OpOperand &opOperand,
+                                   const AnalysisState &state) {
+  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
+    return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
+  return {};
+}
+
+LogicalResult CopyTensorOp::bufferize(RewriterBase &rewriter,
+                                      const BufferizationOptions &options) {
+  FailureOr<Value> buffer = getBuffer(rewriter, getDest(), options);
+  if (failed(buffer))
+    return failure();
+  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), *buffer);
+  replaceOpWithBufferizedValues(rewriter, getOperation(), *buffer);
+  return success();
+}
+
+LogicalResult CopyTensorOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
+  reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

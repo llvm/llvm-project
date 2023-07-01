@@ -68,7 +68,6 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -83,7 +82,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
@@ -322,6 +320,7 @@ static uint64_t getDeclShowContexts(const NamedDecl *ND,
       if (ID->getDefinition())
         Contexts |= (1LL << CodeCompletionContext::CCC_Expression);
       Contexts |= (1LL << CodeCompletionContext::CCC_ObjCInterfaceName);
+      Contexts |= (1LL << CodeCompletionContext::CCC_ObjCClassForwardDecl);
     }
 
     // Deal with tag names.
@@ -1146,6 +1145,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   // Create the compiler instance to use for building the AST.
   std::unique_ptr<CompilerInstance> Clang(
       new CompilerInstance(std::move(PCHContainerOps)));
+  Clang->setInvocation(CCInvocation);
 
   // Clean up on error, disengage it if the function returns successfully.
   auto CleanOnError = llvm::make_scope_exit([&]() {
@@ -1172,7 +1172,6 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
   llvm::CrashRecoveryContextCleanupRegistrar<CompilerInstance>
     CICleanup(Clang.get());
 
-  Clang->setInvocation(CCInvocation);
   OriginalSourceFile =
       std::string(Clang->getFrontendOpts().Inputs[0].getFile());
 
@@ -1755,6 +1754,12 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
   assert(Diags.get() && "no DiagnosticsEngine was provided");
 
+  // If no VFS was provided, create one that tracks the physical file system.
+  // If '-working-directory' was passed as an argument, 'createInvocation' will
+  // set this as the current working directory of the VFS.
+  if (!VFS)
+    VFS = llvm::vfs::createPhysicalFileSystem();
+
   SmallVector<StoredDiagnostic, 4> StoredDiagnostics;
 
   std::shared_ptr<CompilerInvocation> CI;
@@ -1800,8 +1805,6 @@ ASTUnit *ASTUnit::LoadFromCommandLine(
   ConfigureDiags(Diags, *AST, CaptureDiagnostics);
   AST->Diagnostics = Diags;
   AST->FileSystemOpts = CI->getFileSystemOpts();
-  if (!VFS)
-    VFS = llvm::vfs::getRealFileSystem();
   VFS = createVFSFromCompilerInvocation(*CI, *Diags, VFS);
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
   AST->StorePreamblesInMemory = StorePreamblesInMemory;
@@ -2028,6 +2031,7 @@ static void CalculateHiddenNames(const CodeCompletionContext &Context,
   case CodeCompletionContext::CCC_IncludedFile:
   case CodeCompletionContext::CCC_Attribute:
   case CodeCompletionContext::CCC_NewName:
+  case CodeCompletionContext::CCC_ObjCClassForwardDecl:
     // We're looking for nothing, or we're looking for names that cannot
     // be hidden.
     return;
@@ -2313,16 +2317,11 @@ bool ASTUnit::Save(StringRef File) {
   if (HadModuleLoaderFatalFailure)
     return true;
 
-  // Write to a temporary file and later rename it to the actual file, to avoid
-  // possible race conditions.
-  SmallString<128> TempPath;
-  TempPath = File;
-  TempPath += "-%%%%%%%%";
   // FIXME: Can we somehow regenerate the stat cache here, or do we need to
   // unconditionally create a stat cache when we parse the file?
 
-  if (llvm::Error Err = llvm::writeFileAtomically(
-          TempPath, File, [this](llvm::raw_ostream &Out) {
+  if (llvm::Error Err = llvm::writeToOutput(
+          File, [this](llvm::raw_ostream &Out) {
             return serialize(Out) ? llvm::make_error<llvm::StringError>(
                                         "ASTUnit serialization failed",
                                         llvm::inconvertibleErrorCode())

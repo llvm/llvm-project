@@ -6,18 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-def GPRIdxModeMatchClass : AsmOperandClass {
-  let Name = "GPRIdxMode";
-  let PredicateMethod = "isGPRIdxMode";
-  let ParserMethod = "parseGPRIdxMode";
-  let RenderMethod = "addImmOperands";
-}
-
-def GPRIdxMode : Operand<i32> {
-  let PrintMethod = "printVGPRIndexMode";
-  let ParserMatchClass = GPRIdxModeMatchClass;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+def GPRIdxMode : CustomOperand<i32>;
 
 class SOP_Pseudo<string opName, dag outs, dag ins, string asmOps,
                   list<dag> pattern=[]> :
@@ -447,11 +436,11 @@ let SubtargetPredicate = isGFX11Plus in {
     // For s_sendmsg_rtn_* the src0 field encodes the message type directly; it
     // is not an SGPR number.
     def S_SENDMSG_RTN_B32 : SOP1_Pseudo<
-      "s_sendmsg_rtn_b32", (outs SReg_32:$sdst), (ins SendMsgImm:$src0),
+      "s_sendmsg_rtn_b32", (outs SReg_32:$sdst), (ins SendMsg:$src0),
       "$sdst, $src0", [(set i32:$sdst, (int_amdgcn_s_sendmsg_rtn timm:$src0))]
     >;
     def S_SENDMSG_RTN_B64 : SOP1_Pseudo<
-      "s_sendmsg_rtn_b64", (outs SReg_64:$sdst), (ins SendMsgImm:$src0),
+      "s_sendmsg_rtn_b64", (outs SReg_64:$sdst), (ins SendMsg:$src0),
       "$sdst, $src0", [(set i64:$sdst, (int_amdgcn_s_sendmsg_rtn timm:$src0))]
     >;
   }
@@ -1017,7 +1006,7 @@ class SOPK_32 <string opName, list<dag> pattern=[]> : SOPK_Pseudo <
 class SOPK_32_BR <string opName, list<dag> pattern=[]> : SOPK_Pseudo <
   opName,
   (outs),
-  (ins sopp_brtarget:$simm16, SReg_32:$sdst),
+  (ins SOPPBrTarget:$simm16, SReg_32:$sdst),
   "$sdst, $simm16",
   pattern> {
   let Defs = [EXEC];
@@ -1097,7 +1086,7 @@ let isCommutable = 1, DisableEncoding = "$src0",
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9 in
 def S_CBRANCH_I_FORK : SOPK_Pseudo <
   "s_cbranch_i_fork",
-  (outs), (ins SReg_64:$sdst, sopp_brtarget:$simm16),
+  (outs), (ins SReg_64:$sdst, SOPPBrTarget:$simm16),
   "$sdst, $simm16"
 >;
 
@@ -1175,7 +1164,7 @@ let SubtargetPredicate = isGFX9Plus in {
   def S_CALL_B64 : SOPK_Pseudo<
       "s_call_b64",
       (outs SReg_64:$sdst),
-      (ins sopp_brtarget:$simm16),
+      (ins SOPPBrTarget:$simm16),
       "$sdst, $simm16"> {
     let isCall = 1;
   }
@@ -1488,60 +1477,60 @@ let SubtargetPredicate = isGFX10Plus in {
 let isBranch = 1, SchedRW = [WriteBranch] in {
 let isBarrier = 1 in {
 defm S_BRANCH : SOPP_With_Relaxation<
-  "s_branch" , (ins sopp_brtarget:$simm16), "$simm16",
+  "s_branch" , (ins SOPPBrTarget:$simm16), "$simm16",
   [(br bb:$simm16)]>;
 }
 
 let Uses = [SCC] in {
 defm S_CBRANCH_SCC0 : SOPP_With_Relaxation<
-  "s_cbranch_scc0" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_scc0" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 defm S_CBRANCH_SCC1 : SOPP_With_Relaxation <
-  "s_cbranch_scc1" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_scc1" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 } // End Uses = [SCC]
 
 let Uses = [VCC] in {
 defm S_CBRANCH_VCCZ : SOPP_With_Relaxation <
-  "s_cbranch_vccz" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_vccz" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 defm S_CBRANCH_VCCNZ : SOPP_With_Relaxation <
-  "s_cbranch_vccnz" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_vccnz" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 } // End Uses = [VCC]
 
 let Uses = [EXEC] in {
 defm S_CBRANCH_EXECZ : SOPP_With_Relaxation <
-  "s_cbranch_execz" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_execz" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 defm S_CBRANCH_EXECNZ : SOPP_With_Relaxation <
-  "s_cbranch_execnz" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_execnz" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 } // End Uses = [EXEC]
 
 defm S_CBRANCH_CDBGSYS : SOPP_With_Relaxation <
-  "s_cbranch_cdbgsys" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_cdbgsys" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 
 defm S_CBRANCH_CDBGSYS_AND_USER : SOPP_With_Relaxation <
-  "s_cbranch_cdbgsys_and_user" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_cdbgsys_and_user" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 
 defm S_CBRANCH_CDBGSYS_OR_USER : SOPP_With_Relaxation <
-  "s_cbranch_cdbgsys_or_user" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_cdbgsys_or_user" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 
 defm S_CBRANCH_CDBGUSER : SOPP_With_Relaxation <
-  "s_cbranch_cdbguser" , (ins sopp_brtarget:$simm16),
+  "s_cbranch_cdbguser" , (ins SOPPBrTarget:$simm16),
   "$simm16"
 >;
 
@@ -1572,7 +1561,7 @@ def S_WAKEUP : SOPP_Pseudo <"s_wakeup", (ins) > {
 }
 
 let hasSideEffects = 1 in
-def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins WAIT_FLAG:$simm16), "$simm16",
+def S_WAITCNT : SOPP_Pseudo <"s_waitcnt" , (ins SWaitCnt:$simm16), "$simm16",
     [(int_amdgcn_s_waitcnt timm:$simm16)]>;
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
@@ -1597,12 +1586,12 @@ def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
 }
 
 let Uses = [EXEC, M0] in {
-def S_SENDMSG : SOPP_Pseudo <"s_sendmsg" , (ins SendMsgImm:$simm16), "$simm16",
+def S_SENDMSG : SOPP_Pseudo <"s_sendmsg" , (ins SendMsg:$simm16), "$simm16",
   [(int_amdgcn_s_sendmsg (i32 timm:$simm16), M0)]> {
   let hasSideEffects = 1;
 }
 
-def S_SENDMSGHALT : SOPP_Pseudo <"s_sendmsghalt" , (ins SendMsgImm:$simm16), "$simm16",
+def S_SENDMSGHALT : SOPP_Pseudo <"s_sendmsghalt" , (ins SendMsg:$simm16), "$simm16",
   [(int_amdgcn_s_sendmsghalt (i32 timm:$simm16), M0)]> {
   let hasSideEffects = 1;
 }
@@ -1673,7 +1662,7 @@ let SubtargetPredicate = isGFX10Plus in {
 
 let SubtargetPredicate = isGFX10GFX11 in {
   def S_WAITCNT_DEPCTR :
-    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtrImm:$simm16), "$simm16">;
+    SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtr:$simm16), "$simm16">;
 } // End SubtargetPredicate = isGFX10GFX11
 
 let SubtargetPredicate = isGFX11Plus in {
@@ -1681,7 +1670,7 @@ let SubtargetPredicate = isGFX11Plus in {
                                  "$simm16"> {
                                    let hasSideEffects = 1;
                                  }
-  def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins DELAY_FLAG:$simm16),
+  def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins SDelayALU:$simm16),
                                 "$simm16">;
 } // End SubtargetPredicate = isGFX11Plus
 
@@ -1692,7 +1681,7 @@ let SubtargetPredicate = HasVGPRSingleUseHintInsts in {
 
 let SubtargetPredicate = isGFX12Plus, hasSideEffects = 1 in {
   def S_WAIT_ALU :
-    SOPP_Pseudo <"s_wait_alu" , (ins DepCtrImm:$simm16), "$simm16">;
+    SOPP_Pseudo <"s_wait_alu" , (ins DepCtr:$simm16), "$simm16">;
   def S_WAIT_LOADCNT :
     SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16",
                 [(int_amdgcn_s_wait_loadcnt timm:$simm16)]>;

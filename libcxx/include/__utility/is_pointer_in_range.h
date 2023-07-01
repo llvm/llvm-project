@@ -35,7 +35,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("address
                 "__is_pointer_in_range should not be called with member pointers");
 
   if (__libcpp_is_constant_evaluated()) {
-    _LIBCPP_ASSERT(__builtin_constant_p(__begin <= __end), "__begin and __end do not form a range");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__builtin_constant_p(__begin <= __end), "__begin and __end do not form a range");
 
     // If this is not a constant during constant evaluation we know that __ptr is not part of the allocation where
     // [__begin, __end) is.

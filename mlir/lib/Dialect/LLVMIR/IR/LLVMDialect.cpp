@@ -3063,7 +3063,7 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
         .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
+              DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
               DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
               DINullTypeAttr, DISubprogramAttr, DISubroutineTypeAttr,
               LoopAnnotationAttr, LoopVectorizeAttr, LoopInterleaveAttr,

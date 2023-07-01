@@ -74,7 +74,7 @@ end subroutine
 ! CHECK-DAG:     %[[DIM:.*]] = fir.load %[[DIM_REF]]#0 : !fir.ref<i32>
 ! CHECK-DAG:     %[[EXPR:.*]] = hlfir.count %[[MASK]]#0 dim %[[DIM]] kind %[[C8]] : (!fir.box<!fir.array<?x?x!fir.logical<4>>>, i32, i32) -> !hlfir.expr<?xi64>
 ! CHECK-DAG:     %[[RES_SHAPE:.*]] = hlfir.shape_of %[[EXPR]]
-! CHECK-DAG:     %[[RES:.*]] = hlfir.elemental %[[RES_SHAPE]] : (!fir.shape<1>) -> !hlfir.expr<?xi32>
+! CHECK-DAG:     %[[RES:.*]] = hlfir.elemental %[[RES_SHAPE]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xi32>
 ! CHECK-DAG:     hlfir.assign %[[RES]] to %[[OUT]]#0
 ! CHECK-NEXT:    hlfir.destroy %[[RES]] : !hlfir.expr<?xi32>
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]] : !hlfir.expr<?xi64>

@@ -195,7 +195,7 @@ module {
 // CHECK:         llvm.func @_FortranAioOutputDescriptor(!llvm.ptr<i8>, !llvm.ptr<struct<(ptr<struct<()>>, i64, i32, i8, i8, i8, i8, ptr<i8>, array<1 x i64>)>>) -> i1 attributes {fir.io, fir.runtime, sym_visibility = "private"}
 // CHECK:         llvm.func @_FortranAioEndIoStatement(!llvm.ptr<i8>) -> i32 attributes {fir.io, fir.runtime, sym_visibility = "private"}
 
-// CHECK-LABEL:   llvm.mlir.global linkonce constant @_QQcl.2E2F64756D6D792E66393000() {addr_space = 0 : i32} : !llvm.array<12 x i8> {
+// CHECK-LABEL:   llvm.mlir.global linkonce constant @_QQcl.2E2F64756D6D792E66393000() comdat(@__llvm_comdat::@_QQcl.2E2F64756D6D792E66393000) {addr_space = 0 : i32} : !llvm.array<12 x i8> {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant("./dummy.f90\00") : !llvm.array<12 x i8>
 // CHECK:           llvm.return %[[VAL_0]] : !llvm.array<12 x i8>
 // CHECK:         }

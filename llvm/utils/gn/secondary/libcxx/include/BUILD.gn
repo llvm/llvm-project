@@ -49,11 +49,6 @@ if (current_toolchain == default_toolchain) {
     } else {
       values += [ "_LIBCPP_ABI_NAMESPACE=__" + libcxx_abi_version ]
     }
-    if (libcxx_enable_debug_mode) {
-      values += [ "_LIBCPP_ENABLE_DEBUG_MODE=1" ]
-    } else {
-      values += [ "_LIBCPP_ENABLE_DEBUG_MODE=" ]
-    }
   }
 
   write_cmake_config("write_modulemap") {
@@ -400,7 +395,6 @@ if (current_toolchain == default_toolchain) {
       "__coroutine/coroutine_traits.h",
       "__coroutine/noop_coroutine_handle.h",
       "__coroutine/trivial_awaitables.h",
-      "__debug",
       "__debug_utils/randomize_range.h",
       "__debug_utils/strict_weak_ordering_check.h",
       "__exception/exception.h",
@@ -492,6 +486,7 @@ if (current_toolchain == default_toolchain) {
       "__fwd/hash.h",
       "__fwd/ios.h",
       "__fwd/istream.h",
+      "__fwd/mdspan.h",
       "__fwd/memory_resource.h",
       "__fwd/ostream.h",
       "__fwd/pair.h",
@@ -551,6 +546,8 @@ if (current_toolchain == default_toolchain) {
       "__locale_dir/locale_base_api/locale_guard.h",
       "__mbstate_t.h",
       "__mdspan/extents.h",
+      "__mdspan/layout_left.h",
+      "__mdspan/layout_right.h",
       "__memory/addressof.h",
       "__memory/align.h",
       "__memory/aligned_alloc.h",
@@ -576,7 +573,6 @@ if (current_toolchain == default_toolchain) {
       "__memory/temp_value.h",
       "__memory/temporary_buffer.h",
       "__memory/uninitialized_algorithms.h",
-      "__memory/uninitialized_buffer.h",
       "__memory/unique_ptr.h",
       "__memory/uses_allocator.h",
       "__memory/uses_allocator_construction.h",
@@ -680,7 +676,6 @@ if (current_toolchain == default_toolchain) {
       "__ranges/common_view.h",
       "__ranges/concepts.h",
       "__ranges/container_compatible_range.h",
-      "__ranges/movable_box.h",
       "__ranges/counted.h",
       "__ranges/dangling.h",
       "__ranges/data.h",
@@ -697,6 +692,7 @@ if (current_toolchain == default_toolchain) {
       "__ranges/istream_view.h",
       "__ranges/join_view.h",
       "__ranges/lazy_split_view.h",
+      "__ranges/movable_box.h",
       "__ranges/non_propagating_cache.h",
       "__ranges/owning_view.h",
       "__ranges/range_adaptor.h",

@@ -517,10 +517,9 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
   if (AI.isIgnore()) {
     uint64_t PointerSize = getTarget().getPointerWidth(LangAS::Default) / 8;
     CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
-    VAListAddr = CGF.Builder.CreateElementBitCast(VAListAddr, CGF.Int8PtrTy);
+    VAListAddr = VAListAddr.withElementType(CGF.Int8PtrTy);
     auto *Load = CGF.Builder.CreateLoad(VAListAddr);
-    Address Addr = Address(Load, CGF.Int8Ty, SlotSize);
-    return CGF.Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(Ty));
+    return Address(Load, CGF.ConvertTypeForMem(Ty), SlotSize);
   }
 
   bool IsIndirect = AI.isIndirect();
@@ -672,7 +671,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
       CharUnits BaseOffset = CharUnits::fromQuantity(16 * i + Offset);
       Address LoadAddr =
         CGF.Builder.CreateConstInBoundsByteGEP(BaseAddr, BaseOffset);
-      LoadAddr = CGF.Builder.CreateElementBitCast(LoadAddr, BaseTy);
+      LoadAddr = LoadAddr.withElementType(BaseTy);
 
       Address StoreAddr = CGF.Builder.CreateConstArrayGEP(Tmp, i);
 
@@ -680,7 +679,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
       CGF.Builder.CreateStore(Elem, StoreAddr);
     }
 
-    RegAddr = CGF.Builder.CreateElementBitCast(Tmp, MemTy);
+    RegAddr = Tmp.withElementType(MemTy);
   } else {
     // Otherwise the object is contiguous in memory.
 
@@ -693,7 +692,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
       BaseAddr = CGF.Builder.CreateConstInBoundsByteGEP(BaseAddr, Offset);
     }
 
-    RegAddr = CGF.Builder.CreateElementBitCast(BaseAddr, MemTy);
+    RegAddr = BaseAddr.withElementType(MemTy);
   }
 
   CGF.EmitBranch(ContBlock);
@@ -746,7 +745,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr, QualType Ty,
     OnStackAddr = CGF.Builder.CreateConstInBoundsByteGEP(OnStackAddr, Offset);
   }
 
-  OnStackAddr = CGF.Builder.CreateElementBitCast(OnStackAddr, MemTy);
+  OnStackAddr = OnStackAddr.withElementType(MemTy);
 
   CGF.EmitBranch(ContBlock);
 
@@ -777,12 +776,9 @@ Address AArch64ABIInfo::EmitDarwinVAArg(Address VAListAddr, QualType Ty,
   CharUnits SlotSize = CharUnits::fromQuantity(PointerSize);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true)) {
-    Address Addr = Address(CGF.Builder.CreateLoad(VAListAddr, "ap.cur"),
-                           getVAListElementType(CGF), SlotSize);
-    Addr = CGF.Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(Ty));
-    return Addr;
-  }
+  if (isEmptyRecord(getContext(), Ty, true))
+    return Address(CGF.Builder.CreateLoad(VAListAddr, "ap.cur"),
+                   CGF.ConvertTypeForMem(Ty), SlotSize);
 
   // The size of the actual thing passed, which might end up just
   // being a pointer for indirect types.

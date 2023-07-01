@@ -443,6 +443,8 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
   }
   acc.parallel num_gangs(%idxValue: index) {
   }
+  acc.parallel num_gangs(%i64value, %i64value, %idxValue : i64, i64, index) {
+  }
   acc.parallel num_workers(%i64value: i64) {
   }
   acc.parallel num_workers(%i32value: i32) {
@@ -493,6 +495,8 @@ func.func @testparallelop(%a: memref<10xf32>, %b: memref<10xf32>, %c: memref<10x
 // CHECK:      acc.parallel num_gangs([[I32VALUE]] : i32) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel num_gangs([[IDXVALUE]] : index) {
+// CHECK-NEXT: }
+// CHECK:      acc.parallel num_gangs([[I64VALUE]], [[I64VALUE]], [[IDXVALUE]] : i64, i64, index) {
 // CHECK-NEXT: }
 // CHECK:      acc.parallel num_workers([[I64VALUE]] : i64) {
 // CHECK-NEXT: }
@@ -810,6 +814,25 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 
   acc.data {
   } attributes { defaultAttr = #acc<defaultvalue none> }
+
+  acc.data {
+  } attributes { defaultAttr = #acc<defaultvalue none>, async }
+
+  %a1 = arith.constant 1 : i64
+  acc.data async(%a1 : i64) {
+  } attributes { defaultAttr = #acc<defaultvalue none>, async }
+
+  acc.data {
+  } attributes { defaultAttr = #acc<defaultvalue none>, wait }
+
+  %w1 = arith.constant 1 : i64
+  acc.data wait(%w1 : i64) {
+  } attributes { defaultAttr = #acc<defaultvalue none>, wait }
+
+  %wd1 = arith.constant 1 : i64
+  acc.data wait_devnum(%wd1 : i64) wait(%w1 : i64) {
+  } attributes { defaultAttr = #acc<defaultvalue none>, wait }
+
   return
 }
 
@@ -908,6 +931,21 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 
 // CHECK:      acc.data {
 // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+// CHECK:      acc.data {
+// CHECK-NEXT: } attributes {async, defaultAttr = #acc<defaultvalue none>}
+
+// CHECK:      acc.data async(%{{.*}} : i64) {
+// CHECK-NEXT: } attributes {async, defaultAttr = #acc<defaultvalue none>}
+
+// CHECK:      acc.data {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
+
+// CHECK:      acc.data wait(%{{.*}} : i64) {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
+
+// CHECK:      acc.data wait_devnum(%{{.*}} : i64) wait(%{{.*}} : i64) {
+// CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>, wait}
 
 // -----
 

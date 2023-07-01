@@ -253,8 +253,8 @@ class Property<string storageTypeParam = "", string desc = ""> {
   // - `$_storage` is the storage type value.
   // - `$_reader` is a `DialectBytecodeReader`.
   code readFromMlirBytecode = [{
-    if (failed(readFromMlirBytecode($_reader, $_storage)))
-      return failure();
+    if (::mlir::failed(readFromMlirBytecode($_reader, $_storage)))
+      return ::mlir::failure();
   }];
 
   // Default value for the property.

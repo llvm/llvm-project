@@ -134,9 +134,6 @@ private:
     });
     Dict.handle("Includes", [&](Node &N) { parse(F.Includes, N); });
     Dict.handle("ClangTidy", [&](Node &N) { parse(F.ClangTidy, N); });
-    Dict.handle("AllowStalePreamble", [&](Node &N) {
-      F.AllowStalePreamble = boolValue(N, "AllowStalePreamble");
-    });
     Dict.parse(N);
   }
 

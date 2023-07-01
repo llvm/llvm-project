@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=-fullfp16 | FileCheck %s --check-prefix=CHECK-CVT --check-prefix=CHECK-COMMON
-; RUN: llc < %s -asm-verbose=false -mtriple=aarch64-none-eabi -mattr=+fullfp16 | FileCheck %s --check-prefix=CHECK-FP16 --check-prefix=CHECK-COMMON
+; RUN: llc < %s -asm-verbose=false -mtriple=aarch64 -mattr=-fullfp16 | FileCheck %s --check-prefix=CHECK-CVT --check-prefix=CHECK-COMMON
+; RUN: llc < %s -asm-verbose=false -mtriple=aarch64 -mattr=+fullfp16 | FileCheck %s --check-prefix=CHECK-FP16 --check-prefix=CHECK-COMMON
 
 define <4 x half> @add_h(<4 x half> %a, <4 x half> %b) {
 entry:

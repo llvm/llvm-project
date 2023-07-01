@@ -82,6 +82,30 @@ typedef int int32_t;
   "pop %%rbx\n"                                                                \
   "pop %%rax\n"
 
+#define PROT_READ 0x1  /* Page can be read.  */
+#define PROT_WRITE 0x2 /* Page can be written.  */
+#define PROT_EXEC 0x4  /* Page can be executed.  */
+#define PROT_NONE 0x0  /* Page can not be accessed.  */
+#define PROT_GROWSDOWN                                                         \
+  0x01000000 /* Extend change to start of                                      \
+                growsdown vma (mprotect only).  */
+#define PROT_GROWSUP                                                           \
+  0x02000000 /* Extend change to start of                                      \
+                growsup vma (mprotect only).  */
+
+/* Sharing types (must choose one and only one of these).  */
+#define MAP_SHARED 0x01  /* Share changes.  */
+#define MAP_PRIVATE 0x02 /* Changes are private.  */
+#define MAP_FIXED 0x10   /* Interpret addr exactly.  */
+
+#if defined(__APPLE__)
+#define MAP_ANONYMOUS 0x1000
+#else
+#define MAP_ANONYMOUS 0x20
+#endif
+
+#define MAP_FAILED ((void *)-1)
+
 // Functions that are required by freestanding environment. Compiler may
 // generate calls to these implicitly.
 extern "C" {
@@ -218,6 +242,21 @@ uint64_t __sigprocmask(int how, const void *set, void *oldset) {
                                                                "syscall\n"
                        : "=a"(ret)
                        : "D"(how), "S"(set), "d"(oldset), "r"(r10)
+                       : "cc", "rcx", "r11", "memory");
+  return ret;
+}
+
+uint64_t __getpid() {
+  uint64_t ret;
+#if defined(__APPLE__)
+#define GETPID_SYSCALL 20
+#else
+#define GETPID_SYSCALL 39
+#endif
+  __asm__ __volatile__("movq $" STRINGIFY(GETPID_SYSCALL) ", %%rax\n"
+                                                          "syscall\n"
+                       : "=a"(ret)
+                       :
                        : "cc", "rcx", "r11", "memory");
   return ret;
 }
@@ -481,16 +520,6 @@ int __mprotect(void *addr, size_t len, int prot) {
                        "syscall\n"
                        : "=a"(ret)
                        : "D"(addr), "S"(len), "d"(prot)
-                       : "cc", "rcx", "r11", "memory");
-  return ret;
-}
-
-uint64_t __getpid() {
-  uint64_t ret;
-  __asm__ __volatile__("movq $39, %%rax\n"
-                       "syscall\n"
-                       : "=a"(ret)
-                       :
                        : "cc", "rcx", "r11", "memory");
   return ret;
 }

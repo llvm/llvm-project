@@ -992,7 +992,10 @@ Type mlir::LLVM::getVectorType(Type elementType, unsigned numElements,
       return LLVMScalableVectorType::get(elementType, numElements);
     return LLVMFixedVectorType::get(elementType, numElements);
   }
-  return VectorType::get(numElements, elementType, (unsigned)isScalable);
+
+  // LLVM vectors are always 1-D, hence only 1 bool is required to mark it as
+  // scalable/non-scalable.
+  return VectorType::get(numElements, elementType, {isScalable});
 }
 
 Type mlir::LLVM::getVectorType(Type elementType,
@@ -1024,7 +1027,10 @@ Type mlir::LLVM::getScalableVectorType(Type elementType, unsigned numElements) {
                                    "type");
   if (useLLVM)
     return LLVMScalableVectorType::get(elementType, numElements);
-  return VectorType::get(numElements, elementType, /*numScalableDims=*/1);
+
+  // LLVM vectors are always 1-D, hence only 1 bool is required to mark it as
+  // scalable/non-scalable.
+  return VectorType::get(numElements, elementType, /*scalableDims=*/true);
 }
 
 llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {

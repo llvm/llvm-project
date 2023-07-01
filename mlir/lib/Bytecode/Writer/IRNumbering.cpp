@@ -45,6 +45,7 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
     // file locations.
   }
   void writeOwnedBlob(ArrayRef<char> blob) override {}
+  void writeOwnedBool(bool value) override {}
 
   int64_t getBytecodeVersion() const override {
     llvm_unreachable("unexpected querying of version in IRNumbering");

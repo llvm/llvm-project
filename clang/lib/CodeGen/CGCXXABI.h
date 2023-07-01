@@ -288,15 +288,15 @@ public:
   virtual bool shouldDynamicCastCallBeNullChecked(bool SrcIsPtr,
                                                   QualType SrcRecordTy) = 0;
 
-  virtual llvm::Value *
-  EmitDynamicCastCall(CodeGenFunction &CGF, Address Value,
-                      QualType SrcRecordTy, QualType DestTy,
-                      QualType DestRecordTy, llvm::BasicBlock *CastEnd) = 0;
+  virtual llvm::Value *emitDynamicCastCall(CodeGenFunction &CGF, Address Value,
+                                           QualType SrcRecordTy,
+                                           QualType DestTy,
+                                           QualType DestRecordTy,
+                                           llvm::BasicBlock *CastEnd) = 0;
 
-  virtual llvm::Value *EmitDynamicCastToVoid(CodeGenFunction &CGF,
+  virtual llvm::Value *emitDynamicCastToVoid(CodeGenFunction &CGF,
                                              Address Value,
-                                             QualType SrcRecordTy,
-                                             QualType DestTy) = 0;
+                                             QualType SrcRecordTy) = 0;
 
   virtual bool EmitBadCastCall(CodeGenFunction &CGF) = 0;
 

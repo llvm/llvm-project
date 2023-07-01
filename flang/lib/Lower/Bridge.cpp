@@ -716,7 +716,7 @@ public:
               loc = cooked->GetSourcePositionRange(block)) {
         // loc is a pair (begin, end); use the beginning position
         Fortran::parser::SourcePosition &filePos = loc->first;
-        llvm::SmallString<256> filePath(filePos.file.path());
+        llvm::SmallString<256> filePath(*filePos.path);
         llvm::sys::fs::make_absolute(filePath);
         llvm::sys::path::remove_dots(filePath);
         return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
@@ -3165,7 +3165,8 @@ private:
       return hlfir::EntityWithAttributes{builder.createConvert(loc, toTy, val)};
     };
     mlir::Value convertedRhs = hlfir::genElementalOp(
-        loc, builder, toTy, shape, /*typeParams=*/{}, genKernel);
+        loc, builder, toTy, shape, /*typeParams=*/{}, genKernel,
+        /*isUnordered=*/true);
     fir::FirOpBuilder *bldr = &builder;
     stmtCtx.attachCleanup([loc, bldr, convertedRhs]() {
       bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
@@ -3957,6 +3958,19 @@ private:
     assert(blockId == 0 && "invalid blockId");
     assert(activeConstructStack.empty() && "invalid construct stack state");
 
+    // Get the rounding mode at function entry, and arrange for it to be
+    // restored at all function exits.
+    if (!funit.isMainProgram() && funit.mayModifyRoundingMode) {
+      mlir::func::FuncOp getRound = fir::factory::getLlvmGetRounding(*builder);
+      mlir::func::FuncOp setRound = fir::factory::getLlvmSetRounding(*builder);
+      mlir::Value roundMode =
+          builder->create<fir::CallOp>(toLocation(), getRound).getResult(0);
+      mlir::Location endLoc =
+          toLocation(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
+      bridge.fctCtx().attachCleanup(
+          [=]() { builder->create<fir::CallOp>(endLoc, setRound, roundMode); });
+    }
+
     mapDummiesAndResults(funit, callee);
 
     // Map host associated symbols from parent procedure if any.
@@ -4156,6 +4170,12 @@ private:
       startBlock(newBlock);
   }
 
+  void eraseDeadCodeAndBlocks(mlir::RewriterBase &rewriter,
+                              llvm::MutableArrayRef<mlir::Region> regions) {
+    (void)mlir::eraseUnreachableBlocks(rewriter, regions);
+    (void)mlir::runRegionDCE(rewriter, regions);
+  }
+
   /// Finish translation of a function.
   void endNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
@@ -4174,7 +4194,7 @@ private:
     // Eliminate dead code as a prerequisite to calling other IR passes.
     // FIXME: This simplification should happen in a normal pass, not here.
     mlir::IRRewriter rewriter(*builder);
-    (void)mlir::simplifyRegions(rewriter, {builder->getRegion()});
+    (void)eraseDeadCodeAndBlocks(rewriter, {builder->getRegion()});
     delete builder;
     builder = nullptr;
     hostAssocTuple = mlir::Value{};

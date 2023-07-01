@@ -228,12 +228,12 @@ struct _LIBCPP_TEMPLATE_VIS array
     // element access:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reference operator[](size_type __n) _NOEXCEPT {
-        _LIBCPP_ASSERT(__n < _Size, "out-of-bounds access in std::array<T, N>");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n < _Size, "out-of-bounds access in std::array<T, N>");
         return __elems_[__n];
     }
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
     const_reference operator[](size_type __n) const _NOEXCEPT {
-        _LIBCPP_ASSERT(__n < _Size, "out-of-bounds access in std::array<T, N>");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n < _Size, "out-of-bounds access in std::array<T, N>");
         return __elems_[__n];
     }
 
@@ -341,13 +341,13 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
     // element access:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reference operator[](size_type) _NOEXCEPT {
-      _LIBCPP_ASSERT(false, "cannot call array<T, 0>::operator[] on a zero-sized array");
+      _LIBCPP_ASSERT_UNCATEGORIZED(false, "cannot call array<T, 0>::operator[] on a zero-sized array");
       __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
     const_reference operator[](size_type) const _NOEXCEPT {
-      _LIBCPP_ASSERT(false, "cannot call array<T, 0>::operator[] on a zero-sized array");
+      _LIBCPP_ASSERT_UNCATEGORIZED(false, "cannot call array<T, 0>::operator[] on a zero-sized array");
       __libcpp_unreachable();
     }
 
@@ -365,25 +365,25 @@ struct _LIBCPP_TEMPLATE_VIS array<_Tp, 0>
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reference front() _NOEXCEPT {
-      _LIBCPP_ASSERT(false, "cannot call array<T, 0>::front() on a zero-sized array");
+      _LIBCPP_ASSERT_UNCATEGORIZED(false, "cannot call array<T, 0>::front() on a zero-sized array");
       __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
     const_reference front() const _NOEXCEPT {
-      _LIBCPP_ASSERT(false, "cannot call array<T, 0>::front() on a zero-sized array");
+      _LIBCPP_ASSERT_UNCATEGORIZED(false, "cannot call array<T, 0>::front() on a zero-sized array");
       __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reference back() _NOEXCEPT {
-      _LIBCPP_ASSERT(false, "cannot call array<T, 0>::back() on a zero-sized array");
+      _LIBCPP_ASSERT_UNCATEGORIZED(false, "cannot call array<T, 0>::back() on a zero-sized array");
       __libcpp_unreachable();
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
     const_reference back() const _NOEXCEPT {
-      _LIBCPP_ASSERT(false, "cannot call array<T, 0>::back() on a zero-sized array");
+      _LIBCPP_ASSERT_UNCATEGORIZED(false, "cannot call array<T, 0>::back() on a zero-sized array");
       __libcpp_unreachable();
     }
 };

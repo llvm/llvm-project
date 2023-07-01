@@ -2563,6 +2563,7 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
+  const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
 
   // FIXME: Virtual register workaround for RegScavenger not working with empty
   // blocks.
@@ -2626,10 +2627,20 @@ void SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // dest_bb:
   //   buzz;
 
-  RS->enterBasicBlockEnd(MBB);
-  Register Scav = RS->scavengeRegisterBackwards(
-      AMDGPU::SReg_64RegClass, MachineBasicBlock::iterator(GetPC),
-      /* RestoreAfter */ false, 0, /* AllowSpill */ false);
+  Register LongBranchReservedReg = MFI->getLongBranchReservedReg();
+  Register Scav;
+
+  // If we've previously reserved a register for long branches
+  // avoid running the scavenger and just use those registers
+  if (LongBranchReservedReg) {
+    RS->enterBasicBlock(MBB);
+    Scav = LongBranchReservedReg;
+  } else {
+    RS->enterBasicBlockEnd(MBB);
+    Scav = RS->scavengeRegisterBackwards(
+        AMDGPU::SReg_64RegClass, MachineBasicBlock::iterator(GetPC),
+        /* RestoreAfter */ false, 0, /* AllowSpill */ false);
+  }
   if (Scav) {
     RS->setRegUsed(Scav);
     MRI.replaceRegWith(PCReg, Scav);
@@ -5114,12 +5125,6 @@ void SIInstrInfo::legalizeOpWithMove(MachineInstr &MI, unsigned OpIdx) const {
     Opcode = (Size == 64) ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
 
   const TargetRegisterClass *VRC = RI.getEquivalentVGPRClass(RC);
-  const TargetRegisterClass *VRC64 = RI.getVGPR64Class();
-  if (RI.getCommonSubClass(VRC64, VRC))
-    VRC = VRC64;
-  else
-    VRC = &AMDGPU::VGPR_32RegClass;
-
   Register Reg = MRI.createVirtualRegister(VRC);
   DebugLoc DL = MBB->findDebugLoc(I);
   BuildMI(*MI.getParent(), I, DL, get(Opcode), Reg).add(MO);

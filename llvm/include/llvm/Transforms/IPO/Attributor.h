@@ -730,6 +730,17 @@ struct IRPosition {
     }
   }
 
+  /// Return true if this is a function or call site position.
+  bool isFunctionScope() const {
+    switch (getPositionKind()) {
+    case IRPosition::IRP_CALL_SITE:
+    case IRPosition::IRP_FUNCTION:
+      return true;
+    default:
+      return false;
+    };
+  }
+
   /// Return the Function surrounding the anchor value.
   Function *getAnchorScope() const {
     Value &V = getAnchorValue();
@@ -810,6 +821,42 @@ struct IRPosition {
         "There is no attribute index for a floating or invalid position!");
   }
 
+  /// Return the attributes associated with this function or call site scope.
+  AttributeList getAttrList() const {
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->getAttributes();
+    return getAssociatedFunction()->getAttributes();
+  }
+
+  /// Update the attributes associated with this function or call site scope.
+  void setAttrList(const AttributeList &AttrList) const {
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->setAttributes(AttrList);
+    return getAssociatedFunction()->setAttributes(AttrList);
+  }
+
+  /// Return the number of arguments associated with this function or call site
+  /// scope.
+  unsigned getNumArgs() const {
+    assert((getPositionKind() == IRP_CALL_SITE ||
+            getPositionKind() == IRP_FUNCTION) &&
+           "Only valid for function/call site positions!");
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->arg_size();
+    return getAssociatedFunction()->arg_size();
+  }
+
+  /// Return theargument \p ArgNo associated with this function or call site
+  /// scope.
+  Value *getArg(unsigned ArgNo) const {
+    assert((getPositionKind() == IRP_CALL_SITE ||
+            getPositionKind() == IRP_FUNCTION) &&
+           "Only valid for function/call site positions!");
+    if (auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
+      return CB->getArgOperand(ArgNo);
+    return getAssociatedFunction()->getArg(ArgNo);
+  }
+
   /// Return the associated position kind.
   Kind getPositionKind() const {
     char EncodingBits = getEncodingBits();
@@ -861,21 +908,19 @@ struct IRPosition {
     if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
       return;
 
-    AttributeList AttrList;
-    auto *CB = dyn_cast<CallBase>(&getAnchorValue());
-    if (CB)
-      AttrList = CB->getAttributes();
-    else
-      AttrList = getAssociatedFunction()->getAttributes();
+    AttributeList AttrList = getAttrList();
 
+    bool Changed = false;
+    unsigned Idx = getAttrIdx();
     LLVMContext &Ctx = getAnchorValue().getContext();
-    for (Attribute::AttrKind AK : AKs)
-      AttrList = AttrList.removeAttributeAtIndex(Ctx, getAttrIdx(), AK);
-
-    if (CB)
-      CB->setAttributes(AttrList);
-    else
-      getAssociatedFunction()->setAttributes(AttrList);
+    for (Attribute::AttrKind AK : AKs) {
+      if (!AttrList.hasAttributeAtIndex(Idx, AK))
+        continue;
+      Changed = true;
+      AttrList = AttrList.removeAttributeAtIndex(Ctx, Idx, AK);
+    }
+    if (Changed)
+      setAttrList(AttrList);
   }
 
   bool isAnyCallSitePosition() const {
@@ -1186,10 +1231,8 @@ struct InformationCache {
   InformationCache(const Module &M, AnalysisGetter &AG,
                    BumpPtrAllocator &Allocator, SetVector<Function *> *CGSCC,
                    bool UseExplorer = true)
-      : DL(M.getDataLayout()), Allocator(Allocator), AG(AG),
+      : CGSCC(CGSCC), DL(M.getDataLayout()), Allocator(Allocator), AG(AG),
         TargetTriple(M.getTargetTriple()) {
-    if (CGSCC)
-      initializeModuleSlice(*CGSCC);
     if (UseExplorer)
       Explorer = new (Allocator) MustBeExecutedContextExplorer(
           /* ExploreInterBlock */ true, /* ExploreCFGForward */ true,
@@ -1241,46 +1284,8 @@ struct InformationCache {
     }
   }
 
-  /// Initialize the ModuleSlice member based on \p SCC. ModuleSlices contains
-  /// (a subset of) all functions that we can look at during this SCC traversal.
-  /// This includes functions (transitively) called from the SCC and the
-  /// (transitive) callers of SCC functions. We also can look at a function if
-  /// there is a "reference edge", i.a., if the function somehow uses (!=calls)
-  /// a function in the SCC or a caller of a function in the SCC.
-  void initializeModuleSlice(SetVector<Function *> &SCC) {
-    ModuleSlice.insert(SCC.begin(), SCC.end());
-
-    SmallPtrSet<Function *, 16> Seen;
-    SmallVector<Function *, 16> Worklist(SCC.begin(), SCC.end());
-    while (!Worklist.empty()) {
-      Function *F = Worklist.pop_back_val();
-      ModuleSlice.insert(F);
-
-      for (Instruction &I : instructions(*F))
-        if (auto *CB = dyn_cast<CallBase>(&I))
-          if (auto *Callee =
-                  dyn_cast_if_present<Function>(CB->getCalledOperand()))
-            if (Seen.insert(Callee).second)
-              Worklist.push_back(Callee);
-    }
-
-    Seen.clear();
-    Worklist.append(SCC.begin(), SCC.end());
-    while (!Worklist.empty()) {
-      Function *F = Worklist.pop_back_val();
-      ModuleSlice.insert(F);
-
-      // Traverse all transitive uses.
-      foreachUse(*F, [&](Use &U) {
-        if (auto *UsrI = dyn_cast<Instruction>(U.getUser()))
-          if (Seen.insert(UsrI->getFunction()).second)
-            Worklist.push_back(UsrI->getFunction());
-      });
-    }
-  }
-
-  /// The slice of the module we are allowed to look at.
-  SmallPtrSet<Function *, 8> ModuleSlice;
+  /// The CG-SCC the pass is run on, or nullptr if it is a module pass.
+  const SetVector<Function *> *const CGSCC = nullptr;
 
   /// A vector type to hold instructions.
   using InstructionVectorTy = SmallVector<Instruction *, 8>;
@@ -1344,11 +1349,6 @@ struct InformationCache {
     (void)Success;
     assert(Success && "Expected only new entries to be added");
     return UniqueBES;
-  }
-
-  /// Check whether \p F is part of module slice.
-  bool isInModuleSlice(const Function &F) {
-    return ModuleSlice.empty() || ModuleSlice.count(const_cast<Function *>(&F));
   }
 
   /// Return true if the stack (llvm::Alloca) can be accessed by other threads.
@@ -1453,6 +1453,9 @@ struct AttributorConfig {
   /// function marked live. See also: InitializationCallback>
   bool DefaultInitializeLiveInternals = true;
 
+  /// Flag to determine if we should skip all liveness checks early on.
+  bool UseLiveness = true;
+
   /// Callback function to be invoked on internal functions marked live.
   std::function<void(Attributor &A, const Function &F)> InitializationCallback =
       nullptr;
@@ -1475,6 +1478,9 @@ struct AttributorConfig {
 
   /// The name of the pass running the attributor, used to emit remarks.
   const char *PassName = nullptr;
+
+  using IPOAmendableCBTy = function_ref<bool(const Function &F)>;
+  IPOAmendableCBTy IPOAmendableCB;
 };
 
 /// The fixpoint analysis framework that orchestrates the attribute deduction.
@@ -1587,6 +1593,10 @@ struct Attributor {
       return AAPtr;
     }
 
+    bool ShouldUpdateAA;
+    if (!shouldInitialize<AAType>(IRP, ShouldUpdateAA))
+      return nullptr;
+
     // No matching attribute found, create one.
     // Use the static create method.
     auto &AA = AAType::createForPosition(IRP, *this);
@@ -1601,28 +1611,8 @@ struct Attributor {
       return &AA;
     }
 
-    // For now we ignore naked and optnone functions.
-    bool Invalidate =
-        Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID);
-    const Function *AnchorFn = IRP.getAnchorScope();
-    if (AnchorFn) {
-      Invalidate |=
-          AnchorFn->hasFnAttribute(Attribute::Naked) ||
-          AnchorFn->hasFnAttribute(Attribute::OptimizeNone) ||
-          (!isModulePass() && !getInfoCache().isInModuleSlice(*AnchorFn));
-    }
-
-    // Avoid too many nested initializations to prevent a stack overflow.
-    Invalidate |= InitializationChainLength > MaxInitializationChainLength;
-
     // Bootstrap the new attribute with an initial update to propagate
-    // information, e.g., function -> call site. If it is not on a given
-    // Allowed we will not perform updates at all.
-    if (Invalidate) {
-      AA.getState().indicatePessimisticFixpoint();
-      return &AA;
-    }
-
+    // information, e.g., function -> call site.
     {
       TimeTraceScope TimeScope("initialize", [&]() {
         return AA.getName() +
@@ -1633,18 +1623,7 @@ struct Attributor {
       --InitializationChainLength;
     }
 
-    // We update only AAs associated with functions in the Functions set or
-    // call sites of them.
-    if ((AnchorFn && !isRunOn(const_cast<Function *>(AnchorFn))) &&
-        !isRunOn(IRP.getAssociatedFunction())) {
-      AA.getState().indicatePessimisticFixpoint();
-      return &AA;
-    }
-
-    // If this is queried in the manifest stage, we force the AA to indicate
-    // pessimistic fixpoint immediately.
-    if (Phase == AttributorPhase::MANIFEST ||
-        Phase == AttributorPhase::CLEANUP) {
+    if (!ShouldUpdateAA) {
       AA.getState().indicatePessimisticFixpoint();
       return &AA;
     }
@@ -1758,6 +1737,51 @@ struct Attributor {
     return Functions.empty() || Functions.count(Fn);
   }
 
+  template <typename AAType> bool shouldUpdateAA(const IRPosition &IRP) {
+    // If this is queried in the manifest stage, we force the AA to indicate
+    // pessimistic fixpoint immediately.
+    if (Phase == AttributorPhase::MANIFEST || Phase == AttributorPhase::CLEANUP)
+      return false;
+
+    Function *AssociatedFn = IRP.getAssociatedFunction();
+
+    // Check if we require a callee but there is none.
+    if (!AssociatedFn && AAType::requiresCalleeForCallBase() &&
+        IRP.isAnyCallSitePosition())
+      return false;
+
+    if (!AAType::isValidIRPositionForUpdate(*this, IRP))
+      return false;
+
+    // We update only AAs associated with functions in the Functions set or
+    // call sites of them.
+    return (!AssociatedFn || isModulePass() || isRunOn(AssociatedFn) ||
+            isRunOn(IRP.getAnchorScope()));
+  }
+
+  template <typename AAType>
+  bool shouldInitialize(const IRPosition &IRP, bool &ShouldUpdateAA) {
+    if (!AAType::isValidIRPositionForInit(*this, IRP))
+      return false;
+
+    if (Configuration.Allowed && !Configuration.Allowed->count(&AAType::ID))
+      return false;
+
+    // For now we skip anything in naked and optnone functions.
+    const Function *AnchorFn = IRP.getAnchorScope();
+    if (AnchorFn && (AnchorFn->hasFnAttribute(Attribute::Naked) ||
+                     AnchorFn->hasFnAttribute(Attribute::OptimizeNone)))
+      return false;
+
+    // Avoid too many nested initializations to prevent a stack overflow.
+    if (InitializationChainLength > MaxInitializationChainLength)
+      return false;
+
+    ShouldUpdateAA = shouldUpdateAA<AAType>(IRP);
+
+    return !AAType::hasTrivialInitializer() || ShouldUpdateAA;
+  }
+
   /// Determine opportunities to derive 'default' attributes in \p F and create
   /// abstract attribute objects for them.
   ///
@@ -1775,7 +1799,8 @@ struct Attributor {
   /// If a function is exactly defined or it has alwaysinline attribute
   /// and is viable to be inlined, we say it is IPO amendable
   bool isFunctionIPOAmendable(const Function &F) {
-    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F);
+    return F.hasExactDefinition() || InfoCache.InlineableFunctions.count(&F) ||
+           (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
   }
 
   /// Mark the internal function \p F as live.
@@ -3044,6 +3069,7 @@ template <typename BaseTy> struct SetState : public AbstractState {
   /// Performs the set intersection between this set and \p RHS. Returns true if
   /// changes were made.
   bool getIntersection(const SetContents &RHS) {
+    bool IsUniversal = Assumed.isUniversal();
     unsigned SizeBefore = Assumed.getSet().size();
 
     // Get intersection and make sure that the known set is still a proper
@@ -3051,7 +3077,8 @@ template <typename BaseTy> struct SetState : public AbstractState {
     Assumed.getIntersection(RHS);
     Assumed.getUnion(Known);
 
-    return SizeBefore != Assumed.getSet().size();
+    return SizeBefore != Assumed.getSet().size() ||
+           IsUniversal != Assumed.isUniversal();
   }
 
   /// Performs the set union between this set and \p RHS. Returns true if
@@ -3112,18 +3139,6 @@ struct IRAttribute : public BaseType {
       this->getState().indicateOptimisticFixpoint();
       return;
     }
-
-    bool IsFnInterface = IRP.isFnInterfaceKind();
-    const Function *FnScope = IRP.getAnchorScope();
-    // TODO: Not all attributes require an exact definition. Find a way to
-    //       enable deduction for some but not all attributes in case the
-    //       definition might be changed at runtime, see also
-    //       http://lists.llvm.org/pipermail/llvm-dev/2018-February/121275.html.
-    // TODO: We could always determine abstract attributes and if sufficient
-    //       information was found we could duplicate the functions that do not
-    //       have an exact definition.
-    if (IsFnInterface && (!FnScope || !A.isFunctionIPOAmendable(*FnScope)))
-      this->getState().indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -3204,6 +3219,36 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// We eagerly return true here because all AADepGraphNodes except for the
   /// Synthethis Node are of type AbstractAttribute
   static bool classof(const AADepGraphNode *DGN) { return true; }
+
+  /// Return false if this AA does anything non-trivial (hence not done by
+  /// default) in its initializer.
+  static bool hasTrivialInitializer() { return false; }
+
+  /// Return true if this AA requires a "callee" (or an associted function) for
+  /// a call site positon. Default is optimistic to minimize AAs.
+  static bool requiresCalleeForCallBase() { return true; }
+
+  /// Return false if an AA should not be created for \p IRP.
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    return true;
+  }
+
+  /// Return false if an AA should not be updated for \p IRP.
+  static bool isValidIRPositionForUpdate(Attributor &A, const IRPosition &IRP) {
+    Function *AssociatedFn = IRP.getAssociatedFunction();
+    bool IsFnInterface = IRP.isFnInterfaceKind();
+    assert((!IsFnInterface || AssociatedFn) &&
+           "Function interface without a function?");
+
+    // TODO: Not all attributes require an exact definition. Find a way to
+    //       enable deduction for some but not all attributes in case the
+    //       definition might be changed at runtime, see also
+    //       http://lists.llvm.org/pipermail/llvm-dev/2018-February/121275.html.
+    // TODO: We could always determine abstract attributes and if sufficient
+    //       information was found we could duplicate the functions that do not
+    //       have an exact definition.
+    return !IsFnInterface || A.isFunctionIPOAmendable(*AssociatedFn);
+  }
 
   /// Initialize the state with the information in the Attributor \p A.
   ///
@@ -3405,6 +3450,14 @@ struct AANoSync
                          StateWrapper<BooleanState, AbstractAttribute>> {
   AANoSync(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   /// Returns true if "nosync" is assumed.
   bool isAssumedNoSync() const { return getAssumed(); }
 
@@ -3481,6 +3534,13 @@ struct AANonNull
     : public IRAttribute<Attribute::NonNull,
                          StateWrapper<BooleanState, AbstractAttribute>> {
   AANonNull(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const { return getAssumed(); }
@@ -3670,6 +3730,13 @@ struct AANoAlias
                          StateWrapper<BooleanState, AbstractAttribute>> {
   AANoAlias(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
                             ArrayRef<Attribute::AttrKind> AttrKinds,
                             bool IgnoreSubsumingPositions = false) {
@@ -3715,6 +3782,14 @@ struct AANoFree
     : public IRAttribute<Attribute::NoFree,
                          StateWrapper<BooleanState, AbstractAttribute>> {
   AANoFree(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Return true if "nofree" is assumed.
   bool isAssumedNoFree() const { return getAssumed(); }
@@ -4011,6 +4086,13 @@ struct AADereferenceable
                          StateWrapper<DerefState, AbstractAttribute>> {
   AADereferenceable(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const {
     return NonNullAA && NonNullAA->isAssumedNonNull();
@@ -4066,6 +4148,13 @@ struct AAAlign : public IRAttribute<
                      Attribute::Alignment,
                      StateWrapper<AAAlignmentStateType, AbstractAttribute>> {
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Return assumed alignment.
   Align getAssumedAlign() const { return Align(getAssumed()); }
@@ -4137,6 +4226,13 @@ struct AANoCapture
           Attribute::NoCapture,
           StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// NO_CAPTURE is the best possible state, 0 the worst possible state.
@@ -4349,6 +4445,13 @@ struct AAPrivatizablePtr
   using Base = StateWrapper<BooleanState, AbstractAttribute>;
   AAPrivatizablePtr(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   /// Returns true if pointer privatization is assumed to be possible.
   bool isAssumedPrivatizablePtr() const { return getAssumed(); }
 
@@ -4387,6 +4490,14 @@ struct AAMemoryBehavior
           Attribute::ReadNone,
           StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>> {
   AAMemoryBehavior(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// State encoding bits. A set bit in the state means the property holds.
   /// BEST_STATE is the best possible state, 0 the worst possible state.
@@ -4452,6 +4563,14 @@ struct AAMemoryLocation
   using MemoryLocationsKind = StateType::base_t;
 
   AAMemoryLocation(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.isFunctionScope() &&
+        !IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return IRAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Encoding of different locations that could be accessed by a memory
   /// access.
@@ -4619,6 +4738,13 @@ struct AAValueConstantRange
   using Base = StateWrapper<IntegerRangeState, AbstractAttribute, uint32_t>;
   AAValueConstantRange(const IRPosition &IRP, Attributor &A)
       : Base(IRP, IRP.getAssociatedType()->getIntegerBitWidth()) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isIntegerTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// See AbstractAttribute::getState(...).
   IntegerRangeState &getState() override { return *this; }
@@ -4882,6 +5008,13 @@ struct AAPotentialConstantValues
   using Base = StateWrapper<PotentialConstantIntValuesState, AbstractAttribute>;
   AAPotentialConstantValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isIntegerTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
+
   /// See AbstractAttribute::getState(...).
   PotentialConstantIntValuesState &getState() override { return *this; }
   const PotentialConstantIntValuesState &getState() const override {
@@ -5012,6 +5145,19 @@ struct AANoFPClass
 
   AANoFPClass(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    Type *Ty = IRP.getAssociatedType();
+    do {
+      if (Ty->isFPOrFPVectorTy())
+        return IRAttribute::isValidIRPositionForInit(A, IRP);
+      if (!Ty->isArrayTy())
+        break;
+      Ty = Ty->getArrayElementType();
+    } while (true);
+    return false;
+  }
+
   /// Return true if we assume that the underlying value is nofpclass.
   FPClassTest getAssumedNoFPClass() const {
     return static_cast<FPClassTest>(getAssumed());
@@ -5083,6 +5229,10 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 
   AACallEdges(const IRPosition &IRP, Attributor &A)
       : Base(IRP), AACallGraphNode(A) {}
+
+  /// The callee value is tracked beyond a simple stripPointerCasts, so we allow
+  /// unknown callees.
+  static bool requiresCalleeForCallBase() { return false; }
 
   /// Get the optimistic edges.
   virtual const SetVector<Function *> &getOptimisticEdges() const = 0;
@@ -5344,6 +5494,13 @@ struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
 /// An abstract interface for struct information.
 struct AAPointerInfo : public AbstractAttribute {
   AAPointerInfo(const IRPosition &IRP) : AbstractAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   enum AccessKind {
     // First two bits to distinguish may and must accesses.
@@ -5766,6 +5923,13 @@ struct AAAssumptionInfo
 /// An abstract attribute for getting all assumption underlying objects.
 struct AAUnderlyingObjects : AbstractAttribute {
   AAUnderlyingObjects(const IRPosition &IRP) : AbstractAttribute(IRP) {}
+
+  /// See AbstractAttribute::isValidIRPositionForInit
+  static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
+    if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
+      return false;
+    return AbstractAttribute::isValidIRPositionForInit(A, IRP);
+  }
 
   /// Create an abstract attribute biew for the position \p IRP.
   static AAUnderlyingObjects &createForPosition(const IRPosition &IRP,

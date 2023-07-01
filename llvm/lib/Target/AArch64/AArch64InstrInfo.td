@@ -4314,24 +4314,24 @@ defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fround, "FCVTAU">;
 
 let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (any_lround f16:$Rn)),
-            (!cast<Instruction>(FCVTASUWHr) f16:$Rn)>;
+            (FCVTASUWHr f16:$Rn)>;
   def : Pat<(i64 (any_lround f16:$Rn)),
-            (!cast<Instruction>(FCVTASUXHr) f16:$Rn)>;
+            (FCVTASUXHr f16:$Rn)>;
   def : Pat<(i64 (any_llround f16:$Rn)),
-            (!cast<Instruction>(FCVTASUXHr) f16:$Rn)>;
+            (FCVTASUXHr f16:$Rn)>;
 }
 def : Pat<(i32 (any_lround f32:$Rn)),
-          (!cast<Instruction>(FCVTASUWSr) f32:$Rn)>;
+          (FCVTASUWSr f32:$Rn)>;
 def : Pat<(i32 (any_lround f64:$Rn)),
-          (!cast<Instruction>(FCVTASUWDr) f64:$Rn)>;
+          (FCVTASUWDr f64:$Rn)>;
 def : Pat<(i64 (any_lround f32:$Rn)),
-          (!cast<Instruction>(FCVTASUXSr) f32:$Rn)>;
+          (FCVTASUXSr f32:$Rn)>;
 def : Pat<(i64 (any_lround f64:$Rn)),
-          (!cast<Instruction>(FCVTASUXDr) f64:$Rn)>;
+          (FCVTASUXDr f64:$Rn)>;
 def : Pat<(i64 (any_llround f32:$Rn)),
-          (!cast<Instruction>(FCVTASUXSr) f32:$Rn)>;
+          (FCVTASUXSr f32:$Rn)>;
 def : Pat<(i64 (any_llround f64:$Rn)),
-          (!cast<Instruction>(FCVTASUXDr) f64:$Rn)>;
+          (FCVTASUXDr f64:$Rn)>;
 
 //===----------------------------------------------------------------------===//
 // Scaled integer to floating point conversion instructions.
@@ -4406,24 +4406,24 @@ let Predicates = [HasFRInt3264] in {
 // in the FCVTZS as the output of FRINTX is an integer).
 let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (any_lrint f16:$Rn)),
-            (FCVTZSUWHr (!cast<Instruction>(FRINTXHr) f16:$Rn))>;
+            (FCVTZSUWHr (FRINTXHr f16:$Rn))>;
   def : Pat<(i64 (any_lrint f16:$Rn)),
-            (FCVTZSUXHr (!cast<Instruction>(FRINTXHr) f16:$Rn))>;
+            (FCVTZSUXHr (FRINTXHr f16:$Rn))>;
   def : Pat<(i64 (any_llrint f16:$Rn)),
-            (FCVTZSUXHr (!cast<Instruction>(FRINTXHr) f16:$Rn))>;
+            (FCVTZSUXHr (FRINTXHr f16:$Rn))>;
 }
 def : Pat<(i32 (any_lrint f32:$Rn)),
-          (FCVTZSUWSr (!cast<Instruction>(FRINTXSr) f32:$Rn))>;
+          (FCVTZSUWSr (FRINTXSr f32:$Rn))>;
 def : Pat<(i32 (any_lrint f64:$Rn)),
-          (FCVTZSUWDr (!cast<Instruction>(FRINTXDr) f64:$Rn))>;
+          (FCVTZSUWDr (FRINTXDr f64:$Rn))>;
 def : Pat<(i64 (any_lrint f32:$Rn)),
-          (FCVTZSUXSr (!cast<Instruction>(FRINTXSr) f32:$Rn))>;
+          (FCVTZSUXSr (FRINTXSr f32:$Rn))>;
 def : Pat<(i64 (any_lrint f64:$Rn)),
-          (FCVTZSUXDr (!cast<Instruction>(FRINTXDr) f64:$Rn))>;
+          (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 def : Pat<(i64 (any_llrint f32:$Rn)),
-          (FCVTZSUXSr (!cast<Instruction>(FRINTXSr) f32:$Rn))>;
+          (FCVTZSUXSr (FRINTXSr f32:$Rn))>;
 def : Pat<(i64 (any_llrint f64:$Rn)),
-          (FCVTZSUXDr (!cast<Instruction>(FRINTXDr) f64:$Rn))>;
+          (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
@@ -4442,6 +4442,33 @@ defm FMUL   : TwoOperandFPData<0b0000, "fmul", any_fmul>;
 defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", any_fmul>;
 }
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", any_fsub>;
+
+multiclass FMULScalarFromIndexedLane0Patterns<string inst,
+                                              string inst_f16_suffix,
+                                              string inst_f32_suffix,
+                                              string inst_f64_suffix,
+                                              SDPatternOperator OpNode,
+                                              list<Predicate> preds = []> {
+  let Predicates = !listconcat(preds, [HasFullFP16]) in {
+  def : Pat<(f16 (OpNode (f16 FPR16:$Rn),
+                         (f16 (vector_extract (v8f16 V128:$Rm), (i64 0))))),
+            (!cast<Instruction>(inst # inst_f16_suffix)
+              FPR16:$Rn, (EXTRACT_SUBREG V128:$Rm, hsub))>;
+  }
+  let Predicates = preds in {
+  def : Pat<(f32 (OpNode (f32 FPR32:$Rn),
+                         (f32 (vector_extract (v4f32 V128:$Rm), (i64 0))))),
+            (!cast<Instruction>(inst # inst_f32_suffix)
+              FPR32:$Rn, (EXTRACT_SUBREG V128:$Rm, ssub))>;
+  def : Pat<(f64 (OpNode (f64 FPR64:$Rn),
+                         (f64 (vector_extract (v2f64 V128:$Rm), (i64 0))))),
+            (!cast<Instruction>(inst # inst_f64_suffix)
+              FPR64:$Rn, (EXTRACT_SUBREG V128:$Rm, dsub))>;
+  }
+}
+
+defm : FMULScalarFromIndexedLane0Patterns<"FMUL", "Hrr", "Srr", "Drr",
+                                          any_fmul>;
 
 // Match reassociated forms of FNMUL.
 def : Pat<(fmul (fneg FPR16:$a), (f16 FPR16:$b)),
@@ -5247,6 +5274,10 @@ let Predicates = [HasRDM] in {
                                             (i32 FPR32:$Rm))),
             (SQRDMLSHv1i32 FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 }
+
+defm : FMULScalarFromIndexedLane0Patterns<"FMULX", "16", "32", "64",
+                                          int_aarch64_neon_fmulx,
+                                          [HasNEONorSME]>;
 
 def : InstAlias<"cmls $dst, $src1, $src2",
                 (CMHSv1i64 FPR64:$dst, FPR64:$src2, FPR64:$src1), 0>;

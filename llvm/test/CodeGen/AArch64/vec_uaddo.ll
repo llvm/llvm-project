@@ -145,17 +145,17 @@ define <16 x i32> @uaddo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    zip2 v2.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    zip1 v3.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    zip2 v5.8b, v0.8b, v0.8b
-; CHECK-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-NEXT:    shl v2.4s, v2.4s, #31
-; CHECK-NEXT:    cmlt v0.4s, v1.4s, #0
-; CHECK-NEXT:    cmlt v1.4s, v2.4s, #0
+; CHECK-NEXT:    shl v0.4s, v1.4s, #31
+; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    shl v1.4s, v2.4s, #31
 ; CHECK-NEXT:    ushll v2.4s, v3.4h, #0
 ; CHECK-NEXT:    ushll v3.4s, v5.4h, #0
 ; CHECK-NEXT:    shl v2.4s, v2.4s, #31
 ; CHECK-NEXT:    shl v3.4s, v3.4s, #31
+; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-NEXT:    cmlt v2.4s, v2.4s, #0
 ; CHECK-NEXT:    cmlt v3.4s, v3.4s, #0
 ; CHECK-NEXT:    ret

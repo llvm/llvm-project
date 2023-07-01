@@ -174,7 +174,7 @@ def C_LH  : CLoadH_ri<0b100001, 0b1, "c.lh">,
 
 def C_SB : CStoreB_rri<0b100010, "c.sb">,
            Sched<[WriteSTB, ReadStoreData, ReadMemBase]>;
-def C_SH : CStoreH_rri<0b100011, 0b1, "c.sh">,
+def C_SH : CStoreH_rri<0b100011, 0b0, "c.sh">,
            Sched<[WriteSTH, ReadStoreData, ReadMemBase]>;
 }
 

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-none-eabi              < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64-none-eabi -mattr=v8.3a < %s | FileCheck --check-prefix CHECK-V83A %s
+; RUN: llc -mtriple=aarch64              < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64 -mattr=v8.3a < %s | FileCheck --check-prefix CHECK-V83A %s
 
 ; CHECK-LABEL: @leaf
 ; CHECK-NOT: paci{{[a,b]}}sp

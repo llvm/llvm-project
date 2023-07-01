@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -210,6 +211,14 @@ void MachineFunction::init() {
   if (!F.hasFnAttribute(Attribute::OptimizeForSize))
     Alignment = std::max(Alignment,
                          STI->getTargetLowering()->getPrefFunctionAlignment());
+
+  // -fsanitize=function and -fsanitize=kcfi instrument indirect function calls
+  // to load a type hash before the function label. Ensure functions are aligned
+  // by a least 4 to avoid unaligned access, which is especially important for
+  // -mno-unaligned-access.
+  if (F.hasMetadata(LLVMContext::MD_func_sanitize) ||
+      F.getMetadata(LLVMContext::MD_kcfi_type))
+    Alignment = std::max(Alignment, Align(4));
 
   if (AlignAllFunctions)
     Alignment = Align(1ULL << AlignAllFunctions);
@@ -1494,6 +1503,17 @@ void MachineConstantPool::print(raw_ostream &OS) const {
     OS << ", align=" << Constants[i].getAlign().value();
     OS << "\n";
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Template specialization for MachineFunction implementation of
+// ProfileSummaryInfo::getEntryCount().
+//===----------------------------------------------------------------------===//
+template <>
+std::optional<Function::ProfileCount>
+ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
+    const llvm::MachineFunction *F) const {
+  return F->getFunction().getEntryCount();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

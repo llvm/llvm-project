@@ -8427,9 +8427,9 @@ multiclass SIMDThreeSameVectorFMLIndex<bit U, bits<4> opc, string asm,
                                               V128, v4f32, v8f16, OpNode>;
 }
 
-let mayRaiseFPException = 1, Uses = [FPCR] in
 multiclass SIMDFPIndexed<bit U, bits<4> opc, string asm,
                          SDPatternOperator OpNode> {
+  let mayRaiseFPException = 1, Uses = [FPCR] in {
   let Predicates = [HasNEON, HasFullFP16] in {
   def v4i16_indexed : BaseSIMDIndexed<0, U, 0, 0b00, opc,
                                       V64, V64,
@@ -8531,6 +8531,29 @@ multiclass SIMDFPIndexed<bit U, bits<4> opc, string asm,
     bits<1> idx;
     let Inst{11} = idx{0};
     let Inst{21} = 0;
+  }
+  } // mayRaiseFPException = 1, Uses = [FPCR]
+
+  let Predicates = [HasNEON, HasFullFP16] in {
+  def : Pat<(f16 (OpNode
+                   (f16 (vector_extract (v8f16 V128:$Rn), (i64 0))),
+                   (f16 (vector_extract (v8f16 V128:$Rm), VectorIndexH:$idx)))),
+            (!cast<Instruction>(NAME # v1i16_indexed)
+              (EXTRACT_SUBREG V128:$Rn, hsub), V128:$Rm, VectorIndexH:$idx)>;
+  }
+
+  let Predicates = [HasNEON] in {
+  def : Pat<(f32 (OpNode
+                   (f32 (vector_extract (v4f32 V128:$Rn), (i64 0))),
+                   (f32 (vector_extract (v4f32 V128:$Rm), VectorIndexS:$idx)))),
+            (!cast<Instruction>(NAME # v1i32_indexed)
+              (EXTRACT_SUBREG V128:$Rn, ssub), V128:$Rm, VectorIndexS:$idx)>;
+
+  def : Pat<(f64 (OpNode
+                   (f64 (vector_extract (v2f64 V128:$Rn), (i64 0))),
+                   (f64 (vector_extract (v2f64 V128:$Rm), VectorIndexD:$idx)))),
+            (!cast<Instruction>(NAME # v1i64_indexed)
+              (EXTRACT_SUBREG V128:$Rn, dsub), V128:$Rm, VectorIndexD:$idx)>;
   }
 }
 

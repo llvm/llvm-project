@@ -1,14 +1,14 @@
 # llvm-symbolizer infers the number base from the form of the address.
-RUN: llvm-symbolizer -e /dev/null -a 0x1234 | FileCheck %s
-RUN: llvm-symbolizer -e /dev/null -a 0X1234 | FileCheck %s
-RUN: llvm-symbolizer -e /dev/null -a 4660 | FileCheck %s
-RUN: llvm-symbolizer -e /dev/null -a 011064 | FileCheck %s
-RUN: llvm-symbolizer -e /dev/null -a 0b1001000110100 | FileCheck %s
-RUN: llvm-symbolizer -e /dev/null -a 0B1001000110100 | FileCheck %s
-RUN: llvm-symbolizer -e /dev/null -a 0o11064 | FileCheck %s
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe -a 0x1234 | FileCheck %s
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe -a 0X1234 | FileCheck %s
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe -a 4660 | FileCheck %s
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe -a 011064 | FileCheck %s
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe -a 0b1001000110100 | FileCheck %s
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe -a 0B1001000110100 | FileCheck %s
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe -a 0o11064 | FileCheck %s
 
 # llvm-symbolizer / StringRef::getAsInteger only accepts the 0o prefix in lowercase.
-RUN: llvm-symbolizer -e /dev/null -a 0O1234 | FileCheck %s --check-prefix=INVALID-NOT-OCTAL-UPPER
+RUN: llvm-symbolizer -e %p/Inputs/addr.exe -a 0O1234 | FileCheck %s --check-prefix=INVALID-NOT-OCTAL-UPPER
 
 # llvm-addr2line always requires hexadecimal, but accepts an optional 0x prefix.
 RUN: llvm-addr2line -e %p/Inputs/addr.exe -a 0x1234 | FileCheck %s

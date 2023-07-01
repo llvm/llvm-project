@@ -33,14 +33,17 @@ define internal i1 @__kmpc_kernel_parallel() {
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK: Function Attrs: norecurse nosync nounwind memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-SAME: (ptr [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[TMP0:%.*]], i8 [[TMP1:%.*]], i1 [[TMP2:%.*]]) {
+; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(3) @_ZN4ompx5state9TeamStateE, align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @__kmpc_kernel_parallel()
 ; CHECK-NEXT:    ret i32 0
 ;
-;.
-; CHECK: attributes #[[ATTR0]] = { norecurse nosync nounwind memory(write) }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nosync nounwind memory(write) }
+;
+; CHECK-LABEL: define {{[^@]+}}@__kmpc_kernel_parallel() {
+; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr addrspace(3) @_ZN4ompx5state9TeamStateE, align 8
+; CHECK-NEXT:    ret i1 false
+;
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ;.

@@ -209,3 +209,11 @@ define void @streaming_func() "aarch64_pstate_sm_enabled" {
 define void @locally_streaming_func() "aarch64_pstate_sm_body" {
   ret void
 }
+
+// -----
+
+; CHECK-LABEL: @section_func
+; CHECK-SAME: attributes {section = ".section.name"}
+define void @section_func() section ".section.name" {
+  ret void
+}

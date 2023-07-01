@@ -481,7 +481,7 @@ int main(int argc, char **argv) {
   // When an input file is specified, exit immediately if the file cannot be
   // read. If getOrCreateModuleInfo succeeds, symbolizeInput will reuse the
   // cached file handle.
-  if (auto *Arg = Args.getLastArg(OPT_obj_EQ); Arg && IsAddr2Line) {
+  if (auto *Arg = Args.getLastArg(OPT_obj_EQ); Arg) {
     auto Status = Symbolizer.getOrCreateModuleInfo(Arg->getValue());
     if (!Status) {
       Request SymRequest = {Arg->getValue(), 0};

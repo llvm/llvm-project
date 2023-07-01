@@ -321,10 +321,12 @@ using LinalgLoops = SmallVector<Operation *, 4>;
 /// memref.tensor_store %t, %subview
 /// %0 = bufferization.to_tensor %alloc restrict writable
 ///
-/// In addition to rewriting the IR as shown above, the result of the
-/// bufferization.to_tensor op is returned.
+/// In addition to rewriting the IR as shown above, this function returns the
+/// newly allocated buffer. Furthermore, the result of the
+/// bufferization.to_tensor op is optionally returned via `replacement`.
 Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
-                            Attribute memorySpace = {});
+                            Attribute memorySpace = {},
+                            Value *replacement = nullptr);
 
 /// Materialize a buffer allocation for the given tensor value. E.g.:
 ///
@@ -334,8 +336,13 @@ Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
 ///
 /// In case `value` is a tensor.pad result, the corresponding overload is used
 /// internally to produce a better bufferization.
+///
+/// In addition to rewriting the IR as shown above, this function returns the
+/// newly allocated buffer. Furthermore, the result of the
+/// bufferization.to_tensor op is optionally returned via `replacement`.
 Value bufferizeToAllocation(RewriterBase &rewriter, Value value,
-                            Attribute memorySpace = {});
+                            Attribute memorySpace = {},
+                            Value *replacement = nullptr);
 
 /// Fuse two `linalg.generic` operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
@@ -363,13 +370,12 @@ void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
 /// and `packPaddings` to set padding value and nofold attribute of the created
 /// tensor::PadOps, respectively. Update `paddedOp` to the cloned operation with
 /// statically shaped `paddingDimensions` and return the extracted dynamically
-/// shaped results. If padding fails, return failure.
+/// shaped results. If padding fails, return failure. If `copyBack` is set, the
+/// unpadded result is copied back into the original destination tensor.
 FailureOr<SmallVector<Value>>
 rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
-                  ArrayRef<int64_t> paddingDimensions,
-                  ArrayRef<int64_t> padToMultipleOf,
-                  ArrayRef<Attribute> paddingValues,
-                  ArrayRef<bool> packPaddings, LinalgOp &paddedOp);
+                  const LinalgPaddingOptions &options, LinalgOp &paddedOp,
+                  bool copyBack);
 
 namespace detail {
 
@@ -455,7 +461,7 @@ hoistPaddingOnTensors(tensor::PadOp opToHoist, int64_t numLoops,
 /// specified in `options`.
 FailureOr<LinalgOp> padAndHoistLinalgOp(RewriterBase &rewriter,
                                         LinalgOp linalgOp,
-                                        LinalgPaddingOptions options);
+                                        const LinalgPaddingOptions &options);
 
 /// Split the given `op` into two parts along the given iteration space
 /// `dimension` at the specified `splitPoint`, and return the two parts.
@@ -1047,24 +1053,6 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNchwFchwOp convOp);
 // TODO: every single such pattern should be a close to noop wrapper around a
 // functional-stye API call.
 //===----------------------------------------------------------------------===//
-
-///
-/// Linalg padding pattern.
-///
-/// Apply the `padding` transformation as a pattern.
-/// See `padding` for more details.
-struct LinalgPaddingPattern : public OpInterfaceRewritePattern<LinalgOp> {
-  LinalgPaddingPattern(MLIRContext *context,
-                       LinalgPaddingOptions options = LinalgPaddingOptions(),
-                       PatternBenefit benefit = 1);
-
-  LogicalResult matchAndRewrite(LinalgOp op,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  /// Options to control padding and hoisting.
-  LinalgPaddingOptions options;
-};
 
 /// Rewrites 2-D convolution ops with size-1 window dimensions into 1-D
 /// convolution ops.

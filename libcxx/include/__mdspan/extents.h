@@ -174,8 +174,8 @@ public:
       }
       // Precondition check
       else
-        _LIBCPP_ASSERT(__values[__i] == static_cast<_TDynamic>(__static_val),
-                       "extents construction: mismatch of provided arguments with static extents.");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__values[__i] == static_cast<_TDynamic>(__static_val),
+                                     "extents construction: mismatch of provided arguments with static extents.");
     }
   }
 
@@ -190,24 +190,24 @@ public:
       }
       // Precondition check
       else
-        _LIBCPP_ASSERT(static_cast<_TDynamic>(__vals[__i]) == static_cast<_TDynamic>(__static_val),
-                       "extents construction: mismatch of provided arguments with static extents.");
+        _LIBCPP_ASSERT_UNCATEGORIZED(static_cast<_TDynamic>(__vals[__i]) == static_cast<_TDynamic>(__static_val),
+                                     "extents construction: mismatch of provided arguments with static extents.");
     }
   }
 
   // access functions
   _LIBCPP_HIDE_FROM_ABI static constexpr _TStatic __static_value(size_t __i) noexcept {
-    _LIBCPP_ASSERT(__i < __size_, "extents access: index must be less than rank");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__i < __size_, "extents access: index must be less than rank");
     return _StaticValues::__get(__i);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _TDynamic __value(size_t __i) const {
-    _LIBCPP_ASSERT(__i < __size_, "extents access: index must be less than rank");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__i < __size_, "extents access: index must be less than rank");
     _TStatic __static_val = _StaticValues::__get(__i);
     return __static_val == _DynTag ? __dyn_vals_[_DynamicIdxMap::__get(__i)] : static_cast<_TDynamic>(__static_val);
   }
   _LIBCPP_HIDE_FROM_ABI constexpr _TDynamic operator[](size_t __i) const {
-    _LIBCPP_ASSERT(__i < __size_, "extents access: index must be less than rank");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__i < __size_, "extents access: index must be less than rank");
     return __value(__i);
   }
 
@@ -220,7 +220,7 @@ public:
 // value must be a positive integer otherwise returns false
 // if _From is not an integral, we just check positivity
 template <integral _To, class _From>
-  requires(is_integral_v<_From>)
+  requires(integral<_From>)
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_representable_as(_From __value) {
   using _To_u   = make_unsigned_t<_To>;
   using _From_u = make_unsigned_t<_From>;
@@ -236,7 +236,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __is_representable_as(_From __value) {
 }
 
 template <integral _To, class _From>
-  requires(!is_integral_v<_From>)
+  requires(!integral<_From>)
 _LIBCPP_HIDE_FROM_ABI constexpr bool __is_representable_as(_From __value) {
   if constexpr (is_signed_v<_To>) {
     if (static_cast<_To>(__value) < 0)
@@ -310,8 +310,8 @@ public:
              (sizeof...(_OtherIndexTypes) == __rank_ || sizeof...(_OtherIndexTypes) == __rank_dynamic_))
   _LIBCPP_HIDE_FROM_ABI constexpr explicit extents(_OtherIndexTypes... __dynvals) noexcept
       : __vals_(static_cast<index_type>(__dynvals)...) {
-    _LIBCPP_ASSERT(__mdspan_detail::__are_representable_as<index_type>(__dynvals...),
-                   "extents ctor: arguments must be representable as index_type and nonnegative");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__are_representable_as<index_type>(__dynvals...),
+                                 "extents ctor: arguments must be representable as index_type and nonnegative");
   }
 
   template <class _OtherIndexType, size_t _Size>
@@ -320,8 +320,8 @@ public:
   explicit(_Size != __rank_dynamic_)
       _LIBCPP_HIDE_FROM_ABI constexpr extents(const array<_OtherIndexType, _Size>& __exts) noexcept
       : __vals_(span(__exts)) {
-    _LIBCPP_ASSERT(__mdspan_detail::__are_representable_as<index_type>(span(__exts)),
-                   "extents ctor: arguments must be representable as index_type and nonnegative");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__are_representable_as<index_type>(span(__exts)),
+                                 "extents ctor: arguments must be representable as index_type and nonnegative");
   }
 
   template <class _OtherIndexType, size_t _Size>
@@ -330,8 +330,8 @@ public:
   explicit(_Size != __rank_dynamic_)
       _LIBCPP_HIDE_FROM_ABI constexpr extents(const span<_OtherIndexType, _Size>& __exts) noexcept
       : __vals_(__exts) {
-    _LIBCPP_ASSERT(__mdspan_detail::__are_representable_as<index_type>(__exts),
-                   "extents ctor: arguments must be representable as index_type and nonnegative");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__are_representable_as<index_type>(__exts),
+                                 "extents ctor: arguments must be representable as index_type and nonnegative");
   }
 
 private:
@@ -380,10 +380,10 @@ public:
       for (size_t __r = 0; __r < rank(); __r++) {
         if constexpr (static_cast<make_unsigned_t<index_type>>(numeric_limits<index_type>::max()) <
                       static_cast<make_unsigned_t<_OtherIndexType>>(numeric_limits<_OtherIndexType>::max())) {
-          _LIBCPP_ASSERT(__mdspan_detail::__is_representable_as<index_type>(__other.extent(__r)),
-                         "extents ctor: arguments must be representable as index_type and nonnegative");
+          _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__is_representable_as<index_type>(__other.extent(__r)),
+                                       "extents ctor: arguments must be representable as index_type and nonnegative");
         }
-        _LIBCPP_ASSERT(
+        _LIBCPP_ASSERT_UNCATEGORIZED(
             (_Values::__static_value(__r) == dynamic_extent) ||
                 (static_cast<index_type>(__other.extent(__r)) == static_cast<index_type>(_Values::__static_value(__r))),
             "extents construction: mismatch of provided arguments with static extents.");
@@ -437,9 +437,9 @@ using dextents = typename __mdspan_detail::__make_dextents<_IndexType, _Rank>::t
 template <class... _IndexTypes>
 extents(_IndexTypes...) -> extents<size_t, size_t((_IndexTypes(), dynamic_extent))...>;
 
-// Helper type traits for identifying a class as extents.
 namespace __mdspan_detail {
 
+// Helper type traits for identifying a class as extents.
 template <class _Tp>
 struct __is_extents : false_type {};
 
@@ -448,6 +448,44 @@ struct __is_extents<extents<_IndexType, _ExtentsPack...>> : true_type {};
 
 template <class _Tp>
 inline constexpr bool __is_extents_v = __is_extents<_Tp>::value;
+
+// Function to check whether a set of indices are a multidimensional
+// index into extents. This is a word of power in the C++ standard
+// requiring that the indices are larger than 0 and smaller than
+// the respective extents.
+
+template <integral _IndexType, class _From>
+  requires(integral<_From>)
+_LIBCPP_HIDE_FROM_ABI constexpr bool __is_index_in_extent(_IndexType __extent, _From __value) {
+  if constexpr (is_signed_v<_From>) {
+    if (__value < 0)
+      return false;
+  }
+  using _Tp = common_type_t<_IndexType, _From>;
+  return static_cast<_Tp>(__value) < static_cast<_Tp>(__extent);
+}
+
+template <integral _IndexType, class _From>
+  requires(!integral<_From>)
+_LIBCPP_HIDE_FROM_ABI constexpr bool __is_index_in_extent(_IndexType __extent, _From __value) {
+  if constexpr (is_signed_v<_IndexType>) {
+    if (static_cast<_IndexType>(__value) < 0)
+      return false;
+  }
+  return static_cast<_IndexType>(__value) < __extent;
+}
+
+template <size_t... _Idxs, class _Extents, class... _From>
+_LIBCPP_HIDE_FROM_ABI constexpr bool
+__is_multidimensional_index_in_impl(index_sequence<_Idxs...>, const _Extents& __ext, _From... __values) {
+  return (__mdspan_detail::__is_index_in_extent(__ext.extent(_Idxs), __values) && ...);
+}
+
+template <class _Extents, class... _From>
+_LIBCPP_HIDE_FROM_ABI constexpr bool __is_multidimensional_index_in(const _Extents& __ext, _From... __values) {
+  return __mdspan_detail::__is_multidimensional_index_in_impl(
+      make_index_sequence<_Extents::rank()>(), __ext, __values...);
+}
 
 } // namespace __mdspan_detail
 

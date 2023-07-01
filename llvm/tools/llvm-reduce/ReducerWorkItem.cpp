@@ -734,7 +734,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
       Index = std::make_unique<ModuleSummaryIndex>(
           buildModuleSummaryIndex(*M, nullptr, &PSI));
     }
-    WriteBitcodeToFile(getModule(), OutStream, Index.get());
+    WriteBitcodeToFile(getModule(), OutStream,
+                       /*ShouldPreserveUseListOrder=*/true, Index.get());
   }
 }
 

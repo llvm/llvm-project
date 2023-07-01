@@ -1755,29 +1755,25 @@ define i1 @isqnan_fpclass(float %x) {
 ; RV32IF-LABEL: isqnan_fpclass:
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    fclass.s a0, fa0
-; RV32IF-NEXT:    slli a0, a0, 22
-; RV32IF-NEXT:    srli a0, a0, 31
+; RV32IF-NEXT:    srli a0, a0, 9
 ; RV32IF-NEXT:    ret
 ;
 ; RV32IZFINX-LABEL: isqnan_fpclass:
 ; RV32IZFINX:       # %bb.0:
 ; RV32IZFINX-NEXT:    fclass.s a0, a0
-; RV32IZFINX-NEXT:    slli a0, a0, 22
-; RV32IZFINX-NEXT:    srli a0, a0, 31
+; RV32IZFINX-NEXT:    srli a0, a0, 9
 ; RV32IZFINX-NEXT:    ret
 ;
 ; RV64IF-LABEL: isqnan_fpclass:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fclass.s a0, fa0
-; RV64IF-NEXT:    slli a0, a0, 54
-; RV64IF-NEXT:    srli a0, a0, 63
+; RV64IF-NEXT:    srli a0, a0, 9
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IZFINX-LABEL: isqnan_fpclass:
 ; RV64IZFINX:       # %bb.0:
 ; RV64IZFINX-NEXT:    fclass.s a0, a0
-; RV64IZFINX-NEXT:    slli a0, a0, 54
-; RV64IZFINX-NEXT:    srli a0, a0, 63
+; RV64IZFINX-NEXT:    srli a0, a0, 9
 ; RV64IZFINX-NEXT:    ret
 ;
 ; RV32I-LABEL: isqnan_fpclass:

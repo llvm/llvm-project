@@ -100,6 +100,8 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
+  bool enableMaskedInterleavedAccessVectorization() { return ST->hasSVE(); }
+
   unsigned getNumberOfRegisters(unsigned ClassID) const {
     bool Vector = (ClassID == 1);
     if (Vector) {

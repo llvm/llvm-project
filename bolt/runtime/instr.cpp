@@ -134,16 +134,11 @@ public:
     Lock L(M);
 
     if (StackBase == nullptr) {
-#if defined(__APPLE__)
-    int MAP_PRIVATE_MAP_ANONYMOUS = 0x1002;
-#else
-    int MAP_PRIVATE_MAP_ANONYMOUS = 0x22;
-#endif
       StackBase = reinterpret_cast<uint8_t *>(
-          __mmap(0, MaxSize, 0x3 /* PROT_READ | PROT_WRITE*/,
-                 Shared ? 0x21 /*MAP_SHARED | MAP_ANONYMOUS*/
-                        : MAP_PRIVATE_MAP_ANONYMOUS /* MAP_PRIVATE | MAP_ANONYMOUS*/,
-                 -1, 0));
+          __mmap(0, MaxSize, PROT_READ | PROT_WRITE,
+                 (Shared ? MAP_SHARED : MAP_PRIVATE) | MAP_ANONYMOUS, -1, 0));
+      assert(StackBase != MAP_FAILED,
+             "BumpPtrAllocator: failed to mmap stack!");
       StackSize = 0;
     }
 
@@ -248,6 +243,37 @@ extern "C" bool __bolt_instr_conservative;
 struct SimpleHashTableEntryBase {
   uint64_t Key;
   uint64_t Val;
+  void dump(const char *Msg = nullptr) {
+    // TODO: make some sort of formatting function
+    // Currently we have to do it the ugly way because
+    // we want every message to be printed atomically via a single call to
+    // __write. If we use reportNumber() and others nultiple times, we'll get
+    // garbage in mulithreaded environment
+    char Buf[BufSize];
+    char *Ptr = Buf;
+    Ptr = intToStr(Ptr, __getpid(), 10);
+    *Ptr++ = ':';
+    *Ptr++ = ' ';
+    if (Msg)
+      Ptr = strCopy(Ptr, Msg, strLen(Msg));
+    *Ptr++ = '0';
+    *Ptr++ = 'x';
+    Ptr = intToStr(Ptr, (uint64_t)this, 16);
+    *Ptr++ = ':';
+    *Ptr++ = ' ';
+    Ptr = strCopy(Ptr, "MapEntry(0x", sizeof("MapEntry(0x") - 1);
+    Ptr = intToStr(Ptr, Key, 16);
+    *Ptr++ = ',';
+    *Ptr++ = ' ';
+    *Ptr++ = '0';
+    *Ptr++ = 'x';
+    Ptr = intToStr(Ptr, Val, 16);
+    *Ptr++ = ')';
+    *Ptr++ = '\n';
+    assert(Ptr - Buf < BufSize, "Buffer overflow!");
+    // print everything all at once for atomicity
+    __write(2, Buf, Ptr - Buf);
+  }
 };
 
 /// This hash table implementation starts by allocating a table of size
@@ -327,11 +353,13 @@ private:
     TableRoot = new (Alloc, 0) MapEntry[InitialSize];
     MapEntry &Entry = TableRoot[Key % InitialSize];
     Entry.Key = Key;
+    // DEBUG(Entry.dump("Created root entry: "));
     return Entry;
   }
 
   MapEntry &getEntry(MapEntry *Entries, uint64_t Key, uint64_t Selector,
                      BumpPtrAllocator &Alloc, int CurLevel) {
+    // DEBUG(reportNumber("getEntry called, level ", CurLevel, 10));
     const uint32_t NumEntries = CurLevel == 0 ? InitialSize : IncSize;
     uint64_t Remainder = Selector / NumEntries;
     Selector = Selector % NumEntries;
@@ -339,12 +367,14 @@ private:
 
     // A hit
     if (Entry.Key == Key) {
+      // DEBUG(Entry.dump("Hit: "));
       return Entry;
     }
 
     // Vacant - add new entry
     if (Entry.Key == VacantMarker) {
       Entry.Key = Key;
+      // DEBUG(Entry.dump("Adding new entry: "));
       return Entry;
     }
 
@@ -356,13 +386,23 @@ private:
     }
 
     // Conflict - create the next level
+    // DEBUG(Entry.dump("Creating new level: "));
+
     MapEntry *NextLevelTbl = new (Alloc, 0) MapEntry[IncSize];
+    // DEBUG(
+    //     reportNumber("Newly allocated level: 0x", uint64_t(NextLevelTbl),
+    //     16));
     uint64_t CurEntrySelector = Entry.Key / InitialSize;
     for (int I = 0; I < CurLevel; ++I)
       CurEntrySelector /= IncSize;
     CurEntrySelector = CurEntrySelector % IncSize;
     NextLevelTbl[CurEntrySelector] = Entry;
     Entry.Key = reinterpret_cast<uint64_t>(NextLevelTbl) | FollowUpTableMarker;
+    assert((NextLevelTbl[CurEntrySelector].Key & ~FollowUpTableMarker) !=
+               uint64_t(Entries),
+           "circular reference created!\n");
+    // DEBUG(NextLevelTbl[CurEntrySelector].dump("New level entry: "));
+    // DEBUG(Entry.dump("Updated old entry: "));
     return getEntry(NextLevelTbl, Key, Remainder, Alloc, CurLevel + 1);
   }
 
@@ -669,7 +709,8 @@ ProfileWriterContext readDescriptions() {
   // mmap our binary to memory
   uint64_t Size = __lseek(FD, 0, 2 /*SEEK_END*/);
   uint8_t *BinContents = reinterpret_cast<uint8_t *>(
-      __mmap(0, Size, 0x1 /* PROT_READ*/, 0x2 /* MAP_PRIVATE*/, FD, 0));
+      __mmap(0, Size, PROT_READ, MAP_PRIVATE, FD, 0));
+  assert(BinContents != MAP_FAILED, "readDescriptions: Failed to mmap self!");
   Result.MMapPtr = BinContents;
   Result.MMapSize = Size;
   Elf64_Ehdr *Hdr = reinterpret_cast<Elf64_Ehdr *>(BinContents);
@@ -1545,6 +1586,9 @@ extern "C" void __bolt_instr_indirect_tailcall();
 
 /// Initialization code
 extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
+  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
+  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
+
   const uint64_t CountersStart =
       reinterpret_cast<uint64_t>(&__bolt_instr_locations[0]);
   const uint64_t CountersEnd = alignTo(
@@ -1552,18 +1596,19 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
       0x1000);
   DEBUG(reportNumber("replace mmap start: ", CountersStart, 16));
   DEBUG(reportNumber("replace mmap stop: ", CountersEnd, 16));
-  assert (CountersEnd > CountersStart, "no counters");
-  // Maps our counters to be shared instead of private, so we keep counting for
-  // forked processes
-  __mmap(CountersStart, CountersEnd - CountersStart,
-         0x3 /*PROT_READ|PROT_WRITE*/,
-         0x31 /*MAP_ANONYMOUS | MAP_SHARED | MAP_FIXED*/, -1, 0);
+  assert(CountersEnd > CountersStart, "no counters");
 
-  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
-  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
+  const bool Shared = !__bolt_instr_use_pid;
+  const uint64_t MapPrivateOrShared = Shared ? MAP_SHARED : MAP_PRIVATE;
+
+  void *Ret =
+      __mmap(CountersStart, CountersEnd - CountersStart, PROT_READ | PROT_WRITE,
+             MAP_ANONYMOUS | MapPrivateOrShared | MAP_FIXED, -1, 0);
+  assert(Ret != MAP_FAILED, "__bolt_instr_setup: Failed to mmap counters!");
+
   // Conservatively reserve 100MiB shared pages
   GlobalAlloc.setMaxSize(0x6400000);
-  GlobalAlloc.setShared(true);
+  GlobalAlloc.setShared(Shared);
   GlobalWriteProfileMutex = new (GlobalAlloc, 0) Mutex();
   if (__bolt_instr_num_ind_calls > 0)
     GlobalIndCallCounters =

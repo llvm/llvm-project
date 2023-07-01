@@ -645,13 +645,15 @@ entry:
 ; CHECK-MACHO: ldp	x20, x19, [sp], #32
 ; CHECK-MACHO: ret
 
+declare void @use(ptr)
 
-define void @realign_conditional(i1 %b) {
+define void @realign_conditional(i1 %b, ptr %p) {
 entry:
   br i1 %b, label %bb0, label %bb1
 
 bb0:
   %MyAlloca = alloca i8, i64 64, align 32
+  store ptr %MyAlloca, ptr %p
   br label %bb1
 
 bb1:
@@ -665,18 +667,20 @@ bb1:
 ; CHECK:  tbz  {{.*}} .[[LABEL:.*]]
 ; Stack is realigned in a non-entry BB.
 ; CHECK:  sub  [[REG:x[01-9]+]], sp, #64
-; CHECK:  and  sp, [[REG]], #0xffffffffffffffe0
+; CHECK:  and  [[REG]], [[REG]], #0xffffffffffffffe0
+; CHECK:  mov  sp, [[REG]]
 ; CHECK:  .[[LABEL]]:
 ; CHECK:  ret
 
 
-define void @realign_conditional2(i1 %b) {
+define void @realign_conditional2(i1 %b, ptr %p) {
 entry:
   %tmp = alloca i8, i32 16
   br i1 %b, label %bb0, label %bb1
 
 bb0:
   %MyAlloca = alloca i8, i64 64, align 32
+  store ptr %MyAlloca, ptr %p
   br label %bb1
 
 bb1:
@@ -691,7 +695,8 @@ bb1:
 ; CHECK:  mov   x19, sp
 ; Stack is realigned in a non-entry BB.
 ; CHECK:  sub  [[REG:x[01-9]+]], sp, #64
-; CHECK:  and  sp, [[REG]], #0xffffffffffffffe0
+; CHECK:  and  [[REG]], [[REG]], #0xffffffffffffffe0
+; CHECK:  mov  sp, [[REG]]
 ; CHECK:  .[[LABEL]]:
 ; CHECK:  ret
 

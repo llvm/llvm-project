@@ -1015,29 +1015,18 @@ ChangeStatus
 IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
                                    const ArrayRef<Attribute> &DeducedAttrs,
                                    bool ForceReplace) {
-  Function *ScopeFn = IRP.getAnchorScope();
-  IRPosition::Kind PK = IRP.getPositionKind();
+  switch (IRP.getPositionKind()) {
+  case IRPosition::IRP_FLOAT:
+  case IRPosition::IRP_INVALID:
+    return ChangeStatus::UNCHANGED;
+  default:
+    break;
+  };
 
   // In the following some generic code that will manifest attributes in
   // DeducedAttrs if they improve the current IR. Due to the different
   // annotation positions we use the underlying AttributeList interface.
-
-  AttributeList Attrs;
-  switch (PK) {
-  case IRPosition::IRP_INVALID:
-  case IRPosition::IRP_FLOAT:
-    return ChangeStatus::UNCHANGED;
-  case IRPosition::IRP_ARGUMENT:
-  case IRPosition::IRP_FUNCTION:
-  case IRPosition::IRP_RETURNED:
-    Attrs = ScopeFn->getAttributes();
-    break;
-  case IRPosition::IRP_CALL_SITE:
-  case IRPosition::IRP_CALL_SITE_RETURNED:
-  case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    Attrs = cast<CallBase>(IRP.getAnchorValue()).getAttributes();
-    break;
-  }
+  AttributeList Attrs = IRP.getAttrList();
 
   ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
@@ -1051,22 +1040,7 @@ IRAttributeManifest::manifestAttrs(Attributor &A, const IRPosition &IRP,
   if (HasChanged == ChangeStatus::UNCHANGED)
     return HasChanged;
 
-  switch (PK) {
-  case IRPosition::IRP_ARGUMENT:
-  case IRPosition::IRP_FUNCTION:
-  case IRPosition::IRP_RETURNED:
-    ScopeFn->setAttributes(Attrs);
-    break;
-  case IRPosition::IRP_CALL_SITE:
-  case IRPosition::IRP_CALL_SITE_RETURNED:
-  case IRPosition::IRP_CALL_SITE_ARGUMENT:
-    cast<CallBase>(IRP.getAnchorValue()).setAttributes(Attrs);
-    break;
-  case IRPosition::IRP_INVALID:
-  case IRPosition::IRP_FLOAT:
-    break;
-  }
-
+  IRP.setAttrList(Attrs);
   return HasChanged;
 }
 
@@ -1183,11 +1157,7 @@ bool IRPosition::getAttrsFromIRAttr(Attribute::AttrKind AK,
   if (getPositionKind() == IRP_INVALID || getPositionKind() == IRP_FLOAT)
     return false;
 
-  AttributeList AttrList;
-  if (const auto *CB = dyn_cast<CallBase>(&getAnchorValue()))
-    AttrList = CB->getAttributes();
-  else
-    AttrList = getAssociatedFunction()->getAttributes();
+  AttributeList AttrList = getAttrList();
 
   bool HasAttr = AttrList.hasAttributeAtIndex(getAttrIdx(), AK);
   if (HasAttr)
@@ -1407,6 +1377,8 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
                                const AAIsDead *FnLivenessAA,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  if (!Configuration.UseLiveness)
+    return false;
   const IRPosition &IRP = AA.getIRPosition();
   if (!Functions.count(IRP.getAnchorScope()))
     return false;
@@ -1419,6 +1391,8 @@ bool Attributor::isAssumedDead(const Use &U,
                                const AAIsDead *FnLivenessAA,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  if (!Configuration.UseLiveness)
+    return false;
   Instruction *UserI = dyn_cast<Instruction>(U.getUser());
   if (!UserI)
     return isAssumedDead(IRPosition::value(*U.get()), QueryingAA, FnLivenessAA,
@@ -1467,6 +1441,8 @@ bool Attributor::isAssumedDead(const Instruction &I,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass,
                                bool CheckForDeadStore) {
+  if (!Configuration.UseLiveness)
+    return false;
   const IRPosition::CallBaseContext *CBCtx =
       QueryingAA ? QueryingAA->getCallBaseContext() : nullptr;
 
@@ -1527,6 +1503,8 @@ bool Attributor::isAssumedDead(const IRPosition &IRP,
                                const AAIsDead *FnLivenessAA,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly, DepClassTy DepClass) {
+  if (!Configuration.UseLiveness)
+    return false;
   // Don't check liveness for constants, e.g. functions, used as (floating)
   // values since the context instruction and such is here meaningless.
   if (IRP.getPositionKind() == IRPosition::IRP_FLOAT &&
@@ -1572,6 +1550,8 @@ bool Attributor::isAssumedDead(const BasicBlock &BB,
                                const AbstractAttribute *QueryingAA,
                                const AAIsDead *FnLivenessAA,
                                DepClassTy DepClass) {
+  if (!Configuration.UseLiveness)
+    return false;
   const Function &F = *BB.getParent();
   if (!FnLivenessAA || FnLivenessAA->getAnchorScope() != &F)
     FnLivenessAA = getOrCreateAAFor<AAIsDead>(IRPosition::function(F),
@@ -3189,135 +3169,160 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   }
 
   IRPosition FPos = IRPosition::function(F);
-
+  bool IsIPOAmendable = isFunctionIPOAmendable(F);
+  auto Attrs = F.getAttributes();
   // Check for dead BasicBlocks in every function.
   // We need dead instruction detection because we do not want to deal with
   // broken IR in which SSA rules do not apply.
   getOrCreateAAFor<AAIsDead>(FPos);
 
-  // Every function might be "will-return".
-  getOrCreateAAFor<AAWillReturn>(FPos);
-
-  // Every function might be "must-progress".
-  getOrCreateAAFor<AAMustProgress>(FPos);
-
-  // Every function might contain instructions that cause "undefined behavior".
+  // Every function might contain instructions that cause "undefined
+  // behavior".
   getOrCreateAAFor<AAUndefinedBehavior>(FPos);
-
-  // Every function can be nounwind.
-  getOrCreateAAFor<AANoUnwind>(FPos);
-
-  // Every function might be marked "nosync"
-  getOrCreateAAFor<AANoSync>(FPos);
-
-  // Every function might be "no-free".
-  getOrCreateAAFor<AANoFree>(FPos);
-
-  // Every function might be "no-return".
-  getOrCreateAAFor<AANoReturn>(FPos);
-
-  // Every function might be "no-recurse".
-  getOrCreateAAFor<AANoRecurse>(FPos);
-
-  // Every function can be "non-convergent".
-  if (F.hasFnAttribute(Attribute::Convergent))
-    getOrCreateAAFor<AANonConvergent>(FPos);
-
-  // Every function might be "readnone/readonly/writeonly/...".
-  getOrCreateAAFor<AAMemoryBehavior>(FPos);
-
-  // Every function can be "readnone/argmemonly/inaccessiblememonly/...".
-  getOrCreateAAFor<AAMemoryLocation>(FPos);
-
-  // Every function can track active assumptions.
-  getOrCreateAAFor<AAAssumptionInfo>(FPos);
 
   // Every function might be applicable for Heap-To-Stack conversion.
   if (EnableHeapToStack)
     getOrCreateAAFor<AAHeapToStack>(FPos);
 
-  // Return attributes are only appropriate if the return type is non void.
-  Type *ReturnType = F.getReturnType();
-  if (!ReturnType->isVoidTy()) {
-    // Argument attribute "returned" --- Create only one per function even
-    // though it is an argument attribute.
-    getOrCreateAAFor<AAReturnedValues>(FPos);
+  // Everything that is visible from the outside (=function, argument, return
+  // positions), cannot be changed if the function is not IPO amendable. We can
+  // however analyse the code inside.
+  if (IsIPOAmendable) {
 
-    IRPosition RetPos = IRPosition::returned(F);
+    // Every function might be "will-return".
+    if (!Attrs.hasFnAttr(Attribute::WillReturn))
+      getOrCreateAAFor<AAWillReturn>(FPos);
 
-    // Every returned value might be dead.
-    getOrCreateAAFor<AAIsDead>(RetPos);
+    // Every function might be "must-progress".
+    if (!Attrs.hasFnAttr(Attribute::MustProgress))
+      getOrCreateAAFor<AAMustProgress>(FPos);
 
-    // Every function might be simplified.
-    bool UsedAssumedInformation = false;
-    getAssumedSimplified(RetPos, nullptr, UsedAssumedInformation,
-                         AA::Intraprocedural);
+    // Every function can be nounwind.
+    if (!Attrs.hasFnAttr(Attribute::NoUnwind))
+      getOrCreateAAFor<AANoUnwind>(FPos);
 
-    // Every returned value might be marked noundef.
-    getOrCreateAAFor<AANoUndef>(RetPos);
+    // Every function might be marked "nosync"
+    if (!Attrs.hasFnAttr(Attribute::NoSync))
+      getOrCreateAAFor<AANoSync>(FPos);
 
-    if (ReturnType->isPointerTy()) {
+    // Every function might be "no-free".
+    if (!Attrs.hasFnAttr(Attribute::NoFree))
+      getOrCreateAAFor<AANoFree>(FPos);
 
-      // Every function with pointer return type might be marked align.
-      getOrCreateAAFor<AAAlign>(RetPos);
+    // Every function might be "no-return".
+    if (!Attrs.hasFnAttr(Attribute::NoReturn))
+      getOrCreateAAFor<AANoReturn>(FPos);
 
-      // Every function with pointer return type might be marked nonnull.
-      getOrCreateAAFor<AANonNull>(RetPos);
+    // Every function might be "no-recurse".
+    if (!Attrs.hasFnAttr(Attribute::NoRecurse))
+      getOrCreateAAFor<AANoRecurse>(FPos);
 
-      // Every function with pointer return type might be marked noalias.
-      getOrCreateAAFor<AANoAlias>(RetPos);
+    // Every function can be "non-convergent".
+    if (Attrs.hasFnAttr(Attribute::Convergent))
+      getOrCreateAAFor<AANonConvergent>(FPos);
 
-      // Every function with pointer return type might be marked
-      // dereferenceable.
-      getOrCreateAAFor<AADereferenceable>(RetPos);
-    } else if (AttributeFuncs::isNoFPClassCompatibleType(ReturnType)) {
-      getOrCreateAAFor<AANoFPClass>(RetPos);
+    // Every function might be "readnone/readonly/writeonly/...".
+    getOrCreateAAFor<AAMemoryBehavior>(FPos);
+
+    // Every function can be "readnone/argmemonly/inaccessiblememonly/...".
+    getOrCreateAAFor<AAMemoryLocation>(FPos);
+
+    // Every function can track active assumptions.
+    getOrCreateAAFor<AAAssumptionInfo>(FPos);
+
+    // Return attributes are only appropriate if the return type is non void.
+    Type *ReturnType = F.getReturnType();
+    if (!ReturnType->isVoidTy()) {
+      // Argument attribute "returned" --- Create only one per function even
+      // though it is an argument attribute.
+      getOrCreateAAFor<AAReturnedValues>(FPos);
+
+      IRPosition RetPos = IRPosition::returned(F);
+
+      // Every returned value might be dead.
+      getOrCreateAAFor<AAIsDead>(RetPos);
+
+      // Every function might be simplified.
+      bool UsedAssumedInformation = false;
+      getAssumedSimplified(RetPos, nullptr, UsedAssumedInformation,
+                           AA::Intraprocedural);
+
+      // Every returned value might be marked noundef.
+      if (!Attrs.hasRetAttr(Attribute::NoUndef))
+        getOrCreateAAFor<AANoUndef>(RetPos);
+
+      if (ReturnType->isPointerTy()) {
+
+        // Every function with pointer return type might be marked align.
+        getOrCreateAAFor<AAAlign>(RetPos);
+
+        // Every function with pointer return type might be marked nonnull.
+        if (!Attrs.hasRetAttr(Attribute::NonNull))
+          getOrCreateAAFor<AANonNull>(RetPos);
+
+        // Every function with pointer return type might be marked noalias.
+        if (!Attrs.hasRetAttr(Attribute::NoAlias))
+          getOrCreateAAFor<AANoAlias>(RetPos);
+
+        // Every function with pointer return type might be marked
+        // dereferenceable.
+        getOrCreateAAFor<AADereferenceable>(RetPos);
+      } else if (AttributeFuncs::isNoFPClassCompatibleType(ReturnType)) {
+        getOrCreateAAFor<AANoFPClass>(RetPos);
+      }
     }
-  }
 
-  for (Argument &Arg : F.args()) {
-    IRPosition ArgPos = IRPosition::argument(Arg);
+    for (Argument &Arg : F.args()) {
+      IRPosition ArgPos = IRPosition::argument(Arg);
+      auto ArgNo = Arg.getArgNo();
 
-    // Every argument might be simplified. We have to go through the Attributor
-    // interface though as outside AAs can register custom simplification
-    // callbacks.
-    bool UsedAssumedInformation = false;
-    getAssumedSimplified(ArgPos, /* AA */ nullptr, UsedAssumedInformation,
-                         AA::Intraprocedural);
+      // Every argument might be simplified. We have to go through the
+      // Attributor interface though as outside AAs can register custom
+      // simplification callbacks.
+      bool UsedAssumedInformation = false;
+      getAssumedSimplified(ArgPos, /* AA */ nullptr, UsedAssumedInformation,
+                           AA::Intraprocedural);
 
-    // Every argument might be dead.
-    getOrCreateAAFor<AAIsDead>(ArgPos);
+      // Every argument might be dead.
+      getOrCreateAAFor<AAIsDead>(ArgPos);
 
-    // Every argument might be marked noundef.
-    getOrCreateAAFor<AANoUndef>(ArgPos);
+      // Every argument might be marked noundef.
+      if (!Attrs.hasParamAttr(ArgNo, Attribute::NoUndef))
+        getOrCreateAAFor<AANoUndef>(ArgPos);
 
-    if (Arg.getType()->isPointerTy()) {
-      // Every argument with pointer type might be marked nonnull.
-      getOrCreateAAFor<AANonNull>(ArgPos);
+      if (Arg.getType()->isPointerTy()) {
+        // Every argument with pointer type might be marked nonnull.
+        if (!Attrs.hasParamAttr(ArgNo, Attribute::NonNull))
+          getOrCreateAAFor<AANonNull>(ArgPos);
 
-      // Every argument with pointer type might be marked noalias.
-      getOrCreateAAFor<AANoAlias>(ArgPos);
+        // Every argument with pointer type might be marked noalias.
+        if (!Attrs.hasParamAttr(ArgNo, Attribute::NoAlias))
+          getOrCreateAAFor<AANoAlias>(ArgPos);
 
-      // Every argument with pointer type might be marked dereferenceable.
-      getOrCreateAAFor<AADereferenceable>(ArgPos);
+        // Every argument with pointer type might be marked dereferenceable.
+        getOrCreateAAFor<AADereferenceable>(ArgPos);
 
-      // Every argument with pointer type might be marked align.
-      getOrCreateAAFor<AAAlign>(ArgPos);
+        // Every argument with pointer type might be marked align.
+        getOrCreateAAFor<AAAlign>(ArgPos);
 
-      // Every argument with pointer type might be marked nocapture.
-      getOrCreateAAFor<AANoCapture>(ArgPos);
+        // Every argument with pointer type might be marked nocapture.
+        if (!Attrs.hasParamAttr(ArgNo, Attribute::NoCapture))
+          getOrCreateAAFor<AANoCapture>(ArgPos);
 
-      // Every argument with pointer type might be marked
-      // "readnone/readonly/writeonly/..."
-      getOrCreateAAFor<AAMemoryBehavior>(ArgPos);
+        // Every argument with pointer type might be marked
+        // "readnone/readonly/writeonly/..."
+        getOrCreateAAFor<AAMemoryBehavior>(ArgPos);
 
-      // Every argument with pointer type might be marked nofree.
-      getOrCreateAAFor<AANoFree>(ArgPos);
+        // Every argument with pointer type might be marked nofree.
+        if (!Attrs.hasParamAttr(ArgNo, Attribute::NoFree))
+          getOrCreateAAFor<AANoFree>(ArgPos);
 
-      // Every argument with pointer type might be privatizable (or promotable)
-      getOrCreateAAFor<AAPrivatizablePtr>(ArgPos);
-    } else if (AttributeFuncs::isNoFPClassCompatibleType(Arg.getType())) {
-      getOrCreateAAFor<AANoFPClass>(ArgPos);
+        // Every argument with pointer type might be privatizable (or
+        // promotable)
+        getOrCreateAAFor<AAPrivatizablePtr>(ArgPos);
+      } else if (AttributeFuncs::isNoFPClassCompatibleType(Arg.getType())) {
+        getOrCreateAAFor<AANoFPClass>(ArgPos);
+      }
     }
   }
 
@@ -3355,6 +3360,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         getOrCreateAAFor<AANoFPClass>(CBInstPos);
     }
 
+    const AttributeList &CBAttrList = CBFnPos.getAttrList();
     for (int I = 0, E = CB.arg_size(); I < E; ++I) {
 
       IRPosition CBArgPos = IRPosition::callsite_argument(CB, I);
@@ -3370,7 +3376,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
                            AA::Intraprocedural);
 
       // Every call site argument might be marked "noundef".
-      getOrCreateAAFor<AANoUndef>(CBArgPos);
+      if (!CBAttrList.hasParamAttr(I, Attribute::NoUndef))
+        getOrCreateAAFor<AANoUndef>(CBArgPos);
 
       Type *ArgTy = CB.getArgOperand(I)->getType();
 
@@ -3382,13 +3389,16 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       }
 
       // Call site argument attribute "non-null".
-      getOrCreateAAFor<AANonNull>(CBArgPos);
+      if (!CBAttrList.hasParamAttr(I, Attribute::NonNull))
+        getOrCreateAAFor<AANonNull>(CBArgPos);
 
       // Call site argument attribute "nocapture".
-      getOrCreateAAFor<AANoCapture>(CBArgPos);
+      if (!CBAttrList.hasParamAttr(I, Attribute::NoCapture))
+        getOrCreateAAFor<AANoCapture>(CBArgPos);
 
       // Call site argument attribute "no-alias".
-      getOrCreateAAFor<AANoAlias>(CBArgPos);
+      if (!CBAttrList.hasParamAttr(I, Attribute::NoAlias))
+        getOrCreateAAFor<AANoAlias>(CBArgPos);
 
       // Call site argument attribute "dereferenceable".
       getOrCreateAAFor<AADereferenceable>(CBArgPos);
@@ -3398,10 +3408,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
       // Call site argument attribute
       // "readnone/readonly/writeonly/..."
-      getOrCreateAAFor<AAMemoryBehavior>(CBArgPos);
+      if (!CBAttrList.hasParamAttr(I, Attribute::ReadNone))
+        getOrCreateAAFor<AAMemoryBehavior>(CBArgPos);
 
       // Call site argument attribute "nofree".
-      getOrCreateAAFor<AANoFree>(CBArgPos);
+      if (!CBAttrList.hasParamAttr(I, Attribute::NoFree))
+        getOrCreateAAFor<AANoFree>(CBArgPos);
     }
     return true;
   };

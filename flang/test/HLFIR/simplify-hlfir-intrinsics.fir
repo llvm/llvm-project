@@ -10,7 +10,7 @@ func.func @transpose0(%arg0: !fir.box<!fir.array<1x2xi32>>) {
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
 // CHECK:           %[[SHAPE:.*]] = fir.shape %[[C2]], %[[C1]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[EXPR:.*]] = hlfir.elemental %[[SHAPE]] : (!fir.shape<2>) -> !hlfir.expr<2x1xi32> {
+// CHECK:           %[[EXPR:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<2x1xi32> {
 // CHECK:           ^bb0(%[[I:.*]]: index, %[[J:.*]]: index):
 // CHECK:             %[[C0:.*]] = arith.constant 0 : index
 // CHECK:             %[[DIMS0:.*]]:3 = fir.box_dims %[[ARG0]], %[[C0]] : (!fir.box<!fir.array<1x2xi32>>, index) -> (index, index, index)
@@ -38,7 +38,7 @@ func.func @transpose1(%arg0: !hlfir.expr<1x2xi32>) {
 // CHECK:           %[[C1:.*]] = arith.constant 1 : index
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
 // CHECK:           %[[SHAPE:.*]] = fir.shape %[[C2]], %[[C1]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[EXPR:.*]] = hlfir.elemental %[[SHAPE]] : (!fir.shape<2>) -> !hlfir.expr<2x1xi32> {
+// CHECK:           %[[EXPR:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<2x1xi32> {
 // CHECK:           ^bb0(%[[I:.*]]: index, %[[J:.*]]: index):
 // CHECK:             %[[ELEMENT:.*]] = hlfir.apply %[[ARG0]], %[[J]], %[[I]] : (!hlfir.expr<1x2xi32>, index, index) -> i32
 // CHECK:             hlfir.yield_element %[[ELEMENT]] : i32
@@ -57,7 +57,7 @@ func.func @transpose2(%arg0: !fir.box<!fir.array<?x2xi32>>) {
 // CHECK:           %[[DIMS0:.*]]:3 = fir.box_dims %[[ARG0]], %[[C0]] : (!fir.box<!fir.array<?x2xi32>>, index) -> (index, index, index)
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
 // CHECK:           %[[SHAPE:.*]] = fir.shape %[[C2]], %[[DIMS0]]#1 : (index, index) -> !fir.shape<2>
-// CHECK:           %[[EXPR:.*]] = hlfir.elemental %[[SHAPE]] : (!fir.shape<2>) -> !hlfir.expr<2x?xi32> {
+// CHECK:           %[[EXPR:.*]] = hlfir.elemental %[[SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<2x?xi32> {
 // CHECK:           ^bb0(%[[I:.*]]: index, %[[J:.*]]: index):
 // CHECK:             %[[C0_1:.*]] = arith.constant 0 : index
 // CHECK:             %[[DIMS0:.*]]:3 = fir.box_dims %[[ARG0]], %[[C0_1]] : (!fir.box<!fir.array<?x2xi32>>, index) -> (index, index, index)
@@ -86,7 +86,7 @@ func.func @transpose3(%arg0: !hlfir.expr<?x2xi32>) {
 // CHECK:           %[[EXTENT0:.*]] = hlfir.get_extent %[[IN_SHAPE]] {dim = 0 : index} : (!fir.shape<2>) -> index
 // CHECK:           %[[C2:.*]] = arith.constant 2 : index
 // CHECK:           %[[OUT_SHAPE:.*]] = fir.shape %[[C2]], %[[EXTENT0]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[EXPR:.*]] = hlfir.elemental %[[OUT_SHAPE]] : (!fir.shape<2>) -> !hlfir.expr<2x?xi32> {
+// CHECK:           %[[EXPR:.*]] = hlfir.elemental %[[OUT_SHAPE]] unordered : (!fir.shape<2>) -> !hlfir.expr<2x?xi32> {
 // CHECK:           ^bb0(%[[I:.*]]: index, %[[J:.*]]: index):
 // CHECK:             %[[ELEMENT:.*]] = hlfir.apply %[[ARG0]], %[[J]], %[[I]] : (!hlfir.expr<?x2xi32>, index, index) -> i32
 // CHECK:             hlfir.yield_element %[[ELEMENT]] : i32
@@ -113,7 +113,7 @@ func.func @transpose4(%arg0: !hlfir.expr<2x2xf32>, %arg1: !fir.ref<!fir.box<!fir
 // CHECK-SAME:      %[[ARG0:.*]]: !hlfir.expr<2x2xf32>
 // CHECK-SAME:      %[[ARG1:.*]]:
 // CHECK:         %[[SHAPE0:.*]] = fir.shape
-// CHECK:         %[[TRANSPOSE:.*]] = hlfir.elemental %[[SHAPE0]] : (!fir.shape<2>) -> !hlfir.expr<2x2xf32> {
+// CHECK:         %[[TRANSPOSE:.*]] = hlfir.elemental %[[SHAPE0]] unordered : (!fir.shape<2>) -> !hlfir.expr<2x2xf32> {
 // CHECK:         ^bb0(%[[I:.*]]: index, %[[J:.*]]: index):
 // CHECK:           %[[ELE:.*]] = hlfir.apply %[[ARG0]], %[[J]], %[[I]] : (!hlfir.expr<2x2xf32>, index, index) -> f32
 // CHECK:           hlfir.yield_element %[[ELE]] : f32

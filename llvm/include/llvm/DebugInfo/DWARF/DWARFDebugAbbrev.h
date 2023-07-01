@@ -66,7 +66,7 @@ class DWARFDebugAbbrev {
 public:
   DWARFDebugAbbrev(DataExtractor Data);
 
-  const DWARFAbbreviationDeclarationSet *
+  Expected<const DWARFAbbreviationDeclarationSet *>
   getAbbreviationDeclarationSet(uint64_t CUAbbrOffset) const;
 
   void dump(raw_ostream &OS) const;

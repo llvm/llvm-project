@@ -29,8 +29,7 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
                                  LMULInfo vlmul,
                                  OutPatFrag avl,
                                  VReg reg_class,
-                                 int sew = !shl(1, log2sew)>
-{
+                                 int sew = !shl(1, log2sew)> {
   defvar load_instr = !cast<Instruction>("PseudoVLE"#sew#"_V_"#vlmul.MX);
   defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
   // Load
@@ -45,8 +44,7 @@ multiclass VPatUSLoadStoreWholeVRSDNode<ValueType type,
                                         int log2sew,
                                         LMULInfo vlmul,
                                         VReg reg_class,
-                                        int sew = !shl(1, log2sew)>
-{
+                                        int sew = !shl(1, log2sew)> {
   defvar load_instr =
     !cast<Instruction>("VL"#!substr(vlmul.MX, 1)#"RE"#sew#"_V");
   defvar store_instr =
@@ -60,8 +58,7 @@ multiclass VPatUSLoadStoreWholeVRSDNode<ValueType type,
             (store_instr reg_class:$rs2, GPR:$rs1)>;
 }
 
-multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m>
-{
+multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m> {
   defvar load_instr = !cast<Instruction>("PseudoVLM_V_"#m.BX);
   defvar store_instr = !cast<Instruction>("PseudoVSM_V_"#m.BX);
   // Load
@@ -316,7 +313,8 @@ multiclass VPatExtendSDNode_V<list<SDNode> ops, string inst_name, string suffix,
                                  GetVTypePredicates<fti>.Predicates) in
       def : Pat<(vti.Vector (op (fti.Vector fti.RegClass:$rs2))),
                 (!cast<Instruction>(inst_name#"_"#suffix#"_"#vti.LMul.MX)
-                    fti.RegClass:$rs2, fti.AVL, vti.Log2SEW)>;
+                    (vti.Vector (IMPLICIT_DEF)),
+                    fti.RegClass:$rs2, fti.AVL, vti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -328,7 +326,8 @@ multiclass VPatConvertI2FPSDNode_V<SDPatternOperator vop,
                                  GetVTypePredicates<ivti>.Predicates) in
     def : Pat<(fvti.Vector (vop (ivti.Vector ivti.RegClass:$rs1))),
               (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX)
-                  ivti.RegClass:$rs1, fvti.AVL, fvti.Log2SEW)>;
+                  (fvti.Vector (IMPLICIT_DEF)),
+                  ivti.RegClass:$rs1, fvti.AVL, fvti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -340,7 +339,8 @@ multiclass VPatConvertFP2ISDNode_V<SDPatternOperator vop,
                                  GetVTypePredicates<ivti>.Predicates) in
     def : Pat<(ivti.Vector (vop (fvti.Vector fvti.RegClass:$rs1))),
               (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX)
-                  fvti.RegClass:$rs1, ivti.AVL, ivti.Log2SEW)>;
+                  (ivti.Vector (IMPLICIT_DEF)),
+                  fvti.RegClass:$rs1, ivti.AVL, ivti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -353,7 +353,8 @@ multiclass VPatWConvertI2FPSDNode_V<SDPatternOperator vop,
                                  GetVTypePredicates<fwti>.Predicates) in
     def : Pat<(fwti.Vector (vop (ivti.Vector ivti.RegClass:$rs1))),
               (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX)
-                  ivti.RegClass:$rs1, ivti.AVL, ivti.Log2SEW)>;
+                  (fwti.Vector (IMPLICIT_DEF)),
+                  ivti.RegClass:$rs1, ivti.AVL, ivti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -366,7 +367,8 @@ multiclass VPatWConvertFP2ISDNode_V<SDPatternOperator vop,
                                  GetVTypePredicates<iwti>.Predicates) in
     def : Pat<(iwti.Vector (vop (fvti.Vector fvti.RegClass:$rs1))),
               (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX)
-                  fvti.RegClass:$rs1, fvti.AVL, fvti.Log2SEW)>;
+                  (iwti.Vector (IMPLICIT_DEF)),
+                  fvti.RegClass:$rs1, fvti.AVL, fvti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -379,7 +381,8 @@ multiclass VPatNConvertI2FPSDNode_W<SDPatternOperator vop,
                                  GetVTypePredicates<iwti>.Predicates) in
     def : Pat<(fvti.Vector (vop (iwti.Vector iwti.RegClass:$rs1))),
               (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX)
-                  iwti.RegClass:$rs1, fvti.AVL, fvti.Log2SEW)>;
+                  (fvti.Vector (IMPLICIT_DEF)),
+                  iwti.RegClass:$rs1, fvti.AVL, fvti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -392,7 +395,8 @@ multiclass VPatNConvertFP2ISDNode_W<SDPatternOperator vop,
                                  GetVTypePredicates<fwti>.Predicates) in
     def : Pat<(vti.Vector (vop (fwti.Vector fwti.RegClass:$rs1))),
               (!cast<Instruction>(instruction_name#"_"#vti.LMul.MX)
-                  fwti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+                  (vti.Vector (IMPLICIT_DEF)),
+                  fwti.RegClass:$rs1, vti.AVL, vti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -1039,7 +1043,8 @@ foreach vti = AllFloatVectors in {
     // 13.8. Vector Floating-Point Square-Root Instruction
     def : Pat<(any_fsqrt (vti.Vector vti.RegClass:$rs2)),
               (!cast<Instruction>("PseudoVFSQRT_V_"# vti.LMul.MX#"_E"#vti.SEW)
-                   vti.RegClass:$rs2, vti.AVL, vti.Log2SEW)>;
+                   (vti.Vector (IMPLICIT_DEF)),
+                   vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TU_MU)>;
 
     // 13.12. Vector Floating-Point Sign-Injection Instructions
     def : Pat<(fabs (vti.Vector vti.RegClass:$rs)),
@@ -1141,7 +1146,8 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                                GetVTypePredicates<fwti>.Predicates) in
   def : Pat<(fvti.Vector (fpround (fwti.Vector fwti.RegClass:$rs1))),
             (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX)
-                fwti.RegClass:$rs1, fvti.AVL, fvti.Log2SEW)>;
+                (fvti.Vector (IMPLICIT_DEF)),
+                fwti.RegClass:$rs1, fvti.AVL, fvti.Log2SEW, TU_MU)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1152,12 +1158,14 @@ foreach fvti = AllFloatVectors in {
   let Predicates = GetVTypePredicates<fvti>.Predicates in {
     def : Pat<(fvti.Vector (SplatFPOp fvti.ScalarRegClass:$rs1)),
               (!cast<Instruction>("PseudoVFMV_V_"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                (fvti.Vector (IMPLICIT_DEF)),
                 (fvti.Scalar fvti.ScalarRegClass:$rs1),
-                fvti.AVL, fvti.Log2SEW)>;
+                fvti.AVL, fvti.Log2SEW, TU_MU)>;
 
     def : Pat<(fvti.Vector (SplatFPOp (fvti.Scalar fpimm0))),
               (!cast<Instruction>("PseudoVMV_V_I_"#fvti.LMul.MX)
-                0, fvti.AVL, fvti.Log2SEW)>;
+                (fvti.Vector (IMPLICIT_DEF)),
+                0, fvti.AVL, fvti.Log2SEW, TU_MU)>;
   }
 }
 

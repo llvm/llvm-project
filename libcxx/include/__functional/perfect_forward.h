@@ -11,8 +11,12 @@
 #define _LIBCPP___FUNCTIONAL_PERFECT_FORWARD_H
 
 #include <__config>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
+#include <__type_traits/is_constructible.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
+#include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <tuple>
 

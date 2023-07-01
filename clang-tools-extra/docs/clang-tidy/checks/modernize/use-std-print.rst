@@ -49,6 +49,13 @@ It doesn't do a bad job, but it's not perfect. In particular:
 
   - The glibc extension ``%m``.
 
+- ``printf`` and similar functions return the number of characters printed.
+  ``std::print`` does not. This means that any invocations that use the
+  return value will not be converted. Unfortunately this currently includes
+  explicitly-casting to ``void``. Deficiencies in this check mean that any
+  invocations inside ``GCC`` compound statements cannot be converted even
+  if the resulting value is not used.
+
 If conversion would be incomplete or unsafe then the entire invocation will
 be left unchanged.
 

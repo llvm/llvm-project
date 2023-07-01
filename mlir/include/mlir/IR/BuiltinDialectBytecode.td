@@ -275,17 +275,17 @@ def VectorType : DialectType<(type
   Array<SignedVarIntList>:$shape,
   Type:$elementType
 )> {
-  let printerPredicate = "!$_val.getNumScalableDims()";
+  let printerPredicate = "!$_val.isScalable()";
 }
 
 def VectorTypeWithScalableDims : DialectType<(type
-  VarInt:$numScalableDims,
+  Array<BoolList>:$scalableDims,
   Array<SignedVarIntList>:$shape,
   Type:$elementType
 )> {
-  let printerPredicate = "$_val.getNumScalableDims()";
+  let printerPredicate = "$_val.isScalable()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, shape, elementType, numScalableDims)";
+  let cBuilder = "get<$_resultType>(context, shape, elementType, scalableDims)";
 }
 }
 

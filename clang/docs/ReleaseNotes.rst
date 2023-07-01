@@ -112,6 +112,8 @@ C++20 Feature Support
 - Clang now supports `requires cplusplus20` for module maps.
 - Implemented missing parts of `P2002R1: Consistent comparison operators <https://wg21.link/P2002R1>`_
 - Clang now defines `__cpp_consteval` macro.
+- Implemented `P1816R0: <https://wg21.link/p1816r0>`_ and `P2082R1: <https://wg21.link/p2082r1>`_,
+  which allows CTAD for aggregates.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -371,6 +373,12 @@ Improvements to Clang's diagnostics
   ``#pragma clang|GCC diagnostic push|pop`` directive.
   (`#13920: <https://github.com/llvm/llvm-project/issues/13920>`_)
 - Clang now does not try to analyze cast validity on variables with dependent alignment (`#63007: <https://github.com/llvm/llvm-project/issues/63007>`_).
+- Clang constexpr evaluator now displays member function calls more precisely
+  by making use of the syntactical structure of function calls. This avoids display
+  of syntactically invalid codes in diagnostics.
+  (`#57081: <https://github.com/llvm/llvm-project/issues/57081>`_)
+- Clang no longer emits inappropriate notes about the loss of ``__unaligned`` qualifier
+  on overload resolution, when the actual reason for the failure is loss of other qualifiers.
 
 Bug Fixes in This Version
 -------------------------
@@ -545,6 +553,14 @@ Bug Fixes in This Version
   (`#48512 <https://github.com/llvm/llvm-project/issues/48512>`_).
 - Fixed a failing assertion when parsing incomplete destructor.
   (`#63503 <https://github.com/llvm/llvm-project/issues/63503>`_)
+- Fix C++17 mode assert when parsing malformed code and the compiler is
+  attempting to see if it could be type template for class template argument
+  deduction. This fixes
+  (`Issue 57495 <https://github.com/llvm/llvm-project/issues/57495>`_)
+- Fix missing destructor calls and therefore memory leaks in generated code
+  when an immediate invocation appears as a part of an expression that produces
+  temporaries.
+  (`#60709 <https://github.com/llvm/llvm-project/issues/60709>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -8,6 +8,8 @@
 
 #include <utility>
 
+#include "Detail/DimLvlMapParser.h"
+
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
@@ -449,8 +451,8 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 
   StringRef attrName;
   // Exactly 6 keys.
-  SmallVector<StringRef, 6> keys = {"lvlTypes", "dimToLvl", "posWidth",
-                                    "crdWidth", "dimSlices"};
+  SmallVector<StringRef, 6> keys = {"lvlTypes", "dimToLvl",  "posWidth",
+                                    "crdWidth", "dimSlices", "NEW_SYNTAX"};
   while (succeeded(parser.parseOptionalKeyword(&attrName))) {
     if (!llvm::is_contained(keys, attrName)) {
       parser.emitError(parser.getNameLoc(), "unexpected key: ") << attrName;
@@ -514,6 +516,20 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       if (!finished)
         return {};
       RETURN_ON_FAIL(parser.parseRSquare())
+    } else if (attrName == "NEW_SYNTAX") {
+      // Note that we are in the process of migrating to a new STEA surface
+      // syntax. While this is ongoing we use the temporary "NEW_SYNTAX = ...."
+      // to switch to the new parser. This allows us to gradually migrate
+      // examples over to the new surface syntax before making the complete
+      // switch once work is completed.
+      // TODO: replace everything here with new STEA surface syntax parser
+      ir_detail::DimLvlMapParser cParser(parser);
+      auto res = cParser.parseDimLvlMap();
+      RETURN_ON_FAIL(res);
+      // Proof of concept result.
+      // TODO: use DimLvlMap directly as storage representation
+      for (unsigned i = 0, e = res->getLvlRank(); i < e; i++)
+        lvlTypes.push_back(res->getDimLevelType(i));
     }
 
     // Only the last item can omit the comma

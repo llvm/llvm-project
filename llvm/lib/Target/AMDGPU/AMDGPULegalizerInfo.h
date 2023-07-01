@@ -140,6 +140,8 @@ public:
                       MachineIRBuilder &B) const;
   bool legalizeFDIV64(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &B) const;
+  bool legalizeFFREXP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                      MachineIRBuilder &B) const;
   bool legalizeFastUnsafeFDIV(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
   bool legalizeFastUnsafeFDIV64(MachineInstr &MI, MachineRegisterInfo &MRI,

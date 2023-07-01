@@ -74,9 +74,17 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     std::optional<std::pair<hlfir::ApplyOp, hlfir::DestroyOp>> maybeTuple =
         getTwoUses(elemental);
-    if (!maybeTuple) {
-      return rewriter.notifyMatchFailure(elemental.getLoc(),
-                                         [](mlir::Diagnostic &) {});
+    if (!maybeTuple)
+      return rewriter.notifyMatchFailure(
+          elemental, "hlfir.elemental does not have two uses");
+
+    if (elemental.isOrdered()) {
+      // We can only inline the ordered elemental into a loop-like
+      // construct that processes the indices in-order and does not
+      // have the side effects itself. Adhere to conservative behavior
+      // for the time being.
+      return rewriter.notifyMatchFailure(elemental,
+                                         "hlfir.elemental is ordered");
     }
     auto [apply, destroy] = *maybeTuple;
 

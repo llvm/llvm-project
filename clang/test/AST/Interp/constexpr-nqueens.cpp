@@ -48,7 +48,7 @@ constexpr Board tryBoard(const Board &Try,
 constexpr Board buildBoardScan(int N, int Col, int Row, const Board &B) {
   return Row == N ? Board(0, true) :
          B.ok(Row, Col) ?
-         tryBoard(buildBoardRecurse(N, Col + 1, B.addQueen(Row, Col)), // ref-note {{in call to '&Board()->addQueen(0, 0)}} \
+         tryBoard(buildBoardRecurse(N, Col + 1, B.addQueen(Row, Col)), // ref-note {{in call to 'B.addQueen(0, 0)}} \
                                                                        // expected-note {{in call to '&Board()->addQueen(0, 0)}}
                   N, Col, Row+1, B) :
          buildBoardScan(N, Col, Row + 1, B);

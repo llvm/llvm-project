@@ -118,6 +118,13 @@ subroutine acc_parallel
 !CHECK:        acc.yield
 !CHECK-NEXT: }{{$}}
 
+  !$acc parallel num_gangs(1, 1, 1)
+  !$acc end parallel
+
+!CHECK:      acc.parallel num_gangs(%{{.*}}, %{{.*}}, %{{.*}} : i32, i32, i32) {
+!CHECK:        acc.yield
+!CHECK-NEXT: }{{$}}
+
   !$acc parallel num_workers(10)
   !$acc end parallel
 
@@ -321,5 +328,17 @@ subroutine acc_parallel
 ! CHECK:      acc.parallel reduction(@reduction_add_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_i32 -> %{{.*}} : !fir.ref<i32>) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
+
+!$acc parallel default(none)
+!$acc end parallel
+
+! CHECK: acc.parallel {
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+!$acc parallel default(present)
+!$acc end parallel
+
+! CHECK: acc.parallel {
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue present>}
 
 end subroutine acc_parallel
