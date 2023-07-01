@@ -63,12 +63,22 @@ public:
 
   bool IsIntegratedAssemblerDefault() const override { return true; }
 
+  void TryAddIncludeFromPath(llvm::SmallString<128> Path,
+                             const llvm::opt::ArgList &DriverArgs,
+                             llvm::opt::ArgStringList &CC1Args) const;
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
+
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
+
   unsigned GetDefaultDwarfVersion() const override { return 4; }
+  CXXStdlibType GetDefaultCXXStdlibType() const override;
 
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
-
-  CXXStdlibType GetDefaultCXXStdlibType() const override;
 
   RuntimeLibType GetDefaultRuntimeLibType() const override;
 

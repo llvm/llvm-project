@@ -68,7 +68,6 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -83,7 +82,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
@@ -2315,16 +2313,11 @@ bool ASTUnit::Save(StringRef File) {
   if (HadModuleLoaderFatalFailure)
     return true;
 
-  // Write to a temporary file and later rename it to the actual file, to avoid
-  // possible race conditions.
-  SmallString<128> TempPath;
-  TempPath = File;
-  TempPath += "-%%%%%%%%";
   // FIXME: Can we somehow regenerate the stat cache here, or do we need to
   // unconditionally create a stat cache when we parse the file?
 
-  if (llvm::Error Err = llvm::writeFileAtomically(
-          TempPath, File, [this](llvm::raw_ostream &Out) {
+  if (llvm::Error Err = llvm::writeToOutput(
+          File, [this](llvm::raw_ostream &Out) {
             return serialize(Out) ? llvm::make_error<llvm::StringError>(
                                         "ASTUnit serialization failed",
                                         llvm::inconvertibleErrorCode())

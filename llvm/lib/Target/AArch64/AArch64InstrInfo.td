@@ -4443,6 +4443,33 @@ defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", any_fmul>;
 }
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", any_fsub>;
 
+multiclass FMULScalarFromIndexedLane0Patterns<string inst,
+                                              string inst_f16_suffix,
+                                              string inst_f32_suffix,
+                                              string inst_f64_suffix,
+                                              SDPatternOperator OpNode,
+                                              list<Predicate> preds = []> {
+  let Predicates = !listconcat(preds, [HasFullFP16]) in {
+  def : Pat<(f16 (OpNode (f16 FPR16:$Rn),
+                         (f16 (vector_extract (v8f16 V128:$Rm), (i64 0))))),
+            (!cast<Instruction>(inst # inst_f16_suffix)
+              FPR16:$Rn, (EXTRACT_SUBREG V128:$Rm, hsub))>;
+  }
+  let Predicates = preds in {
+  def : Pat<(f32 (OpNode (f32 FPR32:$Rn),
+                         (f32 (vector_extract (v4f32 V128:$Rm), (i64 0))))),
+            (!cast<Instruction>(inst # inst_f32_suffix)
+              FPR32:$Rn, (EXTRACT_SUBREG V128:$Rm, ssub))>;
+  def : Pat<(f64 (OpNode (f64 FPR64:$Rn),
+                         (f64 (vector_extract (v2f64 V128:$Rm), (i64 0))))),
+            (!cast<Instruction>(inst # inst_f64_suffix)
+              FPR64:$Rn, (EXTRACT_SUBREG V128:$Rm, dsub))>;
+  }
+}
+
+defm : FMULScalarFromIndexedLane0Patterns<"FMUL", "Hrr", "Srr", "Drr",
+                                          any_fmul>;
+
 // Match reassociated forms of FNMUL.
 def : Pat<(fmul (fneg FPR16:$a), (f16 FPR16:$b)),
           (FNMULHrr FPR16:$a, FPR16:$b)>,
@@ -5247,6 +5274,10 @@ let Predicates = [HasRDM] in {
                                             (i32 FPR32:$Rm))),
             (SQRDMLSHv1i32 FPR32:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 }
+
+defm : FMULScalarFromIndexedLane0Patterns<"FMULX", "16", "32", "64",
+                                          int_aarch64_neon_fmulx,
+                                          [HasNEONorSME]>;
 
 def : InstAlias<"cmls $dst, $src1, $src2",
                 (CMHSv1i64 FPR64:$dst, FPR64:$src2, FPR64:$src1), 0>;

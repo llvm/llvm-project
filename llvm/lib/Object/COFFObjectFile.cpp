@@ -753,6 +753,54 @@ Error COFFObjectFile::initLoadConfigPtr() {
     return E;
 
   LoadConfig = (const void *)IntPtr;
+
+  if (is64()) {
+    auto Config = getLoadConfig64();
+    if (Config->Size >=
+            offsetof(coff_load_configuration64, CHPEMetadataPointer) +
+                sizeof(Config->CHPEMetadataPointer) &&
+        Config->CHPEMetadataPointer) {
+      uint64_t ChpeOff = Config->CHPEMetadataPointer;
+      if (Error E =
+              getRvaPtr(ChpeOff - getImageBase(), IntPtr, "CHPE metadata"))
+        return E;
+      if (Error E = checkOffset(Data, IntPtr, sizeof(CHPEMetadata)))
+        return E;
+
+      CHPEMetadata = reinterpret_cast<const chpe_metadata *>(IntPtr);
+
+      // Validate CHPE metadata
+      if (CHPEMetadata->CodeMapCount) {
+        if (Error E = getRvaPtr(CHPEMetadata->CodeMap, IntPtr, "CHPE code map"))
+          return E;
+        if (Error E = checkOffset(Data, IntPtr,
+                                  CHPEMetadata->CodeMapCount *
+                                      sizeof(chpe_range_entry)))
+          return E;
+      }
+
+      if (CHPEMetadata->CodeRangesToEntryPointsCount) {
+        if (Error E = getRvaPtr(CHPEMetadata->CodeRangesToEntryPoints, IntPtr,
+                                "CHPE entry point ranges"))
+          return E;
+        if (Error E = checkOffset(Data, IntPtr,
+                                  CHPEMetadata->CodeRangesToEntryPointsCount *
+                                      sizeof(chpe_code_range_entry)))
+          return E;
+      }
+
+      if (CHPEMetadata->RedirectionMetadataCount) {
+        if (Error E = getRvaPtr(CHPEMetadata->RedirectionMetadata, IntPtr,
+                                "CHPE redirection metadata"))
+          return E;
+        if (Error E = checkOffset(Data, IntPtr,
+                                  CHPEMetadata->RedirectionMetadataCount *
+                                      sizeof(chpe_redirection_entry)))
+          return E;
+      }
+    }
+  }
+
   return Error::success();
 }
 

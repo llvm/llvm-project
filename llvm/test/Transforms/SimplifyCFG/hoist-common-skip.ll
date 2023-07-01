@@ -107,14 +107,6 @@ define void @f3(i1 %c, ptr nocapture noundef %d, ptr nocapture noundef readonly 
 ; CHECK-NEXT:    [[ADD_0:%.*]] = add nsw i16 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[M:%.*]], align 2
 ; CHECK-NEXT:    [[U:%.*]] = add i16 [[ADD_0]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    call void @no_side_effects0()
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    call void @no_side_effects1()
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
 ; CHECK-NEXT:    store i16 [[U]], ptr [[D:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
@@ -237,14 +229,6 @@ define void @f6(i1 %c, ptr nocapture noundef %d, ptr nocapture noundef readonly 
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[B:%.*]], align 2
 ; CHECK-NEXT:    [[DIV_0:%.*]] = sdiv i16 211, [[TMP0]]
 ; CHECK-NEXT:    [[U:%.*]] = add i16 [[DIV_0]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    call void @no_side_effects0()
-; CHECK-NEXT:    br label [[IF_END:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    call void @no_side_effects1()
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
 ; CHECK-NEXT:    store i16 [[U]], ptr [[D:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;

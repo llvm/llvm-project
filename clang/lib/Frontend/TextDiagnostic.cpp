@@ -1160,16 +1160,20 @@ void TextDiagnostic::emitSnippetAndCaret(
   // Find the set of lines to include.
   const unsigned MaxLines = DiagOpts->SnippetLineLimit;
   std::pair<unsigned, unsigned> Lines = {CaretLineNo, CaretLineNo};
+  unsigned DisplayLineNo =
+      Ranges.empty() ? Loc.getPresumedLoc().getLine() : ~0u;
   for (const auto &I : Ranges) {
     if (auto OptionalRange = findLinesForRange(I, FID, SM))
       Lines = maybeAddRange(Lines, *OptionalRange, MaxLines);
+
+    DisplayLineNo =
+        std::min(DisplayLineNo, SM.getPresumedLineNumber(I.getBegin()));
   }
 
   // Our line numbers look like:
   // " [number] | "
   // Where [number] is MaxLineNoDisplayWidth columns
   // and the full thing is therefore MaxLineNoDisplayWidth + 4 columns.
-  unsigned DisplayLineNo = Loc.getPresumedLoc().getLine();
   unsigned MaxLineNoDisplayWidth =
       DiagOpts->ShowLineNumbers
           ? std::max(4u, getNumDisplayWidth(DisplayLineNo + MaxLines))

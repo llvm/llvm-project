@@ -133,11 +133,7 @@ join:
 define void @empty_block_with_assume(i1 %c, i32 %x) {
 ; CHECK-LABEL: @empty_block_with_assume(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
-; CHECK:       if:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[JOIN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    br label [[JOIN]]

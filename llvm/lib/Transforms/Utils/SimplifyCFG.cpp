@@ -2660,7 +2660,13 @@ public:
     return false;
   }
 
+  bool empty() const { return EphValues.empty(); }
+
   bool contains(const Instruction *I) const { return EphValues.contains(I); }
+
+  const SmallPtrSetImpl<const Instruction *> &getEphemeralValues() const {
+    return EphValues;
+  }
 };
 } // namespace
 
@@ -6929,6 +6935,22 @@ bool SimplifyCFGOpt::simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder) {
                                    : simplifyCondBranch(Branch, Builder);
 }
 
+static bool isMostlyEmptyBlock(EphemeralValueTracker &EphTracker,
+                               BasicBlock *BB) {
+  for (Instruction &I : reverse(drop_end(BB->instructionsWithoutDebug()))) {
+    // Block can contain phi nodes for this transform.
+    if (isa<PHINode>(I))
+      return true;
+    // Removing EH pads requires additional transforms, even if unused.
+    if (I.isEHPad())
+      return false;
+    if (EphTracker.track(&I))
+      continue;
+    return false;
+  }
+  return true;
+}
+
 bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
                                           IRBuilder<> &Builder) {
   BasicBlock *BB = BI->getParent();
@@ -6945,13 +6967,21 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
       Options.NeedCanonicalLoop &&
       (!LoopHeaders.empty() && BB->hasNPredecessorsOrMore(2) &&
        (is_contained(LoopHeaders, BB) || is_contained(LoopHeaders, Succ)));
-  BasicBlock::iterator I = BB->getFirstNonPHIOrDbg(true)->getIterator();
-  if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
-      !NeedCanonicalLoop && TryToSimplifyUncondBranchFromEmptyBlock(BB, DTU))
-    return true;
+  if (!BB->isEntryBlock() && !NeedCanonicalLoop) {
+    EphemeralValueTracker EphTracker;
+    // If there are ephemeral values and we have a single predecessor, let
+    // MergeBlockIntoPredecessor() handle it, as it does not need to drop the
+    // ephemeral values.
+    if (isMostlyEmptyBlock(EphTracker, BB) &&
+        (EphTracker.empty() || !Succ->getSinglePredecessor()) &&
+        TryToSimplifyUncondBranchFromEmptyBlock(
+            BB, DTU, &EphTracker.getEphemeralValues()))
+      return true;
+  }
 
   // If the only instruction in the block is a seteq/setne comparison against a
   // constant, try to simplify the block.
+  BasicBlock::iterator I = BB->getFirstNonPHIOrDbg(true)->getIterator();
   if (ICmpInst *ICI = dyn_cast<ICmpInst>(I))
     if (ICI->isEquality() && isa<ConstantInt>(ICI->getOperand(1))) {
       for (++I; isa<DbgInfoIntrinsic>(I); ++I)
