@@ -366,6 +366,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "Error in cuCtxSetCurrent: %s");
   }
 
+  /// We want to set up the RPC server for host services to the GPU if it is
+  /// availible.
+  bool shouldSetupRPCServer() const override {
+    return libomptargetSupportsRPC();
+  }
+
   /// Get the stream of the asynchronous info sructure or get a new one.
   CUstream getStream(AsyncInfoWrapperTy &AsyncInfoWrapper) {
     CUstream &Stream = AsyncInfoWrapper.getQueueAs<CUstream>();
@@ -464,7 +470,18 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// Synchronize current thread with the pending operations on the async info.
   Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
     CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo.Queue);
-    CUresult Res = cuStreamSynchronize(Stream);
+    CUresult Res;
+    // If we have an RPC server running on this device we will continuously
+    // query it for work rather than blocking.
+    if (!getRPCHandle()) {
+      Res = cuStreamSynchronize(Stream);
+    } else {
+      do {
+        Res = cuStreamQuery(Stream);
+        if (auto Err = getRPCHandle()->runServer())
+          return Err;
+      } while (Res == CUDA_ERROR_NOT_READY);
+    }
 
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its

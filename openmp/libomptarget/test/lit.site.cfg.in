@@ -22,6 +22,7 @@ config.libomptarget_not = "@OPENMP_NOT_EXECUTABLE@"
 config.libomptarget_debug = @LIBOMPTARGET_DEBUG@
 config.has_libomptarget_ompt = @LIBOMPTARGET_OMPT_SUPPORT@
 config.llvm_enabled_projects = "@LLVM_ENABLE_PROJECTS@".split(";")
+config.libomptarget_has_libc = "@LIBOMPTARGET_GPU_LIBC_SUPPORT@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
