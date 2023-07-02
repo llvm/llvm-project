@@ -42,7 +42,7 @@ define i32 @test(ptr %X) {
 ;
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@test
-; TUNIT-SAME: (ptr nocapture nofree readonly [[X:%.*]]) #[[ATTR0]] {
+; TUNIT-SAME: (ptr nocapture nofree nonnull readonly [[X:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
 ; TUNIT-NEXT:    store i32 1, ptr [[S]], align 8

@@ -2331,7 +2331,7 @@ define internal void @call_via_pointer_with_dead_args_internal_a(ptr %a, ptr %b,
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
 ; CGSCC-SAME: (ptr [[A:%.*]], ptr noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
-; CGSCC-NEXT:    call void @called_via_pointer(ptr [[A]], ptr nofree [[B]], ptr nofree [[A]], i64 -1, ptr nofree null)
+; CGSCC-NEXT:    call void @called_via_pointer(ptr [[A]], ptr nofree nonnull [[B]], ptr nofree [[A]], i64 -1, ptr nofree null)
 ; CGSCC-NEXT:    ret void
 ;
   call void %fp(ptr %a, ptr %b, ptr %a, i64 -1, ptr null)
@@ -2352,29 +2352,17 @@ define internal void @call_via_pointer_with_dead_args_internal_b(ptr %a, ptr %b,
   ret void
 }
 define void @call_via_pointer_with_dead_args_caller(ptr %a, ptr %b) {
-; TUNIT-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_caller
-; TUNIT-SAME: (ptr [[A:%.*]], ptr [[B:%.*]]) {
-; TUNIT-NEXT:    [[PTR1:%.*]] = alloca i32, align 128
-; TUNIT-NEXT:    [[PTR2:%.*]] = alloca i32, align 128
-; TUNIT-NEXT:    [[PTR3:%.*]] = alloca i32, align 128
-; TUNIT-NEXT:    [[PTR4:%.*]] = alloca i32, align 128
-; TUNIT-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR1]], ptr nocapture nofree noundef @called_via_pointer)
-; TUNIT-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR2]], ptr nocapture nofree noundef @called_via_pointer_internal_1)
-; TUNIT-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(ptr [[B]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR3]])
-; TUNIT-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(ptr [[B]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR4]])
-; TUNIT-NEXT:    ret void
-;
-; CGSCC-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_caller
-; CGSCC-SAME: (ptr [[A:%.*]], ptr [[B:%.*]]) {
-; CGSCC-NEXT:    [[PTR1:%.*]] = alloca i32, align 128
-; CGSCC-NEXT:    [[PTR2:%.*]] = alloca i32, align 128
-; CGSCC-NEXT:    [[PTR3:%.*]] = alloca i32, align 128
-; CGSCC-NEXT:    [[PTR4:%.*]] = alloca i32, align 128
-; CGSCC-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR1]], ptr nocapture nofree noundef nonnull @called_via_pointer)
-; CGSCC-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR2]], ptr nocapture nofree noundef nonnull @called_via_pointer_internal_1)
-; CGSCC-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(ptr [[B]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR3]])
-; CGSCC-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(ptr [[B]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR4]])
-; CGSCC-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_caller
+; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:    [[PTR1:%.*]] = alloca i32, align 128
+; CHECK-NEXT:    [[PTR2:%.*]] = alloca i32, align 128
+; CHECK-NEXT:    [[PTR3:%.*]] = alloca i32, align 128
+; CHECK-NEXT:    [[PTR4:%.*]] = alloca i32, align 128
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR1]], ptr nocapture nofree noundef nonnull @called_via_pointer)
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR2]], ptr nocapture nofree noundef nonnull @called_via_pointer_internal_1)
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(ptr [[B]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR3]])
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(ptr [[B]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR4]])
+; CHECK-NEXT:    ret void
 ;
   %ptr1 = alloca i32, align 128
   %ptr2 = alloca i32, align 128

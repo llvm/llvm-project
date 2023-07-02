@@ -212,17 +212,10 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AADereferenceable] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state unknown-dereferenceable
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AADereferenceable] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state dereferenceable<4-4>
+; GRAPH-NEXT: [AADereferenceable] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state dereferenceable_or_null<4-4> [non-null is unknown]
 ; GRAPH-NEXT:   updates [AADereferenceable] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state unknown-dereferenceable
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AADereferenceable] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state unknown-dereferenceable
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AANonNull] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state nonnull
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AANonNull] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state nonnull
-; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state nonnull
-; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state nonnull
-; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoAlias] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state may-alias
 ; GRAPH-EMPTY:
@@ -303,8 +296,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node54:0x[a-z0-9]+]] [shape=record,label="{[AADereferenceable]
 ; DOT-DAG: Node[[Node55:0x[a-z0-9]+]] [shape=record,label="{[AADereferenceable]
 ; DOT-DAG: Node[[Node56:0x[a-z0-9]+]] [shape=record,label="{[AADereferenceable]
-; DOT-DAG: Node[[Node57:0x[a-z0-9]+]] [shape=record,label="{[AANonNull]
-; DOT-DAG: Node[[Node58:0x[a-z0-9]+]] [shape=record,label="{[AANonNull]
 ; DOT-DAG: Node[[Node59:0x[a-z0-9]+]] [shape=record,label="{[AAIsDead]
 ; DOT-DAG: Node[[Node60:0x[a-z0-9]+]] [shape=record,label="{[AANoAlias]
 ; DOT-DAG: Node[[Node61:0x[a-z0-9]+]] [shape=record,label="{[AANoCapture]
@@ -323,7 +314,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node74:0x[a-z0-9]+]] [shape=record,label="{[AADereferenceable]
 
 ; DOT-DAG: Node[[Node20]] -> Node[[Node19]];
-; DOT-DAG: Node[[Node58]] -> Node[[Node58]];
 ; DOT-DAG: Node[[Node13]] -> Node[[Node12]];
 ; DOT-DAG: Node[[Node55]] -> Node[[Node56]];
 ; DOT-DAG: Node[[Node68]] -> Node[[Node73]];
@@ -332,7 +322,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node61]] -> Node[[Node64]];
 ; DOT-DAG: Node[[Node12]] -> Node[[Node13]];
 ; DOT-DAG: Node[[Node11]] -> Node[[Node61]];
-; DOT-DAG: Node[[Node58]] -> Node[[Node51]];
 ; DOT-DAG: Node[[Node14]] -> Node[[Node18]];
 ; DOT-DAG: Node[[Node22]] -> Node[[Node21]];
 ; DOT-DAG: Node[[Node43]] -> Node[[Node68]];
@@ -345,7 +334,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node21]] -> Node[[Node61]];
 ; DOT-DAG: Node[[Node67]] -> Node[[Node66]];
 ; DOT-DAG: Node[[Node18]] -> Node[[Node14]];
-; DOT-DAG: Node[[Node58]] -> Node[[Node57]];
 ; DOT-DAG: Node[[Node66]] -> Node[[Node67]];
 ; DOT-DAG: Node[[Node21]] -> Node[[Node47]];
 ; DOT-DAG: Node[[Node44]] -> Node[[Node43]];

@@ -333,10 +333,10 @@ define void @byval_no_fnarg(ptr byval(i8) %written) {
 
 define void @testbyval(ptr %read_only) {
 ; TUNIT-LABEL: define {{[^@]+}}@testbyval
-; TUNIT-SAME: (ptr nocapture readonly [[READ_ONLY:%.*]]) {
-; TUNIT-NEXT:    call void @byval_not_readonly_1(ptr nocapture readonly byval(i8) [[READ_ONLY]]) #[[ATTR2]]
-; TUNIT-NEXT:    call void @byval_not_readnone_1(ptr noalias nocapture readnone byval(i8) [[READ_ONLY]])
-; TUNIT-NEXT:    call void @byval_no_fnarg(ptr nocapture nofree readonly byval(i8) [[READ_ONLY]]) #[[ATTR15:[0-9]+]]
+; TUNIT-SAME: (ptr nocapture nonnull readonly [[READ_ONLY:%.*]]) {
+; TUNIT-NEXT:    call void @byval_not_readonly_1(ptr nocapture nonnull readonly byval(i8) [[READ_ONLY]]) #[[ATTR2]]
+; TUNIT-NEXT:    call void @byval_not_readnone_1(ptr noalias nocapture nonnull readnone byval(i8) [[READ_ONLY]])
+; TUNIT-NEXT:    call void @byval_no_fnarg(ptr nocapture nofree nonnull readonly byval(i8) [[READ_ONLY]]) #[[ATTR15:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@testbyval

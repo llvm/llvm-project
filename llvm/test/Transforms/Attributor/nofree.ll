@@ -72,7 +72,7 @@ define void @free_in_scc2(ptr nocapture %0) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[TMP0]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[REC:%.*]], label [[CALL:%.*]]
 ; CHECK:       call:
-; CHECK-NEXT:    tail call void @free(ptr nocapture [[TMP0]]) #[[ATTR0]]
+; CHECK-NEXT:    tail call void @free(ptr nocapture nonnull [[TMP0]]) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       rec:
 ; CHECK-NEXT:    tail call void @free_in_scc1(ptr nocapture [[TMP0]]) #[[ATTR0]]
