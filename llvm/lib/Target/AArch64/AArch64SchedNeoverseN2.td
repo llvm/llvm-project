@@ -612,8 +612,8 @@ def N2Write_11cyc_9L01_9S_9V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
 //===----------------------------------------------------------------------===//
 // Define types for arithmetic and logical ops with short shifts
 def N2Write_Arith : SchedWriteVariant<[
-                      SchedVar<NeoverseCheapLSL, [N2Write_1cyc_1I]>,
-                      SchedVar<NoSchedPred,      [N2Write_2cyc_1M]>]>;
+                      SchedVar<IsCheapLSL,  [N2Write_1cyc_1I]>,
+                      SchedVar<NoSchedPred, [N2Write_2cyc_1M]>]>;
 
 def N2Write_Logical: SchedWriteVariant<[
                        SchedVar<NeoverseNoLSL, [N2Write_1cyc_1I]>,

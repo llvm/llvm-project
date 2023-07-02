@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// OpenACC 3.1 structure validity check list
+// OpenACC 3.3 structure validity check list
 //    1. invalid clauses on directive
 //    2. invalid repeated clauses on directive
 //    3. invalid nesting of regions

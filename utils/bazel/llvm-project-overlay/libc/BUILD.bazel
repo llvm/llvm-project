@@ -256,7 +256,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_cpp_type_traits",
     hdrs = ["src/__support/CPP/type_traits.h"],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_macros_attributes",
+        ":libc_root",
+    ],
 )
 
 libc_support_library(

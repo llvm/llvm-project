@@ -10675,7 +10675,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
           SuppressUserConversions,
           /*PartialOverloading=*/false, AllowExplicit, ADLCallKind::NotADL,
-          /*PO=*/{}, /*AggregateCandidateDeduction=*/true);
+          /*PO=*/{}, AllowAggregateDeductionCandidate);
     } else {
       AddOverloadCandidate(GD, FoundDecl, Inits, Candidates,
                            SuppressUserConversions,
@@ -10772,7 +10772,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     //   parenthesized expression-list, and there are no deduction-guides for
     //   C, the set contains an additional function template, called the
     //   aggregate deduction candidate, defined as follows.
-    if (!HasAnyDeductionGuide) {
+    if (getLangOpts().CPlusPlus20 && !HasAnyDeductionGuide) {
       if (ListInit && ListInit->getNumInits()) {
         SynthesizeAggrGuide(ListInit);
       } else if (PL && PL->getNumExprs()) {

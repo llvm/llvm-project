@@ -13,17 +13,6 @@
 
 // Auxiliary predicates.
 
-// Check for LSL shift <= 4
-def NeoverseCheapLSL : MCSchedPredicate<
-                         CheckAll<
-                           [CheckShiftLSL,
-                            CheckAny<
-                              [CheckShiftBy0,
-                               CheckShiftBy1,
-                               CheckShiftBy2,
-                               CheckShiftBy3,
-                               CheckShiftBy4]>]>>;
-
 // Check for LSL shift == 0
 def NeoverseNoLSL : MCSchedPredicate<
                       CheckAll<[CheckShiftLSL,
@@ -36,11 +25,6 @@ def NeoverseReg3IsZero : MCSchedPredicate<
                               CheckAny<
                                 [CheckRegOperand<3, WZR>,
                                  CheckRegOperand<3, XZR>]>]>>;
-
-// Identify EXTR with one register (alias for ROR immediate)
-def NeoverseOneRegEXTR : MCSchedPredicate<
-                           CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
-                                     CheckSameRegOperand<1, 2>]>>;
 
 // Identify LDR/STR H/Q-form scaled (and potentially extended) FP instructions
 def NeoverseHQForm : MCSchedPredicate<

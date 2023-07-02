@@ -600,30 +600,130 @@ _mm256_blendv_epi8(__m256i __V1, __m256i __V2, __m256i __M)
   ((__m256i)__builtin_ia32_pblendw256((__v16hi)(__m256i)(V1), \
                                       (__v16hi)(__m256i)(V2), (int)(M)))
 
+/// Compares corresponding bytes in the 256-bit integer vectors in \a __a and
+///    \a __b for equality and returns the outcomes in the corresponding
+///    bytes of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 31
+///   j := i*8
+///   result[j+7:j] := (__a[j+7:j] == __b[j+7:j]) ? 0xFF : 0
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPCMPEQB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing one of the inputs.
+/// \param __b
+///    A 256-bit integer vector containing one of the inputs.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cmpeq_epi8(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v32qi)__a == (__v32qi)__b);
 }
 
+/// Compares corresponding elements in the 256-bit vectors of [16 x i16] in
+///    \a __a and \a __b for equality and returns the outcomes in the
+///    corresponding elements of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*16
+///   result[j+15:j] := (__a[j+15:j] == __b[j+15:j]) ? 0xFFFF : 0
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPCMPEQW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the inputs.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the inputs.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cmpeq_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v16hi)__a == (__v16hi)__b);
 }
 
+/// Compares corresponding elements in the 256-bit vectors of [8 x i32] in
+///    \a __a and \a __b for equality and returns the outcomes in the
+///    corresponding elements of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*32
+///   result[j+31:j] := (__a[j+31:j] == __b[j+31:j]) ? 0xFFFFFFFF : 0
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPCMPEQD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing one of the inputs.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing one of the inputs.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cmpeq_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v8si)__a == (__v8si)__b);
 }
 
+/// Compares corresponding elements in the 256-bit vectors of [4 x i64] in
+///    \a __a and \a __b for equality and returns the outcomes in the
+///    corresponding elements of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*64
+///   result[j+63:j] := (__a[j+63:j] == __b[j+63:j]) ? 0xFFFFFFFFFFFFFFFF : 0
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPCMPEQQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] containing one of the inputs.
+/// \param __b
+///    A 256-bit vector of [4 x i64] containing one of the inputs.
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cmpeq_epi64(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v4di)__a == (__v4di)__b);
 }
 
+/// Compares corresponding signed bytes in the 256-bit integer vectors in
+///    \a __a and \a __b for greater-than and returns the outcomes in the
+///    corresponding bytes of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 31
+///   j := i*8
+///   result[j+7:j] := (__a[j+7:j] > __b[j+7:j]) ? 0xFF : 0
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPCMPGTB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing one of the inputs.
+/// \param __b
+///    A 256-bit integer vector containing one of the inputs.
+/// \returns A 256-bit integer vector containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cmpgt_epi8(__m256i __a, __m256i __b)
 {
@@ -632,18 +732,78 @@ _mm256_cmpgt_epi8(__m256i __a, __m256i __b)
   return (__m256i)((__v32qs)__a > (__v32qs)__b);
 }
 
+/// Compares corresponding signed elements in the 256-bit vectors of
+///    [16 x i16] in \a __a and \a __b for greater-than and returns the
+///    outcomes in the corresponding elements of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*16
+///   result[j+15:j] := (__a[j+15:j] > __b[j+15:j]) ? 0xFFFF : 0
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPCMPGTW instruction.
+///
+/// \param __a
+///    A 256-bit vector of [16 x i16] containing one of the inputs.
+/// \param __b
+///    A 256-bit vector of [16 x i16] containing one of the inputs.
+/// \returns A 256-bit vector of [16 x i16] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cmpgt_epi16(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v16hi)__a > (__v16hi)__b);
 }
 
+/// Compares corresponding signed elements in the 256-bit vectors of
+///    [8 x i32] in \a __a and \a __b for greater-than and returns the
+///    outcomes in the corresponding elements of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*32
+///   result[j+31:j] := (__a[j+31:j] > __b[j+31:j]) ? 0xFFFFFFFF : 0
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPCMPGTD instruction.
+///
+/// \param __a
+///    A 256-bit vector of [8 x i32] containing one of the inputs.
+/// \param __b
+///    A 256-bit vector of [8 x i32] containing one of the inputs.
+/// \returns A 256-bit vector of [8 x i32] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cmpgt_epi32(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v8si)__a > (__v8si)__b);
 }
 
+/// Compares corresponding signed elements in the 256-bit vectors of
+///    [4 x i64] in \a __a and \a __b for greater-than and returns the
+///    outcomes in the corresponding elements of the 256-bit result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*64
+///   result[j+63:j] := (__a[j+63:j] > __b[j+63:j]) ? 0xFFFFFFFFFFFFFFFF : 0
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPCMPGTQ instruction.
+///
+/// \param __a
+///    A 256-bit vector of [4 x i64] containing one of the inputs.
+/// \param __b
+///    A 256-bit vector of [4 x i64] containing one of the inputs.
+/// \returns A 256-bit vector of [4 x i64] containing the result.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cmpgt_epi64(__m256i __a, __m256i __b)
 {
@@ -1153,6 +1313,26 @@ _mm256_movemask_epi8(__m256i __a)
   return __builtin_ia32_pmovmskb256((__v32qi)__a);
 }
 
+/// Sign-extends bytes from the 128-bit integer vector in \a __V and returns
+///    the 16-bit values in the corresponding elements of a 256-bit vector
+///    of [16 x i16].
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*8
+///   k := i*16
+///   result[k+15:k] := SignExtend(__V[j+7:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVSXBW instruction.
+///
+/// \param __V
+///    A 128-bit integer vector containing the source bytes.
+/// \returns A 256-bit vector of [16 x i16] containing the sign-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepi8_epi16(__m128i __V)
 {
@@ -1161,6 +1341,26 @@ _mm256_cvtepi8_epi16(__m128i __V)
   return (__m256i)__builtin_convertvector((__v16qs)__V, __v16hi);
 }
 
+/// Sign-extends bytes from the lower half of the 128-bit integer vector in
+///    \a __V and returns the 32-bit values in the corresponding elements of a
+///    256-bit vector of [8 x i32].
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*8
+///   k := i*32
+///   result[k+31:k] := SignExtend(__V[j+7:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVSXBD instruction.
+///
+/// \param __V
+///    A 128-bit integer vector containing the source bytes.
+/// \returns A 256-bit vector of [8 x i32] containing the sign-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepi8_epi32(__m128i __V)
 {
@@ -1169,6 +1369,25 @@ _mm256_cvtepi8_epi32(__m128i __V)
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qs)__V, (__v16qs)__V, 0, 1, 2, 3, 4, 5, 6, 7), __v8si);
 }
 
+/// Sign-extends the first four bytes from the 128-bit integer vector in
+///    \a __V and returns the 64-bit values in the corresponding elements of a
+///    256-bit vector of [4 x i64].
+///
+/// \code{.operation}
+/// result[63:0] := SignExtend(__V[7:0])
+/// result[127:64] := SignExtend(__V[15:8])
+/// result[191:128] := SignExtend(__V[23:16])
+/// result[255:192] := SignExtend(__V[31:24])
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVSXBQ instruction.
+///
+/// \param __V
+///    A 128-bit integer vector containing the source bytes.
+/// \returns A 256-bit vector of [4 x i64] containing the sign-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepi8_epi64(__m128i __V)
 {
@@ -1177,54 +1396,229 @@ _mm256_cvtepi8_epi64(__m128i __V)
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qs)__V, (__v16qs)__V, 0, 1, 2, 3), __v4di);
 }
 
+/// Sign-extends 16-bit elements from the 128-bit vector of [8 x i16] in
+///    \a __V and returns the 32-bit values in the corresponding elements of a
+///    256-bit vector of [8 x i32].
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*16
+///   k := i*32
+///   result[k+31:k] := SignExtend(__V[j+15:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVSXWD instruction.
+///
+/// \param __V
+///    A 128-bit vector of [8 x i16] containing the source values.
+/// \returns A 256-bit vector of [8 x i32] containing the sign-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepi16_epi32(__m128i __V)
 {
   return (__m256i)__builtin_convertvector((__v8hi)__V, __v8si);
 }
 
+/// Sign-extends 16-bit elements from the lower half of the 128-bit vector of
+///    [8 x i16] in \a __V and returns the 64-bit values in the corresponding
+///    elements of a 256-bit vector of [4 x i64].
+///
+/// \code{.operation}
+/// result[63:0] := SignExtend(__V[15:0])
+/// result[127:64] := SignExtend(__V[31:16])
+/// result[191:128] := SignExtend(__V[47:32])
+/// result[255:192] := SignExtend(__V[64:48])
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVSXWQ instruction.
+///
+/// \param __V
+///    A 128-bit vector of [8 x i16] containing the source values.
+/// \returns A 256-bit vector of [4 x i64] containing the sign-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepi16_epi64(__m128i __V)
 {
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v8hi)__V, (__v8hi)__V, 0, 1, 2, 3), __v4di);
 }
 
+/// Sign-extends 32-bit elements from the 128-bit vector of [4 x i32] in
+///    \a __V and returns the 64-bit values in the corresponding elements of a
+///    256-bit vector of [4 x i64].
+///
+/// \code{.operation}
+/// result[63:0] := SignExtend(__V[31:0])
+/// result[127:64] := SignExtend(__V[63:32])
+/// result[191:128] := SignExtend(__V[95:64])
+/// result[255:192] := SignExtend(__V[127:96])
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVSXDQ instruction.
+///
+/// \param __V
+///    A 128-bit vector of [4 x i32] containing the source values.
+/// \returns A 256-bit vector of [4 x i64] containing the sign-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepi32_epi64(__m128i __V)
 {
   return (__m256i)__builtin_convertvector((__v4si)__V, __v4di);
 }
 
+/// Zero-extends bytes from the 128-bit integer vector in \a __V and returns
+///    the 16-bit values in the corresponding elements of a 256-bit vector
+///    of [16 x i16].
+///
+/// \code{.operation}
+/// FOR i := 0 TO 15
+///   j := i*8
+///   k := i*16
+///   result[k+15:k] := ZeroExtend(__V[j+7:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVZXBW instruction.
+///
+/// \param __V
+///    A 128-bit integer vector containing the source bytes.
+/// \returns A 256-bit vector of [16 x i16] containing the zero-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepu8_epi16(__m128i __V)
 {
   return (__m256i)__builtin_convertvector((__v16qu)__V, __v16hi);
 }
 
+/// Zero-extends bytes from the lower half of the 128-bit integer vector in
+///    \a __V and returns the 32-bit values in the corresponding elements of a
+///    256-bit vector of [8 x i32].
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*8
+///   k := i*32
+///   result[k+31:k] := ZeroExtend(__V[j+7:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVZXBD instruction.
+///
+/// \param __V
+///    A 128-bit integer vector containing the source bytes.
+/// \returns A 256-bit vector of [8 x i32] containing the zero-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepu8_epi32(__m128i __V)
 {
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3, 4, 5, 6, 7), __v8si);
 }
 
+/// Zero-extends the first four bytes from the 128-bit integer vector in
+///    \a __V and returns the 64-bit values in the corresponding elements of a
+///    256-bit vector of [4 x i64].
+///
+/// \code{.operation}
+/// result[63:0] := ZeroExtend(__V[7:0])
+/// result[127:64] := ZeroExtend(__V[15:8])
+/// result[191:128] := ZeroExtend(__V[23:16])
+/// result[255:192] := ZeroExtend(__V[31:24])
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVZXBQ instruction.
+///
+/// \param __V
+///    A 128-bit integer vector containing the source bytes.
+/// \returns A 256-bit vector of [4 x i64] containing the zero-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepu8_epi64(__m128i __V)
 {
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v16qu)__V, (__v16qu)__V, 0, 1, 2, 3), __v4di);
 }
 
+/// Zero-extends 16-bit elements from the 128-bit vector of [8 x i16] in
+///    \a __V and returns the 32-bit values in the corresponding elements of a
+///    256-bit vector of [8 x i32].
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*16
+///   k := i*32
+///   result[k+31:k] := ZeroExtend(__V[j+15:j])
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVZXWD instruction.
+///
+/// \param __V
+///    A 128-bit vector of [8 x i16] containing the source values.
+/// \returns A 256-bit vector of [8 x i32] containing the zero-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepu16_epi32(__m128i __V)
 {
   return (__m256i)__builtin_convertvector((__v8hu)__V, __v8si);
 }
 
+/// Zero-extends 16-bit elements from the lower half of the 128-bit vector of
+///    [8 x i16] in \a __V and returns the 64-bit values in the corresponding
+///    elements of a 256-bit vector of [4 x i64].
+///
+/// \code{.operation}
+/// result[63:0] := ZeroExtend(__V[15:0])
+/// result[127:64] := ZeroExtend(__V[31:16])
+/// result[191:128] := ZeroExtend(__V[47:32])
+/// result[255:192] := ZeroExtend(__V[64:48])
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVSXWQ instruction.
+///
+/// \param __V
+///    A 128-bit vector of [8 x i16] containing the source values.
+/// \returns A 256-bit vector of [4 x i64] containing the zero-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepu16_epi64(__m128i __V)
 {
   return (__m256i)__builtin_convertvector(__builtin_shufflevector((__v8hu)__V, (__v8hu)__V, 0, 1, 2, 3), __v4di);
 }
 
+/// Zero-extends 32-bit elements from the 128-bit vector of [4 x i32] in
+///    \a __V and returns the 64-bit values in the corresponding elements of a
+///    256-bit vector of [4 x i64].
+///
+/// \code{.operation}
+/// result[63:0] := ZeroExtend(__V[31:0])
+/// result[127:64] := ZeroExtend(__V[63:32])
+/// result[191:128] := ZeroExtend(__V[95:64])
+/// result[255:192] := ZeroExtend(__V[127:96])
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVZXDQ instruction.
+///
+/// \param __V
+///    A 128-bit vector of [4 x i32] containing the source values.
+/// \returns A 256-bit vector of [4 x i64] containing the zero-extended
+///    values.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_cvtepu32_epi64(__m128i __V)
 {
@@ -2556,6 +2950,17 @@ _mm256_xor_si256(__m256i __a, __m256i __b)
   return (__m256i)((__v4du)__a ^ (__v4du)__b);
 }
 
+/// Loads the 256-bit integer vector from memory \a __V using a non-temporal
+///   memory hint and returns the vector. \a __V must be aligned on a 32-byte
+///   boundary.
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VMOVNTDQA instruction.
+///
+/// \param __V
+///    A pointer to the 32-byte aligned memory containing the vector to load.
+/// \returns A 256-bit integer vector loaded from memory.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_stream_load_si256(__m256i const *__V)
 {
@@ -3057,48 +3462,248 @@ _mm256_permutevar8x32_ps(__m256 __a, __m256i __b)
   ((__m256i)__builtin_ia32_insert128i256((__v4di)(__m256i)(V1), \
                                          (__v2di)(__m128i)(V2), (int)(M)))
 
+/// Conditionally loads eight 32-bit integer elements from memory \a __X, if
+///    the most significant bit of the corresponding element in the mask
+///    \a __M is set; otherwise, sets that element of the result to zero.
+///    Returns the 256-bit [8 x i32] result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*32
+///   IF __M[j+31] == 1
+///     result[j+31:j] := Load32(__X+(i*4))
+///   ELSE
+///     result[j+31:j] := 0
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMASKMOVD instruction.
+///
+/// \param __X
+///    A pointer to the memory used for loading values.
+/// \param __M
+///    A 256-bit vector of [8 x i32] containing the mask bits.
+/// \returns A 256-bit vector of [8 x i32] containing the loaded or zeroed
+///    elements.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_maskload_epi32(int const *__X, __m256i __M)
 {
   return (__m256i)__builtin_ia32_maskloadd256((const __v8si *)__X, (__v8si)__M);
 }
 
+/// Conditionally loads four 64-bit integer elements from memory \a __X, if
+///    the most significant bit of the corresponding element in the mask
+///    \a __M is set; otherwise, sets that element of the result to zero.
+///    Returns the 256-bit [4 x i64] result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*64
+///   IF __M[j+63] == 1
+///     result[j+63:j] := Load64(__X+(i*8))
+///   ELSE
+///     result[j+63:j] := 0
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMASKMOVQ instruction.
+///
+/// \param __X
+///    A pointer to the memory used for loading values.
+/// \param __M
+///    A 256-bit vector of [4 x i64] containing the mask bits.
+/// \returns A 256-bit vector of [4 x i64] containing the loaded or zeroed
+///    elements.
 static __inline__ __m256i __DEFAULT_FN_ATTRS256
 _mm256_maskload_epi64(long long const *__X, __m256i __M)
 {
   return (__m256i)__builtin_ia32_maskloadq256((const __v4di *)__X, (__v4di)__M);
 }
 
+/// Conditionally loads four 32-bit integer elements from memory \a __X, if
+///    the most significant bit of the corresponding element in the mask
+///    \a __M is set; otherwise, sets that element of the result to zero.
+///    Returns the 128-bit [4 x i32] result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*32
+///   IF __M[j+31] == 1
+///     result[j+31:j] := Load32(__X+(i*4))
+///   ELSE
+///     result[j+31:j] := 0
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMASKMOVD instruction.
+///
+/// \param __X
+///    A pointer to the memory used for loading values.
+/// \param __M
+///    A 128-bit vector of [4 x i32] containing the mask bits.
+/// \returns A 128-bit vector of [4 x i32] containing the loaded or zeroed
+///    elements.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskload_epi32(int const *__X, __m128i __M)
 {
   return (__m128i)__builtin_ia32_maskloadd((const __v4si *)__X, (__v4si)__M);
 }
 
+/// Conditionally loads two 64-bit integer elements from memory \a __X, if
+///    the most significant bit of the corresponding element in the mask
+///    \a __M is set; otherwise, sets that element of the result to zero.
+///    Returns the 128-bit [2 x i64] result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 1
+///   j := i*64
+///   IF __M[j+63] == 1
+///     result[j+63:j] := Load64(__X+(i*8))
+///   ELSE
+///     result[j+63:j] := 0
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMASKMOVQ instruction.
+///
+/// \param __X
+///    A pointer to the memory used for loading values.
+/// \param __M
+///    A 128-bit vector of [2 x i64] containing the mask bits.
+/// \returns A 128-bit vector of [2 x i64] containing the loaded or zeroed
+///    elements.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskload_epi64(long long const *__X, __m128i __M)
 {
   return (__m128i)__builtin_ia32_maskloadq((const __v2di *)__X, (__v2di)__M);
 }
 
+/// Conditionally stores eight 32-bit integer elements from the 256-bit vector
+///    of [8 x i32] in \a __Y to memory \a __X, if the most significant bit of
+///    the corresponding element in the mask \a __M is set; otherwise, the
+///    memory element is unchanged.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 7
+///   j := i*32
+///   IF __M[j+31] == 1
+///     Store32(__X+(i*4), __Y[j+31:j])
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMASKMOVD instruction.
+///
+/// \param __X
+///    A pointer to the memory used for storing values.
+/// \param __M
+///    A 256-bit vector of [8 x i32] containing the mask bits.
+/// \param __Y
+///    A 256-bit vector of [8 x i32] containing the values to store.
 static __inline__ void __DEFAULT_FN_ATTRS256
 _mm256_maskstore_epi32(int *__X, __m256i __M, __m256i __Y)
 {
   __builtin_ia32_maskstored256((__v8si *)__X, (__v8si)__M, (__v8si)__Y);
 }
 
+/// Conditionally stores four 64-bit integer elements from the 256-bit vector
+///    of [4 x i64] in \a __Y to memory \a __X, if the most significant bit of
+///    the corresponding element in the mask \a __M is set; otherwise, the
+///    memory element is unchanged.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*64
+///   IF __M[j+63] == 1
+///     Store64(__X+(i*8), __Y[j+63:j])
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMASKMOVQ instruction.
+///
+/// \param __X
+///    A pointer to the memory used for storing values.
+/// \param __M
+///    A 256-bit vector of [4 x i64] containing the mask bits.
+/// \param __Y
+///    A 256-bit vector of [4 x i64] containing the values to store.
 static __inline__ void __DEFAULT_FN_ATTRS256
 _mm256_maskstore_epi64(long long *__X, __m256i __M, __m256i __Y)
 {
   __builtin_ia32_maskstoreq256((__v4di *)__X, (__v4di)__M, (__v4di)__Y);
 }
 
+/// Conditionally stores four 32-bit integer elements from the 128-bit vector
+///    of [4 x i32] in \a __Y to memory \a __X, if the most significant bit of
+///    the corresponding element in the mask \a __M is set; otherwise, the
+///    memory element is unchanged.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 3
+///   j := i*32
+///   IF __M[j+31] == 1
+///     Store32(__X+(i*4), __Y[j+31:j])
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMASKMOVD instruction.
+///
+/// \param __X
+///    A pointer to the memory used for storing values.
+/// \param __M
+///    A 128-bit vector of [4 x i32] containing the mask bits.
+/// \param __Y
+///    A 128-bit vector of [4 x i32] containing the values to store.
 static __inline__ void __DEFAULT_FN_ATTRS128
 _mm_maskstore_epi32(int *__X, __m128i __M, __m128i __Y)
 {
   __builtin_ia32_maskstored((__v4si *)__X, (__v4si)__M, (__v4si)__Y);
 }
 
+/// Conditionally stores two 64-bit integer elements from the 128-bit vector
+///    of [2 x i64] in \a __Y to memory \a __X, if the most significant bit of
+///    the corresponding element in the mask \a __M is set; otherwise, the
+///    memory element is unchanged.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 1
+///   j := i*64
+///   IF __M[j+63] == 1
+///     Store64(__X+(i*8), __Y[j+63:j])
+///   FI
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMASKMOVQ instruction.
+///
+/// \param __X
+///    A pointer to the memory used for storing values.
+/// \param __M
+///    A 128-bit vector of [2 x i64] containing the mask bits.
+/// \param __Y
+///    A 128-bit vector of [2 x i64] containing the values to store.
 static __inline__ void __DEFAULT_FN_ATTRS128
 _mm_maskstore_epi64(long long *__X, __m128i __M, __m128i __Y)
 {

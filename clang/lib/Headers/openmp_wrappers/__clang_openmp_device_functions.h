@@ -14,12 +14,12 @@
 #error "This file is for OpenMP compilation only."
 #endif
 
-#pragma omp begin declare variant match(                                       \
-    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#pragma omp begin declare variant match(                                       \
+    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
 
 #define __CUDA__
 #define __OPENMP_NVPTX__
@@ -33,37 +33,19 @@ extern "C" {
 #undef __OPENMP_NVPTX__
 #undef __CUDA__
 
-#ifdef __cplusplus
-} // extern "C"
-#endif
-
 #pragma omp end declare variant
 
 #ifdef __AMDGCN__
-// -fcuda-is-device defines __CUDA_ARCH__
-#undef __CUDA_ARCH__
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-// __NO_INLINE__ prevents some x86 optimized macro definitions in system headers
-#define __NO_INLINE__ 1
-#pragma omp begin declare variant match(                                       \
-    device = {arch(amdgcn)}, implementation = {extension(match_any)})
-
-#ifdef __cplusplus
-#include <cstdint>
-extern "C" {
-#else
+// Import types which will be used by __clang_hip_libdevice_declares.h
+#ifndef __cplusplus
 #include <stdint.h>
 #endif
 
 #define __OPENMP_AMDGCN__
-
-#define __host__ __attribute__((host))
-#define __device__ __attribute__((device))
-#define __global__ __attribute__((global))
-#define __shared__ __attribute__((shared))
-#define __constant__ __attribute__((constant))
-#define __private __attribute__((address_space(5)))
+#pragma push_macro("__device__")
+#define __device__
 
 /// Include declarations for libdevice functions.
 #include <__clang_hip_libdevice_declares.h>
@@ -72,10 +54,12 @@ extern "C" {
 #undef __OPENMP_AMDGCN__
 
 #pragma omp end declare variant
+#endif
 
 #ifdef __cplusplus
 } // extern "C"
 #endif
+
 // Ensure we make `_ZdlPv`, aka. `operator delete(void*)` available without the
 // need to `include <new>` in C++ mode.
 #ifdef __cplusplus
@@ -118,9 +102,4 @@ inline void operator delete[](void *ptr, __SIZE_TYPE__ size) OPENMP_NOEXCEPT {
 #pragma pop_macro("OPENMP_NOEXCEPT")
 #endif
 
-#pragma omp end declare variant
-
-#undef __OPENMP_AMDGCN__
-#endif // __AMDGCN__
-
-#endif // __CLANG_OPENMP_DEVICE_FUNCTIONS_H__
+#endif

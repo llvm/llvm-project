@@ -77,7 +77,7 @@ class CSKYAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
 
   // Helper to actually emit an instruction to the MCStreamer. Also, when
   // possible, compression of the instruction is performed.
@@ -1573,17 +1573,13 @@ OperandMatchResultTy CSKYAsmParser::tryParseRegister(MCRegister &RegNo,
   return MatchOperand_Success;
 }
 
-bool CSKYAsmParser::ParseDirective(AsmToken DirectiveID) {
-  // This returns false if this function recognizes the directive
-  // regardless of whether it is successfully handles or reports an
-  // error. Otherwise it returns true to give the generic parser a
-  // chance at recognizing it.
+ParseStatus CSKYAsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
 
   if (IDVal == ".csky_attribute")
     return parseDirectiveAttribute();
 
-  return true;
+  return ParseStatus::NoMatch;
 }
 
 /// parseDirectiveAttribute
@@ -1597,10 +1593,8 @@ bool CSKYAsmParser::parseDirectiveAttribute() {
     StringRef Name = Parser.getTok().getIdentifier();
     std::optional<unsigned> Ret =
         ELFAttrs::attrTypeFromString(Name, CSKYAttrs::getCSKYAttributeTags());
-    if (!Ret) {
-      Error(TagLoc, "attribute name not recognised: " + Name);
-      return false;
-    }
+    if (!Ret)
+      return Error(TagLoc, "attribute name not recognised: " + Name);
     Tag = *Ret;
     Parser.Lex();
   } else {
@@ -1611,8 +1605,8 @@ bool CSKYAsmParser::parseDirectiveAttribute() {
       return true;
 
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(AttrExpr);
-    if (check(!CE, TagLoc, "expected numeric constant"))
-      return true;
+    if (!CE)
+      return Error(TagLoc, "expected numeric constant");
 
     Tag = CE->getValue();
   }

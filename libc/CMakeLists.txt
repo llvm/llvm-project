@@ -35,6 +35,11 @@ if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR
   # When libc is build as part of the runtimes/bootstrap build's CMake run, we
   # only need to build the host tools to build the libc. So, we just do enough
   # to build libc-hdrgen and return.
+
+  # Always make the RPC server availible to other projects for GPU mode.
+  if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+    add_subdirectory(utils/gpu/server)
+  endif()
   return()
 endif()
 

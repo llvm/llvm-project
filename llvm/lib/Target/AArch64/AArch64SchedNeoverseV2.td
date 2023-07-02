@@ -877,20 +877,20 @@ def V2Write_11cyc_18L01_18S_18V01 : SchedWriteRes<[V2UnitL01, V2UnitL01,
 // Define predicate-controlled types
 
 def V2Write_ArithI : SchedWriteVariant<[
-                       SchedVar<NeoverseCheapLSL, [V2Write_1cyc_1I]>,
-                       SchedVar<NoSchedPred,      [V2Write_2cyc_1M]>]>;
+                       SchedVar<IsCheapLSL,  [V2Write_1cyc_1I]>,
+                       SchedVar<NoSchedPred, [V2Write_2cyc_1M]>]>;
 
 def V2Write_ArithF : SchedWriteVariant<[
-                       SchedVar<NeoverseCheapLSL, [V2Write_1cyc_1F]>,
-                       SchedVar<NoSchedPred,      [V2Write_2cyc_1M]>]>;
+                       SchedVar<IsCheapLSL,  [V2Write_1cyc_1F]>,
+                       SchedVar<NoSchedPred, [V2Write_2cyc_1M]>]>;
 
 def V2Write_Logical : SchedWriteVariant<[
                         SchedVar<NeoverseNoLSL, [V2Write_1cyc_1F]>,
                         SchedVar<NoSchedPred,   [V2Write_2cyc_1M]>]>;
 
 def V2Write_Extr : SchedWriteVariant<[
-                     SchedVar<NeoverseOneRegEXTR,  [V2Write_1cyc_1I]>,
-                     SchedVar<NoSchedPred,         [V2Write_3cyc_1I_1M]>]>;
+                     SchedVar<IsRORImmIdiomPred, [V2Write_1cyc_1I]>,
+                     SchedVar<NoSchedPred,       [V2Write_3cyc_1I_1M]>]>;
 
 def V2Write_LdrHQ : SchedWriteVariant<[
                       SchedVar<NeoverseHQForm,  [V2Write_7cyc_1I_1L]>,

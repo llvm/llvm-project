@@ -142,11 +142,6 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (IsThinLTO)
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
 
-  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
-    LldArgs.push_back(
-        Args.MakeArgString(Twine("-plugin-opt=") + A->getValue(0)));
-  }
-
   if (Arg *A = Args.getLastArgNoClaim(options::OPT_g_Group))
     if (!A->getOption().matches(options::OPT_g0) &&
         !A->getOption().matches(options::OPT_ggdb0))
@@ -170,7 +165,14 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   LldArgs.push_back("--whole-archive");
 
   for (auto *Arg : Args.filtered(options::OPT_Xoffload_linker)) {
-    LldArgs.push_back(Arg->getValue(1));
+    StringRef ArgVal = Arg->getValue(1);
+    auto SplitArg = ArgVal.split("-mllvm=");
+    if (!SplitArg.second.empty()) {
+      LldArgs.push_back(
+          Args.MakeArgString(Twine("-plugin-opt=") + SplitArg.second));
+    } else {
+      LldArgs.push_back(Args.MakeArgString(ArgVal));
+    }
     Arg->claim();
   }
 

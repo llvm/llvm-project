@@ -500,7 +500,7 @@ def SI_ILLEGAL_COPY : SPseudoInstSI <
 
 // Branch on undef scc. Used to avoid intermediate copy from
 // IMPLICIT_DEF to SCC.
-def SI_BR_UNDEF : SPseudoInstSI <(outs), (ins sopp_brtarget:$simm16)> {
+def SI_BR_UNDEF : SPseudoInstSI <(outs), (ins SOPPBrTarget:$simm16)> {
   let isTerminator = 1;
   let usesCustomInserter = 1;
   let isBranch = 1;
