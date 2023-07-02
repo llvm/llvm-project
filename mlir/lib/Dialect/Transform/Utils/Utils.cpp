@@ -42,6 +42,5 @@ ParseResult mlir::transform::parsePackedOrDynamicIndexList(
     return success();
   }
 
-  return parseDynamicIndexList(parser, values, integers,
-                               /*isTrailingIdxScalable=*/nullptr, &valueTypes);
+  return parseDynamicIndexList(parser, values, integers, &valueTypes);
 }
