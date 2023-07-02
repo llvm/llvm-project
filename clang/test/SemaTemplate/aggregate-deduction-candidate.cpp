@@ -1,15 +1,16 @@
-// RUN: %clang_cc1 -std=c++20 -verify -ast-dump -ast-dump-decl-types -ast-dump-filter "deduction guide" %s | FileCheck %s --strict-whitespace
+// RUN: %clang_cc1 -std=c++17 -verify=expected,cxx17 %s
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20 -ast-dump -ast-dump-decl-types -ast-dump-filter "deduction guide" %s | FileCheck %s --strict-whitespace
 
 namespace Basic {
-  template<class T> struct A {
+  template<class T> struct A { // cxx17-note 6 {{candidate}}
     T x;
     T y;
   };
 
-  A a1 = {3.0, 4.0};
-  A a2 = {.x = 3.0, .y = 4.0};
+  A a1 = {3.0, 4.0}; // cxx17-error {{no viable}}
+  A a2 = {.x = 3.0, .y = 4.0}; // cxx17-error {{no viable}}
 
-  A a3(3.0, 4.0);
+  A a3(3.0, 4.0); // cxx17-error {{no viable}}
 
   // CHECK-LABEL: Dumping Basic::<deduction guide for A>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for A>
@@ -30,31 +31,31 @@ namespace Basic {
   // CHECK: `-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
   // CHECK:   `-TemplateTypeParm {{.*}} 'T'
 
-  template <typename T> struct S { // expected-note 2 {{candidate}}
+  template <typename T> struct S { // cxx20-note 2 {{candidate}}
     T x;
     T y;
   };
 
-  template <typename T> struct C { // expected-note 10 {{candidate}}
+  template <typename T> struct C { // cxx20-note 10 {{candidate}} cxx17-note 12 {{candidate}}
     S<T> s;
     T t;
   };
 
-  template <typename T> struct D { // expected-note 6 {{candidate}}
+  template <typename T> struct D { // cxx20-note 6 {{candidate}} cxx17-note 8 {{candidate}}
     S<int> s;
     T t;
   };
 
   C c1 = {1, 2}; // expected-error {{no viable}}
   C c2 = {1, 2, 3}; // expected-error {{no viable}}
-  C c3 = {{1u, 2u}, 3};
+  C c3 = {{1u, 2u}, 3}; // cxx17-error {{no viable}}
 
   C c4(1, 2);    // expected-error {{no viable}}
   C c5(1, 2, 3); // expected-error {{no viable}}
-  C c6({1u, 2u}, 3);
+  C c6({1u, 2u}, 3); // cxx17-error {{no viable}}
 
   D d1 = {1, 2}; // expected-error {{no viable}}
-  D d2 = {1, 2, 3};
+  D d2 = {1, 2, 3}; // cxx17-error {{no viable}}
 
   D d3(1, 2); // expected-error {{no viable}}
   // CTAD succeed but brace elision is not allowed for parenthesized aggregate init. 
@@ -98,14 +99,14 @@ namespace Basic {
   // CHECK:   |-ClassTemplateSpecialization {{.*}} 'S'
   // CHECK:   `-BuiltinType {{.*}} 'int'
 
-  template <typename T> struct E {
+  template <typename T> struct E { // cxx17-note 4 {{candidate}}
     T t;
     decltype(t) t2;
   };
 
-  E e1 = {1, 2};
+  E e1 = {1, 2}; // cxx17-error {{no viable}}
 
-  E e2(1, 2);
+  E e2(1, 2); // cxx17-error {{no viable}}
 
   // CHECK-LABEL: Dumping Basic::<deduction guide for E>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for E>
@@ -132,12 +133,12 @@ namespace Basic {
   };
 
   template <typename T>
-  struct F {
+  struct F { // cxx17-note 2 {{candidate}}
     typename I<T>::type i;
     T t;
   };
 
-  F f1 = {1, 2};
+  F f1 = {1, 2}; // cxx17-error {{no viable}}
 
   // CHECK-LABEL: Dumping Basic::<deduction guide for F>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for F>
@@ -160,18 +161,18 @@ namespace Basic {
 
 namespace Array {
   typedef __SIZE_TYPE__ size_t;
-  template <typename T, size_t N> struct A { // expected-note 2 {{candidate}}
+  template <typename T, size_t N> struct A { // cxx20-note 2 {{candidate}} cxx17-note 14 {{candidate}}
     T array[N];
   };
 
-  A a1 = {{1, 2, 3}};
+  A a1 = {{1, 2, 3}}; // cxx17-error {{no viable}}
   A a2 = {1, 2, 3}; // expected-error {{no viable}}
-  A a3 = {"meow"};
-  A a4 = {("meow")};
+  A a3 = {"meow"}; // cxx17-error {{no viable}}
+  A a4 = {("meow")}; // cxx17-error {{no viable}}
 
-  A a5({1, 2, 3});
-  A a6("meow");
-  A a7(("meow"));
+  A a5({1, 2, 3}); // cxx17-error {{no viable}}
+  A a6("meow"); // cxx17-error {{no viable}}
+  A a7(("meow")); // cxx17-error {{no viable}}
 
   // CHECK-LABEL: Dumping Array::<deduction guide for A>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for A>
@@ -216,14 +217,14 @@ namespace Array {
 }
 
 namespace BraceElision {
-  template <typename T> struct A {
+  template <typename T> struct A { // cxx17-note 4 {{candidate}}
     T array[2];
   };
 
-  A a1 = {0, 1};
+  A a1 = {0, 1}; // cxx17-error {{no viable}}
 
   // CTAD succeed but brace elision is not allowed for parenthesized aggregate init. 
-  A a2(0, 1); // expected-error {{array initializer must be an initializer list}}
+  A a2(0, 1); // cxx20-error {{array initializer must be an initializer list}} cxx17-error {{no viable}}
 
   // CHECK-LABEL: Dumping BraceElision::<deduction guide for A>:
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for A>
@@ -246,15 +247,15 @@ namespace BraceElision {
 }
 
 namespace TrailingPack {
-  template<typename... T> struct A : T... {
+  template<typename... T> struct A : T... { // cxx17-note 4 {{candidate}}
   };
 
-  A a1 = {
+  A a1 = { // cxx17-error {{no viable}}
     []{ return 1; },
     []{ return 2; }
   };
 
-  A a2(
+  A a2( // cxx17-error {{no viable}}
     []{ return 1; },
     []{ return 2; }
   );
@@ -302,20 +303,20 @@ namespace NonTrailingPack {
 
 namespace DeduceArity {
   template <typename... T> struct Types {};
-  template <typename... T> struct F : Types<T...>, T... {}; // expected-note 12 {{candidate}}
+  template <typename... T> struct F : Types<T...>, T... {}; // cxx20-note 12 {{candidate}} cxx17-note 16 {{candidate}}
 
   struct X {};
   struct Y {};
   struct Z {};
   struct W { operator Y(); };
 
-  F f1 = {Types<X, Y, Z>{}, {}, {}};
-  F f2 = {Types<X, Y, Z>{}, X{}, Y{}};
+  F f1 = {Types<X, Y, Z>{}, {}, {}}; // cxx17-error {{no viable}}
+  F f2 = {Types<X, Y, Z>{}, X{}, Y{}}; // cxx17-error {{no viable}}
   F f3 = {Types<X, Y, Z>{}, X{}, W{}}; // expected-error {{no viable}}
   F f4 = {Types<X>{}, {}, {}}; // expected-error {{no viable}}
 
-  F f5(Types<X, Y, Z>{}, {}, {});
-  F f6(Types<X, Y, Z>{}, X{}, Y{});
+  F f5(Types<X, Y, Z>{}, {}, {}); // cxx17-error {{no viable}}
+  F f6(Types<X, Y, Z>{}, X{}, Y{}); // cxx17-error {{no viable}}
   F f7(Types<X, Y, Z>{}, X{}, W{}); // expected-error {{no viable}}
   F f8(Types<X>{}, {}, {}); // expected-error {{no viable}}
 
