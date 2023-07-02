@@ -269,6 +269,19 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     AddRunTimeLibs(TC, TC.getDriver(), CmdArgs, Args);
   }
 
+  StringRef Linker =
+      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER);
+  if (Linker.empty())
+    Linker = "link";
+  // We need to translate 'lld' into 'lld-link'.
+  else if (Linker.equals_insensitive("lld"))
+    Linker = "lld-link";
+
+  if (Linker == "lld-link")
+    for (Arg *A : Args.filtered(options::OPT_vfsoverlay))
+      CmdArgs.push_back(
+          Args.MakeArgString(std::string("/vfsoverlay:") + A->getValue()));
+
   // Add filenames, libraries, and other linker inputs.
   for (const auto &Input : Inputs) {
     if (Input.isFilename()) {
@@ -301,22 +314,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   std::vector<const char *> Environment;
 
-  // We need to special case some linker paths.  In the case of lld, we need to
-  // translate 'lld' into 'lld-link', and in the case of the regular msvc
+  // We need to special case some linker paths. In the case of the regular msvc
   // linker, we need to use a special search algorithm.
   llvm::SmallString<128> linkPath;
-  StringRef Linker
-    = Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER);
-  if (Linker.empty())
-    Linker = "link";
-  if (Linker.equals_insensitive("lld"))
-    Linker = "lld-link";
-
-  if (Linker == "lld-link")
-    for (Arg *A : Args.filtered(options::OPT_vfsoverlay))
-      CmdArgs.push_back(
-          Args.MakeArgString(std::string("/vfsoverlay:") + A->getValue()));
-
   if (Linker.equals_insensitive("link")) {
     // If we're using the MSVC linker, it's not sufficient to just use link
     // from the program PATH, because other environments like GnuWin32 install
