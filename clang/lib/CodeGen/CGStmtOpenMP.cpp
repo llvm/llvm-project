@@ -8398,8 +8398,8 @@ void CodeGenFunction::EmitOMPTargetParallelGenericLoopDeviceFunction(
   assert(Fn && Addr && "Target device function emission failed.");
 }
 
-/// Emit combined directive 'target teams loop' as if its constituent
-/// constructs are 'target', 'teams', 'distribute', 'parallel', and 'for'.
+/// Emit combined directive 'target parallel loop' as if its constituent
+/// constructs are 'target', 'parallel', and 'for'.
 void CodeGenFunction::EmitOMPTargetParallelGenericLoopDirective(
     const OMPTargetParallelGenericLoopDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {

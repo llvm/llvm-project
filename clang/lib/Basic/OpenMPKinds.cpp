@@ -604,10 +604,8 @@ bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_teams_distribute_parallel_for ||
          DKind == OMPD_target_teams_distribute_parallel_for ||
          DKind == OMPD_target_teams_distribute_parallel_for_simd ||
-         DKind == OMPD_parallel_loop ||
-         DKind == OMPD_teams_loop ||
-         DKind == OMPD_target_parallel_loop ||
-         DKind == OMPD_target_teams_loop;
+         DKind == OMPD_parallel_loop || DKind == OMPD_teams_loop ||
+         DKind == OMPD_target_parallel_loop || DKind == OMPD_target_teams_loop;
 }
 
 bool clang::isOpenMPTaskLoopDirective(OpenMPDirectiveKind DKind) {
@@ -733,9 +731,9 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
          Kind == OMPD_distribute_parallel_for_simd ||
          Kind == OMPD_teams_distribute_parallel_for_simd ||
          Kind == OMPD_teams_distribute_parallel_for ||
-         Kind == OMPD_target_teams_loop ||
          Kind == OMPD_target_teams_distribute_parallel_for ||
-         Kind == OMPD_target_teams_distribute_parallel_for_simd;
+         Kind == OMPD_target_teams_distribute_parallel_for_simd ||
+         Kind == OMPD_target_teams_loop;
 }
 
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
@@ -775,12 +773,6 @@ void clang::getOpenMPCaptureRegions(
     CaptureRegions.push_back(OMPD_task);
     CaptureRegions.push_back(OMPD_target);
     CaptureRegions.push_back(OMPD_teams);
-    break;
-  case OMPD_target_teams_loop:
-    CaptureRegions.push_back(OMPD_task);
-    CaptureRegions.push_back(OMPD_target);
-    CaptureRegions.push_back(OMPD_teams);
-    CaptureRegions.push_back(OMPD_parallel);
     break;
   case OMPD_teams:
   case OMPD_teams_loop:
@@ -827,6 +819,7 @@ void clang::getOpenMPCaptureRegions(
     CaptureRegions.push_back(OMPD_parallel);
     CaptureRegions.push_back(OMPD_taskloop);
     break;
+  case OMPD_target_teams_loop:
   case OMPD_target_teams_distribute_parallel_for:
   case OMPD_target_teams_distribute_parallel_for_simd:
     CaptureRegions.push_back(OMPD_task);

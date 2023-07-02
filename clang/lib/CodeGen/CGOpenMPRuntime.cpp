@@ -6227,8 +6227,8 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
     DefaultVal = -1;
     return nullptr;
   }
-  case OMPD_target_teams:
   case OMPD_target_teams_loop:
+  case OMPD_target_teams:
   case OMPD_target_teams_distribute:
   case OMPD_target_teams_distribute_simd:
   case OMPD_target_teams_distribute_parallel_for:

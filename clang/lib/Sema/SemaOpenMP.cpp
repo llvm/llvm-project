@@ -4508,6 +4508,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
                              ParamsParallel, /*OpenMPCaptureLevel=*/3);
     break;
   }
+
   case OMPD_teams_distribute_parallel_for:
   case OMPD_teams_distribute_parallel_for_simd: {
     QualType KmpInt32Ty = Context.getIntTypeForBitwidth(32, 1).withConst();
@@ -15401,6 +15402,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
         break;
       }
       [[fallthrough]];
+    case OMPD_target_teams_loop:
     case OMPD_target_teams_distribute_parallel_for:
       // If this clause applies to the nested 'parallel' region, capture within
       // the 'teams' region, otherwise do not capture.
@@ -15493,7 +15495,6 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target:
     case OMPD_target_teams:
     case OMPD_target_teams_distribute:
-    case OMPD_target_teams_loop:
     case OMPD_distribute_parallel_for:
     case OMPD_task:
     case OMPD_taskloop:
