@@ -9,10 +9,10 @@ define arm_aapcs_vfpcc void @ptr_v2i32(<2 x i32> %v, ptr %offptr) {
 ; CHECK-LABEL: ptr_v2i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    ldrd r1, r0, [r0]
-; CHECK-NEXT:    str r2, [r1]
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    str r1, [r0]
+; CHECK-NEXT:    ldrd r0, r1, [r0]
+; CHECK-NEXT:    str r2, [r0]
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    str r0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <2 x ptr>, ptr %offptr, align 4
@@ -125,9 +125,9 @@ entry:
 define arm_aapcs_vfpcc void @ptr_v2f32(<2 x float> %v, ptr %offptr) {
 ; CHECK-LABEL: ptr_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    ldrd r1, r0, [r0]
-; CHECK-NEXT:    vstr s0, [r1]
-; CHECK-NEXT:    vstr s1, [r0]
+; CHECK-NEXT:    ldrd r0, r1, [r0]
+; CHECK-NEXT:    vstr s0, [r0]
+; CHECK-NEXT:    vstr s1, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <2 x ptr>, ptr %offptr, align 4
@@ -217,10 +217,10 @@ define arm_aapcs_vfpcc void @ptr_v2i16_trunc(<2 x i32> %v, ptr %offptr) {
 ; CHECK-LABEL: ptr_v2i16_trunc:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    ldrd r1, r0, [r0]
-; CHECK-NEXT:    strh r2, [r1]
-; CHECK-NEXT:    vmov r1, s2
-; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    ldrd r0, r1, [r0]
+; CHECK-NEXT:    strh r2, [r0]
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    strh r0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %offs = load <2 x ptr>, ptr %offptr, align 4
