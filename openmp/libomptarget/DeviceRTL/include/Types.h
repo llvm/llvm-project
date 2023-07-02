@@ -262,6 +262,13 @@ typedef struct {
 #define CONSTANT(NAME)                                                         \
   [[clang::address_space(4)]] NAME [[clang::loader_uninitialized]]
 
+// Attribute to keep alive certain definition for the bitcode library.
+#ifdef LIBOMPTARGET_BC_TARGET
+#define KEEP_ALIVE __attribute__((used, retain))
+#else
+#define KEEP_ALIVE
+#endif
+
 ///}
 
 #endif
