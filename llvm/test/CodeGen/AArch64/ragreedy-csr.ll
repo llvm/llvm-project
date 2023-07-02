@@ -27,8 +27,8 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    b.ne LBB0_47
 ; CHECK-NEXT:  ; %bb.1: ; %if.end
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:  Lloh0:
@@ -260,9 +260,6 @@ define fastcc i32 @prune_match(ptr nocapture readonly %a, ptr nocapture readonly
 ; CHECK-NEXT:    cbz w8, LBB0_43
 ; CHECK-NEXT:    b LBB0_12
 ; CHECK-NEXT:  LBB0_47:
-; CHECK-NEXT:    .cfi_def_cfa wsp, 0
-; CHECK-NEXT:    .cfi_same_value w30
-; CHECK-NEXT:    .cfi_same_value w29
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdrGot Lloh0, Lloh1

@@ -12,10 +12,10 @@ define dso_local void @func1(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v
 ; CHECK-LABEL: func1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x25, [sp, #-64]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    stp x24, x23, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #32] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
