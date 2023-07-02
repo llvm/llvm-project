@@ -569,11 +569,11 @@ static bool isAssumedReadOnlyOrReadNone(Attributor &A, const IRPosition &IRP,
                                         bool RequireReadNone, bool &IsKnown) {
   if (RequireReadNone) {
     if (AA::hasAssumedIRAttr<Attribute::ReadNone>(
-            A, QueryingAA, IRP, DepClassTy::OPTIONAL, IsKnown,
+            A, &QueryingAA, IRP, DepClassTy::OPTIONAL, IsKnown,
             /* IgnoreSubsumingPositions */ true))
       return true;
   } else if (AA::hasAssumedIRAttr<Attribute::ReadOnly>(
-                 A, QueryingAA, IRP, DepClassTy::OPTIONAL, IsKnown,
+                 A, &QueryingAA, IRP, DepClassTy::OPTIONAL, IsKnown,
                  /* IgnoreSubsumingPositions */ true))
     return true;
 
