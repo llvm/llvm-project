@@ -63,10 +63,8 @@ Address CSKYABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   // Empty records are ignored for parameter passing purposes.
   if (isEmptyRecord(getContext(), Ty, true)) {
-    Address Addr = Address(CGF.Builder.CreateLoad(VAListAddr),
-                           getVAListElementType(CGF), SlotSize);
-    Addr = CGF.Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(Ty));
-    return Addr;
+    return Address(CGF.Builder.CreateLoad(VAListAddr),
+                   CGF.ConvertTypeForMem(Ty), SlotSize);
   }
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
