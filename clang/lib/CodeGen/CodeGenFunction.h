@@ -3580,6 +3580,12 @@ public:
   void EmitOMPTargetTeamsDistributeSimdDirective(
       const OMPTargetTeamsDistributeSimdDirective &S);
   void EmitOMPGenericLoopDirective(const OMPGenericLoopDirective &S);
+  void EmitOMPParallelGenericLoopDirective(const OMPLoopDirective &S);
+  void EmitOMPTargetParallelGenericLoopDirective(
+      const OMPTargetParallelGenericLoopDirective &S);
+  void EmitOMPTargetTeamsGenericLoopDirective(
+      const OMPTargetTeamsGenericLoopDirective &S);
+  void EmitOMPTeamsGenericLoopDirective(const OMPTeamsGenericLoopDirective &S);
   void EmitOMPInteropDirective(const OMPInteropDirective &S);
   void EmitOMPParallelMaskedDirective(const OMPParallelMaskedDirective &S);
 
@@ -3619,6 +3625,16 @@ public:
   static void EmitOMPTargetTeamsDistributeParallelForSimdDeviceFunction(
       CodeGenModule &CGM, StringRef ParentName,
       const OMPTargetTeamsDistributeParallelForSimdDirective &S);
+
+  /// Emit device code for the target teams loop directive.
+  static void EmitOMPTargetTeamsGenericLoopDeviceFunction(
+      CodeGenModule &CGM, StringRef ParentName,
+      const OMPTargetTeamsGenericLoopDirective &S);
+
+  /// Emit device code for the target parallel loop directive.
+  static void EmitOMPTargetParallelGenericLoopDeviceFunction(
+      CodeGenModule &CGM, StringRef ParentName,
+      const OMPTargetParallelGenericLoopDirective &S);
 
   static void EmitOMPTargetTeamsDistributeParallelForDeviceFunction(
       CodeGenModule &CGM, StringRef ParentName,
