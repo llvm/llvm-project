@@ -171,7 +171,7 @@ define ptr @scc_A(ptr dereferenceable_or_null(4) %a) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) ptr @scc_C(ptr noalias nofree noundef readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) ptr @scc_C(ptr noalias nofree noundef nonnull readnone dereferenceable(4) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(8) ptr @scc_B(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @scc_A(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[COND_END:%.*]]
@@ -208,7 +208,7 @@ define ptr @scc_B(ptr dereferenceable_or_null(8) %a) {
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[A]], null
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) ptr @scc_A(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) ptr @scc_A(ptr noalias nofree noundef nonnull readnone dereferenceable(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[CALL1:%.*]] = call dereferenceable_or_null(8) ptr @scc_B(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[CALL2:%.*]] = call ptr @scc_C(ptr noalias nofree noundef readnone dereferenceable_or_null(8) "no-capture-maybe-returned" [[A]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[COND_END:%.*]]

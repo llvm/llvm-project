@@ -522,7 +522,10 @@ public:
   iterator child_begin() { return iterator(Deps.begin(), &DepGetVal); }
   iterator child_end() { return iterator(Deps.end(), &DepGetVal); }
 
-  virtual void print(raw_ostream &OS) const { OS << "AADepNode Impl\n"; }
+  void print(raw_ostream &OS) const { print(nullptr, OS); }
+  virtual void print(Attributor *, raw_ostream &OS) const {
+    OS << "AADepNode Impl\n";
+  }
   DepSetTy &getDeps() { return Deps; }
 
   friend struct Attributor;
@@ -1883,6 +1886,11 @@ struct Attributor {
                              bool ForceReplace = false);
 
 private:
+  /// Helper to check \p Attrs for \p AK, if not found, check if \p
+  /// AAType::isImpliedByIR is true, and if not, create AAType for \p IRP.
+  template <Attribute::AttrKind AK, typename AAType>
+  void checkAndQueryIRAttr(const IRPosition &IRP, AttributeSet Attrs);
+
   /// Helper to apply \p CB on all attributes of type \p AttrDescs of \p IRP.
   template <typename DescTy>
   ChangeStatus updateAttrMap(const IRPosition &IRP,
@@ -3118,12 +3126,24 @@ template <Attribute::AttrKind AK, typename BaseType, typename AAType>
 struct IRAttribute : public BaseType {
   IRAttribute(const IRPosition &IRP) : BaseType(IRP) {}
 
+  /// Compile time access to the IR attribute kind.
+  static constexpr Attribute::AttrKind IRAttributeKind = AK;
+
+  /// Return true if the IR attribute(s) associated with this AA are implied for
+  /// an undef value.
+  static bool isImpliedByUndef() { return true; }
+
+  /// Return true if the IR attribute(s) associated with this AA are implied for
+  /// an poison value.
+  static bool isImpliedByPoison() { return true; }
+
   static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
                             Attribute::AttrKind ImpliedAttributeKind = AK,
-                            bool IgnoreSubsumingPositions = false,
-                            bool RequiresPoison = false) {
-    if (RequiresPoison ? isa<PoisonValue>(IRP.getAssociatedValue())
-                       : isa<UndefValue>(IRP.getAssociatedValue()))
+                            bool IgnoreSubsumingPositions = false) {
+    if (AAType::isImpliedByUndef() && isa<UndefValue>(IRP.getAssociatedValue()))
+      return true;
+    if (AAType::isImpliedByPoison() &&
+        isa<PoisonValue>(IRP.getAssociatedValue()))
       return true;
     return A.hasAttr(IRP, {ImpliedAttributeKind}, IgnoreSubsumingPositions,
                      ImpliedAttributeKind);
@@ -3143,7 +3163,7 @@ struct IRAttribute : public BaseType {
     if (isa<UndefValue>(this->getIRPosition().getAssociatedValue()))
       return ChangeStatus::UNCHANGED;
     SmallVector<Attribute, 4> DeducedAttrs;
-    getDeducedAttributes(this->getAnchorValue().getContext(), DeducedAttrs);
+    getDeducedAttributes(A, this->getAnchorValue().getContext(), DeducedAttrs);
     if (DeducedAttrs.empty())
       return ChangeStatus::UNCHANGED;
     return A.manifestAttrs(this->getIRPosition(), DeducedAttrs);
@@ -3153,7 +3173,7 @@ struct IRAttribute : public BaseType {
   Attribute::AttrKind getAttrKind() const { return AK; }
 
   /// Return the deduced attributes in \p Attrs.
-  virtual void getDeducedAttributes(LLVMContext &Ctx,
+  virtual void getDeducedAttributes(Attributor &A, LLVMContext &Ctx,
                                     SmallVectorImpl<Attribute> &Attrs) const {
     Attrs.emplace_back(Attribute::get(Ctx, getAttrKind()));
   }
@@ -3276,12 +3296,13 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
 
   /// Helper functions, for debug purposes only.
   ///{
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS) const { print(nullptr, OS); }
+  void print(Attributor *, raw_ostream &OS) const override;
   virtual void printWithDeps(raw_ostream &OS) const;
-  void dump() const { print(dbgs()); }
+  void dump() const { this->print(dbgs()); }
 
   /// This function should return the "summarized" assumed state as string.
-  virtual const std::string getAsStr() const = 0;
+  virtual const std::string getAsStr(Attributor *A) const = 0;
 
   /// This function should return the name of the AbstractAttribute
   virtual const std::string getName() const = 0;
@@ -3538,12 +3559,22 @@ struct AANonNull
                          AANonNull> {
   AANonNull(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See IRAttribute::isImpliedByUndef.
+  /// Undef is not necessarily nonnull as nonnull + noundef would cause poison.
+  /// Poison implies nonnull though.
+  static bool isImpliedByUndef() { return false; }
+
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
   }
+
+  /// See AbstractAttribute::isImpliedByIR(...).
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false);
 
   /// Return true if we assume that the underlying value is nonnull.
   bool isAssumedNonNull() const { return getAssumed(); }
@@ -4085,9 +4116,6 @@ struct DerefState : AbstractState {
     GlobalState |= R.GlobalState;
     return *this;
   }
-
-protected:
-  const AANonNull *NonNullAA = nullptr;
 };
 
 /// An abstract interface for all dereferenceable attribute.
@@ -4102,16 +4130,6 @@ struct AADereferenceable
     if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
       return false;
     return IRAttribute::isValidIRPositionForInit(A, IRP);
-  }
-
-  /// Return true if we assume that the underlying value is nonnull.
-  bool isAssumedNonNull() const {
-    return NonNullAA && NonNullAA->isAssumedNonNull();
-  }
-
-  /// Return true if we know that the underlying value is nonnull.
-  bool isKnownNonNull() const {
-    return NonNullAA && NonNullAA->isKnownNonNull();
   }
 
   /// Return true if we assume that underlying value is
@@ -4726,8 +4744,8 @@ struct AAMemoryLocation
   static AAMemoryLocation &createForPosition(const IRPosition &IRP,
                                              Attributor &A);
 
-  /// See AbstractState::getAsStr().
-  const std::string getAsStr() const override {
+  /// See AbstractState::getAsStr(Attributor).
+  const std::string getAsStr(Attributor *A) const override {
     return getMemoryLocationsAsStr(getAssumedNotAccessedLocation());
   }
 
@@ -6013,6 +6031,7 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
     CASE(NoRecurse, AANoRecurse, );
     CASE(NoSync, AANoSync, );
     CASE(NoAlias, AANoAlias, );
+    CASE(NonNull, AANonNull, );
     CASE(MustProgress, AAMustProgress, );
     CASE(ReadNone, AAMemoryBehavior, AAMemoryBehavior::NO_ACCESSES);
     CASE(ReadOnly, AAMemoryBehavior, AAMemoryBehavior::NO_WRITES);
