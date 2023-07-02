@@ -534,11 +534,11 @@ struct DenseMapInfo<mlir::detail::TypedValue<T>>
     : public DenseMapInfo<mlir::Value> {
   static mlir::detail::TypedValue<T> getEmptyKey() {
     void *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Value::getFromOpaquePointer(pointer);
+    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
   }
   static mlir::detail::TypedValue<T> getTombstoneKey() {
     void *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Value::getFromOpaquePointer(pointer);
+    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
   }
 };
 
@@ -578,7 +578,7 @@ struct PointerLikeTypeTraits<mlir::detail::TypedValue<T>>
     : public PointerLikeTypeTraits<mlir::Value> {
 public:
   static inline mlir::detail::TypedValue<T> getFromVoidPointer(void *pointer) {
-    return mlir::Value::getFromOpaquePointer(pointer);
+    return reinterpret_cast<mlir::detail::ValueImpl *>(pointer);
   }
 };
 
