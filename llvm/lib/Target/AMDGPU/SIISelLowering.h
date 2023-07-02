@@ -352,6 +352,12 @@ public:
 
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  unsigned combineRepeatedFPDivisors() const override {
+    // Combine multiple FDIVs with the same divisor into multiple FMULs by the
+    // reciprocal.
+    return 2;
+  }
+
   bool supportSplitCSR(MachineFunction *MF) const override;
   void initializeSplitCSR(MachineBasicBlock *Entry) const override;
   void insertCopiesSplitCSR(
