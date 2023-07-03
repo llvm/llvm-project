@@ -466,11 +466,20 @@ public:
                                      mlir::cir::CastKind::ptr_to_int, src);
   }
 
+  // TODO(cir): the following function was introduced to keep in sync with LLVM
+  // codegen. CIR does not have "zext" operations. It should eventually be
+  // renamed or removed. For now, we just add whatever cast is required here.
   mlir::Value createZExtOrBitCast(mlir::Location loc, mlir::Value src,
                                   mlir::Type newTy) {
-    if (src.getType() == newTy)
+    auto srcTy = src.getType();
+
+    if (srcTy == newTy)
       return src;
-    llvm_unreachable("NYI");
+
+    if (srcTy.isa<mlir::cir::BoolType>() && newTy.isa<mlir::cir::IntType>())
+      return createBoolToInt(src, newTy);
+
+    llvm_unreachable("unhandled extension cast");
   }
 
   mlir::Value createBoolToInt(mlir::Value src, mlir::Type newTy) {
