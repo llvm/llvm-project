@@ -167,6 +167,74 @@ def DecomposeOp : Op<Transform_Dialect, "structured.decompose",
 }
 
 //===----------------------------------------------------------------------===//
+// EliminateLinalgOpAnchoredEmptyTensorsOp
+//===----------------------------------------------------------------------===//
+
+def EliminateLinalgOpAnchoredEmptyTensorsOp
+    : Op<Transform_Dialect, "structured.eliminate_empty_tensors",
+        [DeclareOpInterfaceMethods<TransformOpInterface>,
+         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    Try to eliminate all `tensor.empty` op uses that are anchored on a LinalgOp
+    within the targeted op.
+
+    This op is similar to `bufferization.eliminate_empty_tensors`, but specific
+    to LinalgOps.
+
+    `tensor.empty` ops cannot be bufferized. They can either be converted to
+    `bufferization.alloc_tensor` or replaced with another tensor (via this
+    transform). `tensor.empty` does not specify the contents of the returned
+    tensor so their results can be replaced with arbitrary tensor values as long
+    as the dimensions match.
+
+    This transform looks for `tensor.empty` ops where the SSA use-def chain of
+    the result ends in a supported LinalgOp (always following the aliasing
+    OpOperand/OpResult chain). The following LinalgOps are supported:
+    - Only parallel iterator types.
+    - The use-def chain ends in an input operand of the LinalgOp.
+    - The LinalgOp has an unused output operand with the same shape and
+      indexing map.
+
+    Example:
+
+    ```
+    %0 = tensor.empty()
+    %1 = linalg.matmul ins(...) outs(%0)
+    %2 = linalg.generic ins(%1) outs(%dest) {
+      ^bb0(%in: f32, %out: f32):
+      // out not used
+    }
+    ```
+
+    Is rewritten with:
+    ```
+    %0 = tensor.empty()
+    %1 = linalg.matmul ins(...) outs(%dest)
+    %2 = linalg.generic ins(%0) outs(%1) {
+      ^bb0(%in: f32, %out: f32):
+      // Use %out instead of %in
+    }
+    ```
+
+    After this transformation, the "ins" operand has no uses inside the body of
+    the LinalgOp and can be folded away with existing cleanup patterns.
+    Afterwards, the tensor::EmptyOp can also fold away, so that the example can
+    bufferize without an allocation (in the absence of other conflicts).
+
+    #### Return modes
+
+    This transform reads the target handle and modifies the payload. It does
+    not produce any handle.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+
+  let results = (outs);
+
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+}
+
+//===----------------------------------------------------------------------===//
 // FuseOp
 //===----------------------------------------------------------------------===//
 
