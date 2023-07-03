@@ -11559,6 +11559,20 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
                        const DenseSet<StringRef> &Known)
       : AAAssumptionInfo(IRP, A, Known) {}
 
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    // Don't manifest a universal set if it somehow made it here.
+    if (getKnown().isUniversal())
+      return ChangeStatus::UNCHANGED;
+
+    const IRPosition &IRP = getIRPosition();
+    return IRAttributeManifest::manifestAttrs(
+        A, IRP,
+        Attribute::get(IRP.getAnchorValue().getContext(), AssumptionAttrKey,
+                       llvm::join(getAssumed().getSet(), ",")),
+        /* ForceReplace */ true);
+  }
+
   bool hasAssumption(const StringRef Assumption) const override {
     return isValidState() && setContains(Assumption);
   }
@@ -11594,21 +11608,6 @@ struct AAAssumptionInfoFunction final : AAAssumptionInfoImpl {
   AAAssumptionInfoFunction(const IRPosition &IRP, Attributor &A)
       : AAAssumptionInfoImpl(IRP, A,
                              getAssumptions(*IRP.getAssociatedFunction())) {}
-
-  /// See AbstractAttribute::manifest(...).
-  ChangeStatus manifest(Attributor &A) override {
-    const auto &Assumptions = getKnown();
-
-    // Don't manifest a universal set if it somehow made it here.
-    if (Assumptions.isUniversal())
-      return ChangeStatus::UNCHANGED;
-
-    Function *AssociatedFunction = getAssociatedFunction();
-
-    bool Changed = addAssumptions(*AssociatedFunction, Assumptions.getSet());
-
-    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
-  }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
@@ -11650,18 +11649,6 @@ struct AAAssumptionInfoCallSite final : AAAssumptionInfoImpl {
   void initialize(Attributor &A) override {
     const IRPosition &FnPos = IRPosition::function(*getAnchorScope());
     A.getAAFor<AAAssumptionInfo>(*this, FnPos, DepClassTy::REQUIRED);
-  }
-
-  /// See AbstractAttribute::manifest(...).
-  ChangeStatus manifest(Attributor &A) override {
-    // Don't manifest a universal set if it somehow made it here.
-    if (getKnown().isUniversal())
-      return ChangeStatus::UNCHANGED;
-
-    CallBase &AssociatedCall = cast<CallBase>(getAssociatedValue());
-    bool Changed = addAssumptions(AssociatedCall, getAssumed().getSet());
-
-    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
   }
 
   /// See AbstractAttribute::updateImpl(...).
