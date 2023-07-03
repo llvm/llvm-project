@@ -814,6 +814,7 @@ struct IRPosition {
     case IRPosition::IRP_CALL_SITE_RETURNED:
       return AttributeList::ReturnIndex;
     case IRPosition::IRP_ARGUMENT:
+      return getCalleeArgNo() + AttributeList::FirstArgIndex;
     case IRPosition::IRP_CALL_SITE_ARGUMENT:
       return getCallSiteArgNo() + AttributeList::FirstArgIndex;
     }
