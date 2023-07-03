@@ -79,6 +79,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -221,10 +222,9 @@ public:
   ///
   /// NB! There may be conditions feeding into \p BI that aren't inductive range
   /// checks, and hence don't end up in \p Checks.
-  static void
-  extractRangeChecksFromBranch(BranchInst *BI, Loop *L, ScalarEvolution &SE,
-                               BranchProbabilityInfo *BPI,
-                               SmallVectorImpl<InductiveRangeCheck> &Checks);
+  static void extractRangeChecksFromBranch(
+      BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
+      SmallVectorImpl<InductiveRangeCheck> &Checks, bool &Changed);
 };
 
 struct LoopStructure;
@@ -388,15 +388,28 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
 
 void InductiveRangeCheck::extractRangeChecksFromBranch(
     BranchInst *BI, Loop *L, ScalarEvolution &SE, BranchProbabilityInfo *BPI,
-    SmallVectorImpl<InductiveRangeCheck> &Checks) {
+    SmallVectorImpl<InductiveRangeCheck> &Checks, bool &Changed) {
   if (BI->isUnconditional() || BI->getParent() == L->getLoopLatch())
     return;
 
+  unsigned IndexLoopSucc = L->contains(BI->getSuccessor(0)) ? 0 : 1;
+  assert(L->contains(BI->getSuccessor(IndexLoopSucc)) &&
+         "No edges coming to loop?");
   BranchProbability LikelyTaken(15, 16);
 
   if (!SkipProfitabilityChecks && BPI &&
-      BPI->getEdgeProbability(BI->getParent(), (unsigned)0) < LikelyTaken)
+      BPI->getEdgeProbability(BI->getParent(), IndexLoopSucc) < LikelyTaken)
     return;
+
+  // IRCE expects branch's true edge comes to loop. Invert branch for opposite
+  // case.
+  if (IndexLoopSucc != 0) {
+    IRBuilder<> Builder(BI);
+    InvertBranch(BI, Builder);
+    if (BPI)
+      BPI->swapSuccEdgesProbabilities(BI->getParent());
+    Changed = true;
+  }
 
   SmallPtrSet<Value *, 8> Visited;
   InductiveRangeCheck::extractRangeChecksFromCond(L, SE, BI->getOperandUse(0),
@@ -1863,14 +1876,15 @@ bool InductiveRangeCheckElimination::run(
 
   LLVMContext &Context = Preheader->getContext();
   SmallVector<InductiveRangeCheck, 16> RangeChecks;
+  bool Changed = false;
 
   for (auto *BBI : L->getBlocks())
     if (BranchInst *TBI = dyn_cast<BranchInst>(BBI->getTerminator()))
       InductiveRangeCheck::extractRangeChecksFromBranch(TBI, L, SE, BPI,
-                                                        RangeChecks);
+                                                        RangeChecks, Changed);
 
   if (RangeChecks.empty())
-    return false;
+    return Changed;
 
   auto PrintRecognizedRangeChecks = [&](raw_ostream &OS) {
     OS << "irce: looking at loop "; L->print(OS);
@@ -1891,11 +1905,11 @@ bool InductiveRangeCheckElimination::run(
   if (!MaybeLoopStructure) {
     LLVM_DEBUG(dbgs() << "irce: could not parse loop structure: "
                       << FailureReason << "\n";);
-    return false;
+    return Changed;
   }
   LoopStructure LS = *MaybeLoopStructure;
   if (!isProfitableToTransform(*L, LS))
-    return false;
+    return Changed;
   const SCEVAddRecExpr *IndVar =
       cast<SCEVAddRecExpr>(SE.getMinusSCEV(SE.getSCEV(LS.IndVarBase), SE.getSCEV(LS.IndVarStep)));
 
@@ -1924,12 +1938,13 @@ bool InductiveRangeCheckElimination::run(
   }
 
   if (!SafeIterRange)
-    return false;
+    return Changed;
 
   LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT, *SafeIterRange);
-  bool Changed = LC.run();
 
-  if (Changed) {
+  if (LC.run()) {
+    Changed = true;
+
     auto PrintConstrainedLoopInfo = [L]() {
       dbgs() << "irce: in function ";
       dbgs() << L->getHeader()->getParent()->getName() << ": ";
