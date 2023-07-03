@@ -47,6 +47,27 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 //===----------------------------------------------------------------------===//
+// Helper functions
+//===----------------------------------------------------------------------===//
+
+Value linalg::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
+                                int64_t dim) {
+  if (llvm::isa<UnrankedMemRefType, MemRefType>(source.getType()))
+    return b.createOrFold<memref::DimOp>(loc, source, dim);
+  if (llvm::isa<UnrankedTensorType, RankedTensorType>(source.getType()))
+    return b.createOrFold<tensor::DimOp>(loc, source, dim);
+  llvm_unreachable("Expected MemRefType or TensorType");
+}
+
+OpFoldResult linalg::createFoldedDimOp(OpBuilder &b, Location loc, Value source,
+                                       int64_t dim) {
+  auto shapedType = llvm::cast<ShapedType>(source.getType());
+  if (!shapedType.hasRank() || shapedType.isDynamicDim(dim))
+    return createOrFoldDimOp(b, loc, source, dim);
+  return b.getIndexAttr(shapedType.getDimSize(dim));
+}
+
+//===----------------------------------------------------------------------===//
 // Support for named Linalg ops defined in ods-gen.
 //===----------------------------------------------------------------------===//
 
