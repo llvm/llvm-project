@@ -120,12 +120,12 @@ attributes #2 = { argmemonly nounwind }
 ; TUNIT: attributes #[[ATTR0]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "target-features"="+avx2" }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
 ; TUNIT: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR3]] = { memory(write) }
+; TUNIT: attributes #[[ATTR3]] = { nofree willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { inlinehint mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "target-features"="+avx2" }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) uwtable }
 ; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR3]] = { memory(write) }
-; CGSCC: attributes #[[ATTR4]] = { nounwind }
+; CGSCC: attributes #[[ATTR3]] = { nofree willreturn memory(write) }
+; CGSCC: attributes #[[ATTR4]] = { nofree nounwind willreturn }
 ;.

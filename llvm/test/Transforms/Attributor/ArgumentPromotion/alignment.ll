@@ -107,6 +107,6 @@ define i32 @callercaller() {
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR3]] = { memory(read) }
-; CGSCC: attributes #[[ATTR4]] = { nounwind }
+; CGSCC: attributes #[[ATTR3]] = { nofree willreturn memory(read) }
+; CGSCC: attributes #[[ATTR4]] = { nofree nounwind willreturn }
 ;.

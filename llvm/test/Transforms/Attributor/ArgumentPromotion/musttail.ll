@@ -68,7 +68,7 @@ define internal i32 @test2(ptr %p, i32 %p2) {
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
 ; CGSCC-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4
 ; CGSCC-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
-; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @foo(ptr undef, i32 [[V]])
+; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @foo(ptr undef, i32 [[V]]) #[[ATTR6:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CA]]
 ;
   %a.gep = getelementptr %T, %T* %p, i64 0, i32 3
@@ -138,7 +138,7 @@ define internal i32 @test2b(ptr %p, i32 %p2) {
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
 ; CGSCC-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4
 ; CGSCC-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
-; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @bar(ptr undef, i32 [[V]]) #[[ATTR6:[0-9]+]]
+; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @bar(ptr undef, i32 [[V]]) #[[ATTR7:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CA]]
 ;
   %a.gep = getelementptr %T, %T* %p, i64 0, i32 3
@@ -160,7 +160,7 @@ define i32 @caller2b(ptr %g) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@caller2b
 ; CGSCC-SAME: (ptr nocapture nofree readonly align 4 [[G:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    [[V:%.*]] = call noundef i32 @test2b(ptr nocapture nofree readonly [[G]], i32 noundef 0) #[[ATTR7:[0-9]+]]
+; CGSCC-NEXT:    [[V:%.*]] = call noundef i32 @test2b(ptr nocapture nofree readonly [[G]], i32 noundef 0) #[[ATTR8:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[V]]
 ;
   %v = call i32 @test2b(%T* %g, i32 0)
@@ -180,7 +180,8 @@ define i32 @caller2b(ptr %g) {
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR5]] = { memory(read) }
-; CGSCC: attributes #[[ATTR6]] = { nounwind memory(write) }
-; CGSCC: attributes #[[ATTR7]] = { nounwind }
+; CGSCC: attributes #[[ATTR5]] = { nofree willreturn memory(read) }
+; CGSCC: attributes #[[ATTR6]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR7]] = { nofree nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR8]] = { nofree nounwind willreturn }
 ;.

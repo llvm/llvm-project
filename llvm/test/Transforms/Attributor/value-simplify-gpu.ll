@@ -68,7 +68,7 @@ define internal void @level1Kernel(i32 %C) {
 ; CGSCC-NEXT:    call void @level2Kernelb() #[[ATTR4]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
-; CGSCC-NEXT:    call void @level2Kernelall_late() #[[ATTR5]]
+; CGSCC-NEXT:    call void @level2Kernelall_late() #[[ATTR6:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -232,7 +232,7 @@ define internal void @level1(i32 %C) {
 ; CGSCC-NEXT:    call void @level2b(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
-; CGSCC-NEXT:    call void @level2all_late(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR5]]
+; CGSCC-NEXT:    call void @level2all_late(ptr noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -370,5 +370,6 @@ declare dso_local void @use(i32, i32, i32) nosync norecurse nounwind
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR3]] = { nosync nounwind }
 ; CGSCC: attributes #[[ATTR4]] = { nounwind }
-; CGSCC: attributes #[[ATTR5]] = { nounwind memory(write) }
+; CGSCC: attributes #[[ATTR5]] = { nofree nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR6]] = { nounwind memory(write) }
 ;.
