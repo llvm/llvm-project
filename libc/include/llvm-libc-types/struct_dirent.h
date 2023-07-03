@@ -14,7 +14,7 @@
 
 struct dirent {
   ino_t d_ino;
-#ifdef __unix__
+#ifdef __linux__
   off_t d_off;
   unsigned short d_reclen;
 #endif
