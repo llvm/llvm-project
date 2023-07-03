@@ -9,8 +9,8 @@
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT:  pacibsp
 ; CHECK-NEXT:  stp x20, x19, [sp, #-32]!
-; CHECK-NEXT:  .cfi_def_cfa_offset 32
 ; CHECK-NEXT:  stp x29, x30, [sp, #16]
+; CHECK-NEXT:  .cfi_def_cfa_offset 32
 ; CHECK-NEXT:  .cfi_offset w30, -8
 ; CHECK-NEXT:  .cfi_offset w29, -16
 ; CHECK-NEXT:  .cfi_offset w19, -24
@@ -59,8 +59,8 @@ continuebb:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT:  pacibsp
 ; CHECK-NEXT:  stp x20, x19, [sp, #-32]!
-; CHECK-NEXT:  .cfi_def_cfa_offset 32
 ; CHECK-NEXT:  stp x29, x30, [sp, #16]
+; CHECK-NEXT:  .cfi_def_cfa_offset 32
 ; CHECK-NEXT:  .cfi_offset w30, -8
 ; CHECK-NEXT:  .cfi_offset w29, -16
 ; CHECK-NEXT:  .cfi_offset w19, -24
@@ -114,8 +114,8 @@ continuebb:
 ; CHECK-NEXT: ; %bb.0:
 ; CHECK-NEXT:         pacibsp
 ; CHECK-NEXT:         stp x20, x19, [sp, #-32]!
-; CHECK-NEXT:         .cfi_def_cfa_offset 32
 ; CHECK-NEXT:         stp x29, x30, [sp, #16]
+; CHECK-NEXT:         .cfi_def_cfa_offset 32
 ; CHECK-NEXT:         .cfi_offset w30, -8
 ; CHECK-NEXT:         .cfi_offset w29, -16
 ; CHECK-NEXT:         .cfi_offset w19, -24
