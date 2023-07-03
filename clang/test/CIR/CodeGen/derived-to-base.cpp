@@ -82,7 +82,7 @@ void C3::Layer::Initialize() {
 
 // CHECK:  cir.scope {
 // CHECK:    %2 = cir.base_class_addr(%1 : cir.ptr <!ty_22struct2EC33A3ALayer22>) -> cir.ptr <!ty_22class2EC23A3ALayer22>
-// CHECK:    %3 = "cir.struct_element_addr"(%2) <{member_name = "m_C1"}> : (!cir.ptr<!ty_22class2EC23A3ALayer22>) -> !cir.ptr<!cir.ptr<!ty_22class2EC222>>
+// CHECK:    %3 = "cir.struct_element_addr"(%2) <{member_index = 0 : index, member_name = "m_C1"}> : (!cir.ptr<!ty_22class2EC23A3ALayer22>) -> !cir.ptr<!cir.ptr<!ty_22class2EC222>>
 // CHECK:    %4 = cir.load %3 : cir.ptr <!cir.ptr<!ty_22class2EC222>>, !cir.ptr<!ty_22class2EC222>
 // CHECK:    %5 = cir.const(#cir.null : !cir.ptr<!ty_22class2EC222>) : !cir.ptr<!ty_22class2EC222>
 // CHECK:    %6 = cir.cmp(eq, %4, %5) : !cir.ptr<!ty_22class2EC222>, !cir.bool

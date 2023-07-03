@@ -44,7 +44,7 @@ class CallOp;
 namespace {
 class ScalarExprEmitter;
 class AggExprEmitter;
-}
+} // namespace
 
 namespace cir {
 
@@ -1448,7 +1448,8 @@ public:
   /// stored in the reference.
   LValue buildLValueForFieldInitialization(LValue Base,
                                            const clang::FieldDecl *Field,
-                                           llvm::StringRef FieldName);
+                                           llvm::StringRef FieldName,
+                                           unsigned FieldIndex);
 
   void buildInitializerForField(clang::FieldDecl *Field, LValue LHS,
                                 clang::Expr *Init);
