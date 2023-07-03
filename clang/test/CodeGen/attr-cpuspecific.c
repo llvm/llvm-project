@@ -44,8 +44,8 @@ void SingleVersion(void);
 // LINUX: define weak_odr ptr @SingleVersion.resolver()
 // LINUX: call void @__cpu_indicator_init
 // LINUX: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
-// LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 1023
-// LINUX: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 1023
+// LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 525311
+// LINUX: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 525311
 // LINUX: ret ptr @SingleVersion.S
 // LINUX: call void @llvm.trap
 // LINUX: unreachable
@@ -53,8 +53,8 @@ void SingleVersion(void);
 // WINDOWS: define weak_odr dso_local void @SingleVersion() comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
-// WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 1023
-// WINDOWS: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 1023
+// WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 525311
+// WINDOWS: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 525311
 // WINDOWS: call void @SingleVersion.S()
 // WINDOWS-NEXT: ret void
 // WINDOWS: call void @llvm.trap
@@ -74,8 +74,8 @@ void TwoVersions(void);
 // LINUX: define weak_odr ptr @TwoVersions.resolver()
 // LINUX: call void @__cpu_indicator_init
 // LINUX: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
-// LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 58836991
-// LINUX: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 58836991
+// LINUX: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 59754495
+// LINUX: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 59754495
 // LINUX: ret ptr @TwoVersions.Z
 // LINUX: ret ptr @TwoVersions.S
 // LINUX: call void @llvm.trap
@@ -84,8 +84,8 @@ void TwoVersions(void);
 // WINDOWS: define weak_odr dso_local void @TwoVersions() comdat
 // WINDOWS: call void @__cpu_indicator_init()
 // WINDOWS: %[[FEAT_INIT:.+]] = load i32, ptr getelementptr inbounds ({ i32, i32, i32, [1 x i32] }, ptr @__cpu_model, i32 0, i32 3, i32 0), align 4
-// WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 58836991
-// WINDOWS: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 58836991
+// WINDOWS: %[[FEAT_JOIN:.+]] = and i32 %[[FEAT_INIT]], 59754495
+// WINDOWS: %[[FEAT_CHECK:.+]] = icmp eq i32 %[[FEAT_JOIN]], 59754495
 // WINDOWS: call void @TwoVersions.Z()
 // WINDOWS-NEXT: ret void
 // WINDOWS: call void @TwoVersions.S()
@@ -351,9 +351,9 @@ int DispatchFirst(void) {return 1;}
 ATTR(cpu_specific(knl))
 void OrderDispatchUsageSpecific(void) {}
 
-// CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+crc32,+cx8,+f16c,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
+// CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+crc32,+cx8,+f16c,+mmx,+pclmul,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK-SAME: "tune-cpu"="ivybridge"
-// CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+avx,+avx2,+avx512cd,+avx512er,+avx512f,+avx512pf,+bmi,+cmov,+crc32,+cx8,+f16c,+fma,+lzcnt,+mmx,+movbe,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
+// CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+aes,+avx,+avx2,+avx512cd,+avx512er,+avx512f,+avx512pf,+bmi,+bmi2,+cmov,+crc32,+cx8,+f16c,+fma,+lzcnt,+mmx,+movbe,+pclmul,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK-SAME: "tune-cpu"="knl"
 // CHECK: attributes #[[O]] = {{.*}}"target-features"="+cmov,+cx8,+mmx,+movbe,+sse,+sse2,+sse3,+ssse3,+x87"
 // CHECK-SAME: "tune-cpu"="atom"
