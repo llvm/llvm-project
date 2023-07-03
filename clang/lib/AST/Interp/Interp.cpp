@@ -496,14 +496,6 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {
   return true;
 }
 
-bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
-            llvm::RoundingMode RM) {
-  Floating F = S.Stk.pop<Floating>();
-  Floating Result = F.toSemantics(Sem, RM);
-  S.Stk.push<Floating>(Result);
-  return true;
-}
-
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter

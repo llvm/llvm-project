@@ -1421,9 +1421,13 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
 
 /// 1) Pops a Floating from the stack.
 /// 2) Pushes a new floating on the stack that uses the given semantics.
-/// Not templated, so implemented in Interp.cpp.
-bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
-            llvm::RoundingMode RM);
+inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
+            llvm::RoundingMode RM) {
+  Floating F = S.Stk.pop<Floating>();
+  Floating Result = F.toSemantics(Sem, RM);
+  S.Stk.push<Floating>(Result);
+  return true;
+}
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
