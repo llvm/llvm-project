@@ -109,11 +109,11 @@ static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val, uint64_t Addr,
   return addOperand(Inst, DAsm->decodeBoolReg(Val));
 }
 
-
-static DecodeStatus decodeSplitBarrierImm(MCInst &Inst, unsigned Val, uint64_t Addr,
-                                  const MCDisassembler *Decoder) {
+static DecodeStatus decodeSplitBarrier(MCInst &Inst, unsigned Val,
+                                       uint64_t Addr,
+                                       const MCDisassembler *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
-  return addOperand(Inst, DAsm->decodeSplitBarrierImm(Val));
+  return addOperand(Inst, DAsm->decodeSplitBarrier(Val));
 }
 
 #define DECODE_OPERAND(StaticDecoderName, DecoderName)                         \
@@ -1748,7 +1748,7 @@ MCOperand AMDGPUDisassembler::decodeBoolReg(unsigned Val) const {
              : decodeSrcOp(OPW32, Val);
 }
 
-MCOperand AMDGPUDisassembler::decodeSplitBarrierImm(unsigned Val) const {
+MCOperand AMDGPUDisassembler::decodeSplitBarrier(unsigned Val) const {
   return decodeSrcOp(OPW32, Val);
 }
 
