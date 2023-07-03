@@ -46,3 +46,18 @@ void local_stringlit() {
 // CHECK-NEXT:  %1 = cir.get_global @".str" : cir.ptr <!cir.array<!s8i x 8>>
 // CHECK-NEXT:  %2 = cir.cast(array_to_ptrdecay, %1 : !cir.ptr<!cir.array<!s8i x 8>>), !cir.ptr<!s8i>
 // CHECK-NEXT:  cir.store %2, %0 : !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>
+
+int multidim(int i, int j) {
+  int arr[2][2];
+  return arr[i][j];
+}
+
+// CHECK: %3 = cir.alloca !cir.array<!cir.array<!s32i x 2> x 2>, cir.ptr <!cir.array<!cir.array<!s32i x 2> x 2>>
+// Stride first dimension (stride = 2)
+// CHECK: %4 = cir.load %{{.+}} : cir.ptr <!s32i>, !s32i
+// CHECK: %5 = cir.cast(array_to_ptrdecay, %3 : !cir.ptr<!cir.array<!cir.array<!s32i x 2> x 2>>), !cir.ptr<!cir.array<!s32i x 2>>
+// CHECK: %6 = cir.ptr_stride(%5 : !cir.ptr<!cir.array<!s32i x 2>>, %4 : !s32i), !cir.ptr<!cir.array<!s32i x 2>>
+// Stride second dimension (stride = 1)
+// CHECK: %7 = cir.load %{{.+}} : cir.ptr <!s32i>, !s32i
+// CHECK: %8 = cir.cast(array_to_ptrdecay, %6 : !cir.ptr<!cir.array<!s32i x 2>>), !cir.ptr<!s32i>
+// CHECK: %9 = cir.ptr_stride(%8 : !cir.ptr<!s32i>, %7 : !s32i), !cir.ptr<!s32i>

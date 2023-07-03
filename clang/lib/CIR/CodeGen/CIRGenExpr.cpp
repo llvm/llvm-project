@@ -1239,7 +1239,7 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
     // For simple multidimensional array indexing, set the 'accessed' flag
     // for better bounds-checking of the base expression.
     if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
-      assert(!llvm::isa<ArraySubscriptExpr>(Array) && "multi-dim access NYI");
+      ArrayLV = buildArraySubscriptExpr(ASE, /*Accessed=*/true);
     else
       ArrayLV = buildLValue(Array);
     auto Idx = EmitIdxAfterBase(/*Promote=*/true);
