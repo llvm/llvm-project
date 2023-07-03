@@ -1888,10 +1888,11 @@ class Pat<dag pattern, dag result> : Pattern<pattern, [result]>;
 //
 
 // Complex patterns, e.g. X86 addressing mode, requires pattern matching code
-// in C++. NumOperands is the number of operands returned by the select function;
-// SelectFunc is the name of the function used to pattern match the max. pattern;
-// RootNodes are the list of possible root nodes of the sub-dags to match.
-// e.g. X86 addressing mode - def addr : ComplexPattern<4, "SelectAddr", [add]>;
+// in C++. Ty is the type of return value; NumOperands is the number of operands
+// returned by the select function; SelectFunc is the name of the function used
+// to pattern match the max. pattern; RootNodes are the list of possible root nodes
+// of the sub-dags to match.
+// e.g. X86 addressing mode - def addr : ComplexPattern<iPTR, 4, "SelectAddr", [add]>;
 //
 class ComplexPattern<ValueType ty, int numops, string fn,
                      list<SDNode> roots = [], list<SDNodeProperty> props = [],
