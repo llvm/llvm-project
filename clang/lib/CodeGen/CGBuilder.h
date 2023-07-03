@@ -155,12 +155,6 @@ public:
                             Addr.isKnownNonNull());
   }
 
-  /// This method is to be deprecated. Use `Address::withElementType` instead.
-  Address CreateElementBitCast(Address Addr, llvm::Type *Ty) {
-    return Address(Addr.getPointer(), Ty, Addr.getAlignment(),
-                   Addr.isKnownNonNull());
-  }
-
   using CGBuilderBaseTy::CreatePointerBitCastOrAddrSpaceCast;
   Address CreatePointerBitCastOrAddrSpaceCast(Address Addr, llvm::Type *Ty,
                                               llvm::Type *ElementTy,
