@@ -69,7 +69,8 @@ struct HostDataToTargetTy {
   const uintptr_t HstPtrEnd;       // non-inclusive.
   const map_var_info_t HstPtrName; // Optional source name of mapped variable.
 
-  const uintptr_t TgtPtrBegin; // target info.
+  const uintptr_t TgtAllocBegin; // allocated target memory
+  const uintptr_t TgtPtrBegin; // mapped target memory = TgtAllocBegin + padding
 
   const bool IsUSMAlloc; // used to track maps under USM mode (optional)
 
@@ -123,11 +124,13 @@ private:
   const std::unique_ptr<StatesTy> States;
 
 public:
-  HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
+  HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E,
+                     uintptr_t TgtAllocBegin, uintptr_t TgtPtrBegin,
                      bool UseHoldRefCount, map_var_info_t Name = nullptr,
                      bool IsINF = false, bool IsUSMAlloc = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
-        TgtPtrBegin(TB), IsUSMAlloc(IsUSMAlloc),
+        TgtAllocBegin(TgtAllocBegin), TgtPtrBegin(TgtPtrBegin),
+        IsUSMAlloc(IsUSMAlloc),
         States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
                                           : IsINF         ? INFRefCount
                                                           : 1,
@@ -458,8 +461,8 @@ struct DeviceTy {
   /// - Data transfer issue fails.
   TargetPointerResultTy getTargetPointer(
       HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin, void *HstPtrBase,
-      int64_t Size, map_var_info_t HstPtrName, bool HasFlagTo,
-      bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
+      int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName,
+      bool HasFlagTo, bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
       bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
       AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR = nullptr,
       bool ReleaseHDTTMap = true);
