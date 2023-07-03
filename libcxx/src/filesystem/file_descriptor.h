@@ -18,6 +18,7 @@
 
 #include "error.h"
 #include "posix_compat.h"
+#include "time_utils.h"
 
 #if defined(_LIBCPP_WIN32API)
 # define WIN32_LEAN_AND_MEAN
