@@ -573,6 +573,11 @@ Bug Fixes in This Version
   (`#60709 <https://github.com/llvm/llvm-project/issues/60709>`_).
 - Fixed a missed integer overflow warning with temporary values.
   (`#63629 <https://github.com/llvm/llvm-project/issues/63629>`_)
+- Fixed parsing of elaborated type specifier inside of a new expression.
+  (`#34341 <https://github.com/llvm/llvm-project/issues/34341>`_)
+- Clang now correctly evaluates ``__has_extension (cxx_defaulted_functions)``
+  and ``__has_extension (cxx_default_function_template_args)`` to 1.
+  (`#61758 <https://github.com/llvm/llvm-project/issues/61758>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

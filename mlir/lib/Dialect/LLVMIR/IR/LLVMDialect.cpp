@@ -281,6 +281,12 @@ LogicalResult AllocaOp::verify() {
   return success();
 }
 
+Type AllocaOp::getResultPtrElementType() {
+  // This will become trivial once non-opaque pointers are gone.
+  return getElemType().has_value() ? *getElemType()
+                                   : getResult().getType().getElementType();
+}
+
 //===----------------------------------------------------------------------===//
 // LLVM::BrOp
 //===----------------------------------------------------------------------===//
@@ -769,6 +775,42 @@ Type LLVM::GEPOp::getSourceElementType() {
   return llvm::cast<LLVMPointerType>(
              extractVectorElementType(getBase().getType()))
       .getElementType();
+}
+
+Type GEPOp::getResultPtrElementType() {
+  // Ensures all indices are static and fetches them.
+  SmallVector<IntegerAttr> indices;
+  for (auto index : getIndices()) {
+    IntegerAttr indexInt = llvm::dyn_cast_if_present<IntegerAttr>(index);
+    if (!indexInt)
+      return nullptr;
+    indices.push_back(indexInt);
+  }
+
+  // Set the initial type currently being used for indexing. This will be
+  // updated as the indices get walked over.
+  Type selectedType = getSourceElementType();
+
+  // Follow the indexed elements in the gep.
+  for (IntegerAttr index : llvm::drop_begin(indices)) {
+    // Ensure the structure of the type being indexed can be reasoned about.
+    // This includes rejecting any potential typed pointer.
+    auto destructurable =
+        llvm::dyn_cast<DestructurableTypeInterface>(selectedType);
+    if (!destructurable)
+      return nullptr;
+
+    // Follow the type at the index the gep is accessing, making it the new type
+    // used for indexing.
+    Type field = destructurable.getTypeAtIndex(index);
+    if (!field)
+      return nullptr;
+    selectedType = field;
+  }
+
+  // When there are no more indices, the type currently being used for indexing
+  // is the type of the value pointed at by the returned indexed pointer.
+  return selectedType;
 }
 
 //===----------------------------------------------------------------------===//
