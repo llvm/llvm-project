@@ -563,6 +563,8 @@ Bug Fixes in This Version
   (`#60709 <https://github.com/llvm/llvm-project/issues/60709>`_).
 - Fixed a missed integer overflow warning with temporary values.
   (`#63629 <https://github.com/llvm/llvm-project/issues/63629>`_)
+- Fixed parsing of elaborated type specifier inside of a new expression.
+  (`#34341 <https://github.com/llvm/llvm-project/issues/34341>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
