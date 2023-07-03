@@ -1507,28 +1507,6 @@ static bool LookupAddressInModule(CommandInterpreter &interpreter, Stream &strm,
     ExecutionContextScope *exe_scope =
         interpreter.GetExecutionContext().GetBestExecutionContextScope();
     DumpAddress(exe_scope, so_addr, verbose, all_ranges, strm);
-    //        strm.IndentMore();
-    //        strm.Indent ("    Address: ");
-    //        so_addr.Dump (&strm, exe_scope,
-    //        Address::DumpStyleModuleWithFileAddress);
-    //        strm.PutCString (" (");
-    //        so_addr.Dump (&strm, exe_scope,
-    //        Address::DumpStyleSectionNameOffset);
-    //        strm.PutCString (")\n");
-    //        strm.Indent ("    Summary: ");
-    //        const uint32_t save_indent = strm.GetIndentLevel ();
-    //        strm.SetIndentLevel (save_indent + 13);
-    //        so_addr.Dump (&strm, exe_scope,
-    //        Address::DumpStyleResolvedDescription);
-    //        strm.SetIndentLevel (save_indent);
-    //        // Print out detailed address information when verbose is enabled
-    //        if (verbose)
-    //        {
-    //            strm.EOL();
-    //            so_addr.Dump (&strm, exe_scope,
-    //            Address::DumpStyleDetailedSymbolContext);
-    //        }
-    //        strm.IndentLess();
     return true;
   }
 
