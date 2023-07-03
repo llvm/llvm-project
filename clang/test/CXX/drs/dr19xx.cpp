@@ -194,7 +194,7 @@ namespace dr1966 { // dr1966: 11
     enum E : int {1}; // expected-error {{expected identifier}} (not bit-field)
   };
   auto *p1 = new enum E : int; // expected-error {{only permitted as a standalone declaration}}
-  auto *p2 = new enum F : int {}; // expected-error {{cannot be defined in a type specifier}}
+  auto *p2 = new enum F : int {}; // expected-error {{only permitted as a standalone declaration}}
   auto *p3 = true ? new enum G : int {}; // expected-error {{forward reference}} expected-error {{incomplete}} expected-note {{declaration}}
   auto h() -> enum E : int {}; // expected-error {{only permitted as a standalone declaration}}
 
