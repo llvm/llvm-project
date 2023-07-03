@@ -140,6 +140,13 @@ public:
   /// Return true if \p T is a legal scalar floating point type.
   bool isLegalFloatingTy(const Type *T) const;
 
+  /// Wrapper to pass all the arguments to computeKnownFPClass
+  KnownFPClass computeKnownFPClass(const Value *V, FPClassTest Interested,
+                                   const Instruction *CtxI) const {
+    return llvm::computeKnownFPClass(V, *DL, Interested, 0, TLInfo, AC, CtxI,
+                                     DT);
+  }
+
   /// Promotes uniform binary operation \p I to equivalent 32 bit binary
   /// operation.
   ///
@@ -239,6 +246,14 @@ public:
 
   Value *matchFractPat(IntrinsicInst &I);
   Value *applyFractPat(IRBuilder<> &Builder, Value *FractArg);
+
+  Value *optimizeWithRsq(IRBuilder<> &Builder, Value *Num, Value *Den,
+                         FastMathFlags DivFMF, FastMathFlags SqrtFMF,
+                         const Instruction *CtxI, bool AllowApproxRsq) const;
+
+  Value *optimizeWithRcp(IRBuilder<> &Builder, Value *Num, Value *Den,
+                         FastMathFlags FMF, const Instruction *CtxI,
+                         bool AllowInaccurateRcp, bool RcpIsAccurate) const;
 
 public:
   bool visitFDiv(BinaryOperator &I);
@@ -734,30 +749,138 @@ bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
   return true;
 }
 
+/// Emit an expansion of 1.0 / Src good for 1ulp that supports denormals.
+static Value *emitRcpIEEE1ULP(IRBuilder<> &Builder, Value *Src, bool IsNegative,
+                              bool HasFractBug) {
+  // Same as for 1.0, but expand the sign out of the constant.
+  // -1.0 / x -> rcp (fneg x)
+  if (IsNegative)
+    Src = Builder.CreateFNeg(Src);
+
+  // The rcp instruction doesn't support denormals, so scale the input
+  // out of the denormal range and convert at the end.
+  //
+  // Expand as 2^-n * (1.0 / (x * 2^n))
+
+  // TODO: Skip scaling if input is known never denormal and the input
+  // range won't underflow to denormal. The hard part is knowing the
+  // result. We need a range check, the result could be denormal for
+  // 0x1p+126 < den <= 0x1p+127.
+
+  Type *Ty = Src->getType();
+  Value *Frexp = Builder.CreateIntrinsic(Intrinsic::frexp,
+                                         {Ty, Builder.getInt32Ty()}, Src);
+  Value *FrexpMant = Builder.CreateExtractValue(Frexp, {0});
+
+  // Bypass the bug workaround for the exponent result since it doesn't matter.
+  // TODO: Does the bug workaround even really need to consider the exponent
+  // result? It's unspecified by the spec.
+
+  Value *FrexpExp =
+      HasFractBug ? Builder.CreateIntrinsic(Intrinsic::amdgcn_frexp_exp,
+                                            {Builder.getInt32Ty(), Ty}, Src)
+                  : Builder.CreateExtractValue(Frexp, {1});
+
+  Value *ScaleFactor = Builder.CreateNeg(FrexpExp);
+  Value *Rcp = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, FrexpMant);
+  return Builder.CreateIntrinsic(Intrinsic::ldexp, {Ty, Builder.getInt32Ty()},
+                                 {Rcp, ScaleFactor});
+}
+
+/// Emit an expansion of 1.0 / sqrt(Src) good for 1ulp that supports denormals.
+static Value *emitRsqIEEE1ULP(IRBuilder<> &Builder, Value *Src,
+                              bool IsNegative) {
+  // bool need_scale = x < 0x1p-126f;
+  // float input_scale = need_scale ? 0x1.0p+24f : 1.0f;
+  // float output_scale = need_scale ? 0x1.0p+12f : 1.0f;
+  // rsq(x * input_scale) * output_scale;
+
+  Type *Ty = Src->getType();
+  APFloat SmallestNormal =
+      APFloat::getSmallestNormalized(Ty->getFltSemantics());
+  Value *NeedScale =
+      Builder.CreateFCmpOLT(Src, ConstantFP::get(Ty, SmallestNormal));
+  Constant *One = ConstantFP::get(Ty, 1.0);
+  Constant *InputScale = ConstantFP::get(Ty, 0x1.0p+24);
+  Constant *OutputScale =
+      ConstantFP::get(Ty, IsNegative ? -0x1.0p+12 : 0x1.0p+12);
+
+  Value *InputScaleFactor = Builder.CreateSelect(NeedScale, InputScale, One);
+
+  Value *ScaledInput = Builder.CreateFMul(Src, InputScaleFactor);
+  Value *Rsq = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rsq, ScaledInput);
+  Value *OutputScaleFactor = Builder.CreateSelect(
+      NeedScale, OutputScale, IsNegative ? ConstantFP::get(Ty, -1.0) : One);
+
+  return Builder.CreateFMul(Rsq, OutputScaleFactor);
+}
+
+Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
+    IRBuilder<> &Builder, Value *Num, Value *Den, FastMathFlags DivFMF,
+    FastMathFlags SqrtFMF, const Instruction *CtxI, bool AllowApproxRsq) const {
+  // The rsqrt contraction increases accuracy from ~2ulp to ~1ulp.
+  if (!DivFMF.allowContract() || !SqrtFMF.allowContract())
+    return nullptr;
+
+  const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num);
+  if (!CLHS)
+    return nullptr;
+
+  Type *Ty = Den->getType();
+  assert(Ty->isFloatTy());
+
+  bool IsNegative = false;
+  if (CLHS->isExactlyValue(1.0) || (IsNegative = CLHS->isExactlyValue(-1.0))) {
+    // Add in the sqrt flags.
+    IRBuilder<>::FastMathFlagGuard Guard(Builder);
+    DivFMF |= SqrtFMF;
+    Builder.setFastMathFlags(DivFMF);
+
+    if (HasFP32DenormalFlush || AllowApproxRsq ||
+        computeKnownFPClass(Den, fcSubnormal, CtxI).isKnownNeverSubnormal()) {
+      Value *Result = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rsq, Den);
+      // -1.0 / sqrt(x) -> fneg(rsq(x))
+      return IsNegative ? Builder.CreateFNeg(Result) : Result;
+    }
+
+    return emitRsqIEEE1ULP(Builder, Den, IsNegative);
+  }
+
+  return nullptr;
+}
+
 // Optimize fdiv with rcp:
 //
 // 1/x -> rcp(x) when rcp is sufficiently accurate or inaccurate rcp is
 //               allowed with unsafe-fp-math or afn.
 //
-// a/b -> a*rcp(b) when inaccurate rcp is allowed with unsafe-fp-math or afn.
-static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
-                              bool RcpIsAccurate, IRBuilder<> &Builder,
-                              Module *Mod) {
-
-  if (!AllowInaccurateRcp && !RcpIsAccurate)
-    return nullptr;
+// a/b -> a*rcp(b) when arcp is allowed, and we only need provide ULP 1.0
+Value *AMDGPUCodeGenPrepareImpl::optimizeWithRcp(IRBuilder<> &Builder,
+                                                 Value *Num, Value *Den,
+                                                 FastMathFlags FMF,
+                                                 const Instruction *CtxI,
+                                                 bool AllowInaccurateRcp,
+                                                 bool RcpIsAccurate) const {
+  assert(AllowInaccurateRcp || RcpIsAccurate);
 
   Type *Ty = Den->getType();
+  assert(Ty->isFloatTy());
+
   if (const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num)) {
-    if (AllowInaccurateRcp || RcpIsAccurate) {
-      if (CLHS->isExactlyValue(1.0)) {
-        Function *Decl = Intrinsic::getDeclaration(
-          Mod, Intrinsic::amdgcn_rcp, Ty);
+    bool IsNegative = false;
+    if (CLHS->isExactlyValue(1.0) ||
+        (IsNegative = CLHS->isExactlyValue(-1.0))) {
+      Value *Src = Den;
+
+      if (HasFP32DenormalFlush || AllowInaccurateRcp) {
+        // -1.0 / x -> 1.0 / fneg(x)
+        if (IsNegative)
+          Src = Builder.CreateFNeg(Src);
 
         // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
         // the CI documentation has a worst case error of 1 ulp.
-        // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
-        // use it as long as we aren't trying to use denormals.
+        // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK
+        // to use it as long as we aren't trying to use denormals.
         //
         // v_rcp_f16 and v_rsq_f16 DO support denormals.
 
@@ -765,30 +888,29 @@ static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
         //       insert rsq intrinsic here.
 
         // 1.0 / x -> rcp(x)
-        return Builder.CreateCall(Decl, { Den });
+        return Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, Src);
       }
 
-       // Same as for 1.0, but expand the sign out of the constant.
-      if (CLHS->isExactlyValue(-1.0)) {
-        Function *Decl = Intrinsic::getDeclaration(
-          Mod, Intrinsic::amdgcn_rcp, Ty);
-
-         // -1.0 / x -> rcp (fneg x)
-         Value *FNeg = Builder.CreateFNeg(Den);
-         return Builder.CreateCall(Decl, { FNeg });
-       }
+      // TODO: If the input isn't denormal, and we know the input exponent isn't
+      // big enough to introduce a denormal we can avoid the scaling.
+      return emitRcpIEEE1ULP(Builder, Src, IsNegative, ST->hasFractBug());
     }
   }
 
-  if (AllowInaccurateRcp) {
-    Function *Decl = Intrinsic::getDeclaration(
-      Mod, Intrinsic::amdgcn_rcp, Ty);
-
-    // Turn into multiply by the reciprocal.
+  if (FMF.allowReciprocal()) {
     // x / y -> x * (1.0 / y)
-    Value *Recip = Builder.CreateCall(Decl, { Den });
+
+    // TODO: Could avoid denormal scaling and use raw rcp if we knew the output
+    // will never underflow.
+    if (AllowInaccurateRcp || HasFP32DenormalFlush) {
+      Value *Recip = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, Den);
+      return Builder.CreateFMul(Num, Recip);
+    }
+
+    Value *Recip = emitRcpIEEE1ULP(Builder, Den, false, ST->hasFractBug());
     return Builder.CreateFMul(Num, Recip);
   }
+
   return nullptr;
 }
 
@@ -852,23 +974,50 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   // expansion around them in codegen. f16 is good enough to always use.
 
   const FPMathOperator *FPOp = cast<const FPMathOperator>(&FDiv);
+  const FastMathFlags DivFMF = FPOp->getFastMathFlags();
+
   const float ReqdAccuracy =  FPOp->getFPAccuracy();
 
   // Inaccurate rcp is allowed with unsafe-fp-math or afn.
-  FastMathFlags FMF = FPOp->getFastMathFlags();
-  const bool AllowInaccurateRcp = HasUnsafeFPMath || FMF.approxFunc();
+  //
+  // Defer to codegen to handle this.
+  //
+  // TODO: Decide on an interpretation for interactions between afn + arcp +
+  // !fpmath, and make it consistent between here and codegen. For now, defer
+  // expansion of afn to codegen. The current interpretation is so aggressive we
+  // don't need any pre-consideration here when we have better information. A
+  // more conservative interpretation could use handling here.
+  const bool AllowInaccurateRcp = HasUnsafeFPMath || DivFMF.approxFunc();
+  if (AllowInaccurateRcp)
+    return false;
+
+  bool AllowApproxRsq = false;
+
+  FastMathFlags SqrtFMF;
 
   // rcp_f16 is accurate to 0.51 ulp.
   // rcp_f32 is accurate for !fpmath >= 1.0ulp and denormals are flushed.
   // rcp_f64 is never accurate.
-  const bool RcpIsAccurate = HasFP32DenormalFlush && ReqdAccuracy >= 1.0f;
-
-  IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
-  Builder.setFastMathFlags(FMF);
-  Builder.SetCurrentDebugLocation(FDiv.getDebugLoc());
-
+  const bool RcpIsAccurate = ReqdAccuracy >= 1.0f;
   Value *Num = FDiv.getOperand(0);
   Value *Den = FDiv.getOperand(1);
+
+  Value *RsqOp = nullptr;
+  auto *DenII = dyn_cast<IntrinsicInst>(Den);
+  if (DenII && DenII->getIntrinsicID() == Intrinsic::sqrt &&
+      DenII->hasOneUse() && (RcpIsAccurate || AllowInaccurateRcp)) {
+    const auto *SqrtOp = cast<FPMathOperator>(DenII);
+    AllowApproxRsq = HasUnsafeFPMath || SqrtOp->hasApproxFunc();
+
+    if (AllowApproxRsq || SqrtOp->getFPAccuracy() >= 1.0f) {
+      SqrtFMF = SqrtOp->getFastMathFlags();
+      RsqOp = SqrtOp->getOperand(0);
+    }
+  }
+
+  IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
+  Builder.setFastMathFlags(DivFMF);
+  Builder.SetCurrentDebugLocation(FDiv.getDebugLoc());
 
   Value *NewFDiv = nullptr;
   if (auto *VT = dyn_cast<FixedVectorType>(FDiv.getType())) {
@@ -878,32 +1027,71 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
     // constant. This works when the scalarizer pass is run first.
     for (unsigned I = 0, E = VT->getNumElements(); I != E; ++I) {
       Value *NumEltI = Builder.CreateExtractElement(Num, I);
-      Value *DenEltI = Builder.CreateExtractElement(Den, I);
-      // Try rcp first.
-      Value *NewElt = optimizeWithRcp(NumEltI, DenEltI, AllowInaccurateRcp,
-                                      RcpIsAccurate, Builder, Mod);
-      if (!NewElt) // Try fdiv.fast.
-         NewElt = optimizeWithFDivFast(NumEltI, DenEltI, ReqdAccuracy,
-                                       HasFP32DenormalFlush, Builder, Mod);
-      if (!NewElt) // Keep the original.
-        NewElt = Builder.CreateFDiv(NumEltI, DenEltI);
+
+      Value *NewElt = nullptr;
+      if (RsqOp) {
+        Value *DenEltI = Builder.CreateExtractElement(RsqOp, I);
+        NewElt = optimizeWithRsq(Builder, NumEltI, DenEltI, DivFMF, SqrtFMF,
+                                 &FDiv, AllowApproxRsq);
+        if (!NewElt) {
+          // TODO: Avoid inserting dead extract in the first place
+          if (Instruction *Extract = dyn_cast<Instruction>(DenEltI))
+            Extract->eraseFromParent();
+        }
+      }
+
+      Value *DenEltI = nullptr;
+
+      if (!NewElt && (RcpIsAccurate || AllowInaccurateRcp)) {
+        DenEltI = Builder.CreateExtractElement(Den, I);
+
+        // Try rcp first.
+        NewElt = optimizeWithRcp(Builder, NumEltI, DenEltI, DivFMF,
+                                 cast<Instruction>(FPOp), AllowInaccurateRcp,
+                                 RcpIsAccurate);
+        if (!NewElt) // Try fdiv.fast.
+          NewElt = optimizeWithFDivFast(NumEltI, DenEltI, ReqdAccuracy,
+                                        HasFP32DenormalFlush, Builder, Mod);
+      }
+
+      if (!NewElt) {
+        if (!DenEltI)
+          DenEltI = Builder.CreateExtractElement(Den, I);
+
+        // Keep the original, but scalarized.
+        Value *ScalarDiv = Builder.CreateFDiv(NumEltI, DenEltI);
+        if (auto *ScalarDivInst = dyn_cast<Instruction>(ScalarDiv))
+          ScalarDivInst->copyMetadata(FDiv);
+        NewElt = ScalarDiv;
+      }
 
       NewFDiv = Builder.CreateInsertElement(NewFDiv, NewElt, I);
     }
   } else { // Scalar FDiv.
-    // Try rcp first.
-    NewFDiv = optimizeWithRcp(Num, Den, AllowInaccurateRcp, RcpIsAccurate,
-                              Builder, Mod);
-    if (!NewFDiv) { // Try fdiv.fast.
-      NewFDiv = optimizeWithFDivFast(Num, Den, ReqdAccuracy,
-                                     HasFP32DenormalFlush, Builder, Mod);
+    if (RsqOp) {
+      NewFDiv = optimizeWithRsq(Builder, Num, RsqOp, DivFMF, SqrtFMF,
+                                cast<Instruction>(FPOp), AllowApproxRsq);
+    }
+
+    if (!NewFDiv) {
+      // Try rcp first.
+      if (RcpIsAccurate || AllowInaccurateRcp) {
+        NewFDiv =
+            optimizeWithRcp(Builder, Num, Den, DivFMF, cast<Instruction>(FPOp),
+                            AllowInaccurateRcp, RcpIsAccurate);
+      }
+
+      if (!NewFDiv) { // Try fdiv.fast.
+        NewFDiv = optimizeWithFDivFast(Num, Den, ReqdAccuracy,
+                                       HasFP32DenormalFlush, Builder, Mod);
+      }
     }
   }
 
   if (NewFDiv) {
     FDiv.replaceAllUsesWith(NewFDiv);
     NewFDiv->takeName(&FDiv);
-    FDiv.eraseFromParent();
+    RecursivelyDeleteTriviallyDeadInstructions(&FDiv, TLInfo);
   }
 
   return !!NewFDiv;
