@@ -463,6 +463,6 @@ end:
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
-; CGSCC: attributes #[[ATTR5]] = { nounwind memory(none) }
-; CGSCC: attributes #[[ATTR6]] = { nounwind }
+; CGSCC: attributes #[[ATTR5]] = { nofree nounwind memory(none) }
+; CGSCC: attributes #[[ATTR6]] = { nofree nounwind }
 ;.

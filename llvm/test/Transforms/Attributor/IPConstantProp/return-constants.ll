@@ -68,7 +68,7 @@ define %0 @caller(i1 %Q) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller
 ; CGSCC-SAME: (i1 noundef [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 noundef [[Q]])
+; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 noundef [[Q]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret [[TMP0]] [[X]]
 ;
   %X = call %0 @foo(i1 %Q)
@@ -101,10 +101,10 @@ define i32 @caller2(i1 %Q) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@caller2
 ; CGSCC-SAME: (i1 noundef [[Q:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 noundef [[Q]])
+; CGSCC-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 noundef [[Q]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] [[X]], 0
 ; CGSCC-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
-; CGSCC-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 noundef [[Q]])
+; CGSCC-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 noundef [[Q]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] [[Y]], 0
 ; CGSCC-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
 ; CGSCC-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]
@@ -130,4 +130,5 @@ define i32 @caller2(i1 %Q) {
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { nofree willreturn }
 ;.

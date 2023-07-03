@@ -3122,7 +3122,8 @@ struct IRAttribute : public BaseType {
     if (RequiresPoison ? isa<PoisonValue>(IRP.getAssociatedValue())
                        : isa<UndefValue>(IRP.getAssociatedValue()))
       return true;
-    return A.hasAttr(IRP, {ImpliedAttributeKind}, IgnoreSubsumingPositions);
+    return A.hasAttr(IRP, {ImpliedAttributeKind}, IgnoreSubsumingPositions,
+                     ImpliedAttributeKind);
   }
 
   /// See AbstractAttribute::initialize(...).

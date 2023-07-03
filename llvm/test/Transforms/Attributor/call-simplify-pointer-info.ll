@@ -292,5 +292,5 @@ entry:
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR4]] = { memory(read) }
+; CGSCC: attributes #[[ATTR4]] = { nofree willreturn memory(read) }
 ;.
