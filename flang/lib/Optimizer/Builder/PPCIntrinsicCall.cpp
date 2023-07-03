@@ -614,7 +614,7 @@ PPCIntrinsicLibrary::genVecCmp(mlir::Type resultType,
       break;
     }
     default:
-      assert("Invalid vector operation for generator");
+      assert(false && "Invalid vector operation for generator");
     }
   } else if (vecTyInfo.isFloat()) {
     mlir::Value vargs[2];
@@ -631,12 +631,12 @@ PPCIntrinsicLibrary::genVecCmp(mlir::Type resultType,
       vargs[1] = argBases[0];
       break;
     default:
-      assert("Invalid vector operation for generator");
+      assert(false && "Invalid vector operation for generator");
     }
     auto callOp{builder.create<fir::CallOp>(loc, funcOp, vargs)};
     res = callOp.getResult(0);
   } else
-    assert("invalid vector type");
+    assert(false && "invalid vector type");
 
   return res;
 }
