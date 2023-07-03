@@ -1790,3 +1790,39 @@ transform.sequence failures(propagate) {
   // expected-remark @below{{1}}
   test_print_number_of_associated_payload_ir_ops %elim_second : !transform.any_op
 }
+
+// -----
+
+// CHECK-LABEL: func @test_licm(
+//       CHECK:   arith.muli
+//       CHECK:   scf.for {{.*}} {
+//       CHECK:     vector.print
+//       CHECK:   }
+func.func @test_licm(%arg0: index, %arg1: index, %arg2: index) {
+  scf.for %iv = %arg0 to %arg1 step %arg2 {
+    %0 = arith.muli %arg0, %arg1 : index
+    vector.print %0 : index
+  }
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.apply_licm to %0 : !transform.any_op
+}
+
+// -----
+
+// expected-note @below{{when applied to this op}}
+module {
+  func.func @test_licm_invalid() {
+    return
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !transform.any_op):
+    // expected-error @below{{transform applied to the wrong op kind}}
+    transform.apply_licm to %arg1 : !transform.any_op
+  }
+}
