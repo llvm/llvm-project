@@ -362,44 +362,6 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   return builder.create<arith::DivUIOp>(loc, sum, divisor);
 }
 
-/// Helper to replace uses of loop carried values (iter_args) and loop
-/// yield values while promoting single iteration scf.for ops.
-static void replaceIterArgsAndYieldResults(scf::ForOp forOp) {
-  // Replace uses of iter arguments with iter operands (initial values).
-  auto iterOperands = forOp.getIterOperands();
-  auto iterArgs = forOp.getRegionIterArgs();
-  for (auto e : llvm::zip(iterOperands, iterArgs))
-    std::get<1>(e).replaceAllUsesWith(std::get<0>(e));
-
-  // Replace uses of loop results with the values yielded by the loop.
-  auto outerResults = forOp.getResults();
-  auto innerResults = forOp.getBody()->getTerminator()->getOperands();
-  for (auto e : llvm::zip(outerResults, innerResults))
-    std::get<0>(e).replaceAllUsesWith(std::get<1>(e));
-}
-
-/// Promotes the loop body of a forOp to its containing block if the forOp
-/// it can be determined that the loop has a single iteration.
-LogicalResult mlir::promoteIfSingleIteration(scf::ForOp forOp) {
-  std::optional<int64_t> tripCount = constantTripCount(
-      forOp.getLowerBound(), forOp.getUpperBound(), forOp.getStep());
-  if (!tripCount.has_value() || tripCount != 1)
-    return failure();
-  auto iv = forOp.getInductionVar();
-  iv.replaceAllUsesWith(forOp.getLowerBound());
-
-  replaceIterArgsAndYieldResults(forOp);
-
-  // Move the loop body operations, except for its terminator, to the loop's
-  // containing block.
-  auto *parentBlock = forOp->getBlock();
-  forOp.getBody()->getTerminator()->erase();
-  parentBlock->getOperations().splice(Block::iterator(forOp),
-                                      forOp.getBody()->getOperations());
-  forOp.erase();
-  return success();
-}
-
 /// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with
 /// associated 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap
 /// 'forOpIV' for each unrolled body. If specified, annotates the Ops in each
@@ -469,6 +431,7 @@ LogicalResult mlir::loopUnrollByFactor(
   // Compute tripCount = ceilDiv((upperBound - lowerBound), step) and populate
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
   OpBuilder boundsBuilder(forOp);
+  IRRewriter rewriter(forOp.getContext());
   auto loc = forOp.getLoc();
   Value step = forOp.getStep();
   Value upperBoundUnrolled;
@@ -488,7 +451,7 @@ LogicalResult mlir::loopUnrollByFactor(
     int64_t tripCount = mlir::ceilDiv(ubCst - lbCst, stepCst);
 
     if (unrollFactor == 1) {
-      if (tripCount == 1 && failed(promoteIfSingleIteration(forOp)))
+      if (tripCount == 1 && failed(forOp.promoteIfSingleIteration(rewriter)))
         return failure();
       return success();
     }
@@ -553,7 +516,7 @@ LogicalResult mlir::loopUnrollByFactor(
     }
     epilogueForOp->setOperands(epilogueForOp.getNumControlOperands(),
                                epilogueForOp.getNumIterOperands(), results);
-    (void)promoteIfSingleIteration(epilogueForOp);
+    (void)epilogueForOp.promoteIfSingleIteration(rewriter);
   }
 
   // Create unrolled loop.
@@ -573,7 +536,7 @@ LogicalResult mlir::loopUnrollByFactor(
       },
       annotateFn, iterArgs, yieldedValues);
   // Promote the loop body up if this has turned into a single iteration loop.
-  (void)promoteIfSingleIteration(forOp);
+  (void)forOp.promoteIfSingleIteration(rewriter);
   return success();
 }
 
