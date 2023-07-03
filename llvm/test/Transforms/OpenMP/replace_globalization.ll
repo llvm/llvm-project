@@ -143,7 +143,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 false)
 ; CHECK-NEXT:    [[X:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR6:[0-9]+]]
-; CHECK-NEXT:    call void @unknown_no_openmp()
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    call void @use.internalized(ptr nofree [[X]]) #[[ATTR7:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[X]], i64 4) #[[ATTR8:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
@@ -153,14 +153,14 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 false)
-; CHECK-NEXT:    call void @unknown_no_openmp()
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR5]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[MASTER1:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master1:
 ; CHECK-NEXT:    call void @use.internalized(ptr nofree addrspacecast (ptr addrspace(3) @x_shared to ptr)) #[[ATTR7]]
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
-; CHECK-NEXT:    call void @unknown_no_openmp()
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR5]]
 ; CHECK-NEXT:    [[B0:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[B0]], label [[MASTER2:%.*]], label [[EXIT]]
 ; CHECK:       master2:
@@ -174,7 +174,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-LABEL: define {{[^@]+}}@baz_spmd
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 true)
-; CHECK-NEXT:    call void @unknown_no_openmp()
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR5]]
 ; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[C]], -1
 ; CHECK-NEXT:    br i1 [[C0]], label [[MASTER3:%.*]], label [[EXIT:%.*]]
 ; CHECK:       master3:
@@ -220,7 +220,7 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR2]] = { norecurse nosync nounwind allocsize(0) memory(read) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK: attributes #[[ATTR5]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK: attributes #[[ATTR6]] = { nounwind memory(read) }
 ; CHECK: attributes #[[ATTR7]] = { nosync nounwind memory(write) }
 ; CHECK: attributes #[[ATTR8]] = { nounwind }
