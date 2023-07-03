@@ -16,6 +16,7 @@
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
+#include "CIRGenValue.h"
 #include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/GlobalDecl.h"
@@ -23,6 +24,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #include "llvm/ADT/StringExtras.h"
 
@@ -582,9 +584,9 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
 
   if (const auto *VD = dyn_cast<VarDecl>(ND)) {
     // Global Named registers access via intrinsics only
-    if (VD->getStorageClass() == SC_Register &&
-        VD->hasAttr<AsmLabelAttr>() && !VD->isLocalVarDecl())
-        llvm_unreachable("NYI");
+    if (VD->getStorageClass() == SC_Register && VD->hasAttr<AsmLabelAttr>() &&
+        !VD->isLocalVarDecl())
+      llvm_unreachable("NYI");
 
     assert(E->isNonOdrUse() != NOUR_Constant && "not implemented");
 
@@ -1177,12 +1179,11 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
                                                bool Accessed) {
   // The index must always be an integer, which is not an aggregate.  Emit it
   // in lexical order (this complexity is, sadly, required by C++17).
-  // llvm::Value *IdxPre =
-  //     (E->getLHS() == E->getIdx()) ? EmitScalarExpr(E->getIdx()) : nullptr;
-  assert(E->getLHS() != E->getIdx() && "not implemented");
+  mlir::Value IdxPre =
+      (E->getLHS() == E->getIdx()) ? buildScalarExpr(E->getIdx()) : nullptr;
   bool SignedIndices = false;
-  auto EmitIdxAfterBase = [&](bool Promote) -> mlir::Value {
-    mlir::Value Idx;
+  auto EmitIdxAfterBase = [&, IdxPre](bool Promote) -> mlir::Value {
+    mlir::Value Idx = IdxPre;
     if (E->getLHS() != E->getIdx()) {
       assert(E->getRHS() == E->getIdx() && "index was neither LHS nor RHS");
       Idx = buildScalarExpr(E->getIdx());
@@ -1192,39 +1193,41 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
     bool IdxSigned = IdxTy->isSignedIntegerOrEnumerationType();
     SignedIndices |= IdxSigned;
 
-    assert(!SanOpts.has(SanitizerKind::ArrayBounds) && "not implemented");
+    if (SanOpts.has(SanitizerKind::ArrayBounds))
+      llvm_unreachable("array bounds sanitizer is NYI");
 
-    // TODO: Extend or truncate the index type to 32 or 64-bits.
-    // if (Promote && !Idx.getType().isa<::mlir::cir::PointerType>()) {
-    //   Idx = Builder.CreateIntCast(Idx, IntPtrTy, IdxSigned, "idxprom");
-    // }
+    // Extend or truncate the index type to 32 or 64-bits.
+    auto ptrTy = Idx.getType().dyn_cast<mlir::cir::PointerType>();
+    if (Promote && ptrTy && ptrTy.getPointee().isa<mlir::cir::IntType>())
+      llvm_unreachable("index type cast is NYI");
 
     return Idx;
   };
+  IdxPre = nullptr;
 
   // If the base is a vector type, then we are forming a vector element
   // with this subscript.
   if (E->getBase()->getType()->isVectorType() &&
       !isa<ExtVectorElementExpr>(E->getBase())) {
-    assert(0 && "not implemented");
+    llvm_unreachable("vector subscript is NYI");
   }
 
   // All the other cases basically behave like simple offsetting.
 
   // Handle the extvector case we ignored above.
   if (isa<ExtVectorElementExpr>(E->getBase())) {
-    assert(0 && "not implemented");
+    llvm_unreachable("extvector subscript is NYI");
   }
 
-  // TODO: TBAAAccessInfo
+  assert(!UnimplementedFeature::tbaa() && "TBAA is NYI");
   LValueBaseInfo EltBaseInfo;
   Address Addr = Address::invalid();
   if (const VariableArrayType *vla =
           getContext().getAsVariableArrayType(E->getType())) {
-    assert(0 && "not implemented");
+    llvm_unreachable("variable array subscript is NYI");
   } else if (const ObjCObjectType *OIT =
                  E->getType()->getAs<ObjCObjectType>()) {
-    assert(0 && "not implemented");
+    llvm_unreachable("ObjC object type subscript is NYI");
   } else if (const Expr *Array = isSimpleArrayDecayOperand(E->getBase())) {
     // If this is A[i] where A is an array, the frontend will have decayed
     // the base to be a ArrayToPointerDecay implicit cast.  While correct, it is
@@ -1235,26 +1238,26 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
     LValue ArrayLV;
     // For simple multidimensional array indexing, set the 'accessed' flag
     // for better bounds-checking of the base expression.
-    // if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
-    //   ArrayLV = buildArraySubscriptExpr(ASE, /*Accessed*/ true);
-    assert(!llvm::isa<ArraySubscriptExpr>(Array) &&
-           "multidimensional array indexing not implemented");
-
-    ArrayLV = buildLValue(Array);
+    if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Array))
+      assert(!llvm::isa<ArraySubscriptExpr>(Array) && "multi-dim access NYI");
+    else
+      ArrayLV = buildLValue(Array);
     auto Idx = EmitIdxAfterBase(/*Promote=*/true);
-    QualType arrayType = Array->getType();
 
     // Propagate the alignment from the array itself to the result.
+    QualType arrayType = Array->getType();
     Addr = buildArraySubscriptPtr(
         *this, CGM.getLoc(Array->getBeginLoc()), CGM.getLoc(Array->getEndLoc()),
         ArrayLV.getAddress(), {Idx}, E->getType(),
         !getLangOpts().isSignedOverflowDefined(), SignedIndices,
         CGM.getLoc(E->getExprLoc()), &arrayType, E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
-    // TODO: EltTBAAInfo
+    // TODO(cir): EltTBAAInfo
+    assert(!UnimplementedFeature::tbaa() && "TBAA is NYI");
   } else {
     // The base must be a pointer; emit it with an estimate of its alignment.
     // TODO(cir): EltTBAAInfo
+    assert(!UnimplementedFeature::tbaa() && "TBAA is NYI");
     Addr = buildPointerWithAlignment(E->getBase(), &EltBaseInfo);
     auto Idx = EmitIdxAfterBase(/*Promote*/ true);
     QualType ptrType = E->getBase()->getType();
@@ -1265,9 +1268,11 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
   }
 
   LValue LV = LValue::makeAddr(Addr, E->getType(), EltBaseInfo);
+
   if (getLangOpts().ObjC && getLangOpts().getGC() != LangOptions::NonGC) {
-    assert(0 && "not implemented");
+    llvm_unreachable("ObjC is NYI");
   }
+
   return LV;
 }
 
