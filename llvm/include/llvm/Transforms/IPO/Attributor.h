@@ -3120,7 +3120,7 @@ struct StateWrapper : public BaseType, public StateTy {
 };
 
 /// Helper class that provides common functionality to manifest IR attributes.
-template <Attribute::AttrKind AK, typename BaseType>
+template <Attribute::AttrKind AK, typename BaseType, typename AAType>
 struct IRAttribute : public BaseType {
   IRAttribute(const IRPosition &IRP) : BaseType(IRP) {}
 
@@ -3135,7 +3135,7 @@ struct IRAttribute : public BaseType {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     const IRPosition &IRP = this->getIRPosition();
-    if (isImpliedByIR(A, IRP, getAttrKind())) {
+    if (AAType::isImpliedByIR(A, IRP, AK)) {
       this->getState().indicateOptimisticFixpoint();
       return;
     }
@@ -3372,7 +3372,8 @@ ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R) {
 
 /// An abstract attribute for the returned values of a function.
 struct AAReturnedValues
-    : public IRAttribute<Attribute::Returned, AbstractAttribute> {
+    : public IRAttribute<Attribute::Returned, AbstractAttribute,
+                         AAReturnedValues> {
   AAReturnedValues(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Check \p Pred on all returned values.
@@ -3418,7 +3419,8 @@ struct AAReturnedValues
 
 struct AANoUnwind
     : public IRAttribute<Attribute::NoUnwind,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoUnwind> {
   AANoUnwind(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Returns true if nounwind is assumed.
@@ -3447,7 +3449,8 @@ struct AANoUnwind
 
 struct AANoSync
     : public IRAttribute<Attribute::NoSync,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoSync> {
   AANoSync(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
@@ -3500,7 +3503,8 @@ struct AANoSync
 /// An abstract interface for all nonnull attributes.
 struct AAMustProgress
     : public IRAttribute<Attribute::MustProgress,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AAMustProgress> {
   AAMustProgress(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is nonnull.
@@ -3532,7 +3536,8 @@ struct AAMustProgress
 /// An abstract interface for all nonnull attributes.
 struct AANonNull
     : public IRAttribute<Attribute::NonNull,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANonNull> {
   AANonNull(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
@@ -3569,7 +3574,8 @@ struct AANonNull
 /// An abstract attribute for norecurse.
 struct AANoRecurse
     : public IRAttribute<Attribute::NoRecurse,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoRecurse> {
   AANoRecurse(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if "norecurse" is assumed.
@@ -3599,7 +3605,8 @@ struct AANoRecurse
 /// An abstract attribute for willreturn.
 struct AAWillReturn
     : public IRAttribute<Attribute::WillReturn,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AAWillReturn> {
   AAWillReturn(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
@@ -3727,7 +3734,8 @@ struct AAIntraFnReachability
 /// An abstract interface for all noalias attributes.
 struct AANoAlias
     : public IRAttribute<Attribute::NoAlias,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoAlias> {
   AANoAlias(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
@@ -3780,7 +3788,8 @@ struct AANoAlias
 /// An AbstractAttribute for nofree.
 struct AANoFree
     : public IRAttribute<Attribute::NoFree,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoFree> {
   AANoFree(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
@@ -3818,7 +3827,8 @@ struct AANoFree
 /// An AbstractAttribute for noreturn.
 struct AANoReturn
     : public IRAttribute<Attribute::NoReturn,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoReturn> {
   AANoReturn(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if the underlying object is assumed to never return.
@@ -4083,7 +4093,8 @@ protected:
 /// An abstract interface for all dereferenceable attribute.
 struct AADereferenceable
     : public IRAttribute<Attribute::Dereferenceable,
-                         StateWrapper<DerefState, AbstractAttribute>> {
+                         StateWrapper<DerefState, AbstractAttribute>,
+                         AADereferenceable> {
   AADereferenceable(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
@@ -4144,9 +4155,10 @@ struct AADereferenceable
 using AAAlignmentStateType =
     IncIntegerState<uint64_t, Value::MaximumAlignment, 1>;
 /// An abstract interface for all align attributes.
-struct AAAlign : public IRAttribute<
-                     Attribute::Alignment,
-                     StateWrapper<AAAlignmentStateType, AbstractAttribute>> {
+struct AAAlign
+    : public IRAttribute<Attribute::Alignment,
+                         StateWrapper<AAAlignmentStateType, AbstractAttribute>,
+                         AAAlign> {
   AAAlign(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
@@ -4224,7 +4236,8 @@ struct AAInstanceInfo : public StateWrapper<BooleanState, AbstractAttribute> {
 struct AANoCapture
     : public IRAttribute<
           Attribute::NoCapture,
-          StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>> {
+          StateWrapper<BitIntegerState<uint16_t, 7, 0>, AbstractAttribute>,
+          AANoCapture> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
@@ -4488,7 +4501,8 @@ struct AAPrivatizablePtr
 struct AAMemoryBehavior
     : public IRAttribute<
           Attribute::ReadNone,
-          StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>> {
+          StateWrapper<BitIntegerState<uint8_t, 3>, AbstractAttribute>,
+          AAMemoryBehavior> {
   AAMemoryBehavior(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// See AbstractAttribute::isValidIRPositionForInit
@@ -4559,7 +4573,8 @@ struct AAMemoryBehavior
 struct AAMemoryLocation
     : public IRAttribute<
           Attribute::ReadNone,
-          StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>> {
+          StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>,
+          AAMemoryLocation> {
   using MemoryLocationsKind = StateType::base_t;
 
   AAMemoryLocation(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
@@ -5108,7 +5123,8 @@ private:
 /// An abstract interface for all noundef attributes.
 struct AANoUndef
     : public IRAttribute<Attribute::NoUndef,
-                         StateWrapper<BooleanState, AbstractAttribute>> {
+                         StateWrapper<BooleanState, AbstractAttribute>,
+                         AANoUndef> {
   AANoUndef(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
   /// Return true if we assume that the underlying value is noundef.
@@ -5139,7 +5155,8 @@ struct AANoFPClass
     : public IRAttribute<
           Attribute::NoFPClass,
           StateWrapper<BitIntegerState<uint32_t, fcAllFlags, fcNone>,
-                       AbstractAttribute>> {
+                       AbstractAttribute>,
+          AANoFPClass> {
   using Base = StateWrapper<BitIntegerState<uint32_t, fcAllFlags, fcNone>,
                             AbstractAttribute>;
 
