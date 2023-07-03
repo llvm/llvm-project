@@ -116,7 +116,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
 
   bool parseVTypeToken(StringRef Identifier, VTypeState &State, unsigned &Sew,
                        unsigned &Lmul, bool &Fractional, bool &TailAgnostic,
@@ -2606,11 +2606,7 @@ bool RISCVAsmParser::isSymbolDiff(const MCExpr *Expr) {
   return false;
 }
 
-bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
-  // This returns false if this function recognizes the directive
-  // regardless of whether it is successfully handles or reports an
-  // error. Otherwise it returns true to give the generic parser a
-  // chance at recognizing it.
+ParseStatus RISCVAsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
 
   if (IDVal == ".option")
@@ -2622,7 +2618,7 @@ bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
   if (IDVal == ".variant_cc")
     return parseDirectiveVariantCC();
 
-  return true;
+  return ParseStatus::NoMatch;
 }
 
 bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
@@ -2864,10 +2860,8 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
     StringRef Name = Parser.getTok().getIdentifier();
     std::optional<unsigned> Ret =
         ELFAttrs::attrTypeFromString(Name, RISCVAttrs::getRISCVAttributeTags());
-    if (!Ret) {
-      Error(TagLoc, "attribute name not recognised: " + Name);
-      return false;
-    }
+    if (!Ret)
+      return Error(TagLoc, "attribute name not recognised: " + Name);
     Tag = *Ret;
     Parser.Lex();
   } else {
@@ -2978,7 +2972,7 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
   if (getParser().parseIdentifier(Name))
     return TokError("expected symbol name");
   if (parseEOL())
-    return false;
+    return true;
   getTargetStreamer().emitDirectiveVariantCC(
       *getContext().getOrCreateSymbol(Name));
   return false;
