@@ -14,7 +14,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -2041,7 +2040,7 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
   computeOutputShape(OpBuilder &builder, Location loc, Value input,
                      llvm::SmallVectorImpl<Value> &dynamicSizes) {
     // Get [N, H, W]
-    auto dims = linalg::getMixedDimensions(builder, loc, input);
+    auto dims = tensor::getMixedSizes(builder, loc, input);
 
     // Set W = (W / 2) + 1 to account for the half-sized W dimension of the
     // output tensors.
