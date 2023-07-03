@@ -1206,12 +1206,20 @@ def : Pat<(brcond (i32 (setne GPR:$rs1, (i32 0))), bb:$imm16),
           (BNEZ32 GPR:$rs1, bb:$imm16)>;
 def : Pat<(brcond (i32 (setlt GPR:$rs1, (i32 0))), bb:$imm16),
           (BLZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setlt GPR:$rs1, (i32 1))), bb:$imm16),
+          (BLSZ32 GPR:$rs1, bb:$imm16)>;
 def : Pat<(brcond (i32 (setge GPR:$rs1, (i32 0))), bb:$imm16),
           (BHSZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setge GPR:$rs1, (i32 1))), bb:$imm16),
+          (BHZ32 GPR:$rs1, bb:$imm16)>;
 def : Pat<(brcond (i32 (setgt GPR:$rs1, (i32 0))), bb:$imm16),
           (BHZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setgt GPR:$rs1, (i32 -1))), bb:$imm16),
+          (BHSZ32 GPR:$rs1, bb:$imm16)>;
 def : Pat<(brcond (i32 (setle GPR:$rs1, (i32 0))), bb:$imm16),
           (BLSZ32 GPR:$rs1, bb:$imm16)>;
+def : Pat<(brcond (i32 (setle GPR:$rs1, (i32 -1))), bb:$imm16),
+          (BLZ32 GPR:$rs1, bb:$imm16)>;
 }
 
 // Compare Patterns.
