@@ -150,6 +150,11 @@ class InductiveRangeCheck {
                              SmallVectorImpl<InductiveRangeCheck> &Checks,
                              SmallPtrSetImpl<Value *> &Visited);
 
+  static bool parseIvAgaisntLimit(Loop *L, Value *LHS, Value *RHS,
+                                  ICmpInst::Predicate Pred, ScalarEvolution &SE,
+                                  const SCEVAddRecExpr *&Index,
+                                  const SCEV *&End);
+
 public:
   const SCEV *getBegin() const { return Begin; }
   const SCEV *getStep() const { return Step; }
@@ -261,11 +266,6 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
     return SE.isLoopInvariant(SE.getSCEV(V), L);
   };
 
-  auto SIntMaxSCEV = [&](Type *T) {
-    unsigned BitWidth = cast<IntegerType>(T)->getBitWidth();
-    return SE.getConstant(APInt::getSignedMaxValue(BitWidth));
-  };
-
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
@@ -277,6 +277,24 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   } else if (!IsLoopInvariant(RHS))
     // Both LHS and RHS are loop variant
     return false;
+
+  if (parseIvAgaisntLimit(L, LHS, RHS, Pred, SE, Index, End))
+    return true;
+
+  return false;
+}
+
+// Try to parse range check in the form of "IV vs Limit"
+bool InductiveRangeCheck::parseIvAgaisntLimit(Loop *L, Value *LHS, Value *RHS,
+                                              ICmpInst::Predicate Pred,
+                                              ScalarEvolution &SE,
+                                              const SCEVAddRecExpr *&Index,
+                                              const SCEV *&End) {
+
+  auto SIntMaxSCEV = [&](Type *T) {
+    unsigned BitWidth = cast<IntegerType>(T)->getBitWidth();
+    return SE.getConstant(APInt::getSignedMaxValue(BitWidth));
+  };
 
   const auto *AddRec = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(LHS));
   if (!AddRec)
