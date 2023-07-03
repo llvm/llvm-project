@@ -25,10 +25,10 @@
 namespace llvm {
 
 template <typename From, typename To, typename = void>
-struct explicitly_convertable : std::false_type {};
+struct explicitly_convertible : std::false_type {};
 
 template <typename From, typename To>
-struct explicitly_convertable<
+struct explicitly_convertible<
     From, To,
     std::void_t<decltype(static_cast<To>(
         std::declval<std::add_rvalue_reference_t<From>>()))>> : std::true_type {
@@ -44,7 +44,7 @@ class iterator_range {
 
 public:
   template <typename Container,
-            std::enable_if_t<explicitly_convertable<
+            std::enable_if_t<explicitly_convertible<
                 detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
   iterator_range(Container &&c)
       : begin_iterator(adl_begin(std::forward<Container>(c))),
