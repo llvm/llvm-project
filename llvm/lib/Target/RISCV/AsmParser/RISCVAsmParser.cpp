@@ -598,6 +598,17 @@ public:
     return RISCVAsmParser::isSymbolDiff(getImm());
   }
 
+  bool isImmXLenLI_Restricted() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    // 'la imm' supports constant immediates only.
+    return IsConstantImm && (VK == RISCVMCExpr::VK_RISCV_None) &&
+           (isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm)));
+  }
+
   bool isUImmLog2XLen() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
@@ -1356,6 +1367,17 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
                                       std::numeric_limits<uint32_t>::max());
+  case Match_InvalidImmXLenLI_Restricted:
+    if (isRV64()) {
+      SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+      return Error(ErrorLoc, "operand either must be a constant 64-bit integer "
+                             "or a bare symbol name");
+    }
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, std::numeric_limits<int32_t>::min(),
+        std::numeric_limits<uint32_t>::max(),
+        "operand either must be a bare symbol name or an immediate integer in "
+        "the range");
   case Match_InvalidImmZero: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "immediate must be zero");
@@ -3392,6 +3414,8 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   switch (Inst.getOpcode()) {
   default:
     break;
+  case RISCV::PseudoLLAImm:
+  case RISCV::PseudoLAImm:
   case RISCV::PseudoLI: {
     MCRegister Reg = Inst.getOperand(0).getReg();
     const MCOperand &Op1 = Inst.getOperand(1);
