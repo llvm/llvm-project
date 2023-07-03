@@ -19,7 +19,7 @@ typedef struct {
   void *__owner;
   unsigned long long __lock_count;
 
-#ifdef __unix__
+#ifdef __linux__
   __futex_word __ftxw;
 #else
 #error "Mutex type not defined for the target platform."
