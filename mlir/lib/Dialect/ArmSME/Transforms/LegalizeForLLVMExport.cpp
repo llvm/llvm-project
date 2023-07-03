@@ -10,6 +10,7 @@
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 
 using namespace mlir;
 using namespace mlir::arm_sme;
@@ -51,7 +52,8 @@ void mlir::populateArmSMELegalizeForLLVMExportPatterns(
 
 void mlir::configureArmSMELegalizeForExportTarget(
     LLVMConversionTarget &target) {
-  target.addLegalOp<arm_sme::aarch64_sme_za_enable,
+  target.addLegalOp<scf::ForOp, scf::YieldOp, arm_sme::aarch64_sme_zero,
+                    arm_sme::aarch64_sme_str, arm_sme::aarch64_sme_za_enable,
                     arm_sme::aarch64_sme_za_disable>();
 
   // Mark 'func.func' ops as legal if either:
