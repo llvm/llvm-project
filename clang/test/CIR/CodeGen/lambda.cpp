@@ -26,12 +26,12 @@ void l0() {
 // CHECK: %0 = cir.alloca !cir.ptr<!ty_22class2Eanon222>, cir.ptr <!cir.ptr<!ty_22class2Eanon222>>, ["this", init] {alignment = 8 : i64}
 // CHECK: cir.store %arg0, %0 : !cir.ptr<!ty_22class2Eanon222>, cir.ptr <!cir.ptr<!ty_22class2Eanon222>>
 // CHECK: %1 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22class2Eanon222>>, !cir.ptr<!ty_22class2Eanon222>
-// CHECK: %2 = "cir.struct_element_addr"(%1) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon222>) -> !cir.ptr<!cir.ptr<!s32i>>
+// CHECK: %2 = "cir.struct_element_addr"(%1) <{member_index = 0 : index, member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon222>) -> !cir.ptr<!cir.ptr<!s32i>>
 // CHECK: %3 = cir.load %2 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK: %4 = cir.load %3 : cir.ptr <!s32i>, !s32i
 // CHECK: %5 = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK: %6 = cir.binop(add, %4, %5) : !s32i
-// CHECK: %7 = "cir.struct_element_addr"(%1) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon222>) -> !cir.ptr<!cir.ptr<!s32i>>
+// CHECK: %7 = "cir.struct_element_addr"(%1) <{member_index = 0 : index, member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon222>) -> !cir.ptr<!cir.ptr<!s32i>>
 // CHECK: %8 = cir.load %7 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK: cir.store %6, %8 : !s32i, cir.ptr <!s32i>
 
@@ -50,7 +50,7 @@ auto g() {
 // CHECK: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
 // CHECK: %2 = cir.const(#cir.int<12> : !s32i) : !s32i
 // CHECK: cir.store %2, %1 : !s32i, cir.ptr <!s32i>
-// CHECK: %3 = "cir.struct_element_addr"(%0) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon223>) -> !cir.ptr<!cir.ptr<!s32i>>
+// CHECK: %3 = "cir.struct_element_addr"(%0) <{member_index = 0 : index, member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon223>) -> !cir.ptr<!cir.ptr<!s32i>>
 // CHECK: cir.store %1, %3 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
 // CHECK: %4 = cir.load %0 : cir.ptr <!ty_22class2Eanon223>, !ty_22class2Eanon223
 // CHECK: cir.return %4 : !ty_22class2Eanon223
@@ -70,7 +70,7 @@ auto g2() {
 // CHECK-NEXT: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
 // CHECK-NEXT: %2 = cir.const(#cir.int<12> : !s32i) : !s32i
 // CHECK-NEXT: cir.store %2, %1 : !s32i, cir.ptr <!s32i>
-// CHECK-NEXT: %3 = "cir.struct_element_addr"(%0) <{member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon224>) -> !cir.ptr<!cir.ptr<!s32i>>
+// CHECK-NEXT: %3 = "cir.struct_element_addr"(%0) <{member_index = 0 : index, member_name = "i"}> : (!cir.ptr<!ty_22class2Eanon224>) -> !cir.ptr<!cir.ptr<!s32i>>
 // CHECK-NEXT: cir.store %1, %3 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
 // CHECK-NEXT: %4 = cir.load %0 : cir.ptr <!ty_22class2Eanon224>, !ty_22class2Eanon224
 // CHECK-NEXT: cir.return %4 : !ty_22class2Eanon224

@@ -1383,6 +1383,9 @@ def StructElementAddr : CIR_Op<"struct_element_addr"> {
     The `cir.struct_element_addr` operaration gets the address of a particular
     named member from the input struct.
 
+    It expects a pointer to the base struct as well as the name of the member
+    and its field index.
+
     Example:
     ```mlir
     !ty_22struct2EBar22 = type !cir.struct<"struct.Bar", i32, i8>
@@ -1397,9 +1400,24 @@ def StructElementAddr : CIR_Op<"struct_element_addr"> {
 
   let arguments = (ins
     Arg<CIR_PointerType, "the address to load from", [MemRead]>:$struct_addr,
-    StrAttr:$member_name);
+    StrAttr:$member_name,
+    IndexAttr:$member_index);
 
   let results = (outs Res<CIR_PointerType, "">:$result);
+
+  let builders = [
+    OpBuilder<(ins "Type":$type, "Value":$value, "llvm::StringRef":$name,
+              "unsigned":$index),
+    [{
+      mlir::APInt fieldIdx(64, index);
+      build($_builder, $_state, type, value, name, fieldIdx);
+    }]>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Return the index of the struct member being accessed.
+    uint64_t getIndex() { return getMemberIndex().getZExtValue(); }
+  }];
 
   // FIXME: add verifier.
 }
