@@ -99,6 +99,7 @@ class DataSharingProcessor {
   void copyFirstPrivateSymbol(const Fortran::semantics::Symbol *sym);
   void copyLastPrivateSymbol(const Fortran::semantics::Symbol *sym,
                              mlir::OpBuilder::InsertPoint *lastPrivIP);
+  void insertDeallocs();
 
 public:
   DataSharingProcessor(Fortran::lower::AbstractConverter &converter,
@@ -114,19 +115,13 @@ public:
   // construct, for looping constructs this is just before the Operation. The
   // split into two steps was performed basically to be able to call
   // privatisation for looping constructs before the operation is created since
-  // the bounds of the MLIR OpenMP operation can be privatised. Step2 performs
-  // the copying for lastprivates. Step2 requires knowledge of the MLIR
-  // operation to insert the last private update.
-  bool process(mlir::Operation *op);
+  // the bounds of the MLIR OpenMP operation can be privatised.
+  // Step2 performs the copying for lastprivates and requires knowledge of the
+  // MLIR operation to insert the last private update. Step2 adds
+  // dealocation code as well.
   void processStep1();
-  bool processStep2(mlir::Operation *op);
+  void processStep2(mlir::Operation *op, bool is_loop);
 };
-
-bool DataSharingProcessor::process(mlir::Operation *op) {
-  processStep1();
-  assert(op && "Current MLIR operation not set");
-  return processStep2(op);
-}
 
 void DataSharingProcessor::processStep1() {
   collectSymbolsForPrivatization();
@@ -136,11 +131,29 @@ void DataSharingProcessor::processStep1() {
   insertBarrier();
 }
 
-bool DataSharingProcessor::processStep2(mlir::Operation *op) {
+void DataSharingProcessor::processStep2(mlir::Operation *op, bool is_loop) {
   insPt = firOpBuilder.saveInsertionPoint();
   copyLastPrivatize(op);
   firOpBuilder.restoreInsertionPoint(insPt);
-  return hasLastPrivateOp;
+
+  if (is_loop) {
+    // push deallocs out of the loop
+    firOpBuilder.setInsertionPointAfter(op);
+    insertDeallocs();
+  } else {
+    // insert dummy instruction to mark the insertion position
+    mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
+        op->getLoc(), firOpBuilder.getIndexType());
+    insertDeallocs();
+    firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
+  }
+}
+
+void DataSharingProcessor::insertDeallocs() {
+  for (auto sym : privatizedSymbols)
+    if (Fortran::semantics::IsAllocatable(sym->GetUltimate())) {
+      converter.createHostAssociateVarCloneDealloc(*sym);
+    }
 }
 
 void DataSharingProcessor::cloneSymbol(const Fortran::semantics::Symbol *sym) {
@@ -694,26 +707,23 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
   } else {
     firOpBuilder.create<mlir::omp::TerminatorOp>(loc);
   }
-
   // Reset the insert point to before the terminator.
   resetBeforeTerminator(firOpBuilder, storeOp, block);
 
   // Handle privatization. Do not privatize if this is the outer operation.
   if (clauses && !outerCombined) {
-    bool lastPrivateOp = false;
+    constexpr bool is_loop = std::is_same_v<Op, omp::WsLoopOp> ||
+                             std::is_same_v<Op, omp::SimdLoopOp>;
     if (!dsp) {
-      dsp = new DataSharingProcessor(converter, *clauses, eval);
-      lastPrivateOp = dsp->process(op);
-      delete dsp;
+      DataSharingProcessor proc(converter, *clauses, eval);
+      proc.processStep1();
+      proc.processStep2(op, is_loop);
     } else {
-      lastPrivateOp = dsp->processStep2(op);
+      dsp->processStep2(op, is_loop);
     }
-    // LastPrivatization, due to introduction of
-    // new control flow, changes the insertion point,
-    // thus restore it.
-    // TODO: Clean up later a bit to avoid this many sets and resets.
-    if (lastPrivateOp && !std::is_same_v<Op, omp::SectionOp>)
-      resetBeforeTerminator(firOpBuilder, storeOp, block);
+
+    if (storeOp)
+      firOpBuilder.setInsertionPointAfter(storeOp);
   }
 
   if constexpr (std::is_same_v<Op, omp::ParallelOp>) {
