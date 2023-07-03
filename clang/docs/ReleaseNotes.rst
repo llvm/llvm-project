@@ -777,6 +777,8 @@ Bug Fixes to C++ Support
 - Fix location of default member initialization in parenthesized aggregate
   initialization.
   (`#63903 <https://github.com/llvm/llvm-project/issues/63903>`_)
+- Fix constraint checking of non-generic lambdas.
+  (`#63181 <https://github.com/llvm/llvm-project/issues/63181>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
