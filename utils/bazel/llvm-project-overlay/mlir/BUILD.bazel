@@ -10237,6 +10237,7 @@ cc_library(
         ":CastInterfaces",
         ":ControlFlowInterfaces",
         ":IR",
+        ":LoopLikeInterface",
         ":Pass",
         ":Rewrite",
         ":SideEffectInterfaces",
