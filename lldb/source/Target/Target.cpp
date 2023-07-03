@@ -3209,8 +3209,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
       assert(m_process_sp);
     } else {
       // Use a Process plugin to construct the process.
-      const char *plugin_name = launch_info.GetProcessPluginName();
-      CreateProcess(launch_info.GetListener(), plugin_name, nullptr, false);
+      CreateProcess(launch_info.GetListener(),
+                    launch_info.GetProcessPluginName(), nullptr, false);
     }
 
     // Since we didn't have a platform launch the process, launch it here.
@@ -3371,14 +3371,14 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   } else {
     if (state != eStateConnected) {
       SaveScriptedLaunchInfo(attach_info);
-      const char *plugin_name = attach_info.GetProcessPluginName();
+      llvm::StringRef plugin_name = attach_info.GetProcessPluginName();
       process_sp =
           CreateProcess(attach_info.GetListenerForProcess(GetDebugger()),
                         plugin_name, nullptr, false);
-      if (process_sp == nullptr) {
-        error.SetErrorStringWithFormat(
-            "failed to create process using plugin %s",
-            (plugin_name) ? plugin_name : "null");
+      if (!process_sp) {
+        error.SetErrorStringWithFormatv(
+            "failed to create process using plugin '{0}'",
+            plugin_name.empty() ? "<empty>" : plugin_name);
         return error;
       }
     }

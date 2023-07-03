@@ -1158,7 +1158,7 @@ std::optional<Expr<SomeType>> DataConstantConversionExtension(
 bool IsAllocatableOrPointerObject(
     const Expr<SomeType> &expr, FoldingContext &context) {
   const semantics::Symbol *sym{UnwrapWholeSymbolOrComponentDataRef(expr)};
-  return (sym && semantics::IsAllocatableOrPointer(*sym)) ||
+  return (sym && semantics::IsAllocatableOrPointer(sym->GetUltimate())) ||
       evaluate::IsObjectPointer(expr, context);
 }
 

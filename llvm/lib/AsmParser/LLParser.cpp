@@ -2283,9 +2283,9 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
 static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
   switch (Tok) {
   case lltok::kw_argmem:
-    return MemoryEffects::ArgMem;
+    return IRMemLocation::ArgMem;
   case lltok::kw_inaccessiblemem:
-    return MemoryEffects::InaccessibleMem;
+    return IRMemLocation::InaccessibleMem;
   default:
     return std::nullopt;
   }
@@ -2322,7 +2322,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
 
   bool SeenLoc = false;
   do {
-    std::optional<MemoryEffects::Location> Loc = keywordToLoc(Lex.getKind());
+    std::optional<IRMemLocation> Loc = keywordToLoc(Lex.getKind());
     if (Loc) {
       Lex.Lex();
       if (!EatIfPresent(lltok::colon)) {

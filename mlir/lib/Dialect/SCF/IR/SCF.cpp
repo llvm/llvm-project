@@ -385,6 +385,35 @@ std::optional<OpFoldResult> ForOp::getSingleUpperBound() {
   return OpFoldResult(getUpperBound());
 }
 
+/// Promotes the loop body of a forOp to its containing block if the forOp
+/// it can be determined that the loop has a single iteration.
+LogicalResult ForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
+  std::optional<int64_t> tripCount =
+      constantTripCount(getLowerBound(), getUpperBound(), getStep());
+  if (!tripCount.has_value() || tripCount != 1)
+    return failure();
+
+  // Replace all results with the yielded values.
+  auto yieldOp = cast<scf::YieldOp>(getBody()->getTerminator());
+  rewriter.replaceAllUsesWith(getResults(), yieldOp.getOperands());
+
+  // Replace block arguments with lower bound (replacement for IV) and
+  // iter_args.
+  SmallVector<Value> bbArgReplacements;
+  bbArgReplacements.push_back(getLowerBound());
+  bbArgReplacements.append(getIterOperands().begin(), getIterOperands().end());
+
+  // Move the loop body operations to the loop's containing block.
+  rewriter.inlineBlockBefore(getBody(), getOperation()->getBlock(),
+                             getOperation()->getIterator(), bbArgReplacements);
+
+  // Erase the old terminator and the loop.
+  rewriter.eraseOp(yieldOp);
+  rewriter.eraseOp(*this);
+
+  return success();
+}
+
 /// Prints the initialization list in the form of
 ///   <prefix>(%inner = %outer, %inner2 = %outer2, <...>)
 /// where 'inner' values are assumed to be region arguments and 'outer' values
@@ -536,59 +565,64 @@ void ForOp::getSuccessorRegions(std::optional<unsigned> index,
   regions.push_back(RegionSuccessor(getResults()));
 }
 
+Region &ForallOp::getLoopBody() { return getRegion(); }
+
 /// Promotes the loop body of a forallOp to its containing block if it can be
 /// determined that the loop has a single iteration.
-LogicalResult mlir::scf::promoteIfSingleIteration(PatternRewriter &rewriter,
-                                                  scf::ForallOp forallOp) {
+LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
   for (auto [lb, ub, step] :
-       llvm::zip(forallOp.getMixedLowerBound(), forallOp.getMixedUpperBound(),
-                 forallOp.getMixedStep())) {
+       llvm::zip(getMixedLowerBound(), getMixedUpperBound(), getMixedStep())) {
     auto tripCount = constantTripCount(lb, ub, step);
     if (!tripCount.has_value() || *tripCount != 1)
       return failure();
   }
 
-  promote(rewriter, forallOp);
+  promote(rewriter, *this);
   return success();
 }
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.
-void mlir::scf::promote(PatternRewriter &rewriter, scf::ForallOp forallOp) {
-  IRMapping mapping;
-  mapping.map(forallOp.getInductionVars(), forallOp.getLowerBound(rewriter));
-  mapping.map(forallOp.getOutputBlockArguments(), forallOp.getOutputs());
-  for (auto &bodyOp : forallOp.getBody()->without_terminator())
-    rewriter.clone(bodyOp, mapping);
+void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
+  OpBuilder::InsertionGuard g(rewriter);
+  scf::InParallelOp terminator = forallOp.getTerminator();
 
+  // Replace block arguments with lower bounds (replacements for IVs) and
+  // outputs.
+  SmallVector<Value> bbArgReplacements = forallOp.getLowerBound(rewriter);
+  bbArgReplacements.append(forallOp.getOutputs().begin(),
+                           forallOp.getOutputs().end());
+
+  // Move the loop body operations to the loop's containing block.
+  rewriter.inlineBlockBefore(forallOp.getBody(), forallOp->getBlock(),
+                             forallOp->getIterator(), bbArgReplacements);
+
+  // Replace the terminator with tensor.insert_slice ops.
+  rewriter.setInsertionPointAfter(forallOp);
   SmallVector<Value> results;
   results.reserve(forallOp.getResults().size());
-  scf::InParallelOp terminator = forallOp.getTerminator();
   for (auto &yieldingOp : terminator.getYieldingOps()) {
     auto parallelInsertSliceOp =
         cast<tensor::ParallelInsertSliceOp>(yieldingOp);
 
     Value dst = parallelInsertSliceOp.getDest();
     Value src = parallelInsertSliceOp.getSource();
-
-    auto getMappedValues = [&](ValueRange values) {
-      return llvm::to_vector(llvm::map_range(
-          values, [&](Value value) { return mapping.lookupOrDefault(value); }));
-    };
-
-    Value srcVal = mapping.lookupOrDefault(src);
-    if (llvm::isa<TensorType>(srcVal.getType())) {
+    if (llvm::isa<TensorType>(src.getType())) {
       results.push_back(rewriter.create<tensor::InsertSliceOp>(
-          forallOp.getLoc(), dst.getType(), srcVal,
-          mapping.lookupOrDefault(dst),
-          getMappedValues(parallelInsertSliceOp.getOffsets()),
-          getMappedValues(parallelInsertSliceOp.getSizes()),
-          getMappedValues(parallelInsertSliceOp.getStrides()),
+          forallOp.getLoc(), dst.getType(), src, dst,
+          parallelInsertSliceOp.getOffsets(), parallelInsertSliceOp.getSizes(),
+          parallelInsertSliceOp.getStrides(),
           parallelInsertSliceOp.getStaticOffsets(),
           parallelInsertSliceOp.getStaticSizes(),
           parallelInsertSliceOp.getStaticStrides()));
+    } else {
+      llvm_unreachable("unsupported terminator");
     }
   }
-  rewriter.replaceOp(forallOp, results);
+  rewriter.replaceAllUsesWith(forallOp.getResults(), results);
+
+  // Erase the old terminator and the loop.
+  rewriter.eraseOp(terminator);
+  rewriter.eraseOp(forallOp);
 }
 
 LoopNest mlir::scf::buildLoopNest(

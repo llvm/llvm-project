@@ -20,6 +20,7 @@
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/ModRef.h"
 #include <map>
 #include <optional>
 
@@ -42,7 +43,6 @@ namespace llvm {
   class Comdat;
   class MDString;
   class MDNode;
-  class MemoryEffects;
   struct SlotMapping;
 
   /// ValID - Represents a reference of a definition of some sort with no type.

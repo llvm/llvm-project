@@ -163,6 +163,8 @@ module m
     real, parameter :: bad3 = dim(huge(1.),-.5*huge(1.))
     !CHECK: warning: DIM intrinsic folding overflow
     integer, parameter :: bad4 = dim(huge(1),-1)
+    !CHECK: warning: HYPOT intrinsic folding overflow
+    real, parameter :: bad5 = hypot(huge(0.), huge(0.))
     !CHECK: warning: overflow on REAL(8) to REAL(4) conversion
     x = 1.D40
   end subroutine

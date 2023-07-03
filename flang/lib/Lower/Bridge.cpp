@@ -569,18 +569,23 @@ public:
     const auto *details = sym.detailsIf<Fortran::semantics::HostAssocDetails>();
     assert(details && "No host-association found");
     const Fortran::semantics::Symbol &hsym = details->symbol();
+    mlir::Type hSymType = genType(hsym);
     Fortran::lower::SymbolBox hsb = lookupSymbol(hsym);
 
     auto allocate = [&](llvm::ArrayRef<mlir::Value> shape,
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
       mlir::Value allocVal = builder->allocateLocal(
-          loc, symType, mangleName(sym), toStringRef(sym.GetUltimate().name()),
+          loc,
+          Fortran::semantics::IsAllocatableOrPointer(hsym.GetUltimate())
+              ? hSymType
+              : symType,
+          mangleName(sym), toStringRef(sym.GetUltimate().name()),
           /*pinned=*/true, shape, typeParams,
           sym.GetUltimate().attrs().test(Fortran::semantics::Attr::TARGET));
       return allocVal;
     };
 
-    fir::ExtendedValue hexv = getExtendedValue(hsb);
+    fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
     fir::ExtendedValue exv = hexv.match(
         [&](const fir::BoxValue &box) -> fir::ExtendedValue {
           const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
@@ -602,8 +607,7 @@ public:
         [&](const fir::MutableBoxValue &box) -> fir::ExtendedValue {
           // Allocate storage for a pointer/allocatble descriptor.
           // No shape/lengths to be passed to the alloca.
-          return fir::MutableBoxValue(allocate({}, {}),
-                                      box.nonDeferredLenParams(), {});
+          return fir::MutableBoxValue(allocate({}, {}), {}, {});
         },
         [&](const auto &) -> fir::ExtendedValue {
           mlir::Value temp =
@@ -612,7 +616,82 @@ public:
           return fir::substBase(hexv, temp);
         });
 
+    // Initialise cloned allocatable
+    hexv.match(
+        [&](const fir::MutableBoxValue &box) -> void {
+          // Do not process pointers
+          if (Fortran::semantics::IsPointer(sym.GetUltimate())) {
+            return;
+          }
+          // Allocate storage for a pointer/allocatble descriptor.
+          // No shape/lengths to be passed to the alloca.
+          const auto new_box = exv.getBoxOf<fir::MutableBoxValue>();
+
+          // allocate if allocated
+          mlir::Value isAllocated =
+              fir::factory::genIsAllocatedOrAssociatedTest(*builder, loc, box);
+          auto if_builder = builder->genIfThenElse(loc, isAllocated);
+          if_builder.genThen([&]() {
+            std::string name = mangleName(sym) + ".alloc";
+            if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
+              fir::ExtendedValue read = fir::factory::genMutableBoxRead(
+                  *builder, loc, box, /*mayBePolymorphic=*/false);
+              auto read_box = read.getBoxOf<fir::ArrayBoxValue>();
+              fir::factory::genInlinedAllocation(
+                  *builder, loc, *new_box, read_box->getLBounds(),
+                  read_box->getExtents(),
+                  /*lenParams=*/std::nullopt, name,
+                  /*mustBeHeap=*/true);
+            } else {
+              fir::factory::genInlinedAllocation(
+                  *builder, loc, *new_box,
+                  new_box->getMutableProperties().lbounds,
+                  new_box->getMutableProperties().extents,
+                  /*lenParams=*/std::nullopt, name,
+                  /*mustBeHeap=*/true);
+            }
+          });
+          if_builder.genElse([&]() {
+            // nullify box
+            auto empty = fir::factory::createUnallocatedBox(
+                *builder, loc, new_box->getBoxTy(),
+                new_box->nonDeferredLenParams(), {});
+            builder->create<fir::StoreOp>(loc, empty, new_box->getAddr());
+          });
+          if_builder.end();
+        },
+        [&](const auto &) -> void {
+          // Do nothing
+        });
+
     return bindIfNewSymbol(sym, exv);
+  }
+
+  void createHostAssociateVarCloneDealloc(
+      const Fortran::semantics::Symbol &sym) override final {
+    mlir::Location loc = genLocation(sym.name());
+    Fortran::lower::SymbolBox hsb = lookupSymbol(sym);
+
+    fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
+    hexv.match(
+        [&](const fir::MutableBoxValue &new_box) -> void {
+          // Do not process pointers
+          if (Fortran::semantics::IsPointer(sym.GetUltimate())) {
+            return;
+          }
+          // deallocate allocated in createHostAssociateVarClone value
+          mlir::Value needs_dealloc =
+              fir::factory::genIsAllocatedOrAssociatedTest(*builder, loc,
+                                                           new_box);
+          builder->genIfThen(loc, needs_dealloc)
+              .genThen([&]() {
+                Fortran::lower::genDeallocateBox(*this, new_box, loc);
+              })
+              .end();
+        },
+        [&](const auto &) -> void {
+          // Do nothing
+        });
   }
 
   void copyHostAssociateVar(
@@ -624,14 +703,14 @@ public:
     const Fortran::semantics::Symbol &hsym = sym.GetUltimate();
     Fortran::lower::SymbolBox hsb = lookupOneLevelUpSymbol(hsym);
     assert(hsb && "Host symbol box not found");
-    fir::ExtendedValue hexv = getExtendedValue(hsb);
+    fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
 
     // 2) Fetch the copied one that will mask the original.
     Fortran::lower::SymbolBox sb = shallowLookupSymbol(sym);
     assert(sb && "Host-associated symbol box not found");
     assert(hsb.getAddr() != sb.getAddr() &&
            "Host and associated symbol boxes are the same");
-    fir::ExtendedValue exv = getExtendedValue(sb);
+    fir::ExtendedValue exv = symBoxToExtendedValue(sb);
 
     // 3) Perform the assignment.
     mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
@@ -653,6 +732,7 @@ public:
 
     mlir::Location loc = genLocation(sym.name());
     mlir::Type symType = genType(sym);
+
     if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
       Fortran::lower::StatementContext stmtCtx;
       Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
@@ -660,16 +740,15 @@ public:
       stmtCtx.finalizeAndReset();
     } else if (hexv.getBoxOf<fir::CharBoxValue>()) {
       fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
-    } else if (hexv.getBoxOf<fir::MutableBoxValue>()) {
-      TODO(loc, "firstprivatisation of allocatable variables");
     } else {
       auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(rhs));
       builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
     }
 
     if (copyAssignIP && copyAssignIP->isSet() &&
-        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate))
+        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
       builder->restoreInsertionPoint(insPt);
+    }
   }
 
   //===--------------------------------------------------------------------===//
@@ -916,15 +995,6 @@ private:
       return false;
     localSymbols.addSymbol(sym, val, forced);
     return true;
-  }
-
-  fir::ExtendedValue getExtendedValue(Fortran::lower::SymbolBox sb) {
-    fir::ExtendedValue exv = symBoxToExtendedValue(sb);
-    // Dereference pointers and allocatables.
-    if (const auto *box = exv.getBoxOf<fir::MutableBoxValue>())
-      return fir::factory::genMutableBoxRead(*builder, getCurrentLocation(),
-                                             *box);
-    return exv;
   }
 
   /// Generate the address of loop variable \p sym.

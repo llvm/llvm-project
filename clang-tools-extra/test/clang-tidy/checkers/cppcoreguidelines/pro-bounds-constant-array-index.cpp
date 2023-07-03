@@ -44,6 +44,28 @@ void f(std::array<int, 10> a, int pos) {
   a[1] = 3; // OK, constant index and inside bounds
   a[9] = 3; // OK, constant index and inside bounds
   a[const_index(6)] = 3; // OK, constant index and inside bounds
+
+  using MyArray = std::array<int, 10>;
+  MyArray m{};
+  m [ pos / 2 /*comment*/] = 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use array subscript when the index is not an integer constant expression [cppcoreguidelines-pro-bounds-constant-array-index]
+  int jj = m[pos - 1];
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: do not use array subscript when the index is not an integer constant expression
+
+  m.at(pos-1) = 2; // OK, at() instead of []
+  gsl::at(m, pos-1) = 2; // OK, gsl::at() instead of []
+  m[-1] = 3;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: std::array<> index -1 is negative [cppcoreguidelines-pro-bounds-constant-array-index]
+  m[10] = 4;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: std::array<> index 10 is past the end of the array (which contains 10 elements) [cppcoreguidelines-pro-bounds-constant-array-index]
+
+  m[const_index(7)] = 3;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: std::array<> index 10 is past the end of the array (which contains 10 elements)
+
+  m[0] = 3; // OK, constant index and inside bounds
+  m[1] = 3; // OK, constant index and inside bounds
+  m[9] = 3; // OK, constant index and inside bounds
+  m[const_index(6)] = 3; // OK, constant index and inside bounds
 }
 
 void g() {
