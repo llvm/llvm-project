@@ -68,6 +68,100 @@ entry:
   ret i32 %y
 }
 
+define i32 @mul_i32_131074(i32 %x) {
+; CHECK-LABEL: mul_i32_131074:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movih32 a1, 2
+; CHECK-NEXT:    ori32 a1, a1, 2
+; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: mul_i32_131074:
+; GENERIC:       # %bb.0: # %entry
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    st16.w l0, (sp, 0) # 4-byte Folded Spill
+; GENERIC-NEXT:    .cfi_offset l0, -4
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 8
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 l0, a3, 16
+; GENERIC-NEXT:    or16 l0, a2
+; GENERIC-NEXT:    lsli16 a1, a1, 8
+; GENERIC-NEXT:    or16 a1, l0
+; GENERIC-NEXT:    or16 a1, a3
+; GENERIC-NEXT:    mult16 a0, a1
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    ld16.w l0, (sp, 0) # 4-byte Folded Reload
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+entry:
+  %y = mul nsw i32 %x, 131074
+  ret i32 %y
+}
+
+define i32 @mul_i32_131076(i32 %x) {
+; CHECK-LABEL: mul_i32_131076:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movih32 a1, 2
+; CHECK-NEXT:    ori32 a1, a1, 4
+; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: mul_i32_131076:
+; GENERIC:       # %bb.0: # %entry
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a1, a1, 8
+; GENERIC-NEXT:    or16 a1, a3
+; GENERIC-NEXT:    movi16 a2, 4
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    mult16 a0, a2
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+entry:
+  %y = mul nsw i32 %x, 131076
+  ret i32 %y
+}
+
+define i32 @mul_i32_131080(i32 %x) {
+; CHECK-LABEL: mul_i32_131080:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movih32 a1, 2
+; CHECK-NEXT:    ori32 a1, a1, 8
+; CHECK-NEXT:    mult16 a0, a1
+; CHECK-NEXT:    rts16
+;
+; GENERIC-LABEL: mul_i32_131080:
+; GENERIC:       # %bb.0: # %entry
+; GENERIC-NEXT:    .cfi_def_cfa_offset 0
+; GENERIC-NEXT:    subi16 sp, sp, 4
+; GENERIC-NEXT:    .cfi_def_cfa_offset 4
+; GENERIC-NEXT:    movi16 a1, 0
+; GENERIC-NEXT:    lsli16 a2, a1, 24
+; GENERIC-NEXT:    movi16 a3, 2
+; GENERIC-NEXT:    lsli16 a3, a3, 16
+; GENERIC-NEXT:    or16 a3, a2
+; GENERIC-NEXT:    lsli16 a1, a1, 8
+; GENERIC-NEXT:    or16 a1, a3
+; GENERIC-NEXT:    movi16 a2, 8
+; GENERIC-NEXT:    or16 a2, a1
+; GENERIC-NEXT:    mult16 a0, a2
+; GENERIC-NEXT:    addi16 sp, sp, 4
+; GENERIC-NEXT:    rts16
+entry:
+  %y = mul nsw i32 %x, 131080
+  ret i32 %y
+}
+
 define i16 @mul_i16_4097(i16 %x) {
 ; CHECK-LABEL: mul_i16_4097:
 ; CHECK:       # %bb.0: # %entry
@@ -275,7 +369,7 @@ define i64 @mul_i64_4097(i64 %x) {
 ; CHECK-NEXT:    st32.w lr, (sp, 0) # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset lr, -4
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4
-; CHECK-NEXT:    lrw32 t0, [.LCPI12_0]
+; CHECK-NEXT:    lrw32 t0, [.LCPI15_0]
 ; CHECK-NEXT:    movi32 a2, 4097
 ; CHECK-NEXT:    movi16 a3, 0
 ; CHECK-NEXT:    jsr16 t0
@@ -285,7 +379,7 @@ define i64 @mul_i64_4097(i64 %x) {
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    .p2align 2, 0x0
-; CHECK-NEXT:  .LCPI12_0:
+; CHECK-NEXT:  .LCPI15_0:
 ; CHECK-NEXT:    .long __muldi3
 ;
 ; GENERIC-LABEL: mul_i64_4097:
@@ -307,7 +401,7 @@ define i64 @mul_i64_4097(i64 %x) {
 ; GENERIC-NEXT:    or16 a3, a2
 ; GENERIC-NEXT:    movi16 a2, 1
 ; GENERIC-NEXT:    or16 a2, a3
-; GENERIC-NEXT:    lrw32 l0, [.LCPI12_0]
+; GENERIC-NEXT:    lrw32 l0, [.LCPI15_0]
 ; GENERIC-NEXT:    movi16 a3, 0
 ; GENERIC-NEXT:    jsr16 l0
 ; GENERIC-NEXT:    addi16 sp, sp, 4
@@ -318,7 +412,7 @@ define i64 @mul_i64_4097(i64 %x) {
 ; GENERIC-NEXT:    .p2align 1
 ; GENERIC-NEXT:  # %bb.1:
 ; GENERIC-NEXT:    .p2align 2, 0x0
-; GENERIC-NEXT:  .LCPI12_0:
+; GENERIC-NEXT:  .LCPI15_0:
 ; GENERIC-NEXT:    .long __muldi3
 entry:
   %y = mul nsw i64 %x, 4097
