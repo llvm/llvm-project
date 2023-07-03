@@ -25,6 +25,7 @@
 #include "lldb/Breakpoint/BreakpointSiteList.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Core/SourceManager.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Core/UserSettingsController.h"
@@ -2573,6 +2574,10 @@ void PruneThreadPlans();
 
   virtual void ForceScriptedState(lldb::StateType state) {}
 
+  SourceManager::SourceFileCache &GetSourceFileCache() {
+    return m_source_file_cache;
+  }
+
 protected:
   friend class Trace;
 
@@ -3042,6 +3047,9 @@ protected:
 
   std::unique_ptr<UtilityFunction> m_dlopen_utility_func_up;
   llvm::once_flag m_dlopen_utility_func_flag_once;
+
+  /// Per process source file cache.
+  SourceManager::SourceFileCache m_source_file_cache;
 
   size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                            uint8_t *buf) const;
