@@ -1315,14 +1315,6 @@ def : SchedAlias<WriteDPPD,   ZnWriteMicrocoded>;
 // x,m,i.
 def : SchedAlias<WriteDPPDLd, ZnWriteMicrocoded>;
 
-//-- Other instructions --//
-
-// VZEROUPPER.
-def : InstRW<[WriteMicrocoded], (instrs VZEROUPPER)>;
-
-// VZEROALL.
-def : InstRW<[WriteMicrocoded], (instrs VZEROALL)>;
-
 ///////////////////////////////////////////////////////////////////////////////
 // Dependency breaking instructions.
 ///////////////////////////////////////////////////////////////////////////////
