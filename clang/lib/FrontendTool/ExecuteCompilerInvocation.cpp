@@ -178,6 +178,14 @@ CreateFrontendAction(CompilerInstance &CI) {
   }
 #endif
 
+  // Wrap the base FE action in an extract api action to generate
+  // symbol graph as a biproduct of comilation ( enabled with
+  // --emit-symbol-graph option )
+  if (!FEOpts.SymbolGraphOutputDir.empty()) {
+    CI.getCodeGenOpts().ClearASTBeforeBackend = false;
+    Act = std::make_unique<WrappingExtractAPIAction>(std::move(Act));
+  }
+
   // If there are any AST files to merge, create a frontend action
   // adaptor to perform the merge.
   if (!FEOpts.ASTMergeFiles.empty())
