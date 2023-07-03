@@ -1727,3 +1727,66 @@ transform.sequence failures(propagate) {
   test_notify_payload_op_replaced %0, %1 : (!transform.any_op, !transform.any_op) -> ()
   test_print_remark_at_operand %0, "updated handle" : !transform.any_op
 }
+
+// -----
+
+// CHECK-LABEL: func @test_apply_cse()
+//       CHECK:   %[[const:.*]] = arith.constant 0 : index
+//       CHECK:   %[[ex1:.*]] = scf.execute_region -> index {
+//       CHECK:     scf.yield %[[const]]
+//       CHECK:   }
+//       CHECK:   %[[ex2:.*]] = scf.execute_region -> index {
+//       CHECK:     scf.yield %[[const]]
+//       CHECK:   }
+//       CHECK:   return %[[const]], %[[ex1]], %[[ex2]]
+func.func @test_apply_cse() -> (index, index, index) {
+  // expected-remark @below{{eliminated 1}}
+  // expected-remark @below{{eliminated 2}}
+  %0 = arith.constant 0 : index
+  %1 = scf.execute_region -> index {
+    %2 = arith.constant 0 : index
+    scf.yield %2 : index
+  } {first}
+  %3 = scf.execute_region -> index {
+    %4 = arith.constant 0 : index
+    scf.yield %4 : index
+  } {second}
+  return %0, %1, %3 : index, index, index
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %first = transform.structured.match attributes{first} in %0 : (!transform.any_op) -> !transform.any_op
+  %elim_first = transform.structured.match ops{["arith.constant"]} in %first : (!transform.any_op) -> !transform.any_op
+  %second = transform.structured.match attributes{first} in %0 : (!transform.any_op) -> !transform.any_op
+  %elim_second = transform.structured.match ops{["arith.constant"]} in %first : (!transform.any_op) -> !transform.any_op
+
+  // There are 3 arith.constant ops.
+  %all = transform.structured.match ops{["arith.constant"]} in %0 : (!transform.any_op) -> !transform.any_op
+  // expected-remark @below{{3}}
+  test_print_number_of_associated_payload_ir_ops %all : !transform.any_op
+  // "deduplicate" has no effect because these are 3 different ops.
+  %merged_before = transform.merge_handles deduplicate %all : !transform.any_op
+  // expected-remark @below{{3}}
+  test_print_number_of_associated_payload_ir_ops %merged_before : !transform.any_op
+
+  // Apply CSE.
+  transform.apply_cse to %0 : !transform.any_op
+
+  // The handle is still mapped to 3 arith.constant ops.
+  // expected-remark @below{{3}}
+  test_print_number_of_associated_payload_ir_ops %all : !transform.any_op
+  // But they are all the same op.
+  %merged_after = transform.merge_handles deduplicate %all : !transform.any_op
+  // expected-remark @below{{1}}
+  test_print_number_of_associated_payload_ir_ops %merged_after : !transform.any_op
+
+  // The other handles were also updated.
+  test_print_remark_at_operand %elim_first, "eliminated 1" : !transform.any_op
+  // expected-remark @below{{1}}
+  test_print_number_of_associated_payload_ir_ops %elim_first : !transform.any_op
+  test_print_remark_at_operand %elim_second, "eliminated 2" : !transform.any_op
+  // expected-remark @below{{1}}
+  test_print_number_of_associated_payload_ir_ops %elim_second : !transform.any_op
+}

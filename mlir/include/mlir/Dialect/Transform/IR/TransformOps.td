@@ -127,6 +127,35 @@ def AnnotateOp : TransformDialectOp<"annotate",
     "`:` type($target) (`,` type($param)^)?";
 }
 
+def ApplyCommonSubexpressionEliminationOp : TransformDialectOp<"apply_cse",
+    [TransformOpInterface, TransformEachOpTrait,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let summary = "Eliminate common subexpressions in the body of the target op";
+  let description = [{
+    This transform applies common subexpression elimination (CSE) to the body
+    of the targeted op.
+
+    This transform reads the target handle and modifies the payload. Existing
+    handles to operations inside of the targeted op are retained and updated if
+    necessary. Note that this can lead to situations where a handle, that was
+    previously mapped to multiple distinct (but equivalent) operations, is now
+    mapped to the same operation multiple times.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+  let assemblyFormat = "`to` $target attr-dict `:` type($target)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::transform::TransformRewriter &rewriter,
+      ::mlir::Operation *target,
+      ::mlir::transform::ApplyToEachResultList &results,
+      ::mlir::transform::TransformState &state);
+  }];
+}
+
 def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
     [TransformOpInterface, TransformEachOpTrait,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
