@@ -78,10 +78,10 @@ public:
     const char *const FuncPtr_name("__FuncPtr");
 
     m_block_struct_type = clang_ast_context->CreateStructForIdentifier(
-        ConstString(), {{isa_name, isa_type},
-                        {flags_name, flags_type},
-                        {reserved_name, reserved_type},
-                        {FuncPtr_name, function_pointer_type}});
+        llvm::StringRef(), {{isa_name, isa_type},
+                            {flags_name, flags_type},
+                            {reserved_name, reserved_type},
+                            {FuncPtr_name, function_pointer_type}});
   }
 
   ~BlockPointerSyntheticFrontEnd() override = default;
