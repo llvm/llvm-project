@@ -386,15 +386,19 @@ ProgramStateRef ExprEngine::createTemporaryRegionIfNeeded(
       State = finishObjectConstruction(State, MT, LC);
       State = State->BindExpr(Result, LC, *V);
       return State;
-    } else {
+    } else if (const ValueDecl *VD = MT->getExtendingDecl()) {
       StorageDuration SD = MT->getStorageDuration();
+      assert(SD != SD_FullExpression);
       // If this object is bound to a reference with static storage duration, we
       // put it in a different region to prevent "address leakage" warnings.
       if (SD == SD_Static || SD == SD_Thread) {
-        TR = MRMgr.getCXXStaticTempObjectRegion(Init);
+        TR = MRMgr.getCXXStaticLifetimeExtendedObjectRegion(Init, VD);
       } else {
-        TR = MRMgr.getCXXTempObjectRegion(Init, LC);
+        TR = MRMgr.getCXXLifetimeExtendedObjectRegion(Init, VD, LC);
       }
+    } else {
+      assert(MT->getStorageDuration() == SD_FullExpression);
+      TR = MRMgr.getCXXTempObjectRegion(Init, LC);
     }
   } else {
     TR = MRMgr.getCXXTempObjectRegion(Init, LC);
