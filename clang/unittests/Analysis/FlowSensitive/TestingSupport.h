@@ -387,40 +387,15 @@ using BuiltinOptions = DataflowAnalysisContext::Options;
 
 /// Runs dataflow on `Code` with a `NoopAnalysis` and calls `VerifyResults` to
 /// verify the results.
-template <typename VerifyResultsT>
-llvm::Error
-runDataflowReturnError(llvm::StringRef Code, VerifyResultsT VerifyResults,
-                       DataflowAnalysisOptions Options,
-                       LangStandard::Kind Std = LangStandard::lang_cxx17,
-                       llvm::StringRef TargetFun = "target") {
-  using ast_matchers::hasName;
-  llvm::SmallVector<std::string, 3> ASTBuildArgs = {
-      // -fnodelayed-template-parsing is the default everywhere but on Windows.
-      // Set it explicitly so that tests behave the same on Windows as on other
-      // platforms.
-      "-fsyntax-only", "-fno-delayed-template-parsing",
-      "-std=" +
-          std::string(LangStandard::getLangStandardForKind(Std).getName())};
-  AnalysisInputs<NoopAnalysis> AI(
-      Code, hasName(TargetFun),
-      [UseBuiltinModel = Options.BuiltinOpts.has_value()](ASTContext &C,
-                                                          Environment &Env) {
-        return NoopAnalysis(
-            C,
-            DataflowAnalysisOptions{
-                UseBuiltinModel ? Env.getDataflowAnalysisContext().getOptions()
-                                : std::optional<BuiltinOptions>()});
-      });
-  AI.ASTBuildArgs = ASTBuildArgs;
-  if (Options.BuiltinOpts)
-    AI.BuiltinOptions = *Options.BuiltinOpts;
-  return checkDataflow<NoopAnalysis>(
-      std::move(AI),
-      /*VerifyResults=*/
-      [&VerifyResults](
-          const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-          const AnalysisOutputs &AO) { VerifyResults(Results, AO.ASTCtx); });
-}
+llvm::Error checkDataflowWithNoopAnalysis(
+    llvm::StringRef Code,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults,
+    DataflowAnalysisOptions Options,
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    llvm::StringRef TargetFun = "target");
 
 /// Returns the `ValueDecl` for the given identifier.
 ///
