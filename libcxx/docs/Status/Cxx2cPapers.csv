@@ -22,7 +22,7 @@
 "`P1759R6 <https://wg21.link/P1759R6>`__","LWG","Native handles and file streams","Varna June 2023","","",""
 "`P2697R1 <https://wg21.link/P2697R1>`__","LWG","Interfacing ``bitset`` with ``string_view``","Varna June 2023","","",""
 "`P1383R2 <https://wg21.link/P1383R2>`__","LWG","More ``constexpr`` for ``<cmath>`` and ``<complex>``","Varna June 2023","","",""
-"`P2734R0 <https://wg21.link/P2734R0>`__","LWG","Adding the new SI prefixes","Varna June 2023","|Complete|","Clang 17",""
+"`P2734R0 <https://wg21.link/P2734R0>`__","LWG","Adding the new SI prefixes","Varna June 2023","|Complete|","17.0",""
 "`P2548R6 <https://wg21.link/P2548R6>`__","LWG","``copyable_function``","Varna June 2023","","",""
 "`P2714R1 <https://wg21.link/P2714R1>`__","LWG","Bind front and back to NTTP callables","Varna June 2023","","",""
 "`P2630R4 <https://wg21.link/P2630R4>`__","LWG","``submdspan``","Varna June 2023","","",""
