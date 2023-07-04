@@ -2746,8 +2746,8 @@ LogicalResult ParallelOp::verify() {
 
   // Check whether all constant step values are positive.
   for (Value stepValue : stepValues)
-    if (auto cst = stepValue.getDefiningOp<arith::ConstantIndexOp>())
-      if (cst.value() <= 0)
+    if (auto cst = getConstantIntValue(stepValue))
+      if (*cst <= 0)
         return emitOpError("constant step operand must be positive");
 
   // Check that the body defines the same number of block arguments as the

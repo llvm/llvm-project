@@ -1148,7 +1148,7 @@ void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
                               Value source, ValueRange position) {
   SmallVector<int64_t, 4> positionConstants =
       llvm::to_vector<4>(llvm::map_range(position, [](Value pos) {
-        return pos.getDefiningOp<arith::ConstantIndexOp>().value();
+        return getConstantIntValue(pos).value();
       }));
   build(builder, result, source, positionConstants);
 }
@@ -2318,7 +2318,7 @@ void InsertOp::build(OpBuilder &builder, OperationState &result, Value source,
                      Value dest, ValueRange position) {
   SmallVector<int64_t, 4> positionConstants =
       llvm::to_vector<4>(llvm::map_range(position, [](Value pos) {
-        return pos.getDefiningOp<arith::ConstantIndexOp>().value();
+        return getConstantIntValue(pos).value();
       }));
   build(builder, result, source, dest, positionConstants);
 }
@@ -2908,18 +2908,16 @@ LogicalResult ReshapeOp::verify() {
   // If all shape operands are produced by constant ops, verify that product
   // of dimensions for input/output shape match.
   auto isDefByConstant = [](Value operand) {
-    return isa_and_nonnull<arith::ConstantIndexOp>(operand.getDefiningOp());
+    return getConstantIntValue(operand).has_value();
   };
   if (llvm::all_of(getInputShape(), isDefByConstant) &&
       llvm::all_of(getOutputShape(), isDefByConstant)) {
     int64_t numInputElements = 1;
     for (auto operand : getInputShape())
-      numInputElements *=
-          cast<arith::ConstantIndexOp>(operand.getDefiningOp()).value();
+      numInputElements *= getConstantIntValue(operand).value();
     int64_t numOutputElements = 1;
     for (auto operand : getOutputShape())
-      numOutputElements *=
-          cast<arith::ConstantIndexOp>(operand.getDefiningOp()).value();
+      numOutputElements *= getConstantIntValue(operand).value();
     if (numInputElements != numOutputElements)
       return emitError("product of input and output shape sizes must match");
   }
@@ -3645,8 +3643,8 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   if (op.getShapedType().isDynamicDim(indicesIdx))
     return false;
   Value index = op.getIndices()[indicesIdx];
-  auto cstOp = index.getDefiningOp<arith::ConstantIndexOp>();
-  if (!cstOp)
+  std::optional<int64_t> cstOp = getConstantIntValue(index);
+  if (!cstOp.has_value())
     return false;
 
   int64_t sourceSize = op.getShapedType().getDimSize(indicesIdx);
@@ -4031,8 +4029,8 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
     return failure();
   // If any index is nonzero.
   auto isNotConstantZero = [](Value v) {
-    auto cstOp = v.getDefiningOp<arith::ConstantIndexOp>();
-    return !cstOp || cstOp.value() != 0;
+    auto cstOp = getConstantIntValue(v);
+    return !cstOp.has_value() || cstOp.value() != 0;
   };
   if (llvm::any_of(read.getIndices(), isNotConstantZero) ||
       llvm::any_of(write.getIndices(), isNotConstantZero))
@@ -5269,7 +5267,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Return if any of 'createMaskOp' operands are not defined by a constant.
     auto isNotDefByConstant = [](Value operand) {
-      return !isa_and_nonnull<arith::ConstantIndexOp>(operand.getDefiningOp());
+      return !getConstantIntValue(operand).has_value();
     };
     if (llvm::any_of(createMaskOp.getOperands(), isNotDefByConstant))
       return failure();
@@ -5291,8 +5289,7 @@ public:
     maskDimSizes.reserve(createMaskOp->getNumOperands());
     for (auto [operand, maxDimSize] : llvm::zip_equal(
              createMaskOp.getOperands(), createMaskOp.getType().getShape())) {
-      Operation *defOp = operand.getDefiningOp();
-      int64_t dimSize = cast<arith::ConstantIndexOp>(defOp).value();
+      int64_t dimSize = getConstantIntValue(operand).value();
       dimSize = std::min(dimSize, maxDimSize);
       // If one of dim sizes is zero, set all dims to zero.
       if (dimSize <= 0) {
