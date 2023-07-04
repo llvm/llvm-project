@@ -39,6 +39,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Assumptions.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -2698,8 +2699,9 @@ struct AANonNullImpl : AANonNull {
   void initialize(Attributor &A) override {
     Value &V = *getAssociatedValue().stripPointerCasts();
     if (!NullIsDefined &&
-        hasAttr({Attribute::NonNull, Attribute::Dereferenceable},
-                /* IgnoreSubsumingPositions */ false, &A)) {
+        A.hasAttr(getIRPosition(),
+                  {Attribute::NonNull, Attribute::Dereferenceable},
+                  /* IgnoreSubsumingPositions */ false)) {
       indicateOptimisticFixpoint();
       return;
     }
@@ -3045,8 +3047,9 @@ struct AANonConvergentFunction final : AANonConvergentImpl {
   }
 
   ChangeStatus manifest(Attributor &A) override {
-    if (isKnownNotConvergent() && hasAttr(Attribute::Convergent)) {
-      removeAttrs({Attribute::Convergent});
+    if (isKnownNotConvergent() &&
+        A.hasAttr(getIRPosition(), Attribute::Convergent)) {
+      A.removeAttrs(getIRPosition(), {Attribute::Convergent});
       return ChangeStatus::CHANGED;
     }
     return ChangeStatus::UNCHANGED;
@@ -3905,7 +3908,7 @@ struct AANoAliasArgument final
   void initialize(Attributor &A) override {
     Base::initialize(A);
     // See callsite argument attribute and callee argument attribute.
-    if (hasAttr({Attribute::ByVal}))
+    if (A.hasAttr(getIRPosition(), {Attribute::ByVal}))
       indicateOptimisticFixpoint();
   }
 
@@ -5026,8 +5029,9 @@ struct AADereferenceableImpl : AADereferenceable {
   void initialize(Attributor &A) override {
     Value &V = *getAssociatedValue().stripPointerCasts();
     SmallVector<Attribute, 4> Attrs;
-    getAttrs({Attribute::Dereferenceable, Attribute::DereferenceableOrNull},
-             Attrs, /* IgnoreSubsumingPositions */ false, &A);
+    A.getAttrs(getIRPosition(),
+               {Attribute::Dereferenceable, Attribute::DereferenceableOrNull},
+               Attrs, /* IgnoreSubsumingPositions */ false);
     for (const Attribute &Attr : Attrs)
       takeKnownDerefBytesMaximum(Attr.getValueAsInt());
 
@@ -5084,8 +5088,9 @@ struct AADereferenceableImpl : AADereferenceable {
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
     ChangeStatus Change = AADereferenceable::manifest(A);
-    if (isAssumedNonNull() && hasAttr(Attribute::DereferenceableOrNull)) {
-      removeAttrs({Attribute::DereferenceableOrNull});
+    if (isAssumedNonNull() &&
+        A.hasAttr(getIRPosition(), Attribute::DereferenceableOrNull)) {
+      A.removeAttrs(getIRPosition(), {Attribute::DereferenceableOrNull});
       return ChangeStatus::CHANGED;
     }
     return Change;
@@ -5326,7 +5331,7 @@ struct AAAlignImpl : AAAlign {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     SmallVector<Attribute, 4> Attrs;
-    getAttrs({Attribute::Alignment}, Attrs);
+    A.getAttrs(getIRPosition(), {Attribute::Alignment}, Attrs);
     for (const Attribute &Attr : Attrs)
       takeKnownMaximum(Attr.getValueAsInt());
 
@@ -5805,7 +5810,8 @@ struct AANoCaptureImpl : public AANoCapture {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (hasAttr(getAttrKind(), /* IgnoreSubsumingPositions */ true)) {
+    if (A.hasAttr(getIRPosition(), getAttrKind(),
+                  /* IgnoreSubsumingPositions */ true)) {
       indicateOptimisticFixpoint();
       return;
     }
@@ -6388,9 +6394,10 @@ struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
 
   void initialize(Attributor &A) override {
     AAValueSimplifyImpl::initialize(A);
-    if (hasAttr({Attribute::InAlloca, Attribute::Preallocated,
-                 Attribute::StructRet, Attribute::Nest, Attribute::ByVal},
-                /* IgnoreSubsumingPositions */ true))
+    if (A.hasAttr(getIRPosition(),
+                  {Attribute::InAlloca, Attribute::Preallocated,
+                   Attribute::StructRet, Attribute::Nest, Attribute::ByVal},
+                  /* IgnoreSubsumingPositions */ true))
       indicatePessimisticFixpoint();
   }
 
@@ -7295,7 +7302,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // rewrite them), there is no need to check them explicitly.
     bool UsedAssumedInformation = false;
     SmallVector<Attribute, 1> Attrs;
-    getAttrs({Attribute::ByVal}, Attrs, /* IgnoreSubsumingPositions */ true);
+    A.getAttrs(getIRPosition(), {Attribute::ByVal}, Attrs,
+               /* IgnoreSubsumingPositions */ true);
     if (!Attrs.empty() &&
         A.checkForAllCallSites([](AbstractCallSite ACS) { return true; }, *this,
                                true, UsedAssumedInformation))
@@ -7370,7 +7378,7 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                         DepClassTy::OPTIONAL);
 
     // Avoid arguments with padding for now.
-    if (!getIRPosition().hasAttr(Attribute::ByVal) &&
+    if (!A.hasAttr(getIRPosition(), Attribute::ByVal) &&
         !isDenselyPacked(*PrivatizableType, A.getInfoCache().getDL())) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] Padding detected\n");
       return indicatePessimisticFixpoint();
@@ -7774,7 +7782,7 @@ struct AAPrivatizablePtrCallSiteArgument final
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (getIRPosition().hasAttr(Attribute::ByVal))
+    if (A.hasAttr(getIRPosition(), Attribute::ByVal))
       indicateOptimisticFixpoint();
   }
 
@@ -7861,16 +7869,16 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     intersectAssumedBits(BEST_STATE);
-    getKnownStateFromValue(getIRPosition(), getState());
+    getKnownStateFromValue(A, getIRPosition(), getState());
     AAMemoryBehavior::initialize(A);
   }
 
   /// Return the memory behavior information encoded in the IR for \p IRP.
-  static void getKnownStateFromValue(const IRPosition &IRP,
+  static void getKnownStateFromValue(Attributor &A, const IRPosition &IRP,
                                      BitIntegerState &State,
                                      bool IgnoreSubsumingPositions = false) {
     SmallVector<Attribute, 2> Attrs;
-    IRP.getAttrs(AttrKinds, Attrs, IgnoreSubsumingPositions);
+    A.getAttrs(IRP, AttrKinds, Attrs, IgnoreSubsumingPositions);
     for (const Attribute &Attr : Attrs) {
       switch (Attr.getKindAsEnum()) {
       case Attribute::ReadNone:
@@ -7910,22 +7918,23 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    if (hasAttr(Attribute::ReadNone, /* IgnoreSubsumingPositions */ true))
-      return ChangeStatus::UNCHANGED;
-
     const IRPosition &IRP = getIRPosition();
+
+    if (A.hasAttr(IRP, Attribute::ReadNone,
+                  /* IgnoreSubsumingPositions */ true))
+      return ChangeStatus::UNCHANGED;
 
     // Check if we would improve the existing attributes first.
     SmallVector<Attribute, 4> DeducedAttrs;
     getDeducedAttributes(IRP.getAnchorValue().getContext(), DeducedAttrs);
     if (llvm::all_of(DeducedAttrs, [&](const Attribute &Attr) {
-          return IRP.hasAttr(Attr.getKindAsEnum(),
-                             /* IgnoreSubsumingPositions */ true);
+          return A.hasAttr(IRP, Attr.getKindAsEnum(),
+                           /* IgnoreSubsumingPositions */ true);
         }))
       return ChangeStatus::UNCHANGED;
 
     // Clear existing attributes.
-    IRP.removeAttrs(AttrKinds);
+    A.removeAttrs(IRP, AttrKinds);
 
     // Use the generic manifest method.
     return IRAttribute::manifest(A);
@@ -7989,9 +7998,9 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
     // TODO: Make IgnoreSubsumingPositions a property of an IRAttribute so we
     // can query it when we use has/getAttr. That would allow us to reuse the
     // initialize of the base class here.
-    bool HasByVal =
-        IRP.hasAttr({Attribute::ByVal}, /* IgnoreSubsumingPositions */ true);
-    getKnownStateFromValue(IRP, getState(),
+    bool HasByVal = A.hasAttr(IRP, {Attribute::ByVal},
+                              /* IgnoreSubsumingPositions */ true);
+    getKnownStateFromValue(A, IRP, getState(),
                            /* IgnoreSubsumingPositions */ HasByVal);
   }
 
@@ -8002,11 +8011,12 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
 
     // TODO: From readattrs.ll: "inalloca parameters are always
     //                           considered written"
-    if (hasAttr({Attribute::InAlloca, Attribute::Preallocated})) {
+    if (A.hasAttr(getIRPosition(),
+                  {Attribute::InAlloca, Attribute::Preallocated})) {
       removeKnownBits(NO_WRITES);
       removeAssumedBits(NO_WRITES);
     }
-    getIRPosition().removeAttrs(AttrKinds);
+    A.removeAttrs(getIRPosition(), AttrKinds);
     return AAMemoryBehaviorFloating::manifest(A);
   }
 
@@ -8111,9 +8121,9 @@ struct AAMemoryBehaviorFunction final : public AAMemoryBehaviorImpl {
     else if (isAssumedWriteOnly())
       ME = MemoryEffects::writeOnly();
 
-    return IRAttributeManifest::manifestAttrs(
-        A, getIRPosition(),
-        Attribute::getWithMemoryEffects(F.getContext(), ME));
+    A.removeAttrs(getIRPosition(), AttrKinds);
+    return A.manifestAttrs(getIRPosition(),
+                           Attribute::getWithMemoryEffects(F.getContext(), ME));
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -8159,10 +8169,9 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
     else if (isAssumedWriteOnly())
       ME = MemoryEffects::writeOnly();
 
-    getIRPosition().removeAttrs(AttrKinds);
-    return IRAttributeManifest::manifestAttrs(
-        A, getIRPosition(),
-        Attribute::getWithMemoryEffects(CB.getContext(), ME));
+    A.removeAttrs(getIRPosition(), AttrKinds);
+    return A.manifestAttrs(getIRPosition(),
+                           Attribute::getWithMemoryEffects(CB.getContext(), ME));
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -8448,7 +8457,7 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
       UseArgMemOnly = !AnchorFn->hasLocalLinkage();
 
     SmallVector<Attribute, 2> Attrs;
-    IRP.getAttrs({Attribute::Memory}, Attrs, IgnoreSubsumingPositions);
+    A.getAttrs(IRP, {Attribute::Memory}, Attrs, IgnoreSubsumingPositions);
     for (const Attribute &Attr : Attrs) {
       // TODO: We can map MemoryEffects to Attributor locations more precisely.
       MemoryEffects ME = Attr.getMemoryEffects();
@@ -8466,11 +8475,10 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
         else {
           // Remove location information, only keep read/write info.
           ME = MemoryEffects(ME.getModRef());
-          IRAttributeManifest::manifestAttrs(
-              A, IRP,
-              Attribute::getWithMemoryEffects(IRP.getAnchorValue().getContext(),
-                                              ME),
-              /*ForceReplace*/ true);
+          A.manifestAttrs(IRP,
+                          Attribute::getWithMemoryEffects(
+                              IRP.getAnchorValue().getContext(), ME),
+                          /*ForceReplace*/ true);
         }
         continue;
       }
@@ -8481,11 +8489,10 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
         else {
           // Remove location information, only keep read/write info.
           ME = MemoryEffects(ME.getModRef());
-          IRAttributeManifest::manifestAttrs(
-              A, IRP,
-              Attribute::getWithMemoryEffects(IRP.getAnchorValue().getContext(),
-                                              ME),
-              /*ForceReplace*/ true);
+          A.manifestAttrs(IRP,
+                          Attribute::getWithMemoryEffects(
+                              IRP.getAnchorValue().getContext(), ME),
+                          /*ForceReplace*/ true);
         }
         continue;
       }
@@ -8526,8 +8533,8 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
       return ChangeStatus::UNCHANGED;
     MemoryEffects ME = DeducedAttrs[0].getMemoryEffects();
 
-    return IRAttributeManifest::manifestAttrs(
-        A, IRP,
+    return A.manifestAttrs(
+        IRP,
         Attribute::getWithMemoryEffects(IRP.getAnchorValue().getContext(), ME));
   }
 
@@ -10134,7 +10141,7 @@ struct AANoUndefImpl : AANoUndef {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (getIRPosition().hasAttr({Attribute::NoUndef})) {
+    if (A.hasAttr(getIRPosition(), {Attribute::NoUndef})) {
       indicateOptimisticFixpoint();
       return;
     }
@@ -10291,7 +10298,7 @@ struct AANoFPClassImpl : AANoFPClass {
     }
 
     SmallVector<Attribute> Attrs;
-    IRP.getAttrs({Attribute::NoFPClass}, Attrs, false, &A);
+    A.getAttrs(getIRPosition(), {Attribute::NoFPClass}, Attrs, false);
     if (!Attrs.empty()) {
       addKnownBits(Attrs[0].getNoFPClass());
       return;
@@ -11566,8 +11573,8 @@ struct AAAssumptionInfoImpl : public AAAssumptionInfo {
       return ChangeStatus::UNCHANGED;
 
     const IRPosition &IRP = getIRPosition();
-    return IRAttributeManifest::manifestAttrs(
-        A, IRP,
+    return A.manifestAttrs(
+        IRP,
         Attribute::get(IRP.getAnchorValue().getContext(), AssumptionAttrKey,
                        llvm::join(getAssumed().getSet(), ",")),
         /* ForceReplace */ true);
