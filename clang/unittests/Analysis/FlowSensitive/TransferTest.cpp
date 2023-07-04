@@ -656,6 +656,30 @@ TEST(TransferTest, SelfReferentialPointerVarDecl) {
       });
 }
 
+TEST(TransferTest, DirectlySelfReferentialReference) {
+  std::string Code = R"(
+    struct target {
+      target() {
+        (void)0;
+        // [[p]]
+      }
+      target &self = *this;
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const ValueDecl *SelfDecl = findValueDecl(ASTCtx, "self");
+
+        auto *ThisLoc = Env.getThisPointeeStorageLocation();
+        auto *RefVal =
+            cast<ReferenceValue>(Env.getValue(ThisLoc->getChild(*SelfDecl)));
+        ASSERT_EQ(&RefVal->getReferentLoc(), ThisLoc);
+      });
+}
+
 TEST(TransferTest, MultipleVarsDecl) {
   std::string Code = R"(
     void target() {
