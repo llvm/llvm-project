@@ -221,53 +221,28 @@ bool DependencyTracker::maybeAddReferencedRoots(
 
     // Resolve reference.
     std::optional<std::pair<CompileUnit *, uint32_t>> RefDie =
-        CU.resolveDIEReference(Val);
+        CU.resolveDIEReference(
+            Val, Context.InterCUProcessingStarted
+                     ? ResolveInterCUReferencesMode::Resolve
+                     : ResolveInterCUReferencesMode::AvoidResolving);
     if (!RefDie) {
       CU.warn("cann't find referenced DIE", Entry);
       continue;
     }
 
-    if (CU.getUniqueID() == RefDie->first->getUniqueID()) {
-      // Check if referenced DIE entry is already kept.
-      if (RefDie->first->getDIEInfo(RefDie->second).getKeep())
-        continue;
-
-      // If referenced DIE is inside current compilation unit.
-      const DWARFDebugInfoEntry *RefEntry =
-          RefDie->first->getDebugInfoEntry(RefDie->second);
-
-      if (RootItem.RootEntry->getTag() == dwarf::DW_TAG_compile_unit)
-        addItemToWorklist(*RefDie->first, RefEntry);
-      else {
-        uint64_t RootStartOffset = RootItem.RootEntry->getOffset();
-        uint64_t RootEndOffset;
-        if (std::optional<uint32_t> SiblingIdx =
-                RootItem.RootEntry->getSiblingIdx()) {
-          RootEndOffset =
-              RootItem.CU.getDebugInfoEntry(*SiblingIdx)->getOffset();
-        } else {
-          RootEndOffset = RootItem.CU.getOrigUnit().getNextUnitOffset();
-        }
-
-        // Do not put item in work list if it is an ancestor of RootItem.
-        // (since we will visit and mark it as kept during normal traversing of
-        // RootItem children)
-        if (RootStartOffset > RefEntry->getOffset() ||
-            RefEntry->getOffset() >= RootEndOffset)
-          addItemToWorklist(*RefDie->first, RefEntry);
-      }
-    } else if (Context.InterCUProcessingStarted && RefDie->second != 0) {
-      // If referenced DIE is in other compilation unit and
-      // it is safe to navigate other units DIEs.
-      addItemToWorklist(*RefDie->first,
-                        RefDie->first->getDebugInfoEntry(RefDie->second));
-    } else {
+    if (RefDie->second == 0) {
       // Delay resolving reference.
       RefDie->first->setInterconnectedCU();
       CU.setInterconnectedCU();
       Context.HasNewInterconnectedCUs = true;
       return false;
     }
+
+    assert(CU.getUniqueID() == RefDie->first->getUniqueID() ||
+           Context.InterCUProcessingStarted);
+
+    addItemToWorklist(*RefDie->first,
+                      RefDie->first->getDebugInfoEntry(RefDie->second));
   }
 
   return true;

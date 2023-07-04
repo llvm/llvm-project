@@ -297,7 +297,7 @@ void DwarfStreamer::emitDebugNames(
     return;
 
   // Build up data structures needed to emit this section.
-  std::vector<MCSymbol *> CompUnits;
+  std::vector<std::variant<MCSymbol *, uint64_t>> CompUnits;
   DenseMap<unsigned, size_t> UniqueIdToCuMap;
   unsigned Id = 0;
   for (auto &CU : EmittedUnits) {

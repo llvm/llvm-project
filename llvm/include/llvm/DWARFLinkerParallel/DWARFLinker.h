@@ -100,9 +100,6 @@ public:
   /// Emit section named SecName with data SecData.
   virtual void emitSectionContents(StringRef SecData, StringRef SecName) = 0;
 
-  /// Emit temporarily symbol named \p SymName inside section \p SecName.
-  virtual MCSymbol *emitTempSym(StringRef SecName, StringRef SymName) = 0;
-
   /// Emit the swift_ast section stored in \p Buffer.
   virtual void emitSwiftAST(StringRef Buffer) = 0;
 
