@@ -702,10 +702,10 @@ define <2 x float> @ret_ldexp_v2f32_known_pos_exp_noinf(<2 x float> nofpclass(in
 }
 
 define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf(<2 x float> nofpclass(inf) %arg0, <2 x i32> %arg1) #0 {
-; CHECK-LABEL: define nofpclass(inf) <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf
+; CHECK-LABEL: define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf
 ; CHECK-SAME: (<2 x float> nofpclass(inf) [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or <2 x i32> [[ARG1]], <i32 -16, i32 -32>
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
   %or.arg1 = or <2 x i32> %arg1, <i32 -16, i32 -32>
@@ -844,9 +844,9 @@ define float @ret_ldexp_f32_22(float %arg0) #0 {
 }
 
 define float @ret_ldexp_f32_23(float %arg0) #0 {
-; CHECK-LABEL: define float @ret_ldexp_f32_23
+; CHECK-LABEL: define nofpclass(sub) float @ret_ldexp_f32_23
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 23) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 23) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 23)
@@ -854,9 +854,9 @@ define float @ret_ldexp_f32_23(float %arg0) #0 {
 }
 
 define float @ret_ldexp_f32_24(float %arg0) #0 {
-; CHECK-LABEL: define float @ret_ldexp_f32_24
+; CHECK-LABEL: define nofpclass(sub) float @ret_ldexp_f32_24
 ; CHECK-SAME: (float [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 24) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 24) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 24)
@@ -876,9 +876,9 @@ define float @ret_ldexp_f32_min24(float %arg0, i32 %arg1) #0 {
 }
 
 define float @ret_ldexp_f32_23_nnan(float nofpclass(nan) %arg0) #0 {
-; CHECK-LABEL: define nofpclass(nan) float @ret_ldexp_f32_23_nnan
+; CHECK-LABEL: define nofpclass(nan sub) float @ret_ldexp_f32_23_nnan
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 23) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan sub) float @llvm.ldexp.f32.i32(float [[ARG0]], i32 noundef 23) #[[ATTR10]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.ldexp.f32.i32(float %arg0, i32 23)
@@ -906,9 +906,9 @@ define double @ret_ldexp_f64_51(double %arg0) #0 {
 }
 
 define double @ret_ldexp_f64_52(double %arg0) #0 {
-; CHECK-LABEL: define double @ret_ldexp_f64_52
+; CHECK-LABEL: define nofpclass(sub) double @ret_ldexp_f64_52
 ; CHECK-SAME: (double [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 52) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 52) #[[ATTR10]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 52)
@@ -916,9 +916,9 @@ define double @ret_ldexp_f64_52(double %arg0) #0 {
 }
 
 define double @ret_ldexp_f64_53(double %arg0) #0 {
-; CHECK-LABEL: define double @ret_ldexp_f64_53
+; CHECK-LABEL: define nofpclass(sub) double @ret_ldexp_f64_53
 ; CHECK-SAME: (double [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 53) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) double @llvm.ldexp.f64.i32(double [[ARG0]], i32 noundef 53) #[[ATTR10]]
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
   %call = call double @llvm.ldexp.f64.i32(double %arg0, i32 53)
@@ -946,9 +946,9 @@ define half @ret_ldexp_f16_9(half %arg0) #0 {
 }
 
 define half @ret_ldexp_f16_10(half %arg0) #0 {
-; CHECK-LABEL: define half @ret_ldexp_f16_10
+; CHECK-LABEL: define nofpclass(sub) half @ret_ldexp_f16_10
 ; CHECK-SAME: (half [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call half @llvm.ldexp.f16.i32(half [[ARG0]], i32 noundef 10) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) half @llvm.ldexp.f16.i32(half [[ARG0]], i32 noundef 10) #[[ATTR10]]
 ; CHECK-NEXT:    ret half [[CALL]]
 ;
   %call = call half @llvm.ldexp.f16.i32(half %arg0, i32 10)
@@ -966,9 +966,9 @@ define bfloat @ret_ldexp_bf16_6(bfloat %arg0) #0 {
 }
 
 define bfloat @ret_ldexp_bf16_7(bfloat %arg0) #0 {
-; CHECK-LABEL: define bfloat @ret_ldexp_bf16_7
+; CHECK-LABEL: define nofpclass(sub) bfloat @ret_ldexp_bf16_7
 ; CHECK-SAME: (bfloat [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 7) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 7) #[[ATTR10]]
 ; CHECK-NEXT:    ret bfloat [[CALL]]
 ;
   %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 7)
@@ -976,9 +976,9 @@ define bfloat @ret_ldexp_bf16_7(bfloat %arg0) #0 {
 }
 
 define bfloat @ret_ldexp_bf16_8(bfloat %arg0) #0 {
-; CHECK-LABEL: define bfloat @ret_ldexp_bf16_8
+; CHECK-LABEL: define nofpclass(sub) bfloat @ret_ldexp_bf16_8
 ; CHECK-SAME: (bfloat [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 8) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) bfloat @llvm.ldexp.bf16.i32(bfloat [[ARG0]], i32 noundef 8) #[[ATTR10]]
 ; CHECK-NEXT:    ret bfloat [[CALL]]
 ;
   %call = call bfloat @llvm.ldexp.bf16.i32(bfloat %arg0, i32 8)

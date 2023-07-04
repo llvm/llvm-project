@@ -4700,24 +4700,30 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if ((KnownSrc.KnownFPClasses & ExpInfoMask) == fcNone)
           break;
 
+        const fltSemantics &Flt
+          = II->getType()->getScalarType()->getFltSemantics();
+        unsigned Precision = APFloat::semanticsPrecision(Flt);
         const Value *ExpArg = II->getArgOperand(1);
-        KnownBits ExpKnownBits(
-            ExpArg->getType()->getScalarType()->getIntegerBitWidth());
-        computeKnownBits(ExpArg, ExpKnownBits, Depth + 1, Q);
+        ConstantRange ExpRange = computeConstantRange(
+            ExpArg, true, Q.IIQ.UseInstrInfo, Q.AC, Q.CxtI, Q.DT, Depth + 1);
+
+        const int MantissaBits = Precision - 1;
+        if (ExpRange.getSignedMin().sge(static_cast<int64_t>(MantissaBits)))
+          Known.knownNot(fcSubnormal);
 
         const Function *F = II->getFunction();
-
-        if (ExpKnownBits.isZero()) {
+        const APInt *ConstVal = ExpRange.getSingleElement();
+        if (ConstVal && ConstVal->isZero()) {
           // ldexp(x, 0) -> x, so propagate everything.
-          Known.propagateCanonicalizingSrc(KnownSrc, *II->getFunction(),
+          Known.propagateCanonicalizingSrc(KnownSrc, *F,
                                            II->getType());
-        } else if (ExpKnownBits.isNegative()) {
-          // If we know the power is < 0, can't introduce inf
+        } else if (ExpRange.isAllNegative()) {
+          // If we know the power is <= 0, can't introduce inf
           if (KnownSrc.isKnownNeverPosInfinity())
             Known.knownNot(fcPosInf);
           if (KnownSrc.isKnownNeverNegInfinity())
             Known.knownNot(fcNegInf);
-        } else if (ExpKnownBits.isNonNegative()) {
+        } else if (ExpRange.isAllNonNegative()) {
           // If we know the power is >= 0, can't introduce subnormal or zero
           if (KnownSrc.isKnownNeverPosSubnormal())
             Known.knownNot(fcPosSubnormal);
