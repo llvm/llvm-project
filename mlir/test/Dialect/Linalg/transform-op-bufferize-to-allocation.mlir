@@ -100,3 +100,24 @@ transform.sequence failures(propagate) {
   // expected-error @below{{failed to bufferize operation}}
   %2 = transform.structured.bufferize_to_allocation %0 {memory_space = 4} : !transform.any_op
 }
+
+// -----
+
+// CHECK-LABEL: func @vector_mask(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>,
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?xf32, 4>
+//       CHECK:   memref.tensor_store %[[t]], %[[alloc]]
+//       CHECK:   vector.mask %{{.*}} { vector.transfer_write %{{.*}}, %[[alloc]]
+//       CHECK:   %[[r:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
+//       CHECK:   memref.dealloc %[[alloc]]
+//       CHECK:   return %[[r]]
+func.func @vector_mask(%t: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vector<16xi1>) -> tensor<?xf32> {
+  %r = vector.mask %m0 { vector.transfer_write %val, %t[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> tensor<?xf32>
+  return %r : tensor<?xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["vector.mask"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %2 = transform.structured.bufferize_to_allocation %0 {memory_space = 4} : !transform.any_op
+}
