@@ -3573,14 +3573,16 @@ public:
     // the mapping from persistent IDs to strings.
     Writer.SetIdentifierOffset(II, Out.tell());
 
+    auto MacroOffset = Writer.getMacroDirectivesOffset(II);
+
     // Emit the offset of the key/data length information to the interesting
     // identifiers table if necessary.
-    if (InterestingIdentifierOffsets && isInterestingIdentifier(II))
+    if (InterestingIdentifierOffsets &&
+        isInterestingIdentifier(II, MacroOffset))
       InterestingIdentifierOffsets->push_back(Out.tell());
 
     unsigned KeyLen = II->getLength() + 1;
     unsigned DataLen = 4; // 4 bytes for the persistent ID << 1
-    auto MacroOffset = Writer.getMacroDirectivesOffset(II);
     if (isInterestingIdentifier(II, MacroOffset)) {
       DataLen += 2; // 2 bytes for builtin ID
       DataLen += 2; // 2 bytes for flags
@@ -3659,9 +3661,8 @@ void ASTWriter::WriteIdentifierTable(Preprocessor &PP,
   // strings.
   {
     llvm::OnDiskChainedHashTableGenerator<ASTIdentifierTableTrait> Generator;
-    ASTIdentifierTableTrait Trait(
-        *this, PP, IdResolver, IsModule,
-        (getLangOpts().CPlusPlus && IsModule) ? &InterestingIdents : nullptr);
+    ASTIdentifierTableTrait Trait(*this, PP, IdResolver, IsModule,
+                                  IsModule ? &InterestingIdents : nullptr);
 
     // Look for any identifiers that were named while processing the
     // headers, but are otherwise not needed. We add these to the hash
