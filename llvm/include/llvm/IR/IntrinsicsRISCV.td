@@ -781,6 +781,29 @@ let TargetPrefix = "riscv" in {
     let ScalarOperand = 1;
     let VLOperand = 4;
   }
+  // UnMasked Vector Multiply-Add operations, its first operand can not be undef.
+  // Input: (vector_in, vector_in/scalar, vector_in, frm, vl, policy)
+  class RISCVTernaryAAXAUnMaskedRoundingMode
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_any_ty, LLVMMatchType<0>,
+                     llvm_anyint_ty, LLVMMatchType<2>, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<5>>, IntrNoMem]>,
+                    RISCVVIntrinsic {
+    let ScalarOperand = 1;
+    let VLOperand = 4;
+  }
+  // Masked Vector Multiply-Add operations, its first operand can not be undef.
+  // Input: (vector_in, vector_in/scalar, vector_in, mask, frm, vl, policy
+  class RISCVTernaryAAXAMaskedRoundingMode
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_any_ty, LLVMMatchType<0>,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                     llvm_anyint_ty, LLVMMatchType<2>, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<6>>, IntrNoMem]>,
+                    RISCVVIntrinsic {
+    let ScalarOperand = 1;
+    let VLOperand = 5;
+  }
   // UnMasked Widening Vector Multiply-Add operations, its first operand can not be undef.
   // Input: (vector_in, vector_in/scalar, vector_in, vl, policy)
   class RISCVTernaryWideUnMasked
@@ -1201,6 +1224,10 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" # NAME : RISCVTernaryAAXAUnMasked;
     def "int_riscv_" # NAME # "_mask" : RISCVTernaryAAXAMasked;
   }
+  multiclass RISCVTernaryAAXARoundingMode {
+    def "int_riscv_" # NAME : RISCVTernaryAAXAUnMaskedRoundingMode;
+    def "int_riscv_" # NAME # "_mask" : RISCVTernaryAAXAMaskedRoundingMode;
+  }
   multiclass RISCVCompare {
     def "int_riscv_" # NAME : RISCVCompareUnMasked;
     def "int_riscv_" # NAME # "_mask" : RISCVCompareMasked;
@@ -1418,14 +1445,14 @@ let TargetPrefix = "riscv" in {
 
   defm vfwmul : RISCVBinaryABXRoundingMode;
 
-  defm vfmacc : RISCVTernaryAAXA;
-  defm vfnmacc : RISCVTernaryAAXA;
-  defm vfmsac : RISCVTernaryAAXA;
-  defm vfnmsac : RISCVTernaryAAXA;
-  defm vfmadd : RISCVTernaryAAXA;
-  defm vfnmadd : RISCVTernaryAAXA;
-  defm vfmsub : RISCVTernaryAAXA;
-  defm vfnmsub : RISCVTernaryAAXA;
+  defm vfmacc : RISCVTernaryAAXARoundingMode;
+  defm vfnmacc : RISCVTernaryAAXARoundingMode;
+  defm vfmsac : RISCVTernaryAAXARoundingMode;
+  defm vfnmsac : RISCVTernaryAAXARoundingMode;
+  defm vfmadd : RISCVTernaryAAXARoundingMode;
+  defm vfnmadd : RISCVTernaryAAXARoundingMode;
+  defm vfmsub : RISCVTernaryAAXARoundingMode;
+  defm vfnmsub : RISCVTernaryAAXARoundingMode;
 
   defm vfwmacc : RISCVTernaryWide;
   defm vfwnmacc : RISCVTernaryWide;
