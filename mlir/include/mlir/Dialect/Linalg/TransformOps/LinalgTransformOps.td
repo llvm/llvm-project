@@ -891,17 +891,19 @@ def PackTransposeOp : Op<Transform_Dialect, "structured.pack_transpose", [
 
 def PadOp : Op<Transform_Dialect, "structured.pad",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
-     TransformOpInterface, TransformEachOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
      ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     Pads the operations pointed to by the target handle using the options
-    provides as operation attributes.
+    provides as operation attributes. The operation returns a handle to the
+    padded operation and to the padding operation ("tensor.pad").
 
     #### Return modes
 
     This operation ignores non-Linalg ops and drops them in the return.
     This operation may produce a definiteFailure if the padding fails for any
     reason.
+
     If all the operations referred to by the `target` handle pad
     properly, the transform succeeds. Otherwise the transform silently fails.
     The return handle points to only the subset of successfully produced
@@ -918,11 +920,11 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
           TypedArrayAttrBase<I64ArrayAttr, "array of arrays of i64">,
           "{}">:$transpose_paddings,
          DefaultValuedAttr<BoolAttr, "true">:$copy_back);
-  let results = (outs TransformHandleTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$padded,
+                      TransformHandleTypeInterface:$pad);
 
   let assemblyFormat =
-    "$target attr-dict `:` "
-    "custom<SemiFunctionType>(type($target), type($transformed))";
+    "$target attr-dict `:` functional-type(operands, results)";
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
