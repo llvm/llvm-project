@@ -21,7 +21,9 @@ If you have installed Jupyter into a virtual environment, adjust `python3` to
 be the interpreter for that environment. This will ensure that tools run the
 kernel in the correct context.
 
+```shell
     python3 -m tablegen_kernel.install
+```
 
 Then run one of:
 
@@ -38,6 +40,17 @@ Then run one of:
 
 `llvm-tblgen` is expected to be either in the `PATH` or you can set
 the environment variable `LLVM_TBLGEN_EXECUTABLE` to point to it directly.
+
+If you see an error like this:
+```shell
+  Cell In[8], line 2
+    // This is some tablegen
+    ^
+SyntaxError: invalid syntax
+```
+
+You are probably running the notebook using the iPython kernel. Make sure you
+ have selected the tablegen kernel.
 
 To run the kernel's doctests do:
 
