@@ -1129,7 +1129,7 @@ struct AAPointerInfoImpl
     // TODO: Use inter-procedural reachability and dominance.
     bool IsKnownNoRecurse;
     AA::hasAssumedIRAttr<Attribute::NoRecurse>(
-        A, *this, IRPosition::function(Scope), DepClassTy::OPTIONAL,
+        A, this, IRPosition::function(Scope), DepClassTy::OPTIONAL,
         IsKnownNoRecurse);
 
     const bool UseDominanceReasoning =
@@ -1166,7 +1166,7 @@ struct AAPointerInfoImpl
       const Function *AIFn = AI->getFunction();
       bool IsKnownNoRecurse;
       if (AA::hasAssumedIRAttr<Attribute::NoRecurse>(
-              A, *this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL,
+              A, this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL,
               IsKnownNoRecurse)) {
         IsLiveInCalleeCB = [AIFn](const Function &Fn) { return AIFn != &Fn; };
       }
@@ -1946,7 +1946,7 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
 
     bool IsKnownNoCapture;
     if (!AA::hasAssumedIRAttr<Attribute::NoCapture>(
-            A, *this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNoCapture))
+            A, this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNoCapture))
       return indicatePessimisticFixpoint();
 
     bool IsKnown = false;
@@ -2000,7 +2000,7 @@ struct AANoUnwindImpl : AANoUnwind {
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
         bool IsKnown;
         return AA::hasAssumedIRAttr<Attribute::NoUnwind>(
-            A, *this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED,
+            A, this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED,
             IsKnown);
       }
       return false;
@@ -2038,7 +2038,7 @@ struct AANoUnwindCallSite final : AANoUnwindImpl {
     const IRPosition &FnPos = IRPosition::function(*F);
     bool IsKnown;
     if (AA::hasAssumedIRAttr<Attribute::NoUnwind>(
-            A, *this, FnPos, DepClassTy::REQUIRED, IsKnown))
+            A, this, FnPos, DepClassTy::REQUIRED, IsKnown))
       return ChangeStatus::UNCHANGED;
     return indicatePessimisticFixpoint();
   }
@@ -2416,7 +2416,7 @@ struct AANoSyncCallSite final : AANoSyncImpl {
     const IRPosition &FnPos = IRPosition::function(*F);
     bool IsKnownNoSycn;
     if (AA::hasAssumedIRAttr<Attribute::NoSync>(
-            A, *this, FnPos, DepClassTy::REQUIRED, IsKnownNoSycn))
+            A, this, FnPos, DepClassTy::REQUIRED, IsKnownNoSycn))
       return ChangeStatus::UNCHANGED;
     return indicatePessimisticFixpoint();
   }
@@ -2437,7 +2437,7 @@ struct AANoFreeImpl : public AANoFree {
     auto CheckForNoFree = [&](Instruction &I) {
       bool IsKnown;
       return AA::hasAssumedIRAttr<Attribute::NoFree>(
-          A, *this, IRPosition::callsite_function(cast<CallBase>(I)),
+          A, this, IRPosition::callsite_function(cast<CallBase>(I)),
           DepClassTy::REQUIRED, IsKnown);
     };
 
@@ -2476,7 +2476,7 @@ struct AANoFreeCallSite final : AANoFreeImpl {
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
     bool IsKnown;
-    if (AA::hasAssumedIRAttr<Attribute::NoFree>(A, *this, FnPos,
+    if (AA::hasAssumedIRAttr<Attribute::NoFree>(A, this, FnPos,
                                                 DepClassTy::REQUIRED, IsKnown))
       return ChangeStatus::UNCHANGED;
     return indicatePessimisticFixpoint();
@@ -2499,7 +2499,7 @@ struct AANoFreeFloating : AANoFreeImpl {
     const IRPosition &IRP = getIRPosition();
 
     bool IsKnown;
-    if (AA::hasAssumedIRAttr<Attribute::NoFree>(A, *this,
+    if (AA::hasAssumedIRAttr<Attribute::NoFree>(A, this,
                                                 IRPosition::function_scope(IRP),
                                                 DepClassTy::OPTIONAL, IsKnown))
       return ChangeStatus::UNCHANGED;
@@ -2516,7 +2516,7 @@ struct AANoFreeFloating : AANoFreeImpl {
 
         bool IsKnown;
         return AA::hasAssumedIRAttr<Attribute::NoFree>(
-            A, *this, IRPosition::callsite_argument(*CB, ArgNo),
+            A, this, IRPosition::callsite_argument(*CB, ArgNo),
             DepClassTy::REQUIRED, IsKnown);
       }
 
@@ -2564,7 +2564,7 @@ struct AANoFreeCallSiteArgument final : AANoFreeFloating {
       return indicatePessimisticFixpoint();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
     bool IsKnown;
-    if (AA::hasAssumedIRAttr<Attribute::NoFree>(A, *this, ArgPos,
+    if (AA::hasAssumedIRAttr<Attribute::NoFree>(A, this, ArgPos,
                                                 DepClassTy::REQUIRED, IsKnown))
       return ChangeStatus::UNCHANGED;
     return indicatePessimisticFixpoint();
@@ -2871,7 +2871,7 @@ struct AAMustProgressFunction final : AAMustProgressImpl {
   ChangeStatus updateImpl(Attributor &A) override {
     bool IsKnown;
     if (AA::hasAssumedIRAttr<Attribute::WillReturn>(
-            A, *this, getIRPosition(), DepClassTy::OPTIONAL, IsKnown)) {
+            A, this, getIRPosition(), DepClassTy::OPTIONAL, IsKnown)) {
       if (IsKnown)
         return indicateOptimisticFixpoint();
       return ChangeStatus::UNCHANGED;
@@ -2881,7 +2881,7 @@ struct AAMustProgressFunction final : AAMustProgressImpl {
       IRPosition IPos = IRPosition::callsite_function(*ACS.getInstruction());
       bool IsKnownMustProgress;
       return AA::hasAssumedIRAttr<Attribute::MustProgress>(
-          A, *this, IPos, DepClassTy::REQUIRED, IsKnownMustProgress,
+          A, this, IPos, DepClassTy::REQUIRED, IsKnownMustProgress,
           /* IgnoreSubsumingPositions */ true);
     };
 
@@ -2914,7 +2914,7 @@ struct AAMustProgressCallSite final : AAMustProgressImpl {
     const IRPosition &FnPos = IRPosition::function(*getAnchorScope());
     bool IsKnownMustProgress;
     if (!AA::hasAssumedIRAttr<Attribute::MustProgress>(
-            A, *this, FnPos, DepClassTy::REQUIRED, IsKnownMustProgress))
+            A, this, FnPos, DepClassTy::REQUIRED, IsKnownMustProgress))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
@@ -2949,7 +2949,7 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
     auto CallSitePred = [&](AbstractCallSite ACS) {
       bool IsKnownNoRecurse;
       if (!AA::hasAssumedIRAttr<Attribute::NoRecurse>(
-              A, *this,
+              A, this,
               IRPosition::function(*ACS.getInstruction()->getFunction()),
               DepClassTy::NONE, IsKnownNoRecurse))
         return false;
@@ -2994,7 +2994,7 @@ struct AANoRecurseCallSite final : AANoRecurseImpl {
     const IRPosition &FnPos = IRPosition::function(*F);
     bool IsKnownNoRecurse;
     if (!AA::hasAssumedIRAttr<Attribute::NoRecurse>(
-            A, *this, FnPos, DepClassTy::REQUIRED, IsKnownNoRecurse))
+            A, this, FnPos, DepClassTy::REQUIRED, IsKnownNoRecurse))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
@@ -3450,7 +3450,7 @@ struct AAWillReturnImpl : public AAWillReturn {
       IRPosition IPos = IRPosition::callsite_function(cast<CallBase>(I));
       bool IsKnown;
       if (AA::hasAssumedIRAttr<Attribute::WillReturn>(
-              A, *this, IPos, DepClassTy::REQUIRED, IsKnown)) {
+              A, this, IPos, DepClassTy::REQUIRED, IsKnown)) {
         if (IsKnown)
           return true;
       } else {
@@ -3458,7 +3458,7 @@ struct AAWillReturnImpl : public AAWillReturn {
       }
       bool IsKnownNoRecurse;
       return AA::hasAssumedIRAttr<Attribute::NoRecurse>(
-          A, *this, IPos, DepClassTy::REQUIRED, IsKnownNoRecurse);
+          A, this, IPos, DepClassTy::REQUIRED, IsKnownNoRecurse);
     };
 
     bool UsedAssumedInformation = false;
@@ -3511,7 +3511,7 @@ struct AAWillReturnCallSite final : AAWillReturnImpl {
     const IRPosition &FnPos = IRPosition::function(*F);
     bool IsKnown;
     if (AA::hasAssumedIRAttr<Attribute::WillReturn>(
-            A, *this, FnPos, DepClassTy::REQUIRED, IsKnown))
+            A, this, FnPos, DepClassTy::REQUIRED, IsKnown))
       return ChangeStatus::UNCHANGED;
     return indicatePessimisticFixpoint();
   }
@@ -3878,9 +3878,9 @@ struct AANoAliasFloating final : AANoAliasImpl {
       indicateOptimisticFixpoint();
     else if (Val != &getAssociatedValue()) {
       bool IsKnownNoAlias;
-      AA::hasAssumedIRAttr<Attribute::NoAlias>(
-          A, *this, IRPosition::value(*Val), DepClassTy::OPTIONAL,
-          IsKnownNoAlias);
+      AA::hasAssumedIRAttr<Attribute::NoAlias>(A, this, IRPosition::value(*Val),
+                                               DepClassTy::OPTIONAL,
+                                               IsKnownNoAlias);
       if (IsKnownNoAlias)
         indicateOptimisticFixpoint();
     }
@@ -3922,7 +3922,7 @@ struct AANoAliasArgument final
     // If the function is no-sync, no-alias cannot break synchronization.
     bool IsKnownNoSycn;
     if (AA::hasAssumedIRAttr<Attribute::NoSync>(
-            A, *this, IRPosition::function_scope(getIRPosition()),
+            A, this, IRPosition::function_scope(getIRPosition()),
             DepClassTy::OPTIONAL, IsKnownNoSycn))
       return Base::updateImpl(A);
 
@@ -4066,7 +4066,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
 
             bool IsKnownNoCapture;
             if (AA::hasAssumedIRAttr<Attribute::NoCapture>(
-                    A, *this, IRPosition::callsite_argument(*CB, ArgNo),
+                    A, this, IRPosition::callsite_argument(*CB, ArgNo),
                     DepClassTy::OPTIONAL, IsKnownNoCapture))
               return true;
           }
@@ -4169,7 +4169,7 @@ struct AANoAliasReturned final : AANoAliasImpl {
       const IRPosition &RVPos = IRPosition::value(RV);
       bool IsKnownNoAlias;
       if (!AA::hasAssumedIRAttr<Attribute::NoAlias>(
-              A, *this, RVPos, DepClassTy::REQUIRED, IsKnownNoAlias))
+              A, this, RVPos, DepClassTy::REQUIRED, IsKnownNoAlias))
         return false;
 
       const auto *NoCaptureAA =
@@ -4202,7 +4202,7 @@ struct AANoAliasCallSiteReturned final : AANoAliasImpl {
     const IRPosition &FnPos = IRPosition::returned(*F);
     bool IsKnownNoAlias;
     if (!AA::hasAssumedIRAttr<Attribute::NoAlias>(
-            A, *this, FnPos, DepClassTy::REQUIRED, IsKnownNoAlias))
+            A, this, FnPos, DepClassTy::REQUIRED, IsKnownNoAlias))
       return indicatePessimisticFixpoint();
     return ChangeStatus::UNCHANGED;
   }
@@ -5674,7 +5674,7 @@ struct AAInstanceInfoImpl : public AAInstanceInfo {
 
     bool IsKnownNoRecurse;
     if (AA::hasAssumedIRAttr<Attribute::NoRecurse>(
-            A, *this, IRPosition::function(*Scope), DepClassTy::OPTIONAL,
+            A, this, IRPosition::function(*Scope), DepClassTy::OPTIONAL,
             IsKnownNoRecurse))
       return Changed;
 
@@ -6024,7 +6024,7 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
 
   bool IsKnownNoUnwind;
   if (AA::hasAssumedIRAttr<Attribute::NoUnwind>(
-          A, *this, FnPos, DepClassTy::OPTIONAL, IsKnownNoUnwind)) {
+          A, this, FnPos, DepClassTy::OPTIONAL, IsKnownNoUnwind)) {
     bool IsVoidTy = F->getReturnType()->isVoidTy();
     const AAReturnedValues *RVAA =
         IsVoidTy ? nullptr
@@ -7033,7 +7033,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
     if (!StackIsAccessibleByOtherThreads) {
       bool IsKnownNoSycn;
       if (!AA::hasAssumedIRAttr<Attribute::NoSync>(
-              A, *this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNoSycn)) {
+              A, this, getIRPosition(), DepClassTy::OPTIONAL, IsKnownNoSycn)) {
         LLVM_DEBUG(
             dbgs() << "[H2S] found an escaping use, stack is not accessible by "
                       "other threads and function is not nosync:\n");
@@ -7118,12 +7118,12 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
 
         bool IsKnownNoCapture;
         bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
-            A, *this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoCapture);
+            A, this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoCapture);
 
         // If a call site argument use is nofree, we are fine.
         bool IsKnownNoFree;
         bool IsAssumedNoFree = AA::hasAssumedIRAttr<Attribute::NoFree>(
-            A, *this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoFree);
+            A, this, CBIRP, DepClassTy::OPTIONAL, IsKnownNoFree);
 
         if (!IsAssumedNoCapture ||
             (AI.LibraryFunctionId != LibFunc___kmpc_alloc_shared &&
@@ -7804,7 +7804,7 @@ struct AAPrivatizablePtrCallSiteArgument final
 
     bool IsKnownNoAlias;
     if (!AA::hasAssumedIRAttr<Attribute::NoAlias>(
-            A, *this, IRP, DepClassTy::REQUIRED, IsKnownNoAlias)) {
+            A, this, IRP, DepClassTy::REQUIRED, IsKnownNoAlias)) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] pointer might alias!\n");
       return indicatePessimisticFixpoint();
     }
