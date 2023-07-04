@@ -15,7 +15,6 @@ define double @v_trig_preop_f64(double %a, i32 %b) {
 ; GFX10PLUS-LABEL: v_trig_preop_f64:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_trig_preop_f64 v[0:1], v[0:1], v2
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 %b)
@@ -32,7 +31,6 @@ define double @v_trig_preop_f64_imm(double %a, i32 %b) {
 ; GFX10PLUS-LABEL: v_trig_preop_f64_imm:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_trig_preop_f64 v[0:1], v[0:1], 7
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 7)

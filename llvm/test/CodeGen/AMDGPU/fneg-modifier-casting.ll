@@ -15,7 +15,6 @@ define i32 @fneg_xor_select_i32(i1 %cond, i32 %arg0, i32 %arg1) {
 ; GFX11-LABEL: fneg_xor_select_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
@@ -41,7 +40,6 @@ define <2 x i32> @fneg_xor_select_v2i32(<2 x i1> %cond, <2 x i32> %arg0, <2 x i3
 ; GFX11-LABEL: fneg_xor_select_v2i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
@@ -81,14 +79,12 @@ define i32 @fneg_xor_select_i32_multi_use(i1 %cond, i32 %arg0, i32 %arg1, ptr ad
 ; GFX11-LABEL: fneg_xor_select_i32_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
 ; GFX11-NEXT:    global_store_b32 v[3:4], v1, off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i32 %arg0, i32 %arg1
   store i32 %select, ptr addrspace(1) %ptr
@@ -109,7 +105,6 @@ define i64 @fneg_xor_select_i64(i1 %cond, i64 %arg0, i64 %arg1) {
 ; GFX11-LABEL: fneg_xor_select_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
@@ -138,7 +133,6 @@ define <2 x i64> @fneg_xor_select_v2i64(<2 x i1> %cond, <2 x i64> %arg0, <2 x i6
 ; GFX11-LABEL: fneg_xor_select_v2i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
@@ -167,7 +161,6 @@ define i16 @fneg_xor_select_i16(i1 %cond, i16 %arg0, i16 %arg1) {
 ; GFX11-LABEL: fneg_xor_select_i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
@@ -216,7 +209,6 @@ define <2 x i16> @fneg_xor_select_v2i16(<2 x i1> %cond, <2 x i16> %arg0, <2 x i1
 ; GFX11-LABEL: fneg_xor_select_v2i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
@@ -261,14 +253,12 @@ define i16 @fneg_xor_select_i16_multi_use(i1 %cond, i16 %arg0, i16 %arg1, ptr ad
 ; GFX11-LABEL: fneg_xor_select_i16_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v1
 ; GFX11-NEXT:    global_store_b16 v[3:4], v1, off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i16 %arg0, i16 %arg1
   store i16 %select, ptr addrspace(1) %ptr
@@ -306,7 +296,6 @@ define i64 @fneg_xor_select_i64_multi_user(i1 %cond, i64 %arg0, i64 %arg1, ptr a
 ; GFX11-LABEL: fneg_xor_select_i64_multi_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_and_b32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
@@ -314,7 +303,6 @@ define i64 @fneg_xor_select_i64_multi_user(i1 %cond, i64 %arg0, i64 %arg1, ptr a
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, -v4, -v2, vcc_lo
 ; GFX11-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v2
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, i64 %arg0, i64 %arg1
   store i64 %select, ptr addrspace(1) %ptr
@@ -339,7 +327,6 @@ define i32 @select_fneg_xor_select_i32(i1 %cond0, i1 %cond1, i32 %arg0, i32 %arg
 ; GFX11-LABEL: select_fneg_xor_select_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
 ; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -374,7 +361,6 @@ define float @select_fneg_select_f32(i1 %cond0, i1 %cond1, float %arg0, float %a
 ; GFX11-LABEL: select_fneg_select_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
@@ -404,7 +390,6 @@ define double @fneg_xor_select_f64(i1 %cond, double %arg0, double %arg1) {
 ; GFX11-LABEL: fneg_xor_select_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
@@ -446,7 +431,6 @@ define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %ar
 ; GFX11-LABEL: fneg_xor_select_f64_multi_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v7, v1 :: v_dual_and_b32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
@@ -455,7 +439,6 @@ define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %ar
 ; GFX11-NEXT:    v_xor_b32_e32 v2, 0x80000000, v1
 ; GFX11-NEXT:    global_store_b64 v[5:6], v[0:1], off
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v2
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %select = select i1 %cond, double %arg0, double %arg1
   store double %select, ptr addrspace(1) %ptr
@@ -477,7 +460,6 @@ define double @fneg_xor_select_i64_user_with_srcmods(i1 %cond, i64 %arg0, i64 %a
 ; GFX11-LABEL: fneg_xor_select_i64_user_with_srcmods:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 1, v0
@@ -509,7 +491,6 @@ define double @select_fneg_select_fneg_f64(i1 %cond0, i1 %cond1, double %arg0, d
 ; GFX11-LABEL: select_fneg_select_fneg_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -548,7 +529,6 @@ define i64 @select_fneg_xor_select_i64(i1 %cond0, i1 %cond1, i64 %arg0, i64 %arg
 ; GFX11-LABEL: select_fneg_xor_select_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -601,7 +581,6 @@ define half @select_fneg_select_f16(i1 %cond0, i1 %cond1, half %arg0, half %arg1
 ; GFX11-LABEL: select_fneg_select_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_xor_b32_e32 v2, 0x8000, v2
 ; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -638,7 +617,6 @@ define i16 @select_fneg_xor_select_i16(i1 %cond0, i1 %cond1, i16 %arg0, i16 %arg
 ; GFX11-LABEL: select_fneg_xor_select_i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    v_xor_b32_e32 v2, 0xffff8000, v2
 ; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
@@ -724,7 +702,6 @@ define <2 x half> @select_fneg_select_v2f16(<2 x i1> %cond0, <2 x i1> %cond1, <2
 ; GFX11-LABEL: select_fneg_select_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v4, 0x80008000, v4
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
 ; GFX11-NEXT:    v_and_b32_e32 v3, 1, v3
@@ -810,7 +787,6 @@ define <2 x i16> @select_fneg_xor_select_v2i16(<2 x i1> %cond0, <2 x i1> %cond1,
 ; GFX11-LABEL: select_fneg_xor_select_v2i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v4, 0x80008000, v4
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
 ; GFX11-NEXT:    v_and_b32_e32 v3, 1, v3
@@ -862,7 +838,6 @@ define double @cospiD_pattern0(i32 %arg, double %arg1, double %arg2) {
 ; GFX11-LABEL: cospiD_pattern0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v5, 1, v0
 ; GFX11-NEXT:    v_cmp_lt_i32_e64 s0, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -903,7 +878,6 @@ define double @cospiD_pattern1(i32 %arg, double %arg1, double %arg2) {
 ; GFX11-LABEL: cospiD_pattern1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v5, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v5
@@ -959,7 +933,6 @@ define float @cospiD_pattern0_half(i16 %arg, float %arg1, float %arg2) {
 ; GFX11-LABEL: cospiD_pattern0_half:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v3, 1, v0
 ; GFX11-NEXT:    v_cmp_lt_i16_e32 vcc_lo, 1, v0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -1011,7 +984,6 @@ define float @cospiD_pattern1_half(i16 %arg, float %arg1, float %arg2) {
 ; GFX11-LABEL: cospiD_pattern1_half:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v3, 1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 0, v3
@@ -1038,7 +1010,6 @@ define double @fneg_f64_bitcast_vector_i64_to_f64(i64 %arg) {
 ; GFX11-LABEL: fneg_f64_bitcast_vector_i64_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast i64 %arg to double
@@ -1056,7 +1027,6 @@ define double @fneg_f64_bitcast_vector_v2i32_to_f64(<2 x i32> %arg) {
 ; GFX11-LABEL: fneg_f64_bitcast_vector_v2i32_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast <2 x i32> %arg to double
@@ -1074,7 +1044,6 @@ define double @fneg_f64_bitcast_vector_v2f32_to_f64(<2 x float> %arg) {
 ; GFX11-LABEL: fneg_f64_bitcast_vector_v2f32_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast <2 x float> %arg to double
@@ -1104,7 +1073,6 @@ define double @fneg_f64_bitcast_vector_v4i16_to_f64(<4 x i16> %arg) {
 ; GFX11-LABEL: fneg_f64_bitcast_vector_v4i16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast <4 x i16> %arg to double
@@ -1136,7 +1104,6 @@ define double @fneg_f64_bitcast_vector_v4f16_to_f64(<4 x half> %arg) {
 ; GFX11-LABEL: fneg_f64_bitcast_vector_v4f16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %bitcast = bitcast <4 x half> %arg to double
@@ -1154,7 +1121,6 @@ define double @fneg_f64_bitcast_build_vector_v2i32_to_f64(i32 %elt0, i32 %elt1) 
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %insert.0 = insertelement <2 x i32> poison, i32 %elt0, i32 0
@@ -1174,7 +1140,6 @@ define double @fneg_f64_bitcast_build_vector_v2f32_to_f64(float %elt0, float %el
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %insert.0 = insertelement <2 x float> poison, float %elt0, i32 0
@@ -1209,7 +1174,6 @@ define double @fneg_f64_bitcast_build_vector_v4i16_to_f64(i16 %elt0, i16 %elt1, 
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v4i16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
 ; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1251,7 +1215,6 @@ define double @fneg_f64_bitcast_build_vector_v4f16_to_f64(half %elt0, half %elt1
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v4f16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
 ; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1289,7 +1252,6 @@ define double @fneg_f64_bitcast_build_vector_v4bf16_to_f64(bfloat %elt0, bfloat 
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v2, v2, v3, 0x3020706
 ; GFX11-NEXT:    v_perm_b32 v0, v0, v1, 0x3020706
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1314,7 +1276,6 @@ define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user(i32 %elt
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f64 v[0:1], -v[0:1], v[2:3]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %insert.0 = insertelement <2 x i32> poison, i32 %elt0, i32 0
@@ -1338,7 +1299,6 @@ define { double, double } @fneg_f64_bitcast_build_vector_v2i32_to_f64_multi_modi
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_multi_modifier_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f64 v[6:7], -v[0:1], v[2:3]
 ; GFX11-NEXT:    v_mul_f64 v[2:3], v[4:5], -v[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1366,7 +1326,6 @@ define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user_integer_
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user_integer_neg_source:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f64 v[0:1], -v[0:1], v[2:3]
@@ -1390,7 +1349,6 @@ define double @fneg_f64_bitcast_build_vector_v2f32_foldable_sources_to_f64(float
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_foldable_sources_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_sub_f32_e32 v1, -2.0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fadd = fadd nsz nnan float %elt1, 2.0
@@ -1421,11 +1379,9 @@ define double @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user(fl
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v4, 0x80000000, v1
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v4
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %insert.0 = insertelement <2 x float> poison, float %elt0, i32 0
   %insert.1 = insertelement <2 x float> %insert.0, float %elt1, i32 1
@@ -1447,7 +1403,6 @@ define { double, <2 x float> } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitca
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_foldable_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v4, 0x80000000, v1
 ; GFX11-NEXT:    v_dual_add_f32 v2, v0, v2 :: v_dual_add_f32 v3, v1, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1475,7 +1430,6 @@ define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_us
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v3, v1 :: v_dual_mov_b32 v2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v3
@@ -1500,7 +1454,6 @@ define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_fo
 ; GFX11-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_foldable_user:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

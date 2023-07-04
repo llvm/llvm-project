@@ -854,7 +854,6 @@ define double @v_test_copysign_f64(ptr addrspace(1) %out, [8 x i32], double %mag
 ; GFX11-LABEL: v_test_copysign_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v10
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v11, v21
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -873,7 +872,6 @@ define double @v_test_copysign_f64_0(ptr addrspace(1) %out, [8 x i32], double %m
 ; GFX11-LABEL: v_test_copysign_f64_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_and_b32 v1, 0x7fffffff, v11
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call double @llvm.copysign.f64(double %mag, double 0.0)
@@ -891,7 +889,6 @@ define double @v_test_copysign_f64_1(ptr addrspace(1) %out, [8 x i32], double %m
 ; GFX11-LABEL: v_test_copysign_f64_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_and_b32 v1, 0x7fffffff, v11
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call double @llvm.copysign.f64(double %mag, double 1.0)
@@ -909,7 +906,6 @@ define double @v_test_copysign_f64_10(ptr addrspace(1) %out, [8 x i32], double %
 ; GFX11-LABEL: v_test_copysign_f64_10:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_and_b32 v1, 0x7fffffff, v11
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call double @llvm.copysign.f64(double %mag, double 10.0)
@@ -927,7 +923,6 @@ define double @v_test_copysign_f64_neg1(ptr addrspace(1) %out, [8 x i32], double
 ; GFX11-LABEL: v_test_copysign_f64_neg1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v10
 ; GFX11-NEXT:    v_or_b32_e32 v1, 0x80000000, v11
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -946,7 +941,6 @@ define double @v_test_copysign_f64_neg10(ptr addrspace(1) %out, [8 x i32], doubl
 ; GFX11-LABEL: v_test_copysign_f64_neg10:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v10
 ; GFX11-NEXT:    v_or_b32_e32 v1, 0x80000000, v11
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -966,7 +960,6 @@ define double @v_test_copysign_f64_f32(ptr addrspace(1) %out, [8 x i32], double 
 ; GFX11-LABEL: v_test_copysign_f64_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v10
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v11, v20
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -996,7 +989,6 @@ define double @v_test_copysign_f64_f16(ptr addrspace(1) %out, [8 x i32], double 
 ; GFX11-LABEL: v_test_copysign_f64_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, v10 :: v_dual_lshlrev_b32 v1, 16, v20
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v11, v1
@@ -1020,7 +1012,6 @@ define <2 x double> @v_test_copysign_v2f64(ptr addrspace(1) %out, <2 x double> %
 ; GFX11-LABEL: v_test_copysign_v2f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v3, v7
 ; GFX11-NEXT:    v_bfi_b32 v3, 0x7fffffff, v5, v9
@@ -1046,7 +1037,6 @@ define <3 x double> @v_test_copysign_v3f64(ptr addrspace(1) %out, <3 x double> %
 ; GFX11-LABEL: v_test_copysign_v3f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v3, v9
 ; GFX11-NEXT:    v_bfi_b32 v3, 0x7fffffff, v5, v11
@@ -1076,7 +1066,6 @@ define <4 x double> @v_test_copysign_v4f64(ptr addrspace(1) %out, <4 x double> %
 ; GFX11-LABEL: v_test_copysign_v4f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v3, v11
 ; GFX11-NEXT:    v_bfi_b32 v3, 0x7fffffff, v5, v13

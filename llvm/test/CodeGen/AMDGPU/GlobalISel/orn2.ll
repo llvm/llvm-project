@@ -106,7 +106,6 @@ define i32 @v_orn2_i32(i32 %src0, i32 %src1) {
 ; GFX10PLUS-LABEL: v_orn2_i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_not_b32_e32 v1, v1
 ; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -257,7 +256,6 @@ define i64 @v_orn2_i64(i64 %src0, i64 %src1) {
 ; GFX10PLUS-LABEL: v_orn2_i64:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_not_b32_e32 v2, v2
 ; GFX10PLUS-NEXT:    v_not_b32_e32 v3, v3
 ; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v2
@@ -452,7 +450,6 @@ define i16 @v_orn2_i16(i16 %src0, i16 %src1) {
 ; GFX10PLUS-LABEL: v_orn2_i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v1, -1, v1
 ; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -679,7 +676,6 @@ define <2 x i16> @v_orn2_v2i16(<2 x i16> %src0, <2 x i16> %src1) {
 ; GFX10PLUS-LABEL: v_orn2_v2i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v1, -1, v1
 ; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -903,7 +899,6 @@ define <3 x i16> @v_orn2_v3i16(<3 x i16> %src0, <3 x i16> %src1) {
 ; GFX10PLUS-LABEL: v_orn2_v3i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v2, -1, v2
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v3, -11, v3
 ; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v2
@@ -1140,7 +1135,6 @@ define <4 x i16> @v_orn2_v4i16(<4 x i16> %src0, <4 x i16> %src1) {
 ; GFX10PLUS-LABEL: v_orn2_v4i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v2, -1, v2
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v3, -1, v3
 ; GFX10PLUS-NEXT:    v_or_b32_e32 v0, v0, v2

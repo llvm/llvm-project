@@ -117,14 +117,12 @@ define i16 @v_mad_u16(i16 %arg0, i16 %arg1, i16 %arg2) {
 ; GFX10-LABEL: v_mad_u16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_mad_u16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %mul = mul i16 %arg0, %arg1
@@ -148,7 +146,6 @@ define i32 @v_mad_u16_zext(i16 %arg0, i16 %arg1, i16 %arg2) {
 ; GFX10-LABEL: v_mad_u16_zext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -156,7 +153,6 @@ define i32 @v_mad_u16_zext(i16 %arg0, i16 %arg1, i16 %arg2) {
 ; GFX11-LABEL: v_mad_u16_zext:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -185,7 +181,6 @@ define i64 @v_mad_u16_zext64(i16 %arg0, i16 %arg1, i16 %arg2) {
 ; GFX10-LABEL: v_mad_u16_zext64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -194,7 +189,6 @@ define i64 @v_mad_u16_zext64(i16 %arg0, i16 %arg1, i16 %arg2) {
 ; GFX11-LABEL: v_mad_u16_zext64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mad_u16 v0, v0, v1, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0xffff, v0
