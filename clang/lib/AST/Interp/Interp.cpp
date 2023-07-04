@@ -68,7 +68,7 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   // Find the active field of the union.
-  Record *R = U.getRecord();
+  const Record *R = U.getRecord();
   assert(R && R->isUnion() && "Not a union");
   const FieldDecl *ActiveField = nullptr;
   for (unsigned I = 0, N = R->getNumFields(); I < N; ++I) {
