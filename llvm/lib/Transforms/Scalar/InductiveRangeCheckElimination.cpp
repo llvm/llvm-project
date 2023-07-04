@@ -249,15 +249,20 @@ public:
 } // end anonymous namespace
 
 /// Parse a single ICmp instruction, `ICI`, into a range check.  If `ICI` cannot
-/// be interpreted as a range check, return false and set `Index` and `End`
-/// to `nullptr`.  Otherwise set `Index` to the SCEV being range checked, and
-/// set `End` to the upper limit `Index` is being range checked.
+/// be interpreted as a range check, return false.  Otherwise set `Index` to the
+/// SCEV being range checked, and set `End` to the upper or lower limit `Index`
+/// is being range checked.
 bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
                                               ScalarEvolution &SE,
                                               const SCEV *&Index,
                                               const SCEV *&End) {
   auto IsLoopInvariant = [&SE, L](Value *V) {
     return SE.isLoopInvariant(SE.getSCEV(V), L);
+  };
+
+  auto SIntMaxSCEV = [&](Type *T) {
+    unsigned BitWidth = cast<IntegerType>(T)->getBitWidth();
+    return SE.getConstant(APInt::getSignedMaxValue(BitWidth));
   };
 
   ICmpInst::Predicate Pred = ICI->getPredicate();
@@ -272,6 +277,10 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
     // Both LHS and RHS are loop variant
     return false;
 
+  // We strengthen "0 <= I" to "0 <= I < INT_SMAX" and "I < L" to "0 <= I < L".
+  // We can potentially do much better here.
+  // If we want to adjust upper bound for the unsigned range check as we do it
+  // for signed one, we will need to pick Unsigned max
   switch (Pred) {
   default:
     return false;
@@ -279,6 +288,7 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   case ICmpInst::ICMP_SGE:
     if (match(RHS, m_ConstantInt<0>())) {
       Index = SE.getSCEV(LHS);
+      End = SIntMaxSCEV(Index->getType());
       return true;
     }
     return false;
@@ -286,6 +296,7 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   case ICmpInst::ICMP_SGT:
     if (match(RHS, m_ConstantInt<-1>())) {
       Index = SE.getSCEV(LHS);
+      End = SIntMaxSCEV(Index->getType());
       return true;
     }
     return false;
@@ -337,23 +348,15 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
   if (!parseRangeCheckICmp(L, ICI, SE, Index, End))
     return;
 
+  assert(Index && "Index was not computed");
+  assert(End && "End was not computed");
+
   const auto *IndexAddRec = dyn_cast<SCEVAddRecExpr>(Index);
   bool IsAffineIndex =
       IndexAddRec && (IndexAddRec->getLoop() == L) && IndexAddRec->isAffine();
 
   if (!IsAffineIndex)
     return;
-
-  // We strengthen "0 <= I" to "0 <= I < INT_SMAX" and "I < L" to "0 <= I < L".
-  // We can potentially do much better here.
-  if (!End) {
-    // So far we can only reach this point for Signed range check. This may
-    // change in future. In this case we will need to pick Unsigned max for the
-    // unsigned range check.
-    unsigned BitWidth = cast<IntegerType>(IndexAddRec->getType())->getBitWidth();
-    const SCEV *SIntMax = SE.getConstant(APInt::getSignedMaxValue(BitWidth));
-    End = SIntMax;
-  }
 
   InductiveRangeCheck IRC;
   IRC.End = End;
