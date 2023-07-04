@@ -5057,7 +5057,7 @@ protected:
         Target::StopHookSP this_hook = target.GetStopHookAtIndex(i);
         if (i > 0)
           result.GetOutputStream().PutCString("\n");
-        this_hook->GetDescription(&(result.GetOutputStream()),
+        this_hook->GetDescription(result.GetOutputStream(),
                                   eDescriptionLevelFull);
       }
     }
