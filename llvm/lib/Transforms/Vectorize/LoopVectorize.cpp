@@ -5699,13 +5699,21 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
       EstimatedRuntimeVF *= *VScale;
   }
 
-  for (auto &NextVF : ProfitableVFs)
-    if (((!NextVF.Width.isScalable() && MainLoopVF.isScalable() &&
-          ElementCount::isKnownLT(NextVF.Width, EstimatedRuntimeVF)) ||
-         ElementCount::isKnownLT(NextVF.Width, MainLoopVF)) &&
-        (Result.Width.isScalar() || isMoreProfitable(NextVF, Result)) &&
-        hasPlanWithVF(NextVF.Width))
+  for (auto &NextVF : ProfitableVFs) {
+    // Skip candidate VFs without a corresponding VPlan.
+    if (!hasPlanWithVF(NextVF.Width))
+      continue;
+
+    // Skip candidate VFs with widths >= the estimate runtime VF (scalable
+    // vectors) or the VF of the main loop (fixed vectors).
+    if ((!NextVF.Width.isScalable() && MainLoopVF.isScalable() &&
+         ElementCount::isKnownGE(NextVF.Width, EstimatedRuntimeVF)) ||
+        ElementCount::isKnownGE(NextVF.Width, MainLoopVF))
+      continue;
+
+    if (Result.Width.isScalar() || isMoreProfitable(NextVF, Result))
       Result = NextVF;
+  }
 
   if (Result != VectorizationFactor::Disabled())
     LLVM_DEBUG(dbgs() << "LEV: Vectorizing epilogue loop with VF = "
