@@ -96,6 +96,14 @@ SourceRange StackAddrEscapeChecker::genName(raw_ostream &os, const MemRegion *R,
     os << "stack memory associated with local variable '" << VR->getString()
        << '\'';
     range = VR->getDecl()->getSourceRange();
+  } else if (const auto *LER = dyn_cast<CXXLifetimeExtendedObjectRegion>(R)) {
+    QualType Ty = LER->getValueType().getLocalUnqualifiedType();
+    os << "stack memory associated with temporary object of type '";
+    Ty.print(os, Ctx.getPrintingPolicy());
+    os << "' lifetime extended by local variable";
+    if (const IdentifierInfo *ID = LER->getExtendingDecl()->getIdentifier())
+      os << " '" << ID->getName() << '\'';
+    range = LER->getExpr()->getSourceRange();
   } else if (const auto *TOR = dyn_cast<CXXTempObjectRegion>(R)) {
     QualType Ty = TOR->getValueType().getLocalUnqualifiedType();
     os << "stack memory associated with temporary object of type '";
@@ -376,7 +384,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     llvm::raw_svector_ostream Out(Buf);
     const SourceRange Range = genName(Out, Referred, Ctx.getASTContext());
 
-    if (isa<CXXTempObjectRegion>(Referrer)) {
+    if (isa<CXXTempObjectRegion, CXXLifetimeExtendedObjectRegion>(Referrer)) {
       Out << " is still referred to by a temporary object on the stack "
           << CommonSuffix;
       auto Report =

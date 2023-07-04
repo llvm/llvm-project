@@ -284,7 +284,8 @@ SVal ExprEngine::computeObjectUnderConstruction(
       CallOpts.IsTemporaryCtorOrDtor = true;
       if (MTE) {
         if (const ValueDecl *VD = MTE->getExtendingDecl()) {
-          assert(MTE->getStorageDuration() != SD_FullExpression);
+          StorageDuration SD = MTE->getStorageDuration();
+          assert(SD != SD_FullExpression);
           if (!VD->getType()->isReferenceType()) {
             // We're lifetime-extended by a surrounding aggregate.
             // Automatic destructors aren't quite working in this case
@@ -293,11 +294,15 @@ SVal ExprEngine::computeObjectUnderConstruction(
             // the MaterializeTemporaryExpr?
             CallOpts.IsTemporaryLifetimeExtendedViaAggregate = true;
           }
-        }
 
-        if (MTE->getStorageDuration() == SD_Static ||
-            MTE->getStorageDuration() == SD_Thread)
-          return loc::MemRegionVal(MRMgr.getCXXStaticTempObjectRegion(E));
+          if (SD == SD_Static || SD == SD_Thread)
+            return loc::MemRegionVal(
+                MRMgr.getCXXStaticLifetimeExtendedObjectRegion(E, VD));
+
+          return loc::MemRegionVal(
+              MRMgr.getCXXLifetimeExtendedObjectRegion(E, VD, LCtx));
+        }
+        assert(MTE->getStorageDuration() == SD_FullExpression);
       }
 
       return loc::MemRegionVal(MRMgr.getCXXTempObjectRegion(E, LCtx));
@@ -799,7 +804,8 @@ void ExprEngine::handleConstructor(const Expr *E,
   StmtNodeBuilder Bldr(DstEvaluated, DstEvaluatedPostProcessed, *currBldrCtx);
   const AnalysisDeclContext *ADC = LCtx->getAnalysisDeclContext();
   if (!ADC->getCFGBuildOptions().AddTemporaryDtors) {
-    if (llvm::isa_and_nonnull<CXXTempObjectRegion>(TargetRegion) &&
+    if (llvm::isa_and_nonnull<CXXTempObjectRegion,
+                              CXXLifetimeExtendedObjectRegion>(TargetRegion) &&
         cast<CXXConstructorDecl>(Call->getDecl())
             ->getParent()
             ->isAnyDestructorNoReturn()) {
