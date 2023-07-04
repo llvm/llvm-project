@@ -5256,25 +5256,16 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                             CostKind, 0, nullptr, nullptr);
 }
 
-InstructionCost X86TTIImpl::getMinMaxCost(Type *Ty, Type *CondTy,
+InstructionCost X86TTIImpl::getMinMaxCost(Intrinsic::ID IID, Type *Ty,
                                           TTI::TargetCostKind CostKind,
-                                          bool IsUnsigned, FastMathFlags FMF) {
-  Intrinsic::ID Id;
-  if (Ty->isIntOrIntVectorTy()) {
-    Id = IsUnsigned ? Intrinsic::umin : Intrinsic::smin;
-  } else {
-    assert(Ty->isFPOrFPVectorTy() &&
-           "Expected float point or integer vector type.");
-    Id = Intrinsic::minnum;
-  }
-
-  IntrinsicCostAttributes ICA(Id, Ty, {Ty, Ty}, FMF);
+                                          FastMathFlags FMF) {
+  IntrinsicCostAttributes ICA(IID, Ty, {Ty, Ty}, FMF);
   return getIntrinsicInstrCost(ICA, CostKind);
 }
 
 InstructionCost
-X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
-                                   bool IsUnsigned, FastMathFlags FMF,
+X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
+                                   FastMathFlags FMF,
                                    TTI::TargetCostKind CostKind) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
@@ -5282,11 +5273,14 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
 
   int ISD;
   if (ValTy->isIntOrIntVectorTy()) {
-    ISD = IsUnsigned ? ISD::UMIN : ISD::SMIN;
+    ISD = (IID == Intrinsic::umin || IID == Intrinsic::umax) ? ISD::UMIN
+                                                             : ISD::SMIN;
   } else {
     assert(ValTy->isFPOrFPVectorTy() &&
            "Expected float point or integer vector type.");
-    ISD = ISD::FMINNUM;
+    ISD = (IID == Intrinsic::minnum || IID == Intrinsic::maxnum)
+              ? ISD::FMINNUM
+              : ISD::FMINIMUM;
   }
 
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
@@ -5362,9 +5356,7 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
     // Type needs to be split. We need LT.first - 1 operations ops.
     Ty = FixedVectorType::get(ValVTy->getElementType(),
                               MTy.getVectorNumElements());
-    auto *SubCondTy = FixedVectorType::get(CondTy->getElementType(),
-                                           MTy.getVectorNumElements());
-    MinMaxCost = getMinMaxCost(Ty, SubCondTy, CostKind, IsUnsigned, FMF);
+    MinMaxCost = getMinMaxCost(IID, Ty, CostKind, FMF);
     MinMaxCost *= LT.first - 1;
     NumVecElts = MTy.getVectorNumElements();
   }
@@ -5391,8 +5383,7 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
   // by type legalization.
   if (!isPowerOf2_32(ValVTy->getNumElements()) ||
       ScalarSize != MTy.getScalarSizeInBits())
-    return BaseT::getMinMaxReductionCost(ValTy, CondTy, IsUnsigned, FMF,
-                                         CostKind);
+    return BaseT::getMinMaxReductionCost(IID, ValTy, FMF, CostKind);
 
   // Now handle reduction with the legal type, taking into account size changes
   // at each level.
@@ -5436,9 +5427,7 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
     }
 
     // Add the arithmetic op for this level.
-    auto *SubCondTy =
-        FixedVectorType::get(CondTy->getElementType(), Ty->getNumElements());
-    MinMaxCost += getMinMaxCost(Ty, SubCondTy, CostKind, IsUnsigned, FMF);
+    MinMaxCost += getMinMaxCost(IID, Ty, CostKind, FMF);
   }
 
   // Add the final extract element to the cost.
