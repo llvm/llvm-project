@@ -30,7 +30,7 @@ func.func @outerproduct_matmul(%A: memref<3x3xf32>, %B: memref<3x3xf32>, %C: mem
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+  %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
   %2 = transform.structured.vectorize %1 : (!transform.any_op) -> !transform.any_op
   transform.apply_patterns to %2 {
     transform.apply_patterns.vector.lower_contraction lowering_strategy = "outerproduct"
