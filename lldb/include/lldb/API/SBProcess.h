@@ -48,7 +48,7 @@ public:
 
   const char *GetPluginName();
 
-  LLDB_DEPRECATED("Use GetPluginName()", "GetPluginName()")
+  LLDB_DEPRECATED_FIXME("Use GetPluginName()", "GetPluginName()")
   const char *GetShortPluginName();
 
   void Clear();
