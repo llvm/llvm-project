@@ -99,9 +99,10 @@ static LogicalResult computePaddedShape(linalg::LinalgOp opToPad,
 static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     RewriterBase &rewriter, linalg::LinalgOp opToPad, OpOperand *opOperand,
     const LinalgPaddingOptions &options) {
-  assert(!options.padToMultipleOf.has_value() ||
-         options.padToMultipleOf->size() == options.paddingDimensions.size() &&
-             "invalid number of elements in padToMultipleOf");
+  assert(
+      (!options.padToMultipleOf.has_value() ||
+       options.padToMultipleOf->size() == options.paddingDimensions.size()) &&
+      "invalid number of elements in padToMultipleOf");
 
   // Compute padded shape.
   SmallVector<int64_t> paddedShape;
