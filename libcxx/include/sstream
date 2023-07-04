@@ -586,7 +586,7 @@ template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI void basic_stringbuf<_CharT, _Traits, _Allocator>::__init_buf_ptrs() {
     __hm_ = nullptr;
     char_type* __data = const_cast<char_type*>(__str_.data());
-        typename string_type::size_type __sz = __str_.size();
+    typename string_type::size_type __sz = __str_.size();
     if (__mode_ & ios_base::in) {
         __hm_ = __data + __sz;
         this->setg(__data, __data, __hm_);
@@ -666,7 +666,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::overflow(int_type __c)
 {
     if (!traits_type::eq_int_type(__c, traits_type::eof()))
     {
-        ptrdiff_t __ninp = this->gptr()  - this->eback();
+        ptrdiff_t __ninp = this->gptr() - this->eback();
         if (this->pptr() == this->epptr())
         {
             if (!(__mode_ & ios_base::out))
@@ -675,7 +675,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::overflow(int_type __c)
             try
             {
 #endif // _LIBCPP_HAS_NO_EXCEPTIONS
-                ptrdiff_t __nout = this->pptr()  - this->pbase();
+                ptrdiff_t __nout = this->pptr() - this->pbase();
                 ptrdiff_t __hm = __hm_ - this->pbase();
                 __str_.push_back(char_type());
                 __str_.resize(__str_.capacity());
