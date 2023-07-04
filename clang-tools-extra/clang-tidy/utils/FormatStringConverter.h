@@ -67,6 +67,11 @@ private:
   std::vector<std::tuple<const Expr *, std::string>> ArgFixes;
   std::vector<clang::ast_matchers::BoundNodes> ArgCStrRemovals;
 
+  // Argument rotations to cope with the fact that std::print puts the value to
+  // be formatted first and the width and precision afterwards whereas printf
+  // puts the width and preicision first.
+  std::vector<std::tuple<unsigned, unsigned>> ArgRotates;
+
   void emitAlignment(const PrintfSpecifier &FS, std::string &FormatSpec);
   void emitSign(const PrintfSpecifier &FS, std::string &FormatSpec);
   void emitAlternativeForm(const PrintfSpecifier &FS, std::string &FormatSpec);
@@ -80,6 +85,8 @@ private:
                 std::string &FormatSpec);
   bool convertArgument(const PrintfSpecifier &FS, const Expr *Arg,
                        std::string &StandardFormatString);
+
+  void maybeRotateArguments(const PrintfSpecifier &FS);
 
   bool HandlePrintfSpecifier(const PrintfSpecifier &FS,
                              const char *StartSpecifier, unsigned SpecifierLen,
