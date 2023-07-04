@@ -5251,6 +5251,10 @@ def print_supported_cpus : Flag<["-", "--"], "print-supported-cpus">,
   HelpText<"Print supported cpu models for the given target (if target is not specified,"
            " it will print the supported cpus for the default target)">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedCPUs">>;
+def print_supported_extensions : Flag<["-", "--"], "print-supported-extensions">,
+  Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Print supported extensions for RISC-V">,
+  MarshallingInfoFlag<FrontendOpts<"PrintSupportedExtensions">>;
 def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
 def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
 def time : Flag<["-"], "time">,

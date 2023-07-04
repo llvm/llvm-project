@@ -2103,7 +2103,8 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
 
   if (C.getArgs().hasArg(options::OPT_v) ||
       C.getArgs().hasArg(options::OPT__HASH_HASH_HASH) ||
-      C.getArgs().hasArg(options::OPT_print_supported_cpus)) {
+      C.getArgs().hasArg(options::OPT_print_supported_cpus) ||
+      C.getArgs().hasArg(options::OPT_print_supported_extensions)) {
     PrintVersion(C, llvm::errs());
     SuppressMissingInputWarning = true;
   }
@@ -4273,16 +4274,30 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
           C.MakeAction<IfsMergeJobAction>(MergerInputs, types::TY_Image));
   }
 
-  // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a custom
-  // Compile phase that prints out supported cpu models and quits.
-  if (Arg *A = Args.getLastArg(options::OPT_print_supported_cpus)) {
-    // Use the -mcpu=? flag as the dummy input to cc1.
-    Actions.clear();
-    Action *InputAc = C.MakeAction<InputAction>(*A, types::TY_C);
-    Actions.push_back(
-        C.MakeAction<PrecompileJobAction>(InputAc, types::TY_Nothing));
-    for (auto &I : Inputs)
-      I.second->claim();
+  for (auto Opt : {options::OPT_print_supported_cpus,
+                   options::OPT_print_supported_extensions}) {
+    // If --print-supported-cpus, -mcpu=? or -mtune=? is specified, build a
+    // custom Compile phase that prints out supported cpu models and quits.
+    //
+    // If --print-supported-extensions is specified, call the helper function
+    // RISCVMarchHelp in RISCVISAInfo.cpp that prints out supported extensions
+    // and quits.
+    if (Arg *A = Args.getLastArg(Opt)) {
+      if (Opt == options::OPT_print_supported_extensions &&
+          !C.getDefaultToolChain().getTriple().isRISCV()) {
+        C.getDriver().Diag(diag::err_opt_not_valid_on_target)
+            << "--print-supported-extensions";
+        return;
+      }
+
+      // Use the -mcpu=? flag as the dummy input to cc1.
+      Actions.clear();
+      Action *InputAc = C.MakeAction<InputAction>(*A, types::TY_C);
+      Actions.push_back(
+          C.MakeAction<PrecompileJobAction>(InputAc, types::TY_Nothing));
+      for (auto &I : Inputs)
+        I.second->claim();
+    }
   }
 
   // Call validator for dxil when -Vd not in Args.
