@@ -70,12 +70,17 @@ class latch
     __atomic_base<ptrdiff_t> __a_;
 
 public:
-    static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept {
+    static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept
+    {
         return numeric_limits<ptrdiff_t>::max();
     }
 
     inline _LIBCPP_INLINE_VISIBILITY
-    constexpr explicit latch(ptrdiff_t __expected) : __a_(__expected) { }
+    constexpr explicit latch(ptrdiff_t __expected) : __a_(__expected)
+    {
+        _LIBCPP_ASSERT_UNCATEGORIZED(__expected >= 0,
+                                     "__expected cannot be negative");
+    }
 
     _LIBCPP_HIDE_FROM_ABI ~latch() = default;
     latch(const latch&) = delete;
@@ -84,6 +89,8 @@ public:
     inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void count_down(ptrdiff_t __update = 1)
     {
+        _LIBCPP_ASSERT_UNCATEGORIZED(
+            __update >= 0, "latch::count_down called with a negative value");
         auto const __old = __a_.fetch_sub(__update, memory_order_release);
         if(__old == __update)
             __a_.notify_all();
@@ -103,6 +110,8 @@ public:
     inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_wait(ptrdiff_t __update = 1)
     {
+        _LIBCPP_ASSERT_UNCATEGORIZED(
+            __update >= 0, "latch::arrive_and_wait called with a negative value");
         count_down(__update);
         wait();
     }
