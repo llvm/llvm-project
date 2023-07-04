@@ -212,7 +212,11 @@ public:
   }
 
   /// Returns the type of the innermost field.
-  QualType getType() const { return getFieldDesc()->getType(); }
+  QualType getType() const {
+    if (inPrimitiveArray() && Offset != Base)
+      return getFieldDesc()->getType()->getAsArrayTypeUnsafe()->getElementType();
+    return getFieldDesc()->getType();
+  }
 
   Pointer getDeclPtr() const { return Pointer(Pointee); }
 
