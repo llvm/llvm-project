@@ -885,9 +885,27 @@ bool DwarfExprAST::tryInlineArgObject(DIObject *ArgObject) {
     emitUnsigned(0);
   } else {
     const MCSymbol *Sym = AP.getSymbol(Global);
-    CU.getDwarfDebug().addArangeLabel(SymbolCU(&CU, Sym));
-    emitDwarfOp(dwarf::DW_OP_addr);
-    emitDwarfAddr(Sym);
+    DwarfDebug *DD = AP.getDwarfDebug();
+    if (DD->useSplitDwarf()) {
+      bool UseAddrOffsetFormOrExpressions =
+          DD->useAddrOffsetForm() || DD->useAddrOffsetExpressions();
+
+      const MCSymbol *Base = nullptr;
+      if (Sym->isInSection() && UseAddrOffsetFormOrExpressions)
+        Base = DD->getSectionLabel(&Sym->getSection());
+
+      unsigned Index = DD->getAddressPool().getIndex(Base ? Base : Sym);
+      emitDwarfOpAddrx(Index);
+      if (Base && Base != Sym) {
+        emitUnsigned(4);
+        emitDwarfLabelDelta(Sym, Base);
+        emitDwarfOp(dwarf::DW_OP_plus);
+      }
+    } else {
+      CU.getDwarfDebug().addArangeLabel(SymbolCU(&CU, Sym));
+      emitDwarfOp(dwarf::DW_OP_addr);
+      emitDwarfAddr(Sym);
+    }
   }
   emitDwarfOp(dwarf::DW_OP_stack_value);
   return true;
@@ -1232,6 +1250,15 @@ void DebugLocDwarfExprAST::emitDwarfAddr(const MCSymbol *Sym) {
   IsImplemented = false;
 }
 
+void DebugLocDwarfExprAST::emitDwarfOpAddrx(unsigned Index) {
+  IsImplemented = false;
+}
+
+void DebugLocDwarfExprAST::emitDwarfLabelDelta(const MCSymbol *Hi,
+                                               const MCSymbol *Lo) {
+  IsImplemented = false;
+}
+
 DIELoc &DIEDwarfExprAST::getActiveDIE() {
   return OutDIE;
 }
@@ -1254,4 +1281,17 @@ void DIEDwarfExprAST::emitDwarfUnsigned(uint64_t UnsignedValue) {
 
 void DIEDwarfExprAST::emitDwarfAddr(const MCSymbol *Sym) {
   CU.addLabel(getActiveDIE(), dwarf::DW_FORM_addr, Sym);
+}
+
+void DIEDwarfExprAST::emitDwarfOpAddrx(unsigned Index) {
+  bool HasOpAddrx = CU.getDwarfDebug().getDwarfVersion() >= 5;
+  emitDwarfOp(HasOpAddrx ? dwarf::DW_OP_addrx : dwarf::DW_OP_GNU_addr_index);
+  CU.addUInt(getActiveDIE(),
+             HasOpAddrx ? dwarf::DW_FORM_addrx : dwarf::DW_FORM_GNU_addr_index,
+             Index);
+}
+
+void DIEDwarfExprAST::emitDwarfLabelDelta(const MCSymbol *Hi,
+                                          const MCSymbol *Lo) {
+  CU.addLabelDelta(getActiveDIE(), (dwarf::Attribute)0, Hi, Lo);
 }
