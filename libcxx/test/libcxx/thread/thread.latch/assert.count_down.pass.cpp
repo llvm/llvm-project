@@ -9,10 +9,10 @@
 
 // <latch>
 //
-// void count_down(ptrdiff_t __update = 1) const noexcept;
+// void count_down(ptrdiff_t __update = 1);
 
-// Make sure that calling count_down with a value higher than the internal
-// counter triggers an assertion.
+// Make sure that calling arrive_and_wait with a negative value or a value
+// higher than the internal counter triggers an assertion.
 
 // REQUIRES: has-unix-headers
 // XFAIL: availability-verbose_abort-missing
@@ -23,6 +23,13 @@
 #include "check_assertion.h"
 
 int main(int, char **) {
+  {
+    std::latch l(5);
+
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l.count_down(-10), "latch::count_down() called with a negative value");
+  }
+
   {
     std::latch l(5);
 
