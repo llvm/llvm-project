@@ -102,7 +102,13 @@ const SCEV *llvm::normalizeForPostIncUse(const SCEV *S,
   auto Pred = [&](const SCEVAddRecExpr *AR) {
     return Loops.count(AR->getLoop());
   };
-  return NormalizeDenormalizeRewriter(Normalize, Pred, SE).visit(S);
+  const SCEV *Normalized =
+      NormalizeDenormalizeRewriter(Normalize, Pred, SE).visit(S);
+  const SCEV *Denormalized = denormalizeForPostIncUse(Normalized, Loops, SE);
+  // If the normalized expression isn't invertible.
+  if (Denormalized != S)
+    return nullptr;
+  return Normalized;
 }
 
 const SCEV *llvm::normalizeForPostIncUseIf(const SCEV *S, NormalizePredTy Pred,

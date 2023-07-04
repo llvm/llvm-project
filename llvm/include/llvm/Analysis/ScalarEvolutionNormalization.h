@@ -50,7 +50,7 @@ typedef SmallPtrSet<const Loop *, 2> PostIncLoopSet;
 typedef function_ref<bool(const SCEVAddRecExpr *)> NormalizePredTy;
 
 /// Normalize \p S to be post-increment for all loops present in \p
-/// Loops.
+/// Loops. Returns nullptr if the result is not invertible.
 const SCEV *normalizeForPostIncUse(const SCEV *S, const PostIncLoopSet &Loops,
                                    ScalarEvolution &SE);
 
