@@ -699,7 +699,11 @@ void DWARFContext::dump(
 }
 
 StringRef DWARFContext::getCompilationDirectory() {
-  return StringRef(getCompileUnitForOffset(0)->getCompilationDir());
+  DWARFCompileUnit * unitForOffset = getCompileUnitForOffset(0);
+  if (unitForOffset == nullptr) {
+    return StringRef("");
+  }
+  return StringRef(unitForOffset->getCompilationDir());
 }
 
 DWARFTypeUnit *DWARFContext::getTypeUnitForHash(uint16_t Version, uint64_t Hash,
