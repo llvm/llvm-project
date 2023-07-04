@@ -77,11 +77,13 @@ llvm.func @double_block_argument_value(%arg0: i64, %arg1: i1) -> i64 {
 
 // CHECK-LABEL: llvm.func @always_drop_promoted_declare
 // CHECK-NOT: = llvm.alloca
-// CHECK-NOT: llvm.intr.dbg.
+// CHECK-NOT: llvm.intr.dbg.declare
+// CHECK-NOT: llvm.intr.dbg.value
 llvm.func @always_drop_promoted_declare() {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x i64 {alignment = 8 : i64} : (i32) -> !llvm.ptr
   llvm.intr.dbg.declare #di_local_variable = %1 : !llvm.ptr
+  llvm.intr.dbg.value #di_local_variable = %1 : !llvm.ptr
   llvm.return
 }
 
