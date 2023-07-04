@@ -153,11 +153,15 @@ namespace {
         for (Instruction &I : *BB) checkTainted(&I);
       }  
 
-      output << "Tainted: {";
+      string solution = "";
       for (auto &var : variables) {
-        if (var.second.tainted) output << var.second.name << ",";
+        if (var.second.tainted) {
+          if (solution.size() == 0) solution += var.second.name;
+          else solution += "," + var.second.name;
+        }
       }
-      output << "}" << "\n";
+
+      output << "Tainted: {" << solution << "}" << "\n";
 
       // Print output
       errs() << output.str();
