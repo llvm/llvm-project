@@ -16,6 +16,9 @@
 using namespace llvm;
 using namespace std;
 
+const string func = "main";
+const string source = "std::__1::cin";
+
 // Strings for output
 std::string output_str;
 raw_string_ostream output(output_str);
@@ -57,9 +60,6 @@ namespace {
   struct Assignment2 : public FunctionPass {
     static char ID;
 
-    // Keep track of all the functions we have encountered so far.
-    unordered_map<string, bool> funcNames;
-
     map<Value *, int> variables;
 
     set<Value *> tainted;
@@ -73,52 +73,71 @@ namespace {
 
     Assignment2() : FunctionPass(ID) {}
 
+    void updateVariable(Value *V, int line) {
+      map<Value *, int>::iterator it = variables.find(V);
+      if (it != variables.end()) {
+        it->second = line;
+        if (line != -1) {
+          output << "Line " << line << ": " << V << " is tainted" << "\n";
+        } else {
+          output << "Line " << line << ": " << V << " is now untainted" << "\n";
+        }
+      }
+    }
+
     void checkTainted(Instruction *I) {
       Value *V = dyn_cast<Value>(I);
+      int line = getSourceCodeLine(I);
 
       if (isa<AllocaInst>(I)) {
+        output << "Alloca Inst: " << line << "\n";
         variables.insert(make_pair(V, -1));
-      } else if (isa<CallInst>(I)) {
-        output << "Call Inst: " << getSourceCodeLine(I) << "\n";
-        if (demangle(I->getOperand(0)->getName().str().c_str()) == "std::__1::cin") {
-          output << "Tainted: " << I->getOperand(1) << " at " << getSourceCodeLine(I) << "\n";
+      } 
+      else if (isa<CallInst>(I)) {
+        output << "Call Inst: " << line << "\n";
+        
+        if (demangle(I->getOperand(0)->getName().str().c_str()) == source) {
+          output << "Tainted: " << I->getOperand(1) << "\n";
           tainted.insert(I->getOperand(1));
-          map<Value *, int>::iterator it = variables.find(I->getOperand(1));
-          if (it != variables.end()) it->second = getSourceCodeLine(I);
+          updateVariable(I->getOperand(1), line);
+        } else {
+          for (Use &U : I->operands()) {
+            Value *v = U.get();
+            if (tainted.find(v) != tainted.end()) {
+              output << "Tainted: " << V << "\n";
+              tainted.insert(V);
+              break;
+            } 
+          }
         }
-      } else if (isa<StoreInst>(I)) {
-        output << "Store Inst: " << getSourceCodeLine(I) << "\n";
+      } 
+      else if (isa<StoreInst>(I)) {
+        output << "Store Inst: " << line << "\n";
+
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          output << "Tainted: " << I->getOperand(1) << " at " << getSourceCodeLine(I) << "\n";
+          output << "Tainted: " << I->getOperand(1) << "\n";
           tainted.insert(I->getOperand(1));
-          map<Value *, int>::iterator it = variables.find(I->getOperand(1));
-          if (it != variables.end()) it->second = getSourceCodeLine(I);
-        } else if (tainted.find(I->getOperand(1)) != tainted.end()) {
-          output << "Untainted: " << I->getOperand(1) << " at " << getSourceCodeLine(I) << "\n";
+          updateVariable(I->getOperand(1), line);
+        } 
+        else if (tainted.find(I->getOperand(1)) != tainted.end()) {
+          output << "Untainted: " << I->getOperand(1) << "\n";
           tainted.erase(I->getOperand(1));
-          map<Value *, int>::iterator it = variables.find(I->getOperand(1));
-          if (it != variables.end()) it->second = -1;
+          updateVariable(I->getOperand(1), -1);
         }
-      } else if (isa<LoadInst>(I)) {
-        output << "Load Inst: " << getSourceCodeLine(I) << "\n";
+      } 
+      else if (isa<LoadInst>(I)) {
+        output << "Load Inst: " << line << "\n";
+
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          output << "Tainted: " << V << " at " << getSourceCodeLine(I) << "\n";
+          output << "Tainted: " << V << "\n";
           tainted.insert(V);
         }
       }
     }
 
-    // Function to return the line numbers that uses an undefined variable.
     bool runOnFunction(Function &F) override {
-      std::string funcName = demangle(F.getName().str().c_str());
-
-      // Remove all non user-defined functions and functions that start with '_' or have 'std'.
-      if (F.isDeclaration() || funcName[0] == '_' || funcName.find("std") != std::string::npos) return false;
-
-      // Remove all functions that we have previously encountered.
-      if (funcNames.find(funcName) != funcNames.end()) return false;
-
-      funcNames.insert(make_pair(funcName, true));
+      // We only want to examine the main method
+      if (demangle(F.getName().str().c_str()) != func) return false;
 
       // Iterate over basic blocks within function
       for (BasicBlock *BB : topoSortBBs(F)) {
@@ -126,9 +145,11 @@ namespace {
         for (Instruction &I : *BB) checkTainted(&I);
       }  
 
+      output << "Tainted: {";
       for (auto &var : variables) {
-        if (var.second != -1) output << "Line " << var.second << ": " << var.first << "\n";
+        if (var.second != -1) output << var.first << ",";
       }
+      output << "}" << "\n";
 
       // Print output
       errs() << output.str();
