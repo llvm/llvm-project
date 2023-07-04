@@ -38,21 +38,28 @@ using ::testing::Ne;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
 
-template <typename VerifyResultsT>
-void runDataflow(llvm::StringRef Code, VerifyResultsT VerifyResults,
-                 DataflowAnalysisOptions Options,
-                 LangStandard::Kind Std = LangStandard::lang_cxx17,
-                 llvm::StringRef TargetFun = "target") {
-  ASSERT_THAT_ERROR(
-      runDataflowReturnError(Code, VerifyResults, Options, Std, TargetFun),
-      llvm::Succeeded());
+void runDataflow(
+    llvm::StringRef Code,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults,
+    DataflowAnalysisOptions Options,
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    llvm::StringRef TargetFun = "target") {
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code, VerifyResults, Options,
+                                                  Std, TargetFun),
+                    llvm::Succeeded());
 }
 
-template <typename VerifyResultsT>
-void runDataflow(llvm::StringRef Code, VerifyResultsT VerifyResults,
-                 LangStandard::Kind Std = LangStandard::lang_cxx17,
-                 bool ApplyBuiltinTransfer = true,
-                 llvm::StringRef TargetFun = "target") {
+void runDataflow(
+    llvm::StringRef Code,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults,
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    bool ApplyBuiltinTransfer = true, llvm::StringRef TargetFun = "target") {
   runDataflow(Code, std::move(VerifyResults),
               {ApplyBuiltinTransfer ? BuiltinOptions{}
                                     : std::optional<BuiltinOptions>()},
@@ -2682,7 +2689,7 @@ TEST(TransferTest, CannotAnalyzeFunctionTemplate) {
     void target() {}
   )";
   ASSERT_THAT_ERROR(
-      runDataflowReturnError(
+      checkDataflowWithNoopAnalysis(
           Code,
           [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
              ASTContext &ASTCtx) {},
@@ -2698,7 +2705,7 @@ TEST(TransferTest, CannotAnalyzeMethodOfClassTemplate) {
     };
   )";
   ASSERT_THAT_ERROR(
-      runDataflowReturnError(
+      checkDataflowWithNoopAnalysis(
           Code,
           [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
              ASTContext &ASTCtx) {},
