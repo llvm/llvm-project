@@ -19,7 +19,7 @@ func.func @vectorize_matmul(%arg0: tensor<24x12xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+  %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
   %2 = transform.structured.vectorize %1 : (!transform.any_op) -> !transform.any_op
 }
 
@@ -44,7 +44,7 @@ func.func @vectorize_matmul_memref(%arg0: memref<24x12xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+  %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
   %2 = transform.structured.vectorize %1 : (!transform.any_op) -> !transform.any_op
 }
 
@@ -64,7 +64,7 @@ func.func @vectorize_copy_memref(%arg0: memref<100x100xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+  %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
   %2 = transform.structured.vectorize %1 : (!transform.any_op) -> !transform.any_op
 }
 
@@ -110,7 +110,7 @@ func.func @vectorize_keep_pad(
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+  %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
   %2 = transform.structured.vectorize %1 : (!transform.any_op) -> !transform.any_op
 }
 
@@ -158,7 +158,7 @@ func.func @vectorize_pad(
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+  %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
   %2 = transform.structured.vectorize %1 {vectorize_padding} : (!transform.any_op) -> !transform.any_op
 }
 

@@ -420,33 +420,6 @@ def ForeachOp : TransformDialectOp<"foreach",
   }];
 }
 
-def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent",
-    [DeclareOpInterfaceMethods<TransformOpInterface>,
-     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
-  let summary = "Gets handles to the closest isolated-from-above parents";
-  let description = [{
-    The handles defined by this Transform op correspond to the closest isolated
-    from above ancestor of the Payload IR operations associated with its
-    operand. If any of the given Payload IR ops has no such parent (unlikely as
-    there usually is a top-level ModuleOp), the transformation is considered to
-    have failed.
-
-    Ancestor ops follow the same order as the ops associated with the
-    operand, except for potential duplicates (multiple Payload IR ops associated
-    with the operand have the same parent) for which the ancestor will only be
-    listed once for the first time it occurs. For example, given the list
-    "(childof(A), childof(B), childof(B), childof(A), childof(B))", the
-    resulting list will be just "(A, B)". Note that no other semantic ordering
-    is applied, e.g., "B" may itself be a parent of "A". This may have an impact
-    on the further transformation applied to the handle produced here.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs TransformHandleTypeInterface:$parent);
-  let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
-}
-
 def GetConsumersOfResult : TransformDialectOp<"get_consumers_of_result",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
@@ -483,6 +456,40 @@ def GetDefiningOp : TransformDialectOp<"get_defining_op",
   let results = (outs TransformHandleTypeInterface:$result);
   let assemblyFormat = "$target attr-dict `:` "
                        "functional-type(operands, results)";
+}
+
+def GetParentOp : TransformDialectOp<"get_parent_op",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Gets handles to the closest isolated-from-above parents";
+  let description = [{
+    The handle defined by this Transform op corresponds to the parents of the
+    targeted payload ops (in the same order).
+
+    Requirements that parent ops must fulfill can be optionally specified. In
+    that case for each target op, the closest parent op that fulfills all
+    requirements, is returned.
+    - `isolated_from_above`: the parent op must be isolated from above
+    - `op_name`: the parent op must have the specified name
+
+    If `deduplicate` is set, the result handle does not contain any duplicate
+    ops. For example, given the list
+    "(childof(A), childof(B), childof(B), childof(A), childof(B))", the
+    resulting list will be just "(A, B)". Note that no other semantic ordering
+    is applied, e.g., "B" may itself be a parent of "A". This may have an impact
+    on the further transformation applied to the handle produced here.
+
+    If any of the given Payload IR ops has no such suitable parent, the
+    transformation fails silently.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       UnitAttr:$isolated_from_above,
+                       OptionalAttr<StrAttr>:$op_name,
+                       UnitAttr:$deduplicate);
+  let results = (outs TransformHandleTypeInterface:$parent);
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type(operands, results)";
 }
 
 def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",

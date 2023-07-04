@@ -15,17 +15,42 @@ from typing import Optional, Sequence, Union
 
 
 class CastOp:
-    def __init__(
-        self, result_type: Type, target: Union[Operation, Value], *, loc=None, ip=None
-    ):
-        super().__init__(result_type, _get_op_result_or_value(target), loc=loc, ip=ip)
+
+  def __init__(
+      self,
+      result_type: Type,
+      target: Union[Operation, Value],
+      *,
+      loc=None,
+      ip=None,
+  ):
+    super().__init__(
+        result_type, _get_op_result_or_value(target), loc=loc, ip=ip
+    )
 
 
-class GetClosestIsolatedParentOp:
-    def __init__(
-        self, result_type: Type, target: Union[Operation, Value], *, loc=None, ip=None
-    ):
-        super().__init__(result_type, _get_op_result_or_value(target), loc=loc, ip=ip)
+class testGetParentOp:
+
+  def __init__(
+      self,
+      result_type: Type,
+      target: Union[Operation, Value],
+      *,
+      isolated_from_above: bool = False,
+      op_name: Optional[str] = None,
+      deduplicate: bool = False,
+      loc=None,
+      ip=None,
+  ):
+    super().__init__(
+        result_type,
+        _get_op_result_or_value(target),
+        isolated_from_above=isolated_from_above,
+        op_name=op_name,
+        deduplicate=deduplicate,
+        loc=loc,
+        ip=ip,
+    )
 
 
 class MergeHandlesOp:
