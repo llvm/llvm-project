@@ -1041,6 +1041,9 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 
     if (auto gc = function.getGarbageCollector())
       llvmFunc->setGC(gc->str());
+
+    if (auto unnamedAddr = function.getUnnamedAddr())
+      llvmFunc->setUnnamedAddr(convertUnnamedAddrToLLVM(*unnamedAddr));
   }
 
   return success();

@@ -205,6 +205,11 @@ module {
     llvm.return
   }
 
+  // CHECK-LABEL: local_unnamed_addr @local_unnamed_addr_func
+  llvm.func local_unnamed_addr @local_unnamed_addr_func() {
+      llvm.return
+  }
+
   // CHECK: llvm.comdat @__llvm_comdat
   llvm.comdat @__llvm_comdat {
     // CHECK: llvm.comdat_selector @any any

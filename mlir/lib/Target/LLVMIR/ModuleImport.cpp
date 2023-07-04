@@ -1738,6 +1738,9 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   if (func->hasGC())
     funcOp.setGarbageCollector(StringRef(func->getGC()));
 
+  if (func->hasAtLeastLocalUnnamedAddr())
+    funcOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(func->getUnnamedAddr()));
+
   if (func->hasSection())
     funcOp.setSection(StringRef(func->getSection()));
 
