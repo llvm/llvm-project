@@ -1877,7 +1877,6 @@ bool InductiveRangeCheckElimination::run(
       cast<SCEVAddRecExpr>(SE.getMinusSCEV(SE.getSCEV(LS.IndVarBase), SE.getSCEV(LS.IndVarStep)));
 
   std::optional<InductiveRangeCheck::Range> SafeIterRange;
-  Instruction *ExprInsertPt = Preheader->getTerminator();
 
   SmallVector<InductiveRangeCheck, 4> RangeChecksToEliminate;
   // Basing on the type of latch predicate, we interpret the IV iteration range
@@ -1887,7 +1886,6 @@ bool InductiveRangeCheckElimination::run(
   auto IntersectRange =
       LS.IsSignedPredicate ? IntersectSignedRange : IntersectUnsignedRange;
 
-  IRBuilder<> B(ExprInsertPt);
   for (InductiveRangeCheck &IRC : RangeChecks) {
     auto Result = IRC.computeSafeIterationSpace(SE, IndVar,
                                                 LS.IsSignedPredicate);
