@@ -1642,6 +1642,20 @@ llvm.func @section_func() attributes { section = ".section.name" } {
 
 // -----
 
+// CHECK-LABEL: @local_unnamed_addr_func
+// CHECK-SAME: local_unnamed_addr
+llvm.func local_unnamed_addr @local_unnamed_addr_func() {
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @unnamed_addr_func
+// CHECK-SAME: unnamed_addr
+llvm.func unnamed_addr @unnamed_addr_func()
+
+// -----
+
 // CHECK-LABEL: @callFreezeOp
 llvm.func @callFreezeOp(%x : i32) {
   // CHECK: freeze i32 %{{[0-9]+}}
