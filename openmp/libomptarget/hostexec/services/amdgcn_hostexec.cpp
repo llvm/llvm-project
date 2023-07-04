@@ -24,6 +24,9 @@
 #include <mutex>
 #include <thread>
 
+/// Defines how many GPUs are maximally supported on a system
+#define AMD_MAX_HSA_AGENTS 16
+
 /** Opaque wrapper for signal */
 typedef struct {
   uint64_t handle;
@@ -139,8 +142,8 @@ static signal_t create_signal() {
 }
 
 static hsa_amd_memory_pool_t static_host_memory_pool;
-static hsa_amd_memory_pool_t static_device_memory_pools[8];
-static hsa_agent_t static_hsa_agents[8];
+static hsa_amd_memory_pool_t static_device_memory_pools[AMD_MAX_HSA_AGENTS];
+static hsa_agent_t static_hsa_agents[AMD_MAX_HSA_AGENTS];
 
 void save_hsa_statics(uint32_t device_id, hsa_amd_memory_pool_t HostMemoryPool,
                       hsa_amd_memory_pool_t DevMemoryPool,
