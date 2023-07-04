@@ -1619,6 +1619,7 @@ module std [system] {
 
     module __thread {
       module formatter            { private header "__thread/formatter.h" }
+      module id                   { private header "__thread/id.h" }
       module poll_with_backoff    { private header "__thread/poll_with_backoff.h" }
       module this_thread          { private header "__thread/this_thread.h" }
       module thread               { private header "__thread/thread.h" }
