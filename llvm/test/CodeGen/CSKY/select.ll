@@ -135,9 +135,8 @@ entry:
 define i32 @selectRI_0_if_true(i1 %c, i32 %q) {
 ; CHECK-LABEL: selectRI_0_if_true:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movi16 a2, 0
 ; CHECK-NEXT:    btsti16 a0, 0
-; CHECK-NEXT:    movt32 a1, a2
+; CHECK-NEXT:    clrt32 a1
 ; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
 ;
@@ -162,10 +161,9 @@ define i32 @selectRI_0_if_true(i1 %c, i32 %q) {
 define i32 @selectRI_0_if_false(i1 %c, i32 %q) {
 ; CHECK-LABEL: selectRI_0_if_false:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movi16 a2, 0
 ; CHECK-NEXT:    btsti16 a0, 0
-; CHECK-NEXT:    movt32 a2, a1
-; CHECK-NEXT:    mov16 a0, a2
+; CHECK-NEXT:    clrf32 a1
+; CHECK-NEXT:    mov16 a0, a1
 ; CHECK-NEXT:    rts16
 ;
 ; GENERIC-LABEL: selectRI_0_if_false:
