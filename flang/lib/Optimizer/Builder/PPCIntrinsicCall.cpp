@@ -358,7 +358,7 @@ PPCIntrinsicLibrary::genVecAnyCompare(mlir::Type resultType,
   assert(vop == VecOp::Anyge && "unknown vector compare operation");
   auto argBases{getBasesForArgs(args)};
   VecTypeInfo vTypeInfo{getVecTypeFromFir(argBases[0])};
-  const auto isSupportedTy{
+  [[maybe_unused]] const auto isSupportedTy{
       mlir::isa<mlir::Float32Type, mlir::Float64Type, mlir::IntegerType>(
           vTypeInfo.eleTy)};
   assert(isSupportedTy && "unsupported vector type");
