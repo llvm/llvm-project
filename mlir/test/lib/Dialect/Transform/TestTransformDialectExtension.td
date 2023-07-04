@@ -428,15 +428,14 @@ def TestProduceParamWithNumberOfTestOps
   let cppNamespace = "::mlir::test";
 }
 
-def TestProduceIntegerParamWithTypeOp
-  : Op<Transform_Dialect, "test_produce_integer_param_with_type",
+def TestProduceParamOp
+  : Op<Transform_Dialect, "test_produce_param",
        [MemoryEffectsOpInterface, ParamProducerTransformOpTrait,
         DeclareOpInterfaceMethods<TransformOpInterface>]> {
-  let arguments = (ins TypeAttr:$type);
+  let arguments = (ins AnyAttr:$attr);
   let results = (outs TransformParamTypeInterface:$result);
-  let assemblyFormat = "$type attr-dict `:` type($result)";
+  let assemblyFormat = "`(` $attr `)` attr-dict `:` type($result)";
   let cppNamespace = "::mlir::test";
-  let hasVerifier = 1;
 }
 
 def TestProduceTransformParamOrForwardOperandOp

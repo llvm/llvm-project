@@ -80,7 +80,7 @@ transform.sequence failures(propagate) {
 ^bb0(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-note @below {{for this parameter}}
-  %1 = transform.test_produce_integer_param_with_type i64 : !transform.param<i64>
+  %1 = transform.test_produce_param (0 : i64) : !transform.param<i64>
   // expected-error @below {{expected as many parameter values (0) as target ops (2)}}
   transform.structured.tile %0 [%1, %1, %1]
     : (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>)
