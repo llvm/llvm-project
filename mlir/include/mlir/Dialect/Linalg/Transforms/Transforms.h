@@ -60,9 +60,34 @@ std::optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
 /// %0 = bufferization.to_tensor %alloc restrict writable
 ///
 /// In addition to rewriting the IR as shown above, this function returns the
-/// newly allocated buffer.
+/// newly allocated buffer. The `insertionPoint` parameter can be used to
+/// specify a custom insertion point for the buffer allocation.
 Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
-                            Attribute memorySpace = {});
+                            Attribute memorySpace = {},
+                            Operation *insertionPoint = nullptr);
+
+/// Materialize a buffer allocation for the given vector.mask op and bufferize
+/// the op, including its region. E.g.:
+///
+/// %0 = vector.mask {
+///   vector.transfer_write %v, %t : vector<16xf32>, tensor<?xf32>
+/// } : vector<16xi1> -> tensor<?xf32>
+///
+/// is lowered to:
+///
+/// %alloc = memref.alloc
+/// memref.tensor_store %t, %subview
+/// vector.mask {
+///   vector.transfer_write %arg0, %alloc : vector<16xf32>, memref<?xf32>
+/// } : vector<16xi1>
+/// %0 = bufferization.to_tensor %alloc restrict writable
+///
+/// In addition to rewriting the IR as shown above, this function returns the
+/// newly allocated buffer. The `insertionPoint` parameter can be used to
+/// specify a custom insertion point for the buffer allocation.
+Value bufferizeToAllocation(RewriterBase &rewriter, vector::MaskOp maskOp,
+                            Attribute memorySpace = {},
+                            Operation *insertionPoint = nullptr);
 
 /// Bufferize the given op with tensor semantics and materialize the result in
 /// a newly allocated buffer.
@@ -72,10 +97,17 @@ Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
 /// supported. They are bufferized using their BufferizableOpInterface
 /// implementation.
 ///
-/// Selected ops that bufferize to an allocation are also supported:
+/// Selected ops that bufferize to an allocation (or need special handling) are
+/// also supported:
 /// - tensor.pad
+/// - vector.mask
+///
+/// This function returns the newly allocated buffer. The `insertionPoint`
+/// parameter can be used to specify a custom insertion point for the buffer
+/// allocation.
 Value bufferizeToAllocation(RewriterBase &rewriter, Operation *op,
-                            Attribute memorySpace = {});
+                            Attribute memorySpace = {},
+                            Operation *insertionPoint = nullptr);
 
 /// Try to eliminate tensor::EmptyOps inside `op` that are anchored on a
 /// LinalgOp. This transforms looks for LinalgOps that have an unused output
