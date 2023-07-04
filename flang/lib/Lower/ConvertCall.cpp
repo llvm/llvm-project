@@ -1597,6 +1597,30 @@ public:
     }
     assert(shape &&
            "elemental array calls must have at least one array arguments");
+
+    // Evaluate the actual argument array expressions before the elemental
+    // call of an impure subprogram or a subprogram with intent(out) or
+    // intent(inout) arguments. Note that the scalar arguments are handled
+    // above.
+    if (mustBeOrdered) {
+      for (unsigned i = 0; i < numArgs; ++i) {
+        auto &preparedActual = loweredActuals[i];
+        if (preparedActual) {
+          hlfir::Entity actual = preparedActual->getOriginalActual();
+          if (!actual.isVariable() && actual.isArray()) {
+            mlir::Type storageType = actual.getType();
+            hlfir::AssociateOp associate = hlfir::genAssociateExpr(
+                loc, builder, actual, storageType, "adapt.impure_arg_eval");
+            preparedActual->setOriginalActual(hlfir::Entity{associate});
+
+            fir::FirOpBuilder *bldr = &builder;
+            callContext.stmtCtx.attachCleanup(
+                [=]() { bldr->create<hlfir::EndAssociateOp>(loc, associate); });
+          }
+        }
+      }
+    }
+
     // Push a new local scope so that any temps made inside the elemental
     // iterations are cleaned up inside the iterations.
     if (!callContext.resultType) {
