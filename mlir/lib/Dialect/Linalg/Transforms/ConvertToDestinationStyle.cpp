@@ -456,9 +456,12 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Operation *op,
     Value alloc = createAllocationForTensor(rewriter, op->getLoc(),
                                             operand->get(), memorySpace);
     allocs.push_back(alloc);
-    // Initialize buffer with a copy of the operand data.
-    // TODO: Do not copy uninitialized tensors such as tensor.empty.
-    rewriter.create<memref::TensorStoreOp>(op->getLoc(), operand->get(), alloc);
+    if (!state.findDefinitions(operand->get()).empty()) {
+      // Initialize buffer with a copy of the operand data. Not needed if the
+      // tensor is uninitialized.
+      rewriter.create<memref::TensorStoreOp>(op->getLoc(), operand->get(),
+                                             alloc);
+    }
     rewriter.updateRootInPlace(op, [&]() {
       operand->set(rewriter.create<ToTensorOp>(op->getLoc(), alloc));
     });
