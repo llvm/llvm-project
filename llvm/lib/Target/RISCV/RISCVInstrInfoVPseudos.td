@@ -2638,13 +2638,13 @@ multiclass VPseudoVDIV_VV_VX {
   }
 }
 
-multiclass VPseudoVFMUL_VV_VF {
+multiclass VPseudoVFMUL_VV_VF_RM {
   foreach m = MxListF in {
     defvar mx = m.MX;
     defvar WriteVFMulV_MX = !cast<SchedWrite>("WriteVFMulV_" # mx);
     defvar ReadVFMulV_MX = !cast<SchedRead>("ReadVFMulV_" # mx);
 
-    defm "" : VPseudoBinaryFV_VV<m>,
+    defm "" : VPseudoBinaryFV_VV_RM<m>,
               Sched<[WriteVFMulV_MX, ReadVFMulV_MX, ReadVFMulV_MX, ReadVMask]>;
   }
 
@@ -2655,13 +2655,13 @@ multiclass VPseudoVFMUL_VV_VF {
       defvar ReadVFMulV_MX = !cast<SchedRead>("ReadVFMulV_" # mx);
       defvar ReadVFMulF_MX = !cast<SchedRead>("ReadVFMulF_" # mx);
 
-      defm "" : VPseudoBinaryV_VF<m, f>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f>,
                 Sched<[WriteVFMulF_MX, ReadVFMulV_MX, ReadVFMulF_MX, ReadVMask]>;
     }
   }
 }
 
-multiclass VPseudoVFDIV_VV_VF {
+multiclass VPseudoVFDIV_VV_VF_RM {
   foreach m = MxListF in {
     defvar mx = m.MX;
     defvar sews = SchedSEWSet<mx, /*isF*/ 1>.val;
@@ -2669,7 +2669,7 @@ multiclass VPseudoVFDIV_VV_VF {
       defvar WriteVFDivV_MX_E = !cast<SchedWrite>("WriteVFDivV_" # mx # "_E" # e);
       defvar ReadVFDivV_MX_E = !cast<SchedRead>("ReadVFDivV_" # mx # "_E" # e);
 
-      defm "" : VPseudoBinaryFV_VV<m, "", e>,
+      defm "" : VPseudoBinaryFV_VV_RM<m, "", e>,
                 Sched<[WriteVFDivV_MX_E, ReadVFDivV_MX_E, ReadVFDivV_MX_E, ReadVMask]>;
     }
   }
@@ -2681,13 +2681,13 @@ multiclass VPseudoVFDIV_VV_VF {
       defvar ReadVFDivV_MX_E = !cast<SchedRead>("ReadVFDivV_" # mx # "_E" # f.SEW);
       defvar ReadVFDivF_MX_E = !cast<SchedRead>("ReadVFDivF_" # mx # "_E" # f.SEW);
 
-      defm "" : VPseudoBinaryV_VF<m, f, "", f.SEW>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, "", f.SEW>,
                 Sched<[WriteVFDivF_MX_E, ReadVFDivV_MX_E, ReadVFDivF_MX_E, ReadVMask]>;
     }
   }
 }
 
-multiclass VPseudoVFRDIV_VF {
+multiclass VPseudoVFRDIV_VF_RM {
   foreach f = FPList in {
     foreach m = f.MxList in {
       defvar mx = m.MX;
@@ -2695,7 +2695,7 @@ multiclass VPseudoVFRDIV_VF {
       defvar ReadVFDivV_MX_E = !cast<SchedRead>("ReadVFDivV_" # mx # "_E" # f.SEW);
       defvar ReadVFDivF_MX_E = !cast<SchedRead>("ReadVFDivF_" # mx # "_E" # f.SEW);
 
-      defm "" : VPseudoBinaryV_VF<m, f, "", f.SEW>,
+      defm "" : VPseudoBinaryV_VF_RM<m, f, "", f.SEW>,
                 Sched<[WriteVFDivF_MX_E, ReadVFDivV_MX_E, ReadVFDivF_MX_E, ReadVMask]>;
     }
   }
@@ -2879,13 +2879,13 @@ multiclass VPseudoVWMUL_VV_VX {
   }
 }
 
-multiclass VPseudoVWMUL_VV_VF {
+multiclass VPseudoVWMUL_VV_VF_RM {
   foreach m = MxListFW in {
     defvar mx = m.MX;
     defvar WriteVFWMulV_MX = !cast<SchedWrite>("WriteVFWMulV_" # mx);
     defvar ReadVFWMulV_MX = !cast<SchedRead>("ReadVFWMulV_" # mx);
 
-    defm "" : VPseudoBinaryW_VV<m>,
+    defm "" : VPseudoBinaryW_VV_RM<m>,
               Sched<[WriteVFWMulV_MX, ReadVFWMulV_MX, ReadVFWMulV_MX, ReadVMask]>;
   }
 
@@ -2896,7 +2896,7 @@ multiclass VPseudoVWMUL_VV_VF {
       defvar ReadVFWMulV_MX = !cast<SchedRead>("ReadVFWMulV_" # mx);
       defvar ReadVFWMulF_MX = !cast<SchedRead>("ReadVFWMulF_" # mx);
 
-      defm "" : VPseudoBinaryW_VF<m, f>,
+      defm "" : VPseudoBinaryW_VF_RM<m, f>,
                 Sched<[WriteVFWMulF_MX, ReadVFWMulV_MX, ReadVFWMulF_MX, ReadVMask]>;
     }
   }
@@ -5974,17 +5974,18 @@ defm PseudoVFWSUB : VPseudoVFWALU_WV_WF_RM;
 //===----------------------------------------------------------------------===//
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 //===----------------------------------------------------------------------===//
-let Uses = [FRM], mayRaiseFPException = true in {
-defm PseudoVFMUL  : VPseudoVFMUL_VV_VF;
-defm PseudoVFDIV  : VPseudoVFDIV_VV_VF;
-defm PseudoVFRDIV : VPseudoVFRDIV_VF;
+let mayRaiseFPException = true, hasSideEffects = 0,
+    hasPostISelHook = 1 in {
+defm PseudoVFMUL  : VPseudoVFMUL_VV_VF_RM;
+defm PseudoVFDIV  : VPseudoVFDIV_VV_VF_RM;
+defm PseudoVFRDIV : VPseudoVFRDIV_VF_RM;
 }
 
 //===----------------------------------------------------------------------===//
 // 13.5. Vector Widening Floating-Point Multiply
 //===----------------------------------------------------------------------===//
-let Uses = [FRM], mayRaiseFPException = true in {
-defm PseudoVFWMUL : VPseudoVWMUL_VV_VF;
+let mayRaiseFPException = true, hasSideEffects = 0 in {
+defm PseudoVFWMUL : VPseudoVWMUL_VV_VF_RM;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6636,14 +6637,18 @@ defm : VPatBinaryW_WV_WX_RM<"int_riscv_vfwsub_w", "PseudoVFWSUB",
 //===----------------------------------------------------------------------===//
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 //===----------------------------------------------------------------------===//
-defm : VPatBinaryV_VV_VX<"int_riscv_vfmul", "PseudoVFMUL", AllFloatVectors>;
-defm : VPatBinaryV_VV_VX<"int_riscv_vfdiv", "PseudoVFDIV", AllFloatVectors, /*isSEWAware*/ 1>;
-defm : VPatBinaryV_VX<"int_riscv_vfrdiv", "PseudoVFRDIV", AllFloatVectors, /*isSEWAware*/ 1>;
+defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfmul", "PseudoVFMUL", 
+                            AllFloatVectors>;
+defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfdiv", "PseudoVFDIV",
+                            AllFloatVectors, /*isSEWAware*/ 1>;
+defm : VPatBinaryV_VX_RM<"int_riscv_vfrdiv", "PseudoVFRDIV",
+                         AllFloatVectors, /*isSEWAware*/ 1>;
 
 //===----------------------------------------------------------------------===//
 // 13.5. Vector Widening Floating-Point Multiply
 //===----------------------------------------------------------------------===//
-defm : VPatBinaryW_VV_VX<"int_riscv_vfwmul", "PseudoVFWMUL", AllWidenableFloatVectors>;
+defm : VPatBinaryW_VV_VX_RM<"int_riscv_vfwmul", "PseudoVFWMUL",
+                            AllWidenableFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions

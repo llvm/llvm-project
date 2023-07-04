@@ -1412,11 +1412,11 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 2;
   }
 
-  defm vfmul : RISCVBinaryAAX;
-  defm vfdiv : RISCVBinaryAAX;
-  defm vfrdiv : RISCVBinaryAAX;
+  defm vfmul : RISCVBinaryAAXRoundingMode;
+  defm vfdiv : RISCVBinaryAAXRoundingMode;
+  defm vfrdiv : RISCVBinaryAAXRoundingMode;
 
-  defm vfwmul : RISCVBinaryABX;
+  defm vfwmul : RISCVBinaryABXRoundingMode;
 
   defm vfmacc : RISCVTernaryAAXA;
   defm vfnmacc : RISCVTernaryAAXA;
