@@ -2203,9 +2203,6 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                                      SIMemOp Op,
                                      bool IsCrossAddrSpaceOrdering,
                                      Position Pos) const {
-  // TODO-GFX12: GDS is not supported on GFX12, so it's an error if ever seen here.
-  // assert((AddrSpace & SIAtomicAddrSpace::GDS) != SIAtomicAddrSpace::NONE);
-
   bool Changed = false;
 
   MachineBasicBlock &MBB = *MI->getParent();
@@ -2268,30 +2265,6 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     case SIAtomicScope::SINGLETHREAD:
       // The LDS keeps all memory operations in order for
       // the same wavefront.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-  }
-
-  // TODO-GFX12: Remove this as part of general GDS support removal for gfx12
-  if ((AddrSpace & SIAtomicAddrSpace::GDS) != SIAtomicAddrSpace::NONE) {
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
-    case SIAtomicScope::AGENT:
-      // If no cross address space ordering then an GDS "S_WAITCNT lgkmcnt(0)"
-      // is not needed as GDS operations for all waves are executed in a total
-      // global ordering as observed by all waves. Required if also
-      // synchronizing with global/LDS memory as GDS operations could be
-      // reordered with respect to later global/LDS memory operations of the
-      // same wave.
-      DSCnt |= IsCrossAddrSpaceOrdering;
-      break;
-    case SIAtomicScope::WORKGROUP:
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // The GDS keeps all memory operations in order for
-      // the same work-group.
       break;
     default:
       llvm_unreachable("Unsupported synchronization scope");
