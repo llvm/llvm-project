@@ -168,8 +168,8 @@ public:
     ImmTyEndpgm,
     ImmTyWaitVDST,
     ImmTyWaitEXP,
-    ImmTyWaitVAVDST,
-    ImmTyWaitVMVSRC,
+    ImmTyWaitVAVDst,
+    ImmTyWaitVMVSrc,
     ImmTyGlobalSReg32,
     ImmTyGlobalSReg64,
   };
@@ -406,8 +406,8 @@ public:
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
   bool isHigh() const { return isImmTy(ImmTyHigh); }
-  bool isGlobalSReg32Imm() const { return isImmTy(ImmTyGlobalSReg32); }
-  bool isGlobalSReg64Imm() const { return isImmTy(ImmTyGlobalSReg64); }
+  bool isGlobalSReg32() const { return isImmTy(ImmTyGlobalSReg32); }
+  bool isGlobalSReg64() const { return isImmTy(ImmTyGlobalSReg64); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -891,7 +891,7 @@ public:
   bool isSDelayALU() const;
   bool isHwreg() const;
   bool isSendMsg() const;
-  bool isSplitBarrierImm() const;
+  bool isSplitBarrier() const;
   bool isSwizzle() const;
   bool isSMRDOffset8() const;
   bool isSMEMOffset() const;
@@ -907,8 +907,8 @@ public:
   bool isEndpgm() const;
   bool isWaitVDST() const;
   bool isWaitEXP() const;
-  bool isWaitVAVDST() const;
-  bool isWaitVMVSRC() const;
+  bool isWaitVAVDst() const;
+  bool isWaitVMVSrc() const;
 
   StringRef getToken() const {
     assert(isToken());
@@ -1100,11 +1100,11 @@ public:
     case ImmTyEndpgm: OS << "Endpgm"; break;
     case ImmTyWaitVDST: OS << "WaitVDST"; break;
     case ImmTyWaitEXP: OS << "WaitEXP"; break;
-    case ImmTyWaitVAVDST:
-      OS << "WaitVAVDST";
+    case ImmTyWaitVAVDst:
+      OS << "WaitVAVDst";
       break;
-    case ImmTyWaitVMVSRC:
-      OS << "WaitVMVSRC";
+    case ImmTyWaitVMVSrc:
+      OS << "WaitVMVSrc";
       break;
     case ImmTyGlobalSReg32: OS << "GlobalSReg32"; break;
     case ImmTyGlobalSReg64: OS << "GlobalSReg64"; break;
@@ -1624,8 +1624,8 @@ public:
   OperandMatchResultTy parseGlobalRegImm(OperandVector &Operands,
                                          AMDGPUOperand::ImmTy ImmTy,
                                          unsigned ExpectedWidth);
-  OperandMatchResultTy parseGlobalSReg32Imm(OperandVector &Operands);
-  OperandMatchResultTy parseGlobalSReg64Imm(OperandVector &Operands);
+  OperandMatchResultTy parseGlobalSReg32(OperandVector &Operands);
+  OperandMatchResultTy parseGlobalSReg64(OperandVector &Operands);
   OperandMatchResultTy tryParseIndexKey(OperandVector &Operands,
                                         AMDGPUOperand::ImmTy ImmTy);
   OperandMatchResultTy parseIndexKey8bit(OperandVector &Operands);
@@ -3344,12 +3344,12 @@ AMDGPUAsmParser::parseGlobalRegImm(OperandVector &Operands,
 }
 
 OperandMatchResultTy
-AMDGPUAsmParser::parseGlobalSReg32Imm(OperandVector &Operands) {
+AMDGPUAsmParser::parseGlobalSReg32(OperandVector &Operands) {
   return parseGlobalRegImm(Operands, AMDGPUOperand::ImmTyGlobalSReg32, 32);
 }
 
 OperandMatchResultTy
-AMDGPUAsmParser::parseGlobalSReg64Imm(OperandVector &Operands) {
+AMDGPUAsmParser::parseGlobalSReg64(OperandVector &Operands) {
   return parseGlobalRegImm(Operands, AMDGPUOperand::ImmTyGlobalSReg64, 64);
 }
 
@@ -9697,12 +9697,12 @@ bool AMDGPUOperand::isWaitVDST() const {
   return isImmTy(ImmTyWaitVDST) && isUInt<4>(getImm());
 }
 
-bool AMDGPUOperand::isWaitVAVDST() const {
-  return isImmTy(ImmTyWaitVAVDST) && isUInt<4>(getImm());
+bool AMDGPUOperand::isWaitVAVDst() const {
+  return isImmTy(ImmTyWaitVAVDst) && isUInt<4>(getImm());
 }
 
-bool AMDGPUOperand::isWaitVMVSRC() const {
-  return isImmTy(ImmTyWaitVMVSRC) && isUInt<1>(getImm());
+bool AMDGPUOperand::isWaitVMVSrc() const {
+  return isImmTy(ImmTyWaitVMVSrc) && isUInt<1>(getImm());
 }
 
 //===----------------------------------------------------------------------===//
@@ -9717,6 +9717,4 @@ bool AMDGPUOperand::isWaitEXP() const {
 // Split Barrier
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUOperand::isSplitBarrierImm() const {
-  return isInlinableImm(MVT::i32);
-}
+bool AMDGPUOperand::isSplitBarrier() const { return isInlinableImm(MVT::i32); }

@@ -353,24 +353,24 @@ let SubtargetPredicate = isGFX12Plus, maybeAtomic = 1, Uses = [M0] in {
 
 let mayLoad = 1 in {
 def S_MOV_FROM_GLOBAL_B32 : SOP1_Pseudo <"s_mov_from_global_b32",
-    (outs SReg_32:$sdst), (ins globalSReg32imm:$src0), "$sdst, $src0",
+    (outs SReg_32:$sdst), (ins GlobalSReg32:$src0), "$sdst, $src0",
     [(set i32:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
 def S_MOV_FROM_GLOBAL_B64 : SOP1_Pseudo <"s_mov_from_global_b64",
-    (outs SReg_64:$sdst), (ins globalSReg64imm:$src0), "$sdst, $src0",
+    (outs SReg_64:$sdst), (ins GlobalSReg64:$src0), "$sdst, $src0",
     [(set i64:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
 } // End mayLoad = 1
 
 let mayStore = 1 in {
 def S_MOV_TO_GLOBAL_B32 : SOP1_Pseudo <"s_mov_to_global_b32", (outs),
-    (ins globalSReg32imm:$sdst, SSrc_b32:$src0), "$sdst, $src0",
+    (ins GlobalSReg32:$sdst, SSrc_b32:$src0), "$sdst, $src0",
     [(int_amdgcn_s_mov_to_global timm:$sdst, i32:$src0, M0)]>;
 def S_MOV_TO_GLOBAL_B64 : SOP1_Pseudo <"s_mov_to_global_b64", (outs),
-    (ins globalSReg64imm:$sdst, SSrc_b64:$src0), "$sdst, $src0",
+    (ins GlobalSReg64:$sdst, SSrc_b64:$src0), "$sdst, $src0",
     [(int_amdgcn_s_mov_to_global timm:$sdst, i64:$src0, M0)]>;
 } // End mayStore = 1
 
 def S_SWAP_TO_GLOBAL_B32 : SOP1_Pseudo <"s_swap_to_global_b32",
-    (outs SReg_32:$src0), (ins globalSReg32imm:$sdst, SReg_32:$src0_tie),
+    (outs SReg_32:$src0), (ins GlobalSReg32:$sdst, SReg_32:$src0_tie),
     "$sdst, $src0",
     [(set i32:$src0, (int_amdgcn_s_swap_to_global timm:$sdst,
                                                   i32:$src0_tie, M0))]> {
@@ -493,7 +493,7 @@ def S_BARRIER_SIGNAL_M0 : SOP1_Pseudo <"s_barrier_signal m0", (outs), (ins),
 }
 
 def S_BARRIER_SIGNAL_IMM : SOP1_Pseudo <"s_barrier_signal", (outs),
-  (ins SplitBarrierImm:$src0), "$src0", [(int_amdgcn_s_barrier_signal timm:$src0)]>{
+  (ins SplitBarrier:$src0), "$src0", [(int_amdgcn_s_barrier_signal timm:$src0)]>{
   let SchedRW = [WriteBarrier];
   let isConvergent = 1;
   let has_sdst = 0;
