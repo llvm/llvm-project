@@ -1,6 +1,5 @@
 # RUN: not llc -mtriple=amdgcn-amd-amdhsa -run-pass=none %s -o /dev/null 2>&1 | FileCheck -check-prefix=ERR %s
 
-# XFAIL: *
 ---
 name: invalid_reg
 machineFunctionInfo:

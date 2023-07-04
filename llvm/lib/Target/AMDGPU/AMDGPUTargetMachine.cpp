@@ -1519,6 +1519,9 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
   if (parseOptionalRegister(YamlMFI.VGPRForAGPRCopy, MFI->VGPRForAGPRCopy))
     return true;
 
+  if (parseOptionalRegister(YamlMFI.SGPRForEXECCopy, MFI->SGPRForEXECCopy))
+    return true;
+
   if (parseOptionalRegister(YamlMFI.LongBranchReservedReg,
                             MFI->LongBranchReservedReg))
     return true;
