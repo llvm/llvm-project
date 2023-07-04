@@ -1293,8 +1293,7 @@ bool GCNHazardRecognizer::fixVcmpxExecWARHazard(MachineInstr *MI) {
           return true;
     }
     if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-        AMDGPU::DepCtr::encodeFieldSaSdst(MI.getOperand(0).getImm(), 0) ==
-            0xfffe)
+        AMDGPU::DepCtr::decodeFieldSaSdst(MI.getOperand(0).getImm()) == 0)
       return true;
     return false;
   };
