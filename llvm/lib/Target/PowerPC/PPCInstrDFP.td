@@ -56,6 +56,39 @@ let isCompare = 1 in {
   def DCMPOQ : XForm_17<63, 130, (outs crrc:$BF), (ins fpairrc:$RA, fpairrc:$RB),
                         "dcmpoq $BF, $RA, $RB", IIC_FPCompare>;
 }
-}
-}
+
+// 5.6.4 DFP Quantum Adjustment Instructions
+defm DQUAI: Z23Form_TE5_FRTB5_RMC2r<59, 67, (outs f8rc:$FRT),
+                                    (ins s5imm:$TE, f8rc:$FRB, u2imm:$RMC),
+                                    "dquai", "$TE, $FRT, $FRB, $RMC", []>;
+defm DQUAIQ: Z23Form_TE5_FRTB5_RMC2r<63, 67, (outs fpairrc:$FRT),
+                                     (ins s5imm:$TE, fpairrc:$FRB, u2imm:$RMC),
+                                     "dquaiq", "$TE, $FRT, $FRB, $RMC", []>;
+defm DQUA: Z23Form_FRTAB5_RMC2r<59, 3, (outs f8rc:$FRT),
+                                (ins f8rc:$FRA, f8rc:$FRB, u2imm:$RMC),
+                                "dqua", "$FRT, $FRA, $FRB, $RMC", []>;
+defm DQUAQ: Z23Form_FRTAB5_RMC2r<63, 3, (outs fpairrc:$FRT),
+                                 (ins fpairrc:$FRA, fpairrc:$FRB, u2imm:$RMC),
+                                 "dquaq", "$FRT, $FRA, $FRB, $RMC", []>;
+defm DRRND: Z23Form_FRTAB5_RMC2r<59, 35, (outs f8rc:$FRT),
+                                (ins f8rc:$FRA, f8rc:$FRB, u2imm:$RMC),
+                                "drrnd", "$FRT, $FRA, $FRB, $RMC", []>;
+defm DRRNDQ: Z23Form_FRTAB5_RMC2r<63, 35, (outs fpairrc:$FRT),
+                                 (ins f8rc:$FRA, fpairrc:$FRB, u2imm:$RMC),
+                                 "drrndq", "$FRT, $FRA, $FRB, $RMC", []>;
+defm DRINTX: Z23Form_FRTB5_R1_RMC2r<59, 99, (outs f8rc:$FRT),
+                                    (ins u1imm:$R, f8rc:$FRB, u2imm:$RMC),
+                                    "drintx", "$R, $FRT, $FRB, $RMC", []>;
+defm DRINTXQ: Z23Form_FRTB5_R1_RMC2r<63, 99, (outs fpairrc:$FRT),
+                                     (ins u1imm:$R, fpairrc:$FRB, u2imm:$RMC),
+                                     "drintxq", "$R, $FRT, $FRB, $RMC", []>;
+defm DRINTN: Z23Form_FRTB5_R1_RMC2r<59, 227, (outs f8rc:$FRT),
+                                    (ins u1imm:$R, f8rc:$FRB, u2imm:$RMC),
+                                    "drintn", "$R, $FRT, $FRB, $RMC", []>;
+defm DRINTNQ: Z23Form_FRTB5_R1_RMC2r<63, 227, (outs fpairrc:$FRT),
+                                     (ins u1imm:$R, fpairrc:$FRB, u2imm:$RMC),
+                                     "drintnq", "$R, $FRT, $FRB, $RMC", []>;
+
+} // mayRaiseFPException
+} // hasNoSchedulingInfo
 
