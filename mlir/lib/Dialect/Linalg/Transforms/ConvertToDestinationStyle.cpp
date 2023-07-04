@@ -170,7 +170,7 @@ static Value createAllocationForTensor(RewriterBase &rewriter, Location loc,
 }
 
 Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
-                                    Attribute memorySpace, Value *replacement) {
+                                    Attribute memorySpace) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(padOp);
   Location loc = padOp.getLoc();
@@ -198,9 +198,6 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
   Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
       loc, alloc, /*restrict=*/true, /*writable=*/true);
   rewriter.replaceOp(padOp, toTensorOp);
-
-  if (replacement)
-    *replacement = toTensorOp;
   return alloc;
 }
 
@@ -331,43 +328,14 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
   return insertSliceOp.getOperation();
 }
 
-Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Value value,
-                                    Attribute memorySpace, Value *replacement) {
+Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Operation *op,
+                                    Attribute memorySpace) {
   // Call specialized overload for certain ops.
-  if (auto padOp = value.getDefiningOp<PadOp>())
-    return bufferizeToAllocation(rewriter, padOp, memorySpace, replacement);
+  if (auto padOp = dyn_cast<tensor::PadOp>(op))
+    return bufferizeToAllocation(rewriter, padOp, memorySpace);
 
-  // Collect all uses.
-  SmallVector<OpOperand *> uses = llvm::to_vector(
-      llvm::map_range(value.getUses(), [](OpOperand &use) { return &use; }));
-
-  OpBuilder::InsertionGuard g(rewriter);
-  if (auto bbArg = dyn_cast<BlockArgument>(value)) {
-    rewriter.setInsertionPointToStart(bbArg.getOwner());
-  } else {
-    rewriter.setInsertionPointAfter(value.getDefiningOp());
-  }
-  Location loc = value.getLoc();
-
-  // Create buffer allocation.
-  Value alloc = createAllocationForTensor(rewriter, loc, value, memorySpace);
-
-  // Create memref.tensor_store.
-  rewriter.setInsertionPointAfter(alloc.getDefiningOp());
-  rewriter.create<memref::TensorStoreOp>(loc, value, alloc);
-
-  // Create bufferization.to_tensor with "restrict" and "writable". The returned
-  // tensor is a new buffer allocation, so it does not alias with any buffer.
-  Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
-      loc, alloc, /*restrict=*/true, /*writable=*/true);
-  for (OpOperand *use : uses) {
-    rewriter.updateRootInPlace(use->getOwner(),
-                               [&]() { use->set(toTensorOp); });
-  }
-
-  if (replacement)
-    *replacement = toTensorOp;
-  return alloc;
+  // TODO: Support other ops.
+  return nullptr;
 }
 
 namespace {
