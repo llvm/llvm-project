@@ -65,11 +65,15 @@ Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
                             Attribute memorySpace = {});
 
 /// Bufferize the given op with tensor semantics and materialize the result in
-/// a newly allocated buffer. E.g.:
+/// a newly allocated buffer.
 ///
-/// Only tensor.pad is supported at the moment.
+/// Only bufferizable ops that bufferize to a memory write or have an
+/// aliasing OpOperand (and do not themselves bufferize to an allocation) are
+/// supported. They are bufferized using their BufferizableOpInterface
+/// implementation.
 ///
-/// This function returns the newly allocated buffer.
+/// Selected ops that bufferize to an allocation are also supported:
+/// - tensor.pad
 Value bufferizeToAllocation(RewriterBase &rewriter, Operation *op,
                             Attribute memorySpace = {});
 
