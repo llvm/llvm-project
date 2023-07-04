@@ -17,10 +17,6 @@ else()
   set(LIBCXXABI_TEST_DEPS cxxabi_static)
 endif()
 
-if (LIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY)
-  list(APPEND LIBCXXABI_TEST_DEPS cxx_external_threads)
-endif()
-
 list(APPEND LIBCXXABI_TEST_DEPS cxx)
 if (LIBCXXABI_USE_LLVM_UNWINDER AND TARGET unwind)
   list(APPEND LIBCXXABI_TEST_DEPS unwind)
