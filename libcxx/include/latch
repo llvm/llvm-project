@@ -96,7 +96,7 @@ public:
     inline _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait() const
     {
-        __cxx_atomic_wait(&__a_.__a_, [&]() -> bool {
+        __cxx_atomic_wait(&__a_.__a_, [this]() -> bool {
             return try_wait();
         });
     }
