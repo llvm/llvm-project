@@ -152,10 +152,10 @@ define void @last_chance_recoloring_failure() {
 entry:
   %i = call { <vscale x 16 x half>, <vscale x 16 x half>} @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64( <vscale x 16 x half> undef,  <vscale x 16 x half> undef, ptr nonnull poison, <vscale x 16 x i32> poison, i64 55)
   %i1 = extractvalue { <vscale x 16 x half>, <vscale x 16 x half> } %i, 0
-  %i2 = call <vscale x 16 x float> @llvm.riscv.vfwadd.mask.nxv16f32.nxv16f16.nxv16f16.i64(<vscale x 16 x float> poison, <vscale x 16 x half> poison, <vscale x 16 x half> poison, <vscale x 16 x i1> zeroinitializer, i64 36, i64 0)
+  %i2 = call <vscale x 16 x float> @llvm.riscv.vfwadd.mask.nxv16f32.nxv16f16.nxv16f16.i64(<vscale x 16 x float> poison, <vscale x 16 x half> poison, <vscale x 16 x half> poison, <vscale x 16 x i1> zeroinitializer, i64 7, i64 36, i64 0)
   call void @func()
   %i3 = call <vscale x 16 x i16> @llvm.riscv.vrgather.vv.mask.nxv16i16.i64(<vscale x 16 x i16> poison, <vscale x 16 x i16> poison, <vscale x 16 x i16> poison, <vscale x 16 x i1> poison, i64 32, i64 0)
-  %i4 = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.nxv16f16.i64(<vscale x 16 x float> poison, <vscale x 16 x float> %i2, <vscale x 16 x half> %i1, i64 36)
+  %i4 = call <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.nxv16f16.i64(<vscale x 16 x float> poison, <vscale x 16 x float> %i2, <vscale x 16 x half> %i1, i64 7, i64 36)
   %i5 = call <vscale x 16 x i16> @llvm.riscv.vssubu.mask.nxv16i16.nxv16i16.i64(<vscale x 16 x i16> %i3, <vscale x 16 x i16> %i3, <vscale x 16 x i16> poison, <vscale x 16 x i1> poison, i64 32, i64 0)
   %i6 = call <vscale x 16 x float> @llvm.riscv.vfdiv.mask.nxv16f32.nxv16f32.i64(<vscale x 16 x float> %i4, <vscale x 16 x float> %i2, <vscale x 16 x float> poison, <vscale x 16 x i1> poison, i64 36, i64 0)
   call void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float> %i6, <vscale x 16 x float>* nonnull poison, i64 36)
@@ -164,9 +164,9 @@ entry:
 
 declare void @func()
 declare { <vscale x 16 x half>, <vscale x 16 x half>} @llvm.riscv.vloxseg2.nxv16f16.nxv16i32.i64( <vscale x 16 x half>, <vscale x 16 x half>, ptr nocapture, <vscale x 16 x i32>, i64)
-declare <vscale x 16 x float> @llvm.riscv.vfwadd.mask.nxv16f32.nxv16f16.nxv16f16.i64(<vscale x 16 x float>, <vscale x 16 x half>, <vscale x 16 x half>, <vscale x 16 x i1>, i64, i64 immarg)
+declare <vscale x 16 x float> @llvm.riscv.vfwadd.mask.nxv16f32.nxv16f16.nxv16f16.i64(<vscale x 16 x float>, <vscale x 16 x half>, <vscale x 16 x half>, <vscale x 16 x i1>, i64, i64, i64 immarg)
 declare <vscale x 16 x i16> @llvm.riscv.vrgather.vv.mask.nxv16i16.i64(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64 immarg)
-declare <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.nxv16f16.i64(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x half>, i64)
+declare <vscale x 16 x float> @llvm.riscv.vfwsub.w.nxv16f32.nxv16f16.i64(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x half>, i64, i64)
 declare <vscale x 16 x i16> @llvm.riscv.vssubu.mask.nxv16i16.nxv16i16.i64(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i1>, i64, i64 immarg)
 declare <vscale x 16 x float> @llvm.riscv.vfdiv.mask.nxv16f32.nxv16f32.i64(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x i1>, i64, i64 immarg)
 declare void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float>, <vscale x 16 x float>* nocapture, i64) #3
