@@ -1410,6 +1410,11 @@ defm : MOVTF32Pat1<setuge, setule, CMPHS32, MOVT32>;
 defm : MOVTF32Pat1<setult, setugt, CMPHS32, MOVF32>;
 defm : MOVTF32Pat1<setlt, setgt, CMPLT32, MOVT32>;
 defm : MOVTF32Pat1<setge, setle, CMPLT32, MOVF32>;
+
+def : Pat<(select CARRY:$ca, (i32 0), GPR:$other),
+          (CLRT32 CARRY:$ca, GPR:$other)>;
+def : Pat<(select CARRY:$ca, GPR:$other, (i32 0)),
+          (CLRF32 CARRY:$ca, GPR:$other)>;
 }
 
 // Constant materialize patterns.

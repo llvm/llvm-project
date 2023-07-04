@@ -1041,6 +1041,12 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 
     if (auto gc = function.getGarbageCollector())
       llvmFunc->setGC(gc->str());
+
+    if (auto unnamedAddr = function.getUnnamedAddr())
+      llvmFunc->setUnnamedAddr(convertUnnamedAddrToLLVM(*unnamedAddr));
+
+    if (auto alignment = function.getAlignment())
+      llvmFunc->setAlignment(llvm::MaybeAlign(*alignment));
   }
 
   return success();

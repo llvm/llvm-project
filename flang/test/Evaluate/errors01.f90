@@ -152,6 +152,17 @@ module m
     !CHECK: error: NCOPIES= argument to REPEAT() should be nonnegative, but is -666
     print *, repeat(' ', -666)
   end subroutine
+  subroutine s14(n)
+    integer, intent(in) :: n
+    !CHECK: error: bit position for IBITS(POS=-1) is negative
+    print *, ibits(0, -1, n)
+    !CHECK: error: bit length for IBITS(LEN=-1) is negative
+    print *, ibits(0, n, -1)
+    !CHECK: error: IBITS() must have POS+LEN (>=33) no greater than 32
+    print *, ibits(0, n, 33)
+    !CHECK: error: IBITS() must have POS+LEN (>=33) no greater than 32
+    print *, ibits(0, 33, n)
+  end
   subroutine warnings
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
     real, parameter :: ok2 = scale(1.0, -99999) ! 0.0
@@ -165,7 +176,21 @@ module m
     integer, parameter :: bad4 = dim(huge(1),-1)
     !CHECK: warning: HYPOT intrinsic folding overflow
     real, parameter :: bad5 = hypot(huge(0.), huge(0.))
+    !CHECK: warning: SUM() of INTEGER(4) data overflowed
+    integer, parameter :: bad6 = sum([huge(1),huge(1)])
+    !CHECK: warning: SUM() of REAL(4) data overflowed
+    real, parameter :: bad7 = sum([huge(1.),huge(1.)])
+    !CHECK: warning: SUM() of COMPLEX(4) data overflowed
+    complex, parameter :: bad8 = sum([(huge(1.),0.),(huge(1.),0.)])
+    !CHECK: warning: PRODUCT() of INTEGER(4) data overflowed
+    integer, parameter :: bad9 = product([huge(1),huge(1)])
+    !CHECK: warning: PRODUCT() of REAL(4) data overflowed
+    real, parameter :: bad10 = product([huge(1.),huge(1.)])
+    !CHECK: warning: PRODUCT() of COMPLEX(4) data overflowed
+    complex, parameter :: bad11 = product([(huge(1.),0.),(huge(1.),0.)])
     !CHECK: warning: overflow on REAL(8) to REAL(4) conversion
     x = 1.D40
+    !CHECK-NOT: warning: invalid argument
+    if (.not. isnan(real(z'ffffffffffffffff',8))) stop
   end subroutine
 end module
