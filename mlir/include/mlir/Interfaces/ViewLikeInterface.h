@@ -52,13 +52,15 @@ namespace mlir {
 /// integer attributes in a list. E.g.
 /// `[%arg0 : index, 7, 42, %arg42 : i32]`.
 ///
-/// If  `isTrailingIdxScalable` is true, then wrap the trailing index with
-/// square brackets, e.g. `[42]`, to denote scalability. This would normally be
-/// used for scalable tile or vector sizes.
+/// Indices can be scalable. For example, "4" in "[2, [4], 8]" is scalable.
+/// This notation is similar to how scalable dims are marked when defining
+/// Vectors. For each value in `integers`, the corresponding `bool` in
+/// `scalables` encodes whether it's a scalable index. If `scalables` is
+/// empty then assume that all indices are non-scalable.
 void printDynamicIndexList(
     OpAsmPrinter &printer, Operation *op, OperandRange values,
     ArrayRef<int64_t> integers, TypeRange valueTypes = TypeRange(),
-    BoolAttr isTrailingIdxScalable = {},
+    ArrayRef<bool> scalables = {},
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
 
 /// Parser hook for custom directive in assemblyFormat.
@@ -78,41 +80,43 @@ void printDynamicIndexList(
 ///   `kDynamic`]"
 ///   2. `ssa` is filled with "[%arg0, %arg1]".
 ///
-/// Trailing indices can be scalable. For example, "42" in "[7, [42]]" is
-/// scalable. This notation is similar to how scalable dims are marked when
-/// defining Vectors. If /p isTrailingIdxScalable is null, scalable indices are
-/// not allowed/expected. When it's not null, this hook will set the
-/// corresponding value to:
-///   * true if the trailing idx is scalable,
-///   * false otherwise.
+/// Indices can be scalable. For example, "4" in "[2, [4], 8]" is scalable.
+/// This notation is similar to how scalable dims are marked when defining
+/// Vectors. For each value in `integers`, the corresponding `bool` in
+/// `scalables` encodes whether it's a scalable index.
 ParseResult parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, bool *isTrailingIdxScalable = nullptr,
+    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalables,
     SmallVectorImpl<Type> *valueTypes = nullptr,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square);
 inline ParseResult parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> &valueTypes,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
-  return parseDynamicIndexList(parser, values, integers,
-                               /*isTrailingIdxScalable=*/nullptr, &valueTypes,
+  DenseBoolArrayAttr scalables = {};
+  return parseDynamicIndexList(parser, values, integers, scalables, valueTypes,
                                delimiter);
 }
 inline ParseResult parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers, SmallVectorImpl<Type> &valueTypes,
-    BoolAttr &isTrailingIdxScalable,
+    AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
+  DenseBoolArrayAttr scalables = {};
+  return parseDynamicIndexList(parser, values, integers, scalables,
+                               &valueTypes, delimiter);
+}
+inline ParseResult parseDynamicIndexList(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> &valueTypes,
+    DenseBoolArrayAttr &scalables,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
 
-  bool scalable = false;
-  auto res = parseDynamicIndexList(parser, values, integers, &scalable,
-                                   &valueTypes, delimiter);
-  auto scalableAttr = parser.getBuilder().getBoolAttr(scalable);
-  isTrailingIdxScalable = scalableAttr;
-  return res;
+  return parseDynamicIndexList(parser, values, integers, scalables, &valueTypes,
+                               delimiter);
 }
 
 /// Verify that a the `values` has as many elements as the number of entries in

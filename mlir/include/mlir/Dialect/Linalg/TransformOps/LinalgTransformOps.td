@@ -1686,7 +1686,7 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
                    Variadic<TransformParamTypeOrAnyHandle>:$dynamic_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$interchange,
-                   DefaultValuedOptionalAttr<BoolAttr, "false">:$last_tile_size_scalable);
+                   DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
   let results = (outs TransformHandleTypeInterface:$tiled_linalg_op,
                       Variadic<TransformHandleTypeInterface>:$loops);
   let builders = [
@@ -2008,9 +2008,10 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
   let arguments = (ins TransformHandleTypeInterface:$target,
                        Variadic<TransformHandleTypeInterface>:$vector_sizes,
                        UnitAttr:$vectorize_nd_extract,
+                       DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:
+                          $scalable_sizes,
                        DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:
-                          $static_vector_sizes,
-                       DefaultValuedOptionalAttr<BoolAttr, "false">:$last_vector_size_scalable);
+                          $static_vector_sizes);
 
   let results = (outs);
   let assemblyFormat = [{
@@ -2018,7 +2019,7 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
       `vector_sizes` custom<DynamicIndexList>($vector_sizes,
                                               $static_vector_sizes,
                                               type($vector_sizes),
-                                              $last_vector_size_scalable)
+                                              $scalable_sizes)
       attr-dict
       `:` type($target)
   }];

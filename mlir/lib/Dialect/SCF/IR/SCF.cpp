@@ -1254,20 +1254,20 @@ void ForallOp::print(OpAsmPrinter &p) {
   if (isNormalized()) {
     p << ") in ";
     printDynamicIndexList(p, op, getDynamicUpperBound(), getStaticUpperBound(),
-                          /*valueTypes=*/{}, /*=isTrailingIdxScalable=*/{},
+                          /*valueTypes=*/{}, /*scalables=*/{},
                           OpAsmParser::Delimiter::Paren);
   } else {
     p << ") = ";
     printDynamicIndexList(p, op, getDynamicLowerBound(), getStaticLowerBound(),
-                          /*valueTypes=*/{}, /*=isTrailingIdxScalable=*/{},
+                          /*valueTypes=*/{}, /*scalables=*/{},
                           OpAsmParser::Delimiter::Paren);
     p << " to ";
     printDynamicIndexList(p, op, getDynamicUpperBound(), getStaticUpperBound(),
-                          /*valueTypes=*/{}, /*=isTrailingIdxScalable=*/{},
+                          /*valueTypes=*/{}, /*scalables=*/{},
                           OpAsmParser::Delimiter::Paren);
     p << " step ";
     printDynamicIndexList(p, op, getDynamicStep(), getStaticStep(),
-                          /*valueTypes=*/{}, /*=isTrailingIdxScalable=*/{},
+                          /*valueTypes=*/{}, /*scalables=*/{},
                           OpAsmParser::Delimiter::Paren);
   }
   printInitializationList(p, getRegionOutArgs(), getOutputs(), " shared_outs");
@@ -1299,9 +1299,9 @@ ParseResult ForallOp::parse(OpAsmParser &parser, OperationState &result) {
       dynamicSteps;
   if (succeeded(parser.parseOptionalKeyword("in"))) {
     // Parse upper bounds.
-    if (parseDynamicIndexList(
-            parser, dynamicUbs, staticUbs, /*isTrailingIdxScalable=*/nullptr,
-            /*valueTypes=*/nullptr, OpAsmParser::Delimiter::Paren) ||
+    if (parseDynamicIndexList(parser, dynamicUbs, staticUbs,
+                              /*valueTypes=*/nullptr,
+                              OpAsmParser::Delimiter::Paren) ||
         parser.resolveOperands(dynamicUbs, indexType, result.operands))
       return failure();
 
@@ -1311,26 +1311,26 @@ ParseResult ForallOp::parse(OpAsmParser &parser, OperationState &result) {
   } else {
     // Parse lower bounds.
     if (parser.parseEqual() ||
-        parseDynamicIndexList(
-            parser, dynamicLbs, staticLbs, /*isTrailingIdxScalable=*/nullptr,
-            /*valueTypes=*/nullptr, OpAsmParser::Delimiter::Paren) ||
+        parseDynamicIndexList(parser, dynamicLbs, staticLbs,
+                              /*valueTypes=*/nullptr,
+                              OpAsmParser::Delimiter::Paren) ||
 
         parser.resolveOperands(dynamicLbs, indexType, result.operands))
       return failure();
 
     // Parse upper bounds.
     if (parser.parseKeyword("to") ||
-        parseDynamicIndexList(
-            parser, dynamicUbs, staticUbs, /*isTrailingIdxScalable=*/nullptr,
-            /*valueTypes=*/nullptr, OpAsmParser::Delimiter::Paren) ||
+        parseDynamicIndexList(parser, dynamicUbs, staticUbs,
+                              /*valueTypes=*/nullptr,
+                              OpAsmParser::Delimiter::Paren) ||
         parser.resolveOperands(dynamicUbs, indexType, result.operands))
       return failure();
 
     // Parse step values.
     if (parser.parseKeyword("step") ||
-        parseDynamicIndexList(
-            parser, dynamicSteps, staticSteps, /*scalable=*/nullptr,
-            /*valueTypes=*/nullptr, OpAsmParser::Delimiter::Paren) ||
+        parseDynamicIndexList(parser, dynamicSteps, staticSteps,
+                              /*valueTypes=*/nullptr,
+                              OpAsmParser::Delimiter::Paren) ||
         parser.resolveOperands(dynamicSteps, indexType, result.operands))
       return failure();
   }
