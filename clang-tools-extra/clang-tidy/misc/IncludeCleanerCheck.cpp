@@ -34,6 +34,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
 #include <optional>
 #include <string>
@@ -171,7 +172,8 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
 
   for (const auto *Inc : Unused) {
     diag(Inc->HashLocation, "included header %0 is not used directly")
-        << Inc->quote()
+        << llvm::sys::path::filename(Inc->Spelled,
+                                     llvm::sys::path::Style::posix)
         << FixItHint::CreateRemoval(CharSourceRange::getCharRange(
                SM->translateLineCol(SM->getMainFileID(), Inc->Line, 1),
                SM->translateLineCol(SM->getMainFileID(), Inc->Line + 1, 1)));

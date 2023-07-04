@@ -126,7 +126,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_i1_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -158,7 +157,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_i1_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -188,7 +186,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i1_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -255,7 +252,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i1_signext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -289,7 +285,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i1_signext:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -321,7 +316,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i1_signext:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -391,7 +385,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i1_zeroext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -425,7 +418,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i1_zeroext:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -457,7 +449,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i1_zeroext:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -524,7 +515,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_imm(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i8_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -555,7 +545,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_imm(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i8_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -585,7 +574,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_imm(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i8_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -649,7 +637,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i8_signext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -681,7 +668,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i8_signext:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -712,7 +698,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i8_signext:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -778,7 +763,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_zeroext(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i8_zeroext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -810,7 +794,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_zeroext(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i8_zeroext:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -841,7 +824,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_zeroext(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i8_zeroext:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -906,7 +888,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_i16_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -937,7 +918,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_i16_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -967,7 +947,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i16_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1031,7 +1010,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i16_signext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -1063,7 +1041,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i16_signext:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1094,7 +1071,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i16_signext:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1160,7 +1136,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_zeroext(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i16_zeroext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -1192,7 +1167,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_zeroext(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i16_zeroext:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1223,7 +1197,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_zeroext(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i16_zeroext:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1288,7 +1261,6 @@ define amdgpu_gfx void @test_call_external_void_func_i32_imm(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -1319,7 +1291,6 @@ define amdgpu_gfx void @test_call_external_void_func_i32_imm(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1349,7 +1320,6 @@ define amdgpu_gfx void @test_call_external_void_func_i32_imm(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1413,7 +1383,6 @@ define amdgpu_gfx void @test_call_external_void_func_i64_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_i64_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -1445,7 +1414,6 @@ define amdgpu_gfx void @test_call_external_void_func_i64_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_i64_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1475,7 +1443,6 @@ define amdgpu_gfx void @test_call_external_void_func_i64_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i64_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1541,7 +1508,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -1574,7 +1540,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1605,7 +1570,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i64:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1674,7 +1638,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i64_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -1708,7 +1671,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i64_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1739,7 +1701,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i64_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1809,7 +1770,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -1844,7 +1804,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1875,7 +1834,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i64:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -1951,7 +1909,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i64() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -1988,7 +1945,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i64() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2020,7 +1976,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i64() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i64:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2091,7 +2046,6 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_f16_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -2122,7 +2076,6 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_f16_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2152,7 +2105,6 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_f16_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2215,7 +2167,6 @@ define amdgpu_gfx void @test_call_external_void_func_f32_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_f32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -2246,7 +2197,6 @@ define amdgpu_gfx void @test_call_external_void_func_f32_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_f32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2276,7 +2226,6 @@ define amdgpu_gfx void @test_call_external_void_func_f32_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_f32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2340,7 +2289,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f32_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2f32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -2372,7 +2320,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f32_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2f32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2402,7 +2349,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f32_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2f32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2468,7 +2414,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f32_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3f32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -2501,7 +2446,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f32_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3f32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2532,7 +2476,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f32_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3f32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2601,7 +2544,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5f32_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v5f32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -2636,7 +2578,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5f32_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v5f32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2668,7 +2609,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5f32_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v5f32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2736,7 +2676,6 @@ define amdgpu_gfx void @test_call_external_void_func_f64_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_f64_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -2768,7 +2707,6 @@ define amdgpu_gfx void @test_call_external_void_func_f64_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_f64_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2798,7 +2736,6 @@ define amdgpu_gfx void @test_call_external_void_func_f64_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_f64_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2865,7 +2802,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f64_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2f64_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -2899,7 +2835,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f64_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2f64_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -2930,7 +2865,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f64_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2f64_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3001,7 +2935,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f64_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3f64_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -3037,7 +2970,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f64_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3f64_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3069,7 +3001,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f64_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3f64_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3137,7 +3068,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -3168,7 +3098,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3198,7 +3127,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i16:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3262,7 +3190,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -3293,7 +3220,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3323,7 +3249,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i16:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3387,7 +3312,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -3418,7 +3342,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3448,7 +3371,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3f16:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3513,7 +3435,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i16_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -3545,7 +3466,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i16_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3575,7 +3495,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i16_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3640,7 +3559,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3f16_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -3672,7 +3590,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3f16_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3703,7 +3620,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3f16_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3767,7 +3683,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -3798,7 +3713,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3828,7 +3742,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i16:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3893,7 +3806,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i16_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -3925,7 +3837,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i16_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -3956,7 +3867,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i16_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4020,7 +3930,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -4051,7 +3960,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4081,7 +3989,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2f16:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4145,7 +4052,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -4176,7 +4082,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4206,7 +4111,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4271,7 +4175,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -4303,7 +4206,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4333,7 +4235,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4399,7 +4300,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_imm(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -4432,7 +4332,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_imm(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4463,7 +4362,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_imm(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4531,7 +4429,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_i32(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i32_i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -4565,7 +4462,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_i32(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i32_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4596,7 +4492,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_i32(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i32_i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4662,7 +4557,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -4693,7 +4587,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4723,7 +4616,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4790,7 +4682,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -4824,7 +4715,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4855,7 +4745,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4925,7 +4814,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5i32_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v5i32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -4960,7 +4848,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5i32_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v5i32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -4992,7 +4879,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5i32_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v5i32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5063,7 +4949,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v8i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -5100,7 +4985,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v8i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5135,7 +5019,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v8i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5213,7 +5096,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_imm() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v8i32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -5251,7 +5133,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_imm() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v8i32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5284,7 +5165,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_imm() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v8i32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5360,7 +5240,6 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v16i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -5399,7 +5278,6 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v16i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5436,7 +5314,6 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v16i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5520,7 +5397,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v32i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -5563,7 +5439,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v32i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5604,7 +5479,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v32i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5695,7 +5569,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_v32i32_i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -5741,7 +5614,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_v32i32_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5784,7 +5656,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v32i32_i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5873,7 +5744,6 @@ define amdgpu_gfx void @test_call_external_i32_func_i32_imm(ptr addrspace(1) %ou
 ; GFX10-LABEL: test_call_external_i32_func_i32_imm:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -5913,7 +5783,6 @@ define amdgpu_gfx void @test_call_external_i32_func_i32_imm(ptr addrspace(1) %ou
 ; GFX11-LABEL: test_call_external_i32_func_i32_imm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -5953,7 +5822,6 @@ define amdgpu_gfx void @test_call_external_i32_func_i32_imm(ptr addrspace(1) %ou
 ; GFX10-SCRATCH-LABEL: test_call_external_i32_func_i32_imm:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6030,7 +5898,6 @@ define amdgpu_gfx void @test_call_external_void_func_struct_i8_i32() #0 {
 ; GFX10-LABEL: test_call_external_void_func_struct_i8_i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -6067,7 +5934,6 @@ define amdgpu_gfx void @test_call_external_void_func_struct_i8_i32() #0 {
 ; GFX11-LABEL: test_call_external_void_func_struct_i8_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6102,7 +5968,6 @@ define amdgpu_gfx void @test_call_external_void_func_struct_i8_i32() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_struct_i8_i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6177,7 +6042,6 @@ define amdgpu_gfx void @test_call_external_void_func_byval_struct_i8_i32() #0 {
 ; GFX10-LABEL: test_call_external_void_func_byval_struct_i8_i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -6212,7 +6076,6 @@ define amdgpu_gfx void @test_call_external_void_func_byval_struct_i8_i32() #0 {
 ; GFX11-LABEL: test_call_external_void_func_byval_struct_i8_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6245,7 +6108,6 @@ define amdgpu_gfx void @test_call_external_void_func_byval_struct_i8_i32() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_byval_struct_i8_i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6330,7 +6192,6 @@ define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_st
 ; GFX10-LABEL: test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -6375,7 +6236,6 @@ define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_st
 ; GFX11-LABEL: test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6417,7 +6277,6 @@ define amdgpu_gfx void @test_call_external_void_func_sret_struct_i8_i32_byval_st
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_sret_struct_i8_i32_byval_struct_i8_i32:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6529,7 +6388,6 @@ define amdgpu_gfx void @test_call_external_void_func_v16i8() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v16i8:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -6583,7 +6441,6 @@ define amdgpu_gfx void @test_call_external_void_func_v16i8() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v16i8:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6632,7 +6489,6 @@ define amdgpu_gfx void @test_call_external_void_func_v16i8() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v16i8:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6784,7 +6640,6 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-LABEL: tail_call_byval_align16:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s6, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s4, -1
@@ -6880,7 +6735,6 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX11-LABEL: tail_call_byval_align16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s4, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
@@ -6971,7 +6825,6 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-SCRATCH-LABEL: tail_call_byval_align16:
 ; GFX10-SCRATCH:       ; %bb.0: ; %entry
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s4, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s0, -1
@@ -7100,7 +6953,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_i1_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -7132,7 +6984,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_i1_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7162,7 +7013,6 @@ define amdgpu_gfx void @test_call_external_void_func_i1_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i1_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7228,7 +7078,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_imm_inreg(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i8_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -7261,7 +7110,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_imm_inreg(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i8_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7293,7 +7141,6 @@ define amdgpu_gfx void @test_call_external_void_func_i8_imm_inreg(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i8_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7360,7 +7207,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_i16_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -7393,7 +7239,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_i16_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7425,7 +7270,6 @@ define amdgpu_gfx void @test_call_external_void_func_i16_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i16_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7492,7 +7336,6 @@ define amdgpu_gfx void @test_call_external_void_func_i32_imm_inreg(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_i32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -7525,7 +7368,6 @@ define amdgpu_gfx void @test_call_external_void_func_i32_imm_inreg(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_i32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7557,7 +7399,6 @@ define amdgpu_gfx void @test_call_external_void_func_i32_imm_inreg(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7627,7 +7468,6 @@ define amdgpu_gfx void @test_call_external_void_func_i64_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_i64_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -7663,7 +7503,6 @@ define amdgpu_gfx void @test_call_external_void_func_i64_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_i64_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7698,7 +7537,6 @@ define amdgpu_gfx void @test_call_external_void_func_i64_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_i64_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7775,7 +7613,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i64_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -7815,7 +7652,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i64_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7854,7 +7690,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i64_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7938,7 +7773,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i64_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -7980,7 +7814,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i64_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8021,7 +7854,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i64_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i64_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8110,7 +7942,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i64_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -8156,7 +7987,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i64_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8201,7 +8031,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i64_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i64_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8303,7 +8132,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i64_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i64_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -8355,7 +8183,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i64_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i64_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8406,7 +8233,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i64_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i64_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8494,7 +8320,6 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_f16_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -8527,7 +8352,6 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_f16_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8559,7 +8383,6 @@ define amdgpu_gfx void @test_call_external_void_func_f16_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_f16_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8626,7 +8449,6 @@ define amdgpu_gfx void @test_call_external_void_func_f32_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_f32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -8659,7 +8481,6 @@ define amdgpu_gfx void @test_call_external_void_func_f32_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_f32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8691,7 +8512,6 @@ define amdgpu_gfx void @test_call_external_void_func_f32_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_f32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8761,7 +8581,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f32_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2f32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -8797,7 +8616,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f32_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2f32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8832,7 +8650,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f32_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2f32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8908,7 +8725,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f32_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3f32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -8947,7 +8763,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f32_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3f32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -8985,7 +8800,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f32_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3f32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9070,7 +8884,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5f32_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v5f32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -9115,7 +8928,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5f32_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v5f32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9159,7 +8971,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5f32_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v5f32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9241,7 +9052,6 @@ define amdgpu_gfx void @test_call_external_void_func_f64_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_f64_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -9277,7 +9087,6 @@ define amdgpu_gfx void @test_call_external_void_func_f64_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_f64_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9312,7 +9121,6 @@ define amdgpu_gfx void @test_call_external_void_func_f64_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_f64_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9391,7 +9199,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f64_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2f64_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -9433,7 +9240,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f64_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2f64_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9474,7 +9280,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f64_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2f64_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9565,7 +9370,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f64_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3f64_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -9613,7 +9417,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f64_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3f64_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9660,7 +9463,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f64_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3f64_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9742,7 +9544,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i16_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -9775,7 +9576,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i16_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9807,7 +9607,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i16_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i16_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9877,7 +9676,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i16_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -9912,7 +9710,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i16_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -9946,7 +9743,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i16_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10018,7 +9814,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3f16_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -10053,7 +9848,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3f16_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10087,7 +9881,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3f16_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10160,7 +9953,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i16_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -10196,7 +9988,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i16_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10231,7 +10022,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i16_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i16_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10304,7 +10094,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3f16_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -10340,7 +10129,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3f16_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10375,7 +10163,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3f16_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3f16_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10447,7 +10234,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i16_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -10482,7 +10268,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i16_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10516,7 +10301,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i16_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10589,7 +10373,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i16_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -10625,7 +10408,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i16_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10660,7 +10442,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i16_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i16_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10730,7 +10511,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2f16_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -10763,7 +10543,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2f16_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10795,7 +10574,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2f16_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2f16_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10865,7 +10643,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i32_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -10900,7 +10677,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i32_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -10934,7 +10710,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i32_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11007,7 +10782,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v2i32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -11043,7 +10817,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v2i32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11078,7 +10851,6 @@ define amdgpu_gfx void @test_call_external_void_func_v2i32_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v2i32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11154,7 +10926,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_imm_inreg(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -11193,7 +10964,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_imm_inreg(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11231,7 +11001,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_imm_inreg(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11313,7 +11082,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_i32_inreg(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_v3i32_i32_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -11355,7 +11123,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_i32_inreg(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_v3i32_i32_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11396,7 +11163,6 @@ define amdgpu_gfx void @test_call_external_void_func_v3i32_i32_inreg(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v3i32_i32_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11478,7 +11244,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i32_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -11517,7 +11282,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i32_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11555,7 +11319,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i32_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11638,7 +11401,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v4i32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -11680,7 +11442,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v4i32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11721,7 +11482,6 @@ define amdgpu_gfx void @test_call_external_void_func_v4i32_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v4i32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11809,7 +11569,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5i32_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v5i32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -11854,7 +11613,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5i32_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v5i32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11898,7 +11656,6 @@ define amdgpu_gfx void @test_call_external_void_func_v5i32_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v5i32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -11993,7 +11750,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v8i32_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -12042,7 +11798,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v8i32_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -12090,7 +11845,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v8i32_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -12196,7 +11950,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_imm_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v8i32_imm_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -12250,7 +12003,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_imm_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v8i32_imm_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -12303,7 +12055,6 @@ define amdgpu_gfx void @test_call_external_void_func_v8i32_imm_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v8i32_imm_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -12423,7 +12174,6 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v16i32_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -12488,7 +12238,6 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v16i32_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -12552,7 +12301,6 @@ define amdgpu_gfx void @test_call_external_void_func_v16i32_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v16i32_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -12729,7 +12477,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() #0 {
 ; GFX10-LABEL: test_call_external_void_func_v32i32_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -12839,7 +12586,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() #0 {
 ; GFX11-LABEL: test_call_external_void_func_v32i32_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -12941,7 +12687,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_inreg() #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v32i32_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -13165,7 +12910,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX10-LABEL: test_call_external_void_func_v32i32_i32_inreg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -13280,7 +13024,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX11-LABEL: test_call_external_void_func_v32i32_i32_inreg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -13386,7 +13129,6 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX10-SCRATCH-LABEL: test_call_external_void_func_v32i32_i32_inreg:
 ; GFX10-SCRATCH:       ; %bb.0:
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -13539,7 +13281,6 @@ define amdgpu_gfx void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, d
 ; GFX10-LABEL: stack_passed_arg_alignment_v32i32_f64:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -13576,7 +13317,6 @@ define amdgpu_gfx void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, d
 ; GFX11-LABEL: stack_passed_arg_alignment_v32i32_f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -13607,7 +13347,6 @@ define amdgpu_gfx void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, d
 ; GFX10-SCRATCH-LABEL: stack_passed_arg_alignment_v32i32_f64:
 ; GFX10-SCRATCH:       ; %bb.0: ; %entry
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -13712,7 +13451,6 @@ define amdgpu_gfx void @stack_12xv3i32() #0 {
 ; GFX10-LABEL: stack_12xv3i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -13782,7 +13520,6 @@ define amdgpu_gfx void @stack_12xv3i32() #0 {
 ; GFX11-LABEL: stack_12xv3i32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -13830,7 +13567,6 @@ define amdgpu_gfx void @stack_12xv3i32() #0 {
 ; GFX10-SCRATCH-LABEL: stack_12xv3i32:
 ; GFX10-SCRATCH:       ; %bb.0: ; %entry
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -13989,7 +13725,6 @@ define amdgpu_gfx void @stack_8xv5i32() #0 {
 ; GFX10-LABEL: stack_8xv5i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -14067,7 +13802,6 @@ define amdgpu_gfx void @stack_8xv5i32() #0 {
 ; GFX11-LABEL: stack_8xv5i32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -14119,7 +13853,6 @@ define amdgpu_gfx void @stack_8xv5i32() #0 {
 ; GFX10-SCRATCH-LABEL: stack_8xv5i32:
 ; GFX10-SCRATCH:       ; %bb.0: ; %entry
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1
@@ -14280,7 +14013,6 @@ define amdgpu_gfx void @stack_8xv5f32() #0 {
 ; GFX10-LABEL: stack_8xv5f32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s34, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s35, -1
@@ -14358,7 +14090,6 @@ define amdgpu_gfx void @stack_8xv5f32() #0 {
 ; GFX11-LABEL: stack_8xv5f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -14416,7 +14147,6 @@ define amdgpu_gfx void @stack_8xv5f32() #0 {
 ; GFX10-SCRATCH-LABEL: stack_8xv5f32:
 ; GFX10-SCRATCH:       ; %bb.0: ; %entry
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s0, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s1, -1

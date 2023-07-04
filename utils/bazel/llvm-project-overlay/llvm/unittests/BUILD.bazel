@@ -706,6 +706,7 @@ cc_test(
         "//llvm:Core",
         "//llvm:MC",
         "//llvm:Support",
+        "//llvm:Target",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

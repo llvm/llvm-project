@@ -38,21 +38,28 @@ using ::testing::Ne;
 using ::testing::NotNull;
 using ::testing::UnorderedElementsAre;
 
-template <typename VerifyResultsT>
-void runDataflow(llvm::StringRef Code, VerifyResultsT VerifyResults,
-                 DataflowAnalysisOptions Options,
-                 LangStandard::Kind Std = LangStandard::lang_cxx17,
-                 llvm::StringRef TargetFun = "target") {
-  ASSERT_THAT_ERROR(
-      runDataflowReturnError(Code, VerifyResults, Options, Std, TargetFun),
-      llvm::Succeeded());
+void runDataflow(
+    llvm::StringRef Code,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults,
+    DataflowAnalysisOptions Options,
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    llvm::StringRef TargetFun = "target") {
+  ASSERT_THAT_ERROR(checkDataflowWithNoopAnalysis(Code, VerifyResults, Options,
+                                                  Std, TargetFun),
+                    llvm::Succeeded());
 }
 
-template <typename VerifyResultsT>
-void runDataflow(llvm::StringRef Code, VerifyResultsT VerifyResults,
-                 LangStandard::Kind Std = LangStandard::lang_cxx17,
-                 bool ApplyBuiltinTransfer = true,
-                 llvm::StringRef TargetFun = "target") {
+void runDataflow(
+    llvm::StringRef Code,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults,
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    bool ApplyBuiltinTransfer = true, llvm::StringRef TargetFun = "target") {
   runDataflow(Code, std::move(VerifyResults),
               {ApplyBuiltinTransfer ? BuiltinOptions{}
                                     : std::optional<BuiltinOptions>()},
@@ -653,6 +660,30 @@ TEST(TransferTest, SelfReferentialPointerVarDecl) {
             cast<PointerValue>(BarPointeeVal->getChild(*BazPtrDecl));
         const StorageLocation &BazPtrPointeeLoc = BazPtrVal->getPointeeLoc();
         EXPECT_THAT(Env.getValue(BazPtrPointeeLoc), NotNull());
+      });
+}
+
+TEST(TransferTest, DirectlySelfReferentialReference) {
+  std::string Code = R"(
+    struct target {
+      target() {
+        (void)0;
+        // [[p]]
+      }
+      target &self = *this;
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const ValueDecl *SelfDecl = findValueDecl(ASTCtx, "self");
+
+        auto *ThisLoc = Env.getThisPointeeStorageLocation();
+        auto *RefVal =
+            cast<ReferenceValue>(Env.getValue(ThisLoc->getChild(*SelfDecl)));
+        ASSERT_EQ(&RefVal->getReferentLoc(), ThisLoc);
       });
 }
 
@@ -2658,7 +2689,7 @@ TEST(TransferTest, CannotAnalyzeFunctionTemplate) {
     void target() {}
   )";
   ASSERT_THAT_ERROR(
-      runDataflowReturnError(
+      checkDataflowWithNoopAnalysis(
           Code,
           [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
              ASTContext &ASTCtx) {},
@@ -2674,7 +2705,7 @@ TEST(TransferTest, CannotAnalyzeMethodOfClassTemplate) {
     };
   )";
   ASSERT_THAT_ERROR(
-      runDataflowReturnError(
+      checkDataflowWithNoopAnalysis(
           Code,
           [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
              ASTContext &ASTCtx) {},
@@ -5544,6 +5575,42 @@ TEST(TransferTest, AnonymousStructWithInitializer) {
 
         auto *B = cast<BoolValue>(Env.getValue(AnonStruct.getChild(*BDecl)));
         ASSERT_TRUE(Env.flowConditionImplies(*B));
+      });
+}
+
+TEST(TransferTest, AnonymousStructWithReferenceField) {
+  std::string Code = R"(
+    int global_i = 0;
+    struct target {
+      target() {
+        (void)0;
+        // [[p]]
+      }
+      struct {
+        int &i = global_i;
+      };
+    };
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        const ValueDecl *GlobalIDecl = findValueDecl(ASTCtx, "global_i");
+        const ValueDecl *IDecl = findValueDecl(ASTCtx, "i");
+        const IndirectFieldDecl *IndirectField =
+            findIndirectFieldDecl(ASTCtx, "i");
+
+        auto *ThisLoc =
+            cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
+        auto &AnonStruct = cast<AggregateStorageLocation>(ThisLoc->getChild(
+            *cast<ValueDecl>(IndirectField->chain().front())));
+
+        auto *RefVal =
+            cast<ReferenceValue>(Env.getValue(AnonStruct.getChild(*IDecl)));
+
+        ASSERT_EQ(&RefVal->getReferentLoc(),
+                  Env.getStorageLocation(*GlobalIDecl));
       });
 }
 

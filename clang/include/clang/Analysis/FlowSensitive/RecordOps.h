@@ -23,7 +23,7 @@ namespace dataflow {
 ///
 /// This performs a deep copy, i.e. it copies every field and recurses on
 /// fields of record type. It also copies properties from the `StructValue`
-/// associated with `Dst` to the `StructValue` associated with `Src` (if these
+/// associated with `Src` to the `StructValue` associated with `Dst` (if these
 /// `StructValue`s exist).
 ///
 /// If there is a `StructValue` associated with `Dst` in the environment, this
@@ -51,6 +51,11 @@ void copyRecord(AggregateStorageLocation &Src, AggregateStorageLocation &Dst,
 /// on fields of record type. Fields of reference type compare equal if they
 /// refer to the same storage location. If `StructValue`s are associated with
 /// `Loc1` and `Loc2`, it also compares the properties on those `StructValue`s.
+///
+/// Note on how to interpret the result:
+/// - If this returns true, the records are guaranteed to be equal at runtime.
+/// - If this returns false, the records may still be equal at runtime; our
+///   analysis merely cannot guarantee that they will be equal.
 ///
 /// Requirements:
 ///

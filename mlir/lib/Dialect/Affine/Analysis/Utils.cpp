@@ -568,7 +568,7 @@ ComputationSliceState::getAsConstraints(FlatAffineValueConstraints *cst) const {
     assert(cst->containsVar(value) && "value expected to be present");
     if (isValidSymbol(value)) {
       // Check if the symbol is a constant.
-      if (auto cOp = value.getDefiningOp<arith::ConstantIndexOp>())
+      if (std::optional<int64_t> cOp = getConstantIntValue(value))
         cst->addBound(BoundType::EQ, value, cOp.value());
     } else if (auto loop = getForInductionVarOwner(value)) {
       if (failed(cst->addAffineForOpDomain(loop)))

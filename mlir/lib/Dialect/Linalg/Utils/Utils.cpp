@@ -373,9 +373,9 @@ void GenerateLoopNest<AffineForOp>::doit(
   SmallVector<int64_t, 4> constantSteps;
   constantSteps.reserve(steps.size());
   for (Value v : steps) {
-    auto op = v.getDefiningOp<arith::ConstantIndexOp>();
-    assert(op && "Affine loops require constant steps");
-    constantSteps.push_back(op.value());
+    auto constVal = getConstantIntValue(v);
+    assert(constVal.has_value() && "Affine loops require constant steps");
+    constantSteps.push_back(constVal.value());
   }
 
   affine::buildAffineLoopNest(b, loc, lbs, ubs, constantSteps,
@@ -903,38 +903,6 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
   if (!curr.empty() && !reassociation.empty())
     reassociation.back().append(curr.begin(), curr.end());
   return reassociation;
-}
-
-/// Return the identity numeric value associated to the give op.
-std::optional<TypedAttr> getNeutralElement(Operation *op) {
-  // Builder only used as helper for attribute creation.
-  OpBuilder b(op->getContext());
-  Type resultType = op->getResult(0).getType();
-  if (auto floatType = dyn_cast<FloatType>(resultType)) {
-    const llvm::fltSemantics &semantic = floatType.getFloatSemantics();
-    if (isa<arith::AddFOp>(op))
-      return b.getFloatAttr(resultType, llvm::APFloat::getZero(semantic));
-    if (isa<arith::MulFOp>(op))
-      return b.getFloatAttr(resultType, llvm::APFloat(semantic, 1));
-    if (isa<arith::MaxFOp>(op))
-      return b.getFloatAttr(resultType,
-                            llvm::APFloat::getInf(semantic, /*Negative=*/true));
-    if (isa<arith::MinFOp>(op))
-      return b.getFloatAttr(
-          resultType, llvm::APFloat::getInf(semantic, /*Negative=*/false));
-    return std::nullopt;
-  }
-  if (isa<arith::AddIOp, arith::OrIOp, arith::XOrIOp>(op))
-    return b.getIntegerAttr(resultType, 0);
-  if (isa<arith::AndIOp>(op))
-    return b.getIntegerAttr(resultType, -1);
-  if (isa<arith::MaxSIOp>(op))
-    return b.getIntegerAttr(resultType, std::numeric_limits<int64_t>::min());
-  if (isa<arith::MinSIOp>(op))
-    return b.getIntegerAttr(resultType, std::numeric_limits<int64_t>::max());
-  if (isa<arith::MulIOp>(op))
-    return b.getIntegerAttr(resultType, 1);
-  return std::nullopt;
 }
 
 } // namespace linalg

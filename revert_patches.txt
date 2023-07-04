@@ -49,13 +49,4 @@ Revert: 2be0abb7fe72 Rewrite load-store-vectorizer.
 
 Revert "[AMDGPU] Remove extract_subvector patterns"  
 
-Revert:
-8a21ea1d0a38 clang: Start emitting intrinsic for __builtin_ldexp*  
-eece6ba283bd IR: Add llvm.ldexp and llvm.experimental.constrained.ldexp intrinsics 
-
-Attributor:
-a15cc5092233 Revert "[Attributor] Avoid the type check in getCalledFunction"
-5981535fae80 Revert "[Attributor][FIX] Do not ignore refinement for IPO"
-d9dbfaffee41 Revert "[Attributor] Avoid uninitialized memory read."
-68aa203b96d7 Revert "[Attributor] Avoid more AAs through IR implication"
-
+Revert "[LSR] Move normalization check to normalizeForPostIncUse."  
