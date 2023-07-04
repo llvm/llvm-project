@@ -176,7 +176,21 @@ module m
     integer, parameter :: bad4 = dim(huge(1),-1)
     !CHECK: warning: HYPOT intrinsic folding overflow
     real, parameter :: bad5 = hypot(huge(0.), huge(0.))
+    !CHECK: warning: SUM() of INTEGER(4) data overflowed
+    integer, parameter :: bad6 = sum([huge(1),huge(1)])
+    !CHECK: warning: SUM() of REAL(4) data overflowed
+    real, parameter :: bad7 = sum([huge(1.),huge(1.)])
+    !CHECK: warning: SUM() of COMPLEX(4) data overflowed
+    complex, parameter :: bad8 = sum([(huge(1.),0.),(huge(1.),0.)])
+    !CHECK: warning: PRODUCT() of INTEGER(4) data overflowed
+    integer, parameter :: bad9 = product([huge(1),huge(1)])
+    !CHECK: warning: PRODUCT() of REAL(4) data overflowed
+    real, parameter :: bad10 = product([huge(1.),huge(1.)])
+    !CHECK: warning: PRODUCT() of COMPLEX(4) data overflowed
+    complex, parameter :: bad11 = product([(huge(1.),0.),(huge(1.),0.)])
     !CHECK: warning: overflow on REAL(8) to REAL(4) conversion
     x = 1.D40
+    !CHECK-NOT: warning: invalid argument
+    if (.not. isnan(real(z'ffffffffffffffff',8))) stop
   end subroutine
 end module
