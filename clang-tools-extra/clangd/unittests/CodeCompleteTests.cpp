@@ -3961,26 +3961,54 @@ TEST(CompletionTest, Concepts) {
     template<$tparam^A U>
     int foo();
 
-    template<class T>
-    concept b = $other^A<T> && $other^sizeof(T) % 2 == 0 || $other^A<T> && sizeof(T) == 1;
+    template<typename T>
+    int bar(T t) requires $expr^A<int>;
 
-    $other^A<T> auto i = 19;
+    template<class T>
+    concept b = $expr^A && $expr^sizeof(T) % 2 == 0 || $expr^A && sizeof(T) == 1;
+
+    $toplevel^A auto i = 19;
+
+    template<$toplevel^A auto i> void constrainedNTTP();
+
+    // FIXME: The first parameter should be dropped in this case.
+    void abbreviated($expr^A auto x) {}
   )cpp");
   TestTU TU;
   TU.Code = Code.code().str();
   TU.ExtraArgs = {"-std=c++20"};
 
-  std::vector<Symbol> Syms = {conceptSym("same_as")};
+  auto Sym = conceptSym("same_as");
+  Sym.Signature = "<typename Tp, typename Up>";
+  Sym.CompletionSnippetSuffix = "<${1:typename Tp}, ${2:typename Up}>";
+  std::vector<Symbol> Syms = {Sym};
   for (auto P : Code.points("tparam")) {
-    ASSERT_THAT(completions(TU, P, Syms).Completions,
-                AllOf(Contains(named("A")), Contains(named("same_as")),
-                      Contains(named("class")), Contains(named("typename"))))
+    ASSERT_THAT(
+        completions(TU, P, Syms).Completions,
+        AllOf(Contains(AllOf(named("A"), signature(""), snippetSuffix(""))),
+              Contains(AllOf(named("same_as"), signature("<typename Up>"),
+                             snippetSuffix("<${2:typename Up}>"))),
+              Contains(named("class")), Contains(named("typename"))))
         << "Completing template parameter at position " << P;
   }
 
-  for (auto P : Code.points("other")) {
-    EXPECT_THAT(completions(TU, P, Syms).Completions,
-                AllOf(Contains(named("A")), Contains(named("same_as"))))
+  for (auto P : Code.points("toplevel")) {
+    EXPECT_THAT(
+        completions(TU, P, Syms).Completions,
+        AllOf(Contains(AllOf(named("A"), signature(""), snippetSuffix(""))),
+              Contains(AllOf(named("same_as"), signature("<typename Up>"),
+                             snippetSuffix("<${2:typename Up}>")))))
+        << "Completing 'requires' expression at position " << P;
+  }
+
+  for (auto P : Code.points("expr")) {
+    EXPECT_THAT(
+        completions(TU, P, Syms).Completions,
+        AllOf(Contains(AllOf(named("A"), signature("<class T>"),
+                             snippetSuffix("<${1:class T}>"))),
+              Contains(AllOf(
+                  named("same_as"), signature("<typename Tp, typename Up>"),
+                  snippetSuffix("<${1:typename Tp}, ${2:typename Up}>")))))
         << "Completing 'requires' expression at position " << P;
   }
 }
