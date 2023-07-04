@@ -229,3 +229,17 @@ define void @local_unnamed_addr_func() local_unnamed_addr {
 
 ; CHECK-LABEL: unnamed_addr @unnamed_addr_func
 declare void @unnamed_addr_func() unnamed_addr
+
+// -----
+
+; CHECK-LABEL: @align_func
+; CHECK-SAME: attributes {alignment = 2 : i64}
+define void @align_func() align 2 {
+  ret void
+}
+
+// -----
+
+; CHECK-LABEL: @align_decl
+; CHECK-SAME: attributes {alignment = 64 : i64}
+declare void @align_decl() align 64
