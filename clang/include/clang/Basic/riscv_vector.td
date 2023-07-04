@@ -211,6 +211,11 @@ let HasMaskedOffOperand = false in {
                                   [["vv", "v", "vvvv"],
                                    ["vf", "v", "vvev"]]>;
   }
+  multiclass RVVFloatingTerBuiltinSetRoundingMode {
+    defm "" : RVVOutOp1BuiltinSet<NAME, "xfd",
+                                  [["vv", "v", "vvvvu"],
+                                   ["vf", "v", "vvevu"]]>;
+  }
 }
 
 let HasMaskedOffOperand = false, Log2LMUL = [-2, -1, 0, 1, 2] in {
@@ -2039,16 +2044,66 @@ let ManualCodegen = [{
 }
 }
 
-// 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+
 let UnMaskedPolicyScheme = HasPolicyOperand in {
-defm vfmacc  : RVVFloatingTerBuiltinSet;
-defm vfnmacc : RVVFloatingTerBuiltinSet;
-defm vfmsac  : RVVFloatingTerBuiltinSet;
-defm vfnmsac : RVVFloatingTerBuiltinSet;
-defm vfmadd  : RVVFloatingTerBuiltinSet;
-defm vfnmadd : RVVFloatingTerBuiltinSet;
-defm vfmsub  : RVVFloatingTerBuiltinSet;
-defm vfnmsub : RVVFloatingTerBuiltinSet;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
+
+    unsigned Offset = IsMasked ? 2 : 1;
+
+    Operands.push_back(Ops[IsMasked ? 1 : 0]); // passthrough
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                      Operands.back()->getType()};
+
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+    defm vfmacc  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmacc : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfmsac  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmsac : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfmadd  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmadd : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfmsub  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmsub : RVVFloatingTerBuiltinSetRoundingMode;
+  }
+  // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+  defm vfmacc  : RVVFloatingTerBuiltinSet;
+  defm vfnmacc : RVVFloatingTerBuiltinSet;
+  defm vfmsac  : RVVFloatingTerBuiltinSet;
+  defm vfnmsac : RVVFloatingTerBuiltinSet;
+  defm vfmadd  : RVVFloatingTerBuiltinSet;
+  defm vfnmadd : RVVFloatingTerBuiltinSet;
+  defm vfmsub  : RVVFloatingTerBuiltinSet;
+  defm vfnmsub : RVVFloatingTerBuiltinSet;
+}
 
 // 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
