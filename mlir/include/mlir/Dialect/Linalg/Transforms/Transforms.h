@@ -401,18 +401,24 @@ SmallVector<Value> peelLoop(RewriterBase &rewriter, Operation *op);
 void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
 
 /// Pad the iterator dimensions `paddingDimensions` of all `opToPad` operands
-/// to a static bounding box. `padToMultipleOf` indicates that each padding
-/// dimension should be padded to the specified multiple. If the derived padding
-/// sizes should not be rounded up to any multiple, use "1". Use `paddingValues`
-/// and `packPaddings` to set padding value and nofold attribute of the created
-/// tensor::PadOps, respectively. Update `paddedOp` to the cloned operation with
-/// statically shaped `paddingDimensions` and return the extracted dynamically
-/// shaped results. If padding fails, return failure. If `copyBack` is set, the
-/// unpadded result is copied back into the original destination tensor.
-FailureOr<SmallVector<Value>>
-rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
-                  const LinalgPaddingOptions &options, LinalgOp &paddedOp,
-                  bool copyBack);
+/// to a static bounding box. The original `opToPad` is cloned and operates on
+/// the padded tensors.
+///
+/// * "options.padToMultipleOf" indicates that each padding dimension should be
+///   padded to the specified multiple.
+/// * Use "options.paddingValues" and "options.packPaddings" to set padding
+///   value and nofold attribute of the created tensor::PadOps, respectively.
+/// * The unpadded results (extracted slice of the cloned operation) are
+///   returned via `replacements`.
+/// * The tensor::PadOps are returned via `padOps`.
+/// * If `copyBack` is set to "true", the unpadded result is copied back to the
+///   original destination tensor.
+LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
+                                const LinalgPaddingOptions &options,
+                                LinalgOp &paddedOp,
+                                SmallVector<Value> &replacements,
+                                SmallVector<tensor::PadOp> &padOps,
+                                bool copyBack);
 
 namespace detail {
 
