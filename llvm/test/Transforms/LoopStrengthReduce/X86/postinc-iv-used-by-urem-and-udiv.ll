@@ -6,6 +6,7 @@ target triple = "x86_64-apple-macosx"
 
 declare void @use(i64)
 declare void @use.i32(i32)
+declare void @use.i8(i8)
 
 define i32 @test_pr38847() {
 ; CHECK-LABEL: define i32 @test_pr38847() {
@@ -131,4 +132,92 @@ exit:
   call void @use(i64 %iv.2)
   %rem = urem i32 %dec.1, 53
   ret i32 %rem
+}
+
+define i64 @test_normalization_failure_in_any_extend(ptr %i, i64 %i1, i8 %i25) {
+; CHECK-LABEL: define i64 @test_normalization_failure_in_any_extend
+; CHECK-SAME: (ptr [[I:%.*]], i64 [[I1:%.*]], i8 [[I25:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_1_HEADER:%.*]]
+; CHECK:       loop.1.header:
+; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_1_NEXT:%.*]], [[LOOP_1_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i64 [ [[I1]], [[ENTRY]] ], [ [[TMP1:%.*]], [[LOOP_1_LATCH]] ]
+; CHECK-NEXT:    br label [[LOOP_2:%.*]]
+; CHECK:       loop.2:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[LOOP_2]] ], [ 2, [[LOOP_1_HEADER]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[C_1]], label [[LOOP_2]], label [[LOOP_3_PREHEADER:%.*]]
+; CHECK:       loop.3.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_2]], 1
+; CHECK-NEXT:    br label [[LOOP_3:%.*]]
+; CHECK:       loop.3:
+; CHECK-NEXT:    [[LSR_IV5:%.*]] = phi i64 [ [[TMP0]], [[LOOP_3_PREHEADER]] ], [ [[LSR_IV_NEXT6:%.*]], [[LOOP_3]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ 2, [[LOOP_3_PREHEADER]] ], [ [[LSR_IV_NEXT2:%.*]], [[LOOP_3]] ]
+; CHECK-NEXT:    [[IV_5:%.*]] = phi i32 [ [[IV_5_NEXT:%.*]], [[LOOP_3]] ], [ 1, [[LOOP_3_PREHEADER]] ]
+; CHECK-NEXT:    [[IV_5_NEXT]] = add nsw i32 [[IV_5]], -1
+; CHECK-NEXT:    [[LSR:%.*]] = trunc i32 [[IV_5_NEXT]] to i8
+; CHECK-NEXT:    [[LSR_IV_NEXT2]] = add nsw i64 [[LSR_IV1]], -1
+; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[LSR_IV_NEXT2]] to i32
+; CHECK-NEXT:    [[LSR_IV_NEXT6]] = add i64 [[LSR_IV5]], 1
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i32 [[TMP]], 0
+; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP_3]], label [[LOOP_1_LATCH]]
+; CHECK:       loop.1.latch:
+; CHECK-NEXT:    [[IV_1_NEXT]] = add nuw nsw i32 [[IV_1]], 1
+; CHECK-NEXT:    [[TMP1]] = add i64 [[LSR_IV_NEXT6]], 1
+; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 [[IV_1_NEXT]], 8
+; CHECK-NEXT:    br i1 [[C_3]], label [[EXIT:%.*]], label [[LOOP_1_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    call void @use.i32(i32 [[IV_5_NEXT]])
+; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT6]])
+; CHECK-NEXT:    call void @use(i64 [[LSR_IV_NEXT2]])
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i32 [[IV_5_NEXT]], 53
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[TMP4:%.*]] = mul i8 [[TMP3]], 53
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i8 [[LSR]], [[TMP4]]
+; CHECK-NEXT:    call void @use.i8(i8 [[TMP5]])
+; CHECK-NEXT:    [[I26:%.*]] = xor i8 [[I25]], 5
+; CHECK-NEXT:    [[I27:%.*]] = zext i8 [[I26]] to i64
+; CHECK-NEXT:    ret i64 [[I27]]
+;
+entry:
+  br label %loop.1.header
+
+loop.1.header:
+  %iv.1 = phi i32 [ 0, %entry ], [ %iv.1.next, %loop.1.latch ]
+  %iv.2 = phi i64 [ %i1, %entry ], [ %iv.6.next, %loop.1.latch ]
+  br label %loop.2
+
+loop.2:
+  %iv.3 = phi i32 [ 1, %loop.1.header ], [ %iv.3.next, %loop.2 ]
+  %iv.4 = phi i64 [ %iv.2, %loop.1.header ], [ %iv.4.next, %loop.2 ]
+  %iv.4.next = add nsw i64 %iv.4, 1
+  %iv.3.next = add nsw i32 %iv.3, -1
+  %c.1 = icmp sgt i32 %iv.3, 0
+  br i1 %c.1, label %loop.2, label %loop.3
+
+loop.3:
+  %iv.5 = phi i32 [ 1, %loop.2 ], [ %iv.5.next, %loop.3 ]
+  %iv.6 = phi i64 [ %iv.4.next, %loop.2 ], [ %iv.6.next, %loop.3 ]
+  %iv.6.next = add nsw i64 %iv.6, 1
+  %iv.5.next = add nsw i32 %iv.5, -1
+  %c.2 = icmp sgt i32 %iv.5, 0
+  br i1 %c.2, label %loop.3, label %loop.1.latch
+
+loop.1.latch:
+  %iv.1.next = add nuw nsw i32 %iv.1, 1
+  %c.3 = icmp eq i32 %iv.1.next, 8
+  br i1 %c.3, label %exit, label %loop.1.header
+
+exit:
+  call void @use.i32(i32 %iv.5.next)
+  %i21 = zext i32 %iv.5 to i64
+  call void @use(i64 %iv.6)
+  call void @use(i64 %i21)
+  %i22 = urem i32 %iv.5.next, 53
+  %i23 = trunc i32 %i22 to i8
+  call void @use.i8(i8 %i23)
+  %i26 = xor i8 %i25, 5
+  %i27 = zext i8 %i26 to i64
+  ret i64 %i27
 }
