@@ -3,6 +3,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cxxabi.h>
@@ -56,11 +57,16 @@ vector<BasicBlock *> topoSortBBs(Function &F) {
   return tempBB;
 }
 
+struct Variable {
+  string name;
+  bool tainted;
+};
+
 namespace {
   struct Assignment2 : public FunctionPass {
     static char ID;
 
-    map<Value *, int> variables;
+    map<Value *, Variable> variables;
 
     set<Value *> tainted;
 
@@ -73,14 +79,14 @@ namespace {
 
     Assignment2() : FunctionPass(ID) {}
 
-    void updateVariable(Value *V, int line) {
-      map<Value *, int>::iterator it = variables.find(V);
+    void updateVariable(Value *V, bool tainted, int line) {
+      map<Value *, Variable>::iterator it = variables.find(V);
       if (it != variables.end()) {
-        it->second = line;
-        if (line != -1) {
-          output << "Line " << line << ": " << V << " is tainted" << "\n";
+        it->second.tainted = tainted;
+        if (tainted) {
+          output << "Line " << line << ": " << it->second.name << " is tainted" << "\n";
         } else {
-          output << "Line " << line << ": " << V << " is now untainted" << "\n";
+          output << "Line " << line << ": " << it->second.name << " is now untainted" << "\n";
         }
       }
     }
@@ -89,17 +95,19 @@ namespace {
       Value *V = dyn_cast<Value>(I);
       int line = getSourceCodeLine(I);
 
-      if (isa<AllocaInst>(I)) {
-        output << "Alloca Inst: " << line << "\n";
-        variables.insert(make_pair(V, -1));
-      } 
+      if (const DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
+        Variable variable;
+        variable.name = DDI->getVariable()->getName();
+        variable.tainted = false;
+        variables.insert(make_pair(DDI->getAddress(), variable));
+      }
       else if (isa<CallInst>(I)) {
         output << "Call Inst: " << line << "\n";
         
         if (demangle(I->getOperand(0)->getName().str().c_str()) == source) {
           output << "Tainted: " << I->getOperand(1) << "\n";
           tainted.insert(I->getOperand(1));
-          updateVariable(I->getOperand(1), line);
+          updateVariable(I->getOperand(1), true, line);
         } else {
           for (Use &U : I->operands()) {
             Value *v = U.get();
@@ -117,12 +125,12 @@ namespace {
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
           output << "Tainted: " << I->getOperand(1) << "\n";
           tainted.insert(I->getOperand(1));
-          updateVariable(I->getOperand(1), line);
+          updateVariable(I->getOperand(1), true, line);
         } 
         else if (tainted.find(I->getOperand(1)) != tainted.end()) {
           output << "Untainted: " << I->getOperand(1) << "\n";
           tainted.erase(I->getOperand(1));
-          updateVariable(I->getOperand(1), -1);
+          updateVariable(I->getOperand(1), false, line);
         }
       } 
       else if (isa<LoadInst>(I)) {
@@ -147,7 +155,7 @@ namespace {
 
       output << "Tainted: {";
       for (auto &var : variables) {
-        if (var.second != -1) output << var.first << ",";
+        if (var.second.tainted) output << var.second.name << ",";
       }
       output << "}" << "\n";
 
