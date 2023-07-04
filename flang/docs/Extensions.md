@@ -592,3 +592,7 @@ end module
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
   same type, a case that is technically implementation-defined.
+
+* `ENCODING=` is not in the list of changeable modes on an I/O unit,
+  but every Fortran compiler allows the encoding to be changed on an
+  open unit.
