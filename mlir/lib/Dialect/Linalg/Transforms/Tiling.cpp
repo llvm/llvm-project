@@ -45,18 +45,6 @@ using namespace mlir::scf;
 
 #define DEBUG_TYPE "linalg-tiling"
 
-static bool isZero(OpFoldResult v) {
-  if (!v)
-    return false;
-  if (auto attr = llvm::dyn_cast_if_present<Attribute>(v)) {
-    IntegerAttr intAttr = dyn_cast<IntegerAttr>(attr);
-    return intAttr && intAttr.getValue().isZero();
-  }
-  if (auto cst = v.get<Value>().getDefiningOp<arith::ConstantIndexOp>())
-    return cst.value() == 0;
-  return false;
-}
-
 std::tuple<SmallVector<Range, 4>, LoopIndexToRangeIndexMap>
 mlir::linalg::makeTiledLoopRanges(RewriterBase &b, Location loc, AffineMap map,
                                   ArrayRef<OpFoldResult> allShapeSizes,
@@ -70,7 +58,8 @@ mlir::linalg::makeTiledLoopRanges(RewriterBase &b, Location loc, AffineMap map,
   // Traverse the tile sizes, which are in loop order, erase zeros everywhere.
   LoopIndexToRangeIndexMap loopIndexToRangeIndex;
   for (int idx = 0, e = tileSizes.size(), zerosCount = 0; idx < e; ++idx) {
-    if (isZero(tileSizes[idx - zerosCount])) {
+    if (getConstantIntValue(tileSizes[idx - zerosCount]) ==
+        static_cast<int64_t>(0)) {
       shapeSizes.erase(shapeSizes.begin() + idx - zerosCount);
       tileSizes.erase(tileSizes.begin() + idx - zerosCount);
       ++zerosCount;
@@ -473,7 +462,9 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
   // Initial tile sizes may be too big, only take the first nLoops.
   tileSizes = tileSizes.take_front(nLoops);
 
-  if (llvm::all_of(tileSizes, isZero)) {
+  if (llvm::all_of(tileSizes, [](OpFoldResult ofr) {
+        return getConstantIntValue(ofr) == static_cast<int64_t>(0);
+      })) {
     TiledLinalgOp tiledOp;
     tiledOp.op = cast<LinalgOp>(b.clone(*op.getOperation()));
     tiledOp.tensorResults.assign(tiledOp.op->result_begin(),
