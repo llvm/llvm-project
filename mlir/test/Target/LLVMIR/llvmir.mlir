@@ -1628,6 +1628,12 @@ llvm.func @hasGCFunction() attributes { garbageCollector = "statepoint-example" 
 
 // -----
 
+// CHECK-LABEL: @gc_decl
+// CHECK-SAME: gc "statepoint-example"
+llvm.func @gc_decl() attributes { garbageCollector = "statepoint-example" }
+
+// -----
+
 // CHECK-LABEL: @section_func
 // CHECK-SAME: section ".section.name"
 llvm.func @section_func() attributes { section = ".section.name" } {
