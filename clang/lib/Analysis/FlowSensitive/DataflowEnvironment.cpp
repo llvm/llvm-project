@@ -194,6 +194,8 @@ getFieldsGlobalsAndFuncs(const Stmt &S,
   for (auto *Child : S.children())
     if (Child != nullptr)
       getFieldsGlobalsAndFuncs(*Child, Fields, Vars, Funcs);
+  if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(&S))
+    getFieldsGlobalsAndFuncs(*DefaultInit->getExpr(), Fields, Vars, Funcs);
 
   if (auto *DS = dyn_cast<DeclStmt>(&S)) {
     if (DS->isSingleDecl())
