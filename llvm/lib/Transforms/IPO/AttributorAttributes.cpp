@@ -8006,6 +8006,7 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
       removeKnownBits(NO_WRITES);
       removeAssumedBits(NO_WRITES);
     }
+    getIRPosition().removeAttrs(AttrKinds);
     return AAMemoryBehaviorFloating::manifest(A);
   }
 
@@ -8110,16 +8111,9 @@ struct AAMemoryBehaviorFunction final : public AAMemoryBehaviorImpl {
     else if (isAssumedWriteOnly())
       ME = MemoryEffects::writeOnly();
 
-    // Intersect with existing memory attribute, as we currently deduce the
-    // location and modref portion separately.
-    MemoryEffects ExistingME = F.getMemoryEffects();
-    ME &= ExistingME;
-    if (ME == ExistingME)
-      return ChangeStatus::UNCHANGED;
-
     return IRAttributeManifest::manifestAttrs(
-        A, getIRPosition(), Attribute::getWithMemoryEffects(F.getContext(), ME),
-        /*ForceReplace*/ true);
+        A, getIRPosition(),
+        Attribute::getWithMemoryEffects(F.getContext(), ME));
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -8165,17 +8159,10 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
     else if (isAssumedWriteOnly())
       ME = MemoryEffects::writeOnly();
 
-    // Intersect with existing memory attribute, as we currently deduce the
-    // location and modref portion separately.
-    MemoryEffects ExistingME = CB.getMemoryEffects();
-    ME &= ExistingME;
-    if (ME == ExistingME)
-      return ChangeStatus::UNCHANGED;
-
+    getIRPosition().removeAttrs(AttrKinds);
     return IRAttributeManifest::manifestAttrs(
         A, getIRPosition(),
-        Attribute::getWithMemoryEffects(CB.getContext(), ME),
-        /*ForceReplace*/ true);
+        Attribute::getWithMemoryEffects(CB.getContext(), ME));
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -8539,22 +8526,9 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
       return ChangeStatus::UNCHANGED;
     MemoryEffects ME = DeducedAttrs[0].getMemoryEffects();
 
-    // Intersect with existing memory attribute, as we currently deduce the
-    // location and modref portion separately.
-    SmallVector<Attribute, 1> ExistingAttrs;
-    IRP.getAttrs({Attribute::Memory}, ExistingAttrs,
-                 /* IgnoreSubsumingPositions */ true);
-    if (ExistingAttrs.size() == 1) {
-      MemoryEffects ExistingME = ExistingAttrs[0].getMemoryEffects();
-      ME &= ExistingME;
-      if (ME == ExistingME)
-        return ChangeStatus::UNCHANGED;
-    }
-
     return IRAttributeManifest::manifestAttrs(
         A, IRP,
-        Attribute::getWithMemoryEffects(IRP.getAnchorValue().getContext(), ME),
-        /*ForceReplace*/ true);
+        Attribute::getWithMemoryEffects(IRP.getAnchorValue().getContext(), ME));
   }
 
   /// See AAMemoryLocation::checkForAllAccessesToMemoryKind(...).

@@ -607,7 +607,7 @@ define i8 @readnone_caller(i1 %c) {
 ; TUNIT-LABEL: define {{[^@]+}}@readnone_caller
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR9:[0-9]+]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i8, align 1
-; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[A]], i1 [[C]]) #[[ATTR13:[0-9]+]]
+; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[A]], i1 [[C]]) #[[ATTR12]]
 ; TUNIT-NEXT:    ret i8 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
@@ -662,7 +662,7 @@ define i8 @readnone_caller2(i1 %c) {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@readnone_caller2
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR9]] {
-; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr undef, i1 [[C]]) #[[ATTR13]]
+; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr undef, i1 [[C]]) #[[ATTR12]]
 ; TUNIT-NEXT:    ret i8 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
@@ -716,7 +716,7 @@ define i8 @readnone_caller3(i1 %c) {
 ; TUNIT-LABEL: define {{[^@]+}}@readnone_caller3
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR9]] {
 ; TUNIT-NEXT:    [[ALLOC:%.*]] = alloca i8, align 1
-; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal3(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 [[C]]) #[[ATTR13]]
+; TUNIT-NEXT:    [[R:%.*]] = call i8 @recursive_not_readnone_internal3(ptr noalias nocapture nofree noundef nonnull writeonly dereferenceable(1) [[ALLOC]], i1 [[C]]) #[[ATTR12]]
 ; TUNIT-NEXT:    ret i8 [[R]]
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
@@ -742,15 +742,15 @@ define internal void @argmemonly_before_ipconstprop(ptr %p) argmemonly {
   ret void
 }
 
-define void @argmemonky_caller() {
+define void @argmemonly_caller() {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write)
-; TUNIT-LABEL: define {{[^@]+}}@argmemonky_caller
+; TUNIT-LABEL: define {{[^@]+}}@argmemonly_caller
 ; TUNIT-SAME: () #[[ATTR6]] {
 ; TUNIT-NEXT:    call void @argmemonly_before_ipconstprop() #[[ATTR11]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(write)
-; CGSCC-LABEL: define {{[^@]+}}@argmemonky_caller
+; CGSCC-LABEL: define {{[^@]+}}@argmemonly_caller
 ; CGSCC-SAME: () #[[ATTR8]] {
 ; CGSCC-NEXT:    call void @argmemonly_before_ipconstprop() #[[ATTR12]]
 ; CGSCC-NEXT:    ret void
@@ -804,9 +804,8 @@ f:
 ; TUNIT: attributes #[[ATTR8]] = { nofree nosync nounwind memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR9]] = { nofree norecurse nosync nounwind memory(none) }
 ; TUNIT: attributes #[[ATTR10]] = { nosync memory(argmem: write) }
-; TUNIT: attributes #[[ATTR11]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR11]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind memory(write) }
-; TUNIT: attributes #[[ATTR13]] = { nofree nosync nounwind }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
@@ -820,6 +819,6 @@ f:
 ; CGSCC: attributes #[[ATTR9]] = { nofree nosync nounwind memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR10]] = { nofree nosync nounwind memory(none) }
 ; CGSCC: attributes #[[ATTR11]] = { nosync memory(argmem: write) }
-; CGSCC: attributes #[[ATTR12]] = { nounwind }
+; CGSCC: attributes #[[ATTR12]] = { nounwind memory(write) }
 ; CGSCC: attributes #[[ATTR13]] = { nofree nosync nounwind memory(write) }
 ;.

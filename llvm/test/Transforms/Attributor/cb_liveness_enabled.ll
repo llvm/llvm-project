@@ -196,7 +196,7 @@ attributes #0 = { noinline nounwind sspstrong uwtable}
 ; TUNIT_: !1 = !{i32 100, i32 201}
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind sspstrong willreturn memory(none) uwtable }
-; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn memory(none) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree noinline norecurse nosync nounwind sspstrong willreturn memory(none) uwtable }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree noinline nosync nounwind sspstrong willreturn memory(none) uwtable }

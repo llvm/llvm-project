@@ -62,7 +62,7 @@ define void @external(ptr %fp) {
 ; CGSCC-SAME: (ptr [[FP:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    call void @foo(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
 ; CGSCC-NEXT:    call void @callback1(ptr noundef nonnull @foo)
 ; CGSCC-NEXT:    call void @callback2(ptr noundef @foo)
 ; CGSCC-NEXT:    call void @callback2(ptr [[FP]])
@@ -101,9 +101,8 @@ declare void @callback1(ptr)
 declare void @callback2(ptr)
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR1]] = { nounwind memory(write) }
-; CGSCC: attributes #[[ATTR2]] = { nounwind }
 ;.

@@ -47,7 +47,7 @@ define i8 @call_simplifiable_1() {
 ; CGSCC-NEXT:    [[BYTES:%.*]] = alloca [1024 x i8], align 16
 ; CGSCC-NEXT:    [[I0:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 2
 ; CGSCC-NEXT:    store i8 2, i8* [[I0]], align 2
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @read_arg(i8* nocapture nofree noundef nonnull readonly align 2 dereferenceable(1022) [[I0]])
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @read_arg(i8* nocapture nofree noundef nonnull readonly align 2 dereferenceable(1022) [[I0]]) #[[ATTR4:[0-9]+]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -77,7 +77,7 @@ define internal i8 @sum_two_same_loads(i8* %p) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@sum_two_same_loads
 ; CGSCC-SAME: (i8* nocapture nofree noundef nonnull readonly dereferenceable(1022) [[P:%.*]]) #[[ATTR2:[0-9]+]] {
-; CGSCC-NEXT:    [[X:%.*]] = call i8 @read_arg_1(i8* nocapture nofree noundef nonnull readonly dereferenceable(1022) [[P]]) #[[ATTR4:[0-9]+]]
+; CGSCC-NEXT:    [[X:%.*]] = call i8 @read_arg_1(i8* nocapture nofree noundef nonnull readonly dereferenceable(1022) [[P]]) #[[ATTR4]]
 ; CGSCC-NEXT:    [[Y:%.*]] = call i8 @read_arg_1(i8* nocapture nofree noundef nonnull readonly dereferenceable(1022) [[P]]) #[[ATTR4]]
 ; CGSCC-NEXT:    [[Z:%.*]] = add nsw i8 [[X]], [[Y]]
 ; CGSCC-NEXT:    ret i8 [[Z]]
@@ -107,7 +107,7 @@ define i8 @call_simplifiable_2() {
 ; CGSCC-NEXT:    store i8 2, i8* [[I0]], align 2
 ; CGSCC-NEXT:    [[I1:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 3
 ; CGSCC-NEXT:    store i8 3, i8* [[I1]], align 1
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @sum_two_same_loads(i8* nocapture nofree noundef nonnull readonly align 2 dereferenceable(1022) [[I0]])
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @sum_two_same_loads(i8* nocapture nofree noundef nonnull readonly align 2 dereferenceable(1022) [[I0]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -137,7 +137,7 @@ define i8 @call_simplifiable_3() {
 ; CGSCC-NEXT:    [[I0:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 0
 ; CGSCC-NEXT:    [[I2:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 2
 ; CGSCC-NEXT:    store i8 2, i8* [[I2]], align 2
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @read_arg_index(i8* nocapture nofree noundef nonnull readonly align 16 dereferenceable(1024) [[I0]])
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @read_arg_index(i8* nocapture nofree noundef nonnull readonly align 16 dereferenceable(1024) [[I0]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -219,7 +219,7 @@ define i8 @call_partially_simplifiable_1() {
 ; CGSCC-NEXT:    store i8 3, i8* [[I3]], align 1
 ; CGSCC-NEXT:    [[I4:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 4
 ; CGSCC-NEXT:    store i8 4, i8* [[I4]], align 4
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @sum_two_different_loads(i8* nocapture nofree noundef nonnull readonly align 2 dereferenceable(1022) [[I2]], i8* nocapture nofree noundef nonnull readonly dereferenceable(1021) [[I3]])
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @sum_two_different_loads(i8* nocapture nofree noundef nonnull readonly align 2 dereferenceable(1022) [[I2]], i8* nocapture nofree noundef nonnull readonly dereferenceable(1021) [[I3]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -264,7 +264,7 @@ define i8 @call_partially_simplifiable_2(i1 %cond) {
 ; CGSCC-NEXT:    [[I54:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[BYTES]], i64 0, i64 54
 ; CGSCC-NEXT:    store i8 4, i8* [[I54]], align 2
 ; CGSCC-NEXT:    [[SEL:%.*]] = select i1 [[COND]], i8* [[I51]], i8* [[I52]]
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @sum_two_different_loads(i8* nocapture nofree noundef nonnull readonly dereferenceable(972) [[SEL]], i8* nocapture nofree noundef nonnull readonly dereferenceable(971) [[I53]])
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @sum_two_different_loads(i8* nocapture nofree noundef nonnull readonly dereferenceable(972) [[SEL]], i8* nocapture nofree noundef nonnull readonly dereferenceable(971) [[I53]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
 entry:
@@ -286,7 +286,7 @@ entry:
 ; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; TUNIT: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn memory(read) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
