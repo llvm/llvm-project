@@ -270,12 +270,11 @@ public:
 
     PyArrayAttributeIterator &dunderIter() { return *this; }
 
-    PyAttribute dunderNext() {
+    MlirAttribute dunderNext() {
       // TODO: Throw is an inefficient way to stop iteration.
       if (nextIndex >= mlirArrayAttrGetNumElements(attr.get()))
         throw py::stop_iteration();
-      return PyAttribute(attr.getContext(),
-                         mlirArrayAttrGetElement(attr.get(), nextIndex++));
+      return mlirArrayAttrGetElement(attr.get(), nextIndex++);
     }
 
     static void bind(py::module &m) {
@@ -290,8 +289,8 @@ public:
     int nextIndex = 0;
   };
 
-  PyAttribute getItem(intptr_t i) {
-    return PyAttribute(getContext(), mlirArrayAttrGetElement(*this, i));
+  MlirAttribute getItem(intptr_t i) {
+    return mlirArrayAttrGetElement(*this, i);
   }
 
   static void bindDerived(ClassTy &c) {
@@ -843,13 +842,11 @@ public:
                                  return mlirDenseElementsAttrIsSplat(self);
                                })
         .def("get_splat_value",
-             [](PyDenseElementsAttribute &self) -> PyAttribute {
-               if (!mlirDenseElementsAttrIsSplat(self)) {
+             [](PyDenseElementsAttribute &self) {
+               if (!mlirDenseElementsAttrIsSplat(self))
                  throw py::value_error(
                      "get_splat_value called on a non-splat attribute");
-               }
-               return PyAttribute(self.getContext(),
-                                  mlirDenseElementsAttrGetSplatValue(self));
+               return mlirDenseElementsAttrGetSplatValue(self);
              })
         .def_buffer(&PyDenseElementsAttribute::accessBuffer);
   }
@@ -1018,10 +1015,9 @@ public:
     c.def("__getitem__", [](PyDictAttribute &self, const std::string &name) {
       MlirAttribute attr =
           mlirDictionaryAttrGetElementByName(self, toMlirStringRef(name));
-      if (mlirAttributeIsNull(attr)) {
+      if (mlirAttributeIsNull(attr))
         throw py::key_error("attempt to access a non-existent attribute");
-      }
-      return PyAttribute(self.getContext(), attr);
+      return attr;
     });
     c.def("__getitem__", [](PyDictAttribute &self, intptr_t index) {
       if (index < 0 || index >= self.dunderLen()) {
