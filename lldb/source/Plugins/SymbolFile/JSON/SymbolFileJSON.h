@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_JSON_SYMBOLFILETEXT_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_JSON_SYMBOLFILETEXT_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLFILE_JSON_SYMBOLFILEJSON_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLFILE_JSON_SYMBOLFILEJSON_H
 
 #include <map>
 #include <optional>
@@ -37,7 +37,7 @@ public:
 
   static void Terminate();
 
-  static llvm::StringRef GetPluginNameStatic() { return "text"; }
+  static llvm::StringRef GetPluginNameStatic() { return "JSON"; }
 
   static llvm::StringRef GetPluginDescriptionStatic();
 
@@ -107,4 +107,4 @@ private:
 };
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_JSON_SYMBOLFILETEXT_H
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_JSON_SYMBOLFILEJSON_H

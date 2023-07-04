@@ -6,6 +6,7 @@ add_flang_library(FortranLower
   Bridge.cpp
   CallInterface.cpp
   Coarray.cpp
+  ComponentPath.cpp
   ConvertArrayConstructor.cpp
   ConvertCall.cpp
   ConvertConstant.cpp
@@ -14,9 +15,9 @@ add_flang_library(FortranLower
   ConvertProcedureDesignator.cpp
   ConvertType.cpp
   ConvertVariable.cpp
-  ComponentPath.cpp
   CustomIntrinsicCall.cpp
   DumpEvaluateExpr.cpp
+  HlfirIntrinsics.cpp
   HostAssociations.cpp
   IO.cpp
   IterationSpace.cpp

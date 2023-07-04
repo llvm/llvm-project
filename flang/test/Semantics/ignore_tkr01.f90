@@ -201,6 +201,7 @@ program test
   call t4(x)
   call t4(m)
   call t5(x)
+  !WARNING: Actual argument array is smaller (2 element(s)) than dummy argument 'm=' array (4)
   call t5(a)
 
   call t6(1)

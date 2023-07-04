@@ -155,10 +155,11 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       }
     }
   } else if (name == "isnan" || name == "__builtin_ieee_is_nan") {
-    using DefaultReal = Type<TypeCategory::Real, 4>;
     // Only replace the type of the function if we can do the fold
     if (args[0] && args[0]->UnwrapExpr() &&
         IsActuallyConstant(*args[0]->UnwrapExpr())) {
+      auto restorer{context.messages().DiscardMessages()};
+      using DefaultReal = Type<TypeCategory::Real, 4>;
       return FoldElementalIntrinsic<T, DefaultReal>(context, std::move(funcRef),
           ScalarFunc<T, DefaultReal>([](const Scalar<DefaultReal> &x) {
             return Scalar<T>{x.IsNotANumber()};

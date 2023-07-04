@@ -1785,7 +1785,8 @@ void GlobalOp::print(OpAsmPrinter &p) {
                            getGlobalTypeAttrName(), getConstantAttrName(),
                            getValueAttrName(), getLinkageAttrName(),
                            getUnnamedAddrAttrName(), getThreadLocal_AttrName(),
-                           getVisibility_AttrName(), getComdatAttrName()});
+                           getVisibility_AttrName(), getComdatAttrName(),
+                           getUnnamedAddrAttrName()});
 
   // Print the trailing type unless it's a string global.
   if (llvm::dyn_cast_or_null<StringAttr>(getValueOrNull()))
@@ -2246,6 +2247,12 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
                           parseOptionalLLVMKeyword<LLVM::Visibility, int64_t>(
                               parser, result, LLVM::Visibility::Default)));
 
+  // Parse optional UnnamedAddr, default to None.
+  result.addAttribute(getUnnamedAddrAttrName(result.name),
+                      parser.getBuilder().getI64IntegerAttr(
+                          parseOptionalLLVMKeyword<UnnamedAddr, int64_t>(
+                              parser, result, LLVM::UnnamedAddr::None)));
+
   // Default to C Calling Convention if no keyword is provided.
   result.addAttribute(
       getCConvAttrName(result.name),
@@ -2309,6 +2316,11 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   StringRef visibility = stringifyVisibility(getVisibility_());
   if (!visibility.empty())
     p << visibility << ' ';
+  if (auto unnamedAddr = getUnnamedAddr()) {
+    StringRef str = stringifyUnnamedAddr(*unnamedAddr);
+    if (!str.empty())
+      p << str << ' ';
+  }
   if (getCConv() != LLVM::CConv::C)
     p << stringifyCConv(getCConv()) << ' ';
 
@@ -2336,7 +2348,7 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
       p, *this,
       {getFunctionTypeAttrName(), getArgAttrsAttrName(), getResAttrsAttrName(),
        getLinkageAttrName(), getCConvAttrName(), getVisibility_AttrName(),
-       getComdatAttrName()});
+       getComdatAttrName(), getUnnamedAddrAttrName()});
 
   // Print the body if this is not an external function.
   Region &body = getBody();

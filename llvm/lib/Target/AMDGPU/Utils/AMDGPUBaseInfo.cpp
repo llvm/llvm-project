@@ -95,6 +95,24 @@ unsigned getVmcntBitWidthHi(unsigned VersionMajor) {
   return (VersionMajor == 9 || VersionMajor == 10) ? 2 : 0;
 }
 
+/// \returns VmVsrc bit width
+inline unsigned getVmVsrcBitWidth() { return 3; }
+
+/// \returns VmVsrc bit shift
+inline unsigned getVmVsrcBitShift() { return 2; }
+
+/// \returns VaVdst bit width
+inline unsigned getVaVdstBitWidth() { return 4; }
+
+/// \returns VaVdst bit shift
+inline unsigned getVaVdstBitShift() { return 12; }
+
+/// \returns SaSdst bit width
+inline unsigned getSaSdstBitWidth() { return 1; }
+
+/// \returns SaSdst bit shift
+inline unsigned getSaSdstBitShift() { return 0; }
+
 } // end namespace anonymous
 
 namespace llvm {
@@ -1499,6 +1517,42 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                  const MCSubtargetInfo &STI) {
   return encodeCustomOperand(DepCtrInfo, DEP_CTR_SIZE, Name, Val, UsedOprMask,
                              STI);
+}
+
+unsigned decodeFieldVmVsrc(unsigned Encoded) {
+  return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
+}
+
+unsigned decodeFieldVaVdst(unsigned Encoded) {
+  return unpackBits(Encoded, getVaVdstBitShift(), getVaVdstBitWidth());
+}
+
+unsigned decodeFieldSaSdst(unsigned Encoded) {
+  return unpackBits(Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
+}
+
+unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
+  return packBits(VmVsrc, Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
+}
+
+unsigned encodeFieldVmVsrc(unsigned VmVsrc) {
+  return encodeFieldVmVsrc(0xffff, VmVsrc);
+}
+
+unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst) {
+  return packBits(VaVdst, Encoded, getVaVdstBitShift(), getVaVdstBitWidth());
+}
+
+unsigned encodeFieldVaVdst(unsigned VaVdst) {
+  return encodeFieldVaVdst(0xffff, VaVdst);
+}
+
+unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst) {
+  return packBits(SaSdst, Encoded, getSaSdstBitShift(), getSaSdstBitWidth());
+}
+
+unsigned encodeFieldSaSdst(unsigned SaSdst) {
+  return encodeFieldSaSdst(0xffff, SaSdst);
 }
 
 } // namespace DepCtr
