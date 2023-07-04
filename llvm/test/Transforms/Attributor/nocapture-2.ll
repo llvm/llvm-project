@@ -786,5 +786,5 @@ attributes #0 = { noinline nounwind uwtable }
 ; CGSCC: attributes #[[ATTR7]] = { memory(read) }
 ; CGSCC: attributes #[[ATTR8]] = { noinline nounwind memory(read) uwtable }
 ; CGSCC: attributes #[[ATTR9]] = { nounwind memory(read) }
-; CGSCC: attributes #[[ATTR10]] = { nounwind memory(write) }
+; CGSCC: attributes #[[ATTR10]] = { nofree nounwind willreturn memory(write) }
 ;.

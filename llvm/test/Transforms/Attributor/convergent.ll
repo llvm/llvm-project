@@ -20,7 +20,7 @@ define i32 @calls_defined() convergent {
 ; CGSCC: Function Attrs: convergent mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@calls_defined
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
-; CGSCC-NEXT:    [[A:%.*]] = call noundef i32 @defined()
+; CGSCC-NEXT:    [[A:%.*]] = call noundef i32 @defined() #[[ATTR5:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[A]]
 ;
   %a = call i32 @defined()
@@ -94,13 +94,13 @@ define void @calls_intrinsic(i8* %dest, i8* %src, i64 %size) convergent {
 ; TUNIT: Function Attrs: convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@calls_intrinsic
 ; TUNIT-SAME: (ptr nocapture nofree writeonly [[DEST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]], i64 [[SIZE:%.*]]) #[[ATTR2:[0-9]+]] {
-; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture nofree writeonly [[DEST]], ptr noalias nocapture nofree readonly [[SRC]], i64 [[SIZE]], i1 noundef false)
+; TUNIT-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture nofree writeonly [[DEST]], ptr noalias nocapture nofree readonly [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR4:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@calls_intrinsic
 ; CGSCC-SAME: (ptr nocapture nofree writeonly [[DEST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]], i64 [[SIZE:%.*]]) #[[ATTR3:[0-9]+]] {
-; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture nofree writeonly [[DEST]], ptr noalias nocapture nofree readonly [[SRC]], i64 [[SIZE]], i1 noundef false)
+; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture nofree writeonly [[DEST]], ptr noalias nocapture nofree readonly [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR5]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %dest, i8* %src, i64 %size, i1 false)
@@ -111,10 +111,12 @@ define void @calls_intrinsic(i8* %dest, i8* %src, i64 %size) convergent {
 ; TUNIT: attributes #[[ATTR1]] = { convergent }
 ; TUNIT: attributes #[[ATTR2]] = { convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR4]] = { nofree willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { convergent mustprogress nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { convergent }
 ; CGSCC: attributes #[[ATTR3]] = { convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR5]] = { nofree willreturn }
 ;.

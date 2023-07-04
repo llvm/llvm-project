@@ -32,7 +32,7 @@ define void @fn2(ptr %P, i1 %C) {
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    [[E_2:%.*]] = phi ptr [ [[P]], [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[E_2]], align 4
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]])
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    store i32 [[CALL]], ptr [[P]], align 4
 ; CGSCC-NEXT:    br label [[FOR_COND1]]
 ; CGSCC:       exit:
@@ -95,7 +95,7 @@ define void @fn_no_null_opt(ptr %P, i1 %C) null_pointer_is_valid {
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    [[E_2:%.*]] = phi ptr [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr null, align 4294967296
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]]) #[[ATTR3]]
 ; CGSCC-NEXT:    store i32 [[CALL]], ptr [[P]], align 4
 ; CGSCC-NEXT:    br label [[FOR_COND1]]
 ; CGSCC:       exit:
@@ -138,4 +138,5 @@ entry:
 ; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind null_pointer_is_valid }
+; CGSCC: attributes #[[ATTR3]] = { nofree }
 ;.

@@ -58,5 +58,5 @@ define i32 @foo(ptr %A) {
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: read) }
-; CGSCC: attributes #[[ATTR2]] = { memory(read) }
+; CGSCC: attributes #[[ATTR2]] = { nofree willreturn memory(read) }
 ;.

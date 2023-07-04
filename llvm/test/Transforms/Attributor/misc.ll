@@ -104,5 +104,5 @@ declare void @callback2(ptr)
 ; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(write) }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR1]] = { nounwind memory(write) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nounwind willreturn memory(write) }
 ;.
