@@ -79,6 +79,8 @@ public:
     {
         _LIBCPP_ASSERT_UNCATEGORIZED(__expected >= 0,
                                      "__expected cannot be negative");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__expected > max(),
+                                     "__expected cannot be greater than max()");
     }
 
     _LIBCPP_HIDE_FROM_ABI ~latch() = default;
