@@ -1773,8 +1773,8 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
     // All intrinsic elemental functions are pure.
     const bool isFunction = callContext.resultType.has_value();
     return ElementalIntrinsicCallBuilder{intrinsic, argLowering, isFunction}
-        .genElementalCall(loweredActuals, /*isImpure=*/!isFunction, callContext)
-        .value();
+        .genElementalCall(loweredActuals, /*isImpure=*/!isFunction,
+                          callContext);
   }
   std::optional<hlfir::EntityWithAttributes> result = genHLFIRIntrinsicRefCore(
       loweredActuals, intrinsic, argLowering, callContext);
