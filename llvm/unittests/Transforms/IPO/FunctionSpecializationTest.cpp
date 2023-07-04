@@ -281,8 +281,8 @@ TEST_F(FunctionSpecializationTest, Misc) {
   Ref = getInstCost(Gep) + getInstCost(Load) + getInstCost(Freeze) +
         getInstCost(Smax);
   Bonus = Specializer.getSpecializationBonus(F->getArg(2), GV, Visitor);
-  EXPECT_NE(Bonus, Ref);
-  EXPECT_FALSE(Bonus > 0);
+  EXPECT_EQ(Bonus, Ref);
+  EXPECT_TRUE(Bonus > 0);
 
   Bonus = Specializer.getSpecializationBonus(F->getArg(3), Undef, Visitor);
   EXPECT_TRUE(Bonus == 0);
