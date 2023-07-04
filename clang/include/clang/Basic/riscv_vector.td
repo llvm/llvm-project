@@ -413,10 +413,20 @@ multiclass RVVFloatingWidenBinBuiltinSet
                          [["vv", "w", "wvv"],
                           ["vf", "w", "wve"]]>;
 
+multiclass RVVFloatingWidenBinBuiltinSetRoundingMode
+    : RVVWidenBuiltinSet<NAME, "xf",
+                         [["vv", "w", "wvvu"],
+                          ["vf", "w", "wveu"]]>;
+
 multiclass RVVFloatingWidenOp0BinBuiltinSet
     : RVVWidenWOp0BuiltinSet<NAME # "_w", "xf",
                              [["wv", "w", "wwv"],
                               ["wf", "w", "wwe"]]>;
+
+multiclass RVVFloatingWidenOp0BinBuiltinSetRoundingMode
+    : RVVWidenWOp0BuiltinSet<NAME # "_w", "xf",
+                             [["wv", "w", "wwvu"],
+                              ["wf", "w", "wweu"]]>;
 
 defvar TypeList = ["c","s","i","l","x","f","d"];
 defvar EEWList = [["8", "(Log2EEW:3)"],
@@ -1930,20 +1940,79 @@ let ManualCodegen = [{
     defm vfadd  : RVVFloatingBinBuiltinSetRoundingMode;
     defm vfsub  : RVVFloatingBinBuiltinSetRoundingMode;
     defm vfrsub : RVVFloatingBinVFBuiltinSetRoundingMode;
+
+    // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+    // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
+    defm vfwadd : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
+    defm vfwsub : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
   }
   // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
   defm vfadd  : RVVFloatingBinBuiltinSet;
   defm vfsub  : RVVFloatingBinBuiltinSet;
   defm vfrsub : RVVFloatingBinVFBuiltinSet;
+
+  // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+  // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
+  defm vfwadd : RVVFloatingWidenOp0BinBuiltinSet;
+  defm vfwsub : RVVFloatingWidenOp0BinBuiltinSet;
 }
 
-// 14.3. Vector Widening Floating-Point Add/Subtract Instructions
-// Widening FP add/subtract, 2*SEW = SEW +/- SEW
-defm vfwadd : RVVFloatingWidenBinBuiltinSet;
-defm vfwsub : RVVFloatingWidenBinBuiltinSet;
-// Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
-defm vfwadd : RVVFloatingWidenOp0BinBuiltinSet;
-defm vfwsub : RVVFloatingWidenOp0BinBuiltinSet;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+                      Ops.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = true in {
+    // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+    // Widening FP add/subtract, 2*SEW = SEW +/- SEW
+    defm vfwadd : RVVFloatingWidenBinBuiltinSetRoundingMode;
+    defm vfwsub : RVVFloatingWidenBinBuiltinSetRoundingMode;
+  }
+  // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+  // Widening FP add/subtract, 2*SEW = SEW +/- SEW
+  defm vfwadd : RVVFloatingWidenBinBuiltinSet;
+  defm vfwsub : RVVFloatingWidenBinBuiltinSet;
+}
 
 // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm vfmul  : RVVFloatingBinBuiltinSet;
