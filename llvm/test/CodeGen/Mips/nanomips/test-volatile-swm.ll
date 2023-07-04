@@ -4,7 +4,7 @@ target triple = "nanomips"
 
 %struct.S = type { i32, i32 }
 
-declare dso_local inreg { i32, i32 } @GetStruct(...) local_unnamed_addr 
+declare dso_local inreg { i32, i32 } @GetStruct(...) local_unnamed_addr
 
 define dso_local void @test(%struct.S* %p, i32 signext %i) local_unnamed_addr {
 entry:
@@ -20,5 +20,4 @@ entry:
   store volatile i32 %0, i32* %A26, align 4
   ret void
 }
-; CHECK: astemunhtobeix
 
