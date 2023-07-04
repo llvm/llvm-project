@@ -46,6 +46,10 @@ uint64_t config::getDynamicMemorySize() {
   return __omp_rtl_device_environment.DynamicMemSize;
 }
 
+uint64_t config::getClockFrequency() {
+  return __omp_rtl_device_environment.ClockFrequency;
+}
+
 bool config::isDebugMode(config::DebugKind Kind) {
   return config::getDebugKind() & Kind;
 }
