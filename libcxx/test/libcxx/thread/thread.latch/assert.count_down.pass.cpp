@@ -1,0 +1,35 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// <latch>
+//
+// void count_down(ptrdiff_t __update = 1) const noexcept;
+
+// Make sure that calling count_down with a value higher than the internal
+// counter triggers an assertion.
+
+// REQUIRES: has-unix-headers
+// XFAIL: availability-verbose_abort-missing
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
+
+#include <latch>
+
+#include "check_assertion.h"
+
+int main(int, char **) {
+  {
+    std::latch l(5);
+
+    TEST_LIBCPP_ASSERT_FAILURE(l.count_down(10),
+                               "latch::count_down() called with value greater "
+                               "than the internal counter");
+  }
+
+  return 0;
+}
