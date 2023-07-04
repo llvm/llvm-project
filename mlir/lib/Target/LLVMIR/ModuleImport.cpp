@@ -1749,6 +1749,9 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   if (func->hasComdat())
     funcOp.setComdatAttr(comdatMapping.lookup(func->getComdat()));
 
+  if (llvm::MaybeAlign maybeAlign = func->getAlign())
+    funcOp.setAlignment(maybeAlign->value());
+
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);
 

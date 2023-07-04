@@ -207,7 +207,13 @@ module {
 
   // CHECK-LABEL: local_unnamed_addr @local_unnamed_addr_func
   llvm.func local_unnamed_addr @local_unnamed_addr_func() {
-      llvm.return
+    llvm.return
+  }
+
+  // CHECK-LABEL: @align_func
+  // CHECK-SAME: attributes {alignment = 2 : i64}
+  llvm.func @align_func() attributes {alignment = 2 : i64} {
+    llvm.return
   }
 
   // CHECK: llvm.comdat @__llvm_comdat
