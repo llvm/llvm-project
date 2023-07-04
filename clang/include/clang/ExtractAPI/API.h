@@ -80,6 +80,7 @@ struct APIRecord {
     RK_ObjCInstanceMethod,
     RK_ObjCInterface,
     RK_ObjCCategory,
+    RK_ObjCCategoryModule,
     RK_ObjCProtocol,
     RK_MacroDefinition,
     RK_Typedef,
@@ -152,6 +153,9 @@ public:
         Availabilities(std::move(Availabilities)), Linkage(Linkage),
         Comment(Comment), Declaration(Declaration), SubHeading(SubHeading),
         IsFromSystemHeader(IsFromSystemHeader), Kind(Kind) {}
+
+  APIRecord(RecordKind Kind, StringRef USR, StringRef Name)
+      : USR(USR), Name(Name), Kind(Kind) {}
 
   // Pure virtual destructor to make APIRecord abstract
   virtual ~APIRecord() = 0;
@@ -643,6 +647,8 @@ private:
 /// This holds information associated with Objective-C categories.
 struct ObjCCategoryRecord : ObjCContainerRecord {
   SymbolReference Interface;
+  /// Determine whether the Category is derived from external class interface.
+  bool IsFromExternalModule = false;
 
   ObjCCategoryRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
                      AvailabilitySet Availabilities, const DocComment &Comment,
@@ -895,7 +901,7 @@ public:
                   AvailabilitySet Availability, const DocComment &Comment,
                   DeclarationFragments Declaration,
                   DeclarationFragments SubHeading, SymbolReference Interface,
-                  bool IsFromSystemHeader);
+                  bool IsFromSystemHeader, bool IsFromExternalModule);
 
   /// Create and add an Objective-C interface record into the API set.
   ///

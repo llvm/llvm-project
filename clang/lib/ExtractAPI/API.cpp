@@ -209,15 +209,16 @@ ObjCCategoryRecord *APISet::addObjCCategory(
     StringRef Name, StringRef USR, PresumedLoc Loc,
     AvailabilitySet Availabilities, const DocComment &Comment,
     DeclarationFragments Declaration, DeclarationFragments SubHeading,
-    SymbolReference Interface, bool IsFromSystemHeader) {
+    SymbolReference Interface, bool IsFromSystemHeader,
+    bool IsFromExternalModule) {
   // Create the category record.
   auto *Record =
       addTopLevelRecord(USRBasedLookupTable, ObjCCategories, USR, Name, Loc,
                         std::move(Availabilities), Comment, Declaration,
                         SubHeading, Interface, IsFromSystemHeader);
 
-  // If this category is extending a known interface, associate it with the
-  // ObjCInterfaceRecord.
+  Record->IsFromExternalModule = IsFromExternalModule;
+
   auto It = ObjCInterfaces.find(Interface.USR);
   if (It != ObjCInterfaces.end())
     It->second->Categories.push_back(Record);

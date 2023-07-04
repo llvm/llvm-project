@@ -578,9 +578,17 @@ bool ExtractAPIVisitorBase<Derived>::VisitObjCCategoryDecl(
   SymbolReference Interface(InterfaceDecl->getName(),
                             API.recordUSR(InterfaceDecl));
 
+  bool IsFromExternalModule = true;
+  for (const auto &Interface : API.getObjCInterfaces()) {
+    if (InterfaceDecl->getName() == Interface.second.get()->Name) {
+      IsFromExternalModule = false;
+      break;
+    }
+  }
+
   ObjCCategoryRecord *ObjCCategoryRecord = API.addObjCCategory(
       Name, USR, Loc, AvailabilitySet(Decl), Comment, Declaration, SubHeading,
-      Interface, isInSystemHeader(Decl));
+      Interface, isInSystemHeader(Decl), IsFromExternalModule);
 
   getDerivedExtractAPIVisitor().recordObjCMethods(ObjCCategoryRecord,
                                                   Decl->methods());
