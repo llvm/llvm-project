@@ -176,16 +176,17 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   Attribute memorySpace =
       getMemorySpace().has_value() ? getMemorySpace().value() : Attribute();
-  SmallVector<Value> replacements;
   SmallVector<Value> allocatedBuffers;
-  for (Value value : state.getPayloadValues(getTarget())) {
-    Value replacement;
-    Value buffer = linalg::bufferizeToAllocation(rewriter, value, memorySpace,
-                                                 &replacement);
-    replacements.push_back(replacement);
+  for (Operation *op : state.getPayloadOps(getTarget())) {
+    Value buffer = linalg::bufferizeToAllocation(rewriter, op, memorySpace);
+    if (!buffer) {
+      DiagnosedSilenceableFailure diag = emitSilenceableError()
+                                         << "failed to bufferize operation";
+      diag.attachNote(op->getLoc()) << "target payload op";
+      return diag;
+    }
     allocatedBuffers.push_back(buffer);
   }
-  results.setValues(cast<OpResult>(getReplacement()), replacements);
   results.setValues(cast<OpResult>(getAllocatedBuffer()), allocatedBuffers);
   return DiagnosedSilenceableFailure::success();
 }
@@ -193,7 +194,6 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
 void transform::BufferizeToAllocationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
-  producesHandle(getReplacement(), effects);
   producesHandle(getAllocatedBuffer(), effects);
   modifiesPayload(effects);
 }

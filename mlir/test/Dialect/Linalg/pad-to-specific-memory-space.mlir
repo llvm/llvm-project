@@ -54,8 +54,7 @@ transform.sequence failures(propagate) {
     padding_dimensions=[0, 1, 2],
     pack_paddings=[1, 1, 1]
   } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-  %pad_result = transform.get_result %pad[0] : (!transform.any_op) -> !transform.any_value
-  %buffer, %replacement = transform.structured.bufferize_to_allocation %pad_result {memory_space = 3}
+  %buffer = transform.structured.bufferize_to_allocation %pad {memory_space = 3} : !transform.any_op
   %2 = transform.bufferization.one_shot_bufferize %arg1 {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
 
 }
