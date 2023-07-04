@@ -18,8 +18,9 @@
 
 // Not very portable
 
-#include <thread>
 #include <cassert>
+#include <functional>
+#include <thread>
 
 #include "test_macros.h"
 

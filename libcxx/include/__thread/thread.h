@@ -18,8 +18,10 @@
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
 #include <__system_error/system_error.h>
+#include <__thread/id.h>
 #include <__threading_support>
 #include <__utility/forward.h>
+#include <iosfwd>
 #include <tuple>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
