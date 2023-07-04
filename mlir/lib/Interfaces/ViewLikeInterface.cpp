@@ -102,7 +102,8 @@ static char getRightDelimiter(AsmParser::Delimiter delimiter) {
 void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                  OperandRange values,
                                  ArrayRef<int64_t> integers,
-                                 TypeRange valueTypes, ArrayRef<bool> scalables,
+                                 TypeRange valueTypes,
+                                 BoolAttr isTrailingIdxScalable,
                                  AsmParser::Delimiter delimiter) {
   char leftDelimiter = getLeftDelimiter(delimiter);
   char rightDelimiter = getRightDelimiter(delimiter);
@@ -112,24 +113,33 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
     return;
   }
 
-  unsigned dynamicValIdx = 0;
-  unsigned scalableIndexIdx = 0;
+  int64_t trailingScalableInteger;
+  if (isTrailingIdxScalable && isTrailingIdxScalable.getValue()) {
+    // ATM only the trailing idx can be scalable
+    trailingScalableInteger = integers.back();
+    integers = integers.drop_back();
+  }
+
+  unsigned idx = 0;
   llvm::interleaveComma(integers, printer, [&](int64_t integer) {
-    if (not scalables.empty() && scalables[scalableIndexIdx])
-      printer << "[";
     if (ShapedType::isDynamic(integer)) {
-      printer << values[dynamicValIdx];
+      printer << values[idx];
       if (!valueTypes.empty())
-        printer << " : " << valueTypes[dynamicValIdx];
-      ++dynamicValIdx;
+        printer << " : " << valueTypes[idx];
+      ++idx;
     } else {
       printer << integer;
     }
-    if (!scalables.empty() && scalables[scalableIndexIdx])
-      printer << "]";
-
-    scalableIndexIdx++;
   });
+
+  // Print the trailing scalable index
+  if (isTrailingIdxScalable && isTrailingIdxScalable.getValue()) {
+    if (!integers.empty())
+      printer << ", ";
+    printer << "[";
+    printer << trailingScalableInteger;
+    printer << "]";
+  }
 
   printer << rightDelimiter;
 }
@@ -137,17 +147,25 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 ParseResult mlir::parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalables,
+    DenseI64ArrayAttr &integers, bool *isTrailingIdxScalable,
     SmallVectorImpl<Type> *valueTypes, AsmParser::Delimiter delimiter) {
 
   SmallVector<int64_t, 4> integerVals;
-  SmallVector<bool, 4> scalableVals;
+  bool foundScalable = false;
   auto parseIntegerOrValue = [&]() {
     OpAsmParser::UnresolvedOperand operand;
     auto res = parser.parseOptionalOperand(operand);
 
-    // When encountering `[`, assume that this is a scalable index.
-    scalableVals.push_back(parser.parseOptionalLSquare().succeeded());
+    // If `foundScalable` has already been set to `true` then a non-trailing
+    // index was identified as scalable.
+    if (foundScalable) {
+      parser.emitError(parser.getNameLoc())
+          << "non-trailing index cannot be scalable";
+      return failure();
+    }
+
+    if (isTrailingIdxScalable && parser.parseOptionalLSquare().succeeded())
+      foundScalable = true;
 
     if (res.has_value() && succeeded(res.value())) {
       values.push_back(operand);
@@ -160,10 +178,7 @@ ParseResult mlir::parseDynamicIndexList(
         return failure();
       integerVals.push_back(integer);
     }
-
-    // If this is assumed to be a scalable index, verify that there's a closing
-    // `]`.
-    if (scalableVals.back() && parser.parseOptionalRSquare().failed())
+    if (foundScalable && parser.parseOptionalRSquare().failed())
       return failure();
     return success();
   };
@@ -172,7 +187,8 @@ ParseResult mlir::parseDynamicIndexList(
     return parser.emitError(parser.getNameLoc())
            << "expected SSA value or integer";
   integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
-  scalables = parser.getBuilder().getDenseBoolArrayAttr(scalableVals);
+  if (isTrailingIdxScalable)
+    *isTrailingIdxScalable = foundScalable;
   return success();
 }
 
