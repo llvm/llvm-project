@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=arm-eabi %s -o /dev/null
 ; RUN: llc -mtriple=thumbv6m-eabi -mattr=+execute-only %s -o - -filetype=obj | \
-; RUN:   llvm-objdump -d --no-leading-addr --no-show-raw-insn - | Filecheck %s
-
+; RUN:   llvm-objdump -d --no-leading-addr --no-show-raw-insn - | FileCheck %s
+c
 define void @test1() {
 ; CHECK-LABEL: <test1>:
 ;; are we using correct prologue immediate materialization pattern for
