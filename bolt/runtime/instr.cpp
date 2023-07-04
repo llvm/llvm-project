@@ -1515,19 +1515,21 @@ extern "C" void __bolt_instr_clear_counters() {
 ///    on demand.
 ///
 extern "C" void __attribute((force_align_arg_pointer))
-__bolt_instr_data_dump() {
+__bolt_instr_data_dump(int FD) {
   // Already dumping
   if (!GlobalWriteProfileMutex->acquire())
     return;
 
+  int ret = __lseek(FD, 0, SEEK_SET);
+  assert(ret == 0, "Failed to lseek!");
+  ret = __ftruncate(FD, 0);
+  assert(ret == 0, "Failed to ftruncate!");
   BumpPtrAllocator HashAlloc;
   HashAlloc.setMaxSize(0x6400000);
   ProfileWriterContext Ctx = readDescriptions();
   Ctx.CallFlowTable = new (HashAlloc, 0) CallFlowHashTable(HashAlloc);
 
   DEBUG(printStats(Ctx));
-
-  int FD = openProfile();
 
   BumpPtrAllocator Alloc;
   Alloc.setMaxSize(0x6400000);
@@ -1544,7 +1546,6 @@ __bolt_instr_data_dump() {
   Ctx.CallFlowTable->forEachElement(visitCallFlowEntry, FD, &Ctx);
 
   __fsync(FD);
-  __close(FD);
   __munmap(Ctx.MMapPtr, Ctx.MMapSize);
   __close(Ctx.FileDesc);
   HashAlloc.destroy();
@@ -1557,6 +1558,7 @@ __bolt_instr_data_dump() {
 void watchProcess() {
   timespec ts, rem;
   uint64_t Ellapsed = 0ull;
+  int FD = openProfile();
   uint64_t ppid;
   if (__bolt_instr_wait_forks) {
     // Store parent pgid
@@ -1568,7 +1570,7 @@ void watchProcess() {
     ppid = __getppid();
     if (ppid == 1) {
       // Parent already dead
-      __bolt_instr_data_dump();
+      __bolt_instr_data_dump(FD);
       goto out;
     }
   }
@@ -1581,7 +1583,7 @@ void watchProcess() {
     // so no need for us to keep dumping.
     if (__kill(ppid, 0) < 0) {
       if (__bolt_instr_no_counters_clear)
-        __bolt_instr_data_dump();
+        __bolt_instr_data_dump(FD);
       break;
     }
 
@@ -1589,13 +1591,14 @@ void watchProcess() {
       continue;
 
     Ellapsed = 0;
-    __bolt_instr_data_dump();
+    __bolt_instr_data_dump(FD);
     if (__bolt_instr_no_counters_clear == false)
       __bolt_instr_clear_counters();
   }
 
 out:;
   DEBUG(report("My parent process is dead, bye!\n"));
+  __close(FD);
   __exit(0);
 }
 
@@ -1691,8 +1694,11 @@ extern "C" __attribute((naked)) void __bolt_instr_start()
 /// This is hooking into ELF's DT_FINI
 extern "C" void __bolt_instr_fini() {
   __bolt_fini_trampoline();
-  if (__bolt_instr_sleep_time == 0)
-    __bolt_instr_data_dump();
+  if (__bolt_instr_sleep_time == 0) {
+    int FD = openProfile();
+    __bolt_instr_data_dump(FD);
+    __close(FD);
+  }
   DEBUG(report("Finished.\n"));
 }
 
