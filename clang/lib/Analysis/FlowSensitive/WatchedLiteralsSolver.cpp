@@ -17,8 +17,8 @@
 #include <queue>
 #include <vector>
 
-#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
+#include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -79,7 +79,7 @@ using ClauseID = uint32_t;
 static constexpr ClauseID NullClause = 0;
 
 /// A boolean formula in conjunctive normal form.
-struct CNFFormula {
+struct BooleanFormula {
   /// `LargestVar` is equal to the largest positive integer that represents a
   /// variable in the formula.
   const Variable LargestVar;
@@ -121,12 +121,12 @@ struct CNFFormula {
   /// clauses in the formula start from the element at index 1.
   std::vector<ClauseID> NextWatched;
 
-  /// Stores the variable identifier and Atom for atomic booleans in the
-  /// formula.
-  llvm::DenseMap<Variable, Atom> Atomics;
+  /// Stores the variable identifier and value location for atomic booleans in
+  /// the formula.
+  llvm::DenseMap<Variable, AtomicBoolValue *> Atomics;
 
-  explicit CNFFormula(Variable LargestVar,
-                      llvm::DenseMap<Variable, Atom> Atomics)
+  explicit BooleanFormula(Variable LargestVar,
+                          llvm::DenseMap<Variable, AtomicBoolValue *> Atomics)
       : LargestVar(LargestVar), Atomics(std::move(Atomics)) {
     Clauses.push_back(0);
     ClauseStarts.push_back(0);
@@ -144,8 +144,8 @@ struct CNFFormula {
   ///
   ///  All literals in the input that are not `NullLit` must be distinct.
   void addClause(Literal L1, Literal L2 = NullLit, Literal L3 = NullLit) {
-    // The literals are guaranteed to be distinct from properties of Formula
-    // and the construction in `buildCNF`.
+    // The literals are guaranteed to be distinct from properties of BoolValue
+    // and the construction in `buildBooleanFormula`.
     assert(L1 != NullLit && L1 != L2 && L1 != L3 &&
            (L2 != L3 || L2 == NullLit));
 
@@ -178,59 +178,98 @@ struct CNFFormula {
 
 /// Converts the conjunction of `Vals` into a formula in conjunctive normal
 /// form where each clause has at least one and at most three literals.
-CNFFormula buildCNF(const llvm::ArrayRef<const Formula *> &Vals) {
+BooleanFormula buildBooleanFormula(const llvm::ArrayRef<BoolValue *> &Vals) {
   // The general strategy of the algorithm implemented below is to map each
   // of the sub-values in `Vals` to a unique variable and use these variables in
   // the resulting CNF expression to avoid exponential blow up. The number of
   // literals in the resulting formula is guaranteed to be linear in the number
-  // of sub-formulas in `Vals`.
+  // of sub-values in `Vals`.
 
-  // Map each sub-formula in `Vals` to a unique variable.
-  llvm::DenseMap<const Formula *, Variable> SubValsToVar;
-  // Store variable identifiers and Atom of atomic booleans.
-  llvm::DenseMap<Variable, Atom> Atomics;
+  // Map each sub-value in `Vals` to a unique variable.
+  llvm::DenseMap<BoolValue *, Variable> SubValsToVar;
+  // Store variable identifiers and value location of atomic booleans.
+  llvm::DenseMap<Variable, AtomicBoolValue *> Atomics;
   Variable NextVar = 1;
   {
-    std::queue<const Formula *> UnprocessedSubVals;
-    for (const Formula *Val : Vals)
+    std::queue<BoolValue *> UnprocessedSubVals;
+    for (BoolValue *Val : Vals)
       UnprocessedSubVals.push(Val);
     while (!UnprocessedSubVals.empty()) {
       Variable Var = NextVar;
-      const Formula *Val = UnprocessedSubVals.front();
+      BoolValue *Val = UnprocessedSubVals.front();
       UnprocessedSubVals.pop();
 
       if (!SubValsToVar.try_emplace(Val, Var).second)
         continue;
       ++NextVar;
 
-      for (const Formula *F : Val->operands())
-        UnprocessedSubVals.push(F);
-      if (Val->kind() == Formula::AtomRef)
-        Atomics[Var] = Val->getAtom();
+      // Visit the sub-values of `Val`.
+      switch (Val->getKind()) {
+      case Value::Kind::Conjunction: {
+        auto *C = cast<ConjunctionValue>(Val);
+        UnprocessedSubVals.push(&C->getLeftSubValue());
+        UnprocessedSubVals.push(&C->getRightSubValue());
+        break;
+      }
+      case Value::Kind::Disjunction: {
+        auto *D = cast<DisjunctionValue>(Val);
+        UnprocessedSubVals.push(&D->getLeftSubValue());
+        UnprocessedSubVals.push(&D->getRightSubValue());
+        break;
+      }
+      case Value::Kind::Negation: {
+        auto *N = cast<NegationValue>(Val);
+        UnprocessedSubVals.push(&N->getSubVal());
+        break;
+      }
+      case Value::Kind::Implication: {
+        auto *I = cast<ImplicationValue>(Val);
+        UnprocessedSubVals.push(&I->getLeftSubValue());
+        UnprocessedSubVals.push(&I->getRightSubValue());
+        break;
+      }
+      case Value::Kind::Biconditional: {
+        auto *B = cast<BiconditionalValue>(Val);
+        UnprocessedSubVals.push(&B->getLeftSubValue());
+        UnprocessedSubVals.push(&B->getRightSubValue());
+        break;
+      }
+      case Value::Kind::TopBool:
+        // Nothing more to do. This `TopBool` instance has already been mapped
+        // to a fresh solver variable (`NextVar`, above) and is thereafter
+        // anonymous. The solver never sees `Top`.
+        break;
+      case Value::Kind::AtomicBool: {
+        Atomics[Var] = cast<AtomicBoolValue>(Val);
+        break;
+      }
+      default:
+        llvm_unreachable("buildBooleanFormula: unhandled value kind");
+      }
     }
   }
 
-  auto GetVar = [&SubValsToVar](const Formula *Val) {
+  auto GetVar = [&SubValsToVar](const BoolValue *Val) {
     auto ValIt = SubValsToVar.find(Val);
     assert(ValIt != SubValsToVar.end());
     return ValIt->second;
   };
 
-  CNFFormula CNF(NextVar - 1, std::move(Atomics));
+  BooleanFormula Formula(NextVar - 1, std::move(Atomics));
   std::vector<bool> ProcessedSubVals(NextVar, false);
 
-  // Add a conjunct for each variable that represents a top-level formula in
-  // `Vals`.
-  for (const Formula *Val : Vals)
-    CNF.addClause(posLit(GetVar(Val)));
+  // Add a conjunct for each variable that represents a top-level conjunction
+  // value in `Vals`.
+  for (BoolValue *Val : Vals)
+    Formula.addClause(posLit(GetVar(Val)));
 
   // Add conjuncts that represent the mapping between newly-created variables
-  // and their corresponding sub-formulas.
-  std::queue<const Formula *> UnprocessedSubVals;
-  for (const Formula *Val : Vals)
+  // and their corresponding sub-values.
+  std::queue<BoolValue *> UnprocessedSubVals;
+  for (BoolValue *Val : Vals)
     UnprocessedSubVals.push(Val);
   while (!UnprocessedSubVals.empty()) {
-    const Formula *Val = UnprocessedSubVals.front();
+    const BoolValue *Val = UnprocessedSubVals.front();
     UnprocessedSubVals.pop();
     const Variable Var = GetVar(Val);
 
@@ -238,107 +277,117 @@ CNFFormula buildCNF(const llvm::ArrayRef<const Formula *> &Vals) {
       continue;
     ProcessedSubVals[Var] = true;
 
-    switch (Val->kind()) {
-    case Formula::AtomRef:
-      break;
-    case Formula::And: {
-      const Variable LHS = GetVar(Val->operands()[0]);
-      const Variable RHS = GetVar(Val->operands()[1]);
+    if (auto *C = dyn_cast<ConjunctionValue>(Val)) {
+      const Variable LeftSubVar = GetVar(&C->getLeftSubValue());
+      const Variable RightSubVar = GetVar(&C->getRightSubValue());
 
-      if (LHS == RHS) {
+      if (LeftSubVar == RightSubVar) {
         // `X <=> (A ^ A)` is equivalent to `(!X v A) ^ (X v !A)` which is
         // already in conjunctive normal form. Below we add each of the
         // conjuncts of the latter expression to the result.
-        CNF.addClause(negLit(Var), posLit(LHS));
-        CNF.addClause(posLit(Var), negLit(LHS));
+        Formula.addClause(negLit(Var), posLit(LeftSubVar));
+        Formula.addClause(posLit(Var), negLit(LeftSubVar));
+
+        // Visit a sub-value of `Val` (pick any, they are identical).
+        UnprocessedSubVals.push(&C->getLeftSubValue());
       } else {
         // `X <=> (A ^ B)` is equivalent to `(!X v A) ^ (!X v B) ^ (X v !A v !B)`
         // which is already in conjunctive normal form. Below we add each of the
         // conjuncts of the latter expression to the result.
-        CNF.addClause(negLit(Var), posLit(LHS));
-        CNF.addClause(negLit(Var), posLit(RHS));
-        CNF.addClause(posLit(Var), negLit(LHS), negLit(RHS));
-      }
-      break;
-    }
-    case Formula::Or: {
-      const Variable LHS = GetVar(Val->operands()[0]);
-      const Variable RHS = GetVar(Val->operands()[1]);
+        Formula.addClause(negLit(Var), posLit(LeftSubVar));
+        Formula.addClause(negLit(Var), posLit(RightSubVar));
+        Formula.addClause(posLit(Var), negLit(LeftSubVar), negLit(RightSubVar));
 
-      if (LHS == RHS) {
+        // Visit the sub-values of `Val`.
+        UnprocessedSubVals.push(&C->getLeftSubValue());
+        UnprocessedSubVals.push(&C->getRightSubValue());
+      }
+    } else if (auto *D = dyn_cast<DisjunctionValue>(Val)) {
+      const Variable LeftSubVar = GetVar(&D->getLeftSubValue());
+      const Variable RightSubVar = GetVar(&D->getRightSubValue());
+
+      if (LeftSubVar == RightSubVar) {
         // `X <=> (A v A)` is equivalent to `(!X v A) ^ (X v !A)` which is
         // already in conjunctive normal form. Below we add each of the
         // conjuncts of the latter expression to the result.
-        CNF.addClause(negLit(Var), posLit(LHS));
-        CNF.addClause(posLit(Var), negLit(LHS));
-      } else {
-        // `X <=> (A v B)` is equivalent to `(!X v A v B) ^ (X v !A) ^ (X v
-        // !B)` which is already in conjunctive normal form. Below we add each
-        // of the conjuncts of the latter expression to the result.
-        CNF.addClause(negLit(Var), posLit(LHS), posLit(RHS));
-        CNF.addClause(posLit(Var), negLit(LHS));
-        CNF.addClause(posLit(Var), negLit(RHS));
-      }
-      break;
-    }
-    case Formula::Not: {
-      const Variable Operand = GetVar(Val->operands()[0]);
+        Formula.addClause(negLit(Var), posLit(LeftSubVar));
+        Formula.addClause(posLit(Var), negLit(LeftSubVar));
 
-      // `X <=> !Y` is equivalent to `(!X v !Y) ^ (X v Y)` which is
-      // already in conjunctive normal form. Below we add each of the
-      // conjuncts of the latter expression to the result.
-      CNF.addClause(negLit(Var), negLit(Operand));
-      CNF.addClause(posLit(Var), posLit(Operand));
-      break;
-    }
-    case Formula::Implies: {
-      const Variable LHS = GetVar(Val->operands()[0]);
-      const Variable RHS = GetVar(Val->operands()[1]);
+        // Visit a sub-value of `Val` (pick any, they are identical).
+        UnprocessedSubVals.push(&D->getLeftSubValue());
+      } else {
+        // `X <=> (A v B)` is equivalent to `(!X v A v B) ^ (X v !A) ^ (X v !B)`
+        // which is already in conjunctive normal form. Below we add each of the
+        // conjuncts of the latter expression to the result.
+        Formula.addClause(negLit(Var), posLit(LeftSubVar), posLit(RightSubVar));
+        Formula.addClause(posLit(Var), negLit(LeftSubVar));
+        Formula.addClause(posLit(Var), negLit(RightSubVar));
+
+        // Visit the sub-values of `Val`.
+        UnprocessedSubVals.push(&D->getLeftSubValue());
+        UnprocessedSubVals.push(&D->getRightSubValue());
+      }
+    } else if (auto *N = dyn_cast<NegationValue>(Val)) {
+      const Variable SubVar = GetVar(&N->getSubVal());
+
+      // `X <=> !Y` is equivalent to `(!X v !Y) ^ (X v Y)` which is already in
+      // conjunctive normal form. Below we add each of the conjuncts of the
+      // latter expression to the result.
+      Formula.addClause(negLit(Var), negLit(SubVar));
+      Formula.addClause(posLit(Var), posLit(SubVar));
+
+      // Visit the sub-values of `Val`.
+      UnprocessedSubVals.push(&N->getSubVal());
+    } else if (auto *I = dyn_cast<ImplicationValue>(Val)) {
+      const Variable LeftSubVar = GetVar(&I->getLeftSubValue());
+      const Variable RightSubVar = GetVar(&I->getRightSubValue());
 
       // `X <=> (A => B)` is equivalent to
       // `(X v A) ^ (X v !B) ^ (!X v !A v B)` which is already in
-      // conjunctive normal form. Below we add each of the conjuncts of
-      // the latter expression to the result.
-      CNF.addClause(posLit(Var), posLit(LHS));
-      CNF.addClause(posLit(Var), negLit(RHS));
-      CNF.addClause(negLit(Var), negLit(LHS), posLit(RHS));
-      break;
-    }
-    case Formula::Equal: {
-      const Variable LHS = GetVar(Val->operands()[0]);
-      const Variable RHS = GetVar(Val->operands()[1]);
+      // conjunctive normal form. Below we add each of the conjuncts of the
+      // latter expression to the result.
+      Formula.addClause(posLit(Var), posLit(LeftSubVar));
+      Formula.addClause(posLit(Var), negLit(RightSubVar));
+      Formula.addClause(negLit(Var), negLit(LeftSubVar), posLit(RightSubVar));
 
-      if (LHS == RHS) {
+      // Visit the sub-values of `Val`.
+      UnprocessedSubVals.push(&I->getLeftSubValue());
+      UnprocessedSubVals.push(&I->getRightSubValue());
+    } else if (auto *B = dyn_cast<BiconditionalValue>(Val)) {
+      const Variable LeftSubVar = GetVar(&B->getLeftSubValue());
+      const Variable RightSubVar = GetVar(&B->getRightSubValue());
+
+      if (LeftSubVar == RightSubVar) {
         // `X <=> (A <=> A)` is equvalent to `X` which is already in
         // conjunctive normal form. Below we add each of the conjuncts of the
         // latter expression to the result.
-        CNF.addClause(posLit(Var));
+        Formula.addClause(posLit(Var));
 
         // No need to visit the sub-values of `Val`.
-        continue;
+      } else {
+        // `X <=> (A <=> B)` is equivalent to
+        // `(X v A v B) ^ (X v !A v !B) ^ (!X v A v !B) ^ (!X v !A v B)` which is
+        // already in conjunctive normal form. Below we add each of the conjuncts
+        // of the latter expression to the result.
+        Formula.addClause(posLit(Var), posLit(LeftSubVar), posLit(RightSubVar));
+        Formula.addClause(posLit(Var), negLit(LeftSubVar), negLit(RightSubVar));
+        Formula.addClause(negLit(Var), posLit(LeftSubVar), negLit(RightSubVar));
+        Formula.addClause(negLit(Var), negLit(LeftSubVar), posLit(RightSubVar));
+
+        // Visit the sub-values of `Val`.
+        UnprocessedSubVals.push(&B->getLeftSubValue());
+        UnprocessedSubVals.push(&B->getRightSubValue());
       }
-      // `X <=> (A <=> B)` is equivalent to
-      // `(X v A v B) ^ (X v !A v !B) ^ (!X v A v !B) ^ (!X v !A v B)` which
-      // is already in conjunctive normal form. Below we add each of the
-      // conjuncts of the latter expression to the result.
-      CNF.addClause(posLit(Var), posLit(LHS), posLit(RHS));
-      CNF.addClause(posLit(Var), negLit(LHS), negLit(RHS));
-      CNF.addClause(negLit(Var), posLit(LHS), negLit(RHS));
-      CNF.addClause(negLit(Var), negLit(LHS), posLit(RHS));
-      break;
     }
-    }
-    for (const Formula *Child : Val->operands())
-      UnprocessedSubVals.push(Child);
   }
 
-  return CNF;
+  return Formula;
 }
 
 class WatchedLiteralsSolverImpl {
   /// A boolean formula in conjunctive normal form that the solver will attempt
   /// to prove satisfiable. The formula will be modified in the process.
-  CNFFormula CNF;
+  BooleanFormula Formula;
 
   /// The search for a satisfying assignment of the variables in `Formula` will
   /// proceed in levels, starting from 1 and going up to `Formula.LargestVar`
@@ -390,10 +439,9 @@ class WatchedLiteralsSolverImpl {
   std::vector<Variable> ActiveVars;
 
 public:
-  explicit WatchedLiteralsSolverImpl(
-      const llvm::ArrayRef<const Formula *> &Vals)
-      : CNF(buildCNF(Vals)), LevelVars(CNF.LargestVar + 1),
-        LevelStates(CNF.LargestVar + 1) {
+  explicit WatchedLiteralsSolverImpl(const llvm::ArrayRef<BoolValue *> &Vals)
+      : Formula(buildBooleanFormula(Vals)), LevelVars(Formula.LargestVar + 1),
+        LevelStates(Formula.LargestVar + 1) {
     assert(!Vals.empty());
 
     // Initialize the state at the root level to a decision so that in
@@ -402,10 +450,10 @@ public:
     LevelStates[0] = State::Decision;
 
     // Initialize all variables as unassigned.
-    VarAssignments.resize(CNF.LargestVar + 1, Assignment::Unassigned);
+    VarAssignments.resize(Formula.LargestVar + 1, Assignment::Unassigned);
 
     // Initialize the active variables.
-    for (Variable Var = CNF.LargestVar; Var != NullVar; --Var) {
+    for (Variable Var = Formula.LargestVar; Var != NullVar; --Var) {
       if (isWatched(posLit(Var)) || isWatched(negLit(Var)))
         ActiveVars.push_back(Var);
     }
@@ -426,7 +474,7 @@ public:
       // 3. Unassigned variables that form watched literals are active.
       // FIXME: Consider replacing these with test cases that fail if the any
       // of the invariants is broken. That might not be easy due to the
-      // transformations performed by `buildCNF`.
+      // transformations performed by `buildBooleanFormula`.
       assert(activeVarsAreUnassigned());
       assert(activeVarsFormWatchedLiterals());
       assert(unassignedVarsFormingWatchedLiteralsAreActive());
@@ -507,10 +555,12 @@ public:
   }
 
 private:
-  /// Returns a satisfying truth assignment to the atoms in the boolean formula.
-  llvm::DenseMap<Atom, Solver::Result::Assignment> buildSolution() {
-    llvm::DenseMap<Atom, Solver::Result::Assignment> Solution;
-    for (auto &Atomic : CNF.Atomics) {
+  /// Returns a satisfying truth assignment to the atomic values in the boolean
+  /// formula.
+  llvm::DenseMap<AtomicBoolValue *, Solver::Result::Assignment>
+  buildSolution() {
+    llvm::DenseMap<AtomicBoolValue *, Solver::Result::Assignment> Solution;
+    for (auto &Atomic : Formula.Atomics) {
       // A variable may have a definite true/false assignment, or it may be
       // unassigned indicating its truth value does not affect the result of
       // the formula. Unassigned variables are assigned to true as a default.
@@ -546,24 +596,24 @@ private:
     const Literal FalseLit = VarAssignments[Var] == Assignment::AssignedTrue
                                  ? negLit(Var)
                                  : posLit(Var);
-    ClauseID FalseLitWatcher = CNF.WatchedHead[FalseLit];
-    CNF.WatchedHead[FalseLit] = NullClause;
+    ClauseID FalseLitWatcher = Formula.WatchedHead[FalseLit];
+    Formula.WatchedHead[FalseLit] = NullClause;
     while (FalseLitWatcher != NullClause) {
-      const ClauseID NextFalseLitWatcher = CNF.NextWatched[FalseLitWatcher];
+      const ClauseID NextFalseLitWatcher = Formula.NextWatched[FalseLitWatcher];
 
       // Pick the first non-false literal as the new watched literal.
-      const size_t FalseLitWatcherStart = CNF.ClauseStarts[FalseLitWatcher];
+      const size_t FalseLitWatcherStart = Formula.ClauseStarts[FalseLitWatcher];
       size_t NewWatchedLitIdx = FalseLitWatcherStart + 1;
-      while (isCurrentlyFalse(CNF.Clauses[NewWatchedLitIdx]))
+      while (isCurrentlyFalse(Formula.Clauses[NewWatchedLitIdx]))
         ++NewWatchedLitIdx;
-      const Literal NewWatchedLit = CNF.Clauses[NewWatchedLitIdx];
+      const Literal NewWatchedLit = Formula.Clauses[NewWatchedLitIdx];
       const Variable NewWatchedLitVar = var(NewWatchedLit);
 
       // Swap the old watched literal for the new one in `FalseLitWatcher` to
       // maintain the invariant that the watched literal is at the beginning of
       // the clause.
-      CNF.Clauses[NewWatchedLitIdx] = FalseLit;
-      CNF.Clauses[FalseLitWatcherStart] = NewWatchedLit;
+      Formula.Clauses[NewWatchedLitIdx] = FalseLit;
+      Formula.Clauses[FalseLitWatcherStart] = NewWatchedLit;
 
       // If the new watched literal isn't watched by any other clause and its
       // variable isn't assigned we need to add it to the active variables.
@@ -571,8 +621,8 @@ private:
           VarAssignments[NewWatchedLitVar] == Assignment::Unassigned)
         ActiveVars.push_back(NewWatchedLitVar);
 
-      CNF.NextWatched[FalseLitWatcher] = CNF.WatchedHead[NewWatchedLit];
-      CNF.WatchedHead[NewWatchedLit] = FalseLitWatcher;
+      Formula.NextWatched[FalseLitWatcher] = Formula.WatchedHead[NewWatchedLit];
+      Formula.WatchedHead[NewWatchedLit] = FalseLitWatcher;
 
       // Go to the next clause that watches `FalseLit`.
       FalseLitWatcher = NextFalseLitWatcher;
@@ -582,15 +632,16 @@ private:
   /// Returns true if and only if one of the clauses that watch `Lit` is a unit
   /// clause.
   bool watchedByUnitClause(Literal Lit) const {
-    for (ClauseID LitWatcher = CNF.WatchedHead[Lit]; LitWatcher != NullClause;
-         LitWatcher = CNF.NextWatched[LitWatcher]) {
-      llvm::ArrayRef<Literal> Clause = CNF.clauseLiterals(LitWatcher);
+    for (ClauseID LitWatcher = Formula.WatchedHead[Lit];
+         LitWatcher != NullClause;
+         LitWatcher = Formula.NextWatched[LitWatcher]) {
+      llvm::ArrayRef<Literal> Clause = Formula.clauseLiterals(LitWatcher);
 
       // Assert the invariant that the watched literal is always the first one
       // in the clause.
       // FIXME: Consider replacing this with a test case that fails if the
       // invariant is broken by `updateWatchedLiterals`. That might not be easy
-      // due to the transformations performed by `buildCNF`.
+      // due to the transformations performed by `buildBooleanFormula`.
       assert(Clause.front() == Lit);
 
       if (isUnit(Clause))
@@ -614,7 +665,7 @@ private:
 
   /// Returns true if and only if `Lit` is watched by a clause in `Formula`.
   bool isWatched(Literal Lit) const {
-    return CNF.WatchedHead[Lit] != NullClause;
+    return Formula.WatchedHead[Lit] != NullClause;
   }
 
   /// Returns an assignment for an unassigned variable.
@@ -627,8 +678,8 @@ private:
   /// Returns a set of all watched literals.
   llvm::DenseSet<Literal> watchedLiterals() const {
     llvm::DenseSet<Literal> WatchedLiterals;
-    for (Literal Lit = 2; Lit < CNF.WatchedHead.size(); Lit++) {
-      if (CNF.WatchedHead[Lit] == NullClause)
+    for (Literal Lit = 2; Lit < Formula.WatchedHead.size(); Lit++) {
+      if (Formula.WatchedHead[Lit] == NullClause)
         continue;
       WatchedLiterals.insert(Lit);
     }
@@ -668,8 +719,7 @@ private:
   }
 };
 
-Solver::Result
-WatchedLiteralsSolver::solve(llvm::ArrayRef<const Formula *> Vals) {
+Solver::Result WatchedLiteralsSolver::solve(llvm::ArrayRef<BoolValue *> Vals) {
   if (Vals.empty())
     return Solver::Result::Satisfiable({{}});
   auto [Res, Iterations] =
