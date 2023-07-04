@@ -1656,6 +1656,20 @@ llvm.func unnamed_addr @unnamed_addr_func()
 
 // -----
 
+// CHECK-LABEL: @align_func
+// CHECK-SAME: align 2
+llvm.func @align_func() attributes {alignment = 2 : i64} {
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @align_decl
+// CHECK-SAME: align 64
+llvm.func @align_decl() attributes {alignment = 64 : i64}
+
+// -----
+
 // CHECK-LABEL: @callFreezeOp
 llvm.func @callFreezeOp(%x : i32) {
   // CHECK: freeze i32 %{{[0-9]+}}

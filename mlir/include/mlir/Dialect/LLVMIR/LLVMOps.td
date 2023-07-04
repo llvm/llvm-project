@@ -1648,7 +1648,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$arm_streaming,
     OptionalAttr<UnitAttr>:$arm_locally_streaming,
     OptionalAttr<StrAttr>:$section,
-    OptionalAttr<UnnamedAddr>:$unnamed_addr
+    OptionalAttr<UnnamedAddr>:$unnamed_addr,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let regions = (region AnyRegion:$body);
