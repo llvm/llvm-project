@@ -1122,12 +1122,12 @@ defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<fadd, "PseudoVFWADD">;
 defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<fsub, "PseudoVFWSUB">;
 
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm : VPatBinaryFPSDNode_VV_VF<any_fmul, "PseudoVFMUL">;
-defm : VPatBinaryFPSDNode_VV_VF<any_fdiv, "PseudoVFDIV", /*isSEWAware*/ 1>;
-defm : VPatBinaryFPSDNode_R_VF<any_fdiv, "PseudoVFRDIV", /*isSEWAware*/ 1>;
+defm : VPatBinaryFPSDNode_VV_VF_RM<any_fmul, "PseudoVFMUL">;
+defm : VPatBinaryFPSDNode_VV_VF_RM<any_fdiv, "PseudoVFDIV", /*isSEWAware*/ 1>;
+defm : VPatBinaryFPSDNode_R_VF_RM<any_fdiv, "PseudoVFRDIV", /*isSEWAware*/ 1>;
 
 // 13.5. Vector Widening Floating-Point Multiply Instructions
-defm : VPatWidenBinaryFPSDNode_VV_VF<fmul, "PseudoVFWMUL">;
+defm : VPatWidenBinaryFPSDNode_VV_VF_RM<fmul, "PseudoVFWMUL">;
 
 // 13.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
 foreach fvti = AllFloatVectors in {

@@ -2026,12 +2026,12 @@ defm : VPatBinaryFPWVL_VV_VF_WV_WF_RM<riscv_vfwadd_vl, riscv_vfwadd_w_vl, "Pseud
 defm : VPatBinaryFPWVL_VV_VF_WV_WF_RM<riscv_vfwsub_vl, riscv_vfwsub_w_vl, "PseudoVFWSUB">;
 
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm : VPatBinaryFPVL_VV_VF<any_riscv_fmul_vl, "PseudoVFMUL">;
-defm : VPatBinaryFPVL_VV_VF<any_riscv_fdiv_vl, "PseudoVFDIV", /*isSEWAware*/ 1>;
-defm : VPatBinaryFPVL_R_VF<any_riscv_fdiv_vl, "PseudoVFRDIV", /*isSEWAware*/ 1>;
+defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fmul_vl, "PseudoVFMUL">;
+defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fdiv_vl, "PseudoVFDIV", /*isSEWAware*/ 1>;
+defm : VPatBinaryFPVL_R_VF_RM<any_riscv_fdiv_vl, "PseudoVFRDIV", /*isSEWAware*/ 1>;
 
 // 13.5. Vector Widening Floating-Point Multiply Instructions
-defm : VPatBinaryFPWVL_VV_VF<riscv_vfwmul_vl, "PseudoVFWMUL">;
+defm : VPatBinaryFPWVL_VV_VF_RM<riscv_vfwmul_vl, "PseudoVFWMUL">;
 
 // 13.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
 defm : VPatFPMulAddVL_VV_VF<any_riscv_vfmadd_vl,  "PseudoVFMADD">;
