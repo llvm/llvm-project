@@ -358,7 +358,7 @@ void SymbolFileNativePDB::InitializeObject() {
       lldb::eLanguageTypeC_plus_plus);
   if (auto err = ts_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Failed to initialize");
+                   "Failed to initialize: {0}");
   } else {
     if (auto ts = *ts_or_err)
       ts->SetSymbolFile(this);

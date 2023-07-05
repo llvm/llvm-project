@@ -148,7 +148,7 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
             eLanguageTypeObjC, exe_ctx);
         if (!utility_fn_or_error) {
           LLDB_LOG_ERROR(log, utility_fn_or_error.takeError(),
-                         "Failed to create utility function: {0}.");
+                         "Failed to create utility function: {0}");
         }
         m_get_item_info_impl_code = std::move(*utility_fn_or_error);
       } else {
@@ -162,13 +162,13 @@ lldb::addr_t AppleGetItemInfoHandler::SetupGetItemInfoFunction(
               eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
         LLDB_LOG_ERROR(log, std::move(err),
-                       "Error inserting get-item-info function");
+                       "Error inserting get-item-info function: {0}");
         return args_addr;
       }
       auto ts = *type_system_or_err;
       if (!ts)
         return args_addr;
-      
+
       CompilerType get_item_info_return_type =
           ts->GetBasicTypeFromAST(eBasicTypeVoid)
               .GetPointerType();
