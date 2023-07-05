@@ -207,3 +207,24 @@ define i32 @test_imm_middle_bytes() {
 
   ret i32 u0x223300
 }
+
+; This struct is sized so that the byval call does an inline memcpy of
+; 0x10001 bytes.
+%struct.struct_t = type { [65553 x i8] }
+@byval_arg = global %struct.struct_t zeroinitializer
+declare void @byval_fn(ptr byval(%struct.struct_t))
+
+define void @test_byval_call() {
+entry:
+; CHECK-LABEL: test_byval_call:
+; CHECK-T2BASE: movw [[BYVAL_CPYSIZE:r[0-9]+]], #1
+; CHECK-T2: movs [[BYVAL_CPYSIZE:r[0-9]+]], #1
+; CHECK: movt [[BYVAL_CPYSIZE]], #1
+; CHECK-T1-LABEL: test_byval_call:
+; CHECK-T1: movs [[BYVAL_CPYSIZE:r[0-9]+]], #1
+; CHECK-T1: lsls [[BYVAL_CPYSIZE]], [[BYVAL_CPYSIZE]], #16
+; CHECK-T1: adds [[BYVAL_CPYSIZE]], #1
+
+  call void @byval_fn(ptr byval(%struct.struct_t) @byval_arg)
+  ret void
+}
