@@ -3644,19 +3644,22 @@ struct AAWillReturn
     if (IRAttribute::isImpliedByIR(A, IRP, ImpliedAttributeKind,
                                    IgnoreSubsumingPositions))
       return true;
-    return isImpliedByMustprogressAndReadonly(A, IRP, /* KnownOnly */ true);
+    if (!isImpliedByMustprogressAndReadonly(A, IRP))
+      return false;
+    A.manifestAttrs(IRP, Attribute::get(IRP.getAnchorValue().getContext(),
+                                        Attribute::WillReturn));
+    return true;
   }
 
   /// Check for `mustprogress` and `readonly` as they imply `willreturn`.
   static bool isImpliedByMustprogressAndReadonly(Attributor &A,
-                                                 const IRPosition &IRP,
-                                                 bool KnownOnly) {
+                                                 const IRPosition &IRP) {
     // Check for `mustprogress` in the scope and the associated function which
     // might be different if this is a call site.
     if (!A.hasAttr(IRP, {Attribute::MustProgress}))
       return false;
 
-    SmallVector<Attribute, 1> Attrs;
+    SmallVector<Attribute, 2> Attrs;
     A.getAttrs(IRP, {Attribute::Memory}, Attrs,
                /* IgnoreSubsumingPositions */ false);
 

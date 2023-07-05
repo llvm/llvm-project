@@ -3275,8 +3275,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   if (IsIPOAmendable) {
 
     // Every function might be "will-return".
-    if (!Attrs.hasFnAttr(Attribute::WillReturn))
-      getOrCreateAAFor<AAWillReturn>(FPos);
+    checkAndQueryIRAttr<Attribute::WillReturn, AAWillReturn>(FPos, FnAttrs);
 
     // Every function might be "must-progress".
     if (!Attrs.hasFnAttr(Attribute::MustProgress))

@@ -3495,12 +3495,16 @@ struct AAWillReturnImpl : public AAWillReturn {
   AAWillReturnImpl(const IRPosition &IRP, Attributor &A)
       : AAWillReturn(IRP, A) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    bool IsKnown;
+    assert(!AA::hasAssumedIRAttr<Attribute::WillReturn>(
+        A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+  }
+
   /// Check for `mustprogress` and `readonly` as they imply `willreturn`.
   bool isImpliedByMustprogressAndReadonly(Attributor &A, bool KnownOnly) {
-    // Check for `mustprogress` in the scope and the associated function which
-    // might be different if this is a call site.
-    if ((!getAnchorScope() || !getAnchorScope()->mustProgress()) &&
-        (!getAssociatedFunction() || !getAssociatedFunction()->mustProgress()))
+    if (!A.hasAttr(getIRPosition(), {Attribute::MustProgress}))
       return false;
 
     bool IsKnown;
