@@ -4174,31 +4174,37 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
     function_ref<MapInfosTy &(InsertPointTy CodeGenIP)> GenMapInfoCB,
     omp::RuntimeFunction *MapperFunc,
     function_ref<InsertPointTy(InsertPointTy CodeGenIP, BodyGenTy BodyGenType)>
-        BodyGenCB) {
+        BodyGenCB,
+    function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB,
+    function_ref<Value *(unsigned int)> CustomMapperCB, Value *SrcLocInfo) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
   Builder.restoreIP(CodeGenIP);
   bool IsStandAlone = !BodyGenCB;
-
+  MapInfosTy *MapInfo;
   // Generate the code for the opening of the data environment. Capture all the
   // arguments of the runtime call by reference because they are used in the
   // closing of the region.
   auto BeginThenGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
-    emitOffloadingArrays(AllocaIP, Builder.saveIP(),
-                         GenMapInfoCB(Builder.saveIP()), Info,
-                         /*IsNonContiguous=*/true);
+    MapInfo = &GenMapInfoCB(Builder.saveIP());
+    emitOffloadingArrays(AllocaIP, Builder.saveIP(), *MapInfo, Info,
+                         /*IsNonContiguous=*/true, DeviceAddrCB,
+                         CustomMapperCB);
 
     TargetDataRTArgs RTArgs;
-    emitOffloadingArraysArgument(Builder, RTArgs, Info);
+    emitOffloadingArraysArgument(Builder, RTArgs, Info,
+                                 !MapInfo->Names.empty());
 
     // Emit the number of elements in the offloading arrays.
     Value *PointerNum = Builder.getInt32(Info.NumberOfPtrs);
 
     // Source location for the ident struct
-    uint32_t SrcLocStrSize;
-    Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-    Value *SrcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+    if (!SrcLocInfo) {
+      uint32_t SrcLocStrSize;
+      Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+      SrcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+    }
 
     Value *OffloadingArgs[] = {SrcLocInfo,           DeviceID,
                                PointerNum,           RTArgs.BasePointersArray,
@@ -4233,16 +4239,18 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
   // Generate code for the closing of the data region.
   auto EndThenGen = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {
     TargetDataRTArgs RTArgs;
-    emitOffloadingArraysArgument(Builder, RTArgs, Info, /*EmitDebug=*/false,
+    emitOffloadingArraysArgument(Builder, RTArgs, Info, !MapInfo->Names.empty(),
                                  /*ForEndCall=*/true);
 
     // Emit the number of elements in the offloading arrays.
     Value *PointerNum = Builder.getInt32(Info.NumberOfPtrs);
 
     // Source location for the ident struct
-    uint32_t SrcLocStrSize;
-    Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-    Value *SrcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+    if (!SrcLocInfo) {
+      uint32_t SrcLocStrSize;
+      Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
+      SrcLocInfo = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+    }
 
     Value *OffloadingArgs[] = {SrcLocInfo,           DeviceID,
                                PointerNum,           RTArgs.BasePointersArray,
@@ -4731,6 +4739,9 @@ void OpenMPIRBuilder::emitOffloadingArrays(
     auto *MapNamesArrayGbl =
         createOffloadMapnames(CombinedInfo.Names, MapnamesName);
     Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
+  } else {
+    Info.RTArgs.MapNamesArray = Constant::getNullValue(
+        Type::getInt8Ty(Builder.getContext())->getPointerTo());
   }
 
   // If there's a present map type modifier, it must not be applied to the end
