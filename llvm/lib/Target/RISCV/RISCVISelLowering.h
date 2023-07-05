@@ -759,6 +759,9 @@ public:
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
+  bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *II,
+                                        LoadInst *LI) const override;
+
   bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
                                        StoreInst *SI) const override;
 
