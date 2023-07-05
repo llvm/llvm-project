@@ -1186,13 +1186,13 @@ define void @willreturn_mustprogress_callee_2() {
 ; TUNIT: Function Attrs: mustprogress willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
 ; TUNIT-SAME: () #[[ATTR23]] {
-; TUNIT-NEXT:    call void @readonly_mustprogress() #[[ATTR19]]
+; TUNIT-NEXT:    call void @readonly_mustprogress() #[[ATTR32:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
 ; CGSCC-SAME: () #[[ATTR24]] {
-; CGSCC-NEXT:    call void @readonly_mustprogress() #[[ATTR20]]
+; CGSCC-NEXT:    call void @readonly_mustprogress() #[[ATTR33:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @readonly_mustprogress()
@@ -1210,13 +1210,13 @@ define void @willreturn_mustprogress_callee_4() {
 ; TUNIT: Function Attrs: mustprogress willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
 ; TUNIT-SAME: () #[[ATTR23]] {
-; TUNIT-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR32:[0-9]+]]
+; TUNIT-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR32]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
 ; CGSCC-SAME: () #[[ATTR24]] {
-; CGSCC-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR33:[0-9]+]]
+; CGSCC-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR33]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @willreturn_mustprogress_callee_2()
