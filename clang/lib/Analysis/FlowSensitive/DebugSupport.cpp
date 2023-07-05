@@ -36,16 +36,8 @@ llvm::StringRef debugString(Value::Kind Kind) {
     return "AtomicBool";
   case Value::Kind::TopBool:
     return "TopBool";
-  case Value::Kind::Conjunction:
-    return "Conjunction";
-  case Value::Kind::Disjunction:
-    return "Disjunction";
-  case Value::Kind::Negation:
-    return "Negation";
-  case Value::Kind::Implication:
-    return "Implication";
-  case Value::Kind::Biconditional:
-    return "Biconditional";
+  case Value::Kind::FormulaBool:
+    return "FormulaBool";
   }
   llvm_unreachable("Unhandled value kind");
 }

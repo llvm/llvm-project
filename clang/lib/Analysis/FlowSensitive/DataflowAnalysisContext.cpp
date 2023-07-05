@@ -102,115 +102,112 @@ DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
 }
 
 void DataflowAnalysisContext::addFlowConditionConstraint(
-    AtomicBoolValue &Token, BoolValue &Constraint) {
-  auto Res = FlowConditionConstraints.try_emplace(&Token, &Constraint);
+    Atom Token, const Formula &Constraint) {
+  auto Res = FlowConditionConstraints.try_emplace(Token, &Constraint);
   if (!Res.second) {
     Res.first->second =
         &arena().makeAnd(*Res.first->second, Constraint);
   }
 }
 
-AtomicBoolValue &
-DataflowAnalysisContext::forkFlowCondition(AtomicBoolValue &Token) {
-  auto &ForkToken = arena().makeFlowConditionToken();
-  FlowConditionDeps[&ForkToken].insert(&Token);
-  addFlowConditionConstraint(ForkToken, Token);
+Atom DataflowAnalysisContext::forkFlowCondition(Atom Token) {
+  Atom ForkToken = arena().makeFlowConditionToken();
+  FlowConditionDeps[ForkToken].insert(Token);
+  addFlowConditionConstraint(ForkToken, arena().makeAtomRef(Token));
   return ForkToken;
 }
 
-AtomicBoolValue &
-DataflowAnalysisContext::joinFlowConditions(AtomicBoolValue &FirstToken,
-                                            AtomicBoolValue &SecondToken) {
-  auto &Token = arena().makeFlowConditionToken();
-  FlowConditionDeps[&Token].insert(&FirstToken);
-  FlowConditionDeps[&Token].insert(&SecondToken);
-  addFlowConditionConstraint(
-      Token, arena().makeOr(FirstToken, SecondToken));
+Atom 
+DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
+                                            Atom SecondToken) {
+  Atom Token = arena().makeFlowConditionToken();
+  FlowConditionDeps[Token].insert(FirstToken);
+  FlowConditionDeps[Token].insert(SecondToken);
+  addFlowConditionConstraint(Token,
+                             arena().makeOr(arena().makeAtomRef(FirstToken),
+                                            arena().makeAtomRef(SecondToken)));
   return Token;
 }
 
-Solver::Result
-DataflowAnalysisContext::querySolver(llvm::SetVector<BoolValue *> Constraints) {
+Solver::Result DataflowAnalysisContext::querySolver(
+    llvm::SetVector<const Formula *> Constraints) {
   Constraints.insert(&arena().makeLiteral(true));
   Constraints.insert(&arena().makeNot(arena().makeLiteral(false)));
-  std::vector<const Formula *> Formulas;
-  for (const BoolValue *Constraint : Constraints)
-    Formulas.push_back(&arena().getFormula(*Constraint));
-  return S->solve(Formulas);
+  return S->solve(Constraints.getArrayRef());
 }
 
-bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
-                                                   BoolValue &Val) {
+bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
+                                                   const Formula &Val) {
   // Returns true if and only if truth assignment of the flow condition implies
   // that `Val` is also true. We prove whether or not this property holds by
   // reducing the problem to satisfiability checking. In other words, we attempt
   // to show that assuming `Val` is false makes the constraints induced by the
   // flow condition unsatisfiable.
-  llvm::SetVector<BoolValue *> Constraints;
-  Constraints.insert(&Token);
+  llvm::SetVector<const Formula *> Constraints;
+  Constraints.insert(&arena().makeAtomRef(Token));
   Constraints.insert(&arena().makeNot(Val));
-  llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
+  llvm::DenseSet<Atom> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
   return isUnsatisfiable(std::move(Constraints));
 }
 
-bool DataflowAnalysisContext::flowConditionIsTautology(AtomicBoolValue &Token) {
+bool DataflowAnalysisContext::flowConditionIsTautology(Atom Token) {
   // Returns true if and only if we cannot prove that the flow condition can
   // ever be false.
-  llvm::SetVector<BoolValue *> Constraints;
-  Constraints.insert(&arena().makeNot(Token));
-  llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
+  llvm::SetVector<const Formula *> Constraints;
+  Constraints.insert(&arena().makeNot(arena().makeAtomRef(Token)));
+  llvm::DenseSet<Atom> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
   return isUnsatisfiable(std::move(Constraints));
 }
 
-bool DataflowAnalysisContext::equivalentBoolValues(BoolValue &Val1,
-                                                   BoolValue &Val2) {
-  llvm::SetVector<BoolValue*> Constraints;
+bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
+                                                 const Formula &Val2) {
+  llvm::SetVector<const Formula *> Constraints;
   Constraints.insert(&arena().makeNot(arena().makeEquals(Val1, Val2)));
   return isUnsatisfiable(std::move(Constraints));
 }
 
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
-    AtomicBoolValue &Token, llvm::SetVector<BoolValue *> &Constraints,
-    llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) {
-  auto Res = VisitedTokens.insert(&Token);
+    Atom Token, llvm::SetVector<const Formula *> &Constraints,
+    llvm::DenseSet<Atom> &VisitedTokens) {
+  auto Res = VisitedTokens.insert(Token);
   if (!Res.second)
     return;
 
-  auto ConstraintsIt = FlowConditionConstraints.find(&Token);
+  auto ConstraintsIt = FlowConditionConstraints.find(Token);
   if (ConstraintsIt == FlowConditionConstraints.end()) {
-    Constraints.insert(&Token);
+    Constraints.insert(&arena().makeAtomRef(Token));
   } else {
     // Bind flow condition token via `iff` to its set of constraints:
     // FC <=> (C1 ^ C2 ^ ...), where Ci are constraints
-    Constraints.insert(&arena().makeEquals(Token, *ConstraintsIt->second));
+    Constraints.insert(&arena().makeEquals(arena().makeAtomRef(Token),
+                                           *ConstraintsIt->second));
   }
 
-  auto DepsIt = FlowConditionDeps.find(&Token);
+  auto DepsIt = FlowConditionDeps.find(Token);
   if (DepsIt != FlowConditionDeps.end()) {
-    for (AtomicBoolValue *DepToken : DepsIt->second) {
-      addTransitiveFlowConditionConstraints(*DepToken, Constraints,
+    for (Atom DepToken : DepsIt->second) {
+      addTransitiveFlowConditionConstraints(DepToken, Constraints,
                                             VisitedTokens);
     }
   }
 }
 
-void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token,
+void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
                                                 llvm::raw_ostream &OS) {
-  // TODO: accumulate formulas directly instead
-  llvm::SetVector<BoolValue *> Constraints;
-  Constraints.insert(&Token);
-  llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
+  llvm::SetVector<const Formula *> Constraints;
+  Constraints.insert(&arena().makeAtomRef(Token));
+  llvm::DenseSet<Atom> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
 
   // TODO: have formulas know about true/false directly instead
-  Atom True = arena().getFormula(arena().makeLiteral(true)).getAtom();
-  Atom False = arena().getFormula(arena().makeLiteral(false)).getAtom();
+  Atom True = arena().makeLiteral(true).getAtom();
+  Atom False = arena().makeLiteral(false).getAtom();
   Formula::AtomNames Names = {{False, "false"}, {True, "true"}};
 
   for (const auto *Constraint : Constraints) {
-    arena().getFormula(*Constraint).print(OS, &Names);
+    Constraint->print(OS, &Names);
     OS << "\n";
   }
 }
