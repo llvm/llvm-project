@@ -18,7 +18,7 @@
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/__support/GPU/utils.h"
 static long clock() { return __llvm_libc::gpu::fixed_frequency_clock(); }
-#if LIBC_TARGET_ARCH_IS_NVPTX
+#if defined(LIBC_TARGET_ARCH_IS_NVPTX)
 uint64_t CLOCKS_PER_SEC = 1000000000UL;
 #else
 // The AMDGPU loader needs to initialize this at runtime by querying the driver.
