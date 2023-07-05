@@ -68,7 +68,7 @@ static bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   }
 
   // Find the active field of the union.
-  Record *R = U.getRecord();
+  const Record *R = U.getRecord();
   assert(R && R->isUnion() && "Not a union");
   const FieldDecl *ActiveField = nullptr;
   for (unsigned I = 0, N = R->getNumFields(); I < N; ++I) {
@@ -493,14 +493,6 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {
     return false;
   }
 
-  return true;
-}
-
-bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
-            llvm::RoundingMode RM) {
-  Floating F = S.Stk.pop<Floating>();
-  Floating Result = F.toSemantics(Sem, RM);
-  S.Stk.push<Floating>(Result);
   return true;
 }
 

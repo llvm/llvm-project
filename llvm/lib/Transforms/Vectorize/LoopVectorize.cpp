@@ -3715,6 +3715,15 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
   // Forget the original basic block.
   PSE.getSE()->forgetLoop(OrigLoop);
 
+  // After vectorization, the exit blocks of the original loop will have
+  // additional predecessors. Invalidate SCEVs for the exit phis in case SE
+  // looked through single-entry phis.
+  SmallVector<BasicBlock *> ExitBlocks;
+  OrigLoop->getExitBlocks(ExitBlocks);
+  for (BasicBlock *Exit : ExitBlocks)
+    for (PHINode &PN : Exit->phis())
+      PSE.getSE()->forgetValue(&PN);
+
   VPBasicBlock *LatchVPBB = Plan.getVectorLoopRegion()->getExitingBasicBlock();
   Loop *VectorLoop = LI->getLoopFor(State.CFG.VPBB2IRBB[LatchVPBB]);
   if (Cost->requiresScalarEpilogue(VF.isVector())) {

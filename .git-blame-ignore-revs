@@ -61,3 +61,6 @@ f9008e6366c2496b1ca1785b891d5578174ad63e
 
 # [clang][NFC] Remove trailing whitespaces and enforce it in lib, include and docs
 f6d557ee34b6bbdb1dc32f29e34b4a4a8ad35e81
+
+# [libc++][NFC] clang-format <shared_mutex>
+2d7eb9c9ea1a146412a83603d5c0c6339a5d8284

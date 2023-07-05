@@ -110,7 +110,7 @@ parseExcludedPrefixes(StringRef PrefixesStr,
 
 void MetaRenameOnlyInstructions(Function &F) {
   for (auto &I : instructions(F))
-    if (!I.getType()->isVoidTy())
+    if (!I.getType()->isVoidTy() && I.getName().empty())
       I.setName(I.getOpcodeName());
 }
 
