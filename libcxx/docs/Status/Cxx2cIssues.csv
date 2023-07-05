@@ -1,5 +1,5 @@
 "Issue #","Issue Name","Meeting","Status","First released version","Labels"
-"`2994 <https://wg21.link/LWG2994>`__","Needless UB for ``basic_string`` and ``basic_string_view``","Varna June 2023","","",""
+"`2994 <https://wg21.link/LWG2994>`__","Needless UB for ``basic_string`` and ``basic_string_view``","Varna June 2023","|Complete|","5.0",""
 "`3884 <https://wg21.link/LWG3884>`__","``flat_foo`` is missing allocator-extended copy/move constructors","Varna June 2023","","","|flat_containers|"
 "`3885 <https://wg21.link/LWG3885>`__","``op`` should be in [zombie.names]","Varna June 2023","","",""
 "`3887 <https://wg21.link/LWG3887>`__","Version macro for ``allocate_at_least``","Varna June 2023","","",""
