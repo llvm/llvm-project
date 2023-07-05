@@ -677,8 +677,8 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
     In particular, note that the second operand `B` has shape `KxNxnxk` (and not
     `KxNxkxn` as one could expect by looking **only** at the operand).
 
-    Other layouts can be obtained unsurprisingly from this canonical 
-    transformation by composing the resulting operation with a (future) 
+    Other layouts can be obtained unsurprisingly from this canonical
+    transformation by composing the resulting operation with a
     `transform.structured.pack_transpose` op.
     This composition allows separating concerns and composes better compared
     to adding additional permutation attributes to this transform op.
