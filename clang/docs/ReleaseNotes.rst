@@ -821,6 +821,7 @@ clang-format
 - Add ``BracedInitializerIndentWidth`` which can be used to configure
   the indentation level of the contents of braced init lists.
 - Add ``KeepEmptyLinesAtEOF`` to keep empty lines at end of file.
+- Add ``RemoveParentheses`` to remove redundant parentheses.
 
 libclang
 --------
