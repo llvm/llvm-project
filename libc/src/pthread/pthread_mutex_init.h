@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_INIT_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEX_INIT_H
 
-#include "include/pthread.h"
+#include <pthread.h>
 
 namespace __llvm_libc {
 
