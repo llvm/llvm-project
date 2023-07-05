@@ -2812,7 +2812,7 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
                                         const StaticRTInput &Values) {
   OpenMPSchedType ScheduleNum = getRuntimeSchedule(
       ScheduleKind.Schedule, Values.Chunk != nullptr, Values.Ordered);
-  assert(isOpenMPWorksharingDirective(DKind) &&
+  assert((isOpenMPWorksharingDirective(DKind) || (DKind == OMPD_loop)) &&
          "Expected loop-based or sections-based directive.");
   llvm::Value *UpdatedLocation = emitUpdateLocation(CGF, Loc,
                                              isOpenMPLoopDirective(DKind)
@@ -6206,6 +6206,7 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
     DefaultVal = -1;
     return nullptr;
   }
+  case OMPD_target_teams_loop:
   case OMPD_target_teams:
   case OMPD_target_teams_distribute:
   case OMPD_target_teams_distribute_simd:
@@ -6225,12 +6226,14 @@ const Expr *CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
+  case OMPD_target_parallel_loop:
   case OMPD_target_simd:
     DefaultVal = 1;
     return nullptr;
   case OMPD_parallel:
   case OMPD_for:
   case OMPD_parallel_for:
+  case OMPD_parallel_loop:
   case OMPD_parallel_master:
   case OMPD_parallel_sections:
   case OMPD_for_simd:
@@ -6447,6 +6450,8 @@ const Expr *CGOpenMPRuntime::getNumThreadsExprForTargetDirective(
       return ThreadLimit;
     }
     return nullptr;
+  case OMPD_target_teams_loop:
+  case OMPD_target_parallel_loop:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
@@ -6649,6 +6654,8 @@ llvm::Value *CGOpenMPRuntime::emitNumThreadsForTargetDirective(
             getNumThreads(CGF, D.getInnermostCapturedStmt(), ThreadLimitVal))
       return NumThreads;
     return Bld.getInt32(0);
+  case OMPD_target_teams_loop:
+  case OMPD_target_parallel_loop:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
@@ -9072,7 +9079,8 @@ getNestedDistributeDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     OpenMPDirectiveKind DKind = NestedDir->getDirectiveKind();
     switch (D.getDirectiveKind()) {
     case OMPD_target:
-      if (isOpenMPDistributeDirective(DKind))
+      // For now, just treat 'target teams loop' as if it's distributed.
+      if (isOpenMPDistributeDirective(DKind) || DKind == OMPD_teams_loop)
         return NestedDir;
       if (DKind == OMPD_teams) {
         Body = NestedDir->getInnermostCapturedStmt()->IgnoreContainers(
@@ -9556,7 +9564,8 @@ llvm::Value *CGOpenMPRuntime::emitTargetNumIterationsCall(
   OpenMPDirectiveKind Kind = D.getDirectiveKind();
   const OMPExecutableDirective *TD = &D;
   // Get nested teams distribute kind directive, if any.
-  if (!isOpenMPDistributeDirective(Kind) || !isOpenMPTeamsDirective(Kind))
+  if ((!isOpenMPDistributeDirective(Kind) || !isOpenMPTeamsDirective(Kind)) &&
+      Kind != OMPD_target_teams_loop)
     TD = getNestedDistributeDirective(CGM.getContext(), D);
   if (!TD)
     return llvm::ConstantInt::get(CGF.Int64Ty, 0);
@@ -9944,6 +9953,14 @@ void CGOpenMPRuntime::scanForTargetRegionsFunctions(const Stmt *S,
           EmitOMPTargetTeamsDistributeParallelForSimdDeviceFunction(
               CGM, ParentName,
               cast<OMPTargetTeamsDistributeParallelForSimdDirective>(E));
+      break;
+    case OMPD_target_teams_loop:
+      CodeGenFunction::EmitOMPTargetTeamsGenericLoopDeviceFunction(
+          CGM, ParentName, cast<OMPTargetTeamsGenericLoopDirective>(E));
+      break;
+    case OMPD_target_parallel_loop:
+      CodeGenFunction::EmitOMPTargetParallelGenericLoopDeviceFunction(
+          CGM, ParentName, cast<OMPTargetParallelGenericLoopDirective>(E));
       break;
     case OMPD_parallel:
     case OMPD_for:

@@ -653,6 +653,8 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
   case OMPD_target:
   case OMPD_target_teams:
     return hasNestedSPMDDirective(Ctx, D);
+  case OMPD_target_teams_loop:
+  case OMPD_target_parallel_loop:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
   case OMPD_target_parallel_for_simd:
