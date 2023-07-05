@@ -21,11 +21,13 @@
 
 #include "check_assertion.h"
 
+void check_latch_invalid(const std::ptrdiff_t expected) {
+  std::latch l(expected);
+  LIBCPP_ASSERT(false);
+}
+
 int main(int, char **) {
-  {
-    TEST_LIBCPP_ASSERT_FAILURE(std::latch(-1),
-                               "latch::latch() called with a negative value");
-  }
+  { check_latch_invalid(-1) }
 
   return 0;
 }
