@@ -766,12 +766,16 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
     break;
   }
   default:
-    if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
+    const APInt *Offset = nullptr;
+    if (match(Cmp, m_ICmp(Pred, m_CombineOr(m_V, m_Add(m_V, m_APInt(Offset))),
+                          m_Value(A)))) {
       KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
       ConstantRange RHSRange =
           ConstantRange::fromKnownBits(RHSKnown, Cmp->isSigned());
       ConstantRange LHSRange =
           ConstantRange::makeAllowedICmpRegion(Pred, RHSRange);
+      if (Offset)
+        LHSRange = LHSRange.sub(*Offset);
       Known = Known.unionWith(LHSRange.toKnownBits());
     }
     break;
