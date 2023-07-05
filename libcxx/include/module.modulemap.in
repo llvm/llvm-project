@@ -34,7 +34,6 @@ module std [system] {
     }
     module inttypes_h {
       header "inttypes.h"
-      export stdint_h
       export *
     }
     // <iso646.h> provided by compiler.
@@ -77,10 +76,6 @@ module std [system] {
     module stdint_h {
       header "stdint.h"
       export *
-      // FIXME: This module only exists on OS X and for some reason the
-      // wildcard above doesn't export it. Removing this breaks the tests
-      // for C compatibility headers in C++17 mode with modules enabled.
-      export Darwin.C.stdint
     }
     module stdio_h {
       // <stdio.h>'s __need_* macros require textual inclusion.
@@ -118,7 +113,6 @@ module std [system] {
   // allow their use in extern "C" contexts.
   module complex_h {
     header "complex.h"
-    export ccomplex
     export *
   }
   module tgmath_h {
@@ -134,7 +128,6 @@ module std [system] {
     }
     module ccomplex {
       header "ccomplex"
-      export complex
       export *
     }
     module cctype {
@@ -155,7 +148,6 @@ module std [system] {
     }
     module cinttypes {
       header "cinttypes"
-      export cstdint
       export *
     }
     module ciso646 {
@@ -198,7 +190,6 @@ module std [system] {
     }
     module cstdint {
       header "cstdint"
-      export depr.stdint_h
       export *
     }
     module cstdio {
@@ -215,8 +206,6 @@ module std [system] {
     }
     module ctgmath {
       header "ctgmath"
-      export ccomplex
-      export cmath
       export *
     }
     module ctime {
@@ -241,7 +230,6 @@ module std [system] {
 
   module algorithm {
     header "algorithm"
-    export initializer_list
     export *
 
     module __algorithm {
@@ -709,7 +697,6 @@ module std [system] {
   }
   module array {
     header "array"
-    export initializer_list
     export *
 
     module array_fwd { private header "__fwd/array.h" }
@@ -769,8 +756,6 @@ module std [system] {
   }
   module bitset {
     header "bitset"
-    export string
-    export iosfwd
     export *
   }
   // No submodule for cassert. It fundamentally needs repeated, textual inclusion.
@@ -926,7 +911,6 @@ module std [system] {
   }
   module deque {
     header "deque"
-    export initializer_list
     export *
   }
   module exception {
@@ -1035,7 +1019,6 @@ module std [system] {
   }
   module forward_list {
     header "forward_list"
-    export initializer_list
     export *
   }
   module fstream {
@@ -1046,8 +1029,6 @@ module std [system] {
   }
   module functional {
     header "functional"
-    // the contents of __type_traits/unwrap_ref.h should be available from functional too.
-    export type_traits.unwrap_ref
     export *
 
     module __functional {
@@ -1112,7 +1093,6 @@ module std [system] {
   module ios {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "ios"
-    export iosfwd
     export *
 
     module __ios {
@@ -1134,10 +1114,6 @@ module std [system] {
   module iostream {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "iostream"
-    export ios
-    export streambuf
-    export istream
-    export ostream
     export *
   }
   module istream {
@@ -1237,7 +1213,6 @@ module std [system] {
   }
   module list {
     header "list"
-    export initializer_list
     export *
   }
   module locale {
@@ -1253,7 +1228,6 @@ module std [system] {
   }
   module map {
     header "map"
-    export initializer_list
     export *
   }
   module mdspan {
@@ -1395,12 +1369,10 @@ module std [system] {
   }
   module queue {
     header "queue"
-    export initializer_list
     export *
   }
   module random {
     header "random"
-    export initializer_list
     export *
 
     module __random {
@@ -1454,9 +1426,6 @@ module std [system] {
   }
   module ranges {
     header "ranges"
-    export compare
-    export initializer_list
-    export iterator
     export *
 
     module __ranges {
@@ -1536,7 +1505,6 @@ module std [system] {
   module regex {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "regex"
-    export initializer_list
     export *
   }
   module scoped_allocator {
@@ -1550,7 +1518,6 @@ module std [system] {
   }
   module set {
     header "set"
-    export initializer_list
     export *
   }
   module shared_mutex {
@@ -1576,7 +1543,6 @@ module std [system] {
   }
   module stack {
     header "stack"
-    export initializer_list
     export *
   }
   module stdexcept {
@@ -1604,8 +1570,6 @@ module std [system] {
   }
   module string {
     header "string"
-    export initializer_list
-    export string_view
     module __string {
       module char_traits           { private header "__string/char_traits.h" }
       module constexpr_c_functions {
@@ -1909,17 +1873,14 @@ module std [system] {
   }
   module unordered_map {
     header "unordered_map"
-    export initializer_list
     export *
   }
   module unordered_set {
     header "unordered_set"
-    export initializer_list
     export *
   }
   module utility {
     header "utility"
-    export initializer_list
     export *
 
     module __utility {
@@ -1974,7 +1935,6 @@ module std [system] {
   }
   module valarray {
     header "valarray"
-    export initializer_list
     export *
   }
   module variant {
@@ -1987,7 +1947,6 @@ module std [system] {
   }
   module vector {
     header "vector"
-    export initializer_list
     export *
   }
   module version {
@@ -2016,7 +1975,6 @@ module std [system] {
   // This one needs to appear after __tree to work around issues with modules in Objective-C++ mode.
   module coroutine {
     header "coroutine"
-    export compare
     export *
 
     module __coroutine {
