@@ -1915,8 +1915,8 @@ bool Debugger::StartEventHandlerThread() {
     if (event_handler_thread) {
       m_event_handler_thread = *event_handler_thread;
     } else {
-      LLDB_LOG(GetLog(LLDBLog::Host), "failed to launch host thread: {}",
-               llvm::toString(event_handler_thread.takeError()));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Host), event_handler_thread.takeError(),
+                     "failed to launch host thread: {0}");
     }
 
     // Make sure DefaultEventHandler() is running and listening to events
@@ -2056,8 +2056,8 @@ bool Debugger::StartIOHandlerThread() {
     if (io_handler_thread) {
       m_io_handler_thread = *io_handler_thread;
     } else {
-      LLDB_LOG(GetLog(LLDBLog::Host), "failed to launch host thread: {}",
-               llvm::toString(io_handler_thread.takeError()));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Host), io_handler_thread.takeError(),
+                     "failed to launch host thread: {0}");
     }
   }
   return m_io_handler_thread.IsJoinable();

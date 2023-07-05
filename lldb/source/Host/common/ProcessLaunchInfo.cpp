@@ -182,8 +182,8 @@ bool ProcessLaunchInfo::MonitorProcess() const {
     llvm::Expected<HostThread> maybe_thread =
         Host::StartMonitoringChildProcess(m_monitor_callback, GetProcessID());
     if (!maybe_thread)
-      LLDB_LOG(GetLog(LLDBLog::Host), "failed to launch host thread: {}",
-               llvm::toString(maybe_thread.takeError()));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Host), maybe_thread.takeError(),
+                     "failed to launch host thread: {0}");
     return true;
   }
   return false;
