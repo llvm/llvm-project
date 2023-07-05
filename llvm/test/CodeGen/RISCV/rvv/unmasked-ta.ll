@@ -184,8 +184,7 @@ declare <vscale x 1 x float> @llvm.riscv.vfwmacc.nxv1f32.nxv1f16(
   <vscale x 1 x float>,
   <vscale x 1 x half>,
   <vscale x 1 x half>,
-  iXLen,
-  iXLen);
+  iXLen, iXLen, iXLen);
 
 define <vscale x 1 x float>  @intrinsic_vfwmacc_vv_nxv1f32_nxv1f16_nxv1f16(<vscale x 1 x float> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwmacc_vv_nxv1f32_nxv1f16_nxv1f16:
@@ -198,7 +197,7 @@ entry:
     <vscale x 1 x float> %0,
     <vscale x 1 x half> %1,
     <vscale x 1 x half> %2,
-    iXLen %3, iXLen 1)
+    iXLen 7, iXLen %3, iXLen 1)
 
   ret <vscale x 1 x float> %a
 }
@@ -207,8 +206,7 @@ declare <vscale x 1 x float> @llvm.riscv.vfwmsac.nxv1f32.nxv1f16(
   <vscale x 1 x float>,
   <vscale x 1 x half>,
   <vscale x 1 x half>,
-  iXLen,
-  iXLen);
+  iXLen, iXLen, iXLen);
 
 define <vscale x 1 x float>  @intrinsic_vfwmsac_vv_nxv1f32_nxv1f16_nxv1f16(<vscale x 1 x float> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwmsac_vv_nxv1f32_nxv1f16_nxv1f16:
@@ -221,7 +219,7 @@ entry:
     <vscale x 1 x float> %0,
     <vscale x 1 x half> %1,
     <vscale x 1 x half> %2,
-    iXLen %3, iXLen 1)
+    iXLen 7, iXLen %3, iXLen 1)
 
   ret <vscale x 1 x float> %a
 }
@@ -230,8 +228,7 @@ declare <vscale x 1 x float> @llvm.riscv.vfwnmacc.nxv1f32.nxv1f16(
   <vscale x 1 x float>,
   <vscale x 1 x half>,
   <vscale x 1 x half>,
-  iXLen,
-  iXLen);
+  iXLen, iXLen, iXLen);
 
 define <vscale x 1 x float>  @intrinsic_vfwnmacc_vv_nxv1f32_nxv1f16_nxv1f16(<vscale x 1 x float> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwnmacc_vv_nxv1f32_nxv1f16_nxv1f16:
@@ -244,7 +241,7 @@ entry:
     <vscale x 1 x float> %0,
     <vscale x 1 x half> %1,
     <vscale x 1 x half> %2,
-    iXLen %3, iXLen 1)
+    iXLen 7, iXLen %3, iXLen 1)
 
   ret <vscale x 1 x float> %a
 }
@@ -253,8 +250,7 @@ declare <vscale x 1 x float> @llvm.riscv.vfwnmsac.nxv1f32.nxv1f16(
   <vscale x 1 x float>,
   <vscale x 1 x half>,
   <vscale x 1 x half>,
-  iXLen,
-  iXLen);
+  iXLen, iXLen, iXLen);
 
 define <vscale x 1 x float>  @intrinsic_vfwnmsac_vv_nxv1f32_nxv1f16_nxv1f16(<vscale x 1 x float> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfwnmsac_vv_nxv1f32_nxv1f16_nxv1f16:
@@ -267,7 +263,7 @@ entry:
     <vscale x 1 x float> %0,
     <vscale x 1 x half> %1,
     <vscale x 1 x half> %2,
-    iXLen %3, iXLen 1)
+    iXLen 7, iXLen %3, iXLen 1)
 
   ret <vscale x 1 x float> %a
 }
