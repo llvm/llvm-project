@@ -144,6 +144,7 @@ std::optional<const MemRegion *> StoreManager::castRegion(const MemRegion *R,
     case MemRegion::NonParamVarRegionKind:
     case MemRegion::ParamVarRegionKind:
     case MemRegion::CXXTempObjectRegionKind:
+    case MemRegion::CXXLifetimeExtendedObjectRegionKind:
     case MemRegion::CXXBaseObjectRegionKind:
     case MemRegion::CXXDerivedObjectRegionKind:
       return MakeElementRegion(cast<SubRegion>(R), PointeeTy);

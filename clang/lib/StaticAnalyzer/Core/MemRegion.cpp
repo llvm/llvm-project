@@ -158,6 +158,18 @@ const StackFrameContext *VarRegion::getStackFrame() const {
   return SSR ? SSR->getStackFrame() : nullptr;
 }
 
+const StackFrameContext *
+CXXLifetimeExtendedObjectRegion::getStackFrame() const {
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  return SSR ? SSR->getStackFrame() : nullptr;
+}
+
+const StackFrameContext *CXXTempObjectRegion::getStackFrame() const {
+  assert(isa<StackSpaceRegion>(getMemorySpace()) &&
+         "A temporary object can only be allocated on the stack");
+  return cast<StackSpaceRegion>(getMemorySpace())->getStackFrame();
+}
+
 ObjCIvarRegion::ObjCIvarRegion(const ObjCIvarDecl *ivd, const SubRegion *sReg)
     : DeclRegion(sReg, ObjCIvarRegionKind), IVD(ivd) {
   assert(IVD);
@@ -389,6 +401,20 @@ void CXXTempObjectRegion::Profile(llvm::FoldingSetNodeID &ID) const {
   ProfileRegion(ID, Ex, getSuperRegion());
 }
 
+void CXXLifetimeExtendedObjectRegion::ProfileRegion(llvm::FoldingSetNodeID &ID,
+                                                    const Expr *E,
+                                                    const ValueDecl *D,
+                                                    const MemRegion *sReg) {
+  ID.AddPointer(E);
+  ID.AddPointer(D);
+  ID.AddPointer(sReg);
+}
+
+void CXXLifetimeExtendedObjectRegion::Profile(
+    llvm::FoldingSetNodeID &ID) const {
+  ProfileRegion(ID, Ex, ExD, getSuperRegion());
+}
+
 void CXXBaseObjectRegion::ProfileRegion(llvm::FoldingSetNodeID &ID,
                                         const CXXRecordDecl *RD,
                                         bool IsVirtual,
@@ -480,6 +506,16 @@ void CompoundLiteralRegion::dumpToStream(raw_ostream &os) const {
 
 void CXXTempObjectRegion::dumpToStream(raw_ostream &os) const {
   os << "temp_object{" << getValueType() << ", "
+     << "S" << Ex->getID(getContext()) << '}';
+}
+
+void CXXLifetimeExtendedObjectRegion::dumpToStream(raw_ostream &os) const {
+  os << "lifetime_extended_object{" << getValueType() << ", ";
+  if (const IdentifierInfo *ID = ExD->getIdentifier())
+    os << ID->getName();
+  else
+    os << "D" << ExD->getID();
+  os << ", "
      << "S" << Ex->getID(getContext()) << '}';
 }
 
@@ -743,6 +779,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
   case MemRegion::CXXBaseObjectRegionKind:
   case MemRegion::CXXDerivedObjectRegionKind:
   case MemRegion::CXXTempObjectRegionKind:
+  case MemRegion::CXXLifetimeExtendedObjectRegionKind:
   case MemRegion::CXXThisRegionKind:
   case MemRegion::ObjCIvarRegionKind:
   case MemRegion::NonParamVarRegionKind:
@@ -1097,12 +1134,6 @@ MemRegionManager::getBlockDataRegion(const BlockCodeRegion *BC,
   return getSubRegion<BlockDataRegion>(BC, LC, blockCount, sReg);
 }
 
-const CXXTempObjectRegion *
-MemRegionManager::getCXXStaticTempObjectRegion(const Expr *Ex) {
-  return getSubRegion<CXXTempObjectRegion>(
-      Ex, getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind, nullptr));
-}
-
 const CompoundLiteralRegion*
 MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
                                            const LocationContext *LC) {
@@ -1182,6 +1213,23 @@ MemRegionManager::getCXXTempObjectRegion(Expr const *E,
   const StackFrameContext *SFC = LC->getStackFrame();
   assert(SFC);
   return getSubRegion<CXXTempObjectRegion>(E, getStackLocalsRegion(SFC));
+}
+
+const CXXLifetimeExtendedObjectRegion *
+MemRegionManager::getCXXLifetimeExtendedObjectRegion(
+    const Expr *Ex, const ValueDecl *VD, const LocationContext *LC) {
+  const StackFrameContext *SFC = LC->getStackFrame();
+  assert(SFC);
+  return getSubRegion<CXXLifetimeExtendedObjectRegion>(
+      Ex, VD, getStackLocalsRegion(SFC));
+}
+
+const CXXLifetimeExtendedObjectRegion *
+MemRegionManager::getCXXStaticLifetimeExtendedObjectRegion(
+    const Expr *Ex, const ValueDecl *VD) {
+  return getSubRegion<CXXLifetimeExtendedObjectRegion>(
+      Ex, VD,
+      getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind, nullptr));
 }
 
 /// Checks whether \p BaseClass is a valid virtual or direct non-virtual base
@@ -1457,6 +1505,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
     case MemRegion::NonParamVarRegionKind:
     case MemRegion::ParamVarRegionKind:
     case MemRegion::CXXTempObjectRegionKind:
+    case MemRegion::CXXLifetimeExtendedObjectRegionKind:
       // Usual base regions.
       goto Finish;
 
