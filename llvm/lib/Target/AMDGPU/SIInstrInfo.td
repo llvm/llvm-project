@@ -1094,8 +1094,6 @@ def CPol_0 : DefaultOperand<CPol, 0>;
 def CPol_GLC1 : DefaultOperand<CPol, 1>;
 
 def TFE : NamedBitOperand<"tfe">;
-def SWZ : NamedBitOperand<"swz">;
-def SWZ_0 : DefaultOperand<SWZ, 0>;
 def UNorm : NamedBitOperand<"unorm">;
 def DA : NamedBitOperand<"da">;
 def R128A16 : CustomOperand<i1, 1>;
