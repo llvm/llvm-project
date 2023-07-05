@@ -4246,13 +4246,20 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   LLT ResTy = MRI.getType(Res);
 
   const MachineFunction &MF = B.getMF();
-  bool AllowInaccurateRcp = MF.getTarget().Options.UnsafeFPMath ||
-                            MI.getFlag(MachineInstr::FmAfn);
-
-  if (!AllowInaccurateRcp)
-    return false;
+  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn) ||
+                            MF.getTarget().Options.UnsafeFPMath;
 
   if (auto CLHS = getConstantFPVRegVal(LHS, MRI)) {
+    if (!AllowInaccurateRcp && ResTy != LLT::scalar(16))
+      return false;
+
+    // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
+    // the CI documentation has a worst case error of 1 ulp.
+    // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
+    // use it as long as we aren't trying to use denormals.
+    //
+    // v_rcp_f16 and v_rsq_f16 DO support denormals and 0.51ulp.
+
     // 1 / x -> RCP(x)
     if (CLHS->isExactlyValue(1.0)) {
       B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res, false)
@@ -4262,6 +4269,8 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
       MI.eraseFromParent();
       return true;
     }
+
+    // TODO: Match rsq
 
     // -1 / x -> RCP( FNEG(x) )
     if (CLHS->isExactlyValue(-1.0)) {
@@ -4274,6 +4283,12 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
       return true;
     }
   }
+
+  // For f16 require arcp only.
+  // For f32 require afn+arcp.
+  if (!AllowInaccurateRcp && (ResTy != LLT::scalar(16) ||
+                              !MI.getFlag(MachineInstr::FmArcp)))
+    return false;
 
   // x / y -> x * (1.0 / y)
   auto RCP = B.buildIntrinsic(Intrinsic::amdgcn_rcp, {ResTy}, false)

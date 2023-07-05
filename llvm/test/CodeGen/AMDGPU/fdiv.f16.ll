@@ -92,10 +92,7 @@ entry:
 
 ; GCN-LABEL: {{^}}reciprocal_f16_rounded:
 ; GFX8PLUS: {{flat|global}}_load_{{ushort|u16}} [[VAL16:v[0-9]+]], v{{.+}}
-; GFX8PLUS: v_cvt_f32_f16_e32 [[CVT_TO32:v[0-9]+]], [[VAL16]]
-; GFX8PLUS: v_rcp_f32_e32 [[RCP32:v[0-9]+]], [[CVT_TO32]]
-; GFX8PLUS: v_cvt_f16_f32_e32 [[CVT_BACK16:v[0-9]+]], [[RCP32]]
-; GFX8PLUS: v_div_fixup_f16 [[RESULT:v[0-9]+]], [[CVT_BACK16]], [[VAL16]], 1.0
+; GFX8PLUS: v_rcp_f16_e32 [[RESULT:v[0-9]+]], [[VAL16]]
 ; GFX8PLUS: {{flat|global}}_store_{{short|b16}} v{{.+}}, [[RESULT]]
 define amdgpu_kernel void @reciprocal_f16_rounded(ptr addrspace(1) %r, ptr addrspace(1) %b) #0 {
 entry:
@@ -269,8 +266,8 @@ define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; SI: v_rcp_f32
 ; SI: v_mul_f32
 
-; GFX8PLUS: v_rcp_f32
-; GFX8PLUS: v_mul_f32
+; GFX8PLUS: v_rcp_f16
+; GFX8PLUS: v_mul_f16
 define half @v_fdiv_f16_arcp(half %x, half %y) {
   %fdiv = fdiv arcp half %x, %y
   ret half %fdiv
