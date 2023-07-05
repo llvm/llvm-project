@@ -4303,6 +4303,7 @@ void ASTWriter::WriteLateParsedTemplates(Sema &SemaRef) {
     LateParsedTemplate &LPT = *LPTMapEntry.second;
     AddDeclRef(FD, Record);
     AddDeclRef(LPT.D, Record);
+    Record.push_back(LPT.FPO.getAsOpaqueInt());
     Record.push_back(LPT.Toks.size());
 
     for (const auto &Tok : LPT.Toks) {
