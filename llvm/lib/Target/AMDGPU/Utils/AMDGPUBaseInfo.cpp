@@ -650,10 +650,13 @@ std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
 
 namespace VOPD {
 
-unsigned ComponentLayout::getIndexOfSrcInMCOperands(unsigned CompSrcIdx) const {
+unsigned ComponentLayout::getIndexOfSrcInMCOperands(unsigned CompSrcIdx,
+                                                    bool VOPD3) const {
   assert(CompSrcIdx < Component::MAX_SRC_NUM);
 
   const unsigned Ops[] = {OpName::src0, OpName::src1, OpName::src2};
+  unsigned Opcode = OpDesc.getOpcode();
+
   if (Kind == SINGLE && Opcode != AMDGPU::V_FMAAK_F32 &&
       Opcode != AMDGPU::V_FMAMK_F32) {
     // FMAAK/FMAMK do not have $src2. However, for VOP2 the following method
@@ -666,9 +669,19 @@ unsigned ComponentLayout::getIndexOfSrcInMCOperands(unsigned CompSrcIdx) const {
     return getNamedOperandIdx(Opcode, Ops[CompSrcIdx]);
   }
 
-  // TODO-GFX1210: This method will not work for VOP3 components in a whole
-  // VOPD3 instruction too when neg source modifiers will be added.
-  return FIRST_MC_SRC_IDX[Kind] + getPrevCompSrcNum() + CompSrcIdx;
+  unsigned Idx = FIRST_MC_SRC_IDX[Kind] + getPrevCompSrcNum() + CompSrcIdx;
+
+  if (VOPD3) { // Count potential modifiers
+    Idx += getPrevCompVOPD3ModsNum();
+    ComponentProps Props(OpDesc);
+    if (Props.getCompVOPD3ModsNum()) {
+      Idx += CompSrcIdx + 1;
+      if (Props.hasSrc2Acc() && CompSrcIdx == 2)
+        --Idx; // No modifers for tied operand.
+    }
+  }
+
+  return Idx;
 }
 
 ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
@@ -680,13 +693,21 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   assert(TiedIdx == -1 || TiedIdx == Component::DST);
   HasSrc2Acc = TiedIdx != -1;
 
-  if (OpDesc.TSFlags & SIInstrFlags::VOP3) {
-    SrcOperandsNum = 3;
-    return;
+  SrcOperandsNum = (OpDesc.TSFlags & SIInstrFlags::VOP3)
+      ? 3 : OpDesc.getNumOperands() - OpDesc.getNumDefs();
+  assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
+
+  if (isSISrcFPOperand(OpDesc,
+                       getNamedOperandIdx(OpDesc.getOpcode(), OpName::src0))) {
+    // All FP VOPD instructions have Neg modifiers for all operands except
+    // for tied src2.
+    NumVOPD3Mods = SrcOperandsNum;
+    if (HasSrc2Acc)
+      --NumVOPD3Mods;
   }
 
-  SrcOperandsNum = OpDesc.getNumOperands() - OpDesc.getNumDefs();
-  assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
+  if (OpDesc.TSFlags & SIInstrFlags::VOP3)
+    return;
 
   auto OperandsNum = OpDesc.getNumOperands();
   unsigned CompOprIdx;
@@ -715,10 +736,10 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     std::function<unsigned(unsigned, unsigned)> GetRegIdx,
     const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
-    bool VOPD3) const {
+    bool VOPD3, bool VOPD3Layout) const {
 
-  auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
-  auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
+  auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx, VOPD3Layout);
+  auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx, VOPD3Layout);
 
   const auto banksOverlap = [&MRI](MCRegister X, MCRegister Y,
                                    unsigned BanksMask) -> bool {
@@ -783,7 +804,7 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
 // if the operand is not a register or not a VGPR.
 InstInfo::RegIndices InstInfo::getRegIndices(
     unsigned CompIdx,
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx, bool VOPD3) const {
   assert(CompIdx < COMPONENTS_NUM);
 
   const auto &Comp = CompInfo[CompIdx];
@@ -795,7 +816,8 @@ InstInfo::RegIndices InstInfo::getRegIndices(
     unsigned CompSrcIdx = CompOprIdx - DST_NUM;
     RegIndices[CompOprIdx] =
         Comp.hasRegSrcOperand(CompSrcIdx)
-            ? GetRegIdx(CompIdx, Comp.getIndexOfSrcInMCOperands(CompSrcIdx))
+            ? GetRegIdx(CompIdx,
+                        Comp.getIndexOfSrcInMCOperands(CompSrcIdx, VOPD3))
             : 0;
   }
   return RegIndices;

@@ -442,8 +442,12 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let InsVOPDYDeferred =
     (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y,
          VGPR_32:$vsrc1Y, VGPRSrc_32:$src2Y);
-  let InsVOPD3X = (ins Src0VOPD3:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
-  let InsVOPD3Y = (ins Src0VOPD3:$src0Y, Src1RC32:$vsrc1Y, VGPRSrc_32:$src2Y);
+  let InsVOPD3X = (ins Src0ModVOPD3:$src0X_modifiers, Src0VOPD3:$src0X,
+                       Src1ModVOPD3:$vsrc1X_modifiers, Src1RC32:$vsrc1X,
+                       VGPRSrc_32:$src2X);
+  let InsVOPD3Y = (ins Src0ModVOPD3:$src0Y_modifiers, Src0VOPD3:$src0Y,
+                       Src1ModVOPD3:$vsrc1Y_modifiers, Src1RC32:$vsrc1Y,
+                       VGPRSrc_32:$src2Y);
 
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,

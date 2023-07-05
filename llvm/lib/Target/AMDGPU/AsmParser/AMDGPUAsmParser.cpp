@@ -316,6 +316,21 @@ public:
     return isRegOrInline(AMDGPU::VS_32RegClassID, MVT::f32);
   }
 
+  bool isRegOrInlineImmWithFP64InputMods() const {
+    return isRegOrInline(AMDGPU::VS_64RegClassID, MVT::f64);
+  }
+
+  bool isVRegWithInputMods(unsigned RCID) const {
+    return isRegClass(RCID);
+  }
+
+  bool isVRegWithFP32InputMods() const {
+    return isVRegWithInputMods(AMDGPU::VGPR_32RegClassID);
+  }
+
+  bool isVRegWithFP64InputMods() const {
+    return isVRegWithInputMods(AMDGPU::VReg_64RegClassID);
+  }
 
   bool isVReg() const {
     return isRegClass(AMDGPU::VGPR_32RegClassID) ||
@@ -1697,9 +1712,10 @@ private:
   bool validateConstantBusLimitations(const MCInst &Inst, const OperandVector &Operands);
   std::optional<unsigned>
   checkVOPDRegBankConstraints(const MCInst &Inst, bool AsVOPD3);
-  bool validateVOPDRegBankConstraints(const MCInst &Inst,
-                                      const OperandVector &Operands);
+  bool validateVOPD(const MCInst &Inst, const OperandVector &Operands);
+  bool tryVOPD(const MCInst &Inst);
   bool tryVOPD3(const MCInst &Inst);
+  bool tryAnotherVOPDEncoding(const MCInst &Inst);
 
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
@@ -3331,11 +3347,11 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     }
   }
 
-  // Asm first tries to match VOPD. By failing early here with
-  // Match_InvalidOperand, the parser will retry parsing as VOPD3. Checking
-  // later during validateInstruction does not give a chance to retry parsing
-  // as VOPD3.
-  if (tryVOPD3(Inst))
+  // Asm can first try to match VOPD or VOPD3. By failing early here with
+  // Match_InvalidOperand, the parser will retry parsing as VOPD3 or VOPD.
+  // Checking later during validateInstruction does not give a chance to retry
+  // parsing as a different encoding.
+  if (tryAnotherVOPDEncoding(Inst))
     return Match_InvalidOperand;
 
   return Match_Success;
@@ -3647,11 +3663,8 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
   bool AllowSameVGPR = isGFX12_10();
 
   if (AsVOPD3) { // Literal constants are not allowed with VOPD3.
-    unsigned BitOp3Idx =
-        (unsigned)AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::bitop3);
-    for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
-      if (I == BitOp3Idx)
-        continue;
+    for (auto OpName : {OpName::src0X, OpName::src0Y}) {
+      int I = getNamedOperandIdx(Opcode, OpName);
       const MCOperand &Op = Inst.getOperand(I);
       if (!Op.isImm())
         continue;
@@ -3660,21 +3673,43 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
           !AMDGPU::isInlinableLiteral64(Imm, hasInv2PiInlineImm()))
         return I;
     }
+
+    for (auto OpName : {OpName::vsrc1X, OpName::vsrc1Y,
+                        OpName::vsrc2X, OpName::vsrc2Y,
+                        OpName::imm}) {
+      int I = getNamedOperandIdx(Opcode, OpName);
+      if (I == -1)
+        continue;
+      const MCOperand &Op = Inst.getOperand(I);
+      if (Op.isImm())
+        return I;
+    }
   }
 
+  bool VOPD3Layout = MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3;
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
   auto InvalidCompOprIdx =
       InstInfo.getInvalidCompOperandIndex(getVRegIdx, *TRI, SkipSrc,
-                                          AllowSameVGPR, AsVOPD3);
+                                          AllowSameVGPR, AsVOPD3, VOPD3Layout);
 
   return InvalidCompOprIdx;
 }
 
-bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
+bool AMDGPUAsmParser::validateVOPD(
     const MCInst &Inst, const OperandVector &Operands) {
 
   unsigned Opcode = Inst.getOpcode();
   bool AsVOPD3 = MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3;
+
+  if (AsVOPD3) {
+    for (unsigned I = 0, E = Operands.size(); I != E; ++I) {
+      AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
+      if ((Op.isRegKind() || Op.isImmTy(AMDGPUOperand::ImmTyNone)) &&
+          (Op.getModifiers().getFPModifiersOperand() & SISrcMods::ABS))
+        Error(Op.getStartLoc(), "ABS not allowed in VOPD3 instructions");
+    }
+  }
+
   auto InvalidCompOprIdx = checkVOPDRegBankConstraints(Inst, AsVOPD3);
   if (!InvalidCompOprIdx.has_value())
     return true;
@@ -3701,14 +3736,9 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
   return false;
 }
 
-// VOPD3 has more relaxed register constraints than VOPD. We prefer shorter VOPD
-// form but switch to VOPD3 otherwise.
+// \returns true if \p Inst does not satisfy VOPD constraints, but can be
+// potentially used as VOPD3 with the same operands.
 bool AMDGPUAsmParser::tryVOPD3(const MCInst &Inst) {
-  const unsigned Opcode = Inst.getOpcode();
-  if (!isGFX12_10() || !isVOPD(Opcode) ||
-      (MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3))
-    return false;
-
   // First check if it fits VOPD
   auto InvalidCompOprIdx = checkVOPDRegBankConstraints(Inst, false);
   if (!InvalidCompOprIdx.has_value())
@@ -3723,9 +3753,49 @@ bool AMDGPUAsmParser::tryVOPD3(const MCInst &Inst) {
     // legal for VOPD either.
     if (*InvalidCompOprIdx == VOPD::Component::DST)
       return true;
+
+    // Otherwise prefer VOPD as we may find ourselves in an awkward situation
+    // with a conflict in tied implicit src2 of fmac and no asm operand to
+    // to point to.
     return false;
   }
   return true;
+}
+
+// \returns true is a VOPD3 instruction can be also represented as a shorter
+// VOPD encoding.
+bool AMDGPUAsmParser::tryVOPD(const MCInst &Inst) {
+  const unsigned Opcode = Inst.getOpcode();
+  const auto &II = getVOPDInstInfo(Opcode, &MII);
+  unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(getSTI());
+  if (!getCanBeVOPD(II[VOPD::X].getOpcode(), EncodingFamily, false).X ||
+      !getCanBeVOPD(II[VOPD::Y].getOpcode(), EncodingFamily, false).Y)
+    return false;
+
+  // If any modifiers are set this cannot be VOPD.
+  for (auto OpName : {OpName::src0X_modifiers, OpName::src0Y_modifiers,
+                      OpName::vsrc1X_modifiers, OpName::vsrc1Y_modifiers,
+                      OpName::vsrc2X_modifiers, OpName::vsrc2Y_modifiers}) {
+    int I = getNamedOperandIdx(Opcode, OpName);
+    if (I == -1)
+      continue;
+    if (Inst.getOperand(I).getImm())
+      return false;
+  }
+
+  return !tryVOPD3(Inst);
+}
+
+// VOPD3 has more relaxed register constraints than VOPD. We prefer shorter VOPD
+// form but switch to VOPD3 otherwise.
+bool AMDGPUAsmParser::tryAnotherVOPDEncoding(const MCInst &Inst) {
+  const unsigned Opcode = Inst.getOpcode();
+  if (!isGFX12_10() || !isVOPD(Opcode))
+    return false;
+
+  if (MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3)
+    return tryVOPD(Inst);
+  return tryVOPD3(Inst);
 }
 
 bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {
@@ -4922,7 +4992,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateConstantBusLimitations(Inst, Operands)) {
     return false;
   }
-  if (!validateVOPDRegBankConstraints(Inst, Operands)) {
+  if (!validateVOPD(Inst, Operands)) {
     return false;
   }
   if (!validateIntClampSupported(Inst)) {
@@ -8742,8 +8812,14 @@ ParseStatus AMDGPUAsmParser::parseVOPD(OperandVector &Operands) {
 
 // Create VOPD MCInst operands using parsed assembler operands.
 void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
+  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+
   auto addOp = [&](uint16_t ParsedOprIdx) { // NOLINT:function pointer
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[ParsedOprIdx]);
+    if (isRegOrImmWithInputMods(Desc, Inst.getNumOperands())) {
+      Op.addRegOrImmWithFPInputModsOperands(Inst, 2);
+      return;
+    }
     if (Op.isReg()) {
       Op.addRegOperands(Inst, 1);
       return;

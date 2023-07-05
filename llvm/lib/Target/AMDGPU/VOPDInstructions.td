@@ -59,9 +59,13 @@ class VOPD3e<bits<5> opX, bits<5> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   bits<8> vsrc1Y;
   bits<8> vsrc2Y;
   bits<8> vdstY;
-  // TODO-GFX1210: Handle neg modifiers.
-  bits<3> negX = 0;
-  bits<3> negY = 0;
+  // neg modifiers
+  bit src0X_modifiers;
+  bit src0Y_modifiers;
+  bit vsrc1X_modifiers;
+  bit vsrc1Y_modifiers;
+  bit vsrc2X_modifiers;
+  bit vsrc2Y_modifiers;
   bits<8> bitop3;
 
   let Inst{8-0} = src0X;
@@ -71,23 +75,27 @@ class VOPD3e<bits<5> opX, bits<5> opY, VOP_Pseudo VDX, VOP_Pseudo VDY> : Enc96 {
   let Inst{22-18} = opX;
   let Inst{31-24} = 0xcf; // encoding
   let Inst{40-32} = src0Y;
-  let Inst{43-41} = negX;
-  let Inst{46-44} = negY;
-  let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPDX, "$vsrc1X"), -1), 0, vsrc1X);
+  let Inst{41} = !if(VDX.Pfl.HasModifiers, src0X_modifiers, 0);
+  let Inst{42} = !if(!and(VDX.Pfl.HasSrc1, VDX.Pfl.HasModifiers), vsrc1X_modifiers, 0);
+  let Inst{43} = !if(!and(VDX.Pfl.HasVOPD3Src2, VDX.Pfl.HasModifiers), vsrc2X_modifiers, 0);
+  let Inst{44} = !if(VDY.Pfl.HasModifiers, src0Y_modifiers, 0);
+  let Inst{45} = !if(!and(VDY.Pfl.HasSrc1, VDY.Pfl.HasModifiers), vsrc1Y_modifiers, 0);
+  let Inst{46} = !if(!and(VDY.Pfl.HasVOPD3Src2, VDY.Pfl.HasModifiers), vsrc2Y_modifiers, 0);
+  let Inst{55-48} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc1X"), -1), 0, vsrc1X);
 
   // Set src2 to VCC for V_DUAL_CNDMASK_B32.
   // SP3 allows to use an SGPR in place of VSRC2 operand for this instruction
   // despite the fact the operand does not accept SGPRs.
   // Actual HW behavior: it does not read and ignores the field, default VCC is
   // used.
-  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPDX, "$vsrc2X"), -1),
+  let Inst{63-56} = !if(!eq(!find(VDX.Pfl.AsmVOPD3X, "$vsrc2X"), -1),
                             !if(!eq(VDX, V_CNDMASK_B32_e32),
                                 !cast<int>(VCC.HWEncoding), 0),
                             vsrc2X);
   let Inst{71-64} = vdstX;
-  let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPDY, "$vsrc1Y"), -1), 0, vsrc1Y);
-  let Inst{87-80} = !if(!ne(!find(VDY.Pfl.AsmVOPDY, "bitop"), -1), bitop3,
-                        !if(!eq(!find(VDY.Pfl.AsmVOPDY, "$vsrc2Y"), -1),
+  let Inst{79-72} = !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc1Y"), -1), 0, vsrc1Y);
+  let Inst{87-80} = !if(!ne(!find(VDY.Pfl.AsmVOPD3Y, "bitop"), -1), bitop3,
+                        !if(!eq(!find(VDY.Pfl.AsmVOPD3Y, "$vsrc2Y"), -1),
                             !if(!eq(VDY, V_CNDMASK_B32_e32),
                                 !cast<int>(VCC.HWEncoding), 0),
                             vsrc2Y));
@@ -292,7 +300,7 @@ foreach Gen = [GFX1210GenD3] in {
       defvar xAsmName = getRenamed<XasVC.VOPDName, Gen>.ret;
       defvar yAsmName = getRenamed<YasVC.VOPDName, Gen>.ret;
       defvar OpName = "V_DUAL_" # !substr(x,2) # "_X_" # !substr(y,2) # "_e96" # Gen.Suffix;
-      defvar asm = xAsmName # xInst.Pfl.AsmVOPDX #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPDY;
+      defvar asm = xAsmName # xInst.Pfl.AsmVOPD3X #" :: "# yAsmName #" "# yInst.Pfl.AsmVOPD3Y;
       defvar ins = !con(xInst.Pfl.InsVOPD3X, yInst.Pfl.InsVOPD3Y);
       defvar outs = (outs xInst.Pfl.DstRC:$vdstX, yInst.Pfl.DstRC:$vdstY);
       def OpName : VOPD3<outs, ins, asm, xInst, yInst, XasVC, YasVC, Gen>;

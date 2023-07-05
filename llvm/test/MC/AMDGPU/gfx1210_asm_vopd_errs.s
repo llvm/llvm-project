@@ -201,12 +201,23 @@ v_dual_mov_b64 v[2:3], 1 :: v_dual_ashrrev_i32 v3, v7, v6
 // GFX12-NEXT:{{^}}                                               ^
 
 //===----------------------------------------------------------------------===//
-// Literals not supported by VOPD3
+// Literals not supported by VOPD3. Inline literals can only be encoded for
+// src0, but not for vsrc1 or vsrc2.
 //===----------------------------------------------------------------------===//
 v_dual_mov_b64 v[2:3], 100 :: v_dual_ashrrev_i32 v4, v7, v6
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // GFX12-NEXT:{{^}}v_dual_mov_b64 v[2:3], 100 :: v_dual_ashrrev_i32 v4, v7, v6
 // GFX12-NEXT:{{^}}                       ^
+
+v_dual_fma_f32 v255, s105, v2, v255 :: v_dual_fma_f32 v7, 1, 0, v8
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v255, s105, v2, v255 :: v_dual_fma_f32 v7, 1, 0, v8
+// GFX12-NEXT:{{^}}                                                             ^
+
+v_dual_fma_f32 v255, s105, v2, v255 :: v_dual_fma_f32 v7, 1, v0, 0
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v255, s105, v2, v255 :: v_dual_fma_f32 v7, 1, v0, 0
+// GFX12-NEXT:{{^}}                                                                 ^
 
 //===----------------------------------------------------------------------===//
 // Check that we properly detect bank conflicts if instruction is derived from
@@ -236,3 +247,64 @@ v_dual_fmac_f32 v7, v5, v8 :: v_dual_fma_f32 v1, v4, v2, v3
 // GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: src2 operands must use different VGPR banks
 // GFX12-NEXT:{{^}}v_dual_fmac_f32 v7, v5, v8 :: v_dual_fma_f32 v1, v4, v2, v3
 // GFX12-NEXT:{{^}}                                                         ^
+
+//===----------------------------------------------------------------------===//
+// ABS modifiers are not supported
+//===----------------------------------------------------------------------===//
+v_dual_fma_f32 v255, |s105|, v0, v1 :: v_dual_add_nc_u32 v7, s1, v0
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: ABS not allowed in VOPD3 instructions
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v255, |s105|, v0, v1 :: v_dual_add_nc_u32 v7, s1, v0
+// GFX12-NEXT:{{^}}                      ^
+
+v_dual_fma_f32 v255, s105, abs(v0), v1 :: v_dual_fma_f32 v7, s1, v0, v8
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: ABS not allowed in VOPD3 instructions
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v255, s105, abs(v0), v1 :: v_dual_fma_f32 v7, s1, v0, v8
+// GFX12-NEXT:{{^}}                               ^
+
+v_dual_fma_f32 v255, s105, v0, |v1| :: v_dual_fma_f32 v7, s1, v0, v8
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: ABS not allowed in VOPD3 instructions
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v255, s105, v0, |v1| :: v_dual_fma_f32 v7, s1, v0, v8
+// GFX12-NEXT:{{^}}                                ^
+
+v_dual_add_nc_u32 v255, s105, v0 :: v_dual_fma_f32 v7, |1|, v0, v8
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: ABS not allowed in VOPD3 instructions
+// GFX12-NEXT:{{^}}v_dual_add_nc_u32 v255, s105, v0 :: v_dual_fma_f32 v7, |1|, v0, v8
+// GFX12-NEXT:{{^}}                                                        ^
+
+v_dual_fma_f32 v255, s105, v0, v1 :: v_dual_fma_f32 v7, s1, -|v0|, v8
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: ABS not allowed in VOPD3 instructions
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v255, s105, v0, v1 :: v_dual_fma_f32 v7, s1, -|v0|, v8
+// GFX12-NEXT:{{^}}                                                              ^
+
+v_dual_fma_f32 v255, s105, v0, v1 :: v_dual_fma_f32 v7, s1, v0, -abs(v8)
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: ABS not allowed in VOPD3 instructions
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v255, s105, v0, v1 :: v_dual_fma_f32 v7, s1, v0, -abs(v8)
+// GFX12-NEXT:{{^}}                                                                     ^
+
+v_dual_mul_f64 v[6:7], -|v[2:3]|, v[4:5] :: v_dual_fma_f32 v255, -s105, v2, v1
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: ABS not allowed in VOPD3 instructions
+// GFX12-NEXT:{{^}}v_dual_mul_f64 v[6:7], -|v[2:3]|, v[4:5] :: v_dual_fma_f32 v255, -s105, v2, v1
+// GFX12-NEXT:{{^}}                         ^
+
+//===----------------------------------------------------------------------===//
+// No modifiers on non-fp part of an instruction
+//===----------------------------------------------------------------------===//
+v_dual_fma_f32 v255, -s105, v0, v1 :: v_dual_lshrrev_b32 v7, -s1, v0
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v255, -s105, v0, v1 :: v_dual_lshrrev_b32 v7, -s1, v0
+// GFX12-NEXT:{{^}}                                                              ^
+
+v_dual_fma_f32 v255, -s105, v0, v1 :: v_dual_max_i32 v7, s1, -v0
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-NEXT:{{^}}v_dual_fma_f32 v255, -s105, v0, v1 :: v_dual_max_i32 v7, s1, -v0
+// GFX12-NEXT:{{^}}                                                              ^
+
+v_dual_add_nc_u32 v7, -s1, v0 :: v_dual_fma_f32 v255, -s105, v0, v1
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+// GFX12-NEXT:{{^}}v_dual_add_nc_u32 v7, -s1, v0 :: v_dual_fma_f32 v255, -s105, v0, v1
+// GFX12-NEXT:{{^}}                      ^
+
+v_dual_sub_nc_u32 v7, s1, -v0 :: v_dual_fma_f32 v255, -s105, v0, v1
+// GFX12: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+// GFX12-NEXT:{{^}}v_dual_sub_nc_u32 v7, s1, -v0 :: v_dual_fma_f32 v255, -s105, v0, v1
+// GFX12-NEXT:{{^}}                          ^

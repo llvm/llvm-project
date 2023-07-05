@@ -96,10 +96,26 @@ public:
       VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
     }
 
+    const uint16_t Mods[2][3] = {
+        {AMDGPU::OpName::src0X_modifiers, AMDGPU::OpName::vsrc1X_modifiers,
+         AMDGPU::OpName::vsrc2X_modifiers},
+        {AMDGPU::OpName::src0Y_modifiers, AMDGPU::OpName::vsrc1Y_modifiers,
+         AMDGPU::OpName::vsrc2Y_modifiers}};
+    const uint16_t SrcMods[3] = {AMDGPU::OpName::src0_modifiers,
+                                 AMDGPU::OpName::src1_modifiers,
+                                 AMDGPU::OpName::src2_modifiers};
+    const unsigned VOPDOpc = VOPDInst->getOpcode();
+
     for (auto CompIdx : VOPD::COMPONENTS) {
       auto CompSrcOprNum = InstInfo[CompIdx].getCompSrcOperandsNum();
       for (unsigned CompSrcIdx = 0; CompSrcIdx < CompSrcOprNum; ++CompSrcIdx) {
-        auto MCOprIdx = InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx);
+        if (AMDGPU::hasNamedOperand(VOPDOpc, Mods[CompIdx][CompSrcIdx])) {
+          const MachineOperand *Mod =
+              SII->getNamedOperand(*MI[CompIdx], SrcMods[CompSrcIdx]);
+          VOPDInst.addImm(Mod ? Mod->getImm() : 0);
+        }
+        auto MCOprIdx =
+            InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx, CI.IsVOPD3);
         VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
       }
     }

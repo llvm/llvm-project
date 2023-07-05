@@ -590,6 +590,7 @@ private:
   unsigned SrcOperandsNum = 0;
   std::optional<unsigned> MandatoryLiteralIdx;
   bool HasSrc2Acc = false;
+  unsigned NumVOPD3Mods = 0;
 
 public:
   ComponentProps() = default;
@@ -622,6 +623,9 @@ public:
 
   // Return true iif this component has tied src2.
   bool hasSrc2Acc() const { return HasSrc2Acc; }
+
+  // Return a number of source modifiers if instruction is used in VOPD3.
+  unsigned getCompVOPD3ModsNum() const { return NumVOPD3Mods; }
 
 private:
   bool hasMandatoryLiteralAt(unsigned CompSrcIdx) const {
@@ -692,24 +696,25 @@ private:
 private:
   const ComponentKind Kind;
   const ComponentProps PrevComp;
-  const unsigned Opcode;
+  const MCInstrDesc &OpDesc;
 
 public:
   // Create layout for COMPONENT_X or SINGLE component.
-  ComponentLayout(ComponentKind Kind, unsigned Opc) : Kind(Kind), Opcode(Opc) {
+  ComponentLayout(ComponentKind Kind, const MCInstrDesc &OpDesc)
+      : Kind(Kind), OpDesc(OpDesc) {
     assert(Kind == ComponentKind::SINGLE || Kind == ComponentKind::COMPONENT_X);
   }
 
   // Create layout for COMPONENT_Y which depends on COMPONENT_X layout.
-  ComponentLayout(const ComponentProps &OpXProps, unsigned Opc)
-      : Kind(ComponentKind::COMPONENT_Y), PrevComp(OpXProps), Opcode(Opc) {}
+  ComponentLayout(const ComponentProps &OpXProps, const MCInstrDesc &OpDesc)
+      : Kind(ComponentKind::COMPONENT_Y), PrevComp(OpXProps), OpDesc(OpDesc) {}
 
 public:
   // Return the index of dst operand in MCInst operands.
   unsigned getIndexOfDstInMCOperands() const { return MC_DST_IDX[Kind]; }
 
   // Return the index of the specified src operand in MCInst operands.
-  unsigned getIndexOfSrcInMCOperands(unsigned CompSrcIdx) const;
+  unsigned getIndexOfSrcInMCOperands(unsigned CompSrcIdx, bool VOPD3) const;
 
   // Return the index of dst operand in the parsed operands array.
   unsigned getIndexOfDstInParsedOperands() const {
@@ -722,12 +727,18 @@ public:
     return FIRST_PARSED_SRC_IDX[Kind] + getPrevCompParsedSrcNum() + CompSrcIdx;
   }
 
+  // Return opcode of the component.
+  unsigned getOpcode() const { return OpDesc.getOpcode(); };
+
 private:
   unsigned getPrevCompSrcNum() const {
     return PrevComp.getCompSrcOperandsNum();
   }
   unsigned getPrevCompParsedSrcNum() const {
     return PrevComp.getCompParsedSrcOperandsNum();
+  }
+  unsigned getPrevCompVOPD3ModsNum() const {
+    return PrevComp.getCompVOPD3ModsNum();
   }
 };
 
@@ -737,11 +748,11 @@ public:
   // Create ComponentInfo for COMPONENT_X or SINGLE component.
   ComponentInfo(const MCInstrDesc &OpDesc,
                 ComponentKind Kind = ComponentKind::SINGLE)
-      : ComponentLayout(Kind, OpDesc.getOpcode()), ComponentProps(OpDesc) {}
+      : ComponentLayout(Kind, OpDesc), ComponentProps(OpDesc) {}
 
   // Create ComponentInfo for COMPONENT_Y which depends on COMPONENT_X layout.
   ComponentInfo(const MCInstrDesc &OpDesc, const ComponentProps &OpXProps)
-      : ComponentLayout(OpXProps, OpDesc.getOpcode()), ComponentProps(OpDesc) {}
+      : ComponentLayout(OpXProps, OpDesc), ComponentProps(OpDesc) {}
 
   // Map component operand index to parsed operand index.
   // Return 0 if the specified operand does not exist.
@@ -776,14 +787,17 @@ public:
   // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
-  // or even.
+  // or even and instruction may have real src2 as opposed to tied accumulator.
+  // \p If VOPD3Layout is set to true then instruction does in fact have VOPD3
+  // operand layout even if we are checking VOPD constraints against it.
   bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
                          const MCRegisterInfo &MRI,
                          bool SkipSrc = false,
                          bool AllowSameVGPR = false,
-                         bool VOPD3 = false) const {
+                         bool VOPD3 = false,
+                         bool VOPD3Layout = false) const {
     return getInvalidCompOperandIndex(GetRegIdx, MRI, SkipSrc, AllowSameVGPR,
-                                      VOPD3).has_value();
+                                      VOPD3, VOPD3Layout).has_value();
   }
 
   // Check VOPD operands constraints.
@@ -793,18 +807,22 @@ public:
   // If \p AllowSameVGPR is set then same VGPRs are allowed for X and Y sources
   // even though it violates requirement to be from different banks.
   // If \p VOPD3 is set to true both dst registers allowed to be either odd
-  // or even.
+  // or even and instruction may have real src2 as opposed to tied accumulator.
+  // \p If VOPD3Layout is set to true then instruction does in fact have VOPD3
+  // operand layout even if we are checking VOPD constraints against it.
   std::optional<unsigned> getInvalidCompOperandIndex(
       std::function<unsigned(unsigned, unsigned)> GetRegIdx,
       const MCRegisterInfo &MRI,
       bool SkipSrc = false,
       bool AllowSameVGPR = false,
-      bool VOPD3 = false) const;
+      bool VOPD3 = false,
+      bool VOPD3Layout = false) const;
 
 private:
   RegIndices
   getRegIndices(unsigned ComponentIdx,
-                std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
+                std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                bool VOPD3) const;
 };
 
 } // namespace VOPD

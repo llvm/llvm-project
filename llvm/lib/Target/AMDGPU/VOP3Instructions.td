@@ -828,7 +828,7 @@ class VOP3_BITOP3_Profile<VOPProfile pfl, VOP3Features f> : VOP3_Profile<pfl, f>
   let AsmVOP3DPP16 = getAsmVOP3DPP16<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
   let AsmVOP3DPP = AsmVOP3DPP16;
   let AsmVOP3DPP8 = getAsmVOP3DPP8<!if(HasOpSel, AsmVOP3OpSel, Asm64)>.ret;
-  let AsmVOPDY = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2>.ret # "$bitop3";
+  let AsmVOPD3Y = getAsmVOPDPart<NumSrcArgs, "Y", HasVOPD3Src2, HasModifiers>.ret # "$bitop3";
 }
 
 let SubtargetPredicate = isGFX10Plus in {

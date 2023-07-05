@@ -106,6 +106,24 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     }
     if (MI.getDesc().hasImplicitUseOfPhysReg(AMDGPU::VCC))
       UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
+
+    if (IsVOPD3) {
+      for (auto OpName : {AMDGPU::OpName::clamp, AMDGPU::OpName::omod,
+                          AMDGPU::OpName::op_sel}) {
+        if (TII.hasModifiersSet(MI, OpName))
+          return false;
+      }
+
+      // Neg is allowed, other modifiers are not. NB: even though sext has the
+      // same value as neg, there are no combinable instructions with sext.
+      for (auto OpName : {AMDGPU::OpName::src0_modifiers,
+                          AMDGPU::OpName::src1_modifiers,
+                          AMDGPU::OpName::src2_modifiers}) {
+        const MachineOperand *Mods = TII.getNamedOperand(MI, OpName);
+        if (Mods && (Mods->getImm() & ~SISrcMods::NEG))
+          return false;
+      }
+    }
   }
 
   if (UniqueLiterals.size() > 1)
@@ -120,14 +138,10 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   bool AllowSameVGPR = ST.hasGFX12_10Insts();
 
   if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
-                                 IsVOPD3))
+                                 IsVOPD3, IsVOPD3))
     return false;
 
   if (IsVOPD3) {
-    // TODO-GFX1210: Neg modifier can be supported for VOPD3.
-    if (TII.hasAnyModifiersSet(FirstMI) || TII.hasAnyModifiersSet(SecondMI))
-      return false;
-
     // BITOP3 can be converted to DUAL_BITOP2 only if src2 is zero.
     if (AMDGPU::hasNamedOperand(SecondMI.getOpcode(), AMDGPU::OpName::bitop3)) {
       const MachineOperand &Src2 =
