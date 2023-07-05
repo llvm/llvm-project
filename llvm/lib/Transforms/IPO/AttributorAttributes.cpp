@@ -2920,6 +2920,13 @@ struct AAMustProgressImpl : public AAMustProgress {
   AAMustProgressImpl(const IRPosition &IRP, Attributor &A)
       : AAMustProgress(IRP, A) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    bool IsKnown;
+    assert(!AA::hasAssumedIRAttr<Attribute::MustProgress>(
+        A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+  }
+
   /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "mustprogress" : "may-not-progress";
