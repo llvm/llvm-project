@@ -603,10 +603,10 @@ LTO::ThinLTOState::ThinLTOState(ThinBackend Backend)
 }
 
 LTO::LTO(Config Conf, ThinBackend Backend,
-         unsigned ParallelCodeGenParallelismLevel)
+         unsigned ParallelCodeGenParallelismLevel, LTOKind LTOMode)
     : Conf(std::move(Conf)),
       RegularLTO(ParallelCodeGenParallelismLevel, this->Conf),
-      ThinLTO(std::move(Backend)) {}
+      ThinLTO(std::move(Backend)), LTOMode(LTOMode) {}
 
 // Requires a destructor for MapVector<BitcodeModule>.
 LTO::~LTO() = default;
@@ -747,12 +747,25 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
     EnableSplitLTOUnit = LTOInfo->EnableSplitLTOUnit;
 
   BitcodeModule BM = Input.Mods[ModI];
+
+  if ((LTOMode == LTOK_UnifiedRegular || LTOMode == LTOK_UnifiedThin) &&
+      !LTOInfo->UnifiedLTO)
+    return make_error<StringError>(
+        "unified LTO compilation must use "
+        "compatible bitcode modules (use -funified-lto)",
+        inconvertibleErrorCode());
+
+  if (LTOInfo->UnifiedLTO && LTOMode == LTOK_Default)
+    LTOMode = LTOK_UnifiedThin;
+
+  bool IsThinLTO = LTOInfo->IsThinLTO && (LTOMode != LTOK_UnifiedRegular);
+
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, {ResI, ResE},
-                       LTOInfo->IsThinLTO ? ThinLTO.ModuleMap.size() + 1 : 0,
+                       IsThinLTO ? ThinLTO.ModuleMap.size() + 1 : 0,
                        LTOInfo->HasSummary);
 
-  if (LTOInfo->IsThinLTO)
+  if (IsThinLTO)
     return addThinLTO(BM, ModSyms, ResI, ResE);
 
   RegularLTO.EmptyCombinedModule = false;
@@ -820,6 +833,15 @@ LTO::addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
 
   if (Error Err = M.materializeMetadata())
     return std::move(Err);
+
+  // If cfi.functions is present and we are in regular LTO mode, LowerTypeTests
+  // will rename local functions in the merged module as "<function name>.1".
+  // This causes linking errors, since other parts of the module expect the
+  // original function name.
+  if (LTOMode == LTOK_UnifiedRegular)
+    if (NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions"))
+      M.eraseNamedMetadata(CfiFunctionsMD);
+
   UpgradeDebugInfo(M);
 
   ModuleSymbolTable SymTab;
@@ -1214,6 +1236,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       RegularLTO.CombinedModule->getContext(), Conf.RemarksFilename,
       Conf.RemarksPasses, Conf.RemarksFormat, Conf.RemarksWithHotness,
       Conf.RemarksHotnessThreshold);
+  LLVM_DEBUG(dbgs() << "Running regular LTO\n");
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
   DiagnosticOutputFile = std::move(*DiagFileOrErr);
@@ -1277,18 +1300,33 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 
   if (!Conf.CodeGenOnly) {
     for (const auto &R : GlobalResolutions) {
+      GlobalValue *GV =
+          RegularLTO.CombinedModule->getNamedValue(R.second.IRName);
       if (!R.second.isPrevailingIRSymbol())
         continue;
       if (R.second.Partition != 0 &&
           R.second.Partition != GlobalResolution::External)
         continue;
 
-      GlobalValue *GV =
-          RegularLTO.CombinedModule->getNamedValue(R.second.IRName);
       // Ignore symbols defined in other partitions.
       // Also skip declarations, which are not allowed to have internal linkage.
       if (!GV || GV->hasLocalLinkage() || GV->isDeclaration())
         continue;
+
+      // Symbols that are marked DLLImport or DLLExport should not be
+      // internalized, as they are either externally visible or referencing
+      // external symbols. Symbols that have AvailableExternally or Appending
+      // linkage might be used by future passes and should be kept as is.
+      // These linkages are seen in Unified regular LTO, because the process
+      // of creating split LTO units introduces symbols with that linkage into
+      // one of the created modules. Normally, only the ThinLTO backend would
+      // compile this module, but Unified Regular LTO processes both
+      // modules created by the splitting process as regular LTO modules.
+      if ((LTOMode == LTOKind::LTOK_UnifiedRegular) &&
+          ((GV->getDLLStorageClass() != GlobalValue::DefaultStorageClass) ||
+           GV->hasAvailableExternallyLinkage() || GV->hasAppendingLinkage()))
+        continue;
+
       GV->setUnnamedAddr(R.second.UnnamedAddr ? GlobalValue::UnnamedAddr::Global
                                               : GlobalValue::UnnamedAddr::None);
       if (EnableLTOInternalization && R.second.Partition == 0)
@@ -1606,6 +1644,7 @@ ThinBackend lto::createWriteIndexesThinBackend(
 
 Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                       const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+  LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   ThinLTO.CombinedIndex.releaseTemporaryMemory();
   timeTraceProfilerBegin("ThinLink", StringRef(""));
   auto TimeTraceScopeExit = llvm::make_scope_exit([]() {
