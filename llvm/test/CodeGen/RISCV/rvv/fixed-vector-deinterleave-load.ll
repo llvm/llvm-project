@@ -20,12 +20,12 @@ define {<16 x i1>, <16 x i1>} @vector_deinterleave_load_v16i1_v32i1(ptr %p) {
 ; RV32-NEXT:    vid.v v9
 ; RV32-NEXT:    vadd.vv v11, v9, v9
 ; RV32-NEXT:    vrgather.vv v9, v8, v11
-; RV32-NEXT:    vadd.vi v12, v11, -16
 ; RV32-NEXT:    lui a0, 16
 ; RV32-NEXT:    addi a0, a0, -256
 ; RV32-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; RV32-NEXT:    vmv.v.x v0, a0
 ; RV32-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; RV32-NEXT:    vadd.vi v12, v11, -16
 ; RV32-NEXT:    vrgather.vv v9, v10, v12, v0.t
 ; RV32-NEXT:    vmsne.vi v9, v9, 0
 ; RV32-NEXT:    vadd.vi v12, v11, 1
@@ -51,12 +51,12 @@ define {<16 x i1>, <16 x i1>} @vector_deinterleave_load_v16i1_v32i1(ptr %p) {
 ; RV64-NEXT:    vid.v v9
 ; RV64-NEXT:    vadd.vv v11, v9, v9
 ; RV64-NEXT:    vrgather.vv v9, v8, v11
-; RV64-NEXT:    vadd.vi v12, v11, -16
 ; RV64-NEXT:    lui a0, 16
 ; RV64-NEXT:    addiw a0, a0, -256
 ; RV64-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; RV64-NEXT:    vadd.vi v12, v11, -16
 ; RV64-NEXT:    vrgather.vv v9, v10, v12, v0.t
 ; RV64-NEXT:    vmsne.vi v9, v9, 0
 ; RV64-NEXT:    vadd.vi v12, v11, 1
