@@ -124,6 +124,8 @@ public:
     template<class InputIterator>
         basic_string(InputIterator begin, InputIterator end,
                      const allocator_type& a = allocator_type());                               // constexpr since C++20
+    template<container-compatible-range<charT> R>
+      constexpr basic_string(from_range_t, R&& rg, const Allocator& a = Allocator());           // since C++23
     basic_string(initializer_list<value_type>, const Allocator& = Allocator());                 // constexpr since C++20
     basic_string(const basic_string&, const Allocator&);                                        // constexpr since C++20
     basic_string(basic_string&&, const Allocator&);                                             // constexpr since C++20
@@ -200,6 +202,8 @@ public:
     basic_string& append(size_type n, value_type c);                                            // constexpr since C++20
     template<class InputIterator>
         basic_string& append(InputIterator first, InputIterator last);                          // constexpr since C++20
+    template<container-compatible-range<charT> R>
+      constexpr basic_string& append_range(R&& rg);                                             // C++23
     basic_string& append(initializer_list<value_type>);                                         // constexpr since C++20
 
     void push_back(value_type c);                                                               // constexpr since C++20
@@ -221,6 +225,8 @@ public:
     basic_string& assign(size_type n, value_type c);                                            // constexpr since C++20
     template<class InputIterator>
         basic_string& assign(InputIterator first, InputIterator last);                          // constexpr since C++20
+    template<container-compatible-range<charT> R>
+      constexpr basic_string& assign_range(R&& rg);                                             // C++23
     basic_string& assign(initializer_list<value_type>);                                         // constexpr since C++20
 
     basic_string& insert(size_type pos1, const basic_string& str);                              // constexpr since C++20
@@ -237,6 +243,8 @@ public:
     iterator      insert(const_iterator p, size_type n, value_type c);                          // constexpr since C++20
     template<class InputIterator>
         iterator insert(const_iterator p, InputIterator first, InputIterator last);             // constexpr since C++20
+    template<container-compatible-range<charT> R>
+      constexpr iterator insert_range(const_iterator p, R&& rg);                                // C++23
     iterator      insert(const_iterator p, initializer_list<value_type>);                       // constexpr since C++20
 
     basic_string& erase(size_type pos = 0, size_type n = npos);                                 // constexpr since C++20
@@ -262,6 +270,8 @@ public:
     basic_string& replace(const_iterator i1, const_iterator i2, size_type n, value_type c);     // constexpr since C++20
     template<class InputIterator>
         basic_string& replace(const_iterator i1, const_iterator i2, InputIterator j1, InputIterator j2); // constexpr since C++20
+    template<container-compatible-range<charT> R>
+      constexpr basic_string& replace_with_range(const_iterator i1, const_iterator i2, R&& rg); // C++23
     basic_string& replace(const_iterator i1, const_iterator i2, initializer_list<value_type>);  // constexpr since C++20
 
     size_type copy(value_type* s, size_type n, size_type pos = 0) const;                        // constexpr since C++20
@@ -353,6 +363,26 @@ basic_string(InputIterator, InputIterator, Allocator = Allocator())
    -> basic_string<typename iterator_traits<InputIterator>::value_type,
                   char_traits<typename iterator_traits<InputIterator>::value_type>,
                   Allocator>;   // C++17
+
+template<ranges::input_range R,
+         class Allocator = allocator<ranges::range_value_t<R>>>
+  basic_string(from_range_t, R&&, Allocator = Allocator())
+    -> basic_string<ranges::range_value_t<R>, char_traits<ranges::range_value_t<R>>,
+                    Allocator>; // C++23
+
+template<class charT,
+         class traits,
+         class Allocator = allocator<charT>>
+  explicit basic_string(basic_string_view<charT, traits>, const Allocator& = Allocator())
+    -> basic_string<charT, traits, Allocator>; // C++17
+
+template<class charT,
+         class traits,
+         class Allocator = allocator<charT>>
+  basic_string(basic_string_view<charT, traits>,
+                typename see below::size_type, typename see below::size_type,
+                const Allocator& = Allocator())
+    -> basic_string<charT, traits, Allocator>; // C++17
 
 template<class charT, class traits, class Allocator>
 basic_string<charT, traits, Allocator>
@@ -558,6 +588,11 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
 #include <__memory_resource/polymorphic_allocator.h>
+#include <__ranges/access.h>
+#include <__ranges/concepts.h>
+#include <__ranges/container_compatible_range.h>
+#include <__ranges/from_range.h>
+#include <__ranges/size.h>
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
 #include <__type_traits/is_allocator.h>
@@ -573,6 +608,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__type_traits/void_t.h>
 #include <__utility/auto_cast.h>
 #include <__utility/declval.h>
+#include <__utility/forward.h>
 #include <__utility/is_pointer_in_range.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
@@ -662,6 +698,7 @@ struct __can_be_converted_to_string_view : public _BoolConstant<
     > {};
 
 struct __uninitialized_size_tag {};
+struct __init_with_sentinel_tag {};
 
 template<class _CharT, class _Traits, class _Allocator>
 class basic_string
@@ -820,6 +857,13 @@ private:
             __set_long_pointer(__allocation);
             __set_long_size(__size);
         }
+    }
+
+    template <class _Iter, class _Sent>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+    basic_string(__init_with_sentinel_tag, _Iter __first, _Sent __last, const allocator_type& __a)
+        : __r_(__default_init_tag(), __a) {
+      __init_with_sentinel(std::move(__first), std::move(__last));
     }
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator __make_iterator(pointer __p) {
@@ -1021,6 +1065,19 @@ public:
       : __r_(__default_init_tag(), __a) {
     __init(__first, __last);
   }
+
+#if _LIBCPP_STD_VER >= 23
+  template <_ContainerCompatibleRange<_CharT> _Range>
+  _LIBCPP_HIDE_FROM_ABI constexpr
+  basic_string(from_range_t, _Range&& __range, const allocator_type& __a = allocator_type())
+      : __r_(__default_init_tag(), __a) {
+    if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
+      __init_with_size(ranges::begin(__range), ranges::end(__range), ranges::distance(__range));
+    } else {
+      __init_with_sentinel(ranges::begin(__range), ranges::end(__range));
+    }
+  }
+#endif
 
 #ifndef _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(initializer_list<_CharT> __il)
@@ -1232,6 +1289,15 @@ public:
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
     append(_ForwardIterator __first, _ForwardIterator __last);
 
+#if _LIBCPP_STD_VER >= 23
+    template <_ContainerCompatibleRange<_CharT> _Range>
+    _LIBCPP_HIDE_FROM_ABI
+    constexpr basic_string& append_range(_Range&& __range) {
+      insert_range(end(), std::forward<_Range>(__range));
+      return *this;
+    }
+#endif
+
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     basic_string& append(initializer_list<value_type> __il) {return append(__il.begin(), __il.size());}
@@ -1295,6 +1361,23 @@ public:
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
     assign(_ForwardIterator __first, _ForwardIterator __last);
 
+#if _LIBCPP_STD_VER >= 23
+    template <_ContainerCompatibleRange<_CharT> _Range>
+    _LIBCPP_HIDE_FROM_ABI
+    constexpr basic_string& assign_range(_Range&& __range) {
+      if constexpr (__string_is_trivial_iterator<ranges::iterator_t<_Range>>::value &&
+          (ranges::forward_range<_Range> || ranges::sized_range<_Range>)) {
+        size_type __n = static_cast<size_type>(ranges::distance(__range));
+        __assign_trivial(ranges::begin(__range), ranges::end(__range), __n);
+
+      } else {
+        __assign_with_sentinel(ranges::begin(__range), ranges::end(__range));
+      }
+
+      return *this;
+    }
+#endif
+
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     basic_string& assign(initializer_list<value_type> __il) {return assign(__il.begin(), __il.size());}
@@ -1325,6 +1408,21 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& insert(size_type __pos, const value_type* __s);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string& insert(size_type __pos, size_type __n, value_type __c);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator insert(const_iterator __pos, value_type __c);
+
+#if _LIBCPP_STD_VER >= 23
+    template <_ContainerCompatibleRange<_CharT> _Range>
+    _LIBCPP_HIDE_FROM_ABI
+    constexpr iterator insert_range(const_iterator __position, _Range&& __range) {
+      if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
+        auto __n = static_cast<size_type>(ranges::distance(__range));
+        return __insert_with_size(__position, ranges::begin(__range), ranges::end(__range), __n);
+
+      } else {
+        basic_string __temp(from_range, std::forward<_Range>(__range), __alloc());
+        return insert(__position, __temp.data(), __temp.data() + __temp.size());
+      }
+    }
+#endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 iterator
   insert(const_iterator __pos, size_type __n, value_type __c) {
@@ -1411,6 +1509,15 @@ public:
   template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> = 0>
   _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string&
   replace(const_iterator __i1, const_iterator __i2, _InputIterator __j1, _InputIterator __j2);
+
+#if _LIBCPP_STD_VER >= 23
+  template <_ContainerCompatibleRange<_CharT> _Range>
+  _LIBCPP_HIDE_FROM_ABI
+  constexpr basic_string& replace_with_range(const_iterator __i1, const_iterator __i2, _Range&& __range) {
+    basic_string __temp(from_range, std::forward<_Range>(__range), __alloc());
+    return replace(__i1, __i2, __temp);
+  }
+#endif
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -1661,9 +1768,17 @@ private:
         return !__libcpp_is_constant_evaluated() && (__sz < __min_cap);
     }
 
-    template <class _ForwardIterator>
+    template <class _Iterator, class _Sentinel>
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+    void __assign_trivial(_Iterator __first, _Sentinel __last, size_type __n);
+
+    template <class _Iterator, class _Sentinel>
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+    void __assign_with_sentinel(_Iterator __first, _Sentinel __last);
+
+    template <class _ForwardIterator, class _Sentinel>
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-    iterator __insert_from_safe_copy(size_type __n, size_type __ip, _ForwardIterator __first, _ForwardIterator __last) {
+    iterator __insert_from_safe_copy(size_type __n, size_type __ip, _ForwardIterator __first, _Sentinel __last) {
         size_type __sz = size();
         size_type __cap = capacity();
         value_type* __p;
@@ -1687,6 +1802,10 @@ private:
 
         return begin() + __ip;
     }
+
+    template<class _Iterator, class _Sentinel>
+    _LIBCPP_CONSTEXPR_SINCE_CXX20
+    iterator __insert_with_size(const_iterator __pos, _Iterator __first, _Sentinel __last, size_type __n);
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 allocator_type& __alloc() _NOEXCEPT { return __r_.second(); }
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR const allocator_type& __alloc() const _NOEXCEPT { return __r_.second(); }
@@ -1791,6 +1910,13 @@ private:
 
     template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_ForwardIterator>::value, int> = 0>
     inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void __init(_ForwardIterator __first, _ForwardIterator __last);
+
+    template <class _InputIterator, class _Sentinel>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+    void __init_with_sentinel(_InputIterator __first, _Sentinel __last);
+    template <class _InputIterator, class _Sentinel>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+    void __init_with_size(_InputIterator __first, _Sentinel __last, size_type __sz);
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20
     void __grow_by(size_type __old_cap, size_type __delta_cap, size_type __old_sz,
@@ -1970,6 +2096,15 @@ basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _
   -> basic_string<_CharT, _Traits, _Allocator>;
 #endif
 
+#if _LIBCPP_STD_VER >= 23
+template <ranges::input_range _Range,
+          class _Allocator = allocator<ranges::range_value_t<_Range>>,
+          class = enable_if_t<__is_allocator<_Allocator>::value>
+          >
+basic_string(from_range_t, _Range&&, _Allocator = _Allocator())
+  -> basic_string<ranges::range_value_t<_Range>, char_traits<ranges::range_value_t<_Range>>, _Allocator>;
+#endif
+
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 void basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s,
@@ -2085,7 +2220,15 @@ template <class _InputIterator, __enable_if_t<__has_exactly_input_iterator_categ
 _LIBCPP_CONSTEXPR_SINCE_CXX20
 void basic_string<_CharT, _Traits, _Allocator>::__init(_InputIterator __first, _InputIterator __last)
 {
+  __init_with_sentinel(std::move(__first), std::move(__last));
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+template <class _InputIterator, class _Sentinel>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+void basic_string<_CharT, _Traits, _Allocator>::__init_with_sentinel(_InputIterator __first, _Sentinel __last) {
     __default_init();
+
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     try
     {
@@ -2108,16 +2251,27 @@ template <class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 basic_string<_CharT, _Traits, _Allocator>::__init(_ForwardIterator __first, _ForwardIterator __last)
 {
+  size_type __sz = static_cast<size_type>(std::distance(__first, __last));
+  __init_with_size(__first, __last, __sz);
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+template <class _InputIterator, class _Sentinel>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+void basic_string<_CharT, _Traits, _Allocator>::__init_with_size(
+    _InputIterator __first, _Sentinel __last, size_type __sz) {
     if (__libcpp_is_constant_evaluated())
         __r_.first() = __rep();
-    size_type __sz = static_cast<size_type>(std::distance(__first, __last));
+
     if (__sz > max_size())
         __throw_length_error();
+
     pointer __p;
     if (__fits_in_sso(__sz))
     {
         __set_short_size(__sz);
         __p = __get_short_pointer();
+
     }
     else
     {
@@ -2369,9 +2523,17 @@ template<class _InputIterator, __enable_if_t<__has_exactly_input_iterator_catego
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(_InputIterator __first, _InputIterator __last)
 {
-    const basic_string __temp(__first, __last, __alloc());
-    assign(__temp.data(), __temp.size());
-    return *this;
+  __assign_with_sentinel(__first, __last);
+  return *this;
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+template <class _InputIterator, class _Sentinel>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+void
+basic_string<_CharT, _Traits, _Allocator>::__assign_with_sentinel(_InputIterator __first, _Sentinel __last) {
+  const basic_string __temp(__init_with_sentinel_tag(), std::move(__first), std::move(__last), __alloc());
+  assign(__temp.data(), __temp.size());
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2379,30 +2541,40 @@ template<class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_
 _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::assign(_ForwardIterator __first, _ForwardIterator __last)
 {
-    size_type __cap = capacity();
-    size_type __n = __string_is_trivial_iterator<_ForwardIterator>::value ?
-        static_cast<size_type>(std::distance(__first, __last)) : 0;
+  if (__string_is_trivial_iterator<_ForwardIterator>::value) {
+    size_type __n = static_cast<size_type>(std::distance(__first, __last));
+    __assign_trivial(__first, __last, __n);
+  } else {
+    __assign_with_sentinel(__first, __last);
+  }
 
-    if (__string_is_trivial_iterator<_ForwardIterator>::value &&
-        (__cap >= __n || !__addr_in_range(*__first)))
-    {
-        if (__cap < __n)
-        {
-            size_type __sz = size();
-            __grow_by(__cap, __n - __cap, __sz, 0, __sz);
-        }
-        pointer __p = __get_pointer();
-        for (; __first != __last; ++__p, (void) ++__first)
-            traits_type::assign(*__p, *__first);
-        traits_type::assign(*__p, value_type());
-        __set_size(__n);
+  return *this;
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+template <class _Iterator, class _Sentinel>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+void
+basic_string<_CharT, _Traits, _Allocator>::__assign_trivial(_Iterator __first, _Sentinel __last, size_type __n) {
+  _LIBCPP_ASSERT_UNCATEGORIZED(
+      __string_is_trivial_iterator<_Iterator>::value, "The iterator type given to `__assign_trivial` must be trivial");
+
+  size_type __cap = capacity();
+  if (__cap < __n) {
+    // Unlike `append` functions, if the input range points into the string itself, there is no case that the input
+    // range could get invalidated by reallocation:
+    // 1. If the input range is a subset of the string itself, its size cannot exceed the capacity of the string,
+    //    thus no reallocation would happen.
+    // 2. In the exotic case where the input range is the byte representation of the string itself, the string
+    //    object itself stays valid even if reallocation happens.
+    size_type __sz = size();
+    __grow_by(__cap, __n - __cap, __sz, 0, __sz);
     }
-    else
-    {
-        const basic_string __temp(__first, __last, __alloc());
-        assign(__temp.data(), __temp.size());
-    }
-    return *this;
+    pointer __p = __get_pointer();
+    for (; __first != __last; ++__p, (void) ++__first)
+        traits_type::assign(*__p, *__first);
+    traits_type::assign(*__p, value_type());
+    __set_size(__n);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -2703,18 +2875,27 @@ template<class _ForwardIterator, __enable_if_t<__has_forward_iterator_category<_
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _ForwardIterator __first, _ForwardIterator __last)
 {
+    auto __n = static_cast<size_type>(std::distance(__first, __last));
+    return __insert_with_size(__pos, __first, __last, __n);
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+template<class _Iterator, class _Sentinel>
+_LIBCPP_CONSTEXPR_SINCE_CXX20
+typename basic_string<_CharT, _Traits, _Allocator>::iterator
+basic_string<_CharT, _Traits, _Allocator>::__insert_with_size(
+    const_iterator __pos, _Iterator __first, _Sentinel __last, size_type __n) {
     size_type __ip = static_cast<size_type>(__pos - begin());
-    size_type __n = static_cast<size_type>(std::distance(__first, __last));
     if (__n == 0)
         return begin() + __ip;
 
-    if (__string_is_trivial_iterator<_ForwardIterator>::value && !__addr_in_range(*__first))
+    if (__string_is_trivial_iterator<_Iterator>::value && !__addr_in_range(*__first))
     {
         return __insert_from_safe_copy(__n, __ip, __first, __last);
     }
     else
     {
-        const basic_string __temp(__first, __last, __alloc());
+        const basic_string __temp(__init_with_sentinel_tag(), __first, __last, __alloc());
         return __insert_from_safe_copy(__n, __ip, __temp.begin(), __temp.end());
     }
 }
