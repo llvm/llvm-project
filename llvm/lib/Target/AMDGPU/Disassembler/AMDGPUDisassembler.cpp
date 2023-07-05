@@ -262,16 +262,9 @@ DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32_Lo128, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW16, 16)
 DECODE_OPERAND_SRC_REG_OR_IMM_DEFERRED_9(VS_32, OPW32, 32)
 
-static DecodeStatus decodeOperand_f32kimm(MCInst &Inst, unsigned Imm,
-                                          uint64_t Addr,
-                                          const MCDisassembler *Decoder) {
-  const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
-  return addOperand(Inst, DAsm->decodeMandatoryLiteralConstant(Imm));
-}
-
-static DecodeStatus decodeOperand_f16kimm(MCInst &Inst, unsigned Imm,
-                                          uint64_t Addr,
-                                          const MCDisassembler *Decoder) {
+static DecodeStatus decodeOperand_KImmFP(MCInst &Inst, unsigned Imm,
+                                         uint64_t Addr,
+                                         const MCDisassembler *Decoder) {
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(Inst, DAsm->decodeMandatoryLiteralConstant(Imm));
 }
