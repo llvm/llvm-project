@@ -11,7 +11,7 @@
 //
 // void count_down(ptrdiff_t __update = 1);
 
-// Make sure that calling arrive_and_wait with a negative value or a value
+// Make sure that calling count_down with a negative value or a value
 // higher than the internal counter triggers an assertion.
 
 // REQUIRES: has-unix-headers
