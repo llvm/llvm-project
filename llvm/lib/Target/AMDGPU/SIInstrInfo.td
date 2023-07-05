@@ -1142,29 +1142,19 @@ def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
 def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
 
-class KImmMatchClass<int size> : AsmOperandClass {
-  let Name = "KImmFP"#size;
-  let PredicateMethod = "isKImmFP"#size;
-  let ParserMethod = "parseImm";
-  let RenderMethod = "addKImmFP"#size#"Operands";
-}
-
-class kimmOperand<ValueType vt> : Operand<vt> {
+class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
   let PrintMethod = "printU"#vt.Size#"ImmOperand";
-  let ParserMatchClass = !cast<AsmOperandClass>("KImmFP"#vt.Size#"MatchClass");
-  let DecoderMethod = "decodeOperand_f"#vt.Size#"kimm";
+  let DecoderMethod = "decodeOperand_KImmFP";
 }
 
 // 32-bit VALU immediate operand that uses the constant bus.
-def KImmFP32MatchClass : KImmMatchClass<32>;
-def f32kimm : kimmOperand<i32>;
+def KImmFP32 : KImmFPOperand<i32>;
 
 // 32-bit VALU immediate operand with a 16-bit value that uses the
 // constant bus.
-def KImmFP16MatchClass : KImmMatchClass<16>;
-def f16kimm : kimmOperand<i16>;
+def KImmFP16 : KImmFPOperand<i16>;
 
 class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithFP"#opSize#"InputMods";

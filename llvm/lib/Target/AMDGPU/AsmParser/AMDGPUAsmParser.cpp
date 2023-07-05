@@ -949,17 +949,6 @@ public:
 
   void addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyModifiers) const;
 
-  template <unsigned Bitwidth>
-  void addKImmFPOperands(MCInst &Inst, unsigned N) const;
-
-  void addKImmFP16Operands(MCInst &Inst, unsigned N) const {
-    addKImmFPOperands<16>(Inst, N);
-  }
-
-  void addKImmFP32Operands(MCInst &Inst, unsigned N) const {
-    addKImmFPOperands<32>(Inst, N);
-  }
-
   void addRegOperands(MCInst &Inst, unsigned N) const;
 
   void addRegOrImmOperands(MCInst &Inst, unsigned N) const {
@@ -2267,24 +2256,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   default:
     llvm_unreachable("invalid operand size");
   }
-}
-
-template <unsigned Bitwidth>
-void AMDGPUOperand::addKImmFPOperands(MCInst &Inst, unsigned N) const {
-  APInt Literal(64, Imm.Val);
-  setImmKindMandatoryLiteral();
-
-  if (!Imm.IsFPImm) {
-    // We got int literal token.
-    Inst.addOperand(MCOperand::createImm(Literal.getLoBits(Bitwidth).getZExtValue()));
-    return;
-  }
-
-  bool Lost;
-  APFloat FPLiteral(APFloat::IEEEdouble(), Literal);
-  FPLiteral.convert(*getFltSemantics(Bitwidth / 8),
-                    APFloat::rmNearestTiesToEven, &Lost);
-  Inst.addOperand(MCOperand::createImm(FPLiteral.bitcastToAPInt().getZExtValue()));
 }
 
 void AMDGPUOperand::addRegOperands(MCInst &Inst, unsigned N) const {
