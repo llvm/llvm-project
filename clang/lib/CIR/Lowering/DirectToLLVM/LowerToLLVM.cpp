@@ -137,7 +137,8 @@ public:
 
   mlir::LogicalResult
   rewriteWhileLoop(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
-                   mlir::ConversionPatternRewriter &rewriter) const {
+                   mlir::ConversionPatternRewriter &rewriter,
+                   mlir::cir::LoopOpKind kind) const {
     auto *currentBlock = rewriter.getInsertionBlock();
     auto *continueBlock =
         rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
@@ -160,9 +161,10 @@ public:
     rewriter.inlineRegionBefore(condRegion, continueBlock);
     rewriter.inlineRegionBefore(bodyRegion, continueBlock);
 
-    // Set loop entry point to condition block.
+    // Set loop entry point to condition or to body in do-while cases.
     rewriter.setInsertionPointToEnd(currentBlock);
-    rewriter.create<mlir::cir::BrOp>(loopOp.getLoc(), &condFrontBlock);
+    auto &entry = (kind != LoopKind::DoWhile ? condFrontBlock : bodyFrontBlock);
+    rewriter.create<mlir::cir::BrOp>(loopOp.getLoc(), &entry);
 
     // Set loop exit point to continue block.
     rewriter.setInsertionPoint(yieldToCont);
@@ -188,9 +190,8 @@ public:
     case LoopKind::For:
       break;
     case LoopKind::While:
-      return rewriteWhileLoop(loopOp, adaptor, rewriter);
     case LoopKind::DoWhile:
-      llvm_unreachable("NYI");
+      return rewriteWhileLoop(loopOp, adaptor, rewriter, loopOp.getKind());
     }
 
     auto loc = loopOp.getLoc();
