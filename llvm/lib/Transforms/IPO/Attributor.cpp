@@ -3294,8 +3294,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     checkAndQueryIRAttr<Attribute::NoReturn, AANoReturn>(FPos, FnAttrs);
 
     // Every function might be "no-recurse".
-    if (!Attrs.hasFnAttr(Attribute::NoRecurse))
-      getOrCreateAAFor<AANoRecurse>(FPos);
+    checkAndQueryIRAttr<Attribute::NoRecurse, AANoRecurse>(FPos, FnAttrs);
 
     // Every function can be "non-convergent".
     if (Attrs.hasFnAttr(Attribute::Convergent))
