@@ -9,24 +9,21 @@ target triple = "aarch64-arm-none-eabi"
 define <4 x double> @complex_mul_const(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: complex_mul_const:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    zip1 v5.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip2 v6.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v2.2d, v2.2d, v3.2d
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    fmov v4.2d, #3.00000000
-; CHECK-NEXT:    fmul v1.2d, v5.2d, v6.2d
-; CHECK-NEXT:    fmul v3.2d, v2.2d, v6.2d
-; CHECK-NEXT:    fmla v1.2d, v0.2d, v2.2d
-; CHECK-NEXT:    fneg v2.2d, v3.2d
-; CHECK-NEXT:    fmov v3.2d, #11.00000000
-; CHECK-NEXT:    fmul v6.2d, v1.2d, v4.2d
-; CHECK-NEXT:    fmla v2.2d, v0.2d, v5.2d
-; CHECK-NEXT:    fmul v1.2d, v1.2d, v3.2d
-; CHECK-NEXT:    fneg v5.2d, v6.2d
-; CHECK-NEXT:    fmla v1.2d, v4.2d, v2.2d
-; CHECK-NEXT:    fmla v5.2d, v3.2d, v2.2d
-; CHECK-NEXT:    zip1 v0.2d, v5.2d, v1.2d
-; CHECK-NEXT:    zip2 v1.2d, v5.2d, v1.2d
+; CHECK-NEXT:    movi v6.2d, #0000000000000000
+; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v6.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v6.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    fcmla v5.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v4.2d, v2.2d, v6.2d, #0
+; CHECK-NEXT:    fcmla v0.2d, v2.2d, v5.2d, #0
+; CHECK-NEXT:    fcmla v4.2d, v2.2d, v6.2d, #90
+; CHECK-NEXT:    fcmla v0.2d, v2.2d, v5.2d, #90
+; CHECK-NEXT:    mov v1.16b, v4.16b
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = shufflevector <4 x double> %a, <4 x double> poison, <2 x i32> <i32 0, i32 2>
@@ -55,24 +52,22 @@ entry:
 define <4 x double> @complex_mul_non_const(<4 x double> %a, <4 x double> %b, [2 x double] %c) {
 ; CHECK-LABEL: complex_mul_non_const:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    zip1 v6.2d, v2.2d, v3.2d
-; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-NEXT:    movi v6.2d, #0000000000000000
 ; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-NEXT:    zip2 v7.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    zip2 v1.2d, v2.2d, v3.2d
-; CHECK-NEXT:    fmul v2.2d, v6.2d, v7.2d
-; CHECK-NEXT:    fmul v3.2d, v1.2d, v7.2d
-; CHECK-NEXT:    fmla v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    fneg v1.2d, v3.2d
-; CHECK-NEXT:    fmul v3.2d, v2.2d, v5.d[0]
-; CHECK-NEXT:    fmul v2.2d, v2.2d, v4.d[0]
-; CHECK-NEXT:    fmla v1.2d, v0.2d, v6.2d
-; CHECK-NEXT:    fneg v3.2d, v3.2d
-; CHECK-NEXT:    fmla v2.2d, v1.2d, v5.d[0]
-; CHECK-NEXT:    fmla v3.2d, v1.2d, v4.d[0]
-; CHECK-NEXT:    zip1 v0.2d, v3.2d, v2.2d
-; CHECK-NEXT:    zip2 v1.2d, v3.2d, v2.2d
+; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-NEXT:    movi v7.2d, #0000000000000000
+; CHECK-NEXT:    mov v4.d[1], v5.d[0]
+; CHECK-NEXT:    fcmla v6.2d, v2.2d, v0.2d, #0
+; CHECK-NEXT:    fcmla v7.2d, v3.2d, v1.2d, #0
+; CHECK-NEXT:    fcmla v6.2d, v2.2d, v0.2d, #90
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v7.2d, v3.2d, v1.2d, #90
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v2.2d, v4.2d, v7.2d, #0
+; CHECK-NEXT:    fcmla v0.2d, v4.2d, v6.2d, #0
+; CHECK-NEXT:    fcmla v2.2d, v4.2d, v7.2d, #90
+; CHECK-NEXT:    fcmla v0.2d, v4.2d, v6.2d, #90
+; CHECK-NEXT:    mov v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %c.coerce.fca.1.extract = extractvalue [2 x double] %c, 1
