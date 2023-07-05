@@ -6048,6 +6048,7 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
     CASE(NoFree, AANoFree, );
     CASE(NoCapture, AANoCapture, );
     CASE(NoRecurse, AANoRecurse, );
+    CASE(NoReturn, AANoReturn, );
     CASE(NoSync, AANoSync, );
     CASE(NoAlias, AANoAlias, );
     CASE(NonNull, AANonNull, );
