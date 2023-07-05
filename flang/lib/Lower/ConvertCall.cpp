@@ -1151,7 +1151,17 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         // Passing a non POINTER actual argument to a POINTER dummy argument.
         // Create a pointer of the dummy argument type and assign the actual
         // argument to it.
-        TODO(loc, "Associate POINTER dummy to TARGET argument in HLFIR");
+        mlir::Type dataTy = fir::unwrapRefType(argTy);
+        fir::ExtendedValue actualExv = Fortran::lower::convertToAddress(
+            loc, callContext.converter, actual, callContext.stmtCtx,
+            hlfir::getFortranElementType(dataTy));
+        mlir::Value irBox = builder.createTemporary(loc, dataTy);
+        fir::MutableBoxValue ptrBox(irBox,
+                                    /*nonDeferredParams=*/mlir::ValueRange{},
+                                    /*mutableProperties=*/{});
+        fir::factory::associateMutableBox(builder, loc, ptrBox, actualExv,
+                                          /*lbounds=*/std::nullopt);
+        caller.placeInput(arg, irBox);
         continue;
       }
       // Passing a POINTER to a POINTER, or an ALLOCATABLE to an ALLOCATABLE.
