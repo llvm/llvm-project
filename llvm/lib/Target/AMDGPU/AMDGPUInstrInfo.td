@@ -397,8 +397,7 @@ def AMDGPUlogf16 : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
                                               (flog2 node:$src)]>;
 
 def AMDGPUexp : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
-                                           (AMDGPUexp_impl node:$src),
-                                           (fexp2 node:$src)]>; // FIXME: Remove me
+                                           (AMDGPUexp_impl node:$src)]>;
 def AMDGPUexpf16 : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
                                               (fexp2 node:$src)]>;
 
