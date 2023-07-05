@@ -1047,12 +1047,16 @@ class NamedBitOperand<string Id, string Name = NAME>
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
+  let PrintMethod = "[this](const MCInst *MI, unsigned OpNo, "#
+    "const MCSubtargetInfo &STI, raw_ostream &O) { "#
+    "printNamedBit(MI, OpNo, O, \""#Id#"\"); }";
 }
 
 class DefaultOperand<CustomOperand Op, int Value>
   : OperandWithDefaultOps<Op.Type, (ops (Op.Type Value))>,
     CustomOperandProps<1, Op.ParserMatchClass.Name> {
   let ParserMethod = Op.ParserMatchClass.ParserMethod;
+  let PrintMethod = Op.PrintMethod;
 }
 
 class SDWAOperand<string Id, string Name = NAME>

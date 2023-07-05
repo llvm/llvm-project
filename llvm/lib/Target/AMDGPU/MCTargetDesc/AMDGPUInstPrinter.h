@@ -47,9 +47,6 @@ private:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printNamedBit(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                      StringRef BitName);
-  void printOffen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printIdxen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printAddr64(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printFlatOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -67,32 +64,14 @@ private:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
-  void printGDS(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
   void printCPol(const MCInst *MI, unsigned OpNo,
                  const MCSubtargetInfo &STI, raw_ostream &O);
-  void printTFE(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
   void printDMask(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
   void printDim(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
-  void printUNorm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                  raw_ostream &O);
-  void printDA(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-               raw_ostream &O);
   void printR128A16(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                  raw_ostream &O);
-  void printA16(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                raw_ostream &O);
-  void printLWE(const MCInst *MI, unsigned OpNo,
-                const MCSubtargetInfo &STI, raw_ostream &O);
-  void printD16(const MCInst *MI, unsigned OpNo,
-                const MCSubtargetInfo &STI, raw_ostream &O);
-  void printExpCompr(const MCInst *MI, unsigned OpNo,
-                     const MCSubtargetInfo &STI, raw_ostream &O);
-  void printExpVM(const MCInst *MI, unsigned OpNo,
-                  const MCSubtargetInfo &STI, raw_ostream &O);
   void printFORMAT(const MCInst *MI, unsigned OpNo,
                    const MCSubtargetInfo &STI, raw_ostream &O);
   void printSymbolicFormat(const MCInst *MI,
@@ -202,12 +181,8 @@ public:
 protected:
   void printAbs(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
-  void printHigh(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                 raw_ostream &O);
   void printClamp(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
-  void printClampSI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
   void printOModSI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
   void printLiteral(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
