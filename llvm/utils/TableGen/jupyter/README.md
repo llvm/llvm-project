@@ -15,15 +15,13 @@ that is not possible, there are Markdown versions next to the notebook files.
 
 ## TableGen Kernel
 
-To use the kernel, first install it into jupyter:
+To use the kernel, first install it into jupyter.
+
+If you have installed Jupyter into a virtual environment, adjust `python3` to
+be the interpreter for that environment. This will ensure that tools run the
+kernel in the correct context.
 
     python3 -m tablegen_kernel.install
-
-Then put this folder on your PYTHONPATH so jupyter can find it:
-
-```shell
-    export PYTHONPATH=$PYTHONPATH:<path to this dir>
-```
 
 Then run one of:
 
