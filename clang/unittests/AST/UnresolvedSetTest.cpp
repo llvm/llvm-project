@@ -3,7 +3,9 @@
 
 namespace clang {
 class NamedDecl {
-  int dummy;
+  // DeclAccessPair assumes that NamedDecl is at least 4-byte aligned, so we
+  // we need to have a dummy value to make this dummy NamedDecl also be aligned.
+  int dummy __attribute__((unused));
 
 public:
   NamedDecl() {}
