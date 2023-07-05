@@ -291,7 +291,7 @@ define ptr @test8(ptr %0) nounwind uwtable {
 declare void @use_i8(ptr nocapture)
 define internal void @test9a(ptr %a, ptr %b) {
 ; CHECK-LABEL: define {{[^@]+}}@test9a() {
-; CHECK-NEXT:    call void @use_i8(ptr nocapture noundef align 4294967296 null)
+; CHECK-NEXT:    call void @use_i8(ptr noundef align 4294967296 null)
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i8(ptr null)
