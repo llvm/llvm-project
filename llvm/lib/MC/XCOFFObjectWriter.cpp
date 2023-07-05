@@ -664,10 +664,10 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     // address, fragment offset and Fixup offset.
     uint64_t BRInstrAddress =
         SectionMap[ParentSec]->Address + FixupOffsetInCsect;
-    // The FixedValue should be the difference between SymA csect address and BR
-    // instr address plus any constant value.
-    FixedValue =
-        SectionMap[SymASec]->Address - BRInstrAddress + Target.getConstant();
+    // The FixedValue should be the difference between symbol's virtual address
+    // and BR instr address plus any constant value.
+    FixedValue = getVirtualAddress(SymA, SymASec) - BRInstrAddress +
+                 Target.getConstant();
   } else if (Type == XCOFF::RelocationType::R_REF) {
     // The FixedValue and FixupOffsetInCsect should always be 0 since it
     // specifies a nonrelocating reference.
