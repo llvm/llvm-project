@@ -638,7 +638,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
 
   // Note that ptrtoint may change the bitwidth.
   Value *A, *B;
-  auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
+  auto m_V =
+      m_CombineOr(m_Specific(V), m_PtrToIntSameSize(Q.DL, m_Specific(V)));
 
   CmpInst::Predicate Pred;
   uint64_t C;
@@ -648,16 +649,13 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   case ICmpInst::ICMP_EQ:
     // assume(v = a)
     if (match(Cmp, m_c_ICmp(Pred, m_V, m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
       Known = Known.unionWith(RHSKnown);
       // assume(v & b = a)
     } else if (match(Cmp,
                      m_c_ICmp(Pred, m_c_And(m_V, m_Value(B)), m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
-      KnownBits MaskKnown =
-          computeKnownBits(B, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
+      KnownBits MaskKnown = computeKnownBits(B, Depth + 1, QueryNoAC);
 
       // For those bits in the mask that are known to be one, we can propagate
       // known bits from the RHS to V.
@@ -666,10 +664,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // assume(~(v & b) = a)
     } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_c_And(m_V, m_Value(B))),
                                    m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
-      KnownBits MaskKnown =
-          computeKnownBits(B, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
+      KnownBits MaskKnown = computeKnownBits(B, Depth + 1, QueryNoAC);
 
       // For those bits in the mask that are known to be one, we can propagate
       // inverted known bits from the RHS to V.
@@ -678,10 +674,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // assume(v | b = a)
     } else if (match(Cmp,
                      m_c_ICmp(Pred, m_c_Or(m_V, m_Value(B)), m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
-      KnownBits BKnown =
-          computeKnownBits(B, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
+      KnownBits BKnown = computeKnownBits(B, Depth + 1, QueryNoAC);
 
       // For those bits in B that are known to be zero, we can propagate known
       // bits from the RHS to V.
@@ -690,10 +684,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // assume(~(v | b) = a)
     } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_c_Or(m_V, m_Value(B))),
                                    m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
-      KnownBits BKnown =
-          computeKnownBits(B, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
+      KnownBits BKnown = computeKnownBits(B, Depth + 1, QueryNoAC);
 
       // For those bits in B that are known to be zero, we can propagate
       // inverted known bits from the RHS to V.
@@ -702,10 +694,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // assume(v ^ b = a)
     } else if (match(Cmp,
                      m_c_ICmp(Pred, m_c_Xor(m_V, m_Value(B)), m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
-      KnownBits BKnown =
-          computeKnownBits(B, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
+      KnownBits BKnown = computeKnownBits(B, Depth + 1, QueryNoAC);
 
       // For those bits in B that are known to be zero, we can propagate known
       // bits from the RHS to V. For those bits in B that are known to be one,
@@ -717,10 +707,8 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
       // assume(~(v ^ b) = a)
     } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_c_Xor(m_V, m_Value(B))),
                                    m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
-      KnownBits BKnown =
-          computeKnownBits(B, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
+      KnownBits BKnown = computeKnownBits(B, Depth + 1, QueryNoAC);
 
       // For those bits in B that are known to be zero, we can propagate
       // inverted known bits from the RHS to V. For those bits in B that are
@@ -733,8 +721,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
     } else if (match(Cmp, m_c_ICmp(Pred, m_Shl(m_V, m_ConstantInt(C)),
                                    m_Value(A))) &&
                C < BitWidth) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
 
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
@@ -745,8 +732,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
     } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_Shl(m_V, m_ConstantInt(C))),
                                    m_Value(A))) &&
                C < BitWidth) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
       // For those bits in RHS that are known, we can propagate them inverted
       // to known bits in V shifted to the right by C.
       RHSKnown.One.lshrInPlace(C);
@@ -757,8 +743,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
     } else if (match(Cmp, m_c_ICmp(Pred, m_Shr(m_V, m_ConstantInt(C)),
                                    m_Value(A))) &&
                C < BitWidth) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
       // For those bits in RHS that are known, we can propagate them to known
       // bits in V shifted to the right by C.
       Known.Zero |= RHSKnown.Zero << C;
@@ -767,8 +752,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
     } else if (match(Cmp, m_c_ICmp(Pred, m_Not(m_Shr(m_V, m_ConstantInt(C))),
                                    m_Value(A))) &&
                C < BitWidth) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
       // For those bits in RHS that are known, we can propagate them inverted
       // to known bits in V shifted to the right by C.
       Known.Zero |= RHSKnown.One << C;
@@ -778,8 +762,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   case ICmpInst::ICMP_SGE:
     // assume(v >=_s c) where c is non-negative
     if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
 
       if (RHSKnown.isNonNegative()) {
         // We know that the sign bit is zero.
@@ -790,8 +773,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   case ICmpInst::ICMP_SGT:
     // assume(v >_s c) where c is at least -1.
     if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
 
       if (RHSKnown.isAllOnes() || RHSKnown.isNonNegative()) {
         // We know that the sign bit is zero.
@@ -802,8 +784,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   case ICmpInst::ICMP_SLE:
     // assume(v <=_s c) where c is negative
     if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
 
       if (RHSKnown.isNegative()) {
         // We know that the sign bit is one.
@@ -814,8 +795,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   case ICmpInst::ICMP_SLT:
     // assume(v <_s c) where c is non-positive
     if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
 
       if (RHSKnown.isZero() || RHSKnown.isNegative()) {
         // We know that the sign bit is one.
@@ -826,8 +806,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   case ICmpInst::ICMP_ULE:
     // assume(v <=_u c)
     if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
 
       // Whatever high bits in c are zero are known to be zero.
       Known.Zero.setHighBits(RHSKnown.countMinLeadingZeros());
@@ -836,8 +815,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
   case ICmpInst::ICMP_ULT:
     // assume(v <_u c)
     if (match(Cmp, m_ICmp(Pred, m_V, m_Value(A)))) {
-      KnownBits RHSKnown =
-          computeKnownBits(A, Depth + 1, QueryNoAC).anyextOrTrunc(BitWidth);
+      KnownBits RHSKnown = computeKnownBits(A, Depth + 1, QueryNoAC);
 
       // If the RHS is known zero, then this assumption must be wrong (nothing
       // is unsigned less than zero). Signal a conflict and get out of here.
@@ -859,7 +837,7 @@ static void computeKnownBitsFromCmp(const Value *V, const ICmpInst *Cmp,
     // assume (v & b != 0) where b is a power of 2
     const APInt *BPow2;
     if (match(Cmp, m_ICmp(Pred, m_c_And(m_V, m_Power2(BPow2)), m_Zero()))) {
-      Known.One |= BPow2->zextOrTrunc(BitWidth);
+      Known.One |= *BPow2;
     }
   } break;
   }
