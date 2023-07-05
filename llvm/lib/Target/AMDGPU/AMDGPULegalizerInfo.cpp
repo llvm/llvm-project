@@ -1130,7 +1130,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   Exp2Ops.clampScalar(0, MinScalarFPTy, S32);
   Exp2Ops.scalarize(0);
 
-  auto &ExpOps = getActionDefinitionsBuilder({G_FEXP, G_FLOG, G_FLOG10, G_FPOW});
+  auto &ExpOps = getActionDefinitionsBuilder({G_FEXP, G_FPOW});
   if (ST.has16BitInsts())
     ExpOps.customFor({{S32}, {S16}});
   else
@@ -1150,6 +1150,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     Log2Ops.customFor({S16});
   Log2Ops.scalarize(0)
     .lower();
+
+  auto &LogOps = getActionDefinitionsBuilder({G_FLOG, G_FLOG10});
+  LogOps.customFor({S32, S16});
+  LogOps.clampScalar(0, MinScalarFPTy, S32)
+        .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder(G_CTPOP)
@@ -2012,9 +2017,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_FLOG2:
     return legalizeFlog2(MI, B);
   case TargetOpcode::G_FLOG:
-    return legalizeFlog(MI, B, numbers::ln2);
   case TargetOpcode::G_FLOG10:
-    return legalizeFlog(MI, B, numbers::ln2 / numbers::ln10);
+    return legalizeFlogCommon(MI, B);
   case TargetOpcode::G_FEXP:
     return legalizeFExp(MI, B);
   case TargetOpcode::G_FPOW:
@@ -3012,6 +3016,37 @@ static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
   return false;
 }
 
+static bool needsDenormHandlingF32(const MachineFunction &MF, Register Src,
+                                   unsigned Flags) {
+  return (Flags & MachineInstr::FmAfn) == 0 &&
+         !MF.getTarget().Options.UnsafeFPMath &&
+         !MF.getTarget().Options.ApproxFuncFPMath &&
+         !valueIsKnownNeverF32Denorm(MF.getRegInfo(), Src) &&
+         MF.getDenormalMode(APFloat::IEEEsingle()).Input !=
+             DenormalMode::PreserveSign;
+}
+
+std::pair<Register, Register>
+AMDGPULegalizerInfo::getScaledLogInput(MachineIRBuilder &B, Register Src,
+                                       unsigned Flags) const {
+  if (!needsDenormHandlingF32(B.getMF(), Src, Flags))
+    return {};
+
+  const LLT F32 = LLT::scalar(32);
+  auto SmallestNormal = B.buildFConstant(
+      F32, APFloat::getSmallestNormalized(APFloat::IEEEsingle()));
+  auto IsLtSmallestNormal =
+      B.buildFCmp(CmpInst::FCMP_OLT, LLT::scalar(1), Src, SmallestNormal);
+
+  auto Scale32 = B.buildFConstant(F32, 0x1.0p+32);
+  auto One = B.buildFConstant(F32, 1.0);
+  auto ScaleFactor =
+      B.buildSelect(F32, IsLtSmallestNormal, Scale32, One, Flags);
+  auto ScaledInput = B.buildFMul(F32, Src, ScaleFactor, Flags);
+
+  return {ScaledInput.getReg(0), IsLtSmallestNormal.getReg(0)};
+}
+
 bool AMDGPULegalizerInfo::legalizeFlog2(MachineInstr &MI,
                                         MachineIRBuilder &B) const {
   // v_log_f32 is good enough for OpenCL, except it doesn't handle denormals.
@@ -3024,8 +3059,6 @@ bool AMDGPULegalizerInfo::legalizeFlog2(MachineInstr &MI,
   Register Src = MI.getOperand(1).getReg();
   LLT Ty = B.getMRI()->getType(Dst);
   unsigned Flags = MI.getFlags();
-
-  const MachineFunction &MF = B.getMF();
 
   if (Ty == LLT::scalar(16)) {
     const LLT F32 = LLT::scalar(32);
@@ -3041,57 +3074,159 @@ bool AMDGPULegalizerInfo::legalizeFlog2(MachineInstr &MI,
 
   assert(Ty == LLT::scalar(32));
 
-  const fltSemantics &Flt = APFloat::IEEEsingle();
-
-  bool NeedDenormHandling =
-      !MI.getFlag(MachineInstr::FmAfn) &&
-      !MF.getTarget().Options.UnsafeFPMath &&
-      !MF.getTarget().Options.ApproxFuncFPMath &&
-      !valueIsKnownNeverF32Denorm(*B.getMRI(), Src) &&
-      MF.getDenormalMode(Flt).Input != DenormalMode::PreserveSign;
-
-  if (!NeedDenormHandling) {
-    B.buildIntrinsic(Intrinsic::amdgcn_log, ArrayRef<Register>{Dst}, false)
-      .addUse(Src)
-      .setMIFlags(Flags);
+  auto [ScaledInput, IsLtSmallestNormal] = getScaledLogInput(B, Src, Flags);
+  if (!ScaledInput) {
+    B.buildIntrinsic(Intrinsic::amdgcn_log, {MI.getOperand(0)}, false)
+        .addUse(Src)
+        .setMIFlags(Flags);
     MI.eraseFromParent();
     return true;
   }
 
-  auto SmallestNormal =
-      B.buildFConstant(Ty, APFloat::getSmallestNormalized(Flt));
-  auto IsDenormOrZero =
-      B.buildFCmp(CmpInst::FCMP_OLT, LLT::scalar(1), Src, SmallestNormal);
-
-  auto Scale32 = B.buildFConstant(Ty, 0x1.0p+32);
-  auto One = B.buildFConstant(Ty, 1.0);
-  auto ScaleFactor = B.buildSelect(Ty, IsDenormOrZero, Scale32, One, Flags);
-  auto ScaledInput = B.buildFMul(Ty, Src, ScaleFactor, Flags);
   auto Log2 = B.buildIntrinsic(Intrinsic::amdgcn_log, {Ty}, false)
-    .addUse(ScaledInput.getReg(0))
-    .setMIFlags(Flags);
+                  .addUse(ScaledInput)
+                  .setMIFlags(Flags);
 
   auto ThirtyTwo = B.buildFConstant(Ty, 32.0);
   auto Zero = B.buildFConstant(Ty, 0.0);
-  auto ResultOffset = B.buildSelect(Ty, IsDenormOrZero, ThirtyTwo, Zero, Flags);
+  auto ResultOffset =
+      B.buildSelect(Ty, IsLtSmallestNormal, ThirtyTwo, Zero, Flags);
   B.buildFSub(Dst, Log2, ResultOffset, Flags);
 
   MI.eraseFromParent();
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeFlog(
-  MachineInstr &MI, MachineIRBuilder &B, double Log2BaseInverted) const {
+static Register getMad(MachineIRBuilder &B, LLT Ty, Register X, Register Y,
+                       Register Z, unsigned Flags) {
+  auto FMul = B.buildFMul(Ty, X, Y, Flags);
+  return B.buildFAdd(Ty, FMul, Z, Flags).getReg(0);
+}
+
+bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
+                                             MachineIRBuilder &B) const {
+  const bool IsLog10 = MI.getOpcode() == TargetOpcode::G_FLOG10;
+  assert(IsLog10 || MI.getOpcode() == TargetOpcode::G_FLOG);
+
+  MachineRegisterInfo &MRI = *B.getMRI();
   Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
-  LLT Ty = B.getMRI()->getType(Dst);
+  Register X = MI.getOperand(1).getReg();
   unsigned Flags = MI.getFlags();
+  const LLT Ty = MRI.getType(X);
+  MachineFunction &MF = B.getMF();
 
-  auto Log2Operand = B.buildFLog2(Ty, Src, Flags);
-  auto Log2BaseInvertedOperand = B.buildFConstant(Ty, Log2BaseInverted);
+  const LLT F32 = LLT::scalar(32);
+  const LLT F16 = LLT::scalar(16);
 
-  B.buildFMul(Dst, Log2Operand, Log2BaseInvertedOperand, Flags);
+  const AMDGPUTargetMachine &TM =
+      static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
+
+  if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn) ||
+      TM.Options.ApproxFuncFPMath || TM.Options.UnsafeFPMath) {
+    const double Log2BaseInv =
+        IsLog10 ? numbers::ln2 / numbers::ln10 : numbers::ln2;
+
+    if (Ty == F16 && !ST.has16BitInsts()) {
+      Register LogVal = MRI.createGenericVirtualRegister(F32);
+      auto PromoteSrc = B.buildFPExt(F32, X);
+      legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), Log2BaseInv, Flags);
+      B.buildFPTrunc(Dst, LogVal);
+    } else {
+      legalizeFlogUnsafe(B, Dst, X, Log2BaseInv, Flags);
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  auto [ScaledInput, IsScaled] = getScaledLogInput(B, X, Flags);
+  if (ScaledInput)
+    X = ScaledInput;
+
+  auto Y = B.buildIntrinsic(Intrinsic::amdgcn_log, {Ty}, false)
+    .addUse(X)
+    .setMIFlags(Flags);
+
+  Register R;
+  if (ST.hasFastFMAF32()) {
+    // c+cc are ln(2)/ln(10) to more than 49 bits
+    const float c_log10 = 0x1.344134p-2f;
+    const float cc_log10 = 0x1.09f79ep-26f;
+
+    // c + cc is ln(2) to more than 49 bits
+    const float c_log = 0x1.62e42ep-1f;
+    const float cc_log = 0x1.efa39ep-25f;
+
+    auto C = B.buildFConstant(Ty, IsLog10 ? c_log10 : c_log);
+    auto CC = B.buildFConstant(Ty, IsLog10 ? cc_log10 : cc_log);
+
+    R = B.buildFMul(Ty, Y, C, Flags).getReg(0);
+    auto NegR = B.buildFNeg(Ty, R, Flags);
+    auto FMA0 = B.buildFMA(Ty, Y, C, NegR, Flags);
+    auto FMA1 = B.buildFMA(Ty, Y, CC, FMA0, Flags);
+    R = B.buildFAdd(Ty, R, FMA1, Flags).getReg(0);
+  } else {
+    // ch+ct is ln(2)/ln(10) to more than 36 bits
+    const float ch_log10 = 0x1.344000p-2f;
+    const float ct_log10 = 0x1.3509f6p-18f;
+
+    // ch + ct is ln(2) to more than 36 bits
+    const float ch_log = 0x1.62e000p-1f;
+    const float ct_log = 0x1.0bfbe8p-15f;
+
+    auto CH = B.buildFConstant(Ty, IsLog10 ? ch_log10 : ch_log);
+    auto CT = B.buildFConstant(Ty, IsLog10 ? ct_log10 : ct_log);
+
+    auto MaskConst = B.buildConstant(Ty, 0xfffff000);
+    auto YH = B.buildAnd(Ty, Y, MaskConst);
+    auto YT = B.buildFSub(Ty, Y, YH, Flags);
+    auto YTCT = B.buildFMul(Ty, YT, CT, Flags);
+
+    Register Mad0 =
+        getMad(B, Ty, YH.getReg(0), CT.getReg(0), YTCT.getReg(0), Flags);
+    Register Mad1 = getMad(B, Ty, YT.getReg(0), CH.getReg(0), Mad0, Flags);
+    R = getMad(B, Ty, YH.getReg(0), CH.getReg(0), Mad1, Flags);
+  }
+
+  const bool IsFiniteOnly =
+      (MI.getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath) &&
+      (MI.getFlag(MachineInstr::FmNoInfs) || TM.Options.NoInfsFPMath);
+
+  if (!IsFiniteOnly) {
+    // Expand isfinite(x) => fabs(x) < inf
+    auto Inf = B.buildFConstant(Ty, APFloat::getInf(APFloat::IEEEsingle()));
+    auto Fabs = B.buildFAbs(Ty, Y);
+    auto IsFinite =
+        B.buildFCmp(CmpInst::FCMP_OLT, LLT::scalar(1), Fabs, Inf, Flags);
+    R = B.buildSelect(Ty, IsFinite, R, Y, Flags).getReg(0);
+  }
+
+  if (ScaledInput) {
+    auto Zero = B.buildFConstant(Ty, 0.0);
+    auto ShiftK =
+        B.buildFConstant(Ty, IsLog10 ? 0x1.344136p+3f : 0x1.62e430p+4f);
+    auto Shift = B.buildSelect(Ty, IsScaled, ShiftK, Zero, Flags);
+    B.buildFSub(Dst, R, Shift, Flags);
+  } else {
+    B.buildCopy(Dst, R);
+  }
+
   MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFlogUnsafe(MachineIRBuilder &B, Register Dst,
+                                             Register Src,
+                                             double Log2BaseInverted,
+                                             unsigned Flags) const {
+  LLT Ty = B.getMRI()->getType(Dst);
+  auto Log2Operand = Ty == LLT::scalar(16)
+                         ? B.buildFLog2(Ty, Src, Flags)
+                         : B.buildIntrinsic(Intrinsic::amdgcn_log, {Ty}, false)
+                               .addUse(Src)
+                               .setMIFlags(Flags);
+  auto Log2BaseInvertedOperand = B.buildFConstant(Ty, Log2BaseInverted);
+  B.buildFMul(Dst, Log2Operand, Log2BaseInvertedOperand, Flags);
   return true;
 }
 

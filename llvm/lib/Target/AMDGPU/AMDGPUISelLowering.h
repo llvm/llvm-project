@@ -60,9 +60,19 @@ protected:
   SDValue LowerFROUNDEVEN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue getIsLtSmallestNormal(SelectionDAG &DAG, SDValue Op,
+                                SDNodeFlags Flags) const;
+  SDValue getIsFinite(SelectionDAG &DAG, SDValue Op, SDNodeFlags Flags) const;
+  std::pair<SDValue, SDValue> getScaledLogInput(SelectionDAG &DAG,
+                                                const SDLoc SL, SDValue Op,
+                                                SDNodeFlags Flags) const;
+
   SDValue LowerFLOG2(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFLOG(SDValue Op, SelectionDAG &DAG,
-                    double Log2BaseInverted) const;
+  SDValue LowerFLOGCommon(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFLOG10(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFLOGUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
+                          double Log2BaseInverted, SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const;
