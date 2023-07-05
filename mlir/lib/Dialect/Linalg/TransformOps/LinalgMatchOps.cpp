@@ -428,6 +428,11 @@ DiagnosedSilenceableFailure transform::MatchStructuredInputOp::matchOperation(
     if (!getResult())
       continue;
 
+    if (isa<AffineMapParamType>(getResult().getType())) {
+      operandMapping.emplace_back(AffineMapAttr::get(indexingMap));
+      continue;
+    }
+
     Value operand = linalgOp.getDpsInputOperand(position)->get();
     if (isa<TransformValueHandleTypeInterface>(getResult().getType())) {
       operandMapping.emplace_back(operand);
@@ -512,6 +517,11 @@ DiagnosedSilenceableFailure transform::MatchStructuredInitOp::matchOperation(
     // If capture not requested, skip it.
     if (!getResult())
       continue;
+
+    if (isa<AffineMapParamType>(getResult().getType())) {
+      operandMapping.emplace_back(AffineMapAttr::get(indexingMap));
+      continue;
+    }
 
     Value operand = linalgOp.getDpsInitOperand(position)->get();
     if (isa<TransformValueHandleTypeInterface>(getResult().getType())) {
