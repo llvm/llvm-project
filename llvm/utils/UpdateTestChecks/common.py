@@ -1573,7 +1573,7 @@ def filter_globals_according_to_preference(
 
 # The capture group is kept as is, followed by a {{.*}} glob
 METADATA_FILTERS = [
-    r"(\w+ version )[\d.]+ \(git@[\w.:/-]+\.git \w+\)",
+    r"(\w+ version )[\d.]+ \([\w.:/@-]+\.git \w+\)",
     r'(!DIFile\(filename: ".+", directory: )".+"',
 ]
 METADATA_FILTERS_RE = [re.compile(s) for s in METADATA_FILTERS]
