@@ -38,6 +38,8 @@ class SystemZMachineFunctionInfo : public MachineFunctionInfo {
   unsigned RegSaveFrameIndex;
   int FramePointerSaveIndex;
   unsigned NumLocalDynamics;
+  /// z/OS XPLINK ABI: incoming ADA virtual register.
+  Register VRegADA;
 
 public:
   SystemZMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI)
@@ -100,6 +102,11 @@ public:
   // Count number of local-dynamic TLS symbols used.
   unsigned getNumLocalDynamicTLSAccesses() const { return NumLocalDynamics; }
   void incNumLocalDynamicTLSAccesses() { ++NumLocalDynamics; }
+
+  // Get and set the function's incoming special XPLINK ABI defined ADA
+  // register.
+  Register getADAVirtualRegister() const { return VRegADA; }
+  void setADAVirtualRegister(Register Reg) { VRegADA = Reg; }
 };
 
 } // end namespace llvm
