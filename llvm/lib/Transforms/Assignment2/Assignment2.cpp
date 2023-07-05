@@ -110,8 +110,7 @@ namespace {
           updateVariable(I->getOperand(1), true, line);
         } else {
           for (Use &U : I->operands()) {
-            Value *v = U.get();
-            if (tainted.find(v) != tainted.end()) {
+            if (tainted.find(U.get()) != tainted.end()) {
               output << "Tainted: " << V << "\n";
               tainted.insert(V);
               break;
