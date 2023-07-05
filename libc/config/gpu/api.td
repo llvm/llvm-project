@@ -30,3 +30,7 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
   ];
   let Types = ["size_t", "FILE"];
 }
+
+def IntTypesAPI : PublicAPI<"inttypes.h"> {
+  let Types = ["imaxdiv_t"];
+}
