@@ -28,7 +28,7 @@ void check_latch_invalid(const std::ptrdiff_t expected) {
 }
 
 int main(int, char **) {
-  { check_latch_invalid(-1) }
+  { check_latch_invalid(-1); }
 
   return 0;
 }
