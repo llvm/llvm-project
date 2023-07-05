@@ -865,6 +865,11 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
   const Expr *SubExpr = E->getSubExpr();
   std::optional<PrimType> SubExprT = classify(SubExpr);
 
+  // If we don't end up using the materialized temporary anyway, don't
+  // bother creating it.
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
   if (E->getStorageDuration() == SD_Static) {
     if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
       const LifetimeExtendedTemporaryDecl *TempDecl =

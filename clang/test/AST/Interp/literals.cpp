@@ -890,7 +890,9 @@ constexpr int ignoredExprs() {
 
   1 ? 0 : 1; // expected-warning {{unused}} \
              // ref-warning {{unused}}
-
+  /// Ignored MaterializeTemporaryExpr.
+  struct B{ const int &a; };
+  (void)B{12};
   return 0;
 }
 
