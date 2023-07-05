@@ -271,6 +271,11 @@ endfunction()
 #   SOURCES: Same as declare_mlir_python_sources().
 #   SOURCES_GLOB: Same as declare_mlir_python_sources().
 #   DEPENDS: Additional dependency targets.
+#
+# TODO: Right now `TD_FILE` can't be the actual dialect tablegen file, since we
+#       use its path to determine where to place the generated python file. If
+#       we made the output path an additional argument here we could remove the
+#       need for the separate "wrapper" .td files
 function(declare_mlir_dialect_python_bindings)
   cmake_parse_arguments(ARG
     ""
