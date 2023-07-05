@@ -224,6 +224,11 @@ let HasMaskedOffOperand = false, Log2LMUL = [-2, -1, 0, 1, 2] in {
                                       [["vv", "w", "wwvv"],
                                        ["vf", "w", "wwev"]]>;
   }
+  multiclass RVVFloatingWidenTerBuiltinSetRoundingMode {
+    defm ""  : RVVOutOp1Op2BuiltinSet<NAME, "xf",
+                                      [["vv", "w", "wwvvu"],
+                                       ["vf", "w", "wwevu"]]>;
+  }
 }
 
 multiclass RVVFloatingBinBuiltinSet
@@ -2105,11 +2110,57 @@ let ManualCodegen = [{
   defm vfnmsub : RVVFloatingTerBuiltinSet;
 }
 
-// 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
-defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
-defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
-defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
-defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
+
+    unsigned Offset = IsMasked ? 2 : 1;
+
+    Operands.push_back(Ops[IsMasked ? 1 : 0]); // passthrough
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+                      Operands.back()->getType()};
+
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+    defm vfwmacc  : RVVFloatingWidenTerBuiltinSetRoundingMode;
+    defm vfwnmacc : RVVFloatingWidenTerBuiltinSetRoundingMode;
+    defm vfwmsac  : RVVFloatingWidenTerBuiltinSetRoundingMode;
+    defm vfwnmsac : RVVFloatingWidenTerBuiltinSetRoundingMode;
+  }
+  // 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+  defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
+  defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
+  defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
+  defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
+}
+
 }
 
 // 14.8. Vector Floating-Point Square-Root Instruction

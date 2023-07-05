@@ -1801,6 +1801,38 @@ multiclass VPatWidenFPMulAccVL_VV_VF<SDNode vop, string instruction_name> {
   }
 }
 
+multiclass VPatWidenFPMulAccVL_VV_VF_RM<SDNode vop, string instruction_name> {
+  foreach vtiToWti = AllWidenableFloatVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in {
+      def : Pat<(vop (vti.Vector vti.RegClass:$rs1),
+                     (vti.Vector vti.RegClass:$rs2),
+                     (wti.Vector wti.RegClass:$rd), (vti.Mask V0),
+                     VLOpFrag),
+                (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX #"_MASK")
+                   wti.RegClass:$rd, vti.RegClass:$rs1, vti.RegClass:$rs2,
+                   (vti.Mask V0),
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                   GPR:$vl, vti.Log2SEW, TA_MA)>;
+      def : Pat<(vop (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),
+                     (vti.Vector vti.RegClass:$rs2),
+                     (wti.Vector wti.RegClass:$rd), (vti.Mask V0),
+                     VLOpFrag),
+                (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX #"_MASK")
+                   wti.RegClass:$rd, vti.ScalarRegClass:$rs1, vti.RegClass:$rs2,
+                   (vti.Mask V0),
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                   GPR:$vl, vti.Log2SEW, TA_MA)>;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -2126,10 +2158,10 @@ defm : VPatFPMulAccVL_VV_VF_RM<riscv_vfnmadd_vl_oneuse, "PseudoVFNMACC">;
 defm : VPatFPMulAccVL_VV_VF_RM<riscv_vfnmsub_vl_oneuse, "PseudoVFNMSAC">;
 
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
-defm : VPatWidenFPMulAccVL_VV_VF<riscv_vfwmadd_vl, "PseudoVFWMACC">;
-defm : VPatWidenFPMulAccVL_VV_VF<riscv_vfwnmadd_vl, "PseudoVFWNMACC">;
-defm : VPatWidenFPMulAccVL_VV_VF<riscv_vfwmsub_vl, "PseudoVFWMSAC">;
-defm : VPatWidenFPMulAccVL_VV_VF<riscv_vfwnmsub_vl, "PseudoVFWNMSAC">;
+defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmadd_vl, "PseudoVFWMACC">;
+defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwnmadd_vl, "PseudoVFWNMACC">;
+defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwmsub_vl, "PseudoVFWMSAC">;
+defm : VPatWidenFPMulAccVL_VV_VF_RM<riscv_vfwnmsub_vl, "PseudoVFWNMSAC">;
 
 // 13.11. Vector Floating-Point MIN/MAX Instructions
 defm : VPatBinaryFPVL_VV_VF<riscv_fminnum_vl, "PseudoVFMIN">;
