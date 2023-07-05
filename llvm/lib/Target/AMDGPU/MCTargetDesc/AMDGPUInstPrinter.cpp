@@ -93,20 +93,18 @@ void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
   O << formatHex(MI->getOperand(OpNo).getImm() & 0xffffffff);
 }
 
-void AMDGPUInstPrinter::printGlobalSReg32ImmOperand(const MCInst *MI,
-                                                    unsigned OpNo,
-                                                    const MCSubtargetInfo &STI,
-                                                    raw_ostream &O) {
+void AMDGPUInstPrinter::printGlobalSReg32(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
   const auto& RegCl = AMDGPUMCRegisterClasses[AMDGPU::SReg_32RegClassID];
   unsigned Idx = MI->getOperand(OpNo).getImm();
   assert(Idx < RegCl.getNumRegs());
   O << getRegisterName(RegCl.getRegister(Idx));
 }
 
-void AMDGPUInstPrinter::printGlobalSReg64ImmOperand(const MCInst *MI,
-                                                    unsigned OpNo,
-                                                    const MCSubtargetInfo &STI,
-                                                    raw_ostream &O) {
+void AMDGPUInstPrinter::printGlobalSReg64(const MCInst *MI, unsigned OpNo,
+                                          const MCSubtargetInfo &STI,
+                                          raw_ostream &O) {
   const auto& RegCl = AMDGPUMCRegisterClasses[AMDGPU::SReg_64RegClassID];
   unsigned Idx = MI->getOperand(OpNo).getImm();
   assert(Idx % 2 == 0);
@@ -770,7 +768,7 @@ void AMDGPUInstPrinter::printWaitVDST(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printWaitVAVDST(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printWaitVAVDst(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   uint8_t Imm = MI->getOperand(OpNo).getImm();
@@ -780,7 +778,7 @@ void AMDGPUInstPrinter::printWaitVAVDST(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printWaitVMVSRC(const MCInst *MI, unsigned OpNo,
+void AMDGPUInstPrinter::printWaitVMVSrc(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   uint8_t Imm = MI->getOperand(OpNo).getImm();

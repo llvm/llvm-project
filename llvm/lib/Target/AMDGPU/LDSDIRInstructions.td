@@ -59,8 +59,8 @@ class LDSDIR_getIns<bit direct> {
 
 class VDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
-    (ins wait_va_vdst:$waitvdst, wait_vm_vsrc:$waitvsrc),
-    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_va_vdst:$waitvdst, wait_vm_vsrc:$waitvsrc)
+    (ins WaitVAVDst:$waitvdst, WaitVMVSrc:$waitvsrc),
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, WaitVAVDst:$waitvdst, WaitVMVSrc:$waitvsrc)
   );
 }
 

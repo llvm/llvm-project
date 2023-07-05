@@ -971,34 +971,16 @@ def InterpAttr : CustomOperand<i32>;
 
 def InterpAttrChan : ImmOperand<i32>;
 
-def SplitBarrierImmMatchClass : AsmOperandClass {
-  let Name = "SplitBarrierImm";
-  let PredicateMethod = "isSplitBarrierImm";
-  let RenderMethod = "addImmOperands";
-}
-
-def SplitBarrierImm : Operand<i32> {
+def SplitBarrier : ImmOperand<i32> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_INLINE_SPLIT_BARRIER_INT32";
-  let ParserMatchClass = SplitBarrierImmMatchClass;
-  let DecoderMethod = "decodeSplitBarrierImm";
+  let DecoderMethod = "decodeSplitBarrier";
+  let PrintMethod = "printOperand";
 }
 
 def VReg32OrOffClass : AsmOperandClass {
   let Name = "VReg32OrOff";
   let ParserMethod = "parseVReg32OrOff";
-}
-
-def GlobalSReg32ImmClass : AsmOperandClass {
-  let Name = "GlobalSReg32Imm";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseGlobalSReg32Imm";
-}
-
-def GlobalSReg64ImmClass : AsmOperandClass {
-  let Name = "GlobalSReg64Imm";
-  let RenderMethod = "addImmOperands";
-  let ParserMethod = "parseGlobalSReg64Imm";
 }
 
 def SendMsg : CustomOperand<i32>;
@@ -1015,15 +997,9 @@ def SDelayALU : CustomOperand<i32>;
 
 // Global register references are represented as immediate operands but printed
 // and parsed like registers.
-def globalSReg32imm : Operand<i16> {
-  let ParserMatchClass = GlobalSReg32ImmClass;
-  let PrintMethod = "printGlobalSReg32ImmOperand";
-}
+def GlobalSReg32 : CustomOperand<i16>;
 
-def globalSReg64imm : Operand<i16> {
-  let ParserMatchClass = GlobalSReg64ImmClass;
-  let PrintMethod = "printGlobalSReg64ImmOperand";
-}
+def GlobalSReg64 : CustomOperand<i16>;
 
 include "SIInstrFormats.td"
 include "VIInstrFormats.td"
@@ -1214,8 +1190,8 @@ def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 
 def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
 def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
-def wait_va_vdst : NamedIntOperand<i8, "wait_va_vdst", "WaitVAVDST">;
-def wait_vm_vsrc : NamedIntOperand<i8, "wait_vm_vsrc", "WaitVMVSRC">;
+def WaitVAVDst : NamedIntOperand<i8, "wait_va_vdst">;
+def WaitVMVSrc : NamedIntOperand<i8, "wait_vm_vsrc">;
 
 def BitOp3 : CustomOperand<i8, 1, "BitOp3">;
 def bitop3_0 : DefaultOperand<BitOp3, 0>;

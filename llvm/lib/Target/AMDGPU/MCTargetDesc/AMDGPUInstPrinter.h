@@ -45,10 +45,10 @@ private:
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
-  void printGlobalSReg32ImmOperand(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI, raw_ostream &O);
-  void printGlobalSReg64ImmOperand(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI, raw_ostream &O);
+  void printGlobalSReg32(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printGlobalSReg64(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printNamedBit(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                      StringRef BitName);
   void printOffen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
@@ -192,9 +192,9 @@ private:
                     raw_ostream &O);
   void printWaitEXP(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                     raw_ostream &O);
-  void printWaitVAVDST(const MCInst *MI, unsigned OpNo,
+  void printWaitVAVDst(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
-  void printWaitVMVSRC(const MCInst *MI, unsigned OpNo,
+  void printWaitVMVSrc(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printExpSrcN(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
