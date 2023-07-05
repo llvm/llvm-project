@@ -157,7 +157,7 @@ define <2 x i32> @shiftedreg_from_and_negative_type(<2 x i32> %a, <2 x i32> %b) 
 ; CHECK-LABEL: shiftedreg_from_and_negative_type:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #2
-; CHECK-NEXT:    bic v0.2s, #31
+; CHECK-NEXT:    bic v0.2s, #28
 ; CHECK-NEXT:    sub v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
   %shl = shl <2 x i32> %a, <i32 2, i32 2>

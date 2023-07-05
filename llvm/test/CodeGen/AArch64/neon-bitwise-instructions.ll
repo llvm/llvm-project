@@ -1483,9 +1483,8 @@ define <2 x i64> @and64imm8h_lsl8(<2 x i64> %a) {
 define <8 x i16> @bic_shifted_knownbits(<8 x i16> %v) {
 ; CHECK-LABEL: bic_shifted_knownbits:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.8h, #1
 ; CHECK-NEXT:    ushr v0.8h, v0.8h, #9
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bic v0.8h, #126
 ; CHECK-NEXT:    ret
 entry:
   %vshr_n = lshr <8 x i16> %v, <i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9>
@@ -1496,12 +1495,10 @@ entry:
 define <8 x i32> @bic_shifted_knownbits2(<8 x i16> %v) {
 ; CHECK-LABEL: bic_shifted_knownbits2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-1048321 // =0xfff000ff
 ; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    bic v1.4s, #255, lsl #8
+; CHECK-NEXT:    bic v0.4s, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
   %vshr_n = zext <8 x i16> %v to <8 x i32>
@@ -1525,11 +1522,10 @@ define <8 x i32> @bic_shifted_knownbits3(<8 x i16> %v) {
 define <8 x i32> @bic_shifted_knownbits4(<8 x i32> %v) {
 ; CHECK-LABEL: bic_shifted_knownbits4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v2.2d, #0xffff0000ffff0000
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #8
 ; CHECK-NEXT:    shl v1.4s, v1.4s, #8
-; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    bic v0.4s, #255, lsl #8
+; CHECK-NEXT:    bic v1.4s, #255, lsl #8
 ; CHECK-NEXT:    ret
 entry:
   %vshr_n = shl <8 x i32> %v, <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>
