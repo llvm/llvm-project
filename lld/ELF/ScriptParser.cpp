@@ -587,7 +587,7 @@ void ScriptParser::readSections() {
     if (SectionCommand *cmd = readAssignment(tok))
       v.push_back(cmd);
     else
-      v.push_back(readOutputSectionDescription(unquote(tok)));
+      v.push_back(readOutputSectionDescription(tok));
   }
 
   // If DATA_SEGMENT_RELRO_END is absent, for sections after DATA_SEGMENT_ALIGN,
