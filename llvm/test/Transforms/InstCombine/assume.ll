@@ -266,7 +266,7 @@ define i32 @bundle2(ptr %P) {
 
 define i1 @nonnull1(ptr %a) {
 ; CHECK-LABEL: @nonnull1(
-; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8, !nonnull !6, !noundef !6
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8, !nonnull [[META6:![0-9]+]], !noundef [[META6]]
 ; CHECK-NEXT:    tail call void @escape(ptr nonnull [[LOAD]])
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -871,8 +871,7 @@ define i32 @range_16_30_top28(i32 %x) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 15
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], -16
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 16
 ;
   %add = add i32 %x, -16
   %cmp = icmp ult i32 %add, 15
@@ -886,7 +885,7 @@ define i32 @range_16_32_top28(i32 %x) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 17
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], -16
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], 48
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %add = add i32 %x, -16
@@ -901,7 +900,7 @@ define i32 @range_16_32_top27(i32 %x) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 17
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], -32
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], 32
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %add = add i32 %x, -16
@@ -916,8 +915,7 @@ define i32 @range_16_32_top26(i32 %x) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 17
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], -64
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 0
 ;
   %add = add i32 %x, -16
   %cmp = icmp ult i32 %add, 17
@@ -931,7 +929,7 @@ define i32 @range_15_31_top28(i32 %x) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -15
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 16
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], -16
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], 16
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %add = add i32 %x, -15
@@ -946,8 +944,7 @@ define i32 @range_15_31_top27(i32 %x) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -15
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 16
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], -32
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 0
 ;
   %add = add i32 %x, -15
   %cmp = icmp ult i32 %add, 16
