@@ -15,11 +15,15 @@ typedef enum : unsigned short {
   RPC_WRITE_TO_STDOUT = 2,
   RPC_WRITE_TO_STDERR = 3,
   RPC_WRITE_TO_STREAM = 4,
-  RPC_MALLOC = 5,
-  RPC_FREE = 6,
-  RPC_TEST_INCREMENT = 7,
-  RPC_TEST_INTERFACE = 8,
-  RPC_TEST_STREAM = 9,
+  RPC_OPEN_FILE = 5,
+  RPC_CLOSE_FILE = 6,
+  RPC_MALLOC = 7,
+  RPC_FREE = 8,
+  // TODO: Move these out of here and handle then with custom handlers in the
+  // loader.
+  RPC_TEST_INCREMENT = 1000,
+  RPC_TEST_INTERFACE = 1001,
+  RPC_TEST_STREAM = 1002,
 } rpc_opcode_t;
 
 #endif // __LLVM_LIBC_TYPES_RPC_OPCODE_H__
