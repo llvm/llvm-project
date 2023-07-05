@@ -24,6 +24,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
 
@@ -631,10 +632,9 @@ public:
   /// symbol marking has occurred, i.e. in the MarkLiveSymbols callback.
   void markInUse(SymbolRef sym);
 
-  using region_iterator = RegionSetTy::const_iterator;
-
-  region_iterator region_begin() const { return LiveRegionRoots.begin(); }
-  region_iterator region_end() const { return LiveRegionRoots.end(); }
+  llvm::iterator_range<RegionSetTy::const_iterator> regions() const {
+    return LiveRegionRoots;
+  }
 
   /// Returns whether or not a symbol has been confirmed dead.
   ///

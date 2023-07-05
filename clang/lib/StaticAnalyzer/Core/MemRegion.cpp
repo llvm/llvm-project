@@ -39,6 +39,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -491,11 +492,9 @@ void BlockCodeRegion::dumpToStream(raw_ostream &os) const {
 void BlockDataRegion::dumpToStream(raw_ostream &os) const {
   os << "block_data{" << BC;
   os << "; ";
-  for (BlockDataRegion::referenced_vars_iterator
-         I = referenced_vars_begin(),
-         E = referenced_vars_end(); I != E; ++I)
-    os << "(" << I.getCapturedRegion() << "<-" <<
-                 I.getOriginalRegion() << ") ";
+  for (auto Var : referenced_vars())
+    os << "(" << Var.getCapturedRegion() << "<-" << Var.getOriginalRegion()
+       << ") ";
   os << '}';
 }
 
@@ -970,13 +969,11 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
     if (const auto *BC = dyn_cast<BlockInvocationContext>(LC)) {
       const auto *BR = static_cast<const BlockDataRegion *>(BC->getData());
       // FIXME: This can be made more efficient.
-      for (BlockDataRegion::referenced_vars_iterator
-           I = BR->referenced_vars_begin(),
-           E = BR->referenced_vars_end(); I != E; ++I) {
-        const TypedValueRegion *OrigR = I.getOriginalRegion();
+      for (auto Var : BR->referenced_vars()) {
+        const TypedValueRegion *OrigR = Var.getOriginalRegion();
         if (const auto *VR = dyn_cast<VarRegion>(OrigR)) {
           if (VR->getDecl() == VD)
-            return cast<VarRegion>(I.getCapturedRegion());
+            return cast<VarRegion>(Var.getCapturedRegion());
         }
       }
     }
@@ -1745,10 +1742,13 @@ BlockDataRegion::referenced_vars_end() const {
                                                    VecOriginal->end());
 }
 
+llvm::iterator_range<BlockDataRegion::referenced_vars_iterator>
+BlockDataRegion::referenced_vars() const {
+  return llvm::make_range(referenced_vars_begin(), referenced_vars_end());
+}
+
 const VarRegion *BlockDataRegion::getOriginalRegion(const VarRegion *R) const {
-  for (referenced_vars_iterator I = referenced_vars_begin(),
-                                E = referenced_vars_end();
-       I != E; ++I) {
+  for (const auto &I : referenced_vars()) {
     if (I.getCapturedRegion() == R)
       return I.getOriginalRegion();
   }
