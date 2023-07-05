@@ -138,10 +138,8 @@ SmallVector<const MemRegion *, 4>
 StackAddrEscapeChecker::getCapturedStackRegions(const BlockDataRegion &B,
                                                 CheckerContext &C) {
   SmallVector<const MemRegion *, 4> Regions;
-  BlockDataRegion::referenced_vars_iterator I = B.referenced_vars_begin();
-  BlockDataRegion::referenced_vars_iterator E = B.referenced_vars_end();
-  for (; I != E; ++I) {
-    SVal Val = C.getState()->getSVal(I.getCapturedRegion());
+  for (auto Var : B.referenced_vars()) {
+    SVal Val = C.getState()->getSVal(Var.getCapturedRegion());
     const MemRegion *Region = Val.getAsRegion();
     if (Region && isa<StackSpaceRegion>(Region->getMemorySpace()))
       Regions.push_back(Region);

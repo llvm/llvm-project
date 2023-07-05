@@ -31,6 +31,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
@@ -737,6 +738,11 @@ public:
       ++OriginalR;
       return *this;
     }
+
+    // This isn't really a conventional iterator.
+    // We just implement the deref as a no-op for now to make range-based for
+    // loops work.
+    const referenced_vars_iterator &operator*() const { return *this; }
   };
 
   /// Return the original region for a captured region, if
@@ -745,6 +751,7 @@ public:
 
   referenced_vars_iterator referenced_vars_begin() const;
   referenced_vars_iterator referenced_vars_end() const;
+  llvm::iterator_range<referenced_vars_iterator> referenced_vars() const;
 
   void dumpToStream(raw_ostream &os) const override;
 

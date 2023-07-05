@@ -20,6 +20,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include <optional>
 
 using namespace clang;
@@ -85,14 +87,13 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
   evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
 
   PostStmt PS(CallExpr, LCtx);
-  for (ExplodedNodeSet::iterator I = Dst.begin(), E = Dst.end();
-       I != E; ++I) {
-    ProgramStateRef State = (*I)->getState();
+  for (ExplodedNode *N : Dst) {
+    ProgramStateRef State = N->getState();
     if (AlwaysReturnsLValue)
       State = State->BindExpr(CallExpr, LCtx, ThisVal);
     else
       State = bindReturnValue(Call, LCtx, State);
-    Bldr.generateNode(PS, State, *I);
+    Bldr.generateNode(PS, State, N);
   }
 }
 
@@ -744,10 +745,8 @@ void ExprEngine::handleConstructor(const Expr *E,
   if (CE) {
     // FIXME: Is it possible and/or useful to do this before PreStmt?
     StmtNodeBuilder Bldr(DstPreVisit, PreInitialized, *currBldrCtx);
-    for (ExplodedNodeSet::iterator I = DstPreVisit.begin(),
-                                   E = DstPreVisit.end();
-         I != E; ++I) {
-      ProgramStateRef State = (*I)->getState();
+    for (ExplodedNode *N : DstPreVisit) {
+      ProgramStateRef State = N->getState();
       if (CE->requiresZeroInitialization()) {
         // FIXME: Once we properly handle constructors in new-expressions, we'll
         // need to invalidate the region before setting a default value, to make
@@ -764,7 +763,7 @@ void ExprEngine::handleConstructor(const Expr *E,
         State = State->bindDefaultZero(Target, LCtx);
       }
 
-      Bldr.generateNode(CE, *I, State, /*tag=*/nullptr,
+      Bldr.generateNode(CE, N, State, /*tag=*/nullptr,
                         ProgramPoint::PreStmtKind);
     }
   } else {
@@ -782,14 +781,12 @@ void ExprEngine::handleConstructor(const Expr *E,
       !CallOpts.IsArrayCtorOrDtor) {
     StmtNodeBuilder Bldr(DstPreCall, DstEvaluated, *currBldrCtx);
     // FIXME: Handle other kinds of trivial constructors as well.
-    for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
-         I != E; ++I)
-      performTrivialCopy(Bldr, *I, *Call);
+    for (ExplodedNode *N : DstPreCall)
+      performTrivialCopy(Bldr, N, *Call);
 
   } else {
-    for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
-         I != E; ++I)
-      getCheckerManager().runCheckersForEvalCall(DstEvaluated, *I, *Call, *this,
+    for (ExplodedNode *N : DstPreCall)
+      getCheckerManager().runCheckersForEvalCall(DstEvaluated, N, *Call, *this,
                                                  CallOpts);
   }
 
@@ -916,9 +913,8 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
 
   ExplodedNodeSet DstInvalidated;
   StmtNodeBuilder Bldr(DstPreCall, DstInvalidated, *currBldrCtx);
-  for (ExplodedNodeSet::iterator I = DstPreCall.begin(), E = DstPreCall.end();
-       I != E; ++I)
-    defaultEvalCall(Bldr, *I, *Call, CallOpts);
+  for (ExplodedNode *N : DstPreCall)
+    defaultEvalCall(Bldr, N, *Call, CallOpts);
 
   getCheckerManager().runCheckersForPostCall(Dst, DstInvalidated,
                                              *Call, *this);
@@ -1197,18 +1193,13 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
   // If we created a new MemRegion for the lambda, we should explicitly bind
   // the captures.
-  unsigned Idx = 0;
-  CXXRecordDecl::field_iterator CurField = LE->getLambdaClass()->field_begin();
-  for (LambdaExpr::const_capture_init_iterator i = LE->capture_init_begin(),
-                                               e = LE->capture_init_end();
-       i != e; ++i, ++CurField, ++Idx) {
-    FieldDecl *FieldForCapture = *CurField;
+  for (auto const [Idx, FieldForCapture, InitExpr] :
+       llvm::zip(llvm::seq<unsigned>(0, -1), LE->getLambdaClass()->fields(),
+                 LE->capture_inits())) {
     SVal FieldLoc = State->getLValue(FieldForCapture, V);
 
     SVal InitVal;
     if (!FieldForCapture->hasCapturedVLAType()) {
-      const Expr *InitExpr = *i;
-
       assert(InitExpr && "Capture missing initialization expression");
 
       // Capturing a 0 length array is a no-op, so we ignore it to get a more

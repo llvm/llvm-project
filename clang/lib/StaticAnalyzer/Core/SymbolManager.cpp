@@ -414,8 +414,8 @@ void SymbolReaper::markElementIndicesLive(const MemRegion *region) {
        SR = dyn_cast<SubRegion>(SR->getSuperRegion())) {
     if (const auto ER = dyn_cast<ElementRegion>(SR)) {
       SVal Idx = ER->getIndex();
-      for (auto SI = Idx.symbol_begin(), SE = Idx.symbol_end(); SI != SE; ++SI)
-        markLive(*SI);
+      for (SymbolRef Sym : Idx.symbols())
+        markLive(Sym);
     }
   }
 }
