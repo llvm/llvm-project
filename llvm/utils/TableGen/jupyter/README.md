@@ -25,6 +25,9 @@ kernel in the correct context.
     python3 -m tablegen_kernel.install
 ```
 
+If you are going to open the notebook in an IDE like Visual Studio Code,
+you should restart it now so that it will find the newly installed kernel.
+
 Then run one of:
 
 ```shell
@@ -37,6 +40,8 @@ Then run one of:
     # To use the kernel from the command line.
     jupyter console --kernel tablegen
 ```
+
+Or open the notebook in a tool with built in Jupyter support.
 
 `llvm-tblgen` is expected to be either in the `PATH` or you can set
 the environment variable `LLVM_TBLGEN_EXECUTABLE` to point to it directly.
