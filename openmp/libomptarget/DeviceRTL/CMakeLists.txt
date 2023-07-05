@@ -246,7 +246,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
         ockl ocml oclc_wavefrontsize64_on oclc_wavefrontsize64_off oclc_isa_version_${gfxnum})
     endif()
     # Add amdgcn-specific bc files to link command
-    list(APPEND bc_files ${ocml_bc_file} ${ockl_bc_file} ${oclc_wf_bc_file} ${oclc_isa_bc_file} ${oclc_abi_version_file})
+    list(APPEND bc_files ${ocml_bc_file} ${ockl_bc_file} ${oclc_wf_bc_file} ${oclc_isa_bc_file})
     # Add touch-target-$(target_cpu) to local_depend_files so all $bc_files will exist or be created.
     list(APPEND local_depend_files touch-target-${target_cpu})
   endif()
