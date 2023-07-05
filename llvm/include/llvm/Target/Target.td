@@ -1239,15 +1239,6 @@ def COPY : StandardPseudoInstruction {
   let isAsCheapAsAMove = true;
   let hasNoSchedulingInfo = false;
 }
-def PRED_COPY : StandardPseudoInstruction {
-  let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins unknown:$src);
-  let AsmString = "PRED_COPY";
-  let hasSideEffects = false;
-  let isAsCheapAsAMove = true;
-  let hasNoSchedulingInfo = false;
-  let isPredicable = true;
-}
 def BUNDLE : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);

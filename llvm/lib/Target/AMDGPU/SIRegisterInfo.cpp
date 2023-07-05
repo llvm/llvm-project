@@ -656,6 +656,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     assert(!isSubRegister(ScratchRSrcReg, BasePtrReg));
   }
 
+  // FIXME: Use same reserved register introduced in D149775
   // SGPR used to preserve EXEC MASK around WWM spill/copy instructions.
   Register ExecCopyReg = MFI->getSGPRForEXECCopy();
   if (ExecCopyReg)
@@ -1261,9 +1262,8 @@ spillVGPRtoAGPR(const GCNSubtarget &ST, MachineBasicBlock &MBB,
     // It could result in AGPR spills restored to VGPRs or the other way around,
     // making the src and dst with identical regclasses at this point. It just
     // needs a copy in such cases.
-    MachineInstrBuilder CopyMIB =
-        MachineInstrBuilder(*MBB.getParent(), TII->buildCopy(MBB, MI, DL, Dst));
-    CopyMIB.addReg(Src, getKillRegState(IsKill));
+    auto CopyMIB = BuildMI(MBB, MI, DL, TII->get(AMDGPU::COPY), Dst)
+                       .addReg(Src, getKillRegState(IsKill));
     CopyMIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);
     if (NeedsCFI)
       TFL->buildCFIForRegToRegSpill(MBB, MI, DL, Src, Dst);
@@ -2309,10 +2309,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                             : AMDGPU::BUFFER_STORE_DWORD_OFFSET;
       auto MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
-      if (IsWWMRegSpill)
+      if (IsWWMRegSpill){
         TII->insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(),
                                    RS->isRegUsed(AMDGPU::SCC));
-
+      }
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
@@ -2376,9 +2376,10 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                             : AMDGPU::BUFFER_LOAD_DWORD_OFFSET;
       auto MBB = MI->getParent();
       bool IsWWMRegSpill = TII->isWWMRegSpillOpcode(MI->getOpcode());
-      if (IsWWMRegSpill)
+      if (IsWWMRegSpill){
         TII->insertScratchExecCopy(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy(),
                                    RS->isRegUsed(AMDGPU::SCC));
+      }
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
@@ -2654,8 +2655,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                 .addReg(ScaledReg, RegState::Kill)
                 .addImm(Offset);
             if (!IsSALU)
-              TII->buildCopy(*MBB, MI, DL, ResultReg, ScaledReg,
-                             RegState::Kill);
+              BuildMI(*MBB, MI, DL, TII->get(AMDGPU::COPY), ResultReg)
+                  .addReg(ScaledReg, RegState::Kill);
             else
               ResultReg = ScaledReg;
 

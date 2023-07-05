@@ -404,16 +404,6 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
   return true;
 }
 
-// Returns true when all the implicit operands of the copy instruction \p MI are
-// reserved registers.
-static bool isCopyWithReservedImplicitOpnds(const MachineInstr &MI,
-                                            const MachineRegisterInfo &MRI) {
-  for (unsigned I = 2, E = MI.getNumOperands(); I != E; ++I) {
-    if (!MRI.isReserved(MI.getOperand(I).getReg()))
-      return false;
-  }
-  return true;
-}
 void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) {
   if (!MI.isIdentityCopy())
     return;
@@ -434,11 +424,8 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) {
   //    %al = COPY %al, implicit-def %eax
   // give us additional liveness information: The target (super-)register
   // must not be valid before this point. Replace the COPY with a KILL
-  // instruction to maintain this information. Do not insert KILL when the
-  // implicit operands are all reserved registers.
-  if (MI.getOperand(1).isUndef() ||
-      ((MI.getNumOperands() > 2) &&
-       !isCopyWithReservedImplicitOpnds(MI, *MRI))) {
+  // instruction to maintain this information.
+  if (MI.getOperand(1).isUndef() || MI.getNumOperands() > 2) {
     MI.setDesc(TII->get(TargetOpcode::KILL));
     LLVM_DEBUG(dbgs() << "  replace by: " << MI);
     return;

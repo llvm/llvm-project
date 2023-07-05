@@ -7,18 +7,18 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(ptr addrspace(4) inreg 
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY killed $sgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY killed $sgpr1
-  ; CHECK-NEXT:   undef %0.sub0:sreg_64 = PRED_COPY killed [[PRED_COPY]]
-  ; CHECK-NEXT:   %0.sub1:sreg_64 = PRED_COPY killed [[PRED_COPY1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY killed $sgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY killed $sgpr1
+  ; CHECK-NEXT:   undef %0.sub0:sreg_64 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   %0.sub1:sreg_64 = COPY killed [[COPY1]]
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (invariant load (<2 x s32>) from %ir.ptr, align 4, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM killed %0, 8, 0 :: (invariant load (s32) from %ir.ptr + 8, addrspace 4)
-  ; CHECK-NEXT:   [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY [[S_LOAD_DWORDX2_IMM]].sub0
-  ; CHECK-NEXT:   $sgpr0 = PRED_COPY killed [[PRED_COPY2]]
-  ; CHECK-NEXT:   [[PRED_COPY3:%[0-9]+]]:sreg_32 = PRED_COPY killed [[S_LOAD_DWORDX2_IMM]].sub1
-  ; CHECK-NEXT:   $sgpr1 = PRED_COPY killed [[PRED_COPY3]]
-  ; CHECK-NEXT:   [[PRED_COPY4:%[0-9]+]]:sreg_32 = PRED_COPY killed [[S_LOAD_DWORD_IMM]]
-  ; CHECK-NEXT:   $sgpr2 = PRED_COPY killed [[PRED_COPY4]]
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; CHECK-NEXT:   $sgpr0 = COPY killed [[COPY2]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY killed [[S_LOAD_DWORDX2_IMM]].sub1
+  ; CHECK-NEXT:   $sgpr1 = COPY killed [[COPY3]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY killed [[S_LOAD_DWORD_IMM]]
+  ; CHECK-NEXT:   $sgpr2 = COPY killed [[COPY4]]
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit killed $sgpr0, implicit killed $sgpr1, implicit killed $sgpr2
   %load = load <3 x i32>, ptr addrspace(4) %ptr, align 4
   ret <3 x i32> %load

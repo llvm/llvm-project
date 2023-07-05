@@ -57,7 +57,7 @@ public:
     virtual ~Delegate() = default;
 
     virtual void MRI_NoteNewVirtualRegister(Register Reg) = 0;
-    virtual void MRI_NotecloneVirtualRegister(Register NewReg,
+    virtual void MRI_NoteCloneVirtualRegister(Register NewReg,
                                               Register SrcReg) {
       MRI_NoteNewVirtualRegister(NewReg);
     }
@@ -181,7 +181,7 @@ public:
 
   void noteCloneVirtualRegister(Register NewReg, Register SrcReg) {
     for (auto *TheDelegate : TheDelegates)
-      TheDelegate->MRI_NotecloneVirtualRegister(NewReg, SrcReg);
+      TheDelegate->MRI_NoteCloneVirtualRegister(NewReg, SrcReg);
   }
 
   //===--------------------------------------------------------------------===//

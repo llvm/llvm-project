@@ -29,11 +29,11 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY2]](s32)
-    ; CHECK-NEXT: [[PRED_COPY3:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY3]](s32)
-    ; CHECK-NEXT: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 0, [[PRED_COPY]](s32), [[PRED_COPY1]](s32), [[PRED_COPY2]](s32), [[PRED_COPY3]](s32), 0, 0
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[COPY3]](s32)
+    ; CHECK-NEXT: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 0, [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), 0, 0
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2

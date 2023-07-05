@@ -2,9 +2,9 @@
 
 # CHECK: %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 # CHECK: %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-# CHECK: %4:vgpr_32 = PRED_COPY %3
+# CHECK: %4:vgpr_32 = COPY %3
 # CHECK: %6:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-# CHECK: %7:vgpr_32 = PRED_COPY %3
+# CHECK: %7:vgpr_32 = COPY %3
 
 ---
 name:            fold_cndmask
@@ -25,7 +25,7 @@ body:             |
     %2 = V_CNDMASK_B32_e64 0, %1, 0, %1, %0, implicit $exec
     %3 = IMPLICIT_DEF
     %4 = V_CNDMASK_B32_e64 0, %3, 0, %3, %0, implicit $exec
-    %5 = PRED_COPY %1
+    %5 = COPY %1
     %6 = V_CNDMASK_B32_e64 0, %5, 0, 0, %0, implicit $exec
     $vcc = IMPLICIT_DEF
     %7 = V_CNDMASK_B32_e32 %3, %3, implicit $exec, implicit $vcc

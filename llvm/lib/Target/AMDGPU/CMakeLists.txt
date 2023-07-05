@@ -134,6 +134,7 @@ add_llvm_target(AMDGPUCodeGen
   R600TargetTransformInfo.cpp
   SIAnnotateControlFlow.cpp
   SIFixSGPRCopies.cpp
+  SIFixVGPRCopies.cpp
   SIFoldOperands.cpp
   SIFormMemoryClauses.cpp
   SIFrameLowering.cpp
@@ -145,6 +146,7 @@ add_llvm_target(AMDGPUCodeGen
   SILoadStoreOptimizer.cpp
   SILowerControlFlow.cpp
   SILowerI1Copies.cpp
+  SILowerWWMCopies.cpp
   SILowerSGPRSpills.cpp
   SIMachineFunctionInfo.cpp
   SIMachineScheduler.cpp
@@ -161,7 +163,6 @@ add_llvm_target(AMDGPUCodeGen
   SIProgramInfo.cpp
   SIRegisterInfo.cpp
   SIShrinkInstructions.cpp
-  SISimplifyPredicatedCopies.cpp
   SIWholeQuadMode.cpp
 
   LINK_COMPONENTS

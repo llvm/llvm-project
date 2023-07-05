@@ -122,7 +122,6 @@ defm : X86WriteRes<WriteMove,    [BWPort0156], 1, [1], 1>;
 
 // Treat misc copies as a move.
 def  : InstRW<[WriteMove], (instrs COPY)>;
-def  : InstRW<[WriteMove], (instrs PRED_COPY)>;
 
 // Idioms that clear a register, like xorps %xmm0, %xmm0.
 // These can often bypass execution ports completely.

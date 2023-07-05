@@ -485,8 +485,7 @@ def shl_0_to_4 : PatFrag<
   let GISelPredicateCode = [{
     int64_t Imm = 0;
     if (!mi_match(MI.getOperand(2).getReg(), MRI, m_ICst(Imm)) &&
-        !mi_match(MI.getOperand(2).getReg(), MRI, m_Copy(m_ICst(Imm))) &&
-        !mi_match(MI.getOperand(2).getReg(), MRI, m_Pred_Copy(m_ICst(Imm))))
+        !mi_match(MI.getOperand(2).getReg(), MRI, m_Copy(m_ICst(Imm))))
       return false;
     return (uint64_t)Imm <= 4;
   }];

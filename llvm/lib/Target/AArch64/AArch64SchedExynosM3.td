@@ -507,7 +507,6 @@ def : InstRW<[M3WriteAW], (instrs ORRWri, ORRXri)>;
 
 // Move instructions.
 def : InstRW<[M3WriteCOPY], (instrs COPY)>;
-def : InstRW<[M3WriteCOPY], (instrs PRED_COPY)>;
 def : InstRW<[M3WriteZ0],   (instrs ADR, ADRP)>;
 def : InstRW<[M3WriteZ0],   (instregex "^MOV[NZ][WX]i")>;
 

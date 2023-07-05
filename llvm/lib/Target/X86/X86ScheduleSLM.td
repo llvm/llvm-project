@@ -96,7 +96,6 @@ defm : X86WriteRes<WriteLDMXCSR, [SLM_MEC_RSV], 10, [8], 5>;
 
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
-def : InstRW<[WriteMove], (instrs PRED_COPY)>;
 
 defm : SLMWriteResPair<WriteALU,    [SLM_IEC_RSV01], 1>;
 defm : SLMWriteResPair<WriteADC,    [SLM_IEC_RSV01], 1>;

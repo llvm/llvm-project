@@ -62,140 +62,140 @@ body:             |
     ; CHECK-NEXT: undef %42.sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET7]].sub3, implicit $exec
     ; CHECK-NEXT: undef %43.sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET7]].sub2, implicit $exec
     ; CHECK-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-    ; CHECK-NEXT: undef %48.sub2:vreg_128 = PRED_COPY %47.sub2
+    ; CHECK-NEXT: undef %48.sub2:vreg_128 = COPY %47.sub2
     ; CHECK-NEXT: %48.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET]].sub1, implicit $exec
-    ; CHECK-NEXT: undef %50.sub0:vreg_128 = PRED_COPY %48.sub0 {
-    ; CHECK-NEXT:   internal %50.sub2:vreg_128 = PRED_COPY %48.sub2
+    ; CHECK-NEXT: undef %50.sub0:vreg_128 = COPY %48.sub0 {
+    ; CHECK-NEXT:   internal %50.sub2:vreg_128 = COPY %48.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %50, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %55.sub2:vreg_128 = PRED_COPY %54.sub2
+    ; CHECK-NEXT: undef %55.sub2:vreg_128 = COPY %54.sub2
     ; CHECK-NEXT: %55.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET]].sub0, implicit $exec
-    ; CHECK-NEXT: undef %57.sub0:vreg_128 = PRED_COPY %55.sub0 {
-    ; CHECK-NEXT:   internal %57.sub2:vreg_128 = PRED_COPY %55.sub2
+    ; CHECK-NEXT: undef %57.sub0:vreg_128 = COPY %55.sub0 {
+    ; CHECK-NEXT:   internal %57.sub2:vreg_128 = COPY %55.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %57, %stack.1, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.1, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %62.sub2:vreg_128 = PRED_COPY %61.sub2
+    ; CHECK-NEXT: undef %62.sub2:vreg_128 = COPY %61.sub2
     ; CHECK-NEXT: %62.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET]].sub3, implicit $exec
-    ; CHECK-NEXT: undef %64.sub0:vreg_128 = PRED_COPY %62.sub0 {
-    ; CHECK-NEXT:   internal %64.sub2:vreg_128 = PRED_COPY %62.sub2
+    ; CHECK-NEXT: undef %64.sub0:vreg_128 = COPY %62.sub0 {
+    ; CHECK-NEXT:   internal %64.sub2:vreg_128 = COPY %62.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %64, %stack.2, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.2, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %69.sub2:vreg_128 = PRED_COPY %68.sub2
+    ; CHECK-NEXT: undef %69.sub2:vreg_128 = COPY %68.sub2
     ; CHECK-NEXT: %69.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET]].sub2, implicit $exec
-    ; CHECK-NEXT: undef %71.sub0:vreg_128 = PRED_COPY %69.sub0 {
-    ; CHECK-NEXT:   internal %71.sub2:vreg_128 = PRED_COPY %69.sub2
+    ; CHECK-NEXT: undef %71.sub0:vreg_128 = COPY %69.sub0 {
+    ; CHECK-NEXT:   internal %71.sub2:vreg_128 = COPY %69.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %71, %stack.3, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.3, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %76.sub2:vreg_128 = PRED_COPY %75.sub2
+    ; CHECK-NEXT: undef %76.sub2:vreg_128 = COPY %75.sub2
     ; CHECK-NEXT: %76.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET1]].sub1, implicit $exec
-    ; CHECK-NEXT: undef %78.sub0:vreg_128 = PRED_COPY %76.sub0 {
-    ; CHECK-NEXT:   internal %78.sub2:vreg_128 = PRED_COPY %76.sub2
+    ; CHECK-NEXT: undef %78.sub0:vreg_128 = COPY %76.sub0 {
+    ; CHECK-NEXT:   internal %78.sub2:vreg_128 = COPY %76.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %78, %stack.4, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.4, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %83.sub2:vreg_128 = PRED_COPY %82.sub2
+    ; CHECK-NEXT: undef %83.sub2:vreg_128 = COPY %82.sub2
     ; CHECK-NEXT: %83.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET1]].sub0, implicit $exec
-    ; CHECK-NEXT: undef %85.sub0:vreg_128 = PRED_COPY %83.sub0 {
-    ; CHECK-NEXT:   internal %85.sub2:vreg_128 = PRED_COPY %83.sub2
+    ; CHECK-NEXT: undef %85.sub0:vreg_128 = COPY %83.sub0 {
+    ; CHECK-NEXT:   internal %85.sub2:vreg_128 = COPY %83.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %85, %stack.5, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.5, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %90.sub2:vreg_128 = PRED_COPY %89.sub2
+    ; CHECK-NEXT: undef %90.sub2:vreg_128 = COPY %89.sub2
     ; CHECK-NEXT: %90.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET1]].sub3, implicit $exec
-    ; CHECK-NEXT: undef %140.sub0:vreg_128 = PRED_COPY %90.sub0 {
-    ; CHECK-NEXT:   internal %140.sub2:vreg_128 = PRED_COPY %90.sub2
+    ; CHECK-NEXT: undef %140.sub0:vreg_128 = COPY %90.sub0 {
+    ; CHECK-NEXT:   internal %140.sub2:vreg_128 = COPY %90.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %140, %stack.7, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.7, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %95.sub2:vreg_128 = PRED_COPY %94.sub2
+    ; CHECK-NEXT: undef %95.sub2:vreg_128 = COPY %94.sub2
     ; CHECK-NEXT: %95.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET1]].sub2, implicit $exec
-    ; CHECK-NEXT: undef %107.sub0:vreg_128 = PRED_COPY %95.sub0 {
-    ; CHECK-NEXT:   internal %107.sub2:vreg_128 = PRED_COPY %95.sub2
+    ; CHECK-NEXT: undef %107.sub0:vreg_128 = COPY %95.sub0 {
+    ; CHECK-NEXT:   internal %107.sub2:vreg_128 = COPY %95.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %107, %stack.6, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.6, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %100.sub2:vreg_128 = PRED_COPY %99.sub2
+    ; CHECK-NEXT: undef %100.sub2:vreg_128 = COPY %99.sub2
     ; CHECK-NEXT: %100.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET2]].sub1, implicit $exec
-    ; CHECK-NEXT: undef %101.sub0:vreg_128 = PRED_COPY %100.sub0 {
-    ; CHECK-NEXT:   internal %101.sub2:vreg_128 = PRED_COPY %100.sub2
+    ; CHECK-NEXT: undef %101.sub0:vreg_128 = COPY %100.sub0 {
+    ; CHECK-NEXT:   internal %101.sub2:vreg_128 = COPY %100.sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef %105.sub2:vreg_128 = PRED_COPY %104.sub2
+    ; CHECK-NEXT: undef %105.sub2:vreg_128 = COPY %104.sub2
     ; CHECK-NEXT: %105.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET2]].sub0, implicit $exec
-    ; CHECK-NEXT: undef %106.sub0:vreg_128 = PRED_COPY %105.sub0 {
-    ; CHECK-NEXT:   internal %106.sub2:vreg_128 = PRED_COPY %105.sub2
+    ; CHECK-NEXT: undef %106.sub0:vreg_128 = COPY %105.sub0 {
+    ; CHECK-NEXT:   internal %106.sub2:vreg_128 = COPY %105.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %139.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET2]].sub3, implicit $exec
-    ; CHECK-NEXT: undef %158.sub0:vreg_128 = PRED_COPY %139.sub0 {
-    ; CHECK-NEXT:   internal %158.sub2:vreg_128 = PRED_COPY %139.sub2
+    ; CHECK-NEXT: undef %158.sub0:vreg_128 = COPY %139.sub0 {
+    ; CHECK-NEXT:   internal %158.sub2:vreg_128 = COPY %139.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %158, %stack.8, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.8, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %186.sub2:vreg_128 = PRED_COPY %185.sub2
+    ; CHECK-NEXT: undef %186.sub2:vreg_128 = COPY %185.sub2
     ; CHECK-NEXT: %186.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET2]].sub2, implicit $exec
-    ; CHECK-NEXT: undef %188.sub0:vreg_128 = PRED_COPY %186.sub0 {
-    ; CHECK-NEXT:   internal %188.sub2:vreg_128 = PRED_COPY %186.sub2
+    ; CHECK-NEXT: undef %188.sub0:vreg_128 = COPY %186.sub0 {
+    ; CHECK-NEXT:   internal %188.sub2:vreg_128 = COPY %186.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %188, %stack.11, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.11, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %167.sub2:vreg_128 = PRED_COPY %166.sub2
+    ; CHECK-NEXT: undef %167.sub2:vreg_128 = COPY %166.sub2
     ; CHECK-NEXT: %167.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET3]].sub1, implicit $exec
-    ; CHECK-NEXT: undef %169.sub0:vreg_128 = PRED_COPY %167.sub0 {
-    ; CHECK-NEXT:   internal %169.sub2:vreg_128 = PRED_COPY %167.sub2
+    ; CHECK-NEXT: undef %169.sub0:vreg_128 = COPY %167.sub0 {
+    ; CHECK-NEXT:   internal %169.sub2:vreg_128 = COPY %167.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %169, %stack.9, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.9, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %114.sub2:vreg_128 = PRED_COPY %113.sub2
+    ; CHECK-NEXT: undef %114.sub2:vreg_128 = COPY %113.sub2
     ; CHECK-NEXT: %114.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET3]].sub0, implicit $exec
-    ; CHECK-NEXT: undef %115.sub0:vreg_128 = PRED_COPY %114.sub0 {
-    ; CHECK-NEXT:   internal %115.sub2:vreg_128 = PRED_COPY %114.sub2
+    ; CHECK-NEXT: undef %115.sub0:vreg_128 = COPY %114.sub0 {
+    ; CHECK-NEXT:   internal %115.sub2:vreg_128 = COPY %114.sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef %119.sub2:vreg_128 = PRED_COPY %118.sub2
+    ; CHECK-NEXT: undef %119.sub2:vreg_128 = COPY %118.sub2
     ; CHECK-NEXT: %119.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET3]].sub3, implicit $exec
-    ; CHECK-NEXT: undef %181.sub0:vreg_128 = PRED_COPY %119.sub0 {
-    ; CHECK-NEXT:   internal %181.sub2:vreg_128 = PRED_COPY %119.sub2
+    ; CHECK-NEXT: undef %181.sub0:vreg_128 = COPY %119.sub0 {
+    ; CHECK-NEXT:   internal %181.sub2:vreg_128 = COPY %119.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: SI_SPILL_V128_SAVE %181, %stack.10, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.10, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %124.sub2:vreg_128 = PRED_COPY %123.sub2
+    ; CHECK-NEXT: undef %124.sub2:vreg_128 = COPY %123.sub2
     ; CHECK-NEXT: %124.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET3]].sub2, implicit $exec
-    ; CHECK-NEXT: undef %125.sub0:vreg_128 = PRED_COPY %124.sub0 {
-    ; CHECK-NEXT:   internal %125.sub2:vreg_128 = PRED_COPY %124.sub2
+    ; CHECK-NEXT: undef %125.sub0:vreg_128 = COPY %124.sub0 {
+    ; CHECK-NEXT:   internal %125.sub2:vreg_128 = COPY %124.sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef %129.sub2:vreg_128 = PRED_COPY %128.sub2
+    ; CHECK-NEXT: undef %129.sub2:vreg_128 = COPY %128.sub2
     ; CHECK-NEXT: %129.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET4]].sub1, implicit $exec
-    ; CHECK-NEXT: undef %130.sub0:vreg_128 = PRED_COPY %129.sub0 {
-    ; CHECK-NEXT:   internal %130.sub2:vreg_128 = PRED_COPY %129.sub2
+    ; CHECK-NEXT: undef %130.sub0:vreg_128 = COPY %129.sub0 {
+    ; CHECK-NEXT:   internal %130.sub2:vreg_128 = COPY %129.sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef %134.sub2:vreg_128 = PRED_COPY %133.sub2
+    ; CHECK-NEXT: undef %134.sub2:vreg_128 = COPY %133.sub2
     ; CHECK-NEXT: %134.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET4]].sub0, implicit $exec
-    ; CHECK-NEXT: undef %135.sub0:vreg_128 = PRED_COPY %134.sub0 {
-    ; CHECK-NEXT:   internal %135.sub2:vreg_128 = PRED_COPY %134.sub2
+    ; CHECK-NEXT: undef %135.sub0:vreg_128 = COPY %134.sub0 {
+    ; CHECK-NEXT:   internal %135.sub2:vreg_128 = COPY %134.sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef %145.sub2:vreg_128 = PRED_COPY %144.sub2
+    ; CHECK-NEXT: undef %145.sub2:vreg_128 = COPY %144.sub2
     ; CHECK-NEXT: %145.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET4]].sub3, implicit $exec
-    ; CHECK-NEXT: undef %146.sub0:vreg_128 = PRED_COPY %145.sub0 {
-    ; CHECK-NEXT:   internal %146.sub2:vreg_128 = PRED_COPY %145.sub2
+    ; CHECK-NEXT: undef %146.sub0:vreg_128 = COPY %145.sub0 {
+    ; CHECK-NEXT:   internal %146.sub2:vreg_128 = COPY %145.sub2
     ; CHECK-NEXT: }
-    ; CHECK-NEXT: undef %150.sub2:vreg_128 = PRED_COPY %149.sub2
+    ; CHECK-NEXT: undef %150.sub2:vreg_128 = COPY %149.sub2
     ; CHECK-NEXT: %150.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET4]].sub2, implicit $exec
-    ; CHECK-NEXT: undef %151.sub0:vreg_128 = PRED_COPY %150.sub0 {
-    ; CHECK-NEXT:   internal %151.sub2:vreg_128 = PRED_COPY %150.sub2
+    ; CHECK-NEXT: undef %151.sub0:vreg_128 = COPY %150.sub0 {
+    ; CHECK-NEXT:   internal %151.sub2:vreg_128 = COPY %150.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef %157.sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub1, implicit $exec
-    ; CHECK-NEXT: undef %155.sub2:vreg_128 = PRED_COPY %157.sub2
+    ; CHECK-NEXT: undef %155.sub2:vreg_128 = COPY %157.sub2
     ; CHECK-NEXT: %155.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub1, implicit $exec
-    ; CHECK-NEXT: undef %156.sub0:vreg_128 = PRED_COPY %155.sub0 {
-    ; CHECK-NEXT:   internal %156.sub2:vreg_128 = PRED_COPY %155.sub2
+    ; CHECK-NEXT: undef %156.sub0:vreg_128 = COPY %155.sub0 {
+    ; CHECK-NEXT:   internal %156.sub2:vreg_128 = COPY %155.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef %165.sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub0, implicit $exec
-    ; CHECK-NEXT: undef %163.sub2:vreg_128 = PRED_COPY %165.sub2
+    ; CHECK-NEXT: undef %163.sub2:vreg_128 = COPY %165.sub2
     ; CHECK-NEXT: %163.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub0, implicit $exec
-    ; CHECK-NEXT: undef %164.sub0:vreg_128 = PRED_COPY %163.sub0 {
-    ; CHECK-NEXT:   internal %164.sub2:vreg_128 = PRED_COPY %163.sub2
+    ; CHECK-NEXT: undef %164.sub0:vreg_128 = COPY %163.sub0 {
+    ; CHECK-NEXT:   internal %164.sub2:vreg_128 = COPY %163.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef %176.sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub3, implicit $exec
-    ; CHECK-NEXT: undef %174.sub2:vreg_128 = PRED_COPY %176.sub2
+    ; CHECK-NEXT: undef %174.sub2:vreg_128 = COPY %176.sub2
     ; CHECK-NEXT: %174.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub3, implicit $exec
-    ; CHECK-NEXT: undef %175.sub0:vreg_128 = PRED_COPY %174.sub0 {
-    ; CHECK-NEXT:   internal %175.sub2:vreg_128 = PRED_COPY %174.sub2
+    ; CHECK-NEXT: undef %175.sub0:vreg_128 = COPY %174.sub0 {
+    ; CHECK-NEXT:   internal %175.sub2:vreg_128 = COPY %174.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: undef %195.sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub2, implicit $exec
-    ; CHECK-NEXT: undef %180.sub2:vreg_128 = PRED_COPY %195.sub2
+    ; CHECK-NEXT: undef %180.sub2:vreg_128 = COPY %195.sub2
     ; CHECK-NEXT: %180.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET5]].sub2, implicit $exec
     ; CHECK-NEXT: undef %194.sub2:vreg_128 = V_LSHRREV_B32_e32 16, [[BUFFER_LOAD_DWORDX4_OFFSET6]].sub1, implicit $exec
-    ; CHECK-NEXT: undef %193.sub2:vreg_128 = PRED_COPY %194.sub2
+    ; CHECK-NEXT: undef %193.sub2:vreg_128 = COPY %194.sub2
     ; CHECK-NEXT: %193.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET6]].sub1, implicit $exec
     ; CHECK-NEXT: %36.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET6]].sub0, implicit $exec
     ; CHECK-NEXT: %37.sub0:vreg_128 = V_AND_B32_e32 [[S_MOV_B32_]], [[BUFFER_LOAD_DWORDX4_OFFSET6]].sub3, implicit $exec
@@ -225,164 +225,164 @@ body:             |
     ; CHECK-NEXT: %36.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %36.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %36, %2, 0, 384, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-    ; CHECK-NEXT: undef %191.sub0:vreg_128 = PRED_COPY %193.sub0 {
-    ; CHECK-NEXT:   internal %191.sub2:vreg_128 = PRED_COPY %193.sub2
+    ; CHECK-NEXT: undef %191.sub0:vreg_128 = COPY %193.sub0 {
+    ; CHECK-NEXT:   internal %191.sub2:vreg_128 = COPY %193.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %191.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %191.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %191, %2, 0, 400, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: undef %178.sub0:vreg_128 = PRED_COPY %180.sub0 {
-    ; CHECK-NEXT:   internal %178.sub2:vreg_128 = PRED_COPY %180.sub2
+    ; CHECK-NEXT: undef %178.sub0:vreg_128 = COPY %180.sub0 {
+    ; CHECK-NEXT:   internal %178.sub2:vreg_128 = COPY %180.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %178.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %178.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %178, %2, 0, 352, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-    ; CHECK-NEXT: undef %172.sub0:vreg_128 = PRED_COPY %175.sub0 {
-    ; CHECK-NEXT:   internal %172.sub2:vreg_128 = PRED_COPY %175.sub2
+    ; CHECK-NEXT: undef %172.sub0:vreg_128 = COPY %175.sub0 {
+    ; CHECK-NEXT:   internal %172.sub2:vreg_128 = COPY %175.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %172.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %172.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %172, %2, 0, 368, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: undef %161.sub0:vreg_128 = PRED_COPY %164.sub0 {
-    ; CHECK-NEXT:   internal %161.sub2:vreg_128 = PRED_COPY %164.sub2
+    ; CHECK-NEXT: undef %161.sub0:vreg_128 = COPY %164.sub0 {
+    ; CHECK-NEXT:   internal %161.sub2:vreg_128 = COPY %164.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %161.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %161.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %161, %2, 0, 320, 0, 0, implicit $exec :: (store (s128), align 64, addrspace 1)
-    ; CHECK-NEXT: undef %153.sub0:vreg_128 = PRED_COPY %156.sub0 {
-    ; CHECK-NEXT:   internal %153.sub2:vreg_128 = PRED_COPY %156.sub2
+    ; CHECK-NEXT: undef %153.sub0:vreg_128 = COPY %156.sub0 {
+    ; CHECK-NEXT:   internal %153.sub2:vreg_128 = COPY %156.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %153.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %153.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %153, %2, 0, 336, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: undef %148.sub0:vreg_128 = PRED_COPY %151.sub0 {
-    ; CHECK-NEXT:   internal %148.sub2:vreg_128 = PRED_COPY %151.sub2
+    ; CHECK-NEXT: undef %148.sub0:vreg_128 = COPY %151.sub0 {
+    ; CHECK-NEXT:   internal %148.sub2:vreg_128 = COPY %151.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %148.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %148.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %148, %2, 0, 288, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-    ; CHECK-NEXT: undef %143.sub0:vreg_128 = PRED_COPY %146.sub0 {
-    ; CHECK-NEXT:   internal %143.sub2:vreg_128 = PRED_COPY %146.sub2
+    ; CHECK-NEXT: undef %143.sub0:vreg_128 = COPY %146.sub0 {
+    ; CHECK-NEXT:   internal %143.sub2:vreg_128 = COPY %146.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %143.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %143.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %143, %2, 0, 304, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: undef %132.sub0:vreg_128 = PRED_COPY %135.sub0 {
-    ; CHECK-NEXT:   internal %132.sub2:vreg_128 = PRED_COPY %135.sub2
+    ; CHECK-NEXT: undef %132.sub0:vreg_128 = COPY %135.sub0 {
+    ; CHECK-NEXT:   internal %132.sub2:vreg_128 = COPY %135.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %132.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %132.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %132, %2, 0, 256, 0, 0, implicit $exec :: (store (s128), align 256, addrspace 1)
-    ; CHECK-NEXT: undef %127.sub0:vreg_128 = PRED_COPY %130.sub0 {
-    ; CHECK-NEXT:   internal %127.sub2:vreg_128 = PRED_COPY %130.sub2
+    ; CHECK-NEXT: undef %127.sub0:vreg_128 = COPY %130.sub0 {
+    ; CHECK-NEXT:   internal %127.sub2:vreg_128 = COPY %130.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %127.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %127.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %127, %2, 0, 272, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: undef %122.sub0:vreg_128 = PRED_COPY %125.sub0 {
-    ; CHECK-NEXT:   internal %122.sub2:vreg_128 = PRED_COPY %125.sub2
+    ; CHECK-NEXT: undef %122.sub0:vreg_128 = COPY %125.sub0 {
+    ; CHECK-NEXT:   internal %122.sub2:vreg_128 = COPY %125.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %122.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %122.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %122, %2, 0, 224, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.10, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.10, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %117.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE]].sub0 {
-    ; CHECK-NEXT:   internal %117.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE]].sub2
+    ; CHECK-NEXT: undef %117.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE]].sub0 {
+    ; CHECK-NEXT:   internal %117.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %117.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %117.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %117, %2, 0, 240, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: undef %112.sub0:vreg_128 = PRED_COPY %115.sub0 {
-    ; CHECK-NEXT:   internal %112.sub2:vreg_128 = PRED_COPY %115.sub2
+    ; CHECK-NEXT: undef %112.sub0:vreg_128 = COPY %115.sub0 {
+    ; CHECK-NEXT:   internal %112.sub2:vreg_128 = COPY %115.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %112.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %112.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %112, %2, 0, 192, 0, 0, implicit $exec :: (store (s128), align 64, addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE1:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.9, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.9, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %110.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE1]].sub0 {
-    ; CHECK-NEXT:   internal %110.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE1]].sub2
+    ; CHECK-NEXT: undef %110.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE1]].sub0 {
+    ; CHECK-NEXT:   internal %110.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE1]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %110.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %110.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %110, %2, 0, 208, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE2:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.11, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.11, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %184.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE2]].sub0 {
-    ; CHECK-NEXT:   internal %184.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE2]].sub2
+    ; CHECK-NEXT: undef %184.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE2]].sub0 {
+    ; CHECK-NEXT:   internal %184.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE2]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %184.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %184.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %184, %2, 0, 160, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE3:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.8, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.8, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %137.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE3]].sub0 {
-    ; CHECK-NEXT:   internal %137.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE3]].sub2
+    ; CHECK-NEXT: undef %137.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE3]].sub0 {
+    ; CHECK-NEXT:   internal %137.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE3]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %137.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %137.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %137, %2, 0, 176, 0, 0, implicit $exec :: (store (s128), addrspace 1)
-    ; CHECK-NEXT: undef %103.sub0:vreg_128 = PRED_COPY %106.sub0 {
-    ; CHECK-NEXT:   internal %103.sub2:vreg_128 = PRED_COPY %106.sub2
+    ; CHECK-NEXT: undef %103.sub0:vreg_128 = COPY %106.sub0 {
+    ; CHECK-NEXT:   internal %103.sub2:vreg_128 = COPY %106.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %103.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %103.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %103, %2, 0, 128, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-    ; CHECK-NEXT: undef %98.sub0:vreg_128 = PRED_COPY %101.sub0 {
-    ; CHECK-NEXT:   internal %98.sub2:vreg_128 = PRED_COPY %101.sub2
+    ; CHECK-NEXT: undef %98.sub0:vreg_128 = COPY %101.sub0 {
+    ; CHECK-NEXT:   internal %98.sub2:vreg_128 = COPY %101.sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %98.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %98.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %98, %2, 0, 144, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE4:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.6, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.6, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %93.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE4]].sub0 {
-    ; CHECK-NEXT:   internal %93.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE4]].sub2
+    ; CHECK-NEXT: undef %93.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE4]].sub0 {
+    ; CHECK-NEXT:   internal %93.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE4]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %93.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %93.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %93, %2, 0, 96, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE5:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.7, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.7, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %88.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE5]].sub0 {
-    ; CHECK-NEXT:   internal %88.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE5]].sub2
+    ; CHECK-NEXT: undef %88.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE5]].sub0 {
+    ; CHECK-NEXT:   internal %88.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE5]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %88.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %88.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %88, %2, 0, 112, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE6:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.5, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %81.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE6]].sub0 {
-    ; CHECK-NEXT:   internal %81.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE6]].sub2
+    ; CHECK-NEXT: undef %81.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE6]].sub0 {
+    ; CHECK-NEXT:   internal %81.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE6]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %81.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %81.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %81, %2, 0, 64, 0, 0, implicit $exec :: (store (s128), align 64, addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE7:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %74.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE7]].sub0 {
-    ; CHECK-NEXT:   internal %74.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE7]].sub2
+    ; CHECK-NEXT: undef %74.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE7]].sub0 {
+    ; CHECK-NEXT:   internal %74.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE7]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %74.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %74.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %74, %2, 0, 80, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE8:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.3, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %67.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE8]].sub0 {
-    ; CHECK-NEXT:   internal %67.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE8]].sub2
+    ; CHECK-NEXT: undef %67.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE8]].sub0 {
+    ; CHECK-NEXT:   internal %67.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE8]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %67.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %67.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %67, %2, 0, 32, 0, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE9:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %60.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE9]].sub0 {
-    ; CHECK-NEXT:   internal %60.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE9]].sub2
+    ; CHECK-NEXT: undef %60.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE9]].sub0 {
+    ; CHECK-NEXT:   internal %60.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE9]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %60.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %60.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %60, %2, 0, 48, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE10:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.1, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %53.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE10]].sub0 {
-    ; CHECK-NEXT:   internal %53.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE10]].sub2
+    ; CHECK-NEXT: undef %53.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE10]].sub0 {
+    ; CHECK-NEXT:   internal %53.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE10]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %53.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %53.sub3:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: BUFFER_STORE_DWORDX4_OFFSET %53, %2, 0, 0, 0, 0, implicit $exec :: (store (s128), align 512, addrspace 1)
     ; CHECK-NEXT: [[SI_SPILL_V128_RESTORE11:%[0-9]+]]:vreg_128 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: undef %46.sub0:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE11]].sub0 {
-    ; CHECK-NEXT:   internal %46.sub2:vreg_128 = PRED_COPY [[SI_SPILL_V128_RESTORE11]].sub2
+    ; CHECK-NEXT: undef %46.sub0:vreg_128 = COPY [[SI_SPILL_V128_RESTORE11]].sub0 {
+    ; CHECK-NEXT:   internal %46.sub2:vreg_128 = COPY [[SI_SPILL_V128_RESTORE11]].sub2
     ; CHECK-NEXT: }
     ; CHECK-NEXT: %46.sub1:vreg_128 = COPY %43.sub1
     ; CHECK-NEXT: %46.sub3:vreg_128 = COPY %43.sub1

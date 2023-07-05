@@ -22,8 +22,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     ; WAVE32-LABEL: name: test_dyn_stackalloc_sgpr_align1
     ; WAVE32: liveins: $sgpr0
@@ -31,8 +31,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     %0:_(s32) = COPY $sgpr0
     %1:_(p5) = G_DYN_STACKALLOC %0, 1
@@ -56,8 +56,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     ; WAVE32-LABEL: name: test_dyn_stackalloc_sgpr_align2
     ; WAVE32: liveins: $sgpr0
@@ -65,8 +65,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     %0:_(s32) = COPY $sgpr0
     %1:_(p5) = G_DYN_STACKALLOC %0, 2
@@ -90,8 +90,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     ; WAVE32-LABEL: name: test_dyn_stackalloc_sgpr_align4
     ; WAVE32: liveins: $sgpr0
@@ -99,8 +99,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     %0:_(s32) = COPY $sgpr0
     %1:_(p5) = G_DYN_STACKALLOC %0, 4
@@ -124,8 +124,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     ; WAVE32-LABEL: name: test_dyn_stackalloc_sgpr_align8
     ; WAVE32: liveins: $sgpr0
@@ -133,8 +133,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     %0:_(s32) = COPY $sgpr0
     %1:_(p5) = G_DYN_STACKALLOC %0, 8
@@ -158,8 +158,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     ; WAVE32-LABEL: name: test_dyn_stackalloc_sgpr_align16
     ; WAVE32: liveins: $sgpr0
@@ -167,8 +167,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     %0:_(s32) = COPY $sgpr0
     %1:_(p5) = G_DYN_STACKALLOC %0, 16
@@ -192,8 +192,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -2048
     ; WAVE64-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C1]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
@@ -203,8 +203,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1024
     ; WAVE32-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C1]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
@@ -230,8 +230,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -4096
     ; WAVE64-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C1]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
@@ -241,8 +241,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -2048
     ; WAVE32-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C1]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
@@ -268,8 +268,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -8192
     ; WAVE64-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C1]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
@@ -279,8 +279,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[COPY]], [[C]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY1]], [[SHL]](s32)
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -4096
     ; WAVE32-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C1]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
@@ -303,15 +303,15 @@ body: |
     ; WAVE64: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[C]], [[C1]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[SHL]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     ; WAVE32-LABEL: name: test_dyn_stackalloc_sgpr_constant_align4
     ; WAVE32: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[C]], [[C1]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[SHL]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     %0:_(s32) = G_CONSTANT i32 32
     %1:_(p5) = G_DYN_STACKALLOC %0, 4
@@ -335,8 +335,8 @@ body: |
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[C]], [[C1]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[SHL]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     ; WAVE32-LABEL: name: test_dyn_stackalloc_sgpr_constant_align8
     ; WAVE32: liveins: $sgpr0
@@ -344,8 +344,8 @@ body: |
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[C]], [[C1]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[SHL]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     %0:_(s32) = G_CONSTANT i32 32
     %1:_(p5) = G_DYN_STACKALLOC %0, 8
@@ -369,8 +369,8 @@ body: |
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[C]], [[C1]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[SHL]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     ; WAVE32-LABEL: name: test_dyn_stackalloc_sgpr_constant_align16
     ; WAVE32: liveins: $sgpr0
@@ -378,8 +378,8 @@ body: |
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[C]], [[C1]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[SHL]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTR_ADD]](p5)
     %0:_(s32) = G_CONSTANT i32 32
     %1:_(p5) = G_DYN_STACKALLOC %0, 16
@@ -403,8 +403,8 @@ body: |
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 6
     ; WAVE64-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[C]], [[C1]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE64-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[SHL]](s32)
     ; WAVE64-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -2048
     ; WAVE64-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)
@@ -414,8 +414,8 @@ body: |
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 32
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 5
     ; WAVE32-NEXT: [[SHL:%[0-9]+]]:sgpr(s32) = G_SHL [[C]], [[C1]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:sgpr(p5) = PRED_COPY $sp_reg
-    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[PRED_COPY]], [[SHL]](s32)
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(p5) = COPY $sp_reg
+    ; WAVE32-NEXT: [[PTR_ADD:%[0-9]+]]:sgpr(p5) = G_PTR_ADD [[COPY]], [[SHL]](s32)
     ; WAVE32-NEXT: [[C2:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1024
     ; WAVE32-NEXT: [[PTRMASK:%[0-9]+]]:sgpr(p5) = G_PTRMASK [[PTR_ADD]], [[C2]](s32)
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[PTRMASK]](p5)

@@ -486,7 +486,7 @@ private:
 
   // MachineRegisterInfo callback functions to notify events.
   void MRI_NoteNewVirtualRegister(Register Reg) override;
-  void MRI_NotecloneVirtualRegister(Register NewReg, Register SrcReg) override;
+  void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
 public:
   struct VGPRSpillToAGPR {
@@ -667,15 +667,17 @@ public:
   void setFlag(Register Reg, uint8_t Flag) {
     assert(Reg.isVirtual());
     if (VRegFlags.inBounds(Reg))
-      VRegFlags[Reg] |= (uint8_t)1 << Flag;
+      VRegFlags[Reg] |= Flag;
   }
 
   bool checkFlag(Register Reg, uint8_t Flag) const {
     if (Reg.isPhysical())
       return false;
 
-    return VRegFlags.inBounds(Reg) && VRegFlags[Reg] & ((uint8_t)1 << Flag);
+    return VRegFlags.inBounds(Reg) && VRegFlags[Reg] & Flag;
   }
+
+  bool hasVRegFlags() { return VRegFlags.size(); }
 
   void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,
                         Align Alignment = Align(4));

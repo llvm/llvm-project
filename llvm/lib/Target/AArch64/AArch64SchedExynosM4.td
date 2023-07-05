@@ -604,7 +604,6 @@ def : InstRW<[M4WriteAV], (instrs ADDWri, ADDXri, ORRWri, ORRXri)>;
 
 // Move instructions.
 def : InstRW<[M4WriteCOPY], (instrs COPY)>;
-def : InstRW<[M4WriteCOPY], (instrs PRED_COPY)>;
 def : InstRW<[M4WriteZ0],   (instrs ADR, ADRP)>;
 def : InstRW<[M4WriteZ0],   (instregex "^MOV[NZ][WX]i")>;
 

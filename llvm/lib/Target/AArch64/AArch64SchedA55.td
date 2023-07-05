@@ -270,7 +270,6 @@ def : InstRW<[WriteAdr, CortexA55WriteVLD1,CortexA55WriteLDP1], (instregex "LDPS
 def : InstRW<[WriteAdr, CortexA55WriteVLD1,CortexA55WriteLDP2], (instregex "LDP(X|D)(pre|post)")>;
 def : InstRW<[WriteAdr, CortexA55WriteVLD1,CortexA55WriteLDP4], (instregex "LDPQ(pre|post)")>;
 def : InstRW<[WriteI], (instrs COPY)>;
-def : InstRW<[WriteI], (instrs PRED_COPY)>;
 //---
 // Vector Loads - 64-bit per cycle
 //---

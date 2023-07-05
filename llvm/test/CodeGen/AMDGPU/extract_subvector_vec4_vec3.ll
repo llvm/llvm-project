@@ -10,18 +10,18 @@ define amdgpu_hs void @main(ptr addrspace(6) inreg %arg) {
   ; GCN: bb.0.main_body:
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY [[DEF]]
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
   ; GCN-NEXT:   [[DEF1:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN [[PRED_COPY]], [[DEF1]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) undef`, align 1, addrspace 8)
-  ; GCN-NEXT:   [[PRED_COPY1:%[0-9]+]]:sgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub2
-  ; GCN-NEXT:   [[PRED_COPY2:%[0-9]+]]:sgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub1
-  ; GCN-NEXT:   [[PRED_COPY3:%[0-9]+]]:sgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_96 = REG_SEQUENCE killed [[PRED_COPY3]], %subreg.sub0, killed [[PRED_COPY2]], %subreg.sub1, killed [[PRED_COPY1]], %subreg.sub2
-  ; GCN-NEXT:   [[PRED_COPY4:%[0-9]+]]:vreg_96 = PRED_COPY [[REG_SEQUENCE]]
+  ; GCN-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN [[COPY]], [[DEF1]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from `ptr addrspace(8) undef`, align 1, addrspace 8)
+  ; GCN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub2
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub1
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub0
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_96 = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1, killed [[COPY1]], %subreg.sub2
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:vreg_96 = COPY [[REG_SEQUENCE]]
   ; GCN-NEXT:   [[DEF2:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY [[DEF2]]
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
   ; GCN-NEXT:   [[DEF3:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-  ; GCN-NEXT:   BUFFER_STORE_DWORDX3_OFFEN_exact killed [[PRED_COPY4]], [[PRED_COPY5]], [[DEF3]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s96) into `ptr addrspace(8) undef`, align 1, addrspace 8)
+  ; GCN-NEXT:   BUFFER_STORE_DWORDX3_OFFEN_exact killed [[COPY4]], [[COPY5]], [[DEF3]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable store (s96) into `ptr addrspace(8) undef`, align 1, addrspace 8)
   ; GCN-NEXT:   S_ENDPGM 0
 main_body:
   %tmp25 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) undef, i32 undef, i32 0, i32 0)

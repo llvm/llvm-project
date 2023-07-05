@@ -205,7 +205,6 @@ def : ReadAdvance<ReadID, 1, [WriteImm,WriteI,
 // Miscellaneous
 //---
 def : InstRW<[WriteI], (instrs COPY)>;
-def : InstRW<[WriteI], (instrs PRED_COPY)>;
 
 //---
 // Vector Loads

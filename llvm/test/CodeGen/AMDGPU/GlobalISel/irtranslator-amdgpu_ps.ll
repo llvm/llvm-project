@@ -7,10 +7,10 @@ define amdgpu_ps void @disabled_input(float inreg %arg0, float %psinput0, float 
   ; CHECK: bb.1.main_body:
   ; CHECK-NEXT:   liveins: $sgpr2, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $sgpr2
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, [[PRED_COPY]](s32), [[PRED_COPY]](s32), [[PRED_COPY]](s32), [[PRED_COPY1]](s32), 0, 0
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
 main_body:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg0, float %arg0, float %arg0, float %psinput1, i1 false, i1 false) #0
@@ -22,11 +22,11 @@ define amdgpu_ps void @disabled_input_struct(float inreg %arg0, { float, float }
   ; CHECK: bb.1.main_body:
   ; CHECK-NEXT:   liveins: $sgpr2, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $sgpr2
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[PRED_COPY2:%[0-9]+]]:_(s32) = PRED_COPY [[DEF]](s32)
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, [[PRED_COPY]](s32), [[PRED_COPY]](s32), [[PRED_COPY]](s32), [[PRED_COPY1]](s32), 0, 0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[DEF]](s32)
+  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 0, 15, [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY1]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
 main_body:
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %arg0, float %arg0, float %arg0, float %psinput1, i1 false, i1 false) #0
@@ -38,8 +38,8 @@ define amdgpu_ps float @vgpr_return(i32 %vgpr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[PRED_COPY]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   $vgpr0 = COPY [[COPY]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %cast = bitcast i32 %vgpr to float
   ret float %cast
@@ -50,9 +50,9 @@ define amdgpu_ps i32 @sgpr_return_i32(i32 %vgpr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[PRED_COPY]](s32)
-  ; CHECK-NEXT:   $sgpr0 = PRED_COPY [[INT]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
   ret i32 %vgpr
 }
@@ -62,14 +62,14 @@ define amdgpu_ps i64 @sgpr_return_i64(i64 %vgpr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](s64)
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
-  ; CHECK-NEXT:   $sgpr0 = PRED_COPY [[INT]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
   ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
-  ; CHECK-NEXT:   $sgpr1 = PRED_COPY [[INT1]](s32)
+  ; CHECK-NEXT:   $sgpr1 = COPY [[INT1]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
   ret i64 %vgpr
 }
@@ -79,14 +79,14 @@ define amdgpu_ps <2 x i32> @sgpr_return_v2i32(<2 x i32> %vgpr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<2 x s32>)
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
-  ; CHECK-NEXT:   $sgpr0 = PRED_COPY [[INT]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
   ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
-  ; CHECK-NEXT:   $sgpr1 = PRED_COPY [[INT1]](s32)
+  ; CHECK-NEXT:   $sgpr1 = COPY [[INT1]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
   ret <2 x i32> %vgpr
 }
@@ -96,13 +96,13 @@ define amdgpu_ps { i32, i32 } @sgpr_struct_return_i32_i32(i32 %vgpr0, i32 %vgpr1
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[PRED_COPY]](s32)
-  ; CHECK-NEXT:   $sgpr0 = PRED_COPY [[INT]](s32)
-  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[PRED_COPY1]](s32)
-  ; CHECK-NEXT:   $sgpr1 = PRED_COPY [[INT1]](s32)
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
+  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)
+  ; CHECK-NEXT:   $sgpr1 = COPY [[INT1]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
   %insertvalue0 = insertvalue { i32, i32 } undef, i32 %vgpr0, 0
   %value = insertvalue { i32, i32 } %insertvalue0, i32 %vgpr1, 1
@@ -114,10 +114,10 @@ define amdgpu_ps ptr addrspace(3) @sgpr_return_p3i8(ptr addrspace(3) %vgpr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(p3) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[PRED_COPY]](p3)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+  ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY]](p3)
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[PTRTOINT]](s32)
-  ; CHECK-NEXT:   $sgpr0 = PRED_COPY [[INT]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
   ret ptr addrspace(3) %vgpr
 }
@@ -127,14 +127,14 @@ define amdgpu_ps ptr addrspace(1) @sgpr_return_p1i8(ptr addrspace(1) %vgpr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[MV]](p1)
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
-  ; CHECK-NEXT:   $sgpr0 = PRED_COPY [[INT]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
   ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
-  ; CHECK-NEXT:   $sgpr1 = PRED_COPY [[INT1]](s32)
+  ; CHECK-NEXT:   $sgpr1 = COPY [[INT1]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
   ret ptr addrspace(1) %vgpr
 }
@@ -144,10 +144,10 @@ define amdgpu_ps <2 x i16> @sgpr_return_v2i16(<2 x i16> %vgpr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(<2 x s16>) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[PRED_COPY]](<2 x s16>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[COPY]](<2 x s16>)
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[BITCAST]](s32)
-  ; CHECK-NEXT:   $sgpr0 = PRED_COPY [[INT]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
   ret <2 x i16> %vgpr
 }

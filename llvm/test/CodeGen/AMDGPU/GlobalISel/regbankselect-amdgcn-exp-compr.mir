@@ -14,9 +14,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr), 0, 0, [[PRED_COPY]](s32), [[PRED_COPY1]](s32), 0, 0
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr), 0, 0, [[COPY2]](s32), [[COPY3]](s32), 0, 0
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp.compr.v2f16), 0, 0, %0, %1, 0, 0

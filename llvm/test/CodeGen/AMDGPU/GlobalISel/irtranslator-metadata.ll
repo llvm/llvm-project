@@ -9,7 +9,7 @@ define i32 @reloc_constant() {
   ; We cannot have any specific metadata check here as ConstantAsMetadata is printed as <raw_ptr_val>
   ; CHECK:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.reloc.constant), <0x{{[0-9a-f]+}}>
   ; CHECK:   [[SUM:%[0-9]+]]:_(s32) = G_ADD [[INT0]], [[INT1]]
-  ; CHECK:   $vgpr0 = PRED_COPY [[SUM]](s32)
+  ; CHECK:   $vgpr0 = COPY [[SUM]](s32)
   ; CHECK:   SI_RETURN implicit $vgpr0
   %val0 = call i32 @llvm.amdgcn.reloc.constant(metadata !0)
   %val1 = call i32 @llvm.amdgcn.reloc.constant(metadata i32 4)

@@ -1178,8 +1178,9 @@ bool RegisterCoalescer::removePartialRedundancy(const CoalescerPair &CP,
                       << printMBBReference(*CopyLeftBB) << '\t' << CopyMI);
 
     // Insert new copy to CopyLeftBB.
-    MachineInstr *NewCopyMI = TII->buildCopy(
-        *CopyLeftBB, InsPos, CopyMI.getDebugLoc(), IntB.reg(), IntA.reg());
+    MachineInstr *NewCopyMI = BuildMI(*CopyLeftBB, InsPos, CopyMI.getDebugLoc(),
+                                      TII->get(TargetOpcode::COPY), IntB.reg())
+                                  .addReg(IntA.reg());
     SlotIndex NewCopyIdx =
         LIS->InsertMachineInstrInMaps(*NewCopyMI).getRegSlot();
     IntB.createDeadDef(NewCopyIdx, LIS->getVNInfoAllocator());

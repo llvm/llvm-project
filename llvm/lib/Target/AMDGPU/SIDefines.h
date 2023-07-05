@@ -931,7 +931,8 @@ namespace VirtRegFlag {
 // Virtual register flags used for various target specific handlings during
 // codegen.
 enum Register_Flag : uint8_t {
-  WWM_REG = 0 // Register operand in a whole-wave mode operation.
+  // Register operand in a whole-wave mode operation.
+  WWM_REG = 1 << 0,
 };
 
 } // namespace VirtRegFlag

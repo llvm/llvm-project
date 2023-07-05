@@ -31,11 +31,11 @@ body: |
     ; GFX8-LABEL: name: icmp_eq_s64_ss
     ; GFX8: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr2_sgpr3
-    ; GFX8-NEXT: S_CMP_EQ_U64 [[PRED_COPY]], [[PRED_COPY1]], implicit-def $scc
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $scc
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[PRED_COPY2]]
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; GFX8-NEXT: S_CMP_EQ_U64 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[COPY2]]
     ; GFX6-LABEL: name: icmp_eq_s64_ss
     ; GFX6: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX6-NEXT: {{  $}}
@@ -62,11 +62,11 @@ body: |
     ; GFX8-LABEL: name: icmp_ne_s64_ss
     ; GFX8: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr2_sgpr3
-    ; GFX8-NEXT: S_CMP_LG_U64 [[PRED_COPY]], [[PRED_COPY1]], implicit-def $scc
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $scc
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[PRED_COPY2]]
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; GFX8-NEXT: S_CMP_LG_U64 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[COPY2]]
     ; GFX6-LABEL: name: icmp_ne_s64_ss
     ; GFX6: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX6-NEXT: {{  $}}
@@ -123,20 +123,20 @@ body: |
     ; GFX8-LABEL: name: icmp_eq_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_EQ_U64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_EQ_U64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_eq_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_EQ_U64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_EQ_U64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -159,20 +159,20 @@ body: |
     ; GFX8-LABEL: name: icmp_ne_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_NE_U64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_NE_U64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_ne_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_NE_U64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_NE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_NE_U64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -195,20 +195,20 @@ body: |
     ; GFX8-LABEL: name: icmp_sgt_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_GT_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_I64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_GT_I64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_GT_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_I64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_GT_I64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_sgt_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_GT_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_I64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_GT_I64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_GT_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_I64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_GT_I64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -231,20 +231,20 @@ body: |
     ; GFX8-LABEL: name: icmp_sge_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_GE_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GE_I64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_GE_I64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_GE_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GE_I64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_GE_I64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_sge_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_GE_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GE_I64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_GE_I64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_GE_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GE_I64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_GE_I64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -267,20 +267,20 @@ body: |
     ; GFX8-LABEL: name: icmp_slt_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_LT_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_LT_I64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_LT_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_LT_I64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_slt_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_LT_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_LT_I64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_LT_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_LT_I64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -303,20 +303,20 @@ body: |
     ; GFX8-LABEL: name: icmp_sle_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_LE_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LE_I64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_LE_I64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_LE_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LE_I64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_LE_I64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_sle_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_LE_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LE_I64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_LE_I64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_LE_I64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LE_I64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_LE_I64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -339,20 +339,20 @@ body: |
     ; GFX8-LABEL: name: icmp_ugt_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_GT_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_GT_U64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_GT_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_GT_U64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_ugt_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_GT_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_GT_U64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_GT_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GT_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_GT_U64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -375,20 +375,20 @@ body: |
     ; GFX8-LABEL: name: icmp_uge_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_GE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GE_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_GE_U64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_GE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GE_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_GE_U64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_uge_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_GE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GE_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_GE_U64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_GE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_GE_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_GE_U64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -411,20 +411,20 @@ body: |
     ; GFX8-LABEL: name: icmp_ult_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_LT_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_LT_U64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_LT_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_LT_U64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_ult_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_LT_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_LT_U64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_LT_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_LT_U64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -447,20 +447,20 @@ body: |
     ; GFX8-LABEL: name: icmp_ule_s64_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_LE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LE_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_LE_U64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_LE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LE_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_LE_U64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_ule_s64_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_LE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LE_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_LE_U64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_LE_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_LE_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_LE_U64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = COPY $vgpr2_vgpr3
@@ -483,11 +483,11 @@ body: |
     ; GFX8-LABEL: name: icmp_eq_p0_ss
     ; GFX8: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr2_sgpr3
-    ; GFX8-NEXT: S_CMP_EQ_U64 [[PRED_COPY]], [[PRED_COPY1]], implicit-def $scc
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $scc
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[PRED_COPY2]]
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; GFX8-NEXT: S_CMP_EQ_U64 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[COPY2]]
     ; GFX6-LABEL: name: icmp_eq_p0_ss
     ; GFX6: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX6-NEXT: {{  $}}
@@ -513,11 +513,11 @@ body: |
     ; GFX8-LABEL: name: icmp_eq_p1_ss
     ; GFX8: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr2_sgpr3
-    ; GFX8-NEXT: S_CMP_EQ_U64 [[PRED_COPY]], [[PRED_COPY1]], implicit-def $scc
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $scc
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[PRED_COPY2]]
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; GFX8-NEXT: S_CMP_EQ_U64 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[COPY2]]
     ; GFX6-LABEL: name: icmp_eq_p1_ss
     ; GFX6: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX6-NEXT: {{  $}}
@@ -544,11 +544,11 @@ body: |
     ; GFX8-LABEL: name: icmp_eq_p999_ss
     ; GFX8: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr0_sgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr2_sgpr3
-    ; GFX8-NEXT: S_CMP_EQ_U64 [[PRED_COPY]], [[PRED_COPY1]], implicit-def $scc
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:sreg_32 = PRED_COPY $scc
-    ; GFX8-NEXT: S_ENDPGM 0, implicit [[PRED_COPY2]]
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; GFX8-NEXT: S_CMP_EQ_U64 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
+    ; GFX8-NEXT: S_ENDPGM 0, implicit [[COPY2]]
     ; GFX6-LABEL: name: icmp_eq_p999_ss
     ; GFX6: liveins: $sgpr0_sgpr1, $sgpr2_sgpr3
     ; GFX6-NEXT: {{  $}}
@@ -575,20 +575,20 @@ body: |
     ; GFX8-LABEL: name: icmp_eq_p0_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_EQ_U64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_EQ_U64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_eq_p0_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_EQ_U64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_EQ_U64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(p0) = COPY $vgpr0_vgpr1
     %1:vgpr(p0) = COPY $vgpr2_vgpr3
@@ -611,20 +611,20 @@ body: |
     ; GFX8-LABEL: name: icmp_eq_p1_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_EQ_U64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_EQ_U64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_eq_p1_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_EQ_U64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_EQ_U64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
     %1:vgpr(p1) = COPY $vgpr2_vgpr3
@@ -647,20 +647,20 @@ body: |
     ; GFX8-LABEL: name: icmp_eq_p999_vv
     ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX8-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX8-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_EQ_U64_e64_]]
-    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_EQ_U64_e64_]]
+    ; GFX8-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX8-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     ; GFX6-LABEL: name: icmp_eq_p999_vv
     ; GFX6: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GFX6-NEXT: [[PRED_COPY1:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr2_vgpr3
-    ; GFX6-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[PRED_COPY]], [[PRED_COPY1]], implicit $exec
-    ; GFX6-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[V_CMP_EQ_U64_e64_]]
-    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[PRED_COPY2]], implicit $exec
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GFX6-NEXT: [[V_CMP_EQ_U64_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[COPY]], [[COPY1]], implicit $exec
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[V_CMP_EQ_U64_e64_]]
+    ; GFX6-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 1, [[COPY2]], implicit $exec
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[V_AND_B32_e32_]]
     %0:vgpr(p999) = COPY $vgpr0_vgpr1
     %1:vgpr(p999) = COPY $vgpr2_vgpr3

@@ -481,8 +481,9 @@ MachineRegisterInfo::EmitLiveInCopies(MachineBasicBlock *EntryMBB,
         --i; --e;
       } else {
         // Emit a copy.
-        TII.buildCopy(*EntryMBB, EntryMBB->begin(), DebugLoc(),
-                      LiveIns[i].second, LiveIns[i].first);
+        BuildMI(*EntryMBB, EntryMBB->begin(), DebugLoc(),
+                TII.get(TargetOpcode::COPY), LiveIns[i].second)
+          .addReg(LiveIns[i].first);
 
         // Add the register to the entry block live-in set.
         EntryMBB->addLiveIn(LiveIns[i].first);

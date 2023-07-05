@@ -623,7 +623,6 @@ def N2Write_Logical: SchedWriteVariant<[
 // -----------------------------------------------------------------------------
 
 def : InstRW<[WriteI], (instrs COPY)>;
-def : InstRW<[WriteI], (instrs PRED_COPY)>;
 
 // Branch Instructions
 // -----------------------------------------------------------------------------

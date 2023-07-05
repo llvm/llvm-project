@@ -8,27 +8,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -45,21 +45,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret float %val
@@ -72,27 +72,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__sgpr_voffset__sgpr_soffset(ptr
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -109,21 +109,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__sgpr_voffset__sgpr_soffset(ptr
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret float %val
@@ -136,27 +136,27 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -173,21 +173,21 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret float %val
@@ -200,27 +200,27 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__vgpr_soffset(ptr
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -237,21 +237,21 @@ define float @raw_ptr_buffer_load_f32__vgpr_rsrc__vgpr_voffset__vgpr_soffset(ptr
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret float %val
@@ -264,27 +264,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -301,21 +301,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 1, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 1, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 1)
   ret float %val
@@ -328,27 +328,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -365,21 +365,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 2, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 2, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 2)
   ret float %val
@@ -392,27 +392,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -429,21 +429,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 4, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 4, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 4)
   ret float %val
@@ -456,27 +456,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -493,21 +493,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 6, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 6, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 6)
   ret float %val
@@ -520,27 +520,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -557,21 +557,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 5, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 5, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 5)
   ret float %val
@@ -584,27 +584,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -621,21 +621,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 7, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 7, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 7)
   ret float %val
@@ -648,27 +648,27 @@ define <2 x float> @raw_ptr_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -685,24 +685,24 @@ define <2 x float> @raw_ptr_buffer_load_v2f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[PRED_COPY10:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub0
-  ; GFX908-NEXT:   [[PRED_COPY11:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub1
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[PRED_COPY10]]
-  ; GFX908-NEXT:   $vgpr1 = PRED_COPY [[PRED_COPY11]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub0
+  ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub1
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
+  ; GFX908-NEXT:   $vgpr1 = COPY [[COPY11]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %val = call <2 x float> @llvm.amdgcn.raw.ptr.buffer.load.v2f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret <2 x float> %val
@@ -714,27 +714,27 @@ define <3 x float> @raw_ptr_buffer_load_v3f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -751,26 +751,26 @@ define <3 x float> @raw_ptr_buffer_load_v3f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORDX3_OFFEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s96) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORDX3_OFFEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s96) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[PRED_COPY10:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub0
-  ; GFX908-NEXT:   [[PRED_COPY11:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY12:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub2
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[PRED_COPY10]]
-  ; GFX908-NEXT:   $vgpr1 = PRED_COPY [[PRED_COPY11]]
-  ; GFX908-NEXT:   $vgpr2 = PRED_COPY [[PRED_COPY12]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub0
+  ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub1
+  ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_OFFEN]].sub2
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
+  ; GFX908-NEXT:   $vgpr1 = COPY [[COPY11]]
+  ; GFX908-NEXT:   $vgpr2 = COPY [[COPY12]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
   %val = call <3 x float> @llvm.amdgcn.raw.ptr.buffer.load.v3f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret <3 x float> %val
@@ -782,27 +782,27 @@ define <4 x float> @raw_ptr_buffer_load_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -819,28 +819,28 @@ define <4 x float> @raw_ptr_buffer_load_v4f32__sgpr_rsrc__vgpr_voffset__sgpr_sof
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORDX4_OFFEN:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s128) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[PRED_COPY10:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub0
-  ; GFX908-NEXT:   [[PRED_COPY11:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY12:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub2
-  ; GFX908-NEXT:   [[PRED_COPY13:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub3
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[PRED_COPY10]]
-  ; GFX908-NEXT:   $vgpr1 = PRED_COPY [[PRED_COPY11]]
-  ; GFX908-NEXT:   $vgpr2 = PRED_COPY [[PRED_COPY12]]
-  ; GFX908-NEXT:   $vgpr3 = PRED_COPY [[PRED_COPY13]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub0
+  ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub1
+  ; GFX908-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub2
+  ; GFX908-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_OFFEN]].sub3
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
+  ; GFX908-NEXT:   $vgpr1 = COPY [[COPY11]]
+  ; GFX908-NEXT:   $vgpr2 = COPY [[COPY12]]
+  ; GFX908-NEXT:   $vgpr3 = COPY [[COPY13]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %val = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret <4 x float> %val
@@ -852,27 +852,27 @@ define half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -889,22 +889,22 @@ define half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_USHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_USHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY killed [[BUFFER_LOAD_USHORT_OFFEN]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[COPY]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY killed [[BUFFER_LOAD_USHORT_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
@@ -916,27 +916,27 @@ define <2 x half> @raw_ptr_buffer_load_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -953,21 +953,21 @@ define <2 x half> @raw_ptr_buffer_load_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call <2 x half> @llvm.amdgcn.raw.ptr.buffer.load.v2f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret <2 x half> %val
@@ -979,27 +979,27 @@ define <4 x half> @raw_ptr_buffer_load_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1016,24 +1016,24 @@ define <4 x half> @raw_ptr_buffer_load_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORDX2_OFFEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[PRED_COPY10:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub0
-  ; GFX908-NEXT:   [[PRED_COPY11:%[0-9]+]]:vgpr_32 = PRED_COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub1
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[PRED_COPY10]]
-  ; GFX908-NEXT:   $vgpr1 = PRED_COPY [[PRED_COPY11]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub0
+  ; GFX908-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_OFFEN]].sub1
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
+  ; GFX908-NEXT:   $vgpr1 = COPY [[COPY11]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %val = call <4 x half> @llvm.amdgcn.raw.ptr.buffer.load.v4f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret <4 x half> %val
@@ -1045,27 +1045,27 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zext
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1082,21 +1082,21 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zext
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8) from %ir.rsrc, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8) from %ir.rsrc, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %zext = zext i8 %val to i32
@@ -1110,27 +1110,27 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sext
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1147,21 +1147,21 @@ define float @raw_ptr_buffer_load_i8__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sext
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_SBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SBYTE_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8) from %ir.rsrc, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_SBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SBYTE_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8) from %ir.rsrc, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_SBYTE_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SBYTE_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %zext = sext i8 %val to i32
@@ -1175,27 +1175,27 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zex
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1212,21 +1212,21 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_zex
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_USHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_USHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_USHORT_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %zext = zext i16 %val to i32
@@ -1240,27 +1240,27 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sex
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1277,21 +1277,21 @@ define float @raw_ptr_buffer_load_i16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sex
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_SSHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SSHORT_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_SSHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_SSHORT_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_SSHORT_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_SSHORT_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i16 @llvm.amdgcn.raw.ptr.buffer.load.i16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %sext = sext i16 %val to i32
@@ -1306,27 +1306,27 @@ define half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1343,22 +1343,22 @@ define half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_USHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_USHORT_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s16) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY killed [[BUFFER_LOAD_USHORT_OFFEN]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[COPY]]
+  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY killed [[BUFFER_LOAD_USHORT_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call half @llvm.amdgcn.raw.ptr.buffer.load.f16(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret half %val
@@ -1371,27 +1371,27 @@ define float @raw_ptr_buffer_load_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1408,21 +1408,21 @@ define float @raw_ptr_buffer_load_i8__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8) from %ir.rsrc, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_UBYTE_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s8) from %ir.rsrc, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_UBYTE_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call i8 @llvm.amdgcn.raw.ptr.buffer.load.i8(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
   %zext = zext i8 %val to i32
@@ -1436,26 +1436,26 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vdpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY2]], %subreg.sub0, [[PRED_COPY1]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY4]], %subreg.sub0, [[PRED_COPY3]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY8]], %subreg.sub0, [[PRED_COPY7]], %subreg.sub1, [[PRED_COPY6]], %subreg.sub2, [[PRED_COPY5]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1472,8 +1472,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vdpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
@@ -1486,7 +1486,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vdpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFSET]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 0, i32 %soffset, i32 0)
   ret float %val
@@ -1498,26 +1498,26 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY2]], %subreg.sub0, [[PRED_COPY1]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY4]], %subreg.sub0, [[PRED_COPY3]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY8]], %subreg.sub0, [[PRED_COPY7]], %subreg.sub1, [[PRED_COPY6]], %subreg.sub2, [[PRED_COPY5]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1534,8 +1534,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
@@ -1548,7 +1548,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFSET]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFSET]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 4095, i32 %soffset, i32 0)
   ret float %val
@@ -1560,26 +1560,26 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY2]], %subreg.sub0, [[PRED_COPY1]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY4]], %subreg.sub0, [[PRED_COPY3]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY8]], %subreg.sub0, [[PRED_COPY7]], %subreg.sub1, [[PRED_COPY6]], %subreg.sub2, [[PRED_COPY5]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; GFX908-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4096, implicit $exec
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
@@ -1597,8 +1597,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
@@ -1611,7 +1611,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 4096, i32 %soffset, i32 0)
   ret float %val
@@ -1623,27 +1623,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1660,21 +1660,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 16, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 16, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %voffset = add i32 %voffset.base, 16
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -1687,27 +1687,27 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1724,21 +1724,21 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 4095, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 4095, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %voffset = add i32 %voffset.base, 4095
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -1751,29 +1751,29 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
-  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[PRED_COPY1]], killed [[S_MOV_B32_]], 0, implicit $exec
+  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1790,8 +1790,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
@@ -1804,7 +1804,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset__vo
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %voffset = add i32 %voffset.base, 4096
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -1817,26 +1817,26 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY2]], %subreg.sub0, [[PRED_COPY1]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY4]], %subreg.sub0, [[PRED_COPY3]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY8]], %subreg.sub0, [[PRED_COPY7]], %subreg.sub1, [[PRED_COPY6]], %subreg.sub2, [[PRED_COPY5]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1858,13 +1858,13 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY]], killed [[REG_SEQUENCE5]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], killed [[REG_SEQUENCE5]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 4095, i32 0)
   ret float %val
@@ -1876,26 +1876,26 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY2]], %subreg.sub0, [[PRED_COPY1]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY1]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY4]], %subreg.sub0, [[PRED_COPY3]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY3]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY8]], %subreg.sub0, [[PRED_COPY7]], %subreg.sub1, [[PRED_COPY6]], %subreg.sub2, [[PRED_COPY5]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY7]], %subreg.sub1, [[COPY6]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1917,13 +1917,13 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY]], killed [[REG_SEQUENCE5]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], killed [[REG_SEQUENCE5]], [[S_MOV_B32_]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 4096, i32 0)
   ret float %val
@@ -1935,29 +1935,29 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[PRED_COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
+  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -1982,13 +1982,13 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %soffset = add i32 %soffset.base, 16
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -2001,29 +2001,29 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
-  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[PRED_COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
+  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -2048,13 +2048,13 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %soffset = add i32 %soffset.base, 4095
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -2067,29 +2067,29 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
-  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[PRED_COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
+  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -2114,13 +2114,13 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %soffset = add i32 %soffset.base, 4096
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -2134,29 +2134,29 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 5000
-  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[PRED_COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
+  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -2181,13 +2181,13 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_sof
   ; GFX908-NEXT: bb.2:
   ; GFX908-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[PRED_COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
+  ; GFX908-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY1]], killed [[REG_SEQUENCE5]], killed [[V_READFIRSTLANE_B32_4]], 0, 0, 0, implicit $exec :: (dereferenceable load (s32) from %ir.rsrc, align 1, addrspace 8)
   ; GFX908-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; GFX908-NEXT:   SI_WATERFALL_LOOP %bb.1, implicit $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %soffset = add i32 %soffset.base, 5000
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -2201,29 +2201,29 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-  ; GFX908-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-  ; GFX908-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-  ; GFX908-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-  ; GFX908-NEXT:   [[PRED_COPY4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX908-NEXT:   [[PRED_COPY5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
+  ; GFX908-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+  ; GFX908-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+  ; GFX908-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+  ; GFX908-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+  ; GFX908-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX908-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY3]], %subreg.sub0, [[PRED_COPY2]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY6:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY7:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub1
+  ; GFX908-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE]].sub0
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PRED_COPY5]], %subreg.sub0, [[PRED_COPY4]], %subreg.sub1
-  ; GFX908-NEXT:   [[PRED_COPY8:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub1
-  ; GFX908-NEXT:   [[PRED_COPY9:%[0-9]+]]:vgpr_32 = PRED_COPY [[REG_SEQUENCE1]].sub0
+  ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
+  ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
   ; GFX908-NEXT:   [[DEF4:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF5:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF6:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF7:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[PRED_COPY9]], %subreg.sub0, [[PRED_COPY8]], %subreg.sub1, [[PRED_COPY7]], %subreg.sub2, [[PRED_COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
-  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[PRED_COPY1]], killed [[S_MOV_B32_]], 0, implicit $exec
+  ; GFX908-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY1]], killed [[S_MOV_B32_]], 0, implicit $exec
   ; GFX908-NEXT:   [[DEF8:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
@@ -2240,8 +2240,8 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX908-NEXT:   [[V_CMP_EQ_U64_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U64_e64 [[REG_SEQUENCE4]], [[REG_SEQUENCE2]].sub2_sub3, implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_]], [[V_CMP_EQ_U64_e64_1]], implicit-def $scc
   ; GFX908-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
-  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[PRED_COPY]], implicit $exec
-  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[PRED_COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
+  ; GFX908-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_4]], [[COPY]], implicit $exec
   ; GFX908-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[S_AND_B64_]], [[V_CMP_EQ_U32_e64_]], implicit-def $scc
   ; GFX908-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_1]], implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX908-NEXT: {{  $}}
@@ -2254,7 +2254,7 @@ define float @raw_ptr_buffer_load_f32__sgpr_rsrc__vgpr_voffset__sgpr_soffset_vof
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   $vgpr0 = PRED_COPY [[BUFFER_LOAD_DWORD_OFFEN]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_DWORD_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   %voffset = add i32 %voffset.base, 5000
   %val = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 %voffset, i32 %soffset, i32 0)

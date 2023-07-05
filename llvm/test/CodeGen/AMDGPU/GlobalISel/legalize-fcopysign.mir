@@ -698,8 +698,8 @@ body: |
     ; SI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UV2]](s32)
     ; SI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[UV3]](s32)
     ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; SI-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C2]](s32)
-    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[PRED_COPY]](s32)
+    ; SI-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
+    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[COPY2]](s32)
     ; SI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ZEXT1]], [[C2]](s32)
     ; SI-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[SHL]], [[C]]
     ; SI-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[SHL1]], [[C]]
@@ -721,8 +721,8 @@ body: |
     ; VI-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UV2]](s32)
     ; VI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[UV3]](s32)
     ; VI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; VI-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C2]](s32)
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[PRED_COPY]](s32)
+    ; VI-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
+    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[COPY2]](s32)
     ; VI-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ZEXT1]], [[C2]](s32)
     ; VI-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[SHL]], [[C]]
     ; VI-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[SHL1]], [[C]]
@@ -744,8 +744,8 @@ body: |
     ; GFX9-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[UV2]](s32)
     ; GFX9-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[UV3]](s32)
     ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; GFX9-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C2]](s32)
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[PRED_COPY]](s32)
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
+    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[ZEXT]], [[COPY2]](s32)
     ; GFX9-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ZEXT1]], [[C2]](s32)
     ; GFX9-NEXT: [[AND2:%[0-9]+]]:_(s64) = G_AND [[SHL]], [[C]]
     ; GFX9-NEXT: [[AND3:%[0-9]+]]:_(s64) = G_AND [[SHL1]], [[C]]
@@ -778,8 +778,8 @@ body: |
     ; SI-NEXT: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[COPY]], [[BUILD_VECTOR1]]
     ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
     ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; SI-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C2]](s32)
-    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[PRED_COPY]](s32)
+    ; SI-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
+    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[COPY2]](s32)
     ; SI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[UV1]], [[C2]](s32)
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)
@@ -799,8 +799,8 @@ body: |
     ; VI-NEXT: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[COPY]], [[BUILD_VECTOR1]]
     ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
     ; VI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; VI-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C2]](s32)
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[PRED_COPY]](s32)
+    ; VI-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
+    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[COPY2]](s32)
     ; VI-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[UV1]], [[C2]](s32)
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)
@@ -820,8 +820,8 @@ body: |
     ; GFX9-NEXT: [[AND:%[0-9]+]]:_(<2 x s32>) = G_AND [[COPY]], [[BUILD_VECTOR1]]
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
     ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; GFX9-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C2]](s32)
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[PRED_COPY]](s32)
+    ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
+    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[UV]], [[COPY2]](s32)
     ; GFX9-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[UV1]], [[C2]](s32)
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR]](s64)
     ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[LSHR1]](s64)

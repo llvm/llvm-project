@@ -53,8 +53,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s64) = PRED_COPY [[C]](s64)
-    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p1) = G_PTRMASK [[COPY]], [[PRED_COPY]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[C]](s64)
+    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p1) = G_PTRMASK [[COPY]], [[COPY1]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(p1) = G_PTRMASK %0, %1
@@ -73,8 +73,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s64) = PRED_COPY [[COPY1]](s64)
-    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p1) = G_PTRMASK [[COPY]], [[PRED_COPY]](s64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
+    ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p1) = G_PTRMASK [[COPY]], [[COPY2]](s64)
     %0:_(p1) = COPY $vgpr0_vgpr1
     %1:_(s64) = COPY $sgpr0_sgpr1
     %2:_(p1) = G_PTRMASK %0, %1

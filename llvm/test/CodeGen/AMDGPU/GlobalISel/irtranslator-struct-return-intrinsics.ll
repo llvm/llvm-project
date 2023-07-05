@@ -8,10 +8,10 @@ define amdgpu_ps void @test_div_scale(float %arg0, float %arg1) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32), [[INT1:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[PRED_COPY]](s32), [[PRED_COPY1]](s32), -1
+  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32), [[INT1:%[0-9]+]]:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.div.scale), [[COPY]](s32), [[COPY1]](s32), -1
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[INT1]](s1)
   ; CHECK-NEXT:   G_STORE [[INT]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
   ; CHECK-NEXT:   G_STORE [[SEXT]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)

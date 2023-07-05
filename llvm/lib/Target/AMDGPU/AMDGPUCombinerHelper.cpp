@@ -79,7 +79,6 @@ static bool hasSourceMods(const MachineInstr &MI) {
 
   switch (MI.getOpcode()) {
   case AMDGPU::COPY:
-  case AMDGPU::PRED_COPY:
   case AMDGPU::G_SELECT:
   case AMDGPU::G_FDIV:
   case AMDGPU::G_FREM:

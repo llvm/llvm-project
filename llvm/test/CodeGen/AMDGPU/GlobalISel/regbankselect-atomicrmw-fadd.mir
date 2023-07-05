@@ -14,9 +14,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p3) = PRED_COPY [[COPY]](p3)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[ATOMICRMW_FADD:%[0-9]+]]:vgpr(s32) = G_ATOMICRMW_FADD [[PRED_COPY]](p3), [[PRED_COPY1]] :: (load store seq_cst (s32), addrspace 3)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[ATOMICRMW_FADD:%[0-9]+]]:vgpr(s32) = G_ATOMICRMW_FADD [[COPY2]](p3), [[COPY3]] :: (load store seq_cst (s32), addrspace 3)
     %0:_(p3) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_ATOMICRMW_FADD %0, %1 :: (load store seq_cst (s32), addrspace 3)

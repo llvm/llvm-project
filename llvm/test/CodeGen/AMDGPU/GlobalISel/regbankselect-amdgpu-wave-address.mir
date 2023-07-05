@@ -24,8 +24,8 @@ body: |
     ; CHECK-LABEL: name: amdgpu_wave_address_v
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p1) = PRED_COPY [[DEF]](p1)
-    ; CHECK-NEXT: G_STORE [[AMDGPU_WAVE_ADDRESS]](p5), [[PRED_COPY]](p1) :: (store (p5), addrspace 1)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
+    ; CHECK-NEXT: G_STORE [[AMDGPU_WAVE_ADDRESS]](p5), [[COPY]](p1) :: (store (p5), addrspace 1)
     %0:_(p1) = G_IMPLICIT_DEF
     %1:_(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     G_STORE %1, %0 :: (store (p5), addrspace 1)

@@ -14,9 +14,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $exec = PRED_COPY killed renamable $sgpr4_sgpr5
-  ; CHECK-NEXT:   renamable $sgpr10_sgpr11 = PRED_COPY killed renamable $sgpr6_sgpr7, implicit $exec
-  ; CHECK-NEXT:   renamable $sgpr12_sgpr13 = PRED_COPY killed renamable $sgpr8_sgpr9, implicit $exec
+  ; CHECK-NEXT:   $exec = COPY killed renamable $sgpr4_sgpr5
+  ; CHECK-NEXT:   renamable $sgpr10_sgpr11 = COPY killed renamable $sgpr6_sgpr7, implicit $exec
+  ; CHECK-NEXT:   renamable $sgpr12_sgpr13 = COPY killed renamable $sgpr8_sgpr9, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}

@@ -16,12 +16,12 @@ body: |
     ; GFX10-LABEL: name: usube_s32_s1_vsv
     ; GFX10: liveins: $sgpr0, $vgpr0
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX10-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; GFX10-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX10-NEXT: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[PRED_COPY2]], [[V_MOV_B32_e32_]], implicit $exec
-    ; GFX10-NEXT: [[V_SUBB_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUBB_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_SUBB_U32_e64 [[PRED_COPY]], [[PRED_COPY1]], [[V_CMP_EQ_U32_e64_]], 0, implicit $exec
+    ; GFX10-NEXT: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[COPY2]], [[V_MOV_B32_e32_]], implicit $exec
+    ; GFX10-NEXT: [[V_SUBB_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUBB_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_SUBB_U32_e64 [[COPY]], [[COPY1]], [[V_CMP_EQ_U32_e64_]], 0, implicit $exec
     ; GFX10-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GFX10-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GFX10-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_2]], 0, [[V_MOV_B32_e32_1]], [[V_SUBB_U32_e64_1]], implicit $exec
@@ -50,12 +50,12 @@ body: |
     ; GFX10-LABEL: name: usube_s32_s1_vvs
     ; GFX10: liveins: $sgpr0, $vgpr0
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; GFX10-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX10-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX10-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GFX10-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX10-NEXT: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[PRED_COPY2]], [[V_MOV_B32_e32_]], implicit $exec
-    ; GFX10-NEXT: [[V_SUBB_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUBB_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_SUBB_U32_e64 [[PRED_COPY]], [[PRED_COPY1]], [[V_CMP_EQ_U32_e64_]], 0, implicit $exec
+    ; GFX10-NEXT: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[COPY2]], [[V_MOV_B32_e32_]], implicit $exec
+    ; GFX10-NEXT: [[V_SUBB_U32_e64_:%[0-9]+]]:vgpr_32, [[V_SUBB_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_SUBB_U32_e64 [[COPY]], [[COPY1]], [[V_CMP_EQ_U32_e64_]], 0, implicit $exec
     ; GFX10-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GFX10-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; GFX10-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_MOV_B32_e32_2]], 0, [[V_MOV_B32_e32_1]], [[V_SUBB_U32_e64_1]], implicit $exec

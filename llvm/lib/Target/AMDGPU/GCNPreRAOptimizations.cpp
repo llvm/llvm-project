@@ -96,8 +96,7 @@ bool GCNPreRAOptimizations::processReg(Register Reg) {
       return false;
     case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
       break;
-    case AMDGPU::COPY:
-    case AMDGPU::PRED_COPY: {
+    case AMDGPU::COPY: {
       // Some subtargets cannot do an AGPR to AGPR copy directly, and need an
       // intermdiate temporary VGPR register. Try to find the defining
       // accvgpr_write to avoid temporary registers.

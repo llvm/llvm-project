@@ -304,7 +304,7 @@ MachineInstrBuilder MachineIRBuilder::buildBrJT(Register TablePtr,
 
 MachineInstrBuilder MachineIRBuilder::buildCopy(const DstOp &Res,
                                                 const SrcOp &Op) {
-  return buildInstr(getTII().getCopyOpcode(), Res, Op);
+  return buildInstr(TargetOpcode::COPY, Res, Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildConstant(const DstOp &Res,
@@ -528,7 +528,7 @@ MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
   assert(Res.getLLTTy(*getMRI()).isScalar() ==
          Op.getLLTTy(*getMRI()).isScalar());
 
-  unsigned Opcode = getTII().getCopyOpcode();
+  unsigned Opcode = TargetOpcode::COPY;
   if (Res.getLLTTy(*getMRI()).getSizeInBits() >
       Op.getLLTTy(*getMRI()).getSizeInBits())
     Opcode = ExtOpc;
@@ -1155,7 +1155,6 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
     break;
   }
   case TargetOpcode::COPY:
-  case TargetOpcode::PRED_COPY:
     assert(DstOps.size() == 1 && "Invalid Dst");
     // If the caller wants to add a subreg source it has to be done separately
     // so we may not have any SrcOps at this point yet.

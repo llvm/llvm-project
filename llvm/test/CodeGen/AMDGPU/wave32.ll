@@ -2103,6 +2103,7 @@ define amdgpu_ps float @test_wqm2(i32 inreg %idx0, i32 inreg %idx1) #0 {
 ; GFX1032-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 idxen
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1032-NEXT:    v_add_f32_e32 v0, v2, v3
+; GFX1032-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX1032-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX1032-NEXT:    ; return to shader part epilog
 ;
@@ -2117,6 +2118,7 @@ define amdgpu_ps float @test_wqm2(i32 inreg %idx0, i32 inreg %idx1) #0 {
 ; GFX1064-NEXT:    buffer_load_dword v3, v1, s[0:3], 0 idxen
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1064-NEXT:    v_add_f32_e32 v0, v2, v3
+; GFX1064-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX1064-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX1064-NEXT:    ; return to shader part epilog
 main_body:

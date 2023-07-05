@@ -6,10 +6,10 @@ define float @test_atomicrmw_fadd(ptr addrspace(3) %addr) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(p3) = PRED_COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
-  ; CHECK-NEXT:   [[ATOMICRMW_FADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_FADD [[PRED_COPY]](p3), [[C]] :: (load store seq_cst (s32) on %ir.addr, addrspace 3)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[ATOMICRMW_FADD]](s32)
+  ; CHECK-NEXT:   [[ATOMICRMW_FADD:%[0-9]+]]:_(s32) = G_ATOMICRMW_FADD [[COPY]](p3), [[C]] :: (load store seq_cst (s32) on %ir.addr, addrspace 3)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[ATOMICRMW_FADD]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %oldval = atomicrmw fadd ptr addrspace(3) %addr, float 1.0 seq_cst
   ret float %oldval
@@ -21,10 +21,10 @@ define float @test_atomicrmw_fsub(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(p3) = PRED_COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 1.000000e+00
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PRED_COPY]](p3) :: (load (s32) from %ir.addr, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s32) from %ir.addr, addrspace 3)
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.atomicrmw.start:
@@ -33,7 +33,7 @@ define float @test_atomicrmw_fsub(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI %15(s64), %bb.2, [[C1]](s64), %bb.1
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[LOAD]](s32), %bb.1, %13(s32), %bb.2
   ; CHECK-NEXT:   [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[PHI1]], [[C]]
-  ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[PRED_COPY]](p3), [[PHI1]], [[FSUB]] :: (load store seq_cst seq_cst (s32) on %ir.addr, addrspace 3)
+  ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p3), [[PHI1]], [[FSUB]] :: (load store seq_cst seq_cst (s32) on %ir.addr, addrspace 3)
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](s1), [[PHI]](s64)
   ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](s64)
   ; CHECK-NEXT:   G_BRCOND [[INT1]](s1), %bb.3
@@ -43,7 +43,7 @@ define float @test_atomicrmw_fsub(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[ATOMIC_CMPXCHG_WITH_SUCCESS]](s32), %bb.2
   ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:_(s64) = G_PHI [[INT]](s64), %bb.2
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI3]](s64)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[PHI2]](s32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[PHI2]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %oldval = atomicrmw fsub ptr addrspace(3) %addr, float 1.0 seq_cst
   ret float %oldval

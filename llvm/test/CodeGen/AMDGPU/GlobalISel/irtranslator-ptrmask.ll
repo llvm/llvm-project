@@ -6,16 +6,16 @@ define ptr @ptrmask_flat_i64(ptr %ptr, i64 %mask) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
-  ; CHECK-NEXT:   [[PRED_COPY2:%[0-9]+]]:_(s32) = PRED_COPY $vgpr2
-  ; CHECK-NEXT:   [[PRED_COPY3:%[0-9]+]]:_(s32) = PRED_COPY $vgpr3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[PRED_COPY2]](s32), [[PRED_COPY3]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[MV]], [[MV1]](s64)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PTRMASK]](p0)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = PRED_COPY [[UV1]](s32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %masked = call ptr @llvm.ptrmask.p0.i64(ptr %ptr, i64 %mask)
   ret ptr %masked
@@ -26,14 +26,14 @@ define ptr @ptrmask_flat_i32(ptr %ptr, i32 %mask) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
-  ; CHECK-NEXT:   [[PRED_COPY2:%[0-9]+]]:_(s32) = PRED_COPY $vgpr2
-  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[MV]], [[PRED_COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[MV]], [[COPY2]](s32)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PTRMASK]](p0)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = PRED_COPY [[UV1]](s32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %masked = call ptr @llvm.ptrmask.p0.i32(ptr %ptr, i32 %mask)
   ret ptr %masked
@@ -44,15 +44,15 @@ define ptr @ptrmask_flat_i16(ptr %ptr, i16 %mask) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
-  ; CHECK-NEXT:   [[PRED_COPY2:%[0-9]+]]:_(s32) = PRED_COPY $vgpr2
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[PRED_COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
   ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[MV]], [[TRUNC]](s16)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PTRMASK]](p0)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = PRED_COPY [[UV1]](s32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %masked = call ptr @llvm.ptrmask.p0.i16(ptr %ptr, i16 %mask)
   ret ptr %masked
@@ -63,15 +63,15 @@ define ptr @ptrmask_flat_i1(ptr %ptr, i1 %mask) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
-  ; CHECK-NEXT:   [[PRED_COPY2:%[0-9]+]]:_(s32) = PRED_COPY $vgpr2
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[PRED_COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY2]](s32)
   ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[MV]], [[TRUNC]](s1)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PTRMASK]](p0)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = PRED_COPY [[UV1]](s32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %masked = call ptr @llvm.ptrmask.p0.i1(ptr %ptr, i1 %mask)
   ret ptr %masked
@@ -82,12 +82,12 @@ define ptr addrspace(3) @ptrmask_local_i64(ptr addrspace(3) %ptr, i64 %mask) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(p3) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[PRED_COPY2:%[0-9]+]]:_(s32) = PRED_COPY $vgpr2
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[PRED_COPY1]](s32), [[PRED_COPY2]](s32)
-  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[PRED_COPY]], [[MV]](s64)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[PTRMASK]](p3)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[COPY]], [[MV]](s64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[PTRMASK]](p3)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %masked = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) %ptr, i64 %mask)
   ret ptr addrspace(3) %masked
@@ -98,10 +98,10 @@ define ptr addrspace(3) @ptrmask_local_i32(ptr addrspace(3) %ptr, i32 %mask) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(p3) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[PRED_COPY]], [[PRED_COPY1]](s32)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[PTRMASK]](p3)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[COPY]], [[COPY1]](s32)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[PTRMASK]](p3)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %masked = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) %ptr, i32 %mask)
   ret ptr addrspace(3) %masked
@@ -112,11 +112,11 @@ define ptr addrspace(3) @ptrmask_local_i16(ptr addrspace(3) %ptr, i16 %mask) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(p3) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[PRED_COPY1]](s32)
-  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[PRED_COPY]], [[TRUNC]](s16)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[PTRMASK]](p3)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[COPY]], [[TRUNC]](s16)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[PTRMASK]](p3)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %masked = call ptr addrspace(3) @llvm.ptrmask.p3.i16(ptr addrspace(3) %ptr, i16 %mask)
   ret ptr addrspace(3) %masked
@@ -127,11 +127,11 @@ define ptr addrspace(3) @ptrmask_local_i1(ptr addrspace(3) %ptr, i1 %mask) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(p3) = PRED_COPY $vgpr0
-  ; CHECK-NEXT:   [[PRED_COPY1:%[0-9]+]]:_(s32) = PRED_COPY $vgpr1
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[PRED_COPY1]](s32)
-  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[PRED_COPY]], [[TRUNC]](s1)
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[PTRMASK]](p3)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY1]](s32)
+  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[COPY]], [[TRUNC]](s1)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[PTRMASK]](p3)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %masked = call ptr addrspace(3) @llvm.ptrmask.p3.i1(ptr addrspace(3) %ptr, i1 %mask)
   ret ptr addrspace(3) %masked

@@ -632,12 +632,6 @@ inline UnaryOp_match<SrcTy, TargetOpcode::COPY> m_Copy(SrcTy &&Src) {
 }
 
 template <typename SrcTy>
-inline UnaryOp_match<SrcTy, TargetOpcode::PRED_COPY> m_Pred_Copy(SrcTy &&Src) {
-  return UnaryOp_match<SrcTy, TargetOpcode::PRED_COPY>(
-      std::forward<SrcTy>(Src));
-}
-
-template <typename SrcTy>
 inline UnaryOp_match<SrcTy, TargetOpcode::G_FSQRT> m_GFSqrt(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, TargetOpcode::G_FSQRT>(Src);
 }

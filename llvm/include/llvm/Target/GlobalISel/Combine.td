@@ -126,8 +126,8 @@ GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
 
 def copy_prop : GICombineRule<
-  (defs root:$mi),
-  (match (wip_match_opcode COPY, PRED_COPY):$mi,
+  (defs root:$d),
+  (match (COPY $d, $s):$mi,
          [{ return Helper.matchCombineCopy(*${mi}); }]),
   (apply [{ Helper.applyCombineCopy(*${mi}); }])>;
 

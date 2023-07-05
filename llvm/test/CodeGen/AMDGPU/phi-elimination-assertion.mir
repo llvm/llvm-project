@@ -27,7 +27,7 @@ body:             |
 # CHECK-LABEL: name:            foo
 # CHECK:   bb.3:
 # CHECK-NEXT:     dead %2:sreg_32_xm0 = IMPLICIT_DEF
-# CHECK-NEXT:     %3:sreg_32_xm0 = PRED_COPY killed %4
+# CHECK-NEXT:     %3:sreg_32_xm0 = COPY killed %4
 # CHECK-NEXT:     S_NOP 0, implicit killed %3
 
 
@@ -36,8 +36,8 @@ body:             |
 # With this PHI node order we did not hit the assert, but we used to get
 #
 #  bb.3:
-#    dead %3:sreg_32_xm0 = PRED_COPY killed %4
-#    %2:sreg_32_xm0 = PRED_COPY %4
+#    dead %3:sreg_32_xm0 = COPY killed %4
+#    %2:sreg_32_xm0 = COPY %4
 #    S_NOP 0, implicit killed %2
 #
 # which looks weird regarding killed flags for %4.
@@ -65,7 +65,7 @@ body:             |
 # CHECK-LABEL: name:            bar
 # CHECK:   bb.3:
 # CHECK-NEXT:     dead %3:sreg_32_xm0 = IMPLICIT_DEF
-# CHECK-NEXT:     %2:sreg_32_xm0 = PRED_COPY killed %4
+# CHECK-NEXT:     %2:sreg_32_xm0 = COPY killed %4
 # CHECK-NEXT:     S_NOP 0, implicit killed %2
 
 
@@ -92,4 +92,4 @@ body:             |
 
 # CHECK-LABEL: name:            bax
 # CHECK:   bb.3:
-# CHECK-NEXT:     %2:sreg_32_xm0 = PRED_COPY killed %3
+# CHECK-NEXT:     %2:sreg_32_xm0 = COPY killed %3

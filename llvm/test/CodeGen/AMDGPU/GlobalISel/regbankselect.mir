@@ -112,8 +112,8 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p1) = PRED_COPY [[COPY]](p1)
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[PRED_COPY]](p1) :: (load (s32) from %ir.ptr1, addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s32) from %ir.ptr1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s32) from %ir.ptr1)
 ...
@@ -129,8 +129,8 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p1) = PRED_COPY [[COPY]](p1)
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[PRED_COPY]](p1) :: (load (s32) from %ir.ptr1, addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s32) from %ir.ptr1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s32) from %ir.ptr1)
 ...
@@ -146,8 +146,8 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p1) = PRED_COPY [[COPY]](p1)
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[PRED_COPY]](p1) :: (volatile invariant load (s32) from %ir.ptr1, addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (volatile invariant load (s32) from %ir.ptr1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (volatile invariant load (s32) from %ir.ptr1)
 ...
@@ -163,8 +163,8 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p1) = PRED_COPY [[COPY]](p1)
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[PRED_COPY]](p1) :: (invariant load acquire (s32) from %ir.ptr1, addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (invariant load acquire (s32) from %ir.ptr1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (invariant load acquire (s32) from %ir.ptr1)
 ...
@@ -180,8 +180,8 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p1) = PRED_COPY [[COPY]](p1)
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[PRED_COPY]](p1) :: (load (s32) from %ir.tmp1, addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:vgpr(s32) = G_LOAD [[COPY1]](p1) :: (load (s32) from %ir.tmp1, addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = G_LOAD %0 :: (load (s32) from %ir.tmp1)
 ...

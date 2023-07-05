@@ -94,8 +94,8 @@ body: |
     ; WAVE64-NEXT: [[C14:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE64-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C14]]
     ; WAVE64-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE64-NEXT: $vgpr0 = COPY [[PRED_COPY]](s32)
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE64-NEXT: $vgpr0 = COPY [[COPY2]](s32)
     ; WAVE32-LABEL: name: extract_vector_elt_v16s32_sv
     ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
     ; WAVE32-NEXT: {{  $}}
@@ -147,8 +147,8 @@ body: |
     ; WAVE32-NEXT: [[C14:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE32-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C14]]
     ; WAVE32-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE32-NEXT: $vgpr0 = COPY [[PRED_COPY]](s32)
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE32-NEXT: $vgpr0 = COPY [[COPY2]](s32)
     %0:_(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_EXTRACT_VECTOR_ELT %0, %1
@@ -244,8 +244,8 @@ body: |
     ; WAVE64-NEXT: [[C14:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE64-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C14]]
     ; WAVE64-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE64-NEXT: $vgpr0 = COPY [[PRED_COPY]](s32)
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE64-NEXT: $vgpr0 = COPY [[COPY2]](s32)
     ; WAVE32-LABEL: name: extract_vector_elt_v16s32_vv
     ; WAVE32: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
     ; WAVE32-NEXT: {{  $}}
@@ -297,8 +297,8 @@ body: |
     ; WAVE32-NEXT: [[C14:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE32-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C14]]
     ; WAVE32-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE32-NEXT: $vgpr0 = COPY [[PRED_COPY]](s32)
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE32-NEXT: $vgpr0 = COPY [[COPY2]](s32)
     %0:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     %1:_(s32) = COPY $vgpr16
     %2:_(s32) = G_EXTRACT_VECTOR_ELT %0, %1
@@ -418,9 +418,9 @@ body: |
     ; WAVE64-NEXT: [[ICMP6:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C6]]
     ; WAVE64-NEXT: [[SELECT12:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV14]], [[SELECT10]]
     ; WAVE64-NEXT: [[SELECT13:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV15]], [[SELECT11]]
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT12]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT13]](s32)
-    ; WAVE64-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[SELECT12]](s32)
+    ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT13]](s32)
+    ; WAVE64-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; WAVE64-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     ; WAVE32-LABEL: name: extract_vector_elt_v8s64_sv
     ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
@@ -456,9 +456,9 @@ body: |
     ; WAVE32-NEXT: [[ICMP6:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C6]]
     ; WAVE32-NEXT: [[SELECT12:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV14]], [[SELECT10]]
     ; WAVE32-NEXT: [[SELECT13:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV15]], [[SELECT11]]
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT12]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT13]](s32)
-    ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[SELECT12]](s32)
+    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT13]](s32)
+    ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; WAVE32-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     %1:_(s32) = COPY $vgpr0
@@ -509,9 +509,9 @@ body: |
     ; WAVE64-NEXT: [[ICMP6:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C6]]
     ; WAVE64-NEXT: [[SELECT12:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV14]], [[SELECT10]]
     ; WAVE64-NEXT: [[SELECT13:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV15]], [[SELECT11]]
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT12]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT13]](s32)
-    ; WAVE64-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[SELECT12]](s32)
+    ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT13]](s32)
+    ; WAVE64-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; WAVE64-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     ; WAVE32-LABEL: name: extract_vector_elt_v8s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
@@ -547,9 +547,9 @@ body: |
     ; WAVE32-NEXT: [[ICMP6:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C6]]
     ; WAVE32-NEXT: [[SELECT12:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV14]], [[SELECT10]]
     ; WAVE32-NEXT: [[SELECT13:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV15]], [[SELECT11]]
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT12]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT13]](s32)
-    ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[SELECT12]](s32)
+    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT13]](s32)
+    ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; WAVE32-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     %1:_(s32) = COPY $vgpr16
@@ -572,8 +572,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -620,16 +620,16 @@ body: |
     ; WAVE64-NEXT: [[C15:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE64-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C15]]
     ; WAVE64-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE64-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE64-NEXT: $vgpr0 = COPY [[PRED_COPY1]](s32)
+    ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE64-NEXT: $vgpr0 = COPY [[COPY3]](s32)
     ; WAVE32-LABEL: name: extract_vector_elt_v16s32_vv_idx_add1
     ; WAVE32: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -676,8 +676,8 @@ body: |
     ; WAVE32-NEXT: [[C15:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE32-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C15]]
     ; WAVE32-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE32-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE32-NEXT: $vgpr0 = COPY [[PRED_COPY1]](s32)
+    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE32-NEXT: $vgpr0 = COPY [[COPY3]](s32)
     %0:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     %1:_(s32) = COPY $vgpr16
     %2:_(s32) = G_CONSTANT i32 1
@@ -701,8 +701,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -749,16 +749,16 @@ body: |
     ; WAVE64-NEXT: [[C15:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE64-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C15]]
     ; WAVE64-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE64-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE64-NEXT: $vgpr0 = COPY [[PRED_COPY1]](s32)
+    ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE64-NEXT: $vgpr0 = COPY [[COPY3]](s32)
     ; WAVE32-LABEL: name: extract_vector_elt_v16s32_vv_idx_addm1
     ; WAVE32: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 -1
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -805,8 +805,8 @@ body: |
     ; WAVE32-NEXT: [[C15:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE32-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C15]]
     ; WAVE32-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE32-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE32-NEXT: $vgpr0 = COPY [[PRED_COPY1]](s32)
+    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE32-NEXT: $vgpr0 = COPY [[COPY3]](s32)
     %0:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     %1:_(s32) = COPY $vgpr16
     %2:_(s32) = G_CONSTANT i32 -1
@@ -830,8 +830,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -878,16 +878,16 @@ body: |
     ; WAVE64-NEXT: [[C15:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE64-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C15]]
     ; WAVE64-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE64-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE64-NEXT: $vgpr0 = COPY [[PRED_COPY1]](s32)
+    ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE64-NEXT: $vgpr0 = COPY [[COPY3]](s32)
     ; WAVE32-LABEL: name: extract_vector_elt_v16s32_vv_idx_add16
     ; WAVE32: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 16
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -934,8 +934,8 @@ body: |
     ; WAVE32-NEXT: [[C15:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE32-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C15]]
     ; WAVE32-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE32-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE32-NEXT: $vgpr0 = COPY [[PRED_COPY1]](s32)
+    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE32-NEXT: $vgpr0 = COPY [[COPY3]](s32)
     %0:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     %1:_(s32) = COPY $vgpr16
     %2:_(s32) = G_CONSTANT i32 16
@@ -959,8 +959,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<8 x s64>)
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -990,9 +990,9 @@ body: |
     ; WAVE64-NEXT: [[ICMP6:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C7]]
     ; WAVE64-NEXT: [[SELECT12:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV14]], [[SELECT10]]
     ; WAVE64-NEXT: [[SELECT13:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV15]], [[SELECT11]]
-    ; WAVE64-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT12]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT13]](s32)
-    ; WAVE64-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY1]](s32), [[PRED_COPY2]](s32)
+    ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT12]](s32)
+    ; WAVE64-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[SELECT13]](s32)
+    ; WAVE64-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
     ; WAVE64-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     ; WAVE32-LABEL: name: extract_vector_elt_v8s64_vv_idx_add1
     ; WAVE32: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
@@ -1000,8 +1000,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr16
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<8 x s64>)
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -1031,9 +1031,9 @@ body: |
     ; WAVE32-NEXT: [[ICMP6:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C7]]
     ; WAVE32-NEXT: [[SELECT12:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV14]], [[SELECT10]]
     ; WAVE32-NEXT: [[SELECT13:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV15]], [[SELECT11]]
-    ; WAVE32-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT12]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT13]](s32)
-    ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY1]](s32), [[PRED_COPY2]](s32)
+    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT12]](s32)
+    ; WAVE32-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[SELECT13]](s32)
+    ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
     ; WAVE32-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
     %1:_(s32) = COPY $vgpr16
@@ -1058,8 +1058,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -1106,16 +1106,16 @@ body: |
     ; WAVE64-NEXT: [[C15:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE64-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C15]]
     ; WAVE64-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE64-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE64-NEXT: $vgpr0 = COPY [[PRED_COPY1]](s32)
+    ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE64-NEXT: $vgpr0 = COPY [[COPY3]](s32)
     ; WAVE32-LABEL: name: extract_vector_elt_v16s32_sv_idx_add1
     ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -1162,8 +1162,8 @@ body: |
     ; WAVE32-NEXT: [[C15:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 15
     ; WAVE32-NEXT: [[ICMP14:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C15]]
     ; WAVE32-NEXT: [[SELECT14:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP14]](s1), [[UV15]], [[SELECT13]]
-    ; WAVE32-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT14]](s32)
-    ; WAVE32-NEXT: $vgpr0 = COPY [[PRED_COPY1]](s32)
+    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT14]](s32)
+    ; WAVE32-NEXT: $vgpr0 = COPY [[COPY3]](s32)
     %0:_(<16 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_CONSTANT i32 1
@@ -1187,8 +1187,8 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE64-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE64-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE64-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE64-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<8 x s64>)
     ; WAVE64-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE64-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -1218,9 +1218,9 @@ body: |
     ; WAVE64-NEXT: [[ICMP6:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C7]]
     ; WAVE64-NEXT: [[SELECT12:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV14]], [[SELECT10]]
     ; WAVE64-NEXT: [[SELECT13:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV15]], [[SELECT11]]
-    ; WAVE64-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT12]](s32)
-    ; WAVE64-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT13]](s32)
-    ; WAVE64-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY1]](s32), [[PRED_COPY2]](s32)
+    ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT12]](s32)
+    ; WAVE64-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[SELECT13]](s32)
+    ; WAVE64-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
     ; WAVE64-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     ; WAVE32-LABEL: name: extract_vector_elt_v8s64_sv_add1
     ; WAVE32: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15, $vgpr0
@@ -1228,8 +1228,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sgpr(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; WAVE32-NEXT: [[C:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
-    ; WAVE32-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[C]](s32)
-    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[PRED_COPY]]
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[C]](s32)
+    ; WAVE32-NEXT: [[ADD:%[0-9]+]]:vgpr(s32) = G_ADD [[COPY1]], [[COPY2]]
     ; WAVE32-NEXT: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32), [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32), [[UV4:%[0-9]+]]:vgpr(s32), [[UV5:%[0-9]+]]:vgpr(s32), [[UV6:%[0-9]+]]:vgpr(s32), [[UV7:%[0-9]+]]:vgpr(s32), [[UV8:%[0-9]+]]:vgpr(s32), [[UV9:%[0-9]+]]:vgpr(s32), [[UV10:%[0-9]+]]:vgpr(s32), [[UV11:%[0-9]+]]:vgpr(s32), [[UV12:%[0-9]+]]:vgpr(s32), [[UV13:%[0-9]+]]:vgpr(s32), [[UV14:%[0-9]+]]:vgpr(s32), [[UV15:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY]](<8 x s64>)
     ; WAVE32-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 1
     ; WAVE32-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C1]]
@@ -1259,9 +1259,9 @@ body: |
     ; WAVE32-NEXT: [[ICMP6:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[C7]]
     ; WAVE32-NEXT: [[SELECT12:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV14]], [[SELECT10]]
     ; WAVE32-NEXT: [[SELECT13:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP6]](s1), [[UV15]], [[SELECT11]]
-    ; WAVE32-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT12]](s32)
-    ; WAVE32-NEXT: [[PRED_COPY2:%[0-9]+]]:vgpr(s32) = PRED_COPY [[SELECT13]](s32)
-    ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY1]](s32), [[PRED_COPY2]](s32)
+    ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[SELECT12]](s32)
+    ; WAVE32-NEXT: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[SELECT13]](s32)
+    ; WAVE32-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY3]](s32), [[COPY4]](s32)
     ; WAVE32-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(<8 x s64>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     %1:_(s32) = COPY $vgpr0

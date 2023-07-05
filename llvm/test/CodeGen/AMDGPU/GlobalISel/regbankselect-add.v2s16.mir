@@ -42,8 +42,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(<2 x s16>) = PRED_COPY [[COPY]](<2 x s16>)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:vgpr(<2 x s16>) = G_ADD [[PRED_COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[COPY]](<2 x s16>)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:vgpr(<2 x s16>) = G_ADD [[COPY2]], [[COPY1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[ADD]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $sgpr0
     %1:_(<2 x s16>) = COPY $vgpr0
@@ -63,8 +63,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(<2 x s16>) = PRED_COPY [[COPY1]](<2 x s16>)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:vgpr(<2 x s16>) = G_ADD [[COPY]], [[PRED_COPY]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[COPY1]](<2 x s16>)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:vgpr(<2 x s16>) = G_ADD [[COPY]], [[COPY2]]
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $sgpr0
     %2:_(<2 x s16>) = G_ADD %0, %1

@@ -55,7 +55,6 @@ static bool lowersToCopies(const MachineInstr &MI) {
   // are not lowered to a COPY.
   switch (MI.getOpcode()) {
   case TargetOpcode::COPY:
-  case TargetOpcode::PRED_COPY:
   case TargetOpcode::PHI:
   case TargetOpcode::INSERT_SUBREG:
   case TargetOpcode::REG_SEQUENCE:
@@ -152,7 +151,6 @@ DeadLaneDetector::transferUsedLanes(const MachineInstr &MI,
 
   switch (MI.getOpcode()) {
   case TargetOpcode::COPY:
-  case TargetOpcode::PRED_COPY:
   case TargetOpcode::PHI:
     return UsedLanes;
   case TargetOpcode::REG_SEQUENCE: {
@@ -255,7 +253,6 @@ LaneBitmask DeadLaneDetector::transferDefinedLanes(
     break;
   }
   case TargetOpcode::COPY:
-  case TargetOpcode::PRED_COPY:
   case TargetOpcode::PHI:
     break;
   default:

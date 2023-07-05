@@ -203,7 +203,7 @@ FPClassTest llvm::getInvertedFPClassTest(FPClassTest Test) {
 
 static MachineOperand *getSalvageOpsForCopy(const MachineRegisterInfo &MRI,
                                             MachineInstr &Copy) {
-  assert(Copy.isCopy() && "Must be a COPY");
+  assert(Copy.getOpcode() == TargetOpcode::COPY && "Must be a COPY");
 
   return &Copy.getOperand(1);
 }
@@ -234,7 +234,6 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
   case TargetOpcode::COPY:
-  case TargetOpcode::PRED_COPY:
     return getSalvageOpsForCopy(MRI, MI);
   default:
     return nullptr;

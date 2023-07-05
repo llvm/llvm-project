@@ -223,7 +223,7 @@ def P5600WriteEitherALU : SchedWriteVariant<
 // xori
 def : InstRW<[P5600WriteEitherALU], (instrs ADD, ADDi, ADDiu, ANDi, ORi, ROTR,
                                      SEB, SEH, SLT, SLTu, SLL, SRA, SRL, XORi,
-                                     ADDu, SLLV, SRAV, SRLV, LSA, COPY, PRED_COPY)>;
+                                     ADDu, SLLV, SRAV, SRLV, LSA, COPY)>;
 
 // FPU Pipelines
 // =============

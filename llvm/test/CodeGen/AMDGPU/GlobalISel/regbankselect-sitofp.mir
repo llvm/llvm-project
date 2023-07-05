@@ -13,8 +13,8 @@ body: |
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:vgpr(s32) = G_SITOFP [[PRED_COPY]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:vgpr(s32) = G_SITOFP [[COPY1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_SITOFP %0
 ...

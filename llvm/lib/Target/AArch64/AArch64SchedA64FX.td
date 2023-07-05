@@ -613,7 +613,6 @@ def : InstRW<[WriteI],
                        "CSNEG(W|X)r")>;
 
 def : InstRW<[WriteI], (instrs COPY)>;
-def : InstRW<[WriteI], (instrs PRED_COPY)>;
 
 // ALU, extend and/or shift
 def : WriteRes<WriteISReg,   [A64FXGI2456]> {

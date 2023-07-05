@@ -151,7 +151,6 @@ def : InstRW<[WriteNoop], (instregex "(t2)?ABS$",
 // -----------------------------------------------------------------------------
 
 def : InstRW<[A57Write_1cyc_1I], (instrs COPY)>;
-def : InstRW<[A57Write_1cyc_1I], (instrs PRED_COPY)>;
 
 // --- 3.2 Branch Instructions ---
 // B, BX, BL, BLX (imm, reg != LR, reg == LR), CBZ, CBNZ

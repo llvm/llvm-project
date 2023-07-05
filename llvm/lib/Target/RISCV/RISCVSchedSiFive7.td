@@ -909,7 +909,6 @@ let Latency = 3 in
   def : WriteRes<WriteRdVLENB, [SiFive7PipeB]>;
 
 def : InstRW<[WriteIALU], (instrs COPY)>;
-def : InstRW<[WriteIALU], (instrs PRED_COPY)>;
 
 //===----------------------------------------------------------------------===//
 

@@ -37,7 +37,6 @@ Align GISelKnownBits::computeKnownAlignment(Register R, unsigned Depth) {
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
   case TargetOpcode::COPY:
-  case TargetOpcode::PRED_COPY:
     return computeKnownAlignment(MI->getOperand(1).getReg(), Depth);
   case TargetOpcode::G_ASSERT_ALIGN: {
     // TODO: Min with source
@@ -202,7 +201,6 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::COPY:
-  case TargetOpcode::PRED_COPY:
   case TargetOpcode::G_PHI:
   case TargetOpcode::PHI: {
     Known.One = APInt::getAllOnes(BitWidth);
@@ -237,7 +235,7 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
           MRI.getType(SrcReg).isValid()) {
         // For COPYs we don't do anything, don't increase the depth.
         computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
-                             Depth + (!MI.isCopy()));
+                      Depth + (Opcode != TargetOpcode::COPY));
         Known = Known.intersectWith(Known2);
         // If we reach a point where we don't know anything
         // just stop looking through the operands.
@@ -634,8 +632,7 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
 
   unsigned FirstAnswer = 1;
   switch (Opcode) {
-  case TargetOpcode::COPY:
-  case TargetOpcode::PRED_COPY: {
+  case TargetOpcode::COPY: {
     MachineOperand &Src = MI.getOperand(1);
     if (Src.getReg().isVirtual() && Src.getSubReg() == 0 &&
         MRI.getType(Src.getReg()).isValid()) {

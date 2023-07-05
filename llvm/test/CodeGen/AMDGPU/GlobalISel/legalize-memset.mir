@@ -15,7 +15,7 @@ body:             |
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:_(s8) = PRED_COPY [[TRUNC]](s8)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY [[TRUNC]](s8)
     ; CHECK-NEXT: G_STORE [[COPY2]](s32), [[MV]](p0) :: (store (s8))
     ; CHECK-NEXT: S_ENDPGM 0
     %0:_(s32) = COPY $vgpr0

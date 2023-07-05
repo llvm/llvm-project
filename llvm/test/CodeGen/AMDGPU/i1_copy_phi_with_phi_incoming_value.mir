@@ -36,7 +36,7 @@ body:             |
   ; GCN-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI %15, %bb.6
   ; GCN-NEXT:   SI_END_CF [[PHI]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   [[S_MOV_B64_2:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-  ; GCN-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_64 = PRED_COPY $exec
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_64 = COPY $exec
   ; GCN-NEXT:   S_BRANCH %bb.5
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
@@ -45,8 +45,8 @@ body:             |
   ; GCN-NEXT:   ATOMIC_FENCE 5, 2
   ; GCN-NEXT:   S_BARRIER
   ; GCN-NEXT:   ATOMIC_FENCE 4, 2
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_64 = COPY %18
-  ; GCN-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF [[COPY5]], %bb.7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sreg_64 = COPY %18
+  ; GCN-NEXT:   [[SI_IF1:%[0-9]+]]:sreg_64 = SI_IF [[COPY6]], %bb.7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.4
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
@@ -57,7 +57,7 @@ body:             |
   ; GCN-NEXT: bb.5:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, [[PRED_COPY]], %bb.2
+  ; GCN-NEXT:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, [[COPY5]], %bb.2
   ; GCN-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
@@ -65,8 +65,8 @@ body:             |
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.6(0x40000000)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[PHI2:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_1]], %bb.1, %15, %bb.6
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:sreg_64 = COPY [[COPY4]]
-  ; GCN-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[COPY6]], [[PHI2]], implicit-def dead $scc
+  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sreg_64 = COPY [[COPY4]]
+  ; GCN-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[COPY7]], [[PHI2]], implicit-def dead $scc
   ; GCN-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.6, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.2
   ; GCN-NEXT: {{  $}}

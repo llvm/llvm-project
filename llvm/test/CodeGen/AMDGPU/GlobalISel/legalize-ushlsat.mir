@@ -177,9 +177,9 @@ body: |
     ; GFX6-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
     ; GFX6-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR3]](s32)
     ; GFX6-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C]](s32)
+    ; GFX6-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
     ; GFX6-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[LSHR5]], [[C2]]
-    ; GFX6-NEXT: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[PRED_COPY]](s32)
+    ; GFX6-NEXT: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[AND3]], [[COPY2]](s32)
     ; GFX6-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL4]](s32)
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND2]], [[TRUNC1]]
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)

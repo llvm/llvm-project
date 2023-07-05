@@ -13,9 +13,9 @@ body: |
     ; GCN-LABEL: name: mul_u24_vsv
     ; GCN: liveins: $sgpr0, $vgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GCN-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; GCN-NEXT: [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[PRED_COPY]], [[PRED_COPY1]], 0, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MUL_U32_U24_e64_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
@@ -35,9 +35,9 @@ body: |
     ; GCN-LABEL: name: mul_u24_vvs
     ; GCN: liveins: $sgpr0, $vgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; GCN-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GCN-NEXT: [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[PRED_COPY]], [[PRED_COPY1]], 0, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MUL_U32_U24_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
@@ -57,9 +57,9 @@ body: |
     ; GCN-LABEL: name: mul_u24_vvv
     ; GCN: liveins: $vgpr0, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; GCN-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-    ; GCN-NEXT: [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[PRED_COPY]], [[PRED_COPY1]], 0, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; GCN-NEXT: [[V_MUL_U32_U24_e64_:%[0-9]+]]:vgpr_32 = V_MUL_U32_U24_e64 [[COPY]], [[COPY1]], 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MUL_U32_U24_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1

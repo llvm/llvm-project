@@ -14,9 +14,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p1) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p1) = PRED_COPY [[COPY]](p1)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[ATOMICRMW_OR:%[0-9]+]]:vgpr(s32) = G_ATOMICRMW_OR [[PRED_COPY]](p1), [[PRED_COPY1]] :: (load store seq_cst (s32), addrspace 1)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(p1) = COPY [[COPY]](p1)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[ATOMICRMW_OR:%[0-9]+]]:vgpr(s32) = G_ATOMICRMW_OR [[COPY2]](p1), [[COPY3]] :: (load store seq_cst (s32), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
     %2:_(s32) = G_ATOMICRMW_OR %0, %1 :: (load store seq_cst (s32), addrspace 1)
@@ -34,9 +34,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p0) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p0) = PRED_COPY [[COPY]](p0)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[ATOMICRMW_OR:%[0-9]+]]:vgpr(s32) = G_ATOMICRMW_OR [[PRED_COPY]](p0), [[PRED_COPY1]] :: (load store seq_cst (s32))
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(p0) = COPY [[COPY]](p0)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[ATOMICRMW_OR:%[0-9]+]]:vgpr(s32) = G_ATOMICRMW_OR [[COPY2]](p0), [[COPY3]] :: (load store seq_cst (s32))
     %0:_(p0) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
     %2:_(s32) = G_ATOMICRMW_OR %0, %1 :: (load store seq_cst (s32), addrspace 0)
@@ -54,9 +54,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(p3) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(p3) = PRED_COPY [[COPY]](p3)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[ATOMICRMW_OR:%[0-9]+]]:vgpr(s32) = G_ATOMICRMW_OR [[PRED_COPY]](p3), [[PRED_COPY1]] :: (load store seq_cst (s32), addrspace 3)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(p3) = COPY [[COPY]](p3)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[ATOMICRMW_OR:%[0-9]+]]:vgpr(s32) = G_ATOMICRMW_OR [[COPY2]](p3), [[COPY3]] :: (load store seq_cst (s32), addrspace 3)
     %0:_(p3) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_ATOMICRMW_OR %0, %1 :: (load store seq_cst (s32), addrspace 3)

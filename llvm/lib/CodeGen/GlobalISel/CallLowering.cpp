@@ -1012,7 +1012,7 @@ bool CallLowering::parametersInCSRMatch(
     // registers. Note that getDefIgnoringCopies does not ignore copies from
     // physical registers.
     MachineInstr *RegDef = getDefIgnoringCopies(OutInfo.Regs[0], MRI);
-    if (!RegDef || !RegDef->isCopy()) {
+    if (!RegDef || RegDef->getOpcode() != TargetOpcode::COPY) {
       LLVM_DEBUG(
           dbgs()
           << "... Parameter was not copied into a VReg, cannot tail call.\n");

@@ -190,7 +190,6 @@ def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "MVCL(E|U)?$")>;
 
 // Pseudo -> reg move
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "COPY(_TO_REGCLASS)?$")>;
-def : InstRW<[WLat1, FXa, NormalGr], (instregex "PRED_COPY$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "EXTRACT_SUBREG$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "INSERT_SUBREG$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "REG_SEQUENCE$")>;

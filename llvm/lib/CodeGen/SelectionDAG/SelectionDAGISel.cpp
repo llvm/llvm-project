@@ -1254,8 +1254,9 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
         assert(EHPhysReg && "target lacks exception pointer register");
         MBB->addLiveIn(EHPhysReg);
         unsigned VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
-        TII->buildCopy(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(), VReg,
-                       EHPhysReg, RegState::Kill);
+        BuildMI(*MBB, FuncInfo->InsertPt, SDB->getCurDebugLoc(),
+                TII->get(TargetOpcode::COPY), VReg)
+            .addReg(EHPhysReg, RegState::Kill);
       }
     }
     return true;
@@ -2303,7 +2304,7 @@ void SelectionDAGISel::Select_FREEZE(SDNode *N) {
   // TODO: We don't have FREEZE pseudo-instruction in MachineInstr-level now.
   // If FREEZE instruction is added later, the code below must be changed as
   // well.
-  CurDAG->SelectNodeTo(N, TII->getCopyOpcode(), N->getValueType(0),
+  CurDAG->SelectNodeTo(N, TargetOpcode::COPY, N->getValueType(0),
                        N->getOperand(0));
 }
 

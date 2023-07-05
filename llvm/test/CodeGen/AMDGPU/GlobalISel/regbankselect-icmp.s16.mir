@@ -16,9 +16,9 @@ body: |
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s16) = PRED_COPY [[TRUNC]](s16)
-    ; GFX8-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s16) = PRED_COPY [[TRUNC1]](s16)
-    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[PRED_COPY]](s16), [[PRED_COPY1]]
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
+    ; GFX8-NEXT: [[COPY3:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC1]](s16)
+    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s16), [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s16) = G_TRUNC %0
@@ -40,8 +40,8 @@ body: |
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s16) = PRED_COPY [[TRUNC]](s16)
-    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[PRED_COPY]](s16), [[TRUNC1]]
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
+    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s16), [[TRUNC1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s16) = G_TRUNC %0
@@ -63,8 +63,8 @@ body: |
     ; GFX8-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s16) = PRED_COPY [[TRUNC]](s16)
-    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[PRED_COPY]](s16), [[TRUNC1]]
+    ; GFX8-NEXT: [[COPY2:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
+    ; GFX8-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY2]](s16), [[TRUNC1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s16) = G_TRUNC %0

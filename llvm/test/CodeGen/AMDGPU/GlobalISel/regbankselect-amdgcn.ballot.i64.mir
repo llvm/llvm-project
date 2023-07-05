@@ -14,8 +14,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vcc(s1) = PRED_COPY [[TRUNC]](s1)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[PRED_COPY]](s1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[COPY1]](s1)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[INT]](s64)
     %0:_(s32) = COPY $sgpr0
     %1:_(s1) = G_TRUNC %0
@@ -35,8 +35,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vcc(s1) = PRED_COPY [[TRUNC]](s1)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[PRED_COPY]](s1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[COPY1]](s1)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[INT]](s64)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0

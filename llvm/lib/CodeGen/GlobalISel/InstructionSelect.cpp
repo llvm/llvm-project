@@ -232,7 +232,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         ReachedBegin = true;
       else
         --MII;
-      if (!MI.isCopy())
+      if (MI.getOpcode() != TargetOpcode::COPY)
         continue;
       Register SrcReg = MI.getOperand(1).getReg();
       Register DstReg = MI.getOperand(0).getReg();

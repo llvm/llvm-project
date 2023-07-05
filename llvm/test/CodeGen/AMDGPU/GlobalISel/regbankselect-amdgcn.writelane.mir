@@ -15,8 +15,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY2]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.writelane), [[COPY]](s32), [[COPY1]](s32), [[PRED_COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.writelane), [[COPY]](s32), [[COPY1]](s32), [[COPY3]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2

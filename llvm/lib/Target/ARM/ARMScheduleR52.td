@@ -210,7 +210,6 @@ def : SchedAlias<WriteFPALU64, R52WriteFPALU_F5>;
 // Subtarget-specific overrides. Map opcodes to list of SchedReadWrites types.
 //
 def : InstRW<[WriteALU], (instrs COPY)>;
-def : InstRW<[WriteALU], (instrs PRED_COPY)>;
 
 def : InstRW<[R52WriteALU_EX2, R52Read_EX1, R52Read_ISS],
       (instregex "SXTB", "SXTH", "SXTB16", "UXTB", "UXTH", "UXTB16",

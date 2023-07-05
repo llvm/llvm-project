@@ -7244,13 +7244,11 @@ define amdgpu_kernel void @global_zextload_v32i16_to_v32i64(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dword v20, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dword v21, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dword v22, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    s_waitcnt expcnt(1)
-; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v21, 0xffff, v3
+; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v4, 0xffff, v3
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v34, 0xffff, v5
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v40, 16, v6
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v38, 0xffff, v6
-; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v20, 0xffff, v8
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v30, v20
+; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v30, 0xffff, v8
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v32, v22
 ; GCN-NOHSA-SI-NEXT:    v_lshrrev_b32_e32 v28, 16, v7
 ; GCN-NOHSA-SI-NEXT:    v_and_b32_e32 v26, 0xffff, v7
@@ -7286,7 +7284,6 @@ define amdgpu_kernel void @global_zextload_v32i16_to_v32i64(ptr addrspace(1) %ou
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v29, v1
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v35, v1
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v37, v1
-; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v4, v21
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v6, v23
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v7, v1

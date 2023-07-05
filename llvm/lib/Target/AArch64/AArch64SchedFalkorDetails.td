@@ -580,7 +580,6 @@ def FalkorWr_STRro : SchedWriteVariant<[
 
 // FIXME: This could be better modeled by looking at the regclasses of the operands.
 def : InstRW<[FalkorWr_1XYZ_1cyc], (instrs COPY)>;
-def : InstRW<[FalkorWr_1XYZ_1cyc], (instrs PRED_COPY)>;
 
 // SIMD Floating-point Instructions
 // -----------------------------------------------------------------------------

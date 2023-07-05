@@ -82,7 +82,6 @@ def : M4UnitL1<WriteNoop>;
 def : M4UnitL1<WritePreLd>;
 def : M4UnitL1I<(instregex "(t|t2)MOV")>;
 def : M4UnitL1I<(instrs COPY)>;
-def : M4UnitL1I<(instrs PRED_COPY)>;
 def : M4UnitL1I<(instregex "t2IT", "t2MSR", "t2MRS")>;
 def : M4UnitL1I<(instregex "t2CLREX")>;
 def : M4UnitL1I<(instregex "t2SEL", "t2USAD8", "t2SML[AS]",

@@ -681,6 +681,7 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; SI-NEXT:    v_mov_b32_dpp v1, v1 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_subrev_f32_dpp v0, v0, v1 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; SI-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; SI-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; SI-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; SI-NEXT:    s_and_b64 s[2:3], s[0:1], vcc
@@ -728,6 +729,7 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX9-NEXT:    v_mov_b32_dpp v1, v1 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_subrev_f32_dpp v0, v0, v1 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX9-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX9-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; GFX9-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GFX9-NEXT:    s_and_b64 s[2:3], s[0:1], vcc
@@ -773,6 +775,7 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX10-32-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-32-NEXT:    v_mov_b32_dpp v1, v1 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-32-NEXT:    v_subrev_f32_dpp v0, v0, v1 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX10-32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX10-32-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v0
 ; GFX10-32-NEXT:    s_and_b32 s1, s0, vcc_lo
@@ -818,6 +821,7 @@ define amdgpu_ps void @wqm_deriv(<2 x float> %input, float %arg, i32 %index) {
 ; GFX10-64-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-64-NEXT:    v_mov_b32_dpp v1, v1 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-64-NEXT:    v_subrev_f32_dpp v0, v0, v1 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX10-64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-64-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; GFX10-64-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
 ; GFX10-64-NEXT:    s_and_b64 s[2:3], s[0:1], vcc
@@ -914,6 +918,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; SI-NEXT:    v_mov_b32_dpp v3, v3 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; SI-NEXT:    s_nop 1
 ; SI-NEXT:    v_subrev_f32_dpp v2, v2, v3 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; SI-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
 ; SI-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v2
 ; SI-NEXT:    s_and_b64 s[4:5], s[0:1], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
@@ -979,6 +984,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX9-NEXT:    v_mov_b32_dpp v3, v3 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX9-NEXT:    s_nop 1
 ; GFX9-NEXT:    v_subrev_f32_dpp v2, v2, v3 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX9-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
 ; GFX9-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v2
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[0:1], vcc
 ; GFX9-NEXT:    s_xor_b64 s[4:5], s[4:5], -1
@@ -1041,6 +1047,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-32-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX10-32-NEXT:    v_mov_b32_dpp v3, v3 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-32-NEXT:    v_subrev_f32_dpp v2, v2, v3 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX10-32-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
 ; GFX10-32-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 0, v2
 ; GFX10-32-NEXT:    s_and_b32 s2, s0, vcc_lo
 ; GFX10-32-NEXT:    s_xor_b32 s2, s2, -1
@@ -1104,6 +1111,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-64-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX10-64-NEXT:    v_mov_b32_dpp v3, v3 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-64-NEXT:    v_subrev_f32_dpp v2, v2, v3 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
+; GFX10-64-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
 ; GFX10-64-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v2
 ; GFX10-64-NEXT:    s_and_b64 s[4:5], s[0:1], vcc
 ; GFX10-64-NEXT:    s_xor_b64 s[4:5], s[4:5], -1

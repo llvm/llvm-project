@@ -409,8 +409,6 @@
     %sgpr95 = tail call i32 asm sideeffect "s_mov_b32 s95, 0", "={s95}"() #1
     %sgpr96 = tail call i32 asm sideeffect "s_mov_b32 s96, 0", "={s96}"() #1
     %sgpr97 = tail call i32 asm sideeffect "s_mov_b32 s97, 0", "={s97}"() #1
-    %sgpr98 = tail call i32 asm sideeffect "s_mov_b32 s98, 0", "={s98}"() #1
-    %sgpr99 = tail call i32 asm sideeffect "s_mov_b32 s99, 0", "={s99}"() #1
     %vcc_lo = tail call i32 asm sideeffect "s_mov_b32 $0, 0", "={vcc_lo}"() #1
     %vcc_hi = tail call i32 asm sideeffect "s_mov_b32 $0, 0", "={vcc_hi}"() #1
     %cmp = icmp ne i32 %cnd.load, 0
@@ -519,8 +517,6 @@
     tail call void asm sideeffect "; reg use $0", "{s95}"(i32 %sgpr95) #1
     tail call void asm sideeffect "; reg use $0", "{s96}"(i32 %sgpr96) #1
     tail call void asm sideeffect "; reg use $0", "{s97}"(i32 %sgpr97) #1
-    tail call void asm sideeffect "; reg use $0", "{s98}"(i32 %sgpr98) #1
-    tail call void asm sideeffect "; reg use $0", "{s99}"(i32 %sgpr99) #1
     tail call void asm sideeffect "; reg use $0", "{vcc_lo}"(i32 %vcc_lo) #1
     tail call void asm sideeffect "; reg use $0", "{vcc_hi}"(i32 %vcc_hi) #1
     ret void

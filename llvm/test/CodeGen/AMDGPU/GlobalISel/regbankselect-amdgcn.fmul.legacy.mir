@@ -14,9 +14,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[COPY2]](s32), [[COPY3]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), %0, %1
@@ -33,8 +33,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[PRED_COPY]](s32), [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[COPY2]](s32), [[COPY1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), %0, %1
@@ -51,8 +51,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[COPY1]](s32), [[PRED_COPY]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[COPY1]](s32), [[COPY2]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), %1, %0

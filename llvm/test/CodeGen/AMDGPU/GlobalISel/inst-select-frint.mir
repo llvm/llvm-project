@@ -15,9 +15,9 @@ body: |
     ; GCN-LABEL: name: frint_s32_vv
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; GCN-NEXT: [[V_RNDNE_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RNDNE_F32_e64 0, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: $vgpr0 = PRED_COPY [[V_RNDNE_F32_e64_]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: %1:vgpr_32 = nofpexcept V_RNDNE_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY %1
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FRINT %0
     $vgpr0 = COPY %1
@@ -36,9 +36,9 @@ body: |
     ; GCN-LABEL: name: frint_s32_vs
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GCN-NEXT: [[V_RNDNE_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RNDNE_F32_e64 0, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: $vgpr0 = PRED_COPY [[V_RNDNE_F32_e64_]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN-NEXT: %1:vgpr_32 = nofpexcept V_RNDNE_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY %1
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_FRINT %0
     $vgpr0 = COPY %1
@@ -57,9 +57,9 @@ body: |
     ; GCN-LABEL: name: frint_fneg_s32_vv
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; GCN-NEXT: [[V_RNDNE_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_RNDNE_F32_e64 1, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: $vgpr0 = PRED_COPY [[V_RNDNE_F32_e64_]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GCN-NEXT: %2:vgpr_32 = nofpexcept V_RNDNE_F32_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FNEG %0
     %2:vgpr(s32) = G_FRINT %1
@@ -79,9 +79,9 @@ body: |
     ; GCN-LABEL: name: frint_s64_vv
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[V_RNDNE_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_RNDNE_F64_e64 0, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: $vgpr0_vgpr1 = PRED_COPY [[V_RNDNE_F64_e64_]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %1:vreg_64 = nofpexcept V_RNDNE_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %1
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FRINT %0
     $vgpr0_vgpr1 = COPY %1
@@ -100,9 +100,9 @@ body: |
     ; GCN-LABEL: name: frint_s64_fneg_vv
     ; GCN: liveins: $vgpr0_vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[V_RNDNE_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_RNDNE_F64_e64 1, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: $vgpr0_vgpr1 = PRED_COPY [[V_RNDNE_F64_e64_]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %2:vreg_64 = nofpexcept V_RNDNE_F64_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %2
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FNEG %0
     %2:vgpr(s64) = G_FRINT %1

@@ -418,8 +418,9 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
       MachineBasicBlock &PredB = *PI.getOperand(i+1).getMBB();
       MachineBasicBlock::iterator At = PredB.getFirstTerminator();
       const DebugLoc &DL = PredB.findDebugLoc(At);
-      auto Copy = TII->buildCopy(PredB, At, DL, NewReg, RegOp.getReg(),
-                                 getRegState(RegOp), RegOp.getSubReg());
+      auto Copy = BuildMI(PredB, At, DL, TII->get(TargetOpcode::COPY), NewReg)
+                    .addReg(RegOp.getReg(), getRegState(RegOp),
+                            RegOp.getSubReg());
       Slots.insertMachineInstrInMaps(*Copy);
       RegOp.setReg(NewReg);
       RegOp.setSubReg(0);

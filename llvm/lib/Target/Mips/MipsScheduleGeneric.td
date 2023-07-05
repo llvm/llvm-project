@@ -51,7 +51,6 @@ def : InstRW<[GenericWriteALU], (instrs ADD, ADDi, ADDiu, ADDu, AND, ANDi,
                                  SRLV, SSNOP, SUB, SUBu, WSBH, XOR, XORi)>;
 
 def : InstRW<[GenericWriteALU], (instrs COPY)>;
-def : InstRW<[GenericWriteALU], (instrs PRED_COPY)>;
 
 // MIPSR6
 // ======

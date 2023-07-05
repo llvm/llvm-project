@@ -44,7 +44,7 @@ body:             |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY [[COPY1]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[COPY1]]
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:

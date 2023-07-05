@@ -687,7 +687,6 @@ def : ReadAdvance<ReadVLD,     0>;
 // Specialising the scheduling model further for Ampere-1.
 
 def : InstRW<[Ampere1Write_1cyc_1AB], (instrs COPY)>;
-def : InstRW<[Ampere1Write_1cyc_1AB], (instrs PRED_COPY)>;
 
 // Branch instructions
 def : InstRW<[Ampere1Write_1cyc_1A], (instrs Bcc, BL, RET)>;

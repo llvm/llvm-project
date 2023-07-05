@@ -14,8 +14,8 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_64_xexec = PRED_COPY killed $vcc
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[PRED_COPY]]
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY killed $vcc
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -37,9 +37,9 @@ body:             |
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_64_xexec = PRED_COPY killed $vcc
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY killed $vcc
     ; GCN-NEXT: [[V_ADD_CO_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[S_MOV_B32_]], [[DEF1]], implicit-def $vcc, implicit $exec
-    ; GCN-NEXT: S_ENDPGM 0, implicit [[PRED_COPY]], implicit [[V_ADD_CO_U32_e32_1]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]], implicit [[V_ADD_CO_U32_e32_1]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -92,8 +92,8 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_64_xexec = PRED_COPY killed $vcc
-    ; GCN-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[DEF1]], [[DEF2]], [[PRED_COPY]], 0, implicit $exec
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY killed $vcc
+    ; GCN-NEXT: [[V_ADDC_U32_e64_:%[0-9]+]]:vgpr_32, [[V_ADDC_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADDC_U32_e64 [[DEF1]], [[DEF2]], [[COPY]], 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_ADDC_U32_e64_]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF

@@ -270,6 +270,7 @@ define amdgpu_ps float @test5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX9-W64-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX9-W64-NEXT:    ; return to shader part epilog
 ;
@@ -284,6 +285,7 @@ define amdgpu_ps float @test5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
@@ -306,6 +308,7 @@ define amdgpu_ps float @test5_ptr_buf(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX9-W64-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX9-W64-NEXT:    ; return to shader part epilog
 ;
@@ -320,6 +323,7 @@ define amdgpu_ps float @test5_ptr_buf(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
@@ -343,6 +347,7 @@ define amdgpu_ps float @test6(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX9-W64-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX9-W64-NEXT:    ; return to shader part epilog
 ;
@@ -357,6 +362,7 @@ define amdgpu_ps float @test6(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
@@ -381,6 +387,7 @@ define amdgpu_ps float @test6_ptr_buf(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX9-W64-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX9-W64-NEXT:    ; return to shader part epilog
 ;
@@ -395,6 +402,7 @@ define amdgpu_ps float @test6_ptr_buf(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v1
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
@@ -632,6 +640,7 @@ define amdgpu_ps float @test_wwm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX9-W64-NEXT:    v_add_f32_e32 v0, v0, v0
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX9-W64-NEXT:    ; return to shader part epilog
 ;
@@ -653,6 +662,7 @@ define amdgpu_ps float @test_wwm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v0
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
@@ -1095,6 +1105,7 @@ define amdgpu_ps float @test_strict_wqm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX9-W64-NEXT:    v_add_f32_e32 v0, v0, v0
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX9-W64-NEXT:    ; return to shader part epilog
 ;
@@ -1118,6 +1129,7 @@ define amdgpu_ps float @test_strict_wqm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v0
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
@@ -1306,6 +1318,7 @@ define amdgpu_ps void @test_set_inactive2(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX9-W64-NEXT:    s_nop 0
 ; GFX9-W64-NEXT:    buffer_load_dword v2, v2, s[0:3], 0 idxen
 ; GFX9-W64-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $scc killed $exec
+; GFX9-W64-NEXT:    ; kill: def $vgpr2 killed $vgpr2 killed $exec
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    v_add_u32_e32 v1, v2, v1
@@ -1322,6 +1335,7 @@ define amdgpu_ps void @test_set_inactive2(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    buffer_load_dword v2, v0, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    buffer_load_dword v1, v1, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $scc killed $exec
+; GFX10-W32-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_add_nc_u32_e32 v1, v1, v2
@@ -2539,6 +2553,7 @@ define amdgpu_ps float @test_strict_wwm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX9-W64-NEXT:    v_add_f32_e32 v0, v0, v0
+; GFX9-W64-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX9-W64-NEXT:    ; return to shader part epilog
 ;
@@ -2560,6 +2575,7 @@ define amdgpu_ps float @test_strict_wwm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v0
+; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:

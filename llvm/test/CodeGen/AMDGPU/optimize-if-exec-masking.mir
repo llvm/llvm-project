@@ -137,7 +137,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
@@ -175,7 +175,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
@@ -212,7 +212,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_OR_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
@@ -242,7 +242,7 @@ body:             |
 # CHECK: $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
 # CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec
 # CHECK-NEXT: $sgpr0_sgpr1 = S_XOR_B64 $sgpr2_sgpr3, killed $sgpr0_sgpr1, implicit-def $scc
-# CHECK-NEXT: $exec = PRED_COPY killed $sgpr2_sgpr3
+# CHECK-NEXT: $exec = COPY killed $sgpr2_sgpr3
 # CHECK-NEXT: S_CBRANCH_EXECZ
 name:            optimize_if_and_saveexec_xor_valu_middle
 liveins:
@@ -251,7 +251,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
@@ -282,7 +282,7 @@ body:             |
 # CHECK-LABEL: name: optimize_if_and_saveexec_xor_wrong_reg{{$}}
 # CHECK: $sgpr0_sgpr1 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
 # CHECK-NEXT: $sgpr0_sgpr1 = S_XOR_B64 undef $sgpr2_sgpr3, killed $sgpr0_sgpr1, implicit-def $scc
-# CHECK-NEXT: $exec = PRED_COPY $sgpr0_sgpr1
+# CHECK-NEXT: $exec = COPY $sgpr0_sgpr1
 # CHECK-NEXT: S_CBRANCH_EXECZ %bb.2, implicit $exec
 name:            optimize_if_and_saveexec_xor_wrong_reg
 liveins:
@@ -293,7 +293,7 @@ body:             |
 
     $sgpr6 = S_MOV_B32 -1
     $sgpr7 = S_MOV_B32 61440
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr0_sgpr1 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
@@ -321,7 +321,7 @@ body:             |
 # CHECK: $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
 # CHECK-NEXT: $sgpr2_sgpr3 = S_OR_B64 killed $sgpr2_sgpr3, 1, implicit-def $scc
 # CHECK-NEXT: $sgpr0_sgpr1 = S_XOR_B64 $sgpr2_sgpr3, killed $sgpr0_sgpr1, implicit-def $scc
-# CHECK-NEXT: $exec = PRED_COPY killed $sgpr2_sgpr3
+# CHECK-NEXT: $exec = COPY killed $sgpr2_sgpr3
 # CHECK-NEXT: S_CBRANCH_EXECZ %bb.2, implicit $exec
 
 name:            optimize_if_and_saveexec_xor_modify_copy_to_exec
@@ -331,7 +331,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
@@ -364,7 +364,7 @@ body:             |
 # CHECK-LABEL: name: optimize_if_and_saveexec_xor_live_out_setexec{{$}}
 # CHECK: $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
 # CHECK-NEXT: $sgpr0_sgpr1 = S_XOR_B64 $sgpr2_sgpr3, killed $sgpr0_sgpr1, implicit-def $scc
-# CHECK-NEXT: $exec = PRED_COPY $sgpr2_sgpr3
+# CHECK-NEXT: $exec = COPY $sgpr2_sgpr3
 # CHECK-NEXT: S_CBRANCH_EXECZ
 name:            optimize_if_and_saveexec_xor_live_out_setexec
 liveins:
@@ -373,7 +373,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
@@ -401,9 +401,9 @@ body:             |
 ...
 
 # CHECK-LABEL: name: optimize_if_unknown_saveexec{{$}}
-# CHECK: $sgpr0_sgpr1 = PRED_COPY $exec
+# CHECK: $sgpr0_sgpr1 = COPY $exec
 # CHECK: $sgpr2_sgpr3 = S_LSHR_B64 $sgpr0_sgpr1, killed $vcc_lo, implicit-def $scc
-# CHECK-NEXT: $exec = PRED_COPY killed $sgpr2_sgpr3
+# CHECK-NEXT: $exec = COPY killed $sgpr2_sgpr3
 # CHECK-NEXT: S_CBRANCH_EXECZ %bb.2, implicit $exec
 
 name:            optimize_if_unknown_saveexec
@@ -413,7 +413,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_LSHR_B64 $sgpr0_sgpr1, killed $vcc_lo, implicit-def $scc
@@ -450,7 +450,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_ANDN2_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
@@ -478,7 +478,7 @@ body:             |
 ---
 # CHECK-LABEL: name: optimize_if_andn2_saveexec_no_commute{{$}}
 # CHECK: $sgpr2_sgpr3 = S_ANDN2_B64 killed $vcc, $sgpr0_sgpr1, implicit-def $scc
-# CHECK-NEXT: $exec = PRED_COPY killed $sgpr2_sgpr3
+# CHECK-NEXT: $exec = COPY killed $sgpr2_sgpr3
 # CHECK-NEXT: S_CBRANCH_EXECZ %bb.2, implicit $exec
 name:            optimize_if_andn2_saveexec_no_commute
 liveins:
@@ -487,7 +487,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_ANDN2_B64 killed $vcc, $sgpr0_sgpr1, implicit-def $scc
@@ -515,7 +515,7 @@ body:             |
 ---
 # A read from exec copy subreg prevents optimization
 # CHECK-LABEL: name: if_and_xor_read_exec_copy_subreg{{$}}
-# CHECK: $sgpr0_sgpr1 = PRED_COPY $exec
+# CHECK: $sgpr0_sgpr1 = COPY $exec
 # CHECK-NEXT: $sgpr4 = S_MOV_B32 $sgpr1
 name:            if_and_xor_read_exec_copy_subreg
 liveins:
@@ -524,7 +524,7 @@ body:             |
   bb.0.main_body:
     liveins: $vgpr0
 
-    $sgpr0_sgpr1 = PRED_COPY $exec
+    $sgpr0_sgpr1 = COPY $exec
     $sgpr4 = S_MOV_B32 $sgpr1
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec

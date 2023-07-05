@@ -92,8 +92,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:vcc(s1) = PRED_COPY [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[PRED_COPY]](s1), %bb.1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; CHECK-NEXT:   G_BRCOND [[COPY1]](s1), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   bb.0.entry:
@@ -125,8 +125,8 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:vcc(s1) = PRED_COPY [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[PRED_COPY]](s1), %bb.1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; CHECK-NEXT:   G_BRCOND [[COPY1]](s1), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   bb.0.entry:
@@ -158,8 +158,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:vcc(s1) = PRED_COPY [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[PRED_COPY]](s1), %bb.1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; CHECK-NEXT:   G_BRCOND [[COPY1]](s1), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   bb.0.entry:
@@ -191,8 +191,8 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
   ; CHECK-NEXT:   S_NOP 0
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:vcc(s1) = PRED_COPY [[TRUNC]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[PRED_COPY]](s1), %bb.1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; CHECK-NEXT:   G_BRCOND [[COPY1]](s1), %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   bb.0.entry:

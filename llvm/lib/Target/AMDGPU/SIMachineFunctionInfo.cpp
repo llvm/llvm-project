@@ -546,7 +546,7 @@ void SIMachineFunctionInfo::MRI_NoteNewVirtualRegister(Register Reg) {
   VRegFlags.grow(Reg);
 }
 
-void SIMachineFunctionInfo::MRI_NotecloneVirtualRegister(Register NewReg,
+void SIMachineFunctionInfo::MRI_NoteCloneVirtualRegister(Register NewReg,
                                                          Register SrcReg) {
   VRegFlags.grow(NewReg);
   VRegFlags[NewReg] = VRegFlags[SrcReg];

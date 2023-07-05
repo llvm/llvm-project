@@ -200,7 +200,6 @@ def : HWVALUWriteRes<WriteTrans64,     4>;
 } // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
-def : InstRW<[WriteCopy], (instrs PRED_COPY)>;
 
 } // End SchedModel = SIFullSpeedModel
 
@@ -219,7 +218,6 @@ def : HWVALUWriteRes<WriteTrans64,     16>;
 } // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
-def : InstRW<[WriteCopy], (instrs PRED_COPY)>;
 def : InstRW<[Write64Bit, MIReadVGPR], (instregex "^V_ACCVGPR_WRITE_B32_e64$")>;
 def : InstRW<[Write2PassMAI,  MIMFMARead], (instregex "^V_MFMA_..._4X4X")>;
 def : InstRW<[Write8PassMAI,  MIMFMARead], (instregex "^V_MFMA_..._16X16X")>;
@@ -242,7 +240,6 @@ def : HWVALUWriteRes<Write64Bit,       1>;
 } // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
-def : InstRW<[WriteCopy], (instrs PRED_COPY)>;
 def : InstRW<[Write64Bit], (instregex "^V_ACCVGPR_WRITE_B32_e64$")>;
 def : InstRW<[Write2PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_4X4X")>;
 def : InstRW<[Write8PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_16X16X")>;
@@ -265,7 +262,6 @@ def : HWVALUWriteRes<WriteIntMul,      1>;
 def : HWVALUWriteRes<Write64Bit,       1>;
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
-def : InstRW<[WriteCopy], (instrs PRED_COPY)>;
 def : InstRW<[Write64Bit], (instregex "^V_ACCVGPR_WRITE_B32_e64$")>;
 def : InstRW<[Write2PassMAI,   MIMFMARead], (instregex "^V_MFMA_.32_4X4X")>;
 
@@ -314,7 +310,6 @@ def : HWWriteRes<WriteBarrier,       [HWBranch],       2000>;
 } // End RetireOOO = 1
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
-def : InstRW<[WriteCopy], (instrs PRED_COPY)>;
 
 }  // End SchedModel = GFX10SpeedModel
 
@@ -341,6 +336,5 @@ def : HWWriteRes<WriteVMEM,          [HWVMEM,   HWRC], 320>;
 def : HWWriteRes<WriteBarrier,       [HWBranch],       2000>;
 
 def : InstRW<[WriteCopy], (instrs COPY)>;
-def : InstRW<[WriteCopy], (instrs PRED_COPY)>;
 
 }  // End SchedModel = GFX11SpeedModel

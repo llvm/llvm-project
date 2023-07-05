@@ -602,8 +602,9 @@ optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
         RC = MRI->getRegClass(UseMI->getOperand(0).getReg());
 
       Register NewVR = MRI->createVirtualRegister(RC);
-      TII->buildCopy(*UseMBB, UseMI, UseMI->getDebugLoc(), NewVR, DstReg, 0,
-                     SubIdx);
+      BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
+              TII->get(TargetOpcode::COPY), NewVR)
+        .addReg(DstReg, 0, SubIdx);
       if (UseSrcSubIdx)
         UseMO->setSubReg(0);
 
@@ -1022,7 +1023,7 @@ public:
       // Get rid of the sub-register index.
       CopyLike.removeOperand(2);
       // Morph the operation into a COPY.
-      CopyLike.setDesc(TII.get(TII.getCopyOpcode()));
+      CopyLike.setDesc(TII.get(TargetOpcode::COPY));
       return true;
     }
     CopyLike.getOperand(CurrentSrcIdx + 1).setImm(NewSubReg);
@@ -1110,7 +1111,6 @@ static Rewriter *getCopyRewriter(MachineInstr &MI, const TargetInstrInfo &TII) {
   default:
     return nullptr;
   case TargetOpcode::COPY:
-  case TargetOpcode::PRED_COPY:
     return new CopyRewriter(MI);
   case TargetOpcode::INSERT_SUBREG:
     return new InsertSubregRewriter(MI);
@@ -1251,8 +1251,9 @@ PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   Register NewVReg = MRI->createVirtualRegister(DefRC);
 
   MachineInstr *NewCopy =
-      TII->buildCopy(*CopyLike.getParent(), &CopyLike, CopyLike.getDebugLoc(),
-                     NewVReg, NewSrc.Reg, 0, NewSrc.SubReg);
+      BuildMI(*CopyLike.getParent(), &CopyLike, CopyLike.getDebugLoc(),
+              TII->get(TargetOpcode::COPY), NewVReg)
+          .addReg(NewSrc.Reg, 0, NewSrc.SubReg);
 
   if (Def.SubReg) {
     NewCopy->getOperand(0).setSubReg(Def.SubReg);

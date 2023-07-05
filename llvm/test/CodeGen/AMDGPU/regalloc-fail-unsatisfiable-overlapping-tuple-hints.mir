@@ -52,13 +52,13 @@ body:             |
   ; CHECK-NEXT:   [[SI_SPILL_V256_RESTORE:%[0-9]+]]:vreg_256 = SI_SPILL_V256_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.1, align 4, addrspace 5)
   ; CHECK-NEXT:   [[SI_SPILL_V256_RESTORE1:%[0-9]+]]:vreg_256 = SI_SPILL_V256_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.3, align 4, addrspace 5)
   ; CHECK-NEXT:   S_NOP 0, implicit [[SI_SPILL_V256_RESTORE]], implicit [[SI_SPILL_V256_RESTORE1]], implicit %4
-  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:vreg_256 = PRED_COPY [[SI_SPILL_V256_RESTORE1]]
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_256 = COPY [[SI_SPILL_V256_RESTORE1]]
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   S_NOP 0, implicit [[PRED_COPY]]
+  ; CHECK-NEXT:   S_NOP 0, implicit [[COPY]]
   ; CHECK-NEXT:   [[SI_SPILL_V256_RESTORE2:%[0-9]+]]:vreg_256 = SI_SPILL_V256_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   S_NOP 0, implicit [[SI_SPILL_V256_RESTORE2]]
   ; CHECK-NEXT:   [[SI_SPILL_V256_RESTORE3:%[0-9]+]]:vreg_256 = SI_SPILL_V256_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.2, align 4, addrspace 5)

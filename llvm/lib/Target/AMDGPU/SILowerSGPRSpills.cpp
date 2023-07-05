@@ -62,6 +62,7 @@ public:
   }
 
   MachineFunctionProperties getClearedProperties() const override {
+    // SILowerSGPRSpills introduces new Virtual VGPRs for spilling SGPRs.
     return MachineFunctionProperties()
         .set(MachineFunctionProperties::Property::IsSSA)
         .set(MachineFunctionProperties::Property::NoVRegs);
@@ -427,8 +428,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   }
 
   if (SpilledToVirtVGPRLanes) {
-    const TargetRegisterClass *RC =
-        ST.isWave32() ? &AMDGPU::SGPR_32RegClass : &AMDGPU::SGPR_64RegClass;
+    const TargetRegisterClass *RC = TRI->getWaveMaskRegClass();
     // Shift back the reserved SGPR for EXEC copy into the lowest range.
     // This SGPR is reserved to handle the whole-wave spill/copy operations
     // that might get inserted during vgpr regalloc.

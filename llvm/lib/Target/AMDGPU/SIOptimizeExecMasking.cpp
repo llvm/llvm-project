@@ -93,7 +93,6 @@ char &llvm::SIOptimizeExecMaskingID = SIOptimizeExecMasking::ID;
 Register SIOptimizeExecMasking::isCopyFromExec(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case AMDGPU::COPY:
-  case AMDGPU::PRED_COPY:
   case AMDGPU::S_MOV_B64:
   case AMDGPU::S_MOV_B64_term:
   case AMDGPU::S_MOV_B32:
@@ -111,7 +110,6 @@ Register SIOptimizeExecMasking::isCopyFromExec(const MachineInstr &MI) const {
 Register SIOptimizeExecMasking::isCopyToExec(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case AMDGPU::COPY:
-  case AMDGPU::PRED_COPY:
   case AMDGPU::S_MOV_B64:
   case AMDGPU::S_MOV_B32: {
     const MachineOperand &Dst = MI.getOperand(0);
@@ -213,12 +211,12 @@ bool SIOptimizeExecMasking::removeTerminatorBit(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case AMDGPU::S_MOV_B32_term: {
     bool RegSrc = MI.getOperand(1).isReg();
-    MI.setDesc(TII->get(RegSrc ? TII->getCopyOpcode() : AMDGPU::S_MOV_B32));
+    MI.setDesc(TII->get(RegSrc ? AMDGPU::COPY : AMDGPU::S_MOV_B32));
     return true;
   }
   case AMDGPU::S_MOV_B64_term: {
     bool RegSrc = MI.getOperand(1).isReg();
-    MI.setDesc(TII->get(RegSrc ? TII->getCopyOpcode() : AMDGPU::S_MOV_B64));
+    MI.setDesc(TII->get(RegSrc ? AMDGPU::COPY : AMDGPU::S_MOV_B64));
     return true;
   }
   case AMDGPU::S_XOR_B64_term: {

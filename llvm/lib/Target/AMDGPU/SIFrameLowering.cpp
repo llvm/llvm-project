@@ -134,6 +134,8 @@ static MCRegister findScratchNonCalleeSaveRegister(MachineRegisterInfo &MRI,
   return MCRegister();
 }
 
+/// Query target location for spilling SGPRs
+/// \p IncludeScratchCopy : Also look for free scratch SGPRs 
 static void getVGPRSpillLaneOrTempRegister(
     MachineFunction &MF, LivePhysRegs &LiveRegs, Register SGPR,
     const TargetRegisterClass &RC = AMDGPU::SReg_32_XM0_XEXECRegClass,
@@ -1162,8 +1164,7 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
   if (!WWMCalleeSavedRegs.empty()) {
     if (ScratchExecCopy) {
       unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-      MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-      BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Exec).addImm(-1);
+      BuildMI(MBB, MBBI, DL, TII->get(MovOpc), TRI.getExec()).addImm(-1);
     } else {
       ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL,
                                              /*IsProlog*/ true,
@@ -1175,8 +1176,7 @@ void SIFrameLowering::emitCSRSpillStores(MachineFunction &MF,
   if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
+    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), TRI.getExec())
         .addReg(ScratchExecCopy, RegState::Kill);
     LiveRegs.addReg(ScratchExecCopy);
   }
@@ -1272,8 +1272,7 @@ void SIFrameLowering::emitCSRSpillRestores(
   if (!WWMCalleeSavedRegs.empty()) {
     if (ScratchExecCopy) {
       unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-      MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-      BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Exec).addImm(-1);
+      BuildMI(MBB, MBBI, DL, TII->get(MovOpc), TRI.getExec()).addImm(-1);
     } else {
       ScratchExecCopy = buildScratchExecCopy(LiveRegs, MF, MBB, MBBI, DL,
                                              /*IsProlog*/ false,
@@ -1285,8 +1284,7 @@ void SIFrameLowering::emitCSRSpillRestores(
   if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), Exec)
+    BuildMI(MBB, MBBI, DL, TII->get(ExecMov), TRI.getExec())
         .addReg(ScratchExecCopy, RegState::Kill);
   }
 }
@@ -1739,9 +1737,7 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
   for (unsigned I = 0; CSRegs[I]; ++I)
     LiveRegs.addReg(CSRegs[I]);
 
-  const TargetRegisterClass &RC = ST.isWave32()
-                                      ? AMDGPU::SReg_32_XM0_XEXECRegClass
-                                      : AMDGPU::SGPR_64RegClass;
+  const TargetRegisterClass &RC = *TRI->getWaveMaskRegClass();
 
   if (NeedExecCopyReservedReg) {
     Register ReservedReg = MFI->getSGPRForEXECCopy();
@@ -2097,8 +2093,9 @@ bool SIFrameLowering::spillCalleeSavedRegisters(
     unsigned Reg = CS.getReg();
 
     if (CS.isSpilledToReg()) {
-      TII->buildCopy(MBB, MBBI, DebugLoc(), CS.getDstReg(), Reg,
-                     getKillRegState(true));
+      BuildMI(MBB, MBBI, DebugLoc(), TII->get(TargetOpcode::COPY),
+              CS.getDstReg())
+          .addReg(Reg, getKillRegState(true));
     } else {
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(
           Reg, Reg == RI->getReturnAddressReg(MF) ? MVT::i64 : MVT::i32);

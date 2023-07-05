@@ -742,9 +742,11 @@ SIWholeQuadMode::saveSCC(MachineBasicBlock &MBB,
   Register SaveReg = MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
   MachineInstr *Save =
-      TII->buildCopy(MBB, Before, DebugLoc(), SaveReg, AMDGPU::SCC);
+      BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), SaveReg)
+          .addReg(AMDGPU::SCC);
   MachineInstr *Restore =
-      TII->buildCopy(MBB, Before, DebugLoc(), AMDGPU::SCC, SaveReg);
+      BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), AMDGPU::SCC)
+          .addReg(SaveReg);
 
   LIS->InsertMachineInstrInMaps(*Save);
   LIS->InsertMachineInstrInMaps(*Restore);
@@ -1232,7 +1234,8 @@ void SIWholeQuadMode::toWQM(MachineBasicBlock &MBB,
   MachineInstr *MI;
 
   if (SavedWQM) {
-    MI = TII->buildCopy(MBB, Before, DebugLoc(), Exec, SavedWQM);
+    MI = BuildMI(MBB, Before, DebugLoc(), TII->get(AMDGPU::COPY), Exec)
+             .addReg(SavedWQM);
   } else {
     MI = BuildMI(MBB, Before, DebugLoc(), TII->get(WQMOpc), Exec).addReg(Exec);
   }
@@ -1317,7 +1320,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, bool IsEntry) {
   auto II = MBB.getFirstNonPHI(), IE = MBB.end();
   if (IsEntry) {
     // Skip the instruction that saves LiveMask
-    if (II != IE && II->isCopy())
+    if (II != IE && II->getOpcode() == AMDGPU::COPY)
       ++II;
   }
 
@@ -1487,7 +1490,8 @@ void SIWholeQuadMode::lowerLiveMaskQueries() {
     Register Dest = MI->getOperand(0).getReg();
 
     MachineInstr *Copy =
-        TII->buildCopy(*MI->getParent(), MI, DL, Dest, LiveMaskReg);
+        BuildMI(*MI->getParent(), MI, DL, TII->get(AMDGPU::COPY), Dest)
+            .addReg(LiveMaskReg);
 
     LIS->ReplaceMachineInstrInMaps(*MI, *Copy);
     MI->eraseFromParent();
@@ -1525,7 +1529,7 @@ void SIWholeQuadMode::lowerCopyInstrs() {
         MI->removeOperand(Index);
         Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC);
       }
-      MI->setDesc(TII->get(TII->getCopyOpcode()));
+      MI->setDesc(TII->get(AMDGPU::COPY));
       LLVM_DEBUG(dbgs() << "  -> " << *MI);
     }
   }
@@ -1632,7 +1636,8 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   if (NeedsLiveMask || (GlobalFlags & StateWQM)) {
     LiveMaskReg = MRI->createVirtualRegister(TRI->getBoolRC());
     MachineInstr *MI =
-        TII->buildCopy(Entry, EntryMI, DebugLoc(), LiveMaskReg, Exec);
+        BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::COPY), LiveMaskReg)
+            .addReg(Exec);
     LIS->InsertMachineInstrInMaps(*MI);
   }
 

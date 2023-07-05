@@ -19,10 +19,10 @@ body: |
 
     ; CHECK-LABEL: name: rsq_legacy_s32_vs
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; CHECK: %1:vgpr_32 = nofpexcept V_RSQ_LEGACY_F32_e64 0, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK: %1:vgpr_32 = nofpexcept V_RSQ_LEGACY_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit %1
-    %0:sgpr(s32) = PRED_COPY $sgpr0
+    %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.legacy), %0
     S_ENDPGM 0, implicit %1
 ...
@@ -39,10 +39,10 @@ body: |
 
     ; CHECK-LABEL: name: rsq_legacy_s32_vv
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; CHECK: %1:vgpr_32 = nofpexcept V_RSQ_LEGACY_F32_e64 0, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK: %1:vgpr_32 = nofpexcept V_RSQ_LEGACY_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; CHECK: S_ENDPGM 0, implicit %1
-    %0:vgpr(s32) = PRED_COPY $vgpr0
+    %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.legacy), %0
     S_ENDPGM 0, implicit %1
 ...

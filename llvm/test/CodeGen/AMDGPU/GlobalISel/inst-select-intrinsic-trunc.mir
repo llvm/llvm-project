@@ -14,9 +14,9 @@ body: |
     ; CHECK-LABEL: name: intrinsic_trunc_s32_vv
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; CHECK-NEXT: [[V_TRUNC_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_TRUNC_F32_e64 0, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0 = PRED_COPY [[V_TRUNC_F32_e64_]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: %1:vgpr_32 = nofpexcept V_TRUNC_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY %1
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_INTRINSIC_TRUNC %0
     $vgpr0 = COPY %1
@@ -35,9 +35,9 @@ body: |
     ; CHECK-LABEL: name: intrinsic_trunc_s32_vs
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; CHECK-NEXT: [[V_TRUNC_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_TRUNC_F32_e64 0, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0 = PRED_COPY [[V_TRUNC_F32_e64_]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: %1:vgpr_32 = nofpexcept V_TRUNC_F32_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY %1
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = G_INTRINSIC_TRUNC %0
     $vgpr0 = COPY %1
@@ -56,9 +56,9 @@ body: |
     ; CHECK-LABEL: name: intrinsic_trunc_s64_sv
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_64 = PRED_COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[V_TRUNC_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_TRUNC_F64_e64 0, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0_vgpr1 = PRED_COPY [[V_TRUNC_F64_e64_]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: %1:vreg_64 = nofpexcept V_TRUNC_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %1
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s64) = G_INTRINSIC_TRUNC %0
     $vgpr0_vgpr1 = COPY %1
@@ -77,9 +77,9 @@ body: |
     ; CHECK-LABEL: name: intrinsic_trunc_s64_vv
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vreg_64 = PRED_COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[V_TRUNC_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_TRUNC_F64_e64 0, [[PRED_COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0_vgpr1 = PRED_COPY [[V_TRUNC_F64_e64_]]
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %1:vreg_64 = nofpexcept V_TRUNC_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %1
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_INTRINSIC_TRUNC %0
     $vgpr0_vgpr1 = COPY %1

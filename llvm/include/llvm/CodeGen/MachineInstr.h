@@ -1412,8 +1412,7 @@ public:
   }
 
   bool isCopy() const {
-    return getOpcode() == TargetOpcode::COPY ||
-           getOpcode() == TargetOpcode::PRED_COPY;
+    return getOpcode() == TargetOpcode::COPY;
   }
 
   bool isFullCopy() const {
@@ -1447,7 +1446,6 @@ public:
     case TargetOpcode::PHI:
     case TargetOpcode::G_PHI:
     case TargetOpcode::COPY:
-    case TargetOpcode::PRED_COPY:
     case TargetOpcode::INSERT_SUBREG:
     case TargetOpcode::SUBREG_TO_REG:
     case TargetOpcode::REG_SEQUENCE:

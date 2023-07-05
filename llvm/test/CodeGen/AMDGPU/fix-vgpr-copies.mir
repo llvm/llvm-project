@@ -1,8 +1,8 @@
 # RUN: llc -march=amdgcn -start-after=greedy -disable-copyprop -stop-after=si-optimize-exec-masking -o - %s | FileCheck %s
 # Check that we first do all vector instructions and only then change exec
-# CHECK-DAG:  PRED_COPY $vgpr10_vgpr11
-# CHECK-DAG:  PRED_COPY $vgpr12_vgpr13
-# CHECK:      $exec = PRED_COPY
+# CHECK-DAG:  COPY $vgpr10_vgpr11
+# CHECK-DAG:  COPY $vgpr12_vgpr13
+# CHECK:      $exec = COPY
 
 ---
 name:            main
@@ -35,10 +35,10 @@ body:             |
     liveins: $vgpr3, $vgpr10_vgpr11, $vgpr12_vgpr13
 
     $vcc = V_CMP_NE_U32_e64 0, killed $vgpr3, implicit $exec
-    $sgpr4_sgpr5 = PRED_COPY $exec, implicit-def $exec
+    $sgpr4_sgpr5 = COPY $exec, implicit-def $exec
     $sgpr6_sgpr7 = S_AND_B64 $sgpr4_sgpr5, killed $vcc, implicit-def dead $scc
     $sgpr4_sgpr5 = S_XOR_B64 $sgpr6_sgpr7, killed $sgpr4_sgpr5, implicit-def dead $scc
-    $vgpr61_vgpr62 = PRED_COPY $vgpr10_vgpr11
-    $vgpr155_vgpr156 = PRED_COPY $vgpr12_vgpr13
+    $vgpr61_vgpr62 = COPY $vgpr10_vgpr11
+    $vgpr155_vgpr156 = COPY $vgpr12_vgpr13
     $exec = S_MOV_B64_term killed $sgpr6_sgpr7
 ...

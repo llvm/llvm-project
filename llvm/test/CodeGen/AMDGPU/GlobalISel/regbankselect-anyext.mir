@@ -29,9 +29,9 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:vgpr(s32) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY]](s32), [[DEF]](s32)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY1]](s32), [[DEF]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s64) = G_ANYEXT %0
 ...

@@ -115,10 +115,6 @@ HANDLE_TARGET_OPCODE(DBG_KILL)
 /// used to copy between subregisters of virtual registers.
   HANDLE_TARGET_OPCODE(COPY)
 
-/// PRED_COPY - Target-independent register copy with a predication.
-/// Some targets require it for special handling certain register copies.
-  HANDLE_TARGET_OPCODE(PRED_COPY)
-
 /// BUNDLE - This instruction represents an instruction bundle. Instructions
 /// which immediately follow a BUNDLE instruction which are marked with
 /// 'InsideBundle' flag are inside the bundle.

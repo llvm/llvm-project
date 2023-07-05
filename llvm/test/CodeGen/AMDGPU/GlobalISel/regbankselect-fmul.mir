@@ -14,9 +14,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[PRED_COPY]], [[PRED_COPY1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY2]], [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_FMUL %0, %1
@@ -34,8 +34,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[PRED_COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY2]], [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_FMUL %0, %1
@@ -53,8 +53,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[PRED_COPY]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s32) = G_FMUL [[COPY]], [[COPY2]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $sgpr0
     %2:_(s32) = G_FMUL %0, %1

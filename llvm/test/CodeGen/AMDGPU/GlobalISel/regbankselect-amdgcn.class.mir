@@ -14,9 +14,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s64) = PRED_COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[PRED_COPY]](s64), [[PRED_COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY2]](s64), [[COPY3]](s32)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $sgpr2
     %2:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0, %1
@@ -35,8 +35,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s64) = PRED_COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[PRED_COPY]](s64), [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY2]](s64), [[COPY1]](s32)
     %0:_(s64) = COPY $sgpr0_sgpr1
     %1:_(s32) = COPY $vgpr0
     %2:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0, %1
@@ -54,8 +54,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY]](s64), [[PRED_COPY]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY]](s64), [[COPY2]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = COPY $sgpr0
     %2:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0, %1

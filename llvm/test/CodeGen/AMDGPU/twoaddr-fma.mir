@@ -16,7 +16,7 @@ body:             |
   bb.0:
 
     %0 = IMPLICIT_DEF
-    %1 = PRED_COPY %0.sub1
+    %1 = COPY %0.sub1
     %2 = V_MOV_B32_e32 1078523331, implicit $exec
     %3 = V_FMAC_F32_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
 
@@ -37,7 +37,7 @@ body:             |
   bb.0:
 
     %0 = IMPLICIT_DEF
-    %1 = PRED_COPY %0.sub1
+    %1 = COPY %0.sub1
     %2 = V_MOV_B32_e32 1078523331, implicit $exec
     %3 = V_FMAC_F32_e32 %2, killed %0.sub0, killed %1, implicit $mode, implicit $exec
 
@@ -124,7 +124,7 @@ body:             |
 ...
 
 # GCN-LABEL: name: test_fmaak_other_constantlike_src0_f32
-# GCN: %2:vgpr_32 = PRED_COPY %1
+# GCN: %2:vgpr_32 = COPY %1
 # GCN: %2:vgpr_32 = V_FMAC_F32_e32 %stack.0, %0, %2, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_other_constantlike_src0_f32
@@ -166,7 +166,7 @@ body:             |
   bb.0:
 
     %0 = IMPLICIT_DEF
-    %1 = PRED_COPY %0.sub1
+    %1 = COPY %0.sub1
     %2 = V_MOV_B32_e32 1078523331, implicit $exec
     %3 = V_FMAC_F32_e32 %0.sub0, %2, %1, implicit $mode, implicit $exec
     %4 = V_FMAC_F32_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
@@ -187,7 +187,7 @@ body:             |
   bb.0:
 
     %0 = IMPLICIT_DEF
-    %1 = PRED_COPY %0.sub1
+    %1 = COPY %0.sub1
     %2 = V_MOV_B32_e32 1078523331, implicit $exec
     %3 = V_FMAC_F32_e32 killed %0.sub0, %2, killed %1, implicit $mode, implicit $exec
     S_NOP 0, implicit %2

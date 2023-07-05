@@ -78,9 +78,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:agpr(s32) = COPY $agpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $agpr0
@@ -100,9 +100,9 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:agpr(s32) = COPY $agpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[PRED_COPY1:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[PRED_COPY]](s32), [[PRED_COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
     %0:_(s32) = COPY $agpr0
     %1:_(s32) = COPY $sgpr0

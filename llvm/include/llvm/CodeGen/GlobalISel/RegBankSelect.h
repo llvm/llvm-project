@@ -85,7 +85,6 @@ class Pass;
 class raw_ostream;
 class TargetPassConfig;
 class TargetRegisterInfo;
-class TargetInstrInfo;
 
 /// This pass implements the reg bank selector pass used in the GlobalISel
 /// pipeline. At the end of this pass, all register operands have been assigned
@@ -493,9 +492,6 @@ protected:
 
   /// Information on the register classes for the current function.
   const TargetRegisterInfo *TRI = nullptr;
-
-  /// Information used to access the description of the opcodes.
-  const TargetInstrInfo *TII = nullptr;
 
   /// Get the frequency of blocks.
   /// This is required for non-fast mode.

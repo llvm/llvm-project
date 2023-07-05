@@ -1200,7 +1200,7 @@ SILoadStoreOptimizer::mergeRead2Pair(CombineInfo &CI, CombineInfo &Paired,
 
   (void)Read2;
 
-  const MCInstrDesc &CopyDesc = TII->get(TII->getCopyOpcode());
+  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
 
   // Copy to the old destination registers.
   BuildMI(*MBB, InsertBefore, DL, CopyDesc)
@@ -1332,7 +1332,7 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
   std::tie(SubRegIdx0, SubRegIdx1) = getSubRegIdxs(CI, Paired);
 
   // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TII->getCopyOpcode());
+  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
   const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
   const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
 
@@ -1378,7 +1378,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
   const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
 
   // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TII->getCopyOpcode());
+  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
   const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::sdst);
   const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::sdst);
 
@@ -1433,7 +1433,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
   const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
 
   // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TII->getCopyOpcode());
+  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
   const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
   const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
 
@@ -1492,7 +1492,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
   const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
 
   // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TII->getCopyOpcode());
+  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
   const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdata);
   const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdata);
 
@@ -1590,7 +1590,7 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeFlatLoadPair(
   const unsigned SubRegIdx1 = std::get<1>(SubRegIdx);
 
   // Copy to the old destination registers.
-  const MCInstrDesc &CopyDesc = TII->get(TII->getCopyOpcode());
+  const MCInstrDesc &CopyDesc = TII->get(TargetOpcode::COPY);
   const auto *Dest0 = TII->getNamedOperand(*CI.I, AMDGPU::OpName::vdst);
   const auto *Dest1 = TII->getNamedOperand(*Paired.I, AMDGPU::OpName::vdst);
 

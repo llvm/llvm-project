@@ -18,7 +18,7 @@ define dso_local i32 @single_block_referrer_live_until_terminator() #1 !dbg !5 {
   ; CHECK-NEXT:   DBG_DEF !8, renamable $sgpr4
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY killed renamable $sgpr4, debug-location !11
+  ; CHECK-NEXT:   $vgpr0 = COPY killed renamable $sgpr4, debug-location !11
   ; CHECK-NEXT:   DBG_KILL !8
   ; CHECK-NEXT:   SI_RETURN implicit killed $vgpr0, debug-location !11
 entry:
@@ -38,7 +38,7 @@ define dso_local i32 @single_block_referrer_live_until_kill() #1 !dbg !12 {
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
   ; CHECK-NEXT:   DBG_KILL !13
   ; CHECK-NEXT:   INLINEASM &"S_NOP 1", 1 /* sideeffect attdialect */
-  ; CHECK-NEXT:   $vgpr0 = PRED_COPY killed renamable $sgpr4, debug-location !15
+  ; CHECK-NEXT:   $vgpr0 = COPY killed renamable $sgpr4, debug-location !15
   ; CHECK-NEXT:   SI_RETURN implicit killed $vgpr0, debug-location !15
 entry:
   %0 = call i32 asm sideeffect "S_NOP 1 ; def $0", "=r"()

@@ -15,8 +15,8 @@ body: |
     ; CHECK-LABEL: name: ds_swizzle_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; CHECK-NEXT: [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[PRED_COPY]], 0, 0, implicit $exec
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[COPY]], 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[DS_SWIZZLE_B32_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ds.swizzle), %0, 0
@@ -38,8 +38,8 @@ body: |
     ; CHECK-LABEL: name: ds_swizzle_65535
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-    ; CHECK-NEXT: [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[PRED_COPY]], 65535, 0, implicit $exec
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[COPY]], 65535, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[DS_SWIZZLE_B32_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.ds.swizzle), %0, 65535

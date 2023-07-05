@@ -29,24 +29,24 @@ define amdgpu_ps float @ds_fmax_f32_ss(ptr addrspace(3) inreg %ptr, float inreg 
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR-NEXT:   liveins: $sgpr2, $sgpr3
   ; GFX8-MIR-NEXT: {{  $}}
-  ; GFX8-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
-  ; GFX8-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
-  ; GFX8-MIR-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY]]
-  ; GFX8-MIR-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY1]]
+  ; GFX8-MIR-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX8-MIR-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX8-MIR-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX8-MIR-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GFX8-MIR-NEXT:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[PRED_COPY2]], [[PRED_COPY3]], 0, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
-  ; GFX8-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_]]
+  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[COPY2]], [[COPY3]], 0, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX8-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_]]
   ; GFX8-MIR-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_ss
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR-NEXT:   liveins: $sgpr2, $sgpr3
   ; GFX9-MIR-NEXT: {{  $}}
-  ; GFX9-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
-  ; GFX9-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
-  ; GFX9-MIR-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY]]
-  ; GFX9-MIR-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY1]]
-  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[PRED_COPY2]], [[PRED_COPY3]], 0, 0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
-  ; GFX9-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_gfx9_]]
+  ; GFX9-MIR-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX9-MIR-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX9-MIR-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX9-MIR-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[COPY2]], [[COPY3]], 0, 0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX9-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_gfx9_]]
   ; GFX9-MIR-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %ret = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %ptr, float %val, i32 0, i32 0, i1 false)
   ret float %ret
@@ -73,24 +73,24 @@ define amdgpu_ps float @ds_fmax_f32_ss_offset(ptr addrspace(3) inreg %ptr, float
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR-NEXT:   liveins: $sgpr2, $sgpr3
   ; GFX8-MIR-NEXT: {{  $}}
-  ; GFX8-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
-  ; GFX8-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
-  ; GFX8-MIR-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY1]]
+  ; GFX8-MIR-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX8-MIR-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX8-MIR-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GFX8-MIR-NEXT:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY]]
-  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[PRED_COPY3]], [[PRED_COPY2]], 512, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
-  ; GFX8-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_]]
+  ; GFX8-MIR-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[COPY3]], [[COPY2]], 512, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
+  ; GFX8-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_]]
   ; GFX8-MIR-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_ss_offset
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR-NEXT:   liveins: $sgpr2, $sgpr3
   ; GFX9-MIR-NEXT: {{  $}}
-  ; GFX9-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
-  ; GFX9-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
-  ; GFX9-MIR-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY1]]
-  ; GFX9-MIR-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY]]
-  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[PRED_COPY3]], [[PRED_COPY2]], 512, 0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
-  ; GFX9-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_gfx9_]]
+  ; GFX9-MIR-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX9-MIR-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX9-MIR-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; GFX9-MIR-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[COPY3]], [[COPY2]], 512, 0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
+  ; GFX9-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_gfx9_]]
   ; GFX9-MIR-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %gep = getelementptr float, ptr addrspace(3) %ptr, i32 128
   %ret = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %gep, float %val, i32 0, i32 0, i1 false)
@@ -116,22 +116,22 @@ define amdgpu_ps void @ds_fmax_f32_ss_nortn(ptr addrspace(3) inreg %ptr, float i
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR-NEXT:   liveins: $sgpr2, $sgpr3
   ; GFX8-MIR-NEXT: {{  $}}
-  ; GFX8-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
-  ; GFX8-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
-  ; GFX8-MIR-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY]]
-  ; GFX8-MIR-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY1]]
+  ; GFX8-MIR-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX8-MIR-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX8-MIR-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX8-MIR-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GFX8-MIR-NEXT:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR-NEXT:   DS_MAX_F32 [[PRED_COPY2]], [[PRED_COPY3]], 0, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX8-MIR-NEXT:   DS_MAX_F32 [[COPY2]], [[COPY3]], 0, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
   ; GFX8-MIR-NEXT:   S_ENDPGM 0
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_ss_nortn
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR-NEXT:   liveins: $sgpr2, $sgpr3
   ; GFX9-MIR-NEXT: {{  $}}
-  ; GFX9-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
-  ; GFX9-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
-  ; GFX9-MIR-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY]]
-  ; GFX9-MIR-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY1]]
-  ; GFX9-MIR-NEXT:   DS_MAX_F32_gfx9 [[PRED_COPY2]], [[PRED_COPY3]], 0, 0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX9-MIR-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX9-MIR-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX9-MIR-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX9-MIR-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; GFX9-MIR-NEXT:   DS_MAX_F32_gfx9 [[COPY2]], [[COPY3]], 0, 0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
   ; GFX9-MIR-NEXT:   S_ENDPGM 0
   %unused = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %ptr, float %val, i32 0, i32 0, i1 false)
   ret void
@@ -156,22 +156,22 @@ define amdgpu_ps void @ds_fmax_f32_ss_offset_nortn(ptr addrspace(3) inreg %ptr, 
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR-NEXT:   liveins: $sgpr2, $sgpr3
   ; GFX8-MIR-NEXT: {{  $}}
-  ; GFX8-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
-  ; GFX8-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
-  ; GFX8-MIR-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY1]]
+  ; GFX8-MIR-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX8-MIR-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX8-MIR-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
   ; GFX8-MIR-NEXT:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY]]
-  ; GFX8-MIR-NEXT:   DS_MAX_F32 [[PRED_COPY3]], [[PRED_COPY2]], 512, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
+  ; GFX8-MIR-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX8-MIR-NEXT:   DS_MAX_F32 [[COPY3]], [[COPY2]], 512, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
   ; GFX8-MIR-NEXT:   S_ENDPGM 0
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_ss_offset_nortn
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR-NEXT:   liveins: $sgpr2, $sgpr3
   ; GFX9-MIR-NEXT: {{  $}}
-  ; GFX9-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
-  ; GFX9-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
-  ; GFX9-MIR-NEXT:   [[PRED_COPY2:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY1]]
-  ; GFX9-MIR-NEXT:   [[PRED_COPY3:%[0-9]+]]:vgpr_32 = PRED_COPY [[PRED_COPY]]
-  ; GFX9-MIR-NEXT:   DS_MAX_F32_gfx9 [[PRED_COPY3]], [[PRED_COPY2]], 512, 0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
+  ; GFX9-MIR-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr2
+  ; GFX9-MIR-NEXT:   [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr3
+  ; GFX9-MIR-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]]
+  ; GFX9-MIR-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]]
+  ; GFX9-MIR-NEXT:   DS_MAX_F32_gfx9 [[COPY3]], [[COPY2]], 512, 0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
   ; GFX9-MIR-NEXT:   S_ENDPGM 0
   %gep = getelementptr float, ptr addrspace(3) %ptr, i32 128
   %unused = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %gep, float %val, i32 0, i32 0, i1 false)
@@ -197,20 +197,20 @@ define float @ds_fmax_f32_vv(ptr addrspace(3) %ptr, float %val) {
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX8-MIR-NEXT: {{  $}}
-  ; GFX8-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX8-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX8-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX8-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-MIR-NEXT:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[PRED_COPY]], [[PRED_COPY1]], 0, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
-  ; GFX8-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_]]
+  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[COPY]], [[COPY1]], 0, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX8-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_]]
   ; GFX8-MIR-NEXT:   SI_RETURN implicit $vgpr0
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_vv
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX9-MIR-NEXT: {{  $}}
-  ; GFX9-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX9-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[PRED_COPY]], [[PRED_COPY1]], 0, 0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
-  ; GFX9-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_gfx9_]]
+  ; GFX9-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX9-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX9-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_gfx9_]]
   ; GFX9-MIR-NEXT:   SI_RETURN implicit $vgpr0
   %ret = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %ptr, float %val, i32 0, i32 0, i1 false)
   ret float %ret
@@ -235,20 +235,20 @@ define float @ds_fmax_f32_vv_offset(ptr addrspace(3) %ptr, float %val) {
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX8-MIR-NEXT: {{  $}}
-  ; GFX8-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX8-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX8-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX8-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-MIR-NEXT:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[PRED_COPY]], [[PRED_COPY1]], 512, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
-  ; GFX8-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_]]
+  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[COPY]], [[COPY1]], 512, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
+  ; GFX8-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_]]
   ; GFX8-MIR-NEXT:   SI_RETURN implicit $vgpr0
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_vv_offset
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX9-MIR-NEXT: {{  $}}
-  ; GFX9-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX9-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[PRED_COPY]], [[PRED_COPY1]], 512, 0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
-  ; GFX9-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_gfx9_]]
+  ; GFX9-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX9-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[COPY]], [[COPY1]], 512, 0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
+  ; GFX9-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_gfx9_]]
   ; GFX9-MIR-NEXT:   SI_RETURN implicit $vgpr0
   %gep = getelementptr float, ptr addrspace(3) %ptr, i32 128
   %ret = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %gep, float %val, i32 0, i32 0, i1 false)
@@ -274,18 +274,18 @@ define void @ds_fmax_f32_vv_nortn(ptr addrspace(3) %ptr, float %val) {
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX8-MIR-NEXT: {{  $}}
-  ; GFX8-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX8-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX8-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX8-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-MIR-NEXT:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR-NEXT:   DS_MAX_F32 [[PRED_COPY]], [[PRED_COPY1]], 0, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX8-MIR-NEXT:   DS_MAX_F32 [[COPY]], [[COPY1]], 0, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
   ; GFX8-MIR-NEXT:   SI_RETURN
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_vv_nortn
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX9-MIR-NEXT: {{  $}}
-  ; GFX9-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX9-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX9-MIR-NEXT:   DS_MAX_F32_gfx9 [[PRED_COPY]], [[PRED_COPY1]], 0, 0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX9-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX9-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX9-MIR-NEXT:   DS_MAX_F32_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (load store (s32) on %ir.ptr, addrspace 3)
   ; GFX9-MIR-NEXT:   SI_RETURN
   %ret = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %ptr, float %val, i32 0, i32 0, i1 false)
   ret void
@@ -310,18 +310,18 @@ define void @ds_fmax_f32_vv_offset_nortn(ptr addrspace(3) %ptr, float %val) {
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX8-MIR-NEXT: {{  $}}
-  ; GFX8-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX8-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX8-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX8-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-MIR-NEXT:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR-NEXT:   DS_MAX_F32 [[PRED_COPY]], [[PRED_COPY1]], 512, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
+  ; GFX8-MIR-NEXT:   DS_MAX_F32 [[COPY]], [[COPY1]], 512, 0, implicit $m0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
   ; GFX8-MIR-NEXT:   SI_RETURN
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_vv_offset_nortn
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX9-MIR-NEXT: {{  $}}
-  ; GFX9-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX9-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX9-MIR-NEXT:   DS_MAX_F32_gfx9 [[PRED_COPY]], [[PRED_COPY1]], 512, 0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
+  ; GFX9-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX9-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX9-MIR-NEXT:   DS_MAX_F32_gfx9 [[COPY]], [[COPY1]], 512, 0, implicit $exec :: (load store (s32) on %ir.gep, addrspace 3)
   ; GFX9-MIR-NEXT:   SI_RETURN
   %gep = getelementptr float, ptr addrspace(3) %ptr, i32 128
   %ret = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %gep, float %val, i32 0, i32 0, i1 false)
@@ -347,20 +347,20 @@ define float @ds_fmax_f32_vv_volatile(ptr addrspace(3) %ptr, float %val) {
   ; GFX8-MIR: bb.1 (%ir-block.0):
   ; GFX8-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX8-MIR-NEXT: {{  $}}
-  ; GFX8-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX8-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
+  ; GFX8-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX8-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX8-MIR-NEXT:   $m0 = S_MOV_B32 -1
-  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[PRED_COPY]], [[PRED_COPY1]], 0, 0, implicit $m0, implicit $exec :: (volatile load store (s32) on %ir.ptr, addrspace 3)
-  ; GFX8-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_]]
+  ; GFX8-MIR-NEXT:   [[DS_MAX_RTN_F32_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32 [[COPY]], [[COPY1]], 0, 0, implicit $m0, implicit $exec :: (volatile load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX8-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_]]
   ; GFX8-MIR-NEXT:   SI_RETURN implicit $vgpr0
   ; GFX9-MIR-LABEL: name: ds_fmax_f32_vv_volatile
   ; GFX9-MIR: bb.1 (%ir-block.0):
   ; GFX9-MIR-NEXT:   liveins: $vgpr0, $vgpr1
   ; GFX9-MIR-NEXT: {{  $}}
-  ; GFX9-MIR-NEXT:   [[PRED_COPY:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr0
-  ; GFX9-MIR-NEXT:   [[PRED_COPY1:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr1
-  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[PRED_COPY]], [[PRED_COPY1]], 0, 0, implicit $exec :: (volatile load store (s32) on %ir.ptr, addrspace 3)
-  ; GFX9-MIR-NEXT:   $vgpr0 = PRED_COPY [[DS_MAX_RTN_F32_gfx9_]]
+  ; GFX9-MIR-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX9-MIR-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+  ; GFX9-MIR-NEXT:   [[DS_MAX_RTN_F32_gfx9_:%[0-9]+]]:vgpr_32 = DS_MAX_RTN_F32_gfx9 [[COPY]], [[COPY1]], 0, 0, implicit $exec :: (volatile load store (s32) on %ir.ptr, addrspace 3)
+  ; GFX9-MIR-NEXT:   $vgpr0 = COPY [[DS_MAX_RTN_F32_gfx9_]]
   ; GFX9-MIR-NEXT:   SI_RETURN implicit $vgpr0
   %ret = call float @llvm.amdgcn.ds.fmax(ptr addrspace(3) %ptr, float %val, i32 0, i32 0, i1 true)
   ret float %ret

@@ -7530,8 +7530,7 @@ LegalizerHelper::lowerVectorReduction(MachineInstr &MI) {
       return UnableToLegalize; // FIXME: handle extension.
     // This can be just a plain copy.
     Observer.changingInstr(MI);
-    const TargetInstrInfo &TII = MIRBuilder.getTII();
-    MI.setDesc(TII.get(TII.getCopyOpcode()));
+    MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::COPY));
     Observer.changedInstr(MI);
     return Legalized;
   }

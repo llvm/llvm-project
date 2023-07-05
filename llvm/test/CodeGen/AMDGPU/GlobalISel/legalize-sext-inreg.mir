@@ -1236,8 +1236,8 @@ body: |
     ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SEXT_INREG]](s64), [[ASHR]](s64)
     ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s64) = G_TRUNC [[UV1]](s128)
     ; GFX9-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[TRUNC1]], 1
-    ; GFX9-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C]](s32)
-    ; GFX9-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG1]], [[PRED_COPY]](s32)
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; GFX9-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG1]], [[COPY1]](s32)
     ; GFX9-NEXT: [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SEXT_INREG1]](s64), [[ASHR1]](s64)
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s128>) = G_BUILD_VECTOR [[MV]](s128), [[MV1]](s128)
     ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<2 x s128>)
@@ -1253,8 +1253,8 @@ body: |
     ; GFX8-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SEXT_INREG]](s64), [[ASHR]](s64)
     ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s64) = G_TRUNC [[UV1]](s128)
     ; GFX8-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[TRUNC1]], 1
-    ; GFX8-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C]](s32)
-    ; GFX8-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG1]], [[PRED_COPY]](s32)
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; GFX8-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG1]], [[COPY1]](s32)
     ; GFX8-NEXT: [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SEXT_INREG1]](s64), [[ASHR1]](s64)
     ; GFX8-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s128>) = G_BUILD_VECTOR [[MV]](s128), [[MV1]](s128)
     ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<2 x s128>)
@@ -1270,8 +1270,8 @@ body: |
     ; GFX6-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SEXT_INREG]](s64), [[ASHR]](s64)
     ; GFX6-NEXT: [[TRUNC1:%[0-9]+]]:_(s64) = G_TRUNC [[UV1]](s128)
     ; GFX6-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s64) = G_SEXT_INREG [[TRUNC1]], 1
-    ; GFX6-NEXT: [[PRED_COPY:%[0-9]+]]:_(s32) = PRED_COPY [[C]](s32)
-    ; GFX6-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG1]], [[PRED_COPY]](s32)
+    ; GFX6-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; GFX6-NEXT: [[ASHR1:%[0-9]+]]:_(s64) = G_ASHR [[SEXT_INREG1]], [[COPY1]](s32)
     ; GFX6-NEXT: [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SEXT_INREG1]](s64), [[ASHR1]](s64)
     ; GFX6-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s128>) = G_BUILD_VECTOR [[MV]](s128), [[MV1]](s128)
     ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<2 x s128>)

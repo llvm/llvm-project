@@ -178,7 +178,6 @@ MachineOperand *GCNDPPCombine::getOldOpndValue(MachineOperand &OldOpnd) const {
   case AMDGPU::IMPLICIT_DEF:
     return nullptr;
   case AMDGPU::COPY:
-  case AMDGPU::PRED_COPY:
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B64_PSEUDO:
   case AMDGPU::V_MOV_B64_e32:

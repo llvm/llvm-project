@@ -15,9 +15,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_s_s32
     ; GFX9PLUS: liveins: $sgpr0, $sgpr1
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[PRED_COPY]], [[PRED_COPY1]]
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[COPY1]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -38,9 +38,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_pack_lh
     ; GFX9PLUS: liveins: $sgpr0, $sgpr1
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
-    ; GFX9PLUS-NEXT: [[S_PACK_LH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LH_B32_B16 [[PRED_COPY]], [[PRED_COPY1]]
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9PLUS-NEXT: [[S_PACK_LH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LH_B32_B16 [[COPY]], [[COPY1]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LH_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -64,18 +64,18 @@ body: |
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_hl
     ; GFX9: liveins: $sgpr0, $sgpr1
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[PRED_COPY]]
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[COPY]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     ; GFX11-LABEL: name: test_build_vector_trunc_s_pack_hl
     ; GFX11: liveins: $sgpr0, $sgpr1
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX11-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
-    ; GFX11-NEXT: [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[PRED_COPY1]], [[PRED_COPY]]
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX11-NEXT: [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY1]], [[COPY]]
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[S_PACK_HL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -98,9 +98,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_pack_hh
     ; GFX9PLUS: liveins: $sgpr0, $sgpr1
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
-    ; GFX9PLUS-NEXT: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[PRED_COPY]], [[PRED_COPY1]]
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9PLUS-NEXT: [[S_PACK_HH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HH_B32_B16 [[COPY]], [[COPY1]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_HH_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -125,9 +125,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_s_0_s32
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[PRED_COPY]], [[S_MOV_B32_]]
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 0
@@ -148,9 +148,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_s_0_s32_s_s32
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[PRED_COPY]]
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 0
@@ -171,8 +171,8 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_s_undef_s32
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[PRED_COPY]]
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_IMPLICIT_DEF
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -192,9 +192,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_s_undef_s32_s_s32
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9PLUS-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[PRED_COPY]]
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[COPY]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_IMPLICIT_DEF
@@ -216,8 +216,8 @@ body: |
     ; GFX9PLUS: liveins: $sgpr1
     ; GFX9PLUS-NEXT: {{  $}}
     ; GFX9PLUS-NEXT: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[PRED_COPY]]
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[DEF]], [[COPY]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = G_IMPLICIT_DEF
     %1:sgpr(s32) = COPY $sgpr1
@@ -238,8 +238,8 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_undef
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[PRED_COPY]]
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_IMPLICIT_DEF
     %2:sgpr(<2 x s16>) = G_BUILD_VECTOR_TRUNC %0, %1
@@ -260,8 +260,8 @@ body: |
     ; GFX9PLUS: liveins: $sgpr1
     ; GFX9PLUS-NEXT: {{  $}}
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[PRED_COPY]]
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = G_CONSTANT i32 0
     %1:sgpr(s32) = COPY $sgpr1
@@ -282,9 +282,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_s_s32_zero
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[PRED_COPY]], [[S_MOV_B32_]]
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 0
@@ -305,8 +305,8 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_lshr16_zero
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY]], 16, implicit-def $scc
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], 16, implicit-def $scc
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_LSHR_B32_]]
     %0:sgpr(s32) = G_CONSTANT i32 0
     %1:sgpr(s32) = COPY $sgpr0
@@ -330,11 +330,11 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_pack_lh_multi_use
     ; GFX9PLUS: liveins: $sgpr0, $sgpr1
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[PRED_COPY]], [[S_LSHR_B32_]]
+    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_LSHR_B32_]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]], implicit [[S_LSHR_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -357,11 +357,11 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_pack_hh_multi_use_lhs
     ; GFX9PLUS: liveins: $sgpr0, $sgpr1
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9PLUS-NEXT: [[S_PACK_LH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LH_B32_B16 [[S_LSHR_B32_]], [[PRED_COPY1]]
+    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9PLUS-NEXT: [[S_PACK_LH_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LH_B32_B16 [[S_LSHR_B32_]], [[COPY1]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LH_B32_B16_]], implicit [[S_LSHR_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -385,21 +385,21 @@ body: |
     ; GFX9-LABEL: name: test_build_vector_trunc_s_pack_hh_multi_use_rhs
     ; GFX9: liveins: $sgpr0, $sgpr1
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
     ; GFX9-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[S_LSHR_B32_1]]
     ; GFX9-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]], implicit [[S_LSHR_B32_1]]
     ; GFX11-LABEL: name: test_build_vector_trunc_s_pack_hh_multi_use_rhs
     ; GFX11: liveins: $sgpr0, $sgpr1
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX11-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-    ; GFX11-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX11-NEXT: [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[PRED_COPY]], [[S_LSHR_B32_]]
+    ; GFX11-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX11-NEXT: [[S_PACK_HL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_HL_B32_B16 [[COPY]], [[S_LSHR_B32_]]
     ; GFX11-NEXT: S_ENDPGM 0, implicit [[S_PACK_HL_B32_B16_]], implicit [[S_LSHR_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -423,11 +423,11 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_pack_lh_wrong_shift_amt
     ; GFX9PLUS: liveins: $sgpr0, $sgpr1
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 15
-    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[PRED_COPY]], [[S_LSHR_B32_]]
+    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_LSHR_B32_]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
@@ -450,11 +450,11 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_pack_hh_wrong_shift_amt
     ; GFX9PLUS: liveins: $sgpr0, $sgpr1
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[PRED_COPY1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 15
-    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX9PLUS-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[PRED_COPY1]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9PLUS-NEXT: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY]], [[S_MOV_B32_]], implicit-def $scc
+    ; GFX9PLUS-NEXT: [[S_LSHR_B32_1:%[0-9]+]]:sreg_32 = S_LSHR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
     ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_LSHR_B32_]], [[S_LSHR_B32_1]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
@@ -661,9 +661,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_var_constant
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 456
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[PRED_COPY]], [[S_MOV_B32_]]
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 456
@@ -685,8 +685,8 @@ body: |
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 456
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[PRED_COPY]]
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = G_CONSTANT i32 456
     %1:sgpr(s32) = COPY $sgpr0
@@ -707,9 +707,9 @@ body: |
     ; GFX9PLUS-LABEL: name: test_build_vector_trunc_s_v2s16_var_0
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[PRED_COPY]], [[S_MOV_B32_]]
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[COPY]], [[S_MOV_B32_]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = G_CONSTANT i32 0
@@ -731,8 +731,8 @@ body: |
     ; GFX9PLUS: liveins: $sgpr0
     ; GFX9PLUS-NEXT: {{  $}}
     ; GFX9PLUS-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GFX9PLUS-NEXT: [[PRED_COPY:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[PRED_COPY]]
+    ; GFX9PLUS-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GFX9PLUS-NEXT: [[S_PACK_LL_B32_B16_:%[0-9]+]]:sreg_32 = S_PACK_LL_B32_B16 [[S_MOV_B32_]], [[COPY]]
     ; GFX9PLUS-NEXT: S_ENDPGM 0, implicit [[S_PACK_LL_B32_B16_]]
     %0:sgpr(s32) = G_CONSTANT i32 0
     %1:sgpr(s32) = COPY $sgpr0

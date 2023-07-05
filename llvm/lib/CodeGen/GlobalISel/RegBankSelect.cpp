@@ -25,7 +25,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -84,7 +83,6 @@ void RegBankSelect::init(MachineFunction &MF) {
   assert(RBI && "Cannot work without RegisterBankInfo");
   MRI = &MF.getRegInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
-  TII = MF.getSubtarget().getInstrInfo();
   TPC = &getAnalysis<TargetPassConfig>();
   if (OptMode != Mode::Fast) {
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
@@ -161,7 +159,7 @@ bool RegBankSelect::repairReg(
     // Build the instruction used to repair, then clone it at the right
     // places. Avoiding buildCopy bypasses the check that Src and Dst have the
     // same types because the type is a placeholder when this function is called.
-    MI = MIRBuilder.buildInstrNoInsert(TII->getCopyOpcode())
+    MI = MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY)
       .addDef(Dst)
       .addUse(Src);
     LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << ':'

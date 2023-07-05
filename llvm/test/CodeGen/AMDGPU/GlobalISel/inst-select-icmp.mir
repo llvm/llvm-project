@@ -9,21 +9,21 @@ legalized:       true
 regBankSelected: true
 
 # GCN: name: icmp_s32_s_mix
-# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
-# GCN: [[SGPR1:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr1
-# GCN: [[SGPR2:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr2
-# GCN: [[SGPR3:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr3
-# GCN: [[SGPR4:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr4
-# GCN: [[SGPR5:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr5
-# GCN: [[SGPR6:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr6
-# GCN: [[SGPR7:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr7
+# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = COPY $sgpr0
+# GCN: [[SGPR1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+# GCN: [[SGPR2:%[0-9]+]]:sreg_32 = COPY $sgpr2
+# GCN: [[SGPR3:%[0-9]+]]:sreg_32 = COPY $sgpr3
+# GCN: [[SGPR4:%[0-9]+]]:sreg_32 = COPY $sgpr4
+# GCN: [[SGPR5:%[0-9]+]]:sreg_32 = COPY $sgpr5
+# GCN: [[SGPR6:%[0-9]+]]:sreg_32 = COPY $sgpr6
+# GCN: [[SGPR7:%[0-9]+]]:sreg_32 = COPY $sgpr7
 # GCN: S_CMP_LG_U32 [[SGPR0]], [[SGPR1]], implicit-def $scc
-# GCN-NEXT: [[COND0:%[0-9]+]]:sreg_32 = PRED_COPY $scc
+# GCN-NEXT: [[COND0:%[0-9]+]]:sreg_32 = COPY $scc
 # GCN: S_CMP_LG_U32 [[SGPR4]], [[SGPR5]], implicit-def $scc
-# GCN-NEXT: [[COND1:%[0-9]+]]:sreg_32 = PRED_COPY $scc
-# GCN: $scc = PRED_COPY [[COND0]]
+# GCN-NEXT: [[COND1:%[0-9]+]]:sreg_32 = COPY $scc
+# GCN: $scc = COPY [[COND0]]
 # GCN-NEXT: S_CSELECT_B32 [[SGPR6]], [[SGPR7]], implicit $scc
-# GCN: $scc = PRED_COPY [[COND1]]
+# GCN: $scc = COPY [[COND1]]
 # GCN-NEXT: S_CSELECT_B32 [[SGPR2]], [[SGPR3]], implicit $scc
 
 body: |
@@ -123,14 +123,14 @@ legalized:       true
 regBankSelected: true
 
 # GCN-LABEL: name: icmp_s32_v_mix
-# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-# GCN: [[VGPR3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
-# GCN: [[VGPR4:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr4
-# GCN: [[VGPR5:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr5
-# GCN: [[VGPR6:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr6
-# GCN: [[VGPR7:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr7
-# GCN: [[VGPR8:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr8
-# GCN: [[VGPR9:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr9
+# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+# GCN: [[VGPR3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
+# GCN: [[VGPR4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
+# GCN: [[VGPR5:%[0-9]+]]:vgpr_32 = COPY $vgpr5
+# GCN: [[VGPR6:%[0-9]+]]:vgpr_32 = COPY $vgpr6
+# GCN: [[VGPR7:%[0-9]+]]:vgpr_32 = COPY $vgpr7
+# GCN: [[VGPR8:%[0-9]+]]:vgpr_32 = COPY $vgpr8
+# GCN: [[VGPR9:%[0-9]+]]:vgpr_32 = COPY $vgpr9
 # GCN: [[COND0:%[0-9]+]]:[[VCCRC]] = V_CMP_NE_U32_e64 [[VGPR2]], [[VGPR3]]
 # GCN: [[COND1:%[0-9]+]]:[[VCCRC]] = V_CMP_NE_U32_e64 [[VGPR6]], [[VGPR7]]
 # GCN: V_CNDMASK_B32_e64 0, [[VGPR9]], 0, [[VGPR8]], [[COND0]]
@@ -220,8 +220,8 @@ legalized:       true
 regBankSelected: true
 
 # GCN-LABEL: name: icmp_s32_vv
-# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-# GCN: [[VGPR3:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr3
+# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+# GCN: [[VGPR3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
 # GCN: V_CMP_NE_U32_e64 [[VGPR2]], [[VGPR3]]
 
 body: |
@@ -244,8 +244,8 @@ legalized:       true
 regBankSelected: true
 
 # GCN-LABEL: name: icmp_s32_vs
-# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = COPY $sgpr0
 # GCN: V_CMP_NE_U32_e64 [[VGPR2]], [[SGPR0]]
 
 body: |
@@ -268,8 +268,8 @@ legalized:       true
 regBankSelected: true
 
 # GCN-LABEL: name: icmp_s32_sv
-# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = COPY $sgpr0
 # GCN: V_CMP_NE_U32_e64 [[SGPR0]], [[VGPR2]]
 
 body: |
@@ -292,8 +292,8 @@ legalized:       true
 regBankSelected: true
 
 # GCN-LABEL: name: icmp_s32_or_vcc
-# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = PRED_COPY $vgpr2
-# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = PRED_COPY $sgpr0
+# GCN: [[VGPR2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+# GCN: [[SGPR0:%[0-9]+]]:sreg_32 = COPY $sgpr0
 # GCN: V_CMP_NE_U32_e64 [[SGPR0]], [[VGPR2]]
 
 body: |

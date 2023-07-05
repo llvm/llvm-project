@@ -631,7 +631,8 @@ void SIShrinkInstructions::dropInstructionKeepingImpDefs(
 // This is really just a generic peephole that is not a canonical shrinking,
 // although requirements match the pass placement and it reduces code size too.
 MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
-  assert(MovT.getOpcode() == AMDGPU::V_MOV_B32_e32 || MovT.isCopy());
+  assert(MovT.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+         MovT.getOpcode() == AMDGPU::COPY);
 
   Register T = MovT.getOperand(0).getReg();
   unsigned Tsub = MovT.getOperand(0).getSubReg();
@@ -657,8 +658,10 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     MachineInstr *MovY = &*Iter;
     KilledT = MovY->killsRegister(T, TRI);
 
-    if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 && !MovY->isCopy()) ||
-        !MovY->getOperand(1).isReg() || MovY->getOperand(1).getReg() != T ||
+    if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
+         MovY->getOpcode() != AMDGPU::COPY) ||
+        !MovY->getOperand(1).isReg()        ||
+        MovY->getOperand(1).getReg() != T   ||
         MovY->getOperand(1).getSubReg() != Tsub)
       continue;
 
@@ -684,7 +687,9 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         }
         continue;
       }
-      if (MovX || (I->getOpcode() != AMDGPU::V_MOV_B32_e32 && !I->isCopy()) ||
+      if (MovX ||
+          (I->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
+           I->getOpcode() != AMDGPU::COPY) ||
           I->getOperand(0).getReg() != X ||
           I->getOperand(0).getSubReg() != Xsub) {
         MovX = nullptr;
@@ -800,8 +805,8 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         }
       }
 
-      if (ST->hasSwap() &&
-          (MI.getOpcode() == AMDGPU::V_MOV_B32_e32 || MI.isCopy())) {
+      if (ST->hasSwap() && (MI.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+                            MI.getOpcode() == AMDGPU::COPY)) {
         if (auto *NextMI = matchSwap(MI)) {
           Next = NextMI->getIterator();
           continue;

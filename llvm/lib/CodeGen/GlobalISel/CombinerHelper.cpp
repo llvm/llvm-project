@@ -205,7 +205,7 @@ bool CombinerHelper::tryCombineCopy(MachineInstr &MI) {
   return false;
 }
 bool CombinerHelper::matchCombineCopy(MachineInstr &MI) {
-  if (!MI.isCopy())
+  if (MI.getOpcode() != TargetOpcode::COPY)
     return false;
   Register DstReg = MI.getOperand(0).getReg();
   Register SrcReg = MI.getOperand(1).getReg();
@@ -4061,7 +4061,7 @@ bool CombinerHelper::matchICmpToLHSKnownBits(
   LLT LHSTy = MRI.getType(LHS);
   unsigned LHSSize = LHSTy.getSizeInBits();
   unsigned DstSize = DstTy.getSizeInBits();
-  unsigned Op = Builder.getTII().getCopyOpcode();
+  unsigned Op = TargetOpcode::COPY;
   if (DstSize != LHSSize)
     Op = DstSize < LHSSize ? TargetOpcode::G_TRUNC : TargetOpcode::G_ZEXT;
   if (!isLegalOrBeforeLegalizer({Op, {DstTy, LHSTy}}))

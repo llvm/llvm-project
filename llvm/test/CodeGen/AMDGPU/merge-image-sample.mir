@@ -2,17 +2,17 @@
 
 # GFX9-LABEL: name: image_sample_l_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_l_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -21,17 +21,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_l_merged_v1v3_reversed
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub3
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub0_sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub3
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub0_sub1_sub2
 
 name: image_sample_l_merged_v1v3_reversed
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -40,17 +40,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_l_merged_v2v2
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %8.sub0_sub1
-# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY killed %8.sub2_sub3
+# GFX9: %{{[0-9]+}}:vreg_64 = COPY %8.sub0_sub1
+# GFX9: %{{[0-9]+}}:vreg_64 = COPY killed %8.sub2_sub3
 
 name: image_sample_l_merged_v2v2
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_64 = IMAGE_SAMPLE_L_V2_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 3, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
     %7:vreg_64 = IMAGE_SAMPLE_L_V2_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 12, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
@@ -59,17 +59,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_l_merged_v2v2_reversed
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %8.sub2_sub3
-# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY killed %8.sub0_sub1
+# GFX9: %{{[0-9]+}}:vreg_64 = COPY %8.sub2_sub3
+# GFX9: %{{[0-9]+}}:vreg_64 = COPY killed %8.sub0_sub1
 
 name: image_sample_l_merged_v2v2_reversed
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_64 = IMAGE_SAMPLE_L_V2_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 12, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
     %7:vreg_64 = IMAGE_SAMPLE_L_V2_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 3, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s64), align 16, addrspace 4)
@@ -78,17 +78,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_l_merged_v3v1
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY %8.sub0_sub1_sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %8.sub3
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY %8.sub0_sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %8.sub3
 
 name: image_sample_l_merged_v3v1
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
@@ -97,17 +97,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_l_merged_v3v1_reversed
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY %8.sub1_sub2_sub3
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %8.sub0
 
 name: image_sample_l_merged_v3v1_reversed
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
@@ -120,11 +120,11 @@ body:             |
 name: image_sample_l_divided_merged
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
@@ -142,11 +142,11 @@ body:             |
 name: image_sample_l_divided_not_merged
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vreg_128 = PRED_COPY %2
+    %4:vreg_128 = COPY %2
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     IMAGE_STORE_V4_V4 %4:vreg_128, %5:vreg_128, %3:sgpr_256, 15, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
@@ -161,11 +161,11 @@ body:             |
 name: image_sample_l_dmask_overlapped_not_merged
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 4, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -179,11 +179,11 @@ body:             |
 name: image_sample_l_dmask_not_disjoint_not_merged
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 4, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 11, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -197,11 +197,11 @@ body:             |
 name: image_sample_l_not_merged_0
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 1, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5, %3, %2, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
@@ -216,12 +216,12 @@ body:             |
 name: image_sample_l_not_merged_1
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
     %4:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %5:vgpr_32 = PRED_COPY %2.sub3
+    %5:vgpr_32 = COPY %2.sub3
     %6:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %6, %3, %2, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %8:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %6, %4, %2, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -235,12 +235,12 @@ body:             |
 name: image_sample_l_not_merged_2
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
-    %3:sgpr_128 = PRED_COPY $sgpr92_sgpr93_sgpr94_sgpr95
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %3:sgpr_128 = COPY $sgpr92_sgpr93_sgpr94_sgpr95
     %4:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %5:vgpr_32 = PRED_COPY %2.sub3
+    %5:vgpr_32 = COPY %2.sub3
     %6:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %7:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %6, %4, %2, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %8:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %6, %4, %3, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -254,11 +254,11 @@ body:             |
 name: image_sample_l_not_merged_3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5, %3, %2, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5, %3, %2, 7, 1, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -272,11 +272,11 @@ body:             |
 name: image_sample_l_not_merged_4
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5, %3, %2, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5, %3, %2, 7, 0, 0, 1, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -290,11 +290,11 @@ body:             |
 name: image_sample_l_not_merged_5
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5, %3, %2, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5, %3, %2, 7, 0, 1, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -308,11 +308,11 @@ body:             |
 name: image_sample_l_not_merged_6
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5, %3, %2, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5, %3, %2, 7, 0, 0, 1, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -326,11 +326,11 @@ body:             |
 name: image_sample_l_not_merged_7
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_64 = IMAGE_SAMPLE_L_V2_V4 %5, %3, %2, 8, 0, 0, 0, 1, 0, -1, 0, implicit $exec :: (dereferenceable load (s64), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5, %3, %2, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -344,11 +344,11 @@ body:             |
 name: image_sample_l_not_merged_8
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vreg_64 = IMAGE_SAMPLE_L_V2_V4 %5, %3, %2, 8, 0, 0, 0, 0, 1, -1, 0, implicit $exec :: (dereferenceable load (s64), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5, %3, %2, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -362,11 +362,11 @@ body:             |
 name: image_sample_l_not_merged_9
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5, %3, %2, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5, %3, %2, 7, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -380,11 +380,11 @@ body:             |
 name: image_sample_l_not_merged_10
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_V1_V4 %5, %3, %2, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_V3_V4 %5, %3, %2, 7, 0, 0, 0, 0, 0, -1, 1, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -393,17 +393,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -412,17 +412,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_b_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_B_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_b_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_B_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_B_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -431,17 +431,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_b_cl_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_B_CL_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_b_cl_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_B_CL_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_B_CL_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -450,17 +450,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_b_cl_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_B_CL_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_b_cl_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_B_CL_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_B_CL_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -469,17 +469,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_b_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_B_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_b_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_B_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_B_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -488,17 +488,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -507,17 +507,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_cd_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_CD_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_cd_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CD_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CD_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -526,17 +526,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_cd_cl_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_CD_CL_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_cd_cl_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CD_CL_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CD_CL_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -545,17 +545,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_cd_cl_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_CD_CL_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_cd_cl_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CD_CL_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CD_CL_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -564,17 +564,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_cd_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_CD_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_cd_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CD_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CD_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -583,17 +583,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_cl_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_CL_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_cl_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CL_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CL_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -602,17 +602,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_cl_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_CL_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_cl_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_CL_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_CL_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -621,17 +621,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_b_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_B_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_b_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_B_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_B_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -640,17 +640,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_b_cl_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_B_CL_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_b_cl_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_B_CL_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_B_CL_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -659,17 +659,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_b_cl_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_B_CL_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_b_cl_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_B_CL_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_B_CL_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -678,17 +678,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_b_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_B_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_b_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_B_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_B_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -697,17 +697,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_cd_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_CD_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_cd_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CD_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CD_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -716,17 +716,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_cd_cl_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_CD_CL_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_cd_cl_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CD_CL_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CD_CL_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -735,17 +735,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_cd_cl_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_CD_CL_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_cd_cl_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CD_CL_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CD_CL_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -754,17 +754,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_cd_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_CD_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_cd_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CD_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CD_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -773,17 +773,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_cl_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_CL_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_cl_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CL_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CL_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -792,17 +792,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_cl_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_CL_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_cl_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_CL_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_CL_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -811,17 +811,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_d_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_D_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_d_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_D_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_D_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -830,17 +830,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_d_cl_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_D_CL_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_d_cl_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_D_CL_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_D_CL_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -849,17 +849,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_d_cl_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_D_CL_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_d_cl_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_D_CL_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_D_CL_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -868,17 +868,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_d_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_D_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_d_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_D_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_D_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -887,17 +887,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_l_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_L_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_l_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_L_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_L_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -906,17 +906,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_lz_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_LZ_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_lz_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_LZ_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_LZ_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -925,17 +925,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_lz_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_LZ_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_lz_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_LZ_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_LZ_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -944,17 +944,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_l_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_L_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_l_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_L_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_L_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -963,17 +963,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_c_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_C_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_c_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_C_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_C_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -982,17 +982,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_d_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_D_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_d_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_D_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_D_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -1001,17 +1001,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_d_cl_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_D_CL_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_d_cl_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_D_CL_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_D_CL_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -1020,17 +1020,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_d_cl_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_D_CL_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_d_cl_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_D_CL_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_D_CL_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -1039,17 +1039,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_d_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_D_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_d_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_D_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_D_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -1058,17 +1058,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_lz_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_LZ_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_lz_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_LZ_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_LZ_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -1077,17 +1077,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_lz_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_LZ_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_lz_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_LZ_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_LZ_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -1096,17 +1096,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_l_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_l_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_L_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_L_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
@@ -1115,17 +1115,17 @@ body:             |
 
 # GFX9-LABEL: name: image_sample_o_merged_v1v3
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_O_V4_V4 %5, %3, %2, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %8.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %8.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
 
 name: image_sample_o_merged_v1v3
 body:             |
   bb.0.entry:
-    %0:sgpr_64 = PRED_COPY $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
-    %2:sgpr_128 = PRED_COPY $sgpr96_sgpr97_sgpr98_sgpr99
+    %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
     %3:sgpr_256 = S_LOAD_DWORDX8_IMM %1, 208, 0
-    %4:vgpr_32 = PRED_COPY %2.sub3
+    %4:vgpr_32 = COPY %2.sub3
     %5:vreg_128 = BUFFER_LOAD_DWORDX4_OFFSET %2:sgpr_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s128))
     %6:vgpr_32 = IMAGE_SAMPLE_O_V1_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 1, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     %7:vreg_96 = IMAGE_SAMPLE_O_V3_V4 %5:vreg_128, %3:sgpr_256, %2:sgpr_128, 14, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)

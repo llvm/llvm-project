@@ -34,8 +34,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s32) = G_SHL [[PRED_COPY]], [[COPY1]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s32) = G_SHL [[COPY2]], [[COPY1]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
@@ -55,8 +55,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s32) = PRED_COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s32) = G_SHL [[COPY]], [[PRED_COPY]](s32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s32) = G_SHL [[COPY]], [[COPY2]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $sgpr0
@@ -126,8 +126,8 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s16) = PRED_COPY [[TRUNC]](s16)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s16) = G_SHL [[PRED_COPY]], [[TRUNC1]](s16)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC]](s16)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s16) = G_SHL [[COPY2]], [[TRUNC1]](s16)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s16)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
@@ -151,8 +151,8 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s16) = G_TRUNC [[COPY]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY1]](s32)
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(s16) = PRED_COPY [[TRUNC1]](s16)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s16) = G_SHL [[TRUNC]], [[PRED_COPY]](s16)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s16) = COPY [[TRUNC1]](s16)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(s16) = G_SHL [[TRUNC]], [[COPY2]](s16)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](s16)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $sgpr0
@@ -229,8 +229,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(<2 x s16>) = PRED_COPY [[COPY]](<2 x s16>)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x s16>) = G_SHL [[PRED_COPY]], [[COPY1]](<2 x s16>)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[COPY]](<2 x s16>)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x s16>) = G_SHL [[COPY2]], [[COPY1]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $sgpr0
     %1:_(<2 x s16>) = COPY $vgpr0
@@ -250,8 +250,8 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(<2 x s16>) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(<2 x s16>) = COPY $sgpr0
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:vgpr(<2 x s16>) = PRED_COPY [[COPY1]](<2 x s16>)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x s16>) = G_SHL [[COPY]], [[PRED_COPY]](<2 x s16>)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s16>) = COPY [[COPY1]](<2 x s16>)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:vgpr(<2 x s16>) = G_SHL [[COPY]], [[COPY2]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[SHL]](<2 x s16>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<2 x s16>) = COPY $sgpr0

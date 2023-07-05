@@ -38,24 +38,22 @@ body: |
 # LiveRange splitting should split this into 2 intervals with the second getting
 # allocated to sgpr0_sgpr1 and the first to something else so we see two copies
 # in between for the two subregisters that are alive.
+# CHECK-LABEL: name: func1
+# CHECK: [[REG0:\$sgpr[0-9]+]] = COPY $sgpr0
+# CHECK: [[REG1:\$sgpr[0-9]+]] = COPY $sgpr2
+# CHECK: S_NOP 0
+# CHECK: S_NOP 0, implicit renamable [[REG0]]
+# CHECK: S_NOP 0, implicit renamable [[REG1]]
+# CHECK: $sgpr0 = COPY killed renamable [[REG0]]
+# CHECK: $sgpr2 = COPY renamable [[REG1]]
+# CHECK: S_NOP
+# CHECK: S_NOP 0, implicit renamable $sgpr0
+# CHECK: S_NOP 0, implicit killed renamable $sgpr2
 name: func1
 tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2
-    ; CHECK-LABEL: name: func1
-    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2
-    ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: renamable $sgpr4 = COPY $sgpr0
-    ; CHECK-NEXT: renamable $sgpr6 = COPY $sgpr2
-    ; CHECK-NEXT: S_NOP 0, implicit-def dead $sgpr0, implicit-def dead $sgpr1
-    ; CHECK-NEXT: S_NOP 0, implicit renamable $sgpr4
-    ; CHECK-NEXT: S_NOP 0, implicit renamable $sgpr6
-    ; CHECK-NEXT: renamable $sgpr0 = PRED_COPY killed renamable $sgpr4
-    ; CHECK-NEXT: renamable $sgpr2 = PRED_COPY renamable $sgpr6
-    ; CHECK-NEXT: S_NOP 0, implicit-def dead $sgpr4, implicit-def dead $sgpr5, implicit-def dead $sgpr6, implicit-def dead $sgpr7, implicit-def dead $sgpr8, implicit-def dead $sgpr9, implicit-def dead $sgpr10, implicit-def dead $sgpr11, implicit-def dead $sgpr12, implicit-def dead $sgpr13, implicit-def dead $sgpr14, implicit-def dead $sgpr15, implicit-def dead $vcc_lo, implicit-def dead $vcc_hi
-    ; CHECK-NEXT: S_NOP 0, implicit renamable $sgpr0
-    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $sgpr2
     undef %0.sub0 : sgpr_128 = COPY $sgpr0
     %0.sub2 = COPY $sgpr2
 

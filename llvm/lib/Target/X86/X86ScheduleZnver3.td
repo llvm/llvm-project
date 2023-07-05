@@ -512,7 +512,6 @@ defm : Zn3WriteResInt<WriteMove, [Zn3ALU0123], 1, [4], 1>;
 
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
-def : InstRW<[WriteMove], (instrs PRED_COPY)>;
 
 def Zn3WriteMOVBE16rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3ALU0123]> {
   let Latency = Znver3Model.LoadLatency;

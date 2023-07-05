@@ -638,13 +638,13 @@ body: |
     ; CHECK-NEXT: [[AND4:%[0-9]+]]:_(s16) = G_AND [[TRUNC4]], [[C3]]
     ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(s16) = G_SHL [[AND4]], [[C4]](s16)
     ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s16) = G_OR [[AND4]], [[SHL2]]
-    ; CHECK-NEXT: [[PRED_COPY:%[0-9]+]]:_(s16) = PRED_COPY [[OR2]](s16)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY [[OR2]](s16)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[OR]](s16)
     ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s16)
     ; CHECK-NEXT: [[SHL3:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C1]](s32)
     ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL3]]
     ; CHECK-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[OR2]](s16)
-    ; CHECK-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[PRED_COPY]](s16)
+    ; CHECK-NEXT: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[COPY1]](s16)
     ; CHECK-NEXT: [[SHL4:%[0-9]+]]:_(s32) = G_SHL [[ZEXT3]], [[C1]](s32)
     ; CHECK-NEXT: [[OR4:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL4]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR3]](s32), [[OR4]](s32)

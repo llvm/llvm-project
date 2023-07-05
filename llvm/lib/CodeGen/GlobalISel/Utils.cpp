@@ -73,11 +73,14 @@ Register llvm::constrainOperandRegClass(
     // FIXME: The copy needs to have the classes constrained for its operands.
     // Use operand's regbank to get the class for old register (Reg).
     if (RegMO.isUse()) {
-      TII.buildCopy(MBB, InsertIt, InsertPt.getDebugLoc(), ConstrainedReg, Reg);
+      BuildMI(MBB, InsertIt, InsertPt.getDebugLoc(),
+              TII.get(TargetOpcode::COPY), ConstrainedReg)
+          .addReg(Reg);
     } else {
       assert(RegMO.isDef() && "Must be a definition");
-      TII.buildCopy(MBB, std::next(InsertIt), InsertPt.getDebugLoc(), Reg,
-                    ConstrainedReg);
+      BuildMI(MBB, std::next(InsertIt), InsertPt.getDebugLoc(),
+              TII.get(TargetOpcode::COPY), Reg)
+          .addReg(ConstrainedReg);
     }
     if (GISelChangeObserver *Observer = MF.getObserver()) {
       Observer->changingInstr(*RegMO.getParent());
@@ -326,7 +329,6 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
       VReg = MI->getOperand(1).getReg();
       break;
     case TargetOpcode::COPY:
-    case TargetOpcode::PRED_COPY:
       VReg = MI->getOperand(1).getReg();
       if (VReg.isPhysical())
         return std::nullopt;
@@ -441,7 +443,7 @@ llvm::getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI) {
   if (!DstTy.isValid())
     return std::nullopt;
   unsigned Opc = DefMI->getOpcode();
-  while (DefMI->isCopy() || isPreISelGenericOptimizationHint(Opc)) {
+  while (Opc == TargetOpcode::COPY || isPreISelGenericOptimizationHint(Opc)) {
     Register SrcReg = DefMI->getOperand(1).getReg();
     auto SrcTy = MRI.getType(SrcReg);
     if (!SrcTy.isValid())
@@ -747,7 +749,8 @@ Register llvm::getFunctionLiveInPhysReg(MachineFunction &MF,
       MRI.setType(LiveIn, RegTy);
   }
 
-  TII.buildCopy(EntryMBB, EntryMBB.begin(), DL, LiveIn, PhysReg);
+  BuildMI(EntryMBB, EntryMBB.begin(), DL, TII.get(TargetOpcode::COPY), LiveIn)
+    .addReg(PhysReg);
   if (!EntryMBB.isLiveIn(PhysReg))
     EntryMBB.addLiveIn(PhysReg);
   return LiveIn;
