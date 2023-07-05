@@ -917,6 +917,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               LineEnding, FormatStyle::LE_CRLF);
   Style.LineEnding = DefaultLineEnding;
   CHECK_PARSE("UseCRLF: true", LineEnding, FormatStyle::LE_DeriveCRLF);
+
+  CHECK_PARSE("RemoveParentheses: MultipleParentheses", RemoveParentheses,
+              FormatStyle::RPS_MultipleParentheses);
+  CHECK_PARSE("RemoveParentheses: ReturnStatement", RemoveParentheses,
+              FormatStyle::RPS_ReturnStatement);
+  CHECK_PARSE("RemoveParentheses: Leave", RemoveParentheses,
+              FormatStyle::RPS_Leave);
 }
 
 TEST(ConfigParseTest, ParsesConfigurationWithLanguages) {

@@ -156,7 +156,7 @@ private:
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
                        tok::TokenKind ClosingBraceKind = tok::r_brace);
-  void parseParens(TokenType AmpAmpTokenType = TT_Unknown);
+  bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
   void parseUnbracedBody(bool CheckEOF = false);
