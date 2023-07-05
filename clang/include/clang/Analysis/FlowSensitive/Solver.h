@@ -14,10 +14,12 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_SOLVER_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_SOLVER_H
 
-#include "clang/Analysis/FlowSensitive/Formula.h"
+#include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <vector>
 
@@ -47,7 +49,8 @@ public:
 
     /// Constructs a result indicating that the queried boolean formula is
     /// satisfiable. The result will hold a solution found by the solver.
-    static Result Satisfiable(llvm::DenseMap<Atom, Assignment> Solution) {
+    static Result
+    Satisfiable(llvm::DenseMap<AtomicBoolValue *, Assignment> Solution) {
       return Result(Status::Satisfiable, std::move(Solution));
     }
 
@@ -65,17 +68,19 @@ public:
 
     /// Returns a truth assignment to boolean values that satisfies the queried
     /// boolean formula if available. Otherwise, an empty optional is returned.
-    std::optional<llvm::DenseMap<Atom, Assignment>> getSolution() const {
+    std::optional<llvm::DenseMap<AtomicBoolValue *, Assignment>>
+    getSolution() const {
       return Solution;
     }
 
   private:
-    Result(Status SATCheckStatus,
-           std::optional<llvm::DenseMap<Atom, Assignment>> Solution)
+    Result(
+        enum Status SATCheckStatus,
+        std::optional<llvm::DenseMap<AtomicBoolValue *, Assignment>> Solution)
         : SATCheckStatus(SATCheckStatus), Solution(std::move(Solution)) {}
 
     Status SATCheckStatus;
-    std::optional<llvm::DenseMap<Atom, Assignment>> Solution;
+    std::optional<llvm::DenseMap<AtomicBoolValue *, Assignment>> Solution;
   };
 
   virtual ~Solver() = default;
@@ -86,11 +91,13 @@ public:
   /// Requirements:
   ///
   ///  All elements in `Vals` must not be null.
-  virtual Result solve(llvm::ArrayRef<const Formula *> Vals) = 0;
-};
+  virtual Result solve(llvm::ArrayRef<BoolValue *> Vals) = 0;
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Solver::Result &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, Solver::Result::Assignment);
+  LLVM_DEPRECATED("Pass ArrayRef for determinism", "")
+  virtual Result solve(llvm::DenseSet<BoolValue *> Vals) {
+    return solve(ArrayRef(std::vector<BoolValue *>(Vals.begin(), Vals.end())));
+  }
+};
 
 } // namespace dataflow
 } // namespace clang

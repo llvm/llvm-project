@@ -15,11 +15,11 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_VALUE_H
 
 #include "clang/AST/Decl.h"
-#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
 
@@ -38,10 +38,14 @@ public:
     Pointer,
     Struct,
 
-    // TODO: Top values should not be need to be type-specific.
+    // Synthetic boolean values are either atomic values or logical connectives.
     TopBool,
     AtomicBool,
-    FormulaBool,
+    Conjunction,
+    Disjunction,
+    Negation,
+    Implication,
+    Biconditional,
   };
 
   explicit Value(Kind ValKind) : ValKind(ValKind) {}
@@ -91,68 +95,151 @@ bool areEquivalentValues(const Value &Val1, const Value &Val2);
 
 /// Models a boolean.
 class BoolValue : public Value {
-  const Formula *F;
-
 public:
-  explicit BoolValue(Kind ValueKind, const Formula &F)
-      : Value(ValueKind), F(&F) {}
+  explicit BoolValue(Kind ValueKind) : Value(ValueKind) {}
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::TopBool ||
            Val->getKind() == Kind::AtomicBool ||
-           Val->getKind() == Kind::FormulaBool;
+           Val->getKind() == Kind::Conjunction ||
+           Val->getKind() == Kind::Disjunction ||
+           Val->getKind() == Kind::Negation ||
+           Val->getKind() == Kind::Implication ||
+           Val->getKind() == Kind::Biconditional;
   }
-
-  const Formula &formula() const { return *F; }
 };
 
-/// A TopBoolValue represents a boolean that is explicitly unconstrained.
-///
-/// This is equivalent to an AtomicBoolValue that does not appear anywhere
-/// else in a system of formula.
-/// Knowing the value is unconstrained is useful when e.g. reasoning about
-/// convergence.
+/// Models the trivially true formula, which is Top in the lattice of boolean
+/// formulas.
 class TopBoolValue final : public BoolValue {
 public:
-  TopBoolValue(const Formula &F) : BoolValue(Kind::TopBool, F) {
-    assert(F.kind() == Formula::AtomRef);
-  }
+  TopBoolValue() : BoolValue(Kind::TopBool) {}
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::TopBool;
   }
-
-  Atom getAtom() const { return formula().getAtom(); }
 };
 
 /// Models an atomic boolean.
-///
-/// FIXME: Merge this class into FormulaBoolValue.
-///        When we want to specify atom identity, use Atom.
-class AtomicBoolValue final : public BoolValue {
+class AtomicBoolValue : public BoolValue {
 public:
-  explicit AtomicBoolValue(const Formula &F) : BoolValue(Kind::AtomicBool, F) {
-    assert(F.kind() == Formula::AtomRef);
-  }
+  explicit AtomicBoolValue() : BoolValue(Kind::AtomicBool) {}
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::AtomicBool;
   }
-
-  Atom getAtom() const { return formula().getAtom(); }
 };
 
-/// Models a compound boolean formula.
-class FormulaBoolValue final : public BoolValue {
+/// Models a boolean conjunction.
+// FIXME: Consider representing binary and unary boolean operations similar
+// to how they are represented in the AST. This might become more pressing
+// when such operations need to be added for other data types.
+class ConjunctionValue : public BoolValue {
 public:
-  explicit FormulaBoolValue(const Formula &F)
-      : BoolValue(Kind::FormulaBool, F) {
-    assert(F.kind() != Formula::AtomRef && "For now, use AtomicBoolValue");
-  }
+  explicit ConjunctionValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Conjunction), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
 
   static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::FormulaBool;
+    return Val->getKind() == Kind::Conjunction;
   }
+
+  /// Returns the left sub-value of the conjunction.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the conjunction.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
+};
+
+/// Models a boolean disjunction.
+class DisjunctionValue : public BoolValue {
+public:
+  explicit DisjunctionValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Disjunction), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Disjunction;
+  }
+
+  /// Returns the left sub-value of the disjunction.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the disjunction.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
+};
+
+/// Models a boolean negation.
+class NegationValue : public BoolValue {
+public:
+  explicit NegationValue(BoolValue &SubVal)
+      : BoolValue(Kind::Negation), SubVal(SubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Negation;
+  }
+
+  /// Returns the sub-value of the negation.
+  BoolValue &getSubVal() const { return SubVal; }
+
+private:
+  BoolValue &SubVal;
+};
+
+/// Models a boolean implication.
+///
+/// Equivalent to `!LHS v RHS`.
+class ImplicationValue : public BoolValue {
+public:
+  explicit ImplicationValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Implication), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Implication;
+  }
+
+  /// Returns the left sub-value of the implication.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the implication.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
+};
+
+/// Models a boolean biconditional.
+///
+/// Equivalent to `(LHS ^ RHS) v (!LHS ^ !RHS)`.
+class BiconditionalValue : public BoolValue {
+public:
+  explicit BiconditionalValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Biconditional), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Biconditional;
+  }
+
+  /// Returns the left sub-value of the biconditional.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the biconditional.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
 };
 
 /// Models an integer.
