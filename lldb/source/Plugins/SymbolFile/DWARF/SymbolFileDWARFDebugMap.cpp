@@ -32,6 +32,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/VariableList.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 #include "lldb/Target/StackFrame.h"
@@ -286,112 +287,105 @@ void SymbolFileDWARFDebugMap::InitOSO() {
   // we return the abilities of the first N_OSO's DWARF.
 
   Symtab *symtab = m_objfile_sp->GetSymtab();
-  if (symtab) {
-    Log *log = GetLog(DWARFLog::DebugMap);
+  if (!symtab)
+    return;
 
-    std::vector<uint32_t> oso_indexes;
-    // When a mach-o symbol is encoded, the n_type field is encoded in bits
-    // 23:16, and the n_desc field is encoded in bits 15:0.
-    //
-    // To find all N_OSO entries that are part of the DWARF + debug map we find
-    // only object file symbols with the flags value as follows: bits 23:16 ==
-    // 0x66 (N_OSO) bits 15: 0 == 0x0001 (specifies this is a debug map object
-    // file)
-    const uint32_t k_oso_symbol_flags_value = 0x660001u;
+  Log *log = GetLog(DWARFLog::DebugMap);
 
-    const uint32_t oso_index_count =
-        symtab->AppendSymbolIndexesWithTypeAndFlagsValue(
-            eSymbolTypeObjectFile, k_oso_symbol_flags_value, oso_indexes);
+  std::vector<uint32_t> oso_indexes;
+  // When a mach-o symbol is encoded, the n_type field is encoded in bits
+  // 23:16, and the n_desc field is encoded in bits 15:0.
+  //
+  // To find all N_OSO entries that are part of the DWARF + debug map we find
+  // only object file symbols with the flags value as follows: bits 23:16 ==
+  // 0x66 (N_OSO) bits 15: 0 == 0x0001 (specifies this is a debug map object
+  // file)
+  const uint32_t k_oso_symbol_flags_value = 0x660001u;
 
-    if (oso_index_count > 0) {
-      symtab->AppendSymbolIndexesWithType(eSymbolTypeCode, Symtab::eDebugYes,
-                                          Symtab::eVisibilityAny,
-                                          m_func_indexes);
-      symtab->AppendSymbolIndexesWithType(eSymbolTypeData, Symtab::eDebugYes,
-                                          Symtab::eVisibilityAny,
-                                          m_glob_indexes);
+  const uint32_t oso_index_count =
+      symtab->AppendSymbolIndexesWithTypeAndFlagsValue(
+          eSymbolTypeObjectFile, k_oso_symbol_flags_value, oso_indexes);
 
-      symtab->SortSymbolIndexesByValue(m_func_indexes, true);
-      symtab->SortSymbolIndexesByValue(m_glob_indexes, true);
+  if (oso_index_count == 0)
+    return;
 
-      for (uint32_t sym_idx : m_func_indexes) {
-        const Symbol *symbol = symtab->SymbolAtIndex(sym_idx);
-        lldb::addr_t file_addr = symbol->GetAddressRef().GetFileAddress();
-        lldb::addr_t byte_size = symbol->GetByteSize();
-        DebugMap::Entry debug_map_entry(
-            file_addr, byte_size, OSOEntry(sym_idx, LLDB_INVALID_ADDRESS));
-        m_debug_map.Append(debug_map_entry);
+  symtab->AppendSymbolIndexesWithType(eSymbolTypeCode, Symtab::eDebugYes,
+                                      Symtab::eVisibilityAny, m_func_indexes);
+  symtab->AppendSymbolIndexesWithType(eSymbolTypeData, Symtab::eDebugYes,
+                                      Symtab::eVisibilityAny, m_glob_indexes);
+
+  symtab->SortSymbolIndexesByValue(m_func_indexes, true);
+  symtab->SortSymbolIndexesByValue(m_glob_indexes, true);
+
+  for (uint32_t sym_idx :
+       llvm::concat<uint32_t>(m_func_indexes, m_glob_indexes)) {
+    const Symbol *symbol = symtab->SymbolAtIndex(sym_idx);
+    lldb::addr_t file_addr = symbol->GetAddressRef().GetFileAddress();
+    lldb::addr_t byte_size = symbol->GetByteSize();
+    DebugMap::Entry debug_map_entry(file_addr, byte_size,
+                                    OSOEntry(sym_idx, LLDB_INVALID_ADDRESS));
+    m_debug_map.Append(debug_map_entry);
+  }
+  m_debug_map.Sort();
+
+  m_compile_unit_infos.resize(oso_index_count);
+
+  for (uint32_t i = 0; i < oso_index_count; ++i) {
+    const uint32_t so_idx = oso_indexes[i] - 1;
+    const uint32_t oso_idx = oso_indexes[i];
+    const Symbol *so_symbol = symtab->SymbolAtIndex(so_idx);
+    const Symbol *oso_symbol = symtab->SymbolAtIndex(oso_idx);
+    if (so_symbol && oso_symbol &&
+        so_symbol->GetType() == eSymbolTypeSourceFile &&
+        oso_symbol->GetType() == eSymbolTypeObjectFile) {
+      m_compile_unit_infos[i].so_file.SetFile(so_symbol->GetName().AsCString(),
+                                              FileSpec::Style::native);
+      m_compile_unit_infos[i].oso_path = oso_symbol->GetName();
+      m_compile_unit_infos[i].oso_mod_time =
+          llvm::sys::toTimePoint(oso_symbol->GetIntegerValue(0));
+      uint32_t sibling_idx = so_symbol->GetSiblingIndex();
+      // The sibling index can't be less that or equal to the current index
+      // "i"
+      if (sibling_idx <= i || sibling_idx == UINT32_MAX) {
+        m_objfile_sp->GetModule()->ReportError(
+            "N_SO in symbol with UID {0} has invalid sibling in debug "
+            "map, "
+            "please file a bug and attach the binary listed in this error",
+            so_symbol->GetID());
+      } else {
+        const Symbol *last_symbol = symtab->SymbolAtIndex(sibling_idx - 1);
+        m_compile_unit_infos[i].first_symbol_index = so_idx;
+        m_compile_unit_infos[i].last_symbol_index = sibling_idx - 1;
+        m_compile_unit_infos[i].first_symbol_id = so_symbol->GetID();
+        m_compile_unit_infos[i].last_symbol_id = last_symbol->GetID();
+
+        LLDB_LOGF(log, "Initialized OSO 0x%8.8x: file=%s", i,
+                  oso_symbol->GetName().GetCString());
       }
-      for (uint32_t sym_idx : m_glob_indexes) {
-        const Symbol *symbol = symtab->SymbolAtIndex(sym_idx);
-        lldb::addr_t file_addr = symbol->GetAddressRef().GetFileAddress();
-        lldb::addr_t byte_size = symbol->GetByteSize();
-        DebugMap::Entry debug_map_entry(
-            file_addr, byte_size, OSOEntry(sym_idx, LLDB_INVALID_ADDRESS));
-        m_debug_map.Append(debug_map_entry);
-      }
-      m_debug_map.Sort();
-
-      m_compile_unit_infos.resize(oso_index_count);
-
-      for (uint32_t i = 0; i < oso_index_count; ++i) {
-        const uint32_t so_idx = oso_indexes[i] - 1;
-        const uint32_t oso_idx = oso_indexes[i];
-        const Symbol *so_symbol = symtab->SymbolAtIndex(so_idx);
-        const Symbol *oso_symbol = symtab->SymbolAtIndex(oso_idx);
-        if (so_symbol && oso_symbol &&
-            so_symbol->GetType() == eSymbolTypeSourceFile &&
-            oso_symbol->GetType() == eSymbolTypeObjectFile) {
-          m_compile_unit_infos[i].so_file.SetFile(
-              so_symbol->GetName().AsCString(), FileSpec::Style::native);
-          m_compile_unit_infos[i].oso_path = oso_symbol->GetName();
-          m_compile_unit_infos[i].oso_mod_time =
-              llvm::sys::toTimePoint(oso_symbol->GetIntegerValue(0));
-          uint32_t sibling_idx = so_symbol->GetSiblingIndex();
-          // The sibling index can't be less that or equal to the current index
-          // "i"
-          if (sibling_idx == UINT32_MAX) {
-            m_objfile_sp->GetModule()->ReportError(
-                "N_SO in symbol with UID {0} has invalid sibling in debug "
-                "map, "
-                "please file a bug and attach the binary listed in this error",
-                so_symbol->GetID());
-          } else {
-            const Symbol *last_symbol = symtab->SymbolAtIndex(sibling_idx - 1);
-            m_compile_unit_infos[i].first_symbol_index = so_idx;
-            m_compile_unit_infos[i].last_symbol_index = sibling_idx - 1;
-            m_compile_unit_infos[i].first_symbol_id = so_symbol->GetID();
-            m_compile_unit_infos[i].last_symbol_id = last_symbol->GetID();
-
-            LLDB_LOGF(log, "Initialized OSO 0x%8.8x: file=%s", i,
-                      oso_symbol->GetName().GetCString());
-          }
-        } else {
-          if (oso_symbol == nullptr)
-            m_objfile_sp->GetModule()->ReportError(
-                "N_OSO symbol[{0}] can't be found, please file a bug and "
-                "attach "
-                "the binary listed in this error",
-                oso_idx);
-          else if (so_symbol == nullptr)
-            m_objfile_sp->GetModule()->ReportError(
-                "N_SO not found for N_OSO symbol[{0}], please file a bug and "
-                "attach the binary listed in this error",
-                oso_idx);
-          else if (so_symbol->GetType() != eSymbolTypeSourceFile)
-            m_objfile_sp->GetModule()->ReportError(
-                "N_SO has incorrect symbol type ({0}) for N_OSO "
-                "symbol[{1}], "
-                "please file a bug and attach the binary listed in this error",
-                so_symbol->GetType(), oso_idx);
-          else if (oso_symbol->GetType() != eSymbolTypeSourceFile)
-            m_objfile_sp->GetModule()->ReportError(
-                "N_OSO has incorrect symbol type ({0}) for N_OSO "
-                "symbol[{1}], "
-                "please file a bug and attach the binary listed in this error",
-                oso_symbol->GetType(), oso_idx);
-        }
-      }
+    } else {
+      if (oso_symbol == nullptr)
+        m_objfile_sp->GetModule()->ReportError(
+            "N_OSO symbol[{0}] can't be found, please file a bug and "
+            "attach "
+            "the binary listed in this error",
+            oso_idx);
+      else if (so_symbol == nullptr)
+        m_objfile_sp->GetModule()->ReportError(
+            "N_SO not found for N_OSO symbol[{0}], please file a bug and "
+            "attach the binary listed in this error",
+            oso_idx);
+      else if (so_symbol->GetType() != eSymbolTypeSourceFile)
+        m_objfile_sp->GetModule()->ReportError(
+            "N_SO has incorrect symbol type ({0}) for N_OSO "
+            "symbol[{1}], "
+            "please file a bug and attach the binary listed in this error",
+            so_symbol->GetType(), oso_idx);
+      else if (oso_symbol->GetType() != eSymbolTypeSourceFile)
+        m_objfile_sp->GetModule()->ReportError(
+            "N_OSO has incorrect symbol type ({0}) for N_OSO "
+            "symbol[{1}], "
+            "please file a bug and attach the binary listed in this error",
+            oso_symbol->GetType(), oso_idx);
     }
   }
 }
