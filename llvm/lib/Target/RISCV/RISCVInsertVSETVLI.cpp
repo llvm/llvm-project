@@ -160,11 +160,23 @@ static bool hasUndefinedMergeOp(const MachineInstr &MI,
     // lanes are undefined.
     return true;
 
-  // If the tied operand is an IMPLICIT_DEF, the pass through lanes
-  // are undefined.
+  // If the tied operand is an IMPLICIT_DEF (or a REG_SEQUENCE whose operands
+  // are solely IMPLICIT_DEFS), the pass through lanes are undefined.  
   const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
-  MachineInstr *UseMI = MRI.getVRegDef(UseMO.getReg());
-  return UseMI && UseMI->isImplicitDef();
+  if (MachineInstr *UseMI = MRI.getVRegDef(UseMO.getReg())) {
+    if (UseMI->isImplicitDef())
+      return true;
+
+    if (UseMI->isRegSequence()) {
+      for (unsigned i = 1, e = UseMI->getNumOperands(); i < e; i += 2) {
+        MachineInstr *SourceMI = MRI.getVRegDef(UseMI->getOperand(i).getReg());
+        if (!SourceMI || !SourceMI->isImplicitDef())
+          return false;
+      }
+      return true;
+    }
+  }
+  return false;
 }
 
 /// Which subfields of VL or VTYPE have values we need to preserve?
