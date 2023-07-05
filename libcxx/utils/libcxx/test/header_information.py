@@ -27,7 +27,6 @@ lit_header_restrictions = {
     "experimental/regex": "// UNSUPPORTED: no-localization, c++03",
     "experimental/set": "// UNSUPPORTED: c++03",
     "experimental/simd": "// UNSUPPORTED: c++03",
-    "experimental/span": "// UNSUPPORTED: c++03",
     "experimental/string": "// UNSUPPORTED: c++03",
     "experimental/type_traits": "// UNSUPPORTED: c++03",
     "experimental/unordered_map": "// UNSUPPORTED: c++03",
