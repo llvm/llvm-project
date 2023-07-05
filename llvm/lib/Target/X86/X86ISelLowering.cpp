@@ -39140,12 +39140,30 @@ unsigned X86TargetLowering::ComputeNumSignBitsForTargetNode(
     getPackDemandedElts(Op.getValueType(), DemandedElts, DemandedLHS,
                         DemandedRHS);
 
+    // Helper to detect PACKSSDW(BITCAST(PACKSSDW(X)),BITCAST(PACKSSDW(Y)))
+    // patterns often used to compact vXi64 allsignbit patterns.
+    auto NumSignBitsPACKSS = [&](SDValue V, const APInt &Elts) -> unsigned {
+      SDValue BC = peekThroughBitcasts(V);
+      if (BC.getOpcode() == X86ISD::PACKSS &&
+          BC.getScalarValueSizeInBits() == 16 &&
+          V.getScalarValueSizeInBits() == 32) {
+        SDValue BC0 = peekThroughBitcasts(BC.getOperand(0));
+        SDValue BC1 = peekThroughBitcasts(BC.getOperand(1));
+        if (BC0.getScalarValueSizeInBits() == 64 &&
+            BC1.getScalarValueSizeInBits() == 64 &&
+            DAG.ComputeNumSignBits(BC0, Depth + 1) == 64 &&
+            DAG.ComputeNumSignBits(BC1, Depth + 1) == 64)
+          return 32;
+      }
+      return DAG.ComputeNumSignBits(V, Elts, Depth + 1);
+    };
+
     unsigned SrcBits = Op.getOperand(0).getScalarValueSizeInBits();
     unsigned Tmp0 = SrcBits, Tmp1 = SrcBits;
     if (!!DemandedLHS)
-      Tmp0 = DAG.ComputeNumSignBits(Op.getOperand(0), DemandedLHS, Depth + 1);
+      Tmp0 = NumSignBitsPACKSS(Op.getOperand(0), DemandedLHS);
     if (!!DemandedRHS)
-      Tmp1 = DAG.ComputeNumSignBits(Op.getOperand(1), DemandedRHS, Depth + 1);
+      Tmp1 = NumSignBitsPACKSS(Op.getOperand(1), DemandedRHS);
     unsigned Tmp = std::min(Tmp0, Tmp1);
     if (Tmp > (SrcBits - VTBits))
       return Tmp - (SrcBits - VTBits);

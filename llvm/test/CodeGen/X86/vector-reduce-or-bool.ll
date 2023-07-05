@@ -1102,7 +1102,7 @@ define i1 @icmp0_v8i64_v8i1(<8 x i64>) {
 ; SSE41-NEXT:    packssdw %xmm1, %xmm0
 ; SSE41-NEXT:    packssdw %xmm2, %xmm0
 ; SSE41-NEXT:    pmovmskb %xmm0, %eax
-; SSE41-NEXT:    testl $43690, %eax # imm = 0xAAAA
+; SSE41-NEXT:    testl %eax, %eax
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
@@ -1899,7 +1899,7 @@ define i1 @icmp_v8i64_v8i1(<8 x i64>, <8 x i64>) {
 ; SSE41-NEXT:    packssdw %xmm1, %xmm0
 ; SSE41-NEXT:    packssdw %xmm2, %xmm0
 ; SSE41-NEXT:    pmovmskb %xmm0, %eax
-; SSE41-NEXT:    testl $43690, %eax # imm = 0xAAAA
+; SSE41-NEXT:    testl %eax, %eax
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
