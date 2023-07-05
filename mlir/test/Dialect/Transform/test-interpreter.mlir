@@ -107,7 +107,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !transform.any_op failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %f = pdl_match @const in %arg1 : (!transform.any_op) -> !transform.any_op
-    %m = get_closest_isolated_parent %f : (!transform.any_op) -> !transform.any_op
+    %m = get_parent_op %f {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     test_print_remark_at_operand %m, "parent function" : !transform.any_op
   }
 }
@@ -169,7 +169,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !transform.any_op failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = pdl_match @match_call in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{all alternatives failed}}
     transform.alternatives %1 : !transform.any_op {
     ^bb2(%arg2: !transform.any_op):
@@ -202,7 +202,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !transform.any_op failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = pdl_match @match_call in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     transform.alternatives %1 : !transform.any_op {
     ^bb2(%arg2: !transform.any_op):
       %2 = transform.pdl_match @match_call in %arg2 : (!transform.any_op) -> !transform.any_op
@@ -243,7 +243,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !transform.any_op failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = pdl_match @match_call in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     transform.alternatives %1 : !transform.any_op {
     ^bb2(%arg2: !transform.any_op):
       %2 = transform.pdl_match @match_call in %arg2 : (!transform.any_op) -> !transform.any_op
@@ -279,7 +279,7 @@ transform.with_pdl_patterns {
   transform.sequence %arg0 : !transform.any_op failures(propagate) {
   ^bb1(%arg1: !transform.any_op):
     %0 = pdl_match @match_call in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     %2 = transform.alternatives %1 : !transform.any_op -> !transform.any_op {
     ^bb2(%arg2: !transform.any_op):
       %3 = transform.pdl_match @match_call in %arg2 : (!transform.any_op) -> !transform.any_op
@@ -1825,4 +1825,38 @@ module {
     // expected-error @below{{transform applied to the wrong op kind}}
     transform.apply_licm to %arg1 : !transform.any_op
   }
+}
+
+// -----
+
+func.func @get_parent_op() {
+  // expected-remark @below{{found test.foo parent}}
+  "test.foo"() ({
+    // expected-remark @below{{direct parent}}
+    "test.bar"() ({
+      "test.qux"() : () -> ()
+      "test.qux"() : () -> ()
+    }) : () -> ()
+  }) : () -> ()
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["test.qux"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+
+  // Get parent by name.
+  %1 = transform.get_parent_op %0 {op_name = "test.foo"} : (!transform.any_op) -> !transform.any_op
+  test_print_remark_at_operand %1, "found test.foo parent" : !transform.any_op
+
+  // Get immediate parent.
+  %2 = transform.get_parent_op %0 : (!transform.any_op) -> !transform.any_op
+  test_print_remark_at_operand %2, "direct parent" : !transform.any_op
+  // expected-remark @below{{2}}
+  test_print_number_of_associated_payload_ir_ops %2 : !transform.any_op
+
+  // Deduplicate results.
+  %3 = transform.structured.match ops{["test.qux"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %4 = transform.get_parent_op %3 {deduplicate} : (!transform.any_op) -> !transform.any_op
+  // expected-remark @below{{1}}
+  test_print_number_of_associated_payload_ir_ops %4 : !transform.any_op
 }

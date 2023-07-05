@@ -266,7 +266,7 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
     return false;
   }
 
-#ifdef LIBOMPTARGET_DEBUG
+#ifdef OMPTARGET_DEBUG
   RTL.RTLName = Name;
 #endif
 
