@@ -52,8 +52,8 @@ if (${hsa-runtime64_FOUND} AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
   set(LIBOMPTARGET_DEP_LIBRARIES hsa-runtime64::hsa-runtime64)
 else()
   libomptarget_say("Building AMDGPU NextGen plugin for dlopened libhsa")
-  include_directories(../../plugins/amdgpu/dynamic_hsa)
-  set(LIBOMPTARGET_EXTRA_SOURCE ../../plugins/amdgpu/dynamic_hsa/hsa.cpp)
+  include_directories(dynamic_hsa)
+  set(LIBOMPTARGET_EXTRA_SOURCE dynamic_hsa/hsa.cpp)
   set(LIBOMPTARGET_DEP_LIBRARIES)
 endif()
 
@@ -66,7 +66,7 @@ else()
   set(LDFLAGS_UNDEFINED "-Wl,-z,defs")
 endif()
 
-add_llvm_library(omptarget.rtl.amdgpu.nextgen SHARED
+add_llvm_library(omptarget.rtl.amdgpu SHARED
   src/rtl.cpp
   ${LIBOMPTARGET_EXTRA_SOURCE}
 
@@ -91,16 +91,16 @@ add_llvm_library(omptarget.rtl.amdgpu.nextgen SHARED
 )
 
 if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
-  target_link_libraries(omptarget.rtl.amdgpu.nextgen PRIVATE OMPT)
+  target_link_libraries(omptarget.rtl.amdgpu PRIVATE OMPT)
 endif()
 
 if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  target_link_libraries(omptarget.rtl.amdgpu.nextgen PRIVATE
+  target_link_libraries(omptarget.rtl.amdgpu PRIVATE
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports")
 endif()
 
 target_include_directories(
-  omptarget.rtl.amdgpu.nextgen
+  omptarget.rtl.amdgpu
   PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/utils
@@ -108,7 +108,7 @@ target_include_directories(
 
 
 # Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.amdgpu.nextgen LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
-set_target_properties(omptarget.rtl.amdgpu.nextgen PROPERTIES
+install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+set_target_properties(omptarget.rtl.amdgpu PROPERTIES
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
   CXX_VISIBILITY_PRESET protected)

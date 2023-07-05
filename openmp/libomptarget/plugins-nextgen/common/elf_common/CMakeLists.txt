@@ -11,7 +11,7 @@
 ##===----------------------------------------------------------------------===##
 
 # NOTE: Don't try to build `elf_common` using `add_llvm_library`.
-# See openmp/libomptarget/plugins-nextgen/common/PluginInterface/CMakeLists.txt
+# See openmp/libomptarget/plugins/common/PluginInterface/CMakeLists.txt
 # for more explanation.
 add_library(elf_common OBJECT elf_common.cpp ELFSymbols.cpp)
 

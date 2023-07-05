@@ -26,7 +26,7 @@ libomptarget_say("Building CUDA NextGen offloading plugin.")
 set(LIBOMPTARGET_DLOPEN_LIBCUDA OFF)
 option(LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA "Build with dlopened libcuda" ${LIBOMPTARGET_DLOPEN_LIBCUDA})
 
-add_llvm_library(omptarget.rtl.cuda.nextgen SHARED
+add_llvm_library(omptarget.rtl.cuda SHARED
   src/rtl.cpp
 
   LINK_COMPONENTS
@@ -43,33 +43,33 @@ add_llvm_library(omptarget.rtl.cuda.nextgen SHARED
 )
 
 if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
-  target_link_libraries(omptarget.rtl.cuda.nextgen PRIVATE OMPT)
+  target_link_libraries(omptarget.rtl.cuda PRIVATE OMPT)
 endif()
 
 if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  target_link_libraries(omptarget.rtl.cuda.nextgen PRIVATE
+  target_link_libraries(omptarget.rtl.cuda PRIVATE
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports,-z,defs")
 endif()
 
 
 if(LIBOMPTARGET_DEP_CUDA_FOUND AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
   libomptarget_say("Building CUDA plugin linked against libcuda")
-  target_link_libraries(omptarget.rtl.cuda.nextgen PRIVATE CUDA::cuda_driver)
+  target_link_libraries(omptarget.rtl.cuda PRIVATE CUDA::cuda_driver)
 else()
   libomptarget_say("Building CUDA plugin for dlopened libcuda")
-  target_include_directories(omptarget.rtl.cuda.nextgen PRIVATE ../../plugins/cuda/dynamic_cuda)
-  target_sources(omptarget.rtl.cuda.nextgen PRIVATE ../../plugins/cuda/dynamic_cuda/cuda.cpp)
+  target_include_directories(omptarget.rtl.cuda PRIVATE dynamic_cuda)
+  target_sources(omptarget.rtl.cuda PRIVATE dynamic_cuda/cuda.cpp)
 endif()
 
 # Define debug prefix. TODO: This should be automatized in the Debug.h but it
 # requires changing the original plugins.
-target_compile_definitions(omptarget.rtl.cuda.nextgen PRIVATE TARGET_NAME="CUDA")
-target_compile_definitions(omptarget.rtl.cuda.nextgen PRIVATE DEBUG_PREFIX="TARGET CUDA RTL")
+target_compile_definitions(omptarget.rtl.cuda PRIVATE TARGET_NAME="CUDA")
+target_compile_definitions(omptarget.rtl.cuda PRIVATE DEBUG_PREFIX="TARGET CUDA RTL")
 
-target_include_directories(omptarget.rtl.cuda.nextgen PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
+target_include_directories(omptarget.rtl.cuda PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
 
 # Install plugin under the lib destination folder.
-install(TARGETS omptarget.rtl.cuda.nextgen LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
-set_target_properties(omptarget.rtl.cuda.nextgen PROPERTIES
+install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+set_target_properties(omptarget.rtl.cuda PROPERTIES
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
   CXX_VISIBILITY_PRESET protected)
