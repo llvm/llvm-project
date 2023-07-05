@@ -34,9 +34,7 @@ static const char *RTLNames[] = {
     /* x86_64 target        */ "libomptarget.rtl.x86_64",
     /* CUDA target          */ "libomptarget.rtl.cuda",
     /* AArch64 target       */ "libomptarget.rtl.aarch64",
-    /* SX-Aurora VE target  */ "libomptarget.rtl.ve",
     /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
-    /* Remote target        */ "libomptarget.rtl.rpc",
 };
 
 PluginManager *PM;
