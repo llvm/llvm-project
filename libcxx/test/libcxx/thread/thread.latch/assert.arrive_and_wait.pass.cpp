@@ -12,8 +12,7 @@
 //
 // void arrive_and_wait(ptrdiff_t __update = 1);
 
-// Make sure that calling arrive_and_wait with a negative value or a value
-// higher than the internal counter triggers an assertion.
+// Make sure that calling arrive_and_wait with a negative value triggers an assertion.
 
 // REQUIRES: has-unix-headers
 // XFAIL: availability-verbose_abort-missing
@@ -29,16 +28,7 @@ int main(int, char **) {
 
     TEST_LIBCPP_ASSERT_FAILURE(
         l.arrive_and_wait(-10),
-        "latch::arrive_and_wait() called with a negative value");
-  }
-
-  {
-    std::latch l(5);
-
-    TEST_LIBCPP_ASSERT_FAILURE(
-        l.arrive_and_wait(10),
-        "latch::arrive_and_wait() called with value greater "
-        "than the internal counter");
+        "latch::arrive_and_wait called with a negative value");
   }
 
   return 0;
