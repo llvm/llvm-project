@@ -1436,6 +1436,11 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
   // emission directly from our frontend.
   pm.addPass(mlir::LLVM::createDIScopeForLLVMFuncOpPass());
 
+  // FIXME(cir): this shouldn't be necessary. It's meant to be a temporary
+  // workaround until we understand why some unrealized casts are being emmited
+  // and how to properly avoid them.
+  pm.addPass(mlir::createReconcileUnrealizedCastsPass());
+
   (void)mlir::applyPassManagerCLOptions(pm);
 
   auto result = !mlir::failed(pm.run(theModule));
