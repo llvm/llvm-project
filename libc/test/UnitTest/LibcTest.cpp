@@ -15,6 +15,16 @@
 
 #if __STDC_HOSTED__
 #include <time.h>
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+#include "src/__support/GPU/utils.h"
+static long clock() { return __llvm_libc::gpu::fixed_frequency_clock(); }
+#if LIBC_TARGET_ARCH_IS_NVPTX
+uint64_t CLOCKS_PER_SEC = 1000000000UL;
+#else
+// The AMDGPU loader needs to initialize this at runtime by querying the driver.
+extern "C" [[gnu::visibility("protected")]] uint64_t __llvm_libc_clock_freq;
+uint64_t CLOCKS_PER_SEC = __llvm_libc_clock_freq;
+#endif
 #else
 static long clock() { return 0; }
 #define CLOCKS_PER_SEC 1
@@ -136,14 +146,22 @@ int Test::runTests(const char *TestFilter) {
       break;
     case RunContext::RunResult::Pass:
       tlog << GREEN << "[       OK ] " << RESET << TestName;
-#if __STDC_HOSTED__
+#if __STDC_HOSTED__ || defined(LIBC_TARGET_ARCH_IS_GPU)
       tlog << " (took ";
       if (start_time > end_time) {
         tlog << "unknown - try rerunning)\n";
       } else {
         const auto duration = end_time - start_time;
-        const uint64_t duration_ms = duration * 1000 / CLOCKS_PER_SEC;
-        tlog << duration_ms << " ms)\n";
+        const uint64_t duration_ms = (duration * 1000) / CLOCKS_PER_SEC;
+        const uint64_t duration_us = (duration * 1000 * 1000) / CLOCKS_PER_SEC;
+        const uint64_t duration_ns =
+            (duration * 1000 * 1000 * 1000) / CLOCKS_PER_SEC;
+        if (duration_ms != 0)
+          tlog << duration_ms << " ms)\n";
+        else if (duration_us != 0)
+          tlog << duration_us << " us)\n";
+        else
+          tlog << duration_ns << " ns)\n";
       }
 #else
       tlog << '\n';
