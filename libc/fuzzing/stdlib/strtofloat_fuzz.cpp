@@ -14,11 +14,15 @@
 #include "src/stdlib/strtof.h"
 #include "src/stdlib/strtold.h"
 
+#include "src/__support/FPUtil/FloatProperties.h"
+
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include "utils/MPFRWrapper/mpfr_inc.h"
+
+using __llvm_libc::fputil::FloatProperties;
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   uint8_t *container = new uint8_t[size + 1];
@@ -40,6 +44,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   char *out_ptr = nullptr;
 
+  size_t base = 0;
+
+  // This is just used to determine the base.
   mpfr_t result;
   mpfr_init2(result, 256);
   mpfr_t bin_result;
@@ -59,7 +66,42 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
       bin_result_ld == result_ld) {
     mpfr_strtofr(result, str_ptr, &out_ptr, 10 /* base */, MPFR_RNDN);
     result_strlen = out_ptr - str_ptr;
+    base = 10;
   }
+
+  mpfr_clear(result);
+  mpfr_clear(bin_result);
+
+  // These must be calculated with the correct precision, and not any more, to
+  // prevent numbers like 66336650.00...01 (many zeroes) from causing an issue.
+  // 66336650 is exactly between two float values (66336652 and 66336648) so the
+  // correct float result for 66336650.00...01 is rounding up to 66336652. The
+  // correct double is instead 66336650, which when converted to float is
+  // rounded down to 66336648. This means we have to compare against the correct
+  // precision to get the correct result.
+  mpfr_t mpfr_float;
+  mpfr_init2(mpfr_float, FloatProperties<float>::MANTISSA_PRECISION);
+
+  mpfr_t mpfr_double;
+  mpfr_init2(mpfr_double, FloatProperties<double>::MANTISSA_PRECISION);
+
+  mpfr_t mpfr_long_double;
+  mpfr_init2(mpfr_long_double,
+             FloatProperties<long double>::MANTISSA_PRECISION);
+
+  // TODO: Add support for other rounding modes.
+  mpfr_strtofr(mpfr_float, str_ptr, &out_ptr, base, MPFR_RNDN);
+  mpfr_strtofr(mpfr_double, str_ptr, &out_ptr, base, MPFR_RNDN);
+  mpfr_strtofr(mpfr_long_double, str_ptr, &out_ptr, base, MPFR_RNDN);
+
+  float volatile float_result = mpfr_get_flt(mpfr_float, MPFR_RNDN);
+  double volatile double_result = mpfr_get_d(mpfr_double, MPFR_RNDN);
+  long double volatile long_double_result =
+      mpfr_get_ld(mpfr_long_double, MPFR_RNDN);
+
+  mpfr_clear(mpfr_float);
+  mpfr_clear(mpfr_double);
+  mpfr_clear(mpfr_long_double);
 
   auto volatile atof_output = __llvm_libc::atof(str_ptr);
   auto volatile strtof_output = __llvm_libc::strtof(str_ptr, &out_ptr);
@@ -77,23 +119,21 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
 
   // If any result is NaN, all of them should be NaN. We can't use the usual
   // comparisons because NaN != NaN.
-  if (isnan(result_ld)) {
+  if (isnan(float_result)) {
     if (!(isnan(atof_output) && isnan(strtof_output) && isnan(strtod_output) &&
           isnan(strtold_output)))
       __builtin_trap();
   } else {
-    if (mpfr_get_d(result, MPFR_RNDN) != atof_output)
+    if (double_result != atof_output)
       __builtin_trap();
-    if (mpfr_get_flt(result, MPFR_RNDN) != strtof_output)
+    if (float_result != strtof_output)
       __builtin_trap();
-    if (mpfr_get_d(result, MPFR_RNDN) != strtod_output)
+    if (double_result != strtod_output)
       __builtin_trap();
-    if (mpfr_get_ld(result, MPFR_RNDN) != strtold_output)
+    if (long_double_result != strtold_output)
       __builtin_trap();
   }
 
-  mpfr_clear(result);
-  mpfr_clear(bin_result);
   delete[] container;
   return 0;
 }
