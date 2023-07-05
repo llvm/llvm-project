@@ -106,6 +106,12 @@ def MatchStructuredBodyOp : Op<Transform_Dialect, "match.structured.body", [
       * `passthrough`: the body of the structured payload op only forwards
         inputs to the outputs (copy or broadcast).
 
+      * `contraction`: the body of the structured payload op is a contraction
+        of the form `<red>(<elem>(bbarg0, bbarg1), bbarg2)` where `<elem>` and
+        `<red>` are binary operations whose names are specified in the attribute
+        and operands can be permuted and optionally forwarded through a chain of
+        unary side effect-free operations.
+
   }], StructuredPredicate.extraDescription, [{
 
     #### Return modes
@@ -116,10 +122,52 @@ def MatchStructuredBodyOp : Op<Transform_Dialect, "match.structured.body", [
   }]);
   let arguments = (ins TransformHandleTypeInterface:$operand_handle,
                        OptionalAttr<I64Attr>:$reduction_position,
-                       UnitAttr:$passthrough);
+                       UnitAttr:$passthrough,
+                       OptionalAttr<StrArrayAttr>:$contraction);
   let assemblyFormat = "$operand_handle attr-dict `:` type($operand_handle)";
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
   let hasVerifier = 1;
+}
+
+def MatchStructuredClassifyContractionDimsOp
+    : Op<Transform_Dialect, "match.structured.classify_contraction_dims", [
+    SingleOpMatcher,
+    StructuredPredicate,
+    MatchOpInterface,
+    MemoryEffectsOpInterface]> {
+  let summary =
+      "Checks if an operation has contraction-like dimensions and returns them";
+  let description = !strconcat([{
+    Checks if the structured payload op has contraction-like dimensions as
+    follows:
+
+      C(batch, m, n) += A(batch, m, k) * B(batch, k, n)
+
+    That is:
+    
+      - 'batch' are parallel dimensions used in inputs and result;
+      - 'm' are parallel dimensions used in the LHS and result;
+      - 'n' are parallel dimensions used in rhe RHS and result;
+      - 'k' are reduction dimensions present only in LHS and RHS.
+
+    Note that this doesn't check the operation in the body.
+
+  }], StructuredPredicate.extraDescription, [{
+
+    #### Return modes
+
+    Succeeds if the operation has the contraction-like dimensions, produces a
+    silenceable failure otherwise.
+  }]);
+
+  let arguments = (ins TransformHandleTypeInterface:$operand_handle);
+  let results = (outs TransformParamTypeInterface:$batch,
+                      TransformParamTypeInterface:$m,
+                      TransformParamTypeInterface:$n,
+                      TransformParamTypeInterface:$k);
+  let assemblyFormat =
+    "$operand_handle attr-dict `:` functional-type(operands, results)";
+  let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
 }
 
 class StructuredDimDescription<string kind> {
