@@ -90,7 +90,7 @@ bool NMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
       Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/false);
       Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/true);
     }
-    if (!DisableNMLoadStoreMultiple) {
+    if (!DisableNMLoadStoreMultiple && Fn.getFunction().hasOptSize()) {
       Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/false);
       Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/true);
     }
