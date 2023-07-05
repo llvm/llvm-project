@@ -218,8 +218,6 @@ public:
       StringRef Name,
       llvm::SmallVectorImpl<StringRef> &Features) const override;
 
-  StringRef getCPUSpecificTuneName(StringRef Name) const override;
-
   std::optional<unsigned> getCPUCacheLineSize() const override;
 
   bool validateAsmConstraint(const char *&Name,
