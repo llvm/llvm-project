@@ -172,22 +172,30 @@ public:
   bool isRegionActive(llvm::StringRef Description) const {
     return ActiveRegions.contains(Description);
   }
+
+  virtual void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) = 0;
+  virtual void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
+                           UniqueInstrument Instrument) = 0;
+  virtual void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) = 0;
 };
 
 struct AnalysisRegions : public CodeRegions {
   AnalysisRegions(llvm::SourceMgr &S);
 
-  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc);
-  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
+                   UniqueInstrument Instrument) override {}
+  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
 };
 
 struct InstrumentRegions : public CodeRegions {
 
   InstrumentRegions(llvm::SourceMgr &S);
 
+  void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc) override{};
   void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc,
-                   UniqueInstrument Instrument);
-  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc);
+                   UniqueInstrument Instrument) override;
+  void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
 
   const SmallVector<Instrument *> getActiveInstruments(llvm::SMLoc Loc) const;
 };
