@@ -847,8 +847,10 @@ private:
   const std::string Name;
 
   /// Utility method serving execute(): generates a single instance of the
-  /// modeled instruction.
-  void generateInstruction(VPTransformState &State, unsigned Part);
+  /// modeled instruction. \returns the generated value for \p Part.
+  /// In some cases an existing value is returned rather than a generated
+  /// one.
+  Value *generateInstruction(VPTransformState &State, unsigned Part);
 
 protected:
   void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
