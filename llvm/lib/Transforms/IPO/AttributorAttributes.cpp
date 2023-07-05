@@ -2033,6 +2033,13 @@ namespace {
 struct AANoUnwindImpl : AANoUnwind {
   AANoUnwindImpl(const IRPosition &IRP, Attributor &A) : AANoUnwind(IRP, A) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    bool IsKnown;
+    assert(!AA::hasAssumedIRAttr<Attribute::NoUnwind>(
+        A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+  }
+
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "nounwind" : "may-unwind";
   }
@@ -2049,10 +2056,10 @@ struct AANoUnwindImpl : AANoUnwind {
         return true;
 
       if (const auto *CB = dyn_cast<CallBase>(&I)) {
-        bool IsKnown;
+        bool IsKnownNoUnwind;
         return AA::hasAssumedIRAttr<Attribute::NoUnwind>(
             A, this, IRPosition::callsite_function(*CB), DepClassTy::REQUIRED,
-            IsKnown);
+            IsKnownNoUnwind);
       }
       return false;
     };
@@ -2087,9 +2094,9 @@ struct AANoUnwindCallSite final : AANoUnwindImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    bool IsKnown;
+    bool IsKnownNoUnwind;
     if (AA::hasAssumedIRAttr<Attribute::NoUnwind>(
-            A, this, FnPos, DepClassTy::REQUIRED, IsKnown))
+            A, this, FnPos, DepClassTy::REQUIRED, IsKnownNoUnwind))
       return ChangeStatus::UNCHANGED;
     return indicatePessimisticFixpoint();
   }
@@ -4340,12 +4347,11 @@ struct AAIsDeadValueImpl : public AAIsDead {
       return false;
 
     const IRPosition &CallIRP = IRPosition::callsite_function(*CB);
-    const auto *NoUnwindAA =
-        A.getAndUpdateAAFor<AANoUnwind>(*this, CallIRP, DepClassTy::NONE);
-    if (!NoUnwindAA || !NoUnwindAA->isAssumedNoUnwind())
+
+    bool IsKnownNoUnwind;
+    if (!AA::hasAssumedIRAttr<Attribute::NoUnwind>(
+            A, this, CallIRP, DepClassTy::OPTIONAL, IsKnownNoUnwind))
       return false;
-    if (!NoUnwindAA || !NoUnwindAA->isKnownNoUnwind())
-      A.recordDependence(*NoUnwindAA, *this, DepClassTy::OPTIONAL);
 
     bool IsKnown;
     return AA::isAssumedReadOnly(A, CallIRP, *this, IsKnown);
@@ -4872,10 +4878,11 @@ identifyAliveSuccessors(Attributor &A, const InvokeInst &II,
     AliveSuccessors.push_back(&II.getUnwindDest()->front());
   } else {
     const IRPosition &IPos = IRPosition::callsite_function(II);
-    const auto *AANoUnw =
-        A.getAndUpdateAAFor<AANoUnwind>(AA, IPos, DepClassTy::OPTIONAL);
-    if (AANoUnw && AANoUnw->isAssumedNoUnwind()) {
-      UsedAssumedInformation |= !AANoUnw->isKnownNoUnwind();
+
+    bool IsKnownNoUnwind;
+    if (AA::hasAssumedIRAttr<Attribute::NoUnwind>(
+            A, &AA, IPos, DepClassTy::OPTIONAL, IsKnownNoUnwind)) {
+      UsedAssumedInformation |= !IsKnownNoUnwind;
     } else {
       AliveSuccessors.push_back(&II.getUnwindDest()->front());
     }
