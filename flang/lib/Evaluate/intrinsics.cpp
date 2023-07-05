@@ -2361,6 +2361,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     attrs.set(characteristics::Procedure::Attr::Elemental);
   }
   if (call.isSubroutineCall) {
+    if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */ ||
+        intrinsicClass == IntrinsicClass::elementalSubroutine /* MVBITS */) {
+      attrs.set(characteristics::Procedure::Attr::Pure);
+    }
     return SpecificCall{
         SpecificIntrinsic{
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
