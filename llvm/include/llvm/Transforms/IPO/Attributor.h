@@ -4249,6 +4249,17 @@ struct AANoCapture
           AANoCapture> {
   AANoCapture(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See IRAttribute::isImpliedByIR
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false);
+
+  /// Update \p State according to the capture capabilities of \p F for position
+  /// \p IRP.
+  static void determineFunctionCaptureCapabilities(const IRPosition &IRP,
+                                                   const Function &F,
+                                                   BitIntegerState &State);
+
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.getAssociatedType()->isPtrOrPtrVectorTy())
@@ -6008,10 +6019,11 @@ enum AttributorRunOption {
 
 namespace AA {
 /// Helper to avoid creating an AA for IR Attributes that might already be set.
-template <Attribute::AttrKind AK>
+template <Attribute::AttrKind AK, typename AAType = AbstractAttribute>
 bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
                       const IRPosition &IRP, DepClassTy DepClass, bool &IsKnown,
-                      bool IgnoreSubsumingPositions = false) {
+                      bool IgnoreSubsumingPositions = false,
+                      const AAType **AAPtr = nullptr) {
   IsKnown = false;
   switch (AK) {
 #define CASE(ATTRNAME, AANAME, ...)                                            \
@@ -6021,6 +6033,8 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
     if (!QueryingAA)                                                           \
       return false;                                                            \
     const auto *AA = A.getAAFor<AANAME>(*QueryingAA, IRP, DepClass);           \
+    if (AAPtr)                                                                 \
+      *AAPtr = reinterpret_cast<const AAType *>(AA);                           \
     if (!AA || !AA->isAssumed(__VA_ARGS__))                                    \
       return false;                                                            \
     IsKnown = AA->isKnown(__VA_ARGS__);                                        \

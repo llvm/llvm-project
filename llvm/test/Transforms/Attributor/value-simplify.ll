@@ -462,14 +462,14 @@ define ptr @complicated_args_preallocated() {
 ; TUNIT-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; TUNIT-SAME: () #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR10:[0-9]+]]
-; TUNIT-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4294967296 dereferenceable(4) ptr @test_preallocated(ptr nocapture nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR9]] [ "preallocated"(token [[C]]) ]
+; TUNIT-NEXT:    [[CALL:%.*]] = call noundef nonnull align 4294967296 dereferenceable(4) ptr @test_preallocated(ptr nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR9]] [ "preallocated"(token [[C]]) ]
 ; TUNIT-NEXT:    ret ptr [[CALL]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@complicated_args_preallocated
 ; CGSCC-SAME: () #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR12]]
-; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @test_preallocated(ptr nocapture nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR13:[0-9]+]] [ "preallocated"(token [[C]]) ]
+; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @test_preallocated(ptr nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR13:[0-9]+]] [ "preallocated"(token [[C]]) ]
 ; CGSCC-NEXT:    ret ptr null
 ;
   %c = call token @llvm.call.preallocated.setup(i32 1)
@@ -501,13 +501,13 @@ define void @complicated_args_sret(ptr %b) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@complicated_args_sret
 ; TUNIT-SAME: (ptr nocapture nofree writeonly [[B:%.*]]) #[[ATTR3]] {
-; TUNIT-NEXT:    call void @test_sret(ptr nocapture nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 null, ptr nocapture nofree noundef writeonly align 8 [[B]]) #[[ATTR11:[0-9]+]]
+; TUNIT-NEXT:    call void @test_sret(ptr nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 null, ptr nocapture nofree noundef writeonly align 8 [[B]]) #[[ATTR11:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@complicated_args_sret
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR5:[0-9]+]] {
-; CGSCC-NEXT:    call void @test_sret(ptr nocapture nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable_or_null(8) null, ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B]]) #[[ATTR14:[0-9]+]]
+; CGSCC-NEXT:    call void @test_sret(ptr nofree noundef writeonly sret([[STRUCT_X:%.*]]) align 4294967296 dereferenceable_or_null(8) null, ptr nocapture nofree noundef nonnull writeonly align 8 dereferenceable(8) [[B]]) #[[ATTR14:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @test_sret(ptr sret(%struct.X) null, ptr %b)
@@ -531,7 +531,7 @@ define ptr @complicated_args_nest() {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@complicated_args_nest
 ; CGSCC-SAME: () #[[ATTR2]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call noalias noundef align 4294967296 ptr @test_nest(ptr nocapture nofree noundef readnone align 4294967296 null) #[[ATTR12]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noalias noundef align 4294967296 ptr @test_nest(ptr nofree noundef readnone align 4294967296 null) #[[ATTR12]]
 ; CGSCC-NEXT:    ret ptr [[CALL]]
 ;
   %call = call ptr @test_nest(ptr null)

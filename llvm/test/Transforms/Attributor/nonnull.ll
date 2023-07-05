@@ -1046,7 +1046,7 @@ define internal void @naked(ptr dereferenceable(4) %a) naked {
 ; CHECK: Function Attrs: naked
 ; CHECK-LABEL: define {{[^@]+}}@naked
 ; CHECK-SAME: (ptr noundef nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr noundef nonnull [[A]])
+; CHECK-NEXT:    call void @use_i32_ptr(ptr nocapture noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1058,7 +1058,7 @@ define internal void @optnone(ptr dereferenceable(4) %a) optnone noinline {
 ; CHECK: Function Attrs: noinline optnone
 ; CHECK-LABEL: define {{[^@]+}}@optnone
 ; CHECK-SAME: (ptr noundef nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr noundef nonnull [[A]])
+; CHECK-NEXT:    call void @use_i32_ptr(ptr nocapture noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
