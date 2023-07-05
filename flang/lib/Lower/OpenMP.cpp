@@ -802,37 +802,43 @@ static void createTargetOp(Fortran::lower::AbstractConverter &converter,
   };
 
   auto addMapClause = [&](const auto &mapClause, mlir::Location &location) {
-    auto mapType = std::get<Fortran::parser::OmpMapType::Type>(
-        std::get<std::optional<Fortran::parser::OmpMapType>>(mapClause->v.t)
-            ->t);
+    const auto &oMapType =
+        std::get<std::optional<Fortran::parser::OmpMapType>>(mapClause->v.t);
     llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
-    switch (mapType) {
-    case Fortran::parser::OmpMapType::Type::To:
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
-      break;
-    case Fortran::parser::OmpMapType::Type::From:
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-      break;
-    case Fortran::parser::OmpMapType::Type::Tofrom:
+    // If the map type is specified, then process it else Tofrom is the default.
+    if (oMapType) {
+      const Fortran::parser::OmpMapType::Type &mapType =
+          std::get<Fortran::parser::OmpMapType::Type>(oMapType->t);
+      switch (mapType) {
+      case Fortran::parser::OmpMapType::Type::To:
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO;
+        break;
+      case Fortran::parser::OmpMapType::Type::From:
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+        break;
+      case Fortran::parser::OmpMapType::Type::Tofrom:
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
+        break;
+      case Fortran::parser::OmpMapType::Type::Alloc:
+      case Fortran::parser::OmpMapType::Type::Release:
+        // alloc and release is the default map_type for the Target Data Ops,
+        // i.e. if no bits for map_type is supplied then alloc/release is
+        // implicitly assumed based on the target directive. Default value for
+        // Target Data and Enter Data is alloc and for Exit Data it is release.
+        break;
+      case Fortran::parser::OmpMapType::Type::Delete:
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
+      }
+
+      if (std::get<std::optional<Fortran::parser::OmpMapType::Always>>(
+              oMapType->t))
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+    } else {
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
                      llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-      break;
-    case Fortran::parser::OmpMapType::Type::Alloc:
-    case Fortran::parser::OmpMapType::Type::Release:
-      // alloc and release is the default map_type for the Target Data Ops, i.e.
-      // if no bits for map_type is supplied then alloc/release is implicitly
-      // assumed based on the target directive. Default value for Target Data
-      // and Enter Data is alloc and for Exit Data it is release.
-      break;
-    case Fortran::parser::OmpMapType::Type::Delete:
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_DELETE;
     }
-    if (std::get<std::optional<Fortran::parser::OmpMapType::Always>>(
-            std::get<std::optional<Fortran::parser::OmpMapType>>(mapClause->v.t)
-                ->t)
-            .has_value())
-      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
 
     // TODO: Add support MapTypeModifiers close, mapper, present, iterator
 
