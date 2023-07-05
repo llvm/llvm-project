@@ -921,6 +921,9 @@ namespace DiscardExprs {
     sizeof(int);
     alignof(int);
 
+    (short)5;
+    (bool)1;
+
     return 0;
   }
   static_assert(ignoredExprs() == 0, "");
