@@ -3291,8 +3291,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     checkAndQueryIRAttr<Attribute::NoFree, AANoFree>(FPos, FnAttrs);
 
     // Every function might be "no-return".
-    if (!Attrs.hasFnAttr(Attribute::NoReturn))
-      getOrCreateAAFor<AANoReturn>(FPos);
+    checkAndQueryIRAttr<Attribute::NoReturn, AANoReturn>(FPos, FnAttrs);
 
     // Every function might be "no-recurse".
     if (!Attrs.hasFnAttr(Attribute::NoRecurse))
