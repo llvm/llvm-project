@@ -81,7 +81,7 @@ define internal void @callee_with_dead_noundef_arg(i1 noundef %create, ...) {
 
 define void @caller_with_unused_arg(i1 %c) {
 ; TUNIT-LABEL: define {{[^@]+}}@caller_with_unused_arg
-; TUNIT-SAME: (i1 [[C:%.*]]) {
+; TUNIT-SAME: (i1 noundef [[C:%.*]]) {
 ; TUNIT-NEXT:    call void (i1, ...) @callee_with_dead_noundef_arg(i1 undef)
 ; TUNIT-NEXT:    ret void
 ;
@@ -96,15 +96,25 @@ define void @caller_with_unused_arg(i1 %c) {
 
 define internal void @callee_with_dead_arg(i1 %create, ...) {
 ;
-; CHECK-LABEL: define {{[^@]+}}@callee_with_dead_arg
-; CHECK-SAME: (i1 [[CREATE:%.*]], ...) {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[IF_THEN3:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    unreachable
-; CHECK:       if.then3:
-; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    ret void
+; TUNIT-LABEL: define {{[^@]+}}@callee_with_dead_arg
+; TUNIT-SAME: (i1 [[CREATE:%.*]], ...) {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    br label [[IF_THEN3:%.*]]
+; TUNIT:       if.then:
+; TUNIT-NEXT:    unreachable
+; TUNIT:       if.then3:
+; TUNIT-NEXT:    call void @unknown()
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@callee_with_dead_arg
+; CGSCC-SAME: (i1 noundef [[CREATE:%.*]], ...) {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    br label [[IF_THEN3:%.*]]
+; CGSCC:       if.then:
+; CGSCC-NEXT:    unreachable
+; CGSCC:       if.then3:
+; CGSCC-NEXT:    call void @unknown()
+; CGSCC-NEXT:    ret void
 ;
 entry:
   br i1 %create, label %if.then3, label %if.then

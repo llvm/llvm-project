@@ -62,7 +62,7 @@ entry:
 
 define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bound_tid., ptr dereferenceable(4) %N, ptr dereferenceable(4) %p, i64 %q) {
 ; TUNIT-LABEL: define {{[^@]+}}@.omp_outlined.
-; TUNIT-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[N:%.*]], ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) {
+; TUNIT-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(4) [[N:%.*]], ptr noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(4) [[P:%.*]], i64 [[Q:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[Q_ADDR:%.*]] = alloca i64, align 8
 ; TUNIT-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4

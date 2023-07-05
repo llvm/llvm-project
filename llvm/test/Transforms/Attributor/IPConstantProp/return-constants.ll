@@ -62,7 +62,7 @@ define %0 @caller(i1 %Q) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@caller
 ; TUNIT-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 noundef [[Q]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret [[TMP0]] [[X]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
@@ -87,10 +87,10 @@ define i32 @caller2(i1 %Q) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@caller2
 ; TUNIT-SAME: (i1 [[Q:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 [[Q]]) #[[ATTR1]]
+; TUNIT-NEXT:    [[X:%.*]] = call [[TMP0:%.*]] @foo(i1 noundef [[Q]]) #[[ATTR1]]
 ; TUNIT-NEXT:    [[A:%.*]] = extractvalue [[TMP0]] [[X]], 0
 ; TUNIT-NEXT:    [[B:%.*]] = extractvalue [[TMP0]] [[X]], 1
-; TUNIT-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 [[Q]]) #[[ATTR1]]
+; TUNIT-NEXT:    [[Y:%.*]] = call [[TMP0]] @bar(i1 noundef [[Q]]) #[[ATTR1]]
 ; TUNIT-NEXT:    [[C:%.*]] = extractvalue [[TMP0]] [[Y]], 0
 ; TUNIT-NEXT:    [[D:%.*]] = extractvalue [[TMP0]] [[Y]], 1
 ; TUNIT-NEXT:    [[M:%.*]] = add i32 [[A]], [[C]]

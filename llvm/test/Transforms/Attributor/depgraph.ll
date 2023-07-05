@@ -22,7 +22,7 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
 ; CHECK:       4:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @checkAndAdvance(ptr nofree nonnull readonly align 16 [[TMP5]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call ptr @checkAndAdvance(ptr nofree noundef nonnull readonly align 16 [[TMP5]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    br label [[TMP8:%.*]]
 ; CHECK:       7:
 ; CHECK-NEXT:    br label [[TMP8]]
@@ -138,8 +138,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT: [AAIsDead] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state assumed-live
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoUndef] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state may-undef-or-poison
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AANoUndef] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state noundef
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AAHeapToStack] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state [H2S] Mallocs Good/Bad: 0/0
 ; GRAPH-EMPTY:
@@ -279,7 +277,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node37:0x[a-z0-9]+]] [shape=record,label="{[AANoUndef]
 ; DOT-DAG: Node[[Node38:0x[a-z0-9]+]] [shape=record,label="{[AAIsDead]
 ; DOT-DAG: Node[[Node39:0x[a-z0-9]+]] [shape=record,label="{[AANoUndef]
-; DOT-DAG: Node[[Node40:0x[a-z0-9]+]] [shape=record,label="{[AANoUndef]
 ; DOT-DAG: Node[[Node41:0x[a-z0-9]+]] [shape=record,label="{[AANoSync]
 ; DOT-DAG: Node[[Node42:0x[a-z0-9]+]] [shape=record,label="{[AANoSync]
 ; DOT-DAG: Node[[Node43:0x[a-z0-9]+]] [shape=record,label="{[AANoFree]

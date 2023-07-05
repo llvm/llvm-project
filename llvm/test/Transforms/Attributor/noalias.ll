@@ -522,7 +522,7 @@ define i32 @i2p(ptr %arg) {
 ; TUNIT-SAME: (ptr nofree readonly [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
 ; TUNIT-NEXT:    [[C:%.*]] = call i32 @p2i(ptr noalias nofree readnone [[ARG]]) #[[ATTR10:[0-9]+]]
 ; TUNIT-NEXT:    [[I2P:%.*]] = inttoptr i32 [[C]] to ptr
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @ret(ptr nocapture nofree readonly align 4 [[I2P]]) #[[ATTR11:[0-9]+]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @ret(ptr nocapture nofree noundef readonly align 4 [[I2P]]) #[[ATTR11:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[CALL]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(read)
@@ -672,7 +672,7 @@ define void @test15_caller(ptr noalias %p, i32 %c) {
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    tail call void @only_store(ptr noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR13:[0-9]+]]
+; TUNIT-NEXT:    tail call void @only_store(ptr noalias nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR13:[0-9]+]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    tail call void @make_alias(ptr nofree writeonly [[P]]) #[[ATTR13]]
@@ -729,14 +729,14 @@ define internal void @test16_sub(ptr noalias %p, i32 %c1, i32 %c2) {
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[C1]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    tail call void @only_store(ptr noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR13]]
+; TUNIT-NEXT:    tail call void @only_store(ptr noalias nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR13]]
 ; TUNIT-NEXT:    tail call void @make_alias(ptr nofree writeonly align 4 [[P]]) #[[ATTR13]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[C2]], 0
 ; TUNIT-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; TUNIT:       if.then2:
-; TUNIT-NEXT:    tail call void @only_store(ptr nocapture nofree writeonly align 4 [[P]]) #[[ATTR13]]
+; TUNIT-NEXT:    tail call void @only_store(ptr nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR13]]
 ; TUNIT-NEXT:    br label [[IF_END3]]
 ; TUNIT:       if.end3:
 ; TUNIT-NEXT:    ret void
@@ -826,7 +826,7 @@ define void @test17_caller(ptr noalias %p, i32 %c) {
 ; TUNIT-NEXT:    tail call void @make_alias(ptr nofree writeonly [[P]]) #[[ATTR13]]
 ; TUNIT-NEXT:    br label [[L3:%.*]]
 ; TUNIT:       l2:
-; TUNIT-NEXT:    tail call void @only_store(ptr noalias nocapture nofree writeonly align 4 [[P]]) #[[ATTR13]]
+; TUNIT-NEXT:    tail call void @only_store(ptr noalias nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR13]]
 ; TUNIT-NEXT:    br label [[L3]]
 ; TUNIT:       l3:
 ; TUNIT-NEXT:    ret void
@@ -899,7 +899,7 @@ define void @test18_caller(ptr noalias %p, i32 %c) {
 ; TUNIT-NEXT:    tail call void @make_alias(ptr nofree writeonly [[P]]) #[[ATTR13]]
 ; TUNIT-NEXT:    br label [[L2]]
 ; TUNIT:       l2:
-; TUNIT-NEXT:    tail call void @only_store(ptr nocapture nofree writeonly align 4 [[P]]) #[[ATTR13]]
+; TUNIT-NEXT:    tail call void @only_store(ptr nocapture nofree noundef writeonly align 4 [[P]]) #[[ATTR13]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(write)

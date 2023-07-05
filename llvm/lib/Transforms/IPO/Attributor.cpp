@@ -3331,8 +3331,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
                            AA::Intraprocedural);
 
       // Every returned value might be marked noundef.
-      if (!Attrs.hasRetAttr(Attribute::NoUndef))
-        getOrCreateAAFor<AANoUndef>(RetPos);
+      checkAndQueryIRAttr<Attribute::NoUndef, AANoUndef>(RetPos, RetAttrs);
 
       if (ReturnType->isPointerTy()) {
 
@@ -3369,8 +3368,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       getOrCreateAAFor<AAIsDead>(ArgPos);
 
       // Every argument might be marked noundef.
-      if (!Attrs.hasParamAttr(ArgNo, Attribute::NoUndef))
-        getOrCreateAAFor<AANoUndef>(ArgPos);
+      checkAndQueryIRAttr<Attribute::NoUndef, AANoUndef>(ArgPos, ArgAttrs);
 
       if (Arg.getType()->isPointerTy()) {
         // Every argument with pointer type might be marked nonnull.
@@ -3457,8 +3455,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
                            AA::Intraprocedural);
 
       // Every call site argument might be marked "noundef".
-      if (!CBAttrs.hasParamAttr(I, Attribute::NoUndef))
-        getOrCreateAAFor<AANoUndef>(CBArgPos);
+      checkAndQueryIRAttr<Attribute::NoUndef, AANoUndef>(CBArgPos, CBArgAttrs);
 
       Type *ArgTy = CB.getArgOperand(I)->getType();
 

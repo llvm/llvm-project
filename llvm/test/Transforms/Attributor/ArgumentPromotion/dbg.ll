@@ -32,7 +32,7 @@ define internal void @test_byval(ptr byval(%struct.pair) %P) {
 define void @caller(ptr %Y, ptr %P) {
 ; TUNIT-LABEL: define {{[^@]+}}@caller
 ; TUNIT-SAME: (ptr nocapture nofree readonly [[Y:%.*]], ptr nocapture nofree readnone [[P:%.*]]) {
-; TUNIT-NEXT:    call void @test(ptr nocapture nofree readonly align 8 [[Y]]), !dbg [[DBG4:![0-9]+]]
+; TUNIT-NEXT:    call void @test(ptr nocapture nofree noundef readonly align 8 [[Y]]), !dbg [[DBG4:![0-9]+]]
 ; TUNIT-NEXT:    call void @test_byval(), !dbg [[DBG5:![0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;

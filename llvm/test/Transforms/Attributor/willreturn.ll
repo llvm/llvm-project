@@ -201,7 +201,7 @@ define void @mutual_recursion2(i1 %c) #0 {
 ; CHECK: Function Attrs: nofree noinline nosync nounwind uwtable
 ; CHECK-LABEL: define {{[^@]+}}@mutual_recursion2
 ; CHECK-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
-; CHECK-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR27]]
+; CHECK-NEXT:    call void @mutual_recursion1(i1 noundef [[C]]) #[[ATTR27]]
 ; CHECK-NEXT:    ret void
 ;
   call void @mutual_recursion1(i1 %c)
