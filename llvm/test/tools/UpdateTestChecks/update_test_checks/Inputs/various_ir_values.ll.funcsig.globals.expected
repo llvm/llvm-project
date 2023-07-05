@@ -250,13 +250,13 @@ attributes #3 = { nounwind }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CHECK: attributes #[[ATTR3]] = { nounwind }
 ;.
-; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], producer: "clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
+; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1]] = !DIFile(filename: "various_ir_values.c", directory: {{.*}})
 ; CHECK: [[META2]] = !{}
 ; CHECK: [[META3:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 4}
 ; CHECK: [[META4:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: [[META5:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK: [[META6:![0-9]+]] = !{!"clang version {{.*}}"}
+; CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 ; CHECK: [[DBG7]] = distinct !DISubprogram(name: "foo", scope: [[META1]], file: [[META1]], line: 1, type: [[META8:![0-9]+]], scopeLine: 1, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META12:![0-9]+]])
 ; CHECK: [[META8]] = !DISubroutineType(types: [[META9:![0-9]+]])
 ; CHECK: [[META9]] = !{null, [[META10:![0-9]+]]}

@@ -1571,17 +1571,16 @@ def filter_globals_according_to_preference(
     ]
 
 
-# The capture group is kept as is, followed by a {{.*}} glob
 METADATA_FILTERS = [
-    r"(\w+ version )[\d.]+(?: \([^)]+\))?",
-    r'(!DIFile\(filename: ".+", directory: )".+"',
+    (r"(?<=\")(\w+ )?(\w+ version )[\d.]+(?: \([^)]+\))?", r"{{.*}}\2{{.*}}"), # preface with glob also, to capture optional CLANG_VENDOR
+    (r'(!DIFile\(filename: ".+", directory: )".+"', r"\1{{.*}}"),
 ]
-METADATA_FILTERS_RE = [re.compile(s) for s in METADATA_FILTERS]
+METADATA_FILTERS_RE = [(re.compile(f),r) for (f,r) in METADATA_FILTERS]
 
 
 def filter_unstable_metadata(line):
-    for f in METADATA_FILTERS_RE:
-        line = f.sub(r"\1{{.*}}", line)
+    for (f,replacement) in METADATA_FILTERS_RE:
+        line = f.sub(replacement, line)
     return line
 
 
