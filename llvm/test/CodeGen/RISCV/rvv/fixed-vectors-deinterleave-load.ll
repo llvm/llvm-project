@@ -82,12 +82,16 @@ define {<16 x i8>, <16 x i8>} @vector_deinterleave_load_v16i8_v32i8(ptr %p) {
   ret {<16 x i8>, <16 x i8>} %retval
 }
 
-; FIXME: Shouldn't be lowered to vlseg because it's unaligned
+; Shouldn't be lowered to vlseg because it's unaligned
 define {<8 x i16>, <8 x i16>} @vector_deinterleave_load_v8i16_v16i16_align1(ptr %p) {
-; CHECK-LABEL: vector_deinterleave_load_v8i16_v16i16:
+; CHECK-LABEL: vector_deinterleave_load_v8i16_v16i16_align1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vle8.v v10, (a0)
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vlseg2e16.v v8, (a0)
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0
+; CHECK-NEXT:    vnsrl.wi v9, v10, 16
 ; CHECK-NEXT:    ret
   %vec = load <16 x i16>, ptr %p, align 1
   %retval = call {<8 x i16>, <8 x i16>} @llvm.experimental.vector.deinterleave2.v16i16(<16 x i16> %vec)
