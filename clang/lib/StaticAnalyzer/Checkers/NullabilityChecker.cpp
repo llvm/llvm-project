@@ -34,6 +34,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 
@@ -498,25 +499,21 @@ void NullabilityChecker::checkDeadSymbols(SymbolReaper &SR,
                                           CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   NullabilityMapTy Nullabilities = State->get<NullabilityMap>();
-  for (NullabilityMapTy::iterator I = Nullabilities.begin(),
-                                  E = Nullabilities.end();
-       I != E; ++I) {
-    const auto *Region = I->first->getAs<SymbolicRegion>();
+  for (const MemRegion *Reg : llvm::make_first_range(Nullabilities)) {
+    const auto *Region = Reg->getAs<SymbolicRegion>();
     assert(Region && "Non-symbolic region is tracked.");
     if (SR.isDead(Region->getSymbol())) {
-      State = State->remove<NullabilityMap>(I->first);
+      State = State->remove<NullabilityMap>(Reg);
     }
   }
 
   // When an object goes out of scope, we can free the history associated
   // with any property accesses on that object
   PropertyAccessesMapTy PropertyAccesses = State->get<PropertyAccessesMap>();
-  for (PropertyAccessesMapTy::iterator I = PropertyAccesses.begin(),
-                                       E = PropertyAccesses.end();
-       I != E; ++I) {
-    const MemRegion *ReceiverRegion = I->first.first;
+  for (ObjectPropPair PropKey : llvm::make_first_range(PropertyAccesses)) {
+    const MemRegion *ReceiverRegion = PropKey.first;
     if (!SR.isLiveRegion(ReceiverRegion)) {
-      State = State->remove<PropertyAccessesMap>(I->first);
+      State = State->remove<PropertyAccessesMap>(PropKey);
     }
   }
 
@@ -945,18 +942,16 @@ static Nullability getReceiverNullability(const ObjCMethodCall &M,
 ProgramStateRef NullabilityChecker::evalAssume(ProgramStateRef State, SVal Cond,
                                                bool Assumption) const {
   PropertyAccessesMapTy PropertyAccesses = State->get<PropertyAccessesMap>();
-  for (PropertyAccessesMapTy::iterator I = PropertyAccesses.begin(),
-                                       E = PropertyAccesses.end();
-       I != E; ++I) {
-    if (!I->second.isConstrainedNonnull) {
-      ConditionTruthVal IsNonNull = State->isNonNull(I->second.Value);
+  for (auto [PropKey, PropVal] : PropertyAccesses) {
+    if (!PropVal.isConstrainedNonnull) {
+      ConditionTruthVal IsNonNull = State->isNonNull(PropVal.Value);
       if (IsNonNull.isConstrainedTrue()) {
-        ConstrainedPropertyVal Replacement = I->second;
+        ConstrainedPropertyVal Replacement = PropVal;
         Replacement.isConstrainedNonnull = true;
-        State = State->set<PropertyAccessesMap>(I->first, Replacement);
+        State = State->set<PropertyAccessesMap>(PropKey, Replacement);
       } else if (IsNonNull.isConstrainedFalse()) {
         // Space optimization: no point in tracking constrained-null cases
-        State = State->remove<PropertyAccessesMap>(I->first);
+        State = State->remove<PropertyAccessesMap>(PropKey);
       }
     }
   }
@@ -1375,9 +1370,9 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
   if (!State->get<InvariantViolated>())
     Out << Sep << NL;
 
-  for (NullabilityMapTy::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-    Out << I->first << " : ";
-    I->second.print(Out);
+  for (auto [Region, State] : B) {
+    Out << Region << " : ";
+    State.print(Out);
     Out << NL;
   }
 }
