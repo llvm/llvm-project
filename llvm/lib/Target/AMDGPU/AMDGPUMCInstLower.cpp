@@ -287,7 +287,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       SmallVector<MCFixup, 4> Fixups;
       SmallVector<char, 16> CodeBytes;
 
-      std::unique_ptr<MCCodeEmitter> InstEmitter(createSIMCCodeEmitter(
+      std::unique_ptr<MCCodeEmitter> InstEmitter(createAMDGPUMCCodeEmitter(
           *STI.getInstrInfo(), OutContext));
       InstEmitter->encodeInstruction(TmpInst, CodeBytes, Fixups, STI);
 
