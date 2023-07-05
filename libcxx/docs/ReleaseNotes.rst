@@ -47,6 +47,7 @@ Implemented Papers
 - P2505R5 - Monadic operations for ``std::expected``
 - P2711R1 - Making Multi-Param Constructors Of views explicit (``join_with_view`` is not done yet)
 - P2572R1 - ``std::format`` fill character allowances
+- P2510R3 - Formatting pointers
 
 Improvements and New Features
 -----------------------------
