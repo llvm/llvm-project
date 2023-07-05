@@ -23,6 +23,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -285,6 +286,13 @@ public:
   mlir::cir::ConstantOp getConstInt(mlir::Location loc, mlir::cir::IntType t,
                                     uint64_t C) {
     return create<mlir::cir::ConstantOp>(loc, t, mlir::cir::IntAttr::get(t, C));
+  }
+  mlir::cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal) {
+    bool isSigned = intVal.isSigned();
+    auto width = intVal.getBitWidth();
+    mlir::cir::IntType t = isSigned ? getSIntNTy(width) : getUIntNTy(width);
+    return getConstInt(
+        loc, t, isSigned ? intVal.getSExtValue() : intVal.getZExtValue());
   }
   mlir::cir::ConstantOp getBool(bool state, mlir::Location loc) {
     return create<mlir::cir::ConstantOp>(loc, getBoolTy(),
