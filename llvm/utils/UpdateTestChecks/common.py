@@ -24,8 +24,10 @@ Version changelog:
 1: Initial version, used by tests that don't specify --version explicitly.
 2: --function-signature is now enabled by default and also checks return
    type/attributes.
+3: --check-globals now has a third option ('smart'). The others are now called
+   'none' and 'all'. 'smart' is the default.
 """
-DEFAULT_VERSION = 2
+DEFAULT_VERSION = 3
 
 
 class Regex(object):
@@ -220,6 +222,8 @@ def parse_args(parser, argv):
     args = parser.parse_args(argv)
     if args.version >= 2:
         args.function_signature = True
+    if "check_globals" in args and args.check_globals == "default":
+        args.check_globals = "none" if args.version < 3 else "smart"
     return args
 
 
@@ -877,7 +881,8 @@ class NamelessValue:
         *,
         is_before_functions=False,
         is_number=False,
-        replace_number_with_counter=False
+        replace_number_with_counter=False,
+        match_literally=False,
     ):
         self.check_prefix = check_prefix
         self.check_key = check_key
@@ -889,6 +894,7 @@ class NamelessValue:
         # Some variable numbers (e.g. MCINST1234) will change based on unrelated
         # modifications to LLVM, replace those with an incrementing counter.
         self.replace_number_with_counter = replace_number_with_counter
+        self.match_literally = match_literally
         self.variable_mapping = {}
 
     # Return true if this kind of IR value is "local", basically if it matches '%{{.*}}'.
@@ -900,9 +906,10 @@ class NamelessValue:
         return self.global_ir_rhs_regexp is not None
 
     # Return the IR prefix and check prefix we use for this kind or IR value,
-    # e.g., (%, TMP) for locals.
+    # e.g., (%, TMP) for locals. If the IR prefix is a regex, return the prefix
+    # used in the IR output
     def get_ir_prefix_from_ir_value_match(self, match):
-        return self.ir_prefix, self.check_prefix
+        return re.search(self.ir_prefix, match[0])[0], self.check_prefix
 
     # Return the IR regexp we use for this kind or IR value, e.g., [\w.-]+? for locals
     def get_ir_regex_from_ir_value_re_match(self, match):
@@ -971,8 +978,15 @@ ir_nameless_values = [
     NamelessValue(r"ATTR", "#", r"#", r"[0-9]+", None),
     NamelessValue(r"ATTR", "#", r"attributes #", r"[0-9]+", r"{[^}]*}"),
     NamelessValue(r"GLOB", "@", r"@", r"[0-9]+", None),
+    NamelessValue(r"GLOB", "@", r"@", r"[0-9]+", r".+", is_before_functions=True),
     NamelessValue(
-        r"GLOB", "@", r"@", r'[a-zA-Z0-9_$"\\.-]+', r".+", is_before_functions=True
+        r"GLOBNAMED",
+        "@",
+        r"@",
+        r"[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*",
+        r".+",
+        is_before_functions=True,
+        match_literally=True,
     ),
     NamelessValue(r"DBG", "!", r"!dbg ", r"![0-9]+", None),
     NamelessValue(r"DIASSIGNID", "!", r"!DIAssignID ", r"![0-9]+", None),
@@ -984,6 +998,19 @@ ir_nameless_values = [
     NamelessValue(r"META", "!", r"metadata ", r"![0-9]+", None),
     NamelessValue(r"META", "!", r"", r"![0-9]+", r"(?:distinct |)!.*"),
     NamelessValue(r"ACC_GRP", "!", r"!llvm.access.group ", r"![0-9]+", None),
+    NamelessValue(r"META", "!", r"![a-z.]+ ", r"![0-9]+", None),
+]
+
+global_nameless_values = [
+    nameless_value
+    for nameless_value in ir_nameless_values
+    if nameless_value.global_ir_rhs_regexp is not None
+]
+# global variable names should be matched literally
+global_nameless_values_w_unstable_ids = [
+    nameless_value
+    for nameless_value in global_nameless_values
+    if not nameless_value.match_literally
 ]
 
 asm_nameless_values = [
@@ -1031,11 +1058,23 @@ for nameless_value in ir_nameless_values:
     if nameless_value.global_ir_rhs_regexp is not None:
         match = "^" + match
     IR_VALUE_REGEXP_STRING = createOrRegexp(IR_VALUE_REGEXP_STRING, match)
-IR_VALUE_REGEXP_SUFFIX = r"([,\s\(\)]|\Z)"
+IR_VALUE_REGEXP_SUFFIX = r"([,\s\(\)\}]|\Z)"
 IR_VALUE_RE = re.compile(
     IR_VALUE_REGEXP_PREFIX
     + r"("
     + IR_VALUE_REGEXP_STRING
+    + r")"
+    + IR_VALUE_REGEXP_SUFFIX
+)
+
+GLOBAL_VALUE_REGEXP_STRING = r""
+for nameless_value in global_nameless_values_w_unstable_ids:
+    match = createPrefixMatch(nameless_value.ir_prefix, nameless_value.ir_regexp)
+    GLOBAL_VALUE_REGEXP_STRING = createOrRegexp(GLOBAL_VALUE_REGEXP_STRING, match)
+GLOBAL_VALUE_RE = re.compile(
+    IR_VALUE_REGEXP_PREFIX
+    + r"("
+    + GLOBAL_VALUE_REGEXP_STRING
     + r")"
     + IR_VALUE_REGEXP_SUFFIX
 )
@@ -1057,6 +1096,7 @@ first_nameless_group_in_ir_value_match = 3
 # constants for the group id of special matches
 variable_group_in_ir_value_match = 3
 attribute_group_in_ir_value_match = 4
+
 
 # Check a match for IR_VALUE_RE and inspect it to determine if it was a local
 # value, %..., global @..., debug number !dbg !..., etc. See the PREFIXES above.
@@ -1170,6 +1210,19 @@ def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
         IR_VALUE_RE,
         False,
     )
+
+
+def generalize_global_check_line(line, is_analyze, global_vars_seen):
+    [new_line] = generalize_check_lines_common(
+        [line],
+        is_analyze,
+        set(),
+        global_vars_seen,
+        global_nameless_values_w_unstable_ids,
+        GLOBAL_VALUE_RE,
+        False,
+    )
+    return new_line
 
 
 def generalize_asm_check_lines(lines, vars_seen, global_vars_seen):
@@ -1437,7 +1490,7 @@ def add_analyze_checks(
 
 
 def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
-    for nameless_value in itertools.chain(ir_nameless_values, asm_nameless_values):
+    for nameless_value in itertools.chain(global_nameless_values, asm_nameless_values):
         if nameless_value.global_ir_rhs_regexp is None:
             continue
 
@@ -1464,6 +1517,74 @@ def build_global_values_dictionary(glob_val_dict, raw_tool_output, prefixes):
             glob_val_dict[prefix][nameless_value.check_prefix] = lines
 
 
+def filter_globals_according_to_preference(
+    global_val_lines, global_vars_seen, nameless_value, global_check_setting
+):
+    if global_check_setting == "none":
+        return []
+    if global_check_setting == "all":
+        return global_val_lines
+    assert global_check_setting == "smart"
+
+    if nameless_value.check_key == "#":
+        # attribute sets are usually better checked by --check-attributes
+        return []
+
+    def extract(line, nv):
+        p = (
+            "^"
+            + nv.ir_prefix
+            + "("
+            + nv.ir_regexp
+            + ") = ("
+            + nv.global_ir_rhs_regexp
+            + ")"
+        )
+        match = re.match(p, line)
+        return (match.group(1), re.findall(nv.ir_regexp, match.group(2)))
+
+    transitively_visible = set()
+    contains_refs_to = {}
+
+    def add(var):
+        nonlocal transitively_visible
+        nonlocal contains_refs_to
+        if var in transitively_visible:
+            return
+        transitively_visible.add(var)
+        if not var in contains_refs_to:
+            return
+        for x in contains_refs_to[var]:
+            add(x)
+
+    for line in global_val_lines:
+        (var, refs) = extract(line, nameless_value)
+        contains_refs_to[var] = refs
+    for var, check_key in global_vars_seen:
+        if check_key != nameless_value.check_key:
+            continue
+        add(var)
+    return [
+        line
+        for line in global_val_lines
+        if extract(line, nameless_value)[0] in transitively_visible
+    ]
+
+
+# The capture group is kept as is, followed by a {{.*}} glob
+METADATA_FILTERS = [
+    r"(\w+ version )[\d.]+ \(git@[\w.:/-]+\.git \w+\)",
+    r'(!DIFile\(filename: ".+", directory: )".+"',
+]
+METADATA_FILTERS_RE = [re.compile(s) for s in METADATA_FILTERS]
+
+
+def filter_unstable_metadata(line):
+    for f in METADATA_FILTERS_RE:
+        line = f.sub(r"\1{{.*}}", line)
+    return line
+
+
 def add_global_checks(
     glob_val_dict,
     comment_marker,
@@ -1472,11 +1593,10 @@ def add_global_checks(
     global_vars_seen_dict,
     is_analyze,
     is_before_functions,
+    global_check_setting,
 ):
     printed_prefixes = set()
-    for nameless_value in ir_nameless_values:
-        if nameless_value.global_ir_rhs_regexp is None:
-            continue
+    for nameless_value in global_nameless_values:
         if nameless_value.is_before_functions != is_before_functions:
             continue
         for p in prefix_list:
@@ -1500,19 +1620,26 @@ def add_global_checks(
 
                 check_lines = []
                 global_vars_seen_before = [key for key in global_vars_seen.keys()]
-                for line in glob_val_dict[checkprefix][nameless_value.check_prefix]:
+                lines = glob_val_dict[checkprefix][nameless_value.check_prefix]
+                lines = filter_globals_according_to_preference(
+                    lines, global_vars_seen_before, nameless_value, global_check_setting
+                )
+                for line in lines:
                     if _global_value_regex:
                         matched = False
                         for regex in _global_value_regex:
-                            if re.match("^@" + regex + " = ", line):
+                            if re.match("^@" + regex + " = ", line) or re.match(
+                                "^!" + regex + " = ", line
+                            ):
                                 matched = True
                                 break
                         if not matched:
                             continue
-                    tmp = generalize_check_lines(
-                        [line], is_analyze, set(), global_vars_seen
+                    new_line = generalize_global_check_line(
+                        line, is_analyze, global_vars_seen
                     )
-                    check_line = "%s %s: %s" % (comment_marker, checkprefix, tmp[0])
+                    new_line = filter_unstable_metadata(new_line)
+                    check_line = "%s %s: %s" % (comment_marker, checkprefix, new_line)
                     check_lines.append(check_line)
                 if not check_lines:
                     continue
@@ -1596,6 +1723,15 @@ def get_autogennote_suffix(parser, args):
         ):
             continue
         value = getattr(args, action.dest)
+        if action.dest == "check_globals":
+            default_value = "none" if args.version < 3 else "smart"
+            if value == default_value:
+                continue
+            autogenerated_note_args += action.option_strings[0] + " "
+            if args.version < 3 and value == "all":
+                continue
+            autogenerated_note_args += "%s " % value
+            continue
         if action.const is not None:  # action stores a constant (usually True/False)
             # Skip actions with different constant values (this happens with boolean
             # --foo/--no-foo options)
