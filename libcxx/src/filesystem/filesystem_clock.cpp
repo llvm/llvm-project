@@ -19,8 +19,16 @@
 # include <windows.h>
 #endif
 
-#if !defined(CLOCK_REALTIME) && !defined(_LIBCPP_WIN32API)
+#if __has_include(<unistd.h>)
+# include <unistd.h> // _POSIX_TIMERS
+#endif
+
+#if __has_include(<sys/time.h>)
 # include <sys/time.h> // for gettimeofday and timeval
+#endif
+
+#if !defined(__APPLE__) && defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0
+# define _LIBCPP_USE_CLOCK_GETTIME
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
@@ -36,7 +44,7 @@ _FilesystemClock::time_point _FilesystemClock::now() noexcept {
   detail::TimeSpec tp = detail::filetime_to_timespec(time);
   return time_point(__secs(tp.tv_sec) +
                     chrono::duration_cast<duration>(__nsecs(tp.tv_nsec)));
-#elif defined(CLOCK_REALTIME)
+#elif defined(_LIBCPP_USE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
   typedef chrono::duration<rep, nano> __nsecs;
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_REALTIME, &tp))
