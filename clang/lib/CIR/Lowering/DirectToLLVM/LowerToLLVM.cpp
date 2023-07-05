@@ -456,6 +456,12 @@ public:
     mlir::OpBuilder::InsertionGuard guard(rewriter);
     auto loc = scopeOp.getLoc();
 
+    // Empty scope: just remove it.
+    if (scopeOp.getRegion().empty()) {
+      rewriter.eraseOp(scopeOp);
+      return mlir::success();
+    }
+
     // Split the current block before the ScopeOp to create the inlining point.
     auto *currentBlock = rewriter.getInsertionBlock();
     auto *remainingOpsBlock =

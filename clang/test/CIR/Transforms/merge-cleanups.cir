@@ -100,7 +100,6 @@ module  {
     }
     cir.return
   }
-}
 
 // CHECK: cir.switch (%4 : !s32i) [
 // CHECK-NEXT:   case (equal, #cir.int<0> : !s32i)  {
@@ -164,3 +163,14 @@ module  {
 // CHECK-NEXT:  }
 // CHECK-NEXT:  cir.return
 // CHECK-NEXT: }
+
+  // Should remove empty scopes.
+  cir.func @removeEmptyScope() {
+    cir.scope {
+    }
+    cir.return
+  }
+  //      CHECK: cir.func @removeEmptyScope
+  // CHECK-NEXT: cir.return
+
+}
