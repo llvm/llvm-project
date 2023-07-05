@@ -104,6 +104,18 @@ strtoul        |check|
 strtoull       |check|
 =============  =========  ============
 
+inttypes.h
+--------
+
+=============  =========  ============
+Function Name  Available  RPC Required
+=============  =========  ============
+imaxabs        |check|
+imaxdiv        |check|
+strtoimax      |check|
+strtoumax      |check|
+=============  =========  ============
+
 stdio.h
 --------
 
