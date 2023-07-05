@@ -11,7 +11,6 @@ module {
     }
     cir.return
   }
-}
 
 //      MLIR: llvm.func @foo() {
 // MLIR-NEXT:   llvm.br ^bb1
@@ -36,3 +35,16 @@ module {
 //  LLVM-NEXT: 3:
 //  LLVM-NEXT:   ret void
 //  LLVM-NEXT: }
+
+
+  // Should drop empty scopes.
+  cir.func @empty_scope() {
+    cir.scope {
+    }
+    cir.return
+  }
+  //      MLIR: llvm.func @empty_scope() {
+  // MLIR-NEXT:   llvm.return
+  // MLIR-NEXT: }
+
+}

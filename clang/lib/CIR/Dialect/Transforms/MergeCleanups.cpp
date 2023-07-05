@@ -15,6 +15,7 @@
 
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
@@ -156,10 +157,17 @@ template <>
 mlir::LogicalResult
 SimplifyRetYieldBlocks<ScopeOp>::replaceScopeLikeOp(PatternRewriter &rewriter,
                                                     ScopeOp scopeOp) const {
-  auto regionChanged = mlir::failure();
+  // Scope region empty: just remove scope.
+  if (scopeOp.getRegion().empty()) {
+    rewriter.eraseOp(scopeOp);
+    return mlir::success();
+  }
+
+  // Scope region non-empty: clean it up.
   if (checkAndRewriteRegion(scopeOp.getRegion(), rewriter).succeeded())
-    regionChanged = mlir::success();
-  return regionChanged;
+    return mlir::success();
+
+  return mlir::failure();
 }
 
 template <>
