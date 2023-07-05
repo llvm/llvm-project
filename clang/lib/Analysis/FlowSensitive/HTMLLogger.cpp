@@ -97,7 +97,6 @@ public:
     case Value::Kind::Integer:
     case Value::Kind::TopBool:
     case Value::Kind::AtomicBool:
-    case Value::Kind::FormulaBool:
       break;
     case Value::Kind::Reference:
       JOS.attributeObject(
@@ -112,6 +111,35 @@ public:
         JOS.attributeObject("f:" + Child.first->getNameAsString(),
                             [&] { dump(*Child.second); });
       break;
+    case Value::Kind::Disjunction: {
+      auto &VV = cast<DisjunctionValue>(V);
+      JOS.attributeObject("lhs", [&] { dump(VV.getLeftSubValue()); });
+      JOS.attributeObject("rhs", [&] { dump(VV.getRightSubValue()); });
+      break;
+    }
+    case Value::Kind::Conjunction: {
+      auto &VV = cast<ConjunctionValue>(V);
+      JOS.attributeObject("lhs", [&] { dump(VV.getLeftSubValue()); });
+      JOS.attributeObject("rhs", [&] { dump(VV.getRightSubValue()); });
+      break;
+    }
+    case Value::Kind::Negation: {
+      auto &VV = cast<NegationValue>(V);
+      JOS.attributeObject("not", [&] { dump(VV.getSubVal()); });
+      break;
+    }
+    case Value::Kind::Implication: {
+      auto &VV = cast<ImplicationValue>(V);
+      JOS.attributeObject("if", [&] { dump(VV.getLeftSubValue()); });
+      JOS.attributeObject("then", [&] { dump(VV.getRightSubValue()); });
+      break;
+    }
+    case Value::Kind::Biconditional: {
+      auto &VV = cast<BiconditionalValue>(V);
+      JOS.attributeObject("lhs", [&] { dump(VV.getLeftSubValue()); });
+      JOS.attributeObject("rhs", [&] { dump(VV.getRightSubValue()); });
+      break;
+    }
     }
 
     for (const auto& Prop : V.properties())
@@ -121,12 +149,10 @@ public:
     // Running the SAT solver is expensive, but knowing which booleans are
     // guaranteed true/false here is valuable and hard to determine by hand.
     if (auto *B = llvm::dyn_cast<BoolValue>(&V)) {
-      JOS.attribute("formula", llvm::to_string(B->formula()));
-      JOS.attribute(
-          "truth", Env.flowConditionImplies(B->formula()) ? "true"
-                   : Env.flowConditionImplies(Env.arena().makeNot(B->formula()))
-                       ? "false"
-                       : "unknown");
+      JOS.attribute("truth", Env.flowConditionImplies(*B) ? "true"
+                             : Env.flowConditionImplies(Env.makeNot(*B))
+                                 ? "false"
+                                 : "unknown");
     }
   }
   void dump(const StorageLocation &L) {
