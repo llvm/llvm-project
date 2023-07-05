@@ -6,6 +6,8 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/IR/Dominators.h"
+#include "llvm/Analysis/PostDominators.h"
 #include <cxxabi.h>
 #include <iostream>
 #include <memory>
@@ -91,11 +93,11 @@ namespace {
       }
     }
 
-    void checkTainted(Instruction *I) {
+    void checkTainted(Instruction *I, bool isInline) {
       Value *V = dyn_cast<Value>(I);
       int line = getSourceCodeLine(I);
 
-      if (const DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
+      if (DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
         Variable variable;
         variable.name = DDI->getVariable()->getName();
         variable.tainted = false;
@@ -126,7 +128,7 @@ namespace {
           tainted.insert(I->getOperand(1));
           updateVariable(I->getOperand(1), true, line);
         } 
-        else if (tainted.find(I->getOperand(1)) != tainted.end()) {
+        else if (tainted.find(I->getOperand(1)) != tainted.end() && isInline) {
           output << "Untainted: " << I->getOperand(1) << "\n";
           tainted.erase(I->getOperand(1));
           updateVariable(I->getOperand(1), false, line);
@@ -146,10 +148,15 @@ namespace {
       // We only want to examine the main method
       if (demangle(F.getName().str().c_str()) != func) return false;
 
+      vector<BasicBlock *> sorted = topoSortBBs(F);
+      BasicBlock *entry = sorted.front();
+
       // Iterate over basic blocks within function
-      for (BasicBlock *BB : topoSortBBs(F)) {
+      for (BasicBlock *BB : sorted) {
+        PostDominatorTree *PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+        bool isInline = PDT->dominates(BB, entry);
         // Iterate over instructions within basic block
-        for (Instruction &I : *BB) checkTainted(&I);
+        for (Instruction &I : *BB) checkTainted(&I, isInline);
       }  
 
       string solution = "";
@@ -168,6 +175,12 @@ namespace {
 
       cleanGlobalVariables();
       return false;
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addRequired<DominatorTreeWrapperPass>();
+      AU.addRequired<PostDominatorTreeWrapperPass>();
+      AU.setPreservesAll();
     }
   };
 }
