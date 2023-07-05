@@ -434,6 +434,22 @@ public:
       if (allBool)
         return builder.create<arith::AndIOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MulIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::div:
+      if (allComplex)
+        return builder.create<complex::DivOp>(arg0.getLoc(), arg0, arg1);
+      if (allFloatingPoint)
+        return builder.create<arith::DivFOp>(arg0.getLoc(), arg0, arg1);
+      if (allBool)
+        llvm_unreachable("unsupported operation: div with bools");
+      return builder.create<arith::DivSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::div_unsigned:
+      if (allComplex)
+        return builder.create<complex::DivOp>(arg0.getLoc(), arg0, arg1);
+      if (allFloatingPoint)
+        return builder.create<arith::DivFOp>(arg0.getLoc(), arg0, arg1);
+      if (allBool)
+        llvm_unreachable("unsupported operation: div with bools");
+      return builder.create<arith::DivUIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_signed:
       assert(!allComplex);
       if (allFloatingPoint)

@@ -57,7 +57,7 @@ def add(
     rhs=TensorDef(T1),
     O=TensorDef(T1, output=True),
 ):
-    """ Adds two tensors elementwise.
+    """Adds two tensors elementwise.
 
     The shapes and element types must be identical. The appropriate casts,
     broadcasts and reductions should be done previously to calling this op.
@@ -68,6 +68,63 @@ def add(
     `linalg.generic` with different affine maps for the two operands.
     """
     O[None] = lhs[None] + rhs[None]
+
+
+@linalg_structured_op
+def sub(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Subtracts two tensors elementwise.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.sub` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+    """
+    O[None] = lhs[None] - rhs[None]
+
+
+@linalg_structured_op
+def mul(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Multiplies two tensors elementwise.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.mul` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+    """
+    O[None] = lhs[None] * rhs[None]
+
+
+@linalg_structured_op
+def div(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Divides the first tensor by the second tensor, elementwise.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+    """
+    O[None] = lhs[None] / rhs[None]
 
 
 @linalg_structured_op
