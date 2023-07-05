@@ -263,12 +263,25 @@ DeletionKind LLVM::DbgDeclareOp::removeBlockingUses(
 bool LLVM::DbgValueOp::canUsesBeRemoved(
     const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses) {
-  return true;
+  // There is only one operand that we can remove the use of.
+  if (blockingUses.size() != 1)
+    return false;
+
+  return (*blockingUses.begin())->get() == getValue();
 }
 
 DeletionKind LLVM::DbgValueOp::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
-  return DeletionKind::Delete;
+  // Rewriter by default is after '*this', but we need it before '*this'.
+  rewriter.setInsertionPoint(*this);
+
+  // Rather than dropping the debug value, replace it with undef to preserve the
+  // debug local variable info. This allows the debugger to inform the user that
+  // the variable has been optimized out.
+  auto undef =
+      rewriter.create<UndefOp>(getValue().getLoc(), getValue().getType());
+  rewriter.updateRootInPlace(*this, [&] { getValueMutable().assign(undef); });
+  return DeletionKind::Keep;
 }
 
 //===----------------------------------------------------------------------===//
