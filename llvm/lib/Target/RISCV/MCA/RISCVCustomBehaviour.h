@@ -49,6 +49,8 @@ public:
   /// Create a Instrument for RISC-V target
   UniqueInstrument createInstrument(StringRef Desc, StringRef Data) override;
 
+  SmallVector<UniqueInstrument> createInstruments(const MCInst &Inst) override;
+
   /// Using the Instrument, returns a SchedClassID to use instead of
   /// the SchedClassID that belongs to the MCI or the original SchedClassID.
   unsigned
