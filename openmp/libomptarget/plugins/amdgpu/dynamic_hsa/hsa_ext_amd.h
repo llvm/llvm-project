@@ -61,6 +61,7 @@ typedef enum hsa_amd_agent_info_s {
   HSA_AMD_AGENT_INFO_MAX_WAVES_PER_CU = 0xA00A,
   HSA_AMD_AGENT_INFO_NUM_SIMDS_PER_CU = 0xA00B,
   HSA_AMD_AGENT_INFO_COOPERATIVE_QUEUES = 0xA010
+  HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY = 0xA016,
 } hsa_amd_agent_info_t;
 
 hsa_status_t hsa_amd_memory_pool_get_info(hsa_amd_memory_pool_t memory_pool,
