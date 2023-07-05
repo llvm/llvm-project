@@ -285,7 +285,8 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
   static __XTEAM_SHARED_LDS uint32_t td;
   if (omp_thread_num == 0) {
     team_vals[omp_team_num] = xwave_lds[0];
-    td = ompx::atomic::inc(teams_done_ptr, NumTeams - 1u, ompx::atomic::seq_cst);
+    td = ompx::atomic::inc(teams_done_ptr, NumTeams - 1u, ompx::atomic::seq_cst,
+                           ompx::atomic::MemScopeTy::device);
   }
 
   // This sync needed so all threads from last team see the shared volatile

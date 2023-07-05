@@ -131,8 +131,9 @@ __attribute__((flatten, always_inline)) void _xteam_scan(
   static __XTEAM_SHARED_LDS uint32_t td;
   if(omp_thread_num == 0) {
     // store the team-level reduction in team_vals[]
-    team_vals[omp_team_num] = storage[omp_team_num*_NT + _NT - 1]; 
-    td = ompx::atomic::inc(teams_done_ptr, NumTeams - 1u, ompx::atomic::seq_cst);
+    team_vals[omp_team_num] = storage[omp_team_num*_NT + _NT - 1];
+    td = ompx::atomic::inc(teams_done_ptr, NumTeams - 1u, ompx::atomic::seq_cst,
+                           ompx::atomic::MemScopeTy::device);
   }
 
   // This sync is needed because all threads of the last team which reaches
