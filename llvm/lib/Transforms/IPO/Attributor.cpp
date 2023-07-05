@@ -204,9 +204,10 @@ bool AA::isNoSyncInst(Attributor &A, const Instruction &I,
     if (AANoSync::isNoSyncIntrinsic(&I))
       return true;
 
-    const auto *NoSyncAA = A.getAAFor<AANoSync>(
-        QueryingAA, IRPosition::callsite_function(*CB), DepClassTy::OPTIONAL);
-    return NoSyncAA && NoSyncAA->isAssumedNoSync();
+    bool IsKnownNoSync;
+    return AA::hasAssumedIRAttr<Attribute::NoSync>(
+        A, &QueryingAA, IRPosition::callsite_function(*CB),
+        DepClassTy::OPTIONAL, IsKnownNoSync);
   }
 
   if (!I.mayReadOrWriteMemory())
@@ -3284,8 +3285,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     checkAndQueryIRAttr<Attribute::NoUnwind, AANoUnwind>(FPos, FnAttrs);
 
     // Every function might be marked "nosync"
-    if (!Attrs.hasFnAttr(Attribute::NoSync))
-      getOrCreateAAFor<AANoSync>(FPos);
+    checkAndQueryIRAttr<Attribute::NoSync, AANoSync>(FPos, FnAttrs);
 
     // Every function might be "no-free".
     checkAndQueryIRAttr<Attribute::NoFree, AANoFree>(FPos, FnAttrs);

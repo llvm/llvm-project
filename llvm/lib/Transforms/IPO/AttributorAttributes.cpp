@@ -2417,6 +2417,13 @@ namespace {
 struct AANoSyncImpl : AANoSync {
   AANoSyncImpl(const IRPosition &IRP, Attributor &A) : AANoSync(IRP, A) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    bool IsKnown;
+    assert(!AA::hasAssumedIRAttr<Attribute::NoSync>(A, nullptr, getIRPosition(),
+                                                    DepClassTy::NONE, IsKnown));
+  }
+
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "nosync" : "may-sync";
   }
