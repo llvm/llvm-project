@@ -94,6 +94,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.stdout
     libc.src.stdio.stderr
 
+    # inttypes.h entrypoints
+    libc.src.inttypes.imaxabs
+    libc.src.inttypes.imaxdiv
+    libc.src.inttypes.strtoimax
+    libc.src.inttypes.strtoumax
+
     # gpu/rpc.h entrypoints
     libc.src.gpu.rpc_reset
 )
