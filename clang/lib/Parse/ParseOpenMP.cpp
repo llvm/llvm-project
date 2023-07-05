@@ -4410,16 +4410,55 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
     }
     if (Tok.is(tok::colon)) {
       Data.ColonLoc = ConsumeToken();
-    } else {
+    } else if (Kind != OMPC_doacross || Tok.isNot(tok::r_paren)) {
       Diag(Tok, DKind == OMPD_ordered ? diag::warn_pragma_expected_colon_r_paren
                                       : diag::warn_pragma_expected_colon)
           << (Kind == OMPC_depend ? "dependency type" : "dependence-type");
     }
-    // Special processing for doacross(source) clause.
-    if (Kind == OMPC_doacross && Data.ExtraModifier == OMPC_DOACROSS_source) {
-      // Parse ')'.
-      T.consumeClose();
-      return false;
+    if (Kind == OMPC_doacross) {
+      if (Tok.is(tok::identifier) &&
+          Tok.getIdentifierInfo()->isStr("omp_cur_iteration")) {
+        Data.ExtraModifier = Data.ExtraModifier == OMPC_DOACROSS_source
+                                 ? OMPC_DOACROSS_source_omp_cur_iteration
+                                 : OMPC_DOACROSS_sink_omp_cur_iteration;
+        ConsumeToken();
+      }
+      if (Data.ExtraModifier == OMPC_DOACROSS_sink_omp_cur_iteration) {
+        if (Tok.isNot(tok::minus)) {
+          Diag(Tok, diag::err_omp_sink_and_source_iteration_not_allowd)
+              << getOpenMPClauseName(Kind) << 0 << 0;
+          SkipUntil(tok::r_paren);
+          return false;
+        } else {
+          ConsumeToken();
+          SourceLocation Loc = Tok.getLocation();
+          uint64_t Value = 0;
+          if (Tok.isNot(tok::numeric_constant) ||
+              (PP.parseSimpleIntegerLiteral(Tok, Value) && Value != 1)) {
+            Diag(Loc, diag::err_omp_sink_and_source_iteration_not_allowd)
+                << getOpenMPClauseName(Kind) << 0 << 0;
+            SkipUntil(tok::r_paren);
+            return false;
+          }
+        }
+      }
+      if (Data.ExtraModifier == OMPC_DOACROSS_source_omp_cur_iteration) {
+        if (Tok.isNot(tok::r_paren)) {
+          Diag(Tok, diag::err_omp_sink_and_source_iteration_not_allowd)
+              << getOpenMPClauseName(Kind) << 1 << 1;
+          SkipUntil(tok::r_paren);
+          return false;
+        }
+      }
+      // Only the 'sink' case has the expression list.
+      if (Kind == OMPC_doacross &&
+          (Data.ExtraModifier == OMPC_DOACROSS_source ||
+           Data.ExtraModifier == OMPC_DOACROSS_source_omp_cur_iteration ||
+           Data.ExtraModifier == OMPC_DOACROSS_sink_omp_cur_iteration)) {
+        // Parse ')'.
+        T.consumeClose();
+        return false;
+      }
     }
   } else if (Kind == OMPC_linear) {
     // Try to parse modifier if any.

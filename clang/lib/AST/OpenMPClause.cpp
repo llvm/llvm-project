@@ -2513,7 +2513,23 @@ void OMPClausePrinter::VisitOMPXDynCGroupMemClause(
 void OMPClausePrinter::VisitOMPDoacrossClause(OMPDoacrossClause *Node) {
   OS << "doacross(";
   OpenMPDoacrossClauseModifier DepType = Node->getDependenceType();
-  OS << (DepType == OMPC_DOACROSS_source ? "source:" : "sink:");
+
+  switch (DepType) {
+  case OMPC_DOACROSS_source:
+    OS << "source:";
+    break;
+  case OMPC_DOACROSS_sink:
+    OS << "sink:";
+    break;
+  case OMPC_DOACROSS_source_omp_cur_iteration:
+    OS << "source: omp_cur_iteration";
+    break;
+  case OMPC_DOACROSS_sink_omp_cur_iteration:
+    OS << "sink: omp_cur_iteration - 1";
+    break;
+  default:
+    llvm_unreachable("unknown docaross modifier");
+  }
   VisitOMPClauseList(Node, ' ');
   OS << ")";
 }
