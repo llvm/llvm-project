@@ -7,95 +7,65 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Arena.h"
-#include "clang/Analysis/FlowSensitive/Value.h"
 
 namespace clang::dataflow {
 
-static std::pair<const Formula *, const Formula *>
-canonicalFormulaPair(const Formula &LHS, const Formula &RHS) {
+static std::pair<BoolValue *, BoolValue *>
+makeCanonicalBoolValuePair(BoolValue &LHS, BoolValue &RHS) {
   auto Res = std::make_pair(&LHS, &RHS);
-  if (&RHS < &LHS) // FIXME: use a deterministic order instead
+  if (&RHS < &LHS)
     std::swap(Res.first, Res.second);
   return Res;
 }
 
-template <class Key, class ComputeFunc>
-const Formula &cached(llvm::DenseMap<Key, const Formula *> &Cache, Key K,
-                      ComputeFunc &&Compute) {
-  auto [It, Inserted] = Cache.try_emplace(std::forward<Key>(K));
-  if (Inserted)
-    It->second = Compute();
-  return *It->second;
+BoolValue &Arena::makeAnd(BoolValue &LHS, BoolValue &RHS) {
+  if (&LHS == &RHS)
+    return LHS;
+
+  auto Res = ConjunctionVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
+                                         nullptr);
+  if (Res.second)
+    Res.first->second = &create<ConjunctionValue>(LHS, RHS);
+  return *Res.first->second;
 }
 
-const Formula &Arena::makeAtomRef(Atom A) {
-  return cached(AtomRefs, A, [&] {
-    return &Formula::create(Alloc, Formula::AtomRef, {},
-                            static_cast<unsigned>(A));
-  });
+BoolValue &Arena::makeOr(BoolValue &LHS, BoolValue &RHS) {
+  if (&LHS == &RHS)
+    return LHS;
+
+  auto Res = DisjunctionVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
+                                         nullptr);
+  if (Res.second)
+    Res.first->second = &create<DisjunctionValue>(LHS, RHS);
+  return *Res.first->second;
 }
 
-const Formula &Arena::makeAnd(const Formula &LHS, const Formula &RHS) {
-  return cached(Ands, canonicalFormulaPair(LHS, RHS), [&] {
-    if (&LHS == &RHS)
-      return &LHS;
-    if (LHS.kind() == Formula::Literal)
-      return LHS.literal() ? &RHS : &LHS;
-    if (RHS.kind() == Formula::Literal)
-      return RHS.literal() ? &LHS : &RHS;
-
-    return &Formula::create(Alloc, Formula::And, {&LHS, &RHS});
-  });
+BoolValue &Arena::makeNot(BoolValue &Val) {
+  auto Res = NegationVals.try_emplace(&Val, nullptr);
+  if (Res.second)
+    Res.first->second = &create<NegationValue>(Val);
+  return *Res.first->second;
 }
 
-const Formula &Arena::makeOr(const Formula &LHS, const Formula &RHS) {
-  return cached(Ors, canonicalFormulaPair(LHS, RHS), [&] {
-    if (&LHS == &RHS)
-      return &LHS;
-    if (LHS.kind() == Formula::Literal)
-      return LHS.literal() ? &LHS : &RHS;
-    if (RHS.kind() == Formula::Literal)
-      return RHS.literal() ? &RHS : &LHS;
+BoolValue &Arena::makeImplies(BoolValue &LHS, BoolValue &RHS) {
+  if (&LHS == &RHS)
+    return makeLiteral(true);
 
-    return &Formula::create(Alloc, Formula::Or, {&LHS, &RHS});
-  });
+  auto Res = ImplicationVals.try_emplace(std::make_pair(&LHS, &RHS), nullptr);
+  if (Res.second)
+    Res.first->second = &create<ImplicationValue>(LHS, RHS);
+  return *Res.first->second;
 }
 
-const Formula &Arena::makeNot(const Formula &Val) {
-  return cached(Nots, &Val, [&] {
-    if (Val.kind() == Formula::Not)
-      return Val.operands()[0];
-    if (Val.kind() == Formula::Literal)
-      return &makeLiteral(!Val.literal());
+BoolValue &Arena::makeEquals(BoolValue &LHS, BoolValue &RHS) {
+  if (&LHS == &RHS)
+    return makeLiteral(true);
 
-    return &Formula::create(Alloc, Formula::Not, {&Val});
-  });
-}
-
-const Formula &Arena::makeImplies(const Formula &LHS, const Formula &RHS) {
-  return cached(Implies, std::make_pair(&LHS, &RHS), [&] {
-    if (&LHS == &RHS)
-      return &makeLiteral(true);
-    if (LHS.kind() == Formula::Literal)
-      return LHS.literal() ? &RHS : &makeLiteral(true);
-    if (RHS.kind() == Formula::Literal)
-      return RHS.literal() ? &RHS : &makeNot(LHS);
-
-    return &Formula::create(Alloc, Formula::Implies, {&LHS, &RHS});
-  });
-}
-
-const Formula &Arena::makeEquals(const Formula &LHS, const Formula &RHS) {
-  return cached(Equals, canonicalFormulaPair(LHS, RHS), [&] {
-    if (&LHS == &RHS)
-      return &makeLiteral(true);
-    if (LHS.kind() == Formula::Literal)
-      return LHS.literal() ? &RHS : &makeNot(RHS);
-    if (RHS.kind() == Formula::Literal)
-      return RHS.literal() ? &LHS : &makeNot(LHS);
-
-    return &Formula::create(Alloc, Formula::Equal, {&LHS, &RHS});
-  });
+  auto Res = BiconditionalVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
+                                           nullptr);
+  if (Res.second)
+    Res.first->second = &create<BiconditionalValue>(LHS, RHS);
+  return *Res.first->second;
 }
 
 IntegerValue &Arena::makeIntLiteral(llvm::APInt Value) {
@@ -103,15 +73,6 @@ IntegerValue &Arena::makeIntLiteral(llvm::APInt Value) {
 
   if (Inserted)
     It->second = &create<IntegerValue>();
-  return *It->second;
-}
-
-BoolValue &Arena::makeBoolValue(const Formula &F) {
-  auto [It, Inserted] = FormulaValues.try_emplace(&F);
-  if (Inserted)
-    It->second = (F.kind() == Formula::AtomRef)
-                     ? (BoolValue *)&create<AtomicBoolValue>(F)
-                     : &create<FormulaBoolValue>(F);
   return *It->second;
 }
 

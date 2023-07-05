@@ -138,31 +138,33 @@ public:
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
 
   /// Adds `Constraint` to the flow condition identified by `Token`.
-  void addFlowConditionConstraint(Atom Token, const Formula &Constraint);
+  void addFlowConditionConstraint(AtomicBoolValue &Token,
+                                  BoolValue &Constraint);
 
   /// Creates a new flow condition with the same constraints as the flow
   /// condition identified by `Token` and returns its token.
-  Atom forkFlowCondition(Atom Token);
+  AtomicBoolValue &forkFlowCondition(AtomicBoolValue &Token);
 
   /// Creates a new flow condition that represents the disjunction of the flow
   /// conditions identified by `FirstToken` and `SecondToken`, and returns its
   /// token.
-  Atom joinFlowConditions(Atom FirstToken, Atom SecondToken);
+  AtomicBoolValue &joinFlowConditions(AtomicBoolValue &FirstToken,
+                                      AtomicBoolValue &SecondToken);
 
   /// Returns true if and only if the constraints of the flow condition
   /// identified by `Token` imply that `Val` is true.
-  bool flowConditionImplies(Atom Token, const Formula &);
+  bool flowConditionImplies(AtomicBoolValue &Token, BoolValue &Val);
 
   /// Returns true if and only if the constraints of the flow condition
   /// identified by `Token` are always true.
-  bool flowConditionIsTautology(Atom Token);
+  bool flowConditionIsTautology(AtomicBoolValue &Token);
 
   /// Returns true if `Val1` is equivalent to `Val2`.
   /// Note: This function doesn't take into account constraints on `Val1` and
   /// `Val2` imposed by the flow condition.
-  bool equivalentFormulas(const Formula &Val1, const Formula &Val2);
+  bool equivalentBoolValues(BoolValue &Val1, BoolValue &Val2);
 
-  LLVM_DUMP_METHOD void dumpFlowCondition(Atom Token,
+  LLVM_DUMP_METHOD void dumpFlowCondition(AtomicBoolValue &Token,
                                           llvm::raw_ostream &OS = llvm::dbgs());
 
   /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
@@ -179,7 +181,7 @@ public:
   /// included in `Constraints` to provide contextually-accurate results, e.g.
   /// if any definitions or relationships of the values in `Constraints` have
   /// been stored in flow conditions.
-  Solver::Result querySolver(llvm::SetVector<const Formula *> Constraints);
+  Solver::Result querySolver(llvm::SetVector<BoolValue *> Constraints);
 
 private:
   friend class Environment;
@@ -207,12 +209,12 @@ private:
   /// to track tokens of flow conditions that were already visited by recursive
   /// calls.
   void addTransitiveFlowConditionConstraints(
-      Atom Token, llvm::SetVector<const Formula *> &Constraints,
-      llvm::DenseSet<Atom> &VisitedTokens);
+      AtomicBoolValue &Token, llvm::SetVector<BoolValue *> &Constraints,
+      llvm::DenseSet<AtomicBoolValue *> &VisitedTokens);
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`
-  bool isUnsatisfiable(llvm::SetVector<const Formula *> Constraints) {
+  bool isUnsatisfiable(llvm::SetVector<BoolValue *> Constraints) {
     return querySolver(std::move(Constraints)).getStatus() ==
            Solver::Result::Status::Unsatisfiable;
   }
@@ -251,8 +253,9 @@ private:
   // Flow conditions depend on other flow conditions if they are created using
   // `forkFlowCondition` or `joinFlowConditions`. The graph of flow condition
   // dependencies is stored in the `FlowConditionDeps` map.
-  llvm::DenseMap<Atom, llvm::DenseSet<Atom>> FlowConditionDeps;
-  llvm::DenseMap<Atom, const Formula *> FlowConditionConstraints;
+  llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<AtomicBoolValue *>>
+      FlowConditionDeps;
+  llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionConstraints;
 
   llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
 
