@@ -34,6 +34,7 @@
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -111,12 +112,86 @@ public:
 class CIRLoopOpLowering : public mlir::OpConversionPattern<mlir::cir::LoopOp> {
 public:
   using mlir::OpConversionPattern<mlir::cir::LoopOp>::OpConversionPattern;
+  using LoopKind = mlir::cir::LoopOpKind;
+
+  mlir::LogicalResult
+  fetchCondRegionYields(mlir::Region &condRegion,
+                        mlir::cir::YieldOp &yieldToBody,
+                        mlir::cir::YieldOp &yieldToCont) const {
+    for (auto &bb : condRegion) {
+      if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(bb.getTerminator())) {
+        if (!yieldOp.getKind().has_value())
+          yieldToCont = yieldOp;
+        else if (yieldOp.getKind() == mlir::cir::YieldOpKind::Continue)
+          yieldToBody = yieldOp;
+        else
+          return mlir::failure();
+      }
+    }
+
+    // Succeed only if both yields are found.
+    if (!yieldToBody || !yieldToCont)
+      return mlir::failure();
+    return mlir::success();
+  }
+
+  mlir::LogicalResult
+  rewriteWhileLoop(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
+                   mlir::ConversionPatternRewriter &rewriter) const {
+    auto *currentBlock = rewriter.getInsertionBlock();
+    auto *continueBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+
+    // Fetch required info from the condition region.
+    auto &condRegion = loopOp.getCond();
+    auto &condFrontBlock = condRegion.front();
+    mlir::cir::YieldOp yieldToBody, yieldToCont;
+    if (fetchCondRegionYields(condRegion, yieldToBody, yieldToCont).failed())
+      return loopOp.emitError("failed to fetch yields in cond region");
+
+    // Fetch required info from the condition region.
+    auto &bodyRegion = loopOp.getBody();
+    auto &bodyFrontBlock = bodyRegion.front();
+    auto bodyYield =
+        dyn_cast<mlir::cir::YieldOp>(bodyRegion.back().getTerminator());
+    assert(bodyYield && "unstructured while loops are NYI");
+
+    // Move loop op region contents to current CFG.
+    rewriter.inlineRegionBefore(condRegion, continueBlock);
+    rewriter.inlineRegionBefore(bodyRegion, continueBlock);
+
+    // Set loop entry point to condition block.
+    rewriter.setInsertionPointToEnd(currentBlock);
+    rewriter.create<mlir::cir::BrOp>(loopOp.getLoc(), &condFrontBlock);
+
+    // Set loop exit point to continue block.
+    rewriter.setInsertionPoint(yieldToCont);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldToCont, continueBlock);
+
+    // Branch from condition to body.
+    rewriter.setInsertionPoint(yieldToBody);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldToBody, &bodyFrontBlock);
+
+    // Branch from body to condition.
+    rewriter.setInsertionPoint(bodyYield);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(bodyYield, &condFrontBlock);
+
+    // Remove the loop op.
+    rewriter.eraseOp(loopOp);
+    return mlir::success();
+  }
 
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    if (loopOp.getKind() != mlir::cir::LoopOpKind::For)
+    switch (loopOp.getKind()) {
+    case LoopKind::For:
+      break;
+    case LoopKind::While:
+      return rewriteWhileLoop(loopOp, adaptor, rewriter);
+    case LoopKind::DoWhile:
       llvm_unreachable("NYI");
+    }
 
     auto loc = loopOp.getLoc();
 

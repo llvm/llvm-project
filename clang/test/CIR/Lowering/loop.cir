@@ -27,7 +27,6 @@ module {
     }
     cir.return
   }
-}
 
 //      MLIR: module {
 // MLIR-NEXT:   llvm.func @foo() {
@@ -61,7 +60,6 @@ module {
 // MLIR-NEXT:   ^bb6:  // pred: ^bb3
 // MLIR-NEXT:     llvm.return
 // MLIR-NEXT:   }
-// MLIR-NEXT: }
 
 //      LLVM: define void @foo() {
 //  LLVM-NEXT:   %1 = alloca i32, i64 1, align 4
@@ -95,3 +93,65 @@ module {
 //  LLVM-NEXT: 15:
 //  LLVM-NEXT:   ret void
 //  LLVM-NEXT: }
+
+  // Test while cir.loop operation lowering.
+  cir.func @testWhile(%arg0: !s32i) {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
+    cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
+    cir.scope {
+      cir.loop while(cond : {
+        %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.const(#cir.int<10> : !s32i) : !s32i
+        %3 = cir.cmp(lt, %1, %2) : !s32i, !s32i
+        %4 = cir.cast(int_to_bool, %3 : !s32i), !cir.bool
+        cir.brcond %4 ^bb1, ^bb2
+      ^bb1:  // pred: ^bb0
+        cir.yield continue
+      ^bb2:  // pred: ^bb0
+        cir.yield
+      }, step : {
+        cir.yield
+      }) {
+        %1 = cir.load %0 : cir.ptr <!s32i>, !s32i
+        %2 = cir.unary(inc, %1) : !s32i, !s32i
+        cir.store %2, %0 : !s32i, cir.ptr <!s32i>
+        cir.yield
+      }
+    }
+    cir.return
+  }
+
+  //      MLIR:  llvm.func @testWhile(%arg0: i32) {
+  // MLIR-NEXT:    %0 = llvm.mlir.constant(1 : index) : i64
+  // MLIR-NEXT:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+  // MLIR-NEXT:    llvm.store %arg0, %1 : i32, !llvm.ptr
+  // MLIR-NEXT:    llvm.br ^bb1
+  // MLIR-NEXT:  ^bb1:
+  // MLIR-NEXT:    llvm.br ^bb2
+  // ============= Condition block =============
+  // MLIR-NEXT:  ^bb2:  // 2 preds: ^bb1, ^bb5
+  // MLIR-NEXT:    %2 = llvm.load %1 : !llvm.ptr
+  // MLIR-NEXT:    %3 = llvm.mlir.constant(10 : i32) : i32
+  // MLIR-NEXT:    %4 = llvm.icmp "slt" %2, %3 : i32
+  // MLIR-NEXT:    %5 = llvm.zext %4 : i1 to i32
+  // MLIR-NEXT:    %6 = llvm.mlir.constant(0 : i32) : i32
+  // MLIR-NEXT:    %7 = llvm.icmp "ne" %5, %6 : i32
+  // MLIR-NEXT:    %8 = llvm.zext %7 : i1 to i8
+  // MLIR-NEXT:    %9 = llvm.trunc %8 : i8 to i1
+  // MLIR-NEXT:    llvm.cond_br %9, ^bb3, ^bb4
+  // MLIR-NEXT:  ^bb3:  // pred: ^bb2
+  // MLIR-NEXT:    llvm.br ^bb5
+  // MLIR-NEXT:  ^bb4:  // pred: ^bb2
+  // MLIR-NEXT:    llvm.br ^bb6
+  // ============= Body block =============
+  // MLIR-NEXT:  ^bb5:  // pred: ^bb3
+  // MLIR-NEXT:    %10 = llvm.load %1 : !llvm.ptr
+  // MLIR-NEXT:    %11 = llvm.mlir.constant(1 : i32) : i32
+  // MLIR-NEXT:    %12 = llvm.add %10, %11  : i32
+  // MLIR-NEXT:    llvm.store %12, %1 : i32, !llvm.ptr
+  // MLIR-NEXT:    llvm.br ^bb2
+  // ============= Exit block =============
+  // MLIR-NEXT:  ^bb6:  // pred: ^bb4
+  // MLIR-NEXT:    llvm.br ^bb7
+
+}
