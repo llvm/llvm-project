@@ -54,6 +54,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
@@ -3230,9 +3231,10 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
         //   (3) Simplified to null pointer where known to be nonnull.
         //       The argument is a poison value and violate noundef attribute.
         IRPosition CalleeArgumentIRP = IRPosition::callsite_argument(CB, idx);
-        auto *NoUndefAA =
-            A.getAAFor<AANoUndef>(*this, CalleeArgumentIRP, DepClassTy::NONE);
-        if (!NoUndefAA || !NoUndefAA->isKnownNoUndef())
+        bool IsKnownNoUndef;
+        AA::hasAssumedIRAttr<Attribute::NoUndef>(
+            A, this, CalleeArgumentIRP, DepClassTy::NONE, IsKnownNoUndef);
+        if (!IsKnownNoUndef)
           continue;
         bool UsedAssumedInformation = false;
         std::optional<Value *> SimplifiedVal =
@@ -3311,9 +3313,10 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
     if (!getAnchorScope()->getReturnType()->isVoidTy()) {
       const IRPosition &ReturnIRP = IRPosition::returned(*getAnchorScope());
       if (!A.isAssumedDead(ReturnIRP, this, nullptr, UsedAssumedInformation)) {
-        auto *RetPosNoUndefAA =
-            A.getAAFor<AANoUndef>(*this, ReturnIRP, DepClassTy::NONE);
-        if (RetPosNoUndefAA && RetPosNoUndefAA->isKnownNoUndef())
+        bool IsKnownNoUndef;
+        AA::hasAssumedIRAttr<Attribute::NoUndef>(
+            A, this, ReturnIRP, DepClassTy::NONE, IsKnownNoUndef);
+        if (IsKnownNoUndef)
           A.checkForAllInstructions(InspectReturnInstForUB, *this,
                                     {Instruction::Ret}, UsedAssumedInformation,
                                     /* CheckBBLivenessOnly */ true);
@@ -10176,27 +10179,39 @@ struct AAPotentialConstantValuesCallSiteArgument
     STATS_DECLTRACK_CSARG_ATTR(potential_values)
   }
 };
+} // namespace
 
 /// ------------------------ NoUndef Attribute ---------------------------------
+bool AANoUndef::isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                              Attribute::AttrKind ImpliedAttributeKind,
+                              bool IgnoreSubsumingPositions) {
+  assert(ImpliedAttributeKind == Attribute::NoUndef &&
+         "Unexpected attribute kind");
+  if (A.hasAttr(IRP, {Attribute::NoUndef}, IgnoreSubsumingPositions,
+                Attribute::NoUndef))
+    return true;
+
+  Value &Val = IRP.getAssociatedValue();
+  if (IRP.getPositionKind() != IRPosition::IRP_RETURNED &&
+      isGuaranteedNotToBeUndefOrPoison(&Val)) {
+    LLVMContext &Ctx = Val.getContext();
+    A.manifestAttrs(IRP, Attribute::get(Ctx, Attribute::NoUndef));
+    return true;
+  }
+
+  return false;
+}
+
+namespace {
 struct AANoUndefImpl : AANoUndef {
   AANoUndefImpl(const IRPosition &IRP, Attributor &A) : AANoUndef(IRP, A) {}
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (A.hasAttr(getIRPosition(), {Attribute::NoUndef})) {
-      indicateOptimisticFixpoint();
-      return;
-    }
     Value &V = getAssociatedValue();
     if (isa<UndefValue>(V))
       indicatePessimisticFixpoint();
-    else if (isa<FreezeInst>(V))
-      indicateOptimisticFixpoint();
-    else if (getPositionKind() != IRPosition::IRP_RETURNED &&
-             isGuaranteedNotToBeUndefOrPoison(&V))
-      indicateOptimisticFixpoint();
-    else
-      AANoUndef::initialize(A);
+    assert(!isImpliedByIR(A, getIRPosition(), Attribute::NoUndef));
   }
 
   /// See followUsesInMBEC
@@ -10257,33 +10272,39 @@ struct AANoUndefFloating : public AANoUndefImpl {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-
-    SmallVector<AA::ValueAndContext> Values;
-    bool UsedAssumedInformation = false;
-    if (!A.getAssumedSimplifiedValues(getIRPosition(), *this, Values,
-                                      AA::AnyScope, UsedAssumedInformation)) {
-      Values.push_back({getAssociatedValue(), getCtxI()});
-    }
-
-    StateType T;
-    auto VisitValueCB = [&](Value &V, const Instruction *CtxI) -> bool {
-      const auto *AA = A.getAAFor<AANoUndef>(*this, IRPosition::value(V),
-                                             DepClassTy::REQUIRED);
-      if (!AA || this == AA) {
-        T.indicatePessimisticFixpoint();
-      } else {
-        const AANoUndef::StateType &S =
-            static_cast<const AANoUndef::StateType &>(AA->getState());
-        T ^= S;
-      }
-      return T.isValidState();
+    auto VisitValueCB = [&](const IRPosition &IRP) -> bool {
+      bool IsKnownNoUndef;
+      return AA::hasAssumedIRAttr<Attribute::NoUndef>(
+          A, this, IRP, DepClassTy::REQUIRED, IsKnownNoUndef);
     };
 
+    bool Stripped;
+    bool UsedAssumedInformation = false;
+    Value *AssociatedValue = &getAssociatedValue();
+    SmallVector<AA::ValueAndContext> Values;
+    if (!A.getAssumedSimplifiedValues(getIRPosition(), *this, Values,
+                                      AA::AnyScope, UsedAssumedInformation))
+      Stripped = false;
+    else
+      Stripped =
+          Values.size() != 1 || Values.front().getValue() != AssociatedValue;
+
+    if (!Stripped) {
+      // If we haven't stripped anything we might still be able to use a
+      // different AA, but only if the IRP changes. Effectively when we
+      // interpret this not as a call site value but as a floating/argument
+      // value.
+      const IRPosition AVIRP = IRPosition::value(*AssociatedValue);
+      if (AVIRP == getIRPosition() || !VisitValueCB(AVIRP))
+        return indicatePessimisticFixpoint();
+      return ChangeStatus::UNCHANGED;
+    }
+
     for (const auto &VAC : Values)
-      if (!VisitValueCB(*VAC.getValue(), VAC.getCtxI()))
+      if (!VisitValueCB(IRPosition::value(*VAC.getValue())))
         return indicatePessimisticFixpoint();
 
-    return clampStateAndIndicateChange(getState(), T);
+    return ChangeStatus::UNCHANGED;
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -10291,18 +10312,26 @@ struct AANoUndefFloating : public AANoUndefImpl {
 };
 
 struct AANoUndefReturned final
-    : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl> {
+    : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl,
+                                   AANoUndef::StateType, false,
+                                   Attribute::NoUndef> {
   AANoUndefReturned(const IRPosition &IRP, Attributor &A)
-      : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl>(IRP, A) {}
+      : AAReturnedFromReturnedValues<AANoUndef, AANoUndefImpl,
+                                     AANoUndef::StateType, false,
+                                     Attribute::NoUndef>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_FNRET_ATTR(noundef) }
 };
 
 struct AANoUndefArgument final
-    : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl> {
+    : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl,
+                                      AANoUndef::StateType, false,
+                                      Attribute::NoUndef> {
   AANoUndefArgument(const IRPosition &IRP, Attributor &A)
-      : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl>(IRP, A) {}
+      : AAArgumentFromCallSiteArguments<AANoUndef, AANoUndefImpl,
+                                        AANoUndef::StateType, false,
+                                        Attribute::NoUndef>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(noundef) }
@@ -10317,9 +10346,13 @@ struct AANoUndefCallSiteArgument final : AANoUndefFloating {
 };
 
 struct AANoUndefCallSiteReturned final
-    : AACallSiteReturnedFromReturned<AANoUndef, AANoUndefImpl> {
+    : AACallSiteReturnedFromReturned<AANoUndef, AANoUndefImpl,
+                                     AANoUndef::StateType, false,
+                                     Attribute::NoUndef> {
   AANoUndefCallSiteReturned(const IRPosition &IRP, Attributor &A)
-      : AACallSiteReturnedFromReturned<AANoUndef, AANoUndefImpl>(IRP, A) {}
+      : AACallSiteReturnedFromReturned<AANoUndef, AANoUndefImpl,
+                                       AANoUndef::StateType, false,
+                                       Attribute::NoUndef>(IRP, A) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CSRET_ATTR(noundef) }

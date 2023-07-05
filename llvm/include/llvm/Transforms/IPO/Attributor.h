@@ -5136,6 +5136,17 @@ struct AANoUndef
                          AANoUndef> {
   AANoUndef(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See IRAttribute::isImpliedByUndef
+  static bool isImpliedByUndef() { return false; }
+
+  /// See IRAttribute::isImpliedByPoison
+  static bool isImpliedByPoison() { return false; }
+
+  /// See IRAttribute::isImpliedByIR
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false);
+
   /// Return true if we assume that the underlying value is noundef.
   bool isAssumedNoUndef() const { return getAssumed(); }
 
@@ -6024,6 +6035,7 @@ bool hasAssumedIRAttr(Attributor &A, const AbstractAttribute *QueryingAA,
     CASE(NoAlias, AANoAlias, );
     CASE(NonNull, AANonNull, );
     CASE(MustProgress, AAMustProgress, );
+    CASE(NoUndef, AANoUndef, );
     CASE(ReadNone, AAMemoryBehavior, AAMemoryBehavior::NO_ACCESSES);
     CASE(ReadOnly, AAMemoryBehavior, AAMemoryBehavior::NO_WRITES);
     CASE(WriteOnly, AAMemoryBehavior, AAMemoryBehavior::NO_READS);

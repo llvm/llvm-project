@@ -2331,7 +2331,7 @@ define internal void @call_via_pointer_with_dead_args_internal_a(ptr %a, ptr %b,
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
 ; CGSCC-SAME: (ptr [[A:%.*]], ptr noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
-; CGSCC-NEXT:    call void @called_via_pointer(ptr [[A]], ptr nofree nonnull [[B]], ptr nofree [[A]], i64 -1, ptr nofree null)
+; CGSCC-NEXT:    call void @called_via_pointer(ptr [[A]], ptr nofree noundef nonnull [[B]], ptr nofree [[A]], i64 noundef -1, ptr nofree noundef null)
 ; CGSCC-NEXT:    ret void
 ;
   call void %fp(ptr %a, ptr %b, ptr %a, i64 -1, ptr null)

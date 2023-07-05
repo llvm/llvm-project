@@ -93,7 +93,7 @@ end:
 define ptr @test3(i1 %c) {
 ; CHECK-LABEL: define {{[^@]+}}@test3
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @scc_binder(i1 [[C]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @scc_binder(i1 noundef [[C]])
 ; CHECK-NEXT:    [[RET:%.*]] = call nonnull ptr @ret_nonnull()
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
@@ -1045,8 +1045,8 @@ define internal void @control(ptr dereferenceable(4) %a) {
 define internal void @naked(ptr dereferenceable(4) %a) naked {
 ; CHECK: Function Attrs: naked
 ; CHECK-LABEL: define {{[^@]+}}@naked
-; CHECK-SAME: (ptr nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr nonnull [[A]])
+; CHECK-SAME: (ptr noundef nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
+; CHECK-NEXT:    call void @use_i32_ptr(ptr noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1057,8 +1057,8 @@ define internal void @optnone(ptr dereferenceable(4) %a) optnone noinline {
 ;
 ; CHECK: Function Attrs: noinline optnone
 ; CHECK-LABEL: define {{[^@]+}}@optnone
-; CHECK-SAME: (ptr nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr nonnull [[A]])
+; CHECK-SAME: (ptr noundef nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR12:[0-9]+]] {
+; CHECK-NEXT:    call void @use_i32_ptr(ptr noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)

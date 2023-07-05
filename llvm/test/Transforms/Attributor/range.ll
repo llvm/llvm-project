@@ -19,7 +19,7 @@ define i32 @test0-range-check(ptr %p) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@test0-range-check
 ; TUNIT-SAME: (ptr nocapture nofree readonly align 4 [[P:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[A:%.*]] = tail call i32 @test0(ptr nocapture nofree readonly align 4 [[P]]) #[[ATTR3:[0-9]+]], !range [[RNG0]]
+; TUNIT-NEXT:    [[A:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef readonly align 4 [[P]]) #[[ATTR3:[0-9]+]], !range [[RNG0]]
 ; TUNIT-NEXT:    ret i32 [[A]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: read)
@@ -48,7 +48,7 @@ define void @test0-icmp-check(ptr %p){
   ; ret = [0, 10)
 ; TUNIT-LABEL: define {{[^@]+}}@test0-icmp-check
 ; TUNIT-SAME: (ptr nocapture nofree readonly align 4 [[P:%.*]]) {
-; TUNIT-NEXT:    [[RET:%.*]] = tail call i32 @test0(ptr nocapture nofree readonly align 4 [[P]]) #[[ATTR3]], !range [[RNG0]]
+; TUNIT-NEXT:    [[RET:%.*]] = tail call i32 @test0(ptr nocapture nofree noundef readonly align 4 [[P]]) #[[ATTR3]], !range [[RNG0]]
 ; TUNIT-NEXT:    [[CMP_EQ_1:%.*]] = icmp eq i32 [[RET]], 10
 ; TUNIT-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; TUNIT-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
@@ -288,7 +288,7 @@ define i1 @test1-check(ptr %p) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@test1-check
 ; TUNIT-SAME: (ptr nocapture nofree readonly align 4 [[P:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[RES:%.*]] = tail call i32 @test1(ptr nocapture nofree readonly align 4 [[P]]) #[[ATTR3]], !range [[RNG2:![0-9]+]]
+; TUNIT-NEXT:    [[RES:%.*]] = tail call i32 @test1(ptr nocapture nofree noundef readonly align 4 [[P]]) #[[ATTR3]], !range [[RNG2:![0-9]+]]
 ; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; TUNIT-NEXT:    ret i1 [[CMP]]
 ;
@@ -338,7 +338,7 @@ define i32 @test2_check(ptr %p) {
 ; TUNIT-LABEL: define {{[^@]+}}@test2_check
 ; TUNIT-SAME: (ptr nocapture nofree readonly align 4 [[P:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = tail call i32 @test2(ptr nocapture nofree readonly align 4 [[P]]) #[[ATTR3]]
+; TUNIT-NEXT:    [[CALL:%.*]] = tail call i32 @test2(ptr nocapture nofree noundef readonly align 4 [[P]]) #[[ATTR3]]
 ; TUNIT-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL]], 5
 ; TUNIT-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; TUNIT:       if.then:
@@ -1616,7 +1616,7 @@ define i1 @propagate_range2(i32 %c) {
 ; TUNIT-SAME: (i32 [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    [[CSRET1:%.*]] = call noundef i32 @less_than_100_2(i32 noundef 0) #[[ATTR4]]
 ; TUNIT-NEXT:    [[TRUE1:%.*]] = call i1 @is_less_than_100_2(i32 noundef [[CSRET1]]) #[[ATTR4]]
-; TUNIT-NEXT:    [[CSRET2:%.*]] = call noundef i32 @less_than_100_2(i32 [[C]]) #[[ATTR4]]
+; TUNIT-NEXT:    [[CSRET2:%.*]] = call noundef i32 @less_than_100_2(i32 noundef [[C]]) #[[ATTR4]]
 ; TUNIT-NEXT:    [[TRUE2:%.*]] = call i1 @is_less_than_100_2(i32 noundef [[CSRET2]]) #[[ATTR4]]
 ; TUNIT-NEXT:    [[TRUE:%.*]] = and i1 [[TRUE1]], [[TRUE2]]
 ; TUNIT-NEXT:    ret i1 [[TRUE]]
