@@ -393,20 +393,18 @@ declare <vscale x 1 x half> @llvm.ceil.nxv1f16(<vscale x 1 x half>)
 define <vscale x 1 x i8> @ceil_nxv1f16_to_si8(<vscale x 1 x half> %x) {
 ; RV32-LABEL: ceil_nxv1f16_to_si8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfncvt.x.f.w v9, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
+; RV32-NEXT:    vfncvt.x.f.w v9, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv1f16_to_si8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfncvt.x.f.w v9, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vfncvt.x.f.w v9, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
@@ -418,20 +416,18 @@ define <vscale x 1 x i8> @ceil_nxv1f16_to_si8(<vscale x 1 x half> %x) {
 define <vscale x 1 x i8> @ceil_nxv1f16_to_ui8(<vscale x 1 x half> %x) {
 ; RV32-LABEL: ceil_nxv1f16_to_ui8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfncvt.xu.f.w v9, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
+; RV32-NEXT:    vfncvt.xu.f.w v9, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv1f16_to_ui8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfncvt.xu.f.w v9, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vfncvt.xu.f.w v9, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
@@ -443,19 +439,17 @@ define <vscale x 1 x i8> @ceil_nxv1f16_to_ui8(<vscale x 1 x half> %x) {
 define <vscale x 1 x i16> @ceil_nxv1f16_to_si16(<vscale x 1 x half> %x) {
 ; RV32-LABEL: ceil_nxv1f16_to_si16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv1f16_to_si16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    ret
   %a = call <vscale x 1 x half> @llvm.ceil.nxv1f16(<vscale x 1 x half> %x)
@@ -466,19 +460,17 @@ define <vscale x 1 x i16> @ceil_nxv1f16_to_si16(<vscale x 1 x half> %x) {
 define <vscale x 1 x i16> @ceil_nxv1f16_to_ui16(<vscale x 1 x half> %x) {
 ; RV32-LABEL: ceil_nxv1f16_to_ui16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfcvt.xu.f.v v8, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vfcvt.xu.f.v v8, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv1f16_to_ui16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfcvt.xu.f.v v8, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vfcvt.xu.f.v v8, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    ret
   %a = call <vscale x 1 x half> @llvm.ceil.nxv1f16(<vscale x 1 x half> %x)
@@ -489,20 +481,18 @@ define <vscale x 1 x i16> @ceil_nxv1f16_to_ui16(<vscale x 1 x half> %x) {
 define <vscale x 1 x i32> @ceil_nxv1f16_to_si32(<vscale x 1 x half> %x) {
 ; RV32-LABEL: ceil_nxv1f16_to_si32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfwcvt.x.f.v v9, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vfwcvt.x.f.v v9, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv1f16_to_si32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfwcvt.x.f.v v9, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vfwcvt.x.f.v v9, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
@@ -514,20 +504,18 @@ define <vscale x 1 x i32> @ceil_nxv1f16_to_si32(<vscale x 1 x half> %x) {
 define <vscale x 1 x i32> @ceil_nxv1f16_to_ui32(<vscale x 1 x half> %x) {
 ; RV32-LABEL: ceil_nxv1f16_to_ui32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfwcvt.xu.f.v v9, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vfwcvt.xu.f.v v9, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv1f16_to_ui32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfwcvt.xu.f.v v9, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vfwcvt.xu.f.v v9, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
@@ -627,20 +615,18 @@ declare <vscale x 4 x half> @llvm.ceil.nxv4f16(<vscale x 4 x half>)
 define <vscale x 4 x i8> @ceil_nxv4f16_to_si8(<vscale x 4 x half> %x) {
 ; RV32-LABEL: ceil_nxv4f16_to_si8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfncvt.x.f.w v9, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vfncvt.x.f.w v9, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv4f16_to_si8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfncvt.x.f.w v9, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vfncvt.x.f.w v9, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
@@ -652,20 +638,18 @@ define <vscale x 4 x i8> @ceil_nxv4f16_to_si8(<vscale x 4 x half> %x) {
 define <vscale x 4 x i8> @ceil_nxv4f16_to_ui8(<vscale x 4 x half> %x) {
 ; RV32-LABEL: ceil_nxv4f16_to_ui8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfncvt.xu.f.w v9, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vfncvt.xu.f.w v9, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv4f16_to_ui8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfncvt.xu.f.w v9, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vfncvt.xu.f.w v9, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv1r.v v8, v9
 ; RV64-NEXT:    ret
@@ -677,19 +661,17 @@ define <vscale x 4 x i8> @ceil_nxv4f16_to_ui8(<vscale x 4 x half> %x) {
 define <vscale x 4 x i16> @ceil_nxv4f16_to_si16(<vscale x 4 x half> %x) {
 ; RV32-LABEL: ceil_nxv4f16_to_si16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV32-NEXT:    vfcvt.x.f.v v8, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv4f16_to_si16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfcvt.x.f.v v8, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV64-NEXT:    vfcvt.x.f.v v8, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    ret
   %a = call <vscale x 4 x half> @llvm.ceil.nxv4f16(<vscale x 4 x half> %x)
@@ -700,19 +682,17 @@ define <vscale x 4 x i16> @ceil_nxv4f16_to_si16(<vscale x 4 x half> %x) {
 define <vscale x 4 x i16> @ceil_nxv4f16_to_ui16(<vscale x 4 x half> %x) {
 ; RV32-LABEL: ceil_nxv4f16_to_ui16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfcvt.xu.f.v v8, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV32-NEXT:    vfcvt.xu.f.v v8, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv4f16_to_ui16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfcvt.xu.f.v v8, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV64-NEXT:    vfcvt.xu.f.v v8, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    ret
   %a = call <vscale x 4 x half> @llvm.ceil.nxv4f16(<vscale x 4 x half> %x)
@@ -723,20 +703,18 @@ define <vscale x 4 x i16> @ceil_nxv4f16_to_ui16(<vscale x 4 x half> %x) {
 define <vscale x 4 x i32> @ceil_nxv4f16_to_si32(<vscale x 4 x half> %x) {
 ; RV32-LABEL: ceil_nxv4f16_to_si32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfwcvt.x.f.v v10, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV32-NEXT:    vfwcvt.x.f.v v10, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv2r.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv4f16_to_si32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfwcvt.x.f.v v10, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV64-NEXT:    vfwcvt.x.f.v v10, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv2r.v v8, v10
 ; RV64-NEXT:    ret
@@ -748,20 +726,18 @@ define <vscale x 4 x i32> @ceil_nxv4f16_to_si32(<vscale x 4 x half> %x) {
 define <vscale x 4 x i32> @ceil_nxv4f16_to_ui32(<vscale x 4 x half> %x) {
 ; RV32-LABEL: ceil_nxv4f16_to_ui32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV32-NEXT:    vmset.m v0
 ; RV32-NEXT:    fsrmi a0, 3
-; RV32-NEXT:    vfwcvt.xu.f.v v10, v8, v0.t
+; RV32-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV32-NEXT:    vfwcvt.xu.f.v v10, v8
 ; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv2r.v v8, v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: ceil_nxv4f16_to_ui32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; RV64-NEXT:    vmset.m v0
 ; RV64-NEXT:    fsrmi a0, 3
-; RV64-NEXT:    vfwcvt.xu.f.v v10, v8, v0.t
+; RV64-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV64-NEXT:    vfwcvt.xu.f.v v10, v8
 ; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv2r.v v8, v10
 ; RV64-NEXT:    ret
