@@ -181,9 +181,12 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
       createAllocationForTensor(rewriter, loc, padOp.getResult(), memorySpace);
   rewriter.setInsertionPoint(padOp);
 
-  // Create linalg.fill or linalg.generic.
-  Operation *fillOp = movePaddingToFillOrGenericOp(rewriter, loc, padOp, alloc);
-  rewriter.setInsertionPointAfter(fillOp);
+  if (!padOp.hasZeroLowPad() || !padOp.hasZeroHighPad()) {
+    // Create linalg.fill or linalg.generic. Not needed if there is no padding.
+    Operation *fillOp =
+        movePaddingToFillOrGenericOp(rewriter, loc, padOp, alloc);
+    rewriter.setInsertionPointAfter(fillOp);
+  }
 
   // Create memref.tensor_store.
   SmallVector<OpFoldResult> sizes =
