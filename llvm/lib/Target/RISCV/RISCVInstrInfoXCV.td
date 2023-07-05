@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 let DecoderNamespace = "XCVbitmanip" in {
-  class RVInstBitManipRII<bits<2> funct2, bits<3> funct3, dag outs, dag ins,
+  class CVInstBitManipRII<bits<2> funct2, bits<3> funct3, dag outs, dag ins,
                       string opcodestr, string argstr>
       : RVInstI<funct3, OPC_CUSTOM_2, outs, ins, opcodestr, argstr> {
     bits<5> is3;
@@ -21,7 +21,7 @@ let DecoderNamespace = "XCVbitmanip" in {
 
   class CVBitManipRII<bits<2> funct2, bits<3> funct3, string opcodestr,
                       Operand i3type = uimm5>
-      : RVInstBitManipRII<funct2, funct3, (outs GPR:$rd),
+      : CVInstBitManipRII<funct2, funct3, (outs GPR:$rd),
                           (ins GPR:$rs1, i3type:$is3, uimm5:$is2),
                           opcodestr, "$rd, $rs1, $is3, $is2">;
 
@@ -49,7 +49,7 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32],
   def CV_EXTRACTUR : CVBitManipRR<0b0011001, "cv.extractur">;
 
   let Constraints = "$rd = $rd_wb" in {
-    def CV_INSERT : RVInstBitManipRII<0b10, 0b000, (outs GPR:$rd_wb),
+    def CV_INSERT : CVInstBitManipRII<0b10, 0b000, (outs GPR:$rd_wb),
                              (ins GPR:$rd, GPR:$rs1, uimm5:$is3, uimm5:$is2),
                              "cv.insert", "$rd, $rs1, $is3, $is2">;
     def CV_INSERTR : RVInstR<0b0011010, 0b011, OPC_CUSTOM_1, (outs GPR:$rd_wb),
