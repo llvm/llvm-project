@@ -186,9 +186,7 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitOffsetOfExpr(OffsetOfExpr *E) { llvm_unreachable("NYI"); }
-  mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E) {
-    llvm_unreachable("NYI");
-  }
+  mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
   mlir::Value VisitAddrLabelExpr(const AddrLabelExpr *E) {
     llvm_unreachable("NYI");
   }
@@ -2151,4 +2149,24 @@ mlir::Value ScalarExprEmitter::VisitVAArgExpr(VAArgExpr *VE) {
   mlir::Value Val = CGF.buildVAArg(VE, ArgValue);
 
   return Val;
+}
+
+/// Return the size or alignment of the type of argument of the sizeof
+/// expression as an integer.
+mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
+    const UnaryExprOrTypeTraitExpr *E) {
+  QualType TypeToSize = E->getTypeOfArgument();
+  if (E->getKind() == UETT_SizeOf) {
+    if (const VariableArrayType *VAT =
+            CGF.getContext().getAsVariableArrayType(TypeToSize)) {
+      llvm_unreachable("NYI");
+    }
+  } else if (E->getKind() == UETT_OpenMPRequiredSimdAlign) {
+    llvm_unreachable("NYI");
+  }
+
+  // If this isn't sizeof(vla), the result must be constant; use the constant
+  // folding logic so we don't have to duplicate it here.
+  return Builder.getConstInt(CGF.getLoc(E->getSourceRange()),
+                             E->EvaluateKnownConstInt(CGF.getContext()));
 }
