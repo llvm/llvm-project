@@ -259,26 +259,37 @@ static void cloneUsedGlobalVariables(const Module &SrcM, Module &DestM,
     appendToUsed(DestM, NewUsed);
 }
 
+bool enableUnifiedLTO(Module &M) {
+  bool UnifiedLTO = false;
+  if (auto *MD =
+          mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("UnifiedLTO")))
+    UnifiedLTO = MD->getZExtValue();
+  return UnifiedLTO;
+}
+
 // If it's possible to split M into regular and thin LTO parts, do so and write
 // a multi-module bitcode file with the two parts to OS. Otherwise, write only a
 // regular LTO bitcode file to OS.
 void splitAndWriteThinLTOBitcode(
     raw_ostream &OS, raw_ostream *ThinLinkOS,
     function_ref<AAResults &(Function &)> AARGetter, Module &M) {
+  bool UnifiedLTO = enableUnifiedLTO(M);
   std::string ModuleId = getUniqueModuleId(&M);
   if (ModuleId.empty()) {
+    assert(!UnifiedLTO);
     // We couldn't generate a module ID for this module, write it out as a
     // regular LTO module with an index for summary-based dead stripping.
     ProfileSummaryInfo PSI(M);
     M.addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
     ModuleSummaryIndex Index = buildModuleSummaryIndex(M, nullptr, &PSI);
-    WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/false, &Index);
+    WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/false, &Index,
+                       /*UnifiedLTO=*/false);
 
     if (ThinLinkOS)
       // We don't have a ThinLTO part, but still write the module to the
       // ThinLinkOS if requested so that the expected output file is produced.
       WriteBitcodeToFile(M, *ThinLinkOS, /*ShouldPreserveUseListOrder=*/false,
-                         &Index);
+                         &Index, /*UnifiedLTO=*/false);
 
     return;
   }
