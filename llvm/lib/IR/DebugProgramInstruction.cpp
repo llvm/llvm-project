@@ -267,6 +267,19 @@ void DPMarker::dropOneDPValue(DPValue *DPV) {
   DPV->deleteInstr();
 }
 
+std::optional<DPValue::self_iterator> DPMarker::getReinsertionPosition() {
+  // Is there a marker on the next instruction?
+  DPMarker *NextMarker = getParent()->getNextMarker(MarkedInstr);
+  if (!NextMarker)
+    return std::nullopt;
+
+  // Are there any DPValues in the next marker?
+  if (NextMarker->StoredDPValues.empty())
+    return std::nullopt;
+
+  return NextMarker->StoredDPValues.begin();
+}
+
 const BasicBlock *DPMarker::getParent() const {
   return MarkedInstr->getParent();
 }
@@ -332,6 +345,18 @@ void DPMarker::absorbDebugValues(DPMarker &Src, bool InsertAtHead) {
     DPV.setMarker(this);
 
   StoredDPValues.splice(It, Src.StoredDPValues);
+}
+
+void DPMarker::absorbDebugValues(iterator_range<DPValue::self_iterator> Range,
+                                 DPMarker &Src, bool InsertAtHead) {
+  for (DPValue &DPV : Range)
+    DPV.setMarker(this);
+
+  auto InsertPos =
+      (InsertAtHead) ? StoredDPValues.begin() : StoredDPValues.end();
+
+  StoredDPValues.splice(InsertPos, Src.StoredDPValues, Range.begin(),
+                        Range.end());
 }
 
 iterator_range<simple_ilist<DPValue>::iterator> DPMarker::cloneDebugInfoFrom(

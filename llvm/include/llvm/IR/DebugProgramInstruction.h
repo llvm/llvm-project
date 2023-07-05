@@ -308,6 +308,11 @@ public:
   /// Transfer any DPValues from \p Src into this DPMarker. If \p InsertAtHead
   /// is true, place them before existing DPValues, otherwise afterwards.
   void absorbDebugValues(DPMarker &Src, bool InsertAtHead);
+  /// Transfer the DPValues in \p Range from \p Src into this DPMarker. If
+  /// \p InsertAtHead is true, place them before existing DPValues, otherwise
+  // afterwards.
+  void absorbDebugValues(iterator_range<DPValue::self_iterator> Range,
+                         DPMarker &Src, bool InsertAtHead);
   /// Insert a DPValue into this DPMarker, at the end of the list. If
   /// \p InsertAtHead is true, at the start.
   void insertDPValue(DPValue *New, bool InsertAtHead);
@@ -327,6 +332,11 @@ public:
   /// never erase an assignment in this way, but it's the equivalent to
   /// erasing a dbg.value from a block.
   void dropOneDPValue(DPValue *DPV);
+
+  /// Return an iterator to the position of the "Next" DPValue after this
+  /// marker, or std::nullopt. This is the position to pass to
+  /// BasicBlock::reinsertInstInDPValues when re-inserting an instruction.
+  std::optional<DPValue::self_iterator> getReinsertionPosition();
 
   /// We generally act like all llvm Instructions have a range of DPValues
   /// attached to them, but in reality sometimes we don't allocate the DPMarker

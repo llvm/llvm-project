@@ -1110,5 +1110,149 @@ TEST(BasicBlockDbgInfoTest, DbgSpliceTrailing) {
   UseNewDbgInfoFormat = false;
 }
 
+// When we remove instructions from the program, adjacent DPValues coalesce
+// together into one DPMarker. In "old" dbg.value mode you could re-insert
+// the removed instruction back into the middle of a sequence of dbg.values.
+// Test that this can be replicated correctly by DPValues
+TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsert) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      %foo = add i16 %a, %a
+      call void @llvm.dbg.value(metadata i16 0, metadata !9, metadata !DIExpression()), !dbg !11
+      ret i16 1
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  BasicBlock &Entry = M->getFunction("f")->getEntryBlock();
+  M->convertToNewDbgValues();
+
+  // Fetch the relevant instructions from the converted function.
+  Instruction *AddInst = &*Entry.begin();
+  ASSERT_TRUE(isa<BinaryOperator>(AddInst));
+  Instruction *RetInst = AddInst->getNextNode();
+  ASSERT_TRUE(isa<ReturnInst>(RetInst));
+
+  // They should both have one DPValue on each.
+  EXPECT_TRUE(AddInst->hasDbgValues());
+  EXPECT_TRUE(RetInst->hasDbgValues());
+  auto R1 = AddInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R1.begin(), R1.end()), 1u);
+  auto R2 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
+
+  // The Supported (TM) code sequence for removing then reinserting insts:
+  std::optional<DPValue::self_iterator> Pos =
+      AddInst->DbgMarker->getReinsertionPosition();
+  AddInst->removeFromParent();
+
+  // We should have a re-insertion position.
+  ASSERT_TRUE(Pos);
+  // Both DPValues should now be attached to the ret inst.
+  auto R3 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R3.begin(), R3.end()), 2u);
+
+  // Re-insert and re-insert.
+  AddInst->insertBefore(RetInst);
+  Entry.reinsertInstInDPValues(AddInst, Pos);
+  // We should be back into a position of having one DPValue on each inst.
+  EXPECT_TRUE(AddInst->hasDbgValues());
+  EXPECT_TRUE(RetInst->hasDbgValues());
+  auto R4 = AddInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R4.begin(), R4.end()), 1u);
+  auto R5 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R5.begin(), R5.end()), 1u);
+
+  UseNewDbgInfoFormat = false;
+}
+
+// Test instruction removal and re-insertion, this time with one DPValue that
+// should hop up one instruction.
+TEST(BasicBlockDbgInfoTest, RemoveInstAndReinsertForOneDPValue) {
+  LLVMContext C;
+  UseNewDbgInfoFormat = true;
+
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i16 @f(i16 %a) !dbg !6 {
+    entry:
+      call void @llvm.dbg.value(metadata i16 %a, metadata !9, metadata !DIExpression()), !dbg !11
+      %foo = add i16 %a, %a
+      ret i16 1
+    }
+    declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!5}
+
+    !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+    !1 = !DIFile(filename: "t.ll", directory: "/")
+    !2 = !{}
+    !5 = !{i32 2, !"Debug Info Version", i32 3}
+    !6 = distinct !DISubprogram(name: "foo", linkageName: "foo", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+    !7 = !DISubroutineType(types: !2)
+    !8 = !{!9}
+    !9 = !DILocalVariable(name: "1", scope: !6, file: !1, line: 1, type: !10)
+    !10 = !DIBasicType(name: "ty16", size: 16, encoding: DW_ATE_unsigned)
+    !11 = !DILocation(line: 1, column: 1, scope: !6)
+)");
+
+  BasicBlock &Entry = M->getFunction("f")->getEntryBlock();
+  M->convertToNewDbgValues();
+
+  // Fetch the relevant instructions from the converted function.
+  Instruction *AddInst = &*Entry.begin();
+  ASSERT_TRUE(isa<BinaryOperator>(AddInst));
+  Instruction *RetInst = AddInst->getNextNode();
+  ASSERT_TRUE(isa<ReturnInst>(RetInst));
+
+  // There should be one DPValue.
+  EXPECT_TRUE(AddInst->hasDbgValues());
+  EXPECT_FALSE(RetInst->hasDbgValues());
+  auto R1 = AddInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R1.begin(), R1.end()), 1u);
+
+  // The Supported (TM) code sequence for removing then reinserting insts:
+  std::optional<DPValue::self_iterator> Pos =
+      AddInst->DbgMarker->getReinsertionPosition();
+  AddInst->removeFromParent();
+
+  // No re-insertion position as there were no DPValues on the ret.
+  ASSERT_FALSE(Pos);
+  // The single DPValue should now be attached to the ret inst.
+  EXPECT_TRUE(RetInst->hasDbgValues());
+  auto R2 = RetInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R2.begin(), R2.end()), 1u);
+
+  // Re-insert and re-insert.
+  AddInst->insertBefore(RetInst);
+  Entry.reinsertInstInDPValues(AddInst, Pos);
+  // We should be back into a position of having one DPValue on the AddInst.
+  EXPECT_TRUE(AddInst->hasDbgValues());
+  EXPECT_FALSE(RetInst->hasDbgValues());
+  auto R3 = AddInst->getDbgValueRange();
+  EXPECT_EQ(std::distance(R3.begin(), R3.end()), 1u);
+
+  UseNewDbgInfoFormat = false;
+}
+
 } // End anonymous namespace.
 #endif // EXPERIMENTAL_DEBUGINFO_ITERATORS
