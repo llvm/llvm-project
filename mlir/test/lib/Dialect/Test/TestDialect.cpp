@@ -34,6 +34,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Base64.h"
 
 #include <cstdint>
 #include <numeric>
@@ -1020,7 +1021,7 @@ ParseResult IsolatedRegionOp::parse(OpAsmParser &parser,
 }
 
 void IsolatedRegionOp::print(OpAsmPrinter &p) {
-  p << "test.isolated_region ";
+  p << ' ';
   p.printOperand(getOperand());
   p.shadowRegionArgs(getRegion(), getOperand());
   p << ' ';
@@ -1054,7 +1055,7 @@ ParseResult AffineScopeOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void AffineScopeOp::print(OpAsmPrinter &p) {
-  p << "test.affine_scope ";
+  p << " ";
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
 }
 
@@ -1103,8 +1104,7 @@ ParseResult ParseB64BytesOp::parse(OpAsmParser &parser,
 }
 
 void ParseB64BytesOp::print(OpAsmPrinter &p) {
-  // Don't print the base64 version to check that we decoded it correctly.
-  p << " \"" << getB64() << "\"";
+  p << " \"" << llvm::encodeBase64(getB64()) << "\"";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1260,7 +1260,14 @@ ParseResult PolyForOp::parse(OpAsmParser &parser, OperationState &result) {
   return parser.parseRegion(*body, ivsInfo);
 }
 
-void PolyForOp::print(OpAsmPrinter &p) { p.printGenericOp(*this); }
+void PolyForOp::print(OpAsmPrinter &p) {
+  p << " ";
+  llvm::interleaveComma(getRegion().getArguments(), p, [&](auto arg) {
+    p.printRegionArgument(arg, /*argAttrs =*/{}, /*omitType=*/true);
+  });
+  p << " ";
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
+}
 
 void PolyForOp::getAsmBlockArgumentNames(Region &region,
                                          OpAsmSetValueNameFn setNameFn) {
