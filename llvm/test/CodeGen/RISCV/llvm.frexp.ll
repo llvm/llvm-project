@@ -905,6 +905,24 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) nounwind {
 ;   ret <2 x i32> %result.1
 ; }
 
+; FIXME: fp128 softening crashes
+; define { fp128, i32 } @test_frexp_f128_i32(fp128 %a) nounwind {
+;   %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+;   ret { fp128, i32 } %result
+; }
+
+; define fp128 @test_frexp_f128_i32_only_use_fract(fp128 %a) nounwind {
+;   %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+;   %result.0 = extractvalue { fp128, i32 } %result, 0
+;   ret fp128 %result.0
+; }
+
+; define i32 @test_frexp_f128_i32_only_use_exp(fp128 %a) nounwind {
+;   %result = call { fp128, i32 } @llvm.frexp.f128.i32(fp128 %a)
+;   %result.0 = extractvalue { fp128, i32 } %result, 1
+;   ret i32 %result.0
+; }
+
 declare { float, i32 } @llvm.frexp.f32.i32(float) #0
 declare { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float>) #0
 declare { <4 x float>, <4 x i32> } @llvm.frexp.v4f32.v4i32(<4 x float>) #0
@@ -917,5 +935,7 @@ declare { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double>) #0
 
 declare { half, i16 } @llvm.frexp.f16.i16(half) #0
 declare { <2 x half>, <2 x i16> } @llvm.frexp.v2f16.v2i16(<2 x half>) #0
+
+declare { fp128, i32 } @llvm.frexp.f128.i32(fp128) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
