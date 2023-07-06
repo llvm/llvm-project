@@ -98,7 +98,6 @@ void NanoMipsTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   UP.OptSizeThreshold = 0;
 }
 
-
 static InstructionCost selectCost(const Value *Cond,
                                   const Value *A, const Value *B) {
   const ConstantInt *AI = dyn_cast<ConstantInt>(A),
@@ -133,4 +132,8 @@ InstructionCost NanoMipsTTIImpl::getCmpSelInstrCost (
   }
 
   return TTI::TCC_Basic;
+}
+
+  bool NanoMipsTTIImpl::hasDivRemOp(Type *DataType, bool IsSigned) {
+  return F->hasOptSize() || (DataType->isIntegerTy(64) && !IsSigned);
 }

@@ -1,5 +1,5 @@
-// No object emitter on nanomips
-// UNSUPPORTED: nanomips
+; No object emitter on nanomips
+; UNSUPPORTED: nanomips
 ; RUN: %llc_dwarf -filetype=obj %s -o - | llvm-dwarfdump -v -debug-info - | FileCheck %s
 
 ;; In DWARF v5, emit DW_AT_addr_base as DW_AT_addr_base is used for DW_AT_low_pc.

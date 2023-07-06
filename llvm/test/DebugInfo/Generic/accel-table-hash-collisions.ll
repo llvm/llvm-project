@@ -1,5 +1,5 @@
-// No object emitter on nanomips
-// UNSUPPORTED: nanomips
+; No object emitter on nanomips
+; UNSUPPORTED: nanomips
 ; RUN: %llc_dwarf -accel-tables=Apple -filetype=obj -o - < %s \
 ; RUN:   | llvm-dwarfdump -apple-names - | FileCheck %s
 

@@ -1,5 +1,6 @@
-// No object emitter on nanomips
-// UNSUPPORTED: nanomips
+; No object emitter on nanomips
+; UNSUPPORTED: nanomips
+
 ; RUN: %llc_dwarf -O0 -filetype=obj < %s > %t
 ; RUN: llvm-dwarfdump -debug-info %t | FileCheck %s
 ; CHECK: DW_TAG_common_block

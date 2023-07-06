@@ -1,5 +1,5 @@
-// No object emitter on nanomips
-// UNSUPPORTED: nanomips
+; No object emitter on nanomips
+; UNSUPPORTED: nanomips
 ; PR 19261
 
 ; RUN: %llc_dwarf -fast-isel=false -O0 -filetype=obj %s -o %t

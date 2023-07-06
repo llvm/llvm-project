@@ -1,5 +1,5 @@
-// No object emitter on nanomips
-// UNSUPPORTED: nanomips
+; No object emitter on nanomips
+; UNSUPPORTED: nanomips
 ; For some reason, the output when targetting sparc is not quite as expected.
 ; XFAIL: sparc
 
