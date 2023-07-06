@@ -331,16 +331,6 @@ public:
       ScopedLock L(Region->FLLock);
       pushBlocksImpl(C, ClassId, Region, Array, Size, SameGroup);
     }
-
-    // Only non-BatchClass will be here, try to release the pages in the region.
-
-    // Note that the tryLock() may fail spuriously, given that it should rarely
-    // happen and page releasing is fine to skip, we don't take certain
-    // approaches to ensure one page release is done.
-    if (Region->MMLock.tryLock()) {
-      releaseToOSMaybe(Region, ClassId);
-      Region->MMLock.unlock();
-    }
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS {
@@ -424,6 +414,19 @@ public:
     }
     // Not supported by the Primary, but not an error either.
     return true;
+  }
+
+  uptr tryReleaseToOS(uptr ClassId, ReleaseToOS ReleaseType) {
+    RegionInfo *Region = getRegionInfo(ClassId);
+    // Note that the tryLock() may fail spuriously, given that it should rarely
+    // happen and page releasing is fine to skip, we don't take certain
+    // approaches to ensure one page release is done.
+    if (Region->MMLock.tryLock()) {
+      uptr BytesReleased = releaseToOSMaybe(Region, ClassId, ReleaseType);
+      Region->MMLock.unlock();
+      return BytesReleased;
+    }
+    return 0;
   }
 
   uptr releaseToOS(ReleaseToOS ReleaseType) {

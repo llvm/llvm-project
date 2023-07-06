@@ -232,9 +232,6 @@ public:
 
     ScopedLock L(Sci->Mutex);
     pushBlocksImpl(C, ClassId, Sci, Array, Size, SameGroup);
-
-    if (ClassId != SizeClassMap::BatchClassId)
-      releaseToOSMaybe(Sci, ClassId);
   }
 
   void disable() NO_THREAD_SAFETY_ANALYSIS {
@@ -321,6 +318,14 @@ public:
     }
     // Not supported by the Primary, but not an error either.
     return true;
+  }
+
+  uptr tryReleaseToOS(uptr ClassId, ReleaseToOS ReleaseType) {
+    SizeClassInfo *Sci = getSizeClassInfo(ClassId);
+    // TODO: Once we have separate locks like primary64, we may consider using
+    // tryLock() as well.
+    ScopedLock L(Sci->Mutex);
+    return releaseToOSMaybe(Sci, ClassId, ReleaseType);
   }
 
   uptr releaseToOS(ReleaseToOS ReleaseType) {
