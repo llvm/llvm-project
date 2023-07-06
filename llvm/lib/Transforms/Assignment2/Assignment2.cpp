@@ -144,20 +144,30 @@ namespace {
       }
     }
 
+    void getVariables(Function &F) {   
+      vector<BasicBlock *> sorted = topoSortBBs(F);
+      BasicBlock *entry = sorted.front();
+      PostDominatorTree *PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+
+      // Iterate over basic blocks within function
+      for (BasicBlock *BB : topoSortBBs(F)) {
+        bool isInline = PDT->dominates(BB, entry);
+        
+        // Iterate over instructions within basic block
+        for (Instruction &I : *BB) {
+          if (isa<AllocaInst>(I)) {
+            output << "Call Inst: " << line << "\n";  
+          } 
+          if (isa<CallInst>(I) && demangle(I.getOperand(0)->getName().str().c_str()) == "std::__1::cin") {
+            
+          }
+        }
+      }  
+    }
+
     bool runOnFunction(Function &F) override {
       // We only want to examine the main method
       if (demangle(F.getName().str().c_str()) != func) return false;
-
-      vector<BasicBlock *> sorted = topoSortBBs(F);
-      BasicBlock *entry = sorted.front();
-
-      // Iterate over basic blocks within function
-      for (BasicBlock *BB : sorted) {
-        PostDominatorTree *PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-        bool isInline = PDT->dominates(BB, entry);
-        // Iterate over instructions within basic block
-        for (Instruction &I : *BB) checkTainted(&I, isInline);
-      }  
 
       string solution = "";
       for (auto &var : variables) {
