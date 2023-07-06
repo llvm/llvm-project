@@ -45,11 +45,9 @@ using namespace llvm;
 using DecodeStatus = llvm::MCDisassembler::DecodeStatus;
 
 AMDGPUDisassembler::AMDGPUDisassembler(const MCSubtargetInfo &STI,
-                                       MCContext &Ctx,
-                                       MCInstrInfo const *MCII) :
-  MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
-  TargetMaxInstBytes(Ctx.getAsmInfo()->getMaxInstLength(&STI)) {
-
+                                       MCContext &Ctx, MCInstrInfo const *MCII)
+    : MCDisassembler(STI, Ctx), MCII(MCII), MRI(*Ctx.getRegisterInfo()),
+      MAI(*Ctx.getAsmInfo()), TargetMaxInstBytes(MAI.getMaxInstLength(&STI)) {
   // ToDo: AMDGPUDisassembler supports only VI ISA.
   if (!STI.hasFeature(AMDGPU::FeatureGCN3Encoding) && !isGFX10Plus())
     report_fatal_error("Disassembly not yet supported for subtarget");
@@ -1632,6 +1630,11 @@ bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   do {                                                                         \
     KdStream << Indent << DIRECTIVE " " << GET_FIELD(MASK) << '\n';            \
   } while (0)
+#define PRINT_PSEUDO_DIRECTIVE_COMMENT(DIRECTIVE, MASK)                        \
+  do {                                                                         \
+    KdStream << Indent << MAI.getCommentString() << ' ' << DIRECTIVE " "       \
+             << GET_FIELD(MASK) << '\n';                                       \
+  } while (0)
 
 // NOLINTNEXTLINE(readability-identifier-naming)
 MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
@@ -1647,8 +1650,9 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   uint32_t GranulatedWorkitemVGPRCount =
       GET_FIELD(COMPUTE_PGM_RSRC1_GRANULATED_WORKITEM_VGPR_COUNT);
 
-  uint32_t NextFreeVGPR = (GranulatedWorkitemVGPRCount + 1) *
-                          AMDGPU::IsaInfo::getVGPREncodingGranule(&STI);
+  uint32_t NextFreeVGPR =
+      (GranulatedWorkitemVGPRCount + 1) *
+      AMDGPU::IsaInfo::getVGPREncodingGranule(&STI, EnableWavefrontSize32);
 
   KdStream << Indent << ".amdhsa_next_free_vgpr " << NextFreeVGPR << '\n';
 
@@ -1786,11 +1790,40 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
 MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
     uint32_t FourByteBuffer, raw_string_ostream &KdStream) const {
   using namespace amdhsa;
-  if (!isGFX10Plus() && FourByteBuffer) {
+  StringRef Indent = "\t";
+  if (isGFX90A()) {
+    KdStream << Indent << ".amdhsa_accum_offset "
+             << (GET_FIELD(COMPUTE_PGM_RSRC3_GFX90A_ACCUM_OFFSET) + 1) * 4
+             << '\n';
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX90A_RESERVED0)
+      return MCDisassembler::Fail;
+    PRINT_DIRECTIVE(".amdhsa_tg_split", COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT);
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX90A_RESERVED1)
+      return MCDisassembler::Fail;
+  } else if (isGFX10Plus()) {
+    if (!EnableWavefrontSize32 || !*EnableWavefrontSize32) {
+      PRINT_DIRECTIVE(".amdhsa_shared_vgpr_count",
+                      COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
+    } else {
+      PRINT_PSEUDO_DIRECTIVE_COMMENT(
+          "SHARED_VGPR_COUNT", COMPUTE_PGM_RSRC3_GFX10_PLUS_SHARED_VGPR_COUNT);
+    }
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_INST_PREF_SIZE);
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_START",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_START);
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_END",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_END);
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED0)
+      return MCDisassembler::Fail;
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("IMAGE_OP",
+                                   COMPUTE_PGM_RSRC3_GFX10_PLUS_TRAP_ON_START);
+  } else if (FourByteBuffer) {
     return MCDisassembler::Fail;
   }
   return MCDisassembler::Success;
 }
+#undef PRINT_PSEUDO_DIRECTIVE_COMMENT
 #undef PRINT_DIRECTIVE
 #undef GET_FIELD
 
@@ -1934,6 +1967,20 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeKernelDescriptor(
   // CP microcode requires the kernel descriptor to be 64 aligned.
   if (Bytes.size() != 64 || KdAddress % 64 != 0)
     return MCDisassembler::Fail;
+
+  // FIXME: We can't actually decode "in order" as is done below, as e.g. GFX10
+  // requires us to know the setting of .amdhsa_wavefront_size32 in order to
+  // accurately produce .amdhsa_next_free_vgpr, and they appear in the wrong
+  // order. Workaround this by first looking up .amdhsa_wavefront_size32 here
+  // when required.
+  if (isGFX10Plus()) {
+    uint16_t KernelCodeProperties =
+        support::endian::read16(&Bytes[amdhsa::KERNEL_CODE_PROPERTIES_OFFSET],
+                                support::endianness::little);
+    EnableWavefrontSize32 =
+        AMDHSA_BITS_GET(KernelCodeProperties,
+                        amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
+  }
 
   std::string Kd;
   raw_string_ostream KdStream(Kd);
