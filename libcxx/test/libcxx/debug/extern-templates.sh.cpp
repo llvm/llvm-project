@@ -10,7 +10,7 @@
 // for members of <locale> even when the debug mode is enabled, which is
 // necessary for correctness. See https://llvm.org/D94718 for details.
 
-// UNSUPPORTED: !libcpp-has-debug-mode
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: cant-build-shared-library
 
