@@ -241,9 +241,8 @@ works.
 
    $ ninja clang
    $ bin/clang -Wall ~/test.cc
-
-   **/path/test.cc:1:124:** **warning****: in order to understand recursion, you must
-   first understand recursion [-Winfinite-recursion]**
+   /path/test.cc:1:124: warning: in order to understand recursion, you must
+   first understand recursion [-Winfinite-recursion]
 
 We should also run the tests to make sure we didn't break something.
 
