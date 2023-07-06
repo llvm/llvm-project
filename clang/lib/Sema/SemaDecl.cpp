@@ -7763,7 +7763,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
            diag::err_thread_non_global)
         << DeclSpec::getSpecifierName(TSCS);
     else if (!Context.getTargetInfo().isTLSSupported()) {
-      if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
+      if (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
           getLangOpts().SYCLIsDevice) {
         // Postpone error emission until we've collected attributes required to
         // figure out whether it's a host or device variable and whether the
@@ -7892,17 +7892,18 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (const auto *TT = R->getAs<TypedefType>())
       copyAttrFromTypedefToDecl<AllocSizeAttr>(*this, NewVD, TT);
 
-  if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
+  if (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
       getLangOpts().SYCLIsDevice) {
     if (EmitTLSUnsupportedError &&
         ((getLangOpts().CUDA && DeclAttrsMatchCUDAMode(getLangOpts(), NewVD)) ||
-         (getLangOpts().OpenMPIsDevice &&
+         (getLangOpts().OpenMPIsTargetDevice &&
           OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(NewVD))))
       Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
            diag::err_thread_unsupported);
 
     if (EmitTLSUnsupportedError &&
-        (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)))
+        (LangOpts.SYCLIsDevice ||
+         (LangOpts.OpenMP && LangOpts.OpenMPIsTargetDevice)))
       targetDiag(D.getIdentifierLoc(), diag::err_thread_unsupported);
     // CUDA B.2.5: "__shared__ and __constant__ variables have implied static
     // storage [duration]."
@@ -13595,7 +13596,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   if (LangOpts.OpenMP &&
-      (LangOpts.OpenMPIsDevice || !LangOpts.OMPTargetTriples.empty()) &&
+      (LangOpts.OpenMPIsTargetDevice || !LangOpts.OMPTargetTriples.empty()) &&
       VDecl->isFileVarDecl())
     DeclsToCheckForDeferredDiags.insert(VDecl);
   CheckCompleteVariableDeclaration(VDecl);
@@ -15961,7 +15962,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     DiscardCleanupsInEvaluationContext();
   }
 
-  if (FD && ((LangOpts.OpenMP && (LangOpts.OpenMPIsDevice ||
+  if (FD && ((LangOpts.OpenMP && (LangOpts.OpenMPIsTargetDevice ||
                                   !LangOpts.OMPTargetTriples.empty())) ||
              LangOpts.CUDA || LangOpts.SYCLIsDevice)) {
     auto ES = getEmissionStatus(FD);
@@ -20039,7 +20040,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
                       getASTContext().GetGVALinkageForFunction(Def));
   };
 
-  if (LangOpts.OpenMPIsDevice) {
+  if (LangOpts.OpenMPIsTargetDevice) {
     // In OpenMP device mode we will not emit host only functions, or functions
     // we don't need due to their linkage.
     std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =

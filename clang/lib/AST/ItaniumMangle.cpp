@@ -3124,27 +3124,30 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << 'd';
     break;
   case BuiltinType::LongDouble: {
-    const TargetInfo *TI = getASTContext().getLangOpts().OpenMP &&
-                                   getASTContext().getLangOpts().OpenMPIsDevice
-                               ? getASTContext().getAuxTargetInfo()
-                               : &getASTContext().getTargetInfo();
+    const TargetInfo *TI =
+        getASTContext().getLangOpts().OpenMP &&
+                getASTContext().getLangOpts().OpenMPIsTargetDevice
+            ? getASTContext().getAuxTargetInfo()
+            : &getASTContext().getTargetInfo();
     Out << TI->getLongDoubleMangling();
     break;
   }
   case BuiltinType::Float128: {
-    const TargetInfo *TI = getASTContext().getLangOpts().OpenMP &&
-                                   getASTContext().getLangOpts().OpenMPIsDevice
-                               ? getASTContext().getAuxTargetInfo()
-                               : &getASTContext().getTargetInfo();
+    const TargetInfo *TI =
+        getASTContext().getLangOpts().OpenMP &&
+                getASTContext().getLangOpts().OpenMPIsTargetDevice
+            ? getASTContext().getAuxTargetInfo()
+            : &getASTContext().getTargetInfo();
     Out << TI->getFloat128Mangling();
     break;
   }
   case BuiltinType::BFloat16: {
-    const TargetInfo *TI = ((getASTContext().getLangOpts().OpenMP &&
-                             getASTContext().getLangOpts().OpenMPIsDevice) ||
-                            getASTContext().getLangOpts().SYCLIsDevice)
-                               ? getASTContext().getAuxTargetInfo()
-                               : &getASTContext().getTargetInfo();
+    const TargetInfo *TI =
+        ((getASTContext().getLangOpts().OpenMP &&
+          getASTContext().getLangOpts().OpenMPIsTargetDevice) ||
+         getASTContext().getLangOpts().SYCLIsDevice)
+            ? getASTContext().getAuxTargetInfo()
+            : &getASTContext().getTargetInfo();
     Out << TI->getBFloat16Mangling();
     break;
   }

@@ -817,7 +817,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // OpenMP target declare device functions are not callable from the host so
     // they should not be exported from the device image. This applies to all
     // functions as the host-callable kernel functions are emitted at codegen.
-    if (Context.getLangOpts().OpenMP && Context.getLangOpts().OpenMPIsDevice &&
+    if (Context.getLangOpts().OpenMP &&
+        Context.getLangOpts().OpenMPIsTargetDevice &&
         ((Context.getTargetInfo().getTriple().isAMDGPU() ||
           Context.getTargetInfo().getTriple().isNVPTX()) ||
          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(Function)))
@@ -1005,7 +1006,8 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
     // they should not be exported from the device image. This applies to all
     // functions as the host-callable kernel functions are emitted at codegen.
     ASTContext &Context = D->getASTContext();
-    if (Context.getLangOpts().OpenMP && Context.getLangOpts().OpenMPIsDevice &&
+    if (Context.getLangOpts().OpenMP &&
+        Context.getLangOpts().OpenMPIsTargetDevice &&
         ((Context.getTargetInfo().getTriple().isAMDGPU() ||
           Context.getTargetInfo().getTriple().isNVPTX()) ||
          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(MD)))
@@ -3564,7 +3566,7 @@ unsigned FunctionDecl::getBuiltinID(bool ConsiderWrapperFunctions) const {
   // library, none of the predefined library functions except printf and malloc
   // should be treated as a builtin i.e. 0 should be returned for them.
   if (Context.getTargetInfo().getTriple().isAMDGCN() &&
-      Context.getLangOpts().OpenMPIsDevice &&
+      Context.getLangOpts().OpenMPIsTargetDevice &&
       Context.BuiltinInfo.isPredefinedLibFunction(BuiltinID) &&
       !(BuiltinID == Builtin::BIprintf || BuiltinID == Builtin::BImalloc))
     return 0;

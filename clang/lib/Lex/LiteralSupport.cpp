@@ -975,7 +975,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       // ToDo: more precise check for CUDA.
       // TODO: AMDGPU might also support it in the future.
       if ((Target.hasFloat16Type() || LangOpts.CUDA ||
-           (LangOpts.OpenMPIsDevice && Target.getTriple().isNVPTX())) &&
+           (LangOpts.OpenMPIsTargetDevice && Target.getTriple().isNVPTX())) &&
           s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
         s += 2; // success, eat up 2 characters.
         isFloat16 = true;

@@ -3,7 +3,7 @@
 // RUN:   %s -o %t-ppc-host.bc -fexceptions -fcxx-exceptions
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown \
 // RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s \
-// RUN:   -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - \
+// RUN:   -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - \
 // RUN:   -fexceptions -fcxx-exceptions -ferror-limit 100
 
 #ifndef HEADER
