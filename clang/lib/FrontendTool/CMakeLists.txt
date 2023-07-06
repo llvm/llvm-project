@@ -12,12 +12,18 @@ set(link_libs
   clangRewriteFrontend
   )
 
+set(deps)
+
 if(CLANG_ENABLE_CIR)
   list(APPEND link_libs
     clangCIRFrontendAction
     MLIRIR
     MLIRPass
     )
+  list(APPEND deps
+    MLIRBuiltinLocationAttributesIncGen
+    )
+
   include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
   include_directories(${CMAKE_BINARY_DIR}/tools/mlir/include)
 endif()
@@ -39,6 +45,7 @@ add_clang_library(clangFrontendTool
 
   DEPENDS
   ClangDriverOptions
+  ${deps}
 
   LINK_LIBS
   ${link_libs}
