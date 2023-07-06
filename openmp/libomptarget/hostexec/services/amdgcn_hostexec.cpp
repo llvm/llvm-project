@@ -14,6 +14,7 @@
 #include "../src/hostexec_internal.h"
 #include "execute_service.h"
 #include "urilocator.h"
+#include <cassert>
 #include <atomic>
 #include <cstring>
 #include <functional>
@@ -148,6 +149,7 @@ static hsa_agent_t static_hsa_agents[AMD_MAX_HSA_AGENTS];
 void save_hsa_statics(uint32_t device_id, hsa_amd_memory_pool_t HostMemoryPool,
                       hsa_amd_memory_pool_t DevMemoryPool,
                       hsa_agent_t hsa_agent) {
+  assert(device_id < AMD_MAX_HSA_AGENTS && "Supports up n GPUs");
   static_host_memory_pool = HostMemoryPool;
   static_device_memory_pools[device_id] = DevMemoryPool;
   static_hsa_agents[device_id] = hsa_agent;
