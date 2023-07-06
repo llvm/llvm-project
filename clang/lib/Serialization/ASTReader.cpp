@@ -4386,26 +4386,55 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     if (F.OriginalSourceFileID.isValid())
       F.OriginalSourceFileID = TranslateFileID(F, F.OriginalSourceFileID);
 
-    // Preload all the pending interesting identifiers by marking them out of
-    // date.
     for (auto Offset : F.PreloadIdentifierOffsets) {
       const unsigned char *Data = F.IdentifierTableData + Offset;
 
       ASTIdentifierLookupTrait Trait(*this, F);
       auto KeyDataLen = Trait.ReadKeyDataLength(Data);
       auto Key = Trait.ReadKey(Data, KeyDataLen.first);
-      auto &II = PP.getIdentifierTable().getOwn(Key);
-      II.setOutOfDate(true);
+
+      IdentifierInfo *II;
+      if (!PP.getLangOpts().CPlusPlus) {
+        // Identifiers present in both the module file and the importing
+        // instance are marked out-of-date so that they can be deserialized
+        // on next use via ASTReader::updateOutOfDateIdentifier().
+        // Identifiers present in the module file but not in the importing
+        // instance are ignored for now, preventing growth of the identifier
+        // table. They will be deserialized on first use via ASTReader::get().
+        auto It = PP.getIdentifierTable().find(Key);
+        if (It == PP.getIdentifierTable().end())
+          continue;
+        II = It->second;
+      } else {
+        // With C++ modules, not many identifiers are considered interesting.
+        // All identifiers in the module file can be placed into the identifier
+        // table of the importing instance and marked as out-of-date. This makes
+        // ASTReader::get() a no-op, and deserialization will take place on
+        // first/next use via ASTReader::updateOutOfDateIdentifier().
+        II = &PP.getIdentifierTable().getOwn(Key);
+      }
+
+      II->setOutOfDate(true);
 
       // Mark this identifier as being from an AST file so that we can track
       // whether we need to serialize it.
-      markIdentifierFromAST(*this, II);
+      markIdentifierFromAST(*this, *II);
 
       // Associate the ID with the identifier so that the writer can reuse it.
       auto ID = Trait.ReadIdentifierID(Data + KeyDataLen.first);
-      SetIdentifierInfo(ID, &II);
+      SetIdentifierInfo(ID, II);
     }
   }
+
+  // Builtins and library builtins have already been initialized. Mark all
+  // identifiers as out-of-date, so that they are deserialized on first use.
+  if (Type == MK_PCH || Type == MK_Preamble || Type == MK_MainFile)
+    for (auto &Id : PP.getIdentifierTable())
+      Id.second->setOutOfDate(true);
+
+  // Mark selectors as out of date.
+  for (const auto &Sel : SelectorGeneration)
+    SelectorOutOfDate[Sel.first] = true;
 
   // Setup the import locations and notify the module manager that we've
   // committed to these module files.
@@ -4423,25 +4452,6 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     else
       F.ImportLoc = TranslateSourceLocation(*M.ImportedBy, M.ImportLoc);
   }
-
-  if (!PP.getLangOpts().CPlusPlus ||
-      (Type != MK_ImplicitModule && Type != MK_ExplicitModule &&
-       Type != MK_PrebuiltModule)) {
-    // Mark all of the identifiers in the identifier table as being out of date,
-    // so that various accessors know to check the loaded modules when the
-    // identifier is used.
-    //
-    // For C++ modules, we don't need information on many identifiers (just
-    // those that provide macros or are poisoned), so we mark all of
-    // the interesting ones via PreloadIdentifierOffsets.
-    for (IdentifierTable::iterator Id = PP.getIdentifierTable().begin(),
-                                IdEnd = PP.getIdentifierTable().end();
-         Id != IdEnd; ++Id)
-      Id->second->setOutOfDate(true);
-  }
-  // Mark selectors as out of date.
-  for (const auto &Sel : SelectorGeneration)
-    SelectorOutOfDate[Sel.first] = true;
 
   // Resolve any unresolved module exports.
   for (unsigned I = 0, N = UnresolvedModuleRefs.size(); I != N; ++I) {

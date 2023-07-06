@@ -20,7 +20,6 @@ define void @_Z2f1v() minsize {
 ; NOOMIT-LABEL: _Z2f1v:
 ; NOOMIT:       // %bb.0: // %entry
 ; NOOMIT-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; NOOMIT-NEXT:    .cfi_def_cfa_offset 16
 ; NOOMIT-NEXT:    mov x29, sp
 ; NOOMIT-NEXT:    .cfi_def_cfa w29, 16
 ; NOOMIT-NEXT:    .cfi_offset w30, -8
@@ -47,7 +46,6 @@ define void @_Z2f2v() minsize {
 ; NOOMIT-LABEL: _Z2f2v:
 ; NOOMIT:       // %bb.0: // %entry
 ; NOOMIT-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; NOOMIT-NEXT:   .cfi_def_cfa_offset 16
 ; NOOMIT-NEXT:    mov x29, sp
 ; NOOMIT-NEXT:    .cfi_def_cfa w29, 16
 ; NOOMIT-NEXT:    .cfi_offset w30, -8

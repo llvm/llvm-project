@@ -901,9 +901,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
       llvmFunc->setPersonalityFn(pfunc);
   }
 
-  if (auto gc = func.getGarbageCollector())
-    llvmFunc->setGC(gc->str());
-
   if (std::optional<StringRef> section = func.getSection())
     llvmFunc->setSection(*section);
 
@@ -1041,6 +1038,15 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
           SymbolTable::lookupNearestSymbolFrom(function, *comdat));
       llvmFunc->setComdat(comdatMapping.lookup(selectorOp));
     }
+
+    if (auto gc = function.getGarbageCollector())
+      llvmFunc->setGC(gc->str());
+
+    if (auto unnamedAddr = function.getUnnamedAddr())
+      llvmFunc->setUnnamedAddr(convertUnnamedAddrToLLVM(*unnamedAddr));
+
+    if (auto alignment = function.getAlignment())
+      llvmFunc->setAlignment(llvm::MaybeAlign(*alignment));
   }
 
   return success();

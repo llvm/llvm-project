@@ -684,8 +684,7 @@ static void EmitOMPAggregateInit(CodeGenFunction &CGF, Address DestAddr,
   const ArrayType *ArrayTy = Type->getAsArrayTypeUnsafe();
   llvm::Value *NumElements = CGF.emitArrayLength(ArrayTy, ElementTy, DestAddr);
   if (DRD)
-    SrcAddr =
-        CGF.Builder.CreateElementBitCast(SrcAddr, DestAddr.getElementType());
+    SrcAddr = SrcAddr.withElementType(DestAddr.getElementType());
 
   llvm::Value *SrcBegin = nullptr;
   if (DRD)
@@ -906,8 +905,8 @@ void ReductionCodeGen::emitCleanups(CodeGenFunction &CGF, unsigned N,
   QualType PrivateType = getPrivateType(N);
   QualType::DestructionKind DTorKind = PrivateType.isDestructedType();
   if (needCleanups(N)) {
-    PrivateAddr = CGF.Builder.CreateElementBitCast(
-        PrivateAddr, CGF.ConvertTypeForMem(PrivateType));
+    PrivateAddr =
+        PrivateAddr.withElementType(CGF.ConvertTypeForMem(PrivateType));
     CGF.pushDestroy(DTorKind, PrivateAddr, PrivateType);
   }
 }
@@ -926,8 +925,7 @@ static LValue loadToBegin(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
     BaseTy = BaseTy->getPointeeType();
   }
   return CGF.MakeAddrLValue(
-      CGF.Builder.CreateElementBitCast(BaseLV.getAddress(CGF),
-                                       CGF.ConvertTypeForMem(ElTy)),
+      BaseLV.getAddress(CGF).withElementType(CGF.ConvertTypeForMem(ElTy)),
       BaseLV.getType(), BaseLV.getBaseInfo(),
       CGF.CGM.getTBAAInfoForSubobject(BaseLV, BaseLV.getType()));
 }
@@ -1777,9 +1775,8 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
       llvm::Value *ArgVal = CtorCGF.EmitLoadOfScalar(
           CtorCGF.GetAddrOfLocalVar(&Dst), /*Volatile=*/false,
           CGM.getContext().VoidPtrTy, Dst.getLocation());
-      Address Arg(ArgVal, CtorCGF.Int8Ty, VDAddr.getAlignment());
-      Arg = CtorCGF.Builder.CreateElementBitCast(
-          Arg, CtorCGF.ConvertTypeForMem(ASTTy));
+      Address Arg(ArgVal, CtorCGF.ConvertTypeForMem(ASTTy),
+                  VDAddr.getAlignment());
       CtorCGF.EmitAnyExprToMem(Init, Arg, Init->getType().getQualifiers(),
                                /*IsInitializer=*/true);
       ArgVal = CtorCGF.EmitLoadOfScalar(
@@ -4244,8 +4241,7 @@ CGOpenMPRuntime::getDepobjElements(CodeGenFunction &CGF, LValue DepobjLVal,
       cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
   QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
   LValue Base = CGF.EmitLoadOfPointerLValue(
-      CGF.Builder.CreateElementBitCast(
-          DepobjLVal.getAddress(CGF),
+      DepobjLVal.getAddress(CGF).withElementType(
           CGF.ConvertTypeForMem(KmpDependInfoPtrTy)),
       KmpDependInfoPtrTy->castAs<PointerType>());
   Address DepObjAddr = CGF.Builder.CreateGEP(
@@ -5471,8 +5467,7 @@ static llvm::Value *emitReduceInitFunction(CodeGenModule &CGM,
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
   QualType PrivateType = RCG.getPrivateType(N);
   Address PrivateAddr = CGF.EmitLoadOfPointer(
-      CGF.Builder.CreateElementBitCast(
-          CGF.GetAddrOfLocalVar(&Param),
+      CGF.GetAddrOfLocalVar(&Param).withElementType(
           CGF.ConvertTypeForMem(PrivateType)->getPointerTo()),
       C.getPointerType(PrivateType)->castAs<PointerType>());
   llvm::Value *Size = nullptr;
@@ -5560,17 +5555,16 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
       LHSVD,
       // Pull out the pointer to the variable.
       CGF.EmitLoadOfPointer(
-          CGF.Builder.CreateElementBitCast(
-              CGF.GetAddrOfLocalVar(&ParamInOut),
-              CGF.ConvertTypeForMem(LHSVD->getType())->getPointerTo()),
+          CGF.GetAddrOfLocalVar(&ParamInOut)
+              .withElementType(
+                  CGF.ConvertTypeForMem(LHSVD->getType())->getPointerTo()),
           C.getPointerType(LHSVD->getType())->castAs<PointerType>()));
   PrivateScope.addPrivate(
       RHSVD,
       // Pull out the pointer to the variable.
       CGF.EmitLoadOfPointer(
-          CGF.Builder.CreateElementBitCast(
-            CGF.GetAddrOfLocalVar(&ParamIn),
-            CGF.ConvertTypeForMem(RHSVD->getType())->getPointerTo()),
+          CGF.GetAddrOfLocalVar(&ParamIn).withElementType(
+              CGF.ConvertTypeForMem(RHSVD->getType())->getPointerTo()),
           C.getPointerType(RHSVD->getType())->castAs<PointerType>()));
   PrivateScope.Privatize();
   // Emit the combiner body:
@@ -11387,8 +11381,10 @@ void CGOpenMPRuntime::emitDoacrossInit(CodeGenFunction &CGF,
                                              llvm::ArrayRef(FiniArgs));
 }
 
-void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
-                                          const OMPDependClause *C) {
+template <typename T>
+static void EmitDoacrossOrdered(CodeGenFunction &CGF, CodeGenModule &CGM,
+                                const T *C, llvm::Value *ULoc,
+                                llvm::Value *ThreadID) {
   QualType Int64Ty =
       CGM.getContext().getIntTypeForBitwidth(/*DestWidth=*/64, /*Signed=*/1);
   llvm::APInt Size(/*numBits=*/32, C->getNumLoops());
@@ -11405,19 +11401,33 @@ void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
                           /*Volatile=*/false, Int64Ty);
   }
   llvm::Value *Args[] = {
-      emitUpdateLocation(CGF, C->getBeginLoc()),
-      getThreadID(CGF, C->getBeginLoc()),
-      CGF.Builder.CreateConstArrayGEP(CntAddr, 0).getPointer()};
+      ULoc, ThreadID, CGF.Builder.CreateConstArrayGEP(CntAddr, 0).getPointer()};
   llvm::FunctionCallee RTLFn;
-  if (C->getDependencyKind() == OMPC_DEPEND_source) {
+  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+  OMPDoacrossKind<T> ODK;
+  if (ODK.isSource(C)) {
     RTLFn = OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                   OMPRTL___kmpc_doacross_post);
   } else {
-    assert(C->getDependencyKind() == OMPC_DEPEND_sink);
+    assert(ODK.isSink(C) && "Expect sink modifier.");
     RTLFn = OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
                                                   OMPRTL___kmpc_doacross_wait);
   }
   CGF.EmitRuntimeCall(RTLFn, Args);
+}
+
+void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
+                                          const OMPDependClause *C) {
+  return EmitDoacrossOrdered<OMPDependClause>(
+      CGF, CGM, C, emitUpdateLocation(CGF, C->getBeginLoc()),
+      getThreadID(CGF, C->getBeginLoc()));
+}
+
+void CGOpenMPRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
+                                          const OMPDoacrossClause *C) {
+  return EmitDoacrossOrdered<OMPDoacrossClause>(
+      CGF, CGM, C, emitUpdateLocation(CGF, C->getBeginLoc()),
+      getThreadID(CGF, C->getBeginLoc()));
 }
 
 void CGOpenMPRuntime::emitCall(CodeGenFunction &CGF, SourceLocation Loc,
@@ -12403,6 +12413,11 @@ void CGOpenMPSIMDRuntime::emitDoacrossInit(CodeGenFunction &CGF,
 
 void CGOpenMPSIMDRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
                                               const OMPDependClause *C) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitDoacrossOrdered(CodeGenFunction &CGF,
+                                              const OMPDoacrossClause *C) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

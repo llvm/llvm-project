@@ -258,8 +258,8 @@ Status ProcessElfCore::DoLoadCore() {
     if (!m_nt_file_entries.empty()) {
       ModuleSpec exe_module_spec;
       exe_module_spec.GetArchitecture() = arch;
-      exe_module_spec.GetFileSpec().SetFile(
-          m_nt_file_entries[0].path.GetCString(), FileSpec::Style::native);
+      exe_module_spec.GetFileSpec().SetFile(m_nt_file_entries[0].path,
+                                            FileSpec::Style::native);
       if (exe_module_spec.GetFileSpec()) {
         exe_module_sp = GetTarget().GetOrCreateModule(exe_module_spec, 
                                                       true /* notify */);
@@ -938,7 +938,7 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       for (uint64_t i = 0; i < count; ++i) {
         const char *path = note.data.GetCStr(&offset);
         if (path && path[0])
-          m_nt_file_entries[i].path.SetCString(path);
+          m_nt_file_entries[i].path.assign(path);
       }
       break;
     }

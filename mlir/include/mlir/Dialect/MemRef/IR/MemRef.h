@@ -59,6 +59,10 @@ Type getTensorTypeFromMemRefType(Type type);
 /// single deallocate if it exists or nullptr.
 std::optional<Operation *> findDealloc(Value allocValue);
 
+/// Return the dimension of the given memref value.
+OpFoldResult getMixedSize(OpBuilder &builder, Location loc, Value value,
+                          int64_t dim);
+
 /// Return the dimensions of the given memref value.
 SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,
                                         Value value);

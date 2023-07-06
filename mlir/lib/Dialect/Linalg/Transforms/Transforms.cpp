@@ -330,7 +330,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
     // Strides.
     SmallVector<OpFoldResult> ones(packedRank, rewriter.getIndexAttr(1));
     SmallVector<OpFoldResult> sizes =
-        getMixedDimensions(rewriter, loc, packOp.getDest());
+        tensor::getMixedSizes(rewriter, loc, packOp.getDest());
 
     auto insertSliceOp = rewriter.create<tensor::InsertSliceOp>(
         loc, /*source=*/padOp, /*dest=*/emptyOp,
@@ -395,7 +395,7 @@ FailureOr<LowerUnPackOpResult> linalg::lowerUnPack(RewriterBase &rewriter,
     // The inner dimensions stay the same as the destination tensor, but the
     // outer ones are additional 1s.
     SmallVector<OpFoldResult> sizes(packedRank - destShape.size(), one);
-    sizes.append(getMixedDimensions(rewriter, loc, unPackOp.getDest()));
+    sizes.append(tensor::getMixedSizes(rewriter, loc, unPackOp.getDest()));
 
     auto extractSliceOp = rewriter.create<tensor::ExtractSliceOp>(
         loc, destTensorType, unPackOp.getSource(),

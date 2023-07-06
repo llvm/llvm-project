@@ -60,7 +60,7 @@ public:
 
   // special value equal to the maximum value representable by the type
   // size_type.
-  inline static constexpr size_t npos = -1;
+  LIBC_INLINE_VAR static constexpr size_t npos = -1;
 
   LIBC_INLINE constexpr string_view() : Data(nullptr), Len(0) {}
 

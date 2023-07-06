@@ -1016,8 +1016,8 @@ TEST_F(QualifierFixerTest, PrepareLeftRightOrdering) {
   std::vector<std::string> Left;
   std::vector<std::string> Right;
   std::vector<tok::TokenKind> ConfiguredTokens;
-  QualifierAlignmentFixer::PrepareLeftRightOrdering(Style.QualifierOrder, Left,
-                                                    Right, ConfiguredTokens);
+  prepareLeftRightOrderingForQualifierAlignmentFixer(Style.QualifierOrder, Left,
+                                                     Right, ConfiguredTokens);
 
   EXPECT_EQ(Left.size(), (size_t)2);
   EXPECT_EQ(Right.size(), (size_t)2);
@@ -1181,10 +1181,12 @@ TEST_F(QualifierFixerTest, NoOpQualifierReplacements) {
   Style.QualifierAlignment = FormatStyle::QAS_Custom;
   Style.QualifierOrder = {"static", "const", "type"};
 
-  ReplacementCount = 0;
-  EXPECT_EQ(ReplacementCount, 0);
   verifyFormat("static const uint32 foo[] = {0, 31};", Style);
+  EXPECT_EQ(ReplacementCount, 0);
+
   verifyFormat("#define MACRO static const", Style);
+  EXPECT_EQ(ReplacementCount, 0);
+
   verifyFormat("using sc = static const", Style);
   EXPECT_EQ(ReplacementCount, 0);
 }

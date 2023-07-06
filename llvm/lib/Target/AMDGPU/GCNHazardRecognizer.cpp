@@ -1706,7 +1706,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
     return false;
 
   // Hazard is observed - insert a wait on va_dst counter to ensure hazard is
-  // avoided (mask 0x0fff achieves this).
+  // avoided.
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
           TII.get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(AMDGPU::DepCtr::encodeFieldVaVdst(0));

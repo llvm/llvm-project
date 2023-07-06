@@ -49,7 +49,7 @@ define void @chain_spanning_several_blocks(i64 %inv1, i64 %inv2, i64 %inv3, i64 
 ; CSE-NEXT:    [[VAL_BB2:%.*]] = call i64 @get_val()
 ; CSE-NEXT:    [[CHAIN_A0:%.*]] = add i64 [[VAL_BB2]], [[INV1]]
 ; CSE-NEXT:    [[CHAIN_A1:%.*]] = add i64 [[CHAIN_A0]], [[INV2]]
-; CSE-NEXT:    [[CHAIN_A2:%.*]] = add i64 [[CHAIN_A1]], [[INV4]]
+; CSE-NEXT:    [[CHAIN_A2:%.*]] = add nuw nsw i64 [[CHAIN_A1]], [[INV4]]
 ; CSE-NEXT:    [[CHAIN_B2:%.*]] = add nuw nsw i64 [[CHAIN_A1]], [[INV5]]
 ; CSE-NEXT:    [[CHAIN_C1:%.*]] = add i64 [[CHAIN_A0]], [[INV3]]
 ; CSE-NEXT:    call void @keep_alive(i64 [[CHAIN_A2]])
@@ -122,7 +122,7 @@ define void @chain_spanning_several_blocks_no_entry_anchor() {
 ; CSE-NEXT:    [[VAL_BB2:%.*]] = call i64 @get_val()
 ; CSE-NEXT:    [[CHAIN_A0:%.*]] = add i64 [[VAL_BB2]], [[INV1_BB1]]
 ; CSE-NEXT:    [[CHAIN_A1:%.*]] = add i64 [[CHAIN_A0]], [[INV2_BB0]]
-; CSE-NEXT:    [[CHAIN_A2:%.*]] = add i64 [[CHAIN_A1]], [[INV4_BB2]]
+; CSE-NEXT:    [[CHAIN_A2:%.*]] = add nuw nsw i64 [[CHAIN_A1]], [[INV4_BB2]]
 ; CSE-NEXT:    [[CHAIN_B2:%.*]] = add nuw nsw i64 [[CHAIN_A1]], [[INV5_BB2]]
 ; CSE-NEXT:    [[CHAIN_C1:%.*]] = add i64 [[CHAIN_A0]], [[INV3_BB2]]
 ; CSE-NEXT:    call void @keep_alive(i64 [[CHAIN_A2]])

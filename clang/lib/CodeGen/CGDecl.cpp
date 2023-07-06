@@ -2453,7 +2453,10 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   assert((isa<ParmVarDecl>(D) || isa<ImplicitParamDecl>(D)) &&
          "Invalid argument to EmitParmDecl");
 
-  Arg.getAnyValue()->setName(D.getName());
+  // Set the name of the parameter's initial value to make IR easier to
+  // read. Don't modify the names of globals.
+  if (!isa<llvm::GlobalValue>(Arg.getAnyValue()))
+    Arg.getAnyValue()->setName(D.getName());
 
   QualType Ty = D.getType();
 

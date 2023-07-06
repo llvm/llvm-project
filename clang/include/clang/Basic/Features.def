@@ -247,6 +247,8 @@ EXTENSION(c_static_assert, true)
 EXTENSION(c_thread_local, PP.getTargetInfo().isTLSSupported())
 // C++11 features supported by other languages as extensions.
 EXTENSION(cxx_atomic, LangOpts.CPlusPlus)
+EXTENSION(cxx_default_function_template_args, LangOpts.CPlusPlus)
+EXTENSION(cxx_defaulted_functions, LangOpts.CPlusPlus)
 EXTENSION(cxx_deleted_functions, LangOpts.CPlusPlus)
 EXTENSION(cxx_explicit_conversions, LangOpts.CPlusPlus)
 EXTENSION(cxx_inline_namespaces, LangOpts.CPlusPlus)

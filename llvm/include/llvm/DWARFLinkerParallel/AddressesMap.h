@@ -60,10 +60,6 @@ public:
   virtual bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                                 bool IsLittleEndian) = 0;
 
-  /// Returns all valid functions address ranges (i.e., those ranges
-  /// which points to sections with code).
-  virtual RangesTy &getValidAddressRanges() = 0;
-
   /// Erases all data.
   virtual void clear() = 0;
 };

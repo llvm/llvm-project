@@ -116,7 +116,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
 
   bool parseVTypeToken(StringRef Identifier, VTypeState &State, unsigned &Sew,
                        unsigned &Lmul, bool &Fractional, bool &TailAgnostic,
@@ -596,6 +596,17 @@ public:
     }
 
     return RISCVAsmParser::isSymbolDiff(getImm());
+  }
+
+  bool isImmXLenLI_Restricted() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    // 'la imm' supports constant immediates only.
+    return IsConstantImm && (VK == RISCVMCExpr::VK_RISCV_None) &&
+           (isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm)));
   }
 
   bool isUImmLog2XLen() const {
@@ -1356,6 +1367,17 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
                                       std::numeric_limits<uint32_t>::max());
+  case Match_InvalidImmXLenLI_Restricted:
+    if (isRV64()) {
+      SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+      return Error(ErrorLoc, "operand either must be a constant 64-bit integer "
+                             "or a bare symbol name");
+    }
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, std::numeric_limits<int32_t>::min(),
+        std::numeric_limits<uint32_t>::max(),
+        "operand either must be a bare symbol name or an immediate integer in "
+        "the range");
   case Match_InvalidImmZero: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "immediate must be zero");
@@ -2606,11 +2628,7 @@ bool RISCVAsmParser::isSymbolDiff(const MCExpr *Expr) {
   return false;
 }
 
-bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
-  // This returns false if this function recognizes the directive
-  // regardless of whether it is successfully handles or reports an
-  // error. Otherwise it returns true to give the generic parser a
-  // chance at recognizing it.
+ParseStatus RISCVAsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
 
   if (IDVal == ".option")
@@ -2622,7 +2640,7 @@ bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
   if (IDVal == ".variant_cc")
     return parseDirectiveVariantCC();
 
-  return true;
+  return ParseStatus::NoMatch;
 }
 
 bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
@@ -2864,10 +2882,8 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
     StringRef Name = Parser.getTok().getIdentifier();
     std::optional<unsigned> Ret =
         ELFAttrs::attrTypeFromString(Name, RISCVAttrs::getRISCVAttributeTags());
-    if (!Ret) {
-      Error(TagLoc, "attribute name not recognised: " + Name);
-      return false;
-    }
+    if (!Ret)
+      return Error(TagLoc, "attribute name not recognised: " + Name);
     Tag = *Ret;
     Parser.Lex();
   } else {
@@ -2978,7 +2994,7 @@ bool RISCVAsmParser::parseDirectiveVariantCC() {
   if (getParser().parseIdentifier(Name))
     return TokError("expected symbol name");
   if (parseEOL())
-    return false;
+    return true;
   getTargetStreamer().emitDirectiveVariantCC(
       *getContext().getOrCreateSymbol(Name));
   return false;
@@ -3398,6 +3414,8 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   switch (Inst.getOpcode()) {
   default:
     break;
+  case RISCV::PseudoLLAImm:
+  case RISCV::PseudoLAImm:
   case RISCV::PseudoLI: {
     MCRegister Reg = Inst.getOperand(0).getReg();
     const MCOperand &Op1 = Inst.getOperand(1);

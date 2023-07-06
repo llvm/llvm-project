@@ -43,7 +43,7 @@ module m2
   end subroutine
  end interface
 contains
- !DEF: /m2/s MODULE SubprogramName
+ !REF:/m2/s
  module procedure s
  end procedure
  !DEF: /m2/s2 MODULE, PUBLIC (Subroutine) Subprogram

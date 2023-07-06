@@ -145,6 +145,17 @@ void testArgumentTracking(Dummy *_Nonnull nonnull, Dummy *_Nullable nullable) {
   }
 }
 
+void testArgumentTrackingDirectly(Dummy *_Nonnull nonnull, Dummy *_Nullable nullable) {
+  switch(getRandom()) {
+  case 1: testMultiParamChecking(nonnull, nullable, nonnull); break;
+  case 2: testMultiParamChecking(nonnull, nonnull, nonnull); break;
+  case 3: testMultiParamChecking(nonnull, nullable, nullable); break; // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 3rd parameter}}
+  case 4: testMultiParamChecking(nullable, nullable, nonnull); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+  case 5: testMultiParamChecking(nullable, nullable, nullable); // expected-warning {{Nullable pointer is passed to a callee that requires a non-null 1st parameter}}
+  case 6: testMultiParamChecking((Dummy *_Nonnull)0, nullable, nonnull); break;
+  }
+}
+
 Dummy *_Nonnull testNullableReturn(Dummy *_Nullable a) {
   Dummy *p = a;
   return p; // expected-warning {{Nullable pointer is returned from a function that is expected to return a non-null value}}

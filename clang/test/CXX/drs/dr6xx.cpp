@@ -1078,9 +1078,10 @@ namespace dr686 { // dr686: yes
     (void)const_cast<struct E{}*>(0); // expected-error {{cannot be defined in a type specifier}}
     (void)sizeof(struct F*);
     (void)sizeof(struct F{}*); // expected-error {{cannot be defined in a type specifier}}
-    (void)new struct G*;
-    (void)new struct G{}*; // expected-error {{cannot be defined in a type specifier}}
+    (void)new struct G*; // expected-note {{forward}}
+    (void)new struct G{}*; // expected-error {{incomplete}}
 #if __cplusplus >= 201103L
+    // expected-error@-2 {{expected expression}}
     (void)alignof(struct H*);
     (void)alignof(struct H{}*); // expected-error {{cannot be defined in a type specifier}}
 #endif

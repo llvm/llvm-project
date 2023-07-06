@@ -27,6 +27,10 @@
 #include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
+namespace bufferization {
+class OneShotAnalysisState;
+} // namespace bufferization
+
 namespace linalg {
 
 class LinalgOp;
@@ -37,6 +41,75 @@ class LinalgOp;
 
 /// Return vector::CombiningKind for the given op.
 std::optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
+
+//===----------------------------------------------------------------------===//
+// Bufferization-related transforms.
+//===----------------------------------------------------------------------===//
+
+/// Materialize a buffer allocation for the given tensor.pad op and lower the
+/// op to linalg.fill/linalg.generic + memref.tensor_store. E.g.:
+///
+/// %0 = tensor.pad low[%l] high[%h] %t ...
+///
+/// is lowered to:
+///
+/// %alloc = memref.alloc
+/// linalg.fill ... outs(%alloc)
+/// %subview = memref.subview %alloc [%l] [...] [1]
+/// memref.tensor_store %t, %subview
+/// %0 = bufferization.to_tensor %alloc restrict writable
+///
+/// In addition to rewriting the IR as shown above, this function returns the
+/// newly allocated buffer. Furthermore, the result of the
+/// bufferization.to_tensor op is optionally returned via `replacement`.
+Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
+                            Attribute memorySpace = {},
+                            Value *replacement = nullptr);
+
+/// Materialize a buffer allocation for the given tensor value. E.g.:
+///
+/// %alloc = memref.alloc
+/// memref.tensor_store %value, %alloc
+/// %0 = bufferization.to_tensor %alloc restrict writable
+///
+/// In case `value` is a tensor.pad result, the corresponding overload is used
+/// internally to produce a better bufferization.
+///
+/// In addition to rewriting the IR as shown above, this function returns the
+/// newly allocated buffer. Furthermore, the result of the
+/// bufferization.to_tensor op is optionally returned via `replacement`.
+Value bufferizeToAllocation(RewriterBase &rewriter, Value value,
+                            Attribute memorySpace = {},
+                            Value *replacement = nullptr);
+
+/// Try to eliminate tensor::EmptyOps inside `op` that are anchored on a
+/// LinalgOp. This transforms looks for LinalgOps that have an unused output
+/// operand and an input operand that is rooted in a tensor::EmptyOp. The
+/// tensor::EmptyOp uses are replaced with the output operand and the two
+/// operands of the LinalgOp are swapped.
+///
+/// Example:
+/// %0 = tensor.empty()
+/// %1 = linalg.matmul ins(...) outs(%0)
+/// %2 = linalg.generic ins(%1) outs(%dest) {
+///   ^bb0(%in: f32, %out: f32):
+///   // out not used
+/// }
+///
+/// The IR is transformed as follows:
+/// %0 = tensor.empty()
+/// %1 = linalg.matmul ins(...) outs(%dest)
+/// %2 = linalg.generic ins(%0) outs(%1) {
+///   ^bb0(%in: f32, %out: f32):
+///   // Use %out instead of %in
+/// }
+///
+/// The "ins" operand has no uses inside the body of the LinalgOp and can be
+/// folded away with existing cleanup patterns. Afterwards, the tensor::EmptyOp
+/// can also fold away.
+LogicalResult linalgOpAnchoredEmptyTensorEliminationStep(
+    RewriterBase &rewriter, Operation *op,
+    bufferization::OneShotAnalysisState &state);
 
 //===----------------------------------------------------------------------===//
 // Structs that configure the behavior of various transformations.
@@ -307,42 +380,6 @@ LogicalResult vectorizeOpPrecondition(Operation *op,
 //===----------------------------------------------------------------------===//
 
 using LinalgLoops = SmallVector<Operation *, 4>;
-
-/// Materialize a buffer allocation for the given tensor.pad op and lower the
-/// op to linalg.fill/linalg.generic + memref.tensor_store. E.g.:
-///
-/// %0 = tensor.pad low[%l] high[%h] %t ...
-///
-/// is lowered to:
-///
-/// %alloc = memref.alloc
-/// linalg.fill ... outs(%alloc)
-/// %subview = memref.subview %alloc [%l] [...] [1]
-/// memref.tensor_store %t, %subview
-/// %0 = bufferization.to_tensor %alloc restrict writable
-///
-/// In addition to rewriting the IR as shown above, this function returns the
-/// newly allocated buffer. Furthermore, the result of the
-/// bufferization.to_tensor op is optionally returned via `replacement`.
-Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
-                            Attribute memorySpace = {},
-                            Value *replacement = nullptr);
-
-/// Materialize a buffer allocation for the given tensor value. E.g.:
-///
-/// %alloc = memref.alloc
-/// memref.tensor_store %value, %alloc
-/// %0 = bufferization.to_tensor %alloc restrict writable
-///
-/// In case `value` is a tensor.pad result, the corresponding overload is used
-/// internally to produce a better bufferization.
-///
-/// In addition to rewriting the IR as shown above, this function returns the
-/// newly allocated buffer. Furthermore, the result of the
-/// bufferization.to_tensor op is optionally returned via `replacement`.
-Value bufferizeToAllocation(RewriterBase &rewriter, Value value,
-                            Attribute memorySpace = {},
-                            Value *replacement = nullptr);
 
 /// Fuse two `linalg.generic` operations that have a producer-consumer
 /// relationship captured through `fusedOperand`. The method expects
