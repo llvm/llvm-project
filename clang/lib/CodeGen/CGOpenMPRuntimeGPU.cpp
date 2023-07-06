@@ -205,6 +205,7 @@ class CheckVarsEscapingDeclContext final
   CodeGenFunction &CGF;
   llvm::SetVector<const ValueDecl *> EscapedDecls;
   llvm::SetVector<const ValueDecl *> EscapedVariableLengthDecls;
+  llvm::SetVector<const ValueDecl *> DelayedVariableLengthDecls;
   llvm::SmallPtrSet<const Decl *, 4> EscapedParameters;
   RecordDecl *GlobalizedRD = nullptr;
   llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *> MappedDeclsFields;
@@ -221,10 +222,12 @@ class CheckVarsEscapingDeclContext final
     if (VD->hasAttrs() && VD->hasAttr<OMPAllocateDeclAttr>())
       return;
     // Variables captured by value must be globalized.
+    bool IsCaptured = false;
     if (auto *CSI = CGF.CapturedStmtInfo) {
       if (const FieldDecl *FD = CSI->lookup(cast<VarDecl>(VD))) {
         // Check if need to capture the variable that was already captured by
         // value in the outer region.
+        IsCaptured = true;
         if (!IsForCombinedParallelRegion) {
           if (!FD->hasAttrs())
             return;
@@ -251,9 +254,14 @@ class CheckVarsEscapingDeclContext final
         VD->getType()->isReferenceType())
       // Do not globalize variables with reference type.
       return;
-    if (VD->getType()->isVariablyModifiedType())
-      EscapedVariableLengthDecls.insert(VD);
-    else
+    if (VD->getType()->isVariablyModifiedType()) {
+      // If not captured at the target region level then mark the escaped
+      // variable as delayed.
+      if (IsCaptured)
+        EscapedVariableLengthDecls.insert(VD);
+      else
+        DelayedVariableLengthDecls.insert(VD);
+    } else
       EscapedDecls.insert(VD);
   }
 
@@ -503,6 +511,12 @@ public:
   /// types.
   ArrayRef<const ValueDecl *> getEscapedVariableLengthDecls() const {
     return EscapedVariableLengthDecls.getArrayRef();
+  }
+
+  /// Returns the list of the delayed variables with the variably modified
+  /// types.
+  ArrayRef<const ValueDecl *> getDelayedVariableLengthDecls() const {
+    return DelayedVariableLengthDecls.getArrayRef();
   }
 };
 } // anonymous namespace
@@ -1084,39 +1098,64 @@ void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
     if (auto *DI = CGF.getDebugInfo())
       VoidPtr->setDebugLoc(DI->SourceLocToDebugLoc(VD->getLocation()));
   }
-  for (const auto *VD : I->getSecond().EscapedVariableLengthDecls) {
-    // Use actual memory size of the VLA object including the padding
-    // for alignment purposes.
-    llvm::Value *Size = CGF.getTypeSize(VD->getType());
-    CharUnits Align = CGM.getContext().getDeclAlign(VD);
-    Size = Bld.CreateNUWAdd(
-        Size, llvm::ConstantInt::get(CGF.SizeTy, Align.getQuantity() - 1));
-    llvm::Value *AlignVal =
-        llvm::ConstantInt::get(CGF.SizeTy, Align.getQuantity());
 
-    Size = Bld.CreateUDiv(Size, AlignVal);
-    Size = Bld.CreateNUWMul(Size, AlignVal);
-
-    // Allocate space for this VLA object to be globalized.
-    llvm::Value *AllocArgs[] = {CGF.getTypeSize(VD->getType())};
-    llvm::CallBase *VoidPtr =
-        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                                CGM.getModule(), OMPRTL___kmpc_alloc_shared),
-                            AllocArgs, VD->getName());
-    VoidPtr->addRetAttr(
-        llvm::Attribute::get(CGM.getLLVMContext(), llvm::Attribute::Alignment,
-                             CGM.getContext().getTargetInfo().getNewAlign()));
-
-    I->getSecond().EscapedVariableLengthDeclsAddrs.emplace_back(
-        std::pair<llvm::Value *, llvm::Value *>(
-            {VoidPtr, CGF.getTypeSize(VD->getType())}));
-    LValue Base = CGF.MakeAddrLValue(VoidPtr, VD->getType(),
+  for (const auto *ValueD : I->getSecond().EscapedVariableLengthDecls) {
+    const auto *VD = cast<VarDecl>(ValueD);
+    std::pair<llvm::Value *, llvm::Value *> AddrSizePair =
+        getKmpcAllocShared(CGF, VD);
+    I->getSecond().EscapedVariableLengthDeclsAddrs.emplace_back(AddrSizePair);
+    LValue Base = CGF.MakeAddrLValue(AddrSizePair.first, VD->getType(),
                                      CGM.getContext().getDeclAlign(VD),
                                      AlignmentSource::Decl);
-    I->getSecond().MappedParams->setVarAddr(CGF, cast<VarDecl>(VD),
-                                            Base.getAddress(CGF));
+    I->getSecond().MappedParams->setVarAddr(CGF, VD, Base.getAddress(CGF));
   }
   I->getSecond().MappedParams->apply(CGF);
+}
+
+bool CGOpenMPRuntimeGPU::isDelayedVariableLengthDecl(CodeGenFunction &CGF,
+                                                     const VarDecl *VD) const {
+  const auto I = FunctionGlobalizedDecls.find(CGF.CurFn);
+  if (I == FunctionGlobalizedDecls.end())
+    return false;
+
+  // Check variable declaration is delayed:
+  return llvm::is_contained(I->getSecond().DelayedVariableLengthDecls, VD);
+}
+
+std::pair<llvm::Value *, llvm::Value *>
+CGOpenMPRuntimeGPU::getKmpcAllocShared(CodeGenFunction &CGF,
+                                       const VarDecl *VD) {
+  CGBuilderTy &Bld = CGF.Builder;
+
+  // Compute size and alignment.
+  llvm::Value *Size = CGF.getTypeSize(VD->getType());
+  CharUnits Align = CGM.getContext().getDeclAlign(VD);
+  Size = Bld.CreateNUWAdd(
+      Size, llvm::ConstantInt::get(CGF.SizeTy, Align.getQuantity() - 1));
+  llvm::Value *AlignVal =
+      llvm::ConstantInt::get(CGF.SizeTy, Align.getQuantity());
+  Size = Bld.CreateUDiv(Size, AlignVal);
+  Size = Bld.CreateNUWMul(Size, AlignVal);
+
+  // Allocate space for this VLA object to be globalized.
+  llvm::Value *AllocArgs[] = {Size};
+  llvm::CallBase *VoidPtr =
+      CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                              CGM.getModule(), OMPRTL___kmpc_alloc_shared),
+                          AllocArgs, VD->getName());
+  VoidPtr->addRetAttr(llvm::Attribute::get(
+      CGM.getLLVMContext(), llvm::Attribute::Alignment, Align.getQuantity()));
+
+  return std::make_pair(VoidPtr, Size);
+}
+
+void CGOpenMPRuntimeGPU::getKmpcFreeShared(
+    CodeGenFunction &CGF,
+    const std::pair<llvm::Value *, llvm::Value *> &AddrSizePair) {
+  // Deallocate the memory for each globalized VLA object
+  CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                          CGM.getModule(), OMPRTL___kmpc_free_shared),
+                      {AddrSizePair.first, AddrSizePair.second});
 }
 
 void CGOpenMPRuntimeGPU::emitGenericVarsEpilog(CodeGenFunction &CGF,
@@ -1127,7 +1166,8 @@ void CGOpenMPRuntimeGPU::emitGenericVarsEpilog(CodeGenFunction &CGF,
 
   const auto I = FunctionGlobalizedDecls.find(CGF.CurFn);
   if (I != FunctionGlobalizedDecls.end()) {
-    // Deallocate the memory for each globalized VLA object
+    // Deallocate the memory for each globalized VLA object that was
+    // globalized in the prolog (i.e. emitGenericVarsProlog).
     for (const auto &AddrSizePair :
          llvm::reverse(I->getSecond().EscapedVariableLengthDeclsAddrs)) {
       CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
@@ -3282,7 +3322,10 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
   TeamAndReductions.second.clear();
   ArrayRef<const ValueDecl *> EscapedVariableLengthDecls =
       VarChecker.getEscapedVariableLengthDecls();
-  if (!GlobalizedVarsRecord && EscapedVariableLengthDecls.empty())
+  ArrayRef<const ValueDecl *> DelayedVariableLengthDecls =
+      VarChecker.getDelayedVariableLengthDecls();
+  if (!GlobalizedVarsRecord && EscapedVariableLengthDecls.empty() &&
+      DelayedVariableLengthDecls.empty())
     return;
   auto I = FunctionGlobalizedDecls.try_emplace(CGF.CurFn).first;
   I->getSecond().MappedParams =
@@ -3292,6 +3335,8 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
       VarChecker.getEscapedParameters().end());
   I->getSecond().EscapedVariableLengthDecls.append(
       EscapedVariableLengthDecls.begin(), EscapedVariableLengthDecls.end());
+  I->getSecond().DelayedVariableLengthDecls.append(
+      DelayedVariableLengthDecls.begin(), DelayedVariableLengthDecls.end());
   DeclToAddrMapTy &Data = I->getSecond().LocalVarData;
   for (const ValueDecl *VD : VarChecker.getEscapedDecls()) {
     assert(VD->isCanonicalDecl() && "Expected canonical declaration");
