@@ -604,10 +604,6 @@ private:
     Islands->CodeOffsets.emplace(Offset);
   }
 
-  /// Register secondary entry point at a given \p Offset into the function.
-  /// Return global symbol for use by extern function references.
-  MCSymbol *addEntryPointAtOffset(uint64_t Offset);
-
   /// Register an internal offset in a function referenced from outside.
   void registerReferencedOffset(uint64_t Offset) {
     ExternallyReferencedOffsets.emplace(Offset);
@@ -1444,6 +1440,10 @@ public:
   /// Add basic block \BB as an entry point to the function. Return global
   /// symbol associated with the entry.
   MCSymbol *addEntryPoint(const BinaryBasicBlock &BB);
+
+  /// Register secondary entry point at a given \p Offset into the function.
+  /// Return global symbol for use by extern function references.
+  MCSymbol *addEntryPointAtOffset(uint64_t Offset);
 
   /// Mark all blocks that are unreachable from a root (entry point
   /// or landing pad) as invalid.
