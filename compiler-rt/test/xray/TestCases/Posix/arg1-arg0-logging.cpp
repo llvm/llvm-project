@@ -5,7 +5,7 @@
 // RUN: %clangxx_xray -std=c++11 %s -o %t
 // RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_logfile_base=arg0-arg1-logging-" %run %t
 
-// REQUIRES: target={{x86_64-.*}}
+// REQUIRES: target={{(aarch64|x86_64)-.*}}
 
 #include "xray/xray_interface.h"
 #include <cassert>
