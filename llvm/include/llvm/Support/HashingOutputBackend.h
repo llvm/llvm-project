@@ -65,7 +65,7 @@ protected:
   }
 
   Expected<std::unique_ptr<OutputFileImpl>>
-  createFileImpl(StringRef Path, Optional<OutputConfig> Config) override {
+  createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override {
     return std::make_unique<HashingOutputFile<HasherT>>(Path, *this);
   }
 
@@ -75,10 +75,10 @@ public:
 
   /// Get hash value for the output files in hex representation.
   /// Return None if the requested path is not generated.
-  Optional<std::string> getHashValueForFile(StringRef Path) {
+  std::optional<std::string> getHashValueForFile(StringRef Path) {
     auto F = OutputHashes.find(Path);
     if (F == OutputHashes.end())
-      return None;
+      return std::nullopt;
     return toHex(F->second);
   }
 
