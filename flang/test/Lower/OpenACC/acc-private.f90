@@ -2,6 +2,12 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.private.recipe @privatization_ref_50xf32 : !fir.ref<!fir.array<50xf32>> init {
+! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<50xf32>>):
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<50xf32>
+! CHECK: acc.yield %[[ALLOCA]] : !fir.ref<!fir.array<50xf32>>
+! CHECK: }
+
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_100xf32 : !fir.ref<!fir.array<100xf32>> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xf32>>):
 ! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<100xf32>
@@ -44,5 +50,20 @@ program acc_private
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
 ! CHECK: %[[B_PRIVATE:.*]] = acc.private varPtr(%[[B]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {name = "b"}
 ! CHECK: acc.loop private(@privatization_ref_100xf32 -> %[[B_PRIVATE]] : !fir.ref<!fir.array<100xf32>>) {
+! CHECK: acc.yield
+
+  !$acc loop private(b(1:50))
+  DO i = 1, n
+    c = i
+    a(i) = b(i) + c
+  END DO
+
+! CHECK: %[[C1:.*]] = arith.constant 1 : index
+! CHECK: %[[LB:.*]] = arith.constant 0 : index
+! CHECK: %[[UB:.*]] = arith.constant 49 : index
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
+! CHECK: %[[B_PRIVATE:.*]] = acc.private varPtr(%[[B]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<50xf32>> {name = "b(1:50)"}
+! CHECK: acc.loop private(@privatization_ref_50xf32 -> %[[B_PRIVATE]] : !fir.ref<!fir.array<50xf32>>)
+
 
 end program
