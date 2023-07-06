@@ -39,6 +39,13 @@ def LLVMTypeConsistency
     their associated pointee type as consistently as possible.
   }];
   let constructor = "::mlir::LLVM::createTypeConsistencyPass()";
+
+  let options = [
+    Option<"maxVectorSplitSize", "max-vector-split-size", "unsigned",
+           /*default=*/"512",
+           "Maximum size in bits of a vector value in a load or store operation"
+           " operating on multiple elements that should still be split">,
+  ];
 }
 
 def NVVMOptimizeForTarget : Pass<"llvm-optimize-for-nvvm-target"> {
