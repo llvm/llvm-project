@@ -59,7 +59,6 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UREM, MVT::i32, Expand);
   setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
-  setOperationAction(ISD::CTTZ, MVT::i32, Expand);
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
   setOperationAction(ISD::ROTR, MVT::i32, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
@@ -103,6 +102,7 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   if (!Subtarget.has2E3()) {
     setOperationAction(ISD::ABS, MVT::i32, Expand);
     setOperationAction(ISD::BITREVERSE, MVT::i32, Expand);
+    setOperationAction(ISD::CTTZ, MVT::i32, Expand);
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
   }
