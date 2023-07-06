@@ -109,10 +109,44 @@ public:
     }
 
     ScopedLock L(ByteMapMutex);
-    for (uptr I = MinRegionIndex; I < MaxRegionIndex; I++)
+    for (uptr I = MinRegionIndex; I <= MaxRegionIndex; I++)
       if (PossibleRegions[I])
         unmap(reinterpret_cast<void *>(I * RegionSize), RegionSize);
     PossibleRegions.unmapTestOnly();
+  }
+
+  // When all blocks are freed, it has to be the same size as `AllocatedUser`.
+  void verifyAllBlocksAreReleasedTestOnly() {
+    // `BatchGroup` and `TransferBatch` also use the blocks from BatchClass.
+    uptr BatchClassUsedInFreeLists = 0;
+    for (uptr I = 0; I < NumClasses; I++) {
+      // We have to count BatchClassUsedInFreeLists in other regions first.
+      if (I == SizeClassMap::BatchClassId)
+        continue;
+      SizeClassInfo *Sci = getSizeClassInfo(I);
+      ScopedLock L1(Sci->Mutex);
+      uptr TotalBlocks = 0;
+      for (BatchGroup &BG : Sci->FreeListInfo.BlockList) {
+        // `BG::Batches` are `TransferBatches`. +1 for `BatchGroup`.
+        BatchClassUsedInFreeLists += BG.Batches.size() + 1;
+        for (const auto &It : BG.Batches)
+          TotalBlocks += It.getCount();
+      }
+
+      const uptr BlockSize = getSizeByClassId(I);
+      DCHECK_EQ(TotalBlocks, Sci->AllocatedUser / BlockSize);
+    }
+
+    SizeClassInfo *Sci = getSizeClassInfo(SizeClassMap::BatchClassId);
+    ScopedLock L1(Sci->Mutex);
+    uptr TotalBlocks = 0;
+    for (BatchGroup &BG : Sci->FreeListInfo.BlockList)
+      for (const auto &It : BG.Batches)
+        TotalBlocks += It.getCount();
+
+    const uptr BlockSize = getSizeByClassId(SizeClassMap::BatchClassId);
+    DCHECK_EQ(TotalBlocks + BatchClassUsedInFreeLists,
+              Sci->AllocatedUser / BlockSize);
   }
 
   CompactPtrT compactPtr(UNUSED uptr ClassId, uptr Ptr) const {

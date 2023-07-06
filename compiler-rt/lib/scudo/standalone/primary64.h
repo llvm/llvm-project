@@ -152,6 +152,41 @@ public:
     PrimaryBase = 0U;
   }
 
+  // When all blocks are freed, it has to be the same size as `AllocatedUser`.
+  void verifyAllBlocksAreReleasedTestOnly() {
+    // `BatchGroup` and `TransferBatch` also use the blocks from BatchClass.
+    uptr BatchClassUsedInFreeLists = 0;
+    for (uptr I = 0; I < NumClasses; I++) {
+      // We have to count BatchClassUsedInFreeLists in other regions first.
+      if (I == SizeClassMap::BatchClassId)
+        continue;
+      RegionInfo *Region = getRegionInfo(I);
+      ScopedLock ML(Region->MMLock);
+      ScopedLock FL(Region->FLLock);
+      const uptr BlockSize = getSizeByClassId(I);
+      uptr TotalBlocks = 0;
+      for (BatchGroup &BG : Region->FreeListInfo.BlockList) {
+        // `BG::Batches` are `TransferBatches`. +1 for `BatchGroup`.
+        BatchClassUsedInFreeLists += BG.Batches.size() + 1;
+        for (const auto &It : BG.Batches)
+          TotalBlocks += It.getCount();
+      }
+
+      DCHECK_EQ(TotalBlocks, Region->MemMapInfo.AllocatedUser / BlockSize);
+    }
+
+    RegionInfo *Region = getRegionInfo(SizeClassMap::BatchClassId);
+    ScopedLock ML(Region->MMLock);
+    ScopedLock FL(Region->FLLock);
+    const uptr BlockSize = getSizeByClassId(SizeClassMap::BatchClassId);
+    uptr TotalBlocks = 0;
+    for (BatchGroup &BG : Region->FreeListInfo.BlockList)
+      for (const auto &It : BG.Batches)
+        TotalBlocks += It.getCount();
+    DCHECK_EQ(TotalBlocks + BatchClassUsedInFreeLists,
+              Region->MemMapInfo.AllocatedUser / BlockSize);
+  }
+
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
     RegionInfo *Region = getRegionInfo(ClassId);
