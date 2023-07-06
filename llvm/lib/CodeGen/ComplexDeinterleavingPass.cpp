@@ -261,6 +261,10 @@ private:
   PHINode *RealPHI = nullptr;
   PHINode *ImagPHI = nullptr;
 
+  /// Set this flag to true if RealPHI and ImagPHI were reached during reduction
+  /// detection.
+  bool PHIsFound = false;
+
   /// OldToNewPHI maps the original real PHINode to a new, double-sized PHINode.
   /// The new PHINode corresponds to a vector of deinterleaved complex numbers.
   /// This mapping is populated during
@@ -1419,7 +1423,8 @@ bool ComplexDeinterleavingGraph::collectPotentialReductions(BasicBlock *B) {
       FinalReduction = dyn_cast<Instruction>(U);
     }
 
-    if (NumUsers != 2 || !FinalReduction || FinalReduction->getParent() == B)
+    if (NumUsers != 2 || !FinalReduction || FinalReduction->getParent() == B ||
+        isa<PHINode>(FinalReduction))
       continue;
 
     ReductionInfo[ReductionOp] = {&PHI, FinalReduction};
@@ -1460,6 +1465,7 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
 
       RealPHI = ReductionInfo[Real].first;
       ImagPHI = ReductionInfo[Imag].first;
+      PHIsFound = false;
       auto Node = identifyNode(Real, Imag);
       if (!Node) {
         std::swap(Real, Imag);
@@ -1467,9 +1473,10 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
         Node = identifyNode(Real, Imag);
       }
 
-      // If a node is identified, mark its operation instructions as used to
-      // prevent re-identification and attach the node to the real part
-      if (Node) {
+      // If a node is identified and reduction PHINode is used in the chain of
+      // operations, mark its operation instructions as used to prevent
+      // re-identification and attach the node to the real part
+      if (Node && PHIsFound) {
         LLVM_DEBUG(dbgs() << "Identified reduction starting from instructions: "
                           << *Real << " / " << *Imag << "\n");
         Processed[i] = true;
@@ -1762,6 +1769,7 @@ ComplexDeinterleavingGraph::identifyPHINode(Instruction *Real,
   if (Real != RealPHI || Imag != ImagPHI)
     return nullptr;
 
+  PHIsFound = true;
   NodePtr PlaceholderNode = prepareCompositeNode(
       ComplexDeinterleavingOperation::ReductionPHI, Real, Imag);
   return submitCompositeNode(PlaceholderNode);
