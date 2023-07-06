@@ -320,6 +320,7 @@ set(openmp_wrapper_files
   openmp_wrappers/__clang_openmp_device_functions.h
   openmp_wrappers/complex_cmath.h
   openmp_wrappers/new
+  openmp_wrappers/usm/force_usm.h
 )
 
 set(llvm_libc_wrapper_files
