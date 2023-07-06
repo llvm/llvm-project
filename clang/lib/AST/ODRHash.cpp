@@ -373,7 +373,6 @@ public:
   void VisitObjCMethodDecl(const ObjCMethodDecl *Method) {
     ID.AddInteger(Method->getDeclKind());
     Hash.AddBoolean(Method->isInstanceMethod()); // false if class method
-    Hash.AddBoolean(Method->isPropertyAccessor());
     Hash.AddBoolean(Method->isVariadic());
     Hash.AddBoolean(Method->isSynthesizedAccessorStub());
     Hash.AddBoolean(Method->isDefined());
