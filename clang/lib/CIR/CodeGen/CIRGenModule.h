@@ -466,7 +466,7 @@ public:
   std::nullptr_t getModuleDebugInfo() { return nullptr; }
 
   /// Emit any needed decls for which code generation was deferred.
-  void buildDeferred();
+  void buildDeferred(unsigned recursionLimit);
 
   /// Helper for `buildDeferred` to apply actual codegen.
   void buildGlobalDecl(clang::GlobalDecl &D);
