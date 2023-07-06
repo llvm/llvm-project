@@ -439,6 +439,24 @@ def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
   let builders = [OpBuilder<(ins "mlir::Value":$string,"mlir::Value":$len)>];
 }
 
+def hlfir_GetLengthOp : hlfir_Op<"get_length", [Pure]> {
+  let summary = "get the length of a character entity";
+  let description = [{
+    Get the length of character entity represented as hlfir.expr.
+  }];
+
+  let arguments = (ins AnyScalarOrArrayCharacterExpr:$expr);
+  let results = (outs Index);
+
+  let assemblyFormat = [{
+    $expr attr-dict `:` functional-type(operands, results)
+  }];
+
+  // If character length is know via the type, then the operation
+  // may be immediately canonicalized into arith::ConstantOp.
+  let hasCanonicalizeMethod = 1;
+}
+
 def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "SUM transformational intrinsic";

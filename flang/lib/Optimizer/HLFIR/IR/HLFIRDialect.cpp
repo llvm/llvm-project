@@ -104,6 +104,14 @@ bool hlfir::isFortranScalarCharacterExprType(mlir::Type type) {
   return false;
 }
 
+bool hlfir::isFortranArrayCharacterExprType(mlir::Type type) {
+  if (auto exprType = mlir::dyn_cast<hlfir::ExprType>(type))
+    return exprType.isArray() &&
+           mlir::isa<fir::CharacterType>(exprType.getElementType());
+
+  return false;
+}
+
 bool hlfir::isFortranScalarNumericalType(mlir::Type type) {
   return fir::isa_integer(type) || fir::isa_real(type) ||
          fir::isa_complex(type);
