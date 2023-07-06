@@ -427,8 +427,20 @@ Fortran::lower::createOrGetPrivateRecipe(mlir::OpBuilder &builder,
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
                       {ty}, {loc});
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-  builder.create<mlir::acc::YieldOp>(
-      loc, recipe.getInitRegion().front().getArgument(0));
+
+  mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
+  if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
+    if (fir::isa_trivial(refTy.getEleTy()))
+      retVal = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
+    else if (auto seqTy =
+                 mlir::dyn_cast_or_null<fir::SequenceType>(refTy.getEleTy())) {
+      if (seqTy.hasDynamicExtents())
+        TODO(loc, "private recipe of array with dynamic extents");
+      if (fir::isa_trivial(seqTy.getEleTy()))
+        retVal = builder.create<fir::AllocaOp>(loc, seqTy);
+    }
+  }
+  builder.create<mlir::acc::YieldOp>(loc, retVal);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
 }
