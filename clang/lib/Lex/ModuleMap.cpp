@@ -2016,10 +2016,12 @@ void ModuleMapParser::parseModuleDecl() {
   Module *ShadowingModule = nullptr;
   if (Module *Existing = Map.lookupModuleQualified(ModuleName, ActiveModule)) {
     // We might see a (re)definition of a module that we already have a
-    // definition for in two cases:
+    // definition for in three cases:
     //  - If we loaded one definition from an AST file and we've just found a
     //    corresponding definition in a module map file, or
-    bool LoadedFromASTFile = Existing->DefinitionLoc.isInvalid();
+    bool LoadedFromASTFile = Existing->IsFromModuleFile;
+    //  - If we previously inferred this module from different module map file.
+    bool Inferred = Existing->IsInferred;
     //  - If we're building a (preprocessed) module and we've just loaded the
     //    module map file from which it was created.
     bool ParsedAsMainInput =
@@ -2027,7 +2029,7 @@ void ModuleMapParser::parseModuleDecl() {
         Map.LangOpts.CurrentModule == ModuleName &&
         SourceMgr.getDecomposedLoc(ModuleNameLoc).first !=
             SourceMgr.getDecomposedLoc(Existing->DefinitionLoc).first;
-    if (!ActiveModule && (LoadedFromASTFile || ParsedAsMainInput)) {
+    if (!ActiveModule && (LoadedFromASTFile || Inferred || ParsedAsMainInput)) {
       // Skip the module definition.
       skipUntil(MMToken::RBrace);
       if (Tok.is(MMToken::RBrace))
