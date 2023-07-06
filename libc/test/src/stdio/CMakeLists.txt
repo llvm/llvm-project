@@ -114,6 +114,7 @@ add_libc_unittest(
 
 add_fp_unittest(
   sprintf_test
+  UNIT_TEST_ONLY
   SUITE
     libc_stdio_unittests
   SRCS
@@ -219,6 +220,18 @@ add_libc_test(
     fputs_test.cpp
   DEPENDS
     libc.src.stdio.fputs
+)
+
+add_libc_test(
+  fopen_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fopen_test.cpp
+  DEPENDS
+    libc.src.stdio.fputs
+    libc.src.stdio.fclose
+    libc.src.stdio.fopen
 )
 
 add_libc_unittest(
@@ -327,6 +340,9 @@ add_libc_unittest(
     libc.src.stdio.fwrite
     libc.src.stdio.setvbuf
 )
+
+# Create an output directory for any temporary test files.
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testdata)
 
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   return()

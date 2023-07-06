@@ -361,7 +361,6 @@ def Shape_DimOp : Shape_Op<"dim",
   }];
 
   let hasFolder = 1;
-  let hasVerifier = 1;
 }
 
 def Shape_GetExtentOp : Shape_Op<"get_extent",

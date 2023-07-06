@@ -633,19 +633,11 @@ mlir::test::TestProduceParamWithNumberOfTestOps::apply(
 }
 
 DiagnosedSilenceableFailure
-mlir::test::TestProduceIntegerParamWithTypeOp::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  Attribute zero = IntegerAttr::get(getType(), 0);
-  results.setParams(llvm::cast<OpResult>(getResult()), zero);
+mlir::test::TestProduceParamOp::apply(transform::TransformRewriter &rewriter,
+                                      transform::TransformResults &results,
+                                      transform::TransformState &state) {
+  results.setParams(llvm::cast<OpResult>(getResult()), getAttr());
   return DiagnosedSilenceableFailure::success();
-}
-
-LogicalResult mlir::test::TestProduceIntegerParamWithTypeOp::verify() {
-  if (!llvm::isa<IntegerType>(getType())) {
-    return emitOpError() << "expects an integer type";
-  }
-  return success();
 }
 
 void mlir::test::TestProduceTransformParamOrForwardOperandOp::getEffects(

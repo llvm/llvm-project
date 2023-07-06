@@ -126,3 +126,27 @@ void f() {
     brachiosaur |= neck;                // OK
 }
 }
+
+namespace dr2681 { // dr2681: 17
+using size_t = decltype(sizeof(int));
+
+template<class T, size_t N>
+struct H {
+  T array[N];
+};
+template<class T, size_t N>
+struct I {
+  volatile T array[N];
+};
+template<size_t N>
+struct J {  // expected-note 3{{candidate}}
+  unsigned char array[N];
+};
+
+H h = { "abc" };
+I i = { "def" };
+static_assert(__is_same(decltype(h), H<char, 4>));  // Not H<const char, 4>
+static_assert(__is_same(decltype(i), I<char, 4>));
+
+J j = { "ghi" };  // expected-error {{no viable constructor or deduction guide}}
+}

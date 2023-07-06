@@ -369,6 +369,12 @@ private:
   /// intrinsic (for both fixed and scalable vectors)
   NodePtr identifyDeinterleave(Instruction *Real, Instruction *Imag);
 
+  /// identifying the operation that represents a complex number repeated in a
+  /// Splat vector. There are two possible types of splats: ConstantExpr with
+  /// the opcode ShuffleVector and ShuffleVectorInstr. Both should have an
+  /// initialization mask with all values set to zero.
+  NodePtr identifySplat(Value *Real, Value *Imag);
+
   NodePtr identifyPHINode(Instruction *Real, Instruction *Imag);
 
   /// Identifies SelectInsts in a loop that has reduction with predication masks
@@ -864,6 +870,9 @@ ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I) {
     LLVM_DEBUG(dbgs() << " - Folding to existing node\n");
     return CN;
   }
+
+  if (NodePtr CN = identifySplat(R, I))
+    return CN;
 
   auto *Real = dyn_cast<Instruction>(R);
   auto *Imag = dyn_cast<Instruction>(I);
@@ -1695,6 +1704,59 @@ ComplexDeinterleavingGraph::identifyDeinterleave(Instruction *Real,
 }
 
 ComplexDeinterleavingGraph::NodePtr
+ComplexDeinterleavingGraph::identifySplat(Value *R, Value *I) {
+  auto IsSplat = [](Value *V) -> bool {
+    // Fixed-width vector with constants
+    if (isa<ConstantDataVector>(V))
+      return true;
+
+    VectorType *VTy;
+    ArrayRef<int> Mask;
+    // Splats are represented differently depending on whether the repeated
+    // value is a constant or an Instruction
+    if (auto *Const = dyn_cast<ConstantExpr>(V)) {
+      if (Const->getOpcode() != Instruction::ShuffleVector)
+        return false;
+      VTy = cast<VectorType>(Const->getType());
+      Mask = Const->getShuffleMask();
+    } else if (auto *Shuf = dyn_cast<ShuffleVectorInst>(V)) {
+      VTy = Shuf->getType();
+      Mask = Shuf->getShuffleMask();
+    } else {
+      return false;
+    }
+
+    // When the data type is <1 x Type>, it's not possible to differentiate
+    // between the ComplexDeinterleaving::Deinterleave and
+    // ComplexDeinterleaving::Splat operations.
+    if (!VTy->isScalableTy() && VTy->getElementCount().getKnownMinValue() == 1)
+      return false;
+
+    return all_equal(Mask) && Mask[0] == 0;
+  };
+
+  if (!IsSplat(R) || !IsSplat(I))
+    return nullptr;
+
+  auto *Real = dyn_cast<Instruction>(R);
+  auto *Imag = dyn_cast<Instruction>(I);
+  if ((!Real && Imag) || (Real && !Imag))
+    return nullptr;
+
+  if (Real && Imag) {
+    // Non-constant splats should be in the same basic block
+    if (Real->getParent() != Imag->getParent())
+      return nullptr;
+
+    FinalInstructions.insert(Real);
+    FinalInstructions.insert(Imag);
+  }
+  NodePtr PlaceholderNode =
+      prepareCompositeNode(ComplexDeinterleavingOperation::Splat, R, I);
+  return submitCompositeNode(PlaceholderNode);
+}
+
+ComplexDeinterleavingGraph::NodePtr
 ComplexDeinterleavingGraph::identifyPHINode(Instruction *Real,
                                             Instruction *Imag) {
   if (Real != RealPHI || Imag != ImagPHI)
@@ -1804,6 +1866,25 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
   case ComplexDeinterleavingOperation::Deinterleave:
     llvm_unreachable("Deinterleave node should already have ReplacementNode");
     break;
+  case ComplexDeinterleavingOperation::Splat: {
+    auto *NewTy = VectorType::getDoubleElementsVectorType(
+        cast<VectorType>(Node->Real->getType()));
+    auto *R = dyn_cast<Instruction>(Node->Real);
+    auto *I = dyn_cast<Instruction>(Node->Imag);
+    if (R && I) {
+      // Splats that are not constant are interleaved where they are located
+      Instruction *InsertPoint = (I->comesBefore(R) ? R : I)->getNextNode();
+      IRBuilder<> IRB(InsertPoint);
+      ReplacementNode =
+          IRB.CreateIntrinsic(Intrinsic::experimental_vector_interleave2, NewTy,
+                              {Node->Real, Node->Imag});
+    } else {
+      ReplacementNode =
+          Builder.CreateIntrinsic(Intrinsic::experimental_vector_interleave2,
+                                  NewTy, {Node->Real, Node->Imag});
+    }
+    break;
+  }
   case ComplexDeinterleavingOperation::ReductionPHI: {
     // If Operation is ReductionPHI, a new empty PHINode is created.
     // It is filled later when the ReductionOperation is processed.

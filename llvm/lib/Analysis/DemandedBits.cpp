@@ -477,6 +477,7 @@ void DemandedBits::print(raw_ostream &OS) {
     OS << *I << '\n';
   };
 
+  OS << "Printing analysis 'Demanded Bits Analysis' for function '" << F.getName() << "':\n";
   performAnalysis();
   for (auto &KV : AliveBits) {
     Instruction *I = KV.first;

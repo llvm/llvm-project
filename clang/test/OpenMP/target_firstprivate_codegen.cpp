@@ -6495,7 +6495,7 @@ int bar(int n, double *ptr) {
 //
 //
 // CHECK0-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// CHECK0-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK0-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
 // CHECK0-NEXT:  entry:
 // CHECK0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK0-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -7273,7 +7273,7 @@ int bar(int n, double *ptr) {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK1-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK1-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -9300,7 +9300,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -9501,7 +9501,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY01-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// SIMD-ONLY01-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY01-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
 // SIMD-ONLY01-NEXT:  entry:
 // SIMD-ONLY01-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY01-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -10922,7 +10922,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY1-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// SIMD-ONLY1-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY1-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
 // SIMD-ONLY1-NEXT:  entry:
 // SIMD-ONLY1-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY1-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
@@ -11123,7 +11123,7 @@ int bar(int n, double *ptr) {
 //
 //
 // SIMD-ONLY11-LABEL: define {{[^@]+}}@_ZN2S12r1Ei
-// SIMD-ONLY11-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// SIMD-ONLY11-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i32 noundef signext [[N:%.*]]) #[[ATTR0]] comdat {
 // SIMD-ONLY11-NEXT:  entry:
 // SIMD-ONLY11-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY11-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4

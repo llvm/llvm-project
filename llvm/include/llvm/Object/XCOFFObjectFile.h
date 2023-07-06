@@ -846,6 +846,7 @@ public:
 
 class XCOFFTracebackTable {
   const uint8_t *const TBPtr;
+  bool Is64BitObj;
   std::optional<SmallString<32>> ParmsType;
   std::optional<uint32_t> TraceBackTableOffset;
   std::optional<uint32_t> HandlerMask;
@@ -855,8 +856,10 @@ class XCOFFTracebackTable {
   std::optional<uint8_t> AllocaRegister;
   std::optional<TBVectorExt> VecExt;
   std::optional<uint8_t> ExtensionTable;
+  std::optional<uint64_t> EhInfoDisp;
 
-  XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size, Error &Err);
+  XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size, Error &Err,
+                      bool Is64Bit = false);
 
 public:
   /// Parse an XCOFF Traceback Table from \a Ptr with \a Size bytes.
@@ -872,8 +875,8 @@ public:
   ///    If the XCOFF Traceback Table is not parsed successfully or there are
   ///    extra bytes that are not recognized, \a Size will be updated to be the
   ///    size up to the end of the last successfully parsed field of the table.
-  static Expected<XCOFFTracebackTable> create(const uint8_t *Ptr,
-                                              uint64_t &Size);
+  static Expected<XCOFFTracebackTable>
+  create(const uint8_t *Ptr, uint64_t &Size, bool Is64Bits = false);
   uint8_t getVersion() const;
   uint8_t getLanguageID() const;
 
@@ -930,6 +933,7 @@ public:
   const std::optional<uint8_t> &getExtensionTable() const {
     return ExtensionTable;
   }
+  const std::optional<uint64_t> &getEhInfoDisp() const { return EhInfoDisp; }
 };
 
 bool doesXCOFFTracebackTableBegin(ArrayRef<uint8_t> Bytes);

@@ -60,27 +60,54 @@ std::optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
 /// %0 = bufferization.to_tensor %alloc restrict writable
 ///
 /// In addition to rewriting the IR as shown above, this function returns the
-/// newly allocated buffer. Furthermore, the result of the
-/// bufferization.to_tensor op is optionally returned via `replacement`.
+/// newly allocated buffer. The `insertionPoint` parameter can be used to
+/// specify a custom insertion point for the buffer allocation.
 Value bufferizeToAllocation(RewriterBase &rewriter, tensor::PadOp padOp,
                             Attribute memorySpace = {},
-                            Value *replacement = nullptr);
+                            Operation *insertionPoint = nullptr);
 
-/// Materialize a buffer allocation for the given tensor value. E.g.:
+/// Materialize a buffer allocation for the given vector.mask op and bufferize
+/// the op, including its region. E.g.:
+///
+/// %0 = vector.mask {
+///   vector.transfer_write %v, %t : vector<16xf32>, tensor<?xf32>
+/// } : vector<16xi1> -> tensor<?xf32>
+///
+/// is lowered to:
 ///
 /// %alloc = memref.alloc
-/// memref.tensor_store %value, %alloc
+/// memref.tensor_store %t, %subview
+/// vector.mask {
+///   vector.transfer_write %arg0, %alloc : vector<16xf32>, memref<?xf32>
+/// } : vector<16xi1>
 /// %0 = bufferization.to_tensor %alloc restrict writable
 ///
-/// In case `value` is a tensor.pad result, the corresponding overload is used
-/// internally to produce a better bufferization.
-///
 /// In addition to rewriting the IR as shown above, this function returns the
-/// newly allocated buffer. Furthermore, the result of the
-/// bufferization.to_tensor op is optionally returned via `replacement`.
-Value bufferizeToAllocation(RewriterBase &rewriter, Value value,
+/// newly allocated buffer. The `insertionPoint` parameter can be used to
+/// specify a custom insertion point for the buffer allocation.
+Value bufferizeToAllocation(RewriterBase &rewriter, vector::MaskOp maskOp,
                             Attribute memorySpace = {},
-                            Value *replacement = nullptr);
+                            Operation *insertionPoint = nullptr);
+
+/// Bufferize the given op with tensor semantics and materialize the result in
+/// a newly allocated buffer.
+///
+/// Only bufferizable ops that bufferize to a memory write or have an
+/// aliasing OpOperand (and do not themselves bufferize to an allocation) are
+/// supported. They are bufferized using their BufferizableOpInterface
+/// implementation.
+///
+/// Selected ops that bufferize to an allocation (or need special handling) are
+/// also supported:
+/// - tensor.pad
+/// - vector.mask
+///
+/// This function returns the newly allocated buffer. The `insertionPoint`
+/// parameter can be used to specify a custom insertion point for the buffer
+/// allocation.
+Value bufferizeToAllocation(RewriterBase &rewriter, Operation *op,
+                            Attribute memorySpace = {},
+                            Operation *insertionPoint = nullptr);
 
 /// Try to eliminate tensor::EmptyOps inside `op` that are anchored on a
 /// LinalgOp. This transforms looks for LinalgOps that have an unused output
@@ -401,18 +428,24 @@ SmallVector<Value> peelLoop(RewriterBase &rewriter, Operation *op);
 void peelLoops(RewriterBase &rewriter, ArrayRef<scf::ForOp> loops);
 
 /// Pad the iterator dimensions `paddingDimensions` of all `opToPad` operands
-/// to a static bounding box. `padToMultipleOf` indicates that each padding
-/// dimension should be padded to the specified multiple. If the derived padding
-/// sizes should not be rounded up to any multiple, use "1". Use `paddingValues`
-/// and `packPaddings` to set padding value and nofold attribute of the created
-/// tensor::PadOps, respectively. Update `paddedOp` to the cloned operation with
-/// statically shaped `paddingDimensions` and return the extracted dynamically
-/// shaped results. If padding fails, return failure. If `copyBack` is set, the
-/// unpadded result is copied back into the original destination tensor.
-FailureOr<SmallVector<Value>>
-rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
-                  const LinalgPaddingOptions &options, LinalgOp &paddedOp,
-                  bool copyBack);
+/// to a static bounding box. The original `opToPad` is cloned and operates on
+/// the padded tensors.
+///
+/// * "options.padToMultipleOf" indicates that each padding dimension should be
+///   padded to the specified multiple.
+/// * Use "options.paddingValues" and "options.packPaddings" to set padding
+///   value and nofold attribute of the created tensor::PadOps, respectively.
+/// * The unpadded results (extracted slice of the cloned operation) are
+///   returned via `replacements`.
+/// * The tensor::PadOps are returned via `padOps`.
+/// * If `copyBack` is set to "true", the unpadded result is copied back to the
+///   original destination tensor.
+LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
+                                const LinalgPaddingOptions &options,
+                                LinalgOp &paddedOp,
+                                SmallVector<Value> &replacements,
+                                SmallVector<tensor::PadOp> &padOps,
+                                bool copyBack);
 
 namespace detail {
 
@@ -1017,6 +1050,20 @@ FailureOr<PackTransposeResult>
 packTranspose(RewriterBase &rewriter, tensor::PackOp packOp,
               linalg::LinalgOp linalgOp, tensor::UnPackOp maybeUnPackOp,
               ArrayRef<int64_t> outerPerm, ArrayRef<int64_t> innerPerm);
+
+/// Pack a LinalgOp by greedily inferring matmul dimensions (m, n, k) where m
+/// and n are proper parallel dimensions and k is a proper reduction
+/// dimension. Packing occurs by rewriting the op as a linalg.generic and
+/// calling linalg::pack by `mnkPackedSizes`. The order of the packed
+/// dimensions is customizable: the `mnkOrder` is a permutation of {0, 1, 2}
+/// to reorder {m, n, k} into one of the 8 possible forms. The outer
+/// dimensions of the operands are not permuted at this time, this is left for
+/// future work.
+FailureOr<PackResult>
+packMatmulGreedily(RewriterBase &rewriter, LinalgOp linalgOp,
+                   ArrayRef<OpFoldResult> mnkPackedSizes,
+                   ArrayRef<int64_t> mnkPaddedSizesNextMultipleOf,
+                   ArrayRef<int64_t> mnkOrder);
 
 /// Rewrite tensor.from_elements to linalg.generic.
 FailureOr<Operation *>

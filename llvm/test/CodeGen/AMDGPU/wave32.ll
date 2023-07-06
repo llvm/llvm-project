@@ -1148,14 +1148,12 @@ define i64 @test_mad_i64_i32(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX1032-LABEL: test_mad_i64_i32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1032-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1032-NEXT:    v_mad_i64_i32 v[0:1], s4, v0, v1, v[2:3]
 ; GFX1032-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1064-LABEL: test_mad_i64_i32:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1064-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1064-NEXT:    v_mad_i64_i32 v[0:1], s[4:5], v0, v1, v[2:3]
 ; GFX1064-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = sext i32 %arg0 to i64
@@ -1169,14 +1167,12 @@ define i64 @test_mad_u64_u32(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX1032-LABEL: test_mad_u64_u32:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1032-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1032-NEXT:    v_mad_u64_u32 v[0:1], s4, v0, v1, v[2:3]
 ; GFX1032-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1064-LABEL: test_mad_u64_u32:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1064-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1064-NEXT:    v_mad_u64_u32 v[0:1], s[4:5], v0, v1, v[2:3]
 ; GFX1064-NEXT:    s_setpc_b64 s[30:31]
   %sext0 = zext i32 %arg0 to i64
@@ -2858,7 +2854,6 @@ define void @callee_no_stack_with_call() #1 {
 ; GFX1032-LABEL: callee_no_stack_with_call:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1032-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1032-NEXT:    s_mov_b32 s16, s33
 ; GFX1032-NEXT:    s_mov_b32 s33, s32
 ; GFX1032-NEXT:    s_or_saveexec_b32 s17, -1
@@ -2893,7 +2888,6 @@ define void @callee_no_stack_with_call() #1 {
 ; GFX1064-LABEL: callee_no_stack_with_call:
 ; GFX1064:       ; %bb.0:
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1064-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1064-NEXT:    s_mov_b32 s16, s33
 ; GFX1064-NEXT:    s_mov_b32 s33, s32
 ; GFX1064-NEXT:    s_or_saveexec_b64 s[18:19], -1

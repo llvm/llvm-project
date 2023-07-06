@@ -23,16 +23,14 @@ define void @storeITLUninit(i64 noundef %x) {
 ; SMALL64-LABEL: storeITLUninit:
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r4, L..C0(r2) # target-flags(ppc-tprel) @IThreadLocalVarUninit
-; SMALL64-NEXT:    add r4, r13, r4
-; SMALL64-NEXT:    std r3, 0(r4)
+; SMALL64-NEXT:    stdx r3, r13, r4
 ; SMALL64-NEXT:    blr
 ;
 ; LARGE64-LABEL: storeITLUninit:
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    addis r4, L..C0@u(r2)
 ; LARGE64-NEXT:    ld r4, L..C0@l(r4)
-; LARGE64-NEXT:    add r4, r13, r4
-; LARGE64-NEXT:    std r3, 0(r4)
+; LARGE64-NEXT:    stdx r3, r13, r4
 ; LARGE64-NEXT:    blr
 ;
 ; SMALL32-LABEL: storeITLUninit:
@@ -77,16 +75,14 @@ define void @storeITLInit(i64 noundef %x) {
 ; SMALL64-LABEL: storeITLInit:
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r4, L..C1(r2) # target-flags(ppc-tprel) @IThreadLocalVarInit
-; SMALL64-NEXT:    add r4, r13, r4
-; SMALL64-NEXT:    std r3, 0(r4)
+; SMALL64-NEXT:    stdx r3, r13, r4
 ; SMALL64-NEXT:    blr
 ;
 ; LARGE64-LABEL: storeITLInit:
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    addis r4, L..C1@u(r2)
 ; LARGE64-NEXT:    ld r4, L..C1@l(r4)
-; LARGE64-NEXT:    add r4, r13, r4
-; LARGE64-NEXT:    std r3, 0(r4)
+; LARGE64-NEXT:    stdx r3, r13, r4
 ; LARGE64-NEXT:    blr
 ;
 ; SMALL32-LABEL: storeITLInit:
@@ -131,16 +127,14 @@ define void @storeTLUninit(i64 noundef %x) {
 ; SMALL64-LABEL: storeTLUninit:
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r4, L..C2(r2) # target-flags(ppc-tprel) @ThreadLocalVarUninit
-; SMALL64-NEXT:    add r4, r13, r4
-; SMALL64-NEXT:    std r3, 0(r4)
+; SMALL64-NEXT:    stdx r3, r13, r4
 ; SMALL64-NEXT:    blr
 ;
 ; LARGE64-LABEL: storeTLUninit:
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    addis r4, L..C2@u(r2)
 ; LARGE64-NEXT:    ld r4, L..C2@l(r4)
-; LARGE64-NEXT:    add r4, r13, r4
-; LARGE64-NEXT:    std r3, 0(r4)
+; LARGE64-NEXT:    stdx r3, r13, r4
 ; LARGE64-NEXT:    blr
 ;
 ; SMALL32-LABEL: storeTLUninit:
@@ -185,16 +179,14 @@ define void @storeTLInit(i64 noundef %x) {
 ; SMALL64-LABEL: storeTLInit:
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r4, L..C3(r2) # target-flags(ppc-tprel) @ThreadLocalVarInit
-; SMALL64-NEXT:    add r4, r13, r4
-; SMALL64-NEXT:    std r3, 0(r4)
+; SMALL64-NEXT:    stdx r3, r13, r4
 ; SMALL64-NEXT:    blr
 ;
 ; LARGE64-LABEL: storeTLInit:
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    addis r4, L..C3@u(r2)
 ; LARGE64-NEXT:    ld r4, L..C3@l(r4)
-; LARGE64-NEXT:    add r4, r13, r4
-; LARGE64-NEXT:    std r3, 0(r4)
+; LARGE64-NEXT:    stdx r3, r13, r4
 ; LARGE64-NEXT:    blr
 ;
 ; SMALL32-LABEL: storeTLInit:
@@ -239,16 +231,14 @@ define i64 @loadITLUninit() {
 ; SMALL64-LABEL: loadITLUninit:
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tprel) @IThreadLocalVarUninit
-; SMALL64-NEXT:    add r3, r13, r3
-; SMALL64-NEXT:    ld r3, 0(r3)
+; SMALL64-NEXT:    ldx r3, r13, r3
 ; SMALL64-NEXT:    blr
 ;
 ; LARGE64-LABEL: loadITLUninit:
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    addis r3, L..C0@u(r2)
 ; LARGE64-NEXT:    ld r3, L..C0@l(r3)
-; LARGE64-NEXT:    add r3, r13, r3
-; LARGE64-NEXT:    ld r3, 0(r3)
+; LARGE64-NEXT:    ldx r3, r13, r3
 ; LARGE64-NEXT:    blr
 ;
 ; SMALL32-LABEL: loadITLUninit:
@@ -292,9 +282,8 @@ define i64 @loadITLUninit2() {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r3, L..C0(r2) # target-flags(ppc-tprel) @IThreadLocalVarUninit
 ; SMALL64-NEXT:    ld r4, L..C4(r2) # @VarInit
-; SMALL64-NEXT:    add r3, r13, r3
+; SMALL64-NEXT:    ldx r3, r13, r3
 ; SMALL64-NEXT:    ld r4, 0(r4)
-; SMALL64-NEXT:    ld r3, 0(r3)
 ; SMALL64-NEXT:    add r3, r4, r3
 ; SMALL64-NEXT:    blr
 ;
@@ -304,9 +293,8 @@ define i64 @loadITLUninit2() {
 ; LARGE64-NEXT:    addis r4, L..C4@u(r2)
 ; LARGE64-NEXT:    ld r3, L..C0@l(r3)
 ; LARGE64-NEXT:    ld r4, L..C4@l(r4)
-; LARGE64-NEXT:    add r3, r13, r3
+; LARGE64-NEXT:    ldx r3, r13, r3
 ; LARGE64-NEXT:    ld r4, 0(r4)
-; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    add r3, r4, r3
 ; LARGE64-NEXT:    blr
 ;
@@ -363,16 +351,14 @@ define i64 @loadITLInit() {
 ; SMALL64-LABEL: loadITLInit:
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r3, L..C1(r2) # target-flags(ppc-tprel) @IThreadLocalVarInit
-; SMALL64-NEXT:    add r3, r13, r3
-; SMALL64-NEXT:    ld r3, 0(r3)
+; SMALL64-NEXT:    ldx r3, r13, r3
 ; SMALL64-NEXT:    blr
 ;
 ; LARGE64-LABEL: loadITLInit:
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    addis r3, L..C1@u(r2)
 ; LARGE64-NEXT:    ld r3, L..C1@l(r3)
-; LARGE64-NEXT:    add r3, r13, r3
-; LARGE64-NEXT:    ld r3, 0(r3)
+; LARGE64-NEXT:    ldx r3, r13, r3
 ; LARGE64-NEXT:    blr
 ;
 ; SMALL32-LABEL: loadITLInit:
@@ -416,9 +402,8 @@ define i64 @loadITLInit2() {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r3, L..C1(r2) # target-flags(ppc-tprel) @IThreadLocalVarInit
 ; SMALL64-NEXT:    ld r4, L..C4(r2) # @VarInit
-; SMALL64-NEXT:    add r3, r13, r3
+; SMALL64-NEXT:    ldx r3, r13, r3
 ; SMALL64-NEXT:    ld r4, 0(r4)
-; SMALL64-NEXT:    ld r3, 0(r3)
 ; SMALL64-NEXT:    add r3, r4, r3
 ; SMALL64-NEXT:    blr
 ;
@@ -428,9 +413,8 @@ define i64 @loadITLInit2() {
 ; LARGE64-NEXT:    addis r4, L..C4@u(r2)
 ; LARGE64-NEXT:    ld r3, L..C1@l(r3)
 ; LARGE64-NEXT:    ld r4, L..C4@l(r4)
-; LARGE64-NEXT:    add r3, r13, r3
+; LARGE64-NEXT:    ldx r3, r13, r3
 ; LARGE64-NEXT:    ld r4, 0(r4)
-; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    add r3, r4, r3
 ; LARGE64-NEXT:    blr
 ;
@@ -487,16 +471,14 @@ define i64 @loadTLUninit() {
 ; SMALL64-LABEL: loadTLUninit:
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r3, L..C2(r2) # target-flags(ppc-tprel) @ThreadLocalVarUninit
-; SMALL64-NEXT:    add r3, r13, r3
-; SMALL64-NEXT:    ld r3, 0(r3)
+; SMALL64-NEXT:    ldx r3, r13, r3
 ; SMALL64-NEXT:    blr
 ;
 ; LARGE64-LABEL: loadTLUninit:
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    addis r3, L..C2@u(r2)
 ; LARGE64-NEXT:    ld r3, L..C2@l(r3)
-; LARGE64-NEXT:    add r3, r13, r3
-; LARGE64-NEXT:    ld r3, 0(r3)
+; LARGE64-NEXT:    ldx r3, r13, r3
 ; LARGE64-NEXT:    blr
 ;
 ; SMALL32-LABEL: loadTLUninit:
@@ -540,9 +522,8 @@ define i64 @loadTLUninit2() {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r3, L..C2(r2) # target-flags(ppc-tprel) @ThreadLocalVarUninit
 ; SMALL64-NEXT:    ld r4, L..C4(r2) # @VarInit
-; SMALL64-NEXT:    add r3, r13, r3
+; SMALL64-NEXT:    ldx r3, r13, r3
 ; SMALL64-NEXT:    ld r4, 0(r4)
-; SMALL64-NEXT:    ld r3, 0(r3)
 ; SMALL64-NEXT:    add r3, r4, r3
 ; SMALL64-NEXT:    blr
 ;
@@ -552,9 +533,8 @@ define i64 @loadTLUninit2() {
 ; LARGE64-NEXT:    addis r4, L..C4@u(r2)
 ; LARGE64-NEXT:    ld r3, L..C2@l(r3)
 ; LARGE64-NEXT:    ld r4, L..C4@l(r4)
-; LARGE64-NEXT:    add r3, r13, r3
+; LARGE64-NEXT:    ldx r3, r13, r3
 ; LARGE64-NEXT:    ld r4, 0(r4)
-; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    add r3, r4, r3
 ; LARGE64-NEXT:    blr
 ;
@@ -611,16 +591,14 @@ define i64 @loadTLInit() {
 ; SMALL64-LABEL: loadTLInit:
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r3, L..C3(r2) # target-flags(ppc-tprel) @ThreadLocalVarInit
-; SMALL64-NEXT:    add r3, r13, r3
-; SMALL64-NEXT:    ld r3, 0(r3)
+; SMALL64-NEXT:    ldx r3, r13, r3
 ; SMALL64-NEXT:    blr
 ;
 ; LARGE64-LABEL: loadTLInit:
 ; LARGE64:       # %bb.0: # %entry
 ; LARGE64-NEXT:    addis r3, L..C3@u(r2)
 ; LARGE64-NEXT:    ld r3, L..C3@l(r3)
-; LARGE64-NEXT:    add r3, r13, r3
-; LARGE64-NEXT:    ld r3, 0(r3)
+; LARGE64-NEXT:    ldx r3, r13, r3
 ; LARGE64-NEXT:    blr
 ;
 ; SMALL32-LABEL: loadTLInit:
@@ -664,9 +642,8 @@ define i64 @loadTLInit2() {
 ; SMALL64:       # %bb.0: # %entry
 ; SMALL64-NEXT:    ld r3, L..C3(r2) # target-flags(ppc-tprel) @ThreadLocalVarInit
 ; SMALL64-NEXT:    ld r4, L..C4(r2) # @VarInit
-; SMALL64-NEXT:    add r3, r13, r3
+; SMALL64-NEXT:    ldx r3, r13, r3
 ; SMALL64-NEXT:    ld r4, 0(r4)
-; SMALL64-NEXT:    ld r3, 0(r3)
 ; SMALL64-NEXT:    add r3, r4, r3
 ; SMALL64-NEXT:    blr
 ;
@@ -676,9 +653,8 @@ define i64 @loadTLInit2() {
 ; LARGE64-NEXT:    addis r4, L..C4@u(r2)
 ; LARGE64-NEXT:    ld r3, L..C3@l(r3)
 ; LARGE64-NEXT:    ld r4, L..C4@l(r4)
-; LARGE64-NEXT:    add r3, r13, r3
+; LARGE64-NEXT:    ldx r3, r13, r3
 ; LARGE64-NEXT:    ld r4, 0(r4)
-; LARGE64-NEXT:    ld r3, 0(r3)
 ; LARGE64-NEXT:    add r3, r4, r3
 ; LARGE64-NEXT:    blr
 ;

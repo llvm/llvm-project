@@ -419,8 +419,7 @@ public:
       // FIXME: Implement pointers to members. For now, don't associate a value
       // with this expression.
       break;
-    case CK_FunctionToPointerDecay:
-    case CK_BuiltinFnToFnPtr: {
+    case CK_FunctionToPointerDecay: {
       StorageLocation *PointeeLoc =
           Env.getStorageLocation(*SubExpr, SkipPast::Reference);
       if (PointeeLoc == nullptr)
@@ -432,6 +431,12 @@ public:
       Env.setValue(PointerLoc, PointerVal);
       break;
     }
+    case CK_BuiltinFnToFnPtr:
+      // Despite its name, the result type of `BuiltinFnToFnPtr` is a function,
+      // not a function pointer. In addition, builtin functions can only be
+      // called directly; it is not legal to take their address. We therefore
+      // don't need to create a value or storage location for them.
+      break;
     default:
       break;
     }

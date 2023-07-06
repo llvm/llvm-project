@@ -19,19 +19,19 @@ define i32 @test_partial_unroll_with_breakout_at_iter0() {
 ; CHECK-NEXT:    br label [[FOR_LATCH:%.*]]
 ; CHECK:       for.latch:
 ; CHECK-NEXT:    [[RED_NEXT_1:%.*]] = add nuw nsw i32 10, [[RED_NEXT]]
-; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV_NEXT]], 2
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 4
 ; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr inbounds [344 x i32], ptr @table, i64 0, i64 [[IV_NEXT_1]]
 ; CHECK-NEXT:    store i32 [[RED_NEXT_1]], ptr [[PTR_1]], align 4
 ; CHECK-NEXT:    br label [[FOR_LATCH_1:%.*]]
 ; CHECK:       for.latch.1:
 ; CHECK-NEXT:    [[RED_NEXT_2:%.*]] = add nuw nsw i32 10, [[RED_NEXT_1]]
-; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV_NEXT_1]], 2
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 6
 ; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr inbounds [344 x i32], ptr @table, i64 0, i64 [[IV_NEXT_2]]
 ; CHECK-NEXT:    store i32 [[RED_NEXT_2]], ptr [[PTR_2]], align 4
 ; CHECK-NEXT:    br label [[FOR_LATCH_2:%.*]]
 ; CHECK:       for.latch.2:
 ; CHECK-NEXT:    [[RED_NEXT_3]] = add nuw nsw i32 10, [[RED_NEXT_2]]
-; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV_NEXT_2]], 2
+; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 8
 ; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr inbounds [344 x i32], ptr @table, i64 0, i64 [[IV_NEXT_3]]
 ; CHECK-NEXT:    store i32 [[RED_NEXT_3]], ptr [[PTR_3]], align 4
 ; CHECK-NEXT:    [[EXITCOND_1_I_3:%.*]] = icmp eq i64 [[IV_NEXT_3]], 344

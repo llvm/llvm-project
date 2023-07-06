@@ -28,7 +28,6 @@ define float @v_div_fmas_f32(float %a, float %b, float %c, i1 %d) {
 ; GFX10_W32-LABEL: v_div_fmas_f32:
 ; GFX10_W32:       ; %bb.0:
 ; GFX10_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10_W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10_W32-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX10_W32-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v3
 ; GFX10_W32-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
@@ -37,7 +36,6 @@ define float @v_div_fmas_f32(float %a, float %b, float %c, i1 %d) {
 ; GFX10_W64-LABEL: v_div_fmas_f32:
 ; GFX10_W64:       ; %bb.0:
 ; GFX10_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10_W64-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10_W64-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX10_W64-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
 ; GFX10_W64-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
@@ -46,7 +44,6 @@ define float @v_div_fmas_f32(float %a, float %b, float %c, i1 %d) {
 ; GFX11_W32-LABEL: v_div_fmas_f32:
 ; GFX11_W32:       ; %bb.0:
 ; GFX11_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11_W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11_W32-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX11_W32-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v3
 ; GFX11_W32-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
@@ -55,7 +52,6 @@ define float @v_div_fmas_f32(float %a, float %b, float %c, i1 %d) {
 ; GFX11_W64-LABEL: v_div_fmas_f32:
 ; GFX11_W64:       ; %bb.0:
 ; GFX11_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11_W64-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11_W64-NEXT:    v_and_b32_e32 v3, 1, v3
 ; GFX11_W64-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v3
 ; GFX11_W64-NEXT:    v_div_fmas_f32 v0, v0, v1, v2
@@ -86,7 +82,6 @@ define double @v_div_fmas_f64(double %a, double %b, double %c, i1 %d) {
 ; GFX10_W32-LABEL: v_div_fmas_f64:
 ; GFX10_W32:       ; %bb.0:
 ; GFX10_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10_W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10_W32-NEXT:    v_and_b32_e32 v6, 1, v6
 ; GFX10_W32-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v6
 ; GFX10_W32-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
@@ -95,7 +90,6 @@ define double @v_div_fmas_f64(double %a, double %b, double %c, i1 %d) {
 ; GFX10_W64-LABEL: v_div_fmas_f64:
 ; GFX10_W64:       ; %bb.0:
 ; GFX10_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10_W64-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10_W64-NEXT:    v_and_b32_e32 v6, 1, v6
 ; GFX10_W64-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v6
 ; GFX10_W64-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
@@ -104,7 +98,6 @@ define double @v_div_fmas_f64(double %a, double %b, double %c, i1 %d) {
 ; GFX11_W32-LABEL: v_div_fmas_f64:
 ; GFX11_W32:       ; %bb.0:
 ; GFX11_W32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11_W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11_W32-NEXT:    v_and_b32_e32 v6, 1, v6
 ; GFX11_W32-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v6
 ; GFX11_W32-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]
@@ -113,7 +106,6 @@ define double @v_div_fmas_f64(double %a, double %b, double %c, i1 %d) {
 ; GFX11_W64-LABEL: v_div_fmas_f64:
 ; GFX11_W64:       ; %bb.0:
 ; GFX11_W64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11_W64-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11_W64-NEXT:    v_and_b32_e32 v6, 1, v6
 ; GFX11_W64-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v6
 ; GFX11_W64-NEXT:    v_div_fmas_f64 v[0:1], v[0:1], v[2:3], v[4:5]

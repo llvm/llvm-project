@@ -443,7 +443,6 @@ libcxx/include/scoped_allocator
 libcxx/include/semaphore
 libcxx/include/set
 libcxx/include/setjmp.h
-libcxx/include/shared_mutex
 libcxx/include/span
 libcxx/include/__split_buffer
 libcxx/include/sstream
@@ -555,7 +554,6 @@ libcxx/src/optional.cpp
 libcxx/src/random.cpp
 libcxx/src/random_shuffle.cpp
 libcxx/src/regex.cpp
-libcxx/src/shared_mutex.cpp
 libcxx/src/stdexcept.cpp
 libcxx/src/std_stream.h
 libcxx/src/string.cpp

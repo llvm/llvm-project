@@ -544,9 +544,15 @@ hlfir::buildEvaluationSchedule(hlfir::OrderedAssignmentTreeOpInterface root,
     scheduler.startIndependentEvaluationGroup();
     scheduler.saveEvaluationIfConflict(assign.getRhsRegion(),
                                        leafRegionsMayOnlyRead);
-    scheduler.saveEvaluationIfConflict(assign.getLhsRegion(),
-                                       leafRegionsMayOnlyRead,
-                                       /*yieldIsImplicitRead=*/false);
+    // There is no point to save the LHS outside of Forall and assignment to a
+    // vector subscripted LHS because the LHS is already fully evaluated and
+    // saved in the resulting SSA address value (that may be a descriptor or
+    // descriptor address).
+    if (mlir::isa<hlfir::ForallOp>(root.getOperation()) ||
+        mlir::isa<hlfir::ElementalAddrOp>(assign.getLhsRegion().back().back()))
+      scheduler.saveEvaluationIfConflict(assign.getLhsRegion(),
+                                         leafRegionsMayOnlyRead,
+                                         /*yieldIsImplicitRead=*/false);
     scheduler.finishIndependentEvaluationGroup();
     scheduler.finishSchedulingAssignment(assign);
   }

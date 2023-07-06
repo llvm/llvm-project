@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 #define LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 
-#include "include/sys/syscall.h" // For syscall numbers.
-#include "include/threads.h"     // For values like thrd_success etc.
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/threads/linux/futex_word.h"
@@ -18,6 +16,8 @@
 
 #include <linux/futex.h> // For futex operations.
 #include <stdint.h>
+#include <sys/syscall.h> // For syscall numbers.
+#include <threads.h>     // For values like thrd_success etc.
 
 namespace __llvm_libc {
 

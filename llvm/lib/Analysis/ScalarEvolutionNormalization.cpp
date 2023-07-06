@@ -96,7 +96,8 @@ NormalizeDenormalizeRewriter::visitAddRecExpr(const SCEVAddRecExpr *AR) {
 
 const SCEV *llvm::normalizeForPostIncUse(const SCEV *S,
                                          const PostIncLoopSet &Loops,
-                                         ScalarEvolution &SE) {
+                                         ScalarEvolution &SE,
+                                         bool CheckInvertible) {
   if (Loops.empty())
     return S;
   auto Pred = [&](const SCEVAddRecExpr *AR) {
@@ -106,7 +107,7 @@ const SCEV *llvm::normalizeForPostIncUse(const SCEV *S,
       NormalizeDenormalizeRewriter(Normalize, Pred, SE).visit(S);
   const SCEV *Denormalized = denormalizeForPostIncUse(Normalized, Loops, SE);
   // If the normalized expression isn't invertible.
-  if (Denormalized != S)
+  if (CheckInvertible && Denormalized != S)
     return nullptr;
   return Normalized;
 }

@@ -736,13 +736,25 @@ class CommandLineCompletionTestCase(TestBase):
         self.runCmd("type synthetic add -x Hoo -l test")
         self.complete_from_to("type synthetic delete ", ["Hoo"])
 
-    @skipIf(archs=no_match(["x86_64"]))
-    def test_register_read_and_write_on_x86(self):
-        """Test the completion of the commands register read and write on x86"""
-
+    def test_register_no_complete(self):
         # The tab completion for "register read/write"  won't work without a running process.
         self.complete_from_to("register read ", "register read ")
         self.complete_from_to("register write ", "register write ")
+        self.complete_from_to("register info ", "register info ")
+
+        self.build()
+        self.runCmd("target create {}".format(self.getBuildArtifact("a.out")))
+        self.runCmd("run")
+
+        # Once a program has finished you have an execution context but no register
+        # context so completion cannot work.
+        self.complete_from_to("register read ", "register read ")
+        self.complete_from_to("register write ", "register write ")
+        self.complete_from_to("register info ", "register info ")
+
+    @skipIf(archs=no_match(["x86_64"]))
+    def test_register_read_and_write_on_x86(self):
+        """Test the completion of the commands register read and write on x86"""
 
         self.build()
         self.main_source_spec = lldb.SBFileSpec("main.cpp")

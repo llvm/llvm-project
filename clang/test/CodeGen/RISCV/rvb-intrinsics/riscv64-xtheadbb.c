@@ -33,9 +33,10 @@ int clo_32(int a) {
 // RV64XTHEADBB-NEXT:    store i64 [[A:%.*]], ptr [[A_ADDR]], align 8
 // RV64XTHEADBB-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
 // RV64XTHEADBB-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[TMP0]], i1 false)
-// RV64XTHEADBB-NEXT:    ret i64 [[TMP1]]
+// RV64XTHEADBB-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP1]] to i32
+// RV64XTHEADBB-NEXT:    ret i32 [[CAST]]
 //
-long clz_64(long a) {
+int clz_64(long a) {
   return __builtin_riscv_clz_64(a);
 }
 
@@ -46,8 +47,9 @@ long clz_64(long a) {
 // RV64XTHEADBB-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
 // RV64XTHEADBB-NEXT:    [[NOT:%.*]] = xor i64 [[TMP0]], -1
 // RV64XTHEADBB-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[NOT]], i1 false)
-// RV64XTHEADBB-NEXT:    ret i64 [[TMP1]]
+// RV64XTHEADBB-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP1]] to i32
+// RV64XTHEADBB-NEXT:    ret i32 [[CAST]]
 //
-long clo_64(long a) {
+int clo_64(long a) {
   return __builtin_riscv_clz_64(~a);
 }

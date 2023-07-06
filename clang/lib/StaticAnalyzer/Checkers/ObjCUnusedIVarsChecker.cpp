@@ -12,16 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
+#include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
 using namespace ento;
@@ -48,9 +49,7 @@ static void Scan(IvarUsageMap& M, const Stmt *S) {
   }
 
   if (const PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(S))
-    for (PseudoObjectExpr::const_semantics_iterator
-        i = POE->semantics_begin(), e = POE->semantics_end(); i != e; ++i) {
-      const Expr *sub = *i;
+    for (const Expr *sub : POE->semantics()) {
       if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(sub))
         sub = OVE->getSourceExpr();
       Scan(M, sub);
@@ -134,8 +133,8 @@ static void checkObjCUnusedIvar(const ObjCImplementationDecl *D,
 
   // Any potentially unused ivars?
   bool hasUnused = false;
-  for (IvarUsageMap::iterator I = M.begin(), E = M.end(); I!=E; ++I)
-    if (I->second == Unused) {
+  for (IVarState State : llvm::make_second_range(M))
+    if (State == Unused) {
       hasUnused = true;
       break;
     }
@@ -152,16 +151,16 @@ static void checkObjCUnusedIvar(const ObjCImplementationDecl *D,
   Scan(M, D->getDeclContext(), SM.getFileID(D->getLocation()), SM);
 
   // Find ivars that are unused.
-  for (IvarUsageMap::iterator I = M.begin(), E = M.end(); I!=E; ++I)
-    if (I->second == Unused) {
+  for (auto [Ivar, State] : M)
+    if (State == Unused) {
       std::string sbuf;
       llvm::raw_string_ostream os(sbuf);
-      os << "Instance variable '" << *I->first << "' in class '" << *ID
+      os << "Instance variable '" << *Ivar << "' in class '" << *ID
          << "' is never used by the methods in its @implementation "
             "(although it may be used by category methods).";
 
       PathDiagnosticLocation L =
-        PathDiagnosticLocation::create(I->first, BR.getSourceManager());
+          PathDiagnosticLocation::create(Ivar, BR.getSourceManager());
       BR.EmitBasicReport(D, Checker, "Unused instance variable", "Optimization",
                          os.str(), L);
     }

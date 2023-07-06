@@ -679,7 +679,6 @@ define float @v_test_copysign_f32(float %mag, float %sign) {
 ; GFX11-LABEL: v_test_copysign_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.copysign.f32(float %mag, float %sign)
@@ -696,7 +695,6 @@ define float @v_test_copysign_f32_0(float %mag) {
 ; GFX11-LABEL: v_test_copysign_f32_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.copysign.f32(float %mag, float 0.0)
@@ -713,7 +711,6 @@ define float @v_test_copysign_f32_1(float %mag) {
 ; GFX11-LABEL: v_test_copysign_f32_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.copysign.f32(float %mag, float 1.0)
@@ -730,7 +727,6 @@ define float @v_test_copysign_f32_10(float %mag) {
 ; GFX11-LABEL: v_test_copysign_f32_10:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.copysign.f32(float %mag, float 10.0)
@@ -747,7 +743,6 @@ define float @v_test_copysign_f32_neg1(float %mag) {
 ; GFX11-LABEL: v_test_copysign_f32_neg1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_or_b32_e32 v0, 0x80000000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.copysign.f32(float %mag, float -1.0)
@@ -764,7 +759,6 @@ define float @v_test_copysign_f32_neg10(float %mag) {
 ; GFX11-LABEL: v_test_copysign_f32_neg10:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_or_b32_e32 v0, 0x80000000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.copysign.f32(float %mag, float -10.0)
@@ -783,7 +777,6 @@ define <2 x float> @v_test_copysign_v2f32(<2 x float> %mag, <2 x float> %sign) {
 ; GFX11-LABEL: v_test_copysign_v2f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v2
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -802,7 +795,6 @@ define <2 x float> @v_test_copysign_v2f32_0(<2 x float> %mag) {
 ; GFX11-LABEL: v_test_copysign_v2f32_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -821,7 +813,6 @@ define <2 x float> @v_test_copysign_v2f32_neg1(<2 x float> %mag) {
 ; GFX11-LABEL: v_test_copysign_v2f32_neg1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_or_b32_e32 v0, 0x80000000, v0
 ; GFX11-NEXT:    v_or_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -842,7 +833,6 @@ define <3 x float> @v_test_copysign_v3f32(<3 x float> %mag, <3 x float> %sign) {
 ; GFX11-LABEL: v_test_copysign_v3f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v3
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v4
 ; GFX11-NEXT:    v_bfi_b32 v2, 0x7fffffff, v2, v5
@@ -865,7 +855,6 @@ define <4 x float> @v_test_copysign_v4f32(<4 x float> %mag, <4 x float> %sign) {
 ; GFX11-LABEL: v_test_copysign_v4f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v4
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v5
 ; GFX11-NEXT:    v_bfi_b32 v2, 0x7fffffff, v2, v6
@@ -890,7 +879,6 @@ define <5 x float> @v_test_copysign_v5f32(<5 x float> %mag, <5 x float> %sign) {
 ; GFX11-LABEL: v_test_copysign_v5f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fffffff, v0, v5
 ; GFX11-NEXT:    v_bfi_b32 v1, 0x7fffffff, v1, v6
 ; GFX11-NEXT:    v_bfi_b32 v2, 0x7fffffff, v2, v7

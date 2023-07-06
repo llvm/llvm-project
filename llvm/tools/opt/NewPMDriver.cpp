@@ -321,17 +321,15 @@ static void registerEPCallbacks(PassBuilder &PB) {
   llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
 #include "llvm/Support/Extension.def"
 
-bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
-                           TargetLibraryInfoImpl *TLII, ToolOutputFile *Out,
-                           ToolOutputFile *ThinLTOLinkOut,
-                           ToolOutputFile *OptRemarkFile,
-                           StringRef PassPipeline,
-                           ArrayRef<PassPlugin> PassPlugins,
-                           OutputKind OK, VerifierKind VK,
-                           bool ShouldPreserveAssemblyUseListOrder,
-                           bool ShouldPreserveBitcodeUseListOrder,
-                           bool EmitSummaryIndex, bool EmitModuleHash,
-                           bool EnableDebugify, bool VerifyDIPreserve) {
+bool llvm::runPassPipeline(
+    StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
+    ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
+    ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
+    ArrayRef<PassPlugin> PassPlugins, OutputKind OK, VerifierKind VK,
+    bool ShouldPreserveAssemblyUseListOrder,
+    bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
+    bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
+    bool UnifiedLTO) {
   bool VerifyEachPass = VK == VK_VerifyEachPass;
 
   auto FS = vfs::getRealFileSystem();
@@ -416,6 +414,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   // to false above so we shouldn't necessarily need to check whether or not the
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
+  PTO.UnifiedLTO = UnifiedLTO;
   PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 

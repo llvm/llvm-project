@@ -108,6 +108,5 @@ static_library("MCTargetDesc") {
     "R600InstPrinter.cpp",
     "R600MCCodeEmitter.cpp",
     "R600MCTargetDesc.cpp",
-    "SIMCCodeEmitter.cpp",
   ]
 }

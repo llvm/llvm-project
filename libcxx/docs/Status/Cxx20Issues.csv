@@ -203,7 +203,7 @@
 "`3233 <https://wg21.link/LWG3233>`__","Broken requirements for ``shared_ptr``\  converting constructors","Prague","",""
 "`3237 <https://wg21.link/LWG3237>`__","LWG 3038 and 3190 have inconsistent PRs","Prague","|Complete|","16.0"
 "`3238 <https://wg21.link/LWG3238>`__","Insufficiently-defined behavior of ``std::function``\  deduction guides","Prague","",""
-"`3242 <https://wg21.link/LWG3242>`__","``std::format``\ : missing rules for ``arg-id``\  in ``width``\  and ``precision``\ ","Prague","|Complete|","Clang 14","|format|"
+"`3242 <https://wg21.link/LWG3242>`__","``std::format``\ : missing rules for ``arg-id``\  in ``width``\  and ``precision``\ ","Prague","|Complete|","14.0","|format|"
 "`3243 <https://wg21.link/LWG3243>`__","``std::format``\  and negative zeroes","Prague","|Complete|","14.0","|format|"
 "`3247 <https://wg21.link/LWG3247>`__","``ranges::iter_move``\  should perform ADL-only lookup of ``iter_move``\ ","Prague","|Complete|","15.0","|ranges|"
 "`3248 <https://wg21.link/LWG3248>`__","``std::format``\  ``#b``\ , ``#B``\ , ``#o``\ , ``#x``\ , and ``#X``\   presentation types misformat negative numbers","Prague","|Complete|","14.0","|format|"

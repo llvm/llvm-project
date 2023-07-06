@@ -2304,13 +2304,6 @@ def ADLPWriteResGroup264 : SchedWriteRes<[ADLPPort01_05, ADLPPort02_03_11]> {
 def : InstRW<[ADLPWriteResGroup264, ReadAfterVecYLd], (instregex "^VSHUFP(D|S)Yrmi$")>;
 def : InstRW<[ADLPWriteResGroup264, ReadAfterVecYLd], (instrs VPBLENDWYrmi)>;
 
-def ADLPWriteResGroup265 : SchedWriteRes<[ADLPPort00_01, ADLPPort02_03_11]> {
-  let Latency = 13;
-  let NumMicroOps = 2;
-}
-def : InstRW<[ADLPWriteResGroup265], (instregex "^VPDP(BU|WS)SD((SY)?)rm$",
-                                                "^VPDP(BU|WS)SD(S|Y)rm$")>;
-
 def ADLPWriteResGroup266 : SchedWriteRes<[ADLPPort00_01, ADLPPort01_05, ADLPPort02_03_11]> {
   let ResourceCycles = [1, 2, 1];
   let Latency = 10;

@@ -1037,7 +1037,7 @@ class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
                       string ConvertMethod = "nullptr">
     : CustomOperand<Type, 1, Name> {
   let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
     "AMDGPUOperand::"#ImmTy#", "#ConvertMethod#"); }";
 }
@@ -1045,20 +1045,24 @@ class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
 class NamedBitOperand<string Id, string Name = NAME>
     : CustomOperand<i1, 1, Name> {
   let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
+  let PrintMethod = "[this](const MCInst *MI, unsigned OpNo, "#
+    "const MCSubtargetInfo &STI, raw_ostream &O) { "#
+    "printNamedBit(MI, OpNo, O, \""#Id#"\"); }";
 }
 
 class DefaultOperand<CustomOperand Op, int Value>
   : OperandWithDefaultOps<Op.Type, (ops (Op.Type Value))>,
     CustomOperandProps<1, Op.ParserMatchClass.Name> {
   let ParserMethod = Op.ParserMatchClass.ParserMethod;
+  let PrintMethod = Op.PrintMethod;
 }
 
 class SDWAOperand<string Id, string Name = NAME>
     : CustomOperand<i32, 1, Name> {
   let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseSDWASel(Operands, \""#Id#"\", AMDGPUOperand::"#ImmTy#"); }";
 }
 
@@ -1066,7 +1070,7 @@ class ArrayOperand0<string Id, string Name = NAME>
   : OperandWithDefaultOps<i32, (ops (i32 0))>,
     CustomOperandProps<1, Name> {
   let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseOperandArrayWithPrefix(\""#Id#"\", Operands, "#
     "AMDGPUOperand::"#ImmTy#"); }";
 }
@@ -1094,8 +1098,6 @@ def CPol_0 : DefaultOperand<CPol, 0>;
 def CPol_GLC1 : DefaultOperand<CPol, 1>;
 
 def TFE : NamedBitOperand<"tfe">;
-def SWZ : NamedBitOperand<"swz">;
-def SWZ_0 : DefaultOperand<SWZ, 0>;
 def UNorm : NamedBitOperand<"unorm">;
 def DA : NamedBitOperand<"da">;
 def R128A16 : CustomOperand<i1, 1>;
@@ -1142,29 +1144,19 @@ def exp_tgt : CustomOperand<i32, 0, "ExpTgt">;
 def wait_vdst : NamedIntOperand<i8, "wait_vdst", "WaitVDST">;
 def wait_exp : NamedIntOperand<i8, "wait_exp", "WaitEXP">;
 
-class KImmMatchClass<int size> : AsmOperandClass {
-  let Name = "KImmFP"#size;
-  let PredicateMethod = "isKImmFP"#size;
-  let ParserMethod = "parseImm";
-  let RenderMethod = "addKImmFP"#size#"Operands";
-}
-
-class kimmOperand<ValueType vt> : Operand<vt> {
+class KImmFPOperand<ValueType vt> : ImmOperand<vt> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_KIMM"#vt.Size;
   let PrintMethod = "printU"#vt.Size#"ImmOperand";
-  let ParserMatchClass = !cast<AsmOperandClass>("KImmFP"#vt.Size#"MatchClass");
-  let DecoderMethod = "decodeOperand_f"#vt.Size#"kimm";
+  let DecoderMethod = "decodeOperand_KImmFP";
 }
 
 // 32-bit VALU immediate operand that uses the constant bus.
-def KImmFP32MatchClass : KImmMatchClass<32>;
-def f32kimm : kimmOperand<i32>;
+def KImmFP32 : KImmFPOperand<i32>;
 
 // 32-bit VALU immediate operand with a 16-bit value that uses the
 // constant bus.
-def KImmFP16MatchClass : KImmMatchClass<16>;
-def f16kimm : kimmOperand<i16>;
+def KImmFP16 : KImmFPOperand<i16>;
 
 class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithFP"#opSize#"InputMods";

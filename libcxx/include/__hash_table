@@ -1623,10 +1623,12 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique_prepare(
         if (__ndptr != nullptr)
         {
             for (__ndptr = __ndptr->__next_; __ndptr != nullptr &&
-                                             std::__constrain_hash(__ndptr->__hash(), __bc) == __chash;
+                    (__ndptr->__hash() == __hash ||
+                     std::__constrain_hash(__ndptr->__hash(), __bc) == __chash);
                                                      __ndptr = __ndptr->__next_)
             {
-                if (key_eq()(__ndptr->__upcast()->__value_, __value))
+                if ((__ndptr->__hash() == __hash) &&
+                    key_eq()(__ndptr->__upcast()->__value_, __value))
                     return __ndptr;
             }
         }
@@ -1835,7 +1837,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
                 (__nd->__hash() == __hash || std::__constrain_hash(__nd->__hash(), __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
-                if (key_eq()(__nd->__upcast()->__value_, __k))
+                if ((__nd->__hash() == __hash) &&
+                    key_eq()(__nd->__upcast()->__value_, __k))
                     goto __done;
             }
         }

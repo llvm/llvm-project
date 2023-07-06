@@ -126,12 +126,13 @@ Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
 void ByteCodeEmitter::emitLabel(LabelTy Label) {
   const size_t Target = Code.size();
   LabelOffsets.insert({Label, Target});
-  auto It = LabelRelocs.find(Label);
-  if (It != LabelRelocs.end()) {
+
+  if (auto It = LabelRelocs.find(Label);
+      It != LabelRelocs.end()) {
     for (unsigned Reloc : It->second) {
       using namespace llvm::support;
 
-      /// Rewrite the operand of all jumps to this label.
+      // Rewrite the operand of all jumps to this label.
       void *Location = Code.data() + Reloc - align(sizeof(int32_t));
       assert(aligned(Location));
       const int32_t Offset = Target - static_cast<int64_t>(Reloc);
@@ -148,10 +149,9 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
   assert(aligned(Position));
 
   // If target is known, compute jump offset.
-  auto It = LabelOffsets.find(Label);
-  if (It != LabelOffsets.end()) {
+  if (auto It = LabelOffsets.find(Label);
+      It != LabelOffsets.end())
     return It->second - Position;
-  }
 
   // Otherwise, record relocation and return dummy offset.
   LabelRelocs[Label].push_back(Position);
@@ -199,14 +199,14 @@ template <typename... Tys>
 bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &... Args, const SourceInfo &SI) {
   bool Success = true;
 
-  /// The opcode is followed by arguments. The source info is
-  /// attached to the address after the opcode.
+  // The opcode is followed by arguments. The source info is
+  // attached to the address after the opcode.
   emit(P, Code, Op, Success);
   if (SI)
     SrcMap.emplace_back(Code.size(), SI);
 
-  /// The initializer list forces the expression to be evaluated
-  /// for each argument in the variadic template, in order.
+  // The initializer list forces the expression to be evaluated
+  // for each argument in the variadic template, in order.
   (void)std::initializer_list<int>{(emit(P, Code, Args, Success), 0)...};
 
   return Success;

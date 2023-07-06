@@ -259,3 +259,17 @@ func.func @regression_eliminate_equivalent_only(%sz: index, %p: index, %t0: tens
   }
   func.return %28 : tensor<?x16xi8>
 }
+
+// -----
+
+// CHECK-LABEL: func.func @regression_multiple_insertion_points(
+//   CHECK-NOT:   memref.alloc
+func.func @regression_multiple_insertion_points(%t1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  %empty = tensor.empty() : tensor<2x5xf32>
+  %f0 = arith.constant 5.5 : f32
+  %0 = "test.foo"() : () -> (index)
+  %1 = "test.bar"() : () -> (index)
+  %filled = linalg.fill ins(%f0 : f32) outs(%empty : tensor<2x5xf32>) -> tensor<2x5xf32>
+  %2 = tensor.insert_slice %filled into %t1 [%0, %1] [2, 5] [1, 1] : tensor<2x5xf32> into tensor<?x?xf32>
+  return %2 : tensor<?x?xf32>
+}

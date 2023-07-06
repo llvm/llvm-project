@@ -820,8 +820,8 @@ const ObjCPropertyDecl *ObjCDeallocChecker::findShadowedPropertyDecl(
 
   IdentifierInfo *ID = PropDecl->getIdentifier();
   DeclContext::lookup_result R = CatDecl->getClassInterface()->lookup(ID);
-  for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E; ++I) {
-    auto *ShadowedPropDecl = dyn_cast<ObjCPropertyDecl>(*I);
+  for (const NamedDecl *D : R) {
+    auto *ShadowedPropDecl = dyn_cast<ObjCPropertyDecl>(D);
     if (!ShadowedPropDecl)
       continue;
 

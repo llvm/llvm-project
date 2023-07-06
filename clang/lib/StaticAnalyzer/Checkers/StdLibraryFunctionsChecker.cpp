@@ -49,6 +49,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -941,11 +942,9 @@ void StdLibraryFunctionsChecker::RangeConstraint::applyOnWithinRange(
   if (Ranges.empty())
     return;
 
-  const IntRangeVector &R = getRanges();
-  size_t E = R.size();
-  for (size_t I = 0; I != E; ++I) {
-    const llvm::APSInt &Min = BVF.getValue(R[I].first, ArgT);
-    const llvm::APSInt &Max = BVF.getValue(R[I].second, ArgT);
+  for (auto [Start, End] : getRanges()) {
+    const llvm::APSInt &Min = BVF.getValue(Start, ArgT);
+    const llvm::APSInt &Max = BVF.getValue(End, ArgT);
     assert(Min <= Max);
     if (!F(Min, Max))
       return;
@@ -1376,12 +1375,11 @@ bool StdLibraryFunctionsChecker::Signature::matches(
   }
 
   // Check the argument types.
-  for (size_t I = 0, E = ArgTys.size(); I != E; ++I) {
-    QualType ArgTy = ArgTys[I];
+  for (auto [Idx, ArgTy] : llvm::enumerate(ArgTys)) {
     if (isIrrelevant(ArgTy))
       continue;
     QualType FDArgTy =
-        RemoveRestrict(FD->getParamDecl(I)->getType().getCanonicalType());
+        RemoveRestrict(FD->getParamDecl(Idx)->getType().getCanonicalType());
     if (ArgTy != FDArgTy)
       return false;
   }

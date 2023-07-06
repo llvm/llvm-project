@@ -37,9 +37,9 @@ case #T[0]:                                                                     
   break;
 
 #if TEST_STD_VER > 20
-  constexpr std::string_view types = "aAbBcdeEfFgGopsxX?";
+  constexpr std::string_view types = "aAbBcdeEfFgGopPsxX?";
 #else
-  constexpr std::string_view types = "aAbBcdeEfFgGopsxX";
+  constexpr std::string_view types = "aAbBcdeEfFgGopPsxX";
 #endif
 
   for (auto type : types) {
@@ -61,6 +61,7 @@ case #T[0]:                                                                     
       CASE(G)
       CASE(o)
       CASE(p)
+      CASE(P)
       CASE(s)
       CASE(x)
       CASE(X)
@@ -2547,6 +2548,11 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '0x0:::'"), SV("answer is '{::<6}'"), P(nullptr));
   check(SV("answer is ':0x0::'"), SV("answer is '{::^6}'"), P(nullptr));
 
+  // Test whether zero padding is ignored
+  check(SV("answer is ':::0x0'"), SV("answer is '{::>06}'"), P(nullptr));
+  check(SV("answer is '0x0:::'"), SV("answer is '{::<06}'"), P(nullptr));
+  check(SV("answer is ':0x0::'"), SV("answer is '{::^06}'"), P(nullptr));
+
   // *** Sign ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), P(nullptr));
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), P(nullptr));
@@ -2556,7 +2562,9 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), P(nullptr));
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), P(nullptr));
+  check(SV("answer is '0x0000'"), SV("answer is '{:06}'"), P(nullptr));
+  check(SV("answer is '0x0000'"), SV("answer is '{:06p}'"), P(nullptr));
+  check(SV("answer is '0X0000'"), SV("answer is '{:06P}'"), P(nullptr));
 
   // *** precision ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), P(nullptr));
@@ -2565,7 +2573,7 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), P(nullptr));
 
   // *** type ***
-  for (const auto& fmt : invalid_types<CharT>("p"))
+  for (const auto& fmt : invalid_types<CharT>("pP"))
     check_exception("The format-spec type has a type not supported for a pointer argument", fmt, P(nullptr));
 }
 

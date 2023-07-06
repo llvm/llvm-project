@@ -28,6 +28,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/ImmutableMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <utility>
@@ -231,7 +232,7 @@ public:
 
   void printJson(raw_ostream &Out, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const {
-    for (iterator I = begin(); I != end(); ++I) {
+    for (iterator I = begin(), E = end(); I != E; ++I) {
       // TODO: We might need a .printJson for I.getKey() as well.
       Indent(Out, Space, IsDot)
           << "{ \"cluster\": \"" << I.getKey() << "\", \"pointer\": \""
@@ -239,18 +240,19 @@ public:
 
       ++Space;
       const ClusterBindings &CB = I.getData();
-      for (ClusterBindings::iterator CI = CB.begin(); CI != CB.end(); ++CI) {
+      for (ClusterBindings::iterator CI = CB.begin(), CE = CB.end(); CI != CE;
+           ++CI) {
         Indent(Out, Space, IsDot) << "{ " << CI.getKey() << ", \"value\": ";
         CI.getData().printJson(Out, /*AddQuotes=*/true);
         Out << " }";
-        if (std::next(CI) != CB.end())
+        if (std::next(CI) != CE)
           Out << ',';
         Out << NL;
       }
 
       --Space;
       Indent(Out, Space, IsDot) << "]}";
-      if (std::next(I) != end())
+      if (std::next(I) != E)
         Out << ',';
       Out << NL;
     }
@@ -644,16 +646,13 @@ public: // Part of public interface to class.
 
   void iterBindings(Store store, BindingsHandler& f) override {
     RegionBindingsRef B = getRegionBindings(store);
-    for (RegionBindingsRef::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-      const ClusterBindings &Cluster = I.getData();
-      for (ClusterBindings::iterator CI = Cluster.begin(), CE = Cluster.end();
-           CI != CE; ++CI) {
-        const BindingKey &K = CI.getKey();
-        if (!K.isDirect())
+    for (const auto &[Region, Cluster] : B) {
+      for (const auto &[Key, Value] : Cluster) {
+        if (!Key.isDirect())
           continue;
-        if (const SubRegion *R = dyn_cast<SubRegion>(K.getRegion())) {
+        if (const SubRegion *R = dyn_cast<SubRegion>(Key.getRegion())) {
           // FIXME: Possibly incorporate the offset?
-          if (!f.HandleBinding(*this, store, R, CI.getData()))
+          if (!f.HandleBinding(*this, store, R, Value))
             return;
         }
       }
@@ -874,9 +873,8 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
       Length = FR->getDecl()->getBitWidthValue(SVB.getContext());
   }
 
-  for (ClusterBindings::iterator I = Cluster.begin(), E = Cluster.end();
-       I != E; ++I) {
-    BindingKey NextKey = I.getKey();
+  for (const auto &StoreEntry : Cluster) {
+    BindingKey NextKey = StoreEntry.first;
     if (NextKey.getRegion() == TopKey.getRegion()) {
       // FIXME: This doesn't catch the case where we're really invalidating a
       // region with a symbolic offset. Example:
@@ -887,7 +885,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
           NextKey.getOffset() - TopKey.getOffset() < Length) {
         // Case 1: The next binding is inside the region we're invalidating.
         // Include it.
-        Bindings.push_back(*I);
+        Bindings.push_back(StoreEntry);
 
       } else if (NextKey.getOffset() == TopKey.getOffset()) {
         // Case 2: The next binding is at the same offset as the region we're
@@ -897,7 +895,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
         // FIXME: This is probably incorrect; consider invalidating an outer
         // struct whose first field is bound to a LazyCompoundVal.
         if (IncludeAllDefaultBindings || NextKey.isDirect())
-          Bindings.push_back(*I);
+          Bindings.push_back(StoreEntry);
       }
 
     } else if (NextKey.hasSymbolicOffset()) {
@@ -908,13 +906,13 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
         // we'll be conservative and include it.
         if (IncludeAllDefaultBindings || NextKey.isDirect())
           if (isCompatibleWithFields(NextKey, FieldsInSymbolicSubregions))
-            Bindings.push_back(*I);
+            Bindings.push_back(StoreEntry);
       } else if (const SubRegion *BaseSR = dyn_cast<SubRegion>(Base)) {
         // Case 4: The next key is symbolic, but we changed a known
         // super-region. In this case the binding is certainly included.
         if (BaseSR->isSubRegionOf(Top))
           if (isCompatibleWithFields(NextKey, FieldsInSymbolicSubregions))
-            Bindings.push_back(*I);
+            Bindings.push_back(StoreEntry);
       }
     }
   }
@@ -956,10 +954,8 @@ RegionStoreManager::removeSubRegionBindings(RegionBindingsConstRef B,
                            /*IncludeAllDefaultBindings=*/false);
 
   ClusterBindingsRef Result(*Cluster, CBFactory);
-  for (SmallVectorImpl<BindingPair>::const_iterator I = Bindings.begin(),
-                                                    E = Bindings.end();
-       I != E; ++I)
-    Result = Result.remove(I->first);
+  for (BindingKey Key : llvm::make_first_range(Bindings))
+    Result = Result.remove(Key);
 
   // If we're invalidating a region with a symbolic offset, we need to make sure
   // we don't treat the base region as uninitialized anymore.
@@ -1056,8 +1052,8 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
                        RegionAndSymbolInvalidationTraits::TK_PreserveContents);
 
   if (C) {
-    for (ClusterBindings::iterator I = C->begin(), E = C->end(); I != E; ++I)
-      VisitBinding(I.getData());
+    for (SVal Val : llvm::make_second_range(*C))
+      VisitBinding(Val);
 
     // Invalidate regions contents.
     if (!PreserveRegionsContents)
@@ -1093,10 +1089,8 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
   // BlockDataRegion?  If so, invalidate captured variables that are passed
   // by reference.
   if (const BlockDataRegion *BR = dyn_cast<BlockDataRegion>(baseR)) {
-    for (BlockDataRegion::referenced_vars_iterator
-         BI = BR->referenced_vars_begin(), BE = BR->referenced_vars_end() ;
-         BI != BE; ++BI) {
-      const VarRegion *VR = BI.getCapturedRegion();
+    for (auto Var : BR->referenced_vars()) {
+      const VarRegion *VR = Var.getCapturedRegion();
       const VarDecl *VD = VR->getDecl();
       if (VD->hasAttr<BlocksAttr>() || !VD->hasLocalStorage()) {
         AddToWorkList(VR);
@@ -1200,9 +1194,7 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
       if (!C)
         goto conjure_default;
 
-      for (ClusterBindings::iterator I = C->begin(), E = C->end(); I != E;
-           ++I) {
-        const BindingKey &BK = I.getKey();
+      for (const auto &[BK, V] : *C) {
         std::optional<uint64_t> ROffset =
             BK.hasSymbolicOffset() ? std::optional<uint64_t>() : BK.getOffset();
 
@@ -1213,10 +1205,9 @@ void InvalidateRegionsWorker::VisitCluster(const MemRegion *baseR,
              (UpperOverflow &&
               (*ROffset >= LowerOffset || *ROffset < UpperOffset)) ||
              (LowerOffset == UpperOffset && *ROffset == LowerOffset))) {
-          B = B.removeBinding(I.getKey());
+          B = B.removeBinding(BK);
           // Bound symbolic regions need to be invalidated for dead symbol
           // detection.
-          SVal V = I.getData();
           const MemRegion *R = V.getAsRegion();
           if (isa_and_nonnull<SymbolicRegion>(R))
             VisitBinding(V);
@@ -1289,12 +1280,8 @@ RegionStoreManager::invalidateGlobalRegion(MemRegion::Kind K,
 void RegionStoreManager::populateWorkList(InvalidateRegionsWorker &W,
                                           ArrayRef<SVal> Values,
                                           InvalidatedRegions *TopLevelRegions) {
-  for (ArrayRef<SVal>::iterator I = Values.begin(),
-                                E = Values.end(); I != E; ++I) {
-    SVal V = *I;
-    if (std::optional<nonloc::LazyCompoundVal> LCS =
-            V.getAs<nonloc::LazyCompoundVal>()) {
-
+  for (SVal V : Values) {
+    if (auto LCS = V.getAs<nonloc::LazyCompoundVal>()) {
       for (SVal S : getInterestingValues(*LCS))
         if (const MemRegion *R = S.getAsRegion())
           W.AddToWorkList(R);
@@ -2281,10 +2268,7 @@ RegionStoreManager::getInterestingValues(nonloc::LazyCompoundVal LCV) {
   SmallVector<BindingPair, 32> Bindings;
   collectSubRegionBindings(Bindings, svalBuilder, *Cluster, LazyR,
                            /*IncludeAllDefaultBindings=*/true);
-  for (SmallVectorImpl<BindingPair>::const_iterator I = Bindings.begin(),
-                                                    E = Bindings.end();
-       I != E; ++I) {
-    SVal V = I->second;
+  for (SVal V : llvm::make_second_range(Bindings)) {
     if (V.isUnknownOrUndef() || V.isConstant())
       continue;
 
@@ -2609,11 +2593,11 @@ std::optional<RegionBindingsRef> RegionStoreManager::tryBindSmallStruct(
 
   RegionBindingsRef NewB = B;
 
-  for (FieldVector::iterator I = Fields.begin(), E = Fields.end(); I != E; ++I){
-    const FieldRegion *SourceFR = MRMgr.getFieldRegion(*I, LCV.getRegion());
+  for (const FieldDecl *Field : Fields) {
+    const FieldRegion *SourceFR = MRMgr.getFieldRegion(Field, LCV.getRegion());
     SVal V = getBindingForField(getRegionBindings(LCV.getStore()), SourceFR);
 
-    const FieldRegion *DestFR = MRMgr.getFieldRegion(*I, R);
+    const FieldRegion *DestFR = MRMgr.getFieldRegion(Field, R);
     NewB = bind(NewB, loc::MemRegionVal(DestFR), V);
   }
 
@@ -2829,11 +2813,11 @@ void RemoveDeadBindingsWorker::VisitCluster(const MemRegion *baseR,
   if (const SymbolicRegion *SymR = dyn_cast<SymbolicRegion>(baseR))
     SymReaper.markLive(SymR->getSymbol());
 
-  for (ClusterBindings::iterator I = C->begin(), E = C->end(); I != E; ++I) {
+  for (const auto &[Key, Val] : *C) {
     // Element index of a binding key is live.
-    SymReaper.markElementIndicesLive(I.getKey().getRegion());
+    SymReaper.markElementIndicesLive(Key.getRegion());
 
-    VisitBinding(I.getData());
+    VisitBinding(Val);
   }
 }
 
@@ -2860,17 +2844,15 @@ void RemoveDeadBindingsWorker::VisitBinding(SVal V) {
 
     // All regions captured by a block are also live.
     if (const BlockDataRegion *BR = dyn_cast<BlockDataRegion>(R)) {
-      BlockDataRegion::referenced_vars_iterator I = BR->referenced_vars_begin(),
-                                                E = BR->referenced_vars_end();
-      for ( ; I != E; ++I)
-        AddToWorkList(I.getCapturedRegion());
+      for (auto Var : BR->referenced_vars())
+        AddToWorkList(Var.getCapturedRegion());
     }
   }
 
 
   // Update the set of live symbols.
-  for (auto SI = V.symbol_begin(), SE = V.symbol_end(); SI!=SE; ++SI)
-    SymReaper.markLive(*SI);
+  for (SymbolRef Sym : V.symbols())
+    SymReaper.markLive(Sym);
 }
 
 bool RemoveDeadBindingsWorker::UpdatePostponed() {
@@ -2878,12 +2860,10 @@ bool RemoveDeadBindingsWorker::UpdatePostponed() {
   // having done a scan.
   bool Changed = false;
 
-  for (auto I = Postponed.begin(), E = Postponed.end(); I != E; ++I) {
-    if (const SymbolicRegion *SR = *I) {
-      if (SymReaper.isLive(SR->getSymbol())) {
-        Changed |= AddToWorkList(SR);
-        *I = nullptr;
-      }
+  for (const SymbolicRegion *SR : Postponed) {
+    if (SymReaper.isLive(SR->getSymbol())) {
+      Changed |= AddToWorkList(SR);
+      SR = nullptr;
     }
   }
 
@@ -2898,9 +2878,8 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
   W.GenerateClusters();
 
   // Enqueue the region roots onto the worklist.
-  for (SymbolReaper::region_iterator I = SymReaper.region_begin(),
-       E = SymReaper.region_end(); I != E; ++I) {
-    W.AddToWorkList(*I);
+  for (const MemRegion *Reg : SymReaper.regions()) {
+    W.AddToWorkList(Reg);
   }
 
   do W.RunWorkList(); while (W.UpdatePostponed());
@@ -2908,9 +2887,7 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
   // We have now scanned the store, marking reachable regions and symbols
   // as live.  We now remove all the regions that are dead from the store
   // as well as update DSymbols with the set symbols that are now dead.
-  for (RegionBindingsRef::iterator I = B.begin(), E = B.end(); I != E; ++I) {
-    const MemRegion *Base = I.getKey();
-
+  for (const MemRegion *Base : llvm::make_first_range(B)) {
     // If the cluster has been visited, we know the region has been marked.
     // Otherwise, remove the dead entry.
     if (!W.isVisited(Base))

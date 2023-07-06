@@ -171,7 +171,6 @@ define float @fmac_sequence_simple(float %a, float %b, float %c, float %d, float
 ; GCN-LABEL: fmac_sequence_simple:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    v_fma_f32 v2, v2, v3, v4
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
 ; GCN-NEXT:    v_mov_b32_e32 v0, v2
@@ -187,7 +186,6 @@ define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %
 ; GCN-LABEL: fmac_sequence_innermost_fmul:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    v_mad_f32 v2, v2, v3, v6
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v4, v5
@@ -206,7 +204,6 @@ define float @fmac_sequence_innermost_fmul_swapped_operands(float %a, float %b, 
 ; GCN-LABEL: fmac_sequence_innermost_fmul_swapped_operands:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    v_mad_f32 v2, v2, v3, v6
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v4, v5

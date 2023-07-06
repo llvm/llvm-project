@@ -79,10 +79,9 @@ void PointerArithChecker::checkDeadSymbols(SymbolReaper &SR,
   // see http://reviews.llvm.org/D14203 for further information.
   /*ProgramStateRef State = C.getState();
   RegionStateTy RegionStates = State->get<RegionState>();
-  for (RegionStateTy::iterator I = RegionStates.begin(), E = RegionStates.end();
-       I != E; ++I) {
-    if (!SR.isLiveRegion(I->first))
-      State = State->remove<RegionState>(I->first);
+  for (const MemRegion *Reg: llvm::make_first_range(RegionStates)) {
+    if (!SR.isLiveRegion(Reg))
+      State = State->remove<RegionState>(Reg);
   }
   C.addTransition(State);*/
 }
