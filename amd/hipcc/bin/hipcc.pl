@@ -155,20 +155,17 @@ if ($HIP_PLATFORM eq "amd") {
     if($isWindows) {
         $execExtension = ".exe";
     }
-    $HIPCC="$HIP_CLANG_PATH/clang++" . $execExtension;
+    $HIPCC="\"$HIP_CLANG_PATH/clang++" . $execExtension . "\"";
 
     # If $HIPCC clang++ is not compiled, use clang instead
     if ( ! -e $HIPCC ) {
-        $HIPCC="$HIP_CLANG_PATH/clang" . $execExtension;
+        $HIPCC="\"$HIP_CLANG_PATH/clang" . $execExtension . "\"";
         $HIPLDFLAGS = "--driver-mode=g++";
     }
     # to avoid using dk linker or MSVC linker
     if($isWindows) {
         $HIPLDFLAGS .= " -fuse-ld=lld";
-        $HIPLDFLAGS .= " --ld-path=$HIP_CLANG_PATH/lld-link.exe";
-
-        # escape possible spaces in path name
-        $HIPCC =~ s/\s/\\$&/g;
+        $HIPLDFLAGS .= " --ld-path=\"$HIP_CLANG_PATH/lld-link.exe\"";
     }
 
     # get Clang RT Builtin path 
@@ -204,12 +201,12 @@ if ($HIP_PLATFORM eq "amd") {
         print ("CUDA_PATH=$CUDA_PATH\n");
     }
 
-    $HIPCC="$CUDA_PATH/bin/nvcc";
+    $HIPCC="\"$CUDA_PATH/bin/nvcc\"";
     $HIPCXXFLAGS .= " -Wno-deprecated-gpu-targets ";
-    $HIPCXXFLAGS .= " -isystem $CUDA_PATH/include";
-    $HIPCFLAGS .= " -isystem $CUDA_PATH/include";
+    $HIPCXXFLAGS .= " -isystem \"$CUDA_PATH/include\"";
+    $HIPCFLAGS .= " -isystem \"$CUDA_PATH/include\"";
 
-    $HIPLDFLAGS = " -Wno-deprecated-gpu-targets -lcuda -lcudart -L$CUDA_PATH/lib64";
+    $HIPLDFLAGS = " -Wno-deprecated-gpu-targets -lcuda -lcudart -L\"$CUDA_PATH/lib64\"";
 } else {
     printf ("error: unknown HIP_PLATFORM = '$HIP_PLATFORM'");
     printf ("       or HIP_COMPILER = '$HIP_COMPILER'");
