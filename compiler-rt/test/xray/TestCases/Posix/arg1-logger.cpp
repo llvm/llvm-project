@@ -10,7 +10,7 @@
 //
 // RUN: rm -f arg1-logger-*
 
-// REQUIRES: target={{x86_64-.*}}
+// REQUIRES: target={{(aarch64|x86_64)-.*}}
 
 #include "xray/xray_interface.h"
 
