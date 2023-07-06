@@ -29,6 +29,7 @@
 #include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 #include <utility>
 #include <variant>
@@ -132,6 +133,10 @@ struct Header {
     return std::get<Standard>(Storage);
   }
   StringRef verbatim() const { return std::get<Verbatim>(Storage); }
+
+  /// Absolute path for the header when it's a physical file. Otherwise just
+  /// the spelling without surrounding quotes/brackets.
+  llvm::StringRef resolvedPath() const;
 
 private:
   // Order must match Kind enum!
