@@ -104,7 +104,8 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
     llvm::function_ref<bool(DWARFDIE die)> callback) {
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
-      if (!regex.Execute(nte.getString()))
+      Mangled mangled_name(nte.getString());
+      if (!mangled_name.NameMatches(regex))
         continue;
 
       uint64_t entry_offset = nte.getEntryOffset();
