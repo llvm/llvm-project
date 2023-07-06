@@ -62,7 +62,7 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
 
 bool DebugNamesDWARFIndex::ProcessEntry(
     const DebugNames::Entry &entry,
-    llvm::function_ref<bool(DWARFDIE die)> callback, llvm::StringRef name) {
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
   std::optional<DIERef> ref = ToDIERef(entry);
   if (!ref)
     return true;
@@ -92,7 +92,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
     if (entry.tag() != DW_TAG_variable)
       continue;
 
-    if (!ProcessEntry(entry, callback, basename.GetStringRef()))
+    if (!ProcessEntry(entry, callback))
       return;
   }
 
@@ -113,8 +113,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
         if (entry_or->tag() != DW_TAG_variable)
           continue;
 
-        if (!ProcessEntry(*entry_or, callback,
-                          llvm::StringRef(nte.getString())))
+        if (!ProcessEntry(*entry_or, callback))
           return;
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
@@ -139,8 +138,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
           continue;
 
         found_entry_for_cu = true;
-        if (!ProcessEntry(*entry_or, callback,
-                          llvm::StringRef(nte.getString())))
+        if (!ProcessEntry(*entry_or, callback))
           return;
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
@@ -202,7 +200,7 @@ void DebugNamesDWARFIndex::GetTypes(
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
     if (isType(entry.tag())) {
-      if (!ProcessEntry(entry, callback, name.GetStringRef()))
+      if (!ProcessEntry(entry, callback))
         return;
     }
   }
@@ -216,7 +214,7 @@ void DebugNamesDWARFIndex::GetTypes(
   auto name = context[0].name;
   for (const DebugNames::Entry &entry : m_debug_names_up->equal_range(name)) {
     if (entry.tag() == context[0].tag) {
-      if (!ProcessEntry(entry, callback, name))
+      if (!ProcessEntry(entry, callback))
         return;
     }
   }
@@ -229,7 +227,7 @@ void DebugNamesDWARFIndex::GetNamespaces(
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
     if (entry.tag() == DW_TAG_namespace) {
-      if (!ProcessEntry(entry, callback, name.GetStringRef()))
+      if (!ProcessEntry(entry, callback))
         return;
     }
   }
@@ -278,8 +276,7 @@ void DebugNamesDWARFIndex::GetFunctions(
         if (tag != DW_TAG_subprogram && tag != DW_TAG_inlined_subroutine)
           continue;
 
-        if (!ProcessEntry(*entry_or, callback,
-                          llvm::StringRef(nte.getString())))
+        if (!ProcessEntry(*entry_or, callback))
           return;
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
