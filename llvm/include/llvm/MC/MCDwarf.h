@@ -70,6 +70,10 @@ public:
 
   /// Returns finalized section.
   SmallString<0> getFinalizedData();
+
+  /// Adds path \p Path to the line string. Returns offset in the
+  /// .debug_line_str section.
+  size_t addString(StringRef Path);
 };
 
 /// Instances of this class represent the name of the dwarf .file directive and
