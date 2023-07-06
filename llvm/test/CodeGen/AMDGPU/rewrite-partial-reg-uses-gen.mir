@@ -4341,9 +4341,9 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_64_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
     undef %0.sub0:sgpr_64 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4358,11 +4358,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_96_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 22
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 22
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_96 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4381,11 +4381,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_128_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 23
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 23
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_128 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4425,11 +4425,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_160_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 24
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 24
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_160 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4450,11 +4450,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_192_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 25
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 25
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_192 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4503,11 +4503,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_224_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 26
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 26
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_224 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4530,11 +4530,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_256_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 27
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 27
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_256 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4612,11 +4612,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_288_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 28
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 28
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_288 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4672,11 +4672,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_320_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 29
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 29
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_320 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4763,11 +4763,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_352_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 210
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 210
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_352 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4791,11 +4791,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_384_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 211
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 211
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_384 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -4929,11 +4929,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_512_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 215
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 215
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_512 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
@@ -5086,11 +5086,11 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_1024_w32
-    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+    ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_]]
-    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+    ; CHECK-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 11
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_1]]
-    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 231
+    ; CHECK-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 231
     ; CHECK-NEXT: S_NOP 0, implicit [[S_MOV_B32_2]]
     undef %0.sub0:sgpr_1024 = S_MOV_B32 00
     S_NOP 0, implicit %0.sub0
