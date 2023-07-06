@@ -615,6 +615,18 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+VPBlockBase *VPRegionBlock::clone() {
+  DenseMap<VPBlockBase *, VPBlockBase *> Old2New;
+  DenseMap<VPValue *, VPValue *> Old2NewVPValues;
+  VPBlockBase *NewEntry =
+      VPBlockUtils::cloneCFG(Entry, Old2New, Old2NewVPValues);
+  auto *NewR =
+      new VPRegionBlock(NewEntry, Old2New[Exiting], getName(), isReplicator());
+  for (VPBlockBase *Block : vp_depth_first_shallow(NewEntry))
+    Block->setParent(NewR);
+  return NewR;
+}
+
 void VPRegionBlock::dropAllReferences(VPValue *NewValue) {
   for (VPBlockBase *Block : vp_depth_first_shallow(Entry))
     // Drop all references in VPBasicBlocks and replace all uses with
@@ -982,6 +994,65 @@ void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopHeaderBB,
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 }
 
+static void remapVPValues(VPBasicBlock *OldBB, VPBasicBlock *NewBB,
+                          DenseMap<VPValue *, VPValue *> &Old2NewVPValues,
+                          bool Full = false) {
+  for (const auto &[OldR, NewR] : zip(*OldBB, *NewBB)) {
+    for (unsigned I = 0, E = NewR.getNumOperands(); I != E; ++I) {
+      VPValue *NewOp = Old2NewVPValues.lookup(OldR.getOperand(I));
+      if (!Full)
+        continue;
+      NewR.setOperand(I, NewOp);
+    }
+    for (const auto &[OldV, NewV] :
+         zip(OldR.definedValues(), NewR.definedValues()))
+      Old2NewVPValues[OldV] = NewV;
+  }
+}
+
+VPlan *VPlan::clone() {
+  DenseMap<VPBlockBase *, VPBlockBase *> Old2New;
+  DenseMap<VPValue *, VPValue *> Old2NewVPValues;
+
+  auto *NewPlan = new VPlan();
+  SmallVector<VPValue *, 16> NewLiveIns;
+  for (VPValue *LI : VPLiveInsToFree) {
+    VPValue *NewLI = new VPValue(LI->getLiveInIRValue());
+    NewPlan->VPLiveInsToFree.push_back(NewLI);
+    Old2NewVPValues[LI] = NewLI;
+  }
+
+  Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
+  Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
+  if (BackedgeTakenCount) {
+    Old2NewVPValues[BackedgeTakenCount] = new VPValue();
+    NewPlan->BackedgeTakenCount = Old2NewVPValues[BackedgeTakenCount];
+  }
+
+  auto NewPH = cast<VPBasicBlock>(Preheader->clone());
+  remapVPValues(cast<VPBasicBlock>(Preheader), cast<VPBasicBlock>(NewPH),
+                Old2NewVPValues, /*Full*/ true);
+  VPValue *NewTC = Old2NewVPValues.lookup(TripCount);
+  if (!NewTC)
+    Old2NewVPValues[TripCount] = new VPValue(TripCount->getLiveInIRValue());
+  NewPlan->TripCount = Old2NewVPValues[TripCount];
+
+  auto *NewEntry = cast<VPBasicBlock>(VPBlockUtils::cloneCFG(
+      getEntry(), Old2New, Old2NewVPValues, /*FullRemapping*/ true));
+
+  NewPlan->Entry = NewEntry;
+  NewPlan->Preheader = NewPH;
+  NewEntry->setPlan(NewPlan);
+  NewPH->setPlan(NewPlan);
+  NewPlan->VFs = VFs;
+  NewPlan->UFs = UFs;
+  NewPlan->Name = Name;
+
+  for (const auto &[_, LO] : LiveOuts)
+    NewPlan->addLiveOut(LO->getPhi(), Old2NewVPValues[LO->getOperand(0)]);
+  return NewPlan;
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
@@ -1199,6 +1270,59 @@ void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   });
 }
 #endif
+
+VPBlockBase *VPBlockUtils::cloneCFG(
+    VPBlockBase *Entry, DenseMap<VPBlockBase *, VPBlockBase *> &Old2New,
+    DenseMap<VPValue *, VPValue *> &Old2NewVPValues, bool FullRemapping) {
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Entry);
+  VPBlockBase *NewEntry = nullptr;
+  for (VPBlockBase *BB : RPOT) {
+    VPBlockBase *NewBB = BB->clone();
+    if (!NewEntry)
+      NewEntry = NewBB;
+
+    for (VPBlockBase *Pred : BB->getPredecessors())
+      connectBlocks(Old2New[Pred], NewBB);
+
+    Old2New[BB] = NewBB;
+
+    if (!isa<VPBasicBlock>(BB))
+      continue;
+  }
+
+  // Update the operands of all cloned recipes starting at NewEntry. This
+  // traverses all reachable blocks. This is done in two steps, to handle cycles
+  // in PHI recipes.
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>>
+      OldDeepRPOT(Entry);
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>>
+      NewDeepRPOT(NewEntry);
+  // First, collect all mappings from old to new VPValues defined by cloned
+  // recipes.
+  for (const auto &[OldBB, NewBB] :
+       zip(VPBlockUtils::blocksOnly<VPBasicBlock>(OldDeepRPOT),
+           VPBlockUtils::blocksOnly<VPBasicBlock>(NewDeepRPOT))) {
+    for (const auto &[OldR, NewR] : zip(*OldBB, *NewBB))
+      for (const auto &[OldV, NewV] :
+           zip(OldR.definedValues(), NewR.definedValues()))
+        Old2NewVPValues[OldV] = NewV;
+  }
+
+  // Update all operands to use cloned VPValues.
+  for (VPBasicBlock *NewBB :
+       VPBlockUtils::blocksOnly<VPBasicBlock>(NewDeepRPOT)) {
+    for (VPRecipeBase &NewR : *NewBB)
+      for (unsigned I = 0, E = NewR.getNumOperands(); I != E; ++I) {
+        VPValue *NewOp = Old2NewVPValues.lookup(NewR.getOperand(I));
+        if (!FullRemapping)
+          continue;
+        NewR.setOperand(I, NewOp);
+      }
+  }
+
+  return NewEntry;
+}
 
 void VPInterleavedAccessInfo::visitRegion(VPRegionBlock *Region,
                                           Old2NewTy &Old2New,
