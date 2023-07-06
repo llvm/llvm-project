@@ -53,8 +53,10 @@ struct S2 {
 //   MEMBER_OF_7 = 0x7000000000000
 
 //.
+// CHECK-PPC64LE: @0 = private unnamed_addr constant [23 x i8] c"
+// CHECK-PPC64LE: @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @0 }, align 8
 // CHECK-PPC64LE: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-PPC64LE: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 [[#0x2001]]]
+// CHECK-PPC64LE: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 8193]
 // CHECK-PPC64LE: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 20]
 // CHECK-PPC64LE: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x2405]]]
 // CHECK-PPC64LE: @.offload_sizes.3 = private unnamed_addr constant [1 x i64] [i64 4]
@@ -62,8 +64,10 @@ struct S2 {
 // CHECK-PPC64LE: @.offload_sizes.5 = private unnamed_addr constant [11 x i64] [i64 0, i64 4, i64 8, i64 8, i64 4, i64 4, i64 0, i64 4, i64 8, i64 8, i64 4]
 // CHECK-PPC64LE: @.offload_maptypes.6 = private unnamed_addr constant [11 x i64] [i64 [[#0x2000]], i64 [[#0x1000000002003]], i64 [[#0x1000000002010]], i64 [[#0x2010]], i64 [[#0x2013]], i64 [[#0x3]], i64 [[#0x2000]], i64 [[#0x7000000002003]], i64 [[#0x7000000002010]], i64 [[#0x2010]], i64 [[#0x2013]]]
 //.
+// CHECK-I386: @0 = private unnamed_addr constant [23 x i8] c"
+// CHECK-I386: @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @0 }, align 8
 // CHECK-I386: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 20]
-// CHECK-I386: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 [[#0x2001]]]
+// CHECK-I386: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 8193]
 // CHECK-I386: @.offload_sizes.1 = private unnamed_addr constant [1 x i64] [i64 20]
 // CHECK-I386: @.offload_maptypes.2 = private unnamed_addr constant [1 x i64] [i64 [[#0x2405]]]
 // CHECK-I386: @.offload_sizes.3 = private unnamed_addr constant [1 x i64] [i64 4]

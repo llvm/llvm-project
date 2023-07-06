@@ -14,9 +14,6 @@
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
 
@@ -245,7 +242,7 @@ static void test_valid_values_day() {
         lfmt,
         file_seconds(1'234'567'890s)); // 23:31:30 UTC on Friday, 13 February 2009
 
-#endif                                 // _WIN32
+#endif // _WIN32
 
   std::locale::global(std::locale::classic());
 }
@@ -336,7 +333,7 @@ static void test_valid_values_day_of_year() {
   check(SV("%j='138'\n"), lfmt, file_seconds(2'000'000'000s)); // 03:33:20 UTC on Wednesday, 18 May 2033
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-  check(loc, SV("%j='001'\n"), lfmt, file_seconds(0s));             // 00:00:00 UTC Thursday, 1 January 1970
+  check(loc, SV("%j='001'\n"), lfmt, file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 
   check(loc, SV("%j='138'\n"), lfmt, file_seconds(2'000'000'000s)); // 03:33:20 UTC on Wednesday, 18 May 2033
 
@@ -641,6 +638,8 @@ static void test_valid_values_time() {
            "%r='11:31:30 PM'\t"
 #elif defined(__APPLE__)
            "%r=''\t"
+#elif defined(_WIN32)
+           "%r='23:31:30 '\t"
 #else
            "%r='11:31:30 '\t"
 #endif
@@ -652,7 +651,7 @@ static void test_valid_values_time() {
             1'234'567'890'123ms)); // 23:31:30 UTC on Friday, 13 February 2009
 
   // Use supplied locale (ja_JP). This locale has a different alternate.a
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='00'\t"
@@ -673,6 +672,10 @@ static void test_valid_values_time() {
            "%r='12:00:00 AM'\t"
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
+#  elif defined(_WIN32)
+           "%r='0:00:00'\t"
+           "%X='0:00:00'\t"
+           "%EX='0:00:00'\t"
 #  else
            "%r='午前12:00:00'\t"
            "%X='00:00:00'\t"
@@ -702,6 +705,10 @@ static void test_valid_values_time() {
            "%r='11:31:30 PM'\t"
            "%X='23時31分30秒'\t"
            "%EX='23時31分30秒'\t"
+#  elif defined(_WIN32)
+           "%r='23:31:30'\t"
+           "%X='23:31:30'\t"
+           "%EX='23:31:30'\t"
 #  else
            "%r='午後11:31:30'\t"
            "%X='23:31:30'\t"
@@ -710,7 +717,7 @@ static void test_valid_values_time() {
            "\n"),
         lfmt,
         std::chrono::hh_mm_ss(23h + 31min + 30s + 123ms));
-#else  // defined(__APPLE__) || defined(_AIX)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='〇'\t"
@@ -749,7 +756,7 @@ static void test_valid_values_time() {
         lfmt,
         std::chrono::sys_time<std::chrono::milliseconds>(
             1'234'567'890'123ms)); // 23:31:30 UTC on Friday, 13 February 2009
-#endif // defined(__APPLE__) || defined(_AIX)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
 
   std::locale::global(std::locale::classic());
 }
@@ -782,6 +789,8 @@ static void test_valid_values_date_time() {
       SV("%c=' 1 janvier 1970 à 00:00:00 UTC'\t%Ec=' 1 janvier 1970 à 00:00:00 UTC'\n"),
 #elif defined(__APPLE__)
       SV("%c='Jeu  1 jan 00:00:00 1970'\t%Ec='Jeu  1 jan 00:00:00 1970'\n"),
+#elif defined(_WIN32)
+      SV("%c='01/01/1970 00:00:00'\t%Ec='01/01/1970 00:00:00'\n"),
 #else
       SV("%c='jeu. 01 janv. 1970 00:00:00'\t%Ec='jeu. 01 janv. 1970 00:00:00'\n"),
 #endif
@@ -796,6 +805,8 @@ static void test_valid_values_date_time() {
       SV("%c='13 février 2009 à 23:31:30 UTC'\t%Ec='13 février 2009 à 23:31:30 UTC'\n"),
 #elif defined(__APPLE__)
       SV("%c='Ven 13 fév 23:31:30 2009'\t%Ec='Ven 13 fév 23:31:30 2009'\n"),
+#elif defined(_WIN32)
+      SV("%c='13/02/2009 23:31:30'\t%Ec='13/02/2009 23:31:30'\n"),
 #else
       SV("%c='ven. 13 févr. 2009 23:31:30'\t%Ec='ven. 13 févr. 2009 23:31:30'\n"),
 #endif
@@ -821,6 +832,15 @@ static void test_valid_values_date_time() {
         SV("%c='2009年02月13日 23:31:30 UTC'\t%Ec='2009年02月13日 23:31:30 UTC'\n"),
         lfmt,
         file_seconds(1'234'567'890s)); // 23:31:30 UTC on Friday, 13 February 2009
+#elif defined(_WIN32)                  // __APPLE__
+  check(loc,
+        SV("%c='1970/01/01 0:00:00'\t%Ec='1970/01/01 0:00:00'\n"),
+        lfmt,
+        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
+  check(loc,
+        SV("%c='2009/02/13 23:31:30'\t%Ec='2009/02/13 23:31:30'\n"),
+        lfmt,
+        std::chrono::sys_seconds(1'234'567'890s)); // 23:31:30 UTC on Friday, 13 February 2009
 #else                                  // __APPLE__
   check(loc,
         SV("%c='1970年01月01日 00時00分00秒'\t%Ec='昭和45年01月01日 00時00分00秒'\n"),
@@ -866,6 +886,22 @@ static void test_valid_values_time_zone() {
         SV("%z='UTC'\t%Ez='UTC'\t%Oz='UTC'\t%Z='UTC'\n"),
         lfmt,
         file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
+#  elif defined(_WIN32)    // defined(_AIX)
+  // Non localized output using C-locale
+  check(SV("%z='-0000'\t%Ez='-0000'\t%Oz='-0000'\t%Z='UTC'\n"),
+        fmt,
+        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
+
+  // Use the global locale (fr_FR)
+  check(SV("%z='-0000'\t%Ez='-0000'\t%Oz='-0000'\t%Z='UTC'\n"),
+        lfmt,
+        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
+
+  // Use supplied locale (ja_JP). This locale has a different alternate.a
+  check(loc,
+        SV("%z='-0000'\t%Ez='-0000'\t%Oz='-0000'\t%Z='UTC'\n"),
+        lfmt,
+        file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 #  else                    // defined(_AIX)
   // Non localized output using C-locale
   check(SV("%z='+0000'\t%Ez='+0000'\t%Oz='+0000'\t%Z='UTC'\n"),
@@ -884,7 +920,7 @@ static void test_valid_values_time_zone() {
         file_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 #  endif                   // defined(_AIX)
   std::locale::global(std::locale::classic());
-#endif                     // !defined(__APPLE__)
+#endif // !defined(__APPLE__)
 }
 
 template <class CharT>

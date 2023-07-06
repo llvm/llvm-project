@@ -123,7 +123,25 @@ struct FileDescriptor {
   static FileDescriptor create(const path* p, error_code& ec, Args... args) {
     ec.clear();
     int fd;
-    if ((fd = detail::open(p->c_str(), args...)) == -1) {
+#ifdef _LIBCPP_WIN32API
+    // TODO: most of the filesystem implementation uses native Win32 calls
+    // (mostly via posix_compat.h). However, here we use the C-runtime APIs to
+    // open a file, because we subsequently pass the C-runtime fd to
+    // `std::[io]fstream::__open(int fd)` in order to implement copy_file.
+    //
+    // Because we're calling the windows C-runtime, win32 error codes are
+    // translated into C error numbers by the C runtime, and returned in errno,
+    // rather than being accessible directly via GetLastError.
+    //
+    // Ideally copy_file should be calling the Win32 CopyFile2 function, which
+    // works on paths, not open files -- at which point this FileDescriptor type
+    // will no longer be needed on windows at all.
+    fd = ::_wopen(p->c_str(), args...);
+#else
+    fd = open(p->c_str(), args...);
+#endif
+
+    if (fd == -1) {
       ec = capture_errno();
       return FileDescriptor{p};
     }
@@ -148,8 +166,14 @@ struct FileDescriptor {
   file_status refresh_status(error_code& ec);
 
   void close() noexcept {
-    if (fd != -1)
-      detail::close(fd);
+    if (fd != -1) {
+#ifdef _LIBCPP_WIN32API
+      ::_close(fd);
+#else
+      ::close(fd);
+#endif
+      // FIXME: shouldn't this return an error_code?
+    }
     fd = -1;
   }
 

@@ -24,7 +24,7 @@
 #include "include/apple_availability.h"
 
 #if __has_include(<unistd.h>)
-# include <unistd.h>
+# include <unistd.h> // _POSIX_TIMERS
 #endif
 
 #if __has_include(<sys/time.h>)
@@ -116,7 +116,7 @@ static system_clock::time_point __libcpp_system_clock_now() {
   return system_clock::time_point(duration_cast<system_clock::duration>(d - nt_to_unix_epoch));
 }
 
-#elif defined(CLOCK_REALTIME) && defined(_LIBCPP_USE_CLOCK_GETTIME)
+#elif defined(_LIBCPP_USE_CLOCK_GETTIME) && defined(CLOCK_REALTIME)
 
 static system_clock::time_point __libcpp_system_clock_now() {
   struct timespec tp;
@@ -226,7 +226,7 @@ static steady_clock::time_point __libcpp_steady_clock_now() noexcept {
   return steady_clock::time_point(nanoseconds(_zx_clock_get_monotonic()));
 }
 
-#  elif defined(CLOCK_MONOTONIC)
+#  elif defined(_LIBCPP_USE_CLOCK_GETTIME) && defined(CLOCK_MONOTONIC)
 
 static steady_clock::time_point __libcpp_steady_clock_now() {
     struct timespec tp;

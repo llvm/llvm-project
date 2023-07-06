@@ -8,17 +8,21 @@
 
 #include "AnalysisInternal.h"
 #include "TypesInternal.h"
+#include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cassert>
 #include <memory>
 
 namespace clang::include_cleaner {
@@ -253,11 +257,11 @@ TEST_F(FindHeadersTest, PublicHeaderHint) {
   EXPECT_THAT(
       findHeaders("private.inc"),
       UnorderedElementsAre(
-          HintedHeader(physicalHeader("private.inc"), Hints::None),
+          HintedHeader(physicalHeader("private.inc"), Hints::OriginHeader),
           HintedHeader(physicalHeader("public.h"), Hints::PublicHeader)));
   EXPECT_THAT(findHeaders("private.h"),
-              UnorderedElementsAre(
-                  HintedHeader(physicalHeader("private.h"), Hints::None)));
+              UnorderedElementsAre(HintedHeader(physicalHeader("private.h"),
+                                                Hints::OriginHeader)));
 }
 
 TEST_F(FindHeadersTest, PreferredHeaderHint) {
@@ -269,11 +273,12 @@ TEST_F(FindHeadersTest, PreferredHeaderHint) {
   )cpp");
   buildAST();
   // Headers explicitly marked should've preferred signal.
-  EXPECT_THAT(findHeaders("private.h"),
-              UnorderedElementsAre(
-                  HintedHeader(physicalHeader("private.h"), Hints::None),
-                  HintedHeader(Header("\"public.h\""),
-                               Hints::PreferredHeader | Hints::PublicHeader)));
+  EXPECT_THAT(
+      findHeaders("private.h"),
+      UnorderedElementsAre(
+          HintedHeader(physicalHeader("private.h"), Hints::OriginHeader),
+          HintedHeader(Header("\"public.h\""),
+                       Hints::PreferredHeader | Hints::PublicHeader)));
 }
 
 class HeadersForSymbolTest : public FindHeadersTest {
@@ -339,11 +344,12 @@ TEST_F(HeadersForSymbolTest, RankByName) {
 }
 
 TEST_F(HeadersForSymbolTest, Ranking) {
-  // Sorting is done over (canonical, public, complete) triplet.
+  // Sorting is done over (canonical, public, complete, origin)-tuple.
   Inputs.Code = R"cpp(
     #include "private.h"
     #include "public.h"
     #include "public_complete.h"
+    #include "exporter.h"
   )cpp";
   Inputs.ExtraFiles["public.h"] = guard(R"cpp(
     struct foo;
@@ -352,11 +358,15 @@ TEST_F(HeadersForSymbolTest, Ranking) {
     // IWYU pragma: private, include "canonical.h"
     struct foo;
   )cpp");
+  Inputs.ExtraFiles["exporter.h"] = guard(R"cpp(
+  #include "private.h" // IWYU pragma: export
+  )cpp");
   Inputs.ExtraFiles["public_complete.h"] = guard("struct foo {};");
   buildAST();
   EXPECT_THAT(headersForFoo(), ElementsAre(Header("\"canonical.h\""),
                                            physicalHeader("public_complete.h"),
                                            physicalHeader("public.h"),
+                                           physicalHeader("exporter.h"),
                                            physicalHeader("private.h")));
 }
 
@@ -422,6 +432,24 @@ TEST_F(HeadersForSymbolTest, PreferExporterOfPrivate) {
   buildAST();
   EXPECT_THAT(headersForFoo(), ElementsAre(physicalHeader("exporter.h"),
                                            physicalHeader("private.h")));
+}
+
+TEST_F(HeadersForSymbolTest, ExporterIsDownRanked) {
+  Inputs.Code = R"cpp(
+    #include "exporter.h"
+    #include "zoo.h"
+  )cpp";
+  // Deliberately named as zoo to make sure it doesn't get name-match boost and
+  // also gets lexicographically bigger order than "exporter".
+  Inputs.ExtraFiles["zoo.h"] = guard(R"cpp(
+    struct foo {};
+  )cpp");
+  Inputs.ExtraFiles["exporter.h"] = guard(R"cpp(
+    #include "zoo.h" // IWYU pragma: export
+  )cpp");
+  buildAST();
+  EXPECT_THAT(headersForFoo(), ElementsAre(physicalHeader("zoo.h"),
+                                           physicalHeader("exporter.h")));
 }
 
 TEST_F(HeadersForSymbolTest, PreferPublicOverNameMatchOnPrivate) {
@@ -495,7 +523,6 @@ TEST_F(HeadersForSymbolTest, StandardHeaders) {
       UnorderedElementsAre(tooling::stdlib::Header::named("<cassert>"),
                            tooling::stdlib::Header::named("<assert.h>")));
 }
-
 
 } // namespace
 } // namespace clang::include_cleaner

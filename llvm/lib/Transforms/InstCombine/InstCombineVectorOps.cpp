@@ -171,8 +171,11 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
     }
   }
 
-  for (auto *E : Extracts)
+  for (auto *E : Extracts) {
     replaceInstUsesWith(*E, scalarPHI);
+    // Add old extract to worklist for DCE.
+    addToWorklist(E);
+  }
 
   return &EI;
 }

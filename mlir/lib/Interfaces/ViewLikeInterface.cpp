@@ -115,7 +115,7 @@ void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
   unsigned dynamicValIdx = 0;
   unsigned scalableIndexIdx = 0;
   llvm::interleaveComma(integers, printer, [&](int64_t integer) {
-    if (not scalables.empty() && scalables[scalableIndexIdx])
+    if (!scalables.empty() && scalables[scalableIndexIdx])
       printer << "[";
     if (ShapedType::isDynamic(integer)) {
       printer << values[dynamicValIdx];

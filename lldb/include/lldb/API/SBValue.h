@@ -283,6 +283,7 @@ public:
 
   uint32_t GetNumChildren(uint32_t max);
 
+  LLDB_DEPRECATED("SBValue::GetOpaqueType() is deprecated.")
   void *GetOpaqueType();
 
   lldb::SBTarget GetTarget();

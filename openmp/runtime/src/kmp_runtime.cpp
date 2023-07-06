@@ -405,6 +405,8 @@ void __kmp_print_storage_map_gtid(int gtid, void *p1, void *p2, size_t size,
   }
 #endif /* KMP_PRINT_DATA_PLACEMENT */
   __kmp_release_bootstrap_lock(&__kmp_stdio_lock);
+
+  va_end(ap);
 }
 
 void __kmp_warn(char const *format, ...) {

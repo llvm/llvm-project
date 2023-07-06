@@ -43,11 +43,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(const void* __ptr, _FormatContext& __ctx) const {
     __format_spec::__parsed_specifications<_CharT> __specs = __parser_.__get_parsed_std_specifications(__ctx);
     __specs.__std_.__alternate_form_                       = true;
-    __specs.__std_.__type_                                 = __format_spec::__type::__hexadecimal_lower_case;
+    __specs.__std_.__type_ =
+        __specs.__std_.__type_ == __format_spec::__type::__pointer_upper_case
+            ? __format_spec::__type::__hexadecimal_upper_case
+            : __format_spec::__type::__hexadecimal_lower_case;
+
     return __formatter::__format_integer(reinterpret_cast<uintptr_t>(__ptr), __ctx, __specs);
   }
 
-  __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__right};
+  __format_spec::__parser<_CharT> __parser_;
 };
 
 // [format.formatter.spec]/2.4
