@@ -9,6 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Configuration.h"
 #include "Types.h"
 
 #include "Debug.h"
@@ -27,17 +28,23 @@ double getWTime();
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-double getWTick() { return ((double)1E-9); }
+double getWTick() {
+  // The number of ticks per second for the AMDGPU clock varies by card and can
+  // only be retrived by querying the driver. We rely on the device environment
+  // to inform us what the proper frequency is.
+  return 1.0 / config::getClockFrequency();
+}
 
 double getWTime() {
-#if __gfx700__ || __gfx701__ || __gfx702__
-  uint64_t t = __builtin_amdgcn_s_memtime();
-#elif __gfx1100__ || __gfx1101__ || __gfx1102__ || __gfx1103__
-  uint64_t t = __builtin_readcyclecounter();
-#else
-  uint64_t t = __builtin_amdgcn_s_memrealtime();
-#endif
-  return ((double)1.0 / 745000000.0) * t;
+  uint64_t NumTicks = 0;
+  if constexpr (__has_builtin(__builtin_amdgcn_s_sendmsg_rtnl))
+    NumTicks = __builtin_amdgcn_s_sendmsg_rtnl(0x83);
+  else if constexpr (__has_builtin(__builtin_amdgcn_s_memrealtime))
+    NumTicks = __builtin_amdgcn_s_memrealtime();
+  else if constexpr (__has_builtin(__builtin_amdgcn_s_memtime))
+    NumTicks = __builtin_amdgcn_s_memtime();
+
+  return static_cast<double>(NumTicks) * getWTick();
 }
 
 #pragma omp end declare variant

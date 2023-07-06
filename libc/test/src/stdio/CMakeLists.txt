@@ -114,6 +114,7 @@ add_libc_unittest(
 
 add_fp_unittest(
   sprintf_test
+  UNIT_TEST_ONLY
   SUITE
     libc_stdio_unittests
   SRCS

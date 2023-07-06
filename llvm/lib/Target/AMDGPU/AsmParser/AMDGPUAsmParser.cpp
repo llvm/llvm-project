@@ -121,7 +121,6 @@ public:
     ImmTyOffset1,
     ImmTySMEMOffsetMod,
     ImmTyCPol,
-    ImmTySWZ,
     ImmTyTFE,
     ImmTyD16,
     ImmTyClampSI,
@@ -378,7 +377,6 @@ public:
   bool isGDS() const { return isImmTy(ImmTyGDS); }
   bool isLDS() const { return isImmTy(ImmTyLDS); }
   bool isCPol() const { return isImmTy(ImmTyCPol); }
-  bool isSWZ() const { return isImmTy(ImmTySWZ); }
   bool isTFE() const { return isImmTy(ImmTyTFE); }
   bool isD16() const { return isImmTy(ImmTyD16); }
   bool isFORMAT() const { return isImmTy(ImmTyFORMAT) && isUInt<7>(getImm()); }
@@ -949,17 +947,6 @@ public:
 
   void addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyModifiers) const;
 
-  template <unsigned Bitwidth>
-  void addKImmFPOperands(MCInst &Inst, unsigned N) const;
-
-  void addKImmFP16Operands(MCInst &Inst, unsigned N) const {
-    addKImmFPOperands<16>(Inst, N);
-  }
-
-  void addKImmFP32Operands(MCInst &Inst, unsigned N) const {
-    addKImmFPOperands<32>(Inst, N);
-  }
-
   void addRegOperands(MCInst &Inst, unsigned N) const;
 
   void addRegOrImmOperands(MCInst &Inst, unsigned N) const {
@@ -1020,7 +1007,6 @@ public:
     case ImmTyOffset1: OS << "Offset1"; break;
     case ImmTySMEMOffsetMod: OS << "SMEMOffsetMod"; break;
     case ImmTyCPol: OS << "CPol"; break;
-    case ImmTySWZ: OS << "SWZ"; break;
     case ImmTyTFE: OS << "TFE"; break;
     case ImmTyD16: OS << "D16"; break;
     case ImmTyFORMAT: OS << "FORMAT"; break;
@@ -2267,24 +2253,6 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val, bool ApplyMo
   default:
     llvm_unreachable("invalid operand size");
   }
-}
-
-template <unsigned Bitwidth>
-void AMDGPUOperand::addKImmFPOperands(MCInst &Inst, unsigned N) const {
-  APInt Literal(64, Imm.Val);
-  setImmKindMandatoryLiteral();
-
-  if (!Imm.IsFPImm) {
-    // We got int literal token.
-    Inst.addOperand(MCOperand::createImm(Literal.getLoBits(Bitwidth).getZExtValue()));
-    return;
-  }
-
-  bool Lost;
-  APFloat FPLiteral(APFloat::IEEEdouble(), Literal);
-  FPLiteral.convert(*getFltSemantics(Bitwidth / 8),
-                    APFloat::rmNearestTiesToEven, &Lost);
-  Inst.addOperand(MCOperand::createImm(FPLiteral.bitcastToAPInt().getZExtValue()));
 }
 
 void AMDGPUOperand::addRegOperands(MCInst &Inst, unsigned N) const {
@@ -7679,7 +7647,6 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
 
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol, 0);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySWZ);
 }
 
 //===----------------------------------------------------------------------===//
@@ -8877,7 +8844,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
 
 /// Force static initialization.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmParser() {
-  RegisterMCAsmParser<AMDGPUAsmParser> A(getTheAMDGPUTarget());
+  RegisterMCAsmParser<AMDGPUAsmParser> A(getTheR600Target());
   RegisterMCAsmParser<AMDGPUAsmParser> B(getTheGCNTarget());
 }
 

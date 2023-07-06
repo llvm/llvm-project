@@ -2114,6 +2114,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
     GridValues.GV_Warp_Size = WavefrontSize;
 
+    // Get the frequency of the steady clock.
+    if (auto Err = getDeviceAttr(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY,
+                                 ClockFrequency))
+      return Err;
+
     // Load the grid values dependending on the wavefront.
     if (WavefrontSize == 32)
       GridValues = getAMDGPUGridValues<32>();
@@ -2294,6 +2299,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   std::string getComputeUnitKind() const override { return ComputeUnitKind; }
 
   uint32_t getNumComputeUnits() const override { return NumComputeUnits; }
+
+  /// Returns the clock frequency for the given AMDGPU device.
+  uint64_t getClockFrequency() const override { return ClockFrequency; }
 
   /// Allocate and construct an AMDGPU kernel.
   Expected<GenericKernelTy *>
@@ -3101,6 +3109,9 @@ private:
 
   /// The number of CUs available in this device
   uint32_t NumComputeUnits;
+
+  /// The frequency of the steady clock inside the device.
+  uint64_t ClockFrequency;
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;

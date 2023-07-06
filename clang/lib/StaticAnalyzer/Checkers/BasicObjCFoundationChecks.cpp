@@ -30,6 +30,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/raw_ostream.h"
@@ -973,9 +974,8 @@ static bool alreadyExecutedAtLeastOneLoopIteration(const ExplodedNode *N,
   }
 
   // Keep looking for a block edge.
-  for (ExplodedNode::const_pred_iterator I = N->pred_begin(),
-                                         E = N->pred_end(); I != E; ++I) {
-    if (alreadyExecutedAtLeastOneLoopIteration(*I, FCS))
+  for (const ExplodedNode *N : N->preds()) {
+    if (alreadyExecutedAtLeastOneLoopIteration(N, FCS))
       return true;
   }
 
@@ -1104,11 +1104,7 @@ ObjCLoopChecker::checkPointerEscape(ProgramStateRef State,
   SymbolRef ImmutableReceiver = getMethodReceiverIfKnownImmutable(Call);
 
   // Remove the invalidated symbols from the collection count map.
-  for (InvalidatedSymbols::const_iterator I = Escaped.begin(),
-       E = Escaped.end();
-       I != E; ++I) {
-    SymbolRef Sym = *I;
-
+  for (SymbolRef Sym : Escaped) {
     // Don't invalidate this symbol's count if we know the method being called
     // is declared on an immutable class. This isn't completely correct if the
     // receiver is also passed as an argument, but in most uses of NSArray,
@@ -1130,9 +1126,7 @@ void ObjCLoopChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
   // Remove the dead symbols from the collection count map.
   ContainerCountMapTy Tracked = State->get<ContainerCountMap>();
-  for (ContainerCountMapTy::iterator I = Tracked.begin(),
-                                     E = Tracked.end(); I != E; ++I) {
-    SymbolRef Sym = I->first;
+  for (SymbolRef Sym : llvm::make_first_range(Tracked)) {
     if (SymReaper.isDead(Sym)) {
       State = State->remove<ContainerCountMap>(Sym);
       State = State->remove<ContainerNonEmptyMap>(Sym);

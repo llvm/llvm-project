@@ -123,6 +123,8 @@ def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 
+def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))>;
+
 class CustomOperandClass<string name, bit optional, string parserMethod,
                          string defaultMethod>
     : AsmOperandClass {

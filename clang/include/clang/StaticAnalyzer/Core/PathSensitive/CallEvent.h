@@ -620,10 +620,9 @@ public:
     const BlockDataRegion *BR = getBlockRegion();
     assert(BR && "Block converted from lambda must have a block region");
 
-    auto I = BR->referenced_vars_begin();
-    assert(I != BR->referenced_vars_end());
-
-    return I.getCapturedRegion();
+    auto ReferencedVars = BR->referenced_vars();
+    assert(!ReferencedVars.empty());
+    return ReferencedVars.begin().getCapturedRegion();
   }
 
   RuntimeDefinition getRuntimeDefinition() const override {

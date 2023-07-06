@@ -65,7 +65,7 @@ public:
   const Base *getBase(QualType T) const;
   /// Returns a virtual base descriptor.
   const Base *getVirtualBase(const RecordDecl *RD) const;
-  // Returns the destructor of the record, if any.
+  /// Returns the destructor of the record, if any.
   const CXXDestructorDecl *getDestructor() const {
     if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(Decl))
       return CXXDecl->getDestructor();

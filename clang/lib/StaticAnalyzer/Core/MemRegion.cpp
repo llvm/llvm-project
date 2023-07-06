@@ -39,6 +39,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CheckedArithmetic.h"
@@ -156,6 +157,18 @@ MemRegionManager &SubRegion::getMemRegionManager() const {
 const StackFrameContext *VarRegion::getStackFrame() const {
   const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
+}
+
+const StackFrameContext *
+CXXLifetimeExtendedObjectRegion::getStackFrame() const {
+  const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
+  return SSR ? SSR->getStackFrame() : nullptr;
+}
+
+const StackFrameContext *CXXTempObjectRegion::getStackFrame() const {
+  assert(isa<StackSpaceRegion>(getMemorySpace()) &&
+         "A temporary object can only be allocated on the stack");
+  return cast<StackSpaceRegion>(getMemorySpace())->getStackFrame();
 }
 
 ObjCIvarRegion::ObjCIvarRegion(const ObjCIvarDecl *ivd, const SubRegion *sReg)
@@ -389,6 +402,20 @@ void CXXTempObjectRegion::Profile(llvm::FoldingSetNodeID &ID) const {
   ProfileRegion(ID, Ex, getSuperRegion());
 }
 
+void CXXLifetimeExtendedObjectRegion::ProfileRegion(llvm::FoldingSetNodeID &ID,
+                                                    const Expr *E,
+                                                    const ValueDecl *D,
+                                                    const MemRegion *sReg) {
+  ID.AddPointer(E);
+  ID.AddPointer(D);
+  ID.AddPointer(sReg);
+}
+
+void CXXLifetimeExtendedObjectRegion::Profile(
+    llvm::FoldingSetNodeID &ID) const {
+  ProfileRegion(ID, Ex, ExD, getSuperRegion());
+}
+
 void CXXBaseObjectRegion::ProfileRegion(llvm::FoldingSetNodeID &ID,
                                         const CXXRecordDecl *RD,
                                         bool IsVirtual,
@@ -465,11 +492,9 @@ void BlockCodeRegion::dumpToStream(raw_ostream &os) const {
 void BlockDataRegion::dumpToStream(raw_ostream &os) const {
   os << "block_data{" << BC;
   os << "; ";
-  for (BlockDataRegion::referenced_vars_iterator
-         I = referenced_vars_begin(),
-         E = referenced_vars_end(); I != E; ++I)
-    os << "(" << I.getCapturedRegion() << "<-" <<
-                 I.getOriginalRegion() << ") ";
+  for (auto Var : referenced_vars())
+    os << "(" << Var.getCapturedRegion() << "<-" << Var.getOriginalRegion()
+       << ") ";
   os << '}';
 }
 
@@ -480,6 +505,16 @@ void CompoundLiteralRegion::dumpToStream(raw_ostream &os) const {
 
 void CXXTempObjectRegion::dumpToStream(raw_ostream &os) const {
   os << "temp_object{" << getValueType() << ", "
+     << "S" << Ex->getID(getContext()) << '}';
+}
+
+void CXXLifetimeExtendedObjectRegion::dumpToStream(raw_ostream &os) const {
+  os << "lifetime_extended_object{" << getValueType() << ", ";
+  if (const IdentifierInfo *ID = ExD->getIdentifier())
+    os << ID->getName();
+  else
+    os << "D" << ExD->getID();
+  os << ", "
      << "S" << Ex->getID(getContext()) << '}';
 }
 
@@ -743,6 +778,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
   case MemRegion::CXXBaseObjectRegionKind:
   case MemRegion::CXXDerivedObjectRegionKind:
   case MemRegion::CXXTempObjectRegionKind:
+  case MemRegion::CXXLifetimeExtendedObjectRegionKind:
   case MemRegion::CXXThisRegionKind:
   case MemRegion::ObjCIvarRegionKind:
   case MemRegion::NonParamVarRegionKind:
@@ -933,13 +969,11 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
     if (const auto *BC = dyn_cast<BlockInvocationContext>(LC)) {
       const auto *BR = static_cast<const BlockDataRegion *>(BC->getData());
       // FIXME: This can be made more efficient.
-      for (BlockDataRegion::referenced_vars_iterator
-           I = BR->referenced_vars_begin(),
-           E = BR->referenced_vars_end(); I != E; ++I) {
-        const TypedValueRegion *OrigR = I.getOriginalRegion();
+      for (auto Var : BR->referenced_vars()) {
+        const TypedValueRegion *OrigR = Var.getOriginalRegion();
         if (const auto *VR = dyn_cast<VarRegion>(OrigR)) {
           if (VR->getDecl() == VD)
-            return cast<VarRegion>(I.getCapturedRegion());
+            return cast<VarRegion>(Var.getCapturedRegion());
         }
       }
     }
@@ -1097,12 +1131,6 @@ MemRegionManager::getBlockDataRegion(const BlockCodeRegion *BC,
   return getSubRegion<BlockDataRegion>(BC, LC, blockCount, sReg);
 }
 
-const CXXTempObjectRegion *
-MemRegionManager::getCXXStaticTempObjectRegion(const Expr *Ex) {
-  return getSubRegion<CXXTempObjectRegion>(
-      Ex, getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind, nullptr));
-}
-
 const CompoundLiteralRegion*
 MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
                                            const LocationContext *LC) {
@@ -1182,6 +1210,23 @@ MemRegionManager::getCXXTempObjectRegion(Expr const *E,
   const StackFrameContext *SFC = LC->getStackFrame();
   assert(SFC);
   return getSubRegion<CXXTempObjectRegion>(E, getStackLocalsRegion(SFC));
+}
+
+const CXXLifetimeExtendedObjectRegion *
+MemRegionManager::getCXXLifetimeExtendedObjectRegion(
+    const Expr *Ex, const ValueDecl *VD, const LocationContext *LC) {
+  const StackFrameContext *SFC = LC->getStackFrame();
+  assert(SFC);
+  return getSubRegion<CXXLifetimeExtendedObjectRegion>(
+      Ex, VD, getStackLocalsRegion(SFC));
+}
+
+const CXXLifetimeExtendedObjectRegion *
+MemRegionManager::getCXXStaticLifetimeExtendedObjectRegion(
+    const Expr *Ex, const ValueDecl *VD) {
+  return getSubRegion<CXXLifetimeExtendedObjectRegion>(
+      Ex, VD,
+      getGlobalsRegion(MemRegion::GlobalInternalSpaceRegionKind, nullptr));
 }
 
 /// Checks whether \p BaseClass is a valid virtual or direct non-virtual base
@@ -1457,6 +1502,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
     case MemRegion::NonParamVarRegionKind:
     case MemRegion::ParamVarRegionKind:
     case MemRegion::CXXTempObjectRegionKind:
+    case MemRegion::CXXLifetimeExtendedObjectRegionKind:
       // Usual base regions.
       goto Finish;
 
@@ -1696,10 +1742,13 @@ BlockDataRegion::referenced_vars_end() const {
                                                    VecOriginal->end());
 }
 
+llvm::iterator_range<BlockDataRegion::referenced_vars_iterator>
+BlockDataRegion::referenced_vars() const {
+  return llvm::make_range(referenced_vars_begin(), referenced_vars_end());
+}
+
 const VarRegion *BlockDataRegion::getOriginalRegion(const VarRegion *R) const {
-  for (referenced_vars_iterator I = referenced_vars_begin(),
-                                E = referenced_vars_end();
-       I != E; ++I) {
+  for (const auto &I : referenced_vars()) {
     if (I.getCapturedRegion() == R)
       return I.getOriginalRegion();
   }

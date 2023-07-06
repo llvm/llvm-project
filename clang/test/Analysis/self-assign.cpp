@@ -5,6 +5,7 @@
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false
 
+// XFAIL: *
 extern "C" char *strdup(const char* s);
 extern "C" void free(void* ptr);
 

@@ -602,8 +602,7 @@ public:
                                       StmtNodeBuilder &Bldr,
                                       ExplodedNode *Pred);
 
-  void handleUOExtension(ExplodedNodeSet::iterator I,
-                         const UnaryOperator* U,
+  void handleUOExtension(ExplodedNode *N, const UnaryOperator *U,
                          StmtNodeBuilder &Bldr);
 
 public:

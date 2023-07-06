@@ -32,7 +32,7 @@ func.func @pad_to_memory_space(%arg0: tensor<24x12xf32>,
   // CHECK: memref.copy %[[s1]], %[[alloc1_view]]
 
   // CHECK: %[[alloc2:.*]] = memref.alloc() : memref<4x5xf32, 3>
-  // CHECK: linalg.fill {{.*}} outs(%[[alloc2]]
+  // CHECK-NOT: linalg.fill {{.*}} outs(%[[alloc2]]
   // No subview because there is 0 padding
   // CHECK: memref.copy %[[s2]], %[[alloc2]]
 
