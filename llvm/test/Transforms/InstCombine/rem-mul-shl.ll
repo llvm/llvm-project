@@ -49,6 +49,19 @@ define i8 @urem_XY_XZ_with_CY_rem_CZ_eq_0(i8 %X) {
   ret i8 %r
 }
 
+define i8 @urem_XY_XZ_with_CY_rem_CZ_eq_0_with_shl(i8 %X) {
+; CHECK-LABEL: @urem_XY_XZ_with_CY_rem_CZ_eq_0_with_shl(
+; CHECK-NEXT:    [[BO0:%.*]] = shl nuw i8 15, [[X:%.*]]
+; CHECK-NEXT:    [[BO1:%.*]] = shl i8 5, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[BO0]], [[BO1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %BO0 = shl nuw i8 15, %X
+  %BO1 = shl i8 5, %X
+  %r = urem i8 %BO0, %BO1
+  ret i8 %r
+}
+
 define i8 @urem_XY_XZ_with_CY_rem_CZ_eq_0_fail_missing_flag(i8 %X) {
 ; CHECK-LABEL: @urem_XY_XZ_with_CY_rem_CZ_eq_0_fail_missing_flag(
 ; CHECK-NEXT:    [[BO0:%.*]] = mul nsw i8 [[X:%.*]], 15
@@ -69,6 +82,19 @@ define i8 @urem_XY_XZ_with_CY_lt_CZ(i8 %X) {
 ;
   %BO0 = mul i8 %X, 3
   %BO1 = mul nuw i8 %X, 12
+  %r = urem i8 %BO0, %BO1
+  ret i8 %r
+}
+
+define i8 @urem_XY_XZ_with_CY_lt_CZ_with_shl(i8 %X) {
+; CHECK-LABEL: @urem_XY_XZ_with_CY_lt_CZ_with_shl(
+; CHECK-NEXT:    [[BO0:%.*]] = shl i8 3, [[X:%.*]]
+; CHECK-NEXT:    [[BO1:%.*]] = shl nuw i8 12, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = urem i8 [[BO0]], [[BO1]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %BO0 = shl i8 3, %X
+  %BO1 = shl nuw i8 12, %X
   %r = urem i8 %BO0, %BO1
   ret i8 %r
 }
@@ -279,6 +305,19 @@ define i8 @srem_XY_XZ_with_CY_lt_CZ_with_nuw_out(i8 %X) {
   %BO1 = mul nsw i8 %X, 15
   %r = srem i8 %BO0, %BO1
   ret i8 %r
+}
+
+define <2 x i8> @srem_XY_XZ_with_CY_lt_CZ_with_nuw_out_with_shl(<2 x i8> %X) {
+; CHECK-LABEL: @srem_XY_XZ_with_CY_lt_CZ_with_nuw_out_with_shl(
+; CHECK-NEXT:    [[BO0:%.*]] = shl nuw <2 x i8> <i8 3, i8 3>, [[X:%.*]]
+; CHECK-NEXT:    [[BO1:%.*]] = shl nsw <2 x i8> <i8 15, i8 15>, [[X]]
+; CHECK-NEXT:    [[R:%.*]] = srem <2 x i8> [[BO0]], [[BO1]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %BO0 = shl nuw <2 x i8> <i8 3, i8 3>, %X
+  %BO1 = shl nsw <2 x i8> <i8 15, i8 15>, %X
+  %r = srem <2 x i8> %BO0, %BO1
+  ret <2 x i8> %r
 }
 
 define i8 @srem_XY_XZ_with_CY_lt_CZ_no_nsw_out(i8 %X) {
