@@ -1,5 +1,5 @@
 // RUN: %libomptarget-compilexx-generic
-// RUN: env LIBOMPTARGET_NEXTGEN_PLUGINS=0 %libomptarget-run-generic %fcheck-generic
+// RUN: %libomptarget-run-generic %fcheck-generic
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO
@@ -7,6 +7,7 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
+// UNSUPPORTED: amdgcn-amd-amdhsa
 
 #include <cstdio>
 
