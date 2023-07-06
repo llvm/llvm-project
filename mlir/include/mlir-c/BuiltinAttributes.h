@@ -283,9 +283,6 @@ MLIR_CAPI_EXPORTED MlirAttribute mlirFlatSymbolRefAttrGet(MlirContext ctx,
 MLIR_CAPI_EXPORTED MlirStringRef
 mlirFlatSymbolRefAttrGetValue(MlirAttribute attr);
 
-/// Returns the typeID of an FlatSymbolRef attribute.
-MLIR_CAPI_EXPORTED MlirTypeID mlirFlatSymbolRefAttrGetTypeID(void);
-
 //===----------------------------------------------------------------------===//
 // Type attribute.
 //===----------------------------------------------------------------------===//

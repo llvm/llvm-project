@@ -305,10 +305,6 @@ MlirStringRef mlirFlatSymbolRefAttrGetValue(MlirAttribute attr) {
   return wrap(llvm::cast<FlatSymbolRefAttr>(unwrap(attr)).getValue());
 }
 
-MlirTypeID mlirFlatSymbolRefAttrGetTypeID(void) {
-  return wrap(FlatSymbolRefAttr::getTypeID());
-}
-
 //===----------------------------------------------------------------------===//
 // Type attribute.
 //===----------------------------------------------------------------------===//
