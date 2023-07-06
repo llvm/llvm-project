@@ -56,7 +56,7 @@ class TargetLibraryInfo;
 class Value;
 /// A private "module" namespace for types and utilities used by GVN. These
 /// are implementation details and should not be used by clients.
-namespace gvn LLVM_LIBRARY_VISIBILITY {
+namespace LLVM_LIBRARY_VISIBILITY gvn {
 
 struct AvailableValue;
 struct AvailableValueInBlock;
