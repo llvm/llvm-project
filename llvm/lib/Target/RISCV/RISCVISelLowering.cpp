@@ -12408,6 +12408,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue(N, 0);
     break;
   }
+  case RISCVISD::FMV_W_X_RV64: {
+    // If the input to FMV_W_X_RV64 is just FMV_X_ANYEXTW_RV64 the the
+    // conversion is unnecessary and can be replaced with the
+    // FMV_X_ANYEXTW_RV64 operand.
+    SDValue Op0 = N->getOperand(0);
+    if (Op0.getOpcode() == RISCVISD::FMV_X_ANYEXTW_RV64)
+      return Op0.getOperand(0);
+    break;
+  }
   case RISCVISD::FMV_X_ANYEXTH:
   case RISCVISD::FMV_X_ANYEXTW_RV64: {
     SDLoc DL(N);
