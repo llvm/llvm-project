@@ -130,11 +130,11 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
       argument.
       }],
       /*retTy=*/"void",
-      /*methodName=*/"setIsDevice",
-      (ins "bool":$isDevice), [{}], [{
+      /*methodName=*/"setIsTargetDevice",
+      (ins "bool":$isTargetDevice), [{}], [{
         $_op->setAttr(
-          mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.is_device"}),
-            mlir::BoolAttr::get($_op->getContext(), isDevice));
+          mlir::StringAttr::get($_op->getContext(), llvm::Twine{"omp.is_target_device"}),
+            mlir::BoolAttr::get($_op->getContext(), isTargetDevice));
       }]>,
     InterfaceMethod<
       /*description=*/[{
@@ -142,11 +142,11 @@ def OffloadModuleInterface : OpInterface<"OffloadModuleInterface"> {
         return its value, if it doesn't exist it returns false by default.
       }],
       /*retTy=*/"bool",
-      /*methodName=*/"getIsDevice",
+      /*methodName=*/"getIsTargetDevice",
       (ins), [{}], [{
-        if (Attribute isDevice = $_op->getAttr("omp.is_device"))
-          if (isDevice.isa<mlir::BoolAttr>())
-           return isDevice.dyn_cast<BoolAttr>().getValue();
+        if (Attribute isTargetDevice = $_op->getAttr("omp.is_target_device"))
+          if (isTargetDevice.isa<mlir::BoolAttr>())
+           return isTargetDevice.dyn_cast<BoolAttr>().getValue();
         return false;
       }]>,
     InterfaceMethod<

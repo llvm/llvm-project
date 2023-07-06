@@ -1,5 +1,5 @@
 !RUN: %flang_fc1 -emit-fir -fopenmp %s -o - | FileCheck %s 
-!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-is-device %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s
 
 module test_0
     implicit none
