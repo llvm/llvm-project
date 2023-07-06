@@ -12,9 +12,11 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/FormattedStream.h"
 
 namespace llvm {
 class StringRef;
@@ -55,6 +57,7 @@ extern bool SectionHeaders;
 extern bool SectionContents;
 extern bool ShowRawInsn;
 extern bool SymbolDescription;
+extern bool TracebackTable;
 extern bool SymbolTable;
 extern std::string TripleName;
 extern bool UnwindInfo;
@@ -156,6 +159,10 @@ std::string getFileNameForError(const object::Archive::Child &C,
                                 unsigned Index);
 SymbolInfoTy createSymbolInfo(const object::ObjectFile &Obj,
                               const object::SymbolRef &Symbol);
+unsigned getInstStartColumn(const MCSubtargetInfo &STI);
+void printRawData(llvm::ArrayRef<uint8_t> Bytes, uint64_t Address,
+                  llvm::formatted_raw_ostream &OS,
+                  llvm::MCSubtargetInfo const &STI);
 
 } // namespace objdump
 } // end namespace llvm
