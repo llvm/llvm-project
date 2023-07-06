@@ -10,7 +10,7 @@
 #include "Error.h"
 #include "llvm/Support/Error.h"
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -19,7 +19,7 @@
 namespace llvm {
 namespace exegesis {
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 
 Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
   // Add the PID to the shared memory name so that if we're running multiple
@@ -138,7 +138,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
 
 SubprocessMemory::~SubprocessMemory() {}
 
-#endif // __linux__
+#endif // defined(__linux__) && !defined(__ANDROID__)
 
 } // namespace exegesis
 } // namespace llvm
