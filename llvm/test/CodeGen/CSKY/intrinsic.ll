@@ -11,6 +11,33 @@ entry:
   ret i32 %nlz
 }
 
+define i32 @cttz_0(i32 %x) {
+; CHECK-LABEL: cttz_0:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    bez32 a0, .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %cond.false
+; CHECK-NEXT:    brev32 a0, a0
+; CHECK-NEXT:    ff1.32 a0, a0
+; CHECK-NEXT:    rts16
+; CHECK-NEXT:  .LBB1_2:
+; CHECK-NEXT:    movi16 a0, 32
+; CHECK-NEXT:    rts16
+entry:
+  %ntz = call i32 @llvm.cttz.i32(i32 %x, i1 0)
+  ret i32 %ntz
+}
+
+define i32 @cttz_1(i32 %x) {
+; CHECK-LABEL: cttz_1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    brev32 a0, a0
+; CHECK-NEXT:    ff1.32 a0, a0
+; CHECK-NEXT:    rts16
+entry:
+  %ntz = call i32 @llvm.cttz.i32(i32 %x, i1 1)
+  ret i32 %ntz
+}
+
 define i32 @bswap(i32 %x) {
 ; CHECK-LABEL: bswap:
 ; CHECK:       # %bb.0: # %entry
@@ -33,4 +60,5 @@ entry:
 
 declare i32 @llvm.bswap.i32(i32)
 declare i32 @llvm.ctlz.i32 (i32, i1)
+declare i32 @llvm.cttz.i32 (i32, i1)
 declare i32 @llvm.bitreverse.i32(i32)
