@@ -798,7 +798,7 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
     Nullability RequiredNullability =
         getNullabilityAnnotation(Param->getType());
     Nullability ArgExprTypeLevelNullability =
-        getNullabilityAnnotation(ArgExpr->getType());
+        getNullabilityAnnotation(lookThroughImplicitCasts(ArgExpr)->getType());
 
     unsigned ParamIdx = Param->getFunctionScopeIndex() + 1;
 
