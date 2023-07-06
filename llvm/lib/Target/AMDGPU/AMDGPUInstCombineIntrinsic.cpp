@@ -902,6 +902,12 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     break;
   }
+  case Intrinsic::amdgcn_mbcnt_hi: {
+    // exec_hi is all 0, so this is just a copy.
+    if (ST->isWave32())
+      return IC.replaceInstUsesWith(II, II.getArgOperand(1));
+    break;
+  }
   case Intrinsic::amdgcn_ballot: {
     if (auto *Src = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
       if (Src->isZero()) {
