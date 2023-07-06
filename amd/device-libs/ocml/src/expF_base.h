@@ -32,48 +32,23 @@
 // 
 //    e^x = (2^m) * ( (2^(j/64)) + q*(2^(j/64)) ) 
 
-PUREATTR float
-#if defined COMPILING_EXP2
-MATH_MANGLE(exp2)(float x)
-#elif defined COMPILING_EXP10
+CONSTATTR float
 MATH_MANGLE(exp10)(float x)
-#else
-MATH_MANGLE(exp)(float x)
-#endif
 {
     if (DAZ_OPT()) {
         if (UNSAFE_MATH_OPT()) {
-#if defined COMPILING_EXP2
-            return BUILTIN_AMDGPU_EXP2_F32(x);
-#elif defined COMPILING_EXP10
             return BUILTIN_AMDGPU_EXP2_F32(x * 0x1.a92000p+1f) * BUILTIN_AMDGPU_EXP2_F32(x * 0x1.4f0978p-11f);
-#else
-            return BUILTIN_AMDGPU_EXP2_F32(x * 0x1.715476p+0f);
-#endif
         } else {
-#if defined COMPILING_EXP2
-            return BUILTIN_AMDGPU_EXP2_F32(x);
-#else
             float ph, pl;
 
             if (HAVE_FAST_FMA32()) {
-#if defined COMPILING_EXP
-                const float c = 0x1.715476p+0f;
-                const float cc = 0x1.4ae0bep-26f; // c+cc are 49 bits
-#else
                 const float c = 0x1.a934f0p+1f;
                 const float cc = 0x1.2f346ep-24f;
-#endif
                 ph = x * c;
                 pl = BUILTIN_FMA_F32(x, cc, BUILTIN_FMA_F32(x, c, -ph));
             } else {
-#if defined COMPILING_EXP
-                const float ch = 0x1.714000p+0f;
-                const float cl = 0x1.47652ap-12f; // ch + cl are 36 bits
-#else
                 const float ch = 0x1.a92000p+1f;
                 const float cl = 0x1.4f0978p-11f;
-#endif
                 float xh = AS_FLOAT(AS_INT(x) & 0xfffff000);
                 float xl = x - xh;
                 ph = xh * ch;
@@ -84,56 +59,28 @@ MATH_MANGLE(exp)(float x)
             float a = ph - e + pl;
             float r = BUILTIN_FLDEXP_F32(BUILTIN_AMDGPU_EXP2_F32(a), (int)e);
 
-#if defined COMPILING_EXP
-            r = x < -0x1.5d58a0p+6f ? 0.0f : r;
-            r = x > 0x1.62e430p+6f ? PINF_F32 : r;
-#else
             r = x < -0x1.2f7030p+5f ? 0.0f : r;
             r = x > 0x1.344136p+5f ? PINF_F32 : r;
-#endif
             return r;
-#endif
         }
     } else {
         if (UNSAFE_MATH_OPT()) {
-#if defined COMPILING_EXP2
-            bool s = x < -0x1.f80000p+6f;
-            return BUILTIN_AMDGPU_EXP2_F32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
-#elif defined COMPILING_EXP10
             bool s = x < -0x1.2f7030p+5f;
             x += s ? 0x1.0p+5f : 0.0f;
             return BUILTIN_AMDGPU_EXP2_F32(x * 0x1.a92000p+1f) *
                    BUILTIN_AMDGPU_EXP2_F32(x * 0x1.4f0978p-11f) *
                    (s ? 0x1.9f623ep-107f : 1.0f);
-#else
-            bool s = x < -0x1.5d58a0p+6f;
-            return BUILTIN_AMDGPU_EXP2_F32((x + (s ? 0x1.0p+6f : 0.0f)) * 0x1.715476p+0f) * (s ? 0x1.969d48p-93f : 1.0f);
-#endif
         } else {
-#if defined COMPILING_EXP2
-            bool s = x < -0x1.f80000p+6f;
-            return BUILTIN_AMDGPU_EXP2_F32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
-#else
             float ph, pl;
 
             if (HAVE_FAST_FMA32()) {
-#if defined COMPILING_EXP
-                const float c = 0x1.715476p+0f;
-                const float cc = 0x1.4ae0bep-26f; // c+cc are 49 bits
-#else
                 const float c = 0x1.a934f0p+1f;
                 const float cc = 0x1.2f346ep-24f;
-#endif
                 ph = x * c;
                 pl = BUILTIN_FMA_F32(x, cc, BUILTIN_FMA_F32(x, c, -ph));
             } else {
-#if defined COMPILING_EXP
-                const float ch = 0x1.714000p+0f;
-                const float cl = 0x1.47652ap-12f; // ch + cl are 36 bits
-#else
                 const float ch = 0x1.a92000p+1f;
                 const float cl = 0x1.4f0978p-11f;
-#endif
                 float xh = AS_FLOAT(AS_INT(x) & 0xfffff000);
                 float xl = x - xh;
                 ph = xh * ch;
@@ -144,15 +91,9 @@ MATH_MANGLE(exp)(float x)
             float a = ph - e + pl;
             float r = BUILTIN_FLDEXP_F32(BUILTIN_AMDGPU_EXP2_F32(a), (int)e);
 
-#if defined COMPILING_EXP
-            r = x < -0x1.9d1da0p+6f ? 0.0f : r;
-            r = x > 0x1.62e430p+6f ? PINF_F32 : r;
-#else
             r = x < -0x1.66d3e8p+5f ? 0.0f : r;
             r = x > 0x1.344136p+5f ? PINF_F32 : r;
-#endif
             return r;
-#endif
         }
     }
 }

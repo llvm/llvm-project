@@ -5,6 +5,9 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#define COMPILING_EXP2
-#include "expF_base.h"
+#include "mathF.h"
 
+CONSTATTR float
+MATH_MANGLE(exp2)(float x) {
+    return BUILTIN_EXP2_F32(x);
+}

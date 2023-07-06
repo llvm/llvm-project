@@ -29,6 +29,7 @@ set_source_files_properties(
 
 set_source_files_properties(
   ${CMAKE_CURRENT_SOURCE_DIR}/src/native_logF.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/native_expF.cl
   PROPERTIES COMPILE_FLAGS "${native_func_flags}")
 
 opencl_bc_lib(NAME ocml SOURCES ${sources})
