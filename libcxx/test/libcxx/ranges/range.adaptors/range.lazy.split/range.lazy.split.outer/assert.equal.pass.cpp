@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03, c++11, c++14, c++17, !libcpp-has-debug-mode
+// UNSUPPORTED: c++03, c++11, c++14, c++17, !libcpp-has-legacy-debug-mode
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 // <ranges>
