@@ -299,7 +299,7 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
   // over the full 32 bytes (8 instructions) with the following pattern:
   //
   //   STP X0, X30, [SP, #-16]! ; push X0 and the link register to the stack
-  //   LDR W0, #12 ; W0 := function ID
+  //   LDR W17, #12 ; W17 := function ID
   //   LDR X16,#12 ; X16 := addr of __xray_FunctionEntry or __xray_FunctionExit
   //   BLR X16 ; call the tracing trampoline
   //   ;DATA: 32 bits of function ID
