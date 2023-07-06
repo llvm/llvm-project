@@ -24,6 +24,7 @@ static_library("Rewrite") {
     "DWARFRewriter.cpp",
     "ExecutableFileMemoryManager.cpp",
     "JITLinkLinker.cpp",
+    "LinuxKernelRewriter.cpp",
     "MachORewriteInstance.cpp",
     "RewriteInstance.cpp",
   ]
