@@ -811,8 +811,7 @@ declare <vscale x 1 x half> @llvm.riscv.vfsqrt.mask.nxv1f16(
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x i1>,
-  iXLen,
-  iXLen);
+  iXLen, iXLen, iXLen);
 
 define <vscale x 1 x half> @intrinsic_vfsqrt_mask_v_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfsqrt_mask_v_nxv1f16_nxv1f16:
@@ -825,7 +824,7 @@ entry:
     <vscale x 1 x half> undef,
     <vscale x 1 x half> %0,
     <vscale x 1 x i1> %1,
-    iXLen %2, iXLen 3)
+    iXLen 7, iXLen %2, iXLen 3)
 
   ret <vscale x 1 x half> %a
 }
@@ -857,8 +856,7 @@ declare <vscale x 1 x half> @llvm.riscv.vfrec7.mask.nxv1f16(
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x i1>,
-  iXLen,
-  iXLen);
+  iXLen, iXLen, iXLen);
 
 define <vscale x 1 x half> @intrinsic_vfrec7_mask_v_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x i1> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfrec7_mask_v_nxv1f16_nxv1f16:
@@ -871,7 +869,7 @@ entry:
     <vscale x 1 x half> undef,
     <vscale x 1 x half> %0,
     <vscale x 1 x i1> %1,
-    iXLen %2, iXLen 3)
+    iXLen 7, iXLen %2, iXLen 3)
 
   ret <vscale x 1 x half> %a
 }
