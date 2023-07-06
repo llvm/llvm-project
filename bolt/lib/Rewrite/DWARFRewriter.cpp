@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWARFLinker/DWARFStreamer.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
@@ -238,6 +239,13 @@ static cl::opt<bool>
                              "Skeleton CUs that get patched."),
                     cl::ZeroOrMore, cl::Hidden, cl::init(false),
                     cl::cat(BoltCategory));
+
+static cl::opt<unsigned> BatchSize(
+    "cu-processing-batch-size",
+    cl::desc(
+        "Specifies the size of batches for processing CUs. Higher number has "
+        "better performance, but more memory usage. Default value is 1."),
+    cl::Hidden, cl::init(1), cl::cat(BoltCategory));
 } // namespace opts
 
 static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
@@ -342,12 +350,11 @@ createDIEStreamer(const Triple &TheTriple, raw_pwrite_stream &OutFile,
   return Streamer;
 }
 
-static DWARFRewriter::UnitMeta emitUnit(DIEBuilder &DIEBldr,
-                                        std::unique_ptr<DIEStreamer> &Streamer,
-                                        DWARFUnit &Unit) {
+static DWARFRewriter::UnitMeta
+emitUnit(DIEBuilder &DIEBldr, DIEStreamer &Streamer, DWARFUnit &Unit) {
   DIE *UnitDIE = DIEBldr.getUnitDIEbyUnit(Unit);
   const DIEBuilder::DWARFUnitInfo &U = DIEBldr.getUnitInfoByDwarfUnit(Unit);
-  Streamer->emitUnit(Unit, *UnitDIE);
+  Streamer.emitUnit(Unit, *UnitDIE);
   uint64_t TypeHash = 0;
   if (DWARFTypeUnit *DTU = dyn_cast_or_null<DWARFTypeUnit>(&Unit))
     TypeHash = DTU->getTypeHash();
@@ -377,7 +384,8 @@ static void emitDWOBuilder(const std::string &DWOName,
     // TUs
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_info_section_units()) {
-      DWARFRewriter::UnitMeta MI = emitUnit(DWODIEBuilder, Streamer, *CU.get());
+      DWARFRewriter::UnitMeta MI =
+          emitUnit(DWODIEBuilder, *Streamer, *CU.get());
       if (CU->isTypeUnit())
         TUMetaVector.emplace_back(MI);
       else
@@ -386,11 +394,11 @@ static void emitDWOBuilder(const std::string &DWOName,
   } else {
     for (std::unique_ptr<llvm::DWARFUnit> &CU :
          SplitCU.getContext().dwo_compile_units())
-      emitUnit(DWODIEBuilder, Streamer, *CU.get());
+      emitUnit(DWODIEBuilder, *Streamer, *CU.get());
 
     // emit debug_types sections for dwarf4
     for (DWARFUnit *CU : DWODIEBuilder.getDWARF4TUVector()) {
-      DWARFRewriter::UnitMeta MI = emitUnit(DWODIEBuilder, Streamer, *CU);
+      DWARFRewriter::UnitMeta MI = emitUnit(DWODIEBuilder, *Streamer, *CU);
       TUMetaVector.emplace_back(MI);
     }
   }
@@ -437,6 +445,46 @@ void DWARFRewriter::addStringHelper(DIEBuilder &DIEBldr, DIE &Die,
   }
   DIEBldr.replaceValue(&Die, DIEAttrInfo.getAttribute(), DIEAttrInfo.getForm(),
                        DIEInteger(NewOffset));
+}
+
+using DWARFUnitVec = std::vector<DWARFUnit *>;
+using CUPartitionVector = std::vector<DWARFUnitVec>;
+/// Partitions CUs in to buckets. Bucket size is controlled by
+/// cu-processing-batch-size. All the CUs that have cross CU reference reference
+/// as a source are put in to the same initial bucket.
+static CUPartitionVector partitionCUs(DWARFContext &DwCtx) {
+  CUPartitionVector Vec(2);
+  unsigned Counter = 0;
+  const DWARFDebugAbbrev *Abbr = DwCtx.getDebugAbbrev();
+  for (std::unique_ptr<DWARFUnit> &CU : DwCtx.compile_units()) {
+    Expected<const DWARFAbbreviationDeclarationSet *> AbbrDeclSet =
+        Abbr->getAbbreviationDeclarationSet(CU->getAbbreviationsOffset());
+    if (!AbbrDeclSet) {
+      consumeError(AbbrDeclSet.takeError());
+      return Vec;
+    }
+    bool CrossCURefFound = false;
+    for (const DWARFAbbreviationDeclaration &Decl : *AbbrDeclSet.get()) {
+      for (const DWARFAbbreviationDeclaration::AttributeSpec &Attr :
+           Decl.attributes()) {
+        if (Attr.Form == dwarf::DW_FORM_ref_addr) {
+          CrossCURefFound = true;
+          break;
+        }
+      }
+      if (CrossCURefFound)
+        break;
+    }
+    if (CrossCURefFound) {
+      Vec[0].push_back(CU.get());
+    } else {
+      ++Counter;
+      Vec.back().push_back(CU.get());
+    }
+    if (Counter % opts::BatchSize == 0 && !Vec.back().empty())
+      Vec.push_back({});
+  }
+  return Vec;
 }
 
 void DWARFRewriter::updateDebugInfo() {
@@ -541,6 +589,7 @@ void DWARFRewriter::updateDebugInfo() {
     // Skipping CUs that failed to load.
     if (SplitCU) {
       DIEBuilder DWODIEBuilder(&(*SplitCU)->getContext(), true);
+      DWODIEBuilder.buildBoth();
       std::string DWOName = updateDWONameCompDir(
           *Unit, *DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
 
@@ -579,7 +628,7 @@ void DWARFRewriter::updateDebugInfo() {
       RangesBase = RangesSectionWriter->getSectionOffset() +
                    getDWARF5RngListLocListHeaderSize();
       RangesSectionWriter->initSection(*Unit);
-      StrOffstsWriter->finalizeSection(*Unit);
+      StrOffstsWriter->finalizeSection(*Unit, *DIEBlder);
     }
 
     updateUnitDebugInfo(*Unit, *DIEBlder, *DebugLocWriter, *RangesSectionWriter,
@@ -587,13 +636,33 @@ void DWARFRewriter::updateDebugInfo() {
     DebugLocWriter->finalize(*DIEBlder, *DIEBlder->getUnitDIEbyUnit(*Unit));
     if (Unit->getVersion() >= 5)
       RangesSectionWriter->finalizeSection();
+    AddrWriter->update(*DIEBlder, *Unit);
   };
 
   CUIndex = 0;
   DIEBuilder DIEBlder(BC.DwCtx.get());
-  if (opts::NoThreads || opts::DeterministicDebugInfo) {
-    for (std::unique_ptr<DWARFUnit> &CU : BC.DwCtx->compile_units()) {
-      processUnitDIE(CUIndex++, CU.get(), &DIEBlder);
+  DIEBlder.buildTypeUnits();
+  SmallVector<char, 20> OutBuffer;
+  std::unique_ptr<raw_svector_ostream> ObjOS =
+      std::make_unique<raw_svector_ostream>(OutBuffer);
+  const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
+  auto TheTriple = std::make_unique<Triple>(File->makeTriple());
+  std::unique_ptr<DIEStreamer> Streamer =
+      createDIEStreamer(*TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this);
+  CUOffsetMap OffsetMap = finalizeTypeSections(DIEBlder, *Streamer);
+
+  const bool SingleThreadedMode =
+      opts::NoThreads || opts::DeterministicDebugInfo;
+  if (!SingleThreadedMode)
+    DIEBlder.buildCompileUnits();
+  if (SingleThreadedMode) {
+    CUPartitionVector PartVec = partitionCUs(*BC.DwCtx);
+    for (std::vector<DWARFUnit *> &Vec : PartVec) {
+      DIEBlder.buildCompileUnits(Vec);
+      for (DWARFUnit *CU : DIEBlder.getProcessedCUs())
+        processUnitDIE(CUIndex++, CU, &DIEBlder);
+      finalizeCompileUnits(DIEBlder, *Streamer, OffsetMap,
+                           DIEBlder.getProcessedCUs());
     }
   } else {
     // Update unit debug info in parallel
@@ -608,7 +677,7 @@ void DWARFRewriter::updateDebugInfo() {
   if (opts::WriteDWP)
     finalizeDWP(State);
 
-  CUOffsetMap OffsetMap = finalizeDebugSections(DIEBlder);
+  finalizeDebugSections(DIEBlder, *Streamer, *ObjOS, OffsetMap);
   updateGdbIndexSection(OffsetMap, CUIndex);
 }
 
@@ -1225,7 +1294,69 @@ void DWARFRewriter::updateLineTableOffsets(const MCAsmLayout &Layout) {
     TypeInfoSection->setIsFinalized();
 }
 
-CUOffsetMap DWARFRewriter::finalizeDebugSections(DIEBuilder &DIEBlder) {
+CUOffsetMap DWARFRewriter::finalizeTypeSections(DIEBuilder &DIEBlder,
+                                                DIEStreamer &Streamer) {
+  // update TypeUnit DW_AT_stmt_list with new .debug_line information.
+  for (const std::unique_ptr<DWARFUnit> &TU : BC.DwCtx->types_section_units()) {
+    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*TU.get());
+    DIEValue StmtAttrInfo = UnitDIE->findAttribute(dwarf::DW_AT_stmt_list);
+    if (!StmtAttrInfo || !TypeUnitRelocMap.count(TU.get()))
+      continue;
+    DIEBlder.replaceValue(UnitDIE, dwarf::DW_AT_stmt_list,
+                          StmtAttrInfo.getForm(),
+                          DIEInteger(TypeUnitRelocMap[TU.get()]));
+  }
+
+  // generate and populate abbrevs here
+  DIEBlder.generateAbbrevs();
+  DIEBlder.finish();
+  SmallVector<char, 20> OutBuffer;
+  std::shared_ptr<raw_svector_ostream> ObjOS =
+      std::make_shared<raw_svector_ostream>(OutBuffer);
+  const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
+  auto TheTriple = std::make_unique<Triple>(File->makeTriple());
+  std::unique_ptr<DIEStreamer> TypeStreamer =
+      createDIEStreamer(*TheTriple, *ObjOS, "TypeStreamer", DIEBlder, *this);
+
+  // generate debug_info and CUMap
+  CUOffsetMap CUMap;
+  for (std::unique_ptr<llvm::DWARFUnit> &CU : BC.DwCtx->info_section_units()) {
+    if (!CU->isTypeUnit())
+      continue;
+    emitUnit(DIEBlder, Streamer, *CU.get());
+    uint32_t StartOffset = CUOffset;
+    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU.get());
+    CUOffset += CU.get()->getHeaderSize();
+    CUOffset += UnitDIE->getSize();
+    CUMap[CU.get()->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
+  }
+
+  // Emit Type Unit of DWARF 4 to .debug_type section
+  for (DWARFUnit *TU : DIEBlder.getDWARF4TUVector())
+    emitUnit(DIEBlder, *TypeStreamer, *TU);
+
+  TypeStreamer->finish();
+
+  std::unique_ptr<MemoryBuffer> ObjectMemBuffer =
+      MemoryBuffer::getMemBuffer(ObjOS->str(), "in-memory object file", false);
+  std::unique_ptr<object::ObjectFile> Obj = cantFail(
+      object::ObjectFile::createObjectFile(ObjectMemBuffer->getMemBufferRef()),
+      "error creating in-memory object");
+
+  for (const SectionRef &Section : Obj->sections()) {
+    StringRef Contents = cantFail(Section.getContents());
+    StringRef Name = cantFail(Section.getName());
+    if (Name.equals(".debug_types"))
+      BC.registerOrUpdateNoteSection(".debug_types", copyByteArray(Contents),
+                                     Contents.size());
+  }
+  return CUMap;
+}
+
+void DWARFRewriter::finalizeDebugSections(DIEBuilder &DIEBlder,
+                                          DIEStreamer &Streamer,
+                                          raw_svector_ostream &ObjOS,
+                                          CUOffsetMap &CUMap) {
   if (StrWriter->isInitialized()) {
     RewriteInstance::addToDebugSectionsToOverwrite(".debug_str");
     std::unique_ptr<DebugStrBufferVector> DebugStrSectionContents =
@@ -1285,89 +1416,13 @@ CUOffsetMap DWARFRewriter::finalizeDebugSections(DIEBuilder &DIEBlder) {
     BC.registerOrUpdateNoteSection(".debug_addr",
                                    copyByteArray(AddressSectionContents),
                                    AddressSectionContents.size());
-    for (std::unique_ptr<llvm::DWARFUnit> &CU : BC.DwCtx->compile_units()) {
-      DIE *Die = DIEBlder.getUnitDIEbyUnit(*CU.get());
-      uint64_t Offset = 0;
-      DIEValue GnuAddrBaseAttrInfo =
-          Die->findAttribute(dwarf::DW_AT_GNU_addr_base);
-      DIEValue AddrBaseAttrInfo = Die->findAttribute(dwarf::DW_AT_addr_base);
-      dwarf::Form BaseAttrForm;
-      dwarf::Attribute BaseAttr;
-      // For cases where Skeleton CU does not have DW_AT_GNU_addr_base
-      if (!GnuAddrBaseAttrInfo && CU->getVersion() < 5)
-        continue;
-
-      if (!AddrBaseAttrInfo && CU->getVersion() >= 5 &&
-          !AddrWriter->doesCUExist(*CU))
-        continue;
-
-      Offset = AddrWriter->getOffset(*CU);
-
-      if (GnuAddrBaseAttrInfo) {
-        BaseAttrForm = GnuAddrBaseAttrInfo.getForm();
-        BaseAttr = GnuAddrBaseAttrInfo.getAttribute();
-      }
-
-      if (AddrBaseAttrInfo) {
-        BaseAttrForm = AddrBaseAttrInfo.getForm();
-        BaseAttr = AddrBaseAttrInfo.getAttribute();
-      }
-
-      if (GnuAddrBaseAttrInfo || AddrBaseAttrInfo) {
-        DIEBlder.replaceValue(Die, BaseAttr, BaseAttrForm, DIEInteger(Offset));
-      } else if (CU->getVersion() >= 5) {
-        // A case where we were not using .debug_addr section, but after update
-        // now using it.
-        DIEBlder.addValue(Die, dwarf::DW_AT_addr_base,
-                          dwarf::DW_FORM_sec_offset, DIEInteger(Offset));
-      }
-    }
   }
 
-  // update TypeUnit DW_AT_stmt_list with new .debug_line information.
-  for (const std::unique_ptr<DWARFUnit> &TU : BC.DwCtx->types_section_units()) {
-    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*TU.get());
-    DIEValue StmtAttrInfo = UnitDIE->findAttribute(dwarf::DW_AT_stmt_list);
-    if (!StmtAttrInfo || !TypeUnitRelocMap.count(TU.get()))
-      continue;
-    DIEBlder.replaceValue(UnitDIE, dwarf::DW_AT_stmt_list,
-                          StmtAttrInfo.getForm(),
-                          DIEInteger(TypeUnitRelocMap[TU.get()]));
-  }
-
-  // generate and populate abbrevs here
-  DIEBlder.generateAbbrevs();
-  DIEBlder.finish();
-  SmallVector<char, 20> OutBuffer;
-  std::shared_ptr<raw_svector_ostream> ObjOS =
-      std::make_shared<raw_svector_ostream>(OutBuffer);
-  const object::ObjectFile *File = BC.DwCtx->getDWARFObj().getFile();
-  auto TheTriple = std::make_unique<Triple>(File->makeTriple());
-  std::unique_ptr<DIEStreamer> Streamer = createDIEStreamer(
-      *TheTriple, *ObjOS, "AbbrevStreamerInitAug2", DIEBlder, *this);
-
-  // generate debug_info and CUMap
-  CUOffsetMap CUMap;
-  uint32_t CUOffset = 0;
-  for (std::unique_ptr<llvm::DWARFUnit> &CU : BC.DwCtx->info_section_units()) {
-    emitUnit(DIEBlder, Streamer, *CU.get());
-
-    uint32_t StartOffset = CUOffset;
-    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU.get());
-    CUOffset += CU.get()->getHeaderSize();
-    CUOffset += UnitDIE->getSize();
-    CUMap[CU.get()->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
-  }
-
-  // Emit Type Unit of DWARF 4 to .debug_type section
-  for (DWARFUnit *TU : DIEBlder.getDWARF4TUVector())
-    emitUnit(DIEBlder, Streamer, *TU);
-
-  Streamer->emitAbbrevs(DIEBlder.getAbbrevs(), BC.DwCtx->getMaxVersion());
-  Streamer->finish();
+  Streamer.emitAbbrevs(DIEBlder.getAbbrevs(), BC.DwCtx->getMaxVersion());
+  Streamer.finish();
 
   std::unique_ptr<MemoryBuffer> ObjectMemBuffer =
-      MemoryBuffer::getMemBuffer(ObjOS->str(), "in-memory object file", false);
+      MemoryBuffer::getMemBuffer(ObjOS.str(), "in-memory object file", false);
   std::unique_ptr<object::ObjectFile> Obj = cantFail(
       object::ObjectFile::createObjectFile(ObjectMemBuffer->getMemBufferRef()),
       "error creating in-memory object");
@@ -1380,9 +1435,6 @@ CUOffsetMap DWARFRewriter::finalizeDebugSections(DIEBuilder &DIEBlder) {
                                      Contents.size());
     } else if (Name.equals(".debug_info")) {
       BC.registerOrUpdateNoteSection(".debug_info", copyByteArray(Contents),
-                                     Contents.size());
-    } else if (Name.equals(".debug_types")) {
-      BC.registerOrUpdateNoteSection(".debug_types", copyByteArray(Contents),
                                      Contents.size());
     }
   }
@@ -1402,7 +1454,23 @@ CUOffsetMap DWARFRewriter::finalizeDebugSections(DIEBuilder &DIEBlder) {
                                    copyByteArray(ARangesContents),
                                    ARangesContents.size());
   }
-  return CUMap;
+}
+
+void DWARFRewriter::finalizeCompileUnits(DIEBuilder &DIEBlder,
+                                         DIEStreamer &Streamer,
+                                         CUOffsetMap &CUMap,
+                                         const std::list<DWARFUnit *> &CUs) {
+  DIEBlder.generateAbbrevs();
+  DIEBlder.finish();
+  // generate debug_info and CUMap
+  for (DWARFUnit *CU : CUs) {
+    emitUnit(DIEBlder, Streamer, *CU);
+    const uint32_t StartOffset = CUOffset;
+    DIE *UnitDIE = DIEBlder.getUnitDIEbyUnit(*CU);
+    CUOffset += CU->getHeaderSize();
+    CUOffset += UnitDIE->getSize();
+    CUMap[CU->getOffset()] = {StartOffset, CUOffset - StartOffset - 4};
+  }
 }
 
 // Creates all the data structures necessary for creating MCStreamer.
@@ -1921,8 +1989,15 @@ void DWARFRewriter::updateGdbIndexSection(CUOffsetMap &CUMap, uint32_t NumCUs) {
   write32le(Buffer + 20, ConstantPoolOffset + Delta);
   Buffer += 24;
 
+  using MapEntry = std::pair<uint32_t, CUInfo>;
+  std::vector<MapEntry> CUVector(CUMap.begin(), CUMap.end());
+  // Need to sort since we write out all of TUs in .debug_info before CUs.
+  std::sort(CUVector.begin(), CUVector.end(),
+            [](const MapEntry &E1, const MapEntry &E2) -> bool {
+              return E1.second.Offset < E2.second.Offset;
+            });
   // Writing out CU List <Offset, Size>
-  for (auto &CUInfo : CUMap) {
+  for (auto &CUInfo : CUVector) {
     // Skipping TU for DWARF5 when they are not included in CU list.
     if (!OriginalOffsets.count(CUInfo.first))
       continue;
