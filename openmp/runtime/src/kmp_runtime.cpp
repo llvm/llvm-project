@@ -7287,6 +7287,10 @@ static void __kmp_do_serial_initialize(void) {
 
   __kmp_init_serial = TRUE;
 
+  if (__kmp_version) {
+    __kmp_print_version_1();
+  }
+
   if (__kmp_settings) {
     __kmp_env_print();
   }

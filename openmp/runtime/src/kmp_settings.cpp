@@ -6362,10 +6362,6 @@ void __kmp_env_initialize(char const *string) {
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
-  if (__kmp_version) {
-    __kmp_print_version_1();
-  }
-
   // Post-initialization step: some env. vars need their value's further
   // processing
   if (string != NULL) { // kmp_set_defaults() was called
