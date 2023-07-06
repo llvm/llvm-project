@@ -29,14 +29,12 @@ int clo_32(int a) {
 
 // RV64XTHEADBB-LABEL: @clz_64(
 // RV64XTHEADBB-NEXT:  entry:
-// RV64XTHEADBB-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // RV64XTHEADBB-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // RV64XTHEADBB-NEXT:    store i64 [[A:%.*]], ptr [[A_ADDR]], align 8
 // RV64XTHEADBB-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
 // RV64XTHEADBB-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[TMP0]], i1 false)
-// RV64XTHEADBB-NEXT:    store i64 [[TMP1]], ptr [[RETVAL]], align 4
-// RV64XTHEADBB-NEXT:    [[TMP2:%.*]] = load i32, ptr [[RETVAL]], align 4
-// RV64XTHEADBB-NEXT:    ret i32 [[TMP2]]
+// RV64XTHEADBB-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP1]] to i32
+// RV64XTHEADBB-NEXT:    ret i32 [[CAST]]
 //
 int clz_64(long a) {
   return __builtin_riscv_clz_64(a);
@@ -44,15 +42,13 @@ int clz_64(long a) {
 
 // RV64XTHEADBB-LABEL: @clo_64(
 // RV64XTHEADBB-NEXT:  entry:
-// RV64XTHEADBB-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // RV64XTHEADBB-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // RV64XTHEADBB-NEXT:    store i64 [[A:%.*]], ptr [[A_ADDR]], align 8
 // RV64XTHEADBB-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A_ADDR]], align 8
 // RV64XTHEADBB-NEXT:    [[NOT:%.*]] = xor i64 [[TMP0]], -1
 // RV64XTHEADBB-NEXT:    [[TMP1:%.*]] = call i64 @llvm.ctlz.i64(i64 [[NOT]], i1 false)
-// RV64XTHEADBB-NEXT:    store i64 [[TMP1]], ptr [[RETVAL]], align 4
-// RV64XTHEADBB-NEXT:    [[TMP2:%.*]] = load i32, ptr [[RETVAL]], align 4
-// RV64XTHEADBB-NEXT:    ret i32 [[TMP2]]
+// RV64XTHEADBB-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP1]] to i32
+// RV64XTHEADBB-NEXT:    ret i32 [[CAST]]
 //
 int clo_64(long a) {
   return __builtin_riscv_clz_64(~a);
