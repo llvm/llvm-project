@@ -2568,3 +2568,123 @@ define <2 x i1> @icmp_ne_m1_or_ne_m1(<2 x i8> %x, <2 x i8> %y) {
   %r = or <2 x i1> %rx, %ry
   ret <2 x i1> %r
 }
+
+define i32 @icmp_slt_0_or_icmp_sgt_0_i32(i32 %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i32(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr i32 [[X]], 31
+; CHECK-NEXT:    [[D:%.*]] = zext i1 [[B]] to i32
+; CHECK-NEXT:    [[E:%.*]] = or i32 [[X_LOBIT]], [[D]]
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %A = icmp slt i32 %x, 0
+  %B = icmp sgt i32 %x, 0
+  %C = zext i1 %A to i32
+  %D = zext i1 %B to i32
+  %E = or i32 %C, %D
+  ret i32 %E
+}
+
+define i64 @icmp_slt_0_or_icmp_sgt_0_i64(i64 %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr i64 [[X]], 63
+; CHECK-NEXT:    [[D:%.*]] = zext i1 [[B]] to i64
+; CHECK-NEXT:    [[E:%.*]] = or i64 [[X_LOBIT]], [[D]]
+; CHECK-NEXT:    ret i64 [[E]]
+;
+  %A = icmp slt i64 %x, 0
+  %B = icmp sgt i64 %x, 0
+  %C = zext i1 %A to i64
+  %D = zext i1 %B to i64
+  %E = or i64 %C, %D
+  ret i64 %E
+}
+
+define i64 @icmp_slt_0_or_icmp_sgt_0_i64_fail0(i64 %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64_fail0(
+; CHECK-NEXT:    [[E:%.*]] = lshr i64 [[X:%.*]], 63
+; CHECK-NEXT:    ret i64 [[E]]
+;
+  %B = icmp slt i64 %x, 0
+  %C = lshr i64 %x, 63
+  %D = zext i1 %B to i64
+  %E = or i64 %C, %D
+  ret i64 %E
+}
+
+define i64 @icmp_slt_0_or_icmp_sgt_0_i64_fail1(i64 %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64_fail1(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[C:%.*]] = ashr i64 [[X]], 63
+; CHECK-NEXT:    [[D:%.*]] = zext i1 [[B]] to i64
+; CHECK-NEXT:    [[E:%.*]] = or i64 [[C]], [[D]]
+; CHECK-NEXT:    ret i64 [[E]]
+;
+  %B = icmp sgt i64 %x, 0
+  %C = ashr i64 %x, 63
+  %D = zext i1 %B to i64
+  %E = or i64 %C, %D
+  ret i64 %E
+}
+
+define i64 @icmp_slt_0_or_icmp_sgt_0_i64_fail2(i64 %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64_fail2(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[C:%.*]] = lshr i64 [[X]], 62
+; CHECK-NEXT:    [[D:%.*]] = zext i1 [[B]] to i64
+; CHECK-NEXT:    [[E:%.*]] = or i64 [[C]], [[D]]
+; CHECK-NEXT:    ret i64 [[E]]
+;
+  %B = icmp sgt i64 %x, 0
+  %C = lshr i64 %x, 62
+  %D = zext i1 %B to i64
+  %E = or i64 %C, %D
+  ret i64 %E
+}
+
+define i64 @icmp_slt_0_or_icmp_sgt_0_i64_fail3(i64 %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64_fail3(
+; CHECK-NEXT:    [[C:%.*]] = ashr i64 [[X:%.*]], 62
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr i64 [[X]], 63
+; CHECK-NEXT:    [[E:%.*]] = or i64 [[C]], [[X_LOBIT]]
+; CHECK-NEXT:    ret i64 [[E]]
+;
+  %B = icmp slt i64 %x, 0
+  %C = ashr i64 %x, 62
+  %D = zext i1 %B to i64
+  %E = or i64 %C, %D
+  ret i64 %E
+}
+
+define <2 x i64> @icmp_slt_0_or_icmp_sgt_0_i64x2(<2 x i64> %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64x2(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i64> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr <2 x i64> [[X]], <i64 63, i64 63>
+; CHECK-NEXT:    [[D:%.*]] = zext <2 x i1> [[B]] to <2 x i64>
+; CHECK-NEXT:    [[E:%.*]] = or <2 x i64> [[X_LOBIT]], [[D]]
+; CHECK-NEXT:    ret <2 x i64> [[E]]
+;
+  %A = icmp slt <2 x i64> %x, <i64 0,i64 0>
+  %B = icmp sgt <2 x i64> %x, <i64 0,i64 0>
+  %C = zext <2 x i1> %A to <2 x i64>
+  %D = zext <2 x i1> %B to <2 x i64>
+  %E = or <2 x i64> %C, %D
+  ret <2 x i64> %E
+}
+
+define <2 x i64> @icmp_slt_0_or_icmp_sgt_0_i64x2_fail(<2 x i64> %x) {
+; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64x2_fail(
+; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i64> [[X:%.*]], <i64 1, i64 1>
+; CHECK-NEXT:    [[C:%.*]] = lshr <2 x i64> [[X]], <i64 63, i64 63>
+; CHECK-NEXT:    [[D:%.*]] = zext <2 x i1> [[B]] to <2 x i64>
+; CHECK-NEXT:    [[E:%.*]] = or <2 x i64> [[C]], [[D]]
+; CHECK-NEXT:    ret <2 x i64> [[E]]
+;
+  %B = icmp sgt <2 x i64> %x, <i64 1, i64 1>
+  %C = lshr <2 x i64> %x, <i64 63, i64 63>
+  %D = zext <2 x i1> %B to <2 x i64>
+  %E = or <2 x i64> %C, %D
+  ret <2 x i64> %E
+
+}
