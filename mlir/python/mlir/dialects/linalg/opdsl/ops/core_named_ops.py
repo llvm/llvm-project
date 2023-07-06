@@ -36,6 +36,78 @@ def elemwise_unary(
 
 
 @linalg_structured_op
+def exp(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies exp(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.exp(I[None])
+
+
+@linalg_structured_op
+def log(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies log(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.log(I[None])
+
+
+@linalg_structured_op
+def abs(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies abs(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.abs(I[None])
+
+
+@linalg_structured_op
+def ceil(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies ceil(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.ceil(I[None])
+
+
+@linalg_structured_op
+def floor(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies floor(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.floor(I[None])
+
+
+@linalg_structured_op
+def negf(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies negf(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.negf(I[None])
+
+
+@linalg_structured_op
 def elemwise_binary(
     lhs=TensorDef(T1),
     rhs=TensorDef(T2),
@@ -67,7 +139,7 @@ def add(
     a `linalg.broadcast` + `linalg.add` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
-    O[None] = lhs[None] + rhs[None]
+    O[None] = BinaryFn.add(lhs[None], rhs[None])
 
 
 @linalg_structured_op
@@ -86,7 +158,7 @@ def sub(
     a `linalg.broadcast` + `linalg.sub` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
-    O[None] = lhs[None] - rhs[None]
+    O[None] = BinaryFn.sub(lhs[None], rhs[None])
 
 
 @linalg_structured_op
@@ -105,7 +177,7 @@ def mul(
     a `linalg.broadcast` + `linalg.mul` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
-    O[None] = lhs[None] * rhs[None]
+    O[None] = BinaryFn.mul(lhs[None], rhs[None])
 
 
 @linalg_structured_op
@@ -124,7 +196,7 @@ def div(
     a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
-    O[None] = lhs[None] / rhs[None]
+    O[None] = BinaryFn.div(lhs[None], rhs[None])
 
 
 @linalg_structured_op
