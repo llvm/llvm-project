@@ -36,7 +36,8 @@ define i32 @mbcnt_hi(i32 %x, i32 %y) {
 ;
 ; WAVE32-LABEL: define i32 @mbcnt_hi
 ; WAVE32-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR1]] {
-; WAVE32-NEXT:    ret i32 [[Y]]
+; WAVE32-NEXT:    [[HI:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[X]], i32 [[Y]])
+; WAVE32-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE64-LABEL: define i32 @mbcnt_hi
 ; WAVE64-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR1]] {
@@ -57,7 +58,8 @@ define i32 @mbcnt_lo_hi(i32 %x, i32 %y, i32 %z) {
 ; WAVE32-LABEL: define i32 @mbcnt_lo_hi
 ; WAVE32-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) #[[ATTR1]] {
 ; WAVE32-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[X]], i32 [[Y]])
-; WAVE32-NEXT:    ret i32 [[LO]]
+; WAVE32-NEXT:    [[HI:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[Z]], i32 [[LO]])
+; WAVE32-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE64-LABEL: define i32 @mbcnt_lo_hi
 ; WAVE64-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) #[[ATTR1]] {
@@ -79,7 +81,8 @@ define i32 @ockl_lane_u32() {
 ; WAVE32-LABEL: define i32 @ockl_lane_u32
 ; WAVE32-SAME: () #[[ATTR1]] {
 ; WAVE32-NEXT:    [[LO:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; WAVE32-NEXT:    ret i32 [[LO]]
+; WAVE32-NEXT:    [[HI:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[LO]])
+; WAVE32-NEXT:    ret i32 [[HI]]
 ;
 ; WAVE64-LABEL: define i32 @ockl_lane_u32
 ; WAVE64-SAME: () #[[ATTR1]] {
