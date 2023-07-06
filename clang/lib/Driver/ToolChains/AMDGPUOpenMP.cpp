@@ -666,6 +666,15 @@ void AMDGPUOpenMPToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   SmallString<128> P(HostTC.getDriver().ResourceDir);
   llvm::sys::path::append(P, "include/cuda_wrappers");
   CC1Args.push_back(DriverArgs.MakeArgString(P));
+
+  // Force APU mode will focefully include #pragma omp requires
+  // unified_shared_memory via the force_usm header
+  if (DriverArgs.hasArg(options::OPT_fopenmp_force_usm)) {
+    CC1Args.push_back("-include");
+    CC1Args.push_back(
+        DriverArgs.MakeArgString(HostTC.getDriver().ResourceDir +
+                                 "/include/openmp_wrappers/force_usm.h"));
+  }
 }
 
 /// Convert path list to Fortran frontend argument
