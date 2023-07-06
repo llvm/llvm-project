@@ -1697,21 +1697,29 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
     OpBuilder<(ins "TypeRange":$loopTypes,
                    "Value":$target,
                    "ArrayRef<int64_t>":$staticTileSizes,
-                   CArg<"ArrayRef<int64_t>", "{}">:$interchange)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$interchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
     OpBuilder<(ins "TypeRange":$loopTypes,
                    "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
-                   CArg<"ArrayRef<int64_t>", "{}">:$interchange)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$interchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$staticTileSizes,
-                   CArg<"ArrayRef<int64_t>", "{}">:$interchange)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$interchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
-                   CArg<"ArrayRef<int64_t>", "{}">:$interchange)>
-
+                   CArg<"ArrayRef<int64_t>", "{}">:$interchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
   ];
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Returns the list of tile sizes, which may be static (Attribute) or
