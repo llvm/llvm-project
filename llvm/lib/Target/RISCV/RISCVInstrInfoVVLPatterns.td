@@ -1127,6 +1127,25 @@ multiclass VPatConvertFP2IVL_V<SDPatternOperator vop, string instruction_name> {
   }
 }
 
+multiclass VPatConvertFP2IVL_V_RM<SDPatternOperator vop, string instruction_name> {
+  foreach fvti = AllFloatVectors in {
+    defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
+                                 GetVTypePredicates<ivti>.Predicates) in
+    def : Pat<(ivti.Vector (vop (fvti.Vector fvti.RegClass:$rs1),
+                                (fvti.Mask V0),
+                                VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX#"_MASK")
+                  (ivti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
+                  (fvti.Mask V0),
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  GPR:$vl, ivti.Log2SEW, TA_MA)>;
+  }
+}
+
+
 multiclass VPatConvertFP2I_RM_VL_V<SDPatternOperator vop, string instruction_name> {
   foreach fvti = AllFloatVectors in {
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
@@ -1142,7 +1161,7 @@ multiclass VPatConvertFP2I_RM_VL_V<SDPatternOperator vop, string instruction_nam
   }
 }
 
-multiclass VPatConvertI2FPVL_V<SDPatternOperator vop, string instruction_name> {
+multiclass VPatConvertI2FPVL_V_RM<SDPatternOperator vop, string instruction_name> {
   foreach fvti = AllFloatVectors in {
     defvar ivti = GetIntVTypeInfo<fvti>.Vti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
@@ -1152,7 +1171,11 @@ multiclass VPatConvertI2FPVL_V<SDPatternOperator vop, string instruction_name> {
                                 VLOpFrag)),
               (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), ivti.RegClass:$rs1,
-                  (ivti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
+                  (ivti.Mask V0),
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
 }
 
@@ -1187,6 +1210,26 @@ multiclass VPatWConvertFP2IVL_V<SDPatternOperator vop, string instruction_name> 
   }
 }
 
+multiclass VPatWConvertFP2IVL_V_RM<SDPatternOperator vop, string instruction_name> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar iwti = GetIntVTypeInfo<fvtiToFWti.Wti>.Vti;
+    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
+                                 GetVTypePredicates<iwti>.Predicates) in
+    def : Pat<(iwti.Vector (vop (fvti.Vector fvti.RegClass:$rs1),
+                                (fvti.Mask V0),
+                                VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
+                  (iwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
+                  (fvti.Mask V0),
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
+  }
+}
+
+
 multiclass VPatWConvertFP2I_RM_VL_V<SDNode vop, string instruction_name> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
@@ -1214,7 +1257,8 @@ multiclass VPatWConvertI2FPVL_V<SDPatternOperator vop,
                                 VLOpFrag)),
               (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX#"_MASK")
                   (fwti.Vector (IMPLICIT_DEF)), ivti.RegClass:$rs1,
-                  (ivti.Mask V0), GPR:$vl, ivti.Log2SEW, TA_MA)>;
+                  (ivti.Mask V0),
+                  GPR:$vl, ivti.Log2SEW, TA_MA)>;
   }
 }
 
@@ -1238,6 +1282,28 @@ multiclass VPatNConvertFP2IVL_W<SDPatternOperator vop,
   }
 }
 
+multiclass VPatNConvertFP2IVL_W_RM<SDPatternOperator vop,
+                                string instruction_name> {
+  // Reuse the same list of types used in the widening nodes, but just swap the
+  // direction of types around so we're converting from Wti -> Vti
+  foreach vtiToWti = AllWidenableIntToFloatVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar fwti = vtiToWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<fwti>.Predicates) in
+    def : Pat<(vti.Vector (vop (fwti.Vector fwti.RegClass:$rs1),
+                               (fwti.Mask V0),
+                               VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_"#vti.LMul.MX#"_MASK")
+                  (vti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
+                  (fwti.Mask V0),
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  GPR:$vl, vti.Log2SEW, TA_MA)>;
+  }
+}
+
 multiclass VPatNConvertFP2I_RM_VL_W<SDNode vop, string instruction_name> {
   foreach vtiToWti = AllWidenableIntToFloatVectors in {
     defvar vti = vtiToWti.Vti;
@@ -1253,7 +1319,7 @@ multiclass VPatNConvertFP2I_RM_VL_W<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatNConvertI2FPVL_W<SDPatternOperator vop,
+multiclass VPatNConvertI2FPVL_W_RM<SDPatternOperator vop,
                                 string instruction_name> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
@@ -1265,7 +1331,11 @@ multiclass VPatNConvertI2FPVL_W<SDPatternOperator vop,
                                 VLOpFrag)),
               (!cast<Instruction>(instruction_name#"_"#fvti.LMul.MX#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), iwti.RegClass:$rs1,
-                  (iwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
+                  (iwti.Mask V0),
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
   }
 }
 
@@ -2347,23 +2417,23 @@ foreach fvti = AllFloatVectors in {
 }
 
 // 13.17. Vector Single-Width Floating-Point/Integer Type-Convert Instructions
-defm : VPatConvertFP2IVL_V<riscv_vfcvt_xu_f_vl, "PseudoVFCVT_XU_F_V">;
-defm : VPatConvertFP2IVL_V<riscv_vfcvt_x_f_vl, "PseudoVFCVT_X_F_V">;
+defm : VPatConvertFP2IVL_V_RM<riscv_vfcvt_xu_f_vl, "PseudoVFCVT_XU_F_V">;
+defm : VPatConvertFP2IVL_V_RM<riscv_vfcvt_x_f_vl, "PseudoVFCVT_X_F_V">;
 defm : VPatConvertFP2I_RM_VL_V<riscv_vfcvt_rm_xu_f_vl, "PseudoVFCVT_RM_XU_F_V">;
 defm : VPatConvertFP2I_RM_VL_V<any_riscv_vfcvt_rm_x_f_vl, "PseudoVFCVT_RM_X_F_V">;
 
 defm : VPatConvertFP2IVL_V<any_riscv_vfcvt_rtz_xu_f_vl, "PseudoVFCVT_RTZ_XU_F_V">;
 defm : VPatConvertFP2IVL_V<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFCVT_RTZ_X_F_V">;
 
-defm : VPatConvertI2FPVL_V<any_riscv_uint_to_fp_vl, "PseudoVFCVT_F_XU_V">;
-defm : VPatConvertI2FPVL_V<any_riscv_sint_to_fp_vl, "PseudoVFCVT_F_X_V">;
+defm : VPatConvertI2FPVL_V_RM<any_riscv_uint_to_fp_vl, "PseudoVFCVT_F_XU_V">;
+defm : VPatConvertI2FPVL_V_RM<any_riscv_sint_to_fp_vl, "PseudoVFCVT_F_X_V">;
 
 defm : VPatConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_xu_vl, "PseudoVFCVT_RM_F_XU_V">;
 defm : VPatConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_x_vl, "PseudoVFCVT_RM_F_X_V">;
 
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
-defm : VPatWConvertFP2IVL_V<riscv_vfcvt_xu_f_vl, "PseudoVFWCVT_XU_F_V">;
-defm : VPatWConvertFP2IVL_V<riscv_vfcvt_x_f_vl, "PseudoVFWCVT_X_F_V">;
+defm : VPatWConvertFP2IVL_V_RM<riscv_vfcvt_xu_f_vl, "PseudoVFWCVT_XU_F_V">;
+defm : VPatWConvertFP2IVL_V_RM<riscv_vfcvt_x_f_vl, "PseudoVFWCVT_X_F_V">;
 defm : VPatWConvertFP2I_RM_VL_V<riscv_vfcvt_rm_xu_f_vl, "PseudoVFWCVT_RM_XU_F_V">;
 defm : VPatWConvertFP2I_RM_VL_V<riscv_vfcvt_rm_x_f_vl, "PseudoVFWCVT_RM_X_F_V">;
 
@@ -2384,20 +2454,21 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                              VLOpFrag)),
             (!cast<Instruction>("PseudoVFWCVT_F_F_V_"#fvti.LMul.MX#"_MASK")
                 (fwti.Vector (IMPLICIT_DEF)), fvti.RegClass:$rs1,
-                (fvti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
+                (fvti.Mask V0),
+                GPR:$vl, fvti.Log2SEW, TA_MA)>;
 }
 
 // 13.19 Narrowing Floating-Point/Integer Type-Convert Instructions
-defm : VPatNConvertFP2IVL_W<riscv_vfcvt_xu_f_vl, "PseudoVFNCVT_XU_F_W">;
-defm : VPatNConvertFP2IVL_W<riscv_vfcvt_x_f_vl, "PseudoVFNCVT_X_F_W">;
+defm : VPatNConvertFP2IVL_W_RM<riscv_vfcvt_xu_f_vl, "PseudoVFNCVT_XU_F_W">;
+defm : VPatNConvertFP2IVL_W_RM<riscv_vfcvt_x_f_vl, "PseudoVFNCVT_X_F_W">;
 defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_xu_f_vl, "PseudoVFNCVT_RM_XU_F_W">;
 defm : VPatNConvertFP2I_RM_VL_W<riscv_vfcvt_rm_x_f_vl, "PseudoVFNCVT_RM_X_F_W">;
 
 defm : VPatNConvertFP2IVL_W<any_riscv_vfcvt_rtz_xu_f_vl, "PseudoVFNCVT_RTZ_XU_F_W">;
 defm : VPatNConvertFP2IVL_W<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFNCVT_RTZ_X_F_W">;
 
-defm : VPatNConvertI2FPVL_W<any_riscv_uint_to_fp_vl, "PseudoVFNCVT_F_XU_W">;
-defm : VPatNConvertI2FPVL_W<any_riscv_sint_to_fp_vl, "PseudoVFNCVT_F_X_W">;
+defm : VPatNConvertI2FPVL_W_RM<any_riscv_uint_to_fp_vl, "PseudoVFNCVT_F_XU_W">;
+defm : VPatNConvertI2FPVL_W_RM<any_riscv_sint_to_fp_vl, "PseudoVFNCVT_F_X_W">;
 
 defm : VPatNConvertI2FP_RM_VL_W<riscv_vfcvt_rm_f_xu_vl, "PseudoVFNCVT_RM_F_XU_W">;
 defm : VPatNConvertI2FP_RM_VL_W<riscv_vfcvt_rm_f_x_vl, "PseudoVFNCVT_RM_F_X_W">;
@@ -2412,7 +2483,11 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
                                (fwti.Mask V0), VLOpFrag)),
               (!cast<Instruction>("PseudoVFNCVT_F_F_W_"#fvti.LMul.MX#"_MASK")
                   (fvti.Vector (IMPLICIT_DEF)), fwti.RegClass:$rs1,
-                  (fwti.Mask V0), GPR:$vl, fvti.Log2SEW, TA_MA)>;
+                  (fwti.Mask V0),
+                  // Value to indicate no rounding mode change in
+                  // RISCVInsertReadWriteCSR
+                  FRM_DYN,
+                  GPR:$vl, fvti.Log2SEW, TA_MA)>;
 
     def : Pat<(fvti.Vector (any_riscv_fncvt_rod_vl
                                (fwti.Vector fwti.RegClass:$rs1),

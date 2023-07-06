@@ -975,6 +975,25 @@ let TargetPrefix = "riscv" in {
                     [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
+  // For Conversion unary operations.
+  // Input: (passthru, vector_in, frm, vl)
+  class RISCVConversionUnMaskedRoundingMode
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty, llvm_anyint_ty,
+                     LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<2>>, IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 3;
+  }
+  // For Conversion unary operations with mask.
+  // Input: (maskedoff, vector_in, mask, frm, vl, policy)
+  class RISCVConversionMaskedRoundingMode
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, llvm_anyvector_ty,
+                     LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyint_ty,
+                     LLVMMatchType<2>, LLVMMatchType<2>],
+                    [ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<5>>, IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 4;
+  }
 
   // For unit stride segment load
   // Input: (passthru, pointer, vl)
@@ -1305,6 +1324,10 @@ let TargetPrefix = "riscv" in {
     def "int_riscv_" #NAME :RISCVConversionUnMasked;
     def "int_riscv_" # NAME # "_mask" : RISCVConversionMasked;
   }
+  multiclass RISCVConversionRoundingMode {
+    def "int_riscv_" #NAME :RISCVConversionUnMaskedRoundingMode;
+    def "int_riscv_" # NAME # "_mask" : RISCVConversionMaskedRoundingMode;
+  }
   multiclass RISCVUSSegLoad<int nf> {
     def "int_riscv_" # NAME : RISCVUSSegLoad<nf>;
     def "int_riscv_" # NAME # "_mask" : RISCVUSSegLoadMasked<nf>;
@@ -1594,28 +1617,28 @@ let TargetPrefix = "riscv" in {
   defm vmsof : RISCVMaskedUnaryMOut;
   defm vmsif : RISCVMaskedUnaryMOut;
 
-  defm vfcvt_xu_f_v : RISCVConversion;
-  defm vfcvt_x_f_v : RISCVConversion;
+  defm vfcvt_xu_f_v : RISCVConversionRoundingMode;
+  defm vfcvt_x_f_v : RISCVConversionRoundingMode;
   defm vfcvt_rtz_xu_f_v : RISCVConversion;
   defm vfcvt_rtz_x_f_v : RISCVConversion;
-  defm vfcvt_f_xu_v : RISCVConversion;
-  defm vfcvt_f_x_v : RISCVConversion;
+  defm vfcvt_f_xu_v : RISCVConversionRoundingMode;
+  defm vfcvt_f_x_v : RISCVConversionRoundingMode;
 
   defm vfwcvt_f_xu_v : RISCVConversion;
   defm vfwcvt_f_x_v : RISCVConversion;
-  defm vfwcvt_xu_f_v : RISCVConversion;
-  defm vfwcvt_x_f_v : RISCVConversion;
+  defm vfwcvt_xu_f_v : RISCVConversionRoundingMode;
+  defm vfwcvt_x_f_v : RISCVConversionRoundingMode;
   defm vfwcvt_rtz_xu_f_v : RISCVConversion;
   defm vfwcvt_rtz_x_f_v : RISCVConversion;
   defm vfwcvt_f_f_v : RISCVConversion;
 
-  defm vfncvt_f_xu_w : RISCVConversion;
-  defm vfncvt_f_x_w : RISCVConversion;
-  defm vfncvt_xu_f_w : RISCVConversion;
-  defm vfncvt_x_f_w : RISCVConversion;
+  defm vfncvt_f_xu_w : RISCVConversionRoundingMode;
+  defm vfncvt_f_x_w : RISCVConversionRoundingMode;
+  defm vfncvt_xu_f_w : RISCVConversionRoundingMode;
+  defm vfncvt_x_f_w : RISCVConversionRoundingMode;
   defm vfncvt_rtz_xu_f_w : RISCVConversion;
   defm vfncvt_rtz_x_f_w : RISCVConversion;
-  defm vfncvt_f_f_w : RISCVConversion;
+  defm vfncvt_f_f_w : RISCVConversionRoundingMode;
   defm vfncvt_rod_f_f_w : RISCVConversion;
 
   // Output: (vector)
