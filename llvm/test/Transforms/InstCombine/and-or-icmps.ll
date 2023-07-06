@@ -2571,10 +2571,8 @@ define <2 x i1> @icmp_ne_m1_or_ne_m1(<2 x i8> %x, <2 x i8> %y) {
 
 define i32 @icmp_slt_0_or_icmp_sgt_0_i32(i32 %x) {
 ; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i32(
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr i32 [[X]], 31
-; CHECK-NEXT:    [[D:%.*]] = zext i1 [[B]] to i32
-; CHECK-NEXT:    [[E:%.*]] = or i32 [[X_LOBIT]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[E:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
   %A = icmp slt i32 %x, 0
@@ -2587,10 +2585,8 @@ define i32 @icmp_slt_0_or_icmp_sgt_0_i32(i32 %x) {
 
 define i64 @icmp_slt_0_or_icmp_sgt_0_i64(i64 %x) {
 ; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64(
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr i64 [[X]], 63
-; CHECK-NEXT:    [[D:%.*]] = zext i1 [[B]] to i64
-; CHECK-NEXT:    [[E:%.*]] = or i64 [[X_LOBIT]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[E:%.*]] = zext i1 [[TMP1]] to i64
 ; CHECK-NEXT:    ret i64 [[E]]
 ;
   %A = icmp slt i64 %x, 0
@@ -2659,10 +2655,8 @@ define i64 @icmp_slt_0_or_icmp_sgt_0_i64_fail3(i64 %x) {
 
 define <2 x i64> @icmp_slt_0_or_icmp_sgt_0_i64x2(<2 x i64> %x) {
 ; CHECK-LABEL: @icmp_slt_0_or_icmp_sgt_0_i64x2(
-; CHECK-NEXT:    [[B:%.*]] = icmp sgt <2 x i64> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[X_LOBIT:%.*]] = lshr <2 x i64> [[X]], <i64 63, i64 63>
-; CHECK-NEXT:    [[D:%.*]] = zext <2 x i1> [[B]] to <2 x i64>
-; CHECK-NEXT:    [[E:%.*]] = or <2 x i64> [[X_LOBIT]], [[D]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i64> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[E:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[E]]
 ;
   %A = icmp slt <2 x i64> %x, <i64 0,i64 0>
