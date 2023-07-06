@@ -132,7 +132,11 @@ T foo() {
     {
       foo();
     }
+#if _OPENMP >= 202111
+    #pragma omp ordered doacross(source:omp_cur_iteration) // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#else
     #pragma omp ordered depend(source) // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#endif
   }
 #pragma omp parallel for ordered
   for (int i = 0; i < 10; ++i) {
@@ -155,6 +159,10 @@ T foo() {
 #pragma omp ordered doacross(sink : // omp52-error {{expected ')'}} omp52-note {{to match this '('}} omp52-error {{expected expression}} omp52-error {{expected 'i' loop iteration variable}}
 #pragma omp ordered doacross(sink : i // omp52-error {{expected ')'}} omp52-note {{to match this '('}} omp52-error {{expected 'j' loop iteration variable}}
 #pragma omp ordered doacross(sink : i) // omp52-error {{expected 'j' loop iteration variable}}
+#pragma omp ordered doacross(sink:omp_cur_iteration + 1) // omp52-error {{'doacross sink:' must be with 'omp_cur_iteration - 1'}}
+#pragma omp ordered doacross(sink:omp_cur_iteration - 2) // omp52-error {{'doacross sink:' must be with 'omp_cur_iteration - 1'}}
+#pragma omp ordered doacross(sink:omp_cur_iteration) // omp52-error {{'doacross sink:' must be with 'omp_cur_iteration - 1'}}
+#pragma omp ordered doacross(source:omp_cur_iteration - 1) // omp52-error {{'doacross source:' must be with 'omp_cur_iteration'}}
 #pragma omp ordered doacross(source:)
                            if (i == j)
 #pragma omp ordered doacross(source:) // omp52-error {{'#pragma omp ordered' with 'doacross' clause cannot be an immediate substatement}}
@@ -309,7 +317,11 @@ int k;
     {
       foo();
     }
+#if _OPENMP >= 202111
+    #pragma omp ordered doacross(source:omp_cur_iteration) // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#else
     #pragma omp ordered depend(source) // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+#endif
   }
 #pragma omp parallel for ordered
   for (int i = 0; i < 10; ++i) {
