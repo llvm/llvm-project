@@ -131,7 +131,7 @@ void ByteCodeEmitter::emitLabel(LabelTy Label) {
     for (unsigned Reloc : It->second) {
       using namespace llvm::support;
 
-      /// Rewrite the operand of all jumps to this label.
+      // Rewrite the operand of all jumps to this label.
       void *Location = Code.data() + Reloc - align(sizeof(int32_t));
       assert(aligned(Location));
       const int32_t Offset = Target - static_cast<int64_t>(Reloc);
@@ -199,14 +199,14 @@ template <typename... Tys>
 bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &... Args, const SourceInfo &SI) {
   bool Success = true;
 
-  /// The opcode is followed by arguments. The source info is
-  /// attached to the address after the opcode.
+  // The opcode is followed by arguments. The source info is
+  // attached to the address after the opcode.
   emit(P, Code, Op, Success);
   if (SI)
     SrcMap.emplace_back(Code.size(), SI);
 
-  /// The initializer list forces the expression to be evaluated
-  /// for each argument in the variadic template, in order.
+  // The initializer list forces the expression to be evaluated
+  // for each argument in the variadic template, in order.
   (void)std::initializer_list<int>{(emit(P, Code, Args, Success), 0)...};
 
   return Success;
