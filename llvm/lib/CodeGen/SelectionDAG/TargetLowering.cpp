@@ -8108,12 +8108,8 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
   // exceptions are ignored.
   if (Flags.hasNoFPExcept() &&
       isOperationLegalOrCustom(ISD::SETCC, OperandVT.getScalarType())) {
-    // Even if the condition isn't legal, we're probably better off expanding it
-    // if it's the combined 0 || denormal compare.
-
     if (isFCmpEqualZero(Test, Semantics, DAG.getMachineFunction()) &&
-        (Test != fcZero ||
-         isCondCodeLegalOrCustom(IsInverted ? ISD::SETUNE : ISD::SETOEQ,
+        (isCondCodeLegalOrCustom(IsInverted ? ISD::SETUNE : ISD::SETOEQ,
                                  OperandVT.getScalarType().getSimpleVT()))) {
       // If denormals could be implicitly treated as 0, this is not equivalent
       // to a compare with 0 since it will also be true for denormals.
@@ -8206,6 +8202,20 @@ SDValue TargetLowering::expandIS_FPCLASS(EVT ResultVT, SDValue Op,
     Test &= ~fcNegFinite;
   }
   appendResult(PartialRes);
+
+  if (FPClassTest PartialCheck = Test & (fcZero | fcSubnormal)) {
+    // fcZero | fcSubnormal => test all exponent bits are 0
+    // TODO: Handle sign bit specific cases
+    if (PartialCheck == (fcZero | fcSubnormal)) {
+      assert(!IsInverted && "should handle inverted case");
+
+      SDValue ExpBits = DAG.getNode(ISD::AND, DL, IntVT, OpAsInt, ExpMaskV);
+      SDValue ExpIsZero =
+          DAG.getSetCC(DL, ResultVT, ExpBits, ZeroV, ISD::SETEQ);
+      appendResult(ExpIsZero);
+      Test &= ~PartialCheck & fcAllFlags;
+    }
+  }
 
   // Check for individual classes.
 
