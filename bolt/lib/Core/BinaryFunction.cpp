@@ -1988,19 +1988,20 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
         updateOffset(LastInstrOffset);
     }
 
-    const uint64_t InstrInputAddr = I->first + Address;
-    bool IsSDTMarker =
-        MIB->isNoop(Instr) && BC.SDTMarkers.count(InstrInputAddr);
-    bool IsLKMarker = BC.LKMarkers.count(InstrInputAddr);
+    bool IsLKMarker = BC.LKMarkers.count(I->first + Address);
     // Mark all nops with Offset for profile tracking purposes.
     if (MIB->isNoop(Instr) || IsLKMarker) {
-      if (!MIB->getOffset(Instr))
+      // If "Offset" annotation is not present, set it and mark the nop for
+      // deletion.
+      if (!MIB->getOffset(Instr)) {
         MIB->setOffset(Instr, static_cast<uint32_t>(Offset), AllocatorId);
-      if (IsSDTMarker || IsLKMarker)
-        HasSDTMarker = true;
-      else
         // Annotate ordinary nops, so we can safely delete them if required.
-        MIB->addAnnotation(Instr, "NOP", static_cast<uint32_t>(1), AllocatorId);
+        if (!IsLKMarker)
+          MIB->addAnnotation(Instr, "NOP", static_cast<uint32_t>(1),
+                             AllocatorId);
+      }
+      if (IsLKMarker)
+        HasSDTMarker = true;
     }
 
     if (!InsertBB) {

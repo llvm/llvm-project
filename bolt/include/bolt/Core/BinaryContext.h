@@ -673,9 +673,6 @@ public:
   /// List of functions that always trap.
   std::vector<const BinaryFunction *> TrappedFunctions;
 
-  /// Map SDT locations to SDT markers info
-  std::unordered_map<uint64_t, SDTMarkerInfo> SDTMarkers;
-
   /// Map linux kernel program locations/instructions to their pointers in
   /// special linux kernel sections
   std::unordered_map<uint64_t, std::vector<LKInstructionMarkerInfo>> LKMarkers;

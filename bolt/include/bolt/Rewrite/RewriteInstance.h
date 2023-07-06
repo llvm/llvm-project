@@ -198,9 +198,6 @@ private:
   /// Update debug and other auxiliary information in the file.
   void updateMetadata();
 
-  /// Update SDTMarkers' locations for the output binary.
-  void updateSDTMarkers();
-
   /// Update LKMarkers' locations for the output binary.
   void updateLKMarkers();
 
@@ -398,15 +395,9 @@ private:
   /// of appending contents to it.
   bool willOverwriteSection(StringRef SectionName);
 
-  /// Parse .note.stapsdt section
-  void parseSDTNotes();
-
   /// Parse .pseudo_probe_desc section and .pseudo_probe section
   /// Setup Pseudo probe decoder
   void parsePseudoProbe();
-
-  /// Print all SDT markers
-  void printSDTMarkers();
 
 public:
   /// Standard ELF sections we overwrite.
@@ -588,10 +579,6 @@ private:
 
   /// .note.gnu.build-id section.
   ErrorOr<BinarySection &> BuildIDSection{std::errc::bad_address};
-
-  /// .note.stapsdt section.
-  /// Contains information about statically defined tracing points
-  ErrorOr<BinarySection &> SDTSection{std::errc::bad_address};
 
   /// .pseudo_probe_desc section.
   /// Contains information about pseudo probe description, like its related

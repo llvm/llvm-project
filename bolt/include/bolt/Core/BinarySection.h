@@ -509,18 +509,6 @@ inline raw_ostream &operator<<(raw_ostream &OS, const BinarySection &Section) {
   return OS;
 }
 
-struct SDTMarkerInfo {
-  uint64_t PC;
-  uint64_t Base;
-  uint64_t Semaphore;
-  StringRef Provider;
-  StringRef Name;
-  StringRef Args;
-
-  /// The offset of PC within the note section
-  unsigned PCOffset;
-};
-
 /// Linux Kernel special sections point to a specific instruction in many cases.
 /// Unlike SDTMarkerInfo, these markers can come from different sections.
 struct LKInstructionMarkerInfo {
