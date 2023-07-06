@@ -13827,12 +13827,18 @@ static MachineBasicBlock *emitVFCVT_RM(MachineInstr &MI, MachineBasicBlock *BB,
   BuildMI(*BB, MI, DL, TII.get(RISCV::SwapFRMImm), SavedFRM)
       .addImm(MI.getOperand(FRMIdx).getImm());
 
-  // Emit an VFCVT without the FRM operand.
+  // Emit an VFCVT with the FRM == DYN
   auto MIB = BuildMI(*BB, MI, DL, TII.get(Opcode));
 
   for (unsigned I = 0; I < MI.getNumOperands(); I++)
     if (I != FRMIdx)
       MIB = MIB.add(MI.getOperand(I));
+    else
+      MIB = MIB.add(MachineOperand::CreateImm(7)); // frm = DYN
+
+  MIB.add(MachineOperand::CreateReg(RISCV::FRM,
+                                    /*IsDef*/ false,
+                                    /*IsImp*/ true));
 
   if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
     MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
@@ -13871,9 +13877,13 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
       .add(MI.getOperand(1))
       .add(MI.getOperand(2))
       .add(MI.getOperand(3))
+      .add(MachineOperand::CreateImm(7)) // frm = DYN
       .add(MI.getOperand(4))
       .add(MI.getOperand(5))
-      .add(MI.getOperand(6));
+      .add(MI.getOperand(6))
+      .add(MachineOperand::CreateReg(RISCV::FRM,
+                                     /*IsDef*/ false,
+                                     /*IsImp*/ true));
 
   // Emit a VFCVT_F_X
   BuildMI(*BB, MI, DL, TII.get(CVTFOpc))
@@ -13881,9 +13891,13 @@ static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
       .add(MI.getOperand(1))
       .addReg(Tmp)
       .add(MI.getOperand(3))
+      .add(MachineOperand::CreateImm(7)) // frm = DYN
       .add(MI.getOperand(4))
       .add(MI.getOperand(5))
-      .add(MI.getOperand(6));
+      .add(MI.getOperand(6))
+      .add(MachineOperand::CreateReg(RISCV::FRM,
+                                     /*IsDef*/ false,
+                                     /*IsImp*/ true));
 
   // Restore FFLAGS.
   BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
