@@ -429,6 +429,13 @@ unsigned NMLoadStoreOpt::getRegNo(unsigned Reg) {
 
 bool NMLoadStoreOpt::isValidLoadStore(MachineInstr &MI, bool IsLoad) {
   unsigned Opcode = MI.getOpcode();
+
+  // Make sure the instruction doesn't have any atomic, volatile or
+  // otherwise strictly ordered accesses.
+  for (auto &MMO : MI.memoperands())
+    if (MMO->isAtomic() || !MMO->isUnordered())
+      return false;
+
   if (IsLoad) {
     // TODO: Handle unaligned loads and stores.
     if (Opcode == Mips::LW_NM || Opcode == Mips::LWs9_NM) {
