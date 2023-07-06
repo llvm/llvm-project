@@ -40,7 +40,7 @@ class Use;
 
 /// A private "module" namespace for types and utilities used by SROA. These
 /// are implementation details and should not be used by clients.
-namespace sroa LLVM_LIBRARY_VISIBILITY {
+namespace LLVM_LIBRARY_VISIBILITY sroa {
 
 class AllocaSliceRewriter;
 class AllocaSlices;
