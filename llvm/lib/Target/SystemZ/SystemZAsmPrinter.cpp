@@ -969,6 +969,7 @@ void SystemZAsmPrinter::emitADASection() {
     std::tie(Sym, SlotKind) = Entry.first;
     unsigned Offset = Entry.second;
     assert(Offset == EmittedBytes && "Offset not as expected");
+    (void)EmittedBytes;
 #define EMIT_COMMENT(Str)                                                      \
   OutStreamer->AddComment(Twine("Offset ")                                     \
                               .concat(utostr(Offset))                          \
