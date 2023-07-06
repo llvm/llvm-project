@@ -5135,14 +5135,18 @@ bool SimplifyCFGOpt::simplifyUnreachable(UnreachableInst *UI) {
         Value* Cond = BI->getCondition();
         assert(BI->getSuccessor(0) != BI->getSuccessor(1) &&
                "The destinations are guaranteed to be different here.");
+        CallInst *Assumption;
         if (BI->getSuccessor(0) == BB) {
-          Builder.CreateAssumption(Builder.CreateNot(Cond));
+          Assumption = Builder.CreateAssumption(Builder.CreateNot(Cond));
           Builder.CreateBr(BI->getSuccessor(1));
         } else {
           assert(BI->getSuccessor(1) == BB && "Incorrect CFG");
-          Builder.CreateAssumption(Cond);
+          Assumption = Builder.CreateAssumption(Cond);
           Builder.CreateBr(BI->getSuccessor(0));
         }
+        if (Options.AC)
+          Options.AC->registerAssumption(cast<AssumeInst>(Assumption));
+
         EraseTerminatorAndDCECond(BI);
         Changed = true;
       }
@@ -7187,7 +7191,8 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I, bool PtrValu
 /// If BB has an incoming value that will always trigger undefined behavior
 /// (eg. null pointer dereference), remove the branch leading here.
 static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
-                                              DomTreeUpdater *DTU) {
+                                              DomTreeUpdater *DTU,
+                                              AssumptionCache *AC) {
   for (PHINode &PHI : BB->phis())
     for (unsigned i = 0, e = PHI.getNumIncomingValues(); i != e; ++i)
       if (passingValueIsAlwaysUndefined(PHI.getIncomingValue(i), &PHI)) {
@@ -7204,10 +7209,13 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
             // Preserve guarding condition in assume, because it might not be
             // inferrable from any dominating condition.
             Value *Cond = BI->getCondition();
+            CallInst *Assumption;
             if (BI->getSuccessor(0) == BB)
-              Builder.CreateAssumption(Builder.CreateNot(Cond));
+              Assumption = Builder.CreateAssumption(Builder.CreateNot(Cond));
             else
-              Builder.CreateAssumption(Cond);
+              Assumption = Builder.CreateAssumption(Cond);
+            if (AC)
+              AC->registerAssumption(cast<AssumeInst>(Assumption));
             Builder.CreateBr(BI->getSuccessor(0) == BB ? BI->getSuccessor(1)
                                                        : BI->getSuccessor(0));
           }
@@ -7268,7 +7276,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   Changed |= EliminateDuplicatePHINodes(BB);
 
   // Check for and remove branches that will always cause undefined behavior.
-  if (removeUndefIntroducingPredecessor(BB, DTU))
+  if (removeUndefIntroducingPredecessor(BB, DTU, Options.AC))
     return requestResimplify();
 
   // Merge basic blocks into their predecessor if there is only one distinct
