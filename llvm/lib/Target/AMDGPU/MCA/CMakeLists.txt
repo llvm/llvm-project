@@ -15,5 +15,3 @@ add_llvm_component_library(LLVMAMDGPUTargetMCA
   ADD_TO_COMPONENT
   AMDGPU
   )
-
-add_dependencies(LLVMAMDGPUTargetMCA LLVMAMDGPUUtils)
