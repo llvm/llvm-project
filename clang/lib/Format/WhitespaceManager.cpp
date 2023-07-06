@@ -870,7 +870,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   AlignTokens(
       Style,
       [](Change const &C) {
-        if (C.Tok->is(TT_FunctionDeclarationName))
+        if (C.Tok->isOneOf(TT_FunctionDeclarationName, TT_FunctionTypeLParen))
           return true;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
