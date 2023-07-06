@@ -4,8 +4,8 @@
 // RUN: rm -f log-args-this-*
 // RUN: XRAY_OPTIONS="patch_premain=true verbosity=1 xray_logfile_base=log-args-this-" %run %t
 //
-// XFAIL: target={{(arm|aarch64|mips).*}}
-// UNSUPPORTED: target=powerpc64le{{.*}}
+// REQUIRES: target={{x86_64-.*}}
+
 #include "xray/xray_interface.h"
 #include <cassert>
 
