@@ -611,6 +611,9 @@ void CommandCompletions::Registers(CommandInterpreter &interpreter,
 
   RegisterContext *reg_ctx =
       interpreter.GetExecutionContext().GetRegisterContext();
+  if (!reg_ctx)
+    return;
+
   const size_t reg_num = reg_ctx->GetRegisterCount();
   for (size_t reg_idx = 0; reg_idx < reg_num; ++reg_idx) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
