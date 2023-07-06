@@ -126,8 +126,9 @@ Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
 void ByteCodeEmitter::emitLabel(LabelTy Label) {
   const size_t Target = Code.size();
   LabelOffsets.insert({Label, Target});
-  auto It = LabelRelocs.find(Label);
-  if (It != LabelRelocs.end()) {
+
+  if (auto It = LabelRelocs.find(Label);
+      It != LabelRelocs.end()) {
     for (unsigned Reloc : It->second) {
       using namespace llvm::support;
 
@@ -148,10 +149,9 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
   assert(aligned(Position));
 
   // If target is known, compute jump offset.
-  auto It = LabelOffsets.find(Label);
-  if (It != LabelOffsets.end()) {
+  if (auto It = LabelOffsets.find(Label);
+      It != LabelOffsets.end())
     return It->second - Position;
-  }
 
   // Otherwise, record relocation and return dummy offset.
   LabelRelocs[Label].push_back(Position);
