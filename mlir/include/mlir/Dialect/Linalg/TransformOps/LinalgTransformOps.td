@@ -2036,6 +2036,8 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
       `:` type($target)
   }];
 
+  let hasVerifier = 1;
+
   let extraClassDeclaration = [{
     // TODO: applyToOne.
     ::mlir::DiagnosedSilenceableFailure apply(

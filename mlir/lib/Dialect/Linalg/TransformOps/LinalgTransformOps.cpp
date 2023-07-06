@@ -3065,6 +3065,14 @@ SmallVector<OpFoldResult> MaskedVectorizeOp::getMixedVectorSizes() {
   return getMixedValues(getStaticVectorSizes(), getVectorSizes(), b);
 }
 
+LogicalResult transform::MaskedVectorizeOp::verify() {
+  if (getStaticVectorSizes().size() != getScalableSizes().size())
+    return emitOpError("expected same number of vector sizes (")
+           << getStaticVectorSizes().size() << ") and scalable sizes ("
+           << getScalableSizes().size() << ")";
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // HoistRedundantVectorTransfersOp
 //===----------------------------------------------------------------------===//
