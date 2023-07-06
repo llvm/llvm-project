@@ -488,7 +488,7 @@ define i1 @captureICmpRev(ptr %x) {
 
 define i1 @nocaptureInboundsGEPICmp(ptr %x) {
 ; CHECK-LABEL: define i1 @nocaptureInboundsGEPICmp
-; CHECK-SAME: (ptr nocapture readnone [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr readnone [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP1]], null
 ; CHECK-NEXT:    ret i1 [[TMP2]]
@@ -500,7 +500,7 @@ define i1 @nocaptureInboundsGEPICmp(ptr %x) {
 
 define i1 @nocaptureInboundsGEPICmpRev(ptr %x) {
 ; CHECK-LABEL: define i1 @nocaptureInboundsGEPICmpRev
-; CHECK-SAME: (ptr nocapture readnone [[X:%.*]]) #[[ATTR0]] {
+; CHECK-SAME: (ptr readnone [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr null, [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[TMP2]]
