@@ -3580,48 +3580,73 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
 }
 
 static Instruction *
-foldICmpUSubSatWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *II,
-                            const APInt &C, InstCombiner::BuilderTy &Builder) {
+foldICmpUSubSatOrUAddSatWithConstant(ICmpInst::Predicate Pred,
+                                     SaturatingInst *II, const APInt &C,
+                                     InstCombiner::BuilderTy &Builder) {
   // This transform may end up producing more than one instruction for the
   // intrinsic, so limit it to one user of the intrinsic.
   if (!II->hasOneUse())
     return nullptr;
 
-  // Let Y = usub_sat(X, C) pred C2
-  //  => Y = (X < C ? 0 : (X - C)) pred C2
-  //  => Y = (X < C) ? (0 pred C2) : ((X - C) pred C2)
+  // Let Y        = [add/sub]_sat(X, C) pred C2
+  //     SatVal   = The saturating value for the operation
+  //     WillWrap = Whether or not the operation will underflow / overflow
+  // => Y = (WillWrap ? SatVal : (X binop C)) pred C2
+  // => Y = WillWrap ? (SatVal pred C2) : ((X binop C) pred C2)
   //
-  // When (0 pred C2) is true, then
-  //    Y = (X < C) ? true : ((X - C) pred C2)
-  // => Y = (X < C) || ((X - C) pred C2)
+  // When (SatVal pred C2) is true, then
+  //    Y = WillWrap ? true : ((X binop C) pred C2)
+  // => Y = WillWrap || ((X binop C) pred C2)
   // else
-  //    Y = (X < C) ? false : ((X - C) pred C2)
-  // => Y = !(X < C) && ((X - C) pred C2)
-  // => Y = (X >= C) && ((X - C) pred C2)
+  //    Y =  WillWrap ? false : ((X binop C) pred C2)
+  // => Y = !WillWrap ?  ((X binop C) pred C2) : false
+  // => Y = !WillWrap && ((X binop C) pred C2)
   Value *Op0 = II->getOperand(0);
   Value *Op1 = II->getOperand(1);
 
-  // Check (0 pred C2)
-  auto [NewPred, LogicalOp] =
-      ICmpInst::compare(APInt::getZero(C.getBitWidth()), C, Pred)
-          ? std::make_pair(ICmpInst::ICMP_ULT, Instruction::BinaryOps::Or)
-          : std::make_pair(ICmpInst::ICMP_UGE, Instruction::BinaryOps::And);
-
   const APInt *COp1;
-  // This transform only works when the usub_sat has an integral constant or
+  // This transform only works when the intrinsic has an integral constant or
   // splat vector as the second operand.
   if (!match(Op1, m_APInt(COp1)))
     return nullptr;
 
-  ConstantRange C1 = ConstantRange::makeExactICmpRegion(NewPred, *COp1);
-  // Convert '(X - C) pred C2' into 'X pred C2' shifted by C.
+  APInt SatVal;
+  switch (II->getIntrinsicID()) {
+  default:
+    llvm_unreachable(
+        "This function only works with usub_sat and uadd_sat for now!");
+  case Intrinsic::uadd_sat:
+    SatVal = APInt::getAllOnes(C.getBitWidth());
+    break;
+  case Intrinsic::usub_sat:
+    SatVal = APInt::getZero(C.getBitWidth());
+    break;
+  }
+
+  // Check (SatVal pred C2)
+  bool SatValCheck = ICmpInst::compare(SatVal, C, Pred);
+
+  // !WillWrap.
+  ConstantRange C1 = ConstantRange::makeExactNoWrapRegion(
+      II->getBinaryOp(), *COp1, II->getNoWrapKind());
+
+  // WillWrap.
+  if (SatValCheck)
+    C1 = C1.inverse();
+
   ConstantRange C2 = ConstantRange::makeExactICmpRegion(Pred, C);
-  C2 = C2.add(*COp1);
+  if (II->getBinaryOp() == Instruction::Add)
+    C2 = C2.sub(*COp1);
+  else
+    C2 = C2.add(*COp1);
+
+  Instruction::BinaryOps CombiningOp =
+      SatValCheck ? Instruction::BinaryOps::Or : Instruction::BinaryOps::And;
 
   std::optional<ConstantRange> Combination;
-  if (LogicalOp == Instruction::BinaryOps::Or)
+  if (CombiningOp == Instruction::BinaryOps::Or)
     Combination = C1.exactUnionWith(C2);
-  else /* LogicalOp == Instruction::BinaryOps::And */
+  else /* CombiningOp == Instruction::BinaryOps::And */
     Combination = C1.exactIntersectWith(C2);
 
   if (!Combination)
@@ -3649,8 +3674,10 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
   switch (II->getIntrinsicID()) {
   default:
     break;
+  case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
-    if (auto *Folded = foldICmpUSubSatWithConstant(Pred, II, C, Builder))
+    if (auto *Folded = foldICmpUSubSatOrUAddSatWithConstant(
+            Pred, cast<SaturatingInst>(II), C, Builder))
       return Folded;
     break;
   }
