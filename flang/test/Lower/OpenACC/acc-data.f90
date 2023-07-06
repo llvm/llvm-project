@@ -144,5 +144,49 @@ subroutine acc_data
 ! CHECK: acc.detach accPtr(%[[ATTACH_D]] : !fir.ptr<f32>) {dataClause = 10 : i64, name = "d"}
 ! CHECK: acc.detach accPtr(%[[ATTACH_E]] : !fir.ptr<f32>) {dataClause = 10 : i64, name = "e"}
 
+  !$acc data present(a) async
+  !$acc end data
+
+! CHECK: acc.data dataOperands(%{{.*}}) {
+! CHECK: } attributes {asyncAttr}
+
+  !$acc data present(a) async(1)
+  !$acc end data
+
+! CHECK: acc.data async(%{{.*}} : i32) dataOperands(%{{.*}}) {
+! CHECK: }{{$}}
+
+  !$acc data present(a) wait
+  !$acc end data
+
+! CHECK: acc.data dataOperands(%{{.*}}) {
+! CHECK: } attributes {waitAttr}
+
+  !$acc data present(a) wait(1)
+  !$acc end data
+
+! CHECK: acc.data dataOperands(%{{.*}}) wait(%{{.*}} : i32) {
+! CHECK: }{{$}}
+
+  !$acc data present(a) wait(devnum: 0: 1)
+  !$acc end data
+
+! CHECK: acc.data dataOperands(%{{.*}}) wait_devnum(%{{.*}} : i32) wait(%{{.*}} : i32) {
+! CHECK: }{{$}}
+
+  !$acc data default(none)
+  !$acc end data
+
+! CHECK: acc.data {
+! CHECK:   acc.terminator
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+  !$acc data default(present)
+  !$acc end data
+
+! CHECK: acc.data {
+! CHECK:   acc.terminator
+! CHECK: } attributes {defaultAttr = #acc<defaultvalue present>}
+
 end subroutine acc_data
 
