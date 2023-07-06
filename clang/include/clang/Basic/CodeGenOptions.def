@@ -465,6 +465,11 @@ CODEGENOPT(CtorDtorReturnThis, 1, 0)
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 
+/// ClangIR specific (internal): limits recursion depth for buildDeferred()
+/// calls. This helps incremental progress while building large C++ TUs, once
+/// CIRGen is mature we should probably remove it.
+VALUE_CODEGENOPT(ClangIRBuildDeferredThreshold, 32, 500)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT

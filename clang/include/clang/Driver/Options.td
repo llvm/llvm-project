@@ -3072,6 +3072,10 @@ def clangir_disable_emit_cxx_default : Flag<["-"], "clangir-disable-emit-cxx-def
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"ClangIR: Disable emission of c++ default (compiler implemented) methods.">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisableEmitCXXDefault">>;
+def fclangir_disable_deferred_EQ : Joined<["-"], "fclangir-build-deferred-threshold=">,
+  Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
+  HelpText<"ClangIR (internal): Control the recursion level for calls to buildDeferred (defaults to 500)">,
+  MarshallingInfoInt<CodeGenOpts<"ClangIRBuildDeferredThreshold">, "500u">;
 def clangir_verify_diagnostics : Flag<["-"], "clangir-verify-diagnostics">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"ClangIR: Enable diagnostic verification in MLIR, similar to clang's -verify">,
