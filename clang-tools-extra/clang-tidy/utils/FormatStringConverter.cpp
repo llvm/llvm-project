@@ -340,6 +340,22 @@ void FormatStringConverter::emitPrecision(const PrintfSpecifier &FS,
   }
 }
 
+void FormatStringConverter::maybeRotateArguments(const PrintfSpecifier &FS) {
+  unsigned ArgCount = 0;
+  const OptionalAmount FieldWidth = FS.getFieldWidth();
+  const OptionalAmount FieldPrecision = FS.getPrecision();
+
+  if (FieldWidth.getHowSpecified() == OptionalAmount::Arg &&
+      !FieldWidth.usesPositionalArg())
+    ++ArgCount;
+  if (FieldPrecision.getHowSpecified() == OptionalAmount::Arg &&
+      !FieldPrecision.usesPositionalArg())
+    ++ArgCount;
+
+  if (ArgCount)
+    ArgRotates.emplace_back(FS.getArgIndex() + ArgsOffset, ArgCount);
+}
+
 void FormatStringConverter::emitStringArgument(const Expr *Arg) {
   // If the argument is the result of a call to std::string::c_str() or
   // data() with a return type of char then we can remove that call and
@@ -531,6 +547,7 @@ bool FormatStringConverter::convertArgument(const PrintfSpecifier &FS,
 
   emitFieldWidth(FS, FormatSpec);
   emitPrecision(FS, FormatSpec);
+  maybeRotateArguments(FS);
 
   if (!emitType(FS, Arg, FormatSpec))
     return false;
@@ -681,6 +698,23 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
               : tooling::fixit::getText(*Arg, *Context).str();
     if (!ArgText.empty())
       Diag << FixItHint::CreateReplacement(Call->getSourceRange(), ArgText);
+  }
+
+  // ArgCount is one less than the number of arguments to be rotated.
+  for (auto [ValueArgIndex, ArgCount] : ArgRotates) {
+    assert(ValueArgIndex < NumArgs);
+    assert(ValueArgIndex > ArgCount);
+
+    // First move the value argument to the right place.
+    Diag << tooling::fixit::createReplacement(*Args[ValueArgIndex - ArgCount],
+                                              *Args[ValueArgIndex], *Context);
+
+    // Now shift down the field width and precision (if either are present) to
+    // accommodate it.
+    for (size_t Offset = 0; Offset < ArgCount; ++Offset)
+      Diag << tooling::fixit::createReplacement(
+          *Args[ValueArgIndex - Offset], *Args[ValueArgIndex - Offset - 1],
+          *Context);
   }
 }
 } // namespace clang::tidy::utils

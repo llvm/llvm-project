@@ -715,11 +715,11 @@ define void @uzp_v32i8(ptr %a, ptr %b) #0{
 ; CHECK-LABEL: uzp_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #128
-; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    stp d15, d14, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d13, d12, [sp, #80] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d11, d10, [sp, #96] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp d9, d8, [sp, #112] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 128
 ; CHECK-NEXT:    .cfi_offset b8, -8
 ; CHECK-NEXT:    .cfi_offset b9, -16
 ; CHECK-NEXT:    .cfi_offset b10, -24

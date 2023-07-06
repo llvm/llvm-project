@@ -962,10 +962,6 @@ public:
 
   void addRegOperands(MCInst &Inst, unsigned N) const;
 
-  void addBoolRegOperands(MCInst &Inst, unsigned N) const {
-    addRegOperands(Inst, N);
-  }
-
   void addRegOrImmOperands(MCInst &Inst, unsigned N) const {
     if (isRegKind())
       addRegOperands(Inst, N);

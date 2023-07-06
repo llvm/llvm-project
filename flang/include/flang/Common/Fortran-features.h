@@ -42,7 +42,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,
     ShortCharacterActual, ExprPassedToVolatile, ImplicitInterfaceActual,
-    PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence)
+    PolymorphicTransferArg, PointerComponentTransferArg, TransferSizePresence,
+    F202XAllocatableBreakingChange)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

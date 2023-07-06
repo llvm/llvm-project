@@ -1419,7 +1419,7 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
   auto emptyOp = rewriter.create<tensor::EmptyOp>(loc, reifiedReturnShapes[0],
                                                   padValue.getType());
   SmallVector<OpFoldResult> mixedSourceDims =
-      getMixedDimensions(rewriter, loc, padOp.getSource());
+      tensor::getMixedSizes(rewriter, loc, padOp.getSource());
   Value mask =
       rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
   auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);

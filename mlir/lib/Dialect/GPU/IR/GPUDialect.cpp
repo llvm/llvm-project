@@ -146,7 +146,6 @@ struct GPUInlinerInterface : public DialectInlinerInterface {
 void GPUDialect::initialize() {
   addTypes<AsyncTokenType>();
   addTypes<MMAMatrixType>();
-  addTypes<SparseEnvHandleType>();
   addTypes<SparseDnTensorHandleType>();
   addTypes<SparseSpMatHandleType>();
   addOperations<
@@ -162,8 +161,6 @@ void GPUDialect::initialize() {
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
   switch (kind) {
-  case SparseHandleKind::Env:
-    return "sparse.env_handle";
   case SparseHandleKind::DnTensor:
     return "sparse.dntensor_handle";
   case SparseHandleKind::SpMat:
@@ -216,8 +213,6 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
                                      shape, elementType, operand);
   }
 
-  if (keyword == getSparseHandleKeyword(SparseHandleKind::Env))
-    return SparseEnvHandleType::get(context);
   if (keyword == getSparseHandleKeyword(SparseHandleKind::DnTensor))
     return SparseDnTensorHandleType::get(context);
   if (keyword == getSparseHandleKeyword(SparseHandleKind::SpMat))
@@ -231,8 +226,6 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
 void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<AsyncTokenType>([&](Type) { os << "async.token"; })
-      .Case<SparseEnvHandleType>(
-          [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::Env); })
       .Case<SparseDnTensorHandleType>([&](Type) {
         os << getSparseHandleKeyword(SparseHandleKind::DnTensor);
       })

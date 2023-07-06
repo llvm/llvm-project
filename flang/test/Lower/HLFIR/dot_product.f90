@@ -51,3 +51,22 @@ end subroutine
 ! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[RES_VAR]]#0 : i32, !fir.ref<i32>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
+
+subroutine dot_product4(lhs, rhs, res)
+  integer, allocatable :: lhs(:), rhs(:)
+  integer :: res
+  res = dot_product(lhs, rhs)
+endsubroutine
+! CHECK-LABEL: func.func @_QPdot_product4
+! CHECK:           %[[LHS:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "lhs"}
+! CHECK:           %[[RHS:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "rhs"}
+! CHECK:           %[[RES:.*]]: !fir.ref<i32> {fir.bindc_name = "res"}
+! CHECK-DAG:     %[[LHS_VAR:.*]]:2 = hlfir.declare %[[LHS]]
+! CHECK-DAG:     %[[RHS_VAR:.*]]:2 = hlfir.declare %[[RHS]]
+! CHECK-DAG:     %[[RES_VAR:.*]]:2 = hlfir.declare %[[RES]]
+! CHECK-NEXT:    %[[LHS_LD:.*]] = fir.load %[[LHS_VAR]]#0
+! CHECK-NEXT:    %[[RHS_LD:.*]] = fir.load %[[RHS_VAR]]#0
+! CHECK-NEXT:    %[[PROD:.*]] = hlfir.dot_product %[[LHS_LD]] %[[RHS_LD]] {fastmath = #arith.fastmath<contract>} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) -> i32
+! CHECK-NEXT:    hlfir.assign %[[PROD]] to %[[RES_VAR]]#0 : i32, !fir.ref<i32>
+! CHECK-NEXT:    return
+! CHECK-NEXT:   }

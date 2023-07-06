@@ -29,8 +29,8 @@ namespace impl {
 ///
 ///{
 /// NOTE: This function needs to be implemented by every target.
-uint32_t atomicInc(uint32_t *Address, uint32_t Val,
-                   atomic::OrderingTy Ordering);
+uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
+                   atomic::MemScopeTy MemScope);
 
 template <typename Ty>
 Ty atomicAdd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
@@ -116,7 +116,8 @@ uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
 ///}
 
 // Forward declarations defined to be defined for AMDGCN and NVPTX.
-uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering);
+uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
+                   atomic::MemScopeTy MemScope);
 void namedBarrierInit();
 void namedBarrier();
 void fenceTeam(atomic::OrderingTy Ordering);
@@ -138,22 +139,35 @@ void setCriticalLock(omp_lock_t *);
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 
-uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering) {
+uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
+                   atomic::MemScopeTy MemScope) {
   // builtin_amdgcn_atomic_inc32 should expand to this switch when
   // passed a runtime value, but does not do so yet. Workaround here.
+
+#define ScopeSwitch(ORDER)                                                     \
+  switch (MemScope) {                                                          \
+  case atomic::MemScopeTy::all:                                                \
+    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "");                     \
+  case atomic::MemScopeTy::device:                                             \
+    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "agent");                \
+  case atomic::MemScopeTy::cgroup:                                             \
+    return __builtin_amdgcn_atomic_inc32(A, V, ORDER, "workgroup");            \
+  }
+
+#define Case(ORDER)                                                            \
+  case ORDER:                                                                  \
+    ScopeSwitch(ORDER)
+
   switch (Ordering) {
   default:
     __builtin_unreachable();
-  case atomic::relaxed:
-    return __builtin_amdgcn_atomic_inc32(A, V, atomic::relaxed, "");
-  case atomic::aquire:
-    return __builtin_amdgcn_atomic_inc32(A, V, atomic::aquire, "");
-  case atomic::release:
-    return __builtin_amdgcn_atomic_inc32(A, V, atomic::release, "");
-  case atomic::acq_rel:
-    return __builtin_amdgcn_atomic_inc32(A, V, atomic::acq_rel, "");
-  case atomic::seq_cst:
-    return __builtin_amdgcn_atomic_inc32(A, V, atomic::seq_cst, "");
+    Case(atomic::relaxed);
+    Case(atomic::aquire);
+    Case(atomic::release);
+    Case(atomic::acq_rel);
+    Case(atomic::seq_cst);
+#undef Case
+#undef ScopeSwitch
   }
 }
 
@@ -308,8 +322,8 @@ void setCriticalLock(omp_lock_t *Lock) {
         device = {arch(nvptx, nvptx64)},                                       \
             implementation = {extension(match_any)})
 
-uint32_t atomicInc(uint32_t *Address, uint32_t Val,
-                   atomic::OrderingTy Ordering) {
+uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
+                   atomic::MemScopeTy MemScope) {
   return __nvvm_atom_inc_gen_ui(Address, Val);
 }
 
@@ -480,8 +494,9 @@ ATOMIC_FP_OP(double, int64_t, uint64_t)
 #undef ATOMIC_INT_OP
 #undef ATOMIC_FP_OP
 
-uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering) {
-  return impl::atomicInc(Addr, V, Ordering);
+uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering,
+                     atomic::MemScopeTy MemScope) {
+  return impl::atomicInc(Addr, V, Ordering, MemScope);
 }
 
 void unsetCriticalLock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
