@@ -12,10 +12,9 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 #include <map>
 #include <set>
+#include <queue>
 using namespace llvm;
 using namespace std;
 
@@ -70,21 +69,62 @@ namespace {
 
     map<Value *, Variable> variables;
 
-    map<Value *, bool> vars;
-
     set<Value *> tainted;
+
+    set<Instruction *> visited;
+
+    queue<Instruction *> worklist;
 
     // Reset all global variables when a new function is called.
     void cleanGlobalVariables() {
       output_str = "";
       variables.clear();
-      vars.clear();
       tainted.clear();
     }
 
     Assignment2() : FunctionPass(ID) {}
 
+    void updateVariable(Value *V, bool tainted, int line) {
+      map<Value *, Variable>::iterator it = variables.find(V);
+      if (it != variables.end()) {
+        it->second.tainted = tainted;
+        if (tainted) {
+          output << "Line " << line << ": " << it->second.name << " is tainted" << "\n";
+        } else {
+          output << "Line " << line << ": " << it->second.name << " is now untainted" << "\n";
+        }
+      }
+    }
+
+    void initVariables(Instruction *I) {
+      if (DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
+        Variable variable;
+        variable.name = DDI->getVariable()->getName();
+        variable.tainted = false;
+        variables.insert(make_pair(DDI->getAddress(), variable));
+      } else if (isa<CallInst>(I) && demangle(I->getOperand(0)->getName().str().c_str()) == source) {
+        updateTainted(I->getOperand(1));        
+        updateVariable(I->getOperand(1), true, getSourceCodeLine(I));
+      }
+    }
+
+    void updateTainted(Value *V) {
+      output << "Tainted: " << V << "\n";
+      tainted.insert(V);
+      vector<Instruction *> tempWorklist;
+
+      for (User *U : V->users()) {
+        if (Instruction *I = dyn_cast<Instruction>(U)) {
+          if (visited.find(I) == visited.end()) tempWorklist.push_back(I);
+        }
+      }
+
+      reverse(tempWorklist.begin(), tempWorklist.end());
+      for (auto &I : tempWorklist) worklist.push(I);
+    } 
+
     void checkTainted(Instruction *I, bool isInline) {
+      visited.insert(I);
       Value *V = dyn_cast<Value>(I);
       int line = getSourceCodeLine(I);
 
@@ -93,8 +133,7 @@ namespace {
         
         for (Use &U : I->operands()) {
           if (tainted.find(U.get()) != tainted.end()) {
-            output << "Tainted: " << V << "\n";
-            tainted.insert(V);
+            updateTainted(V);
             break;
           } 
         }
@@ -103,20 +142,19 @@ namespace {
         output << "Store Inst: " << line << "\n";
 
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          output << "Tainted: " << I->getOperand(1) << "\n";
-          tainted.insert(I->getOperand(1));
+          updateTainted(I->getOperand(1));
+          updateVariable(I->getOperand(1), true, line);
         } 
         else if (tainted.find(I->getOperand(1)) != tainted.end() && isInline) {
-          output << "Untainted: " << I->getOperand(1) << "\n";
           tainted.erase(I->getOperand(1));
+          updateVariable(I->getOperand(1), false, line);
         }
       } 
       else if (isa<LoadInst>(I)) {
         output << "Load Inst: " << line << "\n";
 
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
-          output << "Tainted: " << V << "\n";
-          tainted.insert(V);
+          updateTainted(V);
         }
       }
     }
@@ -125,46 +163,31 @@ namespace {
       // We only want to examine the main method
       if (demangle(F.getName().str().c_str()) != func) return false;
 
-      output << "MAIN" << "\n";
+      PostDominatorTree *PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+      vector<BasicBlock *> sorted = topoSortBBs(F);
+      BasicBlock *entry = sorted.front();
 
-      // Iterate over basic blocks within function
-      for (BasicBlock *BB : topoSortBBs(F)) {        
+      for (BasicBlock *BB : sorted) {
         // Iterate over instructions within basic block
-        for (Instruction &I : *BB) {
-
-          if (isa<AllocaInst>(I)) {
-            Value *V = dyn_cast<Value>(&I);
-            vars.insert(make_pair(V, false));
-            
-            for (User *U : V->users()) {
-              if (CallInst *CI = dyn_cast<CallInst>(U)) {
-                if (demangle(CI->getOperand(0)->getName().str().c_str()) == source) {
-                  map<Value *, bool>::iterator it = vars.find(V);
-                  if (it != vars.end()) {
-                    it->second = true;
-                    output << "Line " << getSourceCodeLine(CI) << ": " << V << " is tainted" << "\n";
-                  }
-                }
-              }
-            }
-          }
-        }
-      }  
-
-      for (auto &var : vars) {
-        output << "Variable: " << var.first << "\n";
-        output << "Tainted: " << var.second << "\n";
+        for (Instruction &I : *BB) initVariables(&I);
       }
 
-      // string solution = "";
-      // for (auto &var : variables) {
-      //   if (var.second.tainted) {
-      //     if (solution.size() == 0) solution += var.second.name;
-      //     else solution += "," + var.second.name;
-      //   }
-      // }
+      while (!worklist.empty()) {
+        Instruction *I = worklist.front();
+        bool isInline = PDT->dominates(I->getParent(), entry);
+        checkTainted(I, isInline);
+        worklist.pop();
+      }
 
-      // output << "Tainted: {" << solution << "}" << "\n";
+      string solution = "";
+      for (auto &var : variables) {
+        if (var.second.tainted) {
+          if (solution.size() == 0) solution += var.second.name;
+          else solution += "," + var.second.name;
+        }
+      }
+
+      output << "Tainted: {" << solution << "}" << "\n";
 
       // Print output
       errs() << output.str();
