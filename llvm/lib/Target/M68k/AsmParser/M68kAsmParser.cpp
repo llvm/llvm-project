@@ -72,7 +72,7 @@ public:
                                         SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
@@ -992,7 +992,9 @@ bool M68kAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   return false;
 }
 
-bool M68kAsmParser::ParseDirective(AsmToken DirectiveID) { return true; }
+ParseStatus M68kAsmParser::parseDirective(AsmToken DirectiveID) {
+  return ParseStatus::NoMatch;
+}
 
 bool M68kAsmParser::invalidOperand(SMLoc const &Loc,
                                    OperandVector const &Operands,

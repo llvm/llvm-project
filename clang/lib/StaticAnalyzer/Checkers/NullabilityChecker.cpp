@@ -26,12 +26,13 @@
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 
+#include "clang/Analysis/AnyCall.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
@@ -81,7 +82,8 @@ class NullabilityChecker
     : public Checker<check::Bind, check::PreCall, check::PreStmt<ReturnStmt>,
                      check::PostCall, check::PostStmt<ExplicitCastExpr>,
                      check::PostObjCMessage, check::DeadSymbols, eval::Assume,
-                     check::Location, check::Event<ImplicitNullDerefEvent>> {
+                     check::Location, check::Event<ImplicitNullDerefEvent>,
+                     check::BeginFunction> {
 
 public:
   // If true, the checker will not diagnose nullabilility issues for calls
@@ -102,6 +104,7 @@ public:
   void checkEvent(ImplicitNullDerefEvent Event) const;
   void checkLocation(SVal Location, bool IsLoad, const Stmt *S,
                      CheckerContext &C) const;
+  void checkBeginFunction(CheckerContext &Ctx) const;
   ProgramStateRef evalAssume(ProgramStateRef State, SVal Cond,
                              bool Assumption) const;
 
@@ -561,6 +564,37 @@ void NullabilityChecker::checkEvent(ImplicitNullDerefEvent Event) const {
                 Event.SinkNode, Region, BR);
     }
   }
+}
+
+void NullabilityChecker::checkBeginFunction(CheckerContext &C) const {
+  if (!C.inTopFrame())
+    return;
+
+  const LocationContext *LCtx = C.getLocationContext();
+  auto AbstractCall = AnyCall::forDecl(LCtx->getDecl());
+  if (!AbstractCall || AbstractCall->parameters().empty())
+    return;
+
+  ProgramStateRef State = C.getState();
+  for (const ParmVarDecl *Param : AbstractCall->parameters()) {
+    if (!isValidPointerType(Param->getType()))
+      continue;
+
+    Nullability RequiredNullability =
+        getNullabilityAnnotation(Param->getType());
+    if (RequiredNullability != Nullability::Nullable)
+      continue;
+
+    const VarRegion *ParamRegion = State->getRegion(Param, LCtx);
+    const MemRegion *ParamPointeeRegion =
+        State->getSVal(ParamRegion).getAsRegion();
+    if (!ParamPointeeRegion)
+      continue;
+
+    State = State->set<NullabilityMap>(ParamPointeeRegion,
+                                       NullabilityState(RequiredNullability));
+  }
+  C.addTransition(State);
 }
 
 // Whenever we see a load from a typed memory region that's been annotated as

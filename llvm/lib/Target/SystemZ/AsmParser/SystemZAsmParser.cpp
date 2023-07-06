@@ -494,7 +494,7 @@ public:
   }
 
   // Override MCTargetAsmParser.
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
   bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                      SMLoc &EndLoc) override;
   bool ParseRegister(MCRegister &RegNo, SMLoc &StartLoc, SMLoc &EndLoc,
@@ -1219,7 +1219,7 @@ SystemZAsmParser::parseAddress(OperandVector &Operands, MemoryKind MemKind,
   return MatchOperand_Success;
 }
 
-bool SystemZAsmParser::ParseDirective(AsmToken DirectiveID) {
+ParseStatus SystemZAsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
 
   if (IDVal == ".insn")
@@ -1229,7 +1229,7 @@ bool SystemZAsmParser::ParseDirective(AsmToken DirectiveID) {
   if (IDVal.startswith(".gnu_attribute"))
     return ParseGNUAttribute(DirectiveID.getLoc());
 
-  return true;
+  return ParseStatus::NoMatch;
 }
 
 /// ParseDirectiveInsn
@@ -1346,12 +1346,12 @@ bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::Identifier) &&
       Parser.getTok().isNot(AsmToken::String))
-    return Error(L, "unexpected token in '.machine' directive");
+    return TokError("unexpected token in '.machine' directive");
 
   StringRef CPU = Parser.getTok().getIdentifier();
   Parser.Lex();
-  if (parseToken(AsmToken::EndOfStatement))
-    return addErrorSuffix(" in '.machine' directive");
+  if (parseEOL())
+    return true;
 
   MCSubtargetInfo &STI = copySTI();
   STI.setDefaultFeatures(CPU, /*TuneCPU*/ CPU, "");
@@ -1366,18 +1366,15 @@ bool SystemZAsmParser::ParseGNUAttribute(SMLoc L) {
   int64_t Tag;
   int64_t IntegerValue;
   if (!Parser.parseGNUAttribute(L, Tag, IntegerValue))
-    return false;
+    return Error(L, "malformed .gnu_attribute directive");
 
   // Tag_GNU_S390_ABI_Vector tag is '8' and can be 0, 1, or 2.
-  if (Tag != 8 || (IntegerValue < 0 || IntegerValue > 2)) {
-    Error(Parser.getTok().getLoc(),
-          "Unrecognized .gnu_attribute tag/value pair.");
-    return false;
-  }
+  if (Tag != 8 || (IntegerValue < 0 || IntegerValue > 2))
+    return Error(L, "unrecognized .gnu_attribute tag/value pair.");
 
   Parser.getStreamer().emitGNUAttribute(Tag, IntegerValue);
 
-  return true;
+  return parseEOL();
 }
 
 bool SystemZAsmParser::ParseRegister(MCRegister &RegNo, SMLoc &StartLoc,

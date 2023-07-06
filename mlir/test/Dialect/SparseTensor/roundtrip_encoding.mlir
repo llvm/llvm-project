@@ -129,19 +129,78 @@ func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 // CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ], dimSlices = [ (1, ?, 1), (?, 4, 2) ] }>>
 func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 
-// -----
 
+///////////////////////////////////////////////////////////////////////////////
 // Migration plan for new STEA surface syntax,
 // use the NEW_SYNTAX on selected examples
 // and then TODO: remove when fully migrated
+///////////////////////////////////////////////////////////////////////////////
 
-#NewSurfaceSyntax = #sparse_tensor.encoding<{
+// -----
+
+#CSR_implicit = #sparse_tensor.encoding<{
   NEW_SYNTAX =
-  (d0, d1) -> (l0 = d0 : dense, l1 = d1 : compressed)
+  (d0, d1) -> (d0 : dense, d1 : compressed)
 }>
 
 // CHECK-LABEL: func private @foo(
 // CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>
-func.func private @foo(%arg0: tensor<?x?xf64, #NewSurfaceSyntax>) {
+func.func private @foo(%arg0: tensor<?x?xf64, #CSR_implicit>) {
+  return
+}
+
+// -----
+
+#CSR_explicit = #sparse_tensor.encoding<{
+  NEW_SYNTAX =
+  {l0, l1} (d0 = l0, d1 = l1) -> (l0 = d0 : dense, l1 = d1 : compressed)
+}>
+
+// CHECK-LABEL: func private @foo(
+// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed" ] }>>
+func.func private @foo(%arg0: tensor<?x?xf64, #CSR_explicit>) {
+  return
+}
+
+// -----
+
+#BCSR_implicit = #sparse_tensor.encoding<{
+  NEW_SYNTAX =
+  ( i, j ) ->
+  ( i floordiv 2 : compressed,
+    j floordiv 3 : compressed,
+    i mod 2      : dense,
+    j mod 3      : dense
+  )
+}>
+
+// FIXME: should not have to use 4 dims ;-)
+//
+// CHECK-LABEL: func private @foo(
+// CHECK-SAME: tensor<?x?x?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "dense", "dense" ] }>>
+func.func private @foo(%arg0: tensor<?x?x?x?xf64, #BCSR_implicit>) {
+  return
+}
+
+// -----
+
+#BCSR_explicit = #sparse_tensor.encoding<{
+  NEW_SYNTAX =
+  {il, jl, ii, jj}
+  ( i = il * 2 + ii,
+    j = jl * 3 + jj
+  ) ->
+  ( il = i floordiv 2 : compressed,
+    jl = j floordiv 3 : compressed,
+    ii = i mod 2      : dense,
+    jj = j mod 3      : dense
+  )
+}>
+
+// FIXME: should not have to use 4 dims ;-)
+//
+// CHECK-LABEL: func private @foo(
+// CHECK-SAME: tensor<?x?x?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "dense", "dense" ] }>>
+func.func private @foo(%arg0: tensor<?x?x?x?xf64, #BCSR_explicit>) {
   return
 }

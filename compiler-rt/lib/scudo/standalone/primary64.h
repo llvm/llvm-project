@@ -1200,59 +1200,58 @@ private:
                                ReleaseRangeSize, ReleaseOffset);
     // We may not be able to do the page release in a rare case that we may
     // fail on PageMap allocation.
-    if (UNLIKELY(!Context.ensurePageMapAllocated()))
-      return 0;
+    if (Context.ensurePageMapAllocated()) {
+      for (BatchGroup &BG : GroupToRelease) {
+        const uptr BatchGroupBase =
+            decompactGroupBase(CompactPtrBase, BG.CompactPtrGroupBase);
+        const uptr BatchGroupEnd = BatchGroupBase + GroupSize;
+        const uptr AllocatedGroupSize = AllocatedUserEnd >= BatchGroupEnd
+                                            ? GroupSize
+                                            : AllocatedUserEnd - BatchGroupBase;
+        const uptr BatchGroupUsedEnd = BatchGroupBase + AllocatedGroupSize;
+        const bool MayContainLastBlockInRegion =
+            BatchGroupUsedEnd == AllocatedUserEnd;
+        const bool BlockAlignedWithUsedEnd =
+            (BatchGroupUsedEnd - Region->RegionBeg) % BlockSize == 0;
 
-    for (BatchGroup &BG : GroupToRelease) {
-      const uptr BatchGroupBase =
-          decompactGroupBase(CompactPtrBase, BG.CompactPtrGroupBase);
-      const uptr BatchGroupEnd = BatchGroupBase + GroupSize;
-      const uptr AllocatedGroupSize = AllocatedUserEnd >= BatchGroupEnd
-                                          ? GroupSize
-                                          : AllocatedUserEnd - BatchGroupBase;
-      const uptr BatchGroupUsedEnd = BatchGroupBase + AllocatedGroupSize;
-      const bool MayContainLastBlockInRegion =
-          BatchGroupUsedEnd == AllocatedUserEnd;
-      const bool BlockAlignedWithUsedEnd =
-          (BatchGroupUsedEnd - Region->RegionBeg) % BlockSize == 0;
+        uptr MaxContainedBlocks = AllocatedGroupSize / BlockSize;
+        if (!BlockAlignedWithUsedEnd)
+          ++MaxContainedBlocks;
 
-      uptr MaxContainedBlocks = AllocatedGroupSize / BlockSize;
-      if (!BlockAlignedWithUsedEnd)
-        ++MaxContainedBlocks;
+        const uptr NumBlocks = (BG.Batches.size() - 1) * BG.MaxCachedPerBatch +
+                               BG.Batches.front()->getCount();
 
-      const uptr NumBlocks = (BG.Batches.size() - 1) * BG.MaxCachedPerBatch +
-                             BG.Batches.front()->getCount();
+        if (NumBlocks == MaxContainedBlocks) {
+          for (const auto &It : BG.Batches)
+            for (u16 I = 0; I < It.getCount(); ++I)
+              DCHECK_EQ(compactPtrGroup(It.get(I)), BG.CompactPtrGroupBase);
 
-      if (NumBlocks == MaxContainedBlocks) {
-        for (const auto &It : BG.Batches)
-          for (u16 I = 0; I < It.getCount(); ++I)
-            DCHECK_EQ(compactPtrGroup(It.get(I)), BG.CompactPtrGroupBase);
-
-        Context.markRangeAsAllCounted(BatchGroupBase, BatchGroupUsedEnd,
-                                      Region->RegionBeg, /*RegionIndex=*/0,
-                                      Region->MemMapInfo.AllocatedUser);
-      } else {
-        DCHECK_LT(NumBlocks, MaxContainedBlocks);
-        // Note that we don't always visit blocks in each BatchGroup so that we
-        // may miss the chance of releasing certain pages that cross
-        // BatchGroups.
-        Context.markFreeBlocksInRegion(
-            BG.Batches, DecompactPtr, Region->RegionBeg, /*RegionIndex=*/0,
-            Region->MemMapInfo.AllocatedUser, MayContainLastBlockInRegion);
+          Context.markRangeAsAllCounted(BatchGroupBase, BatchGroupUsedEnd,
+                                        Region->RegionBeg, /*RegionIndex=*/0,
+                                        Region->MemMapInfo.AllocatedUser);
+        } else {
+          DCHECK_LT(NumBlocks, MaxContainedBlocks);
+          // Note that we don't always visit blocks in each BatchGroup so that
+          // we may miss the chance of releasing certain pages that cross
+          // BatchGroups.
+          Context.markFreeBlocksInRegion(
+              BG.Batches, DecompactPtr, Region->RegionBeg, /*RegionIndex=*/0,
+              Region->MemMapInfo.AllocatedUser, MayContainLastBlockInRegion);
+        }
       }
-    }
 
-    DCHECK(Context.hasBlockMarked());
+      DCHECK(Context.hasBlockMarked());
 
-    auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
-    releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
+      auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
+      releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 
-    if (Recorder.getReleasedRangesCount() > 0) {
-      Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
-      Region->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
-      Region->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
-    }
-    Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
+      if (Recorder.getReleasedRangesCount() > 0) {
+        Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint = BytesInFreeList;
+        Region->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
+        Region->ReleaseInfo.LastReleasedBytes = Recorder.getReleasedBytes();
+      }
+      Region->ReleaseInfo.LastReleaseAtNs = getMonotonicTimeFast();
+    } // if (Context.ensurePageMapAllocated())
 
     // Merge GroupToRelease back to the Region::FreeListInfo.BlockList. Note
     // that both `Region->FreeListInfo.BlockList` and `GroupToRelease` are

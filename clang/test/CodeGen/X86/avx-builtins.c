@@ -99,7 +99,7 @@ __m256 test_mm256_broadcast_ps(__m128* A) {
 
 __m256d test_mm256_broadcast_sd(double* A) {
   // CHECK-LABEL: test_mm256_broadcast_sd
-  // CHECK: load double, ptr %{{.*}}
+  // CHECK: load double, ptr %{{.*}}, align 1{{$}}
   // CHECK: insertelement <4 x double> undef, double %{{.*}}, i32 0
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 1
   // CHECK: insertelement <4 x double> %{{.*}}, double %{{.*}}, i32 2
@@ -109,7 +109,7 @@ __m256d test_mm256_broadcast_sd(double* A) {
 
 __m128 test_mm_broadcast_ss(float* A) {
   // CHECK-LABEL: test_mm_broadcast_ss
-  // CHECK: load float, ptr %{{.*}}
+  // CHECK: load float, ptr %{{.*}}, align 1{{$}}
   // CHECK: insertelement <4 x float> undef, float %{{.*}}, i32 0
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 2
@@ -119,7 +119,7 @@ __m128 test_mm_broadcast_ss(float* A) {
 
 __m256 test_mm256_broadcast_ss(float* A) {
   // CHECK-LABEL: test_mm256_broadcast_ss
-  // CHECK: load float, ptr %{{.*}}
+  // CHECK: load float, ptr %{{.*}}, align 1{{$}}
   // CHECK: insertelement <8 x float> undef, float %{{.*}}, i32 0
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 1
   // CHECK: insertelement <8 x float> %{{.*}}, float %{{.*}}, i32 2

@@ -336,8 +336,11 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
     The `nvgpu.device_async_wait` op will block the execution thread until the group
     associated with the source token is fully completed.
 
-    The optional `$numGroup` attribute gives a lower bound of the number of
-    groups uncompleted when the wait can unblock the thread.
+    The optional `$numGroups` attribute gives an upper bound of the number of
+    groups uncompleted when the wait can unblock the thread. For example,  if
+    16 async groups are pushe and `$numGroups` is set to 12, then the thread
+    will unblock when 12 groups or fewer are in flight (4 groups have
+    completed).
 
     Example:
 

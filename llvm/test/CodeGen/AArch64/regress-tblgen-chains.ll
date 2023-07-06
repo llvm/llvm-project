@@ -16,7 +16,6 @@ define i64 @test_chains() {
 ; CHECK-LABEL: test_chains:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
 ; CHECK-NEXT:    add x29, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16

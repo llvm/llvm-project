@@ -471,18 +471,17 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
           oso_arch, oso_object ? &oso_object : nullptr, 0,
           oso_object ? comp_unit_info->oso_mod_time : llvm::sys::TimePoint<>());
 
-      if (!comp_unit_info->oso_sp->module_sp || !comp_unit_info->oso_sp->module_sp->GetObjectFile()) {
-        if (oso_object && FileSystem::Instance().Exists(oso_file)) {
-          // If we are loading a .o file from a .a file the "oso_object" will
-          // have a valid value name and if the .a file exists, either the .o
-          // file didn't exist in the .a file or the mod time didn't match.
-          comp_unit_info->oso_load_error.SetErrorStringWithFormat(
-              "\"%s\" object from the \"%s\" archive: "
-              "either the .o file doesn't exist in the archive or the "
-              "modification time (0x%8.8x) of the .o file doesn't match",
-              oso_object.AsCString(), oso_file.GetPath().c_str(),
-              (uint32_t)llvm::sys::toTimeT(comp_unit_info->oso_mod_time));
-        }
+      if (oso_object && !comp_unit_info->oso_sp->module_sp->GetObjectFile() &&
+          FileSystem::Instance().Exists(oso_file)) {
+        // If we are loading a .o file from a .a file the "oso_object" will
+        // have a valid value name and if the .a file exists, either the .o
+        // file didn't exist in the .a file or the mod time didn't match.
+        comp_unit_info->oso_load_error.SetErrorStringWithFormat(
+            "\"%s\" object from the \"%s\" archive: "
+            "either the .o file doesn't exist in the archive or the "
+            "modification time (0x%8.8x) of the .o file doesn't match",
+            oso_object.AsCString(), oso_file.GetPath().c_str(),
+            (uint32_t)llvm::sys::toTimeT(comp_unit_info->oso_mod_time));
       }
     }
   }
