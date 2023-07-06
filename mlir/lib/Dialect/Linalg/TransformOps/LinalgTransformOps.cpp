@@ -2332,36 +2332,41 @@ DiagnosedSilenceableFailure transform::TileReductionUsingForallOp::applyToOne(
 void transform::TileOp::build(OpBuilder &builder, OperationState &result,
                               TypeRange loopTypes, Value target,
                               ArrayRef<int64_t> staticTileSizes,
-                              ArrayRef<int64_t> interchange) {
+                              ArrayRef<int64_t> interchange,
+                              std::optional<ArrayRef<bool>> scalableSizes) {
   return build(builder, result, loopTypes,
                /*target=*/target,
                /*mixedTileSizes=*/
                getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
-               interchange);
+               interchange, scalableSizes);
 }
 
 void transform::TileOp::build(OpBuilder &builder, OperationState &result,
                               Value target, ArrayRef<int64_t> staticTileSizes,
-                              ArrayRef<int64_t> interchange) {
+                              ArrayRef<int64_t> interchange,
+                              std::optional<ArrayRef<bool>> scalableSizes) {
   build(builder, result, target,
         getAsOpFoldResult(builder.getI64ArrayAttr(staticTileSizes)),
-        interchange);
+        interchange, scalableSizes);
 }
 
 void transform::TileOp::build(OpBuilder &builder, OperationState &result,
                               Value target,
                               ArrayRef<OpFoldResult> mixedTileSizes,
-                              ArrayRef<int64_t> interchange) {
+                              ArrayRef<int64_t> interchange,
+                              std::optional<ArrayRef<bool>> scalableSizes) {
   // Loop types are automaticaly splat by the callee, setting up one is
   // enough.
   SmallVector<Type> loopTypes(1, builder.getType<transform::AnyOpType>());
-  build(builder, result, loopTypes, target, mixedTileSizes, interchange);
+  build(builder, result, loopTypes, target, mixedTileSizes, interchange,
+        scalableSizes);
 }
 
 void transform::TileOp::build(OpBuilder &builder, OperationState &result,
                               TypeRange loopTypes, Value target,
                               ArrayRef<OpFoldResult> mixedTileSizes,
-                              ArrayRef<int64_t> interchange) {
+                              ArrayRef<int64_t> interchange,
+                              std::optional<ArrayRef<bool>> scalableSizes) {
   SmallVector<int64_t> staticTileSizes;
   SmallVector<Value> dynamicTileSizes;
   dispatchIndexOpFoldResults(mixedTileSizes, dynamicTileSizes, staticTileSizes);
@@ -2379,12 +2384,24 @@ void transform::TileOp::build(OpBuilder &builder, OperationState &result,
     resultTypes.append(numExpectedLoops, loopTypes[0]);
   else
     llvm::append_range(resultTypes, loopTypes);
+  SmallVector<bool> expandedScalableSizes(mixedTileSizes.size(), false);
+  if (scalableSizes.has_value())
+    expandedScalableSizes.assign(scalableSizes->begin(), scalableSizes->end());
   build(builder, result, /*tiled_linalg_op=*/target.getType(),
         /*loops=*/resultTypes,
         /*target=*/target,
         /*dynamic_sizes=*/dynamicTileSizes,
         /*static_sizes=*/staticTileSizesAttr,
-        /*interchange=*/builder.getDenseI64ArrayAttr(interchange));
+        /*interchange=*/builder.getDenseI64ArrayAttr(interchange),
+        /*scalable_sizes=*/expandedScalableSizes);
+}
+
+LogicalResult transform::TileOp::verify() {
+  if (getMixedSizes().size() != getScalableSizes().size())
+    return emitOpError("expected same number of sizes (")
+           << getMixedSizes().size() << ") and scalable sizes ()"
+           << getScalableSizes().size() << ")";
+  return success();
 }
 
 DiagnosedSilenceableFailure
