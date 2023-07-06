@@ -17,7 +17,9 @@ using namespace llvm::vfs;
 OutputConfig &OutputConfig::setOpenFlags(const sys::fs::OpenFlags &Flags) {
   // Ignore CRLF on its own as invalid.
   using namespace llvm::sys::fs;
-  return Flags & OF_Text ? setText().setCRLF(Flags & OF_CRLF) : setBinary();
+  return Flags & OF_Text
+             ? setText().setCRLF(Flags & OF_CRLF).setAppend(Flags & OF_Append)
+             : setBinary().setAppend(Flags & OF_Append);
 }
 
 void OutputConfig::print(raw_ostream &OS) const {

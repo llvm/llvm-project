@@ -53,8 +53,8 @@ public:
   constexpr OutputConfig &setTextWithCRLF(bool Value) {
     return Value ? setText().setCRLF() : setBinary();
   }
-  constexpr bool getTextWithCRLF() { return getText() && getCRLF(); }
-  constexpr bool getBinary() { return !getText(); }
+  constexpr bool getTextWithCRLF() const { return getText() && getCRLF(); }
+  constexpr bool getBinary() const { return !getText(); }
 
   /// Updates Text and CRLF flags based on \a sys::fs::OF_Text and \a
   /// sys::fs::OF_CRLF in \p Flags. Rejects CRLF without Text (calling

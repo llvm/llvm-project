@@ -23,6 +23,7 @@ TEST(VirtualOutputConfigTest, construct) {
   EXPECT_TRUE(OutputConfig().getAtomicWrite());
   EXPECT_TRUE(OutputConfig().getImplyCreateDirectories());
   EXPECT_FALSE(OutputConfig().getOnlyIfDifferent());
+  EXPECT_FALSE(OutputConfig().getAppend());
 
   // Test inverted defaults.
   EXPECT_TRUE(OutputConfig().getNoText());
@@ -31,6 +32,7 @@ TEST(VirtualOutputConfigTest, construct) {
   EXPECT_FALSE(OutputConfig().getNoAtomicWrite());
   EXPECT_FALSE(OutputConfig().getNoImplyCreateDirectories());
   EXPECT_TRUE(OutputConfig().getNoOnlyIfDifferent());
+  EXPECT_TRUE(OutputConfig().getNoAppend());
 }
 
 TEST(VirtualOutputConfigTest, set) {
@@ -124,7 +126,6 @@ TEST(VirtualOutputConfigTest, OpenFlags) {
 
   // Most flags are not supported / have no effect.
   EXPECT_EQ(OutputConfig(), OutputConfig().setOpenFlags(OF_None));
-  EXPECT_EQ(OutputConfig(), OutputConfig().setOpenFlags(OF_Append));
   EXPECT_EQ(OutputConfig(), OutputConfig().setOpenFlags(OF_Delete));
   EXPECT_EQ(OutputConfig(), OutputConfig().setOpenFlags(OF_ChildInherit));
   EXPECT_EQ(OutputConfig(), OutputConfig().setOpenFlags(OF_UpdateAtime));
@@ -134,6 +135,7 @@ TEST(VirtualOutputConfigTest, OpenFlags) {
            OutputConfig(),
            OutputConfig().setText(),
            OutputConfig().setTextWithCRLF(),
+           OutputConfig().setAppend(),
 
            // Should be overridden despite being invalid.
            OutputConfig().setCRLF(),
@@ -143,6 +145,7 @@ TEST(VirtualOutputConfigTest, OpenFlags) {
     EXPECT_EQ(OutputConfig().setText(), Init.setOpenFlags(OF_Text));
     EXPECT_EQ(OutputConfig().setTextWithCRLF(),
               Init.setOpenFlags(OF_TextWithCRLF));
+    EXPECT_EQ(OutputConfig().setAppend(), Init.setOpenFlags(OF_Append));
   }
 }
 
