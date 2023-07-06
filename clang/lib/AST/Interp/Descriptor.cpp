@@ -40,6 +40,9 @@ static void moveTy(Block *, const std::byte *Src, std::byte *Dst,
 template <typename T>
 static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool,
                         const Descriptor *D) {
+  new (Ptr) InitMapPtr(std::nullopt);
+
+  Ptr += sizeof(InitMapPtr);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     new (&reinterpret_cast<T *>(Ptr)[I]) T();
   }
@@ -47,11 +50,11 @@ static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool,
 
 template <typename T>
 static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
-  InitMap *IM = *reinterpret_cast<InitMap **>(Ptr);
-  if (IM != (InitMap *)-1)
-    free(IM);
+  InitMapPtr &IMP = *reinterpret_cast<InitMapPtr *>(Ptr);
 
-  Ptr += sizeof(InitMap *);
+  if (IMP)
+    IMP = std::nullopt;
+  Ptr += sizeof(InitMapPtr);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     reinterpret_cast<T *>(Ptr)[I].~T();
   }
@@ -209,7 +212,8 @@ static BlockMoveFn getMovePrim(PrimType Type) {
 }
 
 static BlockCtorFn getCtorArrayPrim(PrimType Type) {
-  COMPOSITE_TYPE_SWITCH(Type, return ctorArrayTy<T>, return nullptr);
+  TYPE_SWITCH(Type, return ctorArrayTy<T>);
+  llvm_unreachable("unknown Expr");
 }
 
 static BlockDtorFn getDtorArrayPrim(PrimType Type) {
@@ -218,7 +222,8 @@ static BlockDtorFn getDtorArrayPrim(PrimType Type) {
 }
 
 static BlockMoveFn getMoveArrayPrim(PrimType Type) {
-  COMPOSITE_TYPE_SWITCH(Type, return moveArrayTy<T>, return nullptr);
+  TYPE_SWITCH(Type, return moveArrayTy<T>);
+  llvm_unreachable("unknown Expr");
 }
 
 /// Primitives.
@@ -238,7 +243,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        bool IsMutable)
     : Source(D), ElemSize(primSize(Type)), Size(ElemSize * NumElems),
       MDSize(MD.value_or(0)),
-      AllocSize(align(Size) + sizeof(InitMap *) + MDSize), IsConst(IsConst),
+      AllocSize(align(Size) + sizeof(InitMapPtr) + MDSize), IsConst(IsConst),
       IsMutable(IsMutable), IsTemporary(IsTemporary), IsArray(true),
       CtorFn(getCtorArrayPrim(Type)), DtorFn(getDtorArrayPrim(Type)),
       MoveFn(getMoveArrayPrim(Type)) {
@@ -249,9 +254,10 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
 Descriptor::Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary,
                        UnknownSize)
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark), MDSize(0),
-      AllocSize(alignof(void *)), IsConst(true), IsMutable(false),
-      IsTemporary(IsTemporary), IsArray(true), CtorFn(getCtorArrayPrim(Type)),
-      DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
+      AllocSize(alignof(void *) + sizeof(InitMapPtr)), IsConst(true),
+      IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
+      CtorFn(getCtorArrayPrim(Type)), DtorFn(getDtorArrayPrim(Type)),
+      MoveFn(getMoveArrayPrim(Type)) {
   assert(Source && "Missing source");
 }
 
@@ -272,10 +278,10 @@ Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
 Descriptor::Descriptor(const DeclTy &D, Descriptor *Elem, bool IsTemporary,
                        UnknownSize)
     : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
-      Size(UnknownSizeMark), MDSize(0), AllocSize(alignof(void *)),
-      ElemDesc(Elem), IsConst(true), IsMutable(false), IsTemporary(IsTemporary),
-      IsArray(true), CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc),
-      MoveFn(moveArrayDesc) {
+      Size(UnknownSizeMark), MDSize(0),
+      AllocSize(alignof(void *) + sizeof(InitMapPtr)), ElemDesc(Elem),
+      IsConst(true), IsMutable(false), IsTemporary(IsTemporary), IsArray(true),
+      CtorFn(ctorArrayDesc), DtorFn(dtorArrayDesc), MoveFn(moveArrayDesc) {
   assert(Source && "Missing source");
 }
 
@@ -314,21 +320,12 @@ SourceLocation Descriptor::getLocation() const {
   llvm_unreachable("Invalid descriptor type");
 }
 
-InitMap::InitMap(unsigned N) : UninitFields(N) {
-  std::fill_n(data(), (N + PER_FIELD - 1) / PER_FIELD, 0);
+InitMap::InitMap(unsigned N)
+    : UninitFields(N), Data(std::make_unique<T[]>(numFields(N))) {
+  std::fill_n(data(), numFields(N), 0);
 }
 
-InitMap::T *InitMap::data() {
-  auto *Start = reinterpret_cast<char *>(this) + align(sizeof(InitMap));
-  return reinterpret_cast<T *>(Start);
-}
-
-const InitMap::T *InitMap::data() const {
-  auto *Start = reinterpret_cast<const char *>(this) + align(sizeof(InitMap));
-  return reinterpret_cast<const T *>(Start);
-}
-
-bool InitMap::initialize(unsigned I) {
+bool InitMap::initializeElement(unsigned I) {
   unsigned Bucket = I / PER_FIELD;
   T Mask = T(1) << (I % PER_FIELD);
   if (!(data()[Bucket] & Mask)) {
@@ -338,13 +335,7 @@ bool InitMap::initialize(unsigned I) {
   return UninitFields == 0;
 }
 
-bool InitMap::isInitialized(unsigned I) const {
+bool InitMap::isElementInitialized(unsigned I) const {
   unsigned Bucket = I / PER_FIELD;
   return data()[Bucket] & (T(1) << (I % PER_FIELD));
-}
-
-InitMap *InitMap::allocate(unsigned N) {
-  const size_t NumFields = ((N + PER_FIELD - 1) / PER_FIELD);
-  const size_t Size = align(sizeof(InitMap)) + NumFields * PER_FIELD;
-  return new (malloc(Size)) InitMap(N);
 }
