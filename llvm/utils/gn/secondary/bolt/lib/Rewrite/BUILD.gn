@@ -26,6 +26,7 @@ static_library("Rewrite") {
     "JITLinkLinker.cpp",
     "LinuxKernelRewriter.cpp",
     "MachORewriteInstance.cpp",
+    "PseudoProbeRewriter.cpp",
     "RewriteInstance.cpp",
   ]
 
