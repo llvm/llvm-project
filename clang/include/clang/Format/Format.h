@@ -93,7 +93,8 @@ struct FormatStyle {
     /// \endcode
     ///
     /// \warning
-    ///  Note: This currently only applies to parentheses.
+    ///  This currently only applies to braced initializer lists (when
+    ///  ``Cpp11BracedListStyle`` is ``true``) and parentheses.
     /// \endwarning
     BAS_BlockIndent,
   };
