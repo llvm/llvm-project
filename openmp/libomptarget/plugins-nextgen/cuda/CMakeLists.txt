@@ -68,6 +68,22 @@ target_compile_definitions(omptarget.rtl.cuda PRIVATE DEBUG_PREFIX="TARGET CUDA 
 
 target_include_directories(omptarget.rtl.cuda PRIVATE ${LIBOMPTARGET_INCLUDE_DIR})
 
+# Configure testing for the CUDA plugin. We will build tests if we could a
+# functional NVIDIA GPU on the system, or if manually specifies by the user.
+option(LIBOMPTARGET_FORCE_NVIDIA_TESTS "Build NVIDIA libomptarget tests" OFF)
+if (LIBOMPTARGET_FOUND_NVIDIA_GPU OR LIBOMPTARGET_FORCE_NVIDIA_TESTS)
+  libomptarget_say("Enable tests using CUDA plugin")
+  set(LIBOMPTARGET_SYSTEM_TARGETS 
+      "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda" PARENT_SCOPE)
+  set(LIBOMPTARGET_SYSTEM_TARGETS 
+      "${LIBOMPTARGET_SYSTEM_TARGETS} nvptx64-nvidia-cuda-LTO" PARENT_SCOPE)
+  list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.cuda")
+  set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
+else()
+  libomptarget_say("Not generating NVIDIA tests, no supported devices detected."
+                   " Use 'LIBOMPTARGET_FORCE_NVIDIA_TESTS' to override.")
+endif()
+
 # Install plugin under the lib destination folder.
 install(TARGETS omptarget.rtl.cuda LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
 set_target_properties(omptarget.rtl.cuda PROPERTIES
