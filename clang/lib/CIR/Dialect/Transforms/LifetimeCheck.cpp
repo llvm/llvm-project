@@ -417,7 +417,6 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   /// -----------
 
   std::optional<clang::ASTContext *> astCtx;
-
   void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 } // namespace

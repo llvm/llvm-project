@@ -1268,7 +1268,7 @@ void CIRGenFunction::buildDeclRefExprDbgValue(const DeclRefExpr *E,
   assert(!UnimplementedFeature::generateDebugInfo());
 }
 
-Address CIRGenFunction::buildVAListRef(const Expr* E) {
+Address CIRGenFunction::buildVAListRef(const Expr *E) {
   if (getContext().getBuiltinVaListType()->isArrayType())
     return buildPointerWithAlignment(E);
   return buildLValue(E).getAddress();
