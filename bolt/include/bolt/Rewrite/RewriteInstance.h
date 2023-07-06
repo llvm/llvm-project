@@ -386,7 +386,7 @@ public:
 
 private:
   /// Manage a pipeline of metadata handlers.
-  MetadataManager MetadataManager;
+  class MetadataManager MetadataManager;
 
   /// Get the contents of the LSDA section for this binary.
   ArrayRef<uint8_t> getLSDAData();
