@@ -131,7 +131,7 @@ inline RT_API_ATTRS RESULT ApplyType(
       return FUNC<TypeCategory::Integer, 4>{}(std::forward<A>(x)...);
     case 8:
       return FUNC<TypeCategory::Integer, 8>{}(std::forward<A>(x)...);
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
     case 16:
       return FUNC<TypeCategory::Integer, 16>{}(std::forward<A>(x)...);
 #endif
@@ -230,7 +230,7 @@ inline RT_API_ATTRS RESULT ApplyIntegerKind(
     return FUNC<4>{}(std::forward<A>(x)...);
   case 8:
     return FUNC<8>{}(std::forward<A>(x)...);
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
   case 16:
     return FUNC<16>{}(std::forward<A>(x)...);
 #endif
@@ -310,6 +310,11 @@ std::optional<std::pair<TypeCategory, int>> inline constexpr GetResultType(
       return std::make_pair(TypeCategory::Integer, maxKind);
     case TypeCategory::Real:
     case TypeCategory::Complex:
+#if !(defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
+      if (xKind == 16) {
+        break;
+      }
+#endif
       return std::make_pair(yCat, yKind);
     default:
       break;
@@ -318,6 +323,11 @@ std::optional<std::pair<TypeCategory, int>> inline constexpr GetResultType(
   case TypeCategory::Real:
     switch (yCat) {
     case TypeCategory::Integer:
+#if !(defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
+      if (yKind == 16) {
+        break;
+      }
+#endif
       return std::make_pair(TypeCategory::Real, xKind);
     case TypeCategory::Real:
     case TypeCategory::Complex:
@@ -329,6 +339,11 @@ std::optional<std::pair<TypeCategory, int>> inline constexpr GetResultType(
   case TypeCategory::Complex:
     switch (yCat) {
     case TypeCategory::Integer:
+#if !(defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T)
+      if (yKind == 16) {
+        break;
+      }
+#endif
       return std::make_pair(TypeCategory::Complex, xKind);
     case TypeCategory::Real:
     case TypeCategory::Complex:

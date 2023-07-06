@@ -1484,7 +1484,9 @@ static enum Iostat CheckUnitNumberInRangeImpl(INT unit, bool handleError,
     // Only provide the bad unit number in the message if SignalError can print
     // it accurately. Otherwise, the generic IostatUnitOverflow message will be
     // used.
-    if (static_cast<std::intmax_t>(unit) == unit) {
+    if constexpr (sizeof(INT) > sizeof(std::intmax_t)) {
+      errorHandler.SignalError(IostatUnitOverflow);
+    } else if (static_cast<std::intmax_t>(unit) == unit) {
       errorHandler.SignalError(IostatUnitOverflow,
           "UNIT number %jd is out of range", static_cast<std::intmax_t>(unit));
     } else {
