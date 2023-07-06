@@ -954,113 +954,109 @@ static MachineOperand makeImplicit(const MachineOperand &MO) {
   return NewMO;
 }
 
+static MachineOperand getMovOperand(const MachineOperand &MO,
+                                    unsigned TargetFlag) {
+  unsigned TF = MO.getTargetFlags() | TargetFlag;
+  switch (MO.getType()) {
+  case MachineOperand::MO_Immediate: {
+    unsigned Imm = MO.getImm();
+    switch (TargetFlag) {
+    case ARMII::MO_HI_8_15:
+      Imm = (Imm >> 24) & 0xff;
+      break;
+    case ARMII::MO_HI_0_7:
+      Imm = (Imm >> 16) & 0xff;
+      break;
+    case ARMII::MO_LO_8_15:
+      Imm = (Imm >> 8) & 0xff;
+      break;
+    case ARMII::MO_LO_0_7:
+      Imm = Imm & 0xff;
+      break;
+    case ARMII::MO_HI16:
+      Imm = (Imm >> 16) & 0xffff;
+      break;
+    case ARMII::MO_LO16:
+      Imm = Imm & 0xffff;
+      break;
+    default:
+      llvm_unreachable("Only HI/LO target flags are expected");
+    }
+    return MachineOperand::CreateImm(Imm);
+  }
+  case MachineOperand::MO_ExternalSymbol:
+    return MachineOperand::CreateES(MO.getSymbolName(), TF);
+  case MachineOperand::MO_JumpTableIndex:
+    return MachineOperand::CreateJTI(MO.getIndex(), TF);
+  default:
+    return MachineOperand::CreateGA(MO.getGlobal(), MO.getOffset(), TF);
+  }
+}
+
 void ARMExpandPseudo::ExpandTMOV32BitImm(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator &MBBI) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
   bool DstIsDead = MI.getOperand(0).isDead();
   const MachineOperand &MO = MI.getOperand(1);
-  MachineInstrBuilder Upper8_15, LSL_U8_15, Upper0_7, Lower8_15, Lower0_7;
   unsigned MIFlags = MI.getFlags();
 
   LLVM_DEBUG(dbgs() << "Expanding: "; MI.dump());
 
-  Upper8_15 =
-      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tMOVi8), DstReg)
-          .add(t1CondCodeOp(true));
+  // Expand the mov into a sequence of mov/add+lsl of the individual bytes. We
+  // want to avoid emitting any zero bytes, as they won't change the result, and
+  // also don't want any pointless shifts, so instead of immediately emitting
+  // the shift for a byte we keep track of how much we will need to shift and do
+  // it before the next nonzero byte.
+  unsigned PendingShift = 0;
+  for (unsigned Byte = 0; Byte < 4; ++Byte) {
+    unsigned Flag = Byte == 0   ? ARMII::MO_HI_8_15
+                    : Byte == 1 ? ARMII::MO_HI_0_7
+                    : Byte == 2 ? ARMII::MO_LO_8_15
+                                : ARMII::MO_LO_0_7;
+    MachineOperand Operand = getMovOperand(MO, Flag);
+    bool ZeroImm = Operand.isImm() && Operand.getImm() == 0;
+    unsigned Op = PendingShift ? ARM::tADDi8 : ARM::tMOVi8;
 
-  LSL_U8_15 =
-      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tLSLri), DstReg)
-          .add(t1CondCodeOp(true))
-          .addReg(DstReg)
-          .addImm(8)
-          .add(predOps(ARMCC::AL))
-          .setMIFlags(MIFlags);
+    // Emit the pending shift if we're going to emit this byte or if we've
+    // reached the end.
+    if (PendingShift && (!ZeroImm || Byte == 3)) {
+      MachineInstr *Lsl =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tLSLri), DstReg)
+              .add(t1CondCodeOp(true))
+              .addReg(DstReg)
+              .addImm(PendingShift)
+              .add(predOps(ARMCC::AL))
+              .setMIFlags(MIFlags);
+      (void)Lsl;
+      LLVM_DEBUG(dbgs() << "And:       "; Lsl->dump(););
+      PendingShift = 0;
+    }
 
-  Upper0_7 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tADDi8), DstReg)
-                 .add(t1CondCodeOp(true))
-                 .addReg(DstReg);
+    // Emit this byte if it's nonzero.
+    if (!ZeroImm) {
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Op), DstReg)
+              .add(t1CondCodeOp(true));
+      if (Op == ARM::tADDi8)
+        MIB.addReg(DstReg);
+      MIB.add(Operand);
+      MIB.add(predOps(ARMCC::AL));
+      MIB.setMIFlags(MIFlags);
+      LLVM_DEBUG(dbgs() << (Op == ARM::tMOVi8 ? "To: " : "And:") << "       ";
+                 MIB.getInstr()->dump(););
+    }
 
-  MachineInstr *LSL_U0_7 = MBB.getParent()->CloneMachineInstr(LSL_U8_15);
-  MBB.insert(MBBI, LSL_U0_7);
-
-  Lower8_15 =
-      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tADDi8), DstReg)
-          .add(t1CondCodeOp(true))
-          .addReg(DstReg);
-
-  MachineInstr *LSL_L8_15 = MBB.getParent()->CloneMachineInstr(LSL_U8_15);
-  MBB.insert(MBBI, LSL_L8_15);
-
-  Lower0_7 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tADDi8))
-                 .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-                 .add(t1CondCodeOp(true))
-                 .addReg(DstReg);
-
-  Upper8_15.setMIFlags(MIFlags);
-  Upper0_7.setMIFlags(MIFlags);
-  Lower8_15.setMIFlags(MIFlags);
-  Lower0_7.setMIFlags(MIFlags);
-
-  switch (MO.getType()) {
-  case MachineOperand::MO_Immediate: {
-    unsigned Imm = MO.getImm();
-    unsigned Hi8_15 = (Imm >> 24) & 0xff;
-    unsigned Hi0_7 = (Imm >> 16) & 0xff;
-    unsigned Lo8_15 = (Imm >> 8) & 0xff;
-    unsigned Lo0_7 = Imm & 0xff;
-    Upper8_15 = Upper8_15.addImm(Hi8_15);
-    Upper0_7 = Upper0_7.addImm(Hi0_7);
-    Lower8_15 = Lower8_15.addImm(Lo8_15);
-    Lower0_7 = Lower0_7.addImm(Lo0_7);
-    break;
-  }
-  case MachineOperand::MO_ExternalSymbol: {
-    const char *ES = MO.getSymbolName();
-    unsigned TF = MO.getTargetFlags();
-    Upper8_15 = Upper8_15.addExternalSymbol(ES, TF | ARMII::MO_HI_8_15);
-    Upper0_7 = Upper0_7.addExternalSymbol(ES, TF | ARMII::MO_HI_0_7);
-    Lower8_15 = Lower8_15.addExternalSymbol(ES, TF | ARMII::MO_LO_8_15);
-    Lower0_7 = Lower0_7.addExternalSymbol(ES, TF | ARMII::MO_LO_0_7);
-    break;
-  }
-  case MachineOperand::MO_JumpTableIndex: {
-    unsigned Idx = MO.getIndex();
-    unsigned TF = MO.getTargetFlags();
-    Upper8_15 = Upper8_15.addJumpTableIndex(Idx, TF | ARMII::MO_HI_8_15);
-    Upper0_7 = Upper0_7.addJumpTableIndex(Idx, TF | ARMII::MO_HI_0_7);
-    Lower8_15 = Lower8_15.addJumpTableIndex(Idx, TF | ARMII::MO_LO_8_15);
-    Lower0_7 = Lower0_7.addJumpTableIndex(Idx, TF | ARMII::MO_LO_0_7);
-    break;
-  }
-  default: {
-    const GlobalValue *GV = MO.getGlobal();
-    unsigned TF = MO.getTargetFlags();
-    Upper8_15 =
-        Upper8_15.addGlobalAddress(GV, MO.getOffset(), TF | ARMII::MO_HI_8_15);
-    Upper0_7 =
-        Upper0_7.addGlobalAddress(GV, MO.getOffset(), TF | ARMII::MO_HI_0_7);
-    Lower8_15 =
-        Lower8_15.addGlobalAddress(GV, MO.getOffset(), TF | ARMII::MO_LO_8_15);
-    Lower0_7 =
-        Lower0_7.addGlobalAddress(GV, MO.getOffset(), TF | ARMII::MO_LO_0_7);
-    break;
-  }
+    // Don't accumulate the shift value if we've not yet seen a nonzero byte.
+    if (PendingShift || !ZeroImm)
+      PendingShift += 8;
   }
 
-  Upper8_15 = Upper8_15.add(predOps(ARMCC::AL));
-  Upper0_7 = Upper0_7.add(predOps(ARMCC::AL));
-  Lower8_15 = Lower8_15.add(predOps(ARMCC::AL));
-  Lower0_7 = Lower0_7.add(predOps(ARMCC::AL));
+  // The dest is dead on the last instruction we emitted if it was dead on the
+  // original instruction.
+  (--MBBI)->getOperand(0).setIsDead(DstIsDead);
 
   MI.eraseFromParent();
-  LLVM_DEBUG(dbgs() << "To:        "; Upper8_15.getInstr()->dump(););
-  LLVM_DEBUG(dbgs() << "And:       "; LSL_U8_15.getInstr()->dump(););
-  LLVM_DEBUG(dbgs() << "And:       "; Upper0_7.getInstr()->dump(););
-  LLVM_DEBUG(dbgs() << "And:       "; LSL_U0_7->dump(););
-  LLVM_DEBUG(dbgs() << "And:       "; Lower8_15.getInstr()->dump(););
-  LLVM_DEBUG(dbgs() << "And:       "; LSL_L8_15->dump(););
-  LLVM_DEBUG(dbgs() << "And:       "; Lower0_7.getInstr()->dump(););
 }
 
 void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
@@ -1132,53 +1128,34 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
   }
 
   LO16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(LO16Opc), DstReg);
-  HI16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(HI16Opc))
-    .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-    .addReg(DstReg);
-
   LO16.setMIFlags(MIFlags);
-  HI16.setMIFlags(MIFlags);
-
-  switch (MO.getType()) {
-  case MachineOperand::MO_Immediate: {
-    unsigned Imm = MO.getImm();
-    unsigned Lo16 = Imm & 0xffff;
-    unsigned Hi16 = (Imm >> 16) & 0xffff;
-    LO16 = LO16.addImm(Lo16);
-    HI16 = HI16.addImm(Hi16);
-    break;
-  }
-  case MachineOperand::MO_ExternalSymbol: {
-    const char *ES = MO.getSymbolName();
-    unsigned TF = MO.getTargetFlags();
-    LO16 = LO16.addExternalSymbol(ES, TF | ARMII::MO_LO16);
-    HI16 = HI16.addExternalSymbol(ES, TF | ARMII::MO_HI16);
-    break;
-  }
-  default: {
-    const GlobalValue *GV = MO.getGlobal();
-    unsigned TF = MO.getTargetFlags();
-    LO16 = LO16.addGlobalAddress(GV, MO.getOffset(), TF | ARMII::MO_LO16);
-    HI16 = HI16.addGlobalAddress(GV, MO.getOffset(), TF | ARMII::MO_HI16);
-    break;
-  }
-  }
-
+  LO16.add(getMovOperand(MO, ARMII::MO_LO16));
   LO16.cloneMemRefs(MI);
-  HI16.cloneMemRefs(MI);
   LO16.addImm(Pred).addReg(PredReg);
-  HI16.addImm(Pred).addReg(PredReg);
+  if (isCC)
+    LO16.add(makeImplicit(MI.getOperand(1)));
+  LO16.copyImplicitOps(MI);
+  LLVM_DEBUG(dbgs() << "To:        "; LO16.getInstr()->dump(););
+
+  MachineOperand HIOperand = getMovOperand(MO, ARMII::MO_HI16);
+  if (!(HIOperand.isImm() && HIOperand.getImm() == 0)) {
+    HI16 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(HI16Opc))
+               .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+               .addReg(DstReg);
+    HI16.setMIFlags(MIFlags);
+    HI16.add(HIOperand);
+    HI16.cloneMemRefs(MI);
+    HI16.addImm(Pred).addReg(PredReg);
+    HI16.copyImplicitOps(MI);
+    LLVM_DEBUG(dbgs() << "And:       "; HI16.getInstr()->dump(););
+  } else {
+    LO16->getOperand(0).setIsDead(DstIsDead);
+  }
 
   if (RequiresBundling)
     finalizeBundle(MBB, LO16->getIterator(), MBBI->getIterator());
 
-  if (isCC)
-    LO16.add(makeImplicit(MI.getOperand(1)));
-  LO16.copyImplicitOps(MI);
-  HI16.copyImplicitOps(MI);
   MI.eraseFromParent();
-  LLVM_DEBUG(dbgs() << "To:        "; LO16.getInstr()->dump(););
-  LLVM_DEBUG(dbgs() << "And:       "; HI16.getInstr()->dump(););
 }
 
 // The size of the area, accessed by that VLSTM/VLLDM
