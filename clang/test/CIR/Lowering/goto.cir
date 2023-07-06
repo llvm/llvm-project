@@ -1,5 +1,6 @@
 // RUN: cir-tool %s -canonicalize -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 // RUN: cir-tool %s -canonicalize -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+
 !u32i = !cir.int<u, 32>
 
 module {
