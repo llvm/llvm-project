@@ -15,6 +15,7 @@ add_llvm_library(LLVMBOLTRewrite
   ExecutableFileMemoryManager.cpp
   JITLinkLinker.cpp
   MachORewriteInstance.cpp
+  MetadataManager.cpp
   RewriteInstance.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB

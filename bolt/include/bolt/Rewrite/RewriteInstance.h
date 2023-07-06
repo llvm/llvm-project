@@ -15,6 +15,7 @@
 
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/Linker.h"
+#include "bolt/Rewrite/MetadataManager.h"
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -93,6 +94,9 @@ private:
   /// Populate array of binary functions and other objects of interest
   /// from meta data in the file.
   void discoverFileObjects();
+
+  /// Create and initialize metadata rewriters for this instance.
+  void initializeMetadataManager();
 
   /// Process fragments, locate parent functions.
   void registerFragments();
@@ -187,6 +191,9 @@ private:
 
   /// Link additional runtime code to support instrumentation.
   void linkRuntime();
+
+  /// Process metadata in special sections before CFG is built for functions.
+  void processMetadataPreCFG();
 
   /// Update debug and other auxiliary information in the file.
   void updateMetadata();
@@ -424,6 +431,9 @@ public:
   }
 
 private:
+  /// Manage a pipeline of metadata handlers.
+  MetadataManager MetadataManager;
+
   /// Get the contents of the LSDA section for this binary.
   ArrayRef<uint8_t> getLSDAData();
 
