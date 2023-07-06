@@ -28,6 +28,7 @@ static_library("Rewrite") {
     "MachORewriteInstance.cpp",
     "PseudoProbeRewriter.cpp",
     "RewriteInstance.cpp",
+    "SDTRewriter.cpp",
   ]
 
   defines = []
