@@ -11,7 +11,7 @@
 
 #ifdef __APPLE__
 #include "darwin/syscall.h"
-#elif defined(__unix__)
+#elif defined(__linux__)
 #include "linux/syscall.h"
 #endif
 

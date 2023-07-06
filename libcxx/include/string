@@ -663,13 +663,6 @@ struct __can_be_converted_to_string_view : public _BoolConstant<
 
 struct __uninitialized_size_tag {};
 
-template <class _Tp, class _Up, class = void>
-struct __is_less_than_comparable : false_type {};
-
-template <class _Tp, class _Up>
-struct __is_less_than_comparable<_Tp, _Up, __void_t<decltype(std::declval<_Tp>() < std::declval<_Up>())> > : true_type {
-};
-
 template<class _CharT, class _Traits, class _Allocator>
 class basic_string
 {
@@ -1910,23 +1903,9 @@ private:
       return *this;
     }
 
-    template <
-        class _Tp,
-        __enable_if_t<__is_less_than_comparable<const __remove_cvref_t<_Tp>*, const value_type*>::value, int> = 0>
+    template <class _Tp>
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __addr_in_range(const _Tp& __v) const {
       return std::__is_pointer_in_range(data(), data() + size() + 1, std::addressof(__v));
-    }
-
-    template <
-        class _Tp,
-        __enable_if_t<!__is_less_than_comparable<const __remove_cvref_t<_Tp>*, const value_type*>::value, int> = 0>
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __addr_in_range(const _Tp& __v) const {
-      if (__libcpp_is_constant_evaluated())
-                return false;
-
-      auto __t_ptr = reinterpret_cast<const char*>(std::addressof(__v));
-      return reinterpret_cast<const char*>(data()) <= __t_ptr &&
-             __t_ptr < reinterpret_cast<const char*>(data() + size() + 1);
     }
 
     _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI

@@ -218,11 +218,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                               automatically marked as UNSUPPORTED if the compiler
                               does not support Clang-verify.
 
-    FOO.fail.cpp            - Compiled with clang-verify if clang-verify is
-                              supported, and equivalent to a .compile.fail.cpp
-                              test otherwise. This is supported only for backwards
-                              compatibility with the test suite.
-
 
     Substitution requirements
     ===============================
@@ -366,21 +361,6 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                 "%dbg(COMPILED WITH) %{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe",
                 "%dbg(EXECUTED AS) %{exec} %t.exe",
             ]
-            return self._executeShTest(test, litConfig, steps)
-        # This is like a .verify.cpp test when clang-verify is supported,
-        # otherwise it's like a .compile.fail.cpp test. This is only provided
-        # for backwards compatibility with the test suite.
-        elif filename.endswith(".fail.cpp"):
-            if supportsVerify:
-                steps = [
-                    "%dbg(COMPILED WITH) %{{cxx}} %s %{{flags}} %{{compile_flags}} -fsyntax-only -Wno-error {}".format(
-                        VERIFY_FLAGS
-                    )
-                ]
-            else:
-                steps = [
-                    "%dbg(COMPILED WITH) ! %{cxx} %s %{flags} %{compile_flags} -fsyntax-only"
-                ]
             return self._executeShTest(test, litConfig, steps)
         else:
             return lit.Test.Result(

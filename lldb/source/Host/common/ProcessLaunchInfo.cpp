@@ -126,8 +126,8 @@ void ProcessLaunchInfo::SetWorkingDirectory(const FileSpec &working_dir) {
   m_working_dir = working_dir;
 }
 
-const char *ProcessLaunchInfo::GetProcessPluginName() const {
-  return (m_plugin_name.empty() ? nullptr : m_plugin_name.c_str());
+llvm::StringRef ProcessLaunchInfo::GetProcessPluginName() const {
+  return llvm::StringRef(m_plugin_name);
 }
 
 void ProcessLaunchInfo::SetProcessPluginName(llvm::StringRef plugin) {

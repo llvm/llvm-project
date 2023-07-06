@@ -1140,10 +1140,24 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
   case ARM::tLDRpci:
   case ARM::t2MOVi16:
   case ARM::t2MOVTi16:
+  case ARM::tMOVi8:
+  case ARM::tADDi8:
+  case ARM::tLSLri:
     // special cases:
     // 1) for Thumb1 code we sometimes materialize the constant via constpool
     //    load.
-    // 2) for Thumb2 execute only code we materialize the constant via
+    // 2) for Thumb1 execute only code we materialize the constant via the
+    // following pattern:
+    //        movs    r3, #:upper8_15:<const>
+    //        lsls    r3, #8
+    //        adds    r3, #:upper0_7:<const>
+    //        lsls    r3, #8
+    //        adds    r3, #:lower8_15:<const>
+    //        lsls    r3, #8
+    //        adds    r3, #:lower0_7:<const>
+    //    So we need to special-case MOVS, ADDS and LSLS, and keep track of
+    //    where we are in the sequence with the simplest of state machines.
+    // 3) for Thumb2 execute only code we materialize the constant via
     //    immediate constants in 2 separate instructions (MOVW/MOVT).
     SrcReg = ~0U;
     DstReg = MI->getOperand(0).getReg();
@@ -1333,6 +1347,23 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       case ARM::t2MOVTi16:
         Offset = MI->getOperand(2).getImm();
         AFI->EHPrologueOffsetInRegs[DstReg] |= (Offset << 16);
+        break;
+      case ARM::tMOVi8:
+        Offset = MI->getOperand(2).getImm();
+        AFI->EHPrologueOffsetInRegs[DstReg] = Offset;
+        break;
+      case ARM::tLSLri:
+        assert(MI->getOperand(3).getImm() == 8 &&
+               "The shift amount is not equal to 8");
+        assert(MI->getOperand(2).getReg() == MI->getOperand(0).getReg() &&
+               "The source register is not equal to the destination register");
+        AFI->EHPrologueOffsetInRegs[DstReg] <<= 8;
+        break;
+      case ARM::tADDi8:
+        assert(MI->getOperand(2).getReg() == MI->getOperand(0).getReg() &&
+               "The source register is not equal to the destination register");
+        Offset = MI->getOperand(3).getImm();
+        AFI->EHPrologueOffsetInRegs[DstReg] += Offset;
         break;
       case ARM::t2PAC:
       case ARM::t2PACBTI:

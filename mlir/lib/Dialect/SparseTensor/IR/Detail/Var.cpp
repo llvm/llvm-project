@@ -289,4 +289,16 @@ InFlightDiagnostic VarEnv::emitErrorIfAnyUnbound(AsmParser &parser) const {
   return {};
 }
 
+void VarEnv::addVars(
+    SmallVectorImpl<std::pair<StringRef, AffineExpr>> &dimsAndSymbols,
+    VarKind vk, MLIRContext *context) const {
+  for (const auto &var : vars) {
+    if (var.getKind() == vk) {
+      assert(var.hasNum());
+      dimsAndSymbols.push_back(std::make_pair(
+          var.getName(), getAffineDimExpr(*var.getNum(), context)));
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//

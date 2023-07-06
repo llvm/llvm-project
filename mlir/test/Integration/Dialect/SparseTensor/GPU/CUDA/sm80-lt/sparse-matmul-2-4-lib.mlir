@@ -11,6 +11,9 @@
 // RUN: | FileCheck %s
 
 module {
+  llvm.func @mgpuCreateSparseLtEnv()
+  llvm.func @mgpuDestroySparseLtEnv()
+
   func.func @sampled_matmul(%a : memref<16x32xf16>,
                             %b : memref<32x16xf16>,
                             %c : memref<16x16xf16>) {
@@ -28,19 +31,17 @@ module {
     %token4 = gpu.memcpy async [%token3] %d_a, %a : memref<16x32xf16>, memref<16x32xf16>
     %token5 = gpu.memcpy async [%token4] %d_b, %b : memref<32x16xf16>, memref<32x16xf16>
     %token6 = gpu.memcpy async [%token5] %d_c, %c : memref<16x16xf16>, memref<16x16xf16>
-    %env, %token7 = gpu.create_sparse_env async [%token6]
-    %spmat, %token8 = gpu.create_2to4_spmat async [%token7] %env, %c16, %c32, %d_a: memref<16x32xf16>
-    %dnmat, %token9 = gpu.create_dn_tensor async [%token8] %env, %d_b, %c32, %c16: index, index into memref<32x16xf16>
-    %dnmat2, %token10 = gpu.create_dn_tensor async [%token9] %env, %d_c, %c16, %c16: index, index into memref<16x16xf16>
-    %bufferSz0, %bufferSz1, %bufferSz2, %token11 = gpu.spmm_buffer_size async [%token10] %env, %spmat{NON_TRANSPOSE}, %dnmat{NON_TRANSPOSE}, %dnmat2 : index, index,index into f16
+    %spmat, %token8 = gpu.create_2to4_spmat async [%token6] %c16, %c32, %d_a: memref<16x32xf16>
+    %dnmat, %token9 = gpu.create_dn_tensor async [%token8] %d_b, %c32, %c16: index, index into memref<32x16xf16>
+    %dnmat2, %token10 = gpu.create_dn_tensor async [%token9] %d_c, %c16, %c16: index, index into memref<16x16xf16>
+    %bufferSz0, %bufferSz1, %bufferSz2, %token11 = gpu.spmm_buffer_size async [%token10] %spmat{NON_TRANSPOSE}, %dnmat{NON_TRANSPOSE}, %dnmat2 : index, index,index into f16
     %mem1, %token12 = gpu.alloc async [%token11] (%bufferSz0) : memref<?xf16>
     %mem2, %token13 = gpu.alloc async [%token12] (%bufferSz1) : memref<?xf16>
     %mem3, %token14 = gpu.alloc async [%token13] (%bufferSz2) : memref<?xf16>
-    %token15 = gpu.spmm async [%token14] %env, %spmat{NON_TRANSPOSE}, %dnmat{NON_TRANSPOSE}, %dnmat2, %mem1, %mem2, %mem3 : memref<?xf16>, memref<?xf16>,memref<?xf16> into f16
+    %token15 = gpu.spmm async [%token14] %spmat{NON_TRANSPOSE}, %dnmat{NON_TRANSPOSE}, %dnmat2, %mem1, %mem2, %mem3 : memref<?xf16>, memref<?xf16>,memref<?xf16> into f16
     %token16 = gpu.destroy_sp_mat async [%token15] %spmat
     %token17 = gpu.destroy_dn_tensor async [%token16] %dnmat
-    %token18 = gpu.destroy_sparse_env async [%token17] %env
-    %token19 = gpu.memcpy async [%token18] %c, %d_c : memref<16x16xf16>, memref<16x16xf16>
+    %token19 = gpu.memcpy async [%token17] %c, %d_c : memref<16x16xf16>, memref<16x16xf16>
     %token20 = gpu.dealloc async [%token19] %d_c : memref<16x16xf16>
     %token21 = gpu.dealloc async [%token20] %d_b : memref<32x16xf16>
     %token22 = gpu.dealloc async [%token21] %d_a : memref<16x32xf16>
@@ -57,6 +58,7 @@ module {
   // using NVidia 2:4 structured sparsity for A.
   //
   func.func @main() {
+    llvm.call @mgpuCreateSparseLtEnv() : () -> ()
     %f0  = arith.constant 0.0 : f16
     %c0  = arith.constant 0   : index
     %c1  = arith.constant 1   : index
@@ -225,7 +227,8 @@ module {
       %pc0 = vector.transfer_read %c[%pci, %c0], %f0 : memref<16x16xf16>, vector<16xf16>
       vector.print %pc0 : vector<16xf16>
     }
-
+    
+    llvm.call @mgpuDestroySparseLtEnv() : () -> ()
     return
   }
 }

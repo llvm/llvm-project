@@ -726,34 +726,31 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     const auto *lenCon{Folder<Int4>(context).Folding(args[2])};
     if (const auto *argCon{Folder<T>(context).Folding(args[0])};
         argCon && argCon->empty()) {
-    } else if (posCon && lenCon &&
-        (posCon->size() == 1 || lenCon->size() == 1 ||
-            posCon->size() == lenCon->size())) {
-      auto posIter{posCon->values().begin()};
-      auto lenIter{lenCon->values().begin()};
-      for (; posIter != posCon->values().end() &&
-           lenIter != lenCon->values().end();
-           ++posIter, ++lenIter) {
-        posIter = posIter == posCon->values().end() ? posCon->values().begin()
-                                                    : posIter;
-        lenIter = lenIter == lenCon->values().end() ? lenCon->values().begin()
-                                                    : lenIter;
-        auto posVal{static_cast<int>(posIter->ToInt64())};
-        auto lenVal{static_cast<int>(lenIter->ToInt64())};
+    } else {
+      std::size_t posCt{posCon ? posCon->size() : 0};
+      std::size_t lenCt{lenCon ? lenCon->size() : 0};
+      std::size_t n{std::max(posCt, lenCt)};
+      for (std::size_t j{0}; j < n; ++j) {
+        int posVal{j < posCt || posCt == 1
+                ? static_cast<int>(posCon->values()[j % posCt].ToInt64())
+                : 0};
+        int lenVal{j < lenCt || lenCt == 1
+                ? static_cast<int>(lenCon->values()[j % lenCt].ToInt64())
+                : 0};
         if (posVal < 0) {
           context.messages().Say(
-              "bit position for IBITS(POS=%jd,LEN=%jd) is negative"_err_en_US,
-              std::intmax_t{posVal}, std::intmax_t{lenVal});
+              "bit position for IBITS(POS=%jd) is negative"_err_en_US,
+              std::intmax_t{posVal});
           break;
         } else if (lenVal < 0) {
           context.messages().Say(
-              "bit length for IBITS(POS=%jd,LEN=%jd) is negative"_err_en_US,
-              std::intmax_t{posVal}, std::intmax_t{lenVal});
+              "bit length for IBITS(LEN=%jd) is negative"_err_en_US,
+              std::intmax_t{lenVal});
           break;
         } else if (posVal + lenVal > T::Scalar::bits) {
           context.messages().Say(
-              "IBITS(POS=%jd,LEN=%jd) must have POS+LEN no greater than %d"_err_en_US,
-              std::intmax_t{posVal}, std::intmax_t{lenVal}, T::Scalar::bits);
+              "IBITS() must have POS+LEN (>=%jd) no greater than %d"_err_en_US,
+              std::intmax_t{posVal + lenVal}, T::Scalar::bits);
           break;
         }
       }

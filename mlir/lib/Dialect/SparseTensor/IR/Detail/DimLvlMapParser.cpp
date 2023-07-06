@@ -1,8 +1,4 @@
 //===- DimLvlMapParser.cpp - `DimLvlMap` parser implementation ------------===//
-// These two lookup methods are probably small enough to benefit from
-// being defined inline/in-class, expecially since doing so may allow the
-// compiler to optimize the `std::optional` away.  But we put the defns
-// here until benchmarks prove the benefit of doing otherwise.
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,32 +12,12 @@ using namespace mlir;
 using namespace mlir::sparse_tensor;
 using namespace mlir::sparse_tensor::ir_detail;
 
-//===----------------------------------------------------------------------===//
-// TODO(wrengr): rephrase these to do the trick for gobbling up any trailing
-// semicolon
-//
-// NOTE: There's no way for `FAILURE_IF_FAILED` to simultaneously support
-// both `OptionalParseResult` and `InFlightDiagnostic` return types.
-// We can get the compiler to accept the code if we returned "`{}`",
-// however for `OptionalParseResult` that would become the nullopt result,
-// whereas for `InFlightDiagnostic` it would become a result that can
-// be implicitly converted to success.  By using "`failure()`" we ensure
-// that `OptionalParseResult` behaves as intended, however that means the
-// macro cannot be used for `InFlightDiagnostic` since there's no implicit
-// conversion.
 #define FAILURE_IF_FAILED(STMT)                                                \
   if (failed(STMT)) {                                                          \
     return failure();                                                          \
   }
 
-// Although `ERROR_IF` is phrased to return `InFlightDiagnostic`, that type
-// can be implicitly converted to all four of `LogicalResult, `FailureOr`,
-// `ParseResult`, and `OptionalParseResult`.  (However, beware that the
-// conversion to `OptionalParseResult` doesn't properly delegate to
-// `InFlightDiagnostic::operator ParseResult`.)
-//
 // NOTE: this macro assumes `AsmParser parser` and `SMLoc loc` are in scope.
-// NOTE_TO_SELF(wrengr): The LOC used to always be `parser.getNameLoc()`
 #define ERROR_IF(COND, MSG)                                                    \
   if (COND) {                                                                  \
     return parser.emitError(loc, MSG);                                         \
@@ -107,11 +83,8 @@ OptionalParseResult DimLvlMapParser::parseVar(VarKind vk, bool isOptional,
 FailureOr<VarInfo::ID> DimLvlMapParser::parseVarUsage(VarKind vk) {
   VarInfo::ID varID;
   bool didCreate;
-  // We use the policy `May` because we want to allow parsing free/unbound
-  // variables.  If we wanted to distinguish between parsing free-var uses
-  // vs bound-var uses, then the latter should use `MustNot`.
-  const auto res =
-      parseVar(vk, /*isOptional=*/false, CreationPolicy::May, varID, didCreate);
+  const auto res = parseVar(vk, /*isOptional=*/false, CreationPolicy::MustNot,
+                            varID, didCreate);
   if (!res.has_value() || failed(*res))
     return failure();
   return varID;
@@ -126,9 +99,19 @@ DimLvlMapParser::parseVarBinding(VarKind vk, bool isOptional) {
   if (res.has_value()) {
     FAILURE_IF_FAILED(*res)
     return std::make_pair(env.bindVar(id), true);
-  } else {
-    return std::make_pair(env.bindUnusedVar(vk), false);
   }
+  return std::make_pair(env.bindUnusedVar(vk), false);
+}
+
+FailureOr<Var> DimLvlMapParser::parseLvlVarBinding(bool directAffine) {
+  // Nothing to parse, create a new lvl var right away.
+  if (directAffine)
+    return env.bindUnusedVar(VarKind::Level).cast<LvlVar>();
+  // Parse a lvl var, always pulling from the existing pool.
+  const auto use = parseVarUsage(VarKind::Level);
+  FAILURE_IF_FAILED(use)
+  FAILURE_IF_FAILED(parser.parseEqual())
+  return env.toVar(*use);
 }
 
 //===----------------------------------------------------------------------===//
@@ -136,7 +119,10 @@ DimLvlMapParser::parseVarBinding(VarKind vk, bool isOptional) {
 //===----------------------------------------------------------------------===//
 
 FailureOr<DimLvlMap> DimLvlMapParser::parseDimLvlMap() {
-  FAILURE_IF_FAILED(parseOptionalSymbolIdList())
+  FAILURE_IF_FAILED(parseOptionalIdList(VarKind::Symbol,
+                                        OpAsmParser::Delimiter::OptionalSquare))
+  FAILURE_IF_FAILED(parseOptionalIdList(VarKind::Level,
+                                        OpAsmParser::Delimiter::OptionalBraces))
   FAILURE_IF_FAILED(parseDimSpecList())
   FAILURE_IF_FAILED(parser.parseArrow())
   FAILURE_IF_FAILED(parseLvlSpecList())
@@ -148,19 +134,14 @@ FailureOr<DimLvlMap> DimLvlMapParser::parseDimLvlMap() {
   return DimLvlMap(env.getRanks().getSymRank(), dimSpecs, lvlSpecs);
 }
 
-using Delimiter = mlir::OpAsmParser::Delimiter;
-
-ParseResult DimLvlMapParser::parseOptionalSymbolIdList() {
-  const auto parseSymVarBinding = [&]() -> ParseResult {
-    return ParseResult(parseVarBinding(VarKind::Symbol, /*isOptional=*/false));
+ParseResult
+DimLvlMapParser::parseOptionalIdList(VarKind vk,
+                                     OpAsmParser::Delimiter delimiter) {
+  const auto parseIdBinding = [&]() -> ParseResult {
+    return ParseResult(parseVarBinding(vk, /*isOptional=*/false));
   };
-  // If I've correctly unpacked how exactly `Parser::parseCommaSeparatedList`
-  // handles the "optional" delimiters vs the non-optional ones, then
-  // the following call to `AsmParser::parseCommaSeparatedList` should
-  // be equivalent to the whole `AffineParse::parseOptionalSymbolIdList`
-  // method (which uses `Parser` methods to handle the optionality instead).
-  return parser.parseCommaSeparatedList(Delimiter::OptionalSquare,
-                                        parseSymVarBinding, " in symbol list");
+  return parser.parseCommaSeparatedList(delimiter, parseIdBinding,
+                                        " in id list");
 }
 
 //===----------------------------------------------------------------------===//
@@ -169,7 +150,8 @@ ParseResult DimLvlMapParser::parseOptionalSymbolIdList() {
 
 ParseResult DimLvlMapParser::parseDimSpecList() {
   return parser.parseCommaSeparatedList(
-      Delimiter::Paren, [&]() -> ParseResult { return parseDimSpec(); },
+      OpAsmParser::Delimiter::Paren,
+      [&]() -> ParseResult { return parseDimSpec(); },
       " in dimension-specifier list");
 }
 
@@ -178,22 +160,17 @@ ParseResult DimLvlMapParser::parseDimSpec() {
   FAILURE_IF_FAILED(res)
   const DimVar var = res->first.cast<DimVar>();
 
-  DimExpr expr{AffineExpr()};
+  // Parse an optional dimension expression.
+  AffineExpr affine;
   if (succeeded(parser.parseOptionalEqual())) {
-    // FIXME(wrengr): I don't think there's any way to implement this
-    // without replicating the bulk of `AffineParser::parseAffineExpr`
-    // TODO(wrengr): Also, need to make sure the parser uses
-    // `parseVarUsage(VarKind::Level)` so that every `AffineDimExpr`
-    // necessarily corresponds to a `LvlVar` (never a `DimVar`).
-    //
-    // FIXME: proof of concept, parse trivial level vars (viz d0 = l0).
-    auto use = parseVarUsage(VarKind::Level);
-    FAILURE_IF_FAILED(use)
-    AffineExpr a = getAffineDimExpr(var.getNum(), parser.getContext());
-    DimExpr dexpr{a};
-    expr = dexpr;
+    // Parse the dim affine expr, with only any lvl-vars in scope.
+    SmallVector<std::pair<StringRef, AffineExpr>, 4> dimsAndSymbols;
+    env.addVars(dimsAndSymbols, VarKind::Level, parser.getContext());
+    FAILURE_IF_FAILED(parser.parseAffineExpr(dimsAndSymbols, affine))
   }
+  DimExpr expr{affine};
 
+  // Parse an optional slice.
   SparseTensorDimSliceAttr slice;
   if (succeeded(parser.parseOptionalColon())) {
     const auto loc = parser.getCurrentLocation();
@@ -212,40 +189,29 @@ ParseResult DimLvlMapParser::parseDimSpec() {
 //===----------------------------------------------------------------------===//
 
 ParseResult DimLvlMapParser::parseLvlSpecList() {
+  // If no level variable is declared at this point, the following level
+  // specification consists of direct affine expressions only, as in:
+  //    (d0, d1) -> (d0 : dense, d1 : compressed)
+  // Otherwise, we are looking for a leading lvl-var, as in:
+  //    {l0, l1} ( d0 = l0, d1 = l1) -> ( l0 = d0 : dense, l1 = d1: compressed)
+  const bool directAffine = env.getRanks().getLvlRank() == 0;
   return parser.parseCommaSeparatedList(
-      Delimiter::Paren, [&]() -> ParseResult { return parseLvlSpec(); },
+      mlir::OpAsmParser::Delimiter::Paren,
+      [&]() -> ParseResult { return parseLvlSpec(directAffine); },
       " in level-specifier list");
 }
 
-ParseResult DimLvlMapParser::parseLvlSpec() {
-  // FIXME(wrengr): This implementation isn't actually going to work as-is,
-  // due to grammar ambiguity.  That is, assuming the current token is indeed
-  // a variable, we don't yet know whether that variable is supposed to
-  // be a binding vs being a usage that's part of the following AffineExpr.
-  // We can only disambiguate that by peeking at the next token to see whether
-  // it's the equals symbol or not.
-  //
-  // FIXME: proof of concept, assume it is new (viz. l0 = d0).
-  const auto res = parseVarBinding(VarKind::Level, /*isOptional=*/true);
-  FAILURE_IF_FAILED(res)
-  if (res->second) {
-    FAILURE_IF_FAILED(parser.parseEqual())
-  }
-  const LvlVar var = res->first.cast<LvlVar>();
+ParseResult DimLvlMapParser::parseLvlSpec(bool directAffine) {
+  auto res = parseLvlVarBinding(directAffine);
+  FAILURE_IF_FAILED(res);
+  LvlVar var = res->cast<LvlVar>();
 
-  // FIXME(wrengr): I don't think there's any way to implement this
-  // without replicating the bulk of `AffineParser::parseAffineExpr`
-  //
-  // TODO(wrengr): Also, need to make sure the parser uses
-  // `parseVarUsage(VarKind::Dimension)` so that every `AffineDimExpr`
-  // necessarily corresponds to a `DimVar` (never a `LvlVar`).
-  //
-  // FIXME: proof of concept, parse trivial dim vars (viz l0 = d0).
-  auto use = parseVarUsage(VarKind::Dimension);
-  FAILURE_IF_FAILED(use)
-  AffineExpr a =
-      getAffineDimExpr(env.toVar(*use).getNum(), parser.getContext());
-  LvlExpr expr{a};
+  // Parse the lvl affine expr, with only the dim-vars in scope.
+  AffineExpr affine;
+  SmallVector<std::pair<StringRef, AffineExpr>, 4> dimsAndSymbols;
+  env.addVars(dimsAndSymbols, VarKind::Dimension, parser.getContext());
+  FAILURE_IF_FAILED(parser.parseAffineExpr(dimsAndSymbols, affine))
+  LvlExpr expr{affine};
 
   FAILURE_IF_FAILED(parser.parseColon())
 

@@ -235,12 +235,6 @@ public:
   /// dependent work items to the back of the queue.
   void propagateIfChanged(AnalysisState *state, ChangeResult changed);
 
-  /// Add a dependency to an analysis state on a child analysis and program
-  /// point. If the state is updated, the child analysis must be invoked on the
-  /// given program point again.
-  void addDependency(AnalysisState *state, DataFlowAnalysis *analysis,
-                     ProgramPoint point);
-
 private:
   /// The solver's work queue. Work items can be inserted to the front of the
   /// queue to be processed greedily, speeding up computations that otherwise
@@ -294,13 +288,30 @@ public:
   /// Print the contents of the analysis state.
   virtual void print(raw_ostream &os) const = 0;
 
+  /// Add a dependency to this analysis state on a program point and an
+  /// analysis. If this state is updated, the analysis will be invoked on the
+  /// given program point again (in onUpdate()).
+  void addDependency(ProgramPoint dependent, DataFlowAnalysis *analysis);
+
 protected:
   /// This function is called by the solver when the analysis state is updated
-  /// to optionally enqueue more work items. For example, if a state tracks
-  /// dependents through the IR (e.g. use-def chains), this function can be
-  /// implemented to push those dependents on the worklist.
-  virtual void onUpdate(DataFlowSolver *solver) const {}
+  /// to enqueue more work items. For example, if a state tracks dependents
+  /// through the IR (e.g. use-def chains), this function can be implemented to
+  /// push those dependents on the worklist.
+  virtual void onUpdate(DataFlowSolver *solver) const {
+    for (const DataFlowSolver::WorkItem &item : dependents)
+      solver->enqueue(item);
+  }
 
+  /// The program point to which the state belongs.
+  ProgramPoint point;
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// When compiling with debugging, keep a name for the analysis state.
+  StringRef debugName;
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+
+private:
   /// The dependency relations originating from this analysis state. An entry
   /// `state -> (analysis, point)` is created when `analysis` queries `state`
   /// when updating `point`.
@@ -311,14 +322,6 @@ protected:
   ///
   /// Store the dependents on the analysis state for efficiency.
   SetVector<DataFlowSolver::WorkItem> dependents;
-
-  /// The program point to which the state belongs.
-  ProgramPoint point;
-
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  /// When compiling with debugging, keep a name for the analysis state.
-  StringRef debugName;
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
   /// Allow the framework to access the dependents.
   friend class DataFlowSolver;

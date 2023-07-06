@@ -190,7 +190,10 @@ Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
   if (I.getCondition() != LastVisited->first)
     return 0;
 
-  auto *C = cast<ConstantInt>(LastVisited->second);
+  auto *C = dyn_cast<ConstantInt>(LastVisited->second);
+  if (!C)
+    return 0;
+
   BasicBlock *Succ = I.findCaseValue(C)->getCaseSuccessor();
   // Initialize the worklist with the dead basic blocks. These are the
   // destination labels which are different from the one corresponding
