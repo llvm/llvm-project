@@ -320,6 +320,27 @@ struct SetLengthOpConversion
   }
 };
 
+struct GetLengthOpConversion
+    : public mlir::OpConversionPattern<hlfir::GetLengthOp> {
+  using mlir::OpConversionPattern<hlfir::GetLengthOp>::OpConversionPattern;
+  explicit GetLengthOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::GetLengthOp>{ctx} {}
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::GetLengthOp getLength, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = getLength->getLoc();
+    auto module = getLength->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    hlfir::Entity bufferizedExpr = getBufferizedExprStorage(adaptor.getExpr());
+    mlir::Value length = hlfir::genCharLength(loc, builder, bufferizedExpr);
+    if (!length)
+      return rewriter.notifyMatchFailure(
+          getLength, "could not deduce length from GetLengthOp operand");
+    rewriter.replaceOp(getLength, length);
+    return mlir::success();
+  }
+};
+
 static bool allOtherUsesAreDestroys(mlir::Value value,
                                     mlir::Operation *currentUse) {
   for (mlir::Operation *useOp : value.getUsers())
@@ -662,12 +683,12 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-                AssociateOpConversion, CharExtremumOpConversion,
-                ConcatOpConversion, DestroyOpConversion, ElementalOpConversion,
-                EndAssociateOpConversion, NoReassocOpConversion,
-                SetLengthOpConversion, ShapeOfOpConversion>(context);
+    patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+                    AssociateOpConversion, CharExtremumOpConversion,
+                    ConcatOpConversion, DestroyOpConversion,
+                    ElementalOpConversion, EndAssociateOpConversion,
+                    NoReassocOpConversion, SetLengthOpConversion,
+                    ShapeOfOpConversion, GetLengthOpConversion>(context);
     mlir::ConversionTarget target(*context);
     // Note that YieldElementOp is not marked as an illegal operation.
     // It must be erased by its parent converter and there is no explicit
