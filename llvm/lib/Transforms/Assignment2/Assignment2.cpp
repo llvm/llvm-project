@@ -70,54 +70,33 @@ namespace {
 
     map<Value *, Variable> variables;
 
+    map<Value *, bool> vars;
+
     set<Value *> tainted;
 
     // Reset all global variables when a new function is called.
     void cleanGlobalVariables() {
       output_str = "";
       variables.clear();
+      vars.clear();
       tainted.clear();
     }
 
     Assignment2() : FunctionPass(ID) {}
 
-    void updateVariable(Value *V, bool tainted, int line) {
-      map<Value *, Variable>::iterator it = variables.find(V);
-      if (it != variables.end()) {
-        it->second.tainted = tainted;
-        if (tainted) {
-          output << "Line " << line << ": " << it->second.name << " is tainted" << "\n";
-        } else {
-          output << "Line " << line << ": " << it->second.name << " is now untainted" << "\n";
-        }
-      }
-    }
-
     void checkTainted(Instruction *I, bool isInline) {
       Value *V = dyn_cast<Value>(I);
       int line = getSourceCodeLine(I);
 
-      if (DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(I)) {
-        Variable variable;
-        variable.name = DDI->getVariable()->getName();
-        variable.tainted = false;
-        variables.insert(make_pair(DDI->getAddress(), variable));
-      }
-      else if (isa<CallInst>(I)) {
+      if (isa<CallInst>(I)) {
         output << "Call Inst: " << line << "\n";
         
-        if (demangle(I->getOperand(0)->getName().str().c_str()) == source) {
-          output << "Tainted: " << I->getOperand(1) << "\n";
-          tainted.insert(I->getOperand(1));
-          updateVariable(I->getOperand(1), true, line);
-        } else {
-          for (Use &U : I->operands()) {
-            if (tainted.find(U.get()) != tainted.end()) {
-              output << "Tainted: " << V << "\n";
-              tainted.insert(V);
-              break;
-            } 
-          }
+        for (Use &U : I->operands()) {
+          if (tainted.find(U.get()) != tainted.end()) {
+            output << "Tainted: " << V << "\n";
+            tainted.insert(V);
+            break;
+          } 
         }
       } 
       else if (isa<StoreInst>(I)) {
@@ -126,12 +105,10 @@ namespace {
         if (tainted.find(I->getOperand(0)) != tainted.end()) {
           output << "Tainted: " << I->getOperand(1) << "\n";
           tainted.insert(I->getOperand(1));
-          updateVariable(I->getOperand(1), true, line);
         } 
         else if (tainted.find(I->getOperand(1)) != tainted.end() && isInline) {
           output << "Untainted: " << I->getOperand(1) << "\n";
           tainted.erase(I->getOperand(1));
-          updateVariable(I->getOperand(1), false, line);
         }
       } 
       else if (isa<LoadInst>(I)) {
@@ -144,40 +121,50 @@ namespace {
       }
     }
 
-    void getVariables(Function &F) {   
-      vector<BasicBlock *> sorted = topoSortBBs(F);
-      BasicBlock *entry = sorted.front();
-      PostDominatorTree *PDT = &getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-
-      // Iterate over basic blocks within function
-      for (BasicBlock *BB : topoSortBBs(F)) {
-        bool isInline = PDT->dominates(BB, entry);
-        
-        // Iterate over instructions within basic block
-        for (Instruction &I : *BB) {
-          if (isa<AllocaInst>(I)) {
-            output << "Call Inst: " << line << "\n";  
-          } 
-          if (isa<CallInst>(I) && demangle(I.getOperand(0)->getName().str().c_str()) == "std::__1::cin") {
-            
-          }
-        }
-      }  
-    }
-
     bool runOnFunction(Function &F) override {
       // We only want to examine the main method
       if (demangle(F.getName().str().c_str()) != func) return false;
 
-      string solution = "";
-      for (auto &var : variables) {
-        if (var.second.tainted) {
-          if (solution.size() == 0) solution += var.second.name;
-          else solution += "," + var.second.name;
+      output << "MAIN" << "\n";
+
+      // Iterate over basic blocks within function
+      for (BasicBlock *BB : topoSortBBs(F)) {        
+        // Iterate over instructions within basic block
+        for (Instruction &I : *BB) {
+
+          if (isa<AllocaInst>(I)) {
+            Value *V = dyn_cast<Value>(&I);
+            vars.insert(make_pair(V, false));
+            
+            for (User *U : V->users()) {
+              if (CallInst *CI = dyn_cast<CallInst>(U)) {
+                if (demangle(CI->getOperand(0)->getName().str().c_str()) == source) {
+                  map<Value *, bool>::iterator it = vars.find(V);
+                  if (it != vars.end()) {
+                    it->second = true;
+                    output << "Line " << getSourceCodeLine(CI) << ": " << V << " is tainted" << "\n";
+                  }
+                }
+              }
+            }
+          }
         }
+      }  
+
+      for (auto &var : vars) {
+        output << "Variable: " << var.first << "\n";
+        output << "Tainted: " << var.second << "\n";
       }
 
-      output << "Tainted: {" << solution << "}" << "\n";
+      // string solution = "";
+      // for (auto &var : variables) {
+      //   if (var.second.tainted) {
+      //     if (solution.size() == 0) solution += var.second.name;
+      //     else solution += "," + var.second.name;
+      //   }
+      // }
+
+      // output << "Tainted: {" << solution << "}" << "\n";
 
       // Print output
       errs() << output.str();
