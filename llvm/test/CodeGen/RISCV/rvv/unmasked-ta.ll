@@ -724,7 +724,7 @@ declare <vscale x 4 x half> @llvm.riscv.vfredosum.nxv4f16.nxv1f16(
   <vscale x 4 x half>,
   <vscale x 1 x half>,
   <vscale x 4 x half>,
-  iXLen);
+  iXLen, iXLen);
 
 define <vscale x 4 x half> @intrinsic_vfredosum_vs_nxv4f16_nxv1f16_nxv4f16(<vscale x 1 x half> %0, <vscale x 4 x half> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfredosum_vs_nxv4f16_nxv1f16_nxv4f16:
@@ -737,7 +737,7 @@ entry:
     <vscale x 4 x half> undef,
     <vscale x 1 x half> %0,
     <vscale x 4 x half> %1,
-    iXLen %2)
+    iXLen 7, iXLen %2)
 
   ret <vscale x 4 x half> %a
 }
@@ -746,7 +746,7 @@ declare <vscale x 4 x half> @llvm.riscv.vfredusum.nxv4f16.nxv1f16(
   <vscale x 4 x half>,
   <vscale x 1 x half>,
   <vscale x 4 x half>,
-  iXLen);
+  iXLen, iXLen);
 
 define <vscale x 4 x half> @intrinsic_vfredusum_vs_nxv4f16_nxv1f16_nxv4f16(<vscale x 1 x half> %0, <vscale x 4 x half> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfredusum_vs_nxv4f16_nxv1f16_nxv4f16:
@@ -759,7 +759,7 @@ entry:
     <vscale x 4 x half> undef,
     <vscale x 1 x half> %0,
     <vscale x 4 x half> %1,
-    iXLen %2)
+    iXLen 7, iXLen %2)
 
   ret <vscale x 4 x half> %a
 }
@@ -812,7 +812,7 @@ declare <vscale x 2 x float> @llvm.riscv.vfwredosum.nxv2f32.nxv1f16(
   <vscale x 2 x float>,
   <vscale x 1 x half>,
   <vscale x 2 x float>,
-  iXLen);
+  iXLen, iXLen);
 
 define <vscale x 2 x float> @intrinsic_vfwredosum_vs_nxv2f32_nxv1f16_nxv2f32(<vscale x 1 x half> %0, <vscale x 2 x float> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwredosum_vs_nxv2f32_nxv1f16_nxv2f32:
@@ -825,7 +825,7 @@ entry:
     <vscale x 2 x float> undef,
     <vscale x 1 x half> %0,
     <vscale x 2 x float> %1,
-    iXLen %2)
+    iXLen 7, iXLen %2)
 
   ret <vscale x 2 x float> %a
 }
@@ -833,7 +833,7 @@ declare <vscale x 2 x float> @llvm.riscv.vfwredusum.nxv2f32.nxv1f16(
   <vscale x 2 x float>,
   <vscale x 1 x half>,
   <vscale x 2 x float>,
-  iXLen);
+  iXLen, iXLen);
 
 define <vscale x 2 x float> @intrinsic_vfwredusum_vs_nxv2f32_nxv1f16_nxv2f32(<vscale x 1 x half> %0, <vscale x 2 x float> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vfwredusum_vs_nxv2f32_nxv1f16_nxv2f32:
@@ -846,7 +846,7 @@ entry:
     <vscale x 2 x float> undef,
     <vscale x 1 x half> %0,
     <vscale x 2 x float> %1,
-    iXLen %2)
+    iXLen 7, iXLen %2)
 
   ret <vscale x 2 x float> %a
 }
