@@ -2990,6 +2990,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       BaseDirectoryAsWritten = Blob;
       assert(!F.ModuleName.empty() &&
              "MODULE_DIRECTORY found before MODULE_NAME");
+      F.BaseDirectory = std::string(Blob);
+      if (!PP.getPreprocessorOpts().ModulesCheckRelocated)
+        break;
       // If we've already loaded a module map file covering this module, we may
       // have a better path for it (relative to the current build).
       Module *M = PP.getHeaderSearchInfo().lookupModule(
@@ -3011,8 +3014,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           }
         }
         F.BaseDirectory = std::string(M->Directory->getName());
-      } else {
-        F.BaseDirectory = std::string(Blob);
       }
       break;
     }
@@ -3990,7 +3991,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   // usable header search context.
   assert(!F.ModuleName.empty() &&
          "MODULE_NAME should come before MODULE_MAP_FILE");
-  if (F.Kind == MK_ImplicitModule && ModuleMgr.begin()->Kind != MK_MainFile) {
+  if (PP.getPreprocessorOpts().ModulesCheckRelocated &&
+      F.Kind == MK_ImplicitModule && ModuleMgr.begin()->Kind != MK_MainFile) {
     // An implicitly-loaded module file should have its module listed in some
     // module map file that we've already loaded.
     Module *M =
