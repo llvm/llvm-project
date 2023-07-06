@@ -13780,7 +13780,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       }
 
       if (Context.getTargetInfo().allowDebugInfoForExternalRef() &&
-          !Var->isInvalidDecl() && !getLangOpts().CPlusPlus)
+          !Var->isInvalidDecl())
         ExternalDeclarations.push_back(Var);
 
       return;
