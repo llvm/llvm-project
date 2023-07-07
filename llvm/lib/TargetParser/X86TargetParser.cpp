@@ -333,48 +333,48 @@ constexpr ProcInfo Processors[] = {
   { {"pentium-mmx"}, CK_PentiumMMX, ~0U, FeaturesPentiumMMX, '\0', false },
   { {"pentium_mmx"}, CK_PentiumMMX, ~0U, FeaturesPentiumMMX, 'D', true },
   // i686-generation processors, P6 / Pentium M microarchitecture based.
-  { {"pentiumpro"}, CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, '\0', false },
+  { {"pentiumpro"}, CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, 'C', false },
   { {"pentium_pro"}, CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, 'C', true },
   { {"i686"}, CK_i686, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, '\0', false },
-  { {"pentium2"}, CK_Pentium2, ~0U, FeaturesPentium2, '\0', false },
+  { {"pentium2"}, CK_Pentium2, ~0U, FeaturesPentium2, 'E', false },
   { {"pentium_ii"}, CK_Pentium2, ~0U, FeaturesPentium2, 'E', true },
-  { {"pentium3"}, CK_Pentium3, ~0U, FeaturesPentium3, '\0', false },
-  { {"pentium3m"}, CK_Pentium3, ~0U, FeaturesPentium3, '\0', false },
+  { {"pentium3"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', false },
+  { {"pentium3m"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', false },
   { {"pentium_iii"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', true },
   { {"pentium_iii_no_xmm_regs"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', true },
   { {"pentium-m"}, CK_PentiumM, ~0U, FeaturesPentium4, '\0', false },
   { {"pentium_m"}, CK_PentiumM, ~0U, FeaturesPentium4, 'K', true },
   { {"c3-2"}, CK_C3_2, ~0U, FeaturesPentium3, '\0', false },
-  { {"yonah"}, CK_Yonah, ~0U, FeaturesPrescott, '\0', false },
+  { {"yonah"}, CK_Yonah, ~0U, FeaturesPrescott, 'L', false },
   // Netburst microarchitecture based processors.
-  { {"pentium4"}, CK_Pentium4, ~0U, FeaturesPentium4, '\0', false },
-  { {"pentium4m"}, CK_Pentium4, ~0U, FeaturesPentium4, '\0', false },
+  { {"pentium4"}, CK_Pentium4, ~0U, FeaturesPentium4, 'J', false },
+  { {"pentium4m"}, CK_Pentium4, ~0U, FeaturesPentium4, 'J', false },
   { {"pentium_4"}, CK_Pentium4, ~0U, FeaturesPentium4, 'J', true },
   { {"pentium_4_sse3"}, CK_Prescott, ~0U, FeaturesPrescott, 'L', true },
-  { {"prescott"}, CK_Prescott, ~0U, FeaturesPrescott, '\0', false },
-  { {"nocona"}, CK_Nocona, ~0U, FeaturesNocona, '\0', false },
+  { {"prescott"}, CK_Prescott, ~0U, FeaturesPrescott, 'L', false },
+  { {"nocona"}, CK_Nocona, ~0U, FeaturesNocona, 'L', false },
   // Core microarchitecture based processors.
-  { {"core2"}, CK_Core2, FEATURE_SSSE3, FeaturesCore2, '\0', false },
+  { {"core2"}, CK_Core2, FEATURE_SSSE3, FeaturesCore2, 'M', false },
   { {"core_2_duo_ssse3"}, CK_Core2, ~0U, FeaturesCore2, 'M', true },
-  { {"penryn"}, CK_Penryn, ~0U, FeaturesPenryn, '\0', false },
+  { {"penryn"}, CK_Penryn, ~0U, FeaturesPenryn, 'N', false },
   { {"core_2_duo_sse4_1"}, CK_Penryn, ~0U, FeaturesPenryn, 'N', true },
   // Atom processors
-  { {"bonnell"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell, '\0', false },
+  { {"bonnell"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell, 'O', false },
   { {"atom"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell, 'O', false },
-  { {"silvermont"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, '\0', false },
-  { {"slm"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, '\0', false },
+  { {"silvermont"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, 'c', false },
+  { {"slm"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, 'c', false },
   { {"atom_sse4_2"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'c', true },
   { {"atom_sse4_2_movbe"}, CK_Goldmont, FEATURE_SSE4_2, FeaturesGoldmont, 'd', true },
   { {"goldmont"}, CK_Goldmont, FEATURE_SSE4_2, FeaturesGoldmont, 'i', false },
   { {"goldmont-plus"}, CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus, '\0', false },
-  { {"goldmont_plus"}, CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus, '\0', true },
-  { {"tremont"}, CK_Tremont, FEATURE_SSE4_2, FeaturesTremont, '\0', false },
+  { {"goldmont_plus"}, CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus, 'd', true },
+  { {"tremont"}, CK_Tremont, FEATURE_SSE4_2, FeaturesTremont, 'd', false },
   // Nehalem microarchitecture based processors.
-  { {"nehalem"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, '\0', false },
+  { {"nehalem"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', false },
   { {"core_i7_sse4_2"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', true },
-  { {"corei7"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, '\0', false },
+  { {"corei7"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', false },
   // Westmere microarchitecture based processors.
-  { {"westmere"}, CK_Westmere, FEATURE_PCLMUL, FeaturesWestmere, '\0', false },
+  { {"westmere"}, CK_Westmere, FEATURE_PCLMUL, FeaturesWestmere, 'Q', false },
   { {"core_aes_pclmulqdq"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'Q', true },
   // Sandy Bridge microarchitecture based processors.
   { {"sandybridge"}, CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, 'R', false },
@@ -397,38 +397,40 @@ constexpr ProcInfo Processors[] = {
   { {"skylake"}, CK_SkylakeClient, FEATURE_AVX2, FeaturesSkylakeClient, 'b', false },
   // Skylake server microarchitecture based processors.
   { {"skylake-avx512"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, '\0', false },
-  { {"skx"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, '\0', false },
+  { {"skx"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, 'a', false },
   { {"skylake_avx512"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, 'a', true },
   // Cascadelake Server microarchitecture based processors.
-  { {"cascadelake"}, CK_Cascadelake, FEATURE_AVX512VNNI, FeaturesCascadeLake, '\0', false },
+  { {"cascadelake"}, CK_Cascadelake, FEATURE_AVX512VNNI, FeaturesCascadeLake, 'o', false },
   // Cooperlake Server microarchitecture based processors.
-  { {"cooperlake"}, CK_Cooperlake, FEATURE_AVX512BF16, FeaturesCooperLake, '\0', false },
+  { {"cooperlake"}, CK_Cooperlake, FEATURE_AVX512BF16, FeaturesCooperLake, 'f', false },
   // Cannonlake client microarchitecture based processors.
   { {"cannonlake"}, CK_Cannonlake, FEATURE_AVX512VBMI, FeaturesCannonlake, 'e', false },
   // Icelake client microarchitecture based processors.
   { {"icelake-client"}, CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient, '\0', false },
+  { {"icelake_client"}, CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient, 'k', true },
   // Rocketlake microarchitecture based processors.
-  { {"rocketlake"}, CK_Rocketlake, FEATURE_AVX512VBMI2, FeaturesRocketlake, '\0', false },
+  { {"rocketlake"}, CK_Rocketlake, FEATURE_AVX512VBMI2, FeaturesRocketlake, 'k', false },
   // Icelake server microarchitecture based processors.
   { {"icelake-server"}, CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer, '\0', false },
+  { {"icelake_server"}, CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer, 'k', true },
   // Tigerlake microarchitecture based processors.
-  { {"tigerlake"}, CK_Tigerlake, FEATURE_AVX512VP2INTERSECT, FeaturesTigerlake, '\0', false },
+  { {"tigerlake"}, CK_Tigerlake, FEATURE_AVX512VP2INTERSECT, FeaturesTigerlake, 'l', false },
   // Sapphire Rapids microarchitecture based processors.
-  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, '\0', false },
+  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
   // Alderlake microarchitecture based processors.
-  { {"alderlake"}, CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake, '\0', false },
+  { {"alderlake"}, CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Raptorlake microarchitecture based processors.
-  { {"raptorlake"}, CK_Raptorlake, FEATURE_AVX2, FeaturesAlderlake, '\0', false },
+  { {"raptorlake"}, CK_Raptorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Meteorlake microarchitecture based processors.
-  { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake, '\0', false },
+  { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Sierraforest microarchitecture based processors.
-  { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, '\0', false },
+  { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Grandridge microarchitecture based processors.
-  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesGrandridge, '\0', false },
+  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesGrandridge, 'p', false },
   // Granite Rapids microarchitecture based processors.
-  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids, '\0', false },
+  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids, 'n', false },
   // Emerald Rapids microarchitecture based processors.
-  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, '\0', false },
+  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },
   { {"mic_avx512"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true },
