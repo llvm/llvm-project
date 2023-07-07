@@ -75,7 +75,6 @@ private:
   unsigned RVPushStackSize = 0;
   unsigned RVPushRegs = 0;
   int RVPushRlist = llvm::RISCVZC::RLISTENCODE::INVALID_RLIST;
-  bool RVPushable = false;
 
 public:
   RISCVMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
