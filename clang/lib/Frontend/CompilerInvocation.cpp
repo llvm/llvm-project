@@ -1056,15 +1056,6 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
 
       A->claim();
       Opts.Config[key] = std::string(val);
-
-      // FIXME: Remove this hunk after clang-17 released.
-      constexpr auto SingleFAM =
-          "consider-single-element-arrays-as-flexible-array-members";
-      if (key == SingleFAM) {
-        Diags.Report(diag::warn_analyzer_deprecated_option_with_alternative)
-            << SingleFAM << "clang-17"
-            << "-fstrict-flex-arrays=<N>";
-      }
     }
   }
 
