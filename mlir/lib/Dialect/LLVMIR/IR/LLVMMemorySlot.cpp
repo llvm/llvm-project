@@ -349,7 +349,9 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
   Type reachedType = getResultPtrElementType();
   if (!reachedType || getIndices().size() < 2)
     return false;
-  auto firstLevelIndex = cast<IntegerAttr>(getIndices()[1]);
+  auto firstLevelIndex = dyn_cast<IntegerAttr>(getIndices()[1]);
+  if (!firstLevelIndex)
+    return false;
   assert(slot.elementPtrs.contains(firstLevelIndex));
   if (!llvm::isa<LLVM::LLVMPointerType>(slot.elementPtrs.at(firstLevelIndex)))
     return false;
