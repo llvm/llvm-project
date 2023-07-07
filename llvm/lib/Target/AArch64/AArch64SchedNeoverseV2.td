@@ -948,8 +948,8 @@ def V2Write_IncDec : SchedWriteVariant<[
 def V2Wr_IM   : SchedWriteRes<[V2UnitM]>  { let Latency = 2; }
 def V2Wr_IMA  : SchedWriteRes<[V2UnitM0]> { let Latency = 2; }
 def V2Wr_IMUL : SchedWriteVariant<[
-                  SchedVar<NeoverseReg3IsZero, [V2Wr_IM]>,
-                  SchedVar<NoSchedPred,        [V2Wr_IMA]>]>;
+                  SchedVar<IsReg3ZeroPred, [V2Wr_IM]>,
+                  SchedVar<NoSchedPred,    [V2Wr_IMA]>]>;
 def V2Rd_IMA  : SchedReadAdvance<1, [V2Wr_IMA]>;
 
 def V2Wr_FMA : SchedWriteRes<[V2UnitV]> { let Latency = 4; }
