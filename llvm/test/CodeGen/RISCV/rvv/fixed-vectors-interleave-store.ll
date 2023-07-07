@@ -29,12 +29,17 @@ define void @vector_interleave_store_v32i1_v16i1(<16 x i1> %a, <16 x i1> %b, ptr
   ret void
 }
 
-; FIXME: Shouldn't be lowered to vsseg because it's unaligned
+; Shouldn't be lowered to vsseg because it's unaligned
 define void @vector_interleave_store_v16i16_v8i16_align1(<8 x i16> %a, <8 x i16> %b, ptr %p) {
 ; CHECK-LABEL: vector_interleave_store_v16i16_v8i16_align1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vsseg2e16.v v8, (a0)
+; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    li a1, -1
+; CHECK-NEXT:    vwmaccu.vx v10, a1, v9
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    vse8.v v10, (a0)
 ; CHECK-NEXT:    ret
   %res = call <16 x i16> @llvm.experimental.vector.interleave2.v16i16(<8 x i16> %a, <8 x i16> %b)
   store <16 x i16> %res, ptr %p, align 1
