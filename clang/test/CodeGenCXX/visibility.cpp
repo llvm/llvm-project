@@ -216,7 +216,6 @@ namespace Test5 {
   }
 }
 
-// <rdar://problem/8091955>
 namespace Test6 {
   struct HIDDEN foo {
     foo() { }
@@ -354,7 +353,6 @@ namespace Test14 {
   struct A *test() { return var; }
 }
 
-// rdar://problem/8613093
 namespace Test15 {
   struct A {};
   template <class T> struct Temp {
@@ -517,7 +515,6 @@ namespace Test20 {
     A<1>::test3();
   }
 
-  // <rdar://problem/8778497>
   // But we should assume that an unknown specialization has the
   // explicit visibility settings of the template.
   template <class T> struct B {
@@ -547,7 +544,6 @@ namespace test21 {
   template void A<en>::foo();
 }
 
-// rdar://problem/9616154
 // Visibility on explicit specializations should take precedence.
 namespace test22 {
   class A1 {};

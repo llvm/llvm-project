@@ -128,7 +128,6 @@ void testCStyleEnumInference(bool arg) {
       return value; // expected-error {{return type 'enum CStyleEnum' must match previous return type 'int'}}
   };
 
-  // rdar://13200889
   extern void check_enum(void);
   a = ^{
     return (arg ? (CSE_Value) : (check_enum(), (!arg ? CSE_Value2 : getCSE())));

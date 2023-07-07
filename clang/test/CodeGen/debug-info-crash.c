@@ -1,7 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -std=c89 -triple i386-apple-darwin10 -fblocks -debug-info-kind=limited -S %s -o -
 
-// rdar://7590323
 typedef struct dispatch_queue_s *dispatch_queue_t;
 __attribute__((visibility("default")))
 extern struct dispatch_queue_s _dispatch_main_q;

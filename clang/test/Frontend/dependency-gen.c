@@ -10,7 +10,6 @@
 // RUN: %clang -MD -MF - %s -fsyntax-only -include a/b/x.h -DINCLUDE_FLAG_TEST | FileCheck -check-prefix=CHECK-TWO %s
 // CHECK-TWO: {{ }}a{{[/\\]}}b{{[/\\]}}x.h
 
-// rdar://problem/9734352 (paths involving ".")
 // RUN: %clang -MD -MF - %s -fsyntax-only -I ./a/b | FileCheck -check-prefix=CHECK-THREE %s
 // CHECK-THREE: {{ }}a{{[/\\]}}b{{[/\\]}}x.h
 // RUN: %clang -MD -MF - %s -fsyntax-only -I .//./a/b/ | FileCheck -check-prefix=CHECK-FOUR %s

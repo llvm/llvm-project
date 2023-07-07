@@ -22,8 +22,6 @@ D::~D() {}
 // CHECK: define{{.*}} void @_ZN18testBaseDestructor1DD1Ev({{.*}}) unnamed_addr #[[ATTR1:.*]] align 2 {
 
 // CHECK: define{{.*}} void @_ZN18testBaseDestructor1DD0Ev({{.*}}) unnamed_addr #[[ATTR1]] align 2 {
-
-// rdar://11241230
 namespace test0 {
   struct A { A(); ~A(); };
   A a;
