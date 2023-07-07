@@ -1,0 +1,34 @@
+// RUN: cir-tool %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+module @"/tmp/test.raw" attributes {cir.lang = #cir.lang<c>, cir.sob = #cir.signed_overflow_behavior<undefined>, dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i32>>, llvm.data_layout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"} {
+  cir.func private @printf(!cir.ptr<!s8i>, ...) -> !s32i
+  cir.global "private" constant internal @".str" = #cir.const_array<"Hello, world!\0A\00" : !cir.array<!s8i x 15>> : !cir.array<!s8i x 15> {alignment = 1 : i64}
+  cir.func @main() -> !s32i {
+    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
+    %1 = cir.get_global @printf : cir.ptr <!cir.func<!s32i (!cir.ptr<!s8i>, ...)>>
+    %2 = cir.get_global @".str" : cir.ptr <!cir.array<!s8i x 15>>
+    %3 = cir.cast(array_to_ptrdecay, %2 : !cir.ptr<!cir.array<!s8i x 15>>), !cir.ptr<!s8i>
+    %4 = cir.call @printf(%3) : (!cir.ptr<!s8i>) -> !s32i
+    %5 = cir.const(#cir.int<0> : !s32i) : !s32i
+    cir.store %5, %0 : !s32i, cir.ptr <!s32i>
+    %6 = cir.load %0 : cir.ptr <!s32i>, !s32i
+    cir.return %6 : !s32i
+  }
+}
+
+// CHECK:  llvm.func @printf(!llvm.ptr, ...) -> i32
+// CHECK:  llvm.mlir.global internal constant @".str"("Hello, world!\0A\00") {addr_space = 0 : i32}
+// CHECK:  llvm.func @main() -> i32 {
+// CHECK:    %0 = llvm.mlir.constant(1 : index) : i64
+// CHECK:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
+// CHECK:    %2 = llvm.mlir.addressof @".str" : !llvm.ptr
+// CHECK:    %3 = llvm.getelementptr %2[0] : (!llvm.ptr) -> !llvm.ptr
+// CHECK:    %4 = llvm.call @printf(%3) : (!llvm.ptr) -> i32
+// CHECK:    %5 = llvm.mlir.constant(0 : i32) : i32
+// CHECK:    llvm.store %5, %1 : i32, !llvm.ptr
+// CHECK:    %6 = llvm.load %1 : !llvm.ptr
+// CHECK:    llvm.return %6 : i32
+// CHECK:  }
