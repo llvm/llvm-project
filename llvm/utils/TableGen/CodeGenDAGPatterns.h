@@ -330,9 +330,9 @@ struct TypeInfer {
 
   /// For each overloaded type (i.e. of form *Any), replace it with the
   /// corresponding subset of legal, specific types.
-  void expandOverloads(TypeSetByHwMode &VTS);
+  void expandOverloads(TypeSetByHwMode &VTS) const;
   void expandOverloads(TypeSetByHwMode::SetType &Out,
-                       const TypeSetByHwMode::SetType &Legal);
+                       const TypeSetByHwMode::SetType &Legal) const;
 
   struct ValidateOnExit {
     ValidateOnExit(const TypeSetByHwMode &T, const TypeInfer &TI)
@@ -357,11 +357,11 @@ struct TypeInfer {
   bool Validate = true;   // Indicate whether to validate types.
 
 private:
-  const TypeSetByHwMode &getLegalTypes();
+  const TypeSetByHwMode &getLegalTypes() const;
 
   /// Cached legal types (in default mode).
-  bool LegalTypesCached = false;
-  TypeSetByHwMode LegalCache;
+  mutable bool LegalTypesCached = false;
+  mutable TypeSetByHwMode LegalCache;
 };
 
 /// Set type used to track multiply used variables in patterns
