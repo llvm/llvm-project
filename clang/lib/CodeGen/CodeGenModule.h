@@ -356,22 +356,39 @@ public:
     XteamRedVarInfo(const Expr *E, Address A, size_t Pos)
         : RedVarExpr{E}, RedVarAddr{A}, ArgPos{Pos} {}
     XteamRedVarInfo() = delete;
+
+    /// Reduction variable expression, populated during initial analysis
     const Expr *RedVarExpr;
+    /// Address of local reduction variable used in device codegen.
     Address RedVarAddr;
+    /// Argument position for the corresponding metadata in the outlined
+    /// signature, populated during signature generation.
     size_t ArgPos;
   };
+
   using XteamRedVarMap = llvm::DenseMap<const VarDecl *, XteamRedVarInfo>;
+  using XteamArg2VarMapTy =
+      llvm::DenseMap<size_t /* ArgPos */, QualType /* RedVarType */>;
+
   struct XteamRedKernelInfo {
     XteamRedKernelInfo(llvm::Value *TSI, llvm::Value *NT, int BlkSz,
                        OptKernelNestDirectives Dirs, XteamRedVarMap RVM)
         : ThreadStartIndex{TSI}, NumTeams{NT}, BlockSize{BlkSz},
           XteamNestDirs{Dirs}, XteamRedVars{RVM} {}
 
+    /// Start index of every thread used in device codegen.
     llvm::Value *ThreadStartIndex;
+    /// Number of teams used in device codegen.
     llvm::Value *NumTeams;
+    /// Number of threads in a block, populated during device codegen.
     int BlockSize;
+    /// Nested directives, generated during analysis in both host/device
+    /// codegen.
     OptKernelNestDirectives XteamNestDirs;
+    /// Map from reduction variable to metadata, populated during analysis.
     XteamRedVarMap XteamRedVars;
+    /// Map from captured arg position, populated during signature generation.
+    XteamArg2VarMapTy XteamArg2Var;
   };
   using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
 
@@ -1800,6 +1817,11 @@ public:
     return XteamRedKernels.find(S)->second.XteamRedVars;
   }
 
+  XteamArg2VarMapTy &getXteamArg2VarMap(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.XteamArg2Var;
+  }
+
   llvm::Value *getXteamRedThreadStartIndex(const Stmt *S) {
     assert(isXteamRedKernel(S));
     return XteamRedKernels.find(S)->second.ThreadStartIndex;
@@ -1838,6 +1860,10 @@ public:
   void updateXteamRedKernel(const Stmt *S, int BlkSz) {
     assert(isXteamRedKernel(S));
     XteamRedKernels.find(S)->second.BlockSize = BlkSz;
+  }
+
+  void updateXteamArg2Var(XteamArg2VarMapTy *ArgInfo, size_t Pos, QualType T) {
+    ArgInfo->insert(std::make_pair(Pos, T));
   }
 
   // Get the cached block size used by Xteam reduction

@@ -9819,6 +9819,8 @@ static void emitTargetCallKernelLaunch(
   bool HasXTeamReduction = FStmt && CGF.CGM.isXteamRedKernel(FStmt);
   if (HasXTeamReduction) {
     CodeGenModule::XteamRedVarMap &XteamRVM = CGF.CGM.getXteamRedVarMap(FStmt);
+    auto &XteamArgMap = CGF.CGM.getXteamArg2VarMap(FStmt);
+
     assert((CapturedVars.size() == CapturedCount + 2 * XteamRVM.size()) &&
            "Unexpected number of captured vars");
 
@@ -9852,9 +9854,12 @@ static void emitTargetCallKernelLaunch(
       // Process the pair of captured variables:
       llvm::Value *DTeamValsInst = nullptr;
 
-      // Reduction variable type is the first captured variable of the
-      // pair:
-      llvm::Type *RedVarType = CapturedVars[CapturedCount]->getType();
+      // Reduction variable type is obtained from the info cached during
+      // signature generation
+      assert((XteamArgMap.find(CapturedCount) != XteamArgMap.end()) &&
+             "Argument type not found");
+      llvm::Type *RedVarType =
+          CGF.ConvertTypeForMem(XteamArgMap.find(CapturedCount)->second);
 
       // dteam_vals = omp_target_alloc(sizeof(red-type) * team_procs, devid)
       llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGF.CGM.getLLVMContext());

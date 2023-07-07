@@ -590,8 +590,11 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     const ForStmt *FStmt = CGM.getSingleForStmt(CGM.getOptKernelKey(D));
     assert(FStmt && "For statement for directive not found");
     CodeGenModule::XteamRedVarMap &XteamRVM = CGM.getXteamRedVarMap(FStmt);
+    auto &XteamArgMap = CGM.getXteamArg2VarMap(FStmt);
     for (auto &XteamRVElem : XteamRVM) {
       CGM.updateXteamRedVarArgPos(&XteamRVElem.second, Args.size());
+      CGM.updateXteamArg2Var(&XteamArgMap, Args.size(),
+                             XteamRVElem.second.RedVarExpr->getType());
       VarDecl *DTeamValsVD = ImplicitParamDecl::Create(
           Ctx, Ctx.VoidPtrTy, ImplicitParamDecl::CapturedContext);
       Args.emplace_back(DTeamValsVD);
