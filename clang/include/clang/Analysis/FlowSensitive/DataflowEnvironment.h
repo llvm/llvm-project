@@ -529,13 +529,13 @@ public:
 
   /// Adds `Val` to the set of clauses that constitute the flow condition.
   void addToFlowCondition(const Formula &);
-  LLVM_DEPRECATED("Use Formula version instead", "")
+  /// Deprecated: Use Formula version instead.
   void addToFlowCondition(BoolValue &Val);
 
   /// Returns true if and only if the clauses that constitute the flow condition
   /// imply that `Val` is true.
   bool flowConditionImplies(const Formula &) const;
-  LLVM_DEPRECATED("Use Formula version instead", "")
+  /// Deprecated: Use Formula version instead.
   bool flowConditionImplies(BoolValue &Val) const;
 
   /// Returns the `DeclContext` of the block being analysed, if any. Otherwise,
