@@ -820,25 +820,21 @@ private:
     }
 
     if (isXTeamReductionsMode()) {
-      uint64_t NumGroups = 0;
+      // The number of teams must not exceed the number of CUs since the
+      // compiler will allocate that many slots for the metadata.
+      uint64_t NumGroups = DeviceNumCUs;
       // Honor OMP_NUM_TEAMS environment variable for XteamReduction kernel
-      // type.
+      // type, if possible.
       int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
-      if (NumTeamsEnvVar > 0 && NumTeamsEnvVar <= GenericDevice.getBlockLimit())
+      if (NumTeamsEnvVar > 0 &&
+          NumTeamsEnvVar <= GenericDevice.getBlockLimit() &&
+          NumTeamsEnvVar < NumGroups)
         NumGroups = NumTeamsEnvVar;
       else if (NumTeamsClause[0] > 0 &&
-               NumTeamsClause[0] <= GenericDevice.getBlockLimit()) {
+               NumTeamsClause[0] <= GenericDevice.getBlockLimit() &&
+               NumTeamsClause[0] < NumGroups) {
         NumGroups = NumTeamsClause[0];
       } else {
-        // If num_teams clause is not specified, we allow a max of 2*CU teams
-        if (NumThreads > 0) {
-          const uint64_t UIntTwo = 2;
-          NumGroups =
-              DeviceNumCUs *
-              std::min(UIntTwo, static_cast<uint64_t>(1024 / NumThreads));
-        } else {
-          NumGroups = DeviceNumCUs;
-        }
         // Ensure we don't have a large number of teams running if the tripcount
         // is low
         uint64_t NumGroupsFromTripCount = 1;
@@ -847,9 +843,6 @@ private:
               getNumGroupsFromThreadsAndTripCount(LoopTripCount, NumThreads);
         NumGroups = std::min(NumGroups, NumGroupsFromTripCount);
       }
-      // For now, we don't allow number of teams beyond 512.
-      uint64_t fiveTwelve = 512;
-      NumGroups = std::min(fiveTwelve, NumGroups);
       return NumGroups;
     }
 
