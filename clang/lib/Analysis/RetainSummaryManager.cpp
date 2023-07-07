@@ -301,7 +301,6 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
 
   std::string RetTyName = RetTy.getAsString();
   if (FName == "pthread_create" || FName == "pthread_setspecific") {
-    // Part of: <rdar://problem/7299394> and <rdar://problem/11282706>.
     // This will be addressed better with IPA.
     return getPersistentStopSummary();
   } else if(FName == "NSMakeCollectable") {
@@ -311,7 +310,6 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
                                  : getPersistentStopSummary();
   } else if (FName == "CMBufferQueueDequeueAndRetain" ||
              FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
-    // Part of: <rdar://problem/39390714>.
     return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF),
                                 ScratchArgs,
                                 ArgEffect(DoNothing),
@@ -324,13 +322,11 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
                FName == "IOServiceNameMatching" ||
                FName == "IORegistryEntryIDMatching" ||
                FName == "IOOpenFirmwarePathMatching"))) {
-    // Part of <rdar://problem/6961230>. (IOKit)
     // This should be addressed using a API table.
     return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF), ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "IOServiceGetMatchingService" ||
              FName == "IOServiceGetMatchingServices") {
-    // FIXES: <rdar://problem/6326900>
     // This should be addressed using a API table.  This strcmp is also
     // a little gross, but there is no need to super optimize here.
     ScratchArgs = AF.add(ScratchArgs, 1, ArgEffect(DecRef, ObjKind::CF));
@@ -339,14 +335,12 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "IOServiceAddNotification" ||
              FName == "IOServiceAddMatchingNotification") {
-    // Part of <rdar://problem/6961230>. (IOKit)
     // This should be addressed using a API table.
     ScratchArgs = AF.add(ScratchArgs, 2, ArgEffect(DecRef, ObjKind::CF));
     return getPersistentSummary(RetEffect::MakeNoRet(),
                                 ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "CVPixelBufferCreateWithBytes") {
-    // FIXES: <rdar://problem/7283567>
     // Eventually this can be improved by recognizing that the pixel
     // buffer passed to CVPixelBufferCreateWithBytes is released via
     // a callback and doing full IPA to make sure this is done correctly.
@@ -357,7 +351,6 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
                                 ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "CGBitmapContextCreateWithData") {
-    // FIXES: <rdar://problem/7358899>
     // Eventually this can be improved by recognizing that 'releaseInfo'
     // passed to CGBitmapContextCreateWithData is released via
     // a callback and doing full IPA to make sure this is done correctly.
@@ -365,7 +358,6 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
     return getPersistentSummary(RetEffect::MakeOwned(ObjKind::CF), ScratchArgs,
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "CVPixelBufferCreateWithPlanarBytes") {
-    // FIXES: <rdar://problem/7283567>
     // Eventually this can be improved by recognizing that the pixel
     // buffer passed to CVPixelBufferCreateWithPlanarBytes is released
     // via a callback and doing full IPA to make sure this is done
@@ -386,10 +378,9 @@ const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
                                 ArgEffect(DoNothing), ArgEffect(DoNothing));
   } else if (FName == "dispatch_set_context" ||
              FName == "xpc_connection_set_context") {
-    // <rdar://problem/11059275> - The analyzer currently doesn't have
-    // a good way to reason about the finalizer function for libdispatch.
-    // If we pass a context object that is memory managed, stop tracking it.
-    // <rdar://problem/13783514> - Same problem, but for XPC.
+    // The analyzer currently doesn't have a good way to reason about the
+    // finalizer function for libdispatch. If we pass a context object that is
+    // memory managed, stop tracking it.
     // FIXME: this hack should possibly go away once we can handle
     // libdispatch and XPC finalizers.
     ScratchArgs = AF.add(ScratchArgs, 1, ArgEffect(StopTracking));
@@ -740,7 +731,6 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
     // It's okay to be a little sloppy here.
     if (FName == "CMBufferQueueDequeueAndRetain" ||
         FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
-      // Part of: <rdar://problem/39390714>.
       // These are not retain. They just return something and retain it.
       return std::nullopt;
     }
@@ -1243,7 +1233,6 @@ void RetainSummaryManager::InitializeMethodSummaries() {
   // FIXME: For now we opt for false negatives with NSWindow, as these objects
   //  self-own themselves.  However, they only do this once they are displayed.
   //  Thus, we need to track an NSWindow's display status.
-  //  This is tracked in <rdar://problem/6062711>.
   //  See also http://llvm.org/bugs/show_bug.cgi?id=3714.
   const RetainSummary *NoTrackYet =
       getPersistentSummary(RetEffect::MakeNoRet(), ScratchArgs,
@@ -1259,7 +1248,6 @@ void RetainSummaryManager::InitializeMethodSummaries() {
 
   // For NSNull, objects returned by +null are singletons that ignore
   // retain/release semantics.  Just don't track them.
-  // <rdar://problem/12858915>
   addClassMethSummary("NSNull", "null", NoTrackYet);
 
   // Don't track allocated autorelease pools, as it is okay to prematurely

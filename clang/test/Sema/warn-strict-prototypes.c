@@ -72,7 +72,6 @@ void __attribute__((cdecl)) foo12(d) // expected-warning {{a function definition
 
 // No warnings for variadic functions. Overloadable attribute is required
 // to avoid err_ellipsis_first_param error.
-// rdar://problem/33251668
 void foo13(...) __attribute__((overloadable));
 void foo13(...) __attribute__((overloadable)) {}
 

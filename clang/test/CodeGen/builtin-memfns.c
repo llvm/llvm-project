@@ -23,8 +23,6 @@ int test1(int argc, char **argv) {
   return 0;
 }
 
-// rdar://9289468
-
 // CHECK: @test2
 // CHECK: call void @llvm.memcpy.p0.p0.i32
 char* test2(char* a, char* b) {
@@ -70,7 +68,6 @@ int test7(int *p) {
   // CHECK: call void @llvm.memset{{.*}} align 1{{.*}}256, i1 false)
 }
 
-// <rdar://problem/11314941>
 // Make sure we don't over-estimate the alignment of fields of
 // packed structs.
 struct PS {

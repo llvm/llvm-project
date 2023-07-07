@@ -14,7 +14,6 @@ int y __attribute__((aligned(1 << 28)));
 short g0[3] __attribute__((aligned));
 short g0_chk[__alignof__(g0) == 16 ? 1 : -1];
 
-// <rdar://problem/6840045>
 typedef char ueber_aligned_char __attribute__((aligned(8)));
 
 struct struct_with_ueber_char {
@@ -34,7 +33,6 @@ char a4[__alignof__(underaligned_longlong) == 1 ?: -1] = {0};
 typedef long long __attribute__((aligned(1))) underaligned_complex_longlong;
 char a5[__alignof__(underaligned_complex_longlong) == 1 ?: -1] = {0};
 
-// rdar://problem/8335865
 int b __attribute__((aligned(2)));
 char b1[__alignof__(b) == 2 ?: -1] = {0};
 

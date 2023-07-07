@@ -297,7 +297,6 @@ int a7[5] = (int[5]){ 1,
                       nonconst_value() // expected-error{{initializer element is not a compile-time constant}}
 };
 
-// <rdar://problem/10636946>
 __attribute__((weak)) const unsigned int test10_bound = 10;
 char test10_global[test10_bound]; // expected-error {{variable length array declaration not allowed at file scope}}
 void test10(void) {

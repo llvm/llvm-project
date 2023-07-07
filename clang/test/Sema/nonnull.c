@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-strict-prototypes %s
-// rdar://9584012
 //
 // Verify All warnings are still issued with the option -fno-delete-null-pointer-checks
 // if nullptr is passed to function with nonnull attribute.
@@ -88,7 +87,6 @@ void redecl_test(void *p) {
   redecl(0, p); // expected-warning{{null passed}}
 }
 
-// rdar://18712242
 #define NULL (void*)0
 __attribute__((__nonnull__))  // expected-note 2{{declared 'nonnull' here}}
 int evil_nonnull_func(int* pointer, void * pv)

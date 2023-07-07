@@ -3329,7 +3329,7 @@ CGObjCCommonMac::EmitProtocolMethodTypes(Twine Name,
   struct _objc_method_list *instance_methods;
   struct _objc_method_list *class_methods;
   struct _objc_protocol_list *protocols;
-  uint32_t size; // <rdar://4585769>
+  uint32_t size;
   struct _objc_property_list *instance_properties;
   struct _objc_property_list *class_properties;
   };
@@ -4492,8 +4492,7 @@ llvm::FunctionType *FragileHazards::GetAsmFnType() {
   indeterminate value.  For the purposes of LLVM IR, it may be
   sufficient to make loads and stores within the @try (to variables
   declared outside the @try) volatile.  This is necessary for
-  optimized correctness, but is not currently being done; this is
-  being tracked as rdar://problem/8160285
+  optimized correctness, but is not currently being done.
 
   The basic framework for a @try-catch-finally is as follows:
   {
@@ -5092,7 +5091,7 @@ enum ImageInfoFlags {
   eImageInfo_OptimizedByDyld     = (1 << 3), // This flag is set by the dyld shared cache.
 
   // A flag indicating that the module has no instances of a @synthesize of a
-  // superclass variable. <rdar://problem/6803242>
+  // superclass variable.
   eImageInfo_CorrectedSynthesize = (1 << 4), // This flag is no longer set by clang.
   eImageInfo_ImageIsSimulated    = (1 << 5),
   eImageInfo_ClassProperties     = (1 << 6)
