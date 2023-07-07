@@ -849,7 +849,7 @@ void CompilerType::DumpValue(ExecutionContext *exe_ctx, Stream *s,
                              bool show_summary, bool verbose, uint32_t depth) {
   if (!IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      type_system_sp->DumpValue(m_type, exe_ctx, s, format, data,
+      type_system_sp->DumpValue(m_type, exe_ctx, *s, format, data,
                                 data_byte_offset, data_byte_size,
                                 bitfield_bit_size, bitfield_bit_offset,
                                 show_types, show_summary, verbose, depth);
@@ -865,7 +865,7 @@ bool CompilerType::DumpTypeValue(Stream *s, lldb::Format format,
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->DumpTypeValue(
-          m_type, s, format, data, byte_offset, byte_size, bitfield_bit_size,
+          m_type, *s, format, data, byte_offset, byte_size, bitfield_bit_size,
           bitfield_bit_offset, exe_scope, is_base_class);
   return false;
 }
@@ -876,7 +876,7 @@ void CompilerType::DumpSummary(ExecutionContext *exe_ctx, Stream *s,
                                size_t data_byte_size) {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      type_system_sp->DumpSummary(m_type, exe_ctx, s, data, data_byte_offset,
+      type_system_sp->DumpSummary(m_type, exe_ctx, *s, data, data_byte_offset,
                                   data_byte_size);
 }
 
@@ -891,7 +891,7 @@ void CompilerType::DumpTypeDescription(Stream *s, lldb::DescriptionLevel level,
                                        ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      type_system_sp->DumpTypeDescription(m_type, s, level, exe_scope);
+      type_system_sp->DumpTypeDescription(m_type, *s, level, exe_scope);
 }
 
 
