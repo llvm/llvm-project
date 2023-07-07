@@ -47,7 +47,7 @@ static const char* ompt_cancel_flag_t_values[] = {
   "ompt_cancel_discarded_task"
 };
 
-static const char *ompt_dependence_type_t_values[] = {
+static const char *ompt_dependence_type_t_values[36] = {
     "ompt_dependence_type_UNDEFINED",
     "ompt_dependence_type_in", // 1
     "ompt_dependence_type_out", // 2
@@ -55,7 +55,12 @@ static const char *ompt_dependence_type_t_values[] = {
     "ompt_dependence_type_mutexinoutset", // 4
     "ompt_dependence_type_source", // 5
     "ompt_dependence_type_sink", // 6
-    "ompt_dependence_type_inoutset" // 7
+    "ompt_dependence_type_inoutset", // 7
+    "", "", "", "", "", "", // 8-13
+    "", "", "", "", "", "", "", "", "", "", // 14-23
+    "", "", "", "", "", "", "", "", "", "", // 24-33
+    "ompt_dependence_type_out_all_memory", // 34
+    "ompt_dependence_type_inout_all_memory" // 35
 };
 
 static void format_task_type(int type, char *buffer) {
