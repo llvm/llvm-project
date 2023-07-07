@@ -541,8 +541,9 @@ public:
   }
 
   filter_iterator_impl &operator++(int) {
+    filter_iterator_impl &old = *this;
     BaseT::operator++();
-    return *this;
+    return old;
   }
 
   filter_iterator_impl &operator--() {
