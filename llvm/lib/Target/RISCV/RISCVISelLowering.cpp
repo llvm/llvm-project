@@ -9757,6 +9757,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
     case Intrinsic::riscv_orc_b:
     case Intrinsic::riscv_brev8: {
+      if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
+        return;
       unsigned Opc =
           IntNo == Intrinsic::riscv_brev8 ? RISCVISD::BREV8 : RISCVISD::ORC_B;
       SDValue NewOp =
