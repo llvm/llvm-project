@@ -218,8 +218,8 @@ llvm.func @coalesced_store_floats(%arg: i64) {
   // CHECK: llvm.store %[[BIT_CAST]], %[[GEP]]
   // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST32]] : i64
   // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
-  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
   // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (f32, f32)>
+  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
   // CHECK: llvm.store %[[BIT_CAST]], %[[GEP]]
   llvm.store %arg, %1 : i64, !llvm.ptr
   // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
@@ -409,12 +409,27 @@ llvm.func @type_consistent_vector_store(%arg: vector<4xi32>) {
 // CHECK-SAME: %[[ARG:.*]]: vector<4xi32>
 llvm.func @type_consistent_vector_store_other_type(%arg: vector<4xi32>) {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[ARG]] : vector<4xi32> to vector<4xf32>
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (vector<4xf32>)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (vector<4xf32>)> : (i32) -> !llvm.ptr
   // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (vector<4xf32>)>
+  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[ARG]] : vector<4xi32> to vector<4xf32>
   // CHECK: llvm.store %[[BIT_CAST]], %[[GEP]]
   llvm.store %arg, %1 : vector<4xi32>, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @bitcast_insertion
+// CHECK-SAME: %[[ARG:.*]]: i32
+llvm.func @bitcast_insertion(%arg: i32) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x f32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[ARG]] : i32 to f32
+  // CHECK: llvm.store %[[BIT_CAST]], %[[ALLOCA]]
+  llvm.store %arg, %1 : i32, !llvm.ptr
   // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
   llvm.return
 }
