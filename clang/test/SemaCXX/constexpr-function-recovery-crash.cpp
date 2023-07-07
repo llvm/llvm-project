@@ -87,6 +87,7 @@ constexpr int force12 = test12();          // expected-error {{must be initializ
 // We're not checking specific recovery here so don't assert diagnostics.
 TEST_EVALUATE(Switch, switch (!!){});              // expected-error + {{}}
 TEST_EVALUATE(SwitchInit, switch (auto x = !!){}); // expected-error + {{}}
+TEST_EVALUATE(SwitchCondValDep, switch (invalid_value) { default: break; });    // expected-error + {{}}
 TEST_EVALUATE(For, for (!!){}); // expected-error + {{}}
                                 // FIXME: should bail out instead of looping.
                                 // expected-note@-2 + {{infinite loop}}

@@ -570,6 +570,9 @@ Bug Fixes in This Version
 - Clang now correctly evaluates ``__has_extension (cxx_defaulted_functions)``
   and ``__has_extension (cxx_default_function_template_args)`` to 1.
   (`#61758 <https://github.com/llvm/llvm-project/issues/61758>`_)
+- Stop evaluating a constant expression if the condition expression which in
+  switch statement contains errors.
+  (`#63453 <https://github.com/llvm/llvm-project/issues/63453>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
