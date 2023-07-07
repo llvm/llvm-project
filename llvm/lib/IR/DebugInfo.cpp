@@ -1487,7 +1487,7 @@ uint16_t LLVMGetDINodeTag(LLVMMetadataRef MD) {
 }
 
 const char *LLVMDITypeGetName(LLVMMetadataRef DType, size_t *Length) {
-  StringRef Str = unwrap<DIType>(DType)->getName();
+  StringRef Str = unwrapDI<DIType>(DType)->getName();
   *Length = Str.size();
   return Str.data();
 }
