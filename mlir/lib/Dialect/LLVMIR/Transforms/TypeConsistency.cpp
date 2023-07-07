@@ -357,7 +357,7 @@ CanonicalizeAlignedGep::matchAndRewrite(GEPOp gep,
 /// types, failure is returned.
 static FailureOr<ArrayRef<Type>>
 getWrittenToFields(const DataLayout &dataLayout, LLVMStructType structType,
-                   int storeSize, unsigned storeOffset) {
+                   unsigned storeSize, unsigned storeOffset) {
   ArrayRef<Type> body = structType.getBody();
   unsigned currentOffset = 0;
   body = body.drop_until([&](Type type) {
@@ -381,10 +381,6 @@ getWrittenToFields(const DataLayout &dataLayout, LLVMStructType structType,
 
   size_t exclusiveEnd = 0;
   for (; exclusiveEnd < body.size() && storeSize > 0; exclusiveEnd++) {
-    // Not yet recursively handling aggregates, only primitives.
-    if (!isa<IntegerType, FloatType>(body[exclusiveEnd]))
-      return failure();
-
     if (!structType.isPacked()) {
       unsigned alignment = dataLayout.getTypeABIAlignment(body[exclusiveEnd]);
       // No padding allowed inbetween fields at this point in time.
@@ -393,13 +389,29 @@ getWrittenToFields(const DataLayout &dataLayout, LLVMStructType structType,
     }
 
     unsigned fieldSize = dataLayout.getTypeSize(body[exclusiveEnd]);
+    if (fieldSize > storeSize) {
+      // Partial writes into an aggregate are okay since subsequent pattern
+      // applications can further split these up into writes into the
+      // sub-elements.
+      auto subStruct = dyn_cast<LLVMStructType>(body[exclusiveEnd]);
+      if (!subStruct)
+        return failure();
+
+      // Avoid splitting redundantly by making sure the store into the struct
+      // can actually be split.
+      if (failed(getWrittenToFields(dataLayout, subStruct, storeSize,
+                                    /*storeOffset=*/0)))
+        return failure();
+
+      return body.take_front(exclusiveEnd + 1);
+    }
     currentOffset += fieldSize;
     storeSize -= fieldSize;
   }
 
-  // If the storeSize is not 0 at this point we are either partially writing
-  // into a field or writing past the aggregate as a whole. Abort.
-  if (storeSize != 0)
+  // If the storeSize is not 0 at this point we are  writing past the aggregate
+  // as a whole. Abort.
+  if (storeSize > 0)
     return failure();
   return body.take_front(exclusiveEnd);
 }
@@ -435,7 +447,8 @@ static void splitVectorStore(const DataLayout &dataLayout, Location loc,
 /// type-consistent.
 static void splitIntegerStore(const DataLayout &dataLayout, Location loc,
                               RewriterBase &rewriter, Value address,
-                              Value value, unsigned storeOffset,
+                              Value value, unsigned storeSize,
+                              unsigned storeOffset,
                               ArrayRef<Type> writtenToFields) {
   unsigned currentOffset = storeOffset;
   for (Type type : writtenToFields) {
@@ -449,7 +462,12 @@ static void splitIntegerStore(const DataLayout &dataLayout, Location loc,
 
     auto shrOp = rewriter.create<LShrOp>(loc, value, pos);
 
-    IntegerType fieldIntType = rewriter.getIntegerType(fieldSize * 8);
+    // If we are doing a partial write into a direct field the remaining
+    // `storeSize` will be less than the size of the field. We have to truncate
+    // to the `storeSize` to avoid creating a store that wasn't in the original
+    // code.
+    IntegerType fieldIntType =
+        rewriter.getIntegerType(std::min(fieldSize, storeSize) * 8);
     Value valueToStore = rewriter.create<TruncOp>(loc, fieldIntType, shrOp);
 
     // We create an `i8` indexed GEP here as that is the easiest (offset is
@@ -462,6 +480,7 @@ static void splitIntegerStore(const DataLayout &dataLayout, Location loc,
     // No need to care about padding here since we already checked previously
     // that no padding exists in this range.
     currentOffset += fieldSize;
+    storeSize -= fieldSize;
   }
 }
 
@@ -481,28 +500,31 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
 
   auto dataLayout = DataLayout::closest(store);
 
+  unsigned storeSize = dataLayout.getTypeSize(sourceType);
   unsigned offset = 0;
   Value address = store.getAddr();
   if (auto gepOp = address.getDefiningOp<GEPOp>()) {
     // Currently only handle canonical GEPs with exactly two indices,
     // indexing a single aggregate deep.
-    // Recursing into sub-structs is left as a future exercise.
     // If the GEP is not canonical we have to fail, otherwise we would not
     // create type-consistent IR.
     if (gepOp.getIndices().size() != 2 ||
         succeeded(getRequiredConsistentGEPType(gepOp)))
       return failure();
 
-    // A GEP might point somewhere into the middle of an aggregate with the
-    // store storing into multiple adjacent elements. Destructure into
-    // the base address with an offset.
-    std::optional<uint64_t> byteOffset = gepToByteOffset(dataLayout, gepOp);
-    if (!byteOffset)
-      return failure();
+    // If the size of the element indexed by the  GEP is smaller than the store
+    // size, it is pointing into the middle of an aggregate with the store
+    // storing into multiple adjacent elements. Destructure into the base
+    // address of the aggregate with a store offset.
+    if (storeSize > dataLayout.getTypeSize(gepOp.getResultPtrElementType())) {
+      std::optional<uint64_t> byteOffset = gepToByteOffset(dataLayout, gepOp);
+      if (!byteOffset)
+        return failure();
 
-    offset = *byteOffset;
-    typeHint = gepOp.getSourceElementType();
-    address = gepOp.getBase();
+      offset = *byteOffset;
+      typeHint = gepOp.getSourceElementType();
+      address = gepOp.getBase();
+    }
   }
 
   auto structType = typeHint.dyn_cast<LLVMStructType>();
@@ -512,9 +534,7 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
   }
 
   FailureOr<ArrayRef<Type>> writtenToFields =
-      getWrittenToFields(dataLayout, structType,
-                         /*storeSize=*/dataLayout.getTypeSize(sourceType),
-                         /*storeOffset=*/offset);
+      getWrittenToFields(dataLayout, structType, storeSize, offset);
   if (failed(writtenToFields))
     return failure();
 
@@ -526,7 +546,7 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
 
   if (isa<IntegerType>(sourceType)) {
     splitIntegerStore(dataLayout, store.getLoc(), rewriter, address,
-                      store.getValue(), offset, *writtenToFields);
+                      store.getValue(), storeSize, offset, *writtenToFields);
     rewriter.eraseOp(store);
     return success();
   }

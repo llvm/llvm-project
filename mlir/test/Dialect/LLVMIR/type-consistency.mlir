@@ -493,3 +493,134 @@ llvm.func @gep_result_ptr_type_dynamic(%arg: i64) {
   // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @overlapping_int_aggregate_store
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @overlapping_int_aggregate_store(%arg: i64) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)> : (i32) -> !llvm.ptr
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST0]]
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i16
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST16]] : i64
+  // CHECK: [[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i48
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+
+  // Normal integer splitting of [[TRUNC]] follows:
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 2] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+
+  llvm.store %arg, %1 : i64, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @overlapping_vector_aggregate_store
+// CHECK-SAME: %[[ARG:.*]]: vector<4xi16>
+llvm.func @overlapping_vector_aggregate_store(%arg: vector<4 x i16>) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: %[[CST1:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[CST2:.*]] = llvm.mlir.constant(2 : i32) : i32
+  // CHECK: %[[CST3:.*]] = llvm.mlir.constant(3 : i32) : i32
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)> : (i32) -> !llvm.ptr
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractelement %[[ARG]][%[[CST0]] : i32]
+  // CHECK: llvm.store %[[EXTRACT]], %[[GEP]]
+
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractelement %[[ARG]][%[[CST1]] : i32]
+  // CHECK: %[[GEP0:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[GEP1:.*]] = llvm.getelementptr %[[GEP0]][0, 0] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %[[EXTRACT]], %[[GEP1]]
+
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractelement %[[ARG]][%[[CST2]] : i32]
+  // CHECK: %[[GEP0:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[GEP1:.*]] = llvm.getelementptr %[[GEP0]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %[[EXTRACT]], %[[GEP1]]
+
+  // CHECK: %[[EXTRACT:.*]] = llvm.extractelement %[[ARG]][%[[CST3]] : i32]
+  // CHECK: %[[GEP0:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16)>)>
+  // CHECK: %[[GEP1:.*]] = llvm.getelementptr %[[GEP0]][0, 2] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i16, i16, i16)>
+  // CHECK: llvm.store %[[EXTRACT]], %[[GEP1]]
+
+  llvm.store %arg, %1 : vector<4 x i16>, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @partially_overlapping_aggregate_store
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @partially_overlapping_aggregate_store(%arg: i64) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[CST16:.*]] = llvm.mlir.constant(16 : i64) : i64
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i16, struct<(i16, i16, i16, i16)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i16, struct<(i16, i16, i16, i16)>)> : (i32) -> !llvm.ptr
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16, i16)>)>
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST0]]
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i16
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST16]] : i64
+  // CHECK: [[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i48
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i16, struct<(i16, i16, i16, i16)>)>
+
+  // Normal integer splitting of [[TRUNC]] follows:
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i16, i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i16, i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i16, i16, i16, i16)>
+  // CHECK: llvm.store %{{.*}}, %[[GEP]]
+
+  // It is important that there are no more stores at this point.
+  // Specifically a store into the fourth field of %[[TOP_GEP]] would
+  // incorrectly change the semantics of the code.
+  // CHECK-NOT: llvm.store %{{.*}}, %{{.*}}
+
+  llvm.store %arg, %1 : i64, !llvm.ptr
+
+  llvm.return
+}
+
+// -----
+
+// Here a split is undesirable since the store does a partial store into the field.
+
+// CHECK-LABEL: llvm.func @undesirable_overlapping_aggregate_store
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @undesirable_overlapping_aggregate_store(%arg: i64) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i32, i32, struct<(i64, i16, i16, i16)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, i32, struct<(i64, i16, i16, i16)>)> : (i32) -> !llvm.ptr
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, i32, struct<(i64, i16, i16, i16)>)>
+  %2 = llvm.getelementptr %1[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, i32, struct<(i64, i16, i16, i16)>)>
+  // CHECK: llvm.store %[[ARG]], %[[GEP]]
+  llvm.store %arg, %2 : i64, !llvm.ptr
+
+  llvm.return
+}
