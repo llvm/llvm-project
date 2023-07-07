@@ -1447,7 +1447,8 @@ namespace {
     }
 
     void transformedLocalDecl(Decl *Old, ArrayRef<Decl *> NewDecls) {
-      if (Old->isParameterPack()) {
+      if (Old->isParameterPack() &&
+          (NewDecls.size() != 1 || !NewDecls.front()->isParameterPack())) {
         SemaRef.CurrentInstantiationScope->MakeInstantiatedLocalArgPack(Old);
         for (auto *New : NewDecls)
           SemaRef.CurrentInstantiationScope->InstantiatedLocalPackArg(
