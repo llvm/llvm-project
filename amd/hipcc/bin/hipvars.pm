@@ -74,7 +74,7 @@ $isWindows =  ($^O eq 'MSWin32' or $^O eq 'msys');
 # ROCM_PATH is defined relative to HIP_PATH else it is hardcoded to /opt/rocm.
 #
 $HIP_PATH=$ENV{'HIP_PATH'} // dirname(Cwd::abs_path("$0/../")); # use parent directory of hipcc
-if (defined $ENV{'HIP_PATH'}) {
+if ($isWindows and defined $ENV{'HIP_PATH'}) {
   ($HIP_PATH) = $HIP_PATH =~ /"([^"]*)"/;
   $HIP_PATH =~ s/\\/\//g;
 }
