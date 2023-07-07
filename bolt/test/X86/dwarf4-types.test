@@ -30,7 +30,7 @@
 # POSTCHECK: DW_TAG_variable [9]
 # POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x0074 => {0x0000011b} "Foo3")
 # POSTCHECK: DW_TAG_base_type [5]
-# POSTCHECK: DW_AT_name [DW_FORM_strp] ( .debug_str[0x00000063] = "int")
+# POSTCHECK: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "int")
 # POSTCHECK: DW_TAG_structure_type [10]
 # POSTCHECK: DW_AT_signature [DW_FORM_ref_sig8]  (0x104ec427d2ebea6f)
 # POSTCHECK: DW_TAG_structure_type [10]
