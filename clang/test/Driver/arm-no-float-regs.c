@@ -1,7 +1,6 @@
-// REQUIRES: arm-registered-target
-
 // Check that -mfloat-abi=hard gives a warning if FP registers aren't available.
-// RUN: %clang --target=arm-none-eabi -mcpu=cortex-m0 -mfloat-abi=hard -### -c %s 2>&1
+// RUN: %clang --target=arm-none-eabi -mcpu=cortex-m0 -mfloat-abi=hard -### -c %s 2>&1 \
+// RUN:   | FileCheck %s
 
 // RUN: %clang --target=arm-none-eabi -mcpu=cortex-m0 -mhard-float -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=HARDFLOAT %s
@@ -20,4 +19,4 @@
 
 // CHECK: warning: '-mfloat-abi=hard': selected processor lacks floating point registers
 // HARDFLOAT: warning: '-mhard-float': selected processor lacks floating point registers
-// NOWARN-NOT: selected processor lacks floating point registers
+// NOWARN-NOT: warning:
