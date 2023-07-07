@@ -78,8 +78,8 @@ define void @kernel() "kernel" {
 ; TUNIT-NEXT:    br label [[IF_MERGE:%.*]]
 ; TUNIT:       if.else:
 ; TUNIT-NEXT:    call void @barrier() #[[ATTR6:[0-9]+]]
-; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7:[0-9]+]]
-; TUNIT-NEXT:    call void @llvm.assume(i1 undef)
+; TUNIT-NEXT:    call void @use1(i32 1) #[[ATTR7:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.assume(i1 true)
 ; TUNIT-NEXT:    call void @barrier() #[[ATTR6]]
 ; TUNIT-NEXT:    br label [[IF_MERGE]]
 ; TUNIT:       if.merge:
@@ -102,8 +102,8 @@ define void @kernel() "kernel" {
 ; CGSCC-NEXT:    br label [[IF_MERGE:%.*]]
 ; CGSCC:       if.else:
 ; CGSCC-NEXT:    call void @barrier() #[[ATTR6:[0-9]+]]
-; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
-; CGSCC-NEXT:    call void @llvm.assume(i1 undef)
+; CGSCC-NEXT:    call void @use1(i32 1) #[[ATTR6]]
+; CGSCC-NEXT:    call void @llvm.assume(i1 true)
 ; CGSCC-NEXT:    call void @barrier() #[[ATTR6]]
 ; CGSCC-NEXT:    br label [[IF_MERGE]]
 ; CGSCC:       if.merge:
@@ -492,26 +492,34 @@ S:
   ret void
 }
 
-; FIXME: We should not replace the load or delete the second store.
+; We should not replace the load or delete the second store.
 define void @kernel4d1(i1 %c) "kernel" {
 ; TUNIT: Function Attrs: norecurse
 ; TUNIT-LABEL: define {{[^@]+}}@kernel4d1
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    store i32 0, ptr addrspace(3) @QD1, align 4
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
-; TUNIT-NEXT:    call void @use1(i32 0) #[[ATTR7]]
+; TUNIT-NEXT:    call void @barrier() #[[ATTR7]]
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QD1, align 4
+; TUNIT-NEXT:    call void @use1(i32 [[V]]) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
+; TUNIT-NEXT:    store i32 2, ptr addrspace(3) @QD1, align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: norecurse
 ; CGSCC-LABEL: define {{[^@]+}}@kernel4d1
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    store i32 0, ptr addrspace(3) @QD1, align 4
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
-; CGSCC-NEXT:    call void @use1(i32 0) #[[ATTR6]]
+; CGSCC-NEXT:    call void @barrier() #[[ATTR6]]
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QD1, align 4
+; CGSCC-NEXT:    call void @use1(i32 [[V]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
+; CGSCC-NEXT:    store i32 2, ptr addrspace(3) @QD1, align 4
 ; CGSCC-NEXT:    ret void
 ;
   store i32 0, ptr addrspace(3) @QD1
@@ -559,14 +567,14 @@ S:
   ret void
 }
 
-; FIXME: We should not replace the load with undef.
+; We should not replace the load with undef.
 define void @kernel4d2(i1 %c) "kernel" {
 ; TUNIT: Function Attrs: norecurse
 ; TUNIT-LABEL: define {{[^@]+}}@kernel4d2
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
-; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
 ; TUNIT-NEXT:    ret void
@@ -576,7 +584,7 @@ define void @kernel4d2(i1 %c) "kernel" {
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
-; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
 ; CGSCC-NEXT:    ret void
@@ -625,14 +633,14 @@ S:
   ret void
 }
 
-; FIXME: We should not replace the load with undef.
+; We should not replace the load with undef.
 define void @kernel4d3(i1 %c) "kernel" {
 ; TUNIT: Function Attrs: norecurse
 ; TUNIT-LABEL: define {{[^@]+}}@kernel4d3
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
-; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
 ; TUNIT-NEXT:    ret void
@@ -642,7 +650,7 @@ define void @kernel4d3(i1 %c) "kernel" {
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
-; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
 ; CGSCC-NEXT:    ret void
