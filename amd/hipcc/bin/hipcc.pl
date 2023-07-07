@@ -466,10 +466,7 @@ foreach $arg (@ARGV)
     if (not $isWindows and $escapeArg) {
         $arg =~ s/[^-a-zA-Z0-9_=+,.\/]/\\$&/g;
     }
-    if ($isWindows and $escapeArg) {
-        $arg =~ s/[^-a-zA-Z0-9_=+,.:\/\\]/\\$&/g;
-    }
-    $toolArgs .= " $arg" unless $swallowArg;
+    $toolArgs .= " \"$arg\"" unless $swallowArg;
     $prevArg = $arg;
 }
 
