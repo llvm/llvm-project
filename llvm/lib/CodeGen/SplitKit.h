@@ -428,8 +428,11 @@ private:
       bool Late, unsigned RegIdx);
 
   SlotIndex buildSingleSubRegCopy(Register FromReg, Register ToReg,
-      MachineBasicBlock &MB, MachineBasicBlock::iterator InsertBefore,
-      unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex Def);
+                                  MachineBasicBlock &MB,
+                                  MachineBasicBlock::iterator InsertBefore,
+                                  unsigned SubIdx, LiveInterval &DestLI,
+                                  bool Late, SlotIndex Def,
+                                  const MCInstrDesc &Desc);
 
 public:
   /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.

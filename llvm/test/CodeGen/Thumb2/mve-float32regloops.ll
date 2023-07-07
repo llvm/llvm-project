@@ -1614,32 +1614,33 @@ define arm_aapcs_vfpcc void @arm_biquad_cascade_df1_f32(ptr nocapture readonly %
 ; CHECK-NEXT:    @ Parent Loop BB19_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vmov r7, s7
-; CHECK-NEXT:    vldrw.u32 q2, [r9, #16]
+; CHECK-NEXT:    vldr s0, [r1, #12]
 ; CHECK-NEXT:    vmov r11, s6
 ; CHECK-NEXT:    vldrw.u32 q1, [r9, #112]
-; CHECK-NEXT:    vmov r4, s1
-; CHECK-NEXT:    vldr s1, [r1, #12]
 ; CHECK-NEXT:    vmov r3, s3
 ; CHECK-NEXT:    vldr s3, [r1, #8]
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q1, [r9]
-; CHECK-NEXT:    vmov r8, s1
+; CHECK-NEXT:    vmov r8, s0
+; CHECK-NEXT:    vldrw.u32 q2, [r9, #16]
 ; CHECK-NEXT:    ldr r6, [r1, #4]
 ; CHECK-NEXT:    vldrw.u32 q7, [r9, #32]
 ; CHECK-NEXT:    vmul.f32 q1, q1, r8
 ; CHECK-NEXT:    vmov r0, s3
-; CHECK-NEXT:    vldrw.u32 q3, [r9, #48]
 ; CHECK-NEXT:    vfma.f32 q1, q2, r0
+; CHECK-NEXT:    vldrw.u32 q3, [r9, #48]
 ; CHECK-NEXT:    ldr r0, [r1], #16
 ; CHECK-NEXT:    vfma.f32 q1, q7, r6
+; CHECK-NEXT:    vmov r4, s1
 ; CHECK-NEXT:    vldrw.u32 q6, [r9, #64]
-; CHECK-NEXT:    vmov.f32 s2, s1
+; CHECK-NEXT:    vmov.f32 s1, s0
 ; CHECK-NEXT:    vfma.f32 q1, q3, r0
+; CHECK-NEXT:    vmov.f32 s2, s0
 ; CHECK-NEXT:    vldrw.u32 q5, [r9, #80]
 ; CHECK-NEXT:    vfma.f32 q1, q6, r4
 ; CHECK-NEXT:    vldrw.u32 q4, [r9, #96]
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #32] @ 16-byte Reload
 ; CHECK-NEXT:    vfma.f32 q1, q5, r3
+; CHECK-NEXT:    vldrw.u32 q2, [sp, #32] @ 16-byte Reload
 ; CHECK-NEXT:    vfma.f32 q1, q4, r7
 ; CHECK-NEXT:    vfma.f32 q1, q2, r11
 ; CHECK-NEXT:    vstrb.8 q1, [r5], #16
