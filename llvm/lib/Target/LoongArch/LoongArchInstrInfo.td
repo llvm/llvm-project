@@ -526,6 +526,7 @@ def AlslSlliImmI0 : SDNodeXForm<imm, [{
 include "LoongArchInstrFormats.td"
 include "LoongArchFloatInstrFormats.td"
 include "LoongArchLSXInstrFormats.td"
+include "LoongArchLASXInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -2013,3 +2014,8 @@ def : Pat<(int_loongarch_ldpte_d GPR:$rj, timm:$imm8),
 // LSX Instructions
 //===----------------------------------------------------------------------===//
 include "LoongArchLSXInstrInfo.td"
+
+//===----------------------------------------------------------------------===//
+// LASX Instructions
+//===----------------------------------------------------------------------===//
+include "LoongArchLASXInstrInfo.td"
