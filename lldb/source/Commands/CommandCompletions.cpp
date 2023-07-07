@@ -735,7 +735,7 @@ void CommandCompletions::FrameIndexes(CommandInterpreter &interpreter,
     lldb::StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
     StreamString strm;
     // Dumping frames can be slow, allow interruption.
-    if (dbg.InterruptRequested())
+    if (INTERRUPT_REQUESTED(dbg, "Interrupted in frame completion"))
       break;
     frame_sp->Dump(&strm, false, true);
     request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());

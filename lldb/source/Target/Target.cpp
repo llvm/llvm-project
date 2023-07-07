@@ -2285,7 +2285,6 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
         // each library in parallel.
         if (GetPreloadSymbols())
           module_sp->PreloadSymbols();
-
         llvm::SmallVector<ModuleSP, 1> replaced_modules;
         for (ModuleSP &old_module_sp : old_modules) {
           if (m_images.GetIndexForModule(old_module_sp.get()) !=
@@ -4742,6 +4741,10 @@ bool TargetProperties::SetPreferDynamicValue(lldb::DynamicValueType d) {
 }
 
 bool TargetProperties::GetPreloadSymbols() const {
+  if (INTERRUPT_REQUESTED(m_target->GetDebugger(), 
+      "Interrupted checking preload symbols")) {
+    return false;
+  }
   const uint32_t idx = ePropertyPreloadSymbols;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
