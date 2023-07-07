@@ -775,8 +775,10 @@ void ContinuationIndenter::addTokenOnCurrentLine(LineState &State, bool DryRun,
         Style.Cpp11BracedListStyle)) &&
       State.Column > getNewLineColumn(State) &&
       (!Previous.Previous ||
-       !Previous.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
-                                   tok::kw_switch)) &&
+       !(Previous.Previous->isOneOf(TT_CastRParen, tok::kw_for, tok::kw_while,
+                                    tok::kw_switch) ||
+         (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
+          Previous.Previous->isIf()))) &&
       // Don't do this for simple (no expressions) one-argument function calls
       // as that feels like needlessly wasting whitespace, e.g.:
       //
