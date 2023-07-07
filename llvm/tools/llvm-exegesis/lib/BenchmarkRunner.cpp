@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <array>
+#include <cerrno>
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -249,9 +251,20 @@ private:
                                  "to child process failed: " +
                                  Twine(strerror(errno)));
 
-    if (ptrace(PTRACE_SEIZE, ParentOrChildPID, NULL, NULL) != 0)
-      return make_error<Failure>("Failed to seize the child process: " +
+    if (ptrace(PTRACE_ATTACH, ParentOrChildPID, NULL, NULL) != 0)
+      return make_error<Failure>("Failed to attach to the child process: " +
                                  Twine(strerror(errno)));
+
+    if (wait(NULL) == -1) {
+      return make_error<Failure>(
+          "Failed to wait for child process to stop after attaching: " +
+          Twine(strerror(errno)));
+    }
+
+    if (ptrace(PTRACE_CONT, ParentOrChildPID, NULL, NULL) != 0)
+      return make_error<Failure>(
+          "Failed to continue execution of the child process: " +
+          Twine(strerror(errno)));
 
     int ChildStatus;
     if (wait(&ChildStatus) == -1) {
