@@ -25,10 +25,8 @@ define i32 @foo() {
 ; RV32IZCMP-NEXT:    .cfi_offset ra, -4
 ; RV32IZCMP-NEXT:    mv a0, sp
 ; RV32IZCMP-NEXT:    call test@plt
-; RV32IZCMP-NEXT:    li a0, 0
 ; RV32IZCMP-NEXT:    addi sp, sp, 464
-; RV32IZCMP-NEXT:    cm.pop {ra}, 64
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popretz {ra}, 64
 ;
 ; RV64IZCMP-LABEL: foo:
 ; RV64IZCMP:       # %bb.0:
@@ -38,10 +36,8 @@ define i32 @foo() {
 ; RV64IZCMP-NEXT:    .cfi_offset ra, -8
 ; RV64IZCMP-NEXT:    mv a0, sp
 ; RV64IZCMP-NEXT:    call test@plt
-; RV64IZCMP-NEXT:    li a0, 0
 ; RV64IZCMP-NEXT:    addi sp, sp, 464
-; RV64IZCMP-NEXT:    cm.pop {ra}, 64
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popretz {ra}, 64
 ;
 ; RV32IZCMP-SR-LABEL: foo:
 ; RV32IZCMP-SR:       # %bb.0:
@@ -112,10 +108,8 @@ define i32 @pushpopret0(i32 signext %size){
 ; RV32IZCMP-NEXT:    sub a0, sp, a0
 ; RV32IZCMP-NEXT:    mv sp, a0
 ; RV32IZCMP-NEXT:    call callee_void@plt
-; RV32IZCMP-NEXT:    li a0, 0
 ; RV32IZCMP-NEXT:    addi sp, s0, -16
-; RV32IZCMP-NEXT:    cm.pop {ra, s0}, 16
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popretz {ra, s0}, 16
 ;
 ; RV64IZCMP-LABEL: pushpopret0:
 ; RV64IZCMP:       # %bb.0: # %entry
@@ -132,10 +126,8 @@ define i32 @pushpopret0(i32 signext %size){
 ; RV64IZCMP-NEXT:    sub a0, sp, a0
 ; RV64IZCMP-NEXT:    mv sp, a0
 ; RV64IZCMP-NEXT:    call callee_void@plt
-; RV64IZCMP-NEXT:    li a0, 0
 ; RV64IZCMP-NEXT:    addi sp, s0, -16
-; RV64IZCMP-NEXT:    cm.pop {ra, s0}, 16
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popretz {ra, s0}, 16
 ;
 ; RV32IZCMP-SR-LABEL: pushpopret0:
 ; RV32IZCMP-SR:       # %bb.0: # %entry
@@ -240,8 +232,7 @@ define i32 @pushpopret1(i32 signext %size) {
 ; RV32IZCMP-NEXT:    call callee_void@plt
 ; RV32IZCMP-NEXT:    li a0, 1
 ; RV32IZCMP-NEXT:    addi sp, s0, -16
-; RV32IZCMP-NEXT:    cm.pop {ra, s0}, 16
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0}, 16
 ;
 ; RV64IZCMP-LABEL: pushpopret1:
 ; RV64IZCMP:       # %bb.0: # %entry
@@ -260,8 +251,7 @@ define i32 @pushpopret1(i32 signext %size) {
 ; RV64IZCMP-NEXT:    call callee_void@plt
 ; RV64IZCMP-NEXT:    li a0, 1
 ; RV64IZCMP-NEXT:    addi sp, s0, -16
-; RV64IZCMP-NEXT:    cm.pop {ra, s0}, 16
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0}, 16
 ;
 ; RV32IZCMP-SR-LABEL: pushpopret1:
 ; RV32IZCMP-SR:       # %bb.0: # %entry
@@ -366,8 +356,7 @@ define i32 @pushpopretneg1(i32 signext %size) {
 ; RV32IZCMP-NEXT:    call callee_void@plt
 ; RV32IZCMP-NEXT:    li a0, -1
 ; RV32IZCMP-NEXT:    addi sp, s0, -16
-; RV32IZCMP-NEXT:    cm.pop {ra, s0}, 16
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0}, 16
 ;
 ; RV64IZCMP-LABEL: pushpopretneg1:
 ; RV64IZCMP:       # %bb.0: # %entry
@@ -386,8 +375,7 @@ define i32 @pushpopretneg1(i32 signext %size) {
 ; RV64IZCMP-NEXT:    call callee_void@plt
 ; RV64IZCMP-NEXT:    li a0, -1
 ; RV64IZCMP-NEXT:    addi sp, s0, -16
-; RV64IZCMP-NEXT:    cm.pop {ra, s0}, 16
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0}, 16
 ;
 ; RV32IZCMP-SR-LABEL: pushpopretneg1:
 ; RV32IZCMP-SR:       # %bb.0: # %entry
@@ -492,8 +480,7 @@ define i32 @pushpopret2(i32 signext %size) {
 ; RV32IZCMP-NEXT:    call callee_void@plt
 ; RV32IZCMP-NEXT:    li a0, 2
 ; RV32IZCMP-NEXT:    addi sp, s0, -16
-; RV32IZCMP-NEXT:    cm.pop {ra, s0}, 16
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0}, 16
 ;
 ; RV64IZCMP-LABEL: pushpopret2:
 ; RV64IZCMP:       # %bb.0: # %entry
@@ -512,8 +499,7 @@ define i32 @pushpopret2(i32 signext %size) {
 ; RV64IZCMP-NEXT:    call callee_void@plt
 ; RV64IZCMP-NEXT:    li a0, 2
 ; RV64IZCMP-NEXT:    addi sp, s0, -16
-; RV64IZCMP-NEXT:    cm.pop {ra, s0}, 16
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0}, 16
 ;
 ; RV32IZCMP-SR-LABEL: pushpopret2:
 ; RV32IZCMP-SR:       # %bb.0: # %entry
@@ -1187,8 +1173,7 @@ define void @many_args(i32, i32, i32, i32, i32, i32, i32, i32, i32) nounwind {
 ; RV32IZCMP-NEXT:    sw t0, %lo(var0+8)(a0)
 ; RV32IZCMP-NEXT:    sw a7, %lo(var0+4)(a0)
 ; RV32IZCMP-NEXT:    sw a6, %lo(var0)(a0)
-; RV32IZCMP-NEXT:    cm.pop {ra, s0-s4}, 32
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s4}, 32
 ;
 ; RV64IZCMP-LABEL: many_args:
 ; RV64IZCMP:       # %bb.0: # %entry
@@ -1231,8 +1216,7 @@ define void @many_args(i32, i32, i32, i32, i32, i32, i32, i32, i32) nounwind {
 ; RV64IZCMP-NEXT:    sw t0, %lo(var0+8)(a0)
 ; RV64IZCMP-NEXT:    sw a7, %lo(var0+4)(a0)
 ; RV64IZCMP-NEXT:    sw a6, %lo(var0)(a0)
-; RV64IZCMP-NEXT:    cm.pop {ra, s0-s4}, 48
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s4}, 48
 ;
 ; RV32IZCMP-SR-LABEL: many_args:
 ; RV32IZCMP-SR:       # %bb.0: # %entry
@@ -1452,8 +1436,7 @@ define void @alloca(i32 %n) nounwind {
 ; RV32IZCMP-NEXT:    call notdead@plt
 ; RV32IZCMP-NEXT:    mv sp, s1
 ; RV32IZCMP-NEXT:    addi sp, s0, -16
-; RV32IZCMP-NEXT:    cm.pop {ra, s0-s1}, 16
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s1}, 16
 ;
 ; RV64IZCMP-LABEL: alloca:
 ; RV64IZCMP:       # %bb.0:
@@ -1469,8 +1452,7 @@ define void @alloca(i32 %n) nounwind {
 ; RV64IZCMP-NEXT:    call notdead@plt
 ; RV64IZCMP-NEXT:    mv sp, s1
 ; RV64IZCMP-NEXT:    addi sp, s0, -32
-; RV64IZCMP-NEXT:    cm.pop {ra, s0-s1}, 32
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s1}, 32
 ;
 ; RV32IZCMP-SR-LABEL: alloca:
 ; RV32IZCMP-SR:       # %bb.0:
@@ -1789,6 +1771,52 @@ define void @foo_with_irq() nounwind "interrupt"="user" {
 ; RV64I-NEXT:    ld t6, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 128
 ; RV64I-NEXT:    mret
+  %call = call i32 bitcast (i32 (...)* @foo_test_irq to i32 ()*)()
+  ret void
+}
+
+define void @foo_no_irq() nounwind{
+; RV32IZCMP-LABEL: foo_no_irq:
+; RV32IZCMP:       # %bb.0:
+; RV32IZCMP-NEXT:    cm.push {ra}, -16
+; RV32IZCMP-NEXT:    call foo_test_irq@plt
+; RV32IZCMP-NEXT:    cm.popret {ra}, 16
+;
+; RV64IZCMP-LABEL: foo_no_irq:
+; RV64IZCMP:       # %bb.0:
+; RV64IZCMP-NEXT:    cm.push {ra}, -16
+; RV64IZCMP-NEXT:    call foo_test_irq@plt
+; RV64IZCMP-NEXT:    cm.popret {ra}, 16
+;
+; RV32IZCMP-SR-LABEL: foo_no_irq:
+; RV32IZCMP-SR:       # %bb.0:
+; RV32IZCMP-SR-NEXT:    call t0, __riscv_save_0
+; RV32IZCMP-SR-NEXT:    call foo_test_irq@plt
+; RV32IZCMP-SR-NEXT:    tail __riscv_restore_0
+;
+; RV64IZCMP-SR-LABEL: foo_no_irq:
+; RV64IZCMP-SR:       # %bb.0:
+; RV64IZCMP-SR-NEXT:    call t0, __riscv_save_0
+; RV64IZCMP-SR-NEXT:    call foo_test_irq@plt
+; RV64IZCMP-SR-NEXT:    tail __riscv_restore_0
+;
+; RV32I-LABEL: foo_no_irq:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call foo_test_irq@plt
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: foo_no_irq:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call foo_test_irq@plt
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %call = call i32 bitcast (i32 (...)* @foo_test_irq to i32 ()*)()
   ret void
 }
@@ -2624,8 +2652,7 @@ define void @callee_no_irq() nounwind{
 ; RV32IZCMP-NEXT:    sw a0, %lo(var_test_irq+4)(a7)
 ; RV32IZCMP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
 ; RV32IZCMP-NEXT:    sw a0, %lo(var_test_irq)(a7)
-; RV32IZCMP-NEXT:    cm.pop {ra, s0-s11}, 96
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 96
 ;
 ; RV64IZCMP-LABEL: callee_no_irq:
 ; RV64IZCMP:       # %bb.0:
@@ -2708,8 +2735,7 @@ define void @callee_no_irq() nounwind{
 ; RV64IZCMP-NEXT:    sw a0, %lo(var_test_irq+4)(a7)
 ; RV64IZCMP-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
 ; RV64IZCMP-NEXT:    sw a0, %lo(var_test_irq)(a7)
-; RV64IZCMP-NEXT:    cm.pop {ra, s0-s11}, 160
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 160
 ;
 ; RV32IZCMP-SR-LABEL: callee_no_irq:
 ; RV32IZCMP-SR:       # %bb.0:
