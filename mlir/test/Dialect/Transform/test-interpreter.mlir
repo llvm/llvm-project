@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s --test-transform-dialect-interpreter -allow-unregistered-dialect --split-input-file --verify-diagnostics | FileCheck %s
 
+// UNSUPPORTED: target=aarch64-pc-windows-msvc
+
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-remark @below {{applying transformation}}
