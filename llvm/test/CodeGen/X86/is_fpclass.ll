@@ -846,26 +846,15 @@ entry:
 define i1 @not_issubnormal_or_zero_f(float %x) {
 ; CHECK-32-LABEL: not_issubnormal_or_zero_f:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; CHECK-32-NEXT:    setge %cl
-; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
-; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
-; CHECK-32-NEXT:    setb %al
-; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    testl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    setne %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: not_issubnormal_or_zero_f:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    movd %xmm0, %eax
-; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; CHECK-64-NEXT:    setge %cl
-; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
-; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
-; CHECK-64-NEXT:    setb %al
-; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setne %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
@@ -875,26 +864,15 @@ entry:
 define i1 @not_issubnormal_or_zero_f_daz(float %x) #0 {
 ; CHECK-32-LABEL: not_issubnormal_or_zero_f_daz:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; CHECK-32-NEXT:    setge %cl
-; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
-; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
-; CHECK-32-NEXT:    setb %al
-; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    testl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    setne %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: not_issubnormal_or_zero_f_daz:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    movd %xmm0, %eax
-; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; CHECK-64-NEXT:    setge %cl
-; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
-; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
-; CHECK-64-NEXT:    setb %al
-; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setne %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
@@ -904,26 +882,15 @@ entry:
 define i1 @not_issubnormal_or_zero_f_maybe_daz(float %x) #1 {
 ; CHECK-32-LABEL: not_issubnormal_or_zero_f_maybe_daz:
 ; CHECK-32:       # %bb.0: # %entry
-; CHECK-32-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-32-NEXT:    andl {{[0-9]+}}(%esp), %eax
-; CHECK-32-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; CHECK-32-NEXT:    setge %cl
-; CHECK-32-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
-; CHECK-32-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
-; CHECK-32-NEXT:    setb %al
-; CHECK-32-NEXT:    orb %cl, %al
+; CHECK-32-NEXT:    testl $2139095040, {{[0-9]+}}(%esp) # imm = 0x7F800000
+; CHECK-32-NEXT:    setne %al
 ; CHECK-32-NEXT:    retl
 ;
 ; CHECK-64-LABEL: not_issubnormal_or_zero_f_maybe_daz:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    movd %xmm0, %eax
-; CHECK-64-NEXT:    andl $2147483647, %eax # imm = 0x7FFFFFFF
-; CHECK-64-NEXT:    cmpl $2139095040, %eax # imm = 0x7F800000
-; CHECK-64-NEXT:    setge %cl
-; CHECK-64-NEXT:    addl $-8388608, %eax # imm = 0xFF800000
-; CHECK-64-NEXT:    cmpl $2130706432, %eax # imm = 0x7F000000
-; CHECK-64-NEXT:    setb %al
-; CHECK-64-NEXT:    orb %cl, %al
+; CHECK-64-NEXT:    testl $2139095040, %eax # imm = 0x7F800000
+; CHECK-64-NEXT:    setne %al
 ; CHECK-64-NEXT:    retq
 entry:
   %0 = tail call i1 @llvm.is.fpclass.f32(float %x, i32 783)  ; ~0xf0 = "~(subnormal|zero)"
