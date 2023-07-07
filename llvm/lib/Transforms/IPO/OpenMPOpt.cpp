@@ -2579,7 +2579,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
 
     SmallPtrSet<CallBase *, 16> DeletedBarriers;
     auto HandleAlignedBarrier = [&](CallBase *CB) {
-      const ExecutionDomainTy &ED = CEDMap[{CB, PRE}];
+      const ExecutionDomainTy &ED = CB ? CEDMap[{CB, PRE}] : BEDMap[nullptr];
       if (!ED.IsReachedFromAlignedBarrierOnly ||
           ED.EncounteredNonLocalSideEffect)
         return;
@@ -2913,11 +2913,10 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
   // Helper to deal with an aligned barrier encountered during the forward
   // traversal. \p CB is the aligned barrier, \p ED is the execution domain when
   // it was encountered.
-  auto HandleAlignedBarrier = [&](CallBase *CB, ExecutionDomainTy &ED) {
-    if (CB)
-      Changed |= AlignedBarriers.insert(CB);
+  auto HandleAlignedBarrier = [&](CallBase &CB, ExecutionDomainTy &ED) {
+    Changed |= AlignedBarriers.insert(&CB);
     // First, update the barrier ED kept in the separate CEDMap.
-    auto &CallInED = CEDMap[{CB, PRE}];
+    auto &CallInED = CEDMap[{&CB, PRE}];
     Changed |= mergeInPredecessor(A, CallInED, ED);
     CallInED.IsReachingAlignedBarrierOnly = true;
     // Next adjust the ED we use for the traversal.
@@ -2925,9 +2924,8 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     ED.IsReachedFromAlignedBarrierOnly = true;
     // Aligned barrier collection has to come last.
     ED.clearAssumeInstAndAlignedBarriers();
-    if (CB)
-      ED.addAlignedBarrier(A, *CB);
-    auto &CallOutED = CEDMap[{CB, POST}];
+    ED.addAlignedBarrier(A, CB);
+    auto &CallOutED = CEDMap[{&CB, POST}];
     Changed |= mergeInPredecessor(A, CallOutED, ED);
   };
 
@@ -2946,6 +2944,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     // TODO: We use local reasoning since we don't have a divergence analysis
     // 	     running as well. We could basically allow uniform branches here.
     bool AlignedBarrierLastInBlock = IsEntryBB && IsKernel;
+    bool IsExplicitlyAligned = IsEntryBB && IsKernel;
     ExecutionDomainTy ED;
     // Propagate "incoming edges" into information about this block.
     if (IsEntryBB) {
@@ -3020,14 +3019,16 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
           AANoSync::isAlignedBarrier(*CB, AlignedBarrierLastInBlock);
 
       AlignedBarrierLastInBlock &= IsNoSync;
+      IsExplicitlyAligned &= IsNoSync;
 
       // Next we check for calls. Aligned barriers are handled
       // explicitly, everything else is kept for the backward traversal and will
       // also affect our state.
       if (CB) {
         if (IsAlignedBarrier) {
-          HandleAlignedBarrier(CB, ED);
+          HandleAlignedBarrier(*CB, ED);
           AlignedBarrierLastInBlock = true;
+          IsExplicitlyAligned = true;
           continue;
         }
 
@@ -3129,14 +3130,16 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       Changed |= mergeInPredecessor(A, InterProceduralED, ED);
 
       auto &FnED = BEDMap[nullptr];
+      if (IsKernel && !IsExplicitlyAligned)
+        FnED.IsReachingAlignedBarrierOnly = false;
+      Changed |= mergeInPredecessor(A, FnED, ED);
+
       if (!FnED.IsReachingAlignedBarrierOnly) {
         IsEndAndNotReachingAlignedBarriersOnly = true;
         SyncInstWorklist.push_back(BB.getTerminator());
         auto &BBED = BEDMap[&BB];
         Changed |= setAndRecord(BBED.IsReachingAlignedBarrierOnly, false);
       }
-      if (IsKernel)
-        HandleAlignedBarrier(nullptr, ED);
     }
 
     ExecutionDomainTy &StoredED = BEDMap[&BB];

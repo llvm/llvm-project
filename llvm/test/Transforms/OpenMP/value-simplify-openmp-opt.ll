@@ -252,26 +252,32 @@ S:
   ret void
 }
 
-; FIXME: We should not replace the load or delete the second store.
+; We should not replace the load or delete the second store.
 define void @kernel4b1(i1 %c) "kernel" {
 ; TUNIT-LABEL: define {{[^@]+}}@kernel4b1
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    store i32 0, ptr addrspace(3) @QB1, align 4
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
 ; TUNIT-NEXT:    call void @sync()
-; TUNIT-NEXT:    call void @use1(i32 0) #[[ATTR7]]
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QB1, align 4
+; TUNIT-NEXT:    call void @use1(i32 [[V]]) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
+; TUNIT-NEXT:    store i32 2, ptr addrspace(3) @QB1, align 4
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@kernel4b1
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    store i32 0, ptr addrspace(3) @QB1, align 4
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
 ; CGSCC-NEXT:    call void @sync()
-; CGSCC-NEXT:    call void @use1(i32 0) #[[ATTR6]]
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QB1, align 4
+; CGSCC-NEXT:    call void @use1(i32 [[V]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
+; CGSCC-NEXT:    store i32 2, ptr addrspace(3) @QB1, align 4
 ; CGSCC-NEXT:    ret void
 ;
   store i32 0, ptr addrspace(3) @QB1
@@ -328,7 +334,7 @@ define void @kernel4b2(i1 %c) "kernel" {
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
 ; TUNIT-NEXT:    call void @sync()
-; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
 ; TUNIT-NEXT:    ret void
@@ -338,7 +344,7 @@ define void @kernel4b2(i1 %c) "kernel" {
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
 ; CGSCC-NEXT:    call void @sync()
-; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
 ; CGSCC-NEXT:    ret void
