@@ -236,14 +236,11 @@ public:
   /// Find the most similar block for a given hash.
   const FlowBlock *matchBlock(BlendedBlockHash BlendedHash) const {
     auto BlockIt = OpHashToBlocks.find(BlendedHash.OpcodeHash);
-    if (BlockIt == OpHashToBlocks.end()) {
+    if (BlockIt == OpHashToBlocks.end())
       return nullptr;
-    }
     FlowBlock *BestBlock = nullptr;
     uint64_t BestDist = std::numeric_limits<uint64_t>::max();
-    for (auto It : BlockIt->second) {
-      FlowBlock *Block = It.second;
-      BlendedBlockHash Hash = It.first;
+    for (const auto &[Hash, Block] : BlockIt->second) {
       uint64_t Dist = Hash.distance(BlendedHash);
       if (BestBlock == nullptr || Dist < BestDist) {
         BestDist = Dist;
@@ -251,6 +248,14 @@ public:
       }
     }
     return BestBlock;
+  }
+
+  /// Returns true if the two basic blocks (in the binary and in the profile)
+  /// corresponding to the given hashes are matched to each other with a high
+  /// confidence.
+  static bool isHighConfidenceMatch(BlendedBlockHash Hash1,
+                                    BlendedBlockHash Hash2) {
+    return Hash1.InstrHash == Hash2.InstrHash;
   }
 
 private:
@@ -393,7 +398,8 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 /// of the basic blocks in the binary, the count is "matched" to the block.
 /// Similarly, if both the source and the target of a count in the profile are
 /// matched to a jump in the binary, the count is recorded in CFG.
-void matchWeightsByHashes(const BinaryFunction::BasicBlockOrderType &BlockOrder,
+void matchWeightsByHashes(BinaryContext &BC,
+                          const BinaryFunction::BasicBlockOrderType &BlockOrder,
                           const yaml::bolt::BinaryFunctionProfile &YamlBF,
                           FlowFunction &Func) {
   assert(Func.Blocks.size() == BlockOrder.size() + 1);
@@ -417,19 +423,29 @@ void matchWeightsByHashes(const BinaryFunction::BasicBlockOrderType &BlockOrder,
   // Match blocks from the profile to the blocks in CFG
   for (const yaml::bolt::BinaryBasicBlockProfile &YamlBB : YamlBF.Blocks) {
     assert(YamlBB.Hash != 0 && "empty hash of BinaryBasicBlockProfile");
-    BlendedBlockHash BlendedHash(YamlBB.Hash);
-    const FlowBlock *MatchedBlock = Matcher.matchBlock(BlendedHash);
+    BlendedBlockHash YamlHash(YamlBB.Hash);
+    const FlowBlock *MatchedBlock = Matcher.matchBlock(YamlHash);
     if (MatchedBlock != nullptr) {
       MatchedBlocks[YamlBB.Index] = MatchedBlock;
       LLVM_DEBUG(dbgs() << "Matched yaml block with bid = " << YamlBB.Index
                         << " and hash = " << Twine::utohexstr(YamlBB.Hash)
                         << " to BB with index = " << MatchedBlock->Index - 1
                         << "\n");
+      // Update matching stats accounting for the matched block.
+      BlendedBlockHash BinHash = BlendedHashes[MatchedBlock->Index - 1];
+      if (Matcher.isHighConfidenceMatch(BinHash, YamlHash)) {
+        ++BC.Stats.NumMatchedBlocks;
+        BC.Stats.MatchedSampleCount += YamlBB.ExecCount;
+      }
     } else {
       LLVM_DEBUG(
           dbgs() << "Couldn't match yaml block with bid = " << YamlBB.Index
                  << " and hash = " << Twine::utohexstr(YamlBB.Hash) << "\n");
     }
+
+    // Update matching stats.
+    ++BC.Stats.NumStaleBlocks;
+    BC.Stats.StaleSampleCount += YamlBB.ExecCount;
   }
 
   // Match jumps from the profile to the jumps from CFG
@@ -475,7 +491,7 @@ void matchWeightsByHashes(const BinaryFunction::BasicBlockOrderType &BlockOrder,
   // Assign block counts based on in-/out- jumps
   for (FlowBlock &Block : Func.Blocks) {
     if (OutWeight[Block.Index] == 0 && InWeight[Block.Index] == 0) {
-      assert(Block.HasUnknownWeight && "unmatched block with positive count");
+      assert(Block.HasUnknownWeight && "unmatched block with a positive count");
       continue;
     }
     Block.HasUnknownWeight = false;
@@ -702,7 +718,7 @@ bool YAMLProfileReader::inferStaleProfile(
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
-  matchWeightsByHashes(BlockOrder, YamlBF, Func);
+  matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
   // they don't get any counts assigned
