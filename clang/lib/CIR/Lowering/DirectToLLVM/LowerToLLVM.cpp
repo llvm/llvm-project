@@ -341,13 +341,17 @@ public:
       if (dstType.getWidth() < srcType.getWidth()) {
         rewriter.replaceOpWithNewOp<mlir::LLVM::TruncOp>(castOp, llvmDstTy,
                                                          llvmSrcVal);
-      } else {
+      }
+      // Target integer is larger: sign extend or zero extend.
+      else if (dstType.getWidth() > srcType.getWidth()) {
         if (srcType.isUnsigned())
           rewriter.replaceOpWithNewOp<mlir::LLVM::ZExtOp>(castOp, llvmDstTy,
                                                           llvmSrcVal);
         else
           rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(castOp, llvmDstTy,
                                                           llvmSrcVal);
+      } else { // Target integer is of the same size: do nothing.
+        rewriter.replaceOp(castOp, llvmSrcVal);
       }
       break;
     }
