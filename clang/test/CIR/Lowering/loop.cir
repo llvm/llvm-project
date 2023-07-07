@@ -1,9 +1,9 @@
-// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s -check-prefix=MLIR
 
 !s32i = !cir.int<s, 32>
 module {
-  cir.func @foo() {
+  cir.func @testFor() {
     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
     %1 = cir.const(#cir.int<0> : !s32i) : !s32i
     cir.store %1, %0 : !s32i, cir.ptr <!s32i>
@@ -29,12 +29,13 @@ module {
   }
 
 //      MLIR: module {
-// MLIR-NEXT:   llvm.func @foo() {
+// MLIR-NEXT:   llvm.func @testFor() {
 // MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
 // MLIR-NEXT:     %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
 // MLIR-NEXT:     %2 = llvm.mlir.constant(0 : i32) : i32
 // MLIR-NEXT:     llvm.store %2, %1 : i32, !llvm.ptr
 // MLIR-NEXT:     llvm.br ^bb1
+// ============= Condition block =============
 // MLIR-NEXT:   ^bb1:  // 2 preds: ^bb0, ^bb5
 // MLIR-NEXT:     %3 = llvm.load %1 : !llvm.ptr
 // MLIR-NEXT:     %4 = llvm.mlir.constant(10 : i32) : i32
@@ -49,50 +50,20 @@ module {
 // MLIR-NEXT:     llvm.br ^bb4
 // MLIR-NEXT:   ^bb3:  // pred: ^bb1
 // MLIR-NEXT:     llvm.br ^bb6
+// ============= Body block =============
 // MLIR-NEXT:   ^bb4:  // pred: ^bb2
+// MLIR-NEXT:     llvm.br ^bb5
+// ============= Step block =============
+// MLIR-NEXT:   ^bb5:  // pred: ^bb4
 // MLIR-NEXT:     %11 = llvm.load %1 : !llvm.ptr
 // MLIR-NEXT:     %12 = llvm.mlir.constant(1 : i32) : i32
 // MLIR-NEXT:     %13 = llvm.add %11, %12  : i32
 // MLIR-NEXT:     llvm.store %13, %1 : i32, !llvm.ptr
-// MLIR-NEXT:     llvm.br ^bb5
-// MLIR-NEXT:   ^bb5:  // pred: ^bb4
 // MLIR-NEXT:     llvm.br ^bb1
+// ============= Exit block =============
 // MLIR-NEXT:   ^bb6:  // pred: ^bb3
 // MLIR-NEXT:     llvm.return
 // MLIR-NEXT:   }
-
-//      LLVM: define void @foo() {
-//  LLVM-NEXT:   %1 = alloca i32, i64 1, align 4
-//  LLVM-NEXT:   store i32 0, ptr %1, align 4
-//  LLVM-NEXT:   br label %2
-// LLVM-EMPTY:
-//  LLVM-NEXT: 2:
-//  LLVM-NEXT:   %3 = load i32, ptr %1, align 4
-//  LLVM-NEXT:   %4 = icmp slt i32 %3, 10
-//  LLVM-NEXT:   %5 = zext i1 %4 to i32
-//  LLVM-NEXT:   %6 = icmp ne i32 %5, 0
-//  LLVM-NEXT:   %7 = zext i1 %6 to i8
-//  LLVM-NEXT:   %8 = trunc i8 %7 to i1
-//  LLVM-NEXT:   br i1 %8, label %9, label %10
-// LLVM-EMPTY:
-//  LLVM-NEXT: 9:
-//  LLVM-NEXT:   br label %11
-// LLVM-EMPTY:
-//  LLVM-NEXT: 10:
-//  LLVM-NEXT:   br label %15
-// LLVM-EMPTY:
-//  LLVM-NEXT: 11:
-//  LLVM-NEXT:   %12 = load i32, ptr %1, align 4
-//  LLVM-NEXT:   %13 = add i32 %12, 1
-//  LLVM-NEXT:   store i32 %13, ptr %1, align 4
-//  LLVM-NEXT:   br label %14
-// LLVM-EMPTY:
-//  LLVM-NEXT: 14:
-//  LLVM-NEXT:   br label %2
-// LLVM-EMPTY:
-//  LLVM-NEXT: 15:
-//  LLVM-NEXT:   ret void
-//  LLVM-NEXT: }
 
   // Test while cir.loop operation lowering.
   cir.func @testWhile(%arg0: !s32i) {

@@ -135,10 +135,9 @@ public:
     return mlir::success();
   }
 
-  mlir::LogicalResult
-  rewriteWhileLoop(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
-                   mlir::ConversionPatternRewriter &rewriter,
-                   mlir::cir::LoopOpKind kind) const {
+  mlir::LogicalResult rewriteLoop(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
+                                  mlir::ConversionPatternRewriter &rewriter,
+                                  mlir::cir::LoopOpKind kind) const {
     auto *currentBlock = rewriter.getInsertionBlock();
     auto *continueBlock =
         rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
@@ -150,16 +149,24 @@ public:
     if (fetchCondRegionYields(condRegion, yieldToBody, yieldToCont).failed())
       return loopOp.emitError("failed to fetch yields in cond region");
 
-    // Fetch required info from the condition region.
+    // Fetch required info from the body region.
     auto &bodyRegion = loopOp.getBody();
     auto &bodyFrontBlock = bodyRegion.front();
     auto bodyYield =
         dyn_cast<mlir::cir::YieldOp>(bodyRegion.back().getTerminator());
     assert(bodyYield && "unstructured while loops are NYI");
 
+    // Fetch required info from the step region.
+    auto &stepRegion = loopOp.getStep();
+    auto &stepFrontBlock = stepRegion.front();
+    auto stepYield =
+        dyn_cast<mlir::cir::YieldOp>(stepRegion.back().getTerminator());
+
     // Move loop op region contents to current CFG.
     rewriter.inlineRegionBefore(condRegion, continueBlock);
     rewriter.inlineRegionBefore(bodyRegion, continueBlock);
+    if (kind == LoopKind::For) // Ignore step if not a for-loop.
+      rewriter.inlineRegionBefore(stepRegion, continueBlock);
 
     // Set loop entry point to condition or to body in do-while cases.
     rewriter.setInsertionPointToEnd(currentBlock);
@@ -174,9 +181,16 @@ public:
     rewriter.setInsertionPoint(yieldToBody);
     rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldToBody, &bodyFrontBlock);
 
-    // Branch from body to condition.
+    // Branch from body to condition or to step on for-loop cases.
     rewriter.setInsertionPoint(bodyYield);
-    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(bodyYield, &condFrontBlock);
+    auto &bodyExit = (kind == LoopKind::For ? stepFrontBlock : condFrontBlock);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(bodyYield, &bodyExit);
+
+    // Is a for loop: branch from step to condition.
+    if (kind == LoopKind::For) {
+      rewriter.setInsertionPoint(stepYield);
+      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(stepYield, &condFrontBlock);
+    }
 
     // Remove the loop op.
     rewriter.eraseOp(loopOp);
@@ -188,90 +202,10 @@ public:
                   mlir::ConversionPatternRewriter &rewriter) const override {
     switch (loopOp.getKind()) {
     case LoopKind::For:
-      break;
     case LoopKind::While:
     case LoopKind::DoWhile:
-      return rewriteWhileLoop(loopOp, adaptor, rewriter, loopOp.getKind());
+      return rewriteLoop(loopOp, adaptor, rewriter, loopOp.getKind());
     }
-
-    auto loc = loopOp.getLoc();
-
-    auto *currentBlock = rewriter.getInsertionBlock();
-    auto *remainingOpsBlock =
-        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
-    mlir::Block *continueBlock;
-    if (loopOp->getResults().size() == 0)
-      continueBlock = remainingOpsBlock;
-    else
-      llvm_unreachable("NYI");
-
-    auto &condRegion = loopOp.getCond();
-    auto &condFrontBlock = condRegion.front();
-
-    auto &stepRegion = loopOp.getStep();
-    auto &stepFrontBlock = stepRegion.front();
-    auto &stepBackBlock = stepRegion.back();
-
-    auto &bodyRegion = loopOp.getBody();
-    auto &bodyFrontBlock = bodyRegion.front();
-    auto &bodyBackBlock = bodyRegion.back();
-
-    bool rewroteContinue = false;
-    bool rewroteBreak = false;
-
-    for (auto &bb : condRegion) {
-      if (rewroteContinue && rewroteBreak)
-        break;
-
-      if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(bb.getTerminator())) {
-        rewriter.setInsertionPointToEnd(yieldOp->getBlock());
-        if (yieldOp.getKind().has_value()) {
-          switch (yieldOp.getKind().value()) {
-          case mlir::cir::YieldOpKind::Break:
-          case mlir::cir::YieldOpKind::Fallthrough:
-          case mlir::cir::YieldOpKind::NoSuspend:
-            llvm_unreachable("None of these should be present");
-          case mlir::cir::YieldOpKind::Continue:;
-            rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-                yieldOp, yieldOp.getArgs(), &stepFrontBlock);
-            rewroteContinue = true;
-          }
-        } else {
-          rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-              yieldOp, yieldOp.getArgs(), continueBlock);
-          rewroteBreak = true;
-        }
-      }
-    }
-
-    rewriter.inlineRegionBefore(condRegion, continueBlock);
-
-    rewriter.inlineRegionBefore(stepRegion, continueBlock);
-
-    if (auto stepYieldOp =
-            dyn_cast<mlir::cir::YieldOp>(stepBackBlock.getTerminator())) {
-      rewriter.setInsertionPointToEnd(stepYieldOp->getBlock());
-      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-          stepYieldOp, stepYieldOp.getArgs(), &bodyFrontBlock);
-    } else {
-      llvm_unreachable("What are we terminating with?");
-    }
-
-    rewriter.inlineRegionBefore(bodyRegion, continueBlock);
-
-    if (auto bodyYieldOp =
-            dyn_cast<mlir::cir::YieldOp>(bodyBackBlock.getTerminator())) {
-      rewriter.setInsertionPointToEnd(bodyYieldOp->getBlock());
-      rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(
-          bodyYieldOp, bodyYieldOp.getArgs(), &condFrontBlock);
-    } else {
-      llvm_unreachable("What are we terminating with?");
-    }
-
-    rewriter.setInsertionPointToEnd(currentBlock);
-    rewriter.create<mlir::cir::BrOp>(loc, mlir::ValueRange(), &condFrontBlock);
-
-    rewriter.replaceOp(loopOp, continueBlock->getArguments());
 
     return mlir::success();
   }
