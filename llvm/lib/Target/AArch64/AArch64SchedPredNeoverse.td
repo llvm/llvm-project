@@ -18,14 +18,6 @@ def NeoverseNoLSL : MCSchedPredicate<
                       CheckAll<[CheckShiftLSL,
                                 CheckShiftBy0]>>;
 
-// Check if the fourth operand of an instruction is WZR or XZR
-def NeoverseReg3IsZero : MCSchedPredicate<
-                           CheckAll<
-                             [CheckIsRegOperand<3>,
-                              CheckAny<
-                                [CheckRegOperand<3, WZR>,
-                                 CheckRegOperand<3, XZR>]>]>>;
-
 // Identify LDR/STR H/Q-form scaled (and potentially extended) FP instructions
 def NeoverseHQForm : MCSchedPredicate<
                        CheckAll<[
