@@ -1071,11 +1071,13 @@ struct AAPointerInfoImpl
     SmallVector<std::pair<const Access *, bool>, 8> InterferingAccesses;
 
     Function &Scope = *I.getFunction();
-    const auto *NoSyncAA = A.getAAFor<AANoSync>(
-        QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
+    bool IsKnownNoSync;
+    bool IsAssumedNoSync = AA::hasAssumedIRAttr<Attribute::NoSync>(
+        A, &QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL,
+        IsKnownNoSync);
     const auto *ExecDomainAA = A.lookupAAFor<AAExecutionDomain>(
         IRPosition::function(Scope), &QueryingAA, DepClassTy::NONE);
-    bool AllInSameNoSyncFn = NoSyncAA && NoSyncAA->isAssumedNoSync();
+    bool AllInSameNoSyncFn = IsAssumedNoSync;
     bool InstIsExecutedByInitialThreadOnly =
         ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I);
     bool InstIsExecutedInAlignedRegion =
