@@ -1865,6 +1865,12 @@ public:
     return buildInstr(TargetOpcode::G_FPTOSI, {Dst}, {Src0});
   }
 
+  /// Build and insert \p Dst = G_FRINT \p Src0, \p Src1
+  MachineInstrBuilder buildFRint(const DstOp &Dst, const SrcOp &Src0,
+                                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FRINT, {Dst}, {Src0}, Flags);
+  }
+
   /// Build and insert \p Res = G_SMIN \p Op0, \p Op1
   MachineInstrBuilder buildSMin(const DstOp &Dst, const SrcOp &Src0,
                                 const SrcOp &Src1) {

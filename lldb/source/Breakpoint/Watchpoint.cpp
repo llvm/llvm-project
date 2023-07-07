@@ -41,14 +41,14 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
         target.GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
-                     "Failed to set type.");
+                     "Failed to set type: {0}");
     } else {
       if (auto ts = *type_system_or_err)
         m_type =
             ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
       else
         LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
-                       "Failed to set type. Typesystem is no longer live.");
+                       "Failed to set type: Typesystem is no longer live: {0}");
     }
   }
 

@@ -1468,18 +1468,18 @@ define [2 x i8] @PR58546(<16 x float> %a0) {
 define i8 @PR59526(<8 x i32> %a, <8 x i32> %b, ptr %mask) {
 ; SSE-LABEL: PR59526:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
 ; SSE-NEXT:    pcmpeqd %xmm3, %xmm1
-; SSE-NEXT:    movdqu (%rdi), %xmm2
-; SSE-NEXT:    movdqu 16(%rdi), %xmm3
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    movdqu (%rdi), %xmm1
+; SSE-NEXT:    movdqu 16(%rdi), %xmm2
+; SSE-NEXT:    pxor %xmm3, %xmm3
 ; SSE-NEXT:    pxor %xmm4, %xmm4
-; SSE-NEXT:    pxor %xmm5, %xmm5
-; SSE-NEXT:    pcmpgtd %xmm2, %xmm5
-; SSE-NEXT:    pand %xmm0, %xmm5
-; SSE-NEXT:    pcmpgtd %xmm3, %xmm4
-; SSE-NEXT:    pand %xmm1, %xmm4
-; SSE-NEXT:    packssdw %xmm4, %xmm5
-; SSE-NEXT:    pmovmskb %xmm5, %eax
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm4
+; SSE-NEXT:    pcmpgtd %xmm1, %xmm3
+; SSE-NEXT:    packssdw %xmm4, %xmm3
+; SSE-NEXT:    pand %xmm0, %xmm3
+; SSE-NEXT:    pmovmskb %xmm3, %eax
 ; SSE-NEXT:    testl %eax, %eax
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq

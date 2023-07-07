@@ -1360,7 +1360,7 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
             target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
         if (auto err = c_type_system_or_err.takeError()) {
           LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(err),
-                         "Unable to guess value for given address");
+                         "Unable to guess value for given address: {0}");
           return ValueObjectSP();
         } else {
           auto ts = *c_type_system_or_err;
