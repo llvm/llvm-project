@@ -411,16 +411,19 @@ S:
   ret void
 }
 
-; FIXME: The load of QB3 should not be simplified to 0.
+; The load of QB3 should not be simplified to 0.
 define void @kernel4b3(i1 %c) "kernel" {
 ; TUNIT-LABEL: define {{[^@]+}}@kernel4b3
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    store i32 0, ptr addrspace(3) @QB3, align 4
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
 ; TUNIT-NEXT:    call void @sync()
-; TUNIT-NEXT:    call void @use1(i32 0) #[[ATTR7]]
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QB3, align 4
+; TUNIT-NEXT:    call void @use1(i32 [[V]]) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
+; TUNIT-NEXT:    store i32 2, ptr addrspace(3) @QB3, align 4
 ; TUNIT-NEXT:    call void @use1(i32 0) #[[ATTR7]]
 ; TUNIT-NEXT:    call void @use1(i32 1) #[[ATTR7]]
 ; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
@@ -429,12 +432,15 @@ define void @kernel4b3(i1 %c) "kernel" {
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@kernel4b3
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    store i32 0, ptr addrspace(3) @QB3, align 4
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
 ; CGSCC-NEXT:    call void @sync()
-; CGSCC-NEXT:    call void @use1(i32 0) #[[ATTR6]]
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QB3, align 4
+; CGSCC-NEXT:    call void @use1(i32 [[V]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
+; CGSCC-NEXT:    store i32 2, ptr addrspace(3) @QB3, align 4
 ; CGSCC-NEXT:    call void @use1(i32 0) #[[ATTR6]]
 ; CGSCC-NEXT:    call void @use1(i32 1) #[[ATTR6]]
 ; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
