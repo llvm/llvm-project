@@ -101,6 +101,13 @@ struct MemsetRange {
   /// Alignment - The known alignment of the first store.
   unsigned Alignment;
 
+  /// MaxAlignment - The maximum known alignment of any store in the range
+  unsigned MaxAlignment;
+
+  /// MaxAlignmentOffset - The offset of the maximally-aligned store
+  /// from the first
+  unsigned MaxAlignmentOffset;
+
   /// TheStores - The actual stores that make up this range.
   SmallVector<Instruction*, 16> TheStores;
 
@@ -110,8 +117,10 @@ struct MemsetRange {
 } // end anonymous namespace
 
 bool MemsetRange::isProfitableToUseMemset(const DataLayout &DL) const {
-  // If we found more than 4 stores to merge or 16 bytes, use memset.
-  if (TheStores.size() >= 4 || End-Start >= 16) return true;
+  // If the merged range will take more than 16 bytes, use
+  // memset. This avoids the more expensive calculation of merged
+  // stores.
+  if (End-Start >= 16) return true;
 
   // If there is nothing to merge, don't do anything.
   if (TheStores.size() < 2) return false;
@@ -126,29 +135,47 @@ bool MemsetRange::isProfitableToUseMemset(const DataLayout &DL) const {
   // together if it wants to.
   if (TheStores.size() == 2) return false;
 
-  // If we have fewer than 8 stores, it can still be worthwhile to do this.
-  // For example, merging 4 i8 stores into an i32 store is useful almost always.
-  // However, merging 2 32-bit stores isn't useful on a 32-bit architecture (the
-  // memset will be split into 2 32-bit stores anyway) and doing so can
-  // pessimize the llvm optimizer.
+  // Estimate the number of stores that will be used to implement a
+  // memset range after the DAG Combiner has merged naturally-aligned
+  // stores.
   //
-  // Since we don't have perfect knowledge here, make some assumptions: assume
-  // the maximum GPR width is the same size as the largest legal integer
-  // size. If so, check to see whether we will end up actually reducing the
-  // number of stores used.
-  unsigned Bytes = unsigned(End-Start);
+  // This takes account of partial alignment information, which would
+  // be discarded by converting to a memset. For example:
+  //   struct A {
+  //     char a, b, c, d, e, f, g, h;
+  //     int counter;
+  //   } *Ap;
+  //    Ap->b = Ap->c = Ap->d = Ap->e = Ap->f = Ap->g = Ap->h = 0;
+  //
+  // The overall structure alignment is 32-bits. Naively, we see 7
+  // single-byte stores, the first of which, b, is only known to be
+  // byte-aligned. However, since most architectures support 32-bit and
+  // 16-bit stores, these can be merged by DAGCombine into only 3
+  // naturally-aligned stores:
+  //   store<(store (s8) into %ir.b...)> t0, Constant:i8<0>...
+  //   store<(store (s16) into %ir.c), trunc to i16> t0, Constant:i32<0>...
+  //   store<(store (s32) into %ir.e)> t0, Constant:i32<0>...
+
+  int Offset = Start;
+  int OffsetFromMaxAlign = MaxAlignment - MaxAlignmentOffset;
+  int StoreCount = 0;
   unsigned MaxIntSize = DL.getLargestLegalIntTypeSizeInBits() / 8;
-  if (MaxIntSize == 0)
-    MaxIntSize = 1;
-  unsigned NumPointerStores = Bytes / MaxIntSize;
 
-  // Assume the remaining bytes if any are done a byte at a time.
-  unsigned NumByteStores = Bytes % MaxIntSize;
-
-  // If we will reduce the # stores (according to this heuristic), do the
-  // transformation.  This encourages merging 4 x i8 -> i32 and 2 x i16 -> i32
-  // etc.
-  return TheStores.size() > NumPointerStores+NumByteStores;
+  while (Offset < End) {
+    unsigned StoreSize = 1;
+    for (unsigned NextStoreSize = 2;
+	 NextStoreSize <= MaxIntSize && End - Offset >= NextStoreSize;
+	 NextStoreSize *= 2) {
+      uint64_t StoreAlign = (DL.getABIIntegerTypeAlignment(8 * NextStoreSize)
+			     .value());
+      if (OffsetFromMaxAlign % StoreAlign == 0)
+	StoreSize = NextStoreSize;
+    }
+    OffsetFromMaxAlign += StoreSize;
+    Offset += StoreSize;
+    StoreCount++;
+  }
+  return StoreCount > 4;
 }
 
 namespace {
@@ -214,6 +241,8 @@ void MemsetRanges::addRange(int64_t Start, int64_t Size, Value *Ptr,
     R.End          = End;
     R.StartPtr     = Ptr;
     R.Alignment    = Alignment;
+    R.MaxAlignment = Alignment;
+    R.MaxAlignmentOffset = 0;
     R.TheStores.push_back(Inst);
     return;
   }
@@ -236,6 +265,14 @@ void MemsetRanges::addRange(int64_t Start, int64_t Size, Value *Ptr,
     I->Start = Start;
     I->StartPtr = Ptr;
     I->Alignment = Alignment;
+    I->MaxAlignmentOffset = (I->MaxAlignmentOffset + Size) % I->MaxAlignment;
+  }
+
+  // Does this store provide a better alignment than we have
+  // previously seen for this range?
+  if (Alignment > I->MaxAlignment) {
+    I->MaxAlignment = Alignment;
+    I->MaxAlignmentOffset = Start - I->Start;
   }
 
   // Now we know that Start <= I->End and Start >= I->Start (so the startpoint
