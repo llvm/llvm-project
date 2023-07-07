@@ -125,7 +125,7 @@ transform.sequence failures(propagate) {
 }
 ```
 
-The transformation returns two handles, as indicated in its [documentation](https://mlir.llvm.org/docs/Dialects/Transform/#transformstructuredtile_to_forall_op-mlirtransformtiletoforallop):
+The transformation returns two handles, as indicated in its [documentation](https://mlir.llvm.org/docs/Dialects/Transform/#transformstructuredtile_to_forall_op-transformtiletoforallop):
 
 *   A handle to the `scf.forall` “multi-for” loop around tensors.
 *   A handle to `linalg.generic` operating on the subset of the original data.
