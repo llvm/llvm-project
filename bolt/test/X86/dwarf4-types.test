@@ -47,7 +47,7 @@
 # POSTCHECKTU: DW_TAG_pointer_type [4]
 # POSTCHECKTU-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0051 => {0x00000051} "char")
 # POSTCHECKTU: DW_TAG_base_type [5]
-# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x0000000e] = "char")
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "char")
 
 # POSTCHECKTU: version = 0x0004
 # POSTCHECKTU-SAME: type_signature = 0x49dc260088be7e56
@@ -61,4 +61,4 @@
 # POSTCHECKTU: DW_TAG_pointer_type [4]
 # POSTCHECKTU-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0045 => {0x0000009e} "char")
 # POSTCHECKTU: DW_TAG_base_type [5]
-# POSTCHECKTU-NEXT: DW_AT_name [DW_FORM_strp] ( .debug_str[0x0000000e] = "char")
+# POSTCHECKTU-NEXT: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "char")

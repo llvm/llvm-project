@@ -32,16 +32,16 @@
 # POSTCHECKTU: version = 0x0004
 # POSTCHECKTU: DW_TAG_type_unit
 # POSTCHECKTU: DW_TAG_structure_type
-# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x00000020] = "Foo3a")
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "Foo3a")
 # POSTCHECKTU: version = 0x0004
 # POSTCHECKTU: DW_TAG_type_unit
 # POSTCHECKTU: DW_TAG_structure_type
-# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x00000035] = "Foo4")
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "Foo4")
 # POSTCHECKTU: version = 0x0004
 # POSTCHECKTU: DW_TAG_type_unit
 # POSTCHECKTU: DW_TAG_structure_type
-# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x0000004f] = "Foo4a")
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "Foo4a")
 # POSTCHECKTU: version = 0x0004
 # POSTCHECKTU: DW_TAG_type_unit
 # POSTCHECKTU: DW_TAG_structure_type
-# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x0000000e] = "Foo5")
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "Foo5")
