@@ -231,3 +231,28 @@ int llvm_get_di_tag(void) {
 
   return 0;
 }
+
+int llvm_di_type_get_name(void) {
+  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
+
+  LLVMDIBuilderRef Builder = LLVMCreateDIBuilder(M);
+  const char Filename[] = "metadata.c";
+  const char Directory[] = ".";
+  LLVMMetadataRef File = LLVMDIBuilderCreateFile(
+      Builder, Filename, strlen(Filename), Directory, strlen(Directory));
+  const char Name[] = "TestClass";
+  LLVMMetadataRef Struct = LLVMDIBuilderCreateStructType(
+      Builder, File, Name, strlen(Name), File, 42, 64, 0,
+      LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
+
+  size_t Len;
+  const char *TypeName = LLVMDITypeGetName(Struct, &Len);
+  assert(Len == strlen(Name));
+  assert(strncmp(TypeName, Name, Len) == 0);
+  (void)TypeName;
+
+  LLVMDisposeDIBuilder(Builder);
+  LLVMDisposeModule(M);
+
+  return 0;
+}
