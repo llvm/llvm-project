@@ -439,7 +439,7 @@ struct AssociateOpConversion
     // that was bufferized, re-use the storage.
     // Otherwise, create a temp and assign the storage to it.
     if (!isTrivialValue && allOtherUsesAreSafeForAssociate(
-                               associate.getSource(), associate.getOperation(),
+                               adaptor.getSource(), associate.getOperation(),
                                getEndAssociate(associate))) {
       // Re-use hlfir.expr buffer if this is the only use of the hlfir.expr
       // outside of the hlfir.destroy. Take on the cleaning-up responsibility

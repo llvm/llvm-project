@@ -239,6 +239,55 @@ func.func @test_shape_of(%arg0: !fir.ref<!fir.array<4x3xi32>>) {
 // CHECK:           return
 // CHECK:         }
 
+// The hlfir.associate op is cloned when the elemental is bufferized into the
+// fir.do_loop. When the associate op conversion is run, if the source of the
+// assoicate is used directly (not accessing the bufferized version through
+// the adaptor) then both the associate inside the elemental and the associate
+// inside the fir.do_loop are found as uses. Therefore being erroneously
+// flagged as an associate with more than one use
+func.func @test_cloned_associate() {
+  %false = arith.constant false
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = fir.alloca !fir.char<1>
+  %2 = fir.shape %c10 : (index) -> !fir.shape<1>
+  %4 = hlfir.as_expr %0 move %false : (!fir.ref<!fir.char<1>>, i1) -> !hlfir.expr<!fir.char<1>>
+  %5 = hlfir.elemental %2 unordered : (!fir.shape<1>) -> !hlfir.expr<10x!fir.logical<4>> {
+  ^bb0(%arg0: index):
+    %8:3 = hlfir.associate %4 typeparams %c1 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1>>, index) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>, i1)
+    hlfir.end_associate %8#1, %8#2 : !fir.ref<!fir.char<1>>, i1
+    %15 = fir.convert %false : (i1) -> !fir.logical<4>
+    hlfir.yield_element %15 : !fir.logical<4>
+  }
+  hlfir.destroy %5 : !hlfir.expr<10x!fir.logical<4>>
+  hlfir.destroy %4 : !hlfir.expr<!fir.char<1>>
+  return
+}
+// CHECK-LABEL:   func.func @test_cloned_associate() {
+// CHECK:           %[[VAL_0:.*]] = arith.constant false
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.char<1>
+// CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
+// CHECK:           %[[VAL_5:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1>>, i1>
+// CHECK:           %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_0]], [1 : index] : (tuple<!fir.ref<!fir.char<1>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1>>, i1>
+// CHECK:           %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_3]], [0 : index] : (tuple<!fir.ref<!fir.char<1>>, i1>, !fir.ref<!fir.char<1>>) -> tuple<!fir.ref<!fir.char<1>>, i1>
+// CHECK:           %[[VAL_8:.*]] = fir.allocmem !fir.array<10x!fir.logical<4>> {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_4]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<10x!fir.logical<4>>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10x!fir.logical<4>>>, !fir.heap<!fir.array<10x!fir.logical<4>>>)
+// CHECK:           %[[VAL_10:.*]] = arith.constant true
+// CHECK:           %[[VAL_11:.*]] = arith.constant 1 : index
+// CHECK:           fir.do_loop %[[VAL_12:.*]] = %[[VAL_11]] to %[[VAL_2]] step %[[VAL_11]] unordered {
+// CHECK:             %[[VAL_13:.*]] = fir.convert %[[VAL_0]] : (i1) -> !fir.logical<4>
+// CHECK:             %[[VAL_14:.*]] = hlfir.designate %[[VAL_9]]#0 (%[[VAL_12]])  : (!fir.heap<!fir.array<10x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
+// CHECK:             hlfir.assign %[[VAL_13]] to %[[VAL_14]] temporary_lhs : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+// CHECK:           }
+// CHECK:           %[[VAL_15:.*]] = fir.undefined tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>
+// CHECK:           %[[VAL_16:.*]] = fir.insert_value %[[VAL_15]], %[[VAL_10]], [1 : index] : (tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>, i1) -> tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>
+// CHECK:           %[[VAL_17:.*]] = fir.insert_value %[[VAL_16]], %[[VAL_9]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>, !fir.heap<!fir.array<10x!fir.logical<4>>>) -> tuple<!fir.heap<!fir.array<10x!fir.logical<4>>>, i1>
+// CHECK:           fir.freemem %[[VAL_9]]#1 : !fir.heap<!fir.array<10x!fir.logical<4>>>
+// CHECK:           return
+// CHECK:         }
+
 func.func private @take_i4(!fir.ref<i32>)
 func.func private @take_r4(!fir.ref<f32>)
 func.func private @take_l4(!fir.ref<!fir.logical<4>>)
