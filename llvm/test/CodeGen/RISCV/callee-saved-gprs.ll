@@ -338,8 +338,7 @@ define void @callee() nounwind {
 ; RV32IZCMP-NEXT:    sw a0, %lo(var+4)(a7)
 ; RV32IZCMP-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
 ; RV32IZCMP-NEXT:    sw a0, %lo(var)(a7)
-; RV32IZCMP-NEXT:    cm.pop {ra, s0-s11}, 96
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 96
 ;
 ; RV32IZCMP-WITH-FP-LABEL: callee:
 ; RV32IZCMP-WITH-FP:       # %bb.0:
@@ -758,8 +757,7 @@ define void @callee() nounwind {
 ; RV64IZCMP-NEXT:    sw a0, %lo(var+4)(a7)
 ; RV64IZCMP-NEXT:    ld a0, 40(sp) # 8-byte Folded Reload
 ; RV64IZCMP-NEXT:    sw a0, %lo(var)(a7)
-; RV64IZCMP-NEXT:    cm.pop {ra, s0-s11}, 160
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 160
 ;
 ; RV64IZCMP-WITH-FP-LABEL: callee:
 ; RV64IZCMP-WITH-FP:       # %bb.0:
@@ -1287,8 +1285,7 @@ define void @caller() nounwind {
 ; RV32IZCMP-NEXT:    lw a0, 92(sp) # 4-byte Folded Reload
 ; RV32IZCMP-NEXT:    sw a0, %lo(var)(s0)
 ; RV32IZCMP-NEXT:    addi sp, sp, 48
-; RV32IZCMP-NEXT:    cm.pop {ra, s0-s11}, 112
-; RV32IZCMP-NEXT:    ret
+; RV32IZCMP-NEXT:    cm.popret {ra, s0-s11}, 112
 ;
 ; RV32IZCMP-WITH-FP-LABEL: caller:
 ; RV32IZCMP-WITH-FP:       # %bb.0:
@@ -1841,8 +1838,7 @@ define void @caller() nounwind {
 ; RV64IZCMP-NEXT:    ld a0, 168(sp) # 8-byte Folded Reload
 ; RV64IZCMP-NEXT:    sw a0, %lo(var)(s0)
 ; RV64IZCMP-NEXT:    addi sp, sp, 128
-; RV64IZCMP-NEXT:    cm.pop {ra, s0-s11}, 160
-; RV64IZCMP-NEXT:    ret
+; RV64IZCMP-NEXT:    cm.popret {ra, s0-s11}, 160
 ;
 ; RV64IZCMP-WITH-FP-LABEL: caller:
 ; RV64IZCMP-WITH-FP:       # %bb.0:
