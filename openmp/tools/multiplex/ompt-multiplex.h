@@ -142,6 +142,8 @@ static void ompt_multiplex_free_data_pair(ompt_data_t *data_pointer) {
 static ompt_data_t *ompt_multiplex_get_own_ompt_data(ompt_data_t *data) {
   if (!data)
     return NULL;
+  if (!data->ptr)
+    return NULL;
   ompt_multiplex_data_pair_t *data_pair =
       (ompt_multiplex_data_pair_t *)data->ptr;
   return &(data_pair->own_data);
@@ -149,6 +151,8 @@ static ompt_data_t *ompt_multiplex_get_own_ompt_data(ompt_data_t *data) {
 
 static ompt_data_t *ompt_multiplex_get_client_ompt_data(ompt_data_t *data) {
   if (!data)
+    return NULL;
+  if (!data->ptr)
     return NULL;
   ompt_multiplex_data_pair_t *data_pair =
       (ompt_multiplex_data_pair_t *)data->ptr;
