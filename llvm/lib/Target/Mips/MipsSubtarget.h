@@ -338,7 +338,7 @@ public:
   bool useIndirectJumpsHazard() const {
     return UseIndirectJumpsHazard && hasMips32r2();
   }
-  bool useSmallSection() const { return UseSmallSection; }
+  bool useSmallSection() const { return UseSmallSection && !hasNanoMips(); }
 
   bool hasStandardEncoding() const { return !InMips16Mode && !InMicroMipsMode; }
 

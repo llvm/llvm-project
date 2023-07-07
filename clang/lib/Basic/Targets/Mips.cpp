@@ -309,7 +309,62 @@ bool MipsTargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
   // P32 ABI is only supported on NanoMIPS
   if (getTriple().isNanoMips() != (ABI == "p32")) {
     Diags.Report(diag::err_target_unsupported_abi_for_triple)
-      << ABI << getTriple().str();
+        << ABI << getTriple().str();
+    return false;
+  }
+
+  // Validate NanoMips target features.
+  if (getTriple().isNanoMips()) {
+    // NanoMips supports LE only.
+    if (BigEndian) {
+      Diags.Report(diag::err_opt_not_valid_on_target) << "-BE" << CPU;
+      return false;
+    }
+
+    // NanoMips supports soft float only.
+    if (FloatABI == HardFloat) {
+      Diags.Report(diag::err_target_unsupported_abi_for_triple)
+          << "hard-float" << getTriple().str();
+      return false;
+    }
+
+    // NanoMips supports p32 ABI only.
+    if (ABI != "p32") {
+      Diags.Report(diag::err_target_unsupported_abi_for_triple)
+          << ABI << getTriple().str();
+      return false;
+    }
+
+    // NanoMips does not support dsp.
+    if (DspRev != NoDSP) {
+      Diags.Report(diag::err_opt_not_valid_on_target) << "-mdsp/-mdspr2" << CPU;
+      return false;
+    }
+
+    // NanoMips does not support MSA.
+    if (HasMSA) {
+      Diags.Report(diag::err_opt_not_valid_on_target) << "-mmsa" << CPU;
+      return false;
+    }
+
+    // NanoMips does not support mips16.
+    if (IsMips16) {
+      Diags.Report(diag::err_opt_not_valid_on_target) << "-mips16" << CPU;
+      return false;
+    }
+
+    // NanoMips does not support micromips.
+    if (IsMicromips) {
+      Diags.Report(diag::err_target_unsupported_cpu_for_micromips) << CPU;
+      return false;
+    }
+
+    // NanoMips does not support indirect jump hazards.
+    if (UseIndirectJumpHazard) {
+      Diags.Report(diag::err_feature_not_valid_on_target)
+          << "use-indirect-jump-hazard" << CPU;
+      return false;
+    }
   }
 
   return true;

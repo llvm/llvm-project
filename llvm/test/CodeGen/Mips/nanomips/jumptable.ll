@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=nanomips -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=nanomips -mattr=disable-jump-table-opt -asm-show-inst -verify-machineinstrs < %s | FileCheck %s
 
 define i32 @test_jumptable(i32 %in) {
   switch i32 %in, label %def [
@@ -8,11 +8,11 @@ define i32 @test_jumptable(i32 %in) {
     i32 4, label %lbl4
   ]
 
-; CHECK: li $a1
-; CHECK: Li_NM
+; CHECK: la $a1
+; CHECK: LA_NM
 ; CHECK: lwxs $a0, $a0($a1)
 ; CHECK: LWXS_NM
-; CHECK: jrc $a0
+; CHECK: jrc $ra
 ; CHECK: JRC_NM
 
 def:

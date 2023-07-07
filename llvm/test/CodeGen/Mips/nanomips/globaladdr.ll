@@ -7,7 +7,7 @@ define i32 @load_global_val() {
 ; CHECK-LABEL: load_global_val
 ; CHECK: lwpc $a0, single
 ; CHECK-GP-LABEL: load_global_val
-; CHECK-GP: lw $a0, %gp_rel(single)($gp)
+; CHECK-GP: lwpc $a0, single
   %r = load i32, i32* @single
   ret i32 %r
 }
@@ -16,7 +16,7 @@ define i32* @load_global_addr() {
 ; CHECK-LABEL: load_global_addr
 ; CHECK: la $a0, single
 ; CHECK-GP-LABEL: load_global_addr
-; CHECK-GP: addiu $a0, $gp, %gp_rel(single)
+; CHECK-GP: la $a0, single
   ret i32* @single
 }
 

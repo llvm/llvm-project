@@ -625,13 +625,14 @@ void MipsSEInstrInfo::adjustStackPtr(unsigned SP, int64_t Amount,
                                      MachineBasicBlock::iterator I) const {
   MipsABIInfo ABI = Subtarget.getABI();
   DebugLoc DL;
-  if (I != MBB.end()) DL = I->getDebugLoc();
+  bool IsNanoMips = Subtarget.hasNanoMips();
+  if ((I != MBB.end()) && IsNanoMips)
+    DL = I->getDebugLoc();
   unsigned ADDiu = ABI.GetPtrAddiuOp();
 
   if (Amount == 0)
     return;
 
-  bool IsNanoMips = Subtarget.hasNanoMips();
   if ((isInt<16>(Amount) && !IsNanoMips) || (isInt<32>(Amount) && IsNanoMips)) {
     // addi sp, sp, amount
     BuildMI(MBB, I, DL, get(ADDiu), SP).addReg(SP).addImm(Amount);

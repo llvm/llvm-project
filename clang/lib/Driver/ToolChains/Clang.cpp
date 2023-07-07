@@ -2001,6 +2001,97 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
       }
     }
   }
+
+  // NanoMips does not support SmallData, so force it to 0, since the default is
+  // 8 for Mips architectures.
+  if (Triple.isNanoMips()) {
+    CmdArgs.push_back("-msmall-data-limit");
+    CmdArgs.push_back("0");
+
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-mips-ssection-threshold=0");
+  }
+
+  // In the case of NanoMips, warn about using all MIPS legacy options that are
+  // supported by LLVM.
+  if (Triple.isNanoMips()) {
+    // -mabicalls option.
+    if (auto *A = Args.getLastArg(options::OPT_mabicalls,
+                                  options::OPT_mno_abicalls)) {
+      if (A->getOption().matches(options::OPT_mabicalls)) {
+        D.Diag(diag::err_opt_not_valid_on_target)
+            << A->getOption().getName() << CPUName;
+      }
+    }
+
+    // -mbranch-likely option.
+    if (auto *A = Args.getLastArg(options::OPT_mbranch_likely,
+                                  options::OPT_mno_branch_likely)) {
+      if (A->getOption().matches(options::OPT_mbranch_likely)) {
+        D.Diag(diag::err_opt_not_valid_on_target)
+            << A->getOption().getName() << CPUName;
+      }
+    }
+
+    // -mfp32, mfpxx and mfp64 options.
+    if (auto *A = Args.getLastArg(options::OPT_mfp32, options::OPT_mfpxx,
+                                  options::OPT_mfp64)) {
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << A->getOption().getName() << CPUName;
+    }
+
+    // -mabs= option.
+    if (auto *A = Args.getLastArg(options::OPT_mabs_EQ)) {
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << A->getOption().getName() << CPUName;
+    }
+
+    // -mnan= option.
+    if (auto *A = Args.getLastArg(options::OPT_mnan_EQ)) {
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << A->getOption().getName() << CPUName;
+    }
+
+    // -mips16 option.
+    if (auto *A =
+            Args.getLastArg(options::OPT_mips16, options::OPT_mno_mips16)) {
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << A->getOption().getName() << CPUName;
+    }
+
+    // -mmicromips option.
+    if (auto *A = Args.getLastArg(options::OPT_mmicromips,
+                                  options::OPT_mno_micromips)) {
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << A->getOption().getName() << CPUName;
+    }
+
+    // -mrelax-pic-calls option.
+    if (auto *A = Args.getLastArg(options::OPT_mrelax_pic_calls,
+                                  options::OPT_mno_relax_pic_calls)) {
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << A->getOption().getName() << CPUName;
+    }
+
+    // -mxgot option.
+    if (auto *A = Args.getLastArg(options::OPT_mxgot, options::OPT_mno_xgot)) {
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << A->getOption().getName() << CPUName;
+    }
+
+    // -modd-spreg option.
+    if (auto *A = Args.getLastArg(options::OPT_modd_spreg,
+                                  options::OPT_mno_odd_spreg)) {
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << A->getOption().getName() << CPUName;
+    }
+
+    // -mcompact-branches= option.
+    if (auto *A = Args.getLastArg(options::OPT_mcompact_branches_EQ)) {
+      D.Diag(diag::err_opt_not_valid_on_target)
+          << A->getOption().getName() << CPUName;
+    }
+  }
 }
 
 void Clang::AddPPCTargetArgs(const ArgList &Args,

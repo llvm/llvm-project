@@ -100,6 +100,9 @@ IsGlobalInSmallSectionImpl(const GlobalObject *GO,
   if (!Subtarget.useSmallSection())
     return false;
 
+  assert(!Subtarget.hasNanoMips() &&
+         "NanoMips does not support small data section");
+
   // Only global variables, not functions.
   const GlobalVariable *GVA = dyn_cast<GlobalVariable>(GO);
   if (!GVA)

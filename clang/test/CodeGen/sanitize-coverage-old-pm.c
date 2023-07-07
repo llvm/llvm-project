@@ -6,10 +6,9 @@
 // RUN: %clang %s -target x86_64-unknown-linux-gnu -emit-llvm -S -fsanitize=undefined  -fsanitize-coverage=trace-pc,trace-cmp -o - -flegacy-pass-manager | FileCheck %s --check-prefixes=CHECK,UBSAN
 //
 // Host armv7 is currently unsupported: https://bugs.llvm.org/show_bug.cgi?id=46117
-// UNSUPPORTED: armv7, armv7l, thumbv7, armv8l
+// UNSUPPORTED: armv7, armv7l, thumbv7, armv8l, nanomips
 // The same issue also occurs on a riscv32 host.
-// XFAIL: riscv32, nanomips
->>>>>>> 2c4958ebdae8 (Disable sanitize-coverage-old-pm.c for nanoMIPS)
+// XFAIL: riscv32
 
 int x[10];
 
