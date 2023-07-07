@@ -100,6 +100,15 @@ static DecodeStatus DecodeFCSRRegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeLSX128RegisterClass(MCInst &Inst, uint64_t RegNo,
+                                              uint64_t Address,
+                                              const MCDisassembler *Decoder) {
+  if (RegNo >= 32)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(LoongArch::VR0 + RegNo));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N, int P = 0>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address,
