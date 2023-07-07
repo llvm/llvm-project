@@ -1282,10 +1282,12 @@ static LaneBitmask getInstReadLaneMask(const MachineRegisterInfo &MRI,
 /// VirtReg.
 static bool readsLaneSubset(const MachineRegisterInfo &MRI,
                             const MachineInstr *MI, const LiveInterval &VirtReg,
-                            const TargetRegisterInfo *TRI, SlotIndex Use) {
+                            const TargetRegisterInfo *TRI, SlotIndex Use,
+                            const TargetInstrInfo *TII) {
   // Early check the common case.
-  if (MI->isCopy() &&
-      MI->getOperand(0).getSubReg() == MI->getOperand(1).getSubReg())
+  auto DestSrc = TII->isCopyInstr(*MI);
+  if (DestSrc &&
+      DestSrc->Destination->getSubReg() == DestSrc->Source->getSubReg())
     return false;
 
   // FIXME: We're only considering uses, but should be consider defs too?
@@ -1344,14 +1346,14 @@ unsigned RAGreedy::tryInstructionSplit(const LiveInterval &VirtReg,
   // the allocation.
   for (const SlotIndex Use : Uses) {
     if (const MachineInstr *MI = Indexes->getInstructionFromIndex(Use)) {
-      if (MI->isFullCopy() ||
+      if (TII->isFullCopyInstr(*MI) ||
           (SplitSubClass &&
            SuperRCNumAllocatableRegs ==
                getNumAllocatableRegsForConstraints(MI, VirtReg.reg(), SuperRC,
                                                    TII, TRI, RegClassInfo)) ||
           // TODO: Handle split for subranges with subclass constraints?
           (!SplitSubClass && VirtReg.hasSubRanges() &&
-           !readsLaneSubset(*MRI, MI, VirtReg, TRI, Use))) {
+           !readsLaneSubset(*MRI, MI, VirtReg, TRI, Use, TII))) {
         LLVM_DEBUG(dbgs() << "    skip:\t" << Use << '\t' << *MI);
         continue;
       }
@@ -2138,7 +2140,7 @@ void RAGreedy::initializeCSRCost() {
 /// \p Out is not cleared before being populated.
 void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
   for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!Instr.isFullCopy())
+    if (!TII->isFullCopyInstr(Instr))
       continue;
     // Look for the other end of the copy.
     Register OtherReg = Instr.getOperand(0).getReg();
@@ -2453,9 +2455,10 @@ RAGreedy::RAGreedyStats RAGreedy::computeStats(MachineBasicBlock &MBB) {
            MI.getOpcode() == TargetOpcode::STATEPOINT;
   };
   for (MachineInstr &MI : MBB) {
-    if (MI.isCopy()) {
-      const MachineOperand &Dest = MI.getOperand(0);
-      const MachineOperand &Src = MI.getOperand(1);
+    auto DestSrc = TII->isCopyInstr(MI);
+    if (DestSrc) {
+      const MachineOperand &Dest = *DestSrc->Destination;
+      const MachineOperand &Src = *DestSrc->Source;
       Register SrcReg = Src.getReg();
       Register DestReg = Dest.getReg();
       // Only count `COPY`s with a virtual register as source or destination.
