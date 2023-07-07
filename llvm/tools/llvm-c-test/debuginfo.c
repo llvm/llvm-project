@@ -13,9 +13,10 @@
 
 #include "llvm-c-test.h"
 #include "llvm-c/DebugInfo.h"
+
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 
 static LLVMMetadataRef
 declare_objc_class(LLVMDIBuilderRef DIB, LLVMMetadataRef File) {
@@ -203,30 +204,30 @@ int llvm_test_dibuilder(void) {
 }
 
 int llvm_get_di_tag(void) {
-  LLVMModuleRef m = LLVMModuleCreateWithName("Mod");
-  LLVMContextRef context = LLVMGetModuleContext(m);
+  LLVMModuleRef M = LLVMModuleCreateWithName("Mod");
+  LLVMContextRef Context = LLVMGetModuleContext(M);
 
-  LLVMMetadataRef metas[] = {LLVMMDStringInContext2(context, "foo", 3)};
-  LLVMMetadataRef md = LLVMMDNodeInContext2(context, metas, 1);
-  uint16_t tag0 = LLVMGetDINodeTag(md);
+  const char String[] = "foo";
+  LLVMMetadataRef StringMD =
+      LLVMMDStringInContext2(Context, String, strlen(String));
+  LLVMMetadataRef NodeMD = LLVMMDNodeInContext2(Context, &StringMD, 1);
+  assert(LLVMGetDINodeTag(NodeMD) == 0);
+  (void)NodeMD;
 
-  assert(tag0 == 0);
-  (void)tag0;
-
-  const char *filename = "metadata.c";
-  LLVMDIBuilderRef builder = LLVMCreateDIBuilder(m);
-  LLVMMetadataRef file =
-      LLVMDIBuilderCreateFile(builder, filename, strlen(filename), ".", 1);
-  LLVMMetadataRef decl = LLVMDIBuilderCreateStructType(
-      builder, file, "TestClass", 9, file, 42, 64, 0,
+  LLVMDIBuilderRef Builder = LLVMCreateDIBuilder(M);
+  const char Filename[] = "metadata.c";
+  const char Directory[] = ".";
+  LLVMMetadataRef File = LLVMDIBuilderCreateFile(
+      Builder, Filename, strlen(Filename), Directory, strlen(Directory));
+  const char Name[] = "TestClass";
+  LLVMMetadataRef Struct = LLVMDIBuilderCreateStructType(
+      Builder, File, Name, strlen(Name), File, 42, 64, 0,
       LLVMDIFlagObjcClassComplete, NULL, NULL, 0, 0, NULL, NULL, 0);
-  uint16_t tag1 = LLVMGetDINodeTag(decl);
+  assert(LLVMGetDINodeTag(Struct) == 0x13);
+  (void)Struct;
 
-  assert(tag1 == 0x13);
-  (void)tag1;
-
-  LLVMDisposeDIBuilder(builder);
-  LLVMDisposeModule(m);
+  LLVMDisposeDIBuilder(Builder);
+  LLVMDisposeModule(M);
 
   return 0;
 }
