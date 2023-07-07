@@ -79,6 +79,17 @@ public:
                                 PatternRewriter &rewriter) const override;
 };
 
+/// Splits GEPs with more than two indices into multiple GEPs with exactly
+/// two indices. The created GEPs are then guaranteed to index into only
+/// one aggregate at a time.
+class SplitGEP : public OpRewritePattern<GEPOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(GEPOp gepOp,
+                                PatternRewriter &rewriter) const override;
+};
+
 } // namespace LLVM
 } // namespace mlir
 

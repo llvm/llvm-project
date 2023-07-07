@@ -778,34 +778,27 @@ Type LLVM::GEPOp::getSourceElementType() {
 }
 
 Type GEPOp::getResultPtrElementType() {
-  // Ensures all indices are static and fetches them.
-  SmallVector<IntegerAttr> indices;
-  for (auto index : getIndices()) {
-    IntegerAttr indexInt = llvm::dyn_cast_if_present<IntegerAttr>(index);
-    if (!indexInt)
-      return nullptr;
-    indices.push_back(indexInt);
-  }
-
   // Set the initial type currently being used for indexing. This will be
   // updated as the indices get walked over.
   Type selectedType = getSourceElementType();
 
   // Follow the indexed elements in the gep.
-  for (IntegerAttr index : llvm::drop_begin(indices)) {
-    // Ensure the structure of the type being indexed can be reasoned about.
-    // This includes rejecting any potential typed pointer.
-    auto destructurable =
-        llvm::dyn_cast<DestructurableTypeInterface>(selectedType);
-    if (!destructurable)
-      return nullptr;
+  auto indices = getIndices();
+  for (GEPIndicesAdaptor<ValueRange>::value_type index :
+       llvm::drop_begin(indices)) {
+    // GEPs can only index into aggregates which can be structs or arrays.
 
-    // Follow the type at the index the gep is accessing, making it the new type
-    // used for indexing.
-    Type field = destructurable.getTypeAtIndex(index);
-    if (!field)
-      return nullptr;
-    selectedType = field;
+    // The resulting type if indexing into an array type is always the element
+    // type, regardless of index.
+    if (auto arrayType = dyn_cast<LLVMArrayType>(selectedType)) {
+      selectedType = arrayType.getElementType();
+      continue;
+    }
+
+    // The GEP verifier ensures that any index into structs are static and
+    // that they refer to a field within the struct.
+    selectedType = cast<DestructurableTypeInterface>(selectedType)
+                       .getTypeAtIndex(cast<IntegerAttr>(index));
   }
 
   // When there are no more indices, the type currently being used for indexing
