@@ -498,30 +498,19 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[TMP5]], i32 0
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[WIDE_VEC1:%.*]] = load <8 x i64>, ptr [[TMP7]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <8 x i64> [[WIDE_VEC1]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <8 x i64> [[WIDE_VEC1]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[STRIDED_VEC]], [[STRIDED_VEC3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i64> [[STRIDED_VEC2]], [[STRIDED_VEC4]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[Q]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i64, ptr [[TMP10]], i32 0
-; CHECK-NEXT:    store <4 x i64> [[TMP8]], ptr [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP10]], i32 4
-; CHECK-NEXT:    store <4 x i64> [[TMP9]], ptr [[TMP13]], align 4
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[STRIDED_VEC]], [[STRIDED_VEC1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[Q:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
