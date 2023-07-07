@@ -1077,21 +1077,6 @@ multiclass VPatWConvertI2FPVL_V<SDPatternOperator vop,
   }
 }
 
-multiclass VPatWConvertI2FP_RM_VL_V<SDNode vop, string instruction_name> {
-  foreach vtiToWti = AllWidenableIntToFloatVectors in {
-    defvar ivti = vtiToWti.Vti;
-    defvar fwti = vtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<ivti>.Predicates,
-                                 GetVTypePredicates<fwti>.Predicates) in
-    def : Pat<(fwti.Vector (vop (ivti.Vector ivti.RegClass:$rs1),
-                                (ivti.Mask V0), (XLenVT timm:$frm),
-                                VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX#"_MASK")
-                  (fwti.Vector (IMPLICIT_DEF)), ivti.RegClass:$rs1,
-                  (ivti.Mask V0), timm:$frm, GPR:$vl, ivti.Log2SEW, TA_MA)>;
-  }
-}
-
 // Narrowing converting
 
 multiclass VPatNConvertFP2IVL_W<SDPatternOperator vop,
@@ -2053,9 +2038,6 @@ defm : VPatWConvertFP2IVL_V<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFWCVT_RTZ_X_F_V"
 
 defm : VPatWConvertI2FPVL_V<any_riscv_uint_to_fp_vl, "PseudoVFWCVT_F_XU_V">;
 defm : VPatWConvertI2FPVL_V<any_riscv_sint_to_fp_vl, "PseudoVFWCVT_F_X_V">;
-
-defm : VPatWConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_xu_vl, "PseudoVFWCVT_RM_F_XU_V">;
-defm : VPatWConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_x_vl, "PseudoVFWCVT_RM_F_X_V">;
 
 foreach fvtiToFWti = AllWidenableFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;
