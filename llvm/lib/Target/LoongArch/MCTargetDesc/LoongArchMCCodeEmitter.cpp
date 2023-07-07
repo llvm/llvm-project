@@ -279,14 +279,18 @@ void LoongArchMCCodeEmitter::expandToVectorLDI(
   int64_t Imm = MI.getOperand(1).getImm() & 0x3FF;
   switch (MI.getOpcode()) {
   case LoongArch::PseudoVREPLI_B:
+  case LoongArch::PseudoXVREPLI_B:
     break;
   case LoongArch::PseudoVREPLI_H:
+  case LoongArch::PseudoXVREPLI_H:
     Imm |= 0x400;
     break;
   case LoongArch::PseudoVREPLI_W:
+  case LoongArch::PseudoXVREPLI_W:
     Imm |= 0x800;
     break;
   case LoongArch::PseudoVREPLI_D:
+  case LoongArch::PseudoXVREPLI_D:
     Imm |= 0xC00;
     break;
   }
@@ -310,6 +314,11 @@ void LoongArchMCCodeEmitter::encodeInstruction(
   case LoongArch::PseudoVREPLI_W:
   case LoongArch::PseudoVREPLI_D:
     return expandToVectorLDI<LoongArch::VLDI>(MI, CB, Fixups, STI);
+  case LoongArch::PseudoXVREPLI_B:
+  case LoongArch::PseudoXVREPLI_H:
+  case LoongArch::PseudoXVREPLI_W:
+  case LoongArch::PseudoXVREPLI_D:
+    return expandToVectorLDI<LoongArch::XVLDI>(MI, CB, Fixups, STI);
   }
 
   switch (Size) {
