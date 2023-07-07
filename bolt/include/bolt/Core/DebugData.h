@@ -469,7 +469,7 @@ private:
   std::mutex WriterMutex;
   /// Initializes Buffer and Stream.
   void initialize();
-  /// Creats internal data stractures.
+  /// Creates internal data stractures.
   void create();
   std::unique_ptr<DebugStrBufferVector> StrBuffer;
   std::unique_ptr<raw_svector_ostream> StrStream;
