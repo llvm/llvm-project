@@ -870,14 +870,12 @@ static unsigned getOperandsExtensionCost(const Instruction *I) {
 }
 
 InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
-    unsigned Opcode, Type *ValTy,
-    Type *CondTy,
-    CmpInst::Predicate VecPred,
-    TTI::TargetCostKind CostKind,
-    const Instruction *I,
-    ArrayRef<const Value *> Operands = ArrayRef<const Value *>()) {
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, const Instruction *I,
+    ArrayRef<const Value *> Operands) {
   if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, Operands);
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                     I, Operands);
 
   if (!ValTy->isVectorTy()) {
     switch (Opcode) {

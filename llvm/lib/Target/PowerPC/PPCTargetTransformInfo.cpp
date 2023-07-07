@@ -1029,12 +1029,9 @@ InstructionCost PPCTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
 }
 
 InstructionCost PPCTTIImpl::getCmpSelInstrCost(
-    unsigned Opcode, Type *ValTy,
-    Type *CondTy,
-    CmpInst::Predicate VecPred,
-    TTI::TargetCostKind CostKind,
-    const Instruction *I,
-    ArrayRef<const Value *> Operands = ArrayRef<const Value *>()) {
+    unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
+    TTI::TargetCostKind CostKind, const Instruction *I,
+    ArrayRef<const Value *> Operands) {
   InstructionCost Cost =
       BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I,
                                 Operands);
