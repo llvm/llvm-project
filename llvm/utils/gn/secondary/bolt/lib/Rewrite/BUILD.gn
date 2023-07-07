@@ -9,6 +9,8 @@ static_library("Rewrite") {
     "//bolt/lib/Profile",
     "//bolt/lib/RuntimeLibs",
     "//bolt/lib/Utils",
+    "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/DWARFLinker",
     "//llvm/lib/DWP",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/ExecutionEngine/JITLink",
