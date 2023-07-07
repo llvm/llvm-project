@@ -1587,6 +1587,10 @@ void SwiftASTContext::ApplyWorkingDir(
   llvm::SmallString<128> joined_path;
   llvm::sys::path::append(joined_path, cur_working_dir, arg);
   llvm::sys::path::remove_dots(joined_path);
+  // remove_dots can return an empty string if given a . or chain of ./.
+  if (joined_path.empty())
+    joined_path = ".";
+
   clang_argument.resize(prefix.size());
   clang_argument.append(joined_path.begin(), joined_path.end());
 }
