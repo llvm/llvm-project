@@ -807,7 +807,7 @@ bool TypeInfer::EnforceSameSize(TypeSetByHwMode &A, TypeSetByHwMode &B) {
   return Changed;
 }
 
-void TypeInfer::expandOverloads(TypeSetByHwMode &VTS) {
+void TypeInfer::expandOverloads(TypeSetByHwMode &VTS) const {
   ValidateOnExit _1(VTS, *this);
   const TypeSetByHwMode &Legal = getLegalTypes();
   assert(Legal.isSimple() && "Default-mode only expected");
@@ -818,7 +818,7 @@ void TypeInfer::expandOverloads(TypeSetByHwMode &VTS) {
 }
 
 void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
-                                const TypeSetByHwMode::SetType &Legal) {
+                                const TypeSetByHwMode::SetType &Legal) const {
   if (Out.count(MVT::iPTRAny)) {
     Out.erase(MVT::iPTRAny);
     Out.insert(MVT::iPTR);
@@ -857,7 +857,7 @@ void TypeInfer::expandOverloads(TypeSetByHwMode::SetType &Out,
   }
 }
 
-const TypeSetByHwMode &TypeInfer::getLegalTypes() {
+const TypeSetByHwMode &TypeInfer::getLegalTypes() const {
   if (!LegalTypesCached) {
     TypeSetByHwMode::SetType &LegalTypes = LegalCache.getOrCreate(DefaultMode);
     // Stuff all types from all modes into the default mode.
