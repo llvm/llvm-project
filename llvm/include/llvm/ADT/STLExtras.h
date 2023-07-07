@@ -535,6 +535,11 @@ public:
                        PredicateT Pred)
       : BaseT(Begin, End, Pred) {}
 
+  filter_iterator_impl &operator++() {
+    BaseT::operator++();
+    return *this;
+  }
+
   filter_iterator_impl &operator--() {
     BaseT::operator--();
     findPrevValid();
