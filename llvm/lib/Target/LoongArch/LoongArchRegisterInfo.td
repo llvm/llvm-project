@@ -37,6 +37,12 @@ class LoongArchReg64<LoongArchReg32 subreg>
   let SubRegIndices = [sub_32];
 }
 
+def sub_64 : SubRegIndex<64>;
+class LoongArchReg128<LoongArchReg64 subreg, string n>
+    : LoongArchRegWithSubRegs<subreg.HWEncoding, n, [subreg]> {
+  let SubRegIndices = [sub_64];
+}
+
 let FallbackRegAltNameIndex = NoRegAltName in
 def RegAliasName : RegAltNameIndex;
 } // Namespace = "LoongArch"
@@ -174,3 +180,13 @@ def FCSR#I : LoongArchReg<I, "fcsr"#I>;
 
 let isAllocatable = false in
 def FCSR : RegisterClass<"LoongArch", [i32], 32, (sequence "FCSR%u", 0, 3)>;
+
+// LSX registers
+
+foreach I = 0-31 in
+def VR#I : LoongArchReg128<!cast<LoongArchReg64>("F"#I#"_64"), "vr"#I>,
+           DwarfRegAlias<!cast<LoongArchReg64>("F"#I#"_64")>;
+
+def LSX128 : RegisterClass<"LoongArch",
+                           [v4f32, v2f64, v16i8, v8i16, v4i32, v2i64],
+                           128, (sequence "VR%u", 0, 31)>;
