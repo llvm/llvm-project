@@ -48,6 +48,7 @@
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT:  vgprForAGPRCopy: ''
+# FULL-NEXT:  sgprForEXECCopy: ''
 # FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT: body:
 
@@ -149,6 +150,7 @@ body:             |
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
@@ -221,6 +223,7 @@ body:             |
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
@@ -294,6 +297,7 @@ body:             |
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
@@ -536,6 +540,31 @@ body:             |
 name: vgpr_for_agpr_copy_noreg
 machineFunctionInfo:
   vgprForAGPRCopy: '$noreg'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: sgpr_for_exec_copy
+# ALL: sgprForEXECCopy: '$sgpr2_sgpr3'
+name: sgpr_for_exec_copy
+machineFunctionInfo:
+  sgprForEXECCopy: '$sgpr2_sgpr3'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: sgpr_for_exec_copy_noreg
+# FULL: sgprForEXECCopy: ''
+# SIMPLE-NOT: sgprForEXECCopy
+name: sgpr_for_exec_copy_noreg
+machineFunctionInfo:
+  sgprForEXECCopy: '$noreg'
 body:             |
   bb.0:
     SI_RETURN
