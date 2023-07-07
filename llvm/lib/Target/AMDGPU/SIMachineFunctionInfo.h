@@ -667,6 +667,8 @@ public:
     return VRegFlags.inBounds(Reg) && VRegFlags[Reg] & Flag;
   }
 
+  bool hasVRegFlags() { return VRegFlags.size(); }
+
   void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,
                         Align Alignment = Align(4));
 
