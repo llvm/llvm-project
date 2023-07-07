@@ -665,7 +665,7 @@ private:
         // TODO(chiahungduan): Avoid the use of push_back() in `Batches` of
         // BatchClassId.
         BG->Batches.push_front(CurBatch);
-        UnusedSlots = BG->MaxCachedPerBatch - 1;
+        UnusedSlots = static_cast<u16>(BG->MaxCachedPerBatch - 1);
       }
       // `UnusedSlots` is u16 so the result will be also fit in u16.
       const u16 AppendSize = static_cast<u16>(Min<u32>(UnusedSlots, Size - I));
