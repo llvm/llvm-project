@@ -76,7 +76,7 @@ static ompt_get_parallel_info_t ompt_multiplex_get_parallel_info;
   macro(callback_dependences, ompt_callback_dependences_t, 18);                \
   macro(callback_task_dependence, ompt_callback_task_dependence_t, 19);        \
   macro(callback_work, ompt_callback_work_t, 20);                              \
-  macro(callback_master, ompt_callback_master_t, 21);                          \
+  macro(callback_masked, ompt_callback_masked_t, 21);                          \
   macro(callback_target_map, ompt_callback_target_map_t, 22);                  \
   macro(callback_sync_region, ompt_callback_sync_region_t, 23);                \
   macro(callback_lock_init, ompt_callback_mutex_acquire_t, 24);                \
@@ -435,17 +435,17 @@ static void ompt_multiplex_callback_work(ompt_work_t wstype,
   }
 }
 
-static void ompt_multiplex_callback_master(ompt_scope_endpoint_t endpoint,
+static void ompt_multiplex_callback_masked(ompt_scope_endpoint_t endpoint,
                                            ompt_data_t *parallel_data,
                                            ompt_data_t *task_data,
                                            const void *codeptr_ra) {
-  if (ompt_multiplex_own_callbacks.ompt_callback_master) {
-    ompt_multiplex_own_callbacks.ompt_callback_master(
+  if (ompt_multiplex_own_callbacks.ompt_callback_masked) {
+    ompt_multiplex_own_callbacks.ompt_callback_masked(
         endpoint, ompt_multiplex_get_own_parallel_data(parallel_data),
         ompt_multiplex_get_own_task_data(task_data), codeptr_ra);
   }
-  if (ompt_multiplex_client_callbacks.ompt_callback_master) {
-    ompt_multiplex_client_callbacks.ompt_callback_master(
+  if (ompt_multiplex_client_callbacks.ompt_callback_masked) {
+    ompt_multiplex_client_callbacks.ompt_callback_masked(
         endpoint, ompt_multiplex_get_client_parallel_data(parallel_data),
         ompt_multiplex_get_client_task_data(task_data), codeptr_ra);
   }
