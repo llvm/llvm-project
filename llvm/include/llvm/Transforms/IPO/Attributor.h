@@ -1872,9 +1872,12 @@ struct Attributor {
                 SmallVectorImpl<Attribute> &Attrs,
                 bool IgnoreSubsumingPositions = false);
 
+  /// Remove all \p AttrKinds attached to \p IRP.
   ChangeStatus removeAttrs(const IRPosition &IRP,
                            const ArrayRef<Attribute::AttrKind> &AttrKinds);
 
+  /// Attach \p DeducedAttrs to \p IRP, if \p ForceReplace is set we do this
+  /// even if the same attribute kind was already present.
   ChangeStatus manifestAttrs(const IRPosition &IRP,
                              const ArrayRef<Attribute> &DeducedAttrs,
                              bool ForceReplace = false);
