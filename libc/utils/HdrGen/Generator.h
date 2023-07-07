@@ -52,7 +52,6 @@ public:
         ArgMap(Map) {}
 
   void generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records);
-  void generateDecls(llvm::raw_ostream &OS, llvm::RecordKeeper &Records);
 };
 
 } // namespace llvm_libc

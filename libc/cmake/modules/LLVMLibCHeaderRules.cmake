@@ -131,23 +131,6 @@ function(add_gen_header target_name)
             ${hdrgen_deps}
   )
 
-  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-    file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
-    set(decl_out_file ${LIBC_INCLUDE_DIR}/llvm-libc-decls/${relative_path})
-    add_custom_command(
-      OUTPUT ${decl_out_file}
-      COMMAND ${hdrgen_exe} -o ${decl_out_file}
-              --header ${ADD_GEN_HDR_GEN_HDR} --def ${in_file} --export-decls
-              ${replacement_params} -I ${LIBC_SOURCE_DIR} ${ENTRYPOINT_NAME_LIST_ARG}
-              ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      DEPENDS ${in_file} ${fq_data_files} ${td_includes}
-              ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-              ${hdrgen_deps}
-    )
-  endif()
-
   if(ADD_GEN_HDR_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR_DEPENDS})
     # Dependencies of a add_header target can only be another add_gen_header target
@@ -161,14 +144,13 @@ function(add_gen_header target_name)
   endif()
   add_custom_target(
     ${fq_target_name}
-    DEPENDS ${out_file} ${fq_deps_list} ${decl_out_file}
+    DEPENDS ${out_file} ${fq_deps_list}
   )
 
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
       HEADER_FILE_PATH ${out_file}
-      DECLS_FILE_PATH ${decl_out_file}
       DEPS "${fq_deps_list}"
   )
 endfunction(add_gen_header)
