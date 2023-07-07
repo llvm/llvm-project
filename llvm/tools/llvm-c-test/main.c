@@ -44,6 +44,9 @@ static void print_usage(void) {
   fprintf(stderr, "    Read lines of triple, hex ascii machine code from stdin "
                   "- print disassembly\n\n");
   fprintf(stderr, "  * --calc\n");
+  fprintf(
+      stderr,
+      "    Read lines of name, rpn from stdin - print generated module\n\n");
   fprintf(stderr, "  * --get-di-tag\n");
   fprintf(stderr, "    Run test for getting MDNode dwarf tag\n");
   fprintf(stderr, "  * --replace-md-operand\n");
@@ -51,9 +54,6 @@ static void print_usage(void) {
   fprintf(stderr, "  * --is-a-value-as-metadata\n");
   fprintf(stderr,
           "    Run test for checking if LLVMValueRef is a ValueAsMetadata\n");
-  fprintf(
-      stderr,
-      "    Read lines of name, rpn from stdin - print generated module\n\n");
   fprintf(stderr, "  * --echo\n");
   fprintf(stderr, "    Read bitcode file from stdin - print it back out\n\n");
   fprintf(stderr, "  * --echo --opaque-pointers\n");
