@@ -272,11 +272,11 @@ struct TypeInfer {
   /// expand*) is to return "true" if a change has been made, "false"
   /// otherwise.
 
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, const TypeSetByHwMode &In);
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) {
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, const TypeSetByHwMode &In) const;
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT::SimpleValueType InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, ValueTypeByHwMode InVT) {
+  bool MergeInTypeInfo(TypeSetByHwMode &Out, ValueTypeByHwMode InVT) const {
     return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
   }
 
@@ -335,10 +335,11 @@ struct TypeInfer {
                        const TypeSetByHwMode::SetType &Legal);
 
   struct ValidateOnExit {
-    ValidateOnExit(TypeSetByHwMode &T, TypeInfer &TI) : Infer(TI), VTS(T) {}
+    ValidateOnExit(const TypeSetByHwMode &T, const TypeInfer &TI)
+        : Infer(TI), VTS(T) {}
     ~ValidateOnExit();
-    TypeInfer &Infer;
-    TypeSetByHwMode &VTS;
+    const TypeInfer &Infer;
+    const TypeSetByHwMode &VTS;
   };
 
   struct SuppressValidation {
