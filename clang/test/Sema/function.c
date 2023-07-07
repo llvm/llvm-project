@@ -40,12 +40,11 @@ int t14() {
   return; // expected-error {{non-void function 't14' should return a value}}
 }
 
-// <rdar://problem/6097326>
 y(y) { return y; } // expected-error{{parameter 'y' was not declared, defaults to 'int'; ISO C99 and later do not support implicit int}} \
                    // expected-error{{type specifier missing, defaults to 'int'}}
 
 
-// PR3137, <rdar://problem/6127293>
+// PR3137
 extern int g0_3137(void);
 void f0_3137() {
   int g0_3137(void);
@@ -72,7 +71,6 @@ __attribute__((__gnu_inline__)) // expected-warning {{'gnu_inline' attribute req
 gnu_inline2() {}
 
 
-// rdar://6802350
 inline foo_t invalid_type() {  // expected-error {{unknown type name 'foo_t'}}
 }
 

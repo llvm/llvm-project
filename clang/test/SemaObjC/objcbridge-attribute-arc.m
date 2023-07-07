@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -x objective-c -fobjc-arc -verify -Wno-objc-root-class %s
-// rdar://15454846
 
 typedef struct __attribute__ ((objc_bridge(NSError))) __CFErrorRef * CFErrorRef; // expected-note 5 {{declared here}}
 
@@ -225,7 +224,6 @@ void Test9(CFErrorRef2 cf, NSError *ns, NSString *str, Class c, CFUColor2Ref cf2
   (void)(__bridge CFErrorRef)c; // expected-warning {{'__unsafe_unretained Class' cannot bridge to 'CFErrorRef' (aka 'struct __CFErrorRef *')}}
 }
 
-// rdar://19157264
 #if __has_feature(objc_bridge_id)
 typedef struct __attribute__((objc_bridge(id))) __CFFoo *CFFooRef;
 #endif

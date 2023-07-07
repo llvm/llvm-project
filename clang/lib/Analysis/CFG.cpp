@@ -2252,8 +2252,7 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
       // FIXME: The expression inside a CXXDefaultArgExpr is owned by the
       // called function's declaration, not by the caller. If we simply add
       // this expression to the CFG, we could end up with the same Expr
-      // appearing multiple times.
-      // PR13385 / <rdar://problem/12156507>
+      // appearing multiple times. PR13385
       //
       // It's likewise possible for multiple CXXDefaultInitExprs for the same
       // expression to be used in the same function (through aggregate

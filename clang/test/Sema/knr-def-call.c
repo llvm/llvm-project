@@ -18,7 +18,6 @@ void f2(x) float x; { } // expected-warning{{promoted type 'double' of K&R funct
 typedef void (*f3)(void);
 f3 t3(int b) { return b? f0 : f1; } // okay
 
-// <rdar://problem/8193107>
 void f4() {
     char *rindex();
 }

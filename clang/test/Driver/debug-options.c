@@ -1,5 +1,4 @@
 // Check to make sure clang is somewhat picky about -g options.
-// rdar://10383444
 
 // Linux.
 // RUN: %clang -### -c -g %s -target x86_64-linux-gnu 2>&1 \
