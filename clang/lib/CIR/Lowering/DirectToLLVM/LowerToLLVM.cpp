@@ -135,9 +135,10 @@ public:
     return mlir::success();
   }
 
-  mlir::LogicalResult rewriteLoop(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
-                                  mlir::ConversionPatternRewriter &rewriter,
-                                  mlir::cir::LoopOpKind kind) const {
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto kind = loopOp.getKind();
     auto *currentBlock = rewriter.getInsertionBlock();
     auto *continueBlock =
         rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
@@ -194,19 +195,6 @@ public:
 
     // Remove the loop op.
     rewriter.eraseOp(loopOp);
-    return mlir::success();
-  }
-
-  mlir::LogicalResult
-  matchAndRewrite(mlir::cir::LoopOp loopOp, OpAdaptor adaptor,
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    switch (loopOp.getKind()) {
-    case LoopKind::For:
-    case LoopKind::While:
-    case LoopKind::DoWhile:
-      return rewriteLoop(loopOp, adaptor, rewriter, loopOp.getKind());
-    }
-
     return mlir::success();
   }
 };
