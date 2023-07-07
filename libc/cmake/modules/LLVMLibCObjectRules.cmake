@@ -134,7 +134,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     ${ARGN}
   )
 
-  set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
+  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
   set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
   if(NOT ADD_GPU_OBJ_CXX_STANDARD)
     set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -585,7 +585,7 @@ function(create_entrypoint_object fq_target_name)
     ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
   )
   set(internal_target_name ${fq_target_name}.__internal__)
-  set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
+  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
