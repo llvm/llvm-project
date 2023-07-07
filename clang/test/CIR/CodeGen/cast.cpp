@@ -32,6 +32,15 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4) {
   long long d = (long long)x2; // sign extend
   // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !s32i), !s64i
 
+  unsigned ui = (unsigned)x2; // sign drop
+  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !s32i), !u32i
+
+  int si = (int)x1; // sign add
+  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !u32i), !s32i
+
+  unsigned uu = (unsigned)x1; // should not be generated
+  // CHECK-NOT: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !u32i), !u32i
+
   int arr[3];
   int* e = (int*)arr; // explicit pointer decay
   // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %{{[0-9]+}} : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>

@@ -57,6 +57,10 @@ module {
     %15 = cir.load %1 : cir.ptr <!s32i>, !s32i
     %16 = cir.cast(integral, %15 : !s32i), !s64i
     // MLIR: %{{[0-9]+}} = llvm.sext %{{[0-9]+}} : i32 to i64
+    %30 = cir.cast(integral, %arg1 : !s32i), !u32i
+    // Should not produce a cast.
+    %32 = cir.cast(integral, %arg0 : !u32i), !s32i
+    // Should not produce a cast.
     cir.store %16, %6 : !s64i, cir.ptr <!s64i>
     %17 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
     // MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
