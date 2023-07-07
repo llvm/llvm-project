@@ -182,6 +182,10 @@ def imm32 : Operand<GRLenVT> {
   let ParserMatchClass = ImmAsmOperand<"", 32, "">;
 }
 
+def uimm1 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<1>;
+}
+
 def uimm2 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<2>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<2>;
 }
@@ -197,12 +201,20 @@ def uimm3 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<3>;
 }
 
+def uimm4 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<4>;
+}
+
 def uimm5 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5>;
 }
 
 def uimm6 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<6>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<6>;
+}
+
+def uimm7 : Operand<GRLenVT> {
+  let ParserMatchClass = UImmAsmOperand<7>;
 }
 
 def uimm8 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isUInt<8>(Imm);}]> {
@@ -232,6 +244,46 @@ def uimm15 : Operand<GRLenVT>,
   let ParserMatchClass = UImmAsmOperand<15>;
 }
 
+def simm5 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<5>;
+  let DecoderMethod = "decodeSImmOperand<5>";
+}
+
+def simm8 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<8>;
+  let DecoderMethod = "decodeSImmOperand<8>";
+}
+
+foreach I = [1, 2, 3] in {
+def simm8_lsl # I : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<8, "lsl" # I>;
+  let EncoderMethod = "getImmOpValueAsr<" # I # ">";
+  let DecoderMethod = "decodeSImmOperand<8," # I # ">";
+}
+}
+
+def simm9_lsl3 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<9, "lsl3">;
+  let EncoderMethod = "getImmOpValueAsr<3>";
+  let DecoderMethod = "decodeSImmOperand<9, 3>";
+}
+
+def simm10 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<10>;
+}
+
+def simm10_lsl2 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<10, "lsl2">;
+  let EncoderMethod = "getImmOpValueAsr<2>";
+  let DecoderMethod = "decodeSImmOperand<10, 2>";
+}
+
+def simm11_lsl1 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<11, "lsl1">;
+  let EncoderMethod = "getImmOpValueAsr<1>";
+  let DecoderMethod = "decodeSImmOperand<11, 1>";
+}
+
 class SImm12Operand : Operand<GRLenVT>,
                       ImmLeaf <GRLenVT, [{return isInt<12>(Imm);}]> {
   let DecoderMethod = "decodeSImmOperand<12>";
@@ -249,10 +301,15 @@ def simm12_lu52id : SImm12Operand {
   let ParserMatchClass = SImmAsmOperand<12, "lu52id">;
 }
 
+def simm13 : Operand<GRLenVT> {
+  let ParserMatchClass = SImmAsmOperand<13>;
+  let DecoderMethod = "decodeSImmOperand<13>";
+}
+
 def simm14_lsl2 : Operand<GRLenVT>,
     ImmLeaf<GRLenVT, [{return isShiftedInt<14,2>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<14, "lsl2">;
-  let EncoderMethod = "getImmOpValueAsr2";
+  let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<14, 2>";
 }
 
@@ -264,13 +321,13 @@ def simm16 : Operand<GRLenVT> {
 def simm16_lsl2 : Operand<GRLenVT>,
     ImmLeaf<GRLenVT, [{return isInt<16>(Imm>>2);}]> {
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
-  let EncoderMethod = "getImmOpValueAsr2";
+  let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<16, 2>";
 }
 
 def simm16_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
-  let EncoderMethod = "getImmOpValueAsr2";
+  let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<16, 2>";
 }
 
@@ -296,7 +353,7 @@ def simm20_lu32id : SImm20Operand {
 
 def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
-  let EncoderMethod = "getImmOpValueAsr2";
+  let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<21, 2>";
 }
 
@@ -311,7 +368,7 @@ def SImm26OperandB: AsmOperandClass {
 // A symbol or an imm used in B/PseudoBR.
 def simm26_b : Operand<OtherVT> {
   let ParserMatchClass = SImm26OperandB;
-  let EncoderMethod = "getImmOpValueAsr2";
+  let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
 }
 
@@ -326,7 +383,7 @@ def SImm26OperandBL: AsmOperandClass {
 // A symbol or an imm used in BL/PseudoCALL/PseudoTAIL.
 def simm26_symbol : Operand<GRLenVT> {
   let ParserMatchClass = SImm26OperandBL;
-  let EncoderMethod = "getImmOpValueAsr2";
+  let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
 }
 
@@ -468,6 +525,7 @@ def AlslSlliImmI0 : SDNodeXForm<imm, [{
 
 include "LoongArchInstrFormats.td"
 include "LoongArchFloatInstrFormats.td"
+include "LoongArchLSXInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -1950,3 +2008,8 @@ def : Pat<(int_loongarch_lddir_d GPR:$rj, timm:$imm8),
 def : Pat<(int_loongarch_ldpte_d GPR:$rj, timm:$imm8),
           (LDPTE GPR:$rj, uimm8:$imm8)>;
 } // Predicates = [IsLA64]
+
+//===----------------------------------------------------------------------===//
+// LSX Instructions
+//===----------------------------------------------------------------------===//
+include "LoongArchLSXInstrInfo.td"
