@@ -219,7 +219,7 @@ bool IndexingContext::isSystemFile(FileID FID) {
   if (FI.getFileCharacteristic() != SrcMgr::C_User)
     return result(true);
 
-  const FileEntry *FE = FI.getContentCache().OrigEntry;
+  auto FE = FI.getContentCache().OrigEntry;
   if (!FE)
     return result(false);
 
@@ -234,7 +234,7 @@ bool IndexingContext::isSystemFile(FileID FID) {
   bool &isSystemDir = pair.first->second;
   bool wasInserted = pair.second;
   if (wasInserted) {
-    isSystemDir = StringRef(dirEntry->getName()).startswith(SysrootPath);
+    isSystemDir = StringRef(dirEntry.getName()).startswith(SysrootPath);
   }
   return result(isSystemDir);
 }
