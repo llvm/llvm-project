@@ -2,9 +2,6 @@ ee2a35ac4ab [X86] Add AVX-NE-CONVERT instruc
 Revert "[X86] Support -march=sierraforest, grandridge,
 Revert "[AMDGPU] Enable OMod on more VOP3 instructions"   # rocrand assert fails
 
-#break nekbone, cxx20 offsetof
-e327b52766ed [C2x] reject type definitions in offsetof
-
 7f12efa88  [X86][FP16] Lower half->i16 into vcvttph2[u]w directly
 
 FP16
@@ -14,20 +11,10 @@ SROA breaks MIOpen
 Revert "[SROA] Create additional vector type candidates based on store and load slices"
 Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
 
-Revert "[SLP][NFC]Add missing finalize params in the CostEstimator, NFC."
-        seeing rocThrust SLP aborts in merges, try avoiding
-
-Revert: lots of crashes in FastRegAlloc: Assertion `Reg.isPhysical()' failed.
-  c4a872badb53 FastRegAlloc: Fix implicit operands not rewritten
-
-Revert: 2be0abb7fe72 Rewrite load-store-vectorizer.
-
 Revert "[AMDGPU] Remove extract_subvector patterns"  
 
 breaks rccl build:
 Revert "Implement P2361 Unevaluated string literals"
-
-Revert: [libc] Add support for creating wrapper headers for offloading in clang
 
 Revert "[X86] Add SHA512 instructions."  
 Revert "[X86] Add SM3 instructions."
@@ -36,7 +23,6 @@ Revert "[X86] Add AVX-VNNI-INT16 instructions."
 Revert "[Clang] Implement P2741R3 - user-generated static_assert messages "
 Revert "[Clang] Fix crash in CIndex, when visiting a static_assert without message"
 Revert "[AMDGPU] __builtin_amdgcn_read_exec_* should be implemented with llvm.amdgcn.ballot"
-Revert the Revert "[CodeGen]Allow targets to use target specific COPY instructions for live range split
 Revert "[X86] Support -march=arrowlake,arrowlake-s,lunarlake"
 Revert "[X86] Split SDISel call lowering out to its own file"
 Revert "[Clang] Handle static_assert messages with an expression started by a literal"
@@ -46,10 +32,6 @@ Revert "Enable concatenation of predefined identifiers "
 Revert "[FunctionAttrs] Unconditionally perform argument attribute inference in the first function-attrs pass"
 Revert "[clang][test] Fix LIT test failures for the following commit"
 Revert "[Clang] Produce a warning instead of an error in unevaluated strings before C++26 "
-Revert "[IR] Deprecate some old methods for getting typed pointer types"
-
-Revert Complete the implementation of P2361 Unevaluated string literals
 
 Revert "[Attributor] Introduce AAIndirectCallInfo"
   causes snap build time to go from 20 seconds to 35+ minutes, opt attributor 
-

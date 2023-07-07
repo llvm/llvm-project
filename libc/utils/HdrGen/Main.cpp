@@ -32,6 +32,9 @@ llvm::cl::list<std::string> EntrypointNamesOption(
 llvm::cl::list<std::string> ReplacementValues(
     "args", llvm::cl::desc("Command separated <argument name>=<value> pairs."),
     llvm::cl::value_desc("<name=value>[,name=value]"));
+llvm::cl::opt<bool> ExportDecls(
+    "export-decls",
+    llvm::cl::desc("Output a new header containing only the entrypoints."));
 
 void ParseArgValuePairs(std::unordered_map<std::string, std::string> &Map) {
   for (std::string &R : ReplacementValues) {
@@ -48,7 +51,10 @@ bool HeaderGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
   std::unordered_map<std::string, std::string> ArgMap;
   ParseArgValuePairs(ArgMap);
   Generator G(HeaderDefFile, EntrypointNamesOption, StandardHeader, ArgMap);
-  G.generate(OS, Records);
+  if (ExportDecls)
+    G.generateDecls(OS, Records);
+  else
+    G.generate(OS, Records);
 
   return false;
 }

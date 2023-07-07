@@ -13,10 +13,24 @@
 #error "This file is for GPU offloading compilation only"
 #endif
 
-// FIXME: The GNU headers provide C++ standard compliant headers when in C++
-// mode and the LLVM libc does not. We cannot enable memchr, strchr, strchrnul,
-// strpbrk, strrchr, strstr, or strcasestr until this is addressed.
+// FIXME: This is needed for openmpapps/lulesh
 #include_next <string.h>
+
+// The GNU headers provide non C-standard headers when in C++ mode. Manually
+// undefine it here so that the definitions agree with the C standard for our
+// purposes.
+#ifdef __cplusplus
+extern "C" {
+#pragma push_macro("__cplusplus")
+#undef __cplusplus
+#endif
+
+#include_next <string.h>
+
+#pragma pop_macro("__cplusplus")
+#ifdef __cplusplus
+}
+#endif
 
 #if __has_include(<llvm-libc-decls/string.h>)
 

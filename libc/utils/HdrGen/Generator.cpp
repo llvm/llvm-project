@@ -10,6 +10,7 @@
 
 #include "IncludeFileCommand.h"
 #include "PublicAPICommand.h"
+#include "utils/LibcTableGenUtil/APIIndexer.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -114,6 +115,80 @@ void Generator::generate(llvm::raw_ostream &OS, llvm::RecordKeeper &Records) {
     if (P.second.empty())
       break;
   }
+}
+
+void Generator::generateDecls(llvm::raw_ostream &OS,
+                              llvm::RecordKeeper &Records) {
+
+  OS << "//===-- C standard declarations for " << StdHeader << " "
+     << std::string(80 - (42 + StdHeader.size()), '-') << "===//\n"
+     << "//\n"
+     << "// Part of the LLVM Project, under the Apache License v2.0 with LLVM "
+        "Exceptions.\n"
+     << "// See https://llvm.org/LICENSE.txt for license information.\n"
+     << "// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception\n"
+     << "//\n"
+     << "//"
+        "===-------------------------------------------------------------------"
+        "---===//\n\n";
+
+  std::string HeaderGuard(StdHeader.size(), '\0');
+  llvm::transform(StdHeader, HeaderGuard.begin(), [](const char C) -> char {
+    return !isalnum(C) ? '_' : llvm::toUpper(C);
+  });
+  OS << "#ifndef __LLVM_LIBC_DECLARATIONS_" << HeaderGuard << "\n"
+     << "#define __LLVM_LIBC_DECLARATIONS_" << HeaderGuard << "\n\n";
+
+  OS << "#ifndef __LIBC_ATTRS\n"
+     << "#define __LIBC_ATTRS\n"
+     << "#endif\n\n";
+
+  OS << "#ifdef __cplusplus\n"
+     << "extern \"C\" {\n"
+     << "#endif\n\n";
+
+  APIIndexer G(StdHeader, Records);
+  for (auto &Name : EntrypointNameList) {
+    // Filter out functions not exported by this header.
+    if (G.FunctionSpecMap.find(Name) == G.FunctionSpecMap.end())
+      continue;
+
+    llvm::Record *FunctionSpec = G.FunctionSpecMap[Name];
+    llvm::Record *RetValSpec = FunctionSpec->getValueAsDef("Return");
+    llvm::Record *ReturnType = RetValSpec->getValueAsDef("ReturnType");
+
+    OS << G.getTypeAsString(ReturnType) << " " << Name << "(";
+
+    auto ArgsList = FunctionSpec->getValueAsListOfDefs("Args");
+    for (size_t i = 0; i < ArgsList.size(); ++i) {
+      llvm::Record *ArgType = ArgsList[i]->getValueAsDef("ArgType");
+      OS << G.getTypeAsString(ArgType);
+      if (i < ArgsList.size() - 1)
+        OS << ", ";
+    }
+
+    OS << ") __LIBC_ATTRS;\n\n";
+  }
+
+  // Make another pass over entrypoints to emit object declarations.
+  for (const auto &Name : EntrypointNameList) {
+    if (G.ObjectSpecMap.find(Name) == G.ObjectSpecMap.end())
+      continue;
+    llvm::Record *ObjectSpec = G.ObjectSpecMap[Name];
+    auto Type = ObjectSpec->getValueAsString("Type");
+    OS << "extern " << Type << " " << Name << " __LIBC_ATTRS;\n";
+  }
+
+  // Emit a final newline if we emitted any object declarations.
+  if (llvm::any_of(EntrypointNameList, [&](const std::string &Name) {
+        return G.ObjectSpecMap.find(Name) != G.ObjectSpecMap.end();
+      }))
+    OS << "\n";
+
+  OS << "#ifdef __cplusplus\n"
+     << "}\n"
+     << "#endif\n\n";
+  OS << "#endif\n";
 }
 
 } // namespace llvm_libc
