@@ -23,7 +23,7 @@
 namespace llvm::omp::target {
 namespace plugin {
 struct GenericDeviceTy;
-struct GenericGlobalHandlerTy;
+class GenericGlobalHandlerTy;
 class DeviceImageTy;
 } // namespace plugin
 
