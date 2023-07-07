@@ -68,6 +68,17 @@ public:
                                 PatternRewriter &rewrite) const override;
 };
 
+/// Transforms type-inconsistent stores, aka stores where the type hint of
+/// the address contradicts the value stored, by inserting a bitcast if
+/// possible.
+class BitcastStores : public OpRewritePattern<StoreOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(StoreOp store,
+                                PatternRewriter &rewriter) const override;
+};
+
 } // namespace LLVM
 } // namespace mlir
 
