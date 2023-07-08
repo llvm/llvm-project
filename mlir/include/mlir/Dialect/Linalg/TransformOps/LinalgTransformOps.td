@@ -2261,4 +2261,60 @@ def InsertSliceToCopyOp :
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// MapCopyToThreadsOp
+//===----------------------------------------------------------------------===//
+
+def MapCopyToThreadsOp :
+  Op<Transform_Dialect, "structured.gpu.map_copy_to_threads",
+    [FunctionalStyleTransformOpTrait, 
+     MemoryEffectsOpInterface,
+     TransformEachOpTrait, 
+     TransformOpInterface]> {
+  let description = [{
+    Targeted mapping of a copy operation on tensors to a GPU thread mapping.
+
+    This operation implements a greedy heuristic that determines a good 
+    distribution of threads to break down the copy operation into.
+    The heuristic is driven by considerations related to the underlying 
+    architecture for which good high-level decisions are needed assuming certain
+    hardware features. Relevant features are exposed via first-class attributes
+    to control the behavior of the transformation at a high level.
+
+    For now, a single heuristic is implemented and can be extended on a per-need
+    basis.
+
+    #### Return modes:
+
+    The operation always succeeds and returns a handle to the relevant tiled
+    linalg.copy op.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       I64Attr:$total_num_threads,
+                       I64Attr:$desired_bit_alignment);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+
+  let assemblyFormat = [{
+    $target
+    `total_num_threads` `=` $total_num_threads
+    `desired_bit_alignment` `=` $desired_bit_alignment
+    attr-dict 
+    `:` functional-type(operands, results)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$target)>,
+  ];
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::linalg::CopyOp copyOp,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+
+    ::llvm::SmallVector<::mlir::OpFoldResult> getMixedNumThreads();
+  }];
+}
+
 #endif // LINALG_TRANSFORM_OPS
