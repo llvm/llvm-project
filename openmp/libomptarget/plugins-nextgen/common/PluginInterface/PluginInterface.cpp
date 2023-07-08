@@ -396,7 +396,7 @@ GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
       OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 32),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
-      PinnedAllocs(*this) {}
+      PinnedAllocs(*this), RPCHandle(nullptr) {}
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
@@ -453,6 +453,10 @@ Error GenericDeviceTy::deinit() {
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
+  if (RPCHandle)
+    if (auto Err = RPCHandle->deinitDevice())
+      return std::move(Err);
+
   return deinitImpl();
 }
 
@@ -493,6 +497,9 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (auto Err = registerOffloadEntries(*Image))
     return std::move(Err);
 
+  if (auto Err = setupRPCServer(Plugin, *Image))
+    return std::move(Err);
+
   // Return the pointer to the table of entries.
   return Image->getOffloadEntryTable();
 }
@@ -522,6 +529,33 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
        DevEnvGlobal.getName().data());
     consumeError(std::move(Err));
   }
+  return Plugin::success();
+}
+
+Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
+                                      DeviceImageTy &Image) {
+  // The plugin either does not need an RPC server or it is unavailible.
+  if (!shouldSetupRPCServer())
+    return Plugin::success();
+
+  // Check if this device needs to run an RPC server.
+  RPCServerTy &Server = Plugin.getRPCServer();
+  auto UsingOrErr =
+      Server.isDeviceUsingRPC(*this, Plugin.getGlobalHandler(), Image);
+  if (!UsingOrErr)
+    return UsingOrErr.takeError();
+
+  if (!UsingOrErr.get())
+    return Plugin::success();
+
+  if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
+    return std::move(Err);
+
+  auto DeviceOrErr = Server.getDevice(*this);
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  RPCHandle = *DeviceOrErr;
+  DP("Running an RPC server on device %d\n", getDeviceId());
   return Plugin::success();
 }
 
@@ -1088,6 +1122,9 @@ Error GenericPluginTy::init() {
   GlobalHandler = Plugin::createGlobalHandler();
   assert(GlobalHandler && "Invalid global handler");
 
+  RPCServer = new RPCServerTy(NumDevices);
+  assert(RPCServer && "Invalid RPC server");
+
   return Plugin::success();
 }
 
@@ -1104,6 +1141,9 @@ Error GenericPluginTy::deinit() {
     }
     assert(!Devices[DeviceId] && "Device was not deinitialized");
   }
+
+  if (RPCServer)
+    delete RPCServer;
 
   // Perform last deinitializations on the plugin.
   return deinitImpl();
@@ -1137,6 +1177,14 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
   Devices[DeviceId] = nullptr;
 
   return Plugin::success();
+}
+
+const bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
+#ifdef LIBOMPTARGET_RPC_SUPPORT
+  return true;
+#else
+  return false;
+#endif
 }
 
 /// Exposed library API function, basically wrappers around the GenericDeviceTy
