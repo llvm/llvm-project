@@ -239,8 +239,8 @@ public:
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
   GenericKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : Name(Name), ExecutionMode(ExecutionMode),
-        PreferredNumThreads(0), MaxNumThreads(0) {}
+      : Name(Name), ExecutionMode(ExecutionMode), PreferredNumThreads(0),
+        MaxNumThreads(0) {}
 
   virtual ~GenericKernelTy() {}
 
@@ -255,8 +255,8 @@ struct GenericKernelTy {
                ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                           uint64_t NumBlocks,
-                           KernelArgsTy &KernelArgs, void *Args,
+                           uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+                           void *Args,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
