@@ -34,8 +34,8 @@ entry:
 define i8 @t3(ptr %X, i64 %i) {
 ; CHECK-LABEL: t3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    movzbl (%rdi,%rax,4), %eax
+; CHECK-NEXT:    movl %esi, %esi
+; CHECK-NEXT:    movzbl (%rdi,%rsi,4), %eax
 ; CHECK-NEXT:    retq
 
 entry:
