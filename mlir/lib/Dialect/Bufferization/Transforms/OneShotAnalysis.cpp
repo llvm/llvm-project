@@ -383,13 +383,14 @@ static bool happensBefore(Operation *a, Operation *b,
 ///    regions. I.e., we can rule out a RaW conflict if READ happensBefore WRITE
 ///    or WRITE happensBefore DEF. (Checked in `hasReadAfterWriteInterference`.)
 ///
-bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
-                       const SetVector<Value> &definitions,
-                       const AnalysisState &state) {
+static bool canUseOpDominance(OpOperand *uRead, OpOperand *uWrite,
+                              const SetVector<Value> &definitions,
+                              AnalysisState &state) {
   const BufferizationOptions &options = state.getOptions();
   for (Value def : definitions) {
-    Region *rRead = getEnclosingRepetitiveRegion(uRead->getOwner(), options);
-    Region *rDef = getEnclosingRepetitiveRegion(def, options);
+    Region *rRead =
+        state.getEnclosingRepetitiveRegion(uRead->getOwner(), options);
+    Region *rDef = state.getEnclosingRepetitiveRegion(def, options);
 
     // READ and DEF are in the same repetitive region. `happensBefore` can be
     // used to rule out RaW conflicts due to op ordering.
@@ -782,7 +783,10 @@ OneShotAnalysisState::findDefinitionsCached(Value value) {
   return cachedDefinitions[value];
 }
 
-void OneShotAnalysisState::resetCache() { cachedDefinitions.clear(); }
+void OneShotAnalysisState::resetCache() {
+  AnalysisState::resetCache();
+  cachedDefinitions.clear();
+}
 
 /// Determine if `operand` can be bufferized in-place.
 static LogicalResult
