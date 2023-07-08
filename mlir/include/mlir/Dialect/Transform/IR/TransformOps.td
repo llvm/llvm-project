@@ -962,6 +962,36 @@ def SequenceOp : TransformDialectOp<"sequence",
   let hasVerifier = 1;
 }
 
+def VerifyOp : TransformDialectOp<"verify",
+    [TransformOpInterface, TransformEachOpTrait,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let summary = "Verifies the targeted ops";
+  let description = [{
+    This transform verifies the targeted ops. If at least one op fails to
+    verify, the transform fails definitely.
+
+    Note: This op was designed for debugging purposes and should be used like an
+    assertion. It is intentional that this op produces a definite failure and
+    not a silenceable one. Correctness of the program should not depend on this
+    op.
+
+    This transform reads the target handle.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::transform::TransformRewriter &rewriter,
+      ::mlir::Operation *target,
+      ::mlir::transform::ApplyToEachResultList &results,
+      ::mlir::transform::TransformState &state);
+  }];
+}
+
 def YieldOp : TransformDialectOp<"yield",
     [Terminator, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Yields operation handles from a transform IR region";
