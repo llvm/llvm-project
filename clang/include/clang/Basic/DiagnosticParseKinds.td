@@ -1529,6 +1529,8 @@ def err_omp_requires_out_inout_depend_type : Error<
 def warn_omp_more_one_omp_all_memory : Warning<
   "reserved locator 'omp_all_memory' cannot be specified more than once">,
   InGroup<OpenMPClauses>;
+def warn_omp_depend_in_ordered_deprecated : Warning<"'depend' clause for"
+  " 'ordered' is deprecated; use 'doacross' instead">, InGroup<Deprecated>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
