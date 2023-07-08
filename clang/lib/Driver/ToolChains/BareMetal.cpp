@@ -430,9 +430,9 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   CmdArgs.push_back("-Bstatic");
 
-  Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_e, options::OPT_s, options::OPT_t,
-                            options::OPT_Z_Flag, options::OPT_r});
+  Args.AddAllArgs(CmdArgs,
+                  {options::OPT_L, options::OPT_T_Group, options::OPT_s,
+                   options::OPT_t, options::OPT_Z_Flag, options::OPT_r});
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
