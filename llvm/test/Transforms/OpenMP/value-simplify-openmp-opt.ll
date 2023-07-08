@@ -9,20 +9,56 @@ target triple = "amdgcn-amd-amdhsa"
 @G = internal addrspace(3) global i32 undef, align 4
 @H = internal addrspace(3) global i32 undef, align 4
 @X = internal addrspace(3) global i32 undef, align 4
+@QA1 = internal addrspace(3) global i32 undef, align 4
+@QB1 = internal addrspace(3) global i32 undef, align 4
+@QC1 = internal addrspace(3) global i32 undef, align 4
+@QD1 = internal addrspace(3) global i32 undef, align 4
+@QA2 = internal addrspace(3) global i32 undef, align 4
+@QB2 = internal addrspace(3) global i32 undef, align 4
+@QC2 = internal addrspace(3) global i32 undef, align 4
+@QD2 = internal addrspace(3) global i32 undef, align 4
+@QA3 = internal addrspace(3) global i32 undef, align 4
+@QB3 = internal addrspace(3) global i32 undef, align 4
+@QC3 = internal addrspace(3) global i32 undef, align 4
+@QD3 = internal addrspace(3) global i32 undef, align 4
 @str = private unnamed_addr addrspace(4) constant [1 x i8] c"\00", align 1
 
 ; Make sure we do not delete the stores to @G without also replacing the load with `1`.
 ;.
-; TUNIT: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
-; TUNIT: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; TUNIT: @G = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @H = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @X = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QA1 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QB1 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QC1 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QD1 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QA2 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QB2 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QC2 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QD2 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QA3 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QB3 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QC3 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @QD3 = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @str = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
+; TUNIT: @kernel_nested_parallelism = weak constant i8 0
 ;.
-; CGSCC: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
+; CGSCC: @G = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @H = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @X = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QA1 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QB1 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QC1 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QD1 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QA2 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QB2 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QC2 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QD2 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QA3 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QB3 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QC3 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @QD3 = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @str = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ;.
 define void @kernel() "kernel" {
 ;
@@ -168,6 +204,448 @@ define void @sync_def() {
   ret void
 }
 
+define void @kernel4a1(i1 %c) "kernel" {
+; TUNIT-LABEL: define {{[^@]+}}@kernel4a1
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    store i32 0, ptr addrspace(3) @QA1, align 4
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QA1, align 4
+; TUNIT-NEXT:    call void @use1(i32 [[V]]) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    store i32 2, ptr addrspace(3) @QA1, align 4
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@kernel4a1
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    store i32 0, ptr addrspace(3) @QA1, align 4
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QA1, align 4
+; CGSCC-NEXT:    call void @use1(i32 [[V]]) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    store i32 2, ptr addrspace(3) @QA1, align 4
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(3) @QA1
+  br i1 %c, label %S, label %L
+L:
+  call void @sync();
+  %v = load i32, ptr addrspace(3) @QA1
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QA1
+  call void @sync();
+  ret void
+}
+
+; FIXME: We should not replace the load or delete the second store.
+define void @kernel4b1(i1 %c) "kernel" {
+; TUNIT-LABEL: define {{[^@]+}}@kernel4b1
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @use1(i32 0) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@kernel4b1
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @use1(i32 0) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(3) @QB1
+  br i1 %c, label %S, label %L
+L:
+  call void @sync();
+  %v = load i32, ptr addrspace(3) @QB1
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QB1
+  ret void
+}
+
+define void @kernel4a2(i1 %c) "kernel" {
+; TUNIT-LABEL: define {{[^@]+}}@kernel4a2
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@kernel4a2
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    ret void
+;
+  br i1 %c, label %S, label %L
+L:
+  call void @sync();
+  %v = load i32, ptr addrspace(3) @QA2
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QA2
+  call void @sync();
+  ret void
+}
+
+; FIXME: We should not replace the load with undef.
+define void @kernel4b2(i1 %c) "kernel" {
+; TUNIT-LABEL: define {{[^@]+}}@kernel4b2
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@kernel4b2
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    ret void
+;
+  br i1 %c, label %S, label %L
+L:
+  call void @sync();
+  %v = load i32, ptr addrspace(3) @QB2
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QB2
+  ret void
+}
+
+define void @kernel4a3(i1 %c) "kernel" {
+; TUNIT-LABEL: define {{[^@]+}}@kernel4a3
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    store i32 0, ptr addrspace(3) @QA3, align 4
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QA3, align 4
+; TUNIT-NEXT:    call void @use1(i32 [[V]]) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    store i32 2, ptr addrspace(3) @QA3, align 4
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@kernel4a3
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    store i32 0, ptr addrspace(3) @QA3, align 4
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr addrspace(3) @QA3, align 4
+; CGSCC-NEXT:    call void @use1(i32 [[V]]) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    store i32 2, ptr addrspace(3) @QA3, align 4
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(3) @QA3
+  br i1 %c, label %S, label %L
+L:
+  call void @sync();
+  %v = load i32, ptr addrspace(3) @QA3
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QA3
+  call void @sync();
+  call void @sync();
+  call void @sync();
+  call void @sync();
+  ret void
+}
+
+; FIXME: The load of QB3 should not be simplified to 0.
+define void @kernel4b3(i1 %c) "kernel" {
+; TUNIT-LABEL: define {{[^@]+}}@kernel4b3
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @use1(i32 0) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    call void @use1(i32 0) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 1) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 3) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@kernel4b3
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @use1(i32 0) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    call void @use1(i32 0) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 1) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 3) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(3) @QB3
+  br i1 %c, label %S, label %L
+L:
+  call void @sync();
+  %v = load i32, ptr addrspace(3) @QB3
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QB3
+  call void @use1(i32 0)
+  call void @use1(i32 1)
+  call void @use1(i32 2)
+  call void @use1(i32 3)
+  ret void
+}
+
+
+define void @kernel4c1(i1 %c) "kernel" {
+; TUNIT: Function Attrs: norecurse
+; TUNIT-LABEL: define {{[^@]+}}@kernel4c1
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @use1(i32 0) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: norecurse
+; CGSCC-LABEL: define {{[^@]+}}@kernel4c1
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @use1(i32 0) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(3) @QC1
+  br i1 %c, label %S, label %L
+L:
+  call void @barrier();
+  %v = load i32, ptr addrspace(3) @QC1
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QC1
+  call void @barrier();
+  ret void
+}
+
+; FIXME: We should not replace the load or delete the second store.
+define void @kernel4d1(i1 %c) "kernel" {
+; TUNIT: Function Attrs: norecurse
+; TUNIT-LABEL: define {{[^@]+}}@kernel4d1
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @use1(i32 0) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: norecurse
+; CGSCC-LABEL: define {{[^@]+}}@kernel4d1
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @use1(i32 0) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(3) @QD1
+  br i1 %c, label %S, label %L
+L:
+  call void @barrier();
+  %v = load i32, ptr addrspace(3) @QD1
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QD1
+  ret void
+}
+
+define void @kernel4c2(i1 %c) "kernel" {
+; TUNIT: Function Attrs: norecurse
+; TUNIT-LABEL: define {{[^@]+}}@kernel4c2
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: norecurse
+; CGSCC-LABEL: define {{[^@]+}}@kernel4c2
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    ret void
+;
+  br i1 %c, label %S, label %L
+L:
+  call void @barrier();
+  %v = load i32, ptr addrspace(3) @QC2
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QC2
+  call void @barrier();
+  ret void
+}
+
+; FIXME: We should not replace the load with undef.
+define void @kernel4d2(i1 %c) "kernel" {
+; TUNIT: Function Attrs: norecurse
+; TUNIT-LABEL: define {{[^@]+}}@kernel4d2
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: norecurse
+; CGSCC-LABEL: define {{[^@]+}}@kernel4d2
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    ret void
+;
+  br i1 %c, label %S, label %L
+L:
+  call void @barrier();
+  %v = load i32, ptr addrspace(3) @QD2
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QD2
+  ret void
+}
+
+define void @kernel4c3(i1 %c) "kernel" {
+; TUNIT: Function Attrs: norecurse
+; TUNIT-LABEL: define {{[^@]+}}@kernel4c3
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: norecurse
+; CGSCC-LABEL: define {{[^@]+}}@kernel4c3
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    ret void
+;
+  br i1 %c, label %S, label %L
+L:
+  call void @barrier();
+  %v = load i32, ptr addrspace(3) @QC3
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QC3
+  call void @barrier();
+  ret void
+}
+
+; FIXME: We should not replace the load with undef.
+define void @kernel4d3(i1 %c) "kernel" {
+; TUNIT: Function Attrs: norecurse
+; TUNIT-LABEL: define {{[^@]+}}@kernel4d3
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: norecurse
+; CGSCC-LABEL: define {{[^@]+}}@kernel4d3
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    ret void
+;
+  br i1 %c, label %S, label %L
+L:
+  call void @barrier();
+  %v = load i32, ptr addrspace(3) @QD3
+  call void @use1(i32 %v)
+  ret void
+S:
+  store i32 2, ptr addrspace(3) @QD3
+  ret void
+}
+
 declare void @sync()
 declare void @barrier() norecurse nounwind nocallback "llvm.assume"="ompx_aligned_barrier"
 declare void @use1(i32) nosync norecurse nounwind nocallback
@@ -176,13 +654,25 @@ declare void @__kmpc_target_deinit(ptr, i8) nocallback
 declare void @llvm.assume(i1)
 
 !llvm.module.flags = !{!0, !1}
-!nvvm.annotations = !{!2, !3, !4}
+!nvvm.annotations = !{!2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16}
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
 !2 = !{ptr @kernel, !"kernel", i32 1}
 !3 = !{ptr @kernel2, !"kernel", i32 1}
 !4 = !{ptr @kernel3, !"kernel", i32 1}
+!5 = !{ptr @kernel4a1, !"kernel", i32 1}
+!6 = !{ptr @kernel4b1, !"kernel", i32 1}
+!7 = !{ptr @kernel4a2, !"kernel", i32 1}
+!8 = !{ptr @kernel4b2, !"kernel", i32 1}
+!9 = !{ptr @kernel4a3, !"kernel", i32 1}
+!10 = !{ptr @kernel4b3, !"kernel", i32 1}
+!11 = !{ptr @kernel4c1, !"kernel", i32 1}
+!12 = !{ptr @kernel4d1, !"kernel", i32 1}
+!13 = !{ptr @kernel4c2, !"kernel", i32 1}
+!14 = !{ptr @kernel4d2, !"kernel", i32 1}
+!15 = !{ptr @kernel4c3, !"kernel", i32 1}
+!16 = !{ptr @kernel4d3, !"kernel", i32 1}
 
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { norecurse "kernel" }
@@ -207,4 +697,16 @@ declare void @llvm.assume(i1)
 ; CHECK: [[META2:![0-9]+]] = !{ptr @kernel, !"kernel", i32 1}
 ; CHECK: [[META3:![0-9]+]] = !{ptr @kernel2, !"kernel", i32 1}
 ; CHECK: [[META4:![0-9]+]] = !{ptr @kernel3, !"kernel", i32 1}
+; CHECK: [[META5:![0-9]+]] = !{ptr @kernel4a1, !"kernel", i32 1}
+; CHECK: [[META6:![0-9]+]] = !{ptr @kernel4b1, !"kernel", i32 1}
+; CHECK: [[META7:![0-9]+]] = !{ptr @kernel4a2, !"kernel", i32 1}
+; CHECK: [[META8:![0-9]+]] = !{ptr @kernel4b2, !"kernel", i32 1}
+; CHECK: [[META9:![0-9]+]] = !{ptr @kernel4a3, !"kernel", i32 1}
+; CHECK: [[META10:![0-9]+]] = !{ptr @kernel4b3, !"kernel", i32 1}
+; CHECK: [[META11:![0-9]+]] = !{ptr @kernel4c1, !"kernel", i32 1}
+; CHECK: [[META12:![0-9]+]] = !{ptr @kernel4d1, !"kernel", i32 1}
+; CHECK: [[META13:![0-9]+]] = !{ptr @kernel4c2, !"kernel", i32 1}
+; CHECK: [[META14:![0-9]+]] = !{ptr @kernel4d2, !"kernel", i32 1}
+; CHECK: [[META15:![0-9]+]] = !{ptr @kernel4c3, !"kernel", i32 1}
+; CHECK: [[META16:![0-9]+]] = !{ptr @kernel4d3, !"kernel", i32 1}
 ;.
