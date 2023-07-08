@@ -7,7 +7,7 @@
 "`3894 <https://wg21.link/LWG3894>`__","``generator::promise_type::yield_value(ranges::elements_of<Rng, Alloc>)`` should not be ``noexcept``","Varna June 2023","","",""
 "`3903 <https://wg21.link/LWG3903>`__","span destructor is redundantly noexcept","Varna June 2023","|Complete|","Clang 7.0",""
 "`3904 <https://wg21.link/LWG3904>`__","``lazy_split_view::outer-iterator``'s const-converting constructor isn't setting ``trailing_empty_``","Varna June 2023","","","|ranges|"
-"`3905 <https://wg21.link/LWG3905>`__","Type of ``std::fexcept_t``","Varna June 2023","","",""
+"`3905 <https://wg21.link/LWG3905>`__","Type of ``std::fexcept_t``","Varna June 2023","|Complete|","Clang 3.4",""
 "`3912 <https://wg21.link/LWG3912>`__","``enumerate_view::iterator::operator-`` should be ``noexcept``","Varna June 2023","","","|ranges|"
 "`3914 <https://wg21.link/LWG3914>`__","Inconsistent template-head of ``ranges::enumerate_view``","Varna June 2023","","","|ranges|"
 "`3915 <https://wg21.link/LWG3915>`__","Redundant paragraph about expression variations","Varna June 2023","","","|ranges|"
