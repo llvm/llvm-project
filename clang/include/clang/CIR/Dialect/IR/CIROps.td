@@ -1498,6 +1498,11 @@ def FuncOp : CIR_Op<"func", [
     without a prototype and, consequently, may contain calls with invalid
     arguments and undefined behavior.
 
+    The `extra_attrs`, which is an aggregate of function-specific attributes is
+    required and mandatory to describle additional attributes that are not listed
+    above. Though mandatory, the prining of the attribute can be omitted if it is
+    empty.
+
     Example:
 
     ```mlir
@@ -1532,6 +1537,7 @@ def FuncOp : CIR_Op<"func", [
                        UnitAttr:$no_proto,
                        DefaultValuedAttr<GlobalLinkageKind,
                                          "GlobalLinkageKind::ExternalLinkage">:$linkage,
+                       ExtraFuncAttr:$extra_attrs,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,

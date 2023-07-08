@@ -46,13 +46,13 @@ int use_func() { return func<int>(); }
 
 // CHECK-NEXT: cir.global external @s2 = @".str": !cir.ptr<!s8i>
 
-//      CHECK: cir.func @_Z10use_globalv() {
+//      CHECK: cir.func @_Z10use_globalv()
 // CHECK-NEXT:     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["li", init] {alignment = 4 : i64}
 // CHECK-NEXT:     %1 = cir.get_global @a : cir.ptr <!s32i>
 // CHECK-NEXT:     %2 = cir.load %1 : cir.ptr <!s32i>, !s32i
 // CHECK-NEXT:     cir.store %2, %0 : !s32i, cir.ptr <!s32i>
 
-//      CHECK: cir.func @_Z17use_global_stringv() {
+//      CHECK: cir.func @_Z17use_global_stringv()
 // CHECK-NEXT:   %0 = cir.alloca !u8i, cir.ptr <!u8i>, ["c", init] {alignment = 1 : i64}
 // CHECK-NEXT:   %1 = cir.get_global @s2 : cir.ptr <!cir.ptr<!s8i>>
 // CHECK-NEXT:   %2 = cir.load %1 : cir.ptr <!cir.ptr<!s8i>>, !cir.ptr<!s8i>
@@ -63,14 +63,14 @@ int use_func() { return func<int>(); }
 // CHECK-NEXT:   cir.store %6, %0 : !u8i, cir.ptr <!u8i>
 // CHECK-NEXT:   cir.return
 
-//      CHECK:  cir.func linkonce_odr @_Z4funcIiET_v() -> !s32i {
+//      CHECK:  cir.func linkonce_odr @_Z4funcIiET_v() -> !s32i
 // CHECK-NEXT:    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK-NEXT:    %1 = cir.const(#cir.int<0> : !s32i) : !s32i
 // CHECK-NEXT:    cir.store %1, %0 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:    %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
 // CHECK-NEXT:    cir.return %2 : !s32i
 // CHECK-NEXT:  }
-// CHECK-NEXT:  cir.func @_Z8use_funcv() -> !s32i {
+// CHECK-NEXT:  cir.func @_Z8use_funcv() -> !s32i
 // CHECK-NEXT:    %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK-NEXT:    %1 = cir.call @_Z4funcIiET_v() : () -> !s32i
 // CHECK-NEXT:    cir.store %1, %0 : !s32i, cir.ptr <!s32i>

@@ -1762,6 +1762,9 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
         builder.getContext(), mlir::cir::GlobalLinkageKind::ExternalLinkage));
     mlir::SymbolTable::setSymbolVisibility(
         f, mlir::SymbolTable::Visibility::Private);
+
+    setExtraAttributesForFunc(f, FD);
+
     if (!curCGF)
       theModule.push_back(f);
   }
@@ -1785,6 +1788,67 @@ mlir::Location CIRGenModule::getLocForFunction(const clang::FunctionDecl *FD) {
 
   // Use the module location
   return theModule->getLoc();
+}
+
+void CIRGenModule::setExtraAttributesForFunc(FuncOp f,
+                                         const clang::FunctionDecl *FD) {
+  mlir::NamedAttrList attrs;
+
+  if (!FD) {
+    // If we don't have a declaration to control inlining, the function isn't
+    // explicitly marked as alwaysinline for semantic reasons, and inlining is
+    // disabled, mark the function as noinline.
+    if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
+      auto attr = mlir::cir::InlineAttr::get(
+          builder.getContext(), mlir::cir::InlineKind::AlwaysInline);
+      attrs.set(attr.getMnemonic(), attr);
+    }
+  } else if (FD->hasAttr<NoInlineAttr>()) {
+    // Add noinline if the function isn't always_inline.
+    auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+                                           mlir::cir::InlineKind::NoInline);
+    attrs.set(attr.getMnemonic(), attr);
+  } else if (FD->hasAttr<AlwaysInlineAttr>()) {
+    // (noinline wins over always_inline, and we can't specify both in IR)
+    auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+                                           mlir::cir::InlineKind::AlwaysInline);
+    attrs.set(attr.getMnemonic(), attr);
+  } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining) {
+    // If we're not inlining, then force everything that isn't always_inline
+    // to carry an explicit noinline attribute.
+    auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+                                           mlir::cir::InlineKind::NoInline);
+    attrs.set(attr.getMnemonic(), attr);
+  } else {
+    // Otherwise, propagate the inline hint attribute and potentially use its
+    // absence to mark things as noinline.
+    // Search function and template pattern redeclarations for inline.
+    auto CheckForInline = [](const FunctionDecl *FD) {
+      auto CheckRedeclForInline = [](const FunctionDecl *Redecl) {
+        return Redecl->isInlineSpecified();
+      };
+      if (any_of(FD->redecls(), CheckRedeclForInline))
+        return true;
+      const FunctionDecl *Pattern = FD->getTemplateInstantiationPattern();
+      if (!Pattern)
+        return false;
+      return any_of(Pattern->redecls(), CheckRedeclForInline);
+    };
+    if (CheckForInline(FD)) {
+      auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+                                             mlir::cir::InlineKind::InlineHint);
+      attrs.set(attr.getMnemonic(), attr);
+    } else if (codeGenOpts.getInlining() == CodeGenOptions::OnlyHintInlining) {
+      auto attr = mlir::cir::InlineAttr::get(builder.getContext(),
+                                             mlir::cir::InlineKind::NoInline);
+      attrs.set(attr.getMnemonic(), attr);
+    }
+
+  }
+
+  f.setExtraAttrsAttr(mlir::cir::ExtraFuncAttributesAttr::get(
+      builder.getContext(),
+      attrs.getDictionary(builder.getContext())));
 }
 
 /// If the specified mangled name is not in the module,

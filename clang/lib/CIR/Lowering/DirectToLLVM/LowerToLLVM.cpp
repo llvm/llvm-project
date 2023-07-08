@@ -706,6 +706,35 @@ class CIRFuncLowering : public mlir::OpConversionPattern<mlir::cir::FuncOp> {
 public:
   using OpConversionPattern<mlir::cir::FuncOp>::OpConversionPattern;
 
+  /// Returns the name used for the linkage attribute. This *must* correspond to
+  /// the name of the attribute in ODS.
+  static StringRef getLinkageAttrNameString() { return "linkage"; }
+
+  /// Only retain those attributes that are not constructed by
+  /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out argument
+  /// attributes.
+  void
+  filterFuncAttributes(mlir::cir::FuncOp func, bool filterArgAndResAttrs,
+                       SmallVectorImpl<mlir::NamedAttribute> &result) const {
+    for (auto attr : func->getAttrs()) {
+      if (attr.getName() == mlir::SymbolTable::getSymbolAttrName() ||
+          attr.getName() == func.getFunctionTypeAttrName() ||
+          attr.getName() == getLinkageAttrNameString() ||
+          (filterArgAndResAttrs &&
+           (attr.getName() == func.getArgAttrsAttrName() ||
+            attr.getName() == func.getResAttrsAttrName())))
+        continue;
+
+      // `CIRDialectLLVMIRTranslationInterface` requires "cir." prefix for
+      // dialect specific attributes, rename them.
+      if (attr.getName() == func.getExtraAttrsAttrName()) {
+        std::string cirName = "cir." + func.getExtraAttrsAttrName().str();
+        attr.setName(mlir::StringAttr::get(getContext(), cirName));
+      }
+      result.push_back(attr);
+    }
+  }
+
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::FuncOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
@@ -737,9 +766,14 @@ public:
       Loc = FusedLoc.getLocations()[0];
     }
     assert(Loc.isa<mlir::FileLineColLoc>() && "expected single location here");
+
     auto linkage = convertLinkage(op.getLinkage());
-    auto fn = rewriter.create<mlir::LLVM::LLVMFuncOp>(Loc, op.getName(),
-                                                      llvmFnTy, linkage);
+    SmallVector<mlir::NamedAttribute, 4> attributes;
+    filterFuncAttributes(op, /*filterArgAndResAttrs=*/false, attributes);
+
+    auto fn = rewriter.create<mlir::LLVM::LLVMFuncOp>(
+        Loc, op.getName(), llvmFnTy, linkage, false, mlir::LLVM::CConv::C,
+        mlir::SymbolRefAttr(), attributes);
 
     rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
     if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,

@@ -1,5 +1,5 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir -allow-unregistered-dialect | FileCheck %s -check-prefix=LLVM
 
 module {
   cir.func @foo() {
@@ -9,7 +9,7 @@ module {
 }
 
 //      MLIR: module {
-// MLIR-NEXT: func @foo() {
+// MLIR-NEXT: func @foo()
 // MLIR-NEXT:  %0 = llvm.mlir.constant(1 : index) : i64
 // MLIR-NEXT:  %1 = llvm.alloca %0 x !llvm.array<10 x i32> {alignment = 16 : i64} : (i64) -> !llvm.ptr
 // MLIR-NEXT:    llvm.return

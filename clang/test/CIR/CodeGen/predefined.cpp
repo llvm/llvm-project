@@ -5,11 +5,11 @@ extern "C" {
   void __assert2(const char* __file, int __line, const char* __function, const char* __msg) __attribute__((__noreturn__));
 }
 
-void m() { 
+void m() {
   __assert2("yo.cpp", 79, __PRETTY_FUNCTION__, "doom");
 }
 
-// CHECK: cir.func @_Z1mv() {
+// CHECK: cir.func @_Z1mv()
 // CHECK:     %0 = cir.get_global @".str" : cir.ptr <!cir.array<!s8i x 7>>
 // CHECK:     %1 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<!s8i x 7>>), !cir.ptr<!s8i>
 // CHECK:     %2 = cir.const(#cir.int<79> : !s32i) : !s32i

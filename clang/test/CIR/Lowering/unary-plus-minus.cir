@@ -1,5 +1,5 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir -allow-unregistered-dialect | FileCheck %s -check-prefix=LLVM
 !s32i = !cir.int<s, 32>
 module {
   cir.func @foo() {
@@ -29,7 +29,7 @@ module {
 
 
   cir.func @floatingPoints(%arg0: f64) {
-  // MLIR: llvm.func @floatingPoints(%arg0: f64) {
+  // MLIR: llvm.func @floatingPoints(%arg0: f64)
     %0 = cir.alloca f64, cir.ptr <f64>, ["X", init] {alignment = 8 : i64}
     cir.store %arg0, %0 : f64, cir.ptr <f64>
     %1 = cir.load %0 : cir.ptr <f64>, f64

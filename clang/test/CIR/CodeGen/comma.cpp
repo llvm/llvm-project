@@ -7,7 +7,7 @@ int c0() {
     return b + 1, a;
 }
 
-// CHECK: cir.func @_Z2c0v() -> !s32i {
+// CHECK: cir.func @_Z2c0v() -> !s32i
 // CHECK: %[[#RET:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init]
 // CHECK: %[[#B:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["b", init]

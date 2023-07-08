@@ -21,23 +21,23 @@ void t8(void) {}
 bool t9(bool b) { return b; }
 #endif
 
-// CHECK: cir.func @t0(%arg0: !s32i loc({{.*}})) -> !s32i {
-// CHECK: cir.func @t1(%arg0: !u32i loc({{.*}})) -> !u32i {
-// CHECK: cir.func @t2(%arg0: !s8i loc({{.*}})) -> !s8i {
-// CHECK: cir.func @t3(%arg0: !u8i loc({{.*}})) -> !u8i {
-// CHECK: cir.func @t4(%arg0: !s16i loc({{.*}})) -> !s16i {
-// CHECK: cir.func @t5(%arg0: !u16i loc({{.*}})) -> !u16i {
-// CHECK: cir.func @t6(%arg0: f32 loc({{.*}})) -> f32 {
-// CHECK: cir.func @t7(%arg0: f64 loc({{.*}})) -> f64 {
-// CHECK: cir.func @t8() {
+// CHECK: cir.func @t0(%arg0: !s32i loc({{.*}})) -> !s32i
+// CHECK: cir.func @t1(%arg0: !u32i loc({{.*}})) -> !u32i
+// CHECK: cir.func @t2(%arg0: !s8i loc({{.*}})) -> !s8i
+// CHECK: cir.func @t3(%arg0: !u8i loc({{.*}})) -> !u8i
+// CHECK: cir.func @t4(%arg0: !s16i loc({{.*}})) -> !s16i
+// CHECK: cir.func @t5(%arg0: !u16i loc({{.*}})) -> !u16i
+// CHECK: cir.func @t6(%arg0: f32 loc({{.*}})) -> f32
+// CHECK: cir.func @t7(%arg0: f64 loc({{.*}})) -> f64
+// CHECK: cir.func @t8()
 
-// CHECK-CPP: cir.func @_Z2t0i(%arg0: !s32i loc({{.*}})) -> !s32i {
-// CHECK-CPP: cir.func @_Z2t1j(%arg0: !u32i loc({{.*}})) -> !u32i {
-// CHECK-CPP: cir.func @_Z2t2c(%arg0: !s8i loc({{.*}})) -> !s8i {
-// CHECK-CPP: cir.func @_Z2t3h(%arg0: !u8i loc({{.*}})) -> !u8i {
-// CHECK-CPP: cir.func @_Z2t4s(%arg0: !s16i loc({{.*}})) -> !s16i {
-// CHECK-CPP: cir.func @_Z2t5t(%arg0: !u16i loc({{.*}})) -> !u16i {
-// CHECK-CPP: cir.func @_Z2t6f(%arg0: f32 loc({{.*}})) -> f32 {
-// CHECK-CPP: cir.func @_Z2t7d(%arg0: f64 loc({{.*}})) -> f64 {
-// CHECK-CPP: cir.func @_Z2t8v() {
-// CHECK-CPP: cir.func @_Z2t9b(%arg0: !cir.bool loc({{.*}})) -> !cir.bool {
+// CHECK-CPP: cir.func @_Z2t0i(%arg0: !s32i loc({{.*}})) -> !s32i
+// CHECK-CPP: cir.func @_Z2t1j(%arg0: !u32i loc({{.*}})) -> !u32i
+// CHECK-CPP: cir.func @_Z2t2c(%arg0: !s8i loc({{.*}})) -> !s8i
+// CHECK-CPP: cir.func @_Z2t3h(%arg0: !u8i loc({{.*}})) -> !u8i
+// CHECK-CPP: cir.func @_Z2t4s(%arg0: !s16i loc({{.*}})) -> !s16i
+// CHECK-CPP: cir.func @_Z2t5t(%arg0: !u16i loc({{.*}})) -> !u16i
+// CHECK-CPP: cir.func @_Z2t6f(%arg0: f32 loc({{.*}})) -> f32
+// CHECK-CPP: cir.func @_Z2t7d(%arg0: f64 loc({{.*}})) -> f64
+// CHECK-CPP: cir.func @_Z2t8v()
+// CHECK-CPP: cir.func @_Z2t9b(%arg0: !cir.bool loc({{.*}})) -> !cir.bool

@@ -1,0 +1,11 @@
+// RUN: cir-tool %s | FileCheck %s -check-prefix=CIR
+// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+
+module {
+  cir.func @l0() extra( {cir.inline = #cir.inline<no>} )  {
+    cir.return
+  }
+}
+
+// CIR: cir.func @l0() extra( {cir.inline = #cir.inline<no>} ) {
+// MLIR: llvm.func @l0() attributes {cir.extra_attrs = #cir<extra({cir.inline = #cir.inline<no>})>}

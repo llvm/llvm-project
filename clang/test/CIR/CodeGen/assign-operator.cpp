@@ -81,7 +81,7 @@ int main() {
   }
 }
 
-// CHECK: cir.func @main() -> !s32i {
+// CHECK: cir.func @main() -> !s32i
 // CHECK:     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:     %1 = cir.alloca !ty_22struct2EStringView22, cir.ptr <!ty_22struct2EStringView22>, ["sv", init] {alignment = 8 : i64}
 // CHECK:     cir.call @_ZN10StringViewC2Ev(%1) : (!cir.ptr<!ty_22struct2EStringView22>) -> ()

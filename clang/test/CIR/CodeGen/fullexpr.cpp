@@ -8,7 +8,7 @@ int go1() {
   return x;
 }
 
-// CHECK: cir.func @_Z3go1v() -> !s32i {
+// CHECK: cir.func @_Z3go1v() -> !s32i
 // CHECK: %[[#XAddr:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["x", init] {alignment = 4 : i64}
 // CHECK: %[[#RVal:]] = cir.scope {
 // CHECK-NEXT:   %[[#TmpAddr:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["ref.tmp0", init] {alignment = 4 : i64}

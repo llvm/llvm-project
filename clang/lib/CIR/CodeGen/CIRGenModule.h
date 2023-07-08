@@ -525,6 +525,9 @@ public:
   void ReplaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *Old,
                                                  mlir::cir::FuncOp NewFn);
 
+  void setExtraAttributesForFunc(mlir::cir::FuncOp f,
+                             const clang::FunctionDecl *FD);
+
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR
   mlir::cir::FuncOp

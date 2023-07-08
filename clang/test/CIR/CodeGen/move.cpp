@@ -28,7 +28,7 @@ void t() {
 // FIXME: we should explicitly model std::move here since it will
 // be useful at least for the lifetime checker.
 
-// CHECK: cir.func @_Z1tv() {
+// CHECK: cir.func @_Z1tv()
 // CHECK:   %[[#Addr:]] = cir.alloca ![[StdString]], {{.*}} ["ref.tmp0"]
 // CHECK:   %[[#RValStr:]] = cir.call @_Z6getstrv() : () -> ![[StdString]]
 // CHECK:   cir.store %[[#RValStr]], %[[#Addr]]

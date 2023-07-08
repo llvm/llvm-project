@@ -46,7 +46,7 @@ public:
 
 // foo - zero initialize object B and call ctor (@B::B())
 //
-// CHECK: cir.func @_Z3foov() {
+// CHECK: cir.func @_Z3foov()
 // CHECK:     %0 = cir.alloca ![[ClassB]], cir.ptr <![[ClassB]]>, ["agg.tmp0"] {alignment = 8 : i64}
 // CHECK:     cir.scope {
 // CHECK:       %1 = cir.const(#cir.zero : ![[ClassB]]) : ![[ClassB]]

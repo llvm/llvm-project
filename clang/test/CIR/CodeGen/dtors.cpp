@@ -42,7 +42,7 @@ public:
 // Class B
 // CHECK: ![[ClassB:ty_.*]] = !cir.struct<"class.B", ![[ClassA]]>
 
-// CHECK: cir.func @_Z4bluev() {
+// CHECK: cir.func @_Z4bluev()
 // CHECK:   %0 = cir.alloca !ty_22class2EPSEvent22, cir.ptr <!ty_22class2EPSEvent22>, ["p", init] {alignment = 8 : i64}
 // CHECK:   %1 = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK:   %2 = cir.get_global @".str" : cir.ptr <!cir.array<!s8i x 5>>

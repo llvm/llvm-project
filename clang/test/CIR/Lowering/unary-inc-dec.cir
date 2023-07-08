@@ -1,5 +1,5 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir -allow-unregistered-dialect | FileCheck %s -check-prefix=LLVM
 !s32i = !cir.int<s, 32>
 module {
   cir.func @foo() {
@@ -51,7 +51,7 @@ module {
     cir.store %7, %1 : f64, cir.ptr <f64>
     // MLIR: %[[#D_ONE:]] = llvm.mlir.constant(1.000000e+00 : f64) : f64
     // MLIR: = llvm.fadd %[[#D_ONE]], %{{[0-9]+}}  : f64
-    
+
     %8 = cir.load %1 : cir.ptr <f64>, f64
     %9 = cir.unary(dec, %8) : f64, f64
     cir.store %9, %1 : f64, cir.ptr <f64>

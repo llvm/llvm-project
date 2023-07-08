@@ -6,7 +6,7 @@ int f() {
   return p() - 22;
 }
 
-// CHECK: cir.func @_Z1fv() -> !s32i {
+// CHECK: cir.func @_Z1fv() -> !s32i
 // CHECK:   %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:   %1 = cir.call @_Z1pv() : () -> !cir.ptr<!s32i>
 // CHECK:   %2 = cir.load %1 : cir.ptr <!s32i>, !s32i

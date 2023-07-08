@@ -1,5 +1,5 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir -allow-unregistered-dialect | FileCheck %s -check-prefix=LLVM
 !u32i = !cir.int<u, 32>
 
 module {
@@ -12,7 +12,7 @@ module {
     cir.return
   }
 
-//      MLIR: llvm.func @foo() {
+//      MLIR: llvm.func @foo()
 // MLIR-NEXT:   llvm.br ^bb1
 // MLIR-NEXT: ^bb1:
 //  MLIR-DAG:   [[v1:%[0-9]]] = llvm.mlir.constant(4 : i32) : i32
@@ -43,7 +43,7 @@ module {
     }
     cir.return
   }
-  //      MLIR: llvm.func @empty_scope() {
+  //      MLIR: llvm.func @empty_scope()
   // MLIR-NEXT:   llvm.return
   // MLIR-NEXT: }
 

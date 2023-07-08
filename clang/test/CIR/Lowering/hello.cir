@@ -21,7 +21,7 @@ module @"/tmp/test.raw" attributes {cir.lang = #cir.lang<c>, cir.sob = #cir.sign
 
 // CHECK:  llvm.func @printf(!llvm.ptr, ...) -> i32
 // CHECK:  llvm.mlir.global internal constant @".str"("Hello, world!\0A\00") {addr_space = 0 : i32}
-// CHECK:  llvm.func @main() -> i32 {
+// CHECK:  llvm.func @main() -> i32
 // CHECK:    %0 = llvm.mlir.constant(1 : index) : i64
 // CHECK:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
 // CHECK:    %2 = llvm.mlir.addressof @".str" : !llvm.ptr

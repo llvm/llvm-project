@@ -19,7 +19,7 @@ void m() {
 // CHECK: !ty_22union2Eyolm22 = !cir.struct<"union.yolm", !ty_22struct2Eyolo22>
 // CHECK: !ty_22union2Eyolm222 = !cir.struct<"union.yolm2", !ty_22struct2Eanon221>
 
-// CHECK:   cir.func @_Z1mv() {
+// CHECK:   cir.func @_Z1mv()
 // CHECK:   cir.alloca !ty_22union2Eyolm22, cir.ptr <!ty_22union2Eyolm22>, ["q"] {alignment = 4 : i64}
 // CHECK:   cir.alloca !ty_22union2Eyolm222, cir.ptr <!ty_22union2Eyolm222>, ["q2"] {alignment = 8 : i64}
 // CHECK:   cir.alloca !ty_22union2Eyolm322, cir.ptr <!ty_22union2Eyolm322>, ["q3"] {alignment = 4 : i64}

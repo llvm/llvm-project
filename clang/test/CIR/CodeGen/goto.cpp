@@ -55,7 +55,7 @@ end:
 // Make sure (1) we don't get dangling unused cleanup blocks
 //           (2) generated returns consider the function type
 
-// CHECK: cir.func @_Z2g2v() -> !s32i {
+// CHECK: cir.func @_Z2g2v() -> !s32i
 
 // CHECK:     cir.br ^bb2
 // CHECK-NEXT:   ^bb1:  // no predecessors
