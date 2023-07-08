@@ -2059,12 +2059,14 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         running = cmd.startswith("run") or cmd.startswith("process launch")
 
         for i in range(self.maxLaunchCount if running else 1):
-            self.ci.HandleCommand(cmd, self.res, inHistory)
-
             with recording(self, trace) as sbuf:
                 print("runCmd:", cmd, file=sbuf)
                 if not check:
                     print("check of return status not required", file=sbuf)
+
+            self.ci.HandleCommand(cmd, self.res, inHistory)
+
+            with recording(self, trace) as sbuf:
                 if self.res.Succeeded():
                     print("output:", self.res.GetOutput(), file=sbuf)
                 else:
