@@ -50,7 +50,7 @@ public:
   void popArgs();
 
   /// Describes the frame with arguments for diagnostic purposes.
-  void describe(llvm::raw_ostream &OS) override;
+  void describe(llvm::raw_ostream &OS) const override;
 
   /// Returns the parent frame object.
   Frame *getCaller() const override;
