@@ -1650,15 +1650,14 @@ public:
     auto *ArrayTy = ArrayType::get(VT->getElementType(), VT->getNumElements());
     AllocaInst *Alloca =
         Builder.CreateAlloca(ArrayTy, Load->getPointerAddressSpace());
-    Value *BC = Builder.CreateBitCast(Alloca, VT->getPointerTo());
 
-    Builder.CreateMemCpy(BC, Alloca->getAlign(), Load->getPointerOperand(),
+    Builder.CreateMemCpy(Alloca, Alloca->getAlign(), Load->getPointerOperand(),
                          Load->getAlign(), LoadLoc.Size.getValue());
     Builder.SetInsertPoint(Fusion, Fusion->begin());
     PHINode *PHI = Builder.CreatePHI(Load->getPointerOperandType(), 3);
     PHI->addIncoming(Load->getPointerOperand(), Check0);
     PHI->addIncoming(Load->getPointerOperand(), Check1);
-    PHI->addIncoming(BC, Copy);
+    PHI->addIncoming(Alloca, Copy);
 
     // Adjust DT.
     DTUpdates.push_back({DT->Insert, Check0, Check1});
