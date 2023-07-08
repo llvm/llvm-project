@@ -52,3 +52,4 @@ Revert "[AMDGPU] Remove extract_subvector patterns"
 breaks rccl build:
 Revert "Implement P2361 Unevaluated string literals"
 
+Revert: [libc] Add support for creating wrapper headers for offloading in clang
