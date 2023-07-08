@@ -45,7 +45,8 @@ transform::TransformState::TransformState(
   for (ArrayRef<MappedValue> mapping : extraMappings)
     topLevelMappedValues.push_back(mapping);
 
-  auto result = mappings.insert(std::make_pair(region, Mappings()));
+  auto result =
+      mappings.insert(std::make_pair(region, std::make_unique<Mappings>()));
   assert(result.second && "the region scope is already present");
   (void)result;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -87,8 +88,8 @@ LogicalResult transform::TransformState::getHandlesForPayloadOp(
     bool includeOutOfScope) const {
   bool found = false;
   for (const auto &[region, mapping] : llvm::reverse(mappings)) {
-    auto iterator = mapping.reverse.find(op);
-    if (iterator != mapping.reverse.end()) {
+    auto iterator = mapping->reverse.find(op);
+    if (iterator != mapping->reverse.end()) {
       llvm::append_range(handles, iterator->getSecond());
       found = true;
     }
@@ -106,8 +107,8 @@ LogicalResult transform::TransformState::getHandlesForPayloadValue(
     bool includeOutOfScope) const {
   bool found = false;
   for (const auto &[region, mapping] : llvm::reverse(mappings)) {
-    auto iterator = mapping.reverseValues.find(payloadValue);
-    if (iterator != mapping.reverseValues.end()) {
+    auto iterator = mapping->reverseValues.find(payloadValue);
+    if (iterator != mapping->reverseValues.end()) {
       llvm::append_range(handles, iterator->getSecond());
       found = true;
     }
@@ -611,7 +612,7 @@ void transform::TransformState::recordOpHandleInvalidation(
     // Go over all op handle mappings and mark as invalidated any handle
     // pointing to any of the payload ops associated with the given handle or
     // any op nested in them.
-    for (const auto &[payloadOp, otherHandles] : mapping.reverse) {
+    for (const auto &[payloadOp, otherHandles] : mapping->reverse) {
       for (Value otherHandle : otherHandles)
         recordOpHandleInvalidationOne(handle, potentialAncestors, payloadOp,
                                       otherHandle, throughValue,
@@ -622,7 +623,7 @@ void transform::TransformState::recordOpHandleInvalidation(
     // or any op nested in them. Similarly invalidate handles to argument of
     // blocks belonging to any region of any payload op associated with the
     // given handle or any op nested in them.
-    for (const auto &[payloadValue, valueHandles] : mapping.reverseValues) {
+    for (const auto &[payloadValue, valueHandles] : mapping->reverseValues) {
       for (Value valueHandle : valueHandles)
         recordValueHandleInvalidationByOpHandleOne(handle, potentialAncestors,
                                                    payloadValue, valueHandle,
@@ -842,8 +843,9 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     // Cache Operation* -> OperationName mappings. These will be checked after
     // the transform has been applied to detect incorrect memory side effects
     // and missing op tracking.
-    for (Mappings &mapping : llvm::make_second_range(mappings)) {
-      for (Operation *op : llvm::make_first_range(mapping.reverse)) {
+    for (std::unique_ptr<Mappings> &mapping :
+         llvm::make_second_range(mappings)) {
+      for (Operation *op : llvm::make_first_range(mapping->reverse)) {
         auto insertion = cachedNames.insert({op, op->getName()});
         if (!insertion.second) {
           if (insertion.first->second != op->getName()) {
@@ -993,8 +995,9 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     }
 
     // Check cached operation names.
-    for (Mappings &mapping : llvm::make_second_range(mappings)) {
-      for (Operation *op : llvm::make_first_range(mapping.reverse)) {
+    for (std::unique_ptr<Mappings> &mapping :
+         llvm::make_second_range(mappings)) {
+      for (Operation *op : llvm::make_first_range(mapping->reverse)) {
         // Make sure that the name of the op has not changed. If it has changed,
         // the op was removed and a new op was allocated at the same memory
         // location. This means that we are missing op tracking somewhere.
@@ -1106,7 +1109,7 @@ transform::TransformState::RegionScope::~RegionScope() {
   // Remember pointers to payload ops referenced by the handles going out of
   // scope.
   SmallVector<Operation *> referencedOps =
-      llvm::to_vector(llvm::make_first_range(state.mappings[region].reverse));
+      llvm::to_vector(llvm::make_first_range(state.mappings[region]->reverse));
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 
   state.mappings.erase(region);

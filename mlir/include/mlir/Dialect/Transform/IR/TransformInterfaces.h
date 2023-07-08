@@ -285,7 +285,8 @@ public:
     /// transform IR region and payload IR objects.
     RegionScope(TransformState &state, Region &region)
         : state(state), region(&region) {
-      auto res = state.mappings.insert(std::make_pair(&region, Mappings()));
+      auto res = state.mappings.insert(
+          std::make_pair(&region, std::make_unique<Mappings>()));
       assert(res.second && "the region scope is already present");
       (void)res;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -437,7 +438,7 @@ private:
       }
     }
 #endif // NDEBUG
-    return it->second;
+    return *it->second.get();
   }
 
   /// Returns the mappings frame for the region in which the operation resides.
@@ -464,7 +465,7 @@ private:
       }
     }
 #endif // NDEBUG
-    return it->second;
+    return *it->second.get();
   }
 
   /// Updates the state to include the associations between op results and the
@@ -683,7 +684,10 @@ private:
 
   /// A stack of mappings between transform IR values and payload IR ops,
   /// aggregated by the region in which the transform IR values are defined.
-  llvm::MapVector<Region *, Mappings> mappings;
+  /// We use a pointer to the Mappings struct so that reallocations inside
+  /// MapVector don't invalidate iterators when we apply nested transform ops
+  /// while also iterating over the mappings.
+  llvm::MapVector<Region *, std::unique_ptr<Mappings>> mappings;
 
   /// Op handles may be temporarily mapped to nullptr to avoid invalidating
   /// payload op iterators. This set contains all op handles with nullptrs.
