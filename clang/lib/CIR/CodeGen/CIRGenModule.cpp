@@ -2150,6 +2150,7 @@ void CIRGenModule::buildDeferred(unsigned recursionLimit) {
   CurDeclsToEmit.swap(DeferredDeclsToEmit);
   if (recursionLimit == 0)
     return;
+  recursionLimit--;
 
   for (auto &D : CurDeclsToEmit) {
     buildGlobalDecl(D);
@@ -2158,7 +2159,6 @@ void CIRGenModule::buildDeferred(unsigned recursionLimit) {
     // This has the advantage that the decls are emitted in a DFS and related
     // ones are close together, which is convenient for testing.
     if (!DeferredVTables.empty() || !DeferredDeclsToEmit.empty()) {
-      recursionLimit--;
       buildDeferred(recursionLimit);
       assert(DeferredVTables.empty() && DeferredDeclsToEmit.empty());
     }
