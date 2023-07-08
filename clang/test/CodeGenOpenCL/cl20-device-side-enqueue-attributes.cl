@@ -162,30 +162,30 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    ret void
 //
 //.
-// SPIR32: attributes #0 = { convergent noinline norecurse nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
-// SPIR32: attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-// SPIR32: attributes #2 = { convergent noinline nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// SPIR32: attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-// SPIR32: attributes #4 = { convergent nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// SPIR32: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// SPIR32: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// SPIR32: attributes #[[ATTR2]] = { convergent noinline nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// SPIR32: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+// SPIR32: attributes #[[ATTR4]] = { convergent nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
-// STRICTFP: attributes #0 = { convergent noinline norecurse nounwind optnone strictfp "stack-protector-buffer-size"="8" "strictfp" "uniform-work-group-size"="false" }
-// STRICTFP: attributes #1 = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-// STRICTFP: attributes #2 = { convergent noinline nounwind optnone strictfp "stack-protector-buffer-size"="8" }
-// STRICTFP: attributes #3 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
-// STRICTFP: attributes #4 = { convergent nounwind "stack-protector-buffer-size"="8" }
-// STRICTFP: attributes #5 = { strictfp }
+// STRICTFP: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind optnone strictfp "stack-protector-buffer-size"="8" "strictfp" "uniform-work-group-size"="false" }
+// STRICTFP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// STRICTFP: attributes #[[ATTR2]] = { convergent noinline nounwind optnone strictfp "stack-protector-buffer-size"="8" }
+// STRICTFP: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+// STRICTFP: attributes #[[ATTR4]] = { convergent nounwind "stack-protector-buffer-size"="8" }
+// STRICTFP: attributes #[[ATTR5]] = { strictfp }
 //.
-// SPIR32: !0 = !{i32 1, !"wchar_size", i32 4}
-// SPIR32: !1 = !{i32 2, i32 0}
-// SPIR32: !2 = !{i32 1, i32 1, i32 0}
-// SPIR32: !3 = !{!"none", !"none", !"none"}
-// SPIR32: !4 = !{!"float*", !"float*", !"int"}
-// SPIR32: !5 = !{!"", !"", !""}
+// SPIR32: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// SPIR32: [[META1:![0-9]+]] = !{i32 2, i32 0}
+// SPIR32: [[META2:![0-9]+]] = !{i32 1, i32 1, i32 0}
+// SPIR32: [[META3:![0-9]+]] = !{!"none", !"none", !"none"}
+// SPIR32: [[META4:![0-9]+]] = !{!"float*", !"float*", !"int"}
+// SPIR32: [[META5:![0-9]+]] = !{!"", !"", !""}
 //.
-// STRICTFP: !0 = !{i32 1, !"wchar_size", i32 4}
-// STRICTFP: !1 = !{i32 2, i32 0}
-// STRICTFP: !2 = !{i32 1, i32 1, i32 0}
-// STRICTFP: !3 = !{!"none", !"none", !"none"}
-// STRICTFP: !4 = !{!"float*", !"float*", !"int"}
-// STRICTFP: !5 = !{!"", !"", !""}
+// STRICTFP: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// STRICTFP: [[META1:![0-9]+]] = !{i32 2, i32 0}
+// STRICTFP: [[META2:![0-9]+]] = !{i32 1, i32 1, i32 0}
+// STRICTFP: [[META3:![0-9]+]] = !{!"none", !"none", !"none"}
+// STRICTFP: [[META4:![0-9]+]] = !{!"float*", !"float*", !"int"}
+// STRICTFP: [[META5:![0-9]+]] = !{!"", !"", !""}
 //.
