@@ -49,6 +49,8 @@ static void print_usage(void) {
       "    Read lines of name, rpn from stdin - print generated module\n\n");
   fprintf(stderr, "  * --get-di-tag\n");
   fprintf(stderr, "    Run test for getting MDNode dwarf tag\n");
+  fprintf(stderr, "  * --di-type-get-name\n");
+  fprintf(stderr, "    Run test for getting MDNode type name\n");
   fprintf(stderr, "  * --replace-md-operand\n");
   fprintf(stderr, "    Run test for replacing MDNode operands\n");
   fprintf(stderr, "  * --is-a-value-as-metadata\n");
@@ -96,6 +98,8 @@ int main(int argc, char **argv) {
     return llvm_set_metadata();
   } else if (argc == 2 && !strcmp(argv[1], "--get-di-tag")) {
     return llvm_get_di_tag();
+  } else if (argc == 2 && !strcmp(argv[1], "--di-type-get-name")) {
+    return llvm_di_type_get_name();
   } else if (argc == 2 && !strcmp(argv[1], "--replace-md-operand")) {
     return llvm_replace_md_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--is-a-value-as-metadata")) {
