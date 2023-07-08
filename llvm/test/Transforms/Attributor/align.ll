@@ -22,7 +22,7 @@ define ptr @test1(ptr align 8 %0) #0 {
 ; CHECK-SAME: (ptr nofree readnone returned align 8 "no-capture-maybe-returned" [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
-  ret i32* %0
+  ret ptr %0
 }
 
 ; TEST 2
@@ -32,7 +32,7 @@ define ptr @test2(ptr %0) #0 {
 ; CHECK-SAME: (ptr nofree readnone returned "no-capture-maybe-returned" [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret ptr [[TMP0]]
 ;
-  ret i32* %0
+  ret ptr %0
 }
 
 ; TEST 3
@@ -43,7 +43,7 @@ define ptr @test3(ptr align 8 %0, ptr align 4 %1, i1 %2) #0 {
 ; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP2]], ptr [[TMP0]], ptr [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %ret = select i1 %2, i32* %0, i32* %1
+  %ret = select i1 %2, ptr %0, ptr %1
   ret ptr %ret
 }
 
@@ -55,7 +55,7 @@ define ptr @test4(ptr align 32 %0, ptr align 32 %1, i1 %2) #0 {
 ; CHECK-NEXT:    [[RET:%.*]] = select i1 [[TMP2]], ptr [[TMP0]], ptr [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %ret = select i1 %2, i32* %0, i32* %1
+  %ret = select i1 %2, ptr %0, ptr %1
   ret ptr %ret
 }
 
@@ -69,7 +69,7 @@ define ptr @test5_1() {
 ; CHECK-NEXT:    [[RET:%.*]] = tail call align 8 ptr @unknown()
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %ret = tail call align 8 i32* @unknown()
+  %ret = tail call align 8 ptr @unknown()
   ret ptr %ret
 }
 
@@ -78,7 +78,7 @@ define ptr @test5_2() {
 ; CHECK-NEXT:    [[RET:%.*]] = tail call align 8 ptr @align8()
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %ret = tail call i32* @align8()
+  %ret = tail call ptr @align8()
   ret ptr %ret
 }
 
@@ -95,7 +95,7 @@ define ptr @test6_1() #0 {
 ; CGSCC-SAME: () #[[ATTR0]] {
 ; CGSCC-NEXT:    ret ptr undef
 ;
-  %ret = tail call i32* @test6_2()
+  %ret = tail call ptr @test6_2()
   ret ptr %ret
 }
 
@@ -110,7 +110,7 @@ define ptr @test6_2() #0 {
 ; CGSCC-SAME: () #[[ATTR0]] {
 ; CGSCC-NEXT:    ret ptr undef
 ;
-  %ret = tail call i32* @test6_1()
+  %ret = tail call ptr @test6_1()
   ret ptr %ret
 }
 
@@ -143,7 +143,7 @@ define internal ptr @f1(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC:       2:
 ; CGSCC-NEXT:    ret ptr @a1
 ;
-  %2 = icmp eq i8* %0, null
+  %2 = icmp eq ptr %0, null
   br i1 %2, label %3, label %5
 
 ; <label>:3:                                      ; preds = %1
@@ -171,7 +171,7 @@ define ptr @f2(ptr readnone %0) local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi ptr [ [[TMP0]], [[TMP3]] ], [ @a1, [[TMP4]] ]
 ; CHECK-NEXT:    ret ptr [[TMP6]]
 ;
-  %2 = icmp eq i8* %0, null
+  %2 = icmp eq ptr %0, null
   br i1 %2, label %5, label %3
 
 ; <label>:3:                                      ; preds = %1
@@ -199,7 +199,7 @@ define internal ptr @f3(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC:       2:
 ; CGSCC-NEXT:    ret ptr undef
 ;
-  %2 = icmp eq i8* %0, null
+  %2 = icmp eq ptr %0, null
   br i1 %2, label %3, label %5
 
 ; <label>:3:                                      ; preds = %1
@@ -225,7 +225,7 @@ define align 4 ptr @test7() #0 {
 ; CGSCC-NEXT:    [[C:%.*]] = tail call noundef nonnull align 8 dereferenceable(1) ptr @f1() #[[ATTR14:[0-9]+]]
 ; CGSCC-NEXT:    ret ptr [[C]]
 ;
-  %c = tail call i8* @f1(i8* align 8 dereferenceable(1) @a1)
+  %c = tail call ptr @f1(ptr align 8 dereferenceable(1) @a1)
   ret ptr %c
 }
 
@@ -241,7 +241,7 @@ define internal ptr @f1b(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC:       2:
 ; CGSCC-NEXT:    ret ptr undef
 ;
-  %2 = icmp eq i8* %0, null
+  %2 = icmp eq ptr %0, null
   br i1 %2, label %3, label %5
 
 ; <label>:3:                                      ; preds = %1
@@ -273,7 +273,7 @@ define internal ptr @f2b(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC-NEXT:    [[TMP8:%.*]] = phi ptr [ [[TMP4]], [[TMP3]] ], [ [[TMP6]], [[TMP5]] ]
 ; CGSCC-NEXT:    ret ptr [[TMP8]]
 ;
-  %2 = icmp eq i8* %0, null
+  %2 = icmp eq ptr %0, null
   br i1 %2, label %5, label %3
 
 ; <label>:3:                                      ; preds = %1
@@ -302,7 +302,7 @@ define internal ptr @f3b(ptr readnone %0) local_unnamed_addr #0 {
 ; CGSCC:       2:
 ; CGSCC-NEXT:    ret ptr @a1
 ;
-  %2 = icmp eq i8* %0, null
+  %2 = icmp eq ptr %0, null
   br i1 %2, label %3, label %5
 
 ; <label>:3:                                      ; preds = %1
@@ -325,7 +325,7 @@ define align 4 ptr @test7b(ptr align 32 %p) #0 {
 ; CGSCC-SAME: (ptr nofree readnone returned align 32 "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    ret ptr [[P]]
 ;
-  tail call i8* @f1b(i8* align 8 dereferenceable(1) @a1)
+  tail call ptr @f1b(ptr align 8 dereferenceable(1) @a1)
   ret ptr %p
 }
 
@@ -349,7 +349,7 @@ define void @test8_helper() {
 ; CGSCC-NEXT:    tail call void @test8(ptr noalias nocapture readnone align 8 [[PTR2]], ptr noalias nocapture readnone align 4 [[PTR1]], ptr noalias nocapture readnone align 4 [[PTR1]]) #[[ATTR3]]
 ; CGSCC-NEXT:    ret void
 ;
-  %ptr0 = tail call i32* @unknown()
+  %ptr0 = tail call ptr @unknown()
   %ptr1 = tail call align 4 ptr @unknown()
   %ptr2 = tail call align 8 ptr @unknown()
 
@@ -377,7 +377,7 @@ define internal void @test8(ptr %a, ptr %b, ptr %c) {
 ; CGSCC-NEXT:    call void @user_i32_ptr(ptr noalias nocapture readnone [[C]]) #[[ATTR3]]
 ; CGSCC-NEXT:    ret void
 ;
-  call void @user_i32_ptr(i32* %a)
+  call void @user_i32_ptr(ptr %a)
   call void @user_i32_ptr(ptr %b)
   call void @user_i32_ptr(ptr %c)
   ret void
@@ -391,17 +391,17 @@ define void @test9_traversal(i1 %cnd, ptr align 4 %B, ptr align 8 %C) {
 ; CHECK-NEXT:    call void @test9_helper(ptr align 4 [[SEL]])
 ; CHECK-NEXT:    ret void
 ;
-  %sel = select i1 %cnd, i32* %B, i32* %C
+  %sel = select i1 %cnd, ptr %B, ptr %C
   call void @test9_helper(ptr %sel)
   ret void
 }
 
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
-;             define align 32 i32* @test10a(i32* align 32 "no-capture-maybe-returned" %p)
+;             define align 32 ptr @test10a(ptr align 32 "no-capture-maybe-returned" %p)
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
-;             store i32 1, i32* %r, align 32
+;             store i32 1, ptr %r, align 32
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
-;             store i32 -1, i32* %g1, align 32
+;             store i32 -1, ptr %g1, align 32
 define ptr @test10a(ptr align 32 %p) {
 ; TUNIT: Function Attrs: nofree nosync nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@test10a
@@ -441,7 +441,7 @@ define ptr @test10a(ptr align 32 %p) {
 ; CGSCC-NEXT:    [[PHI:%.*]] = phi ptr [ [[G0]], [[T]] ], [ [[G1]], [[F]] ]
 ; CGSCC-NEXT:    ret ptr [[PHI]]
 ;
-  %l = load i32, i32* %p
+  %l = load i32, ptr %p
   %c = icmp eq i32 %l, 0
   br i1 %c, label %t, label %f
 t:
@@ -459,11 +459,11 @@ e:
 }
 
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
-;             define align 32 i32* @test10b(i32* align 32 "no-capture-maybe-returned" %p)
+;             define align 32 ptr @test10b(ptr align 32 "no-capture-maybe-returned" %p)
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
-;             store i32 1, i32* %r, align 32
+;             store i32 1, ptr %r, align 32
 ; FIXME: This will work with an upcoming patch (D66618 or similar)
-;             store i32 -1, i32* %g1, align 32
+;             store i32 -1, ptr %g1, align 32
 define ptr @test10b(ptr align 32 %p) {
 ; TUNIT: Function Attrs: nofree nosync nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@test10b
@@ -503,7 +503,7 @@ define ptr @test10b(ptr align 32 %p) {
 ; CGSCC-NEXT:    [[PHI:%.*]] = phi ptr [ [[G0]], [[T]] ], [ [[G1]], [[F]] ]
 ; CGSCC-NEXT:    ret ptr [[PHI]]
 ;
-  %l = load i32, i32* %p
+  %l = load i32, ptr %p
   %c = icmp eq i32 %l, 0
   br i1 %c, label %t, label %f
 t:
@@ -534,7 +534,7 @@ define i64 @test11(ptr %p) {
 ; CGSCC-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 8
 ; CGSCC-NEXT:    ret i64 [[RET]]
 ;
-  %p-cast = bitcast i32* %p to i64*
+  %p-cast = bitcast ptr %p to ptr
   %ret = load i64, ptr %p-cast, align 8
   ret i64 %ret
 }
@@ -560,7 +560,7 @@ define i64 @test12-1(ptr align 4 %p) {
 ; CGSCC-NEXT:    [[RET:%.*]] = load i64, ptr [[ARRAYIDX1]], align 16
 ; CGSCC-NEXT:    ret i64 [[RET]]
 ;
-  %p-cast = bitcast i32* %p to i64*
+  %p-cast = bitcast ptr %p to ptr
   %arrayidx0 = getelementptr i64, ptr %p-cast, i64 1
   %arrayidx1 = getelementptr i64, ptr %arrayidx0, i64 3
   %ret = load i64, ptr %arrayidx1, align 16
@@ -580,7 +580,7 @@ define i64 @test12-2(ptr align 4 %p) {
 ; CGSCC-NEXT:    [[RET:%.*]] = load i64, ptr [[P]], align 16
 ; CGSCC-NEXT:    ret i64 [[RET]]
 ;
-  %p-cast = bitcast i32* %p to i64*
+  %p-cast = bitcast ptr %p to ptr
   %ret = load i64, ptr %p-cast, align 16
   ret i64 %ret
 }
@@ -603,7 +603,7 @@ define void @test12-3(ptr align 4 %p) {
 ; CGSCC-NEXT:    store i64 0, ptr [[ARRAYIDX1]], align 16
 ; CGSCC-NEXT:    ret void
 ;
-  %p-cast = bitcast i32* %p to i64*
+  %p-cast = bitcast ptr %p to ptr
   %arrayidx0 = getelementptr i64, ptr %p-cast, i64 1
   %arrayidx1 = getelementptr i64, ptr %arrayidx0, i64 3
   store i64 0, ptr %arrayidx1, align 16
@@ -623,7 +623,7 @@ define void @test12-4(ptr align 4 %p) {
 ; CGSCC-NEXT:    store i64 0, ptr [[P]], align 16
 ; CGSCC-NEXT:    ret void
 ;
-  %p-cast = bitcast i32* %p to i64*
+  %p-cast = bitcast ptr %p to ptr
   store i64 0, ptr %p-cast, align 16
   ret void
 }
@@ -647,7 +647,7 @@ define void @test12-5(ptr align 4 %p) {
 ; CGSCC-NEXT:    tail call void @use(ptr align 16 [[ARRAYIDX1]]) #[[ATTR7:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
-  %p-cast = bitcast i32* %p to i64*
+  %p-cast = bitcast ptr %p to ptr
   %arrayidx0 = getelementptr i64, ptr %p-cast, i64 1
   %arrayidx1 = getelementptr i64, ptr %arrayidx0, i64 3
   tail call void @use(ptr align 16 %arrayidx1)
@@ -667,7 +667,7 @@ define void @test12-6(ptr align 4 %p) {
 ; CGSCC-NEXT:    tail call void @use(ptr align 16 [[P]]) #[[ATTR7]]
 ; CGSCC-NEXT:    ret void
 ;
-  %p-cast = bitcast i32* %p to i64*
+  %p-cast = bitcast ptr %p to ptr
   tail call void @use(ptr align 16 %p-cast)
   ret void
 }
@@ -838,7 +838,7 @@ define i64 @ptr2int(ptr %p) {
 ; CGSCC-NEXT:    [[P2I:%.*]] = ptrtoint ptr [[P]] to i64
 ; CGSCC-NEXT:    ret i64 [[P2I]]
 ;
-  %p2i = ptrtoint i32* %p to i64
+  %p2i = ptrtoint ptr %p to i64
   ret i64 %p2i
 }
 define ptr @int2ptr(i64 %i) {
@@ -854,7 +854,7 @@ define ptr @int2ptr(i64 %i) {
 ; CGSCC-NEXT:    [[I2P:%.*]] = inttoptr i64 [[I]] to ptr
 ; CGSCC-NEXT:    ret ptr [[I2P]]
 ;
-  %i2p = inttoptr i64 %i to i64*
+  %i2p = inttoptr i64 %i to ptr
   ret ptr %i2p
 }
 
@@ -872,7 +872,7 @@ define void @aligned_store(ptr %Value, ptr %Ptr) {
 ; CGSCC-NEXT:    store ptr [[VALUE]], ptr [[PTR]], align 32
 ; CGSCC-NEXT:    ret void
 ;
-  store i8* %Value, i8** %Ptr, align 32
+  store ptr %Value, ptr %Ptr, align 32
   ret void
 }
 
@@ -884,7 +884,7 @@ define void @align_call_op_not_store(ptr align 2048 %arg) {
 ; CHECK-NEXT:    store i8 0, ptr [[UNKNOWN]], align 1
 ; CHECK-NEXT:    ret void
 ;
-  %unknown = call i8* @some_func(i8* %arg)
+  %unknown = call ptr @some_func(ptr %arg)
   store i8 0, ptr %unknown
   ret void
 }
@@ -902,7 +902,7 @@ define void @align_store_after_bc(ptr align 2048 %arg) {
 ; CGSCC-NEXT:    store i8 0, ptr [[ARG]], align 2048
 ; CGSCC-NEXT:    ret void
 ;
-  %bc = bitcast i32* %arg to i8*
+  %bc = bitcast ptr %arg to ptr
   store i8 0, ptr %bc
   ret void
 }
@@ -923,7 +923,7 @@ define i32 @musttail_callee_1(ptr %p) {
 ; CGSCC-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 32
 ; CGSCC-NEXT:    ret i32 [[V]]
 ;
-  %v = load i32, i32* %p, align 32
+  %v = load i32, ptr %p, align 32
   ret i32 %v
 }
 define i32 @musttail_caller_1(ptr %p) {
@@ -949,7 +949,7 @@ define i32 @musttail_caller_1(ptr %p) {
 ; CGSCC:       exit:
 ; CGSCC-NEXT:    ret i32 0
 ;
-  %c = load i1, i1* @cnd
+  %c = load i1, ptr @cnd
   br i1 %c, label %mt, label %exit
 mt:
   %v = musttail call i32 @musttail_callee_1(ptr %p)
@@ -1014,7 +1014,7 @@ define void @align4_caller(ptr %p) {
 ; CHECK-NEXT:    call void @align4_callee(ptr align 4 [[P]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @align4_callee(i8* %p)
+  call void @align4_callee(ptr %p)
   ret void
 }
 
@@ -1057,7 +1057,7 @@ define internal ptr @aligned_8_return(ptr %a, i1 %c1, i1 %c2) norecurse {
 ; CGSCC-NEXT:    [[L:%.*]] = load ptr, ptr [[STACK]], align 8
 ; CGSCC-NEXT:    ret ptr [[L]]
 ;
-  %stack = alloca i8*
+  %stack = alloca ptr
   br i1 %c1, label %t, label %f
 t:
   %gep = getelementptr i8, ptr @G, i32 8
@@ -1085,7 +1085,7 @@ define ptr @aligned_8_return_caller(ptr align(16) %a, i1 %c1, i1 %c2) {
 ; CGSCC-NEXT:    [[R:%.*]] = call align 8 ptr @aligned_8_return(ptr noalias nofree readnone align 16 [[A]], i1 noundef [[C1]], i1 [[C2]]) #[[ATTR14]]
 ; CGSCC-NEXT:    ret ptr [[R]]
 ;
-  %r = call i8* @aligned_8_return(i8* %a, i1 %c1, i1 %c2)
+  %r = call ptr @aligned_8_return(ptr %a, i1 %c1, i1 %c2)
   ret ptr %r
 }
 

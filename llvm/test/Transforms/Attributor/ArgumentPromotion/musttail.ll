@@ -18,7 +18,7 @@ define internal i32 @test(ptr %p) {
 ; CHECK-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
-  %a.gep = getelementptr %T, %T* %p, i64 0, i32 3
+  %a.gep = getelementptr %T, ptr %p, i64 0, i32 3
   %b.gep = getelementptr %T, ptr %p, i64 0, i32 2
   %a = load i32, ptr %a.gep
   %b = load i32, ptr %b.gep
@@ -39,7 +39,7 @@ define i32 @caller(ptr %p) {
 ; CGSCC-NEXT:    [[V:%.*]] = musttail call i32 @test(ptr nocapture nofree readonly [[P]]) #[[ATTR5:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[V]]
 ;
-  %v = musttail call i32 @test(%T* %p)
+  %v = musttail call i32 @test(ptr %p)
   ret i32 %v
 }
 
@@ -71,7 +71,7 @@ define internal i32 @test2(ptr %p, i32 %p2) {
 ; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @foo(ptr undef, i32 [[V]]) #[[ATTR6:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CA]]
 ;
-  %a.gep = getelementptr %T, %T* %p, i64 0, i32 3
+  %a.gep = getelementptr %T, ptr %p, i64 0, i32 3
   %b.gep = getelementptr %T, ptr %p, i64 0, i32 2
   %a = load i32, ptr %a.gep
   %b = load i32, ptr %b.gep
@@ -92,7 +92,7 @@ define i32 @caller2(ptr %g) {
 ; CGSCC-NEXT:    [[V:%.*]] = call noundef i32 @test2(ptr nocapture nofree readonly [[G]], i32 noundef 0) #[[ATTR5]]
 ; CGSCC-NEXT:    ret i32 [[V]]
 ;
-  %v = call i32 @test2(%T* %g, i32 0)
+  %v = call i32 @test2(ptr %g, i32 0)
   ret i32 %v
 }
 
@@ -113,7 +113,7 @@ define i32 @bar(ptr %p, i32 %v) {
 ; CGSCC-NEXT:    store i32 [[V]], ptr [[P]], align 4
 ; CGSCC-NEXT:    ret i32 0
 ;
-  %i32ptr = getelementptr %T, %T* %p, i64 0, i32 0
+  %i32ptr = getelementptr %T, ptr %p, i64 0, i32 0
   store i32 %v, ptr %i32ptr
   ret i32 0
 }
@@ -141,7 +141,7 @@ define internal i32 @test2b(ptr %p, i32 %p2) {
 ; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @bar(ptr nonnull undef, i32 [[V]]) #[[ATTR7:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CA]]
 ;
-  %a.gep = getelementptr %T, %T* %p, i64 0, i32 3
+  %a.gep = getelementptr %T, ptr %p, i64 0, i32 3
   %b.gep = getelementptr %T, ptr %p, i64 0, i32 2
   %a = load i32, ptr %a.gep
   %b = load i32, ptr %b.gep
@@ -163,7 +163,7 @@ define i32 @caller2b(ptr %g) {
 ; CGSCC-NEXT:    [[V:%.*]] = call noundef i32 @test2b(ptr nocapture nofree readonly [[G]], i32 noundef 0) #[[ATTR8:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[V]]
 ;
-  %v = call i32 @test2b(%T* %g, i32 0)
+  %v = call i32 @test2b(ptr %g, i32 0)
   ret i32 %v
 }
 ;.
