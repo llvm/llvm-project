@@ -283,6 +283,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   SIMode Mode;
   std::optional<FrameIndex> ScavengeFI;
   StringValue VGPRForAGPRCopy;
+  StringValue SGPRForEXECCopy;
   StringValue LongBranchReservedReg;
 
   SIMachineFunctionInfo() = default;
@@ -327,6 +328,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("scavengeFI", MFI.ScavengeFI);
     YamlIO.mapOptional("vgprForAGPRCopy", MFI.VGPRForAGPRCopy,
                        StringValue()); // Don't print out when it's empty.
+    YamlIO.mapOptional("sgprForEXECCopy", MFI.SGPRForEXECCopy,
+                       StringValue()); // Don't print out when it's empty.
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
   }
@@ -365,7 +368,8 @@ public:
 
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
-class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
+class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
+                                    private MachineRegisterInfo::Delegate {
   friend class GCNTargetMachine;
 
   // State of MODE register, assumed FP mode.
@@ -468,6 +472,9 @@ private:
 
   unsigned HighBitsOf32BitAddress;
 
+  // Flags associated with the virtual registers.
+  IndexedMap<uint8_t, VirtReg2IndexFunctor> VRegFlags;
+
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
 
@@ -476,6 +483,10 @@ private:
   MCPhysReg getNextUserSGPR() const;
 
   MCPhysReg getNextSystemSGPR() const;
+
+  // MachineRegisterInfo callback functions to notify events.
+  void MRI_NoteNewVirtualRegister(Register Reg) override;
+  void MRI_NoteCloneVirtualRegister(Register NewReg, Register SrcReg) override;
 
 public:
   struct VGPRSpillToAGPR {
@@ -518,6 +529,9 @@ private:
   // SILowerSGPRSpills pass, some special handling needed later during the
   // PrologEpilogInserter.
   PrologEpilogSGPRSpillsMap PrologEpilogSGPRSpills;
+
+  // To save/restore EXEC MASK around WWM spills and copies.
+  Register SGPRForEXECCopy;
 
   DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
 
@@ -640,6 +654,19 @@ public:
                : ArrayRef(I->second);
   }
 
+  void setFlag(Register Reg, uint8_t Flag) {
+    assert(Reg.isVirtual());
+    if (VRegFlags.inBounds(Reg))
+      VRegFlags[Reg] |= Flag;
+  }
+
+  bool checkFlag(Register Reg, uint8_t Flag) const {
+    if (Reg.isPhysical())
+      return false;
+
+    return VRegFlags.inBounds(Reg) && VRegFlags[Reg] & Flag;
+  }
+
   void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,
                         Align Alignment = Align(4));
 
@@ -651,6 +678,10 @@ public:
   ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
     return SpillAGPR;
   }
+
+  Register getSGPRForEXECCopy() const { return SGPRForEXECCopy; }
+
+  void setSGPRForEXECCopy(Register Reg) { SGPRForEXECCopy = Reg; }
 
   ArrayRef<MCPhysReg> getVGPRSpillAGPRs() const {
     return SpillVGPR;

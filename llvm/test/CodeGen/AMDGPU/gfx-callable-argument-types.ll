@@ -7117,7 +7117,7 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-LABEL: tail_call_byval_align16:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s6, s33
+; GFX9-NEXT:    s_mov_b32 s8, s33
 ; GFX9-NEXT:    s_mov_b32 s33, s32
 ; GFX9-NEXT:    s_or_saveexec_b64 s[4:5], -1
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
@@ -7202,14 +7202,14 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX9-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:24 ; 4-byte Folded Reload
 ; GFX9-NEXT:    s_mov_b64 exec, s[4:5]
 ; GFX9-NEXT:    s_addk_i32 s32, 0xf800
-; GFX9-NEXT:    s_mov_b32 s33, s6
+; GFX9-NEXT:    s_mov_b32 s33, s8
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: tail_call_byval_align16:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_mov_b32 s6, s33
+; GFX10-NEXT:    s_mov_b32 s7, s33
 ; GFX10-NEXT:    s_mov_b32 s33, s32
 ; GFX10-NEXT:    s_or_saveexec_b32 s4, -1
 ; GFX10-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
@@ -7297,14 +7297,14 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10-NEXT:    s_addk_i32 s32, 0xfc00
-; GFX10-NEXT:    s_mov_b32 s33, s6
+; GFX10-NEXT:    s_mov_b32 s33, s7
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: tail_call_byval_align16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 s4, s33
+; GFX11-NEXT:    s_mov_b32 s5, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX11-NEXT:    scratch_store_b32 off, v40, s33 offset:24 ; 4-byte Folded Spill
@@ -7387,14 +7387,14 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX11-NEXT:    scratch_load_b32 v40, off, s33 offset:24 ; 4-byte Folded Reload
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-NEXT:    s_addk_i32 s32, 0xffe0
-; GFX11-NEXT:    s_mov_b32 s33, s4
+; GFX11-NEXT:    s_mov_b32 s33, s5
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-SCRATCH-LABEL: tail_call_byval_align16:
 ; GFX10-SCRATCH:       ; %bb.0: ; %entry
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-SCRATCH-NEXT:    s_mov_b32 s4, s33
+; GFX10-SCRATCH-NEXT:    s_mov_b32 s5, s33
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s32
 ; GFX10-SCRATCH-NEXT:    s_or_saveexec_b32 s0, -1
 ; GFX10-SCRATCH-NEXT:    scratch_store_dword off, v40, s33 offset:24 ; 4-byte Folded Spill
@@ -7479,7 +7479,7 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX10-SCRATCH-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-SCRATCH-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX10-SCRATCH-NEXT:    s_addk_i32 s32, 0xffe0
-; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s4
+; GFX10-SCRATCH-NEXT:    s_mov_b32 s33, s5
 ; GFX10-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
 entry:
