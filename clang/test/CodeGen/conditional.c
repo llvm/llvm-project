@@ -55,7 +55,6 @@ int test10(int c) {
 }
 enum { Gronk = 5 };
 
-// rdar://9289603
 // CHECK: @test11
 // CHECK: select i1 {{.*}}, i32 4, i32 5
 int test11(int c) {

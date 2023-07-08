@@ -226,15 +226,15 @@
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_subprogram [22]
+# POSTCHECK: DW_TAG_subprogram [7]
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_variable [24]
+# POSTCHECK: DW_TAG_variable [9]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_inlined_subroutine [25]
+# POSTCHECK: DW_TAG_inlined_subroutine [10]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
@@ -242,7 +242,7 @@
 
 # helper1.cpp
 # POSTCHECK: version = 0x0005
-# POSTCHECK: DW_TAG_compile_unit [26] *
+# POSTCHECK: DW_TAG_compile_unit [1] *
 # POSTCHECK-NEXT: DW_AT_producer
 # POSTCHECK-NEXT: DW_AT_language
 # POSTCHECK-NEXT: DW_AT_name
@@ -255,22 +255,22 @@
 # POSTCHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: DW_AT_loclists_base [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]
-# POSTCHECK: DW_TAG_variable [27]
+# POSTCHECK: DW_TAG_variable [2]
 # POSTCHECK-NEXT: DW_AT_name
 # POSTCHECK-NEXT: DW_AT_type
 # POSTCHECK-NEXT: DW_AT_external
 # POSTCHECK-NEXT: DW_AT_decl_file
 # POSTCHECK-NEXT: DW_AT_decl_line
 # POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x2)
-# POSTCHECK: DW_TAG_subprogram [29]
+# POSTCHECK: DW_TAG_subprogram [7]
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1)
 # POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x4]]
-# POSTCHECK: DW_TAG_variable [10]
+# POSTCHECK: DW_TAG_variable [9]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
 # POSTCHECK-NEXT: [0x[[#ADDRB]], 0x[[#ADDRB + 0x3]]
 # POSTCHECK-NEXT: [0x[[#ADDRB + 0x3]], 0x[[#ADDRB + 0x4]]
-# POSTCHECK: DW_TAG_inlined_subroutine [31]
+# POSTCHECK: DW_TAG_inlined_subroutine [10]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addrx]  (indexed (00000001)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x2) rangelist
@@ -278,7 +278,7 @@
 
 # helper2.cpp
 # POSTCHECK: version = 0x0004
-# POSTCHECK: DW_TAG_compile_unit [17] *
+# POSTCHECK: DW_TAG_compile_unit [1] *
 # POSTCHECK-NEXT: DW_AT_producer
 # POSTCHECK-NEXT: DW_AT_language
 # POSTCHECK-NEXT: DW_AT_name
@@ -287,15 +287,15 @@
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_subprogram [22]
+# POSTCHECK: DW_TAG_subprogram [7]
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_variable [24]
+# POSTCHECK: DW_TAG_variable [9]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_sec_offset]
 # POSTCHECK-NEXT: [0x
 # POSTCHECK-NEXT: [0x
-# POSTCHECK: DW_TAG_inlined_subroutine [25]
+# POSTCHECK: DW_TAG_inlined_subroutine [10]
 # POSTCHECK-NEXT: DW_AT_abstract_origin
 # POSTCHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
 # POSTCHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset]

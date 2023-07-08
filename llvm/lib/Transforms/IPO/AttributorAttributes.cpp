@@ -1080,8 +1080,16 @@ struct AAPointerInfoImpl
     bool AllInSameNoSyncFn = IsAssumedNoSync;
     bool InstIsExecutedByInitialThreadOnly =
         ExecDomainAA && ExecDomainAA->isExecutedByInitialThreadOnly(I);
+
+    // If the function is not ending in aligned barriers, we need the stores to
+    // be in aligned barriers. The load being in one is not sufficient since the
+    // store might be executed by a thread that disappears after, causing the
+    // aligned barrier guarding the load to unblock and the load to read a value
+    // that has no CFG path to the load.
     bool InstIsExecutedInAlignedRegion =
-        ExecDomainAA && ExecDomainAA->isExecutedInAlignedRegion(A, I);
+        FindInterferingReads && ExecDomainAA &&
+        ExecDomainAA->isExecutedInAlignedRegion(A, I);
+
     if (InstIsExecutedInAlignedRegion || InstIsExecutedByInitialThreadOnly)
       A.recordDependence(*ExecDomainAA, QueryingAA, DepClassTy::OPTIONAL);
 
@@ -1107,7 +1115,8 @@ struct AAPointerInfoImpl
       if (!FnExecDomainAA)
         return false;
       if (InstIsExecutedInAlignedRegion ||
-          FnExecDomainAA->isExecutedInAlignedRegion(A, I)) {
+          (FindInterferingWrites &&
+           FnExecDomainAA->isExecutedInAlignedRegion(A, I))) {
         A.recordDependence(*FnExecDomainAA, QueryingAA, DepClassTy::OPTIONAL);
         return true;
       }

@@ -4,7 +4,6 @@
 // which the bound was specified, an omitted array bound is taken to be the
 // same as in that earlier declaration
 
-// rdar://13535367
 namespace test0 {
   extern "C" int array[];
   void declare() { extern int array[100]; }

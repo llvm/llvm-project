@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -fblocks
-// rdar://10734265
 
 @class NSObject;
 typedef void (^block1_t)(int arg);

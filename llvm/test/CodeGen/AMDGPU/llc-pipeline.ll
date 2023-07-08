@@ -30,8 +30,6 @@
 ; GCN-O0-NEXT:      Expand large div/rem
 ; GCN-O0-NEXT:      Expand large fp convert
 ; GCN-O0-NEXT:    AMDGPU Printf lowering
-; GCN-O0-NEXT:      FunctionPass Manager
-; GCN-O0-NEXT:        Dominator Tree Construction
 ; GCN-O0-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O0-NEXT:    AMDGPU Inline All Functions
 ; GCN-O0-NEXT:    Inliner for always_inline functions
@@ -151,9 +149,6 @@
 ; GCN-O0-NEXT:      Machine Optimization Remark Emitter
 ; GCN-O0-NEXT:      AMDGPU Assembly Printer
 ; GCN-O0-NEXT:      Free MachineFunction
-; GCN-O0-NEXT:Pass Arguments:  -domtree
-; GCN-O0-NEXT:  FunctionPass Manager
-; GCN-O0-NEXT:    Dominator Tree Construction
 
 ; GCN-O1:Target Library Information
 ; GCN-O1-NEXT:Target Pass Configuration
@@ -177,8 +172,6 @@
 ; GCN-O1-NEXT:      Expand large div/rem
 ; GCN-O1-NEXT:      Expand large fp convert
 ; GCN-O1-NEXT:    AMDGPU Printf lowering
-; GCN-O1-NEXT:      FunctionPass Manager
-; GCN-O1-NEXT:        Dominator Tree Construction
 ; GCN-O1-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O1-NEXT:    AMDGPU Inline All Functions
 ; GCN-O1-NEXT:    Inliner for always_inline functions
@@ -428,9 +421,6 @@
 ; GCN-O1-NEXT:      Machine Optimization Remark Emitter
 ; GCN-O1-NEXT:      AMDGPU Assembly Printer
 ; GCN-O1-NEXT:      Free MachineFunction
-; GCN-O1-NEXT:Pass Arguments:  -domtree
-; GCN-O1-NEXT:  FunctionPass Manager
-; GCN-O1-NEXT:    Dominator Tree Construction
 
 ; GCN-O1-OPTS:Target Library Information
 ; GCN-O1-OPTS-NEXT:Target Pass Configuration
@@ -454,8 +444,6 @@
 ; GCN-O1-OPTS-NEXT:      Expand large div/rem
 ; GCN-O1-OPTS-NEXT:      Expand large fp convert
 ; GCN-O1-OPTS-NEXT:    AMDGPU Printf lowering
-; GCN-O1-OPTS-NEXT:      FunctionPass Manager
-; GCN-O1-OPTS-NEXT:        Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O1-OPTS-NEXT:    AMDGPU Inline All Functions
 ; GCN-O1-OPTS-NEXT:    Inliner for always_inline functions
@@ -727,9 +715,6 @@
 ; GCN-O1-OPTS-NEXT:      Machine Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:      AMDGPU Assembly Printer
 ; GCN-O1-OPTS-NEXT:      Free MachineFunction
-; GCN-O1-OPTS-NEXT:Pass Arguments:  -domtree
-; GCN-O1-OPTS-NEXT:  FunctionPass Manager
-; GCN-O1-OPTS-NEXT:    Dominator Tree Construction
 
 ; GCN-O2:Target Library Information
 ; GCN-O2-NEXT:Target Pass Configuration
@@ -753,8 +738,6 @@
 ; GCN-O2-NEXT:      Expand large div/rem
 ; GCN-O2-NEXT:      Expand large fp convert
 ; GCN-O2-NEXT:    AMDGPU Printf lowering
-; GCN-O2-NEXT:      FunctionPass Manager
-; GCN-O2-NEXT:        Dominator Tree Construction
 ; GCN-O2-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O2-NEXT:    AMDGPU Inline All Functions
 ; GCN-O2-NEXT:    Inliner for always_inline functions
@@ -1036,9 +1019,6 @@
 ; GCN-O2-NEXT:      Machine Optimization Remark Emitter
 ; GCN-O2-NEXT:      AMDGPU Assembly Printer
 ; GCN-O2-NEXT:      Free MachineFunction
-; GCN-O2-NEXT:Pass Arguments:  -domtree
-; GCN-O2-NEXT:  FunctionPass Manager
-; GCN-O2-NEXT:    Dominator Tree Construction
 
 ; GCN-O3:Target Library Information
 ; GCN-O3-NEXT:Target Pass Configuration
@@ -1062,8 +1042,6 @@
 ; GCN-O3-NEXT:      Expand large div/rem
 ; GCN-O3-NEXT:      Expand large fp convert
 ; GCN-O3-NEXT:    AMDGPU Printf lowering
-; GCN-O3-NEXT:      FunctionPass Manager
-; GCN-O3-NEXT:        Dominator Tree Construction
 ; GCN-O3-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O3-NEXT:    AMDGPU Inline All Functions
 ; GCN-O3-NEXT:    Inliner for always_inline functions
@@ -1357,9 +1335,6 @@
 ; GCN-O3-NEXT:      Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:      AMDGPU Assembly Printer
 ; GCN-O3-NEXT:      Free MachineFunction
-; GCN-O3-NEXT:Pass Arguments:  -domtree
-; GCN-O3-NEXT:  FunctionPass Manager
-; GCN-O3-NEXT:    Dominator Tree Construction
 
 define void @empty() {
   ret void

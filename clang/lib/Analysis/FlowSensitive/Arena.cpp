@@ -7,65 +7,75 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Arena.h"
+#include "clang/Analysis/FlowSensitive/Value.h"
 
 namespace clang::dataflow {
 
-static std::pair<BoolValue *, BoolValue *>
-makeCanonicalBoolValuePair(BoolValue &LHS, BoolValue &RHS) {
+static std::pair<const Formula *, const Formula *>
+canonicalFormulaPair(const Formula &LHS, const Formula &RHS) {
   auto Res = std::make_pair(&LHS, &RHS);
-  if (&RHS < &LHS)
+  if (&RHS < &LHS) // FIXME: use a deterministic order instead
     std::swap(Res.first, Res.second);
   return Res;
 }
 
-BoolValue &Arena::makeAnd(BoolValue &LHS, BoolValue &RHS) {
+const Formula &Arena::makeAtomRef(Atom A) {
+  auto [It, Inserted] = AtomRefs.try_emplace(A);
+  if (Inserted)
+    It->second =
+        &Formula::create(Alloc, Formula::AtomRef, {}, static_cast<unsigned>(A));
+  return *It->second;
+}
+
+const Formula &Arena::makeAnd(const Formula &LHS, const Formula &RHS) {
   if (&LHS == &RHS)
     return LHS;
 
-  auto Res = ConjunctionVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
-                                         nullptr);
-  if (Res.second)
-    Res.first->second = &create<ConjunctionValue>(LHS, RHS);
-  return *Res.first->second;
+  auto [It, Inserted] =
+      Ands.try_emplace(canonicalFormulaPair(LHS, RHS), nullptr);
+  if (Inserted)
+    It->second = &Formula::create(Alloc, Formula::And, {&LHS, &RHS});
+  return *It->second;
 }
 
-BoolValue &Arena::makeOr(BoolValue &LHS, BoolValue &RHS) {
+const Formula &Arena::makeOr(const Formula &LHS, const Formula &RHS) {
   if (&LHS == &RHS)
     return LHS;
 
-  auto Res = DisjunctionVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
-                                         nullptr);
-  if (Res.second)
-    Res.first->second = &create<DisjunctionValue>(LHS, RHS);
-  return *Res.first->second;
+  auto [It, Inserted] =
+      Ors.try_emplace(canonicalFormulaPair(LHS, RHS), nullptr);
+  if (Inserted)
+    It->second = &Formula::create(Alloc, Formula::Or, {&LHS, &RHS});
+  return *It->second;
 }
 
-BoolValue &Arena::makeNot(BoolValue &Val) {
-  auto Res = NegationVals.try_emplace(&Val, nullptr);
-  if (Res.second)
-    Res.first->second = &create<NegationValue>(Val);
-  return *Res.first->second;
+const Formula &Arena::makeNot(const Formula &Val) {
+  auto [It, Inserted] = Nots.try_emplace(&Val, nullptr);
+  if (Inserted)
+    It->second = &Formula::create(Alloc, Formula::Not, {&Val});
+  return *It->second;
 }
 
-BoolValue &Arena::makeImplies(BoolValue &LHS, BoolValue &RHS) {
+const Formula &Arena::makeImplies(const Formula &LHS, const Formula &RHS) {
   if (&LHS == &RHS)
     return makeLiteral(true);
 
-  auto Res = ImplicationVals.try_emplace(std::make_pair(&LHS, &RHS), nullptr);
-  if (Res.second)
-    Res.first->second = &create<ImplicationValue>(LHS, RHS);
-  return *Res.first->second;
+  auto [It, Inserted] =
+      Implies.try_emplace(std::make_pair(&LHS, &RHS), nullptr);
+  if (Inserted)
+    It->second = &Formula::create(Alloc, Formula::Implies, {&LHS, &RHS});
+  return *It->second;
 }
 
-BoolValue &Arena::makeEquals(BoolValue &LHS, BoolValue &RHS) {
+const Formula &Arena::makeEquals(const Formula &LHS, const Formula &RHS) {
   if (&LHS == &RHS)
     return makeLiteral(true);
 
-  auto Res = BiconditionalVals.try_emplace(makeCanonicalBoolValuePair(LHS, RHS),
-                                           nullptr);
-  if (Res.second)
-    Res.first->second = &create<BiconditionalValue>(LHS, RHS);
-  return *Res.first->second;
+  auto [It, Inserted] =
+      Equals.try_emplace(canonicalFormulaPair(LHS, RHS), nullptr);
+  if (Inserted)
+    It->second = &Formula::create(Alloc, Formula::Equal, {&LHS, &RHS});
+  return *It->second;
 }
 
 IntegerValue &Arena::makeIntLiteral(llvm::APInt Value) {
@@ -73,6 +83,15 @@ IntegerValue &Arena::makeIntLiteral(llvm::APInt Value) {
 
   if (Inserted)
     It->second = &create<IntegerValue>();
+  return *It->second;
+}
+
+BoolValue &Arena::makeBoolValue(const Formula &F) {
+  auto [It, Inserted] = FormulaValues.try_emplace(&F);
+  if (Inserted)
+    It->second = (F.kind() == Formula::AtomRef)
+                     ? (BoolValue *)&create<AtomicBoolValue>(F)
+                     : &create<FormulaBoolValue>(F);
   return *It->second;
 }
 

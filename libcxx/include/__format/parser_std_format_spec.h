@@ -17,7 +17,6 @@
 /// affect the std-format-spec.
 
 #include <__algorithm/copy_n.h>
-#include <__algorithm/find_if.h>
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__concepts/arithmetic.h>

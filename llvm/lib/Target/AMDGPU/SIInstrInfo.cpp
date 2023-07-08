@@ -1626,10 +1626,12 @@ static unsigned getWWMRegSpillSaveOpcode(unsigned Size) {
   return AMDGPU::SI_SPILL_WWM_V32_SAVE;
 }
 
-static unsigned
-getVectorRegSpillSaveOpcode(Register Reg, const TargetRegisterClass *RC,
-                            unsigned Size, const SIRegisterInfo &TRI,
-                            const SIMachineFunctionInfo &MFI, bool NeedsCFI) {
+static unsigned getVectorRegSpillSaveOpcode(Register Reg,
+                                            const TargetRegisterClass *RC,
+                                            unsigned Size,
+                                            const SIRegisterInfo &TRI,
+                                            const SIMachineFunctionInfo &MFI,
+					    bool NeedsCFI) {
   // Choose the right opcode if spilling a WWM register.
   if (MFI.checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
     return getWWMRegSpillSaveOpcode(Size);

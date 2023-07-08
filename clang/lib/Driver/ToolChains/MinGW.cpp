@@ -192,7 +192,6 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   } else
     CmdArgs.push_back(OutputFile);
 
-  Args.AddAllArgs(CmdArgs, options::OPT_e);
   // FIXME: add -N, -n flags
   Args.AddLastArg(CmdArgs, options::OPT_r);
   Args.AddLastArg(CmdArgs, options::OPT_s);

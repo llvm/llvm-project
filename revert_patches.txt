@@ -49,4 +49,6 @@ Revert: 2be0abb7fe72 Rewrite load-store-vectorizer.
 
 Revert "[AMDGPU] Remove extract_subvector patterns"  
 
-Revert "[LSR] Move normalization check to normalizeForPostIncUse."  
+breaks rccl build:
+Revert "Implement P2361 Unevaluated string literals"
+

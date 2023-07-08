@@ -3,7 +3,6 @@
 // RUN: %clang_cc1 -x objective-c++ -fblocks -fms-extensions -rewrite-objc %t.mm -o %t-rw.cpp
 // RUN: %clang_cc1 -fsyntax-only -triple i686-pc-win32 -Werror -Wno-address-of-temporary -D"Class=struct objc_class *" -D"id=struct objc_object *" -D"SEL=void*" -U__declspec -D"__declspec(X)=" %t-rw.cpp -Wno-attributes
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-pc-win32 -Werror -Wno-address-of-temporary -D"Class=struct objc_class *" -D"id=struct objc_object *" -D"SEL=void*" -U__declspec -D"__declspec(X)=" %t-rw.cpp -Wno-attributes
-// rdar://14913632
 
 extern "C" void *sel_registerName(const char *);
 

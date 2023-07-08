@@ -907,17 +907,25 @@ struct AMDGPUSignalTy {
   }
 
   /// Wait until the signal gets a zero value.
-  Error wait(const uint64_t ActiveTimeout = 0) const {
-    if (ActiveTimeout) {
+  Error wait(const uint64_t ActiveTimeout = 0,
+             RPCHandleTy *RPCHandle = nullptr) const {
+    if (ActiveTimeout && !RPCHandle) {
       hsa_signal_value_t Got = 1;
       Got = hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
                                       ActiveTimeout, HSA_WAIT_STATE_ACTIVE);
       if (Got == 0)
         return Plugin::success();
     }
+
+    // If there is an RPC device attached to this stream we run it as a server.
+    uint64_t Timeout = RPCHandle ? 8192 : UINT64_MAX;
+    auto WaitState = RPCHandle ? HSA_WAIT_STATE_ACTIVE : HSA_WAIT_STATE_BLOCKED;
     while (hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
-                                     UINT64_MAX, HSA_WAIT_STATE_BLOCKED) != 0)
-      ;
+                                     Timeout, WaitState) != 0) {
+      if (RPCHandle)
+        if (auto Err = RPCHandle->runServer())
+          return Err;
+    }
     return Plugin::success();
   }
 
@@ -1370,6 +1378,11 @@ private:
   /// operation that was already finalized in a previous stream sycnhronize.
   uint32_t SyncCycle;
 
+  /// A pointer associated with an RPC server running on the given device. If
+  /// RPC is not being used this will be a null pointer. Otherwise, this
+  /// indicates that an RPC server is expected to be run on this stream.
+  RPCHandleTy *RPCHandle;
+
   /// Mutex to protect stream's management.
   mutable std::mutex Mutex;
 
@@ -1529,6 +1542,9 @@ public:
   Error deinit() { return Plugin::success(); }
 
   hsa_queue_t *getHsaQueue();
+
+  /// Attach an RPC handle to this stream.
+  void setRPCHandle(RPCHandleTy *Handle) { RPCHandle = Handle; }
 
   /// Push a asynchronous kernel to the stream. The kernel arguments must be
   /// placed in a special allocation for kernel args and must keep alive until
@@ -1726,7 +1742,8 @@ public:
       return Plugin::success();
 
     // Wait until all previous operations on the stream have completed.
-    if (auto Err = Slots[last()].Signal->wait(StreamBusyWaitMicroseconds))
+    if (auto Err =
+            Slots[last()].Signal->wait(StreamBusyWaitMicroseconds, RPCHandle))
       return Err;
 
     // Reset the stream and perform all pending post actions.
@@ -2316,6 +2333,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Set the current context to this device's context. Do nothing since the
   /// AMDGPU devices do not have the concept of contexts.
   Error setContext() override { return Plugin::success(); }
+
+  /// We want to set up the RPC server for host services to the GPU if it is
+  /// availible.
+  bool shouldSetupRPCServer() const override {
+    return libomptargetSupportsRPC();
+  }
 
   /// Get the stream of the asynchronous info sructure or get a new one.
   AMDGPUStreamTy &getStream(AsyncInfoWrapperTy &AsyncInfoWrapper) {
@@ -3222,7 +3245,7 @@ Error AMDGPUResourceRef<ResourceTy>::create(GenericDeviceTy &Device) {
 AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
     : Agent(Device.getAgent()), SignalManager(Device.getSignalManager()),
       // Initialize the std::deque with some empty positions.
-      Slots(32), NextSlot(0), SyncCycle(0),
+      Slots(32), NextSlot(0), SyncCycle(0), RPCHandle(nullptr),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
       Device(Device) {}
 
@@ -3626,6 +3649,10 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
            AMDGPUDevice.getPreAllocatedDeviceMemoryPool(),
            utils::COV5_HEAPV1_PTR_SIZE);
   }
+
+  // If this kernel requires an RPC server we attach its pointer to the stream.
+  if (GenericDevice.getRPCHandle())
+    Stream.setRPCHandle(GenericDevice.getRPCHandle());
 
   // Push the kernel launch into the stream.
   return Stream.pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,

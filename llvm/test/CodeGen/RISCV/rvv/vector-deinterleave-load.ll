@@ -39,6 +39,20 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @vector_deinterleave_load_nxv16i
   ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %retval
 }
 
+; Shouldn't be lowered to vlseg because it's unaligned
+define {<vscale x 8 x i16>, <vscale x 8 x i16>} @vector_deinterleave_load_nxv8i16_nxv16i16_align1(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_nxv8i16_nxv16i16_align1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl4r.v v12, (a0)
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vnsrl.wi v8, v12, 0
+; CHECK-NEXT:    vnsrl.wi v10, v12, 16
+; CHECK-NEXT:    ret
+  %vec = load <vscale x 16 x i16>, ptr %p, align 1
+  %retval = call {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.experimental.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> %vec)
+  ret {<vscale x 8 x i16>, <vscale x 8 x i16>} %retval
+}
+
 define {<vscale x 8 x i16>, <vscale x 8 x i16>} @vector_deinterleave_load_nxv8i16_nxv16i16(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_nxv8i16_nxv16i16:
 ; CHECK:       # %bb.0:

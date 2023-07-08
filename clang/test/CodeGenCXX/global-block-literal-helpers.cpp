@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++11 -emit-llvm -fblocks -o - -triple x86_64-apple-darwin10 %s | FileCheck %s
-// rdar://11343499
 
 namespace N {
   typedef void (^BL)();

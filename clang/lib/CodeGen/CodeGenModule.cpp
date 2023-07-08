@@ -2424,15 +2424,6 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   }
 }
 
-void CodeGenModule::setLLVMFunctionFEnvAttributes(const FunctionDecl *D,
-                                                  llvm::Function *F) {
-  if (D->hasAttr<StrictFPAttr>()) {
-    llvm::AttrBuilder FuncAttrs(F->getContext());
-    FuncAttrs.addAttribute("strictfp");
-    F->addFnAttrs(FuncAttrs);
-  }
-}
-
 void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
   const Decl *D = GD.getDecl();
   if (isa_and_nonnull<NamedDecl>(D))
@@ -2618,9 +2609,6 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
 }
 
 void CodeGenModule::setKCFIType(const FunctionDecl *FD, llvm::Function *F) {
-  if (isa<CXXMethodDecl>(FD) && !cast<CXXMethodDecl>(FD)->isStatic())
-    return;
-
   llvm::LLVMContext &Ctx = F->getContext();
   llvm::MDBuilder MDB(Ctx);
   F->setMetadata(llvm::LLVMContext::MD_kcfi_type,
@@ -5672,9 +5660,6 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
 
   maybeSetTrivialComdat(*D, *Fn);
 
-  // Set CodeGen attributes that represent floating point environment.
-  setLLVMFunctionFEnvAttributes(D, Fn);
-
   CodeGenFunction(*this).GenerateCode(GD, Fn, FI);
 
   setNonAliasAttributes(GD, Fn);
@@ -5997,7 +5982,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   }
 
   // Note: -fwritable-strings doesn't make the backing store strings of
-  // CFStrings writable. (See <rdar://problem/10657500>)
+  // CFStrings writable.
   auto *GV =
       new llvm::GlobalVariable(getModule(), C->getType(), /*isConstant=*/true,
                                llvm::GlobalValue::PrivateLinkage, C, ".str");

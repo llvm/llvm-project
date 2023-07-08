@@ -637,9 +637,9 @@ std::optional<uint64_t> DWARFFormValue::getAsAddress() const {
   return std::nullopt;
 }
 
-std::optional<object::SectionedAddress> DWARFFormValue::getAsSectionedAddress(
-    const ValueType &Value, const dwarf::Form Form, const DWARFUnit *U) {
-  if (!doesFormBelongToClass(Form, FC_Address, U->getVersion()))
+std::optional<object::SectionedAddress>
+DWARFFormValue::getAsSectionedAddress() const {
+  if (!isFormClass(FC_Address))
     return std::nullopt;
   bool AddrOffset = Form == dwarf::DW_FORM_LLVM_addrx_offset;
   if (Form == DW_FORM_GNU_addr_index || Form == DW_FORM_addrx ||
@@ -658,11 +658,6 @@ std::optional<object::SectionedAddress> DWARFFormValue::getAsSectionedAddress(
     return SA;
   }
   return {{Value.uval, Value.SectionIndex}};
-}
-
-std::optional<object::SectionedAddress>
-DWARFFormValue::getAsSectionedAddress() const {
-  return getAsSectionedAddress(Value, Form, U);
 }
 
 std::optional<uint64_t> DWARFFormValue::getAsReference() const {

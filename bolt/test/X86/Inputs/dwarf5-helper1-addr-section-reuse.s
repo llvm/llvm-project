@@ -104,7 +104,7 @@ _Z3foov:                                # @_Z3foov
 	.byte	4                               # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	1                               # DW_AT_decl_line
-	.long	41                              # DW_AT_type
+	.long	51                              # DW_AT_type
                                         # DW_AT_external
 	.byte	3                               # Abbrev [3] 0x33:0x4 DW_TAG_base_type
 	.byte	5                               # DW_AT_name

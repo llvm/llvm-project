@@ -1,6 +1,5 @@
 // REQUIRES: arm-registered-target
 // RUN: %clang_cc1 %s -emit-llvm -triple arm-apple-darwin -o - | FileCheck %s
-// Radar 8026855
 
 int test (void *src) {
   register int w0 asm ("0");
