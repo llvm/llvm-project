@@ -2674,6 +2674,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
     if (!isValidState())
       return false;
 
+    bool ForwardIsOk = true;
     const Instruction *CurI;
 
     // Check forward until a call or the block end is reached.
@@ -2682,19 +2683,18 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       auto *CB = dyn_cast<CallBase>(CurI);
       if (!CB)
         continue;
-      if (CB != &I && AlignedBarriers.contains(const_cast<CallBase *>(CB))) {
-        break;
-      }
+      if (CB != &I && AlignedBarriers.contains(const_cast<CallBase *>(CB)))
+        return true;
       const auto &It = CEDMap.find({CB, PRE});
       if (It == CEDMap.end())
         continue;
       if (!It->getSecond().IsReachingAlignedBarrierOnly)
-        return false;
+        ForwardIsOk = false;
       break;
     } while ((CurI = CurI->getNextNonDebugInstruction()));
 
     if (!CurI && !BEDMap.lookup(I.getParent()).IsReachingAlignedBarrierOnly)
-      return false;
+      ForwardIsOk = false;
 
     // Check backward until a call or the block beginning is reached.
     CurI = &I;
@@ -2702,9 +2702,8 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       auto *CB = dyn_cast<CallBase>(CurI);
       if (!CB)
         continue;
-      if (CB != &I && AlignedBarriers.contains(const_cast<CallBase *>(CB))) {
-        break;
-      }
+      if (CB != &I && AlignedBarriers.contains(const_cast<CallBase *>(CB)))
+        return true;
       const auto &It = CEDMap.find({CB, POST});
       if (It == CEDMap.end())
         continue;
@@ -2712,6 +2711,11 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
         break;
       return false;
     } while ((CurI = CurI->getPrevNonDebugInstruction()));
+
+    // Delayed decision on the forward pass to allow aligned barrier detection
+    // in the backwards traversal.
+    if (!ForwardIsOk)
+      return false;
 
     if (!CurI) {
       const BasicBlock *BB = I.getParent();
