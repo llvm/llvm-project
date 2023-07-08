@@ -3174,13 +3174,13 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
       if (!CB)
         continue;
       auto &CallOutED = CEDMap[{CB, POST}];
-      if (setAndRecord(CallOutED.IsReachingAlignedBarrierOnly, false))
-        Changed = true;
+      Changed |= setAndRecord(CallOutED.IsReachingAlignedBarrierOnly, false);
       auto &CallInED = CEDMap[{CB, PRE}];
       HitAlignedBarrierOrKnownEnd =
           AlignedBarriers.count(CB) || !CallInED.IsReachingAlignedBarrierOnly;
       if (HitAlignedBarrierOrKnownEnd)
         break;
+      Changed |= setAndRecord(CallInED.IsReachingAlignedBarrierOnly, false);
     }
     if (HitAlignedBarrierOrKnownEnd)
       continue;
@@ -3198,8 +3198,8 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
     }
     if (SyncBB != &EntryBB)
       continue;
-    if (setAndRecord(InterProceduralED.IsReachingAlignedBarrierOnly, false))
-      Changed = true;
+    Changed |=
+        setAndRecord(InterProceduralED.IsReachingAlignedBarrierOnly, false);
   }
 
   return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
