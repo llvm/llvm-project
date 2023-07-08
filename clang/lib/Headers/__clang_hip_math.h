@@ -182,7 +182,7 @@ __DEVICE__
 float cbrtf(float __x) { return __ocml_cbrt_f32(__x); }
 
 __DEVICE__
-float ceilf(float __x) { return __ocml_ceil_f32(__x); }
+float ceilf(float __x) { return __builtin_ceilf(__x); }
 
 __DEVICE__
 float copysignf(float __x, float __y) { return __builtin_copysignf(__x, __y); }
@@ -731,7 +731,7 @@ __DEVICE__
 double cbrt(double __x) { return __ocml_cbrt_f64(__x); }
 
 __DEVICE__
-double ceil(double __x) { return __ocml_ceil_f64(__x); }
+double ceil(double __x) { return __builtin_ceil(__x); }
 
 __DEVICE__
 double copysign(double __x, double __y) {
