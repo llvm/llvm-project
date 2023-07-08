@@ -52,10 +52,15 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <vector>
 
 namespace clang {
 namespace clangd {
 namespace {
+
+// Tracks number of times a tweak has been offered.
+static constexpr trace::Metric TweakAvailable(
+    "tweak_available", trace::Metric::Counter, "tweak_id");
 
 // Update the FileIndex with new ASTs and plumb the diagnostics responses.
 struct UpdateIndexCallbacks : public ParsingCallbacks {
@@ -643,12 +648,65 @@ tweakSelection(const Range &Sel, const InputsAndAST &AST,
   return std::move(Result);
 }
 
+void ClangdServer::codeAction(const CodeActionInputs &Params,
+                              Callback<CodeActionResult> CB) {
+  auto Action = [Params, CB = std::move(CB),
+                 FeatureModules(this->FeatureModules)](
+                    Expected<InputsAndAST> InpAST) mutable {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    auto KindAllowed =
+        [Only(Params.RequestedActionKinds)](llvm::StringRef Kind) {
+          if (Only.empty())
+            return true;
+          return llvm::any_of(Only, [&](llvm::StringRef Base) {
+            return Kind.consume_front(Base) &&
+                   (Kind.empty() || Kind.startswith("."));
+          });
+        };
+
+    CodeActionResult Result;
+    Result.Version = InpAST->AST.version().str();
+    if (KindAllowed(CodeAction::QUICKFIX_KIND)) {
+      auto FindMatchedFixes =
+          [&InpAST](const DiagRef &DR) -> llvm::ArrayRef<Fix> {
+        for (const auto &Diag : InpAST->AST.getDiagnostics())
+          if (Diag.Range == DR.Range && Diag.Message == DR.Message)
+            return Diag.Fixes;
+        return {};
+      };
+      for (const auto &Diag : Params.Diagnostics)
+        for (const auto &Fix : FindMatchedFixes(Diag))
+          Result.QuickFixes.push_back({Diag, Fix});
+    }
+
+    // Collect Tweaks
+    auto Selections = tweakSelection(Params.Selection, *InpAST, /*FS=*/nullptr);
+    if (!Selections)
+      return CB(Selections.takeError());
+    // Don't allow a tweak to fire more than once across ambiguous selections.
+    llvm::DenseSet<llvm::StringRef> PreparedTweaks;
+    auto DeduplicatingFilter = [&](const Tweak &T) {
+      return KindAllowed(T.kind()) && Params.TweakFilter(T) &&
+             !PreparedTweaks.count(T.id());
+    };
+    for (const auto &Sel : *Selections) {
+      for (auto &T : prepareTweaks(*Sel, DeduplicatingFilter, FeatureModules)) {
+        Result.TweakRefs.push_back(TweakRef{T->id(), T->title(), T->kind()});
+        PreparedTweaks.insert(T->id());
+        TweakAvailable.record(1, T->id());
+      }
+    }
+    CB(std::move(Result));
+  };
+
+  WorkScheduler->runWithAST("codeAction", Params.File, std::move(Action),
+                            Transient);
+}
+
 void ClangdServer::enumerateTweaks(
     PathRef File, Range Sel, llvm::unique_function<bool(const Tweak &)> Filter,
     Callback<std::vector<TweakRef>> CB) {
-  // Tracks number of times a tweak has been offered.
-  static constexpr trace::Metric TweakAvailable(
-      "tweak_available", trace::Metric::Counter, "tweak_id");
   auto Action = [Sel, CB = std::move(CB), Filter = std::move(Filter),
                  FeatureModules(this->FeatureModules)](
                     Expected<InputsAndAST> InpAST) mutable {

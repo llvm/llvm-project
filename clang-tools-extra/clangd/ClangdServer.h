@@ -37,8 +37,7 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
-#include <utility>
+#include <tuple>
 #include <vector>
 
 namespace clang {
@@ -351,8 +350,49 @@ public:
     std::string Title; /// A single-line message to show in the UI.
     llvm::StringLiteral Kind;
   };
+
+  // Ref to the clangd::Diag.
+  struct DiagRef {
+    Range Range;
+    std::string Message;
+    bool operator==(const DiagRef &Other) const {
+      return std::tie(Range, Message) == std::tie(Other.Range, Other.Message);
+    }
+    bool operator<(const DiagRef &Other) const {
+      return std::tie(Range, Message) < std::tie(Other.Range, Other.Message);
+    }
+  };
+
+  struct CodeActionInputs {
+    std::string File;
+    Range Selection;
+
+    /// Requested kind of actions to return.
+    std::vector<std::string> RequestedActionKinds;
+
+    /// Diagnostics attached to the code action request.
+    std::vector<DiagRef> Diagnostics;
+
+    /// Tweaks where Filter returns false will not be checked or included.
+    std::function<bool(const Tweak &)> TweakFilter;
+  };
+  struct CodeActionResult {
+    std::string Version;
+    struct QuickFix {
+      DiagRef Diag;
+      Fix F;
+    };
+    std::vector<QuickFix> QuickFixes;
+    std::vector<TweakRef> TweakRefs;
+  };
+  /// Surface code actions (quick-fixes for diagnostics, or available code
+  /// tweaks) for a given range in a file.
+  void codeAction(const CodeActionInputs &Inputs,
+                  Callback<CodeActionResult> CB);
+
   /// Enumerate the code tweaks available to the user at a specified point.
   /// Tweaks where Filter returns false will not be checked or included.
+  /// Deprecated, use codeAction instead.
   void enumerateTweaks(PathRef File, Range Sel,
                        llvm::unique_function<bool(const Tweak &)> Filter,
                        Callback<std::vector<TweakRef>> CB);
