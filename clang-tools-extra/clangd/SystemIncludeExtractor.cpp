@@ -40,6 +40,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Types.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -61,6 +62,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstddef>
+#include <cstdlib>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -318,10 +320,24 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
   // Input needs to go after Lang flags.
   Args.push_back("-");
 
+  constexpr const char *ResourceEnvVar = "CLANGD_RESOURCE_DIR";
+  std::string ResourceDir;
+  if (!::getenv(ResourceEnvVar)) {
+    static int StaticForMainAddr;
+    ResourceDir= CompilerInvocation::GetResourcesPath("clangd",
+                                                      (void *)&StaticForMainAddr);
+  }
+  if (!ResourceDir.empty())
+    setenv(ResourceEnvVar, ResourceDir.c_str(), 1);
+
   std::string ErrMsg;
-  if (int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/std::nullopt,
-                                         Redirects, /*SecondsToWait=*/0,
-                                         /*MemoryLimit=*/0, &ErrMsg)) {
+  int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/std::nullopt,
+                                     Redirects, /*SecondsToWait=*/0,
+                                     /*MemoryLimit=*/0, &ErrMsg);
+  if (!ResourceDir.empty())
+    ::unsetenv(ResourceEnvVar);
+
+  if (RC) {
     elog("System include extraction: driver execution failed with return code: "
          "{0} - '{1}'. Args: [{2}]",
          llvm::to_string(RC), ErrMsg, printArgv(Args));
