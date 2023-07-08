@@ -843,7 +843,7 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
 // There's no portable memrchr(), unfortunately, and strrchr() would
 // fail on a record with a NUL, so we have to do it the hard way.
 static const char *FindLastNewline(const char *str, std::size_t length) {
-  for (const char *p{str + length}; p-- > str;) {
+  for (const char *p{str + length}; p >= str; p--) {
     if (*p == '\n') {
       return p;
     }
