@@ -862,9 +862,10 @@ bool mlir::affine::hasNoInterveningEffect(Operation *start, T memOp) {
 /// other operations will overwrite the memory loaded between the given load
 /// and store.  If such a value exists, the replaced `loadOp` will be added to
 /// `loadOpsToErase` and its memref will be added to `memrefsToErase`.
-static LogicalResult forwardStoreToLoad(
-    AffineReadOpInterface loadOp, SmallVectorImpl<Operation *> &loadOpsToErase,
-    SmallPtrSetImpl<Value> &memrefsToErase, DominanceInfo &domInfo) {
+static void forwardStoreToLoad(AffineReadOpInterface loadOp,
+                               SmallVectorImpl<Operation *> &loadOpsToErase,
+                               SmallPtrSetImpl<Value> &memrefsToErase,
+                               DominanceInfo &domInfo) {
 
   // The store op candidate for forwarding that satisfies all conditions
   // to replace the load, if any.
@@ -911,7 +912,7 @@ static LogicalResult forwardStoreToLoad(
   }
 
   if (!lastWriteStoreOp)
-    return failure();
+    return;
 
   // Perform the actual store to load forwarding.
   Value storeVal =
@@ -919,13 +920,12 @@ static LogicalResult forwardStoreToLoad(
   // Check if 2 values have the same shape. This is needed for affine vector
   // loads and stores.
   if (storeVal.getType() != loadOp.getValue().getType())
-    return failure();
+    return;
   loadOp.getValue().replaceAllUsesWith(storeVal);
   // Record the memref for a later sweep to optimize away.
   memrefsToErase.insert(loadOp.getMemRef());
   // Record this to erase later.
   loadOpsToErase.push_back(loadOp);
-  return success();
 }
 
 template bool
@@ -995,16 +995,16 @@ static void loadCSE(AffineReadOpInterface loadA,
     MemRefAccess srcAccess(loadB);
     MemRefAccess destAccess(loadA);
 
-    // 1. The accesses have to be to the same location.
+    // 1. The accesses should be to be to the same location.
     if (srcAccess != destAccess) {
       continue;
     }
 
-    // 2. The store has to dominate the load op to be candidate.
+    // 2. loadB should dominate loadA.
     if (!domInfo.dominates(loadB, loadA))
       continue;
 
-    // 3. There is no write between loadA and loadB.
+    // 3. There should not be a write between loadA and loadB.
     if (!affine::hasNoInterveningEffect<MemoryEffects::Write>(
             loadB.getOperation(), loadA))
       continue;
@@ -1073,13 +1073,8 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
 
   // Walk all load's and perform store to load forwarding.
   f.walk([&](AffineReadOpInterface loadOp) {
-    if (failed(
-            forwardStoreToLoad(loadOp, opsToErase, memrefsToErase, domInfo))) {
-      loadCSE(loadOp, opsToErase, domInfo);
-    }
+    forwardStoreToLoad(loadOp, opsToErase, memrefsToErase, domInfo);
   });
-
-  // Erase all load op's whose results were replaced with store fwd'ed ones.
   for (auto *op : opsToErase)
     op->erase();
   opsToErase.clear();
@@ -1088,9 +1083,9 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
   f.walk([&](AffineWriteOpInterface storeOp) {
     findUnusedStore(storeOp, opsToErase, postDomInfo);
   });
-  // Erase all store op's which don't impact the program
   for (auto *op : opsToErase)
     op->erase();
+  opsToErase.clear();
 
   // Check if the store fwd'ed memrefs are now left with only stores and
   // deallocs and can thus be completely deleted. Note: the canonicalize pass
@@ -1114,6 +1109,15 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
       user->erase();
     defOp->erase();
   }
+
+  // To eliminate as many loads as possible, run load CSE after eliminating
+  // stores. Otherwise, some stores are wrongly seen as having an intervening
+  // effect.
+  f.walk([&](AffineReadOpInterface loadOp) {
+    loadCSE(loadOp, opsToErase, domInfo);
+  });
+  for (auto *op : opsToErase)
+    op->erase();
 }
 
 // Perform the replacement in `op`.
