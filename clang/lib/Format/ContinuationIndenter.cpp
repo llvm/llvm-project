@@ -362,7 +362,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
   }
   if (CurrentState.BreakBeforeClosingBrace &&
-      Current.closesBlockOrBlockTypeList(Style)) {
+      (Current.closesBlockOrBlockTypeList(Style) ||
+       (Current.is(tok::r_brace) &&
+        Current.isBlockIndentedInitRBrace(Style)))) {
     return true;
   }
   if (CurrentState.BreakBeforeClosingParen && Current.is(tok::r_paren))
@@ -1168,7 +1170,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
-      Current.is(tok::r_paren) && State.Stack.size() > 1) {
+      (Current.is(tok::r_paren) ||
+       (Current.is(tok::r_brace) &&
+        Current.MatchingParen->is(BK_BracedInit))) &&
+      State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())

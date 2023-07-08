@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -106,6 +107,47 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
     }
   }
   return result;
+}
+
+void PresburgerRelation::inverse() {
+  for (IntegerRelation &cs : disjuncts)
+    cs.inverse();
+
+  if (getNumDisjuncts())
+    setSpace(getDisjunct(0).getSpaceWithoutLocals());
+}
+
+void PresburgerRelation::compose(const PresburgerRelation &rel) {
+  assert(getSpace().getRangeSpace().isCompatible(
+             rel.getSpace().getDomainSpace()) &&
+         "Range of `this` should be compatible with domain of `rel`");
+
+  PresburgerRelation result =
+      PresburgerRelation::getEmpty(PresburgerSpace::getRelationSpace(
+          getNumDomainVars(), rel.getNumRangeVars(), getNumSymbolVars()));
+  for (const IntegerRelation &csA : disjuncts) {
+    for (const IntegerRelation &csB : rel.disjuncts) {
+      IntegerRelation composition = csA;
+      composition.compose(csB);
+      if (!composition.isEmpty())
+        result.unionInPlace(composition);
+    }
+  }
+  *this = result;
+}
+
+void PresburgerRelation::applyDomain(const PresburgerRelation &rel) {
+  assert(getSpace().getDomainSpace().isCompatible(
+             rel.getSpace().getDomainSpace()) &&
+         "Domain of `this` should be compatible with domain of `rel`");
+
+  inverse();
+  compose(rel);
+  inverse();
+}
+
+void PresburgerRelation::applyRange(const PresburgerRelation &rel) {
+  compose(rel);
 }
 
 /// Return the coefficients of the ineq in `rel` specified by  `idx`.

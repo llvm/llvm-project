@@ -122,7 +122,6 @@ void PR9333() {
   if (e == scoped_enum::no) { }
 }
 
-// <rdar://problem/9366066>
 namespace rdar9366066 {
   enum class X : unsigned { value };
 

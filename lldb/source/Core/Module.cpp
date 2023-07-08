@@ -1047,10 +1047,38 @@ void Module::FindTypes(
     symbols->FindTypes(pattern, languages, searched_symbol_files, types);
 }
 
+static Debugger::DebuggerList 
+DebuggersOwningModuleRequestingInterruption(Module &module) {
+  Debugger::DebuggerList requestors 
+      = Debugger::DebuggersRequestingInterruption();
+  Debugger::DebuggerList interruptors;
+  if (requestors.empty())
+    return interruptors;
+    
+  for (auto debugger_sp : requestors) {
+    if (!debugger_sp->InterruptRequested())
+      continue;
+    if (debugger_sp->GetTargetList()
+        .AnyTargetContainsModule(module))
+      interruptors.push_back(debugger_sp);
+  }
+  return interruptors;
+}
+
 SymbolFile *Module::GetSymbolFile(bool can_create, Stream *feedback_strm) {
   if (!m_did_load_symfile.load()) {
     std::lock_guard<std::recursive_mutex> guard(m_mutex);
     if (!m_did_load_symfile.load() && can_create) {
+      Debugger::DebuggerList interruptors 
+          = DebuggersOwningModuleRequestingInterruption(*this);
+      if (!interruptors.empty()) {
+        for (auto debugger_sp : interruptors) {
+          REPORT_INTERRUPTION(*(debugger_sp.get()), 
+                              "Interrupted fetching symbols for module {0}", 
+                              this->GetFileSpec());
+        }
+        return nullptr;
+      }
       ObjectFile *obj_file = GetObjectFile();
       if (obj_file != nullptr) {
         LLDB_SCOPED_TIMER();

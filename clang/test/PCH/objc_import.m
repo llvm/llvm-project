@@ -16,7 +16,6 @@ void func(void) {
  [xx instMethod];
 }
 
-// rdar://14112291
 @class NewID1;
 void foo1(NewID1 *p);
 void bar1(OldID1 *p) {

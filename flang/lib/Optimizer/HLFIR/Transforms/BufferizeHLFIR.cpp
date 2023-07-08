@@ -320,11 +320,51 @@ struct SetLengthOpConversion
   }
 };
 
-static bool allOtherUsesAreDestroys(mlir::Value value,
-                                    mlir::Operation *currentUse) {
+struct GetLengthOpConversion
+    : public mlir::OpConversionPattern<hlfir::GetLengthOp> {
+  using mlir::OpConversionPattern<hlfir::GetLengthOp>::OpConversionPattern;
+  explicit GetLengthOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::GetLengthOp>{ctx} {}
+  mlir::LogicalResult
+  matchAndRewrite(hlfir::GetLengthOp getLength, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = getLength->getLoc();
+    auto module = getLength->getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, fir::getKindMapping(module));
+    hlfir::Entity bufferizedExpr = getBufferizedExprStorage(adaptor.getExpr());
+    mlir::Value length = hlfir::genCharLength(loc, builder, bufferizedExpr);
+    if (!length)
+      return rewriter.notifyMatchFailure(
+          getLength, "could not deduce length from GetLengthOp operand");
+    rewriter.replaceOp(getLength, length);
+    return mlir::success();
+  }
+};
+
+/// The current hlfir.associate lowering does not handle multiple uses of a
+/// non-trivial expression value because it generates the cleanup for the
+/// expression bufferization at hlfir.end_associate. If there was more than one
+/// hlfir.end_associate, it would be cleaned up multiple times, perhaps before
+/// one of the other uses.
+static bool allOtherUsesAreSafeForAssociate(mlir::Value value,
+                                            mlir::Operation *currentUse,
+                                            mlir::Operation *endAssociate) {
   for (mlir::Operation *useOp : value.getUsers())
-    if (!mlir::isa<hlfir::DestroyOp>(useOp) && useOp != currentUse)
+    if (!mlir::isa<hlfir::DestroyOp>(useOp) && useOp != currentUse) {
+      // hlfir.shape_of will not disrupt cleanup so it is safe for
+      // hlfir.associate. hlfir.shape_of might read the box dimensions and so it
+      // needs to come before the hflir.end_associate (which may deallocate).
+      if (mlir::isa<hlfir::ShapeOfOp>(useOp)) {
+        if (!endAssociate)
+          continue;
+        // not known to occur in practice:
+        if (useOp->getBlock() != endAssociate->getBlock())
+          TODO(endAssociate->getLoc(), "Associate split over multiple blocks");
+        if (useOp->isBeforeInBlock(endAssociate))
+          continue;
+      }
       return false;
+    }
   return true;
 }
 
@@ -349,6 +389,15 @@ struct AssociateOpConversion
     mlir::Value bufferizedExpr = getBufferizedExprStorage(adaptor.getSource());
     const bool isTrivialValue = fir::isa_trivial(bufferizedExpr.getType());
 
+    auto getEndAssociate =
+        [](hlfir::AssociateOp associate) -> mlir::Operation * {
+      for (mlir::Operation *useOp : associate->getUsers())
+        if (mlir::isa<hlfir::EndAssociateOp>(useOp))
+          return useOp;
+      // happens in some hand coded mlir in tests
+      return nullptr;
+    };
+
     auto replaceWith = [&](mlir::Value hlfirVar, mlir::Value firVar,
                            mlir::Value flag) {
       // 0-dim variables may need special handling:
@@ -361,8 +410,8 @@ struct AssociateOpConversion
       //        !fir.ref<!fir.type<_T{y:i32}>>,
       //        i1)
       //
-      // !fir.box<!fir.heap<!fir.type<_T{y:i32}>>> value must be propagated
-      // as the box address !fir.ref<!fir.type<_T{y:i32}>>.
+      // !fir.box<!fir.heap<!fir.type<_T{y:i32}>>> value must be
+      // propagated as the box address !fir.ref<!fir.type<_T{y:i32}>>.
       mlir::Type associateHlfirVarType = associate.getResultTypes()[0];
       if (hlfirVar.getType().isa<fir::BaseBoxType>() &&
           !associateHlfirVarType.isa<fir::BaseBoxType>())
@@ -389,8 +438,9 @@ struct AssociateOpConversion
     // If this is the last use of the expression value and this is an hlfir.expr
     // that was bufferized, re-use the storage.
     // Otherwise, create a temp and assign the storage to it.
-    if (!isTrivialValue && allOtherUsesAreDestroys(associate.getSource(),
-                                                   associate.getOperation())) {
+    if (!isTrivialValue && allOtherUsesAreSafeForAssociate(
+                               associate.getSource(), associate.getOperation(),
+                               getEndAssociate(associate))) {
       // Re-use hlfir.expr buffer if this is the only use of the hlfir.expr
       // outside of the hlfir.destroy. Take on the cleaning-up responsibility
       // for the related hlfir.end_associate, and erase the hlfir.destroy (if
@@ -662,12 +712,12 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-                AssociateOpConversion, CharExtremumOpConversion,
-                ConcatOpConversion, DestroyOpConversion, ElementalOpConversion,
-                EndAssociateOpConversion, NoReassocOpConversion,
-                SetLengthOpConversion, ShapeOfOpConversion>(context);
+    patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+                    AssociateOpConversion, CharExtremumOpConversion,
+                    ConcatOpConversion, DestroyOpConversion,
+                    ElementalOpConversion, EndAssociateOpConversion,
+                    NoReassocOpConversion, SetLengthOpConversion,
+                    ShapeOfOpConversion, GetLengthOpConversion>(context);
     mlir::ConversionTarget target(*context);
     // Note that YieldElementOp is not marked as an illegal operation.
     // It must be erased by its parent converter and there is no explicit

@@ -805,49 +805,46 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
     // We currently don't model flexible array members (FAMs), which are:
     //  - int array[]; of IncompleteArrayType
     //  - int array[0]; of ConstantArrayType with size 0
-    //  - int array[1]; of ConstantArrayType with size 1 (*)
-    // (*): Consider single element array object members as FAM candidates only
-    //      if the consider-single-element-arrays-as-flexible-array-members
-    //      analyzer option is true.
+    //  - int array[1]; of ConstantArrayType with size 1
     // https://gcc.gnu.org/onlinedocs/gcc/Zero-Length.html
-    const auto isFlexibleArrayMemberCandidate = [this,
-                                                 &SVB](QualType Ty) -> bool {
-      const ArrayType *AT = Ctx.getAsArrayType(Ty);
+    const auto isFlexibleArrayMemberCandidate =
+        [this](const ArrayType *AT) -> bool {
       if (!AT)
         return false;
-      if (isa<IncompleteArrayType>(AT))
-        return true;
 
-      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-        using FAMKind = LangOptions::StrictFlexArraysLevelKind;
-        const FAMKind StrictFlexArraysLevel =
+      auto IsIncompleteArray = [](const ArrayType *AT) {
+        return isa<IncompleteArrayType>(AT);
+      };
+      auto IsArrayOfZero = [](const ArrayType *AT) {
+        const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+        return CAT && CAT->getSize() == 0;
+      };
+      auto IsArrayOfOne = [](const ArrayType *AT) {
+        const auto *CAT = dyn_cast<ConstantArrayType>(AT);
+        return CAT && CAT->getSize() == 1;
+      };
+
+      using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+      const FAMKind StrictFlexArraysLevel =
           Ctx.getLangOpts().getStrictFlexArraysLevel();
-        const AnalyzerOptions &Opts = SVB.getAnalyzerOptions();
-        const llvm::APInt &Size = CAT->getSize();
 
-        if (StrictFlexArraysLevel <= FAMKind::ZeroOrIncomplete && Size.isZero())
-          return true;
+      // "Default": Any trailing array member is a FAM.
+      // Since we cannot tell at this point if this array is a trailing member
+      // or not, let's just do the same as for "OneZeroOrIncomplete".
+      if (StrictFlexArraysLevel == FAMKind::Default)
+        return IsArrayOfOne(AT) || IsArrayOfZero(AT) || IsIncompleteArray(AT);
 
-        // The "-fstrict-flex-arrays" should have precedence over
-        // consider-single-element-arrays-as-flexible-array-members
-        // analyzer-config when checking single element arrays.
-        if (StrictFlexArraysLevel == FAMKind::Default) {
-          // FIXME: After clang-17 released, we should remove this branch.
-          if (Opts.ShouldConsiderSingleElementArraysAsFlexibleArrayMembers &&
-              Size.isOne())
-            return true;
-        } else {
-          // -fstrict-flex-arrays was specified, since it's not the default, so
-          // ignore analyzer-config.
-          if (StrictFlexArraysLevel <= FAMKind::OneZeroOrIncomplete &&
-              Size.isOne())
-            return true;
-        }
-      }
-      return false;
+      if (StrictFlexArraysLevel == FAMKind::OneZeroOrIncomplete)
+        return IsArrayOfOne(AT) || IsArrayOfZero(AT) || IsIncompleteArray(AT);
+
+      if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete)
+        return IsArrayOfZero(AT) || IsIncompleteArray(AT);
+
+      assert(StrictFlexArraysLevel == FAMKind::IncompleteOnly);
+      return IsIncompleteArray(AT);
     };
 
-    if (isFlexibleArrayMemberCandidate(Ty))
+    if (isFlexibleArrayMemberCandidate(Ctx.getAsArrayType(Ty)))
       return UnknownVal();
 
     return Size;

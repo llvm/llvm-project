@@ -1107,6 +1107,8 @@ void InterleavedAccessInfo::analyzeInterleaving(
   SmallSetVector<InterleaveGroup<Instruction> *, 4> StoreGroups;
   // Holds all interleaved load groups temporarily.
   SmallSetVector<InterleaveGroup<Instruction> *, 4> LoadGroups;
+  // Groups added to this set cannot have new members added.
+  SmallPtrSet<InterleaveGroup<Instruction> *, 4> CompletedLoadGroups;
 
   // Search in bottom-up program order for pairs of accesses (A and B) that can
   // form interleaved load or store groups. In the algorithm below, access A
@@ -1139,8 +1141,12 @@ void InterleavedAccessInfo::analyzeInterleaving(
       }
       if (B->mayWriteToMemory())
         StoreGroups.insert(Group);
-      else
+      else {
+        // Skip B if no new instructions can be added to its load group.
+        if (CompletedLoadGroups.contains(Group))
+          continue;
         LoadGroups.insert(Group);
+      }
     }
 
     for (auto AI = std::next(BI); AI != E; ++AI) {
@@ -1180,6 +1186,18 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
           StoreGroups.remove(StoreGroup);
           releaseGroup(StoreGroup);
+        }
+        // If B is a load and part of an interleave group, no earlier loads can
+        // be added to B's interleave group, because this would mean the load B
+        // would need to be moved across store A. Mark the interleave group as
+        // complete.
+        if (isInterleaved(B) && isa<LoadInst>(B)) {
+          InterleaveGroup<Instruction> *LoadGroup = getInterleaveGroup(B);
+
+          LLVM_DEBUG(dbgs() << "LV: Marking interleave group for " << *B
+                            << " as complete.\n");
+
+          CompletedLoadGroups.insert(LoadGroup);
         }
 
         // If a dependence exists and A is not already in a group (or it was

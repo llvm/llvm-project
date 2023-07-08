@@ -509,11 +509,11 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
     } else {
       // Check for interruption when building the frames.
       // Do the check in idx > 0 so that we'll always create a 0th frame.
-      if (allow_interrupt && dbg.InterruptRequested()) {
-        Log *log = GetLog(LLDBLog::Host);
-        LLDB_LOG(log, "Interrupted %s", __FUNCTION__);
-        was_interrupted = true;
-        break;
+      if (allow_interrupt 
+          && INTERRUPT_REQUESTED(dbg, "Interrupted having fetched {0} frames",
+                                 m_frames.size())) {
+          was_interrupted = true;
+          break;
       }
 
       const bool success =
@@ -965,11 +965,11 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
     // Check for interruption here.  If we're fetching arguments, this loop
     // can go slowly:
     Debugger &dbg = m_thread.GetProcess()->GetTarget().GetDebugger();
-    if (dbg.InterruptRequested()) {
-      Log *log = GetLog(LLDBLog::Host);
-      LLDB_LOG(log, "Interrupted %s", __FUNCTION__);
+    if (INTERRUPT_REQUESTED(dbg, 
+          "Interrupted dumping stack for thread {0:hex} with {1} shown.",
+          m_thread.GetID(), num_frames_displayed))
       break;
-    }
+
 
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),

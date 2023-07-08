@@ -8,7 +8,6 @@
 // x86-64 is the special case here because of its variadic convention.
 // We want to ensure that it always uses a variadic convention even if
 // other platforms do not.
-// rdar://13731520
 
 int test0() {
   extern __unknown_anytype test0_any;

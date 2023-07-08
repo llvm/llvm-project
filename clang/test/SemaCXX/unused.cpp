@@ -44,7 +44,6 @@ namespace derefvolatile {
   }
 }
 
-// <rdar://problem/12359208>
 namespace AnonObject {
   struct Foo {
     Foo(const char* const message);

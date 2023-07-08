@@ -29,13 +29,23 @@ template<typename T> struct S {
 S<char> s1; // expected-note {{in instantiation of template class 'S<char>' requested here}}
 S<int> s2;
 
-static_assert(false, L"\xFFFFFFFF"); // expected-error {{static assertion failed: L"\xFFFFFFFF"}}
-static_assert(false, u"\U000317FF"); // expected-error {{static assertion failed: u"\U000317FF"}}
+static_assert(false, L"\xFFFFFFFF"); // expected-error {{an unevaluated string literal cannot have an encoding prefix}} \
+                                     // expected-error {{invalid escape sequence '\xFFFFFFFF' in an unevaluated string literal}}
+static_assert(false, u"\U000317FF"); // expected-error {{an unevaluated string literal cannot have an encoding prefix}}
+// FIXME: render this as u8"\u03A9"
+static_assert(false, u8"Ω");     // expected-error {{an unevaluated string literal cannot have an encoding prefix}}
+static_assert(false, L"\u1234"); // expected-error {{an unevaluated string literal cannot have an encoding prefix}}
+static_assert(false, L"\x1ff"    // expected-error {{an unevaluated string literal cannot have an encoding prefix}} \
+                                 // expected-error {{invalid escape sequence '\x1ff' in an unevaluated string literal}}
+                     "0\x123"    // expected-error {{invalid escape sequence '\x123' in an unevaluated string literal}}
+                     "fx\xfffff" // expected-error {{invalid escape sequence '\xfffff' in an unevaluated string literal}}
+                     "goop");
 
-static_assert(false, u8"Ω"); // expected-error {{static assertion failed: u8"\316\251"}}
-static_assert(false, L"\u1234"); // expected-error {{static assertion failed: L"\x1234"}}
-static_assert(false, L"\x1ff" "0\x123" "fx\xfffff" "goop"); // expected-error {{static assertion failed: L"\x1FF""0\x123""fx\xFFFFFgoop"}}
-
+static_assert(false, "\'\"\?\\\a\b\f\n\r\t\v"); // expected-error {{'"?\<U+0007><U+0008>}}
+static_assert(true, "\xFF"); // expected-error {{invalid escape sequence '\xFF' in an unevaluated string literal}}
+static_assert(true, "\123"); // expected-error {{invalid escape sequence '\123' in an unevaluated string literal}}
+static_assert(true, "\pOh no, a Pascal string!"); // expected-warning {{unknown escape sequence '\p'}} \
+                                                  // expected-error {{invalid escape sequence '\p' in an unevaluated string literal}}
 static_assert(false, R"(a
 \tb
 c

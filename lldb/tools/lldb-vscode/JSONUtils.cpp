@@ -308,7 +308,8 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 // }
 llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
                                    std::optional<llvm::StringRef> request_path,
-                                   std::optional<uint32_t> request_line) {
+                                   std::optional<uint32_t> request_line,
+                                   std::optional<uint32_t> request_column) {
   // Each breakpoint location is treated as a separate breakpoint for VS code.
   // They don't have the notion of a single breakpoint with multiple locations.
   llvm::json::Object object;
@@ -345,11 +346,16 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
     const auto line = line_entry.GetLine();
     if (line != UINT32_MAX)
       object.try_emplace("line", line);
+    const auto column = line_entry.GetColumn();
+    if (column != 0)
+      object.try_emplace("column", column);
     object.try_emplace("source", CreateSource(line_entry));
   }
   // We try to add request_line as a fallback
   if (request_line)
     object.try_emplace("line", *request_line);
+  if (request_column)
+    object.try_emplace("column", *request_column);
   return llvm::json::Value(std::move(object));
 }
 

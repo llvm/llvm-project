@@ -135,6 +135,8 @@ C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Compiler flags ``-std=c++2c`` and ``-std=gnu++2c`` have been added for experimental C++2c implementation work.
 - Implemented `P2738R1: constexpr cast from void* <https://wg21.link/P2738R1>`_.
+- Partially implemented `P2361R6: constexpr cast from void* <https://wg21.link/P2361R6>`_.
+  The changes to attributes declarations are not part of this release.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -568,6 +570,9 @@ Bug Fixes in This Version
 - Clang now correctly evaluates ``__has_extension (cxx_defaulted_functions)``
   and ``__has_extension (cxx_default_function_template_args)`` to 1.
   (`#61758 <https://github.com/llvm/llvm-project/issues/61758>`_)
+- Stop evaluating a constant expression if the condition expression which in
+  switch statement contains errors.
+  (`#63453 <https://github.com/llvm/llvm-project/issues/63453>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

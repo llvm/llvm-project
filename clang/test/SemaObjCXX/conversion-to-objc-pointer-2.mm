@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
-// rdar: // 7963410
 
 @protocol NSObject @end
 @interface NSObject

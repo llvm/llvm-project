@@ -22,6 +22,7 @@ namespace hlfir {
 bool isFortranVariableType(mlir::Type);
 bool isFortranScalarCharacterType(mlir::Type);
 bool isFortranScalarCharacterExprType(mlir::Type);
+bool isFortranArrayCharacterExprType(mlir::Type);
 } // namespace hlfir
 
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h.inc"
