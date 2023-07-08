@@ -291,7 +291,7 @@
 "`3828 <https://wg21.link/LWG3828>`__","Sync ``intmax_t`` and ``uintmax_t`` with C2x","February 2023","","",""
 "`3833 <https://wg21.link/LWG3833>`__","Remove specialization ``template<size_t N> struct formatter<const charT[N], charT>``","February 2023","|Complete|","17.0","|format|"
 "`3836 <https://wg21.link/LWG3836>`__","``std::expected<bool, E1>`` conversion constructor ``expected(const expected<U, G>&)`` should take precedence over ``expected(U&&)`` with operator ``bool``","February 2023","","",""
-"`3843 <https://wg21.link/LWG3843>`__","``std::expected<T,E>::value() &`` assumes ``E`` is copy constructible","February 2023","","",""
+"`3843 <https://wg21.link/LWG3843>`__","``std::expected<T,E>::value() &`` assumes ``E`` is copy constructible","February 2023","|Complete|","17.0",""
 "`3847 <https://wg21.link/LWG3847>`__","``ranges::to`` can still return views","February 2023","","","|ranges|"
 "`3862 <https://wg21.link/LWG3862>`__","``basic_const_iterator``'s ``common_type`` specialization is underconstrained","February 2023","","",""
 "`3865 <https://wg21.link/LWG3865>`__","Sorting a range of ``pairs``","February 2023","|Complete|","17.0","|ranges|"
