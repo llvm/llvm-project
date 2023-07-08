@@ -2153,6 +2153,13 @@ void CIRGenModule::buildDeferred(unsigned recursionLimit) {
   recursionLimit--;
 
   for (auto &D : CurDeclsToEmit) {
+    if (getCodeGenOpts().ClangIRSkipFunctionsFromSystemHeaders) {
+      auto *decl = D.getDecl();
+      assert(decl && "expected decl");
+      if (astCtx.getSourceManager().isInSystemHeader(decl->getLocation()))
+        continue;
+    }
+
     buildGlobalDecl(D);
 
     // If we found out that we need to emit more decls, do that recursively.
