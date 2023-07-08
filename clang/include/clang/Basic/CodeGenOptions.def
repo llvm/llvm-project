@@ -470,6 +470,11 @@ CODEGENOPT(CtorDtorReturnThis, 1, 0)
 /// CIRGen is mature we should probably remove it.
 VALUE_CODEGENOPT(ClangIRBuildDeferredThreshold, 32, 500)
 
+/// ClangIR specific (internal): Only build deferred functions not coming from
+/// system headers. This helps incremental progress while building large C++
+/// TUs, once CIRGen is mature we should probably remove it.
+CODEGENOPT(ClangIRSkipFunctionsFromSystemHeaders, 1, 0)
+
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT
 #undef VALUE_CODEGENOPT
