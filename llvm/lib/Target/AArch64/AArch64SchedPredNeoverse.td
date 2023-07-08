@@ -45,3 +45,12 @@ def NeoverseCheapIncDec : MCSchedPredicate<
                                         CheckImmOperand<3, 1>,
                                         CheckImmOperand<3, 2>,
                                         CheckImmOperand<3, 4>]>]>>;
+
+// Identify "[SU]?(MADD|MSUB)L?" as the alias for "[SU]?(MUL|MNEG)L?".
+def NeoverseMULIdiomPred : MCSchedPredicate< // <op> Rd, Rs, Rv, ZR
+                             CheckAll<[CheckOpcode<
+                                         [MADDWrrr, MADDXrrr,
+                                          MSUBWrrr, MSUBXrrr,
+                                          SMADDLrrr, UMADDLrrr,
+                                          SMSUBLrrr, UMSUBLrrr]>,
+                                       CheckIsReg3Zero]>>;

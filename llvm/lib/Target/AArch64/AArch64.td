@@ -716,19 +716,35 @@ def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
 
 class AArch64Unsupported { list<Predicate> F; }
 
-def SVEUnsupported : AArch64Unsupported {
-  let F = [HasSVE, HasSVE2, HasSVE2AES, HasSVE2SM4, HasSVE2SHA3,
-           HasSVE2BitPerm, HasSVEorSME, HasSVE2p1, HasSVE2orSME, HasSVE2p1_or_HasSME2p1];
+let F = [HasSVE2p1, HasSVE2p1_or_HasSME2, HasSVE2p1_or_HasSME2p1] in
+def SVE2p1Unsupported : AArch64Unsupported;
+
+def SVE2Unsupported : AArch64Unsupported {
+  let F = !listconcat([HasSVE2, HasSVE2orSME,
+                       HasSVE2AES, HasSVE2SHA3, HasSVE2SM4, HasSVE2BitPerm],
+                       SVE2p1Unsupported.F);
 }
 
-def PAUnsupported : AArch64Unsupported {
-  let F = [HasPAuth];
+def SVEUnsupported : AArch64Unsupported {
+  let F = !listconcat([HasSVE, HasSVEorSME],
+                      SVE2Unsupported.F);
+}
+
+let F = [HasSME2p1, HasSVE2p1_or_HasSME2p1] in
+def SME2p1Unsupported : AArch64Unsupported;
+
+def SME2Unsupported : AArch64Unsupported {
+  let F = !listconcat([HasSME2, HasSVE2p1_or_HasSME2],
+                      SME2p1Unsupported.F);
 }
 
 def SMEUnsupported : AArch64Unsupported {
-  let F = [HasSME, HasSMEF64F64, HasSMEI16I64, HasSME2, HasSVE2p1_or_HasSME2,
-           HasSVE2p1_or_HasSME2p1, HasSME2p1, HasSMEF16F16];
+  let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64],
+                      SME2Unsupported.F);
 }
+
+let F = [HasPAuth] in
+def PAUnsupported : AArch64Unsupported;
 
 include "AArch64SchedA53.td"
 include "AArch64SchedA55.td"
@@ -748,6 +764,7 @@ include "AArch64SchedTSV110.td"
 include "AArch64SchedAmpere1.td"
 include "AArch64SchedNeoverseN1.td"
 include "AArch64SchedNeoverseN2.td"
+include "AArch64SchedNeoverseV1.td"
 include "AArch64SchedNeoverseV2.td"
 
 def TuneA35     : SubtargetFeature<"a35", "ARMProcFamily", "CortexA35",
@@ -1410,9 +1427,9 @@ def : ProcessorModel<"neoverse-n1", NeoverseN1Model,
                      ProcessorFeatures.NeoverseN1, [TuneNeoverseN1]>;
 def : ProcessorModel<"neoverse-n2", NeoverseN2Model,
                      ProcessorFeatures.NeoverseN2, [TuneNeoverseN2]>;
-def : ProcessorModel<"neoverse-512tvb", NeoverseN2Model,
+def : ProcessorModel<"neoverse-512tvb", NeoverseV1Model,
                      ProcessorFeatures.Neoverse512TVB, [TuneNeoverse512TVB]>;
-def : ProcessorModel<"neoverse-v1", NeoverseN2Model,
+def : ProcessorModel<"neoverse-v1", NeoverseV1Model,
                      ProcessorFeatures.NeoverseV1, [TuneNeoverseV1]>;
 def : ProcessorModel<"neoverse-v2", NeoverseV2Model,
                      ProcessorFeatures.NeoverseV2, [TuneNeoverseV2]>;
