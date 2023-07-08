@@ -1450,6 +1450,21 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     hasAlias = true;
   }
 
+  // If extra func attributes are present, parse them.
+  NamedAttrList extraAttrs;
+  if (::mlir::succeeded(parser.parseOptionalKeyword("extra"))) {
+    if (parser.parseLParen().failed())
+      return failure();
+    if (parser.parseOptionalAttrDict(extraAttrs).failed())
+      return failure();
+    if (parser.parseRParen().failed())
+      return failure();
+  }
+  state.addAttribute(getExtraAttrsAttrName(state.name),
+                     mlir::cir::ExtraFuncAttributesAttr::get(
+                         builder.getContext(),
+                         extraAttrs.getDictionary(builder.getContext())));
+
   // Parse the optional function body.
   auto *body = state.addRegion();
   OptionalParseResult parseResult = parser.parseOptionalRegion(
@@ -1529,12 +1544,19 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
       p, *this,
       {getSymVisibilityAttrName(), getAliaseeAttrName(),
        getFunctionTypeAttrName(), getLinkageAttrName(), getBuiltinAttrName(),
-       getNoProtoAttrName()});
+       getNoProtoAttrName(), getExtraAttrsAttrName()});
+
 
   if (auto aliaseeName = getAliasee()) {
     p << " alias(";
     p.printSymbolName(*aliaseeName);
     p << ")";
+  }
+
+  if (!getExtraAttrs().getElements().empty()) {
+    p << " extra(";
+    p.printOptionalAttrDict(getExtraAttrs().getElements().getValue());
+    p << " )";
   }
 
   // Print the body if this is not an external function.

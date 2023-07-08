@@ -1,5 +1,5 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir -allow-unregistered-dialect | FileCheck %s -check-prefix=LLVM
 !s32i = !cir.int<s, 32>
 
 module {
@@ -15,7 +15,7 @@ module {
     cir.return %arg0 : !s32i
   }
 
-//      MLIR:   llvm.func @foo(%arg0: i32) -> i32 {
+//      MLIR:   llvm.func @foo(%arg0: i32) -> i32
 // MLIR-NEXT:     %0 = llvm.mlir.constant(0 : i32) : i32
 // MLIR-NEXT:     %1 = llvm.icmp "ne" %arg0, %0 : i32
 // MLIR-NEXT:     %2 = llvm.zext %1 : i1 to i8
@@ -56,7 +56,7 @@ module {
     cir.return %arg0 : !s32i
   }
 
-  //      MLIR: llvm.func @onlyIf(%arg0: i32) -> i32 {
+  //      MLIR: llvm.func @onlyIf(%arg0: i32) -> i32
   // MLIR-NEXT:   %0 = llvm.mlir.constant(0 : i32) : i32
   // MLIR-NEXT:   %1 = llvm.icmp "ne" %arg0, %0 : i32
   // MLIR-NEXT:   %2 = llvm.zext %1 : i1 to i8

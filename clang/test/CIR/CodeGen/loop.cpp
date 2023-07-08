@@ -210,7 +210,7 @@ void l5() {
   } while (0);
 }
 
-// CHECK: cir.func @_Z2l5v() {
+// CHECK: cir.func @_Z2l5v()
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop dowhile(cond :  {
 // CHECK-NEXT:       %0 = cir.const(#cir.int<0> : !s32i) : !s32i
@@ -235,7 +235,7 @@ void l6() {
   }
 }
 
-// CHECK: cir.func @_Z2l6v() {
+// CHECK: cir.func @_Z2l6v()
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     cir.loop while(cond :  {
 // CHECK-NEXT:       cir.yield continue

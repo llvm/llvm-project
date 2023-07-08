@@ -10,8 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/DialectRegistry.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
+#include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 
@@ -34,6 +37,25 @@ public:
       mlir::NamedAttribute attribute,
       mlir::LLVM::ModuleTranslation &moduleTranslation) const override {
     // TODO: Implement this
+    auto func = dyn_cast<mlir::LLVM::LLVMFuncOp>(op);
+    if (!func)
+      return mlir::success();
+    llvm::Function *llvmFunc = moduleTranslation.lookupFunction(func.getName());
+    if (auto extraAttr = attribute.getValue()
+                             .dyn_cast<mlir::cir::ExtraFuncAttributesAttr>()) {
+      for (auto attr : extraAttr.getElements()) {
+        if (auto inlineAttr = attr.getValue().dyn_cast<mlir::cir::InlineAttr>()) {
+          if (inlineAttr.isNoInline())
+            llvmFunc->addFnAttr(llvm::Attribute::NoInline);
+          else if (inlineAttr.isAlwaysInline())
+            llvmFunc->addFnAttr(llvm::Attribute::AlwaysInline);
+          else if (inlineAttr.isInlineHint())
+            llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
+          else
+            llvm_unreachable("Unknown inline kind");
+        }
+      }
+    }
     return mlir::success();
   }
 };

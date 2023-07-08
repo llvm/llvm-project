@@ -21,7 +21,7 @@ int test0(int x) {
 // definition is not marked as no-proto.
 int noProto1();
 int noProto1(int x) { return x; }
-// CHECK: cir.func @noProto1(%arg0: !s32i {{.+}}) -> !s32i {
+// CHECK: cir.func @noProto1(%arg0: !s32i {{.+}}) -> !s32i
 int test1(int x) {
   // CHECK: cir.func @test1
   return noProto1(x);

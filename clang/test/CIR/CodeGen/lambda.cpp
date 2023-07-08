@@ -35,7 +35,7 @@ void l0() {
 // CHECK: %8 = cir.load %7 : cir.ptr <!cir.ptr<!s32i>>, !cir.ptr<!s32i>
 // CHECK: cir.store %6, %8 : !s32i, cir.ptr <!s32i>
 
-// CHECK: cir.func @_Z2l0v() {
+// CHECK: cir.func @_Z2l0v()
 
 auto g() {
   int i = 12;
@@ -45,7 +45,7 @@ auto g() {
   };
 }
 
-// CHECK: cir.func @_Z1gv() -> !ty_22class2Eanon223 {
+// CHECK: cir.func @_Z1gv() -> !ty_22class2Eanon223
 // CHECK: %0 = cir.alloca !ty_22class2Eanon223, cir.ptr <!ty_22class2Eanon223>, ["__retval"] {alignment = 8 : i64}
 // CHECK: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
 // CHECK: %2 = cir.const(#cir.int<12> : !s32i) : !s32i
@@ -65,7 +65,7 @@ auto g2() {
 }
 
 // Should be same as above because of NRVO
-// CHECK: cir.func @_Z2g2v() -> !ty_22class2Eanon224 {
+// CHECK: cir.func @_Z2g2v() -> !ty_22class2Eanon224
 // CHECK-NEXT: %0 = cir.alloca !ty_22class2Eanon224, cir.ptr <!ty_22class2Eanon224>, ["__retval", init] {alignment = 8 : i64}
 // CHECK-NEXT: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
 // CHECK-NEXT: %2 = cir.const(#cir.int<12> : !s32i) : !s32i
@@ -79,7 +79,7 @@ int f() {
   return g2()();
 }
 
-//      CHECK: cir.func @_Z1fv() -> !s32i {
+//      CHECK: cir.func @_Z1fv() -> !s32i
 // CHECK-NEXT:   %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK-NEXT:   cir.scope {
 // CHECK-NEXT:     %2 = cir.alloca !ty_22class2Eanon224, cir.ptr <!ty_22class2Eanon224>, ["ref.tmp0"] {alignment = 8 : i64}
@@ -107,7 +107,7 @@ int g3() {
 // lambda operator int (*)(int const&)()
 // CHECK:   cir.func internal private @_ZZ2g3vENK3$_0cvPFiRKiEEv
 
-// CHECK: cir.func @_Z2g3v() -> !s32i {
+// CHECK: cir.func @_Z2g3v() -> !s32i
 // CHECK:     %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:     %1 = cir.alloca !cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>, cir.ptr <!cir.ptr<!cir.func<!s32i (!cir.ptr<!s32i>)>>>, ["fn", init] {alignment = 8 : i64}
 // CHECK:     %2 = cir.alloca !s32i, cir.ptr <!s32i>, ["task", init] {alignment = 4 : i64}
@@ -134,4 +134,3 @@ int g3() {
 // CHECK:     }
 
 // CHECK:   }
-

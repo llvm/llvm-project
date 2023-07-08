@@ -6,7 +6,7 @@ unsigned up0() {
   return +a;
 }
 
-// CHECK: cir.func @_Z3up0v() -> !u32i {
+// CHECK: cir.func @_Z3up0v() -> !u32i
 // CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#INPUT:]] = cir.load %[[#A]]
@@ -18,7 +18,7 @@ unsigned um0() {
   return -a;
 }
 
-// CHECK: cir.func @_Z3um0v() -> !u32i {
+// CHECK: cir.func @_Z3um0v() -> !u32i
 // CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#INPUT:]] = cir.load %[[#A]]
@@ -30,7 +30,7 @@ unsigned un0() {
   return ~a; // a ^ -1 , not
 }
 
-// CHECK: cir.func @_Z3un0v() -> !u32i {
+// CHECK: cir.func @_Z3un0v() -> !u32i
 // CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#INPUT:]] = cir.load %[[#A]]
@@ -43,7 +43,7 @@ int inc0() {
   return a;
 }
 
-// CHECK: cir.func @_Z4inc0v() -> !s32i {
+// CHECK: cir.func @_Z4inc0v() -> !s32i
 // CHECK: %[[#RET:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init]
 // CHECK: %[[#ATMP:]] = cir.const(#cir.int<1> : !s32i) : !s32i
@@ -62,7 +62,7 @@ int dec0() {
   return a;
 }
 
-// CHECK: cir.func @_Z4dec0v() -> !s32i {
+// CHECK: cir.func @_Z4dec0v() -> !s32i
 // CHECK: %[[#RET:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init]
 // CHECK: %[[#ATMP:]] = cir.const(#cir.int<1> : !s32i) : !s32i
@@ -82,7 +82,7 @@ int inc1() {
   return a;
 }
 
-// CHECK: cir.func @_Z4inc1v() -> !s32i {
+// CHECK: cir.func @_Z4inc1v() -> !s32i
 // CHECK: %[[#RET:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init]
 // CHECK: %[[#ATMP:]] = cir.const(#cir.int<1> : !s32i) : !s32i
@@ -101,7 +101,7 @@ int dec1() {
   return a;
 }
 
-// CHECK: cir.func @_Z4dec1v() -> !s32i {
+// CHECK: cir.func @_Z4dec1v() -> !s32i
 // CHECK: %[[#RET:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init]
 // CHECK: %[[#ATMP:]] = cir.const(#cir.int<1> : !s32i) : !s32i
@@ -121,7 +121,7 @@ int inc2() {
   return b;
 }
 
-// CHECK: cir.func @_Z4inc2v() -> !s32i {
+// CHECK: cir.func @_Z4inc2v() -> !s32i
 // CHECK: %[[#RET:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["a", init]
 // CHECK: %[[#B:]] = cir.alloca !s32i, cir.ptr <!s32i>, ["b", init]

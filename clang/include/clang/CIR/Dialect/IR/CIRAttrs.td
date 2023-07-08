@@ -386,4 +386,53 @@ def ASTFunctionDeclAttr : ASTDecl<"FunctionDecl", "fndecl">;
 def ASTVarDeclAttr : ASTDecl<"VarDecl", "vardecl">;
 def ASTRecordDeclAttr : ASTDecl<"RecordDecl", "recdecl">;
 
+
+//===----------------------------------------------------------------------===//
+// ExtraFuncAttr
+//===----------------------------------------------------------------------===//
+
+def ExtraFuncAttr : CIR_Attr<"ExtraFuncAttributes", "extra"> {
+  let summary = "Represents aggregated attributes for a function";
+  let description = [{
+    This is a wrapper of dictionary attrbiute that contains extra attributes of
+    a function.
+  }];
+
+  let parameters = (ins "DictionaryAttr":$elements);
+
+  let assemblyFormat = [{ `(` $elements `)` }];
+
+  // Printing and parsing also available in CIRDialect.cpp
+}
+
+
+def NoInline : I32EnumAttrCase<"NoInline", 1, "no">;
+def AlwaysInline : I32EnumAttrCase<"AlwaysInline", 2, "always">;
+def InlineHint : I32EnumAttrCase<"InlineHint", 3, "hint">;
+
+def InlineKind : I32EnumAttr<"InlineKind", "inlineKind", [
+  NoInline, AlwaysInline, InlineHint
+]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def InlineAttr : CIR_Attr<"Inline", "inline"> {
+  let summary = "Inline attribute";
+  let description = [{
+    Inline attributes represents user directives.
+  }];
+
+  let parameters = (ins "InlineKind":$value);
+
+  let assemblyFormat = [{
+    `<` $value `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isNoInline() const { return getValue() == InlineKind::NoInline; };
+    bool isAlwaysInline() const { return getValue() == InlineKind::AlwaysInline; };
+    bool isInlineHint() const { return getValue() == InlineKind::InlineHint; };
+  }];
+}
+
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS

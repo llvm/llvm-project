@@ -5,7 +5,7 @@
 
 // Both CXX and C2X don't support no-prototype functions. They default to void.
 int noProto();
-// CHECK: cir.func @{{.*}}noProto{{.*}}() -> !s32i {
+// CHECK: cir.func @{{.*}}noProto{{.*}}() -> !s32i
 int test(int x) {
   return noProto();
   // CHECK {{.+}} = cir.call @{{.*}}noProto{{.*}}() : () -> !s32i

@@ -14,6 +14,6 @@ void foo() {
   split(s);
 }
 
-// CHECK: cir.func @_Z3foov() {
+// CHECK: cir.func @_Z3foov()
 // CHECK:     %0 = cir.alloca !ty_22struct2EString22, cir.ptr <!ty_22struct2EString22>, ["s"]
 // CHECK:     cir.call @_Z5splitR6String(%0) : (!cir.ptr<!ty_22struct2EString22>) -> ()

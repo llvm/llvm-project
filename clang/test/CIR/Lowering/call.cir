@@ -1,5 +1,5 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir -allow-unregistered-dialect | FileCheck %s -check-prefix=LLVM
 
 module {
   cir.func @a() {
@@ -10,10 +10,10 @@ module {
     cir.return
   }
 
-//      MLIR: llvm.func @a() {
+//      MLIR: llvm.func @a()
 // MLIR-NEXT:   llvm.return
 // MLIR-NEXT: }
-// MLIR-NEXT: llvm.func @d() {
+// MLIR-NEXT: llvm.func @d()
 // MLIR-NEXT:   llvm.call @a() : () -> ()
 // MLIR-NEXT:   llvm.return
 // MLIR-NEXT: }

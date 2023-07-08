@@ -5,7 +5,7 @@
 // CHECK: !ty_22struct2Eyep_22 = !cir.struct<"struct.yep_", !u32i, !u32i>
 
 struct Zero {
-  void yolo(); 
+  void yolo();
 };
 
 void f() {
@@ -14,7 +14,7 @@ void f() {
   Zero z1 = Zero{};
 }
 
-// CHECK: cir.func @_Z1fv() {
+// CHECK: cir.func @_Z1fv()
 // CHECK:     %0 = cir.alloca !ty_22struct2EZero22, cir.ptr <!ty_22struct2EZero22>, ["z0", init]
 // CHECK:     %1 = cir.alloca !ty_22struct2EZero22, cir.ptr <!ty_22struct2EZero22>, ["z1"]
 // CHECK:     cir.call @_ZN4ZeroC1Ev(%0) : (!cir.ptr<!ty_22struct2EZero22>) -> ()
@@ -33,7 +33,7 @@ typedef struct yep_ {
 
 void use() { yop{}; }
 
-// CHECK: cir.func @_Z3usev() {
+// CHECK: cir.func @_Z3usev()
 // CHECK:   %0 = cir.alloca !ty_22struct2Eyep_22, cir.ptr <!ty_22struct2Eyep_22>, ["agg.tmp0"] {alignment = 4 : i64}
 // CHECK:   %1 = "cir.struct_element_addr"(%0) <{member_index = 0 : index, member_name = "Status"}> : (!cir.ptr<!ty_22struct2Eyep_22>) -> !cir.ptr<!u32i>
 // CHECK:   %2 = cir.const(#cir.int<0> : !u32i) : !u32i
@@ -63,7 +63,7 @@ void yo() {
   Yo ext2 = {Y, &ext};
 }
 
-// CHECK: cir.func @_Z2yov() {
+// CHECK: cir.func @_Z2yov()
 // CHECK:   %0 = cir.alloca !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>, ["ext"] {alignment = 8 : i64}
 // CHECK:   %1 = cir.alloca !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>, ["ext2", init] {alignment = 8 : i64}
 // CHECK:   %2 = cir.const(#cir.const_struct<{#cir.int<1000070000> : !u32i,#cir.null : !cir.ptr<!void>,#cir.int<0> : !u64i}> : !ty_22struct2EYo22) : !ty_22struct2EYo22

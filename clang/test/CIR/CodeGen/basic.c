@@ -11,7 +11,7 @@ int foo(int i) {
 }
 
 //      CIR: module @"{{.*}}basic.c" attributes {{{.*}}cir.lang = #cir.lang<c>
-// CIR-NEXT: cir.func @foo(%arg0: !s32i loc({{.*}})) -> !s32i {
+// CIR-NEXT: cir.func @foo(%arg0: !s32i loc({{.*}})) -> !s32i
 // CIR-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT: cir.store %arg0, %0 : !s32i, cir.ptr <!s32i>
@@ -23,7 +23,7 @@ int foo(int i) {
 
 int f2(void) { return 3; }
 
-// CIR: cir.func @f2() -> !s32i {
+// CIR: cir.func @f2() -> !s32i
 // CIR-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT: %1 = cir.const(#cir.int<3> : !s32i) : !s32i
 // CIR-NEXT: cir.store %1, %0 : !s32i, cir.ptr <!s32i>
@@ -43,7 +43,7 @@ int f3(void) {
   return i;
 }
 
-// CIR: cir.func @f3() -> !s32i {
+// CIR: cir.func @f3() -> !s32i
 // CIR-NEXT: %0 = cir.alloca !s32i, cir.ptr <!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT: %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT: %2 = cir.const(#cir.int<3> : !s32i) : !s32i

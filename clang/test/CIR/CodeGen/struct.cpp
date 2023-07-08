@@ -123,7 +123,7 @@ struct S {
 
 void h() { S s; }
 
-// CHECK: cir.func @_Z1hv() {
+// CHECK: cir.func @_Z1hv()
 // CHECK:   %0 = cir.alloca !ty_22struct2ES22, cir.ptr <!ty_22struct2ES22>, ["s", init] {alignment = 1 : i64}
 // CHECK:   %1 = cir.alloca !ty_22struct2EA22, cir.ptr <!ty_22struct2EA22>, ["agg.tmp0"] {alignment = 4 : i64}
 // CHECK:   %2 = cir.call @_Z11get_defaultv() : () -> !ty_22struct2EA22

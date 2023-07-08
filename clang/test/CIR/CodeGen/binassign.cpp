@@ -60,7 +60,7 @@ void exec() {
   if ((r = getty()) < 0) {}
 }
 
-// CHECK: cir.func @_Z4execv() {
+// CHECK: cir.func @_Z4execv()
 // CHECK:   %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["r"] {alignment = 4 : i64}
 // CHECK:   cir.scope {
 // CHECK:     %1 = cir.call @_Z5gettyv() : () -> !u32i

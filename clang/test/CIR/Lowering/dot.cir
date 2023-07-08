@@ -57,7 +57,7 @@ module {
 }
 
 //      MLIR: module {
-// MLIR-NEXT:   llvm.func @dot(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: i32) -> f64 {
+// MLIR-NEXT:   llvm.func @dot(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: i32) -> f64
 // MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
 // MLIR-NEXT:     %1 = llvm.alloca %0 x !llvm.ptr {alignment = 8 : i64} : (i64) -> !llvm.ptr
 // MLIR-NEXT:     %2 = llvm.mlir.constant(1 : index) : i64

@@ -6,7 +6,7 @@ int *p0() {
   return p;
 }
 
-// CHECK: cir.func @_Z2p0v() -> !cir.ptr<!s32i> {
+// CHECK: cir.func @_Z2p0v() -> !cir.ptr<!s32i>
 // CHECK: %1 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["p", init]
 // CHECK: %2 = cir.const(#cir.null : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
 // CHECK: cir.store %2, %1 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
@@ -17,7 +17,7 @@ int *p1() {
   return p;
 }
 
-// CHECK: cir.func @_Z2p1v() -> !cir.ptr<!s32i> {
+// CHECK: cir.func @_Z2p1v() -> !cir.ptr<!s32i>
 // CHECK: %1 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["p"]
 // CHECK: %2 = cir.const(#cir.null : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
 // CHECK: cir.store %2, %1 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
@@ -33,7 +33,7 @@ int *p2() {
   return p;
 }
 
-// CHECK: cir.func @_Z2p2v() -> !cir.ptr<!s32i> {
+// CHECK: cir.func @_Z2p2v() -> !cir.ptr<!s32i>
 // CHECK-NEXT:  %0 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["__retval"] {alignment = 8 : i64}
 // CHECK-NEXT:  %1 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["p", init] {alignment = 8 : i64}
 // CHECK-NEXT:  %2 = cir.const(#cir.null : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
@@ -57,13 +57,13 @@ int *p2() {
 
 void b0() { bool x = true, y = false; }
 
-// CHECK: cir.func @_Z2b0v() {
+// CHECK: cir.func @_Z2b0v()
 // CHECK: %2 = cir.const(#true) : !cir.bool
 // CHECK: %3 = cir.const(#false) : !cir.bool
 
 void b1(int a) { bool b = a; }
 
-// CHECK: cir.func @_Z2b1i(%arg0: !s32i loc({{.*}})) {
+// CHECK: cir.func @_Z2b1i(%arg0: !s32i loc({{.*}}))
 // CHECK: %2 = cir.load %0 : cir.ptr <!s32i>, !s32i
 // CHECK: %3 = cir.cast(int_to_bool, %2 : !s32i), !cir.bool
 // CHECK: cir.store %3, %1 : !cir.bool, cir.ptr <!cir.bool>
@@ -154,7 +154,7 @@ void x() {
   const bool b1 = false;
 }
 
-// CHECK: cir.func @_Z1xv() {
+// CHECK: cir.func @_Z1xv()
 // CHECK:   %0 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["b0", init] {alignment = 1 : i64}
 // CHECK:   %1 = cir.alloca !cir.bool, cir.ptr <!cir.bool>, ["b1", init] {alignment = 1 : i64}
 // CHECK:   %2 = cir.const(#true) : !cir.bool

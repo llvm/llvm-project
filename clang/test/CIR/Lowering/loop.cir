@@ -29,7 +29,7 @@ module {
   }
 
 //      MLIR: module {
-// MLIR-NEXT:   llvm.func @testFor() {
+// MLIR-NEXT:   llvm.func @testFor()
 // MLIR-NEXT:     %0 = llvm.mlir.constant(1 : index) : i64
 // MLIR-NEXT:     %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
 // MLIR-NEXT:     %2 = llvm.mlir.constant(0 : i32) : i32
@@ -92,7 +92,7 @@ module {
     cir.return
   }
 
-  //      MLIR:  llvm.func @testWhile(%arg0: i32) {
+  //      MLIR:  llvm.func @testWhile(%arg0: i32)
   // MLIR-NEXT:    %0 = llvm.mlir.constant(1 : index) : i64
   // MLIR-NEXT:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
   // MLIR-NEXT:    llvm.store %arg0, %1 : i32, !llvm.ptr
@@ -152,7 +152,7 @@ module {
     cir.return
   }
 
-  //      MLIR:  llvm.func @testDoWhile(%arg0: i32) {
+  //      MLIR:  llvm.func @testDoWhile(%arg0: i32)
   // MLIR-NEXT:    %0 = llvm.mlir.constant(1 : index) : i64
   // MLIR-NEXT:    %1 = llvm.alloca %0 x i32 {alignment = 4 : i64} : (i64) -> !llvm.ptr
   // MLIR-NEXT:    llvm.store %arg0, %1 : i32, !llvm.ptr

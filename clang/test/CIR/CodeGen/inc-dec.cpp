@@ -6,7 +6,7 @@ unsigned id0() {
   return ++a;
 }
 
-// CHECK: cir.func @_Z3id0v() -> !u32i {
+// CHECK: cir.func @_Z3id0v() -> !u32i
 // CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
@@ -20,7 +20,7 @@ unsigned id1() {
   return --a;
 }
 
-// CHECK: cir.func @_Z3id1v() -> !u32i {
+// CHECK: cir.func @_Z3id1v() -> !u32i
 // CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
@@ -33,7 +33,7 @@ unsigned id2() {
   return a++;
 }
 
-// CHECK: cir.func @_Z3id2v() -> !u32i {
+// CHECK: cir.func @_Z3id2v() -> !u32i
 // CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
@@ -46,7 +46,7 @@ unsigned id3() {
   return a--;
 }
 
-// CHECK: cir.func @_Z3id3v() -> !u32i {
+// CHECK: cir.func @_Z3id3v() -> !u32i
 // CHECK: %[[#RET:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["__retval"]
 // CHECK: %[[#A:]] = cir.alloca !u32i, cir.ptr <!u32i>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]

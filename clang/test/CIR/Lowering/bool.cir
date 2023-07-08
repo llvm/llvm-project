@@ -1,5 +1,5 @@
 // RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir -allow-unregistered-dialect | FileCheck %s -check-prefix=LLVM
 
 #false = #cir.bool<false> : !cir.bool
 #true = #cir.bool<true> : !cir.bool
@@ -13,7 +13,7 @@ module {
   }
 }
 
-//      MLIR: llvm.func @foo() {
+//      MLIR: llvm.func @foo()
 //  MLIR-DAG: = llvm.mlir.constant(true) : i8
 //  MLIR-DAG: [[Value:%[a-z0-9]+]] = llvm.mlir.constant(1 : index) : i64
 //  MLIR-DAG: = llvm.alloca [[Value]] x i8 {alignment = 1 : i64} : (i64) -> !llvm.ptr
