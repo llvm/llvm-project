@@ -1,6 +1,7 @@
 // Test for mmap/munmap interceptors.
 // RUN: %clang_asan  %s -o %t
 // RUN: %run %t 2>&1
+// UNSUPPORTED: target={{.*windows.*}}
 
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
