@@ -14114,8 +14114,6 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   // VFWCVT
   PseudoVFCVT_RM_CASE(PseudoVFWCVT_RM_XU_F_V, PseudoVFWCVT_XU_F_V);
   PseudoVFCVT_RM_CASE(PseudoVFWCVT_RM_X_F_V, PseudoVFWCVT_X_F_V);
-  PseudoVFCVT_RM_CASE_MF8(PseudoVFWCVT_RM_F_XU_V, PseudoVFWCVT_F_XU_V);
-  PseudoVFCVT_RM_CASE_MF8(PseudoVFWCVT_RM_F_X_V, PseudoVFWCVT_F_X_V);
 
   // VFNCVT
   PseudoVFCVT_RM_CASE_MF8(PseudoVFNCVT_RM_XU_F_W, PseudoVFNCVT_XU_F_W);
