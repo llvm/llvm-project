@@ -140,6 +140,7 @@ class InstallationDetector {
 public:
   InstallationDetector(StringRef ROCmPath, bool isComgrPath)
       : ROCmInstallPath(ROCmPath) {}
+  virtual ~InstallationDetector() = default;
 
   const StringRef getROCmPath() const { return ROCmInstallPath; }
   void setROCmInstallPath(StringRef Path) { ROCmInstallPath = Path; }
