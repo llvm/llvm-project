@@ -101,6 +101,28 @@ namespace test48 {
   // CHECK-HIDDEN: _ZN6test481yE = hidden global
 }
 
+namespace test72 {
+  template <class T>
+  struct foo {
+    HIDDEN static int var1;
+    template <class U> HIDDEN static U var2;
+  };
+  template <class T> template <class U>
+  U foo<T>::var2;
+
+  extern template struct DEFAULT foo<int>;
+
+  int use() {
+    foo<int> o;
+    foo<long> p;
+    return o.var1 + o.var2<int> + p.var1 + p.var2<int>;
+  }
+  // CHECK:      @_ZN6test723fooIiE4var1E = external hidden global i32
+  // CHECK-NEXT: @_ZN6test723fooIiE4var2IiEE = linkonce_odr global i32 0
+  // CHECK-NEXT: @_ZN6test723fooIlE4var1E = external hidden global i32
+  // CHECK-NEXT: @_ZN6test723fooIlE4var2IiEE = linkonce_odr global i32 0
+}
+
 // CHECK: @_ZN5Test425VariableInHiddenNamespaceE = hidden global i32 10
 // CHECK: @_ZN5Test71aE = hidden global
 // CHECK: @_ZN5Test71bE = global
@@ -953,7 +975,7 @@ namespace test51 {
 
   struct HIDDEN foo {
   };
-  DEFAULT foo x, y;
+  DEFAULT foo x, y, z;
   template<foo *z>
   void DEFAULT zed() {
   }
@@ -964,6 +986,12 @@ namespace test51 {
   template void HIDDEN zed<&y>();
   // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1yEEEEEvv(
   // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1yEEEEEvv(
+
+  void use() {
+    zed<&z>();
+  }
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_1zEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_1zEEEEEvv(
 }
 
 namespace test52 {
@@ -1349,11 +1377,16 @@ namespace test71 {
 
   int use() {
     foo<int> o;
-    return o.zed() + o.bar<int>();
+    foo<long> p;
+    return o.zed() + o.bar<int>() + p.zed() + p.bar<int>();
   }
   /// FIXME: foo<int>::bar is hidden in GCC w/ or w/o -fvisibility=hidden.
   // CHECK-LABEL: declare hidden noundef i32 @_ZN6test713fooIiE3zedEv(
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIiE3barIiEET_v(
+  // CHECK-LABEL: define linkonce_odr hidden noundef i64 @_ZN6test713fooIlE3zedEv(
+  // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIlE3barIiEET_v(
   // CHECK-HIDDEN-LABEL: declare hidden noundef i32 @_ZN6test713fooIiE3zedEv(
   // CHECK-HIDDEN-LABEL: define linkonce_odr noundef i32 @_ZN6test713fooIiE3barIiEET_v(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden noundef i64 @_ZN6test713fooIlE3zedEv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden noundef i32 @_ZN6test713fooIlE3barIiEET_v(
 }
