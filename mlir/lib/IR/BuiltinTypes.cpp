@@ -93,7 +93,7 @@ unsigned FloatType::getWidth() {
     return 8;
   if (llvm::isa<Float16Type, BFloat16Type>(*this))
     return 16;
-  if (llvm::isa<Float32Type>(*this))
+  if (llvm::isa<Float32Type, FloatTF32Type>(*this))
     return 32;
   if (llvm::isa<Float64Type>(*this))
     return 64;
@@ -120,6 +120,8 @@ const llvm::fltSemantics &FloatType::getFloatSemantics() {
     return APFloat::BFloat();
   if (llvm::isa<Float16Type>(*this))
     return APFloat::IEEEhalf();
+  if (llvm::isa<FloatTF32Type>(*this))
+    return APFloat::FloatTF32();
   if (llvm::isa<Float32Type>(*this))
     return APFloat::IEEEsingle();
   if (llvm::isa<Float64Type>(*this))

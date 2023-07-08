@@ -199,6 +199,13 @@ def Builtin_Float16 : Builtin_FloatType<"Float16"> {
 }
 
 //===----------------------------------------------------------------------===//
+// FloatTF32Type
+
+def Builtin_FloatTF32 : Builtin_FloatType<"FloatTF32"> {
+  let summary = "TF32 floating-point type";
+}
+
+//===----------------------------------------------------------------------===//
 // Float32Type
 
 def Builtin_Float32 : Builtin_FloatType<"Float32"> {

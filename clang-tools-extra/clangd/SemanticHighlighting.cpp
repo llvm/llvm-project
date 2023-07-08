@@ -737,8 +737,10 @@ public:
   }
 
   bool VisitAutoTypeLoc(AutoTypeLoc L) {
-    if (L.isConstrained())
+    if (L.isConstrained()) {
       H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
+      H.addToken(L.getConceptNameInfo().getLoc(), HighlightingKind::Concept);
+    }
     return true;
   }
 
@@ -953,13 +955,18 @@ public:
         kindForType(AT->getDeducedType().getTypePtrOrNull(), H.getResolver());
     if (!K)
       return true;
-    SourceLocation StartLoc = D->getTypeSpecStartLoc();
+    auto *TSI = D->getTypeSourceInfo();
+    if (!TSI)
+      return true;
+    SourceLocation StartLoc =
+        TSI->getTypeLoc().getContainedAutoTypeLoc().getNameLoc();
     // The AutoType may not have a corresponding token, e.g. in the case of
     // init-captures. In this case, StartLoc overlaps with the location
     // of the decl itself, and producing a token for the type here would result
     // in both it and the token for the decl being dropped due to conflict.
     if (StartLoc == D->getLocation())
       return true;
+
     auto &Tok =
         H.addToken(StartLoc, *K).addModifier(HighlightingModifier::Deduced);
     const Type *Deduced = AT->getDeducedType().getTypePtrOrNull();

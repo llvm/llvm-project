@@ -1,0 +1,45 @@
+# REQUIRES: system-linux
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc --split-dwarf-file=main.dwo   -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-split-gdb-index-types-main.s -o main.o
+; RUN: llvm-mc --split-dwarf-file=helper.dwo -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-split-gdb-index-types-helper.s -o helper1.o
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-types-helper2.s -o helper2.o
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o helper1.o helper2.o -o main.exe
+; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.dwo | FileCheck -check-prefix=PRE-BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-types helper2.o | FileCheck -check-prefix=PRE-BOLT2 %s
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --write-dwp
+; RUN: llvm-dwarfdump --show-form --verbose --debug-types main.exe.bolt.dwp | FileCheck -check-prefix=BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-tu-index main.exe.bolt.dwp | FileCheck -check-prefix=BOLT-DWP-TU-INDEX %s
+
+; Test input into bolt a .dwo file with TU Index.
+; Test split-dwarf and monolithic TUs.
+; Make sure the output .dwp file has a type information.
+
+; PRE-BOLT: 0x675d23e4f33235f2
+; PRE-BOLT: DW_TAG_type_unit
+; PRE-BOLT: 0x49dc260088be7e56
+; PRE-BOLT: DW_TAG_type_unit
+
+; PRE-BOLT2: 0x8f55ac73549bc003
+; PRE-BOLT2: DW_TAG_type_unit
+; PRE-BOLT2: 0xe7734af8fed0632e
+; PRE-BOLT2: DW_TAG_type_unit
+
+; BOLT: 0x675d23e4f33235f2
+; BOLT: DW_TAG_type_unit
+; BOLT: 0x49dc260088be7e56
+; BOLT: DW_TAG_type_unit
+; BOLT: 0x104ec427d2ebea6f
+; BOLT: DW_TAG_type_unit
+; BOLT: 0xb4580bc1535df1e4
+; BOLT: DW_TAG_type_unit
+; BOLT-NOT: 0x8f55ac73549bc003
+; BOLT-NOT: 0xe7734af8fed0632e
+
+; BOLT-DWP-TU-INDEX: version = 2, units = 4, slots = 8
+; BOLT-DWP-TU-INDEX: Index Signature
+; BOLT-DWP-TU-INDEX: 0x675d23e4f33235f2
+; BOLT-DWP-TU-INDEX-NEXT: 0xb4580bc1535df1e4
+; BOLT-DWP-TU-INDEX-NEXT: 0x49dc260088be7e56
+; BOLT-DWP-TU-INDEX-NEXT: 0x104ec427d2ebea6f

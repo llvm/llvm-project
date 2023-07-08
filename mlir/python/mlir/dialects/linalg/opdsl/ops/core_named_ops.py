@@ -36,6 +36,78 @@ def elemwise_unary(
 
 
 @linalg_structured_op
+def exp(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies exp(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.exp(I[None])
+
+
+@linalg_structured_op
+def log(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies log(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.log(I[None])
+
+
+@linalg_structured_op
+def abs(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies abs(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.abs(I[None])
+
+
+@linalg_structured_op
+def ceil(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies ceil(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.ceil(I[None])
+
+
+@linalg_structured_op
+def floor(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies floor(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.floor(I[None])
+
+
+@linalg_structured_op
+def negf(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies negf(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.negf(I[None])
+
+
+@linalg_structured_op
 def elemwise_binary(
     lhs=TensorDef(T1),
     rhs=TensorDef(T2),
@@ -57,7 +129,7 @@ def add(
     rhs=TensorDef(T1),
     O=TensorDef(T1, output=True),
 ):
-    """ Adds two tensors elementwise.
+    """Adds two tensors elementwise.
 
     The shapes and element types must be identical. The appropriate casts,
     broadcasts and reductions should be done previously to calling this op.
@@ -67,7 +139,84 @@ def add(
     a `linalg.broadcast` + `linalg.add` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
-    O[None] = lhs[None] + rhs[None]
+    O[None] = BinaryFn.add(lhs[None], rhs[None])
+
+
+@linalg_structured_op
+def sub(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Subtracts two tensors elementwise.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.sub` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+    """
+    O[None] = BinaryFn.sub(lhs[None], rhs[None])
+
+
+@linalg_structured_op
+def mul(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Multiplies two tensors elementwise.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.mul` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+    """
+    O[None] = BinaryFn.mul(lhs[None], rhs[None])
+
+
+@linalg_structured_op
+def div(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Divides the first tensor by the second tensor, elementwise.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+    """
+    O[None] = BinaryFn.div(lhs[None], rhs[None])
+
+
+@linalg_structured_op
+def div_unsigned(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Divides the first tensor by the second tensor, elementwise. For integer
+    types, performs an unsigned division.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+    """
+    O[None] = lhs[None] / rhs[None]
 
 
 @linalg_structured_op

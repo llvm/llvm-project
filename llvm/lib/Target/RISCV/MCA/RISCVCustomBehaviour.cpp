@@ -13,6 +13,7 @@
 
 #include "RISCVCustomBehaviour.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -87,6 +88,49 @@ RISCVInstrumentManager::createInstrument(llvm::StringRef Desc,
     return nullptr;
   }
   return std::make_unique<RISCVLMULInstrument>(Data);
+}
+
+SmallVector<UniqueInstrument>
+RISCVInstrumentManager::createInstruments(const MCInst &Inst) {
+  if (Inst.getOpcode() == RISCV::VSETVLI ||
+      Inst.getOpcode() == RISCV::VSETIVLI) {
+    LLVM_DEBUG(dbgs() << "RVCB: Found VSETVLI and creating instrument for it: "
+                      << Inst << "\n");
+    unsigned VTypeI = Inst.getOperand(2).getImm();
+    RISCVII::VLMUL VLMUL = RISCVVType::getVLMUL(VTypeI);
+
+    StringRef LMUL;
+    switch (VLMUL) {
+    case RISCVII::LMUL_1:
+      LMUL = "M1";
+      break;
+    case RISCVII::LMUL_2:
+      LMUL = "M2";
+      break;
+    case RISCVII::LMUL_4:
+      LMUL = "M4";
+      break;
+    case RISCVII::LMUL_8:
+      LMUL = "M8";
+      break;
+    case RISCVII::LMUL_F2:
+      LMUL = "MF2";
+      break;
+    case RISCVII::LMUL_F4:
+      LMUL = "MF4";
+      break;
+    case RISCVII::LMUL_F8:
+      LMUL = "MF8";
+      break;
+    case RISCVII::LMUL_RESERVED:
+      llvm_unreachable("Cannot create instrument for LMUL_RESERVED");
+    }
+    SmallVector<UniqueInstrument> Instruments;
+    Instruments.emplace_back(
+        createInstrument(RISCVLMULInstrument::DESC_NAME, LMUL));
+    return Instruments;
+  }
+  return SmallVector<UniqueInstrument>();
 }
 
 unsigned RISCVInstrumentManager::getSchedClassID(

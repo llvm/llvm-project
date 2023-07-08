@@ -52,6 +52,7 @@ AttributeMacros: [
                   '_LIBCPP_STANDALONE_DEBUG',
                   '_LIBCPP_TEMPLATE_DATA_VIS',
                   '_LIBCPP_TEMPLATE_VIS',
+                  '_LIBCPP_THREAD_SAFETY_ANNOTATION',
                   '_LIBCPP_USING_IF_EXISTS',
                   '_LIBCPP_WEAK',
                  ]

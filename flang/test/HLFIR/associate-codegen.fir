@@ -194,6 +194,51 @@ func.func @test_0dim_box(%x : !fir.ref<!fir.box<!fir.heap<i32>>>) {
 // CHECK:           return
 // CHECK:         }
 
+// test that we support a hlfir.associate operation where the expr is also used in a hlfir.shape_of op
+func.func @test_shape_of(%arg0: !fir.ref<!fir.array<4x3xi32>>) {
+  %c4 = arith.constant 4 : index
+  %c3 = arith.constant 3 : index
+  %shape = fir.shape %c3, %c4 : (index, index) -> !fir.shape<2>
+  // %0 = hlfir.transpose %arg0 : (!fir.ref<!fir.array<4x3xi32>>) -> !hlfir.expr<3x4xi32>
+  %0 = hlfir.elemental %shape unordered : (!fir.shape<2>) -> !hlfir.expr<3x4xi32> {
+  ^bb0(%arg1: index, %arg2: index):
+    %4 = hlfir.designate %arg0 (%arg2, %arg1) : (!fir.ref<!fir.array<4x3xi32>>, index, index) -> !fir.ref<i32>
+    %5 = fir.load %4 : !fir.ref<i32>
+    hlfir.yield_element %5 : i32
+  }
+  %1 = hlfir.shape_of %0 : (!hlfir.expr<3x4xi32>) -> !fir.shape<2>
+  %2:3 = hlfir.associate %0(%1) {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<3x4xi32>, !fir.shape<2>) -> (!fir.ref<!fir.array<3x4xi32>>, !fir.ref<!fir.array<3x4xi32>>, i1)
+  // ...
+  hlfir.end_associate %2#1, %2#2 : !fir.ref<!fir.array<3x4xi32>>, i1
+  return
+}
+// CHECK-LABEL:   func.func @test_shape_of(
+// CHECK-SAME:                             %[[VAL_0:.*]]: !fir.ref<!fir.array<4x3xi32>>) {
+// CHECK:           %[[VAL_1:.*]] = arith.constant 4 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant 3 : index
+// CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_2]], %[[VAL_1]] : (index, index) -> !fir.shape<2>
+// CHECK:           %[[VAL_4:.*]] = fir.allocmem !fir.array<3x4xi32> {bindc_name = ".tmp.array", uniq_name = ""}
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_3]]) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<3x4xi32>>, !fir.shape<2>) -> (!fir.heap<!fir.array<3x4xi32>>, !fir.heap<!fir.array<3x4xi32>>)
+// CHECK:           %[[VAL_6:.*]] = arith.constant true
+// CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
+// CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_1]] step %[[VAL_7]] unordered {
+// CHECK:             fir.do_loop %[[VAL_9:.*]] = %[[VAL_7]] to %[[VAL_2]] step %[[VAL_7]] unordered {
+// CHECK:               %[[VAL_10:.*]] = hlfir.designate %[[VAL_0]] (%[[VAL_8]], %[[VAL_9]])  : (!fir.ref<!fir.array<4x3xi32>>, index, index) -> !fir.ref<i32>
+// CHECK:               %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<i32>
+// CHECK:               %[[VAL_12:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_9]], %[[VAL_8]])  : (!fir.heap<!fir.array<3x4xi32>>, index, index) -> !fir.ref<i32>
+// CHECK:               hlfir.assign %[[VAL_11]] to %[[VAL_12]] temporary_lhs : i32, !fir.ref<i32>
+// CHECK:             }
+// CHECK:           }
+// CHECK:           %[[VAL_13:.*]] = fir.undefined tuple<!fir.heap<!fir.array<3x4xi32>>, i1>
+// CHECK:           %[[VAL_14:.*]] = fir.insert_value %[[VAL_13]], %[[VAL_6]], [1 : index] : (tuple<!fir.heap<!fir.array<3x4xi32>>, i1>, i1) -> tuple<!fir.heap<!fir.array<3x4xi32>>, i1>
+// CHECK:           %[[VAL_15:.*]] = fir.insert_value %[[VAL_14]], %[[VAL_5]]#0, [0 : index] : (tuple<!fir.heap<!fir.array<3x4xi32>>, i1>, !fir.heap<!fir.array<3x4xi32>>) -> tuple<!fir.heap<!fir.array<3x4xi32>>, i1>
+// CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.heap<!fir.array<3x4xi32>>) -> !fir.ref<!fir.array<3x4xi32>>
+// CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_5]]#1 : (!fir.heap<!fir.array<3x4xi32>>) -> !fir.ref<!fir.array<3x4xi32>>
+// CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (!fir.ref<!fir.array<3x4xi32>>) -> !fir.heap<!fir.array<3x4xi32>>
+// CHECK:           fir.freemem %[[VAL_18]] : !fir.heap<!fir.array<3x4xi32>>
+// CHECK:           return
+// CHECK:         }
+
 func.func private @take_i4(!fir.ref<i32>)
 func.func private @take_r4(!fir.ref<f32>)
 func.func private @take_l4(!fir.ref<!fir.logical<4>>)

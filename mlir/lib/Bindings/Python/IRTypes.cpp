@@ -247,6 +247,26 @@ public:
   }
 };
 
+/// Floating Point Type subclass - TF32Type.
+class PyTF32Type : public PyConcreteType<PyTF32Type> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsATF32;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirFloatTF32TypeGetTypeID;
+  static constexpr const char *pyClassName = "FloatTF32Type";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirTF32TypeGet(context->get());
+          return PyTF32Type(context->getRef(), t);
+        },
+        py::arg("context") = py::none(), "Create a tf32 type.");
+  }
+};
+
 /// Floating Point Type subclass - F32Type.
 class PyF32Type : public PyConcreteType<PyF32Type> {
 public:
@@ -754,6 +774,7 @@ void mlir::python::populateIRTypes(py::module &m) {
   PyFloat8E5M2FNUZType::bind(m);
   PyBF16Type::bind(m);
   PyF16Type::bind(m);
+  PyTF32Type::bind(m);
   PyF32Type::bind(m);
   PyF64Type::bind(m);
   PyNoneType::bind(m);

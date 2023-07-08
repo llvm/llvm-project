@@ -109,6 +109,16 @@ def IsFortranScalarCharacterExprPred
 def AnyScalarCharacterExpr : Type<IsFortranScalarCharacterExprPred,
     "any character scalar expression type">;
 
+def isFortranArrayCharacterExprTypePred
+        : CPred<"::hlfir::isFortranArrayCharacterExprType($_self)">;
+def AnyArrayCharacterExpr : Type<isFortranArrayCharacterExprTypePred,
+    "any character array expression type">;
+
+def AnyScalarOrArrayCharacterExpr :
+    Type<Or<[AnyScalarCharacterExpr.predicate,
+             AnyArrayCharacterExpr.predicate]>,
+    "any character scalar or array expression type">;
+
 def IsFortranNumericalArrayObjectPred
         : CPred<"::hlfir::isFortranNumericalArrayObject($_self)">;
 def AnyFortranNumericalArrayObject : Type<IsFortranNumericalArrayObjectPred,

@@ -93,6 +93,216 @@ structured_op: !LinalgStructuredOpConfig
               scalar_arg: I
 --- !LinalgOpConfig
 metadata: !LinalgOpMetadata
+  name: exp
+  cpp_class_name: ExpOp
+  doc: |-
+    Applies exp(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !ScalarExpression
+      scalar_fn:
+        kind: unary
+        fn_name: exp
+        operands:
+        - !ScalarExpression
+          scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: log
+  cpp_class_name: LogOp
+  doc: |-
+    Applies log(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !Scalarlogression
+      scalar_fn:
+        kind: unary
+        fn_name: log
+        operands:
+        - !Scalarlogression
+          scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: abs
+  cpp_class_name: AbsOp
+  doc: |-
+    Applies abs(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !Scalarabsression
+      scalar_fn:
+        kind: unary
+        fn_name: abs
+        operands:
+        - !ScalarExpression
+          scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: ceil
+  cpp_class_name: CeilOp
+  doc: |-
+    Applies ceil(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !Scalarceilression
+      scalar_fn:
+        kind: unary
+        fn_name: ceil
+        operands:
+        - !Scalarceilression
+          scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: floor
+  cpp_class_name: FloorOp
+  doc: |-
+    Applies floor(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !Scalarfloorression
+      scalar_fn:
+        kind: unary
+        fn_name: floor
+        operands:
+        - !Scalarfloorression
+          scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: negf
+  cpp_class_name: NegFOp
+  doc: |-
+    Applies negf(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: I
+    kind: input_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: O
+    kind: output_tensor
+    type_var: T1
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: O
+    value: !Scalarnegfression
+      scalar_fn:
+        kind: unary
+        fn_name: negf
+        operands:
+        - !ScalarExpression
+          scalar_arg: I
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
   name: elemwise_binary
   cpp_class_name: ElemwiseBinaryOp
   doc: |-
@@ -199,6 +409,204 @@ structured_op: !LinalgStructuredOpConfig
       scalar_fn:
         kind: binary
         fn_name: add
+        operands:
+        - !ScalarExpression
+          scalar_arg: lhs
+        - !ScalarExpression
+          scalar_arg: rhs
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: sub
+  cpp_class_name: SubOp
+  doc: |-
+    Subtracts two tensors elementwise.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.sub` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: lhs
+    kind: input_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: rhs
+    kind: input_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: out
+    kind: output_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: out
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: sub
+        operands:
+        - !ScalarExpression
+          scalar_arg: lhs
+        - !ScalarExpression
+          scalar_arg: rhs
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: mul
+  cpp_class_name: MulOp
+  doc: |-
+    Multiply two tensors elementwise.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.mul` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: lhs
+    kind: input_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: rhs
+    kind: input_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: out
+    kind: output_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: out
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: mul
+        operands:
+        - !ScalarExpression
+          scalar_arg: lhs
+        - !ScalarExpression
+          scalar_arg: rhs
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: div
+  cpp_class_name: DivOp
+  doc: |-
+    Divides the first tensor by the second tensor, elementwise. For integer
+    types, performs a signed division.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: lhs
+    kind: input_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: rhs
+    kind: input_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: out
+    kind: output_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: out
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: div
+        operands:
+        - !ScalarExpression
+          scalar_arg: lhs
+        - !ScalarExpression
+          scalar_arg: rhs
+--- !LinalgOpConfig
+metadata: !LinalgOpMetadata
+  name: div_unsigned
+  cpp_class_name: DivUOp
+  doc: |-
+    Divides the first tensor by the second tensor, elementwise. For integer
+    types, performs an unsigned division.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+structured_op: !LinalgStructuredOpConfig
+  args:
+  - !LinalgOperandDefConfig
+    name: lhs
+    kind: input_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: rhs
+    kind: input_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  - !LinalgOperandDefConfig
+    name: out
+    kind: output_tensor
+    type_var: T
+    shape_map: affine_map<() -> ()>
+  indexing_maps: !LinalgIndexingMapsConfig
+    static_indexing_maps:
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+    - affine_map<() -> ()>
+  iterator_types: []
+  assignments:
+  - !ScalarAssign
+    arg: out
+    value: !ScalarExpression
+      scalar_fn:
+        kind: binary
+        fn_name: div_unsigned
         operands:
         - !ScalarExpression
           scalar_arg: lhs

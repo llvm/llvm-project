@@ -411,12 +411,78 @@ getWrittenToFields(const DataLayout &dataLayout, LLVMStructType structType,
   return body.take_front(exclusiveEnd);
 }
 
-LogicalResult
-SplitIntegerStores::matchAndRewrite(StoreOp store,
-                                    PatternRewriter &rewriter) const {
-  IntegerType sourceType = dyn_cast<IntegerType>(store.getValue().getType());
-  if (!sourceType) {
-    // We currently only support integer sources.
+/// Splits a store of the vector `value` into `address` at `storeOffset` into
+/// multiple stores of each element with the goal of each generated store
+/// becoming type-consistent through subsequent pattern applications.
+static void splitVectorStore(const DataLayout &dataLayout, Location loc,
+                             RewriterBase &rewriter, Value address,
+                             TypedValue<VectorType> value,
+                             unsigned storeOffset) {
+  VectorType vectorType = value.getType();
+  unsigned elementSize = dataLayout.getTypeSize(vectorType.getElementType());
+
+  // Extract every element in the vector and store it in the given address.
+  for (size_t index : llvm::seq<size_t>(0, vectorType.getNumElements())) {
+    auto pos =
+        rewriter.create<ConstantOp>(loc, rewriter.getI32IntegerAttr(index));
+    auto extractOp = rewriter.create<ExtractElementOp>(loc, value, pos);
+
+    // For convenience, we do indexing by calculating the final byte offset.
+    // Other patterns will turn this into a type-consistent GEP.
+    auto gepOp = rewriter.create<GEPOp>(
+        loc, address.getType(), rewriter.getI8Type(), address,
+        ArrayRef<GEPArg>{storeOffset + index * elementSize});
+
+    rewriter.create<StoreOp>(loc, extractOp, gepOp);
+  }
+}
+
+/// Splits a store of the integer `value` into `address` at `storeOffset` into
+/// multiple stores to each 'writtenFields', making each store operation
+/// type-consistent.
+static void splitIntegerStore(const DataLayout &dataLayout, Location loc,
+                              RewriterBase &rewriter, Value address,
+                              Value value, unsigned storeOffset,
+                              ArrayRef<Type> writtenToFields) {
+  unsigned currentOffset = storeOffset;
+  for (Type type : writtenToFields) {
+    unsigned fieldSize = dataLayout.getTypeSize(type);
+
+    // Extract the data out of the integer by first shifting right and then
+    // truncating it.
+    auto pos = rewriter.create<ConstantOp>(
+        loc, rewriter.getIntegerAttr(value.getType(),
+                                     (currentOffset - storeOffset) * 8));
+
+    auto shrOp = rewriter.create<LShrOp>(loc, value, pos);
+
+    IntegerType fieldIntType = rewriter.getIntegerType(fieldSize * 8);
+    Value valueToStore = rewriter.create<TruncOp>(loc, fieldIntType, shrOp);
+    if (fieldIntType != type) {
+      // Bitcast to the right type. `fieldIntType` was explicitly created
+      // to be of the same size as `type` and must currently be a primitive as
+      // well.
+      valueToStore = rewriter.create<BitcastOp>(loc, type, valueToStore);
+    }
+
+    // We create an `i8` indexed GEP here as that is the easiest (offset is
+    // already known). Other patterns turn this into a type-consistent GEP.
+    auto gepOp =
+        rewriter.create<GEPOp>(loc, address.getType(), rewriter.getI8Type(),
+                               address, ArrayRef<GEPArg>{currentOffset});
+    rewriter.create<StoreOp>(loc, valueToStore, gepOp);
+
+    // No need to care about padding here since we already checked previously
+    // that no padding exists in this range.
+    currentOffset += fieldSize;
+  }
+}
+
+LogicalResult SplitStores::matchAndRewrite(StoreOp store,
+                                           PatternRewriter &rewriter) const {
+  Type sourceType = store.getValue().getType();
+  if (!isa<IntegerType, VectorType>(sourceType)) {
+    // We currently only support integer and vector sources.
     return failure();
   }
 
@@ -465,43 +531,30 @@ SplitIntegerStores::matchAndRewrite(StoreOp store,
   if (failed(writtenToFields))
     return failure();
 
-  unsigned currentOffset = offset;
-  for (Type type : *writtenToFields) {
-    unsigned fieldSize = dataLayout.getTypeSize(type);
-
-    // Extract the data out of the integer by first shifting right and then
-    // truncating it.
-    auto pos = rewriter.create<ConstantOp>(
-        store.getLoc(),
-        rewriter.getIntegerAttr(sourceType, (currentOffset - offset) * 8));
-
-    auto shrOp = rewriter.create<LShrOp>(store.getLoc(), store.getValue(), pos);
-
-    IntegerType fieldIntType = rewriter.getIntegerType(fieldSize * 8);
-    Value valueToStore =
-        rewriter.create<TruncOp>(store.getLoc(), fieldIntType, shrOp);
-    if (fieldIntType != type) {
-      // Bitcast to the right type. `fieldIntType` was explicitly created
-      // to be of the same size as `type` and must currently be a primitive as
-      // well.
-      valueToStore =
-          rewriter.create<BitcastOp>(store.getLoc(), type, valueToStore);
-    }
-
-    // We create an `i8` indexed GEP here as that is the easiest (offset is
-    // already known). Other patterns turn this into a type-consistent GEP.
-    auto gepOp = rewriter.create<GEPOp>(store.getLoc(), address.getType(),
-                                        rewriter.getI8Type(), address,
-                                        ArrayRef<GEPArg>{currentOffset});
-    rewriter.create<StoreOp>(store.getLoc(), valueToStore, gepOp);
-
-    // No need to care about padding here since we already checked previously
-    // that no padding exists in this range.
-    currentOffset += fieldSize;
+  if (writtenToFields->size() <= 1) {
+    // Other patterns should take care of this case, we are only interested in
+    // splitting field stores.
+    return failure();
   }
 
-  rewriter.eraseOp(store);
+  if (isa<IntegerType>(sourceType)) {
+    splitIntegerStore(dataLayout, store.getLoc(), rewriter, address,
+                      store.getValue(), offset, *writtenToFields);
+    rewriter.eraseOp(store);
+    return success();
+  }
 
+  // Add a reasonable bound to not split very large vectors that would end up
+  // generating lots of code.
+  if (dataLayout.getTypeSizeInBits(sourceType) > maxVectorSplitSize)
+    return failure();
+
+  // Vector types are simply split into its elements and new stores generated
+  // with those. Subsequent pattern applications will split these stores further
+  // if required.
+  splitVectorStore(dataLayout, store.getLoc(), rewriter, address,
+                   cast<TypedValue<VectorType>>(store.getValue()), offset);
+  rewriter.eraseOp(store);
   return success();
 }
 
@@ -518,7 +571,7 @@ struct LLVMTypeConsistencyPass
     rewritePatterns.add<AddFieldGetterToStructDirectUse<StoreOp>>(
         &getContext());
     rewritePatterns.add<CanonicalizeAlignedGep>(&getContext());
-    rewritePatterns.add<SplitIntegerStores>(&getContext());
+    rewritePatterns.add<SplitStores>(&getContext(), maxVectorSplitSize);
     FrozenRewritePatternSet frozen(std::move(rewritePatterns));
 
     if (failed(applyPatternsAndFoldGreedily(getOperation(), frozen)))

@@ -677,8 +677,8 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
     In particular, note that the second operand `B` has shape `KxNxnxk` (and not
     `KxNxkxn` as one could expect by looking **only** at the operand).
 
-    Other layouts can be obtained unsurprisingly from this canonical 
-    transformation by composing the resulting operation with a (future) 
+    Other layouts can be obtained unsurprisingly from this canonical
+    transformation by composing the resulting operation with a
     `transform.structured.pack_transpose` op.
     This composition allows separating concerns and composes better compared
     to adding additional permutation attributes to this transform op.
@@ -1697,21 +1697,29 @@ def TileOp : Op<Transform_Dialect, "structured.tile",
     OpBuilder<(ins "TypeRange":$loopTypes,
                    "Value":$target,
                    "ArrayRef<int64_t>":$staticTileSizes,
-                   CArg<"ArrayRef<int64_t>", "{}">:$interchange)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$interchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
     OpBuilder<(ins "TypeRange":$loopTypes,
                    "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
-                   CArg<"ArrayRef<int64_t>", "{}">:$interchange)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$interchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$staticTileSizes,
-                   CArg<"ArrayRef<int64_t>", "{}">:$interchange)>,
+                   CArg<"ArrayRef<int64_t>", "{}">:$interchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
-                   CArg<"ArrayRef<int64_t>", "{}">:$interchange)>
-
+                   CArg<"ArrayRef<int64_t>", "{}">:$interchange,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:
+                      $scalableSizes)>,
   ];
 
   let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Returns the list of tile sizes, which may be static (Attribute) or
@@ -2027,6 +2035,8 @@ def MaskedVectorizeOp : Op<Transform_Dialect, "structured.masked_vectorize",
       attr-dict
       `:` type($target)
   }];
+
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     // TODO: applyToOne.

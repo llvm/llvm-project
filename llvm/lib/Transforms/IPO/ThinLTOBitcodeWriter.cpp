@@ -259,13 +259,15 @@ static void cloneUsedGlobalVariables(const Module &SrcM, Module &DestM,
     appendToUsed(DestM, NewUsed);
 }
 
-bool enableUnifiedLTO(Module &M) {
+#ifndef NDEBUG
+static bool enableUnifiedLTO(Module &M) {
   bool UnifiedLTO = false;
   if (auto *MD =
           mdconst::extract_or_null<ConstantInt>(M.getModuleFlag("UnifiedLTO")))
     UnifiedLTO = MD->getZExtValue();
   return UnifiedLTO;
 }
+#endif
 
 // If it's possible to split M into regular and thin LTO parts, do so and write
 // a multi-module bitcode file with the two parts to OS. Otherwise, write only a
@@ -273,10 +275,9 @@ bool enableUnifiedLTO(Module &M) {
 void splitAndWriteThinLTOBitcode(
     raw_ostream &OS, raw_ostream *ThinLinkOS,
     function_ref<AAResults &(Function &)> AARGetter, Module &M) {
-  bool UnifiedLTO = enableUnifiedLTO(M);
   std::string ModuleId = getUniqueModuleId(&M);
   if (ModuleId.empty()) {
-    assert(!UnifiedLTO);
+    assert(!enableUnifiedLTO(M));
     // We couldn't generate a module ID for this module, write it out as a
     // regular LTO module with an index for summary-based dead stripping.
     ProfileSummaryInfo PSI(M);

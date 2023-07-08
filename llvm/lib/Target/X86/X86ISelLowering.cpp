@@ -12158,9 +12158,11 @@ static bool isTargetShuffleEquivalent(MVT VT, ArrayRef<int> Mask,
     return false;
 
   // Don't use V1/V2 if they're not the same size as the shuffle mask type.
-  if (V1 && V1.getValueSizeInBits() != VT.getSizeInBits())
+  if (V1 && (V1.getValueSizeInBits() != VT.getSizeInBits() ||
+             !V1.getValueType().isVector()))
     V1 = SDValue();
-  if (V2 && V2.getValueSizeInBits() != VT.getSizeInBits())
+  if (V2 && (V2.getValueSizeInBits() != VT.getSizeInBits() ||
+             !V2.getValueType().isVector()))
     V2 = SDValue();
 
   APInt ZeroV1 = APInt::getZero(Size);
@@ -50018,6 +50020,49 @@ static SDValue combineBitOpWithShift(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Attempt to fold:
+// BITOP(PACKSS(X,Z),PACKSS(Y,W)) --> PACKSS(BITOP(X,Y),BITOP(Z,W)).
+// TODO: Handle PACKUS handling.
+static SDValue combineBitOpWithPACK(SDNode *N, SelectionDAG &DAG) {
+  unsigned Opc = N->getOpcode();
+  assert((Opc == ISD::OR || Opc == ISD::AND || Opc == ISD::XOR) &&
+         "Unexpected bit opcode");
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  // Both operands must be single use.
+  if (!N0.hasOneUse() || !N1.hasOneUse())
+    return SDValue();
+
+  // Search for matching packs.
+  N0 = peekThroughOneUseBitcasts(N0);
+  N1 = peekThroughOneUseBitcasts(N1);
+
+  if (N0.getOpcode() != X86ISD::PACKSS || N1.getOpcode() != X86ISD::PACKSS)
+    return SDValue();
+
+  MVT DstVT = N0.getSimpleValueType();
+  if (DstVT != N1.getSimpleValueType())
+    return SDValue();
+
+  MVT SrcVT = N0.getOperand(0).getSimpleValueType();
+  unsigned NumSrcBits = SrcVT.getScalarSizeInBits();
+
+  // Limit to allsignbits packing.
+  if (DAG.ComputeNumSignBits(N0.getOperand(0)) != NumSrcBits ||
+      DAG.ComputeNumSignBits(N0.getOperand(1)) != NumSrcBits ||
+      DAG.ComputeNumSignBits(N1.getOperand(0)) != NumSrcBits ||
+      DAG.ComputeNumSignBits(N1.getOperand(1)) != NumSrcBits)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue LHS = DAG.getNode(Opc, DL, SrcVT, N0.getOperand(0), N1.getOperand(0));
+  SDValue RHS = DAG.getNode(Opc, DL, SrcVT, N0.getOperand(1), N1.getOperand(1));
+  return DAG.getBitcast(VT, DAG.getNode(X86ISD::PACKSS, DL, DstVT, LHS, RHS));
+}
+
 /// If this is a zero/all-bits result that is bitwise-anded with a low bits
 /// mask. (Mask == 1 for the x86 lowering of a SETCC + ZEXT), replace the 'and'
 /// with a shift-right to eliminate loading the vector constant mask value.
@@ -50440,6 +50485,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
     return R;
 
   if (SDValue R = combineBitOpWithShift(N, DAG))
+    return R;
+
+  if (SDValue R = combineBitOpWithPACK(N, DAG))
     return R;
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))
@@ -51197,6 +51245,9 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     return R;
 
   if (SDValue R = combineBitOpWithShift(N, DAG))
+    return R;
+
+  if (SDValue R = combineBitOpWithPACK(N, DAG))
     return R;
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))
@@ -53733,6 +53784,9 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
     return R;
 
   if (SDValue R = combineBitOpWithShift(N, DAG))
+    return R;
+
+  if (SDValue R = combineBitOpWithPACK(N, DAG))
     return R;
 
   if (SDValue FPLogic = convertIntLogicToFPLogic(N, DAG, DCI, Subtarget))

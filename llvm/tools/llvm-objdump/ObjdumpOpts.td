@@ -65,7 +65,11 @@ def : Flag<["-"], "D">, Alias<disassemble_all>,
 
 def symbol_description : Flag<["--"], "symbol-description">,
   HelpText<"Add symbol description for disassembly. This "
-           "option is for XCOFF files only.">;
+           "option is for XCOFF files only">;
+
+def traceback_table : Flag<["--"], "traceback-table">,
+  HelpText<"Decode traceback table in disassembly. Implies --disassemble. "
+           "This option is for XCOFF files only">;
 
 def disassemble_symbols_EQ : Joined<["--"], "disassemble-symbols=">,
   HelpText<"List of symbols to disassemble. "

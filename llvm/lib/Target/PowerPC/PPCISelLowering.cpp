@@ -1381,8 +1381,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
   // We have target-specific dag combine patterns for the following nodes:
-  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::SHL, ISD::SRA, ISD::SRL,
-                       ISD::MUL, ISD::FMA, ISD::SINT_TO_FP, ISD::BUILD_VECTOR});
+  setTargetDAGCombine({ISD::ADD, ISD::SHL, ISD::SRA, ISD::SRL, ISD::MUL,
+                       ISD::FMA, ISD::SINT_TO_FP, ISD::BUILD_VECTOR});
   if (Subtarget.hasFPCVT())
     setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine({ISD::LOAD, ISD::STORE, ISD::BR_CC});
@@ -15496,31 +15496,6 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   default: break;
   case ISD::ADD:
     return combineADD(N, DCI);
-  case ISD::AND: {
-    // We don't want (and (zext (shift...)), C) if C fits in the width of the
-    // original input as that will prevent us from selecting optimal rotates.
-    SDValue Op1 = N->getOperand(0);
-    SDValue Op2 = N->getOperand(1);
-    if ((Op1.getOpcode() != ISD::ZERO_EXTEND &&
-         Op1.getOpcode() != ISD::ANY_EXTEND) ||
-        !isa<ConstantSDNode>(Op2))
-      break;
-    SDValue NarrowOp = Op1.getOperand(0);
-    unsigned NarrowOpcode = NarrowOp.getOpcode();
-    if (NarrowOpcode != ISD::SHL && NarrowOpcode != ISD::SRL &&
-        NarrowOpcode != ISD::ROTL && NarrowOpcode != ISD::ROTR &&
-        NarrowOpcode != ISD::FSHL && NarrowOpcode != ISD::FSHR)
-      break;
-
-    uint64_t Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
-    EVT NarrowVT = NarrowOp.getValueType();
-    // Make sure that the constant is narrow enough to fit in the narrow type.
-    if (Imm >= maxUIntN(NarrowVT.getSizeInBits()))
-      break;
-    SDValue ConstOp = DAG.getConstant(Imm, dl, NarrowVT);
-    SDValue NarrowAnd = DAG.getNode(ISD::AND, dl, NarrowVT, NarrowOp, ConstOp);
-    return DAG.getAnyExtOrTrunc(NarrowAnd, dl, N->getValueType(0));
-  }
   case ISD::SHL:
     return combineSHL(N, DCI);
   case ISD::SRA:

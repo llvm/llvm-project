@@ -1,0 +1,55 @@
+# REQUIRES: system-linux
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc --split-dwarf-file=main.dwo   -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-split-gdb-index-types-main.s -o main.o
+; RUN: llvm-mc --split-dwarf-file=helper.dwo -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-split-gdb-index-types-helper.s -o helper1.o
+; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-types-helper2.s -o helper2.o
+; RUN: %clang %cflags -gdwarf-5 -gsplit-dwarf=split main.o helper1.o helper2.o -o main.exe
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo | FileCheck -check-prefix=PRE-BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info helper2.o | FileCheck -check-prefix=PRE-BOLT2 %s
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections --write-dwp
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info -r 0 main.exe.bolt.dwp | FileCheck -check-prefix=BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-tu-index main.exe.bolt.dwp | FileCheck -check-prefix=BOLT-DWP-TU-INDEX %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-cu-index main.exe.bolt.dwp | FileCheck -check-prefix=BOLT-DWP-CU-INDEX %s
+
+; Test input into bolt a .dwo file with TU Index.
+; Test split-dwarf and monolithic TUs.
+; Make sure the output .dwp file has a type and cu information.
+
+; PRE-BOLT: Type Unit
+; PRE-BOLT-SAME: 0x675d23e4f33235f2
+; PRE-BOLT: Type Unit
+; PRE-BOLT-SAME: 0x49dc260088be7e56
+
+; PRE-BOLT2: 0x8f55ac73549bc003
+; PRE-BOLT2: DW_TAG_type_unit
+; PRE-BOLT2: 0xe7734af8fed0632e
+; PRE-BOLT2: DW_TAG_type_unit
+
+; BOLT: 0x00000000: Type Unit: length = 0x00000047
+; BOLT-SAME: 0x675d23e4f33235f2
+; BOLT: 0x0000004b: Type Unit: length = 0x0000003e
+; BOLT-SAME: 0x49dc260088be7e56
+; BOLT: 0x0000008d: Compile Unit: length = 0x00000074
+; BOLT-SAME: 0x4257354d8bb35644
+; BOLT: 0x00000105: Type Unit: length = 0x00000047
+; BOLT-SAME: 0x104ec427d2ebea6f
+; BOLT: 0x00000150: Type Unit: length = 0x0000003e
+; BOLT-SAME: 0xb4580bc1535df1e4
+; BOLT: 0x00000192: Compile Unit: length = 0x00000051
+; BOLT-SAME: 0x7738bfb5f3edfb73
+; BOLT-NOT: 0x8f55ac73549bc003
+; BOLT-NOT: 0xe7734af8fed0632e
+
+; BOLT-DWP-TU-INDEX: version = 5, units = 4, slots = 8
+; BOLT-DWP-TU-INDEX: Index Signature
+; BOLT-DWP-TU-INDEX: 3 0x675d23e4f33235f2 [0x0000000000000000, 0x000000000000004b) [0x00000000, 0x00000083) [0x00000000, 0x00000056) [0x00000000, 0x00000044)
+; BOLT-DWP-TU-INDEX: 5 0xb4580bc1535df1e4 [0x0000000000000150, 0x0000000000000192) [0x00000083, 0x000000f9) [0x00000056, 0x000000ae) [0x00000044, 0x00000084)
+; BOLT-DWP-TU-INDEX: 7 0x49dc260088be7e56 [0x000000000000004b, 0x000000000000008d) [0x00000000, 0x00000083) [0x00000000, 0x00000056) [0x00000000, 0x00000044)
+; BOLT-DWP-TU-INDEX: 8 0x104ec427d2ebea6f [0x0000000000000105, 0x0000000000000150) [0x00000083, 0x000000f9) [0x00000056, 0x000000ae) [0x00000044, 0x00000084)
+
+; BOLT-DWP-CU-INDEX: version = 5, units = 2, slots = 4
+; BOLT-DWP-CU-INDEX: Index Signature
+; BOLT-DWP-CU-INDEX: 1 0x4257354d8bb35644 [0x000000000000008d, 0x0000000000000105) [0x00000000, 0x00000083) [0x00000000, 0x00000056) [0x00000000, 0x00000044)
+; BOLT-DWP-CU-INDEX: 4 0x7738bfb5f3edfb73 [0x0000000000000192, 0x00000000000001e7) [0x00000083, 0x000000f9) [0x00000056, 0x000000ae) [0x00000044, 0x00000084)

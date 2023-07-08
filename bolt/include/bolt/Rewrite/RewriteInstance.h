@@ -15,6 +15,7 @@
 
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/Linker.h"
+#include "bolt/Rewrite/MetadataManager.h"
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/StringTableBuilder.h"
@@ -94,6 +95,9 @@ private:
   /// from meta data in the file.
   void discoverFileObjects();
 
+  /// Create and initialize metadata rewriters for this instance.
+  void initializeMetadataManager();
+
   /// Process fragments, locate parent functions.
   void registerFragments();
 
@@ -109,30 +113,6 @@ private:
 
   /// Process input relocations.
   void processRelocations();
-
-  /// Insert an LKMarker for a given code pointer \p PC from a non-code section
-  /// \p SectionName.
-  void insertLKMarker(uint64_t PC, uint64_t SectionOffset,
-                      int32_t PCRelativeOffset, bool IsPCRelative,
-                      StringRef SectionName);
-
-  /// Process linux kernel special sections and their relocations.
-  void processLKSections();
-
-  /// Process special linux kernel section, __ex_table.
-  void processLKExTable();
-
-  /// Process special linux kernel section, .pci_fixup.
-  void processLKPCIFixup();
-
-  /// Process __ksymtab and __ksymtab_gpl.
-  void processLKKSymtab(bool IsGPL = false);
-
-  /// Process special linux kernel section, __bug_table.
-  void processLKBugTable();
-
-  /// Process special linux kernel section, .smp_locks.
-  void processLKSMPLocks();
 
   /// Read relocations from a given section.
   void readDynamicRelocations(const object::SectionRef &Section, bool IsJmpRel);
@@ -188,20 +168,11 @@ private:
   /// Link additional runtime code to support instrumentation.
   void linkRuntime();
 
+  /// Process metadata in special sections before CFG is built for functions.
+  void processMetadataPreCFG();
+
   /// Update debug and other auxiliary information in the file.
   void updateMetadata();
-
-  /// Update SDTMarkers' locations for the output binary.
-  void updateSDTMarkers();
-
-  /// Update LKMarkers' locations for the output binary.
-  void updateLKMarkers();
-
-  /// Update address of MCDecodedPseudoProbe.
-  void updatePseudoProbes();
-
-  /// Encode MCDecodedPseudoProbe.
-  void encodePseudoProbes();
 
   /// Return the list of code sections in the output order.
   std::vector<BinarySection *> getCodeSections();
@@ -391,16 +362,6 @@ private:
   /// of appending contents to it.
   bool willOverwriteSection(StringRef SectionName);
 
-  /// Parse .note.stapsdt section
-  void parseSDTNotes();
-
-  /// Parse .pseudo_probe_desc section and .pseudo_probe section
-  /// Setup Pseudo probe decoder
-  void parsePseudoProbe();
-
-  /// Print all SDT markers
-  void printSDTMarkers();
-
 public:
   /// Standard ELF sections we overwrite.
   static constexpr const char *SectionsToOverwrite[] = {
@@ -424,6 +385,9 @@ public:
   }
 
 private:
+  /// Manage a pipeline of metadata handlers.
+  class MetadataManager MetadataManager;
+
   /// Get the contents of the LSDA section for this binary.
   ArrayRef<uint8_t> getLSDAData();
 
@@ -578,19 +542,6 @@ private:
 
   /// .note.gnu.build-id section.
   ErrorOr<BinarySection &> BuildIDSection{std::errc::bad_address};
-
-  /// .note.stapsdt section.
-  /// Contains information about statically defined tracing points
-  ErrorOr<BinarySection &> SDTSection{std::errc::bad_address};
-
-  /// .pseudo_probe_desc section.
-  /// Contains information about pseudo probe description, like its related
-  /// function
-  ErrorOr<BinarySection &> PseudoProbeDescSection{std::errc::bad_address};
-
-  /// .pseudo_probe section.
-  /// Contains information about pseudo probe details, like its address
-  ErrorOr<BinarySection &> PseudoProbeSection{std::errc::bad_address};
 
   /// Helper for accessing sections by name.
   BinarySection *getSection(const Twine &Name) {

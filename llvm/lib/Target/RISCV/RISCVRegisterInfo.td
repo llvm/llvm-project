@@ -115,9 +115,9 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 def XLenVT : ValueTypeByHwMode<[RV32, RV64],
                                [i32,  i64]>;
-// Floating point class with XLen bits.
-def XLenFVT : ValueTypeByHwMode<[RV32, RV64],
-                                [f32,  f64]>;
+// Allow f64 in GPR for ZDINX on RV64.
+def XLenFVT : ValueTypeByHwMode<[RV64],
+                                [f64]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
@@ -164,6 +164,15 @@ def SP : GPRRegisterClass<(add X2)>;
 // Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
 def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
                                  (sequence "X%u", 18, 23))>;
+
+// Registers saveable by PUSH/POP instruction in Zcmp extension
+def PGPR : RegisterClass<"RISCV", [XLenVT], 32, (add
+    (sequence "X%u", 8, 9),
+    (sequence "X%u", 18, 27),
+    X1
+  )> {
+  let RegInfos = XLenRI;
+}
 
 // Floating point registers
 let RegAltNameIndices = [ABIRegAltName] in {

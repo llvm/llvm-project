@@ -113,13 +113,16 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     return Allocator->decompactPtr(ClassId, CompactP);
   }
 
-  void deallocate(uptr ClassId, void *P) {
+  bool deallocate(uptr ClassId, void *P) {
     CHECK_LT(ClassId, NumClasses);
     PerClass *C = &PerClassArray[ClassId];
     // We still have to initialize the cache in the event that the first heap
     // operation in a thread is a deallocation.
     initCacheMaybe(C);
-    if (C->Count == C->MaxCount)
+
+    // If the cache is full, drain half of blocks back to the main allocator.
+    const bool NeedToDrainCache = C->Count == C->MaxCount;
+    if (NeedToDrainCache)
       drain(C, ClassId);
     // See comment in allocate() about memory accesses.
     const uptr ClassSize = C->ClassSize;
@@ -127,6 +130,8 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
         Allocator->compactPtr(ClassId, reinterpret_cast<uptr>(P));
     Stats.sub(StatAllocated, ClassSize);
     Stats.add(StatFree, ClassSize);
+
+    return NeedToDrainCache;
   }
 
   bool isEmpty() const {

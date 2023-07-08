@@ -21,6 +21,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // TODO: Change the name of __unwrap_iter_impl to something more appropriate
@@ -76,5 +79,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _OrigIter __rewrap_iter(_OrigIter __orig
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_PUSH_MACROS
 
 #endif // _LIBCPP___ALGORITHM_UNWRAP_ITER_H

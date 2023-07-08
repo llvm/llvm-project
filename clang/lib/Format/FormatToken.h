@@ -774,6 +774,9 @@ public:
     return Tok;
   }
 
+  /// Returns \c true if this token ends a block indented initializer list.
+  [[nodiscard]] bool isBlockIndentedInitRBrace(const FormatStyle &Style) const;
+
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
   [[nodiscard]] bool opensBlockOrBlockTypeList(const FormatStyle &Style) const;

@@ -1,0 +1,79 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-types-dwarf5-types-main.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-types-dwarf5-types-helper.s -o %thelper.o
+# RUN: %clang %cflags %tmain.o %thelper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-types %t.bolt | FileCheck --check-prefix=POSTCHECKTU %s
+
+# Check BOLT handles DWARF4/5 with fdebug-types.
+
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_type_unit
+# POSTCHECK: DW_TAG_member
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x0045 => {0x{{[0-9a-f]+}}} "char *")
+# POSTCHECK: DW_TAG_pointer_type [4]
+# POSTCHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x004a => {0x{{[0-9a-f]+}}} "char")
+
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_type_unit
+# POSTCHECK: DW_TAG_structure_type
+# POSTCHECK: DW_TAG_member
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x003c => {0x{{[0-9a-f]+}}} "char *")
+# POSTCHECK: DW_TAG_member
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x003c => {0x{{[0-9a-f]+}}} "char *")
+# POSTCHECK: DW_TAG_pointer_type [4]
+# POSTCHECK-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0041 => {0x{{[0-9a-f]+}}} "char")
+
+# POSTCHECK: version = 0x0004
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_TAG_subprogram
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x007c => {0x{{[0-9a-f]+}}} "int")
+# POSTCHECK: DW_TAG_formal_parameter
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x007c => {0x{{[0-9a-f]+}}} "int")
+# POSTCHECK: DW_TAG_formal_parameter
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x0083 => {0x{{[0-9a-f]+}}} "char **")
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x0094 => {0x{{[0-9a-f]+}}} "Foo")
+# POSTCHECK: DW_TAG_base_type
+# POSTCHECK: DW_TAG_pointer_type
+
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_TAG_subprogram
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x0048 => {0x{{[0-9a-f]+}}} "int")
+# POSTCHECK: DW_TAG_variable
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x004c => {0x{{[0-9a-f]+}}} "Foo2a")
+# POSTCHECK: DW_TAG_base_type
+# POSTCHECK: DW_TAG_structure_type
+# POSTCHECK: DW_AT_signature [DW_FORM_ref_sig8]  (0x104ec427d2ebea6f)
+# POSTCHECK: DW_TAG_structure_type
+# POSTCHECK: DW_AT_signature [DW_FORM_ref_sig8]  (0xb4580bc1535df1e4)
+
+# POSTCHECKTU: version = 0x0004
+# POSTCHECKTU-SAME: type_signature = 0x675d23e4f33235f2
+# POSTCHECKTU-SAME: type_offset = 0x001e
+# POSTCHECKTU: DW_TAG_type_unit
+# POSTCHECKTU: DW_TAG_member
+# POSTCHECKTU: DW_AT_type [DW_FORM_ref4] (cu + 0x004c => {0x{{[0-9a-f]+}}} "char *")
+# POSTCHECKTU: DW_TAG_member
+# POSTCHECKTU: DW_AT_type [DW_FORM_ref4] (cu + 0x004c => {0x{{[0-9a-f]+}}} "char *")
+# POSTCHECKTU: DW_TAG_pointer_type
+# POSTCHECKTU-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0051 => {0x{{[0-9a-f]+}}} "char")
+# POSTCHECKTU: DW_TAG_base_type
+# POSTCHECKTU: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "char")
+
+# POSTCHECKTU: version = 0x0004
+# POSTCHECKTU-SAME: type_signature = 0x49dc260088be7e56
+# POSTCHECKTU-SAME: type_offset = 0x001e
+# POSTCHECKTU: DW_TAG_type_unit
+# POSTCHECKTU: DW_TAG_structure_type
+# POSTCHECKTU: DW_TAG_member
+# POSTCHECKTU: DW_AT_type [DW_FORM_ref4] (cu + 0x0040 => {0x{{[0-9a-f]+}}} "char *")
+# POSTCHECKTU: DW_TAG_member
+# POSTCHECKTU: DW_AT_type [DW_FORM_ref4] (cu + 0x0040 => {0x{{[0-9a-f]+}}} "char *")
+# POSTCHECKTU: DW_TAG_pointer_type
+# POSTCHECKTU-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0045 => {0x{{[0-9a-f]+}}} "char")
+# POSTCHECKTU: DW_TAG_base_type
+# POSTCHECKTU-NEXT: DW_AT_name [DW_FORM_strp] ( .debug_str[0x{{[0-9a-f]+}}] = "char")

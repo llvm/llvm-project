@@ -440,6 +440,10 @@ XCOFF ONLY OPTIONS AND COMMANDS
 
   Add symbol description to disassembly output.
 
+.. option:: --traceback-table
+
+  Decode traceback table in disassembly output. Implies :option:`--disassemble`.
+
 BUGS
 ----
 

@@ -5,37 +5,31 @@
 
 // RV64ZKNE-LABEL: @aes64es(
 // RV64ZKNE-NEXT:  entry:
-// RV64ZKNE-NEXT:    [[RS1_ADDR:%.*]] = alloca i32, align 4
-// RV64ZKNE-NEXT:    [[RS2_ADDR:%.*]] = alloca i32, align 4
-// RV64ZKNE-NEXT:    store i32 [[RS1:%.*]], ptr [[RS1_ADDR]], align 4
-// RV64ZKNE-NEXT:    store i32 [[RS2:%.*]], ptr [[RS2_ADDR]], align 4
-// RV64ZKNE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RS1_ADDR]], align 4
-// RV64ZKNE-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
-// RV64ZKNE-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RS2_ADDR]], align 4
-// RV64ZKNE-NEXT:    [[CONV1:%.*]] = sext i32 [[TMP1]] to i64
-// RV64ZKNE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.aes64es(i64 [[CONV]], i64 [[CONV1]])
-// RV64ZKNE-NEXT:    [[CONV2:%.*]] = trunc i64 [[TMP2]] to i32
-// RV64ZKNE-NEXT:    ret i32 [[CONV2]]
+// RV64ZKNE-NEXT:    [[RS1_ADDR:%.*]] = alloca i64, align 8
+// RV64ZKNE-NEXT:    [[RS2_ADDR:%.*]] = alloca i64, align 8
+// RV64ZKNE-NEXT:    store i64 [[RS1:%.*]], ptr [[RS1_ADDR]], align 8
+// RV64ZKNE-NEXT:    store i64 [[RS2:%.*]], ptr [[RS2_ADDR]], align 8
+// RV64ZKNE-NEXT:    [[TMP0:%.*]] = load i64, ptr [[RS1_ADDR]], align 8
+// RV64ZKNE-NEXT:    [[TMP1:%.*]] = load i64, ptr [[RS2_ADDR]], align 8
+// RV64ZKNE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.aes64es(i64 [[TMP0]], i64 [[TMP1]])
+// RV64ZKNE-NEXT:    ret i64 [[TMP2]]
 //
-int aes64es(int rs1, int rs2) {
+long aes64es(long rs1, long rs2) {
   return __builtin_riscv_aes64es_64(rs1, rs2);
 }
 
 
 // RV64ZKNE-LABEL: @aes64esm(
 // RV64ZKNE-NEXT:  entry:
-// RV64ZKNE-NEXT:    [[RS1_ADDR:%.*]] = alloca i32, align 4
-// RV64ZKNE-NEXT:    [[RS2_ADDR:%.*]] = alloca i32, align 4
-// RV64ZKNE-NEXT:    store i32 [[RS1:%.*]], ptr [[RS1_ADDR]], align 4
-// RV64ZKNE-NEXT:    store i32 [[RS2:%.*]], ptr [[RS2_ADDR]], align 4
-// RV64ZKNE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RS1_ADDR]], align 4
-// RV64ZKNE-NEXT:    [[CONV:%.*]] = sext i32 [[TMP0]] to i64
-// RV64ZKNE-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RS2_ADDR]], align 4
-// RV64ZKNE-NEXT:    [[CONV1:%.*]] = sext i32 [[TMP1]] to i64
-// RV64ZKNE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.aes64esm(i64 [[CONV]], i64 [[CONV1]])
-// RV64ZKNE-NEXT:    [[CONV2:%.*]] = trunc i64 [[TMP2]] to i32
-// RV64ZKNE-NEXT:    ret i32 [[CONV2]]
+// RV64ZKNE-NEXT:    [[RS1_ADDR:%.*]] = alloca i64, align 8
+// RV64ZKNE-NEXT:    [[RS2_ADDR:%.*]] = alloca i64, align 8
+// RV64ZKNE-NEXT:    store i64 [[RS1:%.*]], ptr [[RS1_ADDR]], align 8
+// RV64ZKNE-NEXT:    store i64 [[RS2:%.*]], ptr [[RS2_ADDR]], align 8
+// RV64ZKNE-NEXT:    [[TMP0:%.*]] = load i64, ptr [[RS1_ADDR]], align 8
+// RV64ZKNE-NEXT:    [[TMP1:%.*]] = load i64, ptr [[RS2_ADDR]], align 8
+// RV64ZKNE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.aes64esm(i64 [[TMP0]], i64 [[TMP1]])
+// RV64ZKNE-NEXT:    ret i64 [[TMP2]]
 //
-int aes64esm(int rs1, int rs2) {
+long aes64esm(long rs1, long rs2) {
   return __builtin_riscv_aes64esm_64(rs1, rs2);
 }

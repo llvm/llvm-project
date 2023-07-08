@@ -350,12 +350,15 @@ template <typename Op>
 static Op createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Value baseAddr, std::stringstream &name,
                             mlir::SmallVector<mlir::Value> bounds,
-                            bool structured, mlir::acc::DataClause dataClause) {
+                            bool structured, mlir::acc::DataClause dataClause,
+                            mlir::Type retTy) {
   mlir::Value varPtrPtr;
-  if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>())
+  if (auto boxTy = baseAddr.getType().dyn_cast<fir::BaseBoxType>()) {
     baseAddr = builder.create<fir::BoxAddrOp>(loc, baseAddr);
+    retTy = baseAddr.getType();
+  }
 
-  Op op = builder.create<Op>(loc, baseAddr.getType(), baseAddr);
+  Op op = builder.create<Op>(loc, retTy, baseAddr);
   op.setNameAttr(builder.getStringAttr(name.str()));
   op.setStructured(structured);
   op.setDataClause(dataClause);
@@ -388,7 +391,8 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
         converter, builder, semanticsContext, stmtCtx, accObject,
         operandLocation, asFortran, bounds);
     Op op = createDataEntryOp<Op>(builder, operandLocation, baseAddr, asFortran,
-                                  bounds, structured, dataClause);
+                                  bounds, structured, dataClause,
+                                  baseAddr.getType());
     dataOperands.push_back(op.getAccPtr());
   }
 }
@@ -427,8 +431,20 @@ Fortran::lower::createOrGetPrivateRecipe(mlir::OpBuilder &builder,
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
                       {ty}, {loc});
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-  builder.create<mlir::acc::YieldOp>(
-      loc, recipe.getInitRegion().front().getArgument(0));
+
+  mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
+  if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
+    if (fir::isa_trivial(refTy.getEleTy()))
+      retVal = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
+    else if (auto seqTy =
+                 mlir::dyn_cast_or_null<fir::SequenceType>(refTy.getEleTy())) {
+      if (seqTy.hasDynamicExtents())
+        TODO(loc, "private recipe of array with dynamic extents");
+      if (fir::isa_trivial(seqTy.getEleTy()))
+        retVal = builder.create<fir::AllocaOp>(loc, seqTy);
+    }
+  }
+  builder.create<mlir::acc::YieldOp>(loc, retVal);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
 }
@@ -462,6 +478,41 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
   return recipe;
 }
 
+/// Rebuild the array type from the acc.bounds operation with constant
+/// lowerbound/upperbound or extent.
+mlir::Type getTypeFromBounds(llvm::SmallVector<mlir::Value> &bounds,
+                             mlir::Type ty) {
+  auto seqTy =
+      mlir::dyn_cast_or_null<fir::SequenceType>(fir::unwrapRefType(ty));
+  if (!bounds.empty() && seqTy) {
+    llvm::SmallVector<int64_t> shape;
+    for (auto b : bounds) {
+      auto boundsOp =
+          mlir::dyn_cast<mlir::acc::DataBoundsOp>(b.getDefiningOp());
+      if (boundsOp.getLowerbound() &&
+          fir::getIntIfConstant(boundsOp.getLowerbound()) &&
+          boundsOp.getUpperbound() &&
+          fir::getIntIfConstant(boundsOp.getUpperbound())) {
+        int64_t ext = *fir::getIntIfConstant(boundsOp.getUpperbound()) -
+                      *fir::getIntIfConstant(boundsOp.getLowerbound()) + 1;
+        shape.push_back(ext);
+      } else if (boundsOp.getExtent() &&
+                 fir::getIntIfConstant(boundsOp.getExtent())) {
+        shape.push_back(*fir::getIntIfConstant(boundsOp.getExtent()));
+      } else {
+        return ty; // TODO: handle dynamic shaped array slice.
+      }
+    }
+    if (shape.empty() || shape.size() != bounds.size())
+      return ty;
+    auto newSeqTy = fir::SequenceType::get(shape, seqTy.getEleTy());
+    if (mlir::isa<fir::ReferenceType>(ty))
+      return fir::ReferenceType::get(newSeqTy);
+    return newSeqTy;
+  }
+  return ty;
+}
+
 template <typename RecipeOp>
 static void
 genPrivatizations(const Fortran::parser::AccObjectList &objectList,
@@ -481,13 +532,14 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
 
     RecipeOp recipe;
     if constexpr (std::is_same_v<RecipeOp, mlir::acc::PrivateRecipeOp>) {
-      std::string recipeName = fir::getTypeAsString(
-          baseAddr.getType(), converter.getKindMap(), "privatization");
-      recipe = Fortran::lower::createOrGetPrivateRecipe(
-          builder, recipeName, operandLocation, baseAddr.getType());
+      mlir::Type retTy = getTypeFromBounds(bounds, baseAddr.getType());
+      std::string recipeName =
+          fir::getTypeAsString(retTy, converter.getKindMap(), "privatization");
+      recipe = Fortran::lower::createOrGetPrivateRecipe(builder, recipeName,
+                                                        operandLocation, retTy);
       auto op = createDataEntryOp<mlir::acc::PrivateOp>(
           builder, operandLocation, baseAddr, asFortran, bounds, true,
-          mlir::acc::DataClause::acc_private);
+          mlir::acc::DataClause::acc_private, retTy);
       dataOperands.push_back(op.getAccPtr());
     } else {
       std::string recipeName = fir::getTypeAsString(
@@ -496,7 +548,7 @@ genPrivatizations(const Fortran::parser::AccObjectList &objectList,
           builder, recipeName, operandLocation, baseAddr.getType());
       auto op = createDataEntryOp<mlir::acc::FirstprivateOp>(
           builder, operandLocation, baseAddr, asFortran, bounds, true,
-          mlir::acc::DataClause::acc_firstprivate);
+          mlir::acc::DataClause::acc_firstprivate, baseAddr.getType());
       dataOperands.push_back(op.getAccPtr());
     }
     privatizations.push_back(mlir::SymbolRefAttr::get(
@@ -754,7 +806,8 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
 
     auto op = createDataEntryOp<mlir::acc::ReductionOp>(
         builder, operandLocation, baseAddr, asFortran, bounds,
-        /*structured=*/true, mlir::acc::DataClause::acc_reduction);
+        /*structured=*/true, mlir::acc::DataClause::acc_reduction,
+        baseAddr.getType());
     mlir::Type ty = fir::unwrapRefType(op.getAccPtr().getType());
     if (!fir::isa_trivial(ty))
       ty = baseAddr.getType();

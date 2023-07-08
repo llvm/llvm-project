@@ -423,21 +423,6 @@ private:
     return BB->getIndex();
   }
 
-  /// Return basic block that originally contained offset \p Offset
-  /// from the function start.
-  BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset);
-
-  const BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset) const {
-    return const_cast<BinaryFunction *>(this)->getBasicBlockContainingOffset(
-        Offset);
-  }
-
-  /// Return basic block that started at offset \p Offset.
-  BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) {
-    BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
-    return BB && BB->getOffset() == Offset ? BB : nullptr;
-  }
-
   /// Release memory taken by the list.
   template <typename T> BinaryFunction &clearList(T &List) {
     T TempList;
@@ -618,10 +603,6 @@ private:
       Islands = std::make_unique<IslandInfo>();
     Islands->CodeOffsets.emplace(Offset);
   }
-
-  /// Register secondary entry point at a given \p Offset into the function.
-  /// Return global symbol for use by extern function references.
-  MCSymbol *addEntryPointAtOffset(uint64_t Offset);
 
   /// Register an internal offset in a function referenced from outside.
   void registerReferencedOffset(uint64_t Offset) {
@@ -898,6 +879,21 @@ public:
 
   const BinaryBasicBlock *getBasicBlockForLabel(const MCSymbol *Label) const {
     return LabelToBB.lookup(Label);
+  }
+
+  /// Return basic block that originally contained offset \p Offset
+  /// from the function start.
+  BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset);
+
+  const BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset) const {
+    return const_cast<BinaryFunction *>(this)->getBasicBlockContainingOffset(
+        Offset);
+  }
+
+  /// Return basic block that started at offset \p Offset.
+  BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) {
+    BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
+    return BB && BB->getOffset() == Offset ? BB : nullptr;
   }
 
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
@@ -1445,6 +1441,10 @@ public:
   /// symbol associated with the entry.
   MCSymbol *addEntryPoint(const BinaryBasicBlock &BB);
 
+  /// Register secondary entry point at a given \p Offset into the function.
+  /// Return global symbol for use by extern function references.
+  MCSymbol *addEntryPointAtOffset(uint64_t Offset);
+
   /// Mark all blocks that are unreachable from a root (entry point
   /// or landing pad) as invalid.
   void markUnreachableBlocks();
@@ -1701,6 +1701,8 @@ public:
 
   /// Indicate that another function body was merged with this function.
   void setHasFunctionsFoldedInto() { HasFunctionsFoldedInto = true; }
+
+  void setHasSDTMarker(bool V) { HasSDTMarker = V; }
 
   BinaryFunction &setPersonalityFunction(uint64_t Addr) {
     assert(!PersonalityFunction && "can't set personality function twice");

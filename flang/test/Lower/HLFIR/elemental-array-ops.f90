@@ -141,3 +141,74 @@ end subroutine
 ! CHECK:  }
 ! CHECK: fir.call
 ! CHECK: hlfir.destroy %[[VAL_6]]
+
+! Check that the character length for hlfir.associate is taken from
+! hlfir.apply:
+subroutine char_return(x,y)
+  interface
+     elemental character(3) function callee(x)
+       character(3), intent(in) :: x
+     end function callee
+  end interface
+  character(3), intent(in) :: x(:), y(:)
+  logical, allocatable :: l(:)
+  l = x==callee(y)
+end subroutine char_return
+! CHECK-LABEL:   func.func @_QPchar_return(
+! CHECK-SAME:                              %[[VAL_0:.*]]: !fir.box<!fir.array<?x!fir.char<1,3>>> {fir.bindc_name = "x"},
+! CHECK-SAME:                              %[[VAL_1:.*]]: !fir.box<!fir.array<?x!fir.char<1,3>>> {fir.bindc_name = "y"}) {
+! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.char<1,3> {bindc_name = ".result"}
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>> {bindc_name = "l", uniq_name = "_QFchar_returnEl"}
+! CHECK:           %[[VAL_4:.*]] = fir.zero_bits !fir.heap<!fir.array<?x!fir.logical<4>>>
+! CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_7:.*]] = fir.embox %[[VAL_4]](%[[VAL_6]]) : (!fir.heap<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>
+! CHECK:           fir.store %[[VAL_7]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFchar_returnEl"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>)
+! CHECK:           %[[VAL_9:.*]] = arith.constant 3 : index
+! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_0]] typeparams %[[VAL_9]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFchar_returnEx"} : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index) -> (!fir.box<!fir.array<?x!fir.char<1,3>>>, !fir.box<!fir.array<?x!fir.char<1,3>>>)
+! CHECK:           %[[VAL_11:.*]] = arith.constant 3 : index
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_11]] {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFchar_returnEy"} : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index) -> (!fir.box<!fir.array<?x!fir.char<1,3>>>, !fir.box<!fir.array<?x!fir.char<1,3>>>)
+! CHECK:           %[[VAL_13:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_14:.*]]:3 = fir.box_dims %[[VAL_12]]#0, %[[VAL_13]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_14]]#1 : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_16:.*]] = arith.constant 3 : index
+! CHECK:           %[[VAL_17:.*]] = hlfir.elemental %[[VAL_15]] typeparams %[[VAL_16]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,3>> {
+! CHECK:           ^bb0(%[[VAL_18:.*]]: index):
+! CHECK:             %[[VAL_19:.*]] = hlfir.designate %[[VAL_12]]#0 (%[[VAL_18]])  typeparams %[[VAL_11]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index, index) -> !fir.ref<!fir.char<1,3>>
+! CHECK:             %[[VAL_20:.*]] = fir.emboxchar %[[VAL_19]], %[[VAL_11]] : (!fir.ref<!fir.char<1,3>>, index) -> !fir.boxchar<1>
+! CHECK:             %[[VAL_21:.*]] = arith.constant 3 : i64
+! CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (i64) -> index
+! CHECK:             %[[VAL_23:.*]] = arith.constant 0 : index
+! CHECK:             %[[VAL_24:.*]] = arith.cmpi sgt, %[[VAL_22]], %[[VAL_23]] : index
+! CHECK:             %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_22]], %[[VAL_23]] : index
+! CHECK:             %[[VAL_26:.*]] = fir.call @llvm.stacksave() fastmath<contract> : () -> !fir.ref<i8>
+! CHECK:             %[[VAL_27:.*]] = fir.call @_QPcallee(%[[VAL_2]], %[[VAL_25]], %[[VAL_20]]) fastmath<contract> : (!fir.ref<!fir.char<1,3>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
+! CHECK:             %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_2]] typeparams %[[VAL_25]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>)
+! CHECK:             fir.call @llvm.stackrestore(%[[VAL_26]]) fastmath<contract> : (!fir.ref<i8>) -> ()
+! CHECK:             hlfir.yield_element %[[VAL_28]]#0 : !fir.ref<!fir.char<1,3>>
+! CHECK:           }
+! CHECK:           %[[VAL_29:.*]] = arith.constant 0 : index
+! CHECK:           %[[VAL_30:.*]]:3 = fir.box_dims %[[VAL_10]]#0, %[[VAL_29]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_31:.*]] = fir.shape %[[VAL_30]]#1 : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_32:.*]] = hlfir.elemental %[[VAL_31]] unordered : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
+! CHECK:           ^bb0(%[[VAL_33:.*]]: index):
+! CHECK:             %[[VAL_34:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_33]])  typeparams %[[VAL_9]] : (!fir.box<!fir.array<?x!fir.char<1,3>>>, index, index) -> !fir.ref<!fir.char<1,3>>
+! CHECK:             %[[VAL_35:.*]] = hlfir.apply %[[VAL_36:.*]], %[[VAL_33]] typeparams %[[VAL_16]] : (!hlfir.expr<?x!fir.char<1,3>>, index, index) -> !hlfir.expr<!fir.char<1,3>>
+! CHECK:             %[[VAL_37:.*]]:3 = hlfir.associate %[[VAL_35]] typeparams %[[VAL_16]] {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,3>>, index) -> (!fir.ref<!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>, i1)
+! CHECK:             %[[VAL_38:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_37]]#1 : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
+! CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_9]] : (index) -> i64
+! CHECK:             %[[VAL_41:.*]] = fir.convert %[[VAL_16]] : (index) -> i64
+! CHECK:             %[[VAL_42:.*]] = fir.call @_FortranACharacterCompareScalar1(%[[VAL_38]], %[[VAL_39]], %[[VAL_40]], %[[VAL_41]]) fastmath<contract> : (!fir.ref<i8>, !fir.ref<i8>, i64, i64) -> i32
+! CHECK:             %[[VAL_43:.*]] = arith.constant 0 : i32
+! CHECK:             %[[VAL_44:.*]] = arith.cmpi eq, %[[VAL_42]], %[[VAL_43]] : i32
+! CHECK:             hlfir.end_associate %[[VAL_37]]#1, %[[VAL_37]]#2 : !fir.ref<!fir.char<1,3>>, i1
+! CHECK:             %[[VAL_45:.*]] = fir.convert %[[VAL_44]] : (i1) -> !fir.logical<4>
+! CHECK:             hlfir.yield_element %[[VAL_45]] : !fir.logical<4>
+! CHECK:           }
+! CHECK:           hlfir.assign %[[VAL_46:.*]] to %[[VAL_8]]#0 realloc : !hlfir.expr<?x!fir.logical<4>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
+! CHECK:           hlfir.destroy %[[VAL_46]] : !hlfir.expr<?x!fir.logical<4>>
+! CHECK:           hlfir.destroy %[[VAL_47:.*]] : !hlfir.expr<?x!fir.char<1,3>>
+! CHECK:           return
+! CHECK:         }
