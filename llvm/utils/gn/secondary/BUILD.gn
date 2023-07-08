@@ -25,6 +25,11 @@ group("default") {
   if (current_os == "linux" || current_os == "win" || current_os=="mac") {
     deps += [ "//compiler-rt/test/asan" ]
   }
+
+  if (current_os == "mac") {
+    deps += [ "//compiler-rt/test/lsan"]
+  }
+
   if (current_os == "linux" || current_os == "android") {
     deps += [ "//compiler-rt/test/hwasan" ]
   }

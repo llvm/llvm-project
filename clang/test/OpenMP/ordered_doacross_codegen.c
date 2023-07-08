@@ -84,6 +84,43 @@ int main(void) {
 #pragma omp ordered depend(sink : i - 2)
 #endif
     d[i] = a[i - 2];
+    foo();
+// CHECK: call void @foo()
+// CHECK: load i32, ptr [[I]],
+// CHECK-NEXT: sub nsw i32 %{{.+}}, 1
+// CHECK-NEXT: sub nsw i32 %{{.+}}, 0
+// CHECK-NEXT: sdiv i32 %{{.+}}, 1
+// CHECK-NEXT: sext i32 %{{.+}} to i64
+// CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], ptr [[CNT:%.+]], i64 0, i64 0
+// CHECK-NEXT: store i64 %{{.+}}, ptr [[TMP]],
+// CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], ptr [[CNT]], i64 0, i64 0
+// CHECK-NORMAL-NEXT: call void @__kmpc_doacross_wait(ptr [[IDENT]], i32 [[GTID]], ptr [[TMP]])
+// CHECK-IRBUILDER-NEXT: [[GTID2:%.+]] = call i32 @__kmpc_global_thread_num(ptr [[IDENT:@.+]])
+// CHECK-IRBUILDER-NEXT: call void @__kmpc_doacross_wait(ptr [[IDENT]], i32 [[GTID2]], ptr [[TMP]])
+#ifdef OMP52
+#pragma omp ordered doacross(sink :omp_cur_iteration - 1)
+#else
+#pragma omp ordered depend(sink : i - 1)
+#endif
+    d[i] = a[i - 1];
+    foo();
+// CHECK: call void @foo()
+// CHECK: load i32, ptr [[I:%.+]],
+// CHECK-NEXT: sub nsw i32 %{{.+}}, 0
+// CHECK-NEXT: sdiv i32 %{{.+}}, 1
+// CHECK-NEXT: sext i32 %{{.+}} to i64
+// CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], ptr [[CNT:%.+]], i64 0, i64 0
+// CHECK-NEXT: store i64 %{{.+}}, ptr [[TMP]],
+// CHECK-NEXT: [[TMP:%.+]] = getelementptr inbounds [1 x i64], ptr [[CNT]], i64 0, i64 0
+// CHECK-NORMAL-NEXT: call void @__kmpc_doacross_post(ptr [[IDENT]], i32 [[GTID]], ptr [[TMP]])
+// CHECK-IRBUILDER-NEXT: [[GTID1:%.+]] = call i32 @__kmpc_global_thread_num(ptr [[IDENT:@.+]])
+// CHECK-IRBUILDER-NEXT: call void @__kmpc_doacross_post(ptr [[IDENT]], i32 [[GTID1]], ptr [[TMP]])
+#if OMP52
+#pragma omp ordered doacross(source:omp_cur_iteration)
+#else
+#pragma omp ordered depend(source)
+#endif
+    c[i] = c[i] + 1;
   }
   // CHECK: call void @__kmpc_for_static_fini(
   // CHECK-NORMAL: call void @__kmpc_doacross_fini(ptr [[IDENT]], i32 [[GTID]])

@@ -1655,25 +1655,27 @@ void DwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 // Helper function to parse .debug_line_str, and populate one we are using.
 // For functions that we do not modify we output them as raw data.
 // Re-constructing .debug_line_str so that offsets are correct for those
-// debut line tables.
+// debug line tables.
 // Bonus is that when we output a final binary we can re-use .debug_line_str
 // section. So we don't have to do the SHF_ALLOC trick we did with
 // .debug_line.
 static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,
                                          MCDwarfLineStr &LineStr,
-                                         BinaryContext &BC,
-                                         MCStreamer &Streamer) {
+                                         BinaryContext &BC) {
   DataExtractor StrData(LineStrSection.getContents(),
                         BC.DwCtx->isLittleEndian(), 0);
   uint64_t Offset = 0;
   while (StrData.isValidOffset(Offset)) {
+    const uint64_t StrOffset = Offset;
     Error Err = Error::success();
     const char *CStr = StrData.getCStr(&Offset, &Err);
     if (Err) {
       errs() << "BOLT-ERROR: could not extract string from .debug_line_str";
       continue;
     }
-    LineStr.emitRef(&Streamer, CStr);
+    const size_t NewOffset = LineStr.addString(CStr);
+    assert(StrOffset == NewOffset &&
+           "New offset in .debug_line_str doesn't match original offset");
   }
 }
 
@@ -1693,11 +1695,12 @@ void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
   std::optional<MCDwarfLineStr> LineStr;
   ErrorOr<BinarySection &> LineStrSection =
       BC.getUniqueSectionByName(".debug_line_str");
+
   // Some versions of GCC output DWARF5 .debug_info, but DWARF4 or lower
-  // .debug_line
+  // .debug_line, so need to check if section exists.
   if (LineStrSection) {
     LineStr.emplace(*BC.Ctx);
-    parseAndPopulateDebugLineStr(*LineStrSection, *LineStr, BC, Streamer);
+    parseAndPopulateDebugLineStr(*LineStrSection, *LineStr, BC);
   }
 
   // Switch to the section where the table will be emitted into.

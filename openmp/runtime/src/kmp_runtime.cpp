@@ -6105,7 +6105,6 @@ void *__kmp_launch_thread(kmp_info_t *this_thr) {
       __kmp_join_barrier(gtid);
     }
   }
-  TCR_SYNC_PTR((intptr_t)__kmp_global.g.g_done);
 
 #if OMPD_SUPPORT
   if (ompd_state & OMPD_ENABLE_BP)

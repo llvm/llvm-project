@@ -1120,7 +1120,7 @@ extern void __kmp_init_target_task();
 #endif /* KMP_MAX_NTH */
 
 #ifdef PTHREAD_STACK_MIN
-#define KMP_MIN_STKSIZE PTHREAD_STACK_MIN
+#define KMP_MIN_STKSIZE ((size_t)PTHREAD_STACK_MIN)
 #else
 #define KMP_MIN_STKSIZE ((size_t)(32 * 1024))
 #endif
