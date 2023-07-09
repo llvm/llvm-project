@@ -3254,6 +3254,8 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   IRPosition FPos = IRPosition::function(F);
   bool IsIPOAmendable = isFunctionIPOAmendable(F);
   auto Attrs = F.getAttributes();
+  auto FnAttrs = Attrs.getFnAttrs();
+
   // Check for dead BasicBlocks in every function.
   // We need dead instruction detection because we do not want to deal with
   // broken IR in which SSA rules do not apply.
@@ -3289,8 +3291,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       getOrCreateAAFor<AANoSync>(FPos);
 
     // Every function might be "no-free".
-    if (!Attrs.hasFnAttr(Attribute::NoFree))
-      getOrCreateAAFor<AANoFree>(FPos);
+    checkAndQueryIRAttr<Attribute::NoFree, AANoFree>(FPos, FnAttrs);
 
     // Every function might be "no-return".
     if (!Attrs.hasFnAttr(Attribute::NoReturn))
@@ -3393,8 +3394,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         getOrCreateAAFor<AAMemoryBehavior>(ArgPos);
 
         // Every argument with pointer type might be marked nofree.
-        if (!Attrs.hasParamAttr(ArgNo, Attribute::NoFree))
-          getOrCreateAAFor<AANoFree>(ArgPos);
+        checkAndQueryIRAttr<Attribute::NoFree, AANoFree>(ArgPos, ArgAttrs);
 
         // Every argument with pointer type might be privatizable (or
         // promotable)
@@ -3489,8 +3489,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         getOrCreateAAFor<AAMemoryBehavior>(CBArgPos);
 
       // Call site argument attribute "nofree".
-      if (!CBAttrs.hasParamAttr(I, Attribute::NoFree))
-        getOrCreateAAFor<AANoFree>(CBArgPos);
+      checkAndQueryIRAttr<Attribute::NoFree, AANoFree>(CBArgPos, CBArgAttrs);
     }
     return true;
   };
