@@ -12,6 +12,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY LIBC_LOOP_NOUNROLL
 #include "src/__support/macros/properties/architectures.h"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
@@ -21,11 +22,6 @@
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
-
-[[maybe_unused]] LIBC_INLINE BcmpReturnType
-inline_bcmp_byte_per_byte(CPtr p1, CPtr p2, size_t count, size_t offset = 0) {
-  return generic::Bcmp<uint8_t>::loop_and_tail_offset(p1, p2, count, offset);
-}
 
 [[maybe_unused]] LIBC_INLINE BcmpReturnType
 inline_bcmp_aligned_access_64bit(CPtr p1, CPtr p2, size_t count) {
