@@ -138,7 +138,7 @@ define internal i32 @test2b(ptr %p, i32 %p2) {
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[A_GEP]], align 4
 ; CGSCC-NEXT:    [[B:%.*]] = load i32, ptr [[B_GEP]], align 4
 ; CGSCC-NEXT:    [[V:%.*]] = add i32 [[A]], [[B]]
-; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @bar(ptr undef, i32 [[V]]) #[[ATTR7:[0-9]+]]
+; CGSCC-NEXT:    [[CA:%.*]] = musttail call noundef i32 @bar(ptr nonnull undef, i32 [[V]]) #[[ATTR7:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CA]]
 ;
   %a.gep = getelementptr %T, %T* %p, i64 0, i32 3

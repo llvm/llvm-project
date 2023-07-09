@@ -33,7 +33,7 @@ entry:
 ; Function Attrs: nounwind uwtable
 define internal void @callee_t0f(ptr nocapture readnone %tp13, ptr nocapture readnone %tp14, ptr nocapture readnone %tp15, ptr nocapture readnone %tp16, ptr nocapture readnone %tp17, ...) {
 ; CHECK-LABEL: define {{[^@]+}}@callee_t0f
-; CHECK-SAME: (ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP13:%.*]], ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP14:%.*]], ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP15:%.*]], ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP16:%.*]], ptr noalias nocapture nofree nonnull readnone align 4294967296 [[TP17:%.*]], ...) {
+; CHECK-SAME: (ptr noalias nocapture nofree readnone align 4294967296 [[TP13:%.*]], ptr noalias nocapture nofree readnone align 4294967296 [[TP14:%.*]], ptr noalias nocapture nofree readnone align 4294967296 [[TP15:%.*]], ptr noalias nocapture nofree readnone align 4294967296 [[TP16:%.*]], ptr noalias nocapture nofree readnone align 4294967296 [[TP17:%.*]], ...) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @sink(i32 noundef 0)
 ; CHECK-NEXT:    ret void

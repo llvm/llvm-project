@@ -957,7 +957,7 @@ define ptr addrspace(3) @gep2(ptr addrspace(3) %p) {
 define ptr addrspace(3) @as(ptr addrspace(3) dereferenceable(4) %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@as
-; CHECK-SAME: (ptr addrspace(3) nofree noundef nonnull readnone returned dereferenceable(4) "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr addrspace(3) nofree noundef readnone returned dereferenceable(4) dereferenceable_or_null(4) "no-capture-maybe-returned" [[P:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    ret ptr addrspace(3) [[P]]
 ;
   ret ptr addrspace(3) %p
@@ -1045,8 +1045,8 @@ define internal void @control(ptr dereferenceable(4) %a) {
 define internal void @naked(ptr dereferenceable(4) %a) naked {
 ; CHECK: Function Attrs: naked
 ; CHECK-LABEL: define {{[^@]+}}@naked
-; CHECK-SAME: (ptr dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr [[A]])
+; CHECK-SAME: (ptr nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
+; CHECK-NEXT:    call void @use_i32_ptr(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1057,8 +1057,8 @@ define internal void @optnone(ptr dereferenceable(4) %a) optnone noinline {
 ;
 ; CHECK: Function Attrs: noinline optnone
 ; CHECK-LABEL: define {{[^@]+}}@optnone
-; CHECK-SAME: (ptr dereferenceable(4) [[A:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr [[A]])
+; CHECK-SAME: (ptr nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR12:[0-9]+]] {
+; CHECK-NEXT:    call void @use_i32_ptr(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
