@@ -9,6 +9,7 @@
 #include "SubprocessMemory.h"
 #include "Error.h"
 #include "llvm/Support/Error.h"
+#include <cerrno>
 
 #ifdef __linux__
 #include <fcntl.h>
