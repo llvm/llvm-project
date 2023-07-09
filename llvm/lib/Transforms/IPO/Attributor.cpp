@@ -3281,8 +3281,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     checkAndQueryIRAttr<Attribute::MustProgress, AAMustProgress>(FPos, FnAttrs);
 
     // Every function can be nounwind.
-    if (!Attrs.hasFnAttr(Attribute::NoUnwind))
-      getOrCreateAAFor<AANoUnwind>(FPos);
+    checkAndQueryIRAttr<Attribute::NoUnwind, AANoUnwind>(FPos, FnAttrs);
 
     // Every function might be marked "nosync"
     if (!Attrs.hasFnAttr(Attribute::NoSync))
