@@ -3343,8 +3343,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         checkAndQueryIRAttr<Attribute::NonNull, AANonNull>(RetPos, RetAttrs);
 
         // Every function with pointer return type might be marked noalias.
-        if (!Attrs.hasRetAttr(Attribute::NoAlias))
-          getOrCreateAAFor<AANoAlias>(RetPos);
+        checkAndQueryIRAttr<Attribute::NoAlias, AANoAlias>(RetPos, RetAttrs);
 
         // Every function with pointer return type might be marked
         // dereferenceable.
@@ -3378,8 +3377,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         checkAndQueryIRAttr<Attribute::NonNull, AANonNull>(ArgPos, ArgAttrs);
 
         // Every argument with pointer type might be marked noalias.
-        if (!Attrs.hasParamAttr(ArgNo, Attribute::NoAlias))
-          getOrCreateAAFor<AANoAlias>(ArgPos);
+        checkAndQueryIRAttr<Attribute::NoAlias, AANoAlias>(ArgPos, ArgAttrs);
 
         // Every argument with pointer type might be marked dereferenceable.
         getOrCreateAAFor<AADereferenceable>(ArgPos);
@@ -3479,8 +3477,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         getOrCreateAAFor<AANoCapture>(CBArgPos);
 
       // Call site argument attribute "no-alias".
-      if (!CBAttrs.hasParamAttr(I, Attribute::NoAlias))
-        getOrCreateAAFor<AANoAlias>(CBArgPos);
+      checkAndQueryIRAttr<Attribute::NoAlias, AANoAlias>(CBArgPos, CBArgAttrs);
 
       // Call site argument attribute "dereferenceable".
       getOrCreateAAFor<AADereferenceable>(CBArgPos);
