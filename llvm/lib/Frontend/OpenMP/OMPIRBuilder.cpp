@@ -465,9 +465,7 @@ OpenMPIRBuilder::getOrCreateRuntimeFunction(Module &M, RuntimeFunction FnID) {
 
   assert(Fn && "Failed to create OpenMP runtime function");
 
-  // Cast the function to the expected type if necessary
-  Constant *C = ConstantExpr::getBitCast(Fn, FnTy->getPointerTo());
-  return {FnTy, C};
+  return {FnTy, Fn};
 }
 
 FunctionCallee OpenMPIRBuilder::unsignedGetOrCreateAtomicCASRuntimeFunction(
@@ -1554,12 +1552,6 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
         (Twine(OutlinedFn.getName()) + ".wrapper").str(),
         FunctionType::get(Builder.getInt32Ty(), WrapperArgTys, false));
     Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
-    PointerType *WrapperFuncBitcastType =
-        FunctionType::get(Builder.getInt32Ty(),
-                          {Builder.getInt32Ty(), Builder.getInt8PtrTy()}, false)
-            ->getPointerTo();
-    Value *WrapperFuncBitcast =
-        ConstantExpr::getBitCast(WrapperFunc, WrapperFuncBitcastType);
 
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
@@ -1568,7 +1560,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
         TaskAllocFn,
         {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
          /*sizeof_task=*/TaskSize, /*sizeof_shared=*/Builder.getInt64(0),
-         /*task_func=*/WrapperFuncBitcast});
+         /*task_func=*/WrapperFunc});
 
     // Copy the arguments for outlined function
     if (HasTaskData) {
@@ -2003,10 +1995,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createReductions(
   BasicBlock *ReductionFuncBlock =
       BasicBlock::Create(Module->getContext(), "", ReductionFunc);
   Builder.SetInsertPoint(ReductionFuncBlock);
-  Value *LHSArrayPtr = Builder.CreateBitCast(ReductionFunc->getArg(0),
-                                             RedArrayTy->getPointerTo());
-  Value *RHSArrayPtr = Builder.CreateBitCast(ReductionFunc->getArg(1),
-                                             RedArrayTy->getPointerTo());
+  Value *LHSArrayPtr = ReductionFunc->getArg(0);
+  Value *RHSArrayPtr = ReductionFunc->getArg(1);
+
   for (auto En : enumerate(ReductionInfos)) {
     const ReductionInfo &RI = En.value();
     Value *LHSI8PtrPtr = Builder.CreateConstInBoundsGEP2_64(
@@ -4459,7 +4450,8 @@ Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {
 
 Value *OpenMPIRBuilder::getSizeInBytes(Value *BasePtr) {
   LLVMContext &Ctx = Builder.getContext();
-  Value *Null = Constant::getNullValue(BasePtr->getType()->getPointerTo());
+  Value *Null =
+      Constant::getNullValue(PointerType::getUnqual(BasePtr->getContext()));
   Value *SizeGep =
       Builder.CreateGEP(BasePtr->getType(), Null, Builder.getInt32(1));
   Value *SizePtrToInt = Builder.CreatePtrToInt(SizeGep, Type::getInt64Ty(Ctx));
@@ -4520,7 +4512,8 @@ void OpenMPIRBuilder::emitMapperCall(const LocationDescription &Loc,
   Value *ArgSizesGEP =
       Builder.CreateInBoundsGEP(ArrI64Ty, MapperAllocas.ArgSizes,
                                 {Builder.getInt32(0), Builder.getInt32(0)});
-  Value *NullPtr = Constant::getNullValue(Int8Ptr->getPointerTo());
+  Value *NullPtr =
+      Constant::getNullValue(PointerType::getUnqual(Int8Ptr->getContext()));
   Builder.CreateCall(MapperFunc,
                      {SrcLocInfo, Builder.getInt64(DeviceID),
                       Builder.getInt32(NumOperands), ArgsBaseGEP, ArgsGEP,
@@ -4977,8 +4970,8 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  Type *XTy = X.Var->getType();
-  assert(XTy->isPointerTy() && "OMP Atomic expects a pointer to target memory");
+  assert(X.Var->getType()->isPointerTy() &&
+         "OMP Atomic expects a pointer to target memory");
   Type *XElemTy = X.ElemTy;
   assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
           XElemTy->isPointerTy()) &&
@@ -4992,14 +4985,11 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
     XLD->setAtomic(AO);
     XRead = cast<Value>(XLD);
   } else {
-    // We need to bitcast and perform atomic op as integer
-    unsigned Addrspace = cast<PointerType>(XTy)->getAddressSpace();
+    // We need to perform atomic op as integer
     IntegerType *IntCastTy =
         IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
-    Value *XBCast = Builder.CreateBitCast(
-        X.Var, IntCastTy->getPointerTo(Addrspace), "atomic.src.int.cast");
     LoadInst *XLoad =
-        Builder.CreateLoad(IntCastTy, XBCast, X.IsVolatile, "omp.atomic.load");
+        Builder.CreateLoad(IntCastTy, X.Var, X.IsVolatile, "omp.atomic.load");
     XLoad->setAtomic(AO);
     if (XElemTy->isFloatingPointTy()) {
       XRead = Builder.CreateBitCast(XLoad, XElemTy, "atomic.flt.cast");
@@ -5141,13 +5131,10 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
     else
       Res.second = emitRMWOpAsInstruction(Res.first, Expr, RMWOp);
   } else {
-    unsigned Addrspace = cast<PointerType>(X->getType())->getAddressSpace();
     IntegerType *IntCastTy =
         IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
-    Value *XBCast =
-        Builder.CreateBitCast(X, IntCastTy->getPointerTo(Addrspace));
     LoadInst *OldVal =
-        Builder.CreateLoad(IntCastTy, XBCast, X->getName() + ".atomic.load");
+        Builder.CreateLoad(IntCastTy, X, X->getName() + ".atomic.load");
     OldVal->setAtomic(AO);
     // CurBB
     // |     /---\
@@ -5168,14 +5155,7 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
     Builder.SetInsertPoint(ContBB);
     llvm::PHINode *PHI = Builder.CreatePHI(OldVal->getType(), 2);
     PHI->addIncoming(OldVal, CurBB);
-    IntegerType *NewAtomicCastTy =
-        IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
     bool IsIntTy = XElemTy->isIntegerTy();
-    Value *NewAtomicIntAddr =
-        (IsIntTy)
-            ? NewAtomicAddr
-            : Builder.CreateBitCast(NewAtomicAddr,
-                                    NewAtomicCastTy->getPointerTo(Addrspace));
     Value *OldExprVal = PHI;
     if (!IsIntTy) {
       if (XElemTy->isFloatingPointTy()) {
@@ -5189,15 +5169,11 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
 
     Value *Upd = UpdateOp(OldExprVal, Builder);
     Builder.CreateStore(Upd, NewAtomicAddr);
-    LoadInst *DesiredVal = Builder.CreateLoad(IntCastTy, NewAtomicIntAddr);
-    Value *XAddr =
-        (IsIntTy)
-            ? X
-            : Builder.CreateBitCast(X, IntCastTy->getPointerTo(Addrspace));
+    LoadInst *DesiredVal = Builder.CreateLoad(IntCastTy, NewAtomicAddr);
     AtomicOrdering Failure =
         llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
     AtomicCmpXchgInst *Result = Builder.CreateAtomicCmpXchg(
-        XAddr, PHI, DesiredVal, llvm::MaybeAlign(), AO, Failure);
+        X, PHI, DesiredVal, llvm::MaybeAlign(), AO, Failure);
     Result->setVolatile(VolatileX);
     Value *PreviousVal = Builder.CreateExtractValue(Result, /*Idxs=*/0);
     Value *SuccessFailureVal = Builder.CreateExtractValue(Result, /*Idxs=*/1);
@@ -5277,15 +5253,11 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
     AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
     AtomicCmpXchgInst *Result = nullptr;
     if (!IsInteger) {
-      unsigned Addrspace =
-          cast<PointerType>(X.Var->getType())->getAddressSpace();
       IntegerType *IntCastTy =
           IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
-      Value *XBCast =
-          Builder.CreateBitCast(X.Var, IntCastTy->getPointerTo(Addrspace));
       Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
       Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
-      Result = Builder.CreateAtomicCmpXchg(XBCast, EBCast, DBCast, MaybeAlign(),
+      Result = Builder.CreateAtomicCmpXchg(X.Var, EBCast, DBCast, MaybeAlign(),
                                            AO, Failure);
     } else {
       Result =

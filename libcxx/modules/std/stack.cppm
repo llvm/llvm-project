@@ -16,7 +16,6 @@ export namespace std {
   using std::stack;
 
   using std::operator==;
-  using std::operator==;
   using std::operator!=;
   using std::operator<;
   using std::operator>;
