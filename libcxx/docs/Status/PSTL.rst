@@ -1,4 +1,4 @@
-.. pstl-status:
+.. _pstl-status:
 
 ==========================
 libc++ Parallel STL Status
