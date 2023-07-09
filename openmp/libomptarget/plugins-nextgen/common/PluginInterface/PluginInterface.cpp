@@ -455,7 +455,7 @@ Error GenericDeviceTy::deinit() {
 
   if (RPCHandle)
     if (auto Err = RPCHandle->deinitDevice())
-      return std::move(Err);
+      return Err;
 
   return deinitImpl();
 }
@@ -549,7 +549,7 @@ Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
     return Plugin::success();
 
   if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
-    return std::move(Err);
+    return Err;
 
   auto DeviceOrErr = Server.getDevice(*this);
   if (!DeviceOrErr)
