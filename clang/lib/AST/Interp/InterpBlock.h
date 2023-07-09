@@ -124,7 +124,10 @@ protected:
   /// Pointer chain management.
   void addPointer(Pointer *P);
   void removePointer(Pointer *P);
-  void movePointer(Pointer *From, Pointer *To);
+  void replacePointer(Pointer *Old, Pointer *New);
+#ifndef NDEBUG
+  bool hasPointer(const Pointer *P) const;
+#endif
 
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;
