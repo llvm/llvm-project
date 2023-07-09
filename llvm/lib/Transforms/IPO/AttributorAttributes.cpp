@@ -4121,8 +4121,12 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       llvm_unreachable("unknown UseCaptureKind");
     };
 
-    auto *NoCaptureAA = A.getAAFor<AANoCapture>(*this, VIRP, DepClassTy::NONE);
-    if (!NoCaptureAA || !NoCaptureAA->isAssumedNoCaptureMaybeReturned()) {
+    bool IsKnownNoCapture;
+    const AANoCapture *NoCaptureAA = nullptr;
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+        A, this, VIRP, DepClassTy::NONE, IsKnownNoCapture, false, &NoCaptureAA);
+    if (!IsAssumedNoCapture &&
+        (!NoCaptureAA || !NoCaptureAA->isAssumedNoCaptureMaybeReturned())) {
       if (!A.checkForAllUses(UsePred, *this, getAssociatedValue())) {
         LLVM_DEBUG(
             dbgs() << "[AANoAliasCSArg] " << getAssociatedValue()
@@ -4130,7 +4134,8 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
         return false;
       }
     }
-    A.recordDependence(*NoCaptureAA, *this, DepClassTy::OPTIONAL);
+    if (NoCaptureAA)
+      A.recordDependence(*NoCaptureAA, *this, DepClassTy::OPTIONAL);
 
     // Check there is no other pointer argument which could alias with the
     // value passed at this call site.
@@ -4202,9 +4207,13 @@ struct AANoAliasReturned final : AANoAliasImpl {
               A, this, RVPos, DepClassTy::REQUIRED, IsKnownNoAlias))
         return false;
 
-      const auto *NoCaptureAA =
-          A.getAAFor<AANoCapture>(*this, RVPos, DepClassTy::REQUIRED);
-      return NoCaptureAA && NoCaptureAA->isAssumedNoCaptureMaybeReturned();
+      bool IsKnownNoCapture;
+      const AANoCapture *NoCaptureAA = nullptr;
+      bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+          A, this, RVPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
+          &NoCaptureAA);
+      return IsAssumedNoCapture ||
+             (NoCaptureAA && NoCaptureAA->isAssumedNoCaptureMaybeReturned());
     };
 
     if (!A.checkForAllReturnedValues(CheckReturnValue, *this))
@@ -5846,6 +5855,95 @@ struct AAInstanceInfoCallSiteReturned final : AAInstanceInfoFloating {
 } // namespace
 
 /// ----------------------- Variable Capturing ---------------------------------
+bool AANoCapture::isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                                Attribute::AttrKind ImpliedAttributeKind,
+                                bool IgnoreSubsumingPositions) {
+  assert(ImpliedAttributeKind == Attribute::NoCapture &&
+         "Unexpected attribute kind");
+  Value &V = IRP.getAssociatedValue();
+  if (!IRP.isArgumentPosition())
+    return V.use_empty();
+
+  // You cannot "capture" null in the default address space.
+  if (isa<UndefValue>(V) || (isa<ConstantPointerNull>(V) &&
+                             V.getType()->getPointerAddressSpace() == 0)) {
+    return true;
+  }
+
+  if (A.hasAttr(IRP, {Attribute::NoCapture},
+                /* IgnoreSubsumingPositions */ true, Attribute::NoCapture))
+    return true;
+
+  if (IRP.getPositionKind() == IRP_CALL_SITE_ARGUMENT)
+    if (Argument *Arg = IRP.getAssociatedArgument())
+      if (A.hasAttr(IRPosition::argument(*Arg),
+                    {Attribute::NoCapture, Attribute::ByVal},
+                    /* IgnoreSubsumingPositions */ true)) {
+        A.manifestAttrs(IRP,
+                        Attribute::get(V.getContext(), Attribute::NoCapture));
+        return true;
+      }
+
+  if (const Function *F = IRP.getAssociatedFunction()) {
+    // Check what state the associated function can actually capture.
+    AANoCapture::StateType State;
+    determineFunctionCaptureCapabilities(IRP, *F, State);
+    if (State.isKnown(NO_CAPTURE)) {
+      A.manifestAttrs(IRP,
+                      Attribute::get(V.getContext(), Attribute::NoCapture));
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/// Set the NOT_CAPTURED_IN_MEM and NOT_CAPTURED_IN_RET bits in \p Known
+/// depending on the ability of the function associated with \p IRP to capture
+/// state in memory and through "returning/throwing", respectively.
+void AANoCapture::determineFunctionCaptureCapabilities(const IRPosition &IRP,
+                                                       const Function &F,
+                                                       BitIntegerState &State) {
+  // TODO: Once we have memory behavior attributes we should use them here.
+
+  // If we know we cannot communicate or write to memory, we do not care about
+  // ptr2int anymore.
+  bool ReadOnly = F.onlyReadsMemory();
+  bool NoThrow = F.doesNotThrow();
+  bool IsVoidReturn = F.getReturnType()->isVoidTy();
+  if (ReadOnly && NoThrow && IsVoidReturn) {
+    State.addKnownBits(NO_CAPTURE);
+    return;
+  }
+
+  // A function cannot capture state in memory if it only reads memory, it can
+  // however return/throw state and the state might be influenced by the
+  // pointer value, e.g., loading from a returned pointer might reveal a bit.
+  if (ReadOnly)
+    State.addKnownBits(NOT_CAPTURED_IN_MEM);
+
+  // A function cannot communicate state back if it does not through
+  // exceptions and doesn not return values.
+  if (NoThrow && IsVoidReturn)
+    State.addKnownBits(NOT_CAPTURED_IN_RET);
+
+  // Check existing "returned" attributes.
+  int ArgNo = IRP.getCalleeArgNo();
+  if (!NoThrow || ArgNo < 0 ||
+      !F.getAttributes().hasAttrSomewhere(Attribute::Returned))
+    return;
+
+  for (unsigned U = 0, E = F.arg_size(); U < E; ++U)
+    if (F.hasParamAttribute(U, Attribute::Returned)) {
+      if (U == unsigned(ArgNo))
+        State.removeAssumedBits(NOT_CAPTURED_IN_RET);
+      else if (ReadOnly)
+        State.addKnownBits(NO_CAPTURE);
+      else
+        State.addKnownBits(NOT_CAPTURED_IN_RET);
+      break;
+    }
+}
 
 namespace {
 /// A class to hold the state of for no-capture attributes.
@@ -5854,27 +5952,9 @@ struct AANoCaptureImpl : public AANoCapture {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    if (A.hasAttr(getIRPosition(), getAttrKind(),
-                  /* IgnoreSubsumingPositions */ true)) {
-      indicateOptimisticFixpoint();
-      return;
-    }
-
-    // You cannot "capture" null in the default address space.
-    if (isa<ConstantPointerNull>(getAssociatedValue()) &&
-        getAssociatedValue().getType()->getPointerAddressSpace() == 0) {
-      indicateOptimisticFixpoint();
-      return;
-    }
-
-    const Function *F =
-        isArgumentPosition() ? getAssociatedFunction() : getAnchorScope();
-
-    // Check what state the associated function can actually capture.
-    if (F)
-      determineFunctionCaptureCapabilities(getIRPosition(), *F, *this);
-    else
-      indicatePessimisticFixpoint();
+    bool IsKnown;
+    assert(!AA::hasAssumedIRAttr<Attribute::NoCapture>(
+        A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -5891,49 +5971,6 @@ struct AANoCaptureImpl : public AANoCapture {
         Attrs.emplace_back(Attribute::get(Ctx, Attribute::NoCapture));
       else if (ManifestInternal)
         Attrs.emplace_back(Attribute::get(Ctx, "no-capture-maybe-returned"));
-    }
-  }
-
-  /// Set the NOT_CAPTURED_IN_MEM and NOT_CAPTURED_IN_RET bits in \p Known
-  /// depending on the ability of the function associated with \p IRP to capture
-  /// state in memory and through "returning/throwing", respectively.
-  static void determineFunctionCaptureCapabilities(const IRPosition &IRP,
-                                                   const Function &F,
-                                                   BitIntegerState &State) {
-    // TODO: Once we have memory behavior attributes we should use them here.
-
-    // If we know we cannot communicate or write to memory, we do not care about
-    // ptr2int anymore.
-    if (F.onlyReadsMemory() && F.doesNotThrow() &&
-        F.getReturnType()->isVoidTy()) {
-      State.addKnownBits(NO_CAPTURE);
-      return;
-    }
-
-    // A function cannot capture state in memory if it only reads memory, it can
-    // however return/throw state and the state might be influenced by the
-    // pointer value, e.g., loading from a returned pointer might reveal a bit.
-    if (F.onlyReadsMemory())
-      State.addKnownBits(NOT_CAPTURED_IN_MEM);
-
-    // A function cannot communicate state back if it does not through
-    // exceptions and doesn not return values.
-    if (F.doesNotThrow() && F.getReturnType()->isVoidTy())
-      State.addKnownBits(NOT_CAPTURED_IN_RET);
-
-    // Check existing "returned" attributes.
-    int ArgNo = IRP.getCalleeArgNo();
-    if (F.doesNotThrow() && ArgNo >= 0) {
-      for (unsigned u = 0, e = F.arg_size(); u < e; ++u)
-        if (F.hasParamAttribute(u, Attribute::Returned)) {
-          if (u == unsigned(ArgNo))
-            State.removeAssumedBits(NOT_CAPTURED_IN_RET);
-          else if (F.onlyReadsMemory())
-            State.addKnownBits(NO_CAPTURE);
-          else
-            State.addKnownBits(NOT_CAPTURED_IN_RET);
-          break;
-        }
     }
   }
 
@@ -5991,9 +6028,12 @@ struct AANoCaptureImpl : public AANoCapture {
     const IRPosition &CSArgPos = IRPosition::callsite_argument(*CB, ArgNo);
     // If we have a abstract no-capture attribute for the argument we can use
     // it to justify a non-capture attribute here. This allows recursion!
-    auto *ArgNoCaptureAA =
-        A.getAAFor<AANoCapture>(*this, CSArgPos, DepClassTy::REQUIRED);
-    if (ArgNoCaptureAA && ArgNoCaptureAA->isAssumedNoCapture())
+    bool IsKnownNoCapture;
+    const AANoCapture *ArgNoCaptureAA = nullptr;
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+        A, this, CSArgPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
+        &ArgNoCaptureAA);
+    if (IsAssumedNoCapture)
       return isCapturedIn(State, /* Memory */ false, /* Integer */ false,
                           /* Return */ false);
     if (ArgNoCaptureAA && ArgNoCaptureAA->isAssumedNoCaptureMaybeReturned()) {
@@ -6132,14 +6172,6 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
   AANoCaptureCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AANoCaptureImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    if (Argument *Arg = getAssociatedArgument())
-      if (Arg->hasByValAttr())
-        indicateOptimisticFixpoint();
-    AANoCaptureImpl::initialize(A);
-  }
-
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
@@ -6150,8 +6182,13 @@ struct AANoCaptureCallSiteArgument final : AANoCaptureImpl {
     if (!Arg)
       return indicatePessimisticFixpoint();
     const IRPosition &ArgPos = IRPosition::argument(*Arg);
-    auto *ArgAA = A.getAAFor<AANoCapture>(*this, ArgPos, DepClassTy::REQUIRED);
-    if (!ArgAA)
+    bool IsKnownNoCapture;
+    const AANoCapture *ArgAA = nullptr;
+    if (AA::hasAssumedIRAttr<Attribute::NoCapture>(
+            A, this, ArgPos, DepClassTy::REQUIRED, IsKnownNoCapture, false,
+            &ArgAA))
+      return ChangeStatus::UNCHANGED;
+    if (!ArgAA || !ArgAA->isAssumedNoCaptureMaybeReturned())
       return indicatePessimisticFixpoint();
     return clampStateAndIndicateChange(getState(), ArgAA->getState());
   }
@@ -7839,9 +7876,10 @@ struct AAPrivatizablePtrCallSiteArgument final
       return indicatePessimisticFixpoint();
 
     const IRPosition &IRP = getIRPosition();
-    auto *NoCaptureAA =
-        A.getAAFor<AANoCapture>(*this, IRP, DepClassTy::REQUIRED);
-    if (!NoCaptureAA || !NoCaptureAA->isAssumedNoCapture()) {
+    bool IsKnownNoCapture;
+    bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+        A, this, IRP, DepClassTy::REQUIRED, IsKnownNoCapture);
+    if (!IsAssumedNoCapture) {
       LLVM_DEBUG(dbgs() << "[AAPrivatizablePtr] pointer might be captured!\n");
       return indicatePessimisticFixpoint();
     }
@@ -8294,9 +8332,14 @@ ChangeStatus AAMemoryBehaviorFloating::updateImpl(Attributor &A) {
   // it is, any information derived would be irrelevant anyway as we cannot
   // check the potential aliases introduced by the capture. However, no need
   // to fall back to anythign less optimistic than the function state.
-  const auto *ArgNoCaptureAA =
-      A.getAAFor<AANoCapture>(*this, IRP, DepClassTy::OPTIONAL);
-  if (!ArgNoCaptureAA || !ArgNoCaptureAA->isAssumedNoCaptureMaybeReturned()) {
+  bool IsKnownNoCapture;
+  const AANoCapture *ArgNoCaptureAA = nullptr;
+  bool IsAssumedNoCapture = AA::hasAssumedIRAttr<Attribute::NoCapture>(
+      A, this, IRP, DepClassTy::OPTIONAL, IsKnownNoCapture, false,
+      &ArgNoCaptureAA);
+
+  if (!IsAssumedNoCapture &&
+      (!ArgNoCaptureAA || !ArgNoCaptureAA->isAssumedNoCaptureMaybeReturned())) {
     S.intersectAssumedBits(FnMemAssumedState);
     return (AssumedState != getAssumed()) ? ChangeStatus::CHANGED
                                           : ChangeStatus::UNCHANGED;
@@ -8350,9 +8393,10 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use &U,
   // need to check call users.
   if (U.get()->getType()->isPointerTy()) {
     unsigned ArgNo = CB->getArgOperandNo(&U);
-    const auto *ArgNoCaptureAA = A.getAAFor<AANoCapture>(
-        *this, IRPosition::callsite_argument(*CB, ArgNo), DepClassTy::OPTIONAL);
-    return !ArgNoCaptureAA || !ArgNoCaptureAA->isAssumedNoCapture();
+    bool IsKnownNoCapture;
+    return !AA::hasAssumedIRAttr<Attribute::NoCapture>(
+        A, this, IRPosition::callsite_argument(*CB, ArgNo),
+        DepClassTy::OPTIONAL, IsKnownNoCapture);
   }
 
   return true;
