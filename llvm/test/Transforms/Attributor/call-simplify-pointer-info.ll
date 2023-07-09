@@ -175,7 +175,7 @@ define internal i8 @sum_two_different_loads(i8* %p, i8* %q) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@sum_two_different_loads
 ; TUNIT-SAME: (i8* nocapture nofree nonnull readonly dereferenceable(972) [[P:%.*]], i8* nocapture nofree noundef nonnull readonly dereferenceable(971) [[Q:%.*]]) #[[ATTR1]] {
-; TUNIT-NEXT:    [[X:%.*]] = call i8 @read_arg_2(i8* nocapture nofree nonnull readonly dereferenceable(972) [[P]]) #[[ATTR3:[0-9]+]]
+; TUNIT-NEXT:    [[X:%.*]] = call i8 @read_arg_2(i8* nocapture nofree noundef nonnull readonly dereferenceable(972) [[P]]) #[[ATTR3:[0-9]+]]
 ; TUNIT-NEXT:    [[Y:%.*]] = call i8 @read_arg_2(i8* nocapture nofree noundef nonnull readonly dereferenceable(971) [[Q]]) #[[ATTR3]]
 ; TUNIT-NEXT:    [[Z:%.*]] = add nsw i8 [[X]], [[Y]]
 ; TUNIT-NEXT:    ret i8 [[Z]]

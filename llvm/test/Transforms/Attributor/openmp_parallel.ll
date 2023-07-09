@@ -60,7 +60,7 @@ entry:
 define internal void @.omp_outlined.(ptr noalias nocapture readonly %.global_tid., ptr noalias nocapture readnone %.bound_tid., ptr nocapture nonnull readonly align 4 dereferenceable(4) %N, ptr nocapture nonnull readonly align 8 dereferenceable(8) %a, ptr nocapture nonnull readonly align 8 dereferenceable(8) %b) #1 {
 ; TUNIT: Function Attrs: alwaysinline nofree norecurse nounwind uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@.omp_outlined.
-; TUNIT-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr noalias nocapture nofree nonnull readnone align 4 dereferenceable(4) [[N:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[A:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
+; TUNIT-SAME: (ptr noalias nocapture nofree readonly [[DOTGLOBAL_TID_:%.*]], ptr noalias nocapture nofree readnone [[DOTBOUND_TID_:%.*]], ptr noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(4) [[N:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[A:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 8 dereferenceable(8) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4

@@ -39,7 +39,7 @@ define i32 @foo(ptr %A) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; TUNIT-LABEL: define {{[^@]+}}@foo
 ; TUNIT-SAME: (ptr nocapture nofree readonly [[A:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[X:%.*]] = call i32 @callee(ptr nocapture nofree readonly align 4 [[A]]) #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    [[X:%.*]] = call i32 @callee(ptr nocapture nofree noundef readonly align 4 [[A]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[X]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(argmem: read)

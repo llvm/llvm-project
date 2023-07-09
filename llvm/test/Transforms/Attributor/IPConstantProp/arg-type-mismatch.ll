@@ -14,7 +14,7 @@ define dso_local i16 @foo(i16 %a) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i16 [[A:%.*]]) #[[ATTR0:[0-9]+]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i16 @bar(i16 [[A]], i32 noundef 7) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call noundef i16 @bar(i16 [[A]], i32 noundef 7) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i16 [[CALL]]
 ;
   %call = call i16 @bar(i16 %a, i32 7)

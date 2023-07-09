@@ -8,7 +8,7 @@ define i1 @invokecaller(i1 %C) personality ptr @__gxx_personality_v0 {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@invokecaller
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] personality ptr @__gxx_personality_v0 {
-; TUNIT-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]]) #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    [[X:%.*]] = call i32 @foo(i1 noundef [[C]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    br label [[OK:%.*]]
 ; TUNIT:       OK:
 ; TUNIT-NEXT:    ret i1 true

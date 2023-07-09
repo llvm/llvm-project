@@ -375,7 +375,7 @@ define void @test_not_captured_but_returned_calls(ptr %a) #0 {
 ; TUNIT-LABEL: define void @test_not_captured_but_returned_calls
 ; TUNIT-SAME: (ptr nocapture nofree writeonly align 8 [[A:%.*]]) #[[ATTR4]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @not_captured_but_returned_0(ptr nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9:[0-9]+]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @not_captured_but_returned_0(ptr nofree noundef writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9:[0-9]+]]
 ; TUNIT-NEXT:    [[CALL1:%.*]] = call ptr @not_captured_but_returned_1(ptr nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; TUNIT-NEXT:    ret void
 ;
@@ -405,7 +405,7 @@ define ptr @negative_test_not_captured_but_returned_call_0a(ptr %a) #0 {
 ; TUNIT-LABEL: define align 8 ptr @negative_test_not_captured_but_returned_call_0a
 ; TUNIT-SAME: (ptr nofree returned writeonly align 8 "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR4]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @not_captured_but_returned_0(ptr nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @not_captured_but_returned_0(ptr nofree noundef writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; TUNIT-NEXT:    ret ptr [[A]]
 ;
 ; CGSCC: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(argmem: write) uwtable
@@ -432,7 +432,7 @@ define void @negative_test_not_captured_but_returned_call_0b(ptr %a) #0 {
 ; TUNIT-LABEL: define void @negative_test_not_captured_but_returned_call_0b
 ; TUNIT-SAME: (ptr nofree writeonly align 8 [[A:%.*]]) #[[ATTR4]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @not_captured_but_returned_0(ptr nofree writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @not_captured_but_returned_0(ptr nofree noundef writeonly align 8 "no-capture-maybe-returned" [[A]]) #[[ATTR9]]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[A]] to i64
 ; TUNIT-NEXT:    store i64 [[TMP0]], ptr [[A]], align 8
 ; TUNIT-NEXT:    ret void
