@@ -67,6 +67,14 @@ public:
   getOverridingFunction(const CXXRecordDecl *DynamicDecl,
                         const CXXRecordDecl *StaticDecl,
                         const CXXMethodDecl *InitialFunction) const;
+  /// Returns whether we should create a global variable for the
+  /// given ValueDecl.
+  static bool shouldBeGloballyIndexed(const ValueDecl *VD) {
+    if (const auto *V = dyn_cast<VarDecl>(VD))
+      return V->hasGlobalStorage() || V->isConstexpr();
+
+    return false;
+  }
 
 private:
   /// Runs a function.
