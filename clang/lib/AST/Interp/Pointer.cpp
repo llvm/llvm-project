@@ -24,7 +24,7 @@ Pointer::Pointer(const Pointer &P) : Pointer(P.Pointee, P.Base, P.Offset) {}
 Pointer::Pointer(Pointer &&P)
     : Pointee(P.Pointee), Base(P.Base), Offset(P.Offset) {
   if (Pointee)
-    Pointee->movePointer(&P, this);
+    Pointee->replacePointer(&P, this);
 }
 
 Pointer::Pointer(Block *Pointee, unsigned Base, unsigned Offset)
@@ -69,7 +69,7 @@ void Pointer::operator=(Pointer &&P) {
 
   Pointee = P.Pointee;
   if (Pointee)
-    Pointee->movePointer(&P, this);
+    Pointee->replacePointer(&P, this);
 
   if (Old)
     Old->cleanup();
