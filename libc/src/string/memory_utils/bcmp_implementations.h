@@ -12,6 +12,7 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY LIBC_LOOP_NOUNROLL
 #include "src/__support/macros/properties/architectures.h"
+#include "src/string/memory_utils/generic/aligned_access.h"
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -22,59 +23,6 @@
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
-
-[[maybe_unused]] LIBC_INLINE BcmpReturnType
-inline_bcmp_aligned_access_64bit(CPtr p1, CPtr p2, size_t count) {
-  constexpr size_t kAlign = sizeof(uint64_t);
-  if (count <= 2 * kAlign)
-    return inline_bcmp_byte_per_byte(p1, p2, count);
-  size_t bytes_to_p1_align = distance_to_align_up<kAlign>(p1);
-  if (auto value = inline_bcmp_byte_per_byte(p1, p2, bytes_to_p1_align))
-    return value;
-  size_t offset = bytes_to_p1_align;
-  size_t p2_alignment = distance_to_align_down<kAlign>(p2 + offset);
-  for (; offset < count - kAlign; offset += kAlign) {
-    uint64_t a;
-    if (p2_alignment == 0)
-      a = load64_aligned<uint64_t>(p2, offset);
-    else if (p2_alignment == 4)
-      a = load64_aligned<uint32_t, uint32_t>(p2, offset);
-    else if (p2_alignment == 2)
-      a = load64_aligned<uint16_t, uint16_t, uint16_t, uint16_t>(p2, offset);
-    else
-      a = load64_aligned<uint8_t, uint16_t, uint16_t, uint16_t, uint8_t>(
-          p2, offset);
-    uint64_t b = load64_aligned<uint64_t>(p1, offset);
-    if (a != b)
-      return BcmpReturnType::NONZERO();
-  }
-  return inline_bcmp_byte_per_byte(p1, p2, count, offset);
-}
-
-[[maybe_unused]] LIBC_INLINE BcmpReturnType
-inline_bcmp_aligned_access_32bit(CPtr p1, CPtr p2, size_t count) {
-  constexpr size_t kAlign = sizeof(uint32_t);
-  if (count <= 2 * kAlign)
-    return inline_bcmp_byte_per_byte(p1, p2, count);
-  size_t bytes_to_p1_align = distance_to_align_up<kAlign>(p1);
-  if (auto value = inline_bcmp_byte_per_byte(p1, p2, bytes_to_p1_align))
-    return value;
-  size_t offset = bytes_to_p1_align;
-  size_t p2_alignment = distance_to_align_down<kAlign>(p2 + offset);
-  for (; offset < count - kAlign; offset += kAlign) {
-    uint32_t a;
-    if (p2_alignment == 0)
-      a = load32_aligned<uint32_t>(p2, offset);
-    else if (p2_alignment == 2)
-      a = load32_aligned<uint16_t, uint16_t>(p2, offset);
-    else
-      a = load32_aligned<uint8_t, uint16_t, uint8_t>(p2, offset);
-    uint32_t b = load32_aligned<uint32_t>(p1, offset);
-    if (a != b)
-      return BcmpReturnType::NONZERO();
-  }
-  return inline_bcmp_byte_per_byte(p1, p2, count, offset);
-}
 
 #if defined(LIBC_TARGET_ARCH_IS_X86) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
 [[maybe_unused]] LIBC_INLINE BcmpReturnType

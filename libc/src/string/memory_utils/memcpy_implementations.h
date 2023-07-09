@@ -12,6 +12,7 @@
 #include "src/__support/macros/config.h"       // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
 #include "src/__support/macros/properties/architectures.h"
+#include "src/string/memory_utils/generic/aligned_access.h"
 #include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
@@ -25,58 +26,6 @@
 #endif
 
 namespace __llvm_libc {
-
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_aligned_access_32bit(Ptr __restrict dst, CPtr __restrict src,
-                                   size_t count) {
-  constexpr size_t kAlign = sizeof(uint32_t);
-  if (count <= 2 * kAlign)
-    return inline_memcpy_byte_per_byte(dst, src, count);
-  size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
-  inline_memcpy_byte_per_byte(dst, src, bytes_to_dst_align);
-  size_t offset = bytes_to_dst_align;
-  size_t src_alignment = distance_to_align_down<kAlign>(src + offset);
-  for (; offset < count - kAlign; offset += kAlign) {
-    uint32_t value;
-    if (src_alignment == 0)
-      value = load32_aligned<uint32_t>(src, offset);
-    else if (src_alignment == 2)
-      value = load32_aligned<uint16_t, uint16_t>(src, offset);
-    else
-      value = load32_aligned<uint8_t, uint16_t, uint8_t>(src, offset);
-    store32_aligned<uint32_t>(value, dst, offset);
-  }
-  // remainder
-  inline_memcpy_byte_per_byte(dst, src, count, offset);
-}
-
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_aligned_access_64bit(Ptr __restrict dst, CPtr __restrict src,
-                                   size_t count) {
-  constexpr size_t kAlign = sizeof(uint64_t);
-  if (count <= 2 * kAlign)
-    return inline_memcpy_byte_per_byte(dst, src, count);
-  size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
-  inline_memcpy_byte_per_byte(dst, src, bytes_to_dst_align);
-  size_t offset = bytes_to_dst_align;
-  size_t src_alignment = distance_to_align_down<kAlign>(src + offset);
-  for (; offset < count - kAlign; offset += kAlign) {
-    uint64_t value;
-    if (src_alignment == 0)
-      value = load64_aligned<uint64_t>(src, offset);
-    else if (src_alignment == 4)
-      value = load64_aligned<uint32_t, uint32_t>(src, offset);
-    else if (src_alignment == 2)
-      value =
-          load64_aligned<uint16_t, uint16_t, uint16_t, uint16_t>(src, offset);
-    else
-      value = load64_aligned<uint8_t, uint16_t, uint16_t, uint16_t, uint8_t>(
-          src, offset);
-    store64_aligned<uint64_t>(value, dst, offset);
-  }
-  // remainder
-  inline_memcpy_byte_per_byte(dst, src, count, offset);
-}
 
 LIBC_INLINE void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
                                size_t count) {
