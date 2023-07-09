@@ -1261,14 +1261,6 @@ server is running on the same host, each device may be identified twice:
 once through the device plugins and once through the device plugins that the
 server application has access to.
 
-This plugin consists of ``libomptarget.rtl.rpc.so`` and
-``openmp-offloading-server`` which should be running on the (remote) host. The
-server application does not have to be running on a remote host, and can
-instead be used on the same host in order to debug memory mapping during offloading.
-These are implemented via gRPC/protobuf so these libraries are required to
-build and use this plugin. The server must also have access to the necessary
-target-specific plugins in order to perform the offloading.
-
 Due to the experimental nature of this plugin, the CMake variable
 ``LIBOMPTARGET_ENABLE_EXPERIMENTAL_REMOTE_PLUGIN`` must be set in order to
 build this plugin. For example, the rpc plugin is not designed to be

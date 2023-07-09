@@ -158,7 +158,6 @@ The libraries used by an executable compiled for target offloading are:
   - ``libomptarget.rtl.amdgpu.so``
   - ``libomptarget.rtl.cuda.so``
   - ``libomptarget.rtl.x86_64.so``
-  - ``libomptarget.rtl.ve.so``
   - and others
 
 - dependencies of those plugins, e.g. cuda/rocr for nvptx/amdgpu
@@ -244,15 +243,6 @@ through a similar mechanism. It is worth noting that this support requires
 `extensions to the OpenMP begin/end declare variant context selector
 <https://clang.llvm.org/docs/AttributeReference.html#pragma-omp-declare-variant>`__
 that are exposed through LLVM/Clang to the user as well.
-
-Q: What is a way to debug errors from mapping memory to a target device?
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-An experimental way to debug these errors is to use :ref:`remote process
-offloading <remote_offloading_plugin>`.
-By using ``libomptarget.rtl.rpc.so`` and ``openmp-offloading-server``, it is
-possible to explicitly perform memory transfers between processes on the host
-CPU and run sanitizers while doing so in order to catch these errors.
 
 Q: Why does my application say "Named symbol not found" and abort when I run it?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

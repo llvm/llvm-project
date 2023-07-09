@@ -39,8 +39,6 @@ static const char *RTLNames[] = {
     /* x86_64 target        */ "libomptarget.rtl.x86_64",
     /* PowerPC target       */ "libomptarget.rtl.ppc64",
     /* AArch64 target       */ "libomptarget.rtl.aarch64",
-    /* SX-Aurora VE target  */ "libomptarget.rtl.ve",
-    /* Remote target        */ "libomptarget.rtl.rpc",
 };
 
 PluginManager *PM;
