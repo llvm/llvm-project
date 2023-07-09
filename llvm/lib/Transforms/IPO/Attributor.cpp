@@ -3278,8 +3278,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     checkAndQueryIRAttr<Attribute::WillReturn, AAWillReturn>(FPos, FnAttrs);
 
     // Every function might be "must-progress".
-    if (!Attrs.hasFnAttr(Attribute::MustProgress))
-      getOrCreateAAFor<AAMustProgress>(FPos);
+    checkAndQueryIRAttr<Attribute::MustProgress, AAMustProgress>(FPos, FnAttrs);
 
     // Every function can be nounwind.
     if (!Attrs.hasFnAttr(Attribute::NoUnwind))
