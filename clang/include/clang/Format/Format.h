@@ -92,10 +92,10 @@ struct FormatStyle {
     ///   )
     /// \endcode
     ///
-    /// \warning
+    /// \note
     ///  This currently only applies to braced initializer lists (when
     ///  ``Cpp11BracedListStyle`` is ``true``) and parentheses.
-    /// \endwarning
+    /// \endnote
     BAS_BlockIndent,
   };
 
@@ -134,8 +134,10 @@ struct FormatStyle {
   /// if not ``None``, when using initialization for an array of structs
   /// aligns the fields into columns.
   ///
-  /// NOTE: As of clang-format 15 this option only applied to arrays with equal
-  /// number of columns per row.
+  /// \note
+  ///  As of clang-format 15 this option only applied to arrays with equal
+  ///  number of columns per row.
+  /// \endnote
   ///
   /// \version 13
   ArrayInitializerAlignmentStyle AlignArrayOfStructures;
@@ -440,8 +442,10 @@ struct FormatStyle {
 
   /// Control of trailing comments.
   ///
-  /// NOTE: As of clang-format 16 this option is not a bool but can be set
-  /// to the options. Conventional bool options still can be parsed as before.
+  /// \note
+  ///  As of clang-format 16 this option is not a bool but can be set
+  ///  to the options. Conventional bool options still can be parsed as before.
+  /// \endnote
   ///
   /// \code{.yaml}
   ///   # Example of usage:
@@ -1094,8 +1098,10 @@ struct FormatStyle {
     /// \endcode
     bool AfterNamespace;
     /// Wrap ObjC definitions (interfaces, implementations...).
-    /// \note @autoreleasepool and @synchronized blocks are wrapped
-    /// according to `AfterControlStatement` flag.
+    /// \note
+    ///  @autoreleasepool and @synchronized blocks are wrapped
+    ///  according to `AfterControlStatement` flag.
+    /// \endnote
     bool AfterObjCDeclaration;
     /// Wrap struct definitions.
     /// \code
@@ -1290,7 +1296,9 @@ struct FormatStyle {
   /// otherwise it will scan until the closing `]` to determine if it should add
   /// newlines between elements (prettier compatible).
   ///
-  /// NOTE: This is currently only for formatting JSON.
+  /// \note
+  ///  This is currently only for formatting JSON.
+  /// \endnote
   /// \code
   ///    true:                                  false:
   ///    [                          vs.      [1, 2, 3, 4]
@@ -2180,8 +2188,10 @@ struct FormatStyle {
   /// made, clang-format analyzes whether there are other bin-packed cases in
   /// the input file and act accordingly.
   ///
-  /// NOTE: This is an experimental flag, that might go away or be renamed. Do
-  /// not use this in config files, etc. Use at your own risk.
+  /// \note
+  ///  This is an experimental flag, that might go away or be renamed. Do
+  ///  not use this in config files, etc. Use at your own risk.
+  /// \endnote
   /// \version 3.7
   bool ExperimentalAutoDetectBinPacking;
 
@@ -3200,10 +3210,13 @@ struct FormatStyle {
   ///   * restrict
   ///   * type
   ///
-  /// Note: it MUST contain 'type'.
+  /// \note
+  ///  it MUST contain 'type'.
+  /// \endnote
+  ///
   /// Items to the left of 'type' will be placed to the left of the type and
-  /// aligned in the order supplied. Items to the right of 'type' will be placed
-  /// to the right of the type and aligned in the order supplied.
+  /// aligned in the order supplied. Items to the right of 'type' will be
+  /// placed to the right of the type and aligned in the order supplied.
   ///
   /// \code{.yaml}
   ///   QualifierOrder: ['inline', 'static', 'type', 'const', 'volatile' ]

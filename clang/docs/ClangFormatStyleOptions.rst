@@ -239,7 +239,7 @@ the configuration (without a prefix: ``Auto``).
       )
 
 
-    .. warning::
+    .. note::
 
      This currently only applies to braced initializer lists (when
      ``Cpp11BracedListStyle`` is ``true``) and parentheses.
@@ -252,8 +252,11 @@ the configuration (without a prefix: ``Auto``).
   if not ``None``, when using initialization for an array of structs
   aligns the fields into columns.
 
-  NOTE: As of clang-format 15 this option only applied to arrays with equal
-  number of columns per row.
+
+  .. note::
+
+   As of clang-format 15 this option only applied to arrays with equal
+   number of columns per row.
 
   Possible values:
 
@@ -879,8 +882,11 @@ the configuration (without a prefix: ``Auto``).
 **AlignTrailingComments** (``TrailingCommentsAlignmentStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <AlignTrailingComments>`
   Control of trailing comments.
 
-  NOTE: As of clang-format 16 this option is not a bool but can be set
-  to the options. Conventional bool options still can be parsed as before.
+
+  .. note::
+
+   As of clang-format 16 this option is not a bool but can be set
+   to the options. Conventional bool options still can be parsed as before.
 
 
   .. code-block:: yaml
@@ -1677,8 +1683,11 @@ the configuration (without a prefix: ``Auto``).
       }
 
   * ``bool AfterObjCDeclaration`` Wrap ObjC definitions (interfaces, implementations...).
-    @autoreleasepool and @synchronized blocks are wrapped
-    according to `AfterControlStatement` flag.
+
+    .. note::
+
+     @autoreleasepool and @synchronized blocks are wrapped
+     according to `AfterControlStatement` flag.
 
   * ``bool AfterStruct`` Wrap struct definitions.
 
@@ -1921,7 +1930,10 @@ the configuration (without a prefix: ``Auto``).
   otherwise it will scan until the closing `]` to determine if it should add
   newlines between elements (prettier compatible).
 
-  NOTE: This is currently only for formatting JSON.
+
+  .. note::
+
+   This is currently only for formatting JSON.
 
   .. code-block:: c++
 
@@ -2877,8 +2889,11 @@ the configuration (without a prefix: ``Auto``).
   made, clang-format analyzes whether there are other bin-packed cases in
   the input file and act accordingly.
 
-  NOTE: This is an experimental flag, that might go away or be renamed. Do
-  not use this in config files, etc. Use at your own risk.
+
+  .. note::
+
+   This is an experimental flag, that might go away or be renamed. Do
+   not use this in config files, etc. Use at your own risk.
 
 .. _FixNamespaceComments:
 
@@ -4177,10 +4192,14 @@ the configuration (without a prefix: ``Auto``).
     * restrict
     * type
 
-  Note: it MUST contain 'type'.
+
+  .. note::
+
+   it MUST contain 'type'.
+
   Items to the left of 'type' will be placed to the left of the type and
-  aligned in the order supplied. Items to the right of 'type' will be placed
-  to the right of the type and aligned in the order supplied.
+  aligned in the order supplied. Items to the right of 'type' will be
+  placed to the right of the type and aligned in the order supplied.
 
 
   .. code-block:: yaml
