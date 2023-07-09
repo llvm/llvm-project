@@ -56,6 +56,7 @@ bitset limits
 bitset new
 bitset stdexcept
 bitset string
+bitset string_view
 bitset version
 ccomplex complex
 charconv cerrno

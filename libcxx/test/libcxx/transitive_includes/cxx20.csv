@@ -94,6 +94,7 @@ bitset limits
 bitset new
 bitset stdexcept
 bitset string
+bitset string_view
 bitset type_traits
 bitset version
 ccomplex complex
