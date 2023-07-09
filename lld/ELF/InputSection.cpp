@@ -1241,13 +1241,13 @@ void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
     // Optimize the common case.
     do {
       size_t size = strlen(p);
-      pieces.emplace_back(p - s.begin(), xxHash64(StringRef(p, size)), live);
+      pieces.emplace_back(p - s.begin(), xxh3_64bits(p, size), live);
       p += size + 1;
     } while (p != end);
   } else {
     do {
       size_t size = findNull(StringRef(p, end - p), entSize);
-      pieces.emplace_back(p - s.begin(), xxHash64(StringRef(p, size)), live);
+      pieces.emplace_back(p - s.begin(), xxh3_64bits(p, size), live);
       p += size + entSize;
     } while (p != end);
   }

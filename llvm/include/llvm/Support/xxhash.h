@@ -44,6 +44,11 @@
 namespace llvm {
 uint64_t xxHash64(llvm::StringRef Data);
 uint64_t xxHash64(llvm::ArrayRef<uint8_t> Data);
+
+uint64_t xxh3_64bits(const void *input, size_t length);
+inline uint64_t xxh3_64bits(llvm::ArrayRef<uint8_t> data) {
+  return xxh3_64bits(data.data(), data.size());
+}
 }
 
 #endif
