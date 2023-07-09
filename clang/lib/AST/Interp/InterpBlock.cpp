@@ -83,5 +83,5 @@ void DeadBlock::free() {
     Next->Prev = Prev;
   if (Root == this)
     Root = Next;
-  ::free(this);
+  std::free(this);
 }
