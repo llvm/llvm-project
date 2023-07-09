@@ -104,9 +104,8 @@ define i8 @bar2(ptr nocapture inreg %p, i64 inreg %x) nounwind readonly {
 define double @ext8(ptr nocapture inreg %p, i32 inreg %x) nounwind readonly {
 ; CHECK-LABEL: ext8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    shrl $5, %esi
-; CHECK-NEXT:    andl $2040, %esi # imm = 0x7F8
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %x, 5
@@ -120,9 +119,8 @@ define double @ext8(ptr nocapture inreg %p, i32 inreg %x) nounwind readonly {
 define float @ext4(ptr nocapture inreg %p, i32 inreg %x) nounwind readonly {
 ; CHECK-LABEL: ext4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    shrl $6, %esi
-; CHECK-NEXT:    andl $1020, %esi # imm = 0x3FC
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movzbl %ah, %eax
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %x, 6
@@ -136,10 +134,9 @@ define float @ext4(ptr nocapture inreg %p, i32 inreg %x) nounwind readonly {
 define i8 @ext2(ptr nocapture inreg %p, i32 inreg %x) nounwind readonly {
 ; CHECK-LABEL: ext2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    shrl $7, %esi
-; CHECK-NEXT:    andl $510, %esi # imm = 0x1FE
-; CHECK-NEXT:    movzbl (%rdi,%rsi), %eax
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movzbl %ah, %eax
+; CHECK-NEXT:    movzbl (%rdi,%rax,2), %eax
 ; CHECK-NEXT:    retq
   %t0 = lshr i32 %x, 7
   %t1 = and i32 %t0, 510
