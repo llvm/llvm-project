@@ -19,9 +19,9 @@ InterpStack::~InterpStack() {
 
 void InterpStack::clear() {
   if (Chunk && Chunk->Next)
-    free(Chunk->Next);
+    std::free(Chunk->Next);
   if (Chunk)
-    free(Chunk);
+    std::free(Chunk);
   Chunk = nullptr;
   StackSize = 0;
 }
@@ -33,7 +33,7 @@ void *InterpStack::grow(size_t Size) {
     if (Chunk && Chunk->Next) {
       Chunk = Chunk->Next;
     } else {
-      StackChunk *Next = new (malloc(ChunkSize)) StackChunk(Chunk);
+      StackChunk *Next = new (std::malloc(ChunkSize)) StackChunk(Chunk);
       if (Chunk)
         Chunk->Next = Next;
       Chunk = Next;
@@ -65,7 +65,7 @@ void InterpStack::shrink(size_t Size) {
   while (Size > Chunk->size()) {
     Size -= Chunk->size();
     if (Chunk->Next) {
-      free(Chunk->Next);
+      std::free(Chunk->Next);
       Chunk->Next = nullptr;
     }
     Chunk->End = Chunk->start();

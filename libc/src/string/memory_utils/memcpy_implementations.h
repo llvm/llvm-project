@@ -12,6 +12,7 @@
 #include "src/__support/macros/config.h"       // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
 #include "src/__support/macros/properties/architectures.h"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
 
@@ -26,20 +27,13 @@
 namespace __llvm_libc {
 
 [[maybe_unused]] LIBC_INLINE void
-inline_memcpy_byte_per_byte(Ptr dst, CPtr src, size_t offset, size_t count) {
-  LIBC_LOOP_NOUNROLL
-  for (; offset < count; ++offset)
-    dst[offset] = src[offset];
-}
-
-[[maybe_unused]] LIBC_INLINE void
 inline_memcpy_aligned_access_32bit(Ptr __restrict dst, CPtr __restrict src,
                                    size_t count) {
   constexpr size_t kAlign = sizeof(uint32_t);
   if (count <= 2 * kAlign)
-    return inline_memcpy_byte_per_byte(dst, src, 0, count);
+    return inline_memcpy_byte_per_byte(dst, src, count);
   size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
-  inline_memcpy_byte_per_byte(dst, src, 0, bytes_to_dst_align);
+  inline_memcpy_byte_per_byte(dst, src, bytes_to_dst_align);
   size_t offset = bytes_to_dst_align;
   size_t src_alignment = distance_to_align_down<kAlign>(src + offset);
   for (; offset < count - kAlign; offset += kAlign) {
@@ -53,7 +47,7 @@ inline_memcpy_aligned_access_32bit(Ptr __restrict dst, CPtr __restrict src,
     store32_aligned<uint32_t>(value, dst, offset);
   }
   // remainder
-  inline_memcpy_byte_per_byte(dst, src, offset, count);
+  inline_memcpy_byte_per_byte(dst, src, count, offset);
 }
 
 [[maybe_unused]] LIBC_INLINE void
@@ -61,9 +55,9 @@ inline_memcpy_aligned_access_64bit(Ptr __restrict dst, CPtr __restrict src,
                                    size_t count) {
   constexpr size_t kAlign = sizeof(uint64_t);
   if (count <= 2 * kAlign)
-    return inline_memcpy_byte_per_byte(dst, src, 0, count);
+    return inline_memcpy_byte_per_byte(dst, src, count);
   size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
-  inline_memcpy_byte_per_byte(dst, src, 0, bytes_to_dst_align);
+  inline_memcpy_byte_per_byte(dst, src, bytes_to_dst_align);
   size_t offset = bytes_to_dst_align;
   size_t src_alignment = distance_to_align_down<kAlign>(src + offset);
   for (; offset < count - kAlign; offset += kAlign) {
@@ -81,14 +75,14 @@ inline_memcpy_aligned_access_64bit(Ptr __restrict dst, CPtr __restrict src,
     store64_aligned<uint64_t>(value, dst, offset);
   }
   // remainder
-  inline_memcpy_byte_per_byte(dst, src, offset, count);
+  inline_memcpy_byte_per_byte(dst, src, count, offset);
 }
 
 LIBC_INLINE void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
                                size_t count) {
   using namespace __llvm_libc::builtin;
 #if defined(LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY)
-  return inline_memcpy_byte_per_byte(dst, src, 0, count);
+  return inline_memcpy_byte_per_byte(dst, src, count);
 #elif defined(LIBC_TARGET_ARCH_IS_X86)
   return inline_memcpy_x86_maybe_interpose_repmovsb(dst, src, count);
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
@@ -98,7 +92,7 @@ LIBC_INLINE void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
 #elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
   return inline_memcpy_aligned_access_32bit(dst, src, count);
 #else
-  return inline_memcpy_byte_per_byte(dst, src, 0, count);
+  return inline_memcpy_byte_per_byte(dst, src, count);
 #endif
 }
 
