@@ -1576,6 +1576,11 @@ bool AtomicExpand::tryExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 bool llvm::expandAtomicRMWToCmpXchg(AtomicRMWInst *AI,
                                     CreateCmpXchgInstFun CreateCmpXchg) {
   ReplacementIRBuilder Builder(AI, AI->getModule()->getDataLayout());
+  Builder.setIsFPConstrained(
+      AI->getFunction()->hasFnAttribute(Attribute::StrictFP));
+
+  // FIXME: If FP exceptions are observable, we should force them off for the
+  // loop for the FP atomics.
   Value *Loaded = AtomicExpand::insertRMWCmpXchgLoop(
       Builder, AI->getType(), AI->getPointerOperand(), AI->getAlign(),
       AI->getOrdering(), AI->getSyncScopeID(),
