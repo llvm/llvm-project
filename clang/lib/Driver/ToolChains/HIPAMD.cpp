@@ -243,10 +243,6 @@ void HIPAMDToolChain::addClangTargetOptions(
 
   CC1Args.push_back("-fcuda-is-device");
 
-  if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
-                         options::OPT_fno_cuda_approx_transcendentals, false))
-    CC1Args.push_back("-fcuda-approx-transcendentals");
-
   if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                           false))
     CC1Args.append({"-mllvm", "-amdgpu-internalize-symbols"});

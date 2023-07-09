@@ -6801,11 +6801,12 @@ def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>,
   MarshallingInfoEnum<LangOpts<"SYCLVersion">, "SYCL_None">,
   ShouldParseIf<!strconcat(fsycl_is_device.KeyPath, "||", fsycl_is_host.KeyPath)>;
 
-defm cuda_approx_transcendentals : BoolFOption<"cuda-approx-transcendentals",
-  LangOpts<"CUDADeviceApproxTranscendentals">, DefaultFalse,
+defm gpu_approx_transcendentals : BoolFOption<"gpu-approx-transcendentals",
+  LangOpts<"GPUDeviceApproxTranscendentals">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Use">, NegFlag<SetFalse, [], "Don't use">,
-  BothFlags<[], " approximate transcendental functions">>,
-  ShouldParseIf<fcuda_is_device.KeyPath>;
+  BothFlags<[], " approximate transcendental functions">>;
+def : Flag<["-"], "fcuda-approx-transcendentals">, Alias<fgpu_approx_transcendentals>;
+def : Flag<["-"], "fno-cuda-approx-transcendentals">, Alias<fno_gpu_approx_transcendentals>;
 
 //===----------------------------------------------------------------------===//
 // Frontend Options - cc1 + fc1

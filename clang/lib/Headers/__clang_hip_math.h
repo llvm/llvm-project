@@ -34,10 +34,10 @@
 
 // Device library provides fast low precision and slow full-recision
 // implementations for some functions. Which one gets selected depends on
-// __CLANG_CUDA_APPROX_TRANSCENDENTALS__ which gets defined by clang if
-// -ffast-math or -fcuda-approx-transcendentals are in effect.
+// __CLANG_GPU_APPROX_TRANSCENDENTALS__ which gets defined by clang if
+// -ffast-math or -fgpu-approx-transcendentals are in effect.
 #pragma push_macro("__FAST_OR_SLOW")
-#if defined(__CLANG_CUDA_APPROX_TRANSCENDENTALS__)
+#if defined(__CLANG_GPU_APPROX_TRANSCENDENTALS__)
 #define __FAST_OR_SLOW(fast, slow) fast
 #else
 #define __FAST_OR_SLOW(fast, slow) slow
