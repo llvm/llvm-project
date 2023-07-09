@@ -606,10 +606,6 @@ static bool isDeclaredInModuleInterfaceOrPartition(const NamedDecl *D) {
   return false;
 }
 
-static LinkageInfo getInternalLinkageFor(const NamedDecl *D) {
-  return LinkageInfo::internal();
-}
-
 static LinkageInfo getExternalLinkageFor(const NamedDecl *D) {
   return LinkageInfo::external();
 }
@@ -642,7 +638,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // - a variable, variable template, function, or function template
     //   that is explicitly declared static; or
     // (This bullet corresponds to C99 6.2.2p3.)
-    return getInternalLinkageFor(D);
+    return LinkageInfo::internal();
   }
 
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
@@ -666,7 +662,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       if (Var->getStorageClass() != SC_Extern &&
           Var->getStorageClass() != SC_PrivateExtern &&
           !isSingleLineLanguageLinkage(*Var))
-        return getInternalLinkageFor(Var);
+        return LinkageInfo::internal();
     }
 
     for (const VarDecl *PrevVar = Var->getPreviousDecl(); PrevVar;
@@ -676,7 +672,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
         return getDeclLinkageAndVisibility(PrevVar);
       // Explicitly declared static.
       if (PrevVar->getStorageClass() == SC_Static)
-        return getInternalLinkageFor(Var);
+        return LinkageInfo::internal();
     }
   } else if (const auto *IFD = dyn_cast<IndirectFieldDecl>(D)) {
     //   - a data member of an anonymous union.
@@ -700,7 +696,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     //   within an unnamed namespace has internal linkage.
     if ((!Var || !isFirstInExternCContext(Var)) &&
         (!Func || !isFirstInExternCContext(Func)))
-      return getInternalLinkageFor(D);
+      return LinkageInfo::internal();
   }
 
   // Set up the defaults.
@@ -1312,11 +1308,11 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
   if (const auto *Function = dyn_cast<FunctionDecl>(D)) {
     if (Function->isInAnonymousNamespace() &&
         !isFirstInExternCContext(Function))
-      return getInternalLinkageFor(Function);
+      return LinkageInfo::internal();
 
     // This is a "void f();" which got merged with a file static.
     if (Function->getCanonicalDecl()->getStorageClass() == SC_Static)
-      return getInternalLinkageFor(Function);
+      return LinkageInfo::internal();
 
     LinkageInfo LV;
     if (!hasExplicitVisibilityAlready(computation)) {
@@ -1335,7 +1331,7 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
     if (Var->hasExternalStorage()) {
       if (Var->isInAnonymousNamespace() && !isFirstInExternCContext(Var))
-        return getInternalLinkageFor(Var);
+        return LinkageInfo::internal();
 
       LinkageInfo LV;
       if (Var->getStorageClass() == SC_PrivateExtern)
@@ -1415,7 +1411,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
                                               bool IgnoreVarTypeLinkage) {
   // Internal_linkage attribute overrides other considerations.
   if (D->hasAttr<InternalLinkageAttr>())
-    return getInternalLinkageFor(D);
+    return LinkageInfo::internal();
 
   // Objective-C: treat all Objective-C declarations as having external
   // linkage.
@@ -1473,7 +1469,7 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
         if (Record->hasKnownLambdaInternalLinkage() ||
             !Record->getLambdaManglingNumber()) {
           // This lambda has no mangling number, so it's internal.
-          return getInternalLinkageFor(D);
+          return LinkageInfo::internal();
         }
 
         return getLVForClosure(
@@ -1532,7 +1528,7 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
                                           LVComputationKind computation) {
   // Internal_linkage attribute overrides other considerations.
   if (D->hasAttr<InternalLinkageAttr>())
-    return getInternalLinkageFor(D);
+    return LinkageInfo::internal();
 
   if (computation.IgnoreAllVisibility && D->hasCachedLinkage())
     return LinkageInfo(D->getCachedLinkage(), DefaultVisibility, false);
