@@ -185,6 +185,7 @@ void Pointer::initialize() const {
       free(Map);
       Map = (InitMap *)-1;
     }
+    return;
   }
 
   // Field has its bit in an inline descriptor.
