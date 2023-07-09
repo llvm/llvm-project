@@ -78,3 +78,11 @@
 // PTS-DAG: #define HIP_API_PER_THREAD_DEFAULT_STREAM 1
 // NOPTS-NOT: #define __HIP_API_PER_THREAD_DEFAULT_STREAM__
 // NOPTS-NOT: #define HIP_API_PER_THREAD_DEFAULT_STREAM
+
+// RUN: %clang -E -dM --offload-arch=gfx906 -nogpuinc -nogpulib \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=NOAPPROX %s
+// RUN: %clang -E -dM --offload-arch=gfx906 -nogpuinc -nogpulib -fgpu-approx-transcendentals \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=APPROX %s
+// NOAPPROX-NOT: #define __CLANG_GPU_APPROX_TRANSCENDENTALS__
+// APPROX: #define __CLANG_GPU_APPROX_TRANSCENDENTALS__ 1
+// APPROX: #define __CLANG_GPU_APPROX_TRANSCENDENTALS__ 1
