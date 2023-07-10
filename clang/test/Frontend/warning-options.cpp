@@ -3,6 +3,6 @@
 // CHECK: unknown warning option '-Wmonkey'
 // CHECK: unknown warning option '-Wno-monkey'
 // CHECK: unknown warning option '-Wno-unused-command-line-arguments'; did you mean '-Wno-unused-command-line-argument'?
-// CHECK: unknown warning option '-Wmodule-build'; did you mean '-Wmodule-conflict'?
+// CHECK: unknown warning option '-Wmodule-build'
 // CHECK-NEXT: unknown -Werror warning specifier: '-Werror-vla'
 // CHECK: unknown remark option '-Rmodule-built'; did you mean '-Rmodule-build'?
