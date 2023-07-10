@@ -52,6 +52,15 @@ public:
     return *EntryI->second;
   }
 
+  bool appendEntry(Symbol &Target, Symbol &Entry) {
+    assert(Target.hasName() && "Edge cannot point to anonymous target");
+    auto Res = Entries.insert({
+        Target.getName(),
+        &Entry,
+    });
+    return Res.second;
+  }
+
 private:
   TableManagerImplT &impl() { return static_cast<TableManagerImplT &>(*this); }
   DenseMap<StringRef, Symbol *> Entries;
