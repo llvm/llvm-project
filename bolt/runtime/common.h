@@ -106,6 +106,17 @@ typedef int int32_t;
 
 #define MAP_FAILED ((void *)-1)
 
+#define SEEK_SET 0 /* Seek from beginning of file.  */
+#define SEEK_CUR 1 /* Seek from current position.  */
+#define SEEK_END 2 /* Seek from end of file.  */
+
+#define O_RDONLY 0
+#define O_WRONLY 1
+#define O_RDWR 2
+#define O_CREAT 64
+#define O_TRUNC 512
+#define O_APPEND 1024
+
 // Functions that are required by freestanding environment. Compiler may
 // generate calls to these implicitly.
 extern "C" {
