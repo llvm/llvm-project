@@ -7153,7 +7153,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   auto FRecordSwitches =
       Args.hasFlag(options::OPT_frecord_command_line,
                    options::OPT_fno_record_command_line, false);
-  if (FRecordSwitches && !Triple.isOSBinFormatELF())
+  if (FRecordSwitches && !Triple.isOSBinFormatELF() &&
+      !Triple.isOSBinFormatXCOFF())
     D.Diag(diag::err_drv_unsupported_opt_for_target)
         << Args.getLastArg(options::OPT_frecord_command_line)->getAsString(Args)
         << TripleStr;
