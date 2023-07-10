@@ -1508,7 +1508,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     for (auto VT : {MVT::v4f16, MVT::v8f16, MVT::v2f32, MVT::v4f32, MVT::v2f64})
       setOperationAction(ISD::VECREDUCE_SEQ_FADD, VT, Custom);
 
-    if (Subtarget->forceStreamingCompatibleSVE()) {
+    if (!Subtarget->isNeonAvailable()) {
       setTruncStoreAction(MVT::v2f32, MVT::v2f16, Custom);
       setTruncStoreAction(MVT::v4f32, MVT::v4f16, Custom);
       setTruncStoreAction(MVT::v8f32, MVT::v8f16, Custom);
@@ -3623,7 +3623,7 @@ getAArch64XALUOOp(AArch64CC::CondCode &CC, SDValue Op, SelectionDAG &DAG) {
 
 SDValue AArch64TargetLowering::LowerXOR(SDValue Op, SelectionDAG &DAG) const {
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                   Subtarget->forceStreamingCompatibleSVE()))
+                                   !Subtarget->isNeonAvailable()))
     return LowerToScalableOp(Op, DAG);
 
   SDValue Sel = Op.getOperand(0);
@@ -3833,8 +3833,7 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
   if (VT.isScalableVector())
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_EXTEND_MERGE_PASSTHRU);
 
-  if (useSVEForFixedLengthVectorVT(VT,
-                                   Subtarget->forceStreamingCompatibleSVE()))
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthFPExtendToSVE(Op, DAG);
 
   assert(Op.getValueType() == MVT::f128 && "Unexpected lowering");
@@ -3850,8 +3849,7 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
   SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
   EVT SrcVT = SrcVal.getValueType();
 
-  if (useSVEForFixedLengthVectorVT(SrcVT,
-                                   Subtarget->forceStreamingCompatibleSVE()))
+  if (useSVEForFixedLengthVectorVT(SrcVT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthFPRoundToSVE(Op, DAG);
 
   if (SrcVT != MVT::f128) {
@@ -3882,10 +3880,8 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
     return LowerToPredicatedOp(Op, DAG, Opcode);
   }
 
-  if (useSVEForFixedLengthVectorVT(VT,
-                                   Subtarget->forceStreamingCompatibleSVE()) ||
-      useSVEForFixedLengthVectorVT(InVT,
-                                   Subtarget->forceStreamingCompatibleSVE()))
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()) ||
+      useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthFPToIntToSVE(Op, DAG);
 
   unsigned NumElts = InVT.getVectorNumElements();
@@ -4139,10 +4135,8 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     return LowerToPredicatedOp(Op, DAG, Opcode);
   }
 
-  if (useSVEForFixedLengthVectorVT(VT,
-                                   Subtarget->forceStreamingCompatibleSVE()) ||
-      useSVEForFixedLengthVectorVT(InVT,
-                                   Subtarget->forceStreamingCompatibleSVE()))
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()) ||
+      useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthIntToFPToSVE(Op, DAG);
 
   uint64_t VTSize = VT.getFixedSizeInBits();
@@ -4592,9 +4586,7 @@ static unsigned selectUmullSmull(SDNode *&N0, SDNode *&N1, SelectionDAG &DAG,
 SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  // If SVE is available then i64 vector multiplications can also be made legal.
-  bool OverrideNEON = Subtarget->forceStreamingCompatibleSVE();
-
+  bool OverrideNEON = !Subtarget->isNeonAvailable();
   if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
 
@@ -6041,7 +6033,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerMLOAD(Op, DAG);
   case ISD::LOAD:
     if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                     Subtarget->forceStreamingCompatibleSVE()))
+                                     !Subtarget->isNeonAvailable()))
       return LowerFixedLengthVectorLoadToSVE(Op, DAG);
     return LowerLOAD(Op, DAG);
   case ISD::ADD:
@@ -8541,7 +8533,7 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
         getPackedSVEVectorVT(VT.getVectorElementType().changeTypeToInteger());
 
   if (VT.isFixedLengthVector() &&
-    useSVEForFixedLengthVectorVT(VT, Subtarget->forceStreamingCompatibleSVE())) {
+      useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())) {
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
 
     In1 = convertToScalableVector(DAG, ContainerVT, In1);
@@ -8674,8 +8666,7 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
   assert(!IsParity && "ISD::PARITY of vector types not supported");
 
   if (VT.isScalableVector() ||
-      useSVEForFixedLengthVectorVT(VT,
-                                   Subtarget->forceStreamingCompatibleSVE()))
+      useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::CTPOP_MERGE_PASSTHRU);
 
   assert((VT == MVT::v1i64 || VT == MVT::v2i64 || VT == MVT::v2i32 ||
@@ -9289,8 +9280,7 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
     return DAG.getNode(ISD::VSELECT, DL, Ty, SplatPred, TVal, FVal);
   }
 
-  if (useSVEForFixedLengthVectorVT(Ty,
-                                   Subtarget->forceStreamingCompatibleSVE())) {
+  if (useSVEForFixedLengthVectorVT(Ty, !Subtarget->isNeonAvailable())) {
     // FIXME: Ideally this would be the same as above using i1 types, however
     // for the moment we can't deal with fixed i1 vector types properly, so
     // instead extend the predicate to a result type sized integer vector.
@@ -11635,8 +11625,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
-  if (useSVEForFixedLengthVectorVT(VT,
-                                   Subtarget->forceStreamingCompatibleSVE()))
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthVECTOR_SHUFFLEToSVE(Op, DAG);
 
   // Convert shuffles that are directly supported on NEON to target-specific
@@ -11809,8 +11798,7 @@ SDValue AArch64TargetLowering::LowerSPLAT_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (useSVEForFixedLengthVectorVT(VT,
-                                   Subtarget->forceStreamingCompatibleSVE()))
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return LowerToScalableOp(Op, DAG);
 
   assert(VT.isScalableVector() && VT.getVectorElementType() == MVT::i1 &&
@@ -11932,7 +11920,7 @@ static SDValue tryAdvSIMDModImm32(unsigned NewOp, SDValue Op, SelectionDAG &DAG,
                                   const SDValue *LHS = nullptr) {
   EVT VT = Op.getValueType();
   if (VT.isFixedLengthVector() &&
-      DAG.getSubtarget<AArch64Subtarget>().forceStreamingCompatibleSVE())
+      !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable())
     return SDValue();
 
   if (Bits.getHiBits(64) == Bits.getLoBits(64)) {
@@ -11985,7 +11973,7 @@ static SDValue tryAdvSIMDModImm16(unsigned NewOp, SDValue Op, SelectionDAG &DAG,
                                   const SDValue *LHS = nullptr) {
   EVT VT = Op.getValueType();
   if (VT.isFixedLengthVector() &&
-      DAG.getSubtarget<AArch64Subtarget>().forceStreamingCompatibleSVE())
+      !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable())
     return SDValue();
 
   if (Bits.getHiBits(64) == Bits.getLoBits(64)) {
@@ -12218,7 +12206,7 @@ static SDValue tryLowerToSLI(SDNode *N, SelectionDAG &DAG) {
 SDValue AArch64TargetLowering::LowerVectorOR(SDValue Op,
                                              SelectionDAG &DAG) const {
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                   Subtarget->forceStreamingCompatibleSVE()))
+                                   !Subtarget->isNeonAvailable()))
     return LowerToScalableOp(Op, DAG);
 
   // Attempt to form a vector S[LR]I from (or (and X, C1), (lsl Y, C2))
@@ -12338,8 +12326,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (useSVEForFixedLengthVectorVT(VT,
-                                   Subtarget->forceStreamingCompatibleSVE())) {
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())) {
     if (auto SeqInfo = cast<BuildVectorSDNode>(Op)->isConstantSequence()) {
       SDLoc DL(Op);
       EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
@@ -12785,7 +12772,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
 SDValue AArch64TargetLowering::LowerCONCAT_VECTORS(SDValue Op,
                                                    SelectionDAG &DAG) const {
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                   Subtarget->forceStreamingCompatibleSVE()))
+                                   !Subtarget->isNeonAvailable()))
     return LowerFixedLengthConcatVectorsToSVE(Op, DAG);
 
   assert(Op.getValueType().isScalableVector() &&
@@ -12824,7 +12811,7 @@ SDValue AArch64TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
   assert(Op.getOpcode() == ISD::INSERT_VECTOR_ELT && "Unknown opcode!");
 
   if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                   Subtarget->forceStreamingCompatibleSVE()))
+                                   !Subtarget->isNeonAvailable()))
     return LowerFixedLengthInsertVectorElt(Op, DAG);
 
   EVT VT = Op.getOperand(0).getValueType();
@@ -12872,8 +12859,7 @@ AArch64TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     return DAG.getAnyExtOrTrunc(Extract, DL, Op.getValueType());
   }
 
-  if (useSVEForFixedLengthVectorVT(VT,
-                                   Subtarget->forceStreamingCompatibleSVE()))
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthExtractVectorElt(Op, DAG);
 
   // Check for non-constant or out of range lane.
@@ -12935,11 +12921,10 @@ SDValue AArch64TargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   // If this is extracting the upper 64-bits of a 128-bit vector, we match
   // that directly.
   if (Size == 64 && Idx * InVT.getScalarSizeInBits() == 64 &&
-      InVT.getSizeInBits() == 128 && !Subtarget->forceStreamingCompatibleSVE())
+      InVT.getSizeInBits() == 128 && Subtarget->isNeonAvailable())
     return Op;
 
-  if (useSVEForFixedLengthVectorVT(InVT,
-                                   Subtarget->forceStreamingCompatibleSVE())) {
+  if (useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable())) {
     SDLoc DL(Op);
 
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
@@ -13127,8 +13112,7 @@ SDValue AArch64TargetLowering::LowerDIV(SDValue Op, SelectionDAG &DAG) const {
 
 bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
   // Currently no fixed length shuffles that require SVE are legal.
-  if (useSVEForFixedLengthVectorVT(VT,
-                                   Subtarget->forceStreamingCompatibleSVE()))
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return false;
 
   if (VT.getVectorNumElements() == 4 &&
@@ -13221,7 +13205,7 @@ SDValue AArch64TargetLowering::LowerTRUNCATE(SDValue Op,
     return SDValue();
 
   if (useSVEForFixedLengthVectorVT(Op.getOperand(0).getValueType(),
-                                   Subtarget->forceStreamingCompatibleSVE()))
+                                   !Subtarget->isNeonAvailable()))
     return LowerFixedLengthVectorTruncateToSVE(Op, DAG);
 
   return SDValue();
@@ -13240,8 +13224,7 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
   switch (Op.getOpcode()) {
   case ISD::SHL:
     if (VT.isScalableVector() ||
-        useSVEForFixedLengthVectorVT(VT,
-                                     Subtarget->forceStreamingCompatibleSVE()))
+        useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
       return LowerToPredicatedOp(Op, DAG, AArch64ISD::SHL_PRED);
 
     if (isVShiftLImm(Op.getOperand(1), VT, false, Cnt) && Cnt < EltSize)
@@ -13254,8 +13237,7 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
   case ISD::SRA:
   case ISD::SRL:
     if (VT.isScalableVector() ||
-        useSVEForFixedLengthVectorVT(
-            VT, Subtarget->forceStreamingCompatibleSVE())) {
+        useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())) {
       unsigned Opc = Op.getOpcode() == ISD::SRA ? AArch64ISD::SRA_PRED
                                                 : AArch64ISD::SRL_PRED;
       return LowerToPredicatedOp(Op, DAG, Opc);
@@ -13393,7 +13375,7 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::SETCC_MERGE_ZERO);
 
   if (useSVEForFixedLengthVectorVT(Op.getOperand(0).getValueType(),
-                                   Subtarget->forceStreamingCompatibleSVE()))
+                                   !Subtarget->isNeonAvailable()))
     return LowerFixedLengthVectorSetccToSVE(Op, DAG);
 
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
@@ -13571,7 +13553,7 @@ SDValue AArch64TargetLowering::LowerVECREDUCE(SDValue Op,
 
   // Try to lower fixed length reductions to SVE.
   EVT SrcVT = Src.getValueType();
-  bool OverrideNEON = Subtarget->forceStreamingCompatibleSVE() ||
+  bool OverrideNEON = !Subtarget->isNeonAvailable() ||
                       Op.getOpcode() == ISD::VECREDUCE_AND ||
                       Op.getOpcode() == ISD::VECREDUCE_OR ||
                       Op.getOpcode() == ISD::VECREDUCE_XOR ||
@@ -14812,7 +14794,7 @@ bool AArch64TargetLowering::isLegalInterleavedAccessType(
   }
 
   unsigned VecSize = DL.getTypeSizeInBits(VecTy);
-  if (Subtarget->forceStreamingCompatibleSVE() ||
+  if (!Subtarget->isNeonAvailable() ||
       (Subtarget->useSVEForFixedLengthVectors() &&
        (VecSize % Subtarget->getMinSVEVectorSizeInBits() == 0 ||
         (VecSize < Subtarget->getMinSVEVectorSizeInBits() &&
@@ -16551,7 +16533,7 @@ static SDValue performIntToFpCombine(SDNode *N, SelectionDAG &DAG,
 static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const AArch64Subtarget *Subtarget) {
-  if (!Subtarget->hasNEON() || Subtarget->forceStreamingCompatibleSVE())
+  if (!Subtarget->isNeonAvailable())
     return SDValue();
 
   if (!N->getValueType(0).isSimple())
@@ -16764,8 +16746,7 @@ static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   // It also doesn't work for streaming mode because it causes generating
   // bsl instructions that are invalid in streaming mode.
   if (TLI.useSVEForFixedLengthVectorVT(
-          VT,
-          DAG.getSubtarget<AArch64Subtarget>().forceStreamingCompatibleSVE()))
+          VT, !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable()))
     return SDValue();
 
   SDValue N0 = N->getOperand(0);
