@@ -754,7 +754,7 @@ bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
 
 ObjCDeallocChecker::ObjCDeallocChecker()
     : NSObjectII(nullptr), SenTestCaseII(nullptr), XCTestCaseII(nullptr),
-      CIFilterII(nullptr) {
+      Block_releaseII(nullptr), CIFilterII(nullptr) {
 
   MissingReleaseBugType.reset(
       new BugType(this, "Missing ivar release (leak)",

@@ -476,9 +476,8 @@ namespace {
 
 /// Iterator over the redeclarations of a declaration that have already
 /// been merged into the same redeclaration chain.
-template<typename DeclT>
-class MergedRedeclIterator {
-  DeclT *Start;
+template <typename DeclT> class MergedRedeclIterator {
+  DeclT *Start = nullptr;
   DeclT *Canonical = nullptr;
   DeclT *Current = nullptr;
 
