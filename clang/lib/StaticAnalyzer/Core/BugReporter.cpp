@@ -296,26 +296,24 @@ std::string StackHintGeneratorForSymbol::getMessage(const ExplodedNode *N){
     return {};
 
   // Check if one of the parameters are set to the interesting symbol.
-  unsigned ArgIndex = 0;
-  for (CallExpr::const_arg_iterator I = CE->arg_begin(),
-                                    E = CE->arg_end(); I != E; ++I, ++ArgIndex){
-    SVal SV = N->getSVal(*I);
+  for (auto [Idx, ArgExpr] : llvm::enumerate(CE->arguments())) {
+    SVal SV = N->getSVal(ArgExpr);
 
     // Check if the variable corresponding to the symbol is passed by value.
     SymbolRef AS = SV.getAsLocSymbol();
     if (AS == Sym) {
-      return getMessageForArg(*I, ArgIndex);
+      return getMessageForArg(ArgExpr, Idx);
     }
 
     // Check if the parameter is a pointer to the symbol.
     if (std::optional<loc::MemRegionVal> Reg = SV.getAs<loc::MemRegionVal>()) {
       // Do not attempt to dereference void*.
-      if ((*I)->getType()->isVoidPointerType())
+      if (ArgExpr->getType()->isVoidPointerType())
         continue;
       SVal PSV = N->getState()->getSVal(Reg->getRegion());
       SymbolRef AS = PSV.getAsLocSymbol();
       if (AS == Sym) {
-        return getMessageForArg(*I, ArgIndex);
+        return getMessageForArg(ArgExpr, Idx);
       }
     }
   }

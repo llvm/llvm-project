@@ -829,6 +829,9 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return ComputeCapability.str();
   }
 
+  /// Returns the clock frequency for the given NVPTX device.
+  uint64_t getClockFrequency() const override { return 1000000000; }
+
 private:
   using CUDAStreamManagerTy = GenericDeviceResourceManagerTy<CUDAStreamRef>;
   using CUDAEventManagerTy = GenericDeviceResourceManagerTy<CUDAEventRef>;

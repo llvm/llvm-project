@@ -105,6 +105,10 @@ def _f64ArrayAttr(x, context):
 def _denseI64ArrayAttr(x, context):
     return DenseI64ArrayAttr.get(x, context=context)
 
+@register_attribute_builder("DenseBoolArrayAttr")
+def _denseBoolArrayAttr(x, context):
+    return DenseBoolArrayAttr.get(x, context=context)
+
 
 @register_attribute_builder("TypeAttr")
 def _typeAttr(x, context):

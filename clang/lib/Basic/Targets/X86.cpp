@@ -1171,43 +1171,19 @@ unsigned X86TargetInfo::multiVersionSortPriority(StringRef Name) const {
 }
 
 bool X86TargetInfo::validateCPUSpecificCPUDispatch(StringRef Name) const {
-  return llvm::StringSwitch<bool>(Name)
-#define CPU_SPECIFIC(NAME, TUNE_NAME, MANGLING, FEATURES) .Case(NAME, true)
-#define CPU_SPECIFIC_ALIAS(NEW_NAME, TUNE_NAME, NAME) .Case(NEW_NAME, true)
-#include "llvm/TargetParser/X86TargetParser.def"
-      .Default(false);
-}
-
-static StringRef CPUSpecificCPUDispatchNameDealias(StringRef Name) {
-  return llvm::StringSwitch<StringRef>(Name)
-#define CPU_SPECIFIC_ALIAS(NEW_NAME, TUNE_NAME, NAME) .Case(NEW_NAME, NAME)
-#include "llvm/TargetParser/X86TargetParser.def"
-      .Default(Name);
+  return llvm::X86::validateCPUSpecificCPUDispatch(Name);
 }
 
 char X86TargetInfo::CPUSpecificManglingCharacter(StringRef Name) const {
-  return llvm::StringSwitch<char>(CPUSpecificCPUDispatchNameDealias(Name))
-#define CPU_SPECIFIC(NAME, TUNE_NAME, MANGLING, FEATURES) .Case(NAME, MANGLING)
-#include "llvm/TargetParser/X86TargetParser.def"
-      .Default(0);
+  return llvm::X86::getCPUDispatchMangling(Name);
 }
 
 void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
     StringRef Name, llvm::SmallVectorImpl<StringRef> &Features) const {
-  StringRef WholeList =
-      llvm::StringSwitch<StringRef>(CPUSpecificCPUDispatchNameDealias(Name))
-#define CPU_SPECIFIC(NAME, TUNE_NAME, MANGLING, FEATURES) .Case(NAME, FEATURES)
-#include "llvm/TargetParser/X86TargetParser.def"
-          .Default("");
-  WholeList.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-}
-
-StringRef X86TargetInfo::getCPUSpecificTuneName(StringRef Name) const {
-  return llvm::StringSwitch<StringRef>(Name)
-#define CPU_SPECIFIC(NAME, TUNE_NAME, MANGLING, FEATURES) .Case(NAME, TUNE_NAME)
-#define CPU_SPECIFIC_ALIAS(NEW_NAME, TUNE_NAME, NAME) .Case(NEW_NAME, TUNE_NAME)
-#include "llvm/TargetParser/X86TargetParser.def"
-      .Default("");
+  SmallVector<StringRef, 32> TargetCPUFeatures;
+  llvm::X86::getFeaturesForCPU(Name, TargetCPUFeatures, true);
+  for (auto &F : TargetCPUFeatures)
+    Features.push_back(F);
 }
 
 // We can't use a generic validation scheme for the cpus accepted here

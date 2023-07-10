@@ -1317,6 +1317,9 @@ endif()
 set(LLVM_THIRD_PARTY_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/../third-party CACHE STRING
     "Directory containing third party software used by LLVM (e.g. googletest)")
 
+set(LLVM_UNITTEST_LINK_FLAGS "" CACHE STRING
+    "Additional linker flags for unit tests")
+
 if(LLVM_ENABLE_LLVM_LIBC)
   check_library_exists(llvmlibc printf "" HAVE_LLVM_LIBC)
   if(NOT HAVE_LLVM_LIBC)

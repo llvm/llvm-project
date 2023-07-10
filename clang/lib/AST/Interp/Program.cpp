@@ -222,10 +222,8 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     return nullptr;
 
   // Deduplicate records.
-  auto It = Records.find(RD);
-  if (It != Records.end()) {
+  if (auto It = Records.find(RD); It != Records.end())
     return It->second;
-  }
 
   // We insert nullptr now and replace that later, so recursive calls
   // to this function with the same RecordDecl don't run into

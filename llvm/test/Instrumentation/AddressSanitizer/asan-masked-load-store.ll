@@ -373,3 +373,67 @@ define void @scalable.store.nxv4f32(ptr %p, <vscale x 4 x float> %arg, <vscale x
   tail call void @llvm.masked.store.nxv4f32.p0(<vscale x 4 x float> %arg, ptr %p, i32 4, <vscale x 4 x i1> %mask)
   ret void
 }
+
+; Test masked.gather/scatter.
+declare <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr>, i32, <vscale x 4 x i1>, <vscale x 4 x float>)
+declare void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float>, <vscale x 4 x ptr>, i32, <vscale x 4 x i1>)
+
+define <vscale x 4 x float> @scalable.gather.nxv4f32(<vscale x 4 x ptr> %vp, <vscale x 4 x i1> %mask, i32 %evl) sanitize_address {
+; CHECK-LABEL: @scalable.gather.nxv4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[IV_NEXT:%.*]], [[TMP7:%.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 4 x ptr> [[VP:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
+; CHECK-NEXT:    call void @__asan_load4(i64 [[TMP6]])
+; CHECK-NEXT:    br label [[TMP7]]
+; CHECK:       7:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[VP]], i32 4, <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> undef)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+; DISABLED-LABEL: @scalable.gather.nxv4f32(
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> [[VP:%.*]], i32 4, <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x float> undef)
+; DISABLED-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+  %res = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr>  %vp, i32 4, <vscale x 4 x i1> %mask, <vscale x 4 x float> undef)
+  ret <vscale x 4 x float> %res
+}
+
+define void @scalable.scatter.nxv4f32(<vscale x 4 x float> %val, <vscale x 4 x ptr> %vp, <vscale x 4 x i1> %mask, i32 %evl) sanitize_address {
+; CHECK-LABEL: @scalable.scatter.nxv4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[IV_NEXT:%.*]], [[TMP7:%.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <vscale x 4 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 4 x ptr> [[VP:%.*]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[TMP5]] to i64
+; CHECK-NEXT:    call void @__asan_store4(i64 [[TMP6]])
+; CHECK-NEXT:    br label [[TMP7]]
+; CHECK:       7:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP2]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> [[VP]], i32 4, <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    ret void
+;
+; DISABLED-LABEL: @scalable.scatter.nxv4f32(
+; DISABLED-NEXT:    tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> [[VAL:%.*]], <vscale x 4 x ptr> [[VP:%.*]], i32 4, <vscale x 4 x i1> [[MASK:%.*]])
+; DISABLED-NEXT:    ret void
+;
+  tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> %val, <vscale x 4 x ptr>  %vp, i32 4, <vscale x 4 x i1> %mask)
+  ret void
+}

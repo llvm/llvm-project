@@ -19,6 +19,7 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -178,7 +179,10 @@ public:
           unsigned Other = S->getOther() << 2;
           if ((Other & ELF::STO_PPC64_LOCAL_MASK) != 0)
             return true;
-        }
+        } else if (const auto *S = dyn_cast<MCSymbolXCOFF>(&A->getSymbol())) {
+          return !Target.isAbsolute() && S->isExternal() &&
+                 S->getStorageClass() == XCOFF::C_WEAKEXT;
+       }
       }
       return false;
     }

@@ -613,6 +613,14 @@ void tempTest() {
   }
 }
 
+void lifeTimeExtendTest() {
+  A&& a = A{};
+  A b = std::move(a); // peaceful-note {{Object is moved}}
+
+  a.foo(); // peaceful-warning {{Method called on moved-from object}}
+           // peaceful-note@-1 {{Method called on moved-from object}}
+}
+
 void interFunTest1(A &a) {
   a.bar(); // peaceful-warning {{Method called on moved-from object 'a'}}
            // peaceful-note@-1 {{Method called on moved-from object 'a'}}

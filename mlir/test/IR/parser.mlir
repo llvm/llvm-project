@@ -1,4 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | FileCheck %s -check-prefix GENERIC
+// RUN: mlir-opt -allow-unregistered-dialect %s | mlir-opt -allow-unregistered-dialect -mlir-print-op-generic | FileCheck %s -check-prefix GENERIC
 
 // CHECK-DAG: #map{{[0-9]*}} = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
 #map = affine_map<(d0, d1, d2, d3, d4)[s0] -> (d0, d1, d2, d4, d3)>
@@ -1128,10 +1131,10 @@ func.func @special_float_values_in_tensors() {
 // Test parsing of an op with multiple region arguments, and without a
 // delimiter.
 
-// CHECK-LABEL: func @op_with_region_args
+// GENERIC-LABEL: op_with_region_args
 func.func @op_with_region_args() {
-  // CHECK: "test.polyfor"() ({
-  // CHECK-NEXT: ^bb{{.*}}(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
+  // GENERIC: "test.polyfor"() ({
+  // GENERIC-NEXT: ^bb{{.*}}(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index):
   test.polyfor %i, %j, %k {
     "foo"() : () -> ()
   }
@@ -1185,9 +1188,9 @@ func.func @parse_wrapped_keyword_test() {
   return
 }
 
-// CHECK-LABEL: func @parse_base64_test
+// GENERIC-LABEL: parse_base64_test
 func.func @parse_base64_test() {
-  // CHECK: test.parse_b64 "hello world"
+  // GENERIC: "test.parse_b64"() <{b64 = "hello world"}>
   test.parse_b64 "aGVsbG8gd29ybGQ="
   return
 }

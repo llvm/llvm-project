@@ -332,10 +332,6 @@ void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
   return;
 }
 
-void AMDGPUInstPrinter::printSWZ(const MCInst *MI, unsigned OpNo,
-                                 const MCSubtargetInfo &STI, raw_ostream &O) {
-}
-
 void AMDGPUInstPrinter::printTFE(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
   printNamedBit(MI, OpNo, O, "tfe");

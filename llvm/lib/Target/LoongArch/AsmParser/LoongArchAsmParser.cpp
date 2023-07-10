@@ -51,10 +51,6 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  ParseStatus parseDirective(AsmToken DirectiveID) override {
-    return ParseStatus::NoMatch;
-  }
-
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,

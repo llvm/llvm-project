@@ -14,6 +14,9 @@ from typing import List, Optional, Sequence, Union, overload
 IntOrAttrList = Sequence[Union[IntegerAttr, int]]
 OptionalIntList = Optional[Union[ArrayAttr, IntOrAttrList]]
 
+BoolOrAttrList = Sequence[Union[BoolAttr, bool]]
+OptionalBoolList = Optional[Union[ArrayAttr, BoolOrAttrList]]
+
 
 def _get_int_int_array_attr(
     values: Optional[Union[ArrayAttr, Sequence[Union[ArrayAttr, IntOrAttrList]]]]
@@ -226,6 +229,7 @@ class TileOp:
             Union[Sequence[Union[int, IntegerAttr, Operation, Value]], ArrayAttr]
         ] = None,
         interchange: OptionalIntList = None,
+        scalable_sizes: OptionalBoolList = None,
         loc=None,
         ip=None,
     ):
@@ -240,6 +244,7 @@ class TileOp:
             Union[Sequence[Union[int, IntegerAttr, Operation, Value]], ArrayAttr]
         ] = None,
         interchange: OptionalIntList = None,
+        scalable_sizes: OptionalBoolList = None,
         loc=None,
         ip=None,
     ):
@@ -254,6 +259,7 @@ class TileOp:
             Union[Sequence[Union[int, IntegerAttr, Operation, Value]], ArrayAttr]
         ] = None,
         interchange: OptionalIntList = None,
+        scalable_sizes: OptionalBoolList = None,
         loc=None,
         ip=None,
     ):
@@ -261,6 +267,8 @@ class TileOp:
             interchange = []
         if sizes is None:
             sizes = []
+        if scalable_sizes is None:
+            scalable_sizes = []
 
         static_sizes = []
         dynamic_sizes = []
@@ -298,6 +306,7 @@ class TileOp:
             dynamic_sizes=dynamic_sizes,
             static_sizes=sizes_attr,
             interchange=interchange,
+            scalable_sizes=scalable_sizes,
             loc=loc,
             ip=ip,
         )
