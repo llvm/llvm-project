@@ -2038,6 +2038,7 @@ struct AANoUnwindImpl : AANoUnwind {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoUnwind>(
         A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+    (void)IsKnown;
   }
 
   const std::string getAsStr(Attributor *A) const override {
@@ -2422,6 +2423,7 @@ struct AANoSyncImpl : AANoSync {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoSync>(A, nullptr, getIRPosition(),
                                                     DepClassTy::NONE, IsKnown));
+    (void)IsKnown;
   }
 
   const std::string getAsStr(Attributor *A) const override {
@@ -2502,6 +2504,7 @@ struct AANoFreeImpl : public AANoFree {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoFree>(A, nullptr, getIRPosition(),
                                                     DepClassTy::NONE, IsKnown));
+    (void)IsKnown;
   }
 
   /// See AbstractAttribute::updateImpl(...).
@@ -2939,6 +2942,7 @@ struct AAMustProgressImpl : public AAMustProgress {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::MustProgress>(
         A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+    (void)IsKnown;
   }
 
   /// See AbstractAttribute::getAsStr()
@@ -3021,6 +3025,7 @@ struct AANoRecurseImpl : public AANoRecurse {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoRecurse>(
         A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+    (void)IsKnown;
   }
 
   /// See AbstractAttribute::getAsStr()
@@ -3528,6 +3533,7 @@ struct AAWillReturnImpl : public AAWillReturn {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::WillReturn>(
         A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+    (void)IsKnown;
   }
 
   /// Check for `mustprogress` and `readonly` as they imply `willreturn`.
@@ -5659,6 +5665,7 @@ struct AANoReturnImpl : public AANoReturn {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoReturn>(
         A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+    (void)IsKnown;
   }
 
   /// See AbstractAttribute::getAsStr().
@@ -5992,6 +5999,7 @@ struct AANoCaptureImpl : public AANoCapture {
     bool IsKnown;
     assert(!AA::hasAssumedIRAttr<Attribute::NoCapture>(
         A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+    (void)IsKnown;
   }
 
   /// See AbstractAttribute::updateImpl(...).
