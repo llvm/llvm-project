@@ -46,6 +46,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include <map>
 #include <optional>
 #include <set>
@@ -2438,13 +2439,12 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
 }
 
 bool Sema::CheckImmediateEscalatingFunctionDefinition(
-    FunctionDecl *FD, bool HasImmediateEscalatingExpression) {
-  if (!FD->hasBody() || !getLangOpts().CPlusPlus20 ||
-      !FD->isImmediateEscalating())
+    FunctionDecl *FD, const sema::FunctionScopeInfo *FSI) {
+  if (!getLangOpts().CPlusPlus20 || !FD->isImmediateEscalating())
     return true;
   FD->setBodyContainsImmediateEscalatingExpressions(
-      HasImmediateEscalatingExpression);
-  if (HasImmediateEscalatingExpression) {
+      FSI->FoundImmediateEscalatingExpression);
+  if (FSI->FoundImmediateEscalatingExpression) {
     auto it = UndefinedButUsed.find(FD->getCanonicalDecl());
     if (it != UndefinedButUsed.end()) {
       Diag(it->second, diag::err_immediate_function_used_before_definition)
@@ -2458,65 +2458,92 @@ bool Sema::CheckImmediateEscalatingFunctionDefinition(
   return true;
 }
 
-void Sema::DiagnoseImmediateEscalatingReason(const FunctionDecl *FD) {
+void Sema::DiagnoseImmediateEscalatingReason(FunctionDecl *FD) {
   assert(FD->isImmediateEscalating() && !FD->isConsteval() &&
          "expected an immediate function");
   assert(FD->hasBody() && "expected the function to have a body");
   struct ImmediateEscalatingExpressionsVisitor
       : public RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor> {
+
     using Base = RecursiveASTVisitor<ImmediateEscalatingExpressionsVisitor>;
     Sema &SemaRef;
-    const FunctionDecl *FD;
-    ImmediateEscalatingExpressionsVisitor(Sema &SemaRef, const FunctionDecl *FD)
-        : SemaRef(SemaRef), FD(FD) {}
+
+    const FunctionDecl *ImmediateFn;
+    bool ImmediateFnIsConstructor;
+    CXXConstructorDecl *CurrentConstructor = nullptr;
+    CXXCtorInitializer *CurrentInit = nullptr;
+
+    ImmediateEscalatingExpressionsVisitor(Sema &SemaRef, FunctionDecl *FD)
+        : SemaRef(SemaRef), ImmediateFn(FD),
+          ImmediateFnIsConstructor(isa<CXXConstructorDecl>(FD)) {}
 
     bool shouldVisitImplicitCode() const { return true; }
     bool shouldVisitLambdaBody() const { return false; }
 
+    void Diag(const Expr *E, const FunctionDecl *Fn, bool IsCall) {
+      SourceLocation Loc = E->getBeginLoc();
+      SourceRange Range = E->getSourceRange();
+      if (CurrentConstructor && CurrentInit) {
+        Loc = CurrentConstructor->getLocation();
+        Range = CurrentInit->isWritten() ? CurrentInit->getSourceRange()
+                                         : SourceRange();
+      }
+      SemaRef.Diag(Loc, diag::note_immediate_function_reason)
+          << ImmediateFn << Fn << Fn->isConsteval() << IsCall
+          << isa<CXXConstructorDecl>(Fn) << ImmediateFnIsConstructor
+          << (CurrentInit != nullptr)
+          << (CurrentInit && !CurrentInit->isWritten())
+          << (CurrentInit ? CurrentInit->getAnyMember() : nullptr) << Range;
+    }
     bool TraverseCallExpr(CallExpr *E) {
       if (const auto *DR =
               dyn_cast<DeclRefExpr>(E->getCallee()->IgnoreImplicit());
           DR && DR->isImmediateEscalating()) {
-        SemaRef.Diag(E->getBeginLoc(), diag::note_immediate_function_reason)
-            << FD << E->getDirectCallee() << E->getDirectCallee()->isConsteval()
-            << /*Call*/ 1 << /*Function*/ 0 << E->getSourceRange();
+        Diag(E, E->getDirectCallee(), /*IsCall=*/true);
+        return false;
       }
-      for (auto A : E->arguments()) {
-        getDerived().TraverseStmt(A);
-      }
+
+      for (Expr *A : E->arguments())
+        if (!getDerived().TraverseStmt(A))
+          return false;
+
       return true;
     }
+
     bool VisitDeclRefExpr(DeclRefExpr *E) {
       if (const auto *ReferencedFn = dyn_cast<FunctionDecl>(E->getDecl());
           ReferencedFn && E->isImmediateEscalating()) {
-        SemaRef.Diag(E->getBeginLoc(), diag::note_immediate_function_reason)
-            << FD << ReferencedFn << ReferencedFn->isConsteval()
-            << /*Address*/ 0 << /*Function*/ 0 << E->getSourceRange();
+        Diag(E, ReferencedFn, /*IsCall=*/false);
+        return false;
       }
+
       return true;
     }
+
     bool VisitCXXConstructExpr(CXXConstructExpr *E) {
       CXXConstructorDecl *D = E->getConstructor();
       if (E->isImmediateEscalating()) {
-        SemaRef.Diag(E->getBeginLoc(), diag::note_immediate_function_reason)
-            << FD << D << D->isConsteval() << /*Call*/ 1 << /*Constructor*/ 1
-            << E->getSourceRange();
+        Diag(E, D, /*IsCall=*/true);
+        return false;
       }
       return true;
     }
 
-    // These nodes can never contain an immediate escalating expression,
-    // we can skip them to avoid unecessary work.
-    bool TraverseDecl(Decl *D) {
-      if (isa<FunctionDecl, RecordDecl>(D))
-        return true;
-      return Base::TraverseDecl(D);
+    bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+      llvm::SaveAndRestore RAII(CurrentInit, Init);
+      return Base::TraverseConstructorInitializer(Init);
     }
+
+    bool TraverseCXXConstructorDecl(CXXConstructorDecl *Ctr) {
+      llvm::SaveAndRestore RAII(CurrentConstructor, Ctr);
+      return Base::TraverseCXXConstructorDecl(Ctr);
+    }
+
     bool TraverseType(QualType T) { return true; }
     bool VisitBlockExpr(BlockExpr *T) { return true; }
 
   } Visitor(*this, FD);
-  Visitor.TraverseStmt(FD->getBody());
+  Visitor.TraverseDecl(FD);
 }
 
 /// Get the class that is directly named by the current context. This is the

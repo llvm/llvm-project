@@ -6084,17 +6084,11 @@ struct ImmediateCallVisitor : public RecursiveASTVisitor<ImmediateCallVisitor> {
   ImmediateCallVisitor(const ASTContext &Ctx) : Context(Ctx) {}
 
   bool HasImmediateCalls = false;
-  bool IsImmediateInvocation = false;
-
   bool shouldVisitImplicitCode() const { return true; }
 
   bool VisitCallExpr(CallExpr *E) {
-    if (const FunctionDecl *FD = E->getDirectCallee()) {
+    if (const FunctionDecl *FD = E->getDirectCallee())
       HasImmediateCalls |= FD->isImmediateFunction();
-      if (FD->isConsteval() && !E->isCXX11ConstantExpr(Context))
-        IsImmediateInvocation = true;
-    }
-
     return RecursiveASTVisitor<ImmediateCallVisitor>::VisitStmt(E);
   }
 
@@ -6224,6 +6218,8 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   if (Field->isInvalidDecl())
     return ExprError();
 
+  CXXThisScopeRAII This(*this, Field->getParent(), Qualifiers());
+
   auto *ParentRD = cast<CXXRecordDecl>(Field->getParent());
 
   std::optional<ExpressionEvaluationContextRecord::InitializationContext>
@@ -6271,13 +6267,6 @@ ExprResult Sema::BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field) {
   if (!NestedDefaultChecking)
     V.TraverseDecl(Field);
   if (V.HasImmediateCalls) {
-    // C++23 [expr.const]/p15
-    // An aggregate initialization is an immediate invocation
-    // if it evaluates a default member initializer that has a subexpression
-    // that is an immediate-escalating expression.
-    ExprEvalContexts.back().InImmediateFunctionContext |=
-        V.IsImmediateInvocation;
-
     ExprEvalContexts.back().DelayedDefaultInitializationContext = {Loc, Field,
                                                                    CurContext};
     ExprEvalContexts.back().IsCurrentlyCheckingDefaultArgumentOrInitializer =
@@ -18445,7 +18434,12 @@ HandleImmediateInvocations(Sema &SemaRef,
     if (!CE.getInt())
       EvaluateAndDiagnoseImmediateInvocation(SemaRef, CE);
   for (auto *DR : Rec.ReferenceToConsteval) {
-    const auto *FD = cast<FunctionDecl>(DR->getDecl());
+    // If the expression is immediate escalating, it is not an error;
+    // The outer context itself becomes immediate and further errors,
+    // if any, will be handled by DiagnoseImmediateEscalatingReason.
+    if (DR->isImmediateEscalating())
+      continue;
+    auto *FD = cast<FunctionDecl>(DR->getDecl());
     const NamedDecl *ND = FD;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(ND);
         MD && (MD->isLambdaStaticInvoker() || isLambdaCallOperator(MD)))
@@ -18470,8 +18464,15 @@ HandleImmediateInvocations(Sema &SemaRef,
       SemaRef.Diag(DR->getBeginLoc(), diag::err_invalid_consteval_take_address)
           << ND << isa<CXXRecordDecl>(ND) << FD->isConsteval();
       SemaRef.Diag(ND->getLocation(), diag::note_declared_at);
+      if (auto Context =
+              SemaRef.InnermostDeclarationWithDelayedImmediateInvocations()) {
+        SemaRef.Diag(Context->Loc, diag::note_invalid_consteval_initializer)
+            << Context->Decl;
+        SemaRef.Diag(Context->Decl->getBeginLoc(), diag::note_declared_at);
+      }
       if (FD->isImmediateEscalating() && !FD->isConsteval())
         SemaRef.DiagnoseImmediateEscalatingReason(FD);
+
     } else {
       SemaRef.MarkExpressionAsImmediateEscalating(DR);
     }
@@ -18920,6 +18921,12 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   // or of another default member initializer (ie a PotentiallyEvaluatedIfUsed
   // context), its initializers may not be referenced yet.
   if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(Func)) {
+    EnterExpressionEvaluationContext EvalContext(
+        *this,
+        Constructor->isImmediateFunction()
+            ? ExpressionEvaluationContext::ImmediateFunctionContext
+            : ExpressionEvaluationContext::PotentiallyEvaluated,
+        Constructor);
     for (CXXCtorInitializer *Init : Constructor->inits()) {
       if (Init->isInClassMemberInitializer())
         runWithSufficientStackSpace(Init->getSourceLocation(), [&]() {

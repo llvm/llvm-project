@@ -2685,7 +2685,8 @@ def err_immediate_function_used_before_definition : Error<
   "immediate function %0 used before it is defined">;
 
 def note_immediate_function_reason : Note<
-  "%0 is an immediate function because its body "
+  "%0 is an immediate %select{function|constructor}5 because "
+  "%select{its body|the%select{| default}7 initializer of %8}6 "
   "%select{evaluates the address of %select{an immediate|a consteval}2 "
   "function %1|contains a call to %select{an immediate|a consteval}2 "
   "%select{function|constructor}4 %1 and that call is not a constant "

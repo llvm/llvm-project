@@ -4438,13 +4438,10 @@ llvm::Constant *CodeGenModule::GetOrCreateLLVMFunction(
 /// GetAddrOfFunction - Return the address of the given function.  If Ty is
 /// non-null, then this function will use the specified type if it has to
 /// create it (this occurs when we see a definition of the function).
-llvm::Constant *CodeGenModule::GetAddrOfFunction(GlobalDecl GD,
-                                                 llvm::Type *Ty,
-                                                 bool ForVTable,
-                                                 bool DontDefer,
-                                              ForDefinition_t IsForDefinition) {
-  assert(!cast<FunctionDecl>(GD.getDecl())->isImmediateFunction() &&
-         "an immediate function should never be emitted");
+llvm::Constant *
+CodeGenModule::GetAddrOfFunction(GlobalDecl GD, llvm::Type *Ty, bool ForVTable,
+                                 bool DontDefer,
+                                 ForDefinition_t IsForDefinition) {
   // If there was no specific requested type, just convert it now.
   if (!Ty) {
     const auto *FD = cast<FunctionDecl>(GD.getDecl());
