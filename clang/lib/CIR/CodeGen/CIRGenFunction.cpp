@@ -13,6 +13,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenCXXABI.h"
 #include "CIRGenModule.h"
+#include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/ExprObjC.h"
@@ -1237,7 +1238,28 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   if (OldFPFeatures == FPFeatures)
     return;
 
-  llvm_unreachable("NYI");
+  // TODO(cir): create guard to restore fast math configurations.
+  assert(!UnimplementedFeature::fastMathGuard());
+
+  llvm::RoundingMode NewRoundingBehavior = FPFeatures.getRoundingMode();
+  // TODO(cir): override rounding behaviour once FM configs are guarded.
+  auto NewExceptionBehavior =
+      ToConstrainedExceptMD(static_cast<LangOptions::FPExceptionModeKind>(
+          FPFeatures.getExceptionMode()));
+  // TODO(cir): override exception behaviour once FM configs are guarded.
+
+  // TODO(cir): override FP flags once FM configs are guarded.
+  assert(!UnimplementedFeature::fastMathFlags());
+
+  assert((CGF.CurFuncDecl == nullptr || CGF.builder.getIsFPConstrained() ||
+          isa<CXXConstructorDecl>(CGF.CurFuncDecl) ||
+          isa<CXXDestructorDecl>(CGF.CurFuncDecl) ||
+          (NewExceptionBehavior == fp::ebIgnore &&
+           NewRoundingBehavior == llvm::RoundingMode::NearestTiesToEven)) &&
+         "FPConstrained should be enabled on entire function");
+
+  // TODO(cir): mark CIR function with fast math attributes.
+  assert(!UnimplementedFeature::fastMathFuncAttributes());
 }
 
 CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {

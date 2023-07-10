@@ -100,3 +100,14 @@ void b3(int a, int b, int c, int d) {
 // CHECK-NEXT:      %14 = cir.load %3
 // CHECK-NEXT:      %15 = cir.cmp(eq, %13, %14)
 // CHECK-NEXT:      %16 = cir.ternary(%15, true
+
+void testFloatingPointBinOps(float a, float b) {
+  a * b;
+  // CHECK: cir.binop(mul, %{{.+}}, %{{.+}}) : f32
+  a / b;
+  // CHECK: cir.binop(div, %{{.+}}, %{{.+}}) : f32
+  a + b;
+  // CHECK: cir.binop(add, %{{.+}}, %{{.+}}) : f32
+  a - b;
+  // CHECK: cir.binop(sub, %{{.+}}, %{{.+}}) : f32
+}

@@ -380,6 +380,16 @@ public:
                                      mlir::cir::CastKind::floating, v);
   }
 
+  mlir::Value createFSub(mlir::Value lhs, mlir::Value rhs) {
+    assert(!UnimplementedFeature::metaDataNode());
+    if (IsFPConstrained)
+      llvm_unreachable("Constrained FP NYI");
+
+    assert(!UnimplementedFeature::foldBinOpFMF());
+    return create<mlir::cir::BinOp>(lhs.getLoc(), mlir::cir::BinOpKind::Sub,
+                                    lhs, rhs);
+  }
+
   mlir::Value createPtrToBoolCast(mlir::Value v) {
     return create<mlir::cir::CastOp>(v.getLoc(), getBoolTy(),
                                      mlir::cir::CastKind::ptr_to_bool, v);
