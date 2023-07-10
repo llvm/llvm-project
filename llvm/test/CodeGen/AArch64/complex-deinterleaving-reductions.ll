@@ -236,4 +236,31 @@ middle.block:                                     ; preds = %vector.body
   %.fca.0.1.insert = insertvalue %"struct.std::complex" %.fca.0.0.insert, double %18, 0, 1
   ret %"struct.std::complex" %.fca.0.1.insert
 }
+
+; The reduced bug from D153355. Shows that reduction was detected where it did not exist.
+define void @incorrect_reduction_pattern(i1 %exitcond.not) {
+; CHECK-LABEL: incorrect_reduction_pattern:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:  .LBB3_1: // %for.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    tbz w0, #0, .LBB3_1
+; CHECK-NEXT:  // %bb.2: // %for.end.loopexit
+; CHECK-NEXT:    ret
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %entry
+  %vec_r = phi <4 x float> [ zeroinitializer, %entry ], [ %lane_r, %for.body ]
+  %vec_i = phi <4 x float> [ zeroinitializer, %entry ], [ %lane_i, %for.body ]
+  %add = fadd <4 x float> %vec_r, %vec_i
+  %lane_r = shufflevector <4 x float> <float 1.000000e+00, float undef, float undef, float undef>, <4 x float> zeroinitializer, <4 x i32> zeroinitializer
+  %lane_i = shufflevector <4 x float> <float 1.000000e+00, float undef, float undef, float undef>, <4 x float> zeroinitializer, <4 x i32> zeroinitializer
+  br i1 %exitcond.not, label %for.end.loopexit, label %for.body
+
+for.end.loopexit:                                 ; preds = %for.body
+  %mul.r = fadd <4 x float> %lane_r, %add
+  %mul.i = fadd <4 x float> %lane_i, %add
+  ret void
+}
+
 declare double @llvm.vector.reduce.fadd.v2f64(double, <2 x double>)
