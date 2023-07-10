@@ -13,6 +13,10 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_COOPERATIVE_MATRIX_OPS
 #define MLIR_DIALECT_SPIRV_IR_COOPERATIVE_MATRIX_OPS
 
+//===----------------------------------------------------------------------===//
+// SPV_NV_cooperative_matrix extension ops.
+//===----------------------------------------------------------------------===//
+
 // -----
 
 def SPIRV_NVCooperativeMatrixLengthOp : SPIRV_NvVendorOp<"CooperativeMatrixLength",
@@ -35,7 +39,7 @@ def SPIRV_NVCooperativeMatrixLengthOp : SPIRV_NvVendorOp<"CooperativeMatrixLengt
     For example:
 
     ```
-    %0 = spirv.NV.CooperativeMatrixLength : !spirv.coopmatrix<Subgroup, i32, 8, 16>
+    %0 = spirv.NV.CooperativeMatrixLength : !spirv.NV.coopmatrix<Subgroup, i32, 8, 16>
     ```
   }];
 
@@ -111,7 +115,7 @@ def SPIRV_NVCooperativeMatrixLoadOp : SPIRV_NvVendorOp<"CooperativeMatrixLoad", 
 
     ```
     %0 = spirv.NV.CooperativeMatrixLoad %ptr, %stride, %colMajor
-         : !spirv.ptr<i32, StorageBuffer> as !spirv.coopmatrix<i32, Workgroup, 16, 8>
+         : !spirv.ptr<i32, StorageBuffer> as !spirv.NV.coopmatrix<i32, Workgroup, 16, 8>
     ```
   }];
 
@@ -130,7 +134,7 @@ def SPIRV_NVCooperativeMatrixLoadOp : SPIRV_NvVendorOp<"CooperativeMatrixLoad", 
   );
 
   let results = (outs
-    SPIRV_AnyCooperativeMatrix:$result
+    SPIRV_AnyCooperativeMatrixNV:$result
   );
 }
 
@@ -182,7 +186,7 @@ def SPIRV_NVCooperativeMatrixMulAddOp : SPIRV_NvVendorOp<"CooperativeMatrixMulAd
 
     ```
     %0 = spirv.NV.CooperativeMatrixMulAdd %arg0, %arg1, %arg2,  :
-      !spirv.coopmatrix<Subgroup, i32, 8, 16>
+      !spirv.NV.coopmatrix<Subgroup, i32, 8, 16>
     ```
   }];
 
@@ -198,13 +202,13 @@ def SPIRV_NVCooperativeMatrixMulAddOp : SPIRV_NvVendorOp<"CooperativeMatrixMulAd
   ];
 
   let arguments = (ins
-    SPIRV_AnyCooperativeMatrix:$a,
-    SPIRV_AnyCooperativeMatrix:$b,
-    SPIRV_AnyCooperativeMatrix:$c
+    SPIRV_AnyCooperativeMatrixNV:$a,
+    SPIRV_AnyCooperativeMatrixNV:$b,
+    SPIRV_AnyCooperativeMatrixNV:$c
   );
 
   let results = (outs
-    SPIRV_AnyCooperativeMatrix:$result
+    SPIRV_AnyCooperativeMatrixNV:$result
   );
 }
 
@@ -247,7 +251,7 @@ def SPIRV_NVCooperativeMatrixStoreOp : SPIRV_NvVendorOp<"CooperativeMatrixStore"
 
     ```
       spirv.NV.CooperativeMatrixStore %arg0, %arg2, %arg1, %arg3 :
-        !spirv.ptr<i32, StorageBuffer>, !spirv.coopmatrix<Workgroup, i32, 16, 8>
+        !spirv.ptr<i32, StorageBuffer>, !spirv.NV.coopmatrix<Workgroup, i32, 16, 8>
     ```
   }];
 
@@ -260,7 +264,7 @@ def SPIRV_NVCooperativeMatrixStoreOp : SPIRV_NvVendorOp<"CooperativeMatrixStore"
 
   let arguments = (ins
     SPIRV_AnyPtr:$pointer,
-    SPIRV_AnyCooperativeMatrix:$object,
+    SPIRV_AnyCooperativeMatrixNV:$object,
     SPIRV_Integer:$stride,
     SPIRV_Bool:$columnmajor,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access
