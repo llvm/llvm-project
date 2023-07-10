@@ -781,7 +781,7 @@ def err_module_odr_violation_field : Error<
   "%select{non-|}5bitfield %4|"
   "bitfield %4 with one width expression|"
   "%select{non-|}5mutable field %4|"
-  "field %4 with %select{no|an}5 initalizer|"
+  "field %4 with %select{no|an}5 initializer|"
   "field %4 with an initializer"
   "}3">;
 def note_module_odr_violation_field : Note<
