@@ -123,6 +123,9 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
   // returns false to avoid storing unneeded values in `DACtx`.
   // FIXME: Creating the value based on the type alone creates misshapen values
   // for lvalues, since the type does not reflect the need for `ReferenceValue`.
+  // This issue will be resolved when `ReferenceValue` is eliminated as part
+  // of the ongoing migration to strict handling of value categories (see
+  // https://discourse.llvm.org/t/70086 for details).
   if (Value *MergedVal = MergedEnv.createValue(Type))
     if (Model.merge(Type, Val1, Env1, Val2, Env2, *MergedVal, MergedEnv))
       return MergedVal;
