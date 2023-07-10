@@ -195,7 +195,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
 
 CIRGenModule::~CIRGenModule() {}
 
-bool CIRGenModule::isTypeConstant(QualType Ty, bool ExcludeCtor) {
+bool CIRGenModule::isTypeConstant(QualType Ty, bool ExcludeCtor, bool ExcludeDtor) {
   if (!Ty.isConstant(astCtx) && !Ty->isReferenceType())
     return false;
 
@@ -203,7 +203,7 @@ bool CIRGenModule::isTypeConstant(QualType Ty, bool ExcludeCtor) {
     if (const CXXRecordDecl *Record =
             astCtx.getBaseElementType(Ty)->getAsCXXRecordDecl())
       return ExcludeCtor && !Record->hasMutableFields() &&
-             Record->hasTrivialDestructor();
+             (Record->hasTrivialDestructor() || ExcludeDtor);
   }
 
   return true;

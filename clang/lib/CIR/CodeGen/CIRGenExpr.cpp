@@ -41,7 +41,7 @@ static mlir::cir::FuncOp buildFunctionDeclPointer(CIRGenModule &CGM,
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
 
   if (FD->hasAttr<WeakRefAttr>()) {
-    mlir::Operation* aliasee = CGM.getWeakRefReference(FD);
+    mlir::Operation *aliasee = CGM.getWeakRefReference(FD);
     return dyn_cast<FuncOp>(aliasee);
   }
 
@@ -641,10 +641,17 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
     // Otherwise, it might be static local we haven't emitted yet for some
     // reason; most likely, because it's in an outer function.
     else if (VD->isStaticLocal()) {
-      llvm_unreachable("NYI");
+      mlir::cir::GlobalOp var = CGM.getOrCreateStaticVarDecl(
+          *VD, CGM.getCIRLinkageVarDefinition(VD, /*IsConstant=*/false));
+      addr = Address(builder.createGetGlobal(var), convertType(VD->getType()),
+                     getContext().getDeclAlign(VD));
     } else {
       llvm_unreachable("DeclRefExpr for decl not entered in LocalDeclMap?");
     }
+
+    // Handle threadlocal function locals.
+    if (VD->getTLSKind() != VarDecl::TLS_None)
+      llvm_unreachable("thread-local storage is NYI");
 
     // Check for OpenMP threadprivate variables.
     if (getLangOpts().OpenMP && !getLangOpts().OpenMPSimd &&
@@ -665,25 +672,30 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
                                          VD->getType(), AlignmentSource::Decl)
             : makeAddrLValue(addr, T, AlignmentSource::Decl);
 
-    assert(symbolTable.count(VD) && "should be already mapped");
+    // Statics are defined as globals, so they are not include in the function's
+    // symbol table.
+    assert((VD->isStaticLocal() || symbolTable.count(VD)) &&
+           "non-static locals should be already mapped");
 
     bool isLocalStorage = VD->hasLocalStorage();
 
     bool NonGCable =
         isLocalStorage && !VD->getType()->isReferenceType() && !isBlockByref;
 
-    if (NonGCable) {
-      // TODO: nongcable
+    if (NonGCable && UnimplementedFeature::setNonGC()) {
+      llvm_unreachable("garbage collection is NYI");
     }
 
     bool isImpreciseLifetime =
         (isLocalStorage && !VD->hasAttr<ObjCPreciseLifetimeAttr>());
-    if (isImpreciseLifetime)
-      ; // TODO: LV.setARCPreciseLifetime
-    // TODO: setObjCGCLValueClass(getContext(), E, LV);
+    if (isImpreciseLifetime && UnimplementedFeature::ARC())
+      llvm_unreachable("imprecise lifetime is NYI");
+    assert(!UnimplementedFeature::setObjCGCLValueClass());
 
-    mlir::Value V = symbolTable.lookup(VD);
-    assert(V && "Name lookup must succeed");
+    // Statics are defined as globals, so they are not include in the function's
+    // symbol table.
+    assert((VD->isStaticLocal() || symbolTable.lookup(VD)) &&
+           "Name lookup must succeed for non-static local variables");
 
     return LV;
   }
@@ -1605,7 +1617,7 @@ static Address createReferenceTemporary(CIRGenFunction &CGF,
     QualType Ty = Inner->getType();
     if (CGF.CGM.getCodeGenOpts().MergeAllConstants &&
         (Ty->isArrayType() || Ty->isRecordType()) &&
-        CGF.CGM.isTypeConstant(Ty, true))
+        CGF.CGM.isTypeConstant(Ty, /*ExcludeCtor=*/true, /*ExcludeDtor=*/false))
       assert(0 && "NYI");
     return CGF.CreateMemTemp(Ty, CGF.getLoc(M->getSourceRange()),
                              CGF.getCounterRefTmpAsString(), Alloca);

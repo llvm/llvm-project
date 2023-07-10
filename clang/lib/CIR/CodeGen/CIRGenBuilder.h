@@ -22,11 +22,14 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <string>
 
 namespace cir {
 
@@ -37,6 +40,8 @@ class CIRGenBuilderTy : public mlir::OpBuilder {
   bool IsFPConstrained = false;
   fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
   llvm::RoundingMode DefaultConstrainedRounding = llvm::RoundingMode::Dynamic;
+
+  llvm::StringMap<unsigned> GlobalsVersioning;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &C, const CIRGenTypeCache &tc)
@@ -461,6 +466,36 @@ public:
         create<mlir::cir::BaseClassAddrOp>(loc, ptrTy, addr.getPointer());
 
     return Address(baseAddr, ptrTy, addr.getAlignment());
+  }
+
+  // FIXME(cir): CIRGenBuilder class should have an attribute with a reference
+  // to the module so that we don't have search for it or pass it around.
+  // FIXME(cir): Track a list of globals, or at least the last one inserted, so
+  // that we can insert globals in the same order they are defined by CIRGen.
+
+  /// Creates a versioned global variable. If the symbol is already taken, an ID
+  /// will be appended to the symbol. The returned global must always be queried
+  /// for its name so it can be referenced correctly.
+  [[nodiscard]] mlir::cir::GlobalOp
+  createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
+                        mlir::StringRef name, mlir::Type type, bool isConst,
+                        mlir::cir::GlobalLinkageKind linkage) {
+    mlir::OpBuilder::InsertionGuard guard(*this);
+    setInsertionPointToStart(module.getBody());
+
+    // Create a unique name if the given name is already taken.
+    std::string uniqueName;
+    if (unsigned version = GlobalsVersioning[name.str()]++)
+      uniqueName = name.str() + "." + std::to_string(version);
+    else
+      uniqueName = name.str();
+
+    return create<mlir::cir::GlobalOp>(loc, uniqueName, type, isConst, linkage);
+  }
+
+  mlir::Value createGetGlobal(mlir::cir::GlobalOp global) {
+    return create<mlir::cir::GetGlobalOp>(
+        global.getLoc(), getPointerTo(global.getSymType()), global.getName());
   }
 
   /// Cast the element type of the given address to a different type,

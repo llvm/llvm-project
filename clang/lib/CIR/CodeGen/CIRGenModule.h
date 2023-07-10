@@ -27,6 +27,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "llvm/ADT/ScopedHashTable.h"
@@ -172,6 +173,7 @@ public:
   /// Tell the consumer that this variable has been instantiated.
   void HandleCXXStaticMemberVarInstantiation(VarDecl *VD);
 
+  llvm::DenseMap<const Decl *, mlir::cir::GlobalOp> StaticLocalDeclMap;
   llvm::DenseMap<StringRef, mlir::Value> Globals;
   mlir::Operation *getGlobalValue(StringRef Ref);
   mlir::Value getGlobalValue(const clang::Decl *D);
@@ -182,6 +184,18 @@ public:
   getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty, LangAS AddrSpace,
                        const VarDecl *D,
                        ForDefinition_t IsForDefinition = NotForDefinition);
+
+  mlir::cir::GlobalOp getStaticLocalDeclAddress(const VarDecl *D) {
+    return StaticLocalDeclMap[D];
+  }
+
+  void setStaticLocalDeclAddress(const VarDecl *D, mlir::cir::GlobalOp C) {
+    StaticLocalDeclMap[D] = C;
+  }
+
+  mlir::cir::GlobalOp
+  getOrCreateStaticVarDecl(const VarDecl &D,
+                              mlir::cir::GlobalLinkageKind Linkage);
 
   mlir::cir::GlobalOp buildGlobal(const VarDecl *D, mlir::Type Ty,
                                   ForDefinition_t IsForDefinition);
@@ -318,7 +332,7 @@ public:
   /// FIXME: in LLVM codegen path this is part of CGM, which doesn't seem
   /// like necessary, since (1) it doesn't use CGM at all and (2) is AST type
   /// query specific.
-  bool isTypeConstant(clang::QualType Ty, bool ExcludeCtor);
+  bool isTypeConstant(clang::QualType Ty, bool ExcludeCtor, bool ExcludeDtor);
 
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
@@ -529,7 +543,7 @@ public:
                                                  mlir::cir::FuncOp NewFn);
 
   void setExtraAttributesForFunc(mlir::cir::FuncOp f,
-                             const clang::FunctionDecl *FD);
+                                 const clang::FunctionDecl *FD);
 
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR
