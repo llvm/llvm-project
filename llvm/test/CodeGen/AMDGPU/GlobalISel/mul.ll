@@ -68,7 +68,6 @@ define i16 @v_mul_i16(i16 %num, i16 %den) {
 ; GFX10PLUS-LABEL: v_mul_i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -76,7 +75,6 @@ define i16 @v_mul_i16(i16 %num, i16 %den) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -152,7 +150,6 @@ define zeroext i16 @v_mul_i16_zeroext(i16 zeroext %num, i16 zeroext %den) {
 ; GFX10PLUS-LABEL: v_mul_i16_zeroext:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -161,7 +158,6 @@ define zeroext i16 @v_mul_i16_zeroext(i16 zeroext %num, i16 zeroext %den) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -243,7 +239,6 @@ define signext i16 @v_mul_i16_signext(i16 signext %num, i16 signext %den) {
 ; GFX10PLUS-LABEL: v_mul_i16_signext:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_mul_lo_u16 v0, v0, v1
 ; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -252,7 +247,6 @@ define signext i16 @v_mul_i16_signext(i16 signext %num, i16 signext %den) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -293,7 +287,6 @@ define i32 @v_mul_i32(i32 %num, i32 %den) {
 ; GFX10PLUS-LABEL: v_mul_i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -301,7 +294,6 @@ define i32 @v_mul_i32(i32 %num, i32 %den) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -344,7 +336,6 @@ define <2 x i32> @v_mul_v2i32(<2 x i32> %num, <2 x i32> %den) {
 ; GFX10PLUS-LABEL: v_mul_v2i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_mul_lo_u32 v0, v0, v2
 ; GFX10PLUS-NEXT:    v_mul_lo_u32 v1, v1, v3
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -353,7 +344,6 @@ define <2 x i32> @v_mul_v2i32(<2 x i32> %num, <2 x i32> %den) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -490,7 +480,6 @@ define i64 @v_mul_i64(i64 %num, i64 %den) {
 ; GFX10-LABEL: v_mul_i64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v5, v1
 ; GFX10-NEXT:    v_mad_u64_u32 v[0:1], s4, v4, v2, 0
@@ -502,7 +491,6 @@ define i64 @v_mul_i64(i64 %num, i64 %den) {
 ; GFX11-LABEL: v_mul_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v4, v2, 0
 ; GFX11-NEXT:    v_mul_lo_u32 v3, v4, v3
@@ -514,7 +502,6 @@ define i64 @v_mul_i64(i64 %num, i64 %den) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -665,7 +652,6 @@ define i96 @v_mul_i96(i96 %num, i96 %den) {
 ; GFX10-LABEL: v_mul_i96:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v7, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v2, v2, v3
@@ -680,7 +666,6 @@ define i96 @v_mul_i96(i96 %num, i96 %den) {
 ; GFX11-LABEL: v_mul_i96:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v6, v0 :: v_dual_mov_b32 v7, v1
 ; GFX11-NEXT:    v_mul_lo_u32 v2, v2, v3
 ; GFX11-NEXT:    v_mul_lo_u32 v5, v6, v5
@@ -695,7 +680,6 @@ define i96 @v_mul_i96(i96 %num, i96 %den) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -992,7 +976,6 @@ define i128 @v_mul_i128(i128 %num, i128 %den) {
 ; GFX10-LABEL: v_mul_i128:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v8, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v9, v1
 ; GFX10-NEXT:    v_mov_b32_e32 v10, v2
@@ -1015,7 +998,6 @@ define i128 @v_mul_i128(i128 %num, i128 %den) {
 ; GFX11-LABEL: v_mul_i128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v8, v0 :: v_dual_mov_b32 v9, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v10, v2
 ; GFX11-NEXT:    v_mul_lo_u32 v3, v3, v4
@@ -1038,7 +1020,6 @@ define i128 @v_mul_i128(i128 %num, i128 %den) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -2264,7 +2245,6 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX10-LABEL: v_mul_i256:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v16, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v17, v1
 ; GFX10-NEXT:    v_mul_lo_u32 v27, v6, v9
@@ -2336,7 +2316,6 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX11-LABEL: v_mul_i256:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v16, v0 :: v_dual_mov_b32 v17, v1
 ; GFX11-NEXT:    v_mul_lo_u32 v7, v7, v8
 ; GFX11-NEXT:    v_mul_lo_u32 v27, v6, v9
@@ -2408,7 +2387,6 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0

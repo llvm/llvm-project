@@ -12,7 +12,6 @@ body:             |
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: S_BARRIER
@@ -24,7 +23,6 @@ body:             |
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: S_WAITCNT 0
-    ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: S_BARRIER
@@ -50,7 +48,6 @@ body:             |
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 1
     ; GFX10-NEXT: S_BARRIER
@@ -62,7 +59,6 @@ body:             |
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: S_WAITCNT 0
-    ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: S_BARRIER
@@ -88,7 +84,6 @@ body:             |
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX10-NEXT: S_WAITCNT 112
     ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
@@ -101,7 +96,6 @@ body:             |
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: S_WAITCNT 0
-    ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX11-NEXT: S_WAITCNT 112
     ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
@@ -129,7 +123,6 @@ body:             |
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: S_BARRIER
@@ -141,7 +134,6 @@ body:             |
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: S_WAITCNT 0
-    ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: S_BARRIER
@@ -169,7 +161,6 @@ body:             |
     ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX10-NEXT: S_WAITCNT 0
     ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 1
@@ -182,7 +173,6 @@ body:             |
     ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: S_WAITCNT 0
-    ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
     ; GFX11-NEXT: S_WAITCNT 0
     ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0

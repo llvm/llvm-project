@@ -875,6 +875,11 @@ struct Waitcnt {
                     : Waitcnt(0, 0, 0, HasStorecnt ? 0 : ~0u);
   }
 
+  static Waitcnt allZeroExceptVsCnt(bool Extended) {
+    return Extended ? Waitcnt(0, 0, 0, ~0u, 0, 0, 0, 0, 0)
+                    : Waitcnt(0, 0, 0, ~0u);
+  }
+
   bool hasWait() const { return StoreCnt != ~0u || hasWaitExceptStoreCnt(); }
 
   bool hasWaitExceptStoreCnt() const {

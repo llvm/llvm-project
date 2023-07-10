@@ -7,7 +7,6 @@ define void @f(i32 %arg, ptr %ptr) {
 ; ISA-LABEL: f:
 ; ISA:       ; %bb.0: ; %bb
 ; ISA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; ISA-NEXT:    s_waitcnt_vscnt null, 0x0
 ; ISA-NEXT:    s_mov_b64 s[4:5], 0
 ; ISA-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 1, v0
 ; ISA-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
@@ -41,7 +40,6 @@ define void @f(i32 %arg, ptr %ptr) {
 ; ISA-NEXT:    s_or_b32 exec_lo, exec_lo, s4
 ; ISA-NEXT:    flat_store_dword v[1:2], v6
 ; ISA-NEXT:    s_waitcnt lgkmcnt(0)
-; ISA-NEXT:    s_waitcnt_vscnt null, 0x0
 ; ISA-NEXT:    s_setpc_b64 s[30:31]
   ; MIR-LABEL: name: f
   ; MIR: bb.0.bb:

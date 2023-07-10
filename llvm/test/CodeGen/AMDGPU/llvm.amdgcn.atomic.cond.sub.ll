@@ -6,7 +6,6 @@ define float @raw_buffer_atomic_cond_sub(<4 x i32> inreg %rsrc, i32 inreg %data)
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -43,7 +42,6 @@ define float @raw_buffer_atomic_cond_sub_imm_soff(<4 x i32> inreg %rsrc, i32 inr
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -81,7 +79,6 @@ define float @struct_buffer_atomic_cond_sub(<4 x i32> inreg %rsrc, i32 inreg %da
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -120,7 +117,6 @@ define float @struct_buffer_atomic_cond_sub_imm_soff(<4 x i32> inreg %rsrc, i32 
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0

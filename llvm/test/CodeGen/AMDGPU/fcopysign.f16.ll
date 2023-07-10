@@ -658,7 +658,6 @@ define half @v_copysign_f16(half %mag, half %sign) {
 ; GFX11-LABEL: v_copysign_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half %sign)
@@ -688,7 +687,6 @@ define half @v_test_copysign_f16_0(half %mag) {
 ; GFX11-LABEL: v_test_copysign_f16_0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half 0.0)
@@ -718,7 +716,6 @@ define half @v_test_copysign_f16_1(half %mag) {
 ; GFX11-LABEL: v_test_copysign_f16_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half 1.0)
@@ -748,7 +745,6 @@ define half @v_test_copysign_f16_10(half %mag) {
 ; GFX11-LABEL: v_test_copysign_f16_10:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x7fff, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half 10.0)
@@ -778,7 +774,6 @@ define half @v_test_copysign_f16_neg1(half %mag) {
 ; GFX11-LABEL: v_test_copysign_f16_neg1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_or_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half -1.0)
@@ -808,7 +803,6 @@ define half @v_test_copysign_f16_neg10(half %mag) {
 ; GFX11-LABEL: v_test_copysign_f16_neg10:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_or_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call half @llvm.copysign.f16(half %mag, half -10.0)

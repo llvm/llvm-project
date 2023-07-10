@@ -6,7 +6,6 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GCN-LABEL: vgpr_descriptor_waterfall_loop_idom_update:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    v_add_co_u32 v6, vcc_lo, v0, 8
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v1, vcc_lo
 ; GCN-NEXT:  .LBB0_1: ; %bb0
@@ -37,13 +36,11 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GCN-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GCN-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GCN-NEXT:  ; %bb.4: ; %DummyReturnBlock
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: vgpr_descriptor_waterfall_loop_idom_update:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB0_1: ; %bb0
 ; GFX11-NEXT:    ; =>This Loop Header: Depth=1
@@ -73,7 +70,6 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GFX11-NEXT:    s_mov_b32 vcc_lo, exec_lo
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB0_1
 ; GFX11-NEXT:  ; %bb.4: ; %DummyReturnBlock
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   br label %bb0

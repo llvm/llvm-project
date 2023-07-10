@@ -178,7 +178,6 @@ define void @test2_s_barrier_signal_var(i32 %arg) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_expcnt 0x0
-; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_bvhcnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -192,7 +191,6 @@ define void @test2_s_barrier_signal_var(i32 %arg) {
 ; GLOBAL-ISEL:       ; %bb.0:
 ; GLOBAL-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_expcnt 0x0
-; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_samplecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
@@ -418,7 +416,6 @@ define void @test2_s_barrier_signal_isfirst_var(i32 addrspace(1)* %a, i32 addrsp
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_expcnt 0x0
-; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_bvhcnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -439,7 +436,6 @@ define void @test2_s_barrier_signal_isfirst_var(i32 addrspace(1)* %a, i32 addrsp
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    v_mul_lo_u32 v0, v1, v0
 ; GCN-NEXT:    global_store_b32 v[7:8], v0, off
-; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -447,7 +443,6 @@ define void @test2_s_barrier_signal_isfirst_var(i32 addrspace(1)* %a, i32 addrsp
 ; GLOBAL-ISEL:       ; %bb.0:
 ; GLOBAL-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_expcnt 0x0
-; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_samplecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
@@ -470,7 +465,6 @@ define void @test2_s_barrier_signal_isfirst_var(i32 addrspace(1)* %a, i32 addrsp
 ; GLOBAL-ISEL-NEXT:    s_wait_loadcnt 0x0
 ; GLOBAL-ISEL-NEXT:    v_mul_lo_u32 v0, v1, v0
 ; GLOBAL-ISEL-NEXT:    global_store_b32 v[7:8], v0, off
-; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_setpc_b64 s[30:31]
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -660,7 +654,6 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_expcnt 0x0
-; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_bvhcnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -677,7 +670,6 @@ define void @test5_s_barrier_init_m0(i32 %arg1 ,i32 %arg2) {
 ; GLOBAL-ISEL:       ; %bb.0:
 ; GLOBAL-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_expcnt 0x0
-; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_samplecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
@@ -854,7 +846,6 @@ define void @test5_s_barrier_join_m0(i32 %arg) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_expcnt 0x0
-; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_bvhcnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -868,7 +859,6 @@ define void @test5_s_barrier_join_m0(i32 %arg) {
 ; GLOBAL-ISEL:       ; %bb.0:
 ; GLOBAL-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_expcnt 0x0
-; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_samplecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
@@ -1092,7 +1082,6 @@ define void @test5_s_wakeup_barrier_m0(i32 %arg) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_expcnt 0x0
-; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_bvhcnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -1106,7 +1095,6 @@ define void @test5_s_wakeup_barrier_m0(i32 %arg) {
 ; GLOBAL-ISEL:       ; %bb.0:
 ; GLOBAL-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_expcnt 0x0
-; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_samplecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0
@@ -1263,7 +1251,6 @@ define i32 @test5_s_get_barrier_state_m0(i32 %arg) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_expcnt 0x0
-; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_bvhcnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -1279,7 +1266,6 @@ define i32 @test5_s_get_barrier_state_m0(i32 %arg) {
 ; GLOBAL-ISEL:       ; %bb.0:
 ; GLOBAL-ISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_expcnt 0x0
-; GLOBAL-ISEL-NEXT:    s_wait_storecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_samplecnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GLOBAL-ISEL-NEXT:    s_wait_kmcnt 0x0

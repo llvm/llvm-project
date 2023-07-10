@@ -632,11 +632,6 @@ public:
     return false;
   }
 
-  AMDGPU::Waitcnt allZeroWaitcnt() const {
-    return AMDGPU::Waitcnt::allZero(ST->hasExtendedWaitCounts(),
-                                    ST->hasVscnt());
-  }
-
   void setForceEmitWaitcnt() {
 // For non-debug builds, ForceEmitWaitcnt has been initialized to false;
 // For debug builds, get the debug counter info and adjust if need be
@@ -1723,7 +1718,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
       MI.getOpcode() == AMDGPU::SI_RETURN ||
       MI.getOpcode() == AMDGPU::S_SETPC_B64_return ||
       (MI.isReturn() && MI.isCall() && !callWaitsOnFunctionEntry(MI))) {
-    Wait = Wait.combined(allZeroWaitcnt());
+    Wait = Wait.combined(
+        AMDGPU::Waitcnt::allZeroExceptVsCnt(ST->hasExtendedWaitCounts()));
   }
   // Identify S_ENDPGM instructions which may have to wait for outstanding VMEM
   // stores. In this case it can be useful to send a message to explicitly
@@ -1928,7 +1924,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   // cause an exception. Otherwise, insert an explicit S_WAITCNT 0 here.
   if (MI.getOpcode() == AMDGPU::S_BARRIER &&
       !ST->hasAutoWaitcntBeforeBarrier() && !ST->supportsBackOffBarrier()) {
-    Wait = Wait.combined(allZeroWaitcnt());
+    Wait = Wait.combined(
+        AMDGPU::Waitcnt::allZero(ST->hasExtendedWaitCounts(), ST->hasVscnt()));
   }
 
   // TODO: Remove this work-around, enable the assert for Bug 457939
@@ -1955,7 +1952,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
   ScoreBrackets.clearRedundantVmVsrcWait(Wait);
 
   if (ForceEmitZeroWaitcnts)
-    Wait = allZeroWaitcnt();
+    Wait = AMDGPU::Waitcnt::allZeroExceptVsCnt(ST->hasExtendedWaitCounts());
 
   if (ForceEmitWaitcnt[LOAD_CNT])
     Wait.LoadCnt = 0;
@@ -1963,8 +1960,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
     Wait.ExpCnt = 0;
   if (ForceEmitWaitcnt[DS_CNT])
     Wait.DsCnt = 0;
-  if (ForceEmitWaitcnt[STORE_CNT])
-    Wait.StoreCnt = 0;
   if (ForceEmitWaitcnt[SAMPLE_CNT])
     Wait.SampleCnt = 0;
   if (ForceEmitWaitcnt[BVH_CNT])
@@ -2206,7 +2201,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
   } else if (Inst.isCall()) {
     if (callWaitsOnFunctionReturn(Inst)) {
       // Act as a wait on everything
-      ScoreBrackets->applyWaitcnt(allZeroWaitcnt());
+      ScoreBrackets->applyWaitcnt(
+          AMDGPU::Waitcnt::allZeroExceptVsCnt(ST->hasExtendedWaitCounts()));
     } else {
       // May need to way wait for anything.
       ScoreBrackets->applyWaitcnt(AMDGPU::Waitcnt());
@@ -2648,7 +2644,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAIT_LOADCNT_DSCNT))
           .addImm(0);
       for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
-        if (CT == LOAD_CNT || CT == DS_CNT)
+        if (CT == LOAD_CNT || CT == DS_CNT || CT == STORE_CNT)
           continue;
 
         BuildMI(EntryBB, I, DebugLoc(),
@@ -2664,10 +2660,6 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       }
     } else {
       BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT)).addImm(0);
-      if (ST->hasVscnt())
-        BuildMI(EntryBB, I, DebugLoc(), TII->get(AMDGPU::S_WAITCNT_VSCNT))
-            .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
-            .addImm(0);
     }
 
     Modified = true;

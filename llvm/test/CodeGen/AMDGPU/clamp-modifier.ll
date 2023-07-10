@@ -1575,7 +1575,6 @@ define <2 x half> @v_clamp_cvt_pkrtz_src_v2f16_denorm(float %a, float %b) #0 {
 ; GFX11-LABEL: v_clamp_cvt_pkrtz_src_v2f16_denorm:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cvt_pk_rtz_f16_f32_e64 v0, v0, v1 clamp
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %add = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %a, float %b)
