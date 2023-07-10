@@ -39,7 +39,7 @@ def SPIRV_NVCooperativeMatrixLengthOp : SPIRV_NvVendorOp<"CooperativeMatrixLengt
     For example:
 
     ```
-    %0 = spirv.NV.CooperativeMatrixLength : !spirv.NV.coopmatrix<Subgroup, i32, 8, 16>
+    %0 = spirv.NV.CooperativeMatrixLength : !spirv.NV.coopmatrix<8x16xi32, Subgroup>
     ```
   }];
 
@@ -115,7 +115,7 @@ def SPIRV_NVCooperativeMatrixLoadOp : SPIRV_NvVendorOp<"CooperativeMatrixLoad", 
 
     ```
     %0 = spirv.NV.CooperativeMatrixLoad %ptr, %stride, %colMajor
-         : !spirv.ptr<i32, StorageBuffer> as !spirv.NV.coopmatrix<i32, Workgroup, 16, 8>
+         : !spirv.ptr<i32, StorageBuffer> as !spirv.NV.coopmatrix<16x8xi32, Workgroup>
     ```
   }];
 
@@ -186,7 +186,7 @@ def SPIRV_NVCooperativeMatrixMulAddOp : SPIRV_NvVendorOp<"CooperativeMatrixMulAd
 
     ```
     %0 = spirv.NV.CooperativeMatrixMulAdd %arg0, %arg1, %arg2,  :
-      !spirv.NV.coopmatrix<Subgroup, i32, 8, 16>
+      !spirv.NV.coopmatrix<8x16xi32, Subgroup>
     ```
   }];
 
@@ -251,7 +251,7 @@ def SPIRV_NVCooperativeMatrixStoreOp : SPIRV_NvVendorOp<"CooperativeMatrixStore"
 
     ```
       spirv.NV.CooperativeMatrixStore %arg0, %arg2, %arg1, %arg3 :
-        !spirv.ptr<i32, StorageBuffer>, !spirv.NV.coopmatrix<Workgroup, i32, 16, 8>
+        !spirv.ptr<i32, StorageBuffer>, !spirv.NV.coopmatrix<16x8xi32, Workgroup>
     ```
   }];
 
