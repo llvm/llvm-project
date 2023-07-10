@@ -29,8 +29,10 @@ TARGET_BUILTIN(__builtin_riscv_clmulh, "LiLiLi", "nc", "zbc|zbkc")
 TARGET_BUILTIN(__builtin_riscv_clmulr, "LiLiLi", "nc", "zbc")
 
 // Zbkx
-TARGET_BUILTIN(__builtin_riscv_xperm4, "LiLiLi", "nc", "zbkx")
-TARGET_BUILTIN(__builtin_riscv_xperm8, "LiLiLi", "nc", "zbkx")
+TARGET_BUILTIN(__builtin_riscv_xperm4_32, "iii", "nc", "zbkx,32bit")
+TARGET_BUILTIN(__builtin_riscv_xperm4_64, "WiWiWi", "nc", "zbkx,64bit")
+TARGET_BUILTIN(__builtin_riscv_xperm8_32, "iii", "nc", "zbkx,32bit")
+TARGET_BUILTIN(__builtin_riscv_xperm8_64, "WiWiWi", "nc", "zbkx,64bit")
 
 // Zbkb extension
 TARGET_BUILTIN(__builtin_riscv_brev8, "LiLi", "nc", "zbkb")
