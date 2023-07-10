@@ -7,7 +7,6 @@ define i8 @simple_phi(i1 %c, i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @simple_phi
 ; CHECK-SAME: (i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[A]], i8 [[B]]
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    ret i8 [[A]]
@@ -36,7 +35,6 @@ define i8 @phi_other_edge(i1 %c, i8 %a, i8 %b, i32 %sw) {
 ; CHECK-NEXT:    i32 1, label [[ELSE:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       test:
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[A]], i8 [[B]]
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN]], label [[ELSE]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ [[A]], [[TEST]] ], [ 1, [[ENTRY:%.*]] ]
@@ -96,12 +94,11 @@ define i8 @simple_non_phi(i1 %c, i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @simple_non_phi
 ; CHECK-SAME: (i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[A]], i8 [[B]]
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    ret i8 [[S]]
+; CHECK-NEXT:    ret i8 [[A]]
 ; CHECK:       else:
-; CHECK-NEXT:    ret i8 [[S]]
+; CHECK-NEXT:    ret i8 [[B]]
 ;
 entry:
   %s = select i1 %c, i8 %a, i8 %b
@@ -123,10 +120,10 @@ define void @simple_multiple_uses(i1 %c, i8 %a, i8 %b) {
 ; CHECK-NEXT:    call void @use(i8 [[S]], i8 [[S]])
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    call void @use(i8 [[S]], i8 [[S]])
+; CHECK-NEXT:    call void @use(i8 [[A]], i8 [[A]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       else:
-; CHECK-NEXT:    call void @use(i8 [[S]], i8 [[S]])
+; CHECK-NEXT:    call void @use(i8 [[B]], i8 [[B]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
