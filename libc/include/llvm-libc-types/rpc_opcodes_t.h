@@ -20,11 +20,6 @@ typedef enum : unsigned short {
   RPC_MALLOC = 7,
   RPC_FREE = 8,
   RPC_HOST_CALL = 9,
-  // TODO: Move these out of here and handle then with custom handlers in the
-  // loader.
-  RPC_TEST_INCREMENT = 1000,
-  RPC_TEST_INTERFACE = 1001,
-  RPC_TEST_STREAM = 1002,
 } rpc_opcode_t;
 
 #endif // __LLVM_LIBC_TYPES_RPC_OPCODE_H__
