@@ -28,7 +28,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 
 template <class _Callback>
 class _LIBCPP_AVAILABILITY_SYNC stop_callback : private __stop_callback_base {
@@ -96,4 +96,4 @@ _LIBCPP_AVAILABILITY_SYNC stop_callback(stop_token, Callback) -> stop_callback<C
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___STOP_TOKEN_STOP_TOKEN_H
+#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
