@@ -92,11 +92,35 @@ out:
   ret void
 }
 
+define i8 @simple_non_phi(i1 %c, i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @simple_non_phi
+; CHECK-SAME: (i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    ret i8 [[S]]
+; CHECK:       else:
+; CHECK-NEXT:    ret i8 [[S]]
+;
+entry:
+  %s = select i1 %c, i8 %a, i8 %b
+  br i1 %c, label %then, label %else
+
+then:
+  ret i8 %s
+
+else:
+  ret i8 %s
+}
+
+
 define void @simple_multiple_uses(i1 %c, i8 %a, i8 %b) {
 ; CHECK-LABEL: define void @simple_multiple_uses
 ; CHECK-SAME: (i1 [[C:%.*]], i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[A]], i8 [[B]]
+; CHECK-NEXT:    call void @use(i8 [[S]], i8 [[S]])
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    call void @use(i8 [[S]], i8 [[S]])
@@ -107,6 +131,7 @@ define void @simple_multiple_uses(i1 %c, i8 %a, i8 %b) {
 ;
 entry:
   %s = select i1 %c, i8 %a, i8 %b
+  call void @use(i8 %s, i8 %s)
   br i1 %c, label %then, label %else
 
 then:
