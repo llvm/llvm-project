@@ -1069,6 +1069,13 @@ bool DWARFExpression::Evaluate(
         return false;
       }
       uint8_t size = opcodes.GetU8(&offset);
+      if (size > 8) {
+        if (error_ptr)
+              error_ptr->SetErrorStringWithFormat(
+                  "Invalid address size for DW_OP_deref_size: %d\n",
+                  size);
+        return false;
+      }
       Value::ValueType value_type = stack.back().GetValueType();
       switch (value_type) {
       case Value::ValueType::HostAddress: {
@@ -1141,7 +1148,7 @@ bool DWARFExpression::Evaluate(
           } else {
             if (error_ptr)
               error_ptr->SetErrorStringWithFormat(
-                  "Failed to dereference pointer for for DW_OP_deref_size: "
+                  "Failed to dereference pointer for DW_OP_deref_size: "
                   "%s\n",
                   error.AsCString());
             return false;
