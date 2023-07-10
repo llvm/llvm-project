@@ -254,6 +254,7 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
       uint32_t NopInst = support::endian::read32<Endianness>(FixupPtr + 4);
       assert(NopInst == 0x60000000 &&
              "NOP should be placed here for restoring r2");
+      (void)NopInst;
       // Restore r2 by instruction 0xe8410018 which is `ld r2, 24(r1)`.
       support::endian::write32<Endianness>(FixupPtr + 4, 0xe8410018);
     }
