@@ -323,14 +323,14 @@ declare void @external(ptr readonly) nounwind argmemonly
 define void @nc4(ptr %p) {
 ; TUNIT: Function Attrs: nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@nc4
-; TUNIT-SAME: (ptr [[P:%.*]]) #[[ATTR5:[0-9]+]] {
-; TUNIT-NEXT:    call void @external(ptr readonly [[P]]) #[[ATTR17:[0-9]+]]
+; TUNIT-SAME: (ptr nofree [[P:%.*]]) #[[ATTR5:[0-9]+]] {
+; TUNIT-NEXT:    call void @external(ptr nofree readonly [[P]]) #[[ATTR17:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@nc4
-; CGSCC-SAME: (ptr [[P:%.*]]) #[[ATTR8:[0-9]+]] {
-; CGSCC-NEXT:    call void @external(ptr readonly [[P]]) #[[ATTR20:[0-9]+]]
+; CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR8:[0-9]+]] {
+; CGSCC-NEXT:    call void @external(ptr nofree readonly [[P]]) #[[ATTR20:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @external(ptr %p)
@@ -802,13 +802,13 @@ declare void @val_use(i8 %ptr) readonly nounwind willreturn
 define void @ptr_uses(ptr %ptr, ptr %wptr) {
 ; TUNIT: Function Attrs: mustprogress nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@ptr_uses
-; TUNIT-SAME: (ptr [[PTR:%.*]], ptr nocapture nofree noundef nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) #[[ATTR11:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree [[PTR:%.*]], ptr nocapture nofree noundef nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) #[[ATTR11:[0-9]+]] {
 ; TUNIT-NEXT:    store i8 0, ptr [[WPTR]], align 1
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@ptr_uses
-; CGSCC-SAME: (ptr [[PTR:%.*]], ptr nocapture nofree noundef nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) #[[ATTR14:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree [[PTR:%.*]], ptr nocapture nofree noundef nonnull writeonly dereferenceable(1) [[WPTR:%.*]]) #[[ATTR14:[0-9]+]] {
 ; CGSCC-NEXT:    store i8 0, ptr [[WPTR]], align 1
 ; CGSCC-NEXT:    ret void
 ;
