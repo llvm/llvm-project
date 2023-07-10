@@ -14,8 +14,6 @@ SROA breaks MIOpen
 Revert "[SROA] Create additional vector type candidates based on store and load slices"
 Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
 
-d0ed9a9d3 [Libomptarget] Remove unused arguments from bitcode compilation
-
 Revert "[SLP][NFC]Add missing finalize params in the CostEstimator, NFC."
         seeing rocThrust SLP aborts in merges, try avoiding
 
@@ -30,8 +28,6 @@ breaks rccl build:
 Revert "Implement P2361 Unevaluated string literals"
 
 Revert: [libc] Add support for creating wrapper headers for offloading in clang
-
-Revert "[Attributor][FIX] Ensure the function manager cache is updated"  
 
 Revert "[X86] Add SHA512 instructions."  
 Revert "[X86] Add SM3 instructions."
@@ -51,9 +47,6 @@ Revert "[FunctionAttrs] Unconditionally perform argument attribute inference in 
 Revert "[clang][test] Fix LIT test failures for the following commit"
 Revert "[Clang] Produce a warning instead of an error in unevaluated strings before C++26 "
 Revert "[IR] Deprecate some old methods for getting typed pointer types"
-
-Revert [clang] Add missing field to TLSModelAttr json AST dump
-Revert [clang] Add missing field to VisibilityAttr json AST dump
 
 Revert Complete the implementation of P2361 Unevaluated string literals
 
