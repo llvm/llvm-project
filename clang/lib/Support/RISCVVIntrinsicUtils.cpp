@@ -1080,10 +1080,9 @@ void RVVIntrinsic::updateNamesAndPolicy(bool IsMasked, bool HasPolicy,
   } else {
     if (PolicyAttrs.isTUPolicy())
       appendPolicySuffix("_tu");
-    else if (PolicyAttrs.isTAPolicy()) {
-      if (HasPolicy)
-        BuiltinName += "_ta";
-    } else
+    else if (PolicyAttrs.isTAPolicy()) // no suffix needed
+      return;
+    else
       llvm_unreachable("Unhandled policy condition");
   }
 }

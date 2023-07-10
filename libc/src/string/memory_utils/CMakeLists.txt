@@ -6,6 +6,7 @@ add_header_library(
     aarch64/memcpy_implementations.h
     bcmp_implementations.h
     bzero_implementations.h
+    generic/aligned_access.h
     generic/byte_per_byte.h
     memcmp_implementations.h
     memcpy_implementations.h
