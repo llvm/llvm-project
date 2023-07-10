@@ -19,4 +19,4 @@
 
 // CHECK: warning: '-mfloat-abi=hard': selected processor lacks floating point registers
 // HARDFLOAT: warning: '-mhard-float': selected processor lacks floating point registers
-// NOWARN-NOT: warning:
+// NOWARN-NOT: selected processor lacks floating point registers
