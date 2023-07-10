@@ -1676,6 +1676,8 @@ static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,
     const size_t NewOffset = LineStr.addString(CStr);
     assert(StrOffset == NewOffset &&
            "New offset in .debug_line_str doesn't match original offset");
+    (void)StrOffset;
+    (void)NewOffset;
   }
 }
 

@@ -9,7 +9,7 @@ declare void @deref_phi_user(ptr %a);
 ; take mininimum of return values
 ;
 ;.
-; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = global i64 0
+; CHECK: @g = global i64 0
 ;.
 define ptr @test1(ptr dereferenceable(4) %0, ptr dereferenceable(8) %1, i1 zeroext %2) local_unnamed_addr {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)

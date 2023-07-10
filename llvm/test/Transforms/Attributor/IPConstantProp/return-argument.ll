@@ -63,7 +63,7 @@ define void @caller(i1 %C) personality ptr @__gxx_personality_v0 {
 ; TUNIT-LABEL: define {{[^@]+}}@caller
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] personality ptr @__gxx_personality_v0 {
 ; TUNIT-NEXT:    [[Q:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[W:%.*]] = call align 4 ptr @incdec(i1 [[C]], ptr noalias nofree noundef nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[W:%.*]] = call align 4 ptr @incdec(i1 noundef [[C]], ptr noalias nofree noundef nonnull writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[Q]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    br label [[OK:%.*]]
 ; TUNIT:       OK:
 ; TUNIT-NEXT:    br label [[RET:%.*]]
