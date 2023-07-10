@@ -87,7 +87,7 @@ public:
   }
 
   unsigned getNumBases() const { return Bases.size(); }
-  Base *getBase(unsigned I) { return &Bases[I]; }
+  const Base *getBase(unsigned I) const { return &Bases[I]; }
 
   using const_virtual_iter = VirtualBaseList::const_iterator;
   llvm::iterator_range<const_virtual_iter> virtual_bases() const {
@@ -95,7 +95,7 @@ public:
   }
 
   unsigned getNumVirtualBases() const { return VirtualBases.size(); }
-  Base *getVirtualBase(unsigned I) { return &VirtualBases[I]; }
+  const Base *getVirtualBase(unsigned I) const { return &VirtualBases[I]; }
 
 private:
   /// Constructor used by Program to create record descriptors.

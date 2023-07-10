@@ -88,6 +88,29 @@ transform.sequence failures(propagate) {
 
 // -----
 
+// CHECK-LABEL: func @tensor_insert_into_empty(
+//       CHECK:   %[[alloc:.*]] = memref.alloc() : memref<10xindex, 4>
+//   CHECK-NOT:   memref.copy
+//       CHECK:   memref.store %{{.*}}, %[[alloc]]
+//       CHECK:   %[[r:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
+//       CHECK:   memref.dealloc %[[alloc]]
+//       CHECK:   return %[[r]]
+func.func @tensor_insert_into_empty(%idx: index, %v: index) -> tensor<10xindex> {
+  %e = tensor.empty() : tensor<10xindex>
+  %r = tensor.insert %v into %e[%idx] : tensor<10xindex>
+  return %r : tensor<10xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.insert"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %2 = transform.structured.bufferize_to_allocation %0 {memory_space = 4} : !transform.any_op
+  // Make sure that One-Shot Bufferize can bufferize the rest.
+  %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
+}
+
+// -----
+
 func.func @tensor_extract(%t: tensor<?x10xindex>, %idx: index) -> index {
   // expected-note @below{{target payload op}}
   %r = tensor.extract %t[%idx, %idx] : tensor<?x10xindex>

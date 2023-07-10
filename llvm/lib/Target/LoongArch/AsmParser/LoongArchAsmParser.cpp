@@ -78,11 +78,11 @@ class LoongArchAsmParser : public MCTargetAsmParser {
 #define GET_ASSEMBLER_HEADER
 #include "LoongArchGenAsmMatcher.inc"
 
-  OperandMatchResultTy parseRegister(OperandVector &Operands);
-  OperandMatchResultTy parseImmediate(OperandVector &Operands);
-  OperandMatchResultTy parseOperandWithModifier(OperandVector &Operands);
-  OperandMatchResultTy parseSImm26Operand(OperandVector &Operands);
-  OperandMatchResultTy parseAtomicMemOp(OperandVector &Operands);
+  ParseStatus parseRegister(OperandVector &Operands);
+  ParseStatus parseImmediate(OperandVector &Operands);
+  ParseStatus parseOperandWithModifier(OperandVector &Operands);
+  ParseStatus parseSImm26Operand(OperandVector &Operands);
+  ParseStatus parseAtomicMemOp(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -566,36 +566,34 @@ bool LoongArchAsmParser::classifySymbolRef(const MCExpr *Expr,
   return false;
 }
 
-OperandMatchResultTy
-LoongArchAsmParser::parseRegister(OperandVector &Operands) {
+ParseStatus LoongArchAsmParser::parseRegister(OperandVector &Operands) {
   if (!parseOptionalToken(AsmToken::Dollar))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   if (getLexer().getKind() != AsmToken::Identifier)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   StringRef Name = getLexer().getTok().getIdentifier();
   MCRegister RegNo;
   matchRegisterNameHelper(RegNo, Name);
   if (RegNo == LoongArch::NoRegister)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   SMLoc S = getLoc();
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
   getLexer().Lex();
   Operands.push_back(LoongArchOperand::createReg(RegNo, S, E));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-LoongArchAsmParser::parseImmediate(OperandVector &Operands) {
+ParseStatus LoongArchAsmParser::parseImmediate(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
   const MCExpr *Res;
 
   switch (getLexer().getKind()) {
   default:
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   case AsmToken::LParen:
   case AsmToken::Dot:
   case AsmToken::Minus:
@@ -606,59 +604,49 @@ LoongArchAsmParser::parseImmediate(OperandVector &Operands) {
   case AsmToken::String:
   case AsmToken::Identifier:
     if (getParser().parseExpression(Res, E))
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
     break;
   case AsmToken::Percent:
     return parseOperandWithModifier(Operands);
   }
 
   Operands.push_back(LoongArchOperand::createImm(Res, S, E));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
+ParseStatus
 LoongArchAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
 
-  if (getLexer().getKind() != AsmToken::Percent) {
-    Error(getLoc(), "expected '%' for operand modifier");
-    return MatchOperand_ParseFail;
-  }
+  if (getLexer().getKind() != AsmToken::Percent)
+    return Error(getLoc(), "expected '%' for operand modifier");
 
   getParser().Lex(); // Eat '%'
 
-  if (getLexer().getKind() != AsmToken::Identifier) {
-    Error(getLoc(), "expected valid identifier for operand modifier");
-    return MatchOperand_ParseFail;
-  }
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return Error(getLoc(), "expected valid identifier for operand modifier");
   StringRef Identifier = getParser().getTok().getIdentifier();
   LoongArchMCExpr::VariantKind VK =
       LoongArchMCExpr::getVariantKindForName(Identifier);
-  if (VK == LoongArchMCExpr::VK_LoongArch_Invalid) {
-    Error(getLoc(), "unrecognized operand modifier");
-    return MatchOperand_ParseFail;
-  }
+  if (VK == LoongArchMCExpr::VK_LoongArch_Invalid)
+    return Error(getLoc(), "unrecognized operand modifier");
 
   getParser().Lex(); // Eat the identifier
-  if (getLexer().getKind() != AsmToken::LParen) {
-    Error(getLoc(), "expected '('");
-    return MatchOperand_ParseFail;
-  }
+  if (getLexer().getKind() != AsmToken::LParen)
+    return Error(getLoc(), "expected '('");
   getParser().Lex(); // Eat '('
 
   const MCExpr *SubExpr;
-  if (getParser().parseParenExpression(SubExpr, E)) {
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseParenExpression(SubExpr, E))
+    return ParseStatus::Failure;
 
   const MCExpr *ModExpr = LoongArchMCExpr::create(SubExpr, VK, getContext());
   Operands.push_back(LoongArchOperand::createImm(ModExpr, S, E));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
+ParseStatus LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
   SMLoc S = getLoc();
   const MCExpr *Res;
 
@@ -666,11 +654,11 @@ LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
     return parseOperandWithModifier(Operands);
 
   if (getLexer().getKind() != AsmToken::Identifier)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   StringRef Identifier;
   if (getParser().parseIdentifier(Identifier))
-    return MatchOperand_ParseFail;
+    return ParseStatus::Failure;
 
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
@@ -679,14 +667,13 @@ LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
   Res = LoongArchMCExpr::create(Res, LoongArchMCExpr::VK_LoongArch_CALL,
                                 getContext());
   Operands.push_back(LoongArchOperand::createImm(Res, S, E));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-LoongArchAsmParser::parseAtomicMemOp(OperandVector &Operands) {
+ParseStatus LoongArchAsmParser::parseAtomicMemOp(OperandVector &Operands) {
   // Parse "$r*".
-  if (parseRegister(Operands) != MatchOperand_Success)
-    return MatchOperand_NoMatch;
+  if (!parseRegister(Operands).isSuccess())
+    return ParseStatus::NoMatch;
 
   // If there is a next operand and it is 0, ignore it. Otherwise print a
   // diagnostic message.
@@ -694,14 +681,12 @@ LoongArchAsmParser::parseAtomicMemOp(OperandVector &Operands) {
     int64_t ImmVal;
     SMLoc ImmStart = getLoc();
     if (getParser().parseIntToken(ImmVal, "expected optional integer offset"))
-      return MatchOperand_ParseFail;
-    if (ImmVal) {
-      Error(ImmStart, "optional integer offset must be 0");
-      return MatchOperand_ParseFail;
-    }
+      return ParseStatus::Failure;
+    if (ImmVal)
+      return Error(ImmStart, "optional integer offset must be 0");
   }
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 /// Looks at a token type and creates the relevant operand from this
 /// information, adding to Operands. Return true upon an error.
@@ -709,20 +694,19 @@ bool LoongArchAsmParser::parseOperand(OperandVector &Operands,
                                       StringRef Mnemonic) {
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  OperandMatchResultTy Result =
+  ParseStatus Result =
       MatchOperandParserImpl(Operands, Mnemonic, /*ParseForAllFeatures=*/true);
-  if (Result == MatchOperand_Success)
+  if (Result.isSuccess())
     return false;
-  if (Result == MatchOperand_ParseFail)
+  if (Result.isFailure())
     return true;
 
-  if (parseRegister(Operands) == MatchOperand_Success ||
-      parseImmediate(Operands) == MatchOperand_Success)
+  if (parseRegister(Operands).isSuccess() ||
+      parseImmediate(Operands).isSuccess())
     return false;
 
   // Finally we have exhausted all options and must declare defeat.
-  Error(getLoc(), "unknown operand");
-  return true;
+  return Error(getLoc(), "unknown operand");
 }
 
 bool LoongArchAsmParser::ParseInstruction(ParseInstructionInfo &Info,

@@ -1082,7 +1082,7 @@ class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
                       string ConvertMethod = "nullptr">
     : CustomOperand<Type, 1, Name> {
   let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseIntWithPrefix(\""#Prefix#"\", Operands, "#
     "AMDGPUOperand::"#ImmTy#", "#ConvertMethod#"); }";
 }
@@ -1090,7 +1090,7 @@ class NamedIntOperand<ValueType Type, string Prefix, string Name = NAME,
 class NamedBitOperand<string Id, string Name = NAME>
     : CustomOperand<i1, 1, Name> {
   let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
 }
 
@@ -1103,7 +1103,7 @@ class DefaultOperand<CustomOperand Op, int Value>
 class SDWAOperand<string Id, string Name = NAME>
     : CustomOperand<i32, 1, Name> {
   let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseSDWASel(Operands, \""#Id#"\", AMDGPUOperand::"#ImmTy#"); }";
 }
 
@@ -1111,7 +1111,7 @@ class ArrayOperand0<string Id, string Name = NAME>
   : OperandWithDefaultOps<i32, (ops (i32 0))>,
     CustomOperandProps<1, Name> {
   let ParserMethod =
-    "[this](OperandVector &Operands) -> OperandMatchResultTy { "#
+    "[this](OperandVector &Operands) -> ParseStatus { "#
     "return parseOperandArrayWithPrefix(\""#Id#"\", Operands, "#
     "AMDGPUOperand::"#ImmTy#"); }";
 }

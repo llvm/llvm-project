@@ -28,6 +28,7 @@
 #include <filesystem>
 
 #include "error.h"
+#include "time_utils.h"
 
 #if defined(_LIBCPP_WIN32API)
 # define WIN32_LEAN_AND_MEAN
@@ -80,41 +81,6 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 namespace detail {
 
 #if defined(_LIBCPP_WIN32API)
-// Various C runtime versions (UCRT, or the legacy msvcrt.dll used by
-// some mingw toolchains) provide different stat function implementations,
-// with a number of limitations with respect to what we want from the
-// stat function. Instead provide our own which does exactly what we want,
-// along with our own stat structure and flag macros.
-
-struct TimeSpec {
-  int64_t tv_sec;
-  int64_t tv_nsec;
-};
-struct StatT {
-  unsigned st_mode;
-  TimeSpec st_atim;
-  TimeSpec st_mtim;
-  uint64_t st_dev; // FILE_ID_INFO::VolumeSerialNumber
-  struct FileIdStruct {
-    unsigned char id[16]; // FILE_ID_INFO::FileId
-    bool operator==(const FileIdStruct &other) const {
-      for (int i = 0; i < 16; i++)
-        if (id[i] != other.id[i])
-          return false;
-      return true;
-    }
-  } st_ino;
-  uint32_t st_nlink;
-  uintmax_t st_size;
-};
-
-#else
-using TimeSpec = struct timespec;
-using TimeVal = struct timeval;
-using StatT = struct stat;
-#endif
-
-#if defined(_LIBCPP_WIN32API)
 
 // Various C runtime header sets provide more or less of these. As we
 // provide our own implementation, undef all potential defines from the
@@ -155,35 +121,6 @@ using StatT = struct stat;
 #define S_ISSOCK(m)     (((m) & _S_IFMT) == _S_IFSOCK)
 
 #define O_NONBLOCK 0
-
-
-// There were 369 years and 89 leap days from the Windows epoch
-// (1601) to the Unix epoch (1970).
-#define FILE_TIME_OFFSET_SECS (uint64_t(369 * 365 + 89) * (24 * 60 * 60))
-
-inline TimeSpec filetime_to_timespec(LARGE_INTEGER li) {
-  TimeSpec ret;
-  ret.tv_sec = li.QuadPart / 10000000 - FILE_TIME_OFFSET_SECS;
-  ret.tv_nsec = (li.QuadPart % 10000000) * 100;
-  return ret;
-}
-
-inline TimeSpec filetime_to_timespec(FILETIME ft) {
-  LARGE_INTEGER li;
-  li.LowPart = ft.dwLowDateTime;
-  li.HighPart = ft.dwHighDateTime;
-  return filetime_to_timespec(li);
-}
-
-inline FILETIME timespec_to_filetime(TimeSpec ts) {
-  LARGE_INTEGER li;
-  li.QuadPart =
-      ts.tv_nsec / 100 + (ts.tv_sec + FILE_TIME_OFFSET_SECS) * 10000000;
-  FILETIME ft;
-  ft.dwLowDateTime = li.LowPart;
-  ft.dwHighDateTime = li.HighPart;
-  return ft;
-}
 
 inline int set_errno(int e = GetLastError()) {
   errno = static_cast<int>(__win_err_to_errc(e));

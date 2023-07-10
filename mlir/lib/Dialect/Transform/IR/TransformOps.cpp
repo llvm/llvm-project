@@ -909,26 +909,43 @@ LogicalResult transform::ForeachOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// GetClosestIsolatedParentOp
+// GetParentOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::GetClosestIsolatedParentOp::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  SetVector<Operation *> parents;
+DiagnosedSilenceableFailure
+transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
+                              transform::TransformResults &results,
+                              transform::TransformState &state) {
+  SmallVector<Operation *> parents;
+  DenseSet<Operation *> resultSet;
   for (Operation *target : state.getPayloadOps(getTarget())) {
-    Operation *parent =
-        target->getParentWithTrait<OpTrait::IsIsolatedFromAbove>();
+    Operation *parent = target->getParentOp();
+    do {
+      bool checkIsolatedFromAbove =
+          !getIsolatedFromAbove() ||
+          parent->hasTrait<OpTrait::IsIsolatedFromAbove>();
+      bool checkOpName = !getOpName().has_value() ||
+                         parent->getName().getStringRef() == *getOpName();
+      if (checkIsolatedFromAbove && checkOpName)
+        break;
+    } while ((parent = parent->getParentOp()));
     if (!parent) {
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
-          << "could not find an isolated-from-above parent op";
+          << "could not find a parent op that matches all requirements";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
-    parents.insert(parent);
+    if (getDeduplicate()) {
+      if (!resultSet.contains(parent)) {
+        parents.push_back(parent);
+        resultSet.insert(parent);
+      }
+    } else {
+      parents.push_back(parent);
+    }
   }
-  results.set(llvm::cast<OpResult>(getResult()), parents.getArrayRef());
+  results.set(llvm::cast<OpResult>(getResult()), parents);
   return DiagnosedSilenceableFailure::success();
 }
 

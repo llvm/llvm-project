@@ -260,6 +260,17 @@ DeletionKind LLVM::DbgDeclareOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+bool LLVM::DbgValueOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  return true;
+}
+
+DeletionKind LLVM::DbgValueOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
+  return DeletionKind::Delete;
+}
+
 //===----------------------------------------------------------------------===//
 // Interfaces for GEPOp
 //===----------------------------------------------------------------------===//

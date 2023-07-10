@@ -23,14 +23,14 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
-void DebugImporter::translate(llvm::Function *func, LLVMFuncOp funcOp) {
+Location DebugImporter::translateFuncLocation(llvm::Function *func) {
   if (!func->getSubprogram())
-    return;
+    return UnknownLoc::get(context);
 
   // Add a fused location to link the subprogram information.
   StringAttr name = StringAttr::get(context, func->getSubprogram()->getName());
-  funcOp->setLoc(FusedLocWith<DISubprogramAttr>::get(
-      {NameLoc::get(name)}, translate(func->getSubprogram()), context));
+  return FusedLocWith<DISubprogramAttr>::get(
+      {NameLoc::get(name)}, translate(func->getSubprogram()), context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -237,7 +237,7 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
 
 Location DebugImporter::translateLoc(llvm::DILocation *loc) {
   if (!loc)
-    return mlirModule.getLoc();
+    return UnknownLoc::get(context);
 
   // Get the file location of the instruction.
   Location result = FileLineColLoc::get(context, loc->getFilename(),

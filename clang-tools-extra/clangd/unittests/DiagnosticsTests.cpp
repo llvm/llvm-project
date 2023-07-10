@@ -38,6 +38,7 @@
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1877,6 +1878,42 @@ TEST(Diagnostics, Tags) {
       ifTidyChecks(UnorderedElementsAre(
           AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
                 withTag(DiagnosticTag::Deprecated)))));
+}
+
+TEST(Diagnostics, DeprecatedDiagsAreHints) {
+  ClangdDiagnosticOptions Opts;
+  std::optional<clangd::Diagnostic> Diag;
+  clangd::Diag D;
+  D.Range = {pos(1, 2), pos(3, 4)};
+  D.InsideMainFile = true;
+
+  // Downgrade warnings with deprecated tags to remark.
+  D.Tags = {Deprecated};
+  D.Severity = DiagnosticsEngine::Warning;
+  toLSPDiags(D, {}, Opts,
+             [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix>) {
+               Diag = std::move(LSPDiag);
+             });
+  EXPECT_EQ(Diag->severity, getSeverity(DiagnosticsEngine::Remark));
+  Diag.reset();
+
+  // Preserve errors.
+  D.Severity = DiagnosticsEngine::Error;
+  toLSPDiags(D, {}, Opts,
+             [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix>) {
+               Diag = std::move(LSPDiag);
+             });
+  EXPECT_EQ(Diag->severity, getSeverity(DiagnosticsEngine::Error));
+  Diag.reset();
+
+  // No-op without tag.
+  D.Tags = {};
+  D.Severity = DiagnosticsEngine::Warning;
+  toLSPDiags(D, {}, Opts,
+             [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix>) {
+               Diag = std::move(LSPDiag);
+             });
+  EXPECT_EQ(Diag->severity, getSeverity(DiagnosticsEngine::Warning));
 }
 
 TEST(DiagnosticsTest, IncludeCleaner) {
