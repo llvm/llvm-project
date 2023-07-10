@@ -534,8 +534,8 @@ bool OptionValue::DumpQualifiedName(Stream &strm) const {
     if (m_parent_sp->DumpQualifiedName(strm))
       dumped_something = true;
   }
-  ConstString name(GetName());
-  if (name) {
+  llvm::StringRef name(GetName());
+  if (!name.empty()) {
     if (dumped_something)
       strm.PutChar('.');
     else

@@ -521,7 +521,9 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
   for (Operation *ancestor : potentialAncestors) {
     Operation *definingOp;
     std::optional<unsigned> resultNo;
-    unsigned argumentNo, blockNo, regionNo;
+    unsigned argumentNo = std::numeric_limits<unsigned>::max();
+    unsigned blockNo = std::numeric_limits<unsigned>::max();
+    unsigned regionNo = std::numeric_limits<unsigned>::max();
     if (auto opResult = llvm::dyn_cast<OpResult>(payloadValue)) {
       definingOp = opResult.getOwner();
       resultNo = opResult.getResultNumber();

@@ -7,7 +7,6 @@ define float @test_amdgcn_fdot4_f32_fp8_bf8(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -23,7 +22,6 @@ define float @test_amdgcn_fdot4_f32_fp8_bf8_fabs(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -40,7 +38,6 @@ define float @test_amdgcn_fdot4_f32_fp8_bf8_fneg(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -57,7 +54,6 @@ define float @test_amdgcn_fdot4_f32_fp8_bf8_fabs_fneg(i32 %a, i32 %b, float %c) 
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -75,7 +71,6 @@ define float @test_amdgcn_fdot4_f32_fp8_bf8_fneg_fabs(i32 %a, i32 %b, float %c) 
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -93,7 +88,6 @@ define float @test_amdgcn_fdot4_f32_bf8_fp8(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -109,7 +103,6 @@ define float @test_amdgcn_fdot4_f32_bf8_fp8_fabs(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -126,7 +119,6 @@ define float @test_amdgcn_fdot4_f32_bf8_fp8_fneg(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -143,7 +135,6 @@ define float @test_amdgcn_fdot4_f32_bf8_fp8_fabs_fneg(i32 %a, i32 %b, float %c) 
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -161,7 +152,6 @@ define float @test_amdgcn_fdot4_f32_bf8_fp8_fneg_fabs(i32 %a, i32 %b, float %c) 
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -179,7 +169,6 @@ define float @test_amdgcn_fdot4_f32_fp8_fp8(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -195,7 +184,6 @@ define float @test_amdgcn_fdot4_f32_fp8_fp8_fabs(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -212,7 +200,6 @@ define float @test_amdgcn_fdot4_f32_fp8_fp8_fneg(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -229,7 +216,6 @@ define float @test_amdgcn_fdot4_f32_fp8_fp8_fabs_fneg(i32 %a, i32 %b, float %c) 
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -247,7 +233,6 @@ define float @test_amdgcn_fdot4_f32_fp8_fp8_fneg_fabs(i32 %a, i32 %b, float %c) 
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -265,7 +250,6 @@ define float @test_amdgcn_fdot4_f32_bf8_bf8(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -281,7 +265,6 @@ define float @test_amdgcn_fdot4_f32_bf8_bf8_fabs(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -298,7 +281,6 @@ define float @test_amdgcn_fdot4_f32_bf8_bf8_fneg(i32 %a, i32 %b, float %c) {
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -315,7 +297,6 @@ define float @test_amdgcn_fdot4_f32_bf8_bf8_fabs_fneg(i32 %a, i32 %b, float %c) 
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -333,7 +314,6 @@ define float @test_amdgcn_fdot4_f32_bf8_bf8_fneg_fabs(i32 %a, i32 %b, float %c) 
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0

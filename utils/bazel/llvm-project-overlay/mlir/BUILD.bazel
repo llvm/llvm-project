@@ -2583,6 +2583,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
         ":SparseTensorAttrDefsIncGen",
@@ -9955,6 +9956,7 @@ cc_library(
         ":LoopLikeInterface",
         ":Pass",
         ":QuantOps",
+        ":Support",
         ":TensorDialect",
         ":TosaDialectIncGen",
         ":TosaInterfacesIncGen",

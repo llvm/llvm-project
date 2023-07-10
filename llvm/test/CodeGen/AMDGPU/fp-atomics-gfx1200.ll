@@ -70,7 +70,6 @@ define <2 x half> @local_atomic_fadd_v2f16_rtn(ptr addrspace(3) %ptr, <2 x half>
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -82,7 +81,6 @@ define <2 x half> @local_atomic_fadd_v2f16_rtn(ptr addrspace(3) %ptr, <2 x half>
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -98,10 +96,10 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    ds_pk_add_rtn_bf16 v0, v0, v1
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
@@ -113,10 +111,10 @@ define <2 x i16> @local_atomic_fadd_v2bf16_rtn(ptr addrspace(3) %ptr, <2 x i16> 
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    ds_pk_add_rtn_bf16 v0, v0, v1
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
@@ -154,7 +152,6 @@ define <2 x half> @flat_atomic_fadd_v2f16_rtn(ptr %ptr, <2 x half> %data) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -166,7 +163,6 @@ define <2 x half> @flat_atomic_fadd_v2f16_rtn(ptr %ptr, <2 x half> %data) {
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -204,7 +200,6 @@ define <2 x i16> @flat_atomic_fadd_v2bf16_rtn(ptr %ptr, <2 x i16> %data) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -216,7 +211,6 @@ define <2 x i16> @flat_atomic_fadd_v2bf16_rtn(ptr %ptr, <2 x i16> %data) {
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -254,7 +248,6 @@ define <2 x i16> @global_atomic_fadd_v2bf16_rtn(ptr addrspace(1) %ptr, <2 x i16>
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -266,7 +259,6 @@ define <2 x i16> @global_atomic_fadd_v2bf16_rtn(ptr addrspace(1) %ptr, <2 x i16>
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
@@ -282,24 +274,20 @@ define void @global_atomic_pk_add_v2f16(ptr addrspace(1) %ptr, <2 x half> %data)
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: global_atomic_pk_add_v2f16:
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    global_atomic_pk_add_f16 v[0:1], v2, off
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 main_body:
   %ret = call <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1.v2f16(ptr addrspace(1) %ptr, <2 x half> %data)
@@ -311,7 +299,6 @@ define <2 x half> @global_atomic_pk_add_v2f16_rtn(ptr addrspace(1) %ptr, <2 x ha
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -323,7 +310,6 @@ define <2 x half> @global_atomic_pk_add_v2f16_rtn(ptr addrspace(1) %ptr, <2 x ha
 ; GFX12-GISEL:       ; %bb.0: ; %main_body
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0

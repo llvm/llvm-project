@@ -29,6 +29,11 @@ Here's a sample COFF file.
                        ] # 0x60500020
       SectionData:
         "\x83\xEC\x0C\xC7\x44\x24\x08\x00\x00\x00\x00\xC7\x04\x24\x00\x00\x00\x00\xE8\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x8B\x44\x24\x08\x83\xC4\x0C\xC3" # |....D$.......$...............D$.....|
+    - Name: .rdata
+      Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+      StructuredData:
+        - Binary: {type: str}
+        - UInt32: {type: int}
 
   symbols:
     - Name: .text

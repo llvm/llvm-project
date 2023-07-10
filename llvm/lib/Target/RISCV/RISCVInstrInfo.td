@@ -1241,7 +1241,6 @@ class binop_oneuse<SDPatternOperator operator>
 }]>;
 
 def and_oneuse : binop_oneuse<and>;
-def add_oneuse : binop_oneuse<add>;
 def mul_oneuse : binop_oneuse<mul>;
 
 def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),

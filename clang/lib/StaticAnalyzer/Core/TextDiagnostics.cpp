@@ -86,10 +86,7 @@ public:
       }
     };
 
-    for (std::vector<const PathDiagnostic *>::iterator I = Diags.begin(),
-         E = Diags.end();
-         I != E; ++I) {
-      const PathDiagnostic *PD = *I;
+    for (const PathDiagnostic *PD : Diags) {
       std::string WarningMsg = (DiagOpts.ShouldDisplayDiagnosticName
                                     ? " [" + PD->getCheckerName() + "]"
                                     : "")

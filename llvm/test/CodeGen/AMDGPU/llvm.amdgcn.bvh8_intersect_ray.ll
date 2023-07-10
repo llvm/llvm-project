@@ -15,7 +15,6 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray(i64 %node_ptr, float %ra
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b96 v[10:11], v[16:18], off
 ; GFX12-SDAG-NEXT:    global_store_b96 v[12:13], v[19:21], off
-; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: image_bvh8_intersect_ray:
@@ -28,7 +27,6 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray(i64 %node_ptr, float %ra
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b96 v[10:11], v[14:16], off
 ; GFX12-GISEL-NEXT:    global_store_b96 v[12:13], v[17:19], off
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0
@@ -58,7 +56,6 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_1(i64 %node_ptr, float %
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b96 v[10:11], v[16:18], off
 ; GFX12-SDAG-NEXT:    global_store_b96 v[12:13], v[19:21], off
-; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: image_bvh8_intersect_ray_1:
@@ -71,7 +68,6 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_1(i64 %node_ptr, float %
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b96 v[10:11], v[14:16], off
 ; GFX12-GISEL-NEXT:    global_store_b96 v[12:13], v[17:19], off
-; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 main_body:
   %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0

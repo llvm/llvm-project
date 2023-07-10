@@ -3600,8 +3600,8 @@ bool Process::StartPrivateStateThread(bool is_secondary_thread) {
           },
           8 * 1024 * 1024);
   if (!private_state_thread) {
-    LLDB_LOG(GetLog(LLDBLog::Host), "failed to launch host thread: {}",
-             llvm::toString(private_state_thread.takeError()));
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Host), private_state_thread.takeError(),
+                   "failed to launch host thread: {0}");
     return false;
   }
 

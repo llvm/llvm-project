@@ -56,6 +56,7 @@ __all__ = [
     "Float8E4M3B11FNUZType",
     "Float8E5M2FNUZType",
     "F16Type",
+    "FloatTF32Type",
     "F32Type",
     "F64Type",
     "FlatSymbolRefAttr",
@@ -624,6 +625,14 @@ class F16Type(Type):
     def __init__(self, cast_from_type: Type) -> None: ...
     @staticmethod
     def get(*args, **kwargs) -> F16Type: ...
+    @staticmethod
+    def isinstance(arg: Any) -> bool: ...
+
+# TODO: Auto-generated. Audit and fix.
+class FloatTF32Type(Type):
+    def __init__(self, cast_from_type: Type) -> None: ...
+    @staticmethod
+    def get(*args, **kwargs) -> FloatTF32Type: ...
     @staticmethod
     def isinstance(arg: Any) -> bool: ...
 

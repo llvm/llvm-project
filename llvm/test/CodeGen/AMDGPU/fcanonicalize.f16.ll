@@ -196,7 +196,6 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1
 ; GFX11-LABEL: v_test_canonicalize_build_vector_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
@@ -2268,7 +2267,6 @@ define <3 x half> @v_test_canonicalize_var_v3f16(<3 x half> %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_var_v3f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2311,7 +2309,6 @@ define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_var_v4f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2387,7 +2384,6 @@ define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_reg_undef_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 0
@@ -2422,7 +2418,6 @@ define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_undef_reg_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -2455,7 +2450,6 @@ define <2 x half> @v_test_canonicalize_undef_lo_imm_hi_v2f16() #1 {
 ; GFX11-LABEL: v_test_canonicalize_undef_lo_imm_hi_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfrev_b32_e32 v0, 60
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half 1.0, i32 1
@@ -2486,7 +2480,6 @@ define <2 x half> @v_test_canonicalize_imm_lo_undef_hi_v2f16() #1 {
 ; GFX11-LABEL: v_test_canonicalize_imm_lo_undef_hi_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x3c00
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half 1.0, i32 0
@@ -2517,7 +2510,6 @@ define <2 x half> @v_test_canonicalize_undef_lo_k_hi_v2f16() #1 {
 ; GFX11-LABEL: v_test_canonicalize_undef_lo_k_hi_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfrev_b32_e32 v0, 50
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half 16.0, i32 1
@@ -2548,7 +2540,6 @@ define <2 x half> @v_test_canonicalize_k_lo_undef_hi_v2f16() #1 {
 ; GFX11-LABEL: v_test_canonicalize_k_lo_undef_hi_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0x4c00
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %vec = insertelement <2 x half> undef, half 16.0, i32 0
@@ -2582,7 +2573,6 @@ define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_reg_k_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, 2.0
@@ -2619,7 +2609,6 @@ define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_k_reg_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pack_b32_f16 v0, 2.0, v0
@@ -2708,7 +2697,6 @@ define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1
 ; GFX11-LABEL: v_test_canonicalize_reg_undef_undef_undef_v4f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -2754,7 +2742,6 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
 ; GFX11-LABEL: v_test_canonicalize_reg_reg_undef_undef_v4f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0x7e007e00
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -2805,7 +2792,6 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 ; GFX11-LABEL: v_test_canonicalize_reg_undef_reg_reg_v4f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    v_perm_b32 v1, v2, v1, 0x5040100
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -2862,7 +2848,6 @@ define <6 x half> @v_test_canonicalize_var_v6f16(<6 x half> %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_var_v6f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
@@ -2922,7 +2907,6 @@ define <8 x half> @v_test_canonicalize_var_v8f16(<8 x half> %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_var_v8f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
@@ -2999,7 +2983,6 @@ define <12 x half> @v_test_canonicalize_var_v12f16(<12 x half> %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_var_v12f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
@@ -3094,7 +3077,6 @@ define <16 x half> @v_test_canonicalize_var_v16f16(<16 x half> %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_var_v16f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
@@ -3257,7 +3239,6 @@ define <32 x half> @v_test_canonicalize_var_v32f16(<32 x half> %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_var_v32f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-NEXT:    v_pk_max_f16 v2, v2, v2
@@ -3687,7 +3668,6 @@ define <64 x half> @v_test_canonicalize_var_v64f16(<64 x half> %val) #1 {
 ; GFX11-LABEL: v_test_canonicalize_var_v64f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-NEXT:    v_pk_max_f16 v1, v1, v1

@@ -45,6 +45,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/ValueHandle.h"
@@ -216,6 +217,8 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
                                    ScalarEvolution *SE, DominatorTree *DT,
                                    AssumptionCache *AC,
                                    const TargetTransformInfo *TTI) {
+  using namespace llvm::PatternMatch;
+
   // Simplify any new induction variables in the partially unrolled loop.
   if (SE && SimplifyIVs) {
     SmallVector<WeakTrackingVH, 16> DeadInsts;
@@ -241,6 +244,30 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
           Inst.replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(&Inst))
         DeadInsts.emplace_back(&Inst);
+
+      // Fold ((add X, C1), C2) to (add X, C1+C2). This is very common in
+      // unrolled loops, and handling this early allows following code to
+      // identify the IV as a "simple recurrence" without first folding away
+      // a long chain of adds.
+      {
+        Value *X;
+        const APInt *C1, *C2;
+        if (match(&Inst, m_Add(m_Add(m_Value(X), m_APInt(C1)), m_APInt(C2)))) {
+          auto *InnerI = dyn_cast<Instruction>(Inst.getOperand(0));
+          auto *InnerOBO = cast<OverflowingBinaryOperator>(Inst.getOperand(0));
+          bool SignedOverflow;
+          APInt NewC = C1->sadd_ov(*C2, SignedOverflow);
+          Inst.setOperand(0, X);
+          Inst.setOperand(1, ConstantInt::get(Inst.getType(), NewC));
+          Inst.setHasNoUnsignedWrap(Inst.hasNoUnsignedWrap() &&
+                                    InnerOBO->hasNoUnsignedWrap());
+          Inst.setHasNoSignedWrap(Inst.hasNoSignedWrap() &&
+                                  InnerOBO->hasNoSignedWrap() &&
+                                  !SignedOverflow);
+          if (InnerI && isInstructionTriviallyDead(InnerI))
+            DeadInsts.emplace_back(InnerI);
+        }
+      }
     }
     // We can't do recursive deletion until we're done iterating, as we might
     // have a phi which (potentially indirectly) uses instructions later in

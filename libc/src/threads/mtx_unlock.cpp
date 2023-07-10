@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/threads/mtx_unlock.h"
-#include "include/threads.h" // For mtx_t definition.
 #include "src/__support/common.h"
 #include "src/__support/threads/mutex.h"
+
+#include <threads.h> // For mtx_t definition.
 
 namespace __llvm_libc {
 

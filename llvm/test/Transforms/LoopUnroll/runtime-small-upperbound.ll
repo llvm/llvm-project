@@ -108,29 +108,27 @@ define dso_local void @hoge_5(i8 %arg) {
 ; UPPER-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[IV_NEXT]], 17
 ; UPPER-NEXT:    br i1 [[TMP1]], label [[LOOP_1:%.*]], label [[EXIT_LOOPEXIT:%.*]]
 ; UPPER:       loop.1:
-; UPPER-NEXT:    [[IV_NEXT_1:%.*]] = add nuw i32 [[IV_NEXT]], 4
+; UPPER-NEXT:    [[IV_NEXT_1:%.*]] = add nuw i32 [[X]], 8
 ; UPPER-NEXT:    [[PTR_NEXT_1:%.*]] = getelementptr inbounds i8, ptr [[PTR_NEXT]], i32 1
 ; UPPER-NEXT:    store i8 [[ARG]], ptr [[PTR_NEXT_1]], align 1
 ; UPPER-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[IV_NEXT_1]], 17
 ; UPPER-NEXT:    br i1 [[TMP2]], label [[LOOP_2:%.*]], label [[EXIT_LOOPEXIT]]
 ; UPPER:       loop.2:
-; UPPER-NEXT:    [[IV_NEXT_2:%.*]] = add nuw i32 [[IV_NEXT_1]], 4
+; UPPER-NEXT:    [[IV_NEXT_2:%.*]] = add nuw i32 [[X]], 12
 ; UPPER-NEXT:    [[PTR_NEXT_2:%.*]] = getelementptr inbounds i8, ptr [[PTR_NEXT_1]], i32 1
 ; UPPER-NEXT:    store i8 [[ARG]], ptr [[PTR_NEXT_2]], align 1
 ; UPPER-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[IV_NEXT_2]], 17
 ; UPPER-NEXT:    br i1 [[TMP3]], label [[LOOP_3:%.*]], label [[EXIT_LOOPEXIT]]
 ; UPPER:       loop.3:
-; UPPER-NEXT:    [[IV_NEXT_3:%.*]] = add nuw i32 [[IV_NEXT_2]], 4
+; UPPER-NEXT:    [[IV_NEXT_3:%.*]] = add nuw i32 [[X]], 16
 ; UPPER-NEXT:    [[PTR_NEXT_3:%.*]] = getelementptr inbounds i8, ptr [[PTR_NEXT_2]], i32 1
 ; UPPER-NEXT:    store i8 [[ARG]], ptr [[PTR_NEXT_3]], align 1
 ; UPPER-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[IV_NEXT_3]], 17
 ; UPPER-NEXT:    br i1 [[TMP4]], label [[LOOP_4:%.*]], label [[EXIT_LOOPEXIT]]
 ; UPPER:       loop.4:
-; UPPER-NEXT:    [[IV_NEXT_4:%.*]] = add nuw i32 [[IV_NEXT_3]], 4
 ; UPPER-NEXT:    [[PTR_NEXT_4:%.*]] = getelementptr inbounds i8, ptr [[PTR_NEXT_3]], i32 1
 ; UPPER-NEXT:    store i8 [[ARG]], ptr [[PTR_NEXT_4]], align 1
-; UPPER-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[IV_NEXT_4]], 17
-; UPPER-NEXT:    br i1 [[TMP5]], label [[LOOP_5:%.*]], label [[EXIT_LOOPEXIT]]
+; UPPER-NEXT:    br i1 false, label [[LOOP_5:%.*]], label [[EXIT_LOOPEXIT]]
 ; UPPER:       loop.5:
 ; UPPER-NEXT:    [[PTR_NEXT_5:%.*]] = getelementptr inbounds i8, ptr [[PTR_NEXT_4]], i32 1
 ; UPPER-NEXT:    store i8 [[ARG]], ptr [[PTR_NEXT_5]], align 1

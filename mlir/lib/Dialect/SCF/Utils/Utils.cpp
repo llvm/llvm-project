@@ -438,9 +438,9 @@ LogicalResult mlir::loopUnrollByFactor(
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
 
-  auto lbCstOp = forOp.getLowerBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto ubCstOp = forOp.getUpperBound().getDefiningOp<arith::ConstantIndexOp>();
-  auto stepCstOp = forOp.getStep().getDefiningOp<arith::ConstantIndexOp>();
+  std::optional<int64_t> lbCstOp = getConstantIntValue(forOp.getLowerBound());
+  std::optional<int64_t> ubCstOp = getConstantIntValue(forOp.getUpperBound());
+  std::optional<int64_t> stepCstOp = getConstantIntValue(forOp.getStep());
   if (lbCstOp && ubCstOp && stepCstOp) {
     // Constant loop bounds computation.
     int64_t lbCst = lbCstOp.value();
@@ -467,7 +467,7 @@ LogicalResult mlir::loopUnrollByFactor(
       upperBoundUnrolled = boundsBuilder.create<arith::ConstantIndexOp>(
           loc, upperBoundUnrolledCst);
     else
-      upperBoundUnrolled = ubCstOp;
+      upperBoundUnrolled = forOp.getUpperBound();
 
     // Create constant for 'stepUnrolled'.
     stepUnrolled = stepCst == stepUnrolledCst
@@ -550,11 +550,11 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
   // Check if the loop is already known to have a constant zero lower bound or
   // a constant one step.
   bool isZeroBased = false;
-  if (auto ubCst = lowerBound.getDefiningOp<arith::ConstantIndexOp>())
+  if (auto ubCst = getConstantIntValue(lowerBound))
     isZeroBased = ubCst.value() == 0;
 
   bool isStepOne = false;
-  if (auto stepCst = step.getDefiningOp<arith::ConstantIndexOp>())
+  if (auto stepCst = getConstantIntValue(step))
     isStepOne = stepCst.value() == 1;
 
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)

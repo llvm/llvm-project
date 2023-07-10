@@ -163,8 +163,8 @@ class getMTBUFInsDA<list<RegisterClass> vdataList,
   dag SOffset = !if(hasGFX12Enc, (ins SReg_32:$soffset),
                                  (ins SCSrc_b32:$soffset));
 
-dag NonVaddrInputs = !con((ins SReg_128:$srsrc), SOffset,
-                          (ins offset:$offset, FORMAT:$format, CPol_0:$cpol, SWZ_0:$swz));
+  dag NonVaddrInputs = !con((ins SReg_128:$srsrc), SOffset,
+                            (ins offset:$offset, FORMAT:$format, CPol_0:$cpol, i1imm_0:$swz));
 
   dag Inputs = !if(!empty(vaddrList),
                    NonVaddrInputs,
@@ -196,7 +196,7 @@ class getMTBUFAsmOps<int addrKind> {
     !if(!eq(addrKind, BUFAddrKind.Addr64),
             "$vaddr, $srsrc,$format $soffset addr64",
     "")))));
-  string ret = " $vdata, " # Pfx # "$offset$cpol$swz";
+  string ret = " $vdata, " # Pfx # "$offset$cpol";
 }
 
 class MTBUF_SetupAddr<int addrKind> {
@@ -411,7 +411,7 @@ class getMUBUFInsDA<list<RegisterClass> vdataList,
   RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdataClass, isTFE>.ret;
 
   dag SOffset = !if(hasGFX12Enc, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
-  dag NonVaddrInputs = !con((ins SReg_128:$srsrc), SOffset, (ins offset:$offset, CPol_0:$cpol, SWZ_0:$swz));
+  dag NonVaddrInputs = !con((ins SReg_128:$srsrc), SOffset, (ins offset:$offset, CPol_0:$cpol, i1imm_0:$swz));
 
   dag Inputs = !if(!empty(vaddrList), NonVaddrInputs, !con((ins vaddrClass:$vaddr), NonVaddrInputs));
   dag ret = !if(!empty(vdataList), Inputs, !con((ins vdata_op:$vdata), Inputs));
@@ -446,7 +446,7 @@ class getMUBUFIns<int addrKind, list<RegisterClass> vdataList, bit isTFE, bit ha
     (ins))))));
 }
 
-class getMUBUFAsmOps<int addrKind, bit noVdata = 0, bit isLds = 0, bit isTFE = 0, bit isSwz = 0> {
+class getMUBUFAsmOps<int addrKind, bit noVdata = 0, bit isLds = 0, bit isTFE = 0> {
   string Vdata = !if(noVdata, " ", " $vdata, ");
   string Lds = !if(isLds, " lds", "");
   string TFE = !if(isTFE, " tfe", "");
@@ -459,9 +459,8 @@ class getMUBUFAsmOps<int addrKind, bit noVdata = 0, bit isLds = 0, bit isTFE = 0
     "")))));
   string Offset = "$offset";
   string OtherArgs = "$cpol";
-  string Swz = !if(isSwz, "$swz", "");
 
-  string ret = Vdata # MainArgs # Offset # OtherArgs # Lds # TFE # Swz;
+  string ret = Vdata # MainArgs # Offset # OtherArgs # Lds # TFE;
 }
 
 class MUBUF_SetupAddr<int addrKind> {
@@ -493,7 +492,7 @@ class MUBUF_Load_Pseudo <string opName,
                  !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
                  !con(getMUBUFIns<addrKindCopy, [], isTFE, hasGFX12Enc>.ret,
                       !if(HasTiedDest, (ins vdata_op:$vdata_in), (ins))),
-                 getMUBUFAsmOps<addrKindCopy, !or(isLds, isLdsOpc), isLds, isTFE, 1>.ret,
+                 getMUBUFAsmOps<addrKindCopy, !or(isLds, isLdsOpc), isLds, isTFE>.ret,
                  pattern>,
     MUBUF_SetupAddr<addrKindCopy> {
   let PseudoInstr = opName # !if(isLds, "_lds", "") # !if(isTFE, "_tfe", "") #
@@ -605,7 +604,7 @@ class MUBUF_Store_Pseudo <string opName,
   : MUBUF_Pseudo<opName,
                  (outs),
                  getMUBUFIns<addrKindCopy, [getVregSrcForVT<store_vt>.ret], isTFE, hasGFX12Enc>.ret,
-                 getMUBUFAsmOps<addrKindCopy, 0, 0, isTFE, 1>.ret,
+                 getMUBUFAsmOps<addrKindCopy, 0, 0, isTFE>.ret,
                  pattern>,
     MUBUF_SetupAddr<addrKindCopy> {
   let PseudoInstr = opName # "_" # !if(isTFE, "_tfe", "") #
@@ -668,8 +667,8 @@ multiclass MUBUF_Pseudo_Stores<string opName, ValueType store_vt = i32> {
 class MUBUF_Pseudo_Store_Lds<string opName>
   : MUBUF_Pseudo<opName,
                  (outs),
-                 (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, CPol:$cpol, SWZ:$swz),
-                 " $srsrc, $soffset$offset lds$cpol$swz"> {
+                 (ins SReg_128:$srsrc, SCSrc_b32:$soffset, offset:$offset, CPol:$cpol, i1imm:$swz),
+                 " $srsrc, $soffset$offset lds$cpol"> {
   let LGKM_CNT = 1;
   let mayLoad = 1;
   let mayStore = 1;

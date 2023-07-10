@@ -2575,9 +2575,7 @@ CStringChecker::checkRegionChanges(ProgramStateRef state,
   llvm::SmallPtrSet<const MemRegion *, 32> SuperRegions;
 
   // First build sets for the changed regions and their super-regions.
-  for (ArrayRef<const MemRegion *>::iterator
-      I = Regions.begin(), E = Regions.end(); I != E; ++I) {
-    const MemRegion *MR = *I;
+  for (const MemRegion *MR : Regions) {
     Invalidated.insert(MR);
 
     SuperRegions.insert(MR);
@@ -2590,10 +2588,7 @@ CStringChecker::checkRegionChanges(ProgramStateRef state,
   CStringLengthTy::Factory &F = state->get_context<CStringLength>();
 
   // Then loop over the entries in the current state.
-  for (CStringLengthTy::iterator I = Entries.begin(),
-      E = Entries.end(); I != E; ++I) {
-    const MemRegion *MR = I.getKey();
-
+  for (const MemRegion *MR : llvm::make_first_range(Entries)) {
     // Is this entry for a super-region of a changed region?
     if (SuperRegions.count(MR)) {
       Entries = F.remove(Entries, MR);
@@ -2619,13 +2614,9 @@ void CStringChecker::checkLiveSymbols(ProgramStateRef state,
   // Mark all symbols in our string length map as valid.
   CStringLengthTy Entries = state->get<CStringLength>();
 
-  for (CStringLengthTy::iterator I = Entries.begin(), E = Entries.end();
-      I != E; ++I) {
-    SVal Len = I.getData();
-
-    for (SymExpr::symbol_iterator si = Len.symbol_begin(),
-        se = Len.symbol_end(); si != se; ++si)
-      SR.markInUse(*si);
+  for (SVal Len : llvm::make_second_range(Entries)) {
+    for (SymbolRef Sym : Len.symbols())
+      SR.markInUse(Sym);
   }
 }
 
@@ -2637,12 +2628,10 @@ void CStringChecker::checkDeadSymbols(SymbolReaper &SR,
     return;
 
   CStringLengthTy::Factory &F = state->get_context<CStringLength>();
-  for (CStringLengthTy::iterator I = Entries.begin(), E = Entries.end();
-      I != E; ++I) {
-    SVal Len = I.getData();
+  for (auto [Reg, Len] : Entries) {
     if (SymbolRef Sym = Len.getAsSymbol()) {
       if (SR.isDead(Sym))
-        Entries = F.remove(Entries, I.getKey());
+        Entries = F.remove(Entries, Reg);
     }
   }
 

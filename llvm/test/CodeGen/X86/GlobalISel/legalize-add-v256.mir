@@ -52,6 +52,7 @@ body:             |
     ; SSE2-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<32 x s8>) = G_CONCAT_VECTORS [[ADD]](<16 x s8>), [[ADD1]](<16 x s8>)
     ; SSE2-NEXT: $ymm0 = COPY [[CONCAT_VECTORS]](<32 x s8>)
     ; SSE2-NEXT: RET 0
+    ;
     ; AVX1-LABEL: name: test_add_v32i8
     ; AVX1: liveins: $ymm0, $ymm1
     ; AVX1-NEXT: {{  $}}
@@ -64,6 +65,7 @@ body:             |
     ; AVX1-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<32 x s8>) = G_CONCAT_VECTORS [[ADD]](<16 x s8>), [[ADD1]](<16 x s8>)
     ; AVX1-NEXT: $ymm0 = COPY [[CONCAT_VECTORS]](<32 x s8>)
     ; AVX1-NEXT: RET 0
+    ;
     ; AVX2-LABEL: name: test_add_v32i8
     ; AVX2: liveins: $ymm0, $ymm1
     ; AVX2-NEXT: {{  $}}
@@ -104,6 +106,7 @@ body:             |
     ; SSE2-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s16>) = G_CONCAT_VECTORS [[ADD]](<8 x s16>), [[ADD1]](<8 x s16>)
     ; SSE2-NEXT: $ymm0 = COPY [[CONCAT_VECTORS]](<16 x s16>)
     ; SSE2-NEXT: RET 0
+    ;
     ; AVX1-LABEL: name: test_add_v16i16
     ; AVX1: liveins: $ymm0, $ymm1
     ; AVX1-NEXT: {{  $}}
@@ -116,6 +119,7 @@ body:             |
     ; AVX1-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s16>) = G_CONCAT_VECTORS [[ADD]](<8 x s16>), [[ADD1]](<8 x s16>)
     ; AVX1-NEXT: $ymm0 = COPY [[CONCAT_VECTORS]](<16 x s16>)
     ; AVX1-NEXT: RET 0
+    ;
     ; AVX2-LABEL: name: test_add_v16i16
     ; AVX2: liveins: $ymm0, $ymm1
     ; AVX2-NEXT: {{  $}}
@@ -156,6 +160,7 @@ body:             |
     ; SSE2-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[ADD]](<4 x s32>), [[ADD1]](<4 x s32>)
     ; SSE2-NEXT: $ymm0 = COPY [[CONCAT_VECTORS]](<8 x s32>)
     ; SSE2-NEXT: RET 0
+    ;
     ; AVX1-LABEL: name: test_add_v8i32
     ; AVX1: liveins: $ymm0, $ymm1
     ; AVX1-NEXT: {{  $}}
@@ -168,6 +173,7 @@ body:             |
     ; AVX1-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s32>) = G_CONCAT_VECTORS [[ADD]](<4 x s32>), [[ADD1]](<4 x s32>)
     ; AVX1-NEXT: $ymm0 = COPY [[CONCAT_VECTORS]](<8 x s32>)
     ; AVX1-NEXT: RET 0
+    ;
     ; AVX2-LABEL: name: test_add_v8i32
     ; AVX2: liveins: $ymm0, $ymm1
     ; AVX2-NEXT: {{  $}}
@@ -208,6 +214,7 @@ body:             |
     ; SSE2-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[ADD]](<2 x s64>), [[ADD1]](<2 x s64>)
     ; SSE2-NEXT: $ymm0 = COPY [[CONCAT_VECTORS]](<4 x s64>)
     ; SSE2-NEXT: RET 0
+    ;
     ; AVX1-LABEL: name: test_add_v4i64
     ; AVX1: liveins: $ymm0, $ymm1
     ; AVX1-NEXT: {{  $}}
@@ -220,6 +227,7 @@ body:             |
     ; AVX1-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[ADD]](<2 x s64>), [[ADD1]](<2 x s64>)
     ; AVX1-NEXT: $ymm0 = COPY [[CONCAT_VECTORS]](<4 x s64>)
     ; AVX1-NEXT: RET 0
+    ;
     ; AVX2-LABEL: name: test_add_v4i64
     ; AVX2: liveins: $ymm0, $ymm1
     ; AVX2-NEXT: {{  $}}

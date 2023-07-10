@@ -54,7 +54,7 @@ define void @s32_max2(i32 %n, ptr %p) {
 ; CHECK:       do.body.1:
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i32, ptr [[P]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 [[INC]], ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[INC_1:%.*]] = add i32 [[INC]], 1
+; CHECK-NEXT:    [[INC_1:%.*]] = add i32 [[N]], 2
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i32, ptr [[P]], i32 [[INC_1]]
 ; CHECK-NEXT:    store i32 [[INC_1]], ptr [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    br label [[DO_END]]
@@ -202,7 +202,7 @@ define void @u32_max2(i32 %n, ptr %p) {
 ; CHECK:       do.body.1:
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr i32, ptr [[P]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 [[INC]], ptr [[ARRAYIDX_1]], align 4
-; CHECK-NEXT:    [[INC_1:%.*]] = add i32 [[INC]], 1
+; CHECK-NEXT:    [[INC_1:%.*]] = add i32 [[N]], 2
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr i32, ptr [[P]], i32 [[INC_1]]
 ; CHECK-NEXT:    store i32 [[INC_1]], ptr [[ARRAYIDX_2]], align 4
 ; CHECK-NEXT:    br label [[DO_END]]

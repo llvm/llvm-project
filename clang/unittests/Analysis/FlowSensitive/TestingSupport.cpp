@@ -153,6 +153,43 @@ test::buildStatementToAnnotationMapping(const FunctionDecl *Func,
   return Result;
 }
 
+llvm::Error test::checkDataflowWithNoopAnalysis(
+    llvm::StringRef Code,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults,
+    DataflowAnalysisOptions Options, LangStandard::Kind Std,
+    llvm::StringRef TargetFun) {
+  using ast_matchers::hasName;
+  llvm::SmallVector<std::string, 3> ASTBuildArgs = {
+      // -fnodelayed-template-parsing is the default everywhere but on Windows.
+      // Set it explicitly so that tests behave the same on Windows as on other
+      // platforms.
+      "-fsyntax-only", "-fno-delayed-template-parsing",
+      "-std=" +
+          std::string(LangStandard::getLangStandardForKind(Std).getName())};
+  AnalysisInputs<NoopAnalysis> AI(
+      Code, hasName(TargetFun),
+      [UseBuiltinModel = Options.BuiltinOpts.has_value()](ASTContext &C,
+                                                          Environment &Env) {
+        return NoopAnalysis(
+            C,
+            DataflowAnalysisOptions{
+                UseBuiltinModel ? Env.getDataflowAnalysisContext().getOptions()
+                                : std::optional<BuiltinOptions>()});
+      });
+  AI.ASTBuildArgs = ASTBuildArgs;
+  if (Options.BuiltinOpts)
+    AI.BuiltinOptions = *Options.BuiltinOpts;
+  return checkDataflow<NoopAnalysis>(
+      std::move(AI),
+      /*VerifyResults=*/
+      [&VerifyResults](
+          const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+          const AnalysisOutputs &AO) { VerifyResults(Results, AO.ASTCtx); });
+}
+
 const ValueDecl *test::findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name) {
   auto TargetNodes = match(
       valueDecl(unless(indirectFieldDecl()), hasName(Name)).bind("v"), ASTCtx);

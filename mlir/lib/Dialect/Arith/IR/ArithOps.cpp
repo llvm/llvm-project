@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::arith;
@@ -2375,6 +2376,38 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
     break;
   }
   return nullptr;
+}
+
+/// Return the identity numeric value associated to the give op.
+std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
+  std::optional<AtomicRMWKind> maybeKind =
+      llvm::TypeSwitch<Operation *, std::optional<AtomicRMWKind>>(op)
+          // Floating-point operations.
+          .Case([](arith::AddFOp op) { return AtomicRMWKind::addf; })
+          .Case([](arith::MulFOp op) { return AtomicRMWKind::mulf; })
+          .Case([](arith::MaxFOp op) { return AtomicRMWKind::maxf; })
+          .Case([](arith::MinFOp op) { return AtomicRMWKind::minf; })
+          // Integer operations.
+          .Case([](arith::AddIOp op) { return AtomicRMWKind::addi; })
+          .Case([](arith::OrIOp op) { return AtomicRMWKind::ori; })
+          .Case([](arith::XOrIOp op) { return AtomicRMWKind::ori; })
+          .Case([](arith::AndIOp op) { return AtomicRMWKind::andi; })
+          .Case([](arith::MaxUIOp op) { return AtomicRMWKind::maxu; })
+          .Case([](arith::MinUIOp op) { return AtomicRMWKind::minu; })
+          .Case([](arith::MaxSIOp op) { return AtomicRMWKind::maxs; })
+          .Case([](arith::MinSIOp op) { return AtomicRMWKind::mins; })
+          .Case([](arith::MulIOp op) { return AtomicRMWKind::muli; })
+          .Default([](Operation *op) { return std::nullopt; });
+  if (!maybeKind) {
+    op->emitError() << "Unknown neutral element for: " << *op;
+    return std::nullopt;
+  }
+
+  // Builder only used as helper for attribute creation.
+  OpBuilder b(op->getContext());
+  Type resultType = op->getResult(0).getType();
+
+  return getIdentityValueAttr(*maybeKind, resultType, b, op->getLoc());
 }
 
 /// Returns the identity value associated with an AtomicRMWKind op.

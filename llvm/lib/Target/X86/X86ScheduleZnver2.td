@@ -1321,9 +1321,6 @@ def : SchedAlias<WriteDPPDLd, Zn2WriteMicrocoded>;
 // VZEROUPPER.
 def : InstRW<[WriteALU], (instrs VZEROUPPER)>;
 
-// VZEROALL.
-def : InstRW<[WriteMicrocoded], (instrs VZEROALL)>;
-
 ///////////////////////////////////////////////////////////////////////////////
 // Dependency breaking instructions.
 ///////////////////////////////////////////////////////////////////////////////

@@ -778,13 +778,13 @@ def : Pat<(i64 (add (and GPR:$rs1, 0x3FFFFFFFC), non_imm12:$rs2)),
 def : Pat<(i64 (add (and GPR:$rs1, 0x7FFFFFFF8), non_imm12:$rs2)),
           (SH3ADD_UW (SRLI GPR:$rs1, 3), GPR:$rs2)>;
 
-def : Pat<(i64 (mul (binop_oneuse<and> GPR:$r, 0xFFFFFFFF), C3LeftShiftUW:$i)),
+def : Pat<(i64 (mul (and_oneuse GPR:$r, 0xFFFFFFFF), C3LeftShiftUW:$i)),
           (SH1ADD (SLLI_UW GPR:$r, (TrailingZeros C3LeftShiftUW:$i)),
                   (SLLI_UW GPR:$r, (TrailingZeros C3LeftShiftUW:$i)))>;
-def : Pat<(i64 (mul (binop_oneuse<and> GPR:$r, 0xFFFFFFFF), C5LeftShiftUW:$i)),
+def : Pat<(i64 (mul (and_oneuse GPR:$r, 0xFFFFFFFF), C5LeftShiftUW:$i)),
           (SH2ADD (SLLI_UW GPR:$r, (TrailingZeros C5LeftShiftUW:$i)),
                   (SLLI_UW GPR:$r, (TrailingZeros C5LeftShiftUW:$i)))>;
-def : Pat<(i64 (mul (binop_oneuse<and> GPR:$r, 0xFFFFFFFF), C9LeftShiftUW:$i)),
+def : Pat<(i64 (mul (and_oneuse GPR:$r, 0xFFFFFFFF), C9LeftShiftUW:$i)),
           (SH3ADD (SLLI_UW GPR:$r, (TrailingZeros C9LeftShiftUW:$i)),
                   (SLLI_UW GPR:$r, (TrailingZeros C9LeftShiftUW:$i)))>;
 } // Predicates = [HasStdExtZba, IsRV64]

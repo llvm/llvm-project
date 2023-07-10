@@ -11,7 +11,6 @@
 // RUN: [ $PROFILES -eq 2 ]
 // RUN: rm -f xray-log.profiling-single-*
 //
-// REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree
 
 #include "xray/xray_interface.h"

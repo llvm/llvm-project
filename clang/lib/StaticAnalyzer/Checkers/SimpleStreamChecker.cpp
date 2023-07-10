@@ -163,13 +163,11 @@ void SimpleStreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   ProgramStateRef State = C.getState();
   SymbolVector LeakedStreams;
   StreamMapTy TrackedStreams = State->get<StreamMap>();
-  for (StreamMapTy::iterator I = TrackedStreams.begin(),
-                             E = TrackedStreams.end(); I != E; ++I) {
-    SymbolRef Sym = I->first;
+  for (auto [Sym, StreamStatus] : TrackedStreams) {
     bool IsSymDead = SymReaper.isDead(Sym);
 
     // Collect leaked symbols.
-    if (isLeaked(Sym, I->second, IsSymDead, State))
+    if (isLeaked(Sym, StreamStatus, IsSymDead, State))
       LeakedStreams.push_back(Sym);
 
     // Remove the dead symbol from the streams map.
@@ -241,11 +239,7 @@ SimpleStreamChecker::checkPointerEscape(ProgramStateRef State,
     return State;
   }
 
-  for (InvalidatedSymbols::const_iterator I = Escaped.begin(),
-                                          E = Escaped.end();
-                                          I != E; ++I) {
-    SymbolRef Sym = *I;
-
+  for (SymbolRef Sym : Escaped) {
     // The symbol escaped. Optimistically, assume that the corresponding file
     // handle will be closed somewhere else.
     State = State->remove<StreamMap>(Sym);

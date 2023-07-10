@@ -1394,18 +1394,18 @@ bool TBVectorExt::hasVMXInstruction() const {
 #undef GETVALUEWITHMASK
 #undef GETVALUEWITHMASKSHIFT
 
-Expected<XCOFFTracebackTable> XCOFFTracebackTable::create(const uint8_t *Ptr,
-                                                          uint64_t &Size) {
+Expected<XCOFFTracebackTable>
+XCOFFTracebackTable::create(const uint8_t *Ptr, uint64_t &Size, bool Is64Bit) {
   Error Err = Error::success();
-  XCOFFTracebackTable TBT(Ptr, Size, Err);
+  XCOFFTracebackTable TBT(Ptr, Size, Err, Is64Bit);
   if (Err)
     return std::move(Err);
   return TBT;
 }
 
 XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
-                                         Error &Err)
-    : TBPtr(Ptr) {
+                                         Error &Err, bool Is64Bit)
+    : TBPtr(Ptr), Is64BitObj(Is64Bit) {
   ErrorAsOutParameter EAO(&Err);
   DataExtractor DE(ArrayRef<uint8_t>(Ptr, Size), /*IsLittleEndian=*/false,
                    /*AddressSize=*/0);
@@ -1460,6 +1460,8 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
       }
       VecExt = TBVecExtOrErr.get();
       VectorParmsNum = VecExt->getNumberOfVectorParms();
+      // Skip two bytes of padding after vector info.
+      DE.skip(Cur, 2);
     }
   }
 
@@ -1480,9 +1482,15 @@ XCOFFTracebackTable::XCOFFTracebackTable(const uint8_t *Ptr, uint64_t &Size,
     ParmsType = ParmsTypeOrError.get();
   }
 
-  if (Cur && hasExtensionTable())
+  if (Cur && hasExtensionTable()) {
     ExtensionTable = DE.getU8(Cur);
 
+    if (*ExtensionTable & ExtendedTBTableFlag::TB_EH_INFO) {
+      // eh_info displacement must be 4-byte aligned.
+      Cur.seek(alignTo(Cur.tell(), 4));
+      EhInfoDisp = Is64BitObj ? DE.getU64(Cur) : DE.getU32(Cur);
+    }
+  }
   if (!Cur)
     Err = Cur.takeError();
 

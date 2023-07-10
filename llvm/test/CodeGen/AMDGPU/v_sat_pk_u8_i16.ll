@@ -40,7 +40,6 @@ define <2 x i16> @basic_smax_smin(i16 %src0, i16 %src1) {
 ; SDAG-GFX11-LABEL: basic_smax_smin:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX11-NEXT:    v_med3_i16 v0, v0, 0, 0xff
 ; SDAG-GFX11-NEXT:    v_med3_i16 v1, v1, 0, 0xff
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -71,7 +70,6 @@ define <2 x i16> @basic_smax_smin(i16 %src0, i16 %src1) {
 ; GISEL-GFX11-LABEL: basic_smax_smin:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX11-NEXT:    v_med3_i16 v0, v0, 0, 0xff
 ; GISEL-GFX11-NEXT:    v_med3_i16 v1, v1, 0, 0xff
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -233,7 +231,6 @@ define <2 x i16> @basic_smin_smax(i16 %src0, i16 %src1) {
 ; SDAG-GFX11-LABEL: basic_smin_smax:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX11-NEXT:    v_med3_i16 v0, v0, 0, 0xff
 ; SDAG-GFX11-NEXT:    v_med3_i16 v1, v1, 0, 0xff
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -264,7 +261,6 @@ define <2 x i16> @basic_smin_smax(i16 %src0, i16 %src1) {
 ; GISEL-GFX11-LABEL: basic_smin_smax:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX11-NEXT:    v_med3_i16 v0, v0, 0, 0xff
 ; GISEL-GFX11-NEXT:    v_med3_i16 v1, v1, 0, 0xff
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -305,7 +301,6 @@ define <2 x i16> @basic_smin_smax_combined(i16 %src0, i16 %src1) {
 ; SDAG-GFX11-LABEL: basic_smin_smax_combined:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX11-NEXT:    v_med3_i16 v0, v0, 0, 0xff
 ; SDAG-GFX11-NEXT:    v_med3_i16 v1, v1, 0, 0xff
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -336,7 +331,6 @@ define <2 x i16> @basic_smin_smax_combined(i16 %src0, i16 %src1) {
 ; GISEL-GFX11-LABEL: basic_smin_smax_combined:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX11-NEXT:    v_med3_i16 v0, v0, 0, 0xff
 ; GISEL-GFX11-NEXT:    v_med3_i16 v1, v1, 0, 0xff
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -376,7 +370,6 @@ define <2 x i16> @vec_smax_smin(<2 x i16> %src) {
 ; GFX11-LABEL: vec_smax_smin:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_max_i16 v0, v0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
@@ -554,7 +547,6 @@ define <2 x i16> @vec_smin_smax(<2 x i16> %src) {
 ; GFX11-LABEL: vec_smin_smax:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_min_i16 v0, 0xff, v0 op_sel_hi:[0,1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_i16 v0, v0, 0

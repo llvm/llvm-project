@@ -569,8 +569,11 @@ endfunction()
 # RTTI flags ==================================================================
 function(cxx_add_rtti_flags target)
   if (NOT LIBCXX_ENABLE_RTTI)
-    target_add_compile_flags_if_supported(${target} PUBLIC -GR-)
-    target_add_compile_flags_if_supported(${target} PUBLIC -fno-rtti)
+    if (LIBCXX_TARGETING_CLANG_CL OR LIBCXX_TARGETING_MSVC)
+      target_add_compile_flags_if_supported(${target} PUBLIC -GR-)
+    else()
+      target_add_compile_flags_if_supported(${target} PUBLIC -fno-rtti)
+    endif()
   endif()
 endfunction()
 

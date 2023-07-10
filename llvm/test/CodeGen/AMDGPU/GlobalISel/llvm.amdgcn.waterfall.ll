@@ -3429,7 +3429,6 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-32-LABEL: test_indirect_call_vgpr_ptr_arg_and_reuse:
 ; GFX10-32:       ; %bb.0:
 ; GFX10-32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-32-NEXT:    s_mov_b32 s34, s33
 ; GFX10-32-NEXT:    s_mov_b32 s33, s32
 ; GFX10-32-NEXT:    s_or_saveexec_b32 s35, -1
@@ -3481,7 +3480,6 @@ define amdgpu_gfx i32 @test_indirect_call_vgpr_ptr_arg_and_reuse(i32 %i, i32 %fp
 ; GFX10-64-LABEL: test_indirect_call_vgpr_ptr_arg_and_reuse:
 ; GFX10-64:       ; %bb.0:
 ; GFX10-64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-64-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-64-NEXT:    s_mov_b32 s34, s33
 ; GFX10-64-NEXT:    s_mov_b32 s33, s32
 ; GFX10-64-NEXT:    s_or_saveexec_b64 s[36:37], -1

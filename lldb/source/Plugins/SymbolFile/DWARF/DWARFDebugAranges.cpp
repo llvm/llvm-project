@@ -43,7 +43,7 @@ void DWARFDebugAranges::extract(const DWARFDataExtractor &debug_aranges_data) {
       Log *log = GetLog(DWARFLog::DebugInfo);
       LLDB_LOG_ERROR(log, std::move(error),
                      "DWARFDebugAranges::extract failed to extract "
-                     ".debug_aranges set at offset %#" PRIx64,
+                     ".debug_aranges set at offset {1:x}: {0}",
                      set_offset);
     } else {
       const uint32_t num_descriptors = set.NumDescriptors();

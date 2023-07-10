@@ -13804,15 +13804,9 @@ private:
     case RecurKind::SMin:
     case RecurKind::UMax:
     case RecurKind::UMin: {
-      if (!AllConsts) {
-        auto *VecCondTy =
-            cast<VectorType>(CmpInst::makeCmpResultType(VectorTy));
-        bool IsUnsigned =
-            RdxKind == RecurKind::UMax || RdxKind == RecurKind::UMin;
-        VectorCost = TTI->getMinMaxReductionCost(VectorTy, VecCondTy,
-                                                 IsUnsigned, FMF, CostKind);
-      }
       Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
+      if (!AllConsts)
+        VectorCost = TTI->getMinMaxReductionCost(Id, VectorTy, FMF, CostKind);
       ScalarCost = EvaluateScalarCost([&]() {
         IntrinsicCostAttributes ICA(Id, ScalarTy, {ScalarTy, ScalarTy}, FMF);
         return TTI->getIntrinsicInstrCost(ICA, CostKind);

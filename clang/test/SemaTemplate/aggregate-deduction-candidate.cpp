@@ -198,22 +198,22 @@ namespace Array {
   // CHECK: FunctionTemplateDecl {{.*}} implicit <deduction guide for A>
   // CHECK: |-TemplateTypeParmDecl {{.*}} referenced typename depth 0 index 0 T
   // CHECK: |-NonTypeTemplateParmDecl {{.*}} 'size_t':'unsigned {{.*}}' depth 0 index 1 N
-  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (T (&)[N]) -> A<T, N>'
-  // CHECK: | `-ParmVarDecl {{.*}} 'T (&)[N]'
-  // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for A> 'auto (const char (&)[5]) -> Array::A<const char, 5>'
-  // CHECK:   |-TemplateArgument type 'const char'
-  // CHECK:   | `-QualType {{.*}} 'const char' const
-  // CHECK:   |   `-BuiltinType {{.*}} 'char'
+  // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for A> 'auto (const T (&)[N]) -> A<T, N>'
+  // CHECK: | `-ParmVarDecl {{.*}} 'const T (&)[N]'
+  // CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for A> 'auto (const char (&)[5]) -> Array::A<char, 5>'
+  // CHECK:   |-TemplateArgument type 'char'
+  // CHECK:   | `-BuiltinType {{.*}} 'char'
   // CHECK:   |-TemplateArgument integral 5
   // CHECK:   `-ParmVarDecl {{.*}} 'const char (&)[5]'
-  // CHECK: FunctionProtoType {{.*}} 'auto (T (&)[N]) -> A<T, N>' dependent trailing_return cdecl
+  // CHECK: FunctionProtoType {{.*}} 'auto (const T (&)[N]) -> A<T, N>' dependent trailing_return cdecl
   // CHECK: |-InjectedClassNameType {{.*}} 'A<T, N>' dependent
   // CHECK: | `-CXXRecord {{.*}} 'A'
-  // CHECK: `-LValueReferenceType {{.*}} 'T (&)[N]' dependent
-  // CHECK:   `-DependentSizedArrayType {{.*}} 'T[N]' dependent
-  // CHECK:     |-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
-  // CHECK:     | `-TemplateTypeParm {{.*}} 'T'
-  // CHECK:     `-DeclRefExpr {{.*}} 'size_t':'unsigned {{.*}}' NonTypeTemplateParm {{.*}} 'N' 'size_t':'unsigned {{.*}}'
+  // CHECK: `-LValueReferenceType {{.*}} 'const T (&)[N]' dependent
+  // CHECK:   `-QualType {{.*}} 'const T[N]' const
+  // CHECK:     `-DependentSizedArrayType {{.*}} 'T[N]' dependent
+  // CHECK:       |-TemplateTypeParmType {{.*}} 'T' dependent depth 0 index 0
+  // CHECK:       | `-TemplateTypeParm {{.*}} 'T'
+  // CHECK:       `-DeclRefExpr {{.*}} 'size_t':'unsigned{{.*}}' NonTypeTemplateParm {{.*}} 'N' 'size_t':'unsigned{{.*}}'
 }
 
 namespace BraceElision {

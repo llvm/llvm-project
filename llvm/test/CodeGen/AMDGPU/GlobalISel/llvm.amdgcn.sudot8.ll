@@ -7,7 +7,6 @@ define i32 @test_llvm_amdgcn_sudot8_uu(i32 %a, i32 %b, i32 %c) {
 ; GFX11-LABEL: test_llvm_amdgcn_sudot8_uu:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0x7c,0xbc]
 ; GFX11-NEXT:    v_dot8_i32_iu4 v0, v0, v1, v2 ; encoding: [0x00,0x40,0x18,0xcc,0x00,0x03,0x0a,0x1c]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
 entry:
@@ -19,7 +18,6 @@ define i32 @test_llvm_amdgcn_sudot8_us(i32 %a, i32 %b, i32 %c) {
 ; GFX11-LABEL: test_llvm_amdgcn_sudot8_us:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0x7c,0xbc]
 ; GFX11-NEXT:    v_dot8_i32_iu4 v0, v0, v1, v2 neg_lo:[0,1,0] ; encoding: [0x00,0x40,0x18,0xcc,0x00,0x03,0x0a,0x5c]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
 entry:
@@ -31,7 +29,6 @@ define i32 @test_llvm_amdgcn_sudot8_su(i32 %a, i32 %b, i32 %c) {
 ; GFX11-LABEL: test_llvm_amdgcn_sudot8_su:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0x7c,0xbc]
 ; GFX11-NEXT:    v_dot8_i32_iu4 v0, v0, v1, v2 neg_lo:[1,0,0] ; encoding: [0x00,0x40,0x18,0xcc,0x00,0x03,0x0a,0x3c]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
 entry:
@@ -43,7 +40,6 @@ define i32 @test_llvm_amdgcn_sudot8_ss(i32 %a, i32 %b, i32 %c) {
 ; GFX11-LABEL: test_llvm_amdgcn_sudot8_ss:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0x7c,0xbc]
 ; GFX11-NEXT:    v_dot8_i32_iu4 v0, v0, v1, v2 neg_lo:[1,1,0] ; encoding: [0x00,0x40,0x18,0xcc,0x00,0x03,0x0a,0x7c]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
 entry:
@@ -57,7 +53,6 @@ define i32 @test_llvm_amdgcn_sudot8_uu_clamp(i32 %a, i32 %b, i32 %c) {
 ; GFX11-LABEL: test_llvm_amdgcn_sudot8_uu_clamp:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0x7c,0xbc]
 ; GFX11-NEXT:    v_dot8_i32_iu4 v0, v0, v1, v2 clamp ; encoding: [0x00,0xc0,0x18,0xcc,0x00,0x03,0x0a,0x1c]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
 entry:
@@ -69,7 +64,6 @@ define i32 @test_llvm_amdgcn_sudot8_us_clamp(i32 %a, i32 %b, i32 %c) {
 ; GFX11-LABEL: test_llvm_amdgcn_sudot8_us_clamp:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0x7c,0xbc]
 ; GFX11-NEXT:    v_dot8_i32_iu4 v0, v0, v1, v2 neg_lo:[0,1,0] clamp ; encoding: [0x00,0xc0,0x18,0xcc,0x00,0x03,0x0a,0x5c]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
 entry:
@@ -81,7 +75,6 @@ define i32 @test_llvm_amdgcn_sudot8_su_clamp(i32 %a, i32 %b, i32 %c) {
 ; GFX11-LABEL: test_llvm_amdgcn_sudot8_su_clamp:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0x7c,0xbc]
 ; GFX11-NEXT:    v_dot8_i32_iu4 v0, v0, v1, v2 neg_lo:[1,0,0] clamp ; encoding: [0x00,0xc0,0x18,0xcc,0x00,0x03,0x0a,0x3c]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
 entry:
@@ -93,7 +86,6 @@ define i32 @test_llvm_amdgcn_sudot8_ss_clamp(i32 %a, i32 %b, i32 %c) {
 ; GFX11-LABEL: test_llvm_amdgcn_sudot8_ss_clamp:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0) ; encoding: [0x00,0x00,0x89,0xbf]
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0 ; encoding: [0x00,0x00,0x7c,0xbc]
 ; GFX11-NEXT:    v_dot8_i32_iu4 v0, v0, v1, v2 neg_lo:[1,1,0] clamp ; encoding: [0x00,0xc0,0x18,0xcc,0x00,0x03,0x0a,0x7c]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31] ; encoding: [0x1e,0x48,0x80,0xbe]
 entry:

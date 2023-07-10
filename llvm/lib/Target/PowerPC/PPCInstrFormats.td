@@ -2171,6 +2171,54 @@ class Z23Form_RTAB5_CY2<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Inst{31} = 0;
 }
 
+class Z23Form_FRTAB5_RMC2<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                          string asmstr, list<dag> pattern>
+    : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> FRT;
+  bits<5> FRA;
+  bits<5> FRB;
+  bits<2> RMC;
+
+  let Pattern = pattern;
+
+  bit RC = 0; // set by isRecordForm
+
+  let Inst{6 - 10} = FRT;
+  let Inst{11 - 15} = FRA;
+  let Inst{16 - 20} = FRB;
+  let Inst{21 - 22} = RMC;
+  let Inst{23 - 30} = xo;
+  let Inst{31} = RC;
+}
+
+class Z23Form_TE5_FRTB5_RMC2<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                             string asmstr, list<dag> pattern>
+    : Z23Form_FRTAB5_RMC2<opcode, xo, OOL, IOL, asmstr, pattern> {
+  bits<5> TE;
+  let FRA = TE;
+}
+
+class Z23Form_FRTB5_R1_RMC2<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
+                            string asmstr, list<dag> pattern>
+    : I<opcode, OOL, IOL, asmstr, NoItinerary> {
+  bits<5> FRT;
+  bits<1> R;
+  bits<5> FRB;
+  bits<2> RMC;
+
+  let Pattern = pattern;
+
+  bit RC = 0; // set by isRecordForm
+
+  let Inst{6 - 10} = FRT;
+  let Inst{11 - 14} = 0;
+  let Inst{15} = R;
+  let Inst{16 - 20} = FRB;
+  let Inst{21 - 22} = RMC;
+  let Inst{23 - 30} = xo;
+  let Inst{31} = RC;
+}
+
 //===----------------------------------------------------------------------===//
 // EmitTimePseudo won't have encoding information for the [MC]CodeEmitter
 // stuff

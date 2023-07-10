@@ -142,7 +142,7 @@ LIBC_INLINE uint64_t processor_clock() {
 }
 
 /// Returns a global fixed-frequency timer at nanosecond frequency.
-LIBC_INLINE uint64_t fixed_frequrency_clock() {
+LIBC_INLINE uint64_t fixed_frequency_clock() {
   uint64_t nsecs;
   LIBC_INLINE_ASM("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
   return nsecs;

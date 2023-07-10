@@ -909,26 +909,43 @@ LogicalResult transform::ForeachOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// GetClosestIsolatedParentOp
+// GetParentOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::GetClosestIsolatedParentOp::apply(
-    transform::TransformRewriter &rewriter,
-    transform::TransformResults &results, transform::TransformState &state) {
-  SetVector<Operation *> parents;
+DiagnosedSilenceableFailure
+transform::GetParentOp::apply(transform::TransformRewriter &rewriter,
+                              transform::TransformResults &results,
+                              transform::TransformState &state) {
+  SmallVector<Operation *> parents;
+  DenseSet<Operation *> resultSet;
   for (Operation *target : state.getPayloadOps(getTarget())) {
-    Operation *parent =
-        target->getParentWithTrait<OpTrait::IsIsolatedFromAbove>();
+    Operation *parent = target->getParentOp();
+    do {
+      bool checkIsolatedFromAbove =
+          !getIsolatedFromAbove() ||
+          parent->hasTrait<OpTrait::IsIsolatedFromAbove>();
+      bool checkOpName = !getOpName().has_value() ||
+                         parent->getName().getStringRef() == *getOpName();
+      if (checkIsolatedFromAbove && checkOpName)
+        break;
+    } while ((parent = parent->getParentOp()));
     if (!parent) {
       DiagnosedSilenceableFailure diag =
           emitSilenceableError()
-          << "could not find an isolated-from-above parent op";
+          << "could not find a parent op that matches all requirements";
       diag.attachNote(target->getLoc()) << "target op";
       return diag;
     }
-    parents.insert(parent);
+    if (getDeduplicate()) {
+      if (!resultSet.contains(parent)) {
+        parents.push_back(parent);
+        resultSet.insert(parent);
+      }
+    } else {
+      parents.push_back(parent);
+    }
   }
-  results.set(llvm::cast<OpResult>(getResult()), parents.getArrayRef());
+  results.set(llvm::cast<OpResult>(getResult()), parents);
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -1029,6 +1046,37 @@ transform::GetResultOp::apply(transform::TransformRewriter &rewriter,
     opResults.push_back(target->getOpResult(resultNumber));
   }
   results.setValues(llvm::cast<OpResult>(getResult()), opResults);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetTypeOp
+//===----------------------------------------------------------------------===//
+
+void transform::GetTypeOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getValue(), effects);
+  producesHandle(getResult(), effects);
+  onlyReadsPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+transform::GetTypeOp::apply(transform::TransformRewriter &rewriter,
+                            transform::TransformResults &results,
+                            transform::TransformState &state) {
+  SmallVector<Attribute> params;
+  ArrayRef<Value> values = state.getPayloadValues(getValue());
+  params.reserve(values.size());
+  for (Value value : values) {
+    Type type = value.getType();
+    if (getElemental()) {
+      if (auto shaped = dyn_cast<ShapedType>(type)) {
+        type = shaped.getElementType();
+      }
+    }
+    params.push_back(TypeAttr::get(type));
+  }
+  results.setParams(getResult().cast<OpResult>(), params);
   return DiagnosedSilenceableFailure::success();
 }
 

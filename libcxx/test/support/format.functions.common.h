@@ -205,7 +205,7 @@ std::basic_string<CharT> get_colons() {
 }
 
 constexpr std::string_view get_format_types() {
-  return "aAbBcdeEfFgGopsxX"
+  return "aAbBcdeEfFgGopPsxX"
 #if TEST_STD_VER > 20
          "?"
 #endif

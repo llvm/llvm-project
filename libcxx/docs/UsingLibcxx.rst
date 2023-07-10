@@ -537,6 +537,9 @@ versions. This allows the library to have better estimates for newly introduced
 Unicode code points, without requiring the user to use the latest C++ version
 in their code base.
 
+In C++26 formatting pointers gained a type ``P`` and allows to use
+zero-padding. These options have been retroactively applied to C++20.
+
 Turning off ASan annotation in containers
 -----------------------------------------
 

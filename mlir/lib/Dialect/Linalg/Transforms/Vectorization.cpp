@@ -745,8 +745,12 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
   if (extractOp.getIndices().size() != 1 && !vectorizeNDExtract)
     return failure();
 
-  if (!VectorType::isValidElementType(extractOp.getIndices()[0].getType()))
-    return failure();
+  // Check the index type, but only for non 0-d tensors (for which we do need
+  // access indices).
+  if (not extractOp.getIndices().empty()) {
+    if (!VectorType::isValidElementType(extractOp.getIndices()[0].getType()))
+      return failure();
+  }
 
   if (llvm::any_of(extractOp->getResultTypes(), [](Type type) {
         return !VectorType::isValidElementType(type);
@@ -919,6 +923,12 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
                                     LinalgOp &linalgOp) {
 
   auto targetShape = linalgOp.getStaticLoopRanges();
+  auto inputShape = cast<ShapedType>(extractOp.getTensor().getType());
+
+  // 0. Is this a 0-D vector? If yes then this is a scalar broadcast.
+  if (inputShape.getShape().empty())
+    return VectorMemoryAccessKind::ScalarBroadcast;
+
 
   // 1. Assume that it's a gather load when reading _into_:
   //    * an n-D vector, like`tensor<1x2x4xi32` or`tensor<2x1x4xi32>`, or
@@ -929,7 +939,6 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
       targetShape.back() == 1)
     return VectorMemoryAccessKind::Gather;
 
-  auto inputShape = cast<ShapedType>(extractOp.getTensor().getType());
 
   // 2. Assume that it's a gather load when reading _from_ a tensor for which
   // the trailing dimension is 1, e.g. `tensor<1x4x1xi32>`.

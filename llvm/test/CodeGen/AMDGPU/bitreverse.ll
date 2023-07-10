@@ -878,7 +878,6 @@ define float @missing_truncate_promote_bitreverse(i32 %arg) {
 ; GFX11-FLAT-LABEL: missing_truncate_promote_bitreverse:
 ; GFX11-FLAT:       ; %bb.0: ; %bb
 ; GFX11-FLAT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FLAT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-FLAT-NEXT:    v_bfrev_b32_e32 v0, v0
 ; GFX11-FLAT-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FLAT-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
@@ -888,7 +887,6 @@ define float @missing_truncate_promote_bitreverse(i32 %arg) {
 ; GFX11-GISEL-LABEL: missing_truncate_promote_bitreverse:
 ; GFX11-GISEL:       ; %bb.0: ; %bb
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-GISEL-NEXT:    v_bfrev_b32_e32 v0, v0
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_lshrrev_b32_e32 v0, 16, v0

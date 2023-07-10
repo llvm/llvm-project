@@ -56,7 +56,7 @@ enum class ModRefInfo : uint8_t {
 raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
 /// The locations at which a function might access memory.
-enum IRMemLocation {
+enum class IRMemLocation {
   /// Access to memory via argument pointers.
   ArgMem = 0,
   /// Memory that is inaccessible via LLVM IR.

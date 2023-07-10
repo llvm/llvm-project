@@ -72,10 +72,10 @@ define <16 x i1> @reverse_v16i1(<16 x i1> %a) {
 define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 ; CHECK-LABEL: reverse_v32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    lui a0, %hi(.LCPI4_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI4_0)
+; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
@@ -89,10 +89,10 @@ define <32 x i1> @reverse_v32i1(<32 x i1> %a) {
 define <64 x i1> @reverse_v64i1(<64 x i1> %a) {
 ; CHECK-LABEL: reverse_v64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 64
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    lui a0, %hi(.LCPI5_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_0)
+; CHECK-NEXT:    li a1, 64
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmv.v.i v12, 0
 ; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0

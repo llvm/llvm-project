@@ -180,7 +180,6 @@ define i32 @v_extract_v64i32_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -243,7 +242,6 @@ define i32 @v_extract_v64i32_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    scratch_load_b32 v0, v0, s33
 ; GFX12-NEXT:    s_mov_b32 s33, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-GFX12-LABEL: v_extract_v64i32_varidx:
 ; GCN-GFX12:       ; %bb.0:
@@ -667,7 +665,6 @@ define i16 @v_extract_v128i16_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -768,7 +765,6 @@ define i16 @v_extract_v128i16_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    s_wait_loadcnt 0x10
 ; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-GFX12-LABEL: v_extract_v128i16_varidx:
 ; GCN-GFX12:       ; %bb.0:
@@ -1231,7 +1227,6 @@ define i64 @v_extract_v32i64_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -1294,7 +1289,6 @@ define i64 @v_extract_v32i64_varidx(ptr addrspace(1) %ptr, i32 %idx) {
 ; GFX12-NEXT:    scratch_load_b64 v[0:1], v0, s33
 ; GFX12-NEXT:    s_mov_b32 s33, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GCN-GFX12-LABEL: v_extract_v32i64_varidx:
 ; GCN-GFX12:       ; %bb.0:

@@ -131,6 +131,7 @@
 // RUN:               -DRESOURCE=%S/Inputs/resource_dir \
 // RUN:               --check-prefix=CHECK-NOSTDINC-BUILTINC %s
 // CHECK-NOSTDINC-BUILTINC: "-cc1"
+// CHECK-NOSTDINC-BUILTINC-NOT: "-ibuiltininc"
 // CHECK-NOSTDINC-BUILTINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-NOSTDINC-BUILTINC: "-internal-isystem" "[[RESOURCE]]/include"
 // CHECK-NOSTDINC-BUILTINC-NOT: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"

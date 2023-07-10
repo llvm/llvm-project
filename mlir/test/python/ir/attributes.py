@@ -228,13 +228,28 @@ def testBoolAttr():
 @run
 def testFlatSymbolRefAttr():
     with Context() as ctx:
-        sattr = FlatSymbolRefAttr(Attribute.parse("@symbol"))
+        sattr = Attribute.parse("@symbol")
         # CHECK: symattr value: symbol
         print("symattr value:", sattr.value)
 
         # Test factory methods.
         # CHECK: default_get: @foobar
         print("default_get:", FlatSymbolRefAttr.get("foobar"))
+
+
+# CHECK-LABEL: TEST: testSymbolRefAttr
+@run
+def testSymbolRefAttr():
+    with Context() as ctx:
+        sattr = Attribute.parse("@symbol1::@symbol2")
+        # CHECK: symattr value: ['symbol1', 'symbol2']
+        print("symattr value:", sattr.value)
+
+        # CHECK: default_get: @symbol1::@symbol2
+        print("default_get:", SymbolRefAttr.get(["symbol1", "symbol2"]))
+
+        # CHECK: default_get: @"@symbol1"::@"@symbol2"
+        print("default_get:", SymbolRefAttr.get(["@symbol1", "@symbol2"]))
 
 
 # CHECK-LABEL: TEST: testOpaqueAttr

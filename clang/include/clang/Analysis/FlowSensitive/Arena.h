@@ -8,7 +8,6 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE__ARENA_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE__ARENA_H
 
-#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include <vector>
@@ -105,17 +104,7 @@ public:
     return create<AtomicBoolValue>();
   }
 
-  /// Gets the boolean formula equivalent of a BoolValue.
-  /// Each unique Top values is translated to an Atom.
-  /// TODO: migrate to storing Formula directly in Values instead.
-  const Formula &getFormula(const BoolValue &);
-
-  /// Returns a new atomic boolean variable, distinct from any other.
-  Atom makeAtom() { return static_cast<Atom>(NextAtom++); };
-
 private:
-  llvm::BumpPtrAllocator Alloc;
-
   // Storage for the state of a program.
   std::vector<std::unique_ptr<StorageLocation>> Locs;
   std::vector<std::unique_ptr<Value>> Vals;
@@ -132,9 +121,6 @@ private:
       ImplicationVals;
   llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, BiconditionalValue *>
       BiconditionalVals;
-
-  llvm::DenseMap<const BoolValue *, const Formula *> ValToFormula;
-  unsigned NextAtom = 0;
 
   AtomicBoolValue &TrueVal;
   AtomicBoolValue &FalseVal;

@@ -2,27 +2,62 @@
 ; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-SDAG %s
 ; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefixes=GFX12,GFX12-GISEL %s
 
+; TODO-GFX12: Generate v_s_exp_f32
 define amdgpu_cs float @v_s_exp_f32(float inreg %src) {
-; GFX12-LABEL: v_s_exp_f32:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mul_f32 s0, s0, 0x3fb8aa3b
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(TRANS32_DEP_1)
-; GFX12-NEXT:    v_s_exp_f32 s0, s0
-; GFX12-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-NEXT:    ; return to shader part epilog
-  %result = call float @llvm.exp.f32(float %src)
+; GFX12-SDAG-LABEL: v_s_exp_f32:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_cmp_lt_f32 s0, 0xc2fc0000
+; GFX12-SDAG-NEXT:    s_cselect_b32 s1, -1, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42800000, s1
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0x1f800000, s1
+; GFX12-SDAG-NEXT:    v_add_f32_e32 v1, s0, v1
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-SDAG-NEXT:    v_exp_f32_e32 v1, v1
+; GFX12-SDAG-NEXT:    v_mul_f32_e32 v0, v1, v0
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: v_s_exp_f32:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_cmp_lt_f32 s0, 0xc2fc0000
+; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 0x42800000, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_3)
+; GFX12-GISEL-NEXT:    s_add_f32 s0, s0, s1
+; GFX12-GISEL-NEXT:    v_exp_f32_e32 v0, s0
+; GFX12-GISEL-NEXT:    s_cselect_b32 s0, 0x1f800000, 1.0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    v_mul_f32_e32 v0, s0, v0
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
+  %result = call float @llvm.exp2.f32(float %src)
   ret float %result
 }
 
 define amdgpu_cs half @v_s_exp_f16(half inreg %src) {
 ; GFX12-LABEL: v_s_exp_f16:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_mul_f16 s0, s0, 0x3dc5
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(TRANS32_DEP_1)
 ; GFX12-NEXT:    v_s_exp_f16 s0, s0
+; GFX12-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
-  %result = call half @llvm.exp.f16(half %src)
+  %result = call half @llvm.exp2.f16(half %src)
+  ret half %result
+}
+
+define amdgpu_cs float @v_s_amdgcn_exp_f32(float inreg %src) {
+; GFX12-LABEL: v_s_amdgcn_exp_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_exp_f32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
+  %result = call float @llvm.amdgcn.exp2.f32(float %src)
+  ret float %result
+}
+
+define amdgpu_cs half @v_s_amdgcn_exp_f16(half inreg %src) {
+; GFX12-LABEL: v_s_amdgcn_exp_f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_exp_f16_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
+  %result = call half @llvm.amdgcn.exp2.f16(half %src)
   ret half %result
 }
 
@@ -64,6 +99,24 @@ define amdgpu_cs half @v_s_log_f16(half inreg %src) {
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-NEXT:    ; return to shader part epilog
   %result = call half @llvm.log2.f16(half %src)
+  ret half %result
+}
+
+define amdgpu_cs float @v_s_amdgcn_log_f32(float inreg %src) {
+; GFX12-LABEL: v_s_amdgcn_log_f32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_log_f32_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
+  %result = call float @llvm.amdgcn.log.f32(float %src)
+  ret float %result
+}
+
+define amdgpu_cs half @v_s_amdgcn_log_f16(half inreg %src) {
+; GFX12-LABEL: v_s_amdgcn_log_f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    v_log_f16_e32 v0, s0
+; GFX12-NEXT:    ; return to shader part epilog
+  %result = call half @llvm.amdgcn.log.f16(half %src)
   ret half %result
 }
 
@@ -248,10 +301,14 @@ define amdgpu_cs half @srcmods_neg_f16(half inreg %src) {
   ret half %result
 }
 
-declare half @llvm.exp.f16(half)
-declare float @llvm.exp.f32(float)
+declare half @llvm.exp2.f16(half)
+declare float @llvm.exp2.f32(float)
+declare half @llvm.amdgcn.exp2.f16(half)
+declare float @llvm.amdgcn.exp2.f32(float)
 declare half @llvm.log2.f16(half)
 declare float @llvm.log2.f32(float)
+declare half @llvm.amdgcn.log.f16(half)
+declare float @llvm.amdgcn.log.f32(float)
 declare half @llvm.amdgcn.rcp.f16(half)
 declare float @llvm.amdgcn.rcp.f32(float)
 declare half @llvm.sqrt.f16(half)

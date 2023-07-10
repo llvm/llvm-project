@@ -1305,6 +1305,9 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     } else if (A->getOption().matches(options::OPT_stdlibxx_isystem)) {
       // Translated to -internal-isystem by the driver, no need to pass to cc1.
       continue;
+    } else if (A->getOption().matches(options::OPT_ibuiltininc)) {
+      // This is used only by the driver. No need to pass to cc1.
+      continue;
     }
 
     // Not translated, render as usual.

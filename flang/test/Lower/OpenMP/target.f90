@@ -125,6 +125,24 @@ subroutine omp_target_data
    !CHECK: }
 end subroutine omp_target_data
 
+!CHECK-LABEL: func.func @_QPomp_target_data_mt
+subroutine omp_target_data_mt
+   integer :: a(1024)
+   integer :: b(1024)
+   !CHECK: %[[VAR_A:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_data_mtEa"}
+   !CHECK: %[[VAR_B:.*]] = fir.alloca !fir.array<1024xi32> {bindc_name = "b", uniq_name = "_QFomp_target_data_mtEb"}
+   !CHECK: omp.target_data   map((tofrom -> %[[VAR_A]] : !fir.ref<!fir.array<1024xi32>>))
+   !$omp target data map(a)
+   !CHECK: omp.terminator
+   !$omp end target data
+   !CHECK: }
+   !CHECK: omp.target_data   map((always, from -> %[[VAR_B]] : !fir.ref<!fir.array<1024xi32>>))
+   !$omp target data map(always, from : b)
+   !CHECK: omp.terminator
+   !$omp end target data
+   !CHECK: }
+end subroutine omp_target_data_mt
+
 !===============================================================================
 ! Target with region
 !===============================================================================

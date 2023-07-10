@@ -12408,6 +12408,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue(N, 0);
     break;
   }
+  case RISCVISD::FMV_W_X_RV64: {
+    // If the input to FMV_W_X_RV64 is just FMV_X_ANYEXTW_RV64 the the
+    // conversion is unnecessary and can be replaced with the
+    // FMV_X_ANYEXTW_RV64 operand.
+    SDValue Op0 = N->getOperand(0);
+    if (Op0.getOpcode() == RISCVISD::FMV_X_ANYEXTW_RV64)
+      return Op0.getOperand(0);
+    break;
+  }
   case RISCVISD::FMV_X_ANYEXTH:
   case RISCVISD::FMV_X_ANYEXTW_RV64: {
     SDLoc DL(N);
@@ -13795,8 +13804,8 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   return TailMBB;
 }
 
-static MachineBasicBlock *
-emitVFCVT_RM_MASK(MachineInstr &MI, MachineBasicBlock *BB, unsigned Opcode) {
+static MachineBasicBlock *emitVFCVT_RM(MachineInstr &MI, MachineBasicBlock *BB,
+                                       unsigned Opcode) {
   DebugLoc DL = MI.getDebugLoc();
 
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
@@ -13804,20 +13813,20 @@ emitVFCVT_RM_MASK(MachineInstr &MI, MachineBasicBlock *BB, unsigned Opcode) {
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
   Register SavedFRM = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
+  assert(MI.getNumOperands() == 8 || MI.getNumOperands() == 7);
+  unsigned FRMIdx = MI.getNumOperands() == 8 ? 4 : 3;
+
   // Update FRM and save the old value.
   BuildMI(*BB, MI, DL, TII.get(RISCV::SwapFRMImm), SavedFRM)
-      .addImm(MI.getOperand(4).getImm());
+      .addImm(MI.getOperand(FRMIdx).getImm());
 
   // Emit an VFCVT without the FRM operand.
-  assert(MI.getNumOperands() == 8);
-  auto MIB = BuildMI(*BB, MI, DL, TII.get(Opcode))
-                 .add(MI.getOperand(0))
-                 .add(MI.getOperand(1))
-                 .add(MI.getOperand(2))
-                 .add(MI.getOperand(3))
-                 .add(MI.getOperand(5))
-                 .add(MI.getOperand(6))
-                 .add(MI.getOperand(7));
+  auto MIB = BuildMI(*BB, MI, DL, TII.get(Opcode));
+
+  for (unsigned I = 0; I < MI.getNumOperands(); I++)
+    if (I != FRMIdx)
+      MIB = MIB.add(MI.getOperand(I));
+
   if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
     MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
 
@@ -14067,8 +14076,10 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                          Subtarget);
 
 #define PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, LMUL)                             \
+  case RISCV::RMOpc##_##LMUL:                                                  \
+    return emitVFCVT_RM(MI, BB, RISCV::Opc##_##LMUL);                          \
   case RISCV::RMOpc##_##LMUL##_MASK:                                           \
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::Opc##_##LMUL##_MASK);
+    return emitVFCVT_RM(MI, BB, RISCV::Opc##_##LMUL##_MASK);
 
 #define PseudoVFCVT_RM_CASE(RMOpc, Opc)                                        \
   PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, M1)                                     \
@@ -16669,24 +16680,29 @@ Value *RISCVTargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
 }
 
 bool RISCVTargetLowering::isLegalInterleavedAccessType(
-    FixedVectorType *VTy, unsigned Factor, const DataLayout &DL) const {
-  if (!Subtarget.useRVVForFixedLengthVectors())
-    return false;
+    VectorType *VTy, unsigned Factor, const DataLayout &DL) const {
   EVT VT = getValueType(DL, VTy);
-  // Don't lower vlseg/vsseg for fixed length vector types that can't be split.
+  // Don't lower vlseg/vsseg for vector types that can't be split.
   if (!isTypeLegal(VT))
     return false;
 
   if (!isLegalElementTypeForRVV(VT.getScalarType()))
     return false;
 
-  // Sometimes the interleaved access pass picks up splats as interleaves of one
-  // element. Don't lower these.
-  if (VTy->getNumElements() < 2)
-    return false;
+  MVT ContainerVT = VT.getSimpleVT();
+
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+    if (!Subtarget.useRVVForFixedLengthVectors())
+      return false;
+    // Sometimes the interleaved access pass picks up splats as interleaves of
+    // one element. Don't lower these.
+    if (FVTy->getNumElements() < 2)
+      return false;
+
+    ContainerVT = getContainerForFixedLengthVector(VT.getSimpleVT());
+  }
 
   // Need to make sure that EMUL * NFIELDS ≤ 8
-  MVT ContainerVT = getContainerForFixedLengthVector(VT.getSimpleVT());
   auto [LMUL, Fractional] = RISCVVType::decodeVLMUL(getLMUL(ContainerVT));
   if (Fractional)
     return true;
@@ -16713,6 +16729,12 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
   return true;
 }
 
+static const Intrinsic::ID FixedVlsegIntrIds[] = {
+    Intrinsic::riscv_seg2_load, Intrinsic::riscv_seg3_load,
+    Intrinsic::riscv_seg4_load, Intrinsic::riscv_seg5_load,
+    Intrinsic::riscv_seg6_load, Intrinsic::riscv_seg7_load,
+    Intrinsic::riscv_seg8_load};
+
 /// Lower an interleaved load into a vlsegN intrinsic.
 ///
 /// E.g. Lower an interleaved load (Factor = 2):
@@ -16737,13 +16759,8 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
 
-  static const Intrinsic::ID FixedLenIntrIds[] = {
-      Intrinsic::riscv_seg2_load, Intrinsic::riscv_seg3_load,
-      Intrinsic::riscv_seg4_load, Intrinsic::riscv_seg5_load,
-      Intrinsic::riscv_seg6_load, Intrinsic::riscv_seg7_load,
-      Intrinsic::riscv_seg8_load};
   Function *VlsegNFunc =
-      Intrinsic::getDeclaration(LI->getModule(), FixedLenIntrIds[Factor - 2],
+      Intrinsic::getDeclaration(LI->getModule(), FixedVlsegIntrIds[Factor - 2],
                                 {VTy, LI->getPointerOperandType(), XLenTy});
 
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
@@ -16758,6 +16775,12 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   return true;
 }
+
+static const Intrinsic::ID FixedVssegIntrIds[] = {
+    Intrinsic::riscv_seg2_store, Intrinsic::riscv_seg3_store,
+    Intrinsic::riscv_seg4_store, Intrinsic::riscv_seg5_store,
+    Intrinsic::riscv_seg6_store, Intrinsic::riscv_seg7_store,
+    Intrinsic::riscv_seg8_store};
 
 /// Lower an interleaved store into a vssegN intrinsic.
 ///
@@ -16789,14 +16812,8 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   auto *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
-  static const Intrinsic::ID FixedLenIntrIds[] = {
-      Intrinsic::riscv_seg2_store, Intrinsic::riscv_seg3_store,
-      Intrinsic::riscv_seg4_store, Intrinsic::riscv_seg5_store,
-      Intrinsic::riscv_seg6_store, Intrinsic::riscv_seg7_store,
-      Intrinsic::riscv_seg8_store};
-
   Function *VssegNFunc =
-      Intrinsic::getDeclaration(SI->getModule(), FixedLenIntrIds[Factor - 2],
+      Intrinsic::getDeclaration(SI->getModule(), FixedVssegIntrIds[Factor - 2],
                                 {VTy, SI->getPointerOperandType(), XLenTy});
 
   auto Mask = SVI->getShuffleMask();
@@ -16815,6 +16832,100 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   Ops.append({SI->getPointerOperand(), VL});
 
   Builder.CreateCall(VssegNFunc, Ops);
+
+  return true;
+}
+
+bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
+                                                           LoadInst *LI) const {
+  assert(LI->isSimple());
+  IRBuilder<> Builder(LI);
+
+  // Only deinterleave2 supported at present.
+  if (DI->getIntrinsicID() != Intrinsic::experimental_vector_deinterleave2)
+    return false;
+
+  unsigned Factor = 2;
+
+  VectorType *VTy = cast<VectorType>(DI->getOperand(0)->getType());
+  VectorType *ResVTy = cast<VectorType>(DI->getType()->getContainedType(0));
+
+  if (!isLegalInterleavedAccessType(ResVTy, Factor,
+                                    LI->getModule()->getDataLayout()))
+    return false;
+
+  Function *VlsegNFunc;
+  Value *VL;
+  Type *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
+  SmallVector<Value *, 10> Ops;
+
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+    VlsegNFunc = Intrinsic::getDeclaration(
+        LI->getModule(), FixedVlsegIntrIds[Factor - 2],
+        {ResVTy, LI->getPointerOperandType(), XLenTy});
+    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+  } else {
+    static const Intrinsic::ID IntrIds[] = {
+        Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
+        Intrinsic::riscv_vlseg4, Intrinsic::riscv_vlseg5,
+        Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
+        Intrinsic::riscv_vlseg8};
+
+    VlsegNFunc = Intrinsic::getDeclaration(LI->getModule(), IntrIds[Factor - 2],
+                                           {ResVTy, XLenTy});
+    VL = Constant::getAllOnesValue(XLenTy);
+    Ops.append(Factor, PoisonValue::get(ResVTy));
+  }
+
+  Ops.append({LI->getPointerOperand(), VL});
+
+  Value *Vlseg = Builder.CreateCall(VlsegNFunc, Ops);
+  DI->replaceAllUsesWith(Vlseg);
+
+  return true;
+}
+
+bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
+                                                          StoreInst *SI) const {
+  assert(SI->isSimple());
+  IRBuilder<> Builder(SI);
+
+  // Only interleave2 supported at present.
+  if (II->getIntrinsicID() != Intrinsic::experimental_vector_interleave2)
+    return false;
+
+  unsigned Factor = 2;
+
+  VectorType *VTy = cast<VectorType>(II->getType());
+  VectorType *InVTy = cast<VectorType>(II->getOperand(0)->getType());
+
+  if (!isLegalInterleavedAccessType(InVTy, Factor,
+                                    SI->getModule()->getDataLayout()))
+    return false;
+
+  Function *VssegNFunc;
+  Value *VL;
+  Type *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
+
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+    VssegNFunc = Intrinsic::getDeclaration(
+        SI->getModule(), FixedVssegIntrIds[Factor - 2],
+        {InVTy, SI->getPointerOperandType(), XLenTy});
+    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+  } else {
+    static const Intrinsic::ID IntrIds[] = {
+        Intrinsic::riscv_vsseg2, Intrinsic::riscv_vsseg3,
+        Intrinsic::riscv_vsseg4, Intrinsic::riscv_vsseg5,
+        Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
+        Intrinsic::riscv_vsseg8};
+
+    VssegNFunc = Intrinsic::getDeclaration(SI->getModule(), IntrIds[Factor - 2],
+                                           {InVTy, XLenTy});
+    VL = Constant::getAllOnesValue(XLenTy);
+  }
+
+  Builder.CreateCall(VssegNFunc, {II->getOperand(0), II->getOperand(1),
+                                  SI->getPointerOperand(), VL});
 
   return true;
 }

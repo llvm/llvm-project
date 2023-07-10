@@ -835,17 +835,12 @@ static Value *optimizeWithFDivFast(Value *Num, Value *Den, float ReqdAccuracy,
 //
 // NOTE: rcp is the preference in cases that both are legal.
 bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
-
   Type *Ty = FDiv.getType()->getScalarType();
+  if (!Ty->isFloatTy())
+    return false;
 
   // The f64 rcp/rsq approximations are pretty inaccurate. We can do an
-  // expansion around them in codegen.
-  if (Ty->isDoubleTy())
-    return false;
-
-  // No intrinsic for fdiv16 if target does not support f16.
-  if (Ty->isHalfTy() && !ST->has16BitInsts())
-    return false;
+  // expansion around them in codegen. f16 is good enough to always use.
 
   const FPMathOperator *FPOp = cast<const FPMathOperator>(&FDiv);
   const float ReqdAccuracy =  FPOp->getFPAccuracy();
@@ -854,11 +849,10 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   FastMathFlags FMF = FPOp->getFastMathFlags();
   const bool AllowInaccurateRcp = HasUnsafeFPMath || FMF.approxFunc();
 
-  // rcp_f16 is accurate for !fpmath >= 1.0ulp.
+  // rcp_f16 is accurate to 0.51 ulp.
   // rcp_f32 is accurate for !fpmath >= 1.0ulp and denormals are flushed.
   // rcp_f64 is never accurate.
-  const bool RcpIsAccurate = (Ty->isHalfTy() && ReqdAccuracy >= 1.0f) ||
-            (Ty->isFloatTy() && !HasFP32Denormals && ReqdAccuracy >= 1.0f);
+  const bool RcpIsAccurate = !HasFP32Denormals && ReqdAccuracy >= 1.0f;
 
   IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
   Builder.setFastMathFlags(FMF);

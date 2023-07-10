@@ -118,7 +118,6 @@ define i32 @v_shl1_add_u32(i32 %src0, i32 %src1) {
 ; GFX10-LABEL: v_shl1_add_u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 1, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %shl = shl i32 %src0, 1
@@ -143,7 +142,6 @@ define i32 @v_shl2_add_u32(i32 %src0, i32 %src1) {
 ; GFX10-LABEL: v_shl2_add_u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 2, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %shl = shl i32 %src0, 2
@@ -168,7 +166,6 @@ define i32 @v_shl3_add_u32(i32 %src0, i32 %src1) {
 ; GFX10-LABEL: v_shl3_add_u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 3, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %shl = shl i32 %src0, 3
@@ -193,7 +190,6 @@ define i32 @v_shl4_add_u32(i32 %src0, i32 %src1) {
 ; GFX10-LABEL: v_shl4_add_u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 4, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %shl = shl i32 %src0, 4
@@ -218,7 +214,6 @@ define i32 @v_shl5_add_u32(i32 %src0, i32 %src1) {
 ; GFX10-LABEL: v_shl5_add_u32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 5, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %shl = shl i32 %src0, 5

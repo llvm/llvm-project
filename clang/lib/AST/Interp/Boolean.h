@@ -64,7 +64,7 @@ class Boolean final {
 
   Boolean toUnsigned() const { return *this; }
 
-  constexpr static unsigned bitWidth() { return true; }
+  constexpr static unsigned bitWidth() { return 1; }
   bool isZero() const { return !V; }
   bool isMin() const { return isZero(); }
 

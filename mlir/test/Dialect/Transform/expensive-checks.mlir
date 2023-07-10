@@ -19,7 +19,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !transform.any_op):
     // expected-note @below {{handle to invalidated ops}}
     %0 = pdl_match @return in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
     test_consume_operand %1 : !transform.any_op
     // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}

@@ -3430,6 +3430,52 @@ define <2 x i64> @PR56520(<16 x i8> %0) {
   ret <2 x i64> %7
 }
 
+define <4 x i32> @PR63700(i128 %0) {
+; SSE2-LABEL: PR63700:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %edi, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR63700:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movd %edi, %xmm0
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR63700:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movd %edi, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: PR63700:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd %edi, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX1-NEXT:    retq
+;
+; AVX2-SLOW-LABEL: PR63700:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vmovd %edi, %xmm0
+; AVX2-SLOW-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: PR63700:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vmovq %rdi, %xmm0
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3],zero,zero,zero,zero,xmm0[0,1,2,3],zero,zero,zero,zero
+; AVX2-FAST-NEXT:    retq
+  %vcmp = bitcast i128 %0 to <4 x i32>
+  %shuffle.i = shufflevector <4 x i32> %vcmp, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>
+  %shuffle.i11 = shufflevector <4 x i32> %shuffle.i, <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  ret <4 x i32> %shuffle.i11
+}
+
 ; Test case reported on D105827
 define void @SpinningCube() {
 ; SSE2-LABEL: SpinningCube:
@@ -3538,9 +3584,9 @@ define void @autogen_SD25931() {
 ; CHECK-LABEL: autogen_SD25931:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB139_1: # %CF242
+; CHECK-NEXT:  .LBB140_1: # %CF242
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB139_1
+; CHECK-NEXT:    jmp .LBB140_1
 BB:
   %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
   %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>

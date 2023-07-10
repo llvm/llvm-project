@@ -422,8 +422,12 @@ TEST(WalkUsed, FilterRefsNotSpelledInMainFile) {
   }
 }
 
+struct Tag {
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Tag &T) {
+    return OS << "Anon Tag";
+  }
+};
 TEST(Hints, Ordering) {
-  struct Tag {};
   auto Hinted = [](Hints Hints) {
     return clang::include_cleaner::Hinted<Tag>({}, Hints);
   };
