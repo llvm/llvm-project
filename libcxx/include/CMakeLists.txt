@@ -384,6 +384,7 @@ set(files
   __format/range_formatter.h
   __format/unicode.h
   __format/width_estimation_table.h
+  __format/write_escaped.h
   __functional/binary_function.h
   __functional/binary_negate.h
   __functional/bind.h
