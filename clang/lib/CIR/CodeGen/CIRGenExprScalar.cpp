@@ -77,6 +77,11 @@ struct BinOpInfo {
   }
 };
 
+static bool PromotionIsPotentiallyEligibleForImplicitIntegerConversionCheck(
+    QualType SrcType, QualType DstType) {
+  return SrcType->isIntegerType() && DstType->isIntegerType();
+}
+
 class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
   CIRGenFunction &CGF;
   CIRGenBuilderTy &Builder;
@@ -337,12 +342,35 @@ public:
           CGF.getLoc(E->getExprLoc()), CGF.getCIRType(type),
           Builder.getCIRBoolAttr(true));
     } else if (type->isIntegerType()) {
-      // QualType promotedType;
+      QualType promotedType;
       bool canPerformLossyDemotionCheck = false;
       if (CGF.getContext().isPromotableIntegerType(type)) {
+        promotedType = CGF.getContext().getPromotedIntegerType(type);
+        assert(promotedType != type && "Shouldn't promote to the same type.");
         canPerformLossyDemotionCheck = true;
-        llvm_unreachable("no promotable integer inc/dec yet");
+        canPerformLossyDemotionCheck &=
+            CGF.getContext().getCanonicalType(type) !=
+            CGF.getContext().getCanonicalType(promotedType);
+        canPerformLossyDemotionCheck &=
+            PromotionIsPotentiallyEligibleForImplicitIntegerConversionCheck(
+                type, promotedType);
+
+        // TODO(cir): Currently, we store bitwidths in CIR types only for
+        // integers. This might also be required for other types.
+        auto srcCirTy = ConvertType(type).dyn_cast<mlir::cir::IntType>();
+        auto promotedCirTy = ConvertType(type).dyn_cast<mlir::cir::IntType>();
+        assert(srcCirTy && promotedCirTy && "Expected integer type");
+
+        assert(
+            (!canPerformLossyDemotionCheck ||
+             type->isSignedIntegerOrEnumerationType() ||
+             promotedType->isSignedIntegerOrEnumerationType() ||
+             srcCirTy.getWidth() == promotedCirTy.getWidth()) &&
+            "The following check expects that if we do promotion to different "
+            "underlying canonical type, at least one of the types (either "
+            "base or promoted) will be signed, or the bitwidths will match.");
       }
+
       if (CGF.SanOpts.hasOneOf(
               SanitizerKind::ImplicitIntegerArithmeticValueChange) &&
           canPerformLossyDemotionCheck) {
