@@ -46,6 +46,7 @@
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
+#include <__utility/as_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
@@ -559,29 +560,35 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return __has_val_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& value() const& {
+    static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
     if (!__has_val_) {
-      std::__throw_bad_expected_access<_Err>(__union_.__unex_);
+      std::__throw_bad_expected_access<_Err>(std::as_const(error()));
     }
     return __union_.__val_;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() & {
+    static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
     if (!__has_val_) {
-      std::__throw_bad_expected_access<_Err>(__union_.__unex_);
+      std::__throw_bad_expected_access<_Err>(std::as_const(error()));
     }
     return __union_.__val_;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& value() const&& {
+    static_assert(is_copy_constructible_v<_Err> && is_constructible_v<_Err, decltype(std::move(error()))>,
+                  "error_type has to be both copy constructible and constructible from decltype(std::move(error()))");
     if (!__has_val_) {
-      std::__throw_bad_expected_access<_Err>(std::move(__union_.__unex_));
+      std::__throw_bad_expected_access<_Err>(std::move(error()));
     }
     return std::move(__union_.__val_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& value() && {
+    static_assert(is_copy_constructible_v<_Err> && is_constructible_v<_Err, decltype(std::move(error()))>,
+                  "error_type has to be both copy constructible and constructible from decltype(std::move(error()))");
     if (!__has_val_) {
-      std::__throw_bad_expected_access<_Err>(std::move(__union_.__unex_));
+      std::__throw_bad_expected_access<_Err>(std::move(error()));
     }
     return std::move(__union_.__val_);
   }

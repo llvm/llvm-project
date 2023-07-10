@@ -74,7 +74,7 @@ define internal i32 @call_with_two_values(i32 %c) {
 ; CGSCC-SAME: (i32 noundef [[C:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    [[CSRET1:%.*]] = call i32 @iszero2(i32 noundef [[C]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[MINUSC:%.*]] = sub i32 0, [[C]]
-; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @iszero2(i32 [[MINUSC]]) #[[ATTR2]]
+; CGSCC-NEXT:    [[CSRET2:%.*]] = call i32 @iszero2(i32 noundef [[MINUSC]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[RET:%.*]] = add i32 [[CSRET1]], [[CSRET2]]
 ; CGSCC-NEXT:    ret i32 [[RET]]
 ;
@@ -433,7 +433,7 @@ define i1 @potential_test10(i32 %c) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@potential_test10
 ; TUNIT-SAME: (i32 [[C:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[RET:%.*]] = call i32 @may_return_undef(i32 [[C]]) #[[ATTR1]]
+; TUNIT-NEXT:    [[RET:%.*]] = call i32 @may_return_undef(i32 noundef [[C]]) #[[ATTR1]]
 ; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RET]], 0
 ; TUNIT-NEXT:    ret i1 [[CMP]]
 ;
@@ -514,9 +514,9 @@ define i32 @potential_test11(i1 %c) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@potential_test11
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
-; TUNIT-NEXT:    [[ZERO1:%.*]] = call i32 @optimize_undef_1(i1 [[C]]) #[[ATTR1]], !range [[RNG0]]
-; TUNIT-NEXT:    [[ZERO2:%.*]] = call i32 @optimize_undef_2(i1 [[C]]) #[[ATTR1]], !range [[RNG2:![0-9]+]]
-; TUNIT-NEXT:    [[ZERO3:%.*]] = call i32 @optimize_undef_3(i1 [[C]]) #[[ATTR1]], !range [[RNG0]]
+; TUNIT-NEXT:    [[ZERO1:%.*]] = call i32 @optimize_undef_1(i1 noundef [[C]]) #[[ATTR1]], !range [[RNG0]]
+; TUNIT-NEXT:    [[ZERO2:%.*]] = call i32 @optimize_undef_2(i1 noundef [[C]]) #[[ATTR1]], !range [[RNG2:![0-9]+]]
+; TUNIT-NEXT:    [[ZERO3:%.*]] = call i32 @optimize_undef_3(i1 noundef [[C]]) #[[ATTR1]], !range [[RNG0]]
 ; TUNIT-NEXT:    [[ACC1:%.*]] = add i32 [[ZERO1]], [[ZERO2]]
 ; TUNIT-NEXT:    [[ACC2:%.*]] = add i32 [[ACC1]], [[ZERO3]]
 ; TUNIT-NEXT:    ret i32 [[ACC2]]

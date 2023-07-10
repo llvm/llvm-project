@@ -271,7 +271,6 @@ class DimLvlExpr;
 //===----------------------------------------------------------------------===//
 class Ranks final {
   // Not using `VarKindArray` since `EnumeratedArray` doesn't support constexpr.
-  // TODO(wrengr): to what extent do we actually care about constexpr here?
   unsigned impl[3];
 
   static constexpr unsigned to_index(VarKind vk) {
@@ -303,6 +302,14 @@ public:
 static_assert(IsZeroCostAbstraction<Ranks>);
 
 //===----------------------------------------------------------------------===//
+/// Efficient representation of a set of `Var`.
+///
+/// NOTE: For the `contains`/`occursIn` methods: if variables occurring in
+/// the method parameter are OOB for the `VarSet`, then these methods will
+/// always return false.  However, for the `add` methods: OOB parameters
+/// cause undefined behavior.  Currently the `add` methods will raise an
+/// assertion error; though we may change that behavior in the future
+/// (e.g., to resize the underlying bitvectors).
 class VarSet final {
   // If we're willing to give up the possibility of resizing the
   // individual bitvectors, then we could flatten this into a single
@@ -314,14 +321,12 @@ class VarSet final {
 public:
   explicit VarSet(Ranks const &ranks);
 
-  // TODO(wrengr): can we come up with a single name that works for all three of
-  // these?
   bool contains(Var var) const;
   bool occursIn(VarSet const &vars) const;
   bool occursIn(DimLvlExpr expr) const;
 
   void add(Var var);
-  // TODO(wrengr): void add(VarSet const& vars);
+  void add(VarSet const &vars);
   void add(DimLvlExpr expr);
 };
 
@@ -397,7 +402,6 @@ class VarEnv final {
   VarInfo::ID nextID() const { return static_cast<VarInfo::ID>(vars.size()); }
 
 public:
-  // NOTE TO Wren: initializer needed!
   VarEnv() : nextNum(0) {}
 
   /// Gets the underlying storage for the `VarInfo` identified by

@@ -291,7 +291,6 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuCreateSparseEnv() {
   ScopedContext scopedContext;
   assert(!cusparse_env && "client called mgpuCreateSparseEnv() twice");
   CUSPARSE_REPORT_IF_ERROR(cusparseCreate(&cusparse_env));
-  return;
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuDestroySparseEnv() {

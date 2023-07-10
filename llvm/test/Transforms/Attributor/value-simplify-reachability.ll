@@ -770,7 +770,7 @@ define i32 @exclusion_set3(i1 %c) {
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    store i32 3, ptr [[A]], align 4
-; TUNIT-NEXT:    call void @exclusion_set3_helper(i1 [[C]], ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR8]]
+; TUNIT-NEXT:    call void @exclusion_set3_helper(i1 noundef [[C]], ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A]]) #[[ATTR8]]
 ; TUNIT-NEXT:    [[FINAL:%.*]] = load i32, ptr [[A]], align 4
 ; TUNIT-NEXT:    ret i32 [[FINAL]]
 ;

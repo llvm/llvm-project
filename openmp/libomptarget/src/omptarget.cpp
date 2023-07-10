@@ -16,6 +16,7 @@
 #include "private.h"
 #include "rtl.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 
 #include <cassert>

@@ -218,8 +218,8 @@ llvm.func @coalesced_store_floats(%arg: i64) {
   // CHECK: llvm.store %[[BIT_CAST]], %[[GEP]]
   // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST32]] : i64
   // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
-  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
   // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<"foo", (f32, f32)>
+  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[TRUNC]] : i32 to f32
   // CHECK: llvm.store %[[BIT_CAST]], %[[GEP]]
   llvm.store %arg, %1 : i64, !llvm.ptr
   // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
@@ -409,12 +409,87 @@ llvm.func @type_consistent_vector_store(%arg: vector<4xi32>) {
 // CHECK-SAME: %[[ARG:.*]]: vector<4xi32>
 llvm.func @type_consistent_vector_store_other_type(%arg: vector<4xi32>) {
   %0 = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[ARG]] : vector<4xi32> to vector<4xf32>
   // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (vector<4xf32>)>
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (vector<4xf32>)> : (i32) -> !llvm.ptr
   // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (vector<4xf32>)>
+  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[ARG]] : vector<4xi32> to vector<4xf32>
   // CHECK: llvm.store %[[BIT_CAST]], %[[GEP]]
   llvm.store %arg, %1 : vector<4xi32>, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @bitcast_insertion
+// CHECK-SAME: %[[ARG:.*]]: i32
+llvm.func @bitcast_insertion(%arg: i32) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x f32
+  %1 = llvm.alloca %0 x f32 : (i32) -> !llvm.ptr
+  // CHECK: %[[BIT_CAST:.*]] = llvm.bitcast %[[ARG]] : i32 to f32
+  // CHECK: llvm.store %[[BIT_CAST]], %[[ALLOCA]]
+  llvm.store %arg, %1 : i32, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @gep_split
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @gep_split(%arg: i64) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.array<2 x struct<"foo", (i64)>>
+  %1 = llvm.alloca %0 x !llvm.array<2 x struct<"foo", (i64)>> : (i32) -> !llvm.ptr
+  %3 = llvm.getelementptr %1[0, 1, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x struct<"foo", (i64)>>
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x struct<"foo", (i64)>>
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i64)>
+  // CHECK: llvm.store %[[ARG]], %[[GEP]]
+  llvm.store %arg, %3 : i64, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @coalesced_store_ints_subaggregate
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @coalesced_store_ints_subaggregate(%arg: i64) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.struct<"foo", (i64, struct<(i32, i32)>)>
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i64, struct<(i32, i32)>)> : (i32) -> !llvm.ptr
+  %3 = llvm.getelementptr %1[0, 1, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i64, struct<(i32, i32)>)>
+
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i64, struct<(i32, i32)>)>
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, i32)>
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST0]]
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST32]] : i64
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.struct<(i32, i32)>
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+  llvm.store %arg, %3 : i64, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @gep_result_ptr_type_dynamic
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @gep_result_ptr_type_dynamic(%arg: i64) {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.array<2 x struct<"foo", (i64)>>
+  %1 = llvm.alloca %0 x !llvm.array<2 x struct<"foo", (i64)>> : (i32) -> !llvm.ptr
+  %3 = llvm.getelementptr %1[0, %arg, 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<2 x struct<"foo", (i64)>>
+  // CHECK: %[[TOP_GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, %[[ARG]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<2 x struct<"foo", (i64)>>
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[TOP_GEP]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i64)>
+  // CHECK: llvm.store %[[ARG]], %[[GEP]]
+  llvm.store %arg, %3 : i64, !llvm.ptr
   // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
   llvm.return
 }

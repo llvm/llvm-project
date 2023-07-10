@@ -1917,3 +1917,31 @@ transform.sequence failures(propagate) {
   // CHECK: test_produce_param(#{{.*}}) : !transform.affine_map
   transform.test_produce_param(affine_map<(d0) -> ()>) : !transform.affine_map
 }
+
+// -----
+
+func.func @verify_success(%arg0: f64) -> f64 {
+  return %arg0 : f64
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.verify %0 : !transform.any_op
+}
+
+// -----
+
+// expected-error @below{{fail_to_verify is set}}
+// expected-note @below{{payload op}}
+func.func @verify_failure(%arg0: f64) -> f64 {
+  return %arg0 : f64
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.test_produce_invalid_ir %0 : !transform.any_op
+  // expected-error @below{{failed to verify payload op}}
+  transform.verify %0 : !transform.any_op
+}

@@ -69,7 +69,7 @@ define void @intrinsic(ptr %dest, ptr %src, i32 %len) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@intrinsic
 ; CHECK-SAME: (ptr nocapture nofree writeonly [[DEST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]], i32 [[LEN:%.*]]) #[[ATTR4:[0-9]+]] {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture nofree writeonly [[DEST]], ptr noalias nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr nocapture nofree writeonly [[DEST]], ptr nocapture nofree readonly [[SRC]], i32 [[LEN]], i1 noundef false) #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i32(ptr %dest, ptr %src, i32 %len, i1 false)
@@ -261,7 +261,7 @@ define i1 @test_rec_neg(i1 %c) norecurse {
 ; TUNIT-NEXT:    [[RC1:%.*]] = call i1 @rec(i1 noundef true)
 ; TUNIT-NEXT:    br i1 [[RC1]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    [[RC2:%.*]] = call i1 @rec(i1 [[C]])
+; TUNIT-NEXT:    [[RC2:%.*]] = call i1 @rec(i1 noundef [[C]])
 ; TUNIT-NEXT:    ret i1 [[RC2]]
 ; TUNIT:       f:
 ; TUNIT-NEXT:    ret i1 [[RC1]]

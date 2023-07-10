@@ -4742,8 +4742,8 @@ entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1:[0-9]+]])
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 ; CHECK2-NEXT:    call void @__kmpc_push_proc_bind(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 noundef 3)
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..2, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..3, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..2, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..3, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -4770,8 +4770,8 @@ entry:
 ; CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]])
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
 ; CHECK2-NEXT:    call void @__kmpc_push_num_threads(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 [[A]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..4, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..5, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..4, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..5, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -4796,9 +4796,9 @@ entry:
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..6, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..6, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void (...) @foo()
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..7, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..7, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5701,11 +5701,11 @@ entry:
 ; CHECK2-NEXT:  entry:
 ; CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..28, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..28, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void (...) @foo()
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..29, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..29, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void (...) @foo()
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..30, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..30, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5739,10 +5739,10 @@ entry:
 ; CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]])
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..31, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..31, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void @__kmpc_push_proc_bind(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 noundef 3)
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..32, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..33, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..32, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..33, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5776,10 +5776,10 @@ entry:
 ; CHECK2-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 ; CHECK2-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]])
 ; CHECK2-NEXT:    store i32 [[A]], ptr [[A_ADDR]], align 4
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..34, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..34, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    call void @__kmpc_push_num_threads(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 [[TMP0]], i32 [[A]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..35, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..36, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..35, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..36, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;
@@ -5826,7 +5826,7 @@ entry:
 ; CHECK2-NEXT:    br label [[ENTRY_SPLIT_SPLIT:%.*]]
 ; CHECK2:       entry.split.split:
 ; CHECK2-NEXT:    call void (...) @foo()
-; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef @.omp_outlined..39, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
+; CHECK2-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB1]], i32 noundef 1, ptr noundef nonnull @.omp_outlined..39, ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A_ADDR]])
 ; CHECK2-NEXT:    ret void
 ;
 ;

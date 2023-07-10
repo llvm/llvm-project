@@ -23,6 +23,7 @@
 #include "asan_suppressions.h"
 #include "asan_thread.h"
 #include "lsan/lsan_common.h"
+#include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
@@ -145,6 +146,48 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
     } else {                                           \
       *begin = *end = 0;                               \
     }
+
+template <class Mmap>
+static void* mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
+                              int prot, int flags, int fd, OFF64_T offset) {
+  void *res = real_mmap(addr, length, prot, flags, fd, offset);
+  if (length && res != (void *)-1) {
+    const uptr beg = reinterpret_cast<uptr>(res);
+    DCHECK(IsAligned(beg, GetPageSize()));
+    SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
+    // Only unpoison shadow if it's an ASAN managed address.
+    if (AddrIsInMem(beg) && AddrIsInMem(beg + rounded_length - 1))
+      PoisonShadow(beg, RoundUpTo(length, GetPageSize()), 0);
+  }
+  return res;
+}
+
+template <class Munmap>
+static int munmap_interceptor(Munmap real_munmap, void *addr, SIZE_T length) {
+  // We should not tag if munmap fail, but it's to late to tag after
+  // real_munmap, as the pages could be mmaped by another thread.
+  const uptr beg = reinterpret_cast<uptr>(addr);
+  if (length && IsAligned(beg, GetPageSize())) {
+    SIZE_T rounded_length = RoundUpTo(length, GetPageSize());
+    // Protect from unmapping the shadow.
+    if (AddrIsInMem(beg) && AddrIsInMem(beg + rounded_length - 1))
+      PoisonShadow(beg, rounded_length, 0);
+  }
+  return real_munmap(addr, length);
+}
+
+#  define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags,   \
+                                     fd, offset)                               \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    return mmap_interceptor(REAL(mmap), addr, sz, prot, flags, fd, off);       \
+  } while (false)
+
+#  define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, length)                    \
+  do {                                                                         \
+    (void)(ctx);                                                               \
+    return munmap_interceptor(REAL(munmap), addr, sz);                         \
+  } while (false)
 
 #if CAN_SANITIZE_LEAKS
 #define COMMON_INTERCEPTOR_STRERROR()                       \

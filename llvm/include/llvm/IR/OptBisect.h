@@ -19,8 +19,6 @@
 
 namespace llvm {
 
-class Pass;
-
 /// Extensions to this class implement mechanisms to disable passes and
 /// individual optimizations at compile time.
 class OptPassGate {

@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "Debug.h"
-#include "omptargetplugin.h"
 
 /// Base class of per-device allocator.
 class DeviceAllocatorTy {

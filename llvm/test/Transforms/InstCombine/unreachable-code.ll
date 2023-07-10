@@ -236,7 +236,6 @@ join:
 }
 
 define void @br_not_into_loop(i1 %x) {
-;
 ; DEFAULT_ITER-LABEL: define void @br_not_into_loop
 ; DEFAULT_ITER-SAME: (i1 [[X:%.*]]) {
 ; DEFAULT_ITER-NEXT:    br i1 true, label [[EXIT:%.*]], label [[LOOP:%.*]]

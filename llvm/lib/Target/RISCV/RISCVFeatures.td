@@ -656,6 +656,13 @@ def HasHalfFPLoadStoreMove
                                     "'Zfbfmin' (Scalar BF16 Converts) or "
                                     "'Zvfbfwma' (Vector BF16 widening mul-add)">;
 
+def FeatureStdExtZacas
+    : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
+                       "'Zacas' (Atomic Compare-And-Swap Instructions)">;
+def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZacas),
+                               "'Zacas' (Atomic Compare-And-Swap Instructions)">;
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//

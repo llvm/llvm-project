@@ -467,10 +467,10 @@ namespace IncDec {
     T a;
     if constexpr (Inc)
       ++a; // ref-note 2{{increment of uninitialized}} \
-           // expected-note 2{{increment of object outside its lifetime}}
+           // expected-note 2{{increment of uninitialized}}
     else
       --a; // ref-note 2{{decrement of uninitialized}} \
-           // expected-note 2{{decrement of object outside its lifetime}}
+           // expected-note 2{{decrement of uninitialized}}
     return 1;
   }
   static_assert(uninit<int, true>(), ""); // ref-error {{not an integral constant expression}} \

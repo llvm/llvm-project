@@ -4484,8 +4484,7 @@ bool CombinerHelper::tryReassocBinOp(unsigned Opc, Register DstReg,
       };
       return true;
     }
-    if (getTargetLowering().isReassocProfitable(MRI, OpLHS, OpRHS) &&
-        MRI.hasOneNonDBGUse(OpLHSLHS)) {
+    if (getTargetLowering().isReassocProfitable(MRI, OpLHS, OpRHS)) {
       // Reassociate: (op (op x, c1), y) -> (op (op x, y), c1)
       //              iff (op x, c1) has one use
       MatchInfo = [=](MachineIRBuilder &B) {

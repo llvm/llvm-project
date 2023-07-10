@@ -51,8 +51,12 @@ class Logger;
 const Expr &ignoreCFGOmittedNodes(const Expr &E);
 const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
 
+/// A set of `FieldDecl *`. Use `SmallSetVector` to guarantee deterministic
+/// iteration order.
+using FieldSet = llvm::SmallSetVector<const FieldDecl *, 4>;
+
 /// Returns the set of all fields in the type.
-llvm::DenseSet<const FieldDecl *> getObjectFields(QualType Type);
+FieldSet getObjectFields(QualType Type);
 
 struct ContextSensitiveOptions {
   /// The maximum depth to analyze. A value of zero is equivalent to disabling
@@ -181,6 +185,10 @@ public:
   /// been stored in flow conditions.
   Solver::Result querySolver(llvm::SetVector<const Formula *> Constraints);
 
+  /// Returns the fields of `Type`, limited to the set of fields modeled by this
+  /// context.
+  FieldSet getModeledFields(QualType Type);
+
 private:
   friend class Environment;
 
@@ -196,11 +204,7 @@ private:
   };
 
   // Extends the set of modeled field declarations.
-  void addModeledFields(const llvm::DenseSet<const FieldDecl *> &Fields);
-
-  /// Returns the fields of `Type`, limited to the set of fields modeled by this
-  /// context.
-  llvm::DenseSet<const FieldDecl *> getReferencedFields(QualType Type);
+  void addModeledFields(const FieldSet &Fields);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
   /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
@@ -257,7 +261,7 @@ private:
   llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
 
   // Fields modeled by environments covered by this context.
-  llvm::DenseSet<const FieldDecl *> ModeledFields;
+  FieldSet ModeledFields;
 
   std::unique_ptr<Logger> LogOwner; // If created via flags.
 };

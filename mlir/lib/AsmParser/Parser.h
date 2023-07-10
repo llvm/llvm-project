@@ -300,9 +300,9 @@ public:
   ParseResult parseAffineMapOrIntegerSetReference(AffineMap &map,
                                                   IntegerSet &set);
   ParseResult parseAffineMapReference(AffineMap &map);
-  ParseResult parseAffineExprReference(
-      SmallVectorImpl<std::pair<StringRef, AffineExpr>> &symbolSet,
-      AffineExpr &expr);
+  ParseResult
+  parseAffineExprReference(ArrayRef<std::pair<StringRef, AffineExpr>> symbolSet,
+                           AffineExpr &expr);
   ParseResult parseIntegerSetReference(IntegerSet &set);
 
   /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.

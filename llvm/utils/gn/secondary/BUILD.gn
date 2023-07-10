@@ -26,7 +26,7 @@ group("default") {
     deps += [ "//compiler-rt/test/asan" ]
   }
 
-  if (current_os == "mac") {
+  if (current_os == "linux" || current_os == "mac") {
     deps += [ "//compiler-rt/test/lsan"]
   }
 
