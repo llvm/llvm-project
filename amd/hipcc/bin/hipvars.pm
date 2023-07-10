@@ -75,7 +75,7 @@ $isWindows =  ($^O eq 'MSWin32' or $^O eq 'msys');
 #
 $HIP_PATH=$ENV{'HIP_PATH'} // dirname(Cwd::abs_path("$0/../")); # use parent directory of hipcc
 if ($isWindows and defined $ENV{'HIP_PATH'}) {
-  ($HIP_PATH) = $HIP_PATH =~ /"([^"]*)"/;
+  $HIP_PATH =~ s/^"(.*)"$/$1/;
   $HIP_PATH =~ s/\\/\//g;
 }
 if (-e "$HIP_PATH/bin/rocm_agent_enumerator") {
