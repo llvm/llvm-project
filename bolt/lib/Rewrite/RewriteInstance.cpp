@@ -1174,6 +1174,8 @@ void RewriteInstance::discoverFileObjects() {
                << SymName;
         if (BC->HasRelocations)
           errs() << ". The support is limited in relocation mode\n";
+        else
+          errs() << '\n';
       }
       BC->HasSplitFunctions = true;
       BF->IsFragment = true;
