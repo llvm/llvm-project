@@ -152,7 +152,6 @@ struct AAIsDead;
 struct AttributorCallGraph;
 struct IRPosition;
 
-class AAResults;
 class Function;
 
 /// Abstract Attribute helper functions.
