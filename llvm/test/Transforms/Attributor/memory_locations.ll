@@ -618,7 +618,7 @@ define i8 @readnone_caller2(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@readnone_caller2
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR10]] {
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr undef, i1 noundef [[C]]) #[[ATTR14]]
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr nofree undef, i1 noundef [[C]]) #[[ATTR14]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
   %r = call i8 @recursive_readnone_internal2(ptr undef, i1 %c)

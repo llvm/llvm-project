@@ -2950,7 +2950,7 @@ define i1 @alloca_non_unique_caller(i32 %in, i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@alloca_non_unique_caller
 ; CGSCC-SAME: (i32 [[IN:%.*]], i1 noundef [[C:%.*]]) #[[ATTR15:[0-9]+]] {
-; CGSCC-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(ptr undef, i32 [[IN]], i1 noundef [[C]]) #[[ATTR25:[0-9]+]]
+; CGSCC-NEXT:    [[R:%.*]] = call i1 @alloca_non_unique(ptr nofree undef, i32 [[IN]], i1 noundef [[C]]) #[[ATTR25:[0-9]+]]
 ; CGSCC-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @alloca_non_unique(ptr undef, i32 %in, i1 %c)
