@@ -1047,7 +1047,7 @@ static SDValue attemptOrToIns(SDValue &And, SDValue &Right, SDNode *N,
     return SDValue();
   unsigned Mask0 = ~CN->getZExtValue();
 
-  KnownBits KnownMaskBits = DAG.computeKnownBits(And.getOperand(1));
+  KnownBits KnownMaskBits = DAG.computeKnownBits(SDValue(CN, 0));
   APInt maxValue = KnownMaskBits.getMaxValue();
   unsigned int MaxNumOfActiveBitsInMask = maxValue.getActiveBits();
 
@@ -1157,7 +1157,7 @@ static SDValue attemptOrToIns(SDValue &And, SDValue &Right, SDNode *N,
       // then we will allow replacement with the INS instruction
       // because we are sure that we have only leading zeros
       KnownBits Known = DAG.computeKnownBits(Right.getOperand(0));
-      if (Known.countMaxPopulation() > SMSize0)
+      if (Known.getMaxValue().getActiveBits() > SMSize0)
         return SDValue();
     }
 
