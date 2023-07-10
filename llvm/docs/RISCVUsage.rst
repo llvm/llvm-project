@@ -191,6 +191,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-ssaia``
   LLVM implements the `Ratification candidate 3 <https://github.com/riscv/riscv-aia/releases/tag/1.0-RC3>`_.
 
+``experimental-zacas``
+  LLVM implements the `1.0-rc1 draft specification <https://github.com/riscv/riscv-zacas/releases/tag/v1.0-rc1>`_.
+
 ``experimental-zfa``
   LLVM implements the `0.2 draft specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20230131-c0b298a/zfa-20230414.pdf>`__.
 
