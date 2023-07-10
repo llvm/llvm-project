@@ -28,10 +28,8 @@ define i1 @eq_basic(i8 %x, i8 %y) {
 define i1 @ne_basic_equal_5(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @ne_basic_equal_5
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = add i8 [[X]], -5
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X]], 5
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[SUB]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], -6
+; CHECK-NEXT:    [[AND:%.*]] = icmp ult i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %sub = add i8 %x, -5
@@ -44,10 +42,7 @@ define i1 @ne_basic_equal_5(i8 %x, i8 %y) {
 define i1 @eq_basic_equal_minus_1(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @eq_basic_equal_minus_1
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[X]], -1
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp uge i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %add = add i8 %x, 1
@@ -60,10 +55,8 @@ define i1 @eq_basic_equal_minus_1(i8 %x, i8 %y) {
 define i1 @ne_basic_equal_minus_7(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i1 @ne_basic_equal_minus_7
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 7
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X]], -7
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule i8 [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X]], 6
+; CHECK-NEXT:    [[AND:%.*]] = icmp ult i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %add = add i8 %x, 7
@@ -159,10 +152,8 @@ define <2 x i1> @eq_vector(<2 x i8> %x, <2 x i8> %y) {
 define <2 x i1> @ne_vector_equal_5(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i1> @ne_vector_equal_5
 ; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[X]], <i8 -5, i8 -5>
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne <2 x i8> [[X]], <i8 5, i8 5>
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule <2 x i8> [[SUB]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[C1]], [[C2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 -6, i8 -6>
+; CHECK-NEXT:    [[AND:%.*]] = icmp ult <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %sub = add <2 x i8> %x, <i8 -5, i8 -5>
@@ -175,10 +166,7 @@ define <2 x i1> @ne_vector_equal_5(<2 x i8> %x, <2 x i8> %y) {
 define <2 x i1> @eq_vector_equal_minus_1(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i1> @eq_vector_equal_minus_1
 ; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 1, i8 1>
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq <2 x i8> [[X]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt <2 x i8> [[ADD]], [[Y]]
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[C1]], [[C2]]
+; CHECK-NEXT:    [[OR:%.*]] = icmp uge <2 x i8> [[X]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %add = add <2 x i8> %x, <i8 1, i8 1>
@@ -191,10 +179,8 @@ define <2 x i1> @eq_vector_equal_minus_1(<2 x i8> %x, <2 x i8> %y) {
 define <2 x i1> @ne_vector_equal_minus_7(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: define <2 x i1> @ne_vector_equal_minus_7
 ; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i8> [[X]], <i8 7, i8 7>
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne <2 x i8> [[X]], <i8 -7, i8 -7>
-; CHECK-NEXT:    [[C2:%.*]] = icmp ule <2 x i8> [[ADD]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[C1]], [[C2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 6, i8 6>
+; CHECK-NEXT:    [[AND:%.*]] = icmp ult <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[AND]]
 ;
   %add = add <2 x i8> %x, <i8 7, i8 7>
@@ -239,17 +225,29 @@ define <2 x i1> @ne_vector_unequal2(<2 x i8> %x, <2 x i8> %y) {
 ; ==============================================================================
 ; Tests with undef
 ; ==============================================================================
-define <2 x i1> @eq_vector_undef(<2 x i8> %x, <2 x i8> %y) {
-; CHECK-LABEL: define <2 x i1> @eq_vector_undef
+define <2 x i1> @eq_vector_undef_icmp(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @eq_vector_undef_icmp
 ; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
-; CHECK-NEXT:    [[SUB:%.*]] = add <2 x i8> [[X]], <i8 -5, i8 -5>
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq <2 x i8> [[X]], <i8 5, i8 undef>
-; CHECK-NEXT:    [[C2:%.*]] = icmp ugt <2 x i8> [[SUB]], [[Y]]
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i1> [[C1]], [[C2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 -6, i8 -6>
+; CHECK-NEXT:    [[OR:%.*]] = icmp uge <2 x i8> [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %sub = add <2 x i8> %x, <i8 -5, i8 -5>
   %c1 = icmp eq <2 x i8> %x, <i8 5, i8 undef>
+  %c2 = icmp ugt <2 x i8> %sub, %y
+  %or = or <2 x i1> %c1, %c2
+  ret <2 x i1> %or
+}
+
+define <2 x i1> @eq_vector_undef_add(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: define <2 x i1> @eq_vector_undef_add
+; CHECK-SAME: (<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X]], <i8 -6, i8 -6>
+; CHECK-NEXT:    [[OR:%.*]] = icmp uge <2 x i8> [[TMP1]], [[Y]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
+;
+  %sub = add <2 x i8> %x, <i8 -5, i8 undef>
+  %c1 = icmp eq <2 x i8> %x, <i8 5, i8 5>
   %c2 = icmp ugt <2 x i8> %sub, %y
   %or = or <2 x i1> %c1, %c2
   ret <2 x i1> %or
@@ -277,10 +275,7 @@ define i1 @ne_commuted_equal_minus_1(i8 %x, i8 %py) {
 ; CHECK-LABEL: define i1 @ne_commuted_equal_minus_1
 ; CHECK-SAME: (i8 [[X:%.*]], i8 [[PY:%.*]]) {
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 42, [[PY]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], 1
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i8 [[X]], -1
-; CHECK-NEXT:    [[C2:%.*]] = icmp uge i8 [[Y]], [[ADD]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    [[AND:%.*]] = icmp ugt i8 [[Y]], [[X]]
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %y = sdiv i8 42, %py ; thwart complexity-based canonicalization
