@@ -473,7 +473,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  1      1     1.00                        kandnb	%k0, %k1, %k2
 # CHECK-NEXT:  1      1     1.00                        kmovb	%k0, %k2
 # CHECK-NEXT:  3      7     1.00    *                   kmovb	(%rax), %k2
-# CHECK-NEXT:  2      1     1.00           *            kmovb	%k0, (%rax)
+# CHECK-NEXT:  2      1     0.50           *            kmovb	%k0, (%rax)
 # CHECK-NEXT:  1      1     1.00                        kmovb	%eax, %k2
 # CHECK-NEXT:  1      3     1.00                        kmovb	%k0, %eax
 # CHECK-NEXT:  1      1     1.00                        knotb	%k0, %k2
@@ -654,24 +654,24 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  3      14    1.00    *                   vcvtuqq2ps	(%rax), %ymm19 {%k1} {z}
 # CHECK-NEXT:  3      14    1.00    *                   vcvtuqq2ps	(%rax){1to8}, %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vextractf32x8	$1, %zmm16, %ymm19
-# CHECK-NEXT:  2      1     1.00                        vextractf32x8	$1, %zmm16, (%rax)
+# CHECK-NEXT:  2      1     0.50                        vextractf32x8	$1, %zmm16, (%rax)
 # CHECK-NEXT:  1      3     1.00                        vextractf32x8	$1, %zmm16, %ymm19 {%k1}
-# CHECK-NEXT:  2      1     1.00           *            vextractf32x8	$1, %zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      1     0.50           *            vextractf32x8	$1, %zmm16, (%rax) {%k1}
 # CHECK-NEXT:  1      3     1.00                        vextractf32x8	$1, %zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vextractf64x2	$1, %zmm16, %xmm19
-# CHECK-NEXT:  2      1     1.00                        vextractf64x2	$1, %zmm16, (%rax)
+# CHECK-NEXT:  2      1     0.50                        vextractf64x2	$1, %zmm16, (%rax)
 # CHECK-NEXT:  1      3     1.00                        vextractf64x2	$1, %zmm16, %xmm19 {%k1}
-# CHECK-NEXT:  2      1     1.00           *            vextractf64x2	$1, %zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      1     0.50           *            vextractf64x2	$1, %zmm16, (%rax) {%k1}
 # CHECK-NEXT:  1      3     1.00                        vextractf64x2	$1, %zmm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vextracti32x8	$1, %zmm16, %ymm19
-# CHECK-NEXT:  2      1     1.00                        vextracti32x8	$1, %zmm16, (%rax)
+# CHECK-NEXT:  2      1     0.50                        vextracti32x8	$1, %zmm16, (%rax)
 # CHECK-NEXT:  1      3     1.00                        vextracti32x8	$1, %zmm16, %ymm19 {%k1}
-# CHECK-NEXT:  2      1     1.00           *            vextracti32x8	$1, %zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      1     0.50           *            vextracti32x8	$1, %zmm16, (%rax) {%k1}
 # CHECK-NEXT:  1      3     1.00                        vextracti32x8	$1, %zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      3     1.00                        vextracti64x2	$1, %zmm16, %xmm19
-# CHECK-NEXT:  2      1     1.00                        vextracti64x2	$1, %zmm16, (%rax)
+# CHECK-NEXT:  2      1     0.50                        vextracti64x2	$1, %zmm16, (%rax)
 # CHECK-NEXT:  1      3     1.00                        vextracti64x2	$1, %zmm16, %xmm19 {%k1}
-# CHECK-NEXT:  2      1     1.00           *            vextracti64x2	$1, %zmm16, (%rax) {%k1}
+# CHECK-NEXT:  2      1     0.50           *            vextracti64x2	$1, %zmm16, (%rax) {%k1}
 # CHECK-NEXT:  1      3     1.00                        vextracti64x2	$1, %zmm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  1      4     1.00                        vfpclasspd	$171, %zmm16, %k1
 # CHECK-NEXT:  2      11    1.00    *                   vfpclasspdz	$171, (%rax), %k1
@@ -872,7 +872,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -      -     197.25 73.25  105.67 105.67 11.00  209.25 0.25   3.67    -      -
+# CHECK-NEXT:  -      -     197.25 73.25  102.00 102.00 5.50   209.25 0.25   5.50   5.50   5.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -882,7 +882,7 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     kandnb	%k0, %k1, %k2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     kmovb	%k0, %k2
 # CHECK-NEXT:  -      -     0.25   0.25   0.50   0.50    -     1.25   0.25    -      -      -     kmovb	(%rax), %k2
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     kmovb	%k0, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   kmovb	%k0, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     kmovb	%eax, %k2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     kmovb	%k0, %eax
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     knotb	%k0, %k2
@@ -1063,24 +1063,24 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     1.00    -      -      -      -     vcvtuqq2ps	(%rax), %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     1.00    -      -      -      -     vcvtuqq2ps	(%rax){1to8}, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextractf32x8	$1, %zmm16, %ymm19
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextractf32x8	$1, %zmm16, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextractf32x8	$1, %zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextractf32x8	$1, %zmm16, %ymm19 {%k1}
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextractf32x8	$1, %zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextractf32x8	$1, %zmm16, (%rax) {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextractf32x8	$1, %zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextractf64x2	$1, %zmm16, %xmm19
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextractf64x2	$1, %zmm16, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextractf64x2	$1, %zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextractf64x2	$1, %zmm16, %xmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextractf64x2	$1, %zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextractf64x2	$1, %zmm16, (%rax) {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextractf64x2	$1, %zmm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextracti32x8	$1, %zmm16, %ymm19
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextracti32x8	$1, %zmm16, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextracti32x8	$1, %zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextracti32x8	$1, %zmm16, %ymm19 {%k1}
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextracti32x8	$1, %zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextracti32x8	$1, %zmm16, (%rax) {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextracti32x8	$1, %zmm16, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextracti64x2	$1, %zmm16, %xmm19
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextracti64x2	$1, %zmm16, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextracti64x2	$1, %zmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextracti64x2	$1, %zmm16, %xmm19 {%k1}
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     vextracti64x2	$1, %zmm16, (%rax) {%k1}
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   vextracti64x2	$1, %zmm16, (%rax) {%k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vextracti64x2	$1, %zmm16, %xmm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     vfpclasspd	$171, %zmm16, %k1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vfpclasspdz	$171, (%rax), %k1
@@ -1145,9 +1145,9 @@ vxorps            (%rax){1to16}, %zmm17, %zmm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vorps	(%rax), %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.50    -     0.50   0.50    -     0.50    -      -      -      -     vorps	(%rax){1to16}, %zmm17, %zmm19 {%k1} {z}
 # CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     vpextrd	$1, %xmm16, %ecx
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     vpextrd	$1, %xmm16, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   vpextrd	$1, %xmm16, (%rax)
 # CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -      -      -     vpextrq	$1, %xmm16, %rcx
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     vpextrq	$1, %xmm16, (%rax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   vpextrq	$1, %xmm16, (%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpinsrd	$1, %ecx, %xmm16, %xmm19
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     vpinsrd	$1, (%rax), %xmm16, %xmm19
 # CHECK-NEXT:  -      -      -      -      -      -      -     2.00    -      -      -      -     vpinsrq	$1, %rcx, %xmm16, %xmm19

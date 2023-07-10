@@ -641,18 +641,18 @@ define { i64, i1 } @addcarry_fake_carry(i64 %a, i64 %b, i1 %carryin) nounwind {
 ; CHECK-NEXT:    adcq %rsi, %rax
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    retq
-    %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
-    %partial = extractvalue { i64, i1 } %t1, 0
-    %k1 = extractvalue { i64, i1 } %t1, 1
+  %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %partial = extractvalue { i64, i1 } %t1, 0
+  %k1 = extractvalue { i64, i1 } %t1, 1
 
-    %zcarryin = zext i1 %carryin to i64
-    %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %zcarryin)
-    %k2 = extractvalue { i64, i1 } %sum, 1
+  %zcarryin = zext i1 %carryin to i64
+  %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %zcarryin)
+  %k2 = extractvalue { i64, i1 } %sum, 1
 
-    %carryout = or i1 %k1, %k2
+  %carryout = or i1 %k1, %k2
 
-    %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
-    ret { i64, i1 } %ret
+  %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
+  ret { i64, i1 } %ret
 }
 
 ; negative test: %carryin does not look like carry
@@ -666,17 +666,17 @@ define { i64, i1 } @addcarry_carry_not_zext(i64 %a, i64 %b, i64 %carryin) nounwi
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    orb %cl, %dl
 ; CHECK-NEXT:    retq
-    %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
-    %partial = extractvalue { i64, i1 } %t1, 0
-    %k1 = extractvalue { i64, i1 } %t1, 1
+  %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %partial = extractvalue { i64, i1 } %t1, 0
+  %k1 = extractvalue { i64, i1 } %t1, 1
 
-    %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %carryin)
-    %k2 = extractvalue { i64, i1 } %sum, 1
+  %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %carryin)
+  %k2 = extractvalue { i64, i1 } %sum, 1
 
-    %carryout = or i1 %k1, %k2
+  %carryout = or i1 %k1, %k2
 
-    %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
-    ret { i64, i1 } %ret
+  %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
+  ret { i64, i1 } %ret
 }
 
 ; negative test: %carryin does not look like carry
@@ -690,18 +690,18 @@ define { i64, i1 } @addcarry_carry_not_i1(i64 %a, i64 %b, i8 %carryin) nounwind 
 ; CHECK-NEXT:    setb %dl
 ; CHECK-NEXT:    orb %cl, %dl
 ; CHECK-NEXT:    retq
-    %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
-    %partial = extractvalue { i64, i1 } %t1, 0
-    %k1 = extractvalue { i64, i1 } %t1, 1
+  %t1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %partial = extractvalue { i64, i1 } %t1, 0
+  %k1 = extractvalue { i64, i1 } %t1, 1
 
-    %zcarryin = zext i8 %carryin to i64
-    %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %zcarryin)
-    %k2 = extractvalue { i64, i1 } %sum, 1
+  %zcarryin = zext i8 %carryin to i64
+  %sum = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %partial, i64 %zcarryin)
+  %k2 = extractvalue { i64, i1 } %sum, 1
 
-    %carryout = or i1 %k1, %k2
+  %carryout = or i1 %k1, %k2
 
-    %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
-    ret { i64, i1 } %ret
+  %ret = insertvalue { i64, i1 } %sum, i1 %carryout, 1
+  ret { i64, i1 } %ret
 }
 
 ; negative test for combineCarryDiamond(): uaddo mixed with usubo

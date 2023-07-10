@@ -3,7 +3,7 @@
 
 ; IV = 0; IV <s limit; IV += 1;
 ;   Check(N - IV >= 2)
-; TODO: IRCE is allowed
+; TODO: IRCE is allowed.
 define i8 @test1(i8 %limit, i8 %n) {
 ; CHECK-LABEL: define i8 @test1
 ; CHECK-SAME: (i8 [[LIMIT:%.*]], i8 [[N:%.*]]) {
@@ -55,8 +55,64 @@ out_of_bounds:
 }
 
 ; IV = 0; IV <s limit; IV += 1;
+;   Check(N - IV >= 2)
+; N is known to be non-negative.
+; TODO: IRCE is allowed.
+define i8 @test1a(i8 %limit, ptr %p) {
+; CHECK-LABEL: define i8 @test1a
+; CHECK-SAME: (i8 [[LIMIT:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[PRECHECK:%.*]] = icmp sgt i8 [[LIMIT]], 0
+; CHECK-NEXT:    br i1 [[PRECHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_NEXT:%.*]], [[INBOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[N]], [[IDX]]
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp sge i8 [[SUB]], 2
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INBOUNDS]], label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       inbounds:
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1:%.*]] = phi i8 [ [[IDX]], [[INBOUNDS]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IDX_LCSSA1]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i8 [ [[IDX]], [[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[IDX_LCSSA]]
+;
+entry:
+  %n = load i8, ptr %p, !range !0
+  %precheck = icmp sgt i8 %limit, 0
+  br i1 %precheck, label %loop, label %exit
+
+loop:
+  %idx = phi i8 [ %idx.next, %inbounds ], [ 0, %entry ]
+  %sub = sub i8 %n, %idx
+  %check = icmp sge i8 %sub, 2
+  br i1 %check, label %inbounds, label %out_of_bounds
+
+inbounds:
+  %idx.next = add nuw i8 %idx, 1
+  %cmp = icmp slt i8 %idx.next, %limit
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %res = phi i8 [ 0, %entry ], [ %idx, %inbounds ]
+  ret i8 %res
+
+out_of_bounds:
+  ret i8 %idx;
+}
+
+; IV = 0; IV <s limit; IV += 1;
 ;   Check(IV - N <= -2)
-; TODO: IRCE is allowed
+; TODO: IRCE is allowed.
 define i8 @test2(i8 %limit, i8 %n) {
 ; CHECK-LABEL: define i8 @test2
 ; CHECK-SAME: (i8 [[LIMIT:%.*]], i8 [[N:%.*]]) {
@@ -108,8 +164,64 @@ out_of_bounds:
 }
 
 ; IV = 0; IV <s limit; IV += 1;
+;   Check(IV - N <= -2)
+; N is known to be non-negative.
+; TODO: IRCE is allowed.
+define i8 @test2a(i8 %limit, ptr %p) {
+; CHECK-LABEL: define i8 @test2a
+; CHECK-SAME: (i8 [[LIMIT:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG0]]
+; CHECK-NEXT:    [[PRECHECK:%.*]] = icmp sgt i8 [[LIMIT]], 0
+; CHECK-NEXT:    br i1 [[PRECHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_NEXT:%.*]], [[INBOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[IDX]], [[N]]
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp sle i8 [[SUB]], -2
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INBOUNDS]], label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       inbounds:
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1:%.*]] = phi i8 [ [[IDX]], [[INBOUNDS]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IDX_LCSSA1]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i8 [ [[IDX]], [[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[IDX_LCSSA]]
+;
+entry:
+  %n = load i8, ptr %p, !range !0
+  %precheck = icmp sgt i8 %limit, 0
+  br i1 %precheck, label %loop, label %exit
+
+loop:
+  %idx = phi i8 [ %idx.next, %inbounds ], [ 0, %entry ]
+  %sub = sub i8 %idx, %n
+  %check = icmp sle i8 %sub, -2
+  br i1 %check, label %inbounds, label %out_of_bounds
+
+inbounds:
+  %idx.next = add nuw i8 %idx, 1
+  %cmp = icmp slt i8 %idx.next, %limit
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %res = phi i8 [ 0, %entry ], [ %idx, %inbounds ]
+  ret i8 %res
+
+out_of_bounds:
+  ret i8 %idx;
+}
+
+; IV = 0; IV <s limit; IV += 1;
 ;   Check(IV + 2 <= N)
-; TODO: IRCE is allowed
+; TODO: IRCE is allowed.
 define i8 @test3(i8 %limit, i8 %n) {
 ; CHECK-LABEL: define i8 @test3
 ; CHECK-SAME: (i8 [[LIMIT:%.*]], i8 [[N:%.*]]) {
@@ -159,3 +271,502 @@ exit:
 out_of_bounds:
   ret i8 %idx;
 }
+
+; IV = 0; IV <s limit; IV += 1;
+;   Check(IV + 2 <= N)
+; N is known to be non-negative.
+; IRCE is allowed.
+define i8 @test3a(i8 %limit, ptr %p) {
+; CHECK-LABEL: define i8 @test3a
+; CHECK-SAME: (i8 [[LIMIT:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG0]]
+; CHECK-NEXT:    [[PRECHECK:%.*]] = icmp sgt i8 [[LIMIT]], 0
+; CHECK-NEXT:    br i1 [[PRECHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i8 [[N]], -1
+; CHECK-NEXT:    [[SMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[LIMIT]], i8 [[TMP0]])
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN]], i8 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER3:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK:       loop.preheader3:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_NEXT:%.*]], [[INBOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER3]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[IDX]], 2
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp sle i8 [[ADD]], [[N]]
+; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT4:%.*]]
+; CHECK:       inbounds:
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK:       main.exit.selector:
+; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i8 [ [[IDX_NEXT]], [[INBOUNDS]] ]
+; CHECK-NEXT:    [[IDX_LCSSA2:%.*]] = phi i8 [ [[IDX]], [[INBOUNDS]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[IDX_NEXT_LCSSA]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       main.pseudo.exit:
+; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i8 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i8 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
+; CHECK:       exit.loopexit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1_PH:%.*]] = phi i8 [ [[IDX_POSTLOOP:%.*]], [[INBOUNDS_POSTLOOP:%.*]] ]
+; CHECK-NEXT:    br label [[EXIT_LOOPEXIT]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1:%.*]] = phi i8 [ [[IDX_LCSSA2]], [[MAIN_EXIT_SELECTOR]] ], [ [[IDX_LCSSA1_PH]], [[EXIT_LOOPEXIT_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IDX_LCSSA1]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK:       out_of_bounds.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA_PH:%.*]] = phi i8 [ [[IDX_POSTLOOP]], [[LOOP_POSTLOOP:%.*]] ]
+; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       out_of_bounds.loopexit4:
+; CHECK-NEXT:    [[IDX_LCSSA_PH5:%.*]] = phi i8 [ [[IDX]], [[LOOP]] ]
+; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i8 [ [[IDX_LCSSA_PH]], [[OUT_OF_BOUNDS_LOOPEXIT:%.*]] ], [ [[IDX_LCSSA_PH5]], [[OUT_OF_BOUNDS_LOOPEXIT4]] ]
+; CHECK-NEXT:    ret i8 [[IDX_LCSSA]]
+; CHECK:       postloop:
+; CHECK-NEXT:    br label [[LOOP_POSTLOOP]]
+; CHECK:       loop.postloop:
+; CHECK-NEXT:    [[IDX_POSTLOOP]] = phi i8 [ [[IDX_NEXT_POSTLOOP:%.*]], [[INBOUNDS_POSTLOOP]] ], [ [[IDX_COPY]], [[POSTLOOP]] ]
+; CHECK-NEXT:    [[ADD_POSTLOOP:%.*]] = add i8 [[IDX_POSTLOOP]], 2
+; CHECK-NEXT:    [[CHECK_POSTLOOP:%.*]] = icmp sle i8 [[ADD_POSTLOOP]], [[N]]
+; CHECK-NEXT:    br i1 [[CHECK_POSTLOOP]], label [[INBOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT]]
+; CHECK:       inbounds.postloop:
+; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
+; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP1:![0-9]+]], !irce.loop.clone !6
+;
+entry:
+  %n = load i8, ptr %p, !range !0
+  %precheck = icmp sgt i8 %limit, 0
+  br i1 %precheck, label %loop, label %exit
+
+loop:
+  %idx = phi i8 [ %idx.next, %inbounds ], [ 0, %entry ]
+  %add = add i8 %idx, 2
+  %check = icmp sle i8 %add, %n
+  br i1 %check, label %inbounds, label %out_of_bounds
+
+inbounds:
+  %idx.next = add nuw i8 %idx, 1
+  %cmp = icmp slt i8 %idx.next, %limit
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %res = phi i8 [ 0, %entry ], [ %idx, %inbounds ]
+  ret i8 %res
+
+out_of_bounds:
+  ret i8 %idx;
+}
+
+; IV = 0; IV <s limit; IV += 1;
+;   Check(N - IV > 2)
+; TODO: IRCE is allowed.
+define i8 @test4(i8 %limit, i8 %n) {
+; CHECK-LABEL: define i8 @test4
+; CHECK-SAME: (i8 [[LIMIT:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRECHECK:%.*]] = icmp sgt i8 [[LIMIT]], 0
+; CHECK-NEXT:    br i1 [[PRECHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_NEXT:%.*]], [[INBOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[N]], [[IDX]]
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp sgt i8 [[SUB]], 2
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INBOUNDS]], label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       inbounds:
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1:%.*]] = phi i8 [ [[IDX]], [[INBOUNDS]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IDX_LCSSA1]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i8 [ [[IDX]], [[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[IDX_LCSSA]]
+;
+entry:
+  %precheck = icmp sgt i8 %limit, 0
+  br i1 %precheck, label %loop, label %exit
+
+loop:
+  %idx = phi i8 [ %idx.next, %inbounds ], [ 0, %entry ]
+  %sub = sub i8 %n, %idx
+  %check = icmp sgt i8 %sub, 2
+  br i1 %check, label %inbounds, label %out_of_bounds
+
+inbounds:
+  %idx.next = add nuw i8 %idx, 1
+  %cmp = icmp slt i8 %idx.next, %limit
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %res = phi i8 [ 0, %entry ], [ %idx, %inbounds ]
+  ret i8 %res
+
+out_of_bounds:
+  ret i8 %idx;
+}
+
+; IV = 0; IV <s limit; IV += 1;
+;   Check(N - IV > 2)
+; N is known to be non-negative.
+; TODO: IRCE is allowed.
+define i8 @test4a(i8 %limit, ptr %p) {
+; CHECK-LABEL: define i8 @test4a
+; CHECK-SAME: (i8 [[LIMIT:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG0]]
+; CHECK-NEXT:    [[PRECHECK:%.*]] = icmp sgt i8 [[LIMIT]], 0
+; CHECK-NEXT:    br i1 [[PRECHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_NEXT:%.*]], [[INBOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[N]], [[IDX]]
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp sgt i8 [[SUB]], 2
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INBOUNDS]], label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       inbounds:
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1:%.*]] = phi i8 [ [[IDX]], [[INBOUNDS]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IDX_LCSSA1]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i8 [ [[IDX]], [[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[IDX_LCSSA]]
+;
+entry:
+  %n = load i8, ptr %p, !range !0
+  %precheck = icmp sgt i8 %limit, 0
+  br i1 %precheck, label %loop, label %exit
+
+loop:
+  %idx = phi i8 [ %idx.next, %inbounds ], [ 0, %entry ]
+  %sub = sub i8 %n, %idx
+  %check = icmp sgt i8 %sub, 2
+  br i1 %check, label %inbounds, label %out_of_bounds
+
+inbounds:
+  %idx.next = add nuw i8 %idx, 1
+  %cmp = icmp slt i8 %idx.next, %limit
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %res = phi i8 [ 0, %entry ], [ %idx, %inbounds ]
+  ret i8 %res
+
+out_of_bounds:
+  ret i8 %idx;
+}
+
+; IV = 0; IV <s limit; IV += 1;
+;   Check(IV - N < -2)
+; TODO: IRCE is allowed.
+define i8 @test5(i8 %limit, i8 %n) {
+; CHECK-LABEL: define i8 @test5
+; CHECK-SAME: (i8 [[LIMIT:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRECHECK:%.*]] = icmp sgt i8 [[LIMIT]], 0
+; CHECK-NEXT:    br i1 [[PRECHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_NEXT:%.*]], [[INBOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[IDX]], [[N]]
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i8 [[SUB]], -2
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INBOUNDS]], label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       inbounds:
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1:%.*]] = phi i8 [ [[IDX]], [[INBOUNDS]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IDX_LCSSA1]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i8 [ [[IDX]], [[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[IDX_LCSSA]]
+;
+entry:
+  %precheck = icmp sgt i8 %limit, 0
+  br i1 %precheck, label %loop, label %exit
+
+loop:
+  %idx = phi i8 [ %idx.next, %inbounds ], [ 0, %entry ]
+  %sub = sub i8 %idx, %n
+  %check = icmp slt i8 %sub, -2
+  br i1 %check, label %inbounds, label %out_of_bounds
+
+inbounds:
+  %idx.next = add nuw i8 %idx, 1
+  %cmp = icmp slt i8 %idx.next, %limit
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %res = phi i8 [ 0, %entry ], [ %idx, %inbounds ]
+  ret i8 %res
+
+out_of_bounds:
+  ret i8 %idx;
+}
+
+; IV = 0; IV <s limit; IV += 1;
+;   Check(IV - N < -2)
+; N is known to be non-negative.
+; TODO: IRCE is allowed.
+define i8 @test5a(i8 %limit, ptr %p) {
+; CHECK-LABEL: define i8 @test5a
+; CHECK-SAME: (i8 [[LIMIT:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG0]]
+; CHECK-NEXT:    [[PRECHECK:%.*]] = icmp sgt i8 [[LIMIT]], 0
+; CHECK-NEXT:    br i1 [[PRECHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_NEXT:%.*]], [[INBOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[IDX]], [[N]]
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i8 [[SUB]], -2
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INBOUNDS]], label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       inbounds:
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1:%.*]] = phi i8 [ [[IDX]], [[INBOUNDS]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IDX_LCSSA1]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i8 [ [[IDX]], [[LOOP]] ]
+; CHECK-NEXT:    ret i8 [[IDX_LCSSA]]
+;
+entry:
+  %n = load i8, ptr %p, !range !0
+  %precheck = icmp sgt i8 %limit, 0
+  br i1 %precheck, label %loop, label %exit
+
+loop:
+  %idx = phi i8 [ %idx.next, %inbounds ], [ 0, %entry ]
+  %sub = sub i8 %idx, %n
+  %check = icmp slt i8 %sub, -2
+  br i1 %check, label %inbounds, label %out_of_bounds
+
+inbounds:
+  %idx.next = add nuw i8 %idx, 1
+  %cmp = icmp slt i8 %idx.next, %limit
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %res = phi i8 [ 0, %entry ], [ %idx, %inbounds ]
+  ret i8 %res
+
+out_of_bounds:
+  ret i8 %idx;
+}
+
+; IV = 0; IV <s limit; IV += 1;
+;   Check(IV + 2 < N)
+; IRCE is allowed.
+define i8 @test6(i8 %limit, i8 %n) {
+; CHECK-LABEL: define i8 @test6
+; CHECK-SAME: (i8 [[LIMIT:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRECHECK:%.*]] = icmp sgt i8 [[LIMIT]], 0
+; CHECK-NEXT:    br i1 [[PRECHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N]], -127
+; CHECK-NEXT:    [[SMAX:%.*]] = call i8 @llvm.smax.i8(i8 [[TMP0]], i8 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 [[N]], [[SMAX]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[N]], i8 0)
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN]], i8 -1)
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i8 [[SMAX2]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i8 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[SMIN3:%.*]] = call i8 @llvm.smin.i8(i8 [[LIMIT]], i8 [[TMP3]])
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN3]], i8 0)
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i8 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP_PREHEADER6:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK:       loop.preheader6:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_NEXT:%.*]], [[INBOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER6]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[IDX]], 2
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i8 [[ADD]], [[N]]
+; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT7:%.*]]
+; CHECK:       inbounds:
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK:       main.exit.selector:
+; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i8 [ [[IDX_NEXT]], [[INBOUNDS]] ]
+; CHECK-NEXT:    [[IDX_LCSSA5:%.*]] = phi i8 [ [[IDX]], [[INBOUNDS]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp slt i8 [[IDX_NEXT_LCSSA]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       main.pseudo.exit:
+; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i8 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i8 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
+; CHECK:       exit.loopexit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1_PH:%.*]] = phi i8 [ [[IDX_POSTLOOP:%.*]], [[INBOUNDS_POSTLOOP:%.*]] ]
+; CHECK-NEXT:    br label [[EXIT_LOOPEXIT]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1:%.*]] = phi i8 [ [[IDX_LCSSA5]], [[MAIN_EXIT_SELECTOR]] ], [ [[IDX_LCSSA1_PH]], [[EXIT_LOOPEXIT_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IDX_LCSSA1]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK:       out_of_bounds.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA_PH:%.*]] = phi i8 [ [[IDX_POSTLOOP]], [[LOOP_POSTLOOP:%.*]] ]
+; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       out_of_bounds.loopexit7:
+; CHECK-NEXT:    [[IDX_LCSSA_PH8:%.*]] = phi i8 [ [[IDX]], [[LOOP]] ]
+; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i8 [ [[IDX_LCSSA_PH]], [[OUT_OF_BOUNDS_LOOPEXIT:%.*]] ], [ [[IDX_LCSSA_PH8]], [[OUT_OF_BOUNDS_LOOPEXIT7]] ]
+; CHECK-NEXT:    ret i8 [[IDX_LCSSA]]
+; CHECK:       postloop:
+; CHECK-NEXT:    br label [[LOOP_POSTLOOP]]
+; CHECK:       loop.postloop:
+; CHECK-NEXT:    [[IDX_POSTLOOP]] = phi i8 [ [[IDX_NEXT_POSTLOOP:%.*]], [[INBOUNDS_POSTLOOP]] ], [ [[IDX_COPY]], [[POSTLOOP]] ]
+; CHECK-NEXT:    [[ADD_POSTLOOP:%.*]] = add i8 [[IDX_POSTLOOP]], 2
+; CHECK-NEXT:    [[CHECK_POSTLOOP:%.*]] = icmp slt i8 [[ADD_POSTLOOP]], [[N]]
+; CHECK-NEXT:    br i1 [[CHECK_POSTLOOP]], label [[INBOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT]]
+; CHECK:       inbounds.postloop:
+; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
+; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP7:![0-9]+]], !irce.loop.clone !6
+;
+entry:
+  %precheck = icmp sgt i8 %limit, 0
+  br i1 %precheck, label %loop, label %exit
+
+loop:
+  %idx = phi i8 [ %idx.next, %inbounds ], [ 0, %entry ]
+  %add = add i8 %idx, 2
+  %check = icmp slt i8 %add, %n
+  br i1 %check, label %inbounds, label %out_of_bounds
+
+inbounds:
+  %idx.next = add nuw i8 %idx, 1
+  %cmp = icmp slt i8 %idx.next, %limit
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %res = phi i8 [ 0, %entry ], [ %idx, %inbounds ]
+  ret i8 %res
+
+out_of_bounds:
+  ret i8 %idx;
+}
+
+; IV = 0; IV <s limit; IV += 1;
+;   Check(IV + 2 < N)
+; N is known to be non-negative.
+; IRCE is allowed.
+define i8 @test6a(i8 %limit, ptr %p) {
+; CHECK-LABEL: define i8 @test6a
+; CHECK-SAME: (i8 [[LIMIT:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG0]]
+; CHECK-NEXT:    [[PRECHECK:%.*]] = icmp sgt i8 [[LIMIT]], 0
+; CHECK-NEXT:    br i1 [[PRECHECK]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i8 [[N]], -2
+; CHECK-NEXT:    [[SMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[LIMIT]], i8 [[TMP0]])
+; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN]], i8 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 0, [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER3:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
+; CHECK:       loop.preheader3:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IDX:%.*]] = phi i8 [ [[IDX_NEXT:%.*]], [[INBOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER3]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[IDX]], 2
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i8 [[ADD]], [[N]]
+; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT4:%.*]]
+; CHECK:       inbounds:
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
+; CHECK:       main.exit.selector:
+; CHECK-NEXT:    [[IDX_NEXT_LCSSA:%.*]] = phi i8 [ [[IDX_NEXT]], [[INBOUNDS]] ]
+; CHECK-NEXT:    [[IDX_LCSSA2:%.*]] = phi i8 [ [[IDX]], [[INBOUNDS]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[IDX_NEXT_LCSSA]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[MAIN_PSEUDO_EXIT]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK:       main.pseudo.exit:
+; CHECK-NEXT:    [[IDX_COPY:%.*]] = phi i8 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    [[INDVAR_END:%.*]] = phi i8 [ 0, [[LOOP_PREHEADER]] ], [ [[IDX_NEXT_LCSSA]], [[MAIN_EXIT_SELECTOR]] ]
+; CHECK-NEXT:    br label [[POSTLOOP:%.*]]
+; CHECK:       exit.loopexit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1_PH:%.*]] = phi i8 [ [[IDX_POSTLOOP:%.*]], [[INBOUNDS_POSTLOOP:%.*]] ]
+; CHECK-NEXT:    br label [[EXIT_LOOPEXIT]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA1:%.*]] = phi i8 [ [[IDX_LCSSA2]], [[MAIN_EXIT_SELECTOR]] ], [ [[IDX_LCSSA1_PH]], [[EXIT_LOOPEXIT_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IDX_LCSSA1]], [[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    ret i8 [[RES]]
+; CHECK:       out_of_bounds.loopexit:
+; CHECK-NEXT:    [[IDX_LCSSA_PH:%.*]] = phi i8 [ [[IDX_POSTLOOP]], [[LOOP_POSTLOOP:%.*]] ]
+; CHECK-NEXT:    br label [[OUT_OF_BOUNDS:%.*]]
+; CHECK:       out_of_bounds.loopexit4:
+; CHECK-NEXT:    [[IDX_LCSSA_PH5:%.*]] = phi i8 [ [[IDX]], [[LOOP]] ]
+; CHECK-NEXT:    br label [[OUT_OF_BOUNDS]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    [[IDX_LCSSA:%.*]] = phi i8 [ [[IDX_LCSSA_PH]], [[OUT_OF_BOUNDS_LOOPEXIT:%.*]] ], [ [[IDX_LCSSA_PH5]], [[OUT_OF_BOUNDS_LOOPEXIT4]] ]
+; CHECK-NEXT:    ret i8 [[IDX_LCSSA]]
+; CHECK:       postloop:
+; CHECK-NEXT:    br label [[LOOP_POSTLOOP]]
+; CHECK:       loop.postloop:
+; CHECK-NEXT:    [[IDX_POSTLOOP]] = phi i8 [ [[IDX_NEXT_POSTLOOP:%.*]], [[INBOUNDS_POSTLOOP]] ], [ [[IDX_COPY]], [[POSTLOOP]] ]
+; CHECK-NEXT:    [[ADD_POSTLOOP:%.*]] = add i8 [[IDX_POSTLOOP]], 2
+; CHECK-NEXT:    [[CHECK_POSTLOOP:%.*]] = icmp slt i8 [[ADD_POSTLOOP]], [[N]]
+; CHECK-NEXT:    br i1 [[CHECK_POSTLOOP]], label [[INBOUNDS_POSTLOOP]], label [[OUT_OF_BOUNDS_LOOPEXIT]]
+; CHECK:       inbounds.postloop:
+; CHECK-NEXT:    [[IDX_NEXT_POSTLOOP]] = add nuw i8 [[IDX_POSTLOOP]], 1
+; CHECK-NEXT:    [[CMP_POSTLOOP:%.*]] = icmp slt i8 [[IDX_NEXT_POSTLOOP]], [[LIMIT]]
+; CHECK-NEXT:    br i1 [[CMP_POSTLOOP]], label [[LOOP_POSTLOOP]], label [[EXIT_LOOPEXIT_LOOPEXIT]], !llvm.loop [[LOOP8:![0-9]+]], !irce.loop.clone !6
+;
+entry:
+  %n = load i8, ptr %p, !range !0
+  %precheck = icmp sgt i8 %limit, 0
+  br i1 %precheck, label %loop, label %exit
+
+loop:
+  %idx = phi i8 [ %idx.next, %inbounds ], [ 0, %entry ]
+  %add = add i8 %idx, 2
+  %check = icmp slt i8 %add, %n
+  br i1 %check, label %inbounds, label %out_of_bounds
+
+inbounds:
+  %idx.next = add nuw i8 %idx, 1
+  %cmp = icmp slt i8 %idx.next, %limit
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %res = phi i8 [ 0, %entry ], [ %idx, %inbounds ]
+  ret i8 %res
+
+out_of_bounds:
+  ret i8 %idx;
+}
+
+!0 = !{i8 0, i8 127}

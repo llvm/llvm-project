@@ -46,12 +46,56 @@ private:
     BASR33 = 7,   // b'x111' == BASR  r3,r3
   };
 
+  // The Associated Data Area (ADA) contains descriptors which help locating
+  // external symbols. For each symbol and type, the displacement into the ADA
+  // is stored.
+  class AssociatedDataAreaTable {
+  public:
+    using DisplacementTable =
+        MapVector<std::pair<const MCSymbol *, unsigned>, uint32_t>;
+
+  private:
+    const uint64_t PointerSize;
+
+    /// The mapping of name/slot type pairs to displacements.
+    DisplacementTable Displacements;
+
+    /// The next available displacement value. Incremented when new entries into
+    /// the ADA are created.
+    uint32_t NextDisplacement = 0;
+
+  public:
+    AssociatedDataAreaTable(uint64_t PointerSize) : PointerSize(PointerSize) {}
+
+    /// @brief Add a function descriptor to the ADA.
+    /// @param MI Pointer to an ADA_ENTRY instruction.
+    /// @return The displacement of the descriptor into the ADA.
+    uint32_t insert(const MachineOperand MO);
+
+    /// @brief Get the displacement into associated data area (ADA) for a name.
+    /// If no  displacement is already associated with the name, assign one and
+    /// return it.
+    /// @param Sym The symbol for which the displacement should be returned.
+    /// @param SlotKind The ADA type.
+    /// @return The displacement of the descriptor into the ADA.
+    uint32_t insert(const MCSymbol *Sym, unsigned SlotKind);
+
+    /// Get the table of GOFF displacements.  This is 'const' since it should
+    /// never be modified by anything except the APIs on this class.
+    const DisplacementTable &getTable() const { return Displacements; }
+
+    uint32_t getNextDisplacement() const { return NextDisplacement; }
+  };
+
+  AssociatedDataAreaTable ADATable;
+
   void emitPPA1(MCSymbol *FnEndSym);
+  void emitADASection();
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)), CurrentFnPPA1Sym(nullptr),
-        CurrentFnEPMarkerSym(nullptr) {}
+        CurrentFnEPMarkerSym(nullptr), ADATable(TM.getPointerSize(0)) {}
 
   // Override AsmPrinter.
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }

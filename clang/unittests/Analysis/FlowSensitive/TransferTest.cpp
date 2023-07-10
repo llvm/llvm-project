@@ -5480,8 +5480,8 @@ TEST(TransferTest, FunctionToPointerDecayHasValue) {
       });
 }
 
-// Check that the pointer that a builtin function decays to is associated with
-// a value.
+// Check that a builtin function is not associated with a value. (It's only
+// possible to call builtin functions directly, not take their address.)
 TEST(TransferTest, BuiltinFunctionModeled) {
   std::string Code = R"(
     void target() {
@@ -5509,7 +5509,7 @@ TEST(TransferTest, BuiltinFunctionModeled) {
                   ASTCtx));
 
         ASSERT_THAT(ImplicitCast, NotNull());
-        EXPECT_THAT(Env.getValueStrict(*ImplicitCast), NotNull());
+        EXPECT_THAT(Env.getValueStrict(*ImplicitCast), IsNull());
       });
 }
 

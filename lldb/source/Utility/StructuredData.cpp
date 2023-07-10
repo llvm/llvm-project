@@ -104,36 +104,34 @@ static StructuredData::ObjectSP ParseJSONArray(json::Array *array) {
 
 StructuredData::ObjectSP
 StructuredData::Object::GetObjectForDotSeparatedPath(llvm::StringRef path) {
-  if (this->GetType() == lldb::eStructuredDataTypeDictionary) {
+  if (GetType() == lldb::eStructuredDataTypeDictionary) {
     std::pair<llvm::StringRef, llvm::StringRef> match = path.split('.');
-    std::string key = match.first.str();
-    ObjectSP value = this->GetAsDictionary()->GetValueForKey(key);
-    if (value.get()) {
-      // Do we have additional words to descend?  If not, return the value
-      // we're at right now.
-      if (match.second.empty()) {
-        return value;
-      } else {
-        return value->GetObjectForDotSeparatedPath(match.second);
-      }
-    }
-    return ObjectSP();
+    llvm::StringRef key = match.first;
+    ObjectSP value = GetAsDictionary()->GetValueForKey(key);
+    if (!value)
+      return {};
+
+    // Do we have additional words to descend?  If not, return the value
+    // we're at right now.
+    if (match.second.empty())
+      return value;
+
+    return value->GetObjectForDotSeparatedPath(match.second);
   }
 
-  if (this->GetType() == lldb::eStructuredDataTypeArray) {
+  if (GetType() == lldb::eStructuredDataTypeArray) {
     std::pair<llvm::StringRef, llvm::StringRef> match = path.split('[');
-    if (match.second.empty()) {
-      return this->shared_from_this();
-    }
-    errno = 0;
-    uint64_t val = strtoul(match.second.str().c_str(), nullptr, 10);
-    if (errno == 0) {
-      return this->GetAsArray()->GetItemAtIndex(val);
-    }
-    return ObjectSP();
+    if (match.second.empty())
+      return shared_from_this();
+
+    uint64_t val = 0;
+    if (!llvm::to_integer(match.second, val, /* Base = */ 10))
+      return {};
+
+    return GetAsArray()->GetItemAtIndex(val);
   }
 
-  return this->shared_from_this();
+  return shared_from_this();
 }
 
 void StructuredData::Object::DumpToStdout(bool pretty_print) const {

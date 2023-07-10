@@ -217,10 +217,10 @@ class SplitOp:
 
 
 class TileOp:
-    """Specialization for TileOp class."""
+  """Specialization for TileOp class."""
 
-    @overload
-    def __init__(
+  @overload
+  def __init__(
         self,
         loop_types: Union[Type, List[Type]],
         target: Union[Operation, Value],
@@ -233,10 +233,10 @@ class TileOp:
         loc=None,
         ip=None,
     ):
-        ...
+    ...
 
-    @overload
-    def __init__(
+  @overload
+  def __init__(
         self,
         target: Union[Operation, Value, OpView],
         *,
@@ -248,9 +248,9 @@ class TileOp:
         loc=None,
         ip=None,
     ):
-        ...
+    ...
 
-    def __init__(
+  def __init__(
         self,
         loop_types_or_target: Union[Type, List[Type], Operation, Value],
         target_or_none: Optional[Union[Operation, Value, OpView]] = None,
@@ -263,43 +263,45 @@ class TileOp:
         loc=None,
         ip=None,
     ):
-        if interchange is None:
-            interchange = []
-        if sizes is None:
-            sizes = []
-        if scalable_sizes is None:
-            scalable_sizes = []
+    if interchange is None:
+      interchange = []
+    if sizes is None:
+      sizes = []
 
-        static_sizes = []
-        dynamic_sizes = []
-        if isinstance(sizes, ArrayAttr):
-            sizes_attr = sizes
+    static_sizes = []
+    dynamic_sizes = []
+    if isinstance(sizes, ArrayAttr):
+      sizes_attr = sizes
+    else:
+      for size in sizes:
+        if isinstance(size, int):
+          static_sizes.append(size)
         else:
-            for size in sizes:
-                if isinstance(size, int):
-                    static_sizes.append(size)
-                else:
-                    static_sizes.append(ShapedType.get_dynamic_size())
-                    dynamic_sizes.append(_get_op_result_or_value(size))
-            sizes_attr = DenseI64ArrayAttr.get(static_sizes)
+          static_sizes.append(ShapedType.get_dynamic_size())
+          dynamic_sizes.append(_get_op_result_or_value(size))
+      sizes_attr = DenseI64ArrayAttr.get(static_sizes)
 
-        num_loops = sum(v if v == 0 else 1 for v in self.__extract_values(sizes_attr))
+    num_loops = sum(
+        v if v == 0 else 1 for v in self.__extract_values(sizes_attr)
+    )
+    if scalable_sizes is None:
+      scalable_sizes = [False] * len(self.__extract_values(sizes_attr))
 
-        if isinstance(loop_types_or_target, (Operation, Value, OpView)):
-            loop_types = [transform.AnyOpType.get()] * num_loops
-            target = loop_types_or_target
-            assert target_or_none is None, "Cannot construct TileOp with two targets."
-        else:
-            loop_types = (
-                ([loop_types_or_target] * num_loops)
-                if isinstance(loop_types_or_target, Type)
-                else loop_types_or_target
-            )
-            target = target_or_none
+    if isinstance(loop_types_or_target, (Operation, Value, OpView)):
+      loop_types = [transform.AnyOpType.get()] * num_loops
+      target = loop_types_or_target
+      assert target_or_none is None, "Cannot construct TileOp with two targets."
+    else:
+      loop_types = (
+          ([loop_types_or_target] * num_loops)
+          if isinstance(loop_types_or_target, Type)
+          else loop_types_or_target
+      )
+      target = target_or_none
 
-        target = _get_op_result_or_value(target)
+    target = _get_op_result_or_value(target)
 
-        super().__init__(
+    super().__init__(
             target.type,
             loop_types,
             target,
@@ -311,10 +313,10 @@ class TileOp:
             ip=ip,
         )
 
-    def __extract_values(self, attr: Optional[DenseI64ArrayAttr]) -> List[int]:
-        if not attr:
-            return []
-        return [element for element in attr]
+  def __extract_values(self, attr: Optional[DenseI64ArrayAttr]) -> List[int]:
+    if not attr:
+      return []
+    return [element for element in attr]
 
 
 class VectorizeOp:

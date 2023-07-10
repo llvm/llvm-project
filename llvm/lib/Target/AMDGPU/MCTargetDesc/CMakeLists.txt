@@ -24,5 +24,3 @@ add_llvm_component_library(LLVMAMDGPUDesc
   ADD_TO_COMPONENT
   AMDGPU
   )
-
-add_dependencies(LLVMAMDGPUDesc LLVMAMDGPUUtils)

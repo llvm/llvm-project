@@ -89,6 +89,8 @@ public:
 
   int getAddressOfCalleeRegister() { return SystemZ::R6D; };
 
+  int getADARegister() { return SystemZ::R5D; }
+
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const final;
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,

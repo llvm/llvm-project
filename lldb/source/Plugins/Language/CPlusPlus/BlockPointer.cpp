@@ -45,7 +45,7 @@ public:
         lldb::eLanguageTypeC_plus_plus);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(err),
-                     "Failed to get scratch TypeSystemClang");
+                     "Failed to get scratch TypeSystemClang: {0}");
       return;
     }
 

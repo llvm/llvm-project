@@ -17,7 +17,7 @@ module attributes { transform.with_named_sequence } {
   // Entry point. Match any structured operation and emit at remark.
   transform.sequence failures(propagate) attributes { transform.target_tag = "transform" } {
   ^bb0(%arg0: !transform.any_op):
-    transform.foreach_match in %arg0 
+    transform.foreach_match in %arg0
         @match_structured_empty -> @print_structured
         : (!transform.any_op) -> !transform.any_op
   }
@@ -73,7 +73,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.sequence failures(propagate) attributes { transform.target_tag = "transform" } {
   ^bb0(%arg0: !transform.any_op):
-    transform.foreach_match in %arg0 
+    transform.foreach_match in %arg0
         @match_structured_suppress -> @do_nothing
         : (!transform.any_op) -> !transform.any_op
   }
@@ -118,7 +118,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.sequence failures(propagate) attributes { transform.target_tag = "transform" } {
   ^bb0(%arg0: !transform.any_op):
-    transform.foreach_match in %arg0 
+    transform.foreach_match in %arg0
         @match_structured_body_passthrough -> @print_passthrough
         : (!transform.any_op) -> !transform.any_op
   }
@@ -129,7 +129,7 @@ module attributes { transform.with_named_sequence } {
       indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
       iterator_types = ["parallel"]
     } ins(%in : tensor<2xf32>) outs(%out : tensor<2xf32>) {
-    ^bb0(%arg0: f32, %arg1: f32):      
+    ^bb0(%arg0: f32, %arg1: f32):
       linalg.yield %arg0 : f32
     } -> tensor<2xf32>
 
@@ -137,7 +137,7 @@ module attributes { transform.with_named_sequence } {
       indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
       iterator_types = ["parallel"]
     } ins(%in : tensor<2xf32>) outs(%out : tensor<2xf32>) {
-    ^bb0(%arg0: f32, %arg1: f32):      
+    ^bb0(%arg0: f32, %arg1: f32):
       %0 = arith.mulf %arg0, %arg1 : f32
       linalg.yield %0 : f32
     } -> tensor<2xf32>
@@ -168,7 +168,7 @@ module attributes { transform.with_named_sequence } {
 
   transform.sequence failures(propagate) attributes { transform.target_tag = "transform" } {
   ^bb0(%arg0: !transform.any_op):
-    transform.foreach_match in %arg0 
+    transform.foreach_match in %arg0
         @match_structured_body_reduction -> @print_reduction
         : (!transform.any_op) -> !transform.any_op
   }
@@ -230,8 +230,8 @@ module attributes { transform.with_named_sequence } {
 
   transform.named_sequence @match_dimension_capture(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
     // Capture multiple dimension values. Suppress failures so we can print them anyway after the capture.
-    %0:9 = transform.match.structured failures(suppress) %arg0 
-      : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, 
+    %0:9 = transform.match.structured failures(suppress) %arg0
+      : (!transform.any_op) -> (!transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>,
             !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>) {
     ^bb0(%arg1: !transform.any_op):
       // This also tests the positional specification used by other ops, which may not test it again.
@@ -243,8 +243,8 @@ module attributes { transform.with_named_sequence } {
       %6 = transform.match.structured.dim %arg1[except(-1)] : (!transform.any_op) -> !transform.param<i64>
       %7 = transform.match.structured.dim %arg1[except(0, -2)] : (!transform.any_op) -> !transform.param<i64>
       %8 = transform.match.structured.dim %arg1[0, -3] : (!transform.any_op) -> !transform.param<i64>
-      transform.match.structured.yield %arg1, %1, %2, %3, %4, %5, %6, %7, %8 
-          : !transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, 
+      transform.match.structured.yield %arg1, %1, %2, %3, %4, %5, %6, %7, %8
+          : !transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>,
             !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>
     }
     transform.test_print_param %0#1, "dimensions all:" at %0#0 : !transform.param<i64>, !transform.any_op
@@ -280,7 +280,7 @@ module attributes { transform.with_named_sequence } {
   }
 
   func.func @payload(%lhs: tensor<2x4xf32>, %rhs: tensor<4x3xf32>, %out: tensor<2x3xf32>) attributes { transform.target_tag = "start_here" } {
-    // The last does not emit anything because it fails to match 
+    // The last does not emit anything because it fails to match
     // due to 0 and -3 being the same dimension in the 3D case.
     // expected-remark @below {{dimensions all: 2 : i64, 3 : i64, 4 : i64}}
     // expected-remark @below {{dimension 0: 2 : i64}}
@@ -404,7 +404,7 @@ module attributes { transform.with_named_sequence } {
     }
     transform.yield %arg0, %bw : !transform.any_op, !transform.param<i64>
   }
-  
+
   transform.named_sequence @print_bitwidth(%arg0: !transform.any_op {transform.readonly}, %arg1: !transform.param<i64> {transform.readonly}) {
     transform.test_print_param %arg1, "bitwidth:" at %arg0 : !transform.param<i64>, !transform.any_op
     transform.yield
@@ -417,7 +417,7 @@ module attributes { transform.with_named_sequence } {
   }
 
   func.func @payload(%f32: f32, %tf32: tensor<?xf32>,
-                     %index: index, %tindex: tensor<?xindex>) 
+                     %index: index, %tindex: tensor<?xindex>)
             attributes { transform.target_tag = "start_here" }  {
     // expected-remark @below {{bitwidth: 32}}
     linalg.fill ins(%f32: f32) outs(%tf32: tensor<?xf32>) -> tensor<?xf32>
@@ -429,7 +429,7 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @match_init(%arg0: !transform.any_op {transform.readonly}) 
+  transform.named_sequence @match_init(%arg0: !transform.any_op {transform.readonly})
       -> (!transform.any_op, !transform.any_value, !transform.any_value, !transform.any_op) {
     %outs:3 = transform.match.structured failures(suppress) %arg0
       : (!transform.any_op) -> (!transform.any_value, !transform.any_value, !transform.any_op) {
@@ -441,7 +441,7 @@ module attributes { transform.with_named_sequence } {
     }
     transform.yield %arg0, %outs#0, %outs#1, %outs#2 : !transform.any_op, !transform.any_value, !transform.any_value, !transform.any_op
   }
-  
+
   transform.named_sequence @print_init(%arg0: !transform.any_op {transform.readonly},
                                          %arg1: !transform.any_value {transform.readonly},
                                          %arg2: !transform.any_value {transform.readonly},
@@ -459,21 +459,21 @@ module attributes { transform.with_named_sequence } {
   }
 
 
-  func.func @payload(%f32: f32, 
+  func.func @payload(%f32: f32,
             // expected-remark @below {{output 0}}
             // expected-remark @below {{all output}}
             // expected-note @below {{value handle points to a block argument #1 in block #0 in region #0}}
             %tf32: tensor<?xf32>,
             // expected-remark @below {{all output}}
             // expected-note @below {{value handle points to a block argument #2 in block #0 in region #0}}
-            %tf32_2: tensor<?xf32>) 
+            %tf32_2: tensor<?xf32>)
             attributes { transform.target_tag = "start_here" }  {
     // expected-remark @below {{output 0}}
     // expected-remark @below {{output producer}}
     // expected-remark @below {{all output}}
     // expected-note @below {{value handle points to an op result #0}}
     %0 = linalg.fill ins(%f32: f32) outs(%tf32: tensor<?xf32>) -> tensor<?xf32>
-    
+
     linalg.generic {
       indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
       iterator_types = ["parallel"]
@@ -488,7 +488,7 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @match_init_0_permutation(%arg0: !transform.any_op {transform.readonly}) 
+  transform.named_sequence @match_init_0_permutation(%arg0: !transform.any_op {transform.readonly})
       -> !transform.any_op {
     %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
@@ -497,7 +497,7 @@ module attributes { transform.with_named_sequence } {
     }
     transform.yield %0 : !transform.any_op
   }
-  transform.named_sequence @match_init_1_permutation(%arg0: !transform.any_op {transform.readonly}) 
+  transform.named_sequence @match_init_1_permutation(%arg0: !transform.any_op {transform.readonly})
       -> !transform.any_op {
     %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
@@ -506,7 +506,7 @@ module attributes { transform.with_named_sequence } {
     }
     transform.yield %0 : !transform.any_op
   }
-  transform.named_sequence @match_init_2_projected_permutation(%arg0: !transform.any_op {transform.readonly}) 
+  transform.named_sequence @match_init_2_projected_permutation(%arg0: !transform.any_op {transform.readonly})
       -> !transform.any_op {
     %0 = transform.match.structured failures(propagate) %arg0 : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
@@ -515,7 +515,7 @@ module attributes { transform.with_named_sequence } {
     }
     transform.yield %0 : !transform.any_op
   }
-  
+
   transform.named_sequence @print_init_0_permutation(%arg0: !transform.any_op {transform.readonly}) {
     transform.test_print_remark_at_operand %arg0, "matched output 0 permutation" : !transform.any_op
     transform.yield
@@ -537,10 +537,10 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 
-  func.func @payload(%f32: f32, 
+  func.func @payload(%f32: f32,
             %oned: tensor<?xf32>,
             %oned2: tensor<?xf32>,
-            %twod: tensor<?x?xf32>) 
+            %twod: tensor<?x?xf32>)
             attributes { transform.target_tag = "start_here" }  {
     // expected-remark @below {{matched output 2 projected permutation}}
     linalg.generic {
@@ -575,9 +575,9 @@ module attributes { transform.with_named_sequence } {
 
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @match_num_io(%arg0: !transform.any_op {transform.readonly}) 
+  transform.named_sequence @match_num_io(%arg0: !transform.any_op {transform.readonly})
       -> (!transform.param<i64>, !transform.param<i64>, !transform.any_op) {
-    %0:3 = transform.match.structured failures(propagate) %arg0 
+    %0:3 = transform.match.structured failures(propagate) %arg0
          : (!transform.any_op) -> (!transform.param<i64>, !transform.param<i64>, !transform.any_op) {
     ^bb0(%arg1: !transform.any_op):
       %1 = transform.match.structured.num_inputs %arg1 : (!transform.any_op) -> !transform.param<i64>
@@ -587,7 +587,7 @@ module attributes { transform.with_named_sequence } {
     transform.yield %0#0, %0#1, %0#2 : !transform.param<i64>, !transform.param<i64>, !transform.any_op
   }
 
-  
+
   transform.named_sequence @print_num_io(
       %arg0: !transform.param<i64> {transform.readonly},
       %arg1: !transform.param<i64> {transform.readonly},
@@ -604,10 +604,10 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 
-  func.func @payload(%f32: f32, 
+  func.func @payload(%f32: f32,
             %oned: tensor<?xf32>,
             %oned2: tensor<?xf32>,
-            %twod: tensor<?x?xf32>) 
+            %twod: tensor<?x?xf32>)
             attributes { transform.target_tag = "start_here" }  {
     // expected-remark @below {{inputs 1}}
     // expected-remark @below {{outputs 3}}
@@ -641,9 +641,9 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @match_rank(%arg0: !transform.any_op {transform.readonly}) 
+  transform.named_sequence @match_rank(%arg0: !transform.any_op {transform.readonly})
       -> (!transform.param<i64>, !transform.any_op) {
-    %0:2 = transform.match.structured failures(propagate) %arg0 
+    %0:2 = transform.match.structured failures(propagate) %arg0
          : (!transform.any_op) -> (!transform.param<i64>, !transform.any_op) {
     ^bb0(%arg1: !transform.any_op):
       %1 = transform.match.structured.rank %arg1 : (!transform.any_op) -> !transform.param<i64>
@@ -652,7 +652,7 @@ module attributes { transform.with_named_sequence } {
     transform.yield %0#0, %0#1 : !transform.param<i64>, !transform.any_op
   }
 
-  
+
   transform.named_sequence @print_rank(%arg0: !transform.param<i64> {transform.readonly},
                                        %arg2: !transform.any_op {transform.readonly}) {
     transform.test_print_param %arg0, "rank" at %arg2 : !transform.param<i64>, !transform.any_op
@@ -665,8 +665,8 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 
-  func.func @payload(%f32: f32, 
-            %twod: tensor<42x42xf32>) 
+  func.func @payload(%f32: f32,
+            %twod: tensor<42x42xf32>)
             attributes { transform.target_tag = "start_here" } {
     %0 = tensor.empty() : tensor<42x42xf32>
     // expected-remark @below {{rank 2}}
@@ -681,9 +681,9 @@ module attributes { transform.with_named_sequence } {
 // -----
 
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @match_single_result(%arg0: !transform.any_op {transform.readonly}) 
+  transform.named_sequence @match_single_result(%arg0: !transform.any_op {transform.readonly})
       -> (!transform.any_op, !transform.any_op) {
-    %0:2 = transform.match.structured failures(propagate) %arg0 
+    %0:2 = transform.match.structured failures(propagate) %arg0
          : (!transform.any_op) -> (!transform.any_op, !transform.any_op) {
     ^bb0(%arg1: !transform.any_op):
       %1 = transform.match.structured.result %arg1[0] { single } : (!transform.any_op) -> !transform.any_op
@@ -693,7 +693,7 @@ module attributes { transform.with_named_sequence } {
   }
   transform.named_sequence @match_result_value(%arg0: !transform.any_op {transform.readonly})
       -> (!transform.any_value, !transform.any_op) {
-    %0:2 = transform.match.structured failures(propagate) %arg0 
+    %0:2 = transform.match.structured failures(propagate) %arg0
          : (!transform.any_op) -> (!transform.any_value, !transform.any_op) {
     ^bb0(%arg1: !transform.any_op):
       %1 = transform.match.structured.result %arg1[0] : (!transform.any_op) -> !transform.any_value
@@ -701,9 +701,9 @@ module attributes { transform.with_named_sequence } {
     }
     transform.yield %0#0, %0#1 : !transform.any_value, !transform.any_op
   }
-  transform.named_sequence @match_any_result(%arg0: !transform.any_op {transform.readonly}) 
+  transform.named_sequence @match_any_result(%arg0: !transform.any_op {transform.readonly})
       -> (!transform.any_op) {
-    %0 = transform.match.structured failures(propagate) %arg0 
+    %0 = transform.match.structured failures(propagate) %arg0
          : (!transform.any_op) -> !transform.any_op {
     ^bb0(%arg1: !transform.any_op):
       %1 = transform.match.structured.result %arg1[-1] { any } : (!transform.any_op) -> !transform.any_op
@@ -711,7 +711,7 @@ module attributes { transform.with_named_sequence } {
     }
     transform.yield %0 : !transform.any_op
   }
-  
+
   transform.named_sequence @print_single_result(%arg0: !transform.any_op {transform.readonly},
                                                 %arg2: !transform.any_op {transform.readonly}) {
     transform.test_print_remark_at_operand %arg2, "matched single result" : !transform.any_op
@@ -738,7 +738,7 @@ module attributes { transform.with_named_sequence } {
   }
 
   func.func @payload(%f32: f32, %f322: f32, %f323: f32,
-            %twod: tensor<42x42xf32>) 
+            %twod: tensor<42x42xf32>)
             attributes { transform.target_tag = "start_here" } {
     %0 = tensor.empty() : tensor<42x42xf32>
 
@@ -771,6 +771,63 @@ module attributes { transform.with_named_sequence } {
     // expected-remark @below {{op result}}
     // expected-note @below {{value handle points to an op result #0}}
     linalg.elemwise_unary {fun = #linalg.unary_fn<exp>} ins(%3 : tensor<42x42xf32>) outs(%0 : tensor<42x42xf32>) -> tensor<42x42xf32>
+    return
+  }
+}
+
+// -----
+
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @match_input_indexing_map(%arg0: !transform.any_op {transform.readonly})
+      -> (!transform.affine_map, !transform.any_op) {
+    %0 = transform.match.structured failures(propagate) %arg0
+         : (!transform.any_op) -> !transform.affine_map {
+    ^bb0(%arg1: !transform.any_op):
+      %1 = transform.match.structured.input %arg1[0]  : (!transform.any_op) -> !transform.affine_map
+      transform.match.structured.yield %1 : !transform.affine_map
+    }
+    transform.yield %0, %arg0 : !transform.affine_map, !transform.any_op
+  }
+  transform.named_sequence @match_init_indexing_map(%arg0: !transform.any_op {transform.readonly})
+      -> (!transform.affine_map, !transform.any_op) {
+    %0 = transform.match.structured failures(propagate) %arg0
+         : (!transform.any_op) -> !transform.affine_map {
+    ^bb0(%arg1: !transform.any_op):
+      %1 = transform.match.structured.init %arg1[0]  : (!transform.any_op) -> !transform.affine_map
+      transform.match.structured.yield %1 : !transform.affine_map
+    }
+    transform.yield %0, %arg0 : !transform.affine_map, !transform.any_op
+  }
+
+  transform.named_sequence @print_indexing_map_1(%arg0: !transform.affine_map {transform.readonly},
+                                               %arg1: !transform.any_op {transform.readonly}) {
+    transform.test_print_param %arg0, "indexing map 1" at %arg1 : !transform.affine_map, !transform.any_op
+    transform.yield
+  }
+  transform.named_sequence @print_indexing_map_2(%arg0: !transform.affine_map {transform.readonly},
+                                               %arg1: !transform.any_op {transform.readonly}) {
+    transform.test_print_param %arg0, "indexing map 2" at %arg1 : !transform.affine_map, !transform.any_op
+    transform.yield
+  }
+
+  transform.sequence failures(propagate) attributes { transform.target_tag = "transform" } {
+  ^bb0(%arg0: !transform.any_op):
+    %3 = transform.foreach_match in %arg0 @match_input_indexing_map -> @print_indexing_map_1 : (!transform.any_op) -> !transform.any_op
+    %4 = transform.foreach_match in %3 @match_init_indexing_map -> @print_indexing_map_2 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+
+  func.func @payload(%lhs: tensor<32x32xf32>, %rhs: tensor<32x32xf32>)
+            attributes { transform.target_tag = "start_here" } {
+    %out = tensor.empty() : tensor<32x32xf32>
+    %cst = arith.constant 1.0 : f32
+    // expected-remark @below {{indexing map 1 affine_map<(d0, d1) -> ()>}}
+    // expected-remark @below {{indexing map 2 affine_map<(d0, d1) -> (d0, d1)>}}
+    %res = linalg.fill ins(%cst : f32) outs(%out : tensor<32x32xf32>) -> tensor<32x32xf32>
+    // expected-remark @below {{indexing map 1 affine_map<(d0, d1, d2) -> (d0, d2)>}}
+    // expected-remark @below {{indexing map 2 affine_map<(d0, d1, d2) -> (d0, d1)>}}
+    linalg.matmul ins(%lhs, %rhs : tensor<32x32xf32>, tensor<32x32xf32>) outs(%res : tensor<32x32xf32>) -> tensor<32x32xf32>
     return
   }
 }

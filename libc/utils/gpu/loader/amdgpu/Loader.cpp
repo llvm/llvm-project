@@ -264,6 +264,30 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
   return HSA_STATUS_SUCCESS;
 }
 
+/// Copies data from the source agent to the destination agent. The source
+/// memory must first be pinned explicitly or allocated via HSA.
+static hsa_status_t hsa_memcpy(void *dst, hsa_agent_t dst_agent,
+                               const void *src, hsa_agent_t src_agent,
+                               uint64_t size) {
+  // Create a memory signal to copy information between the host and device.
+  hsa_signal_t memory_signal;
+  if (hsa_status_t err = hsa_signal_create(1, 0, nullptr, &memory_signal))
+    return err;
+
+  if (hsa_status_t err = hsa_amd_memory_async_copy(
+          dst, dst_agent, src, src_agent, size, 0, nullptr, memory_signal))
+    return err;
+
+  while (hsa_signal_wait_scacquire(memory_signal, HSA_SIGNAL_CONDITION_EQ, 0,
+                                   UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0)
+    ;
+
+  if (hsa_status_t err = hsa_signal_destroy(memory_signal))
+    return err;
+
+  return HSA_STATUS_SUCCESS;
+}
+
 int load(int argc, char **argv, char **envp, void *image, size_t size,
          const LaunchParameters &params) {
   // Initialize the HSA runtime used to communicate with the device.
@@ -388,6 +412,34 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
                                          wavefront_size, rpc_alloc, &tuple))
     handle_error(err);
 
+  // Obtain the GPU's fixed-frequency clock rate and copy it to the GPU.
+  void *host_clock_freq;
+  if (hsa_status_t err =
+          hsa_amd_memory_pool_allocate(finegrained_pool, sizeof(uint64_t),
+                                       /*flags=*/0, &host_clock_freq))
+    handle_error(err);
+  hsa_amd_agents_allow_access(1, &dev_agent, nullptr, host_clock_freq);
+
+  if (hsa_status_t err = hsa_agent_get_info(
+          dev_agent,
+          static_cast<hsa_agent_info_t>(HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY),
+          host_clock_freq))
+    handle_error(err);
+
+  hsa_executable_symbol_t freq_sym;
+  if (hsa_status_t err = hsa_executable_get_symbol_by_name(
+          executable, "__llvm_libc_clock_freq", &dev_agent, &freq_sym))
+    handle_error(err);
+
+  void *freq_addr;
+  if (hsa_status_t err = hsa_executable_symbol_get_info(
+          freq_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS, &freq_addr))
+    handle_error(err);
+
+  if (hsa_status_t err = hsa_memcpy(freq_addr, dev_agent, host_clock_freq,
+                                    host_agent, sizeof(uint64_t)))
+    handle_error(err);
+
   // Obtain a queue with the minimum (power of two) size, used to send commands
   // to the HSA runtime and launch execution on the device.
   uint64_t queue_size;
@@ -414,12 +466,6 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
                         coarsegrained_pool, queue, params, "_start.kd", args))
     handle_error(err);
 
-  // Create a memory signal and copy the return value back from the device into
-  // a new buffer.
-  hsa_signal_t memory_signal;
-  if (hsa_status_t err = hsa_signal_create(1, 0, nullptr, &memory_signal))
-    handle_error(err);
-
   void *host_ret;
   if (hsa_status_t err =
           hsa_amd_memory_pool_allocate(finegrained_pool, sizeof(int),
@@ -428,13 +474,8 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   hsa_amd_agents_allow_access(1, &dev_agent, nullptr, host_ret);
 
   if (hsa_status_t err =
-          hsa_amd_memory_async_copy(host_ret, host_agent, dev_ret, dev_agent,
-                                    sizeof(int), 0, nullptr, memory_signal))
+          hsa_memcpy(host_ret, host_agent, dev_ret, dev_agent, sizeof(int)))
     handle_error(err);
-
-  while (hsa_signal_wait_scacquire(memory_signal, HSA_SIGNAL_CONDITION_EQ, 0,
-                                   UINT64_MAX, HSA_WAIT_STATE_ACTIVE) != 0)
-    ;
 
   // Save the return value and perform basic clean-up.
   int ret = *static_cast<int *>(host_ret);
@@ -458,8 +499,6 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
   if (hsa_status_t err = hsa_amd_memory_pool_free(host_ret))
     handle_error(err);
 
-  if (hsa_status_t err = hsa_signal_destroy(memory_signal))
-    handle_error(err);
   if (hsa_status_t err = hsa_queue_destroy(queue))
     handle_error(err);
 

@@ -45,7 +45,8 @@ ASM_SYMBOL(__xray_FunctionEntry):
   adrp x2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
   ldr x2, [x2, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
   cbz x2, 1f
-  // Function ID is already in w0 (the first parameter). x1=0 means that we are tracing an entry event.
+  // Set w0 to the function ID (w17). Set x1 to XRayEntryType::ENTRY = 0.
+  mov w0, w17
   mov x1, #0
   // Call the handler with 2 parameters.
   blr x2
@@ -71,7 +72,8 @@ ASM_SYMBOL(__xray_FunctionExit):
   adrp x2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
   ldr x2, [x2, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
   cbz x2, 1f
-  // Function ID is already in w0 (the first parameter). x1=1 means that we are tracing an exit event.
+  // Set w0 to the function ID (w17). Set x1 to XRayEntryType::EXIT = 1.
+  mov w0, w17
   mov x1, #1
   // Call the handler with 2 parameters.
   blr x2
@@ -97,7 +99,8 @@ ASM_SYMBOL(__xray_FunctionTailExit):
   adrp x2, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
   ldr x2, [x2, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
   cbz x2, 1f
-  // Function ID is already in w0 (the first parameter). x1=2 means that we are tracing a tail exit event.
+  // Set w0 to the function ID (w17). Set x1 to XRayEntryType::TAIL = 2.
+  mov w0, w17
   mov x1, #2
   // Call the handler with 2 parameters.
   blr x2
@@ -105,6 +108,35 @@ ASM_SYMBOL(__xray_FunctionTailExit):
   RESTORE_REGISTERS
   ret
 ASM_SIZE(__xray_FunctionTailExit)
+
+.p2align 2
+.global ASM_SYMBOL(__xray_ArgLoggerEntry)
+ASM_HIDDEN(__xray_ArgLoggerEntry)
+ASM_TYPE_FUNCTION(__xray_ArgLoggerEntry)
+ASM_SYMBOL(__xray_ArgLoggerEntry):
+  add x30, x30, #12
+  // Push the registers which may be modified by the handler function.
+  SAVE_REGISTERS
+
+  adrp x8, ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)
+  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray13XRayArgLoggerE)]
+  cbnz x8, 2f
+
+  // Load the handler function pointer.
+  adrp x8, ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)
+  ldr x8, [x8, #:lo12:ASM_SYMBOL(_ZN6__xray19XRayPatchedFunctionE)]
+  cbz x8, 1f
+
+2:
+  mov x2, x0
+  mov x1, #3  // XRayEntryType::LOG_ARGS_ENTRY
+  mov w0, w17
+  blr x8
+
+1:
+  RESTORE_REGISTERS
+  ret
+ASM_SIZE(__xray_ArgLoggerEntry)
 
 .global ASM_SYMBOL(__xray_CustomEvent)
 ASM_HIDDEN(__xray_CustomEvent)

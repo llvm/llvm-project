@@ -1037,7 +1037,7 @@ transform.sequence -> !transform.any_op failures(suppress) {
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
-  %0 = transform.test_produce_integer_param_with_type i32 : !transform.test_dialect_param
+  %0 = transform.test_produce_param (0 : i32) : !transform.test_dialect_param
   // expected-remark @below {{0 : i32}}
   transform.test_print_param %0 : !transform.test_dialect_param
 }
@@ -1047,7 +1047,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{expected the type of the parameter attribute ('i32') to match the parameter type ('i64')}}
-  transform.test_produce_integer_param_with_type i32 : !transform.param<i64>
+  transform.test_produce_param (0 : i32) : !transform.param<i64>
 }
 
 // -----
@@ -1859,4 +1859,59 @@ transform.sequence failures(propagate) {
   %4 = transform.get_parent_op %3 {deduplicate} : (!transform.any_op) -> !transform.any_op
   // expected-remark @below{{1}}
   test_print_number_of_associated_payload_ir_ops %4 : !transform.any_op
+}
+
+// -----
+
+func.func @cast(%arg0: f32) -> f64 {
+  // expected-remark @below{{f64}}
+  %0 = arith.extf %arg0 : f32 to f64
+  return %0 : f64
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.structured.match ops{["arith.extf"]} in %arg0 : (!transform.any_op) -> !transform.op<"arith.extf">
+  %1 = transform.get_result %0[0] : (!transform.op<"arith.extf">) -> !transform.any_value
+  %2 = transform.get_type %1 : (!transform.any_value) -> !transform.type
+  transform.test_print_param %2 at %0 : !transform.type, !transform.op<"arith.extf">
+  transform.yield
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected type attribute, got 0 : i32}}
+  transform.test_produce_param (0 : i32) : !transform.type
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error @below {{expected affine map attribute, got 0 : i32}}
+  transform.test_produce_param (0 : i32) : !transform.affine_map
+}
+
+// -----
+
+// CHECK-LABEL: @type_param_anchor
+func.func private @type_param_anchor()
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // CHECK: test_produce_param(f32) : !transform.type
+  transform.test_produce_param(f32) : !transform.type
+}
+
+// -----
+
+// CHECK-LABEL: @affine_map_param_anchor
+func.func private @affine_map_param_anchor()
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // CHECK: test_produce_param(#{{.*}}) : !transform.affine_map
+  transform.test_produce_param(affine_map<(d0) -> ()>) : !transform.affine_map
 }

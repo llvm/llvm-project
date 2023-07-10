@@ -212,6 +212,8 @@ def testFloatType():
         print("float:", BF16Type.get())
         # CHECK: float: f16
         print("float:", F16Type.get())
+        # CHECK: float: tf32
+        print("float:", FloatTF32Type.get())
         # CHECK: float: f32
         print("float:", F32Type.get())
         # CHECK: float: f64

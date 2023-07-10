@@ -12,6 +12,7 @@
 #include <__algorithm/pstl_backend.h>
 #include <__algorithm/pstl_for_each.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
+#include <__algorithm/pstl_transform.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/enable_if.h>

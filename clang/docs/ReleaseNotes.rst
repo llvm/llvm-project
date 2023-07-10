@@ -635,6 +635,9 @@ Bug Fixes to C++ Support
 - Allow abstract parameter and return types in functions that are
   either deleted or not defined.
   (`#63012 <https://github.com/llvm/llvm-project/issues/63012>`_)
+- Fix handling of using-declarations in the init statements of for
+  loop declarations.
+  (`#63627 <https://github.com/llvm/llvm-project/issues/63627>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -967,7 +967,7 @@ void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
     Config.PostPrunePasses.push_back(
         PerGraphGOTAndPLTStubsBuilder_ELF_riscv::asPass);
-    Config.PreFixupPasses.push_back(relax);
+    Config.PostAllocationPasses.push_back(relax);
   }
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));

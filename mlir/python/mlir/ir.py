@@ -73,6 +73,14 @@ def _symbolNameAttr(x, context):
 
 @register_attribute_builder("SymbolRefAttr")
 def _symbolRefAttr(x, context):
+    if isinstance(x, list):
+        return SymbolRefAttr.get(x, context=context)
+    else:
+        return FlatSymbolRefAttr.get(x, context=context)
+
+
+@register_attribute_builder("FlatSymbolRefAttr")
+def _flatSymbolRefAttr(x, context):
     return FlatSymbolRefAttr.get(x, context=context)
 
 
@@ -104,6 +112,7 @@ def _f64ArrayAttr(x, context):
 @register_attribute_builder("DenseI64ArrayAttr")
 def _denseI64ArrayAttr(x, context):
     return DenseI64ArrayAttr.get(x, context=context)
+
 
 @register_attribute_builder("DenseBoolArrayAttr")
 def _denseBoolArrayAttr(x, context):

@@ -3579,16 +3579,87 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
   return foldICmpBinOpEqualityWithConstant(Cmp, BO, C);
 }
 
+static Instruction *
+foldICmpUSubSatWithConstant(ICmpInst::Predicate Pred, IntrinsicInst *II,
+                            const APInt &C, InstCombiner::BuilderTy &Builder) {
+  // This transform may end up producing more than one instruction for the
+  // intrinsic, so limit it to one user of the intrinsic.
+  if (!II->hasOneUse())
+    return nullptr;
+
+  // Let Y = usub_sat(X, C) pred C2
+  //  => Y = (X < C ? 0 : (X - C)) pred C2
+  //  => Y = (X < C) ? (0 pred C2) : ((X - C) pred C2)
+  //
+  // When (0 pred C2) is true, then
+  //    Y = (X < C) ? true : ((X - C) pred C2)
+  // => Y = (X < C) || ((X - C) pred C2)
+  // else
+  //    Y = (X < C) ? false : ((X - C) pred C2)
+  // => Y = !(X < C) && ((X - C) pred C2)
+  // => Y = (X >= C) && ((X - C) pred C2)
+  Value *Op0 = II->getOperand(0);
+  Value *Op1 = II->getOperand(1);
+
+  // Check (0 pred C2)
+  auto [NewPred, LogicalOp] =
+      ICmpInst::compare(APInt::getZero(C.getBitWidth()), C, Pred)
+          ? std::make_pair(ICmpInst::ICMP_ULT, Instruction::BinaryOps::Or)
+          : std::make_pair(ICmpInst::ICMP_UGE, Instruction::BinaryOps::And);
+
+  const APInt *COp1;
+  // This transform only works when the usub_sat has an integral constant or
+  // splat vector as the second operand.
+  if (!match(Op1, m_APInt(COp1)))
+    return nullptr;
+
+  ConstantRange C1 = ConstantRange::makeExactICmpRegion(NewPred, *COp1);
+  // Convert '(X - C) pred C2' into 'X pred C2' shifted by C.
+  ConstantRange C2 = ConstantRange::makeExactICmpRegion(Pred, C);
+  C2 = C2.add(*COp1);
+
+  std::optional<ConstantRange> Combination;
+  if (LogicalOp == Instruction::BinaryOps::Or)
+    Combination = C1.exactUnionWith(C2);
+  else /* LogicalOp == Instruction::BinaryOps::And */
+    Combination = C1.exactIntersectWith(C2);
+
+  if (!Combination)
+    return nullptr;
+
+  CmpInst::Predicate EquivPred;
+  APInt EquivInt;
+  APInt EquivOffset;
+
+  Combination->getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
+
+  return new ICmpInst(
+      EquivPred,
+      Builder.CreateAdd(Op0, ConstantInt::get(Op1->getType(), EquivOffset)),
+      ConstantInt::get(Op1->getType(), EquivInt));
+}
+
 /// Fold an icmp with LLVM intrinsic and constant operand: icmp Pred II, C.
 Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
                                                              IntrinsicInst *II,
                                                              const APInt &C) {
+  ICmpInst::Predicate Pred = Cmp.getPredicate();
+
+  // Handle folds that apply for any kind of icmp.
+  switch (II->getIntrinsicID()) {
+  default:
+    break;
+  case Intrinsic::usub_sat:
+    if (auto *Folded = foldICmpUSubSatWithConstant(Pred, II, C, Builder))
+      return Folded;
+    break;
+  }
+
   if (Cmp.isEquality())
     return foldICmpEqIntrinsicWithConstant(Cmp, II, C);
 
   Type *Ty = II->getType();
   unsigned BitWidth = C.getBitWidth();
-  ICmpInst::Predicate Pred = Cmp.getPredicate();
   switch (II->getIntrinsicID()) {
   case Intrinsic::ctpop: {
     // (ctpop X > BitWidth - 1) --> X == -1

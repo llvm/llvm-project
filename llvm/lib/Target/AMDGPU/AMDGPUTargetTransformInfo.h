@@ -56,7 +56,7 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
 
-  int64_t getMaxInlineSizeThreshold() const;
+  int64_t getMaxMemIntrinsicInlineSizeThreshold() const;
 };
 
 class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
@@ -136,7 +136,7 @@ public:
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const;
 
-  int64_t getMaxInlineSizeThreshold() const;
+  int64_t getMaxMemIntrinsicInlineSizeThreshold() const;
   Type *getMemcpyLoopLoweringType(
       LLVMContext & Context, Value * Length, unsigned SrcAddrSpace,
       unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,

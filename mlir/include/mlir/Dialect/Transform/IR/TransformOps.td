@@ -443,6 +443,7 @@ def GetConsumersOfResult : TransformDialectOp<"get_consumers_of_result",
 
 def GetDefiningOp : TransformDialectOp<"get_defining_op",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
+     MatchOpInterface,
      NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
   let summary = "Get handle to the defining op of a value";
   let description = [{
@@ -528,6 +529,25 @@ def GetResultOp : TransformDialectOp<"get_result",
                        I64Attr:$result_number);
   let results = (outs TransformValueHandleTypeInterface:$result);
   let assemblyFormat = "$target `[` $result_number `]` attr-dict `:` "
+                       "functional-type(operands, results)";
+}
+
+def GetTypeOp : TransformDialectOp<"get_type",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     MatchOpInterface,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Get a parameter containing the type of the given value";
+  let description = [{
+    This operation creates a new Transform parameter containing the
+    type(s) of the value(s) associated with the operand handle.
+
+    This transform never fails.
+  }];
+
+  let arguments = (ins TransformValueHandleTypeInterface:$value,
+                       UnitAttr:$elemental);
+  let results = (outs TransformParamTypeInterface:$type_param);
+  let assemblyFormat = "(`elemental` $elemental^)? $value attr-dict `:`"
                        "functional-type(operands, results)";
 }
 
@@ -838,6 +858,7 @@ def SequenceOp : TransformDialectOp<"sequence",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getSuccessorEntryOperands", "getSuccessorRegions",
          "getRegionInvocationBounds"]>,
+     MatchOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      OpAsmOpInterface, PossibleTopLevelTransformOpTrait,

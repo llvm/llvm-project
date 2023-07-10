@@ -7,8 +7,6 @@
 // RUN: %llvm_xray convert --output-format=yaml --symbolize --instr_map=%t \
 // RUN:   "`ls fdr-logging-1thr-* | head -n1`" | FileCheck %s
 // RUN: rm fdr-logging-1thr-*
-//
-// REQUIRES: x86_64-target-arch
 
 #include "xray/xray_log_interface.h"
 #include <cassert>

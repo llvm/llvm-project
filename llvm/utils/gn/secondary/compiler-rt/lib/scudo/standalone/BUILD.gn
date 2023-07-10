@@ -35,6 +35,8 @@ source_set("sources") {
     "mem_map.cpp",
     "mem_map.h",
     "mem_map_base.h",
+    "mem_map_fuchsia.cpp",
+    "mem_map_fuchsia.h",
     "memtag.h",
     "mutex.h",
     "options.h",

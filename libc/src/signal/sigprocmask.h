@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SIGNAL_SIGPROCMASK_H
 #define LLVM_LIBC_SRC_SIGNAL_SIGPROCMASK_H
 
-#include "include/signal.h"
+#include <signal.h>
 
 namespace __llvm_libc {
 

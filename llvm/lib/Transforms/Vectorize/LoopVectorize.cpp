@@ -5288,6 +5288,13 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
     auto Min = Attr.getVScaleRangeMin();
     WidestRegisterMinEC *= Min;
   }
+
+  // When a scalar epilogue is required, at least one iteration of the scalar
+  // loop has to execute. Adjust ConstTripCount accordingly to avoid picking a
+  // max VF that results in a dead vector loop.
+  if (ConstTripCount > 0 && requiresScalarEpilogue(true))
+    ConstTripCount -= 1;
+
   if (ConstTripCount && ConstTripCount <= WidestRegisterMinEC &&
       (!FoldTailByMasking || isPowerOf2_32(ConstTripCount))) {
     // If loop trip count (TC) is known at compile time there is no point in

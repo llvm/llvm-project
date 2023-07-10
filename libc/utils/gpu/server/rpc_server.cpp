@@ -101,6 +101,24 @@ private:
       }
       break;
     }
+    case RPC_OPEN_FILE: {
+      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
+      void *paths[rpc::MAX_LANE_SIZE] = {nullptr};
+      port->recv_n(paths, sizes, [&](uint64_t size) { return new char[size]; });
+      port->recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
+        FILE *file = fopen(reinterpret_cast<char *>(paths[id]),
+                           reinterpret_cast<char *>(buffer->data));
+        buffer->data[0] = reinterpret_cast<uintptr_t>(file);
+      });
+      break;
+    }
+    case RPC_CLOSE_FILE: {
+      port->recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
+        FILE *file = reinterpret_cast<FILE *>(buffer->data[0]);
+        buffer->data[0] = fclose(file);
+      });
+      break;
+    }
     case RPC_EXIT: {
       // Send a response to the client to signal that we are ready to exit.
       port->recv_and_send([](rpc::Buffer *) {});
