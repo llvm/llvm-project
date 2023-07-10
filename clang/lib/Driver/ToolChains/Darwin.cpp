@@ -3476,8 +3476,6 @@ SanitizerMask Darwin::getSupportedSanitizers() const {
   Res |= SanitizerKind::FuzzerNoLink;
   Res |= SanitizerKind::ObjCCast;
 
-  if (getTriple().isArm64e())
-    Res &= ~SanitizerKind::Function;
   // Apple-Clang: Don't support LSan. rdar://problem/45841334
   Res &= ~SanitizerKind::Leak;
 

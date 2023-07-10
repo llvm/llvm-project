@@ -3,7 +3,6 @@
 // RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK
 // Verify that we can disable symbolization if needed:
 // RUN: %env_ubsan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
-// XFAIL: arm64e-target-arch
 
 struct Shared {};
 using FnShared = void (*)(Shared *);

@@ -1,6 +1,5 @@
 // RUN: %clang -g -fsanitize=function %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK --implicit-check-not='runtime error:'
-// XFAIL: arm64e-target-arch
 
 void f(void (*fp)(int (*)[])) { fp(0); }
 
