@@ -1127,16 +1127,15 @@ bool DWARFExpression::Evaluate(
 
         if (load_addr == LLDB_INVALID_ADDRESS && so_addr.IsSectionOffset()) {
           uint8_t addr_bytes[8];
-          size_t buf_size = sizeof(addr_bytes);
           Status error;
 
           if (target &&
-              target->ReadMemory(so_addr, &addr_bytes, buf_size, error,
-                                 /*force_live_memory=*/false) == buf_size) {
+              target->ReadMemory(so_addr, &addr_bytes, size, error,
+                                 /*force_live_memory=*/false) == size) {
             ObjectFile *objfile = module_sp->GetObjectFile();
 
             stack.back().GetScalar() = DerefSizeExtractDataHelper(
-                addr_bytes, size, objfile->GetByteOrder(), buf_size);
+                addr_bytes, size, objfile->GetByteOrder(), size);
             stack.back().ClearContext();
             break;
           } else {
@@ -1160,13 +1159,13 @@ bool DWARFExpression::Evaluate(
             lldb::addr_t pointer_addr =
                 stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
             uint8_t addr_bytes[sizeof(lldb::addr_t)];
-            size_t buf_size = sizeof(addr_bytes);
             Status error;
-            if (process->ReadMemory(pointer_addr, &addr_bytes, buf_size, error)
-                == buf_size) {
+            if (process->ReadMemory(pointer_addr, &addr_bytes, size, error) ==
+                size) {
+
               stack.back().GetScalar() =
                   DerefSizeExtractDataHelper(addr_bytes, sizeof(addr_bytes),
-                                             process->GetByteOrder(), buf_size);
+                                             process->GetByteOrder(), size);
               stack.back().ClearContext();
             } else {
               if (error_ptr)
