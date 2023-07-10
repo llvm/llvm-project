@@ -3125,6 +3125,11 @@ template <Attribute::AttrKind AK, typename BaseType, typename AAType>
 struct IRAttribute : public BaseType {
   IRAttribute(const IRPosition &IRP) : BaseType(IRP) {}
 
+  /// Most boolean IRAttribute AAs don't do anything non-trivial
+  /// in their initializers while non-boolean ones often do. Subclasses can
+  /// change this.
+  static bool hasTrivialInitializer() { return Attribute::isEnumAttrKind(AK); }
+
   /// Compile time access to the IR attribute kind.
   static constexpr Attribute::AttrKind IRAttributeKind = AK;
 
@@ -3146,15 +3151,6 @@ struct IRAttribute : public BaseType {
       return true;
     return A.hasAttr(IRP, {ImpliedAttributeKind}, IgnoreSubsumingPositions,
                      ImpliedAttributeKind);
-  }
-
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    const IRPosition &IRP = this->getIRPosition();
-    if (AAType::isImpliedByIR(A, IRP, AK)) {
-      this->getState().indicateOptimisticFixpoint();
-      return;
-    }
   }
 
   /// See AbstractAttribute::manifest(...).
@@ -3557,6 +3553,9 @@ struct AANonNull
                          StateWrapper<BooleanState, AbstractAttribute>,
                          AANonNull> {
   AANonNull(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::hasTrivialInitializer.
+  static bool hasTrivialInitializer() { return false; }
 
   /// See IRAttribute::isImpliedByUndef.
   /// Undef is not necessarily nonnull as nonnull + noundef would cause poison.
@@ -4527,6 +4526,9 @@ struct AAMemoryBehavior
           AAMemoryBehavior> {
   AAMemoryBehavior(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
 
+  /// See AbstractAttribute::hasTrivialInitializer.
+  static bool hasTrivialInitializer() { return false; }
+
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     if (!IRP.isFunctionScope() &&
@@ -4600,6 +4602,9 @@ struct AAMemoryLocation
   using MemoryLocationsKind = StateType::base_t;
 
   AAMemoryLocation(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  /// See AbstractAttribute::hasTrivialInitializer.
+  static bool hasTrivialInitializer() { return false; }
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
