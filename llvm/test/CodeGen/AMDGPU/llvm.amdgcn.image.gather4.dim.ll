@@ -22,7 +22,7 @@ main_body:
 ; PREGFX12: v_mov_b32_e32 v4, v0
 ; GFX6789: image_gather4 v[0:4], v[5:6], s[0:7], s[8:11] dmask:0x1 tfe{{$}}
 ; GFX10: image_gather4 v[0:4], v[5:6], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe ;
-; GFX12: image_gather4 v[0:4], [v0, v1], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe ;
+; GFX12: image_gather4 v[0:4], [v6, v5], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D tfe ;
 define amdgpu_ps <4 x float> @gather4_2d_tfe(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t) {
 main_body:
   %v = call { <4 x float>, i32 } @llvm.amdgcn.image.gather4.2d.sl_v4f32i32s.f32(i32 1, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 1, i32 0)
