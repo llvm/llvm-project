@@ -176,8 +176,6 @@ define half @sin_f16(half %a) nounwind {
 ; RV64IFD-LP64D:       # %bb.0:
 ; RV64IFD-LP64D-NEXT:    addi sp, sp, -16
 ; RV64IFD-LP64D-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-LP64D-NEXT:    fmv.x.w a0, fa0
-; RV64IFD-LP64D-NEXT:    fmv.w.x fa0, a0
 ; RV64IFD-LP64D-NEXT:    call __extendhfsf2@plt
 ; RV64IFD-LP64D-NEXT:    call sinf@plt
 ; RV64IFD-LP64D-NEXT:    call __truncsfhf2@plt
@@ -193,8 +191,6 @@ define half @sin_f16(half %a) nounwind {
 ; RV64IF-LP64F:       # %bb.0:
 ; RV64IF-LP64F-NEXT:    addi sp, sp, -16
 ; RV64IF-LP64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-LP64F-NEXT:    fmv.x.w a0, fa0
-; RV64IF-LP64F-NEXT:    fmv.w.x fa0, a0
 ; RV64IF-LP64F-NEXT:    call __extendhfsf2@plt
 ; RV64IF-LP64F-NEXT:    call sinf@plt
 ; RV64IF-LP64F-NEXT:    call __truncsfhf2@plt

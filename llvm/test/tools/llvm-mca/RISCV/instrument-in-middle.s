@@ -2,7 +2,7 @@
 # RUN: llvm-mca -mtriple=riscv64 -mcpu=sifive-x280 -timeline -iterations=1 < %s | FileCheck %s
 
 vadd.vv v12, v12, v12
-vsetvli zero, a0, e8, m8, tu, mu
+vsetvli zero, a0, e8, mf8, tu, mu
 # LLVM-MCA-RISCV-LMUL MF8
 vadd.vv v12, v12, v12
 
@@ -26,7 +26,7 @@ vadd.vv v12, v12, v12
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      4     16.00                       vadd.vv	v12, v12, v12
-# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, a0, e8, m8, tu, mu
+# CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, a0, e8, mf8, tu, mu
 # CHECK-NEXT:  1      4     1.00                        vadd.vv	v12, v12, v12
 
 # CHECK:      Resources:
@@ -46,7 +46,7 @@ vadd.vv v12, v12, v12
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
 # CHECK-NEXT:  -      -      -      -     16.00  16.00   -      -     vadd.vv	v12, v12, v12
-# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e8, m8, tu, mu
+# CHECK-NEXT:  -      -     1.00    -      -      -      -      -     vsetvli	zero, a0, e8, mf8, tu, mu
 # CHECK-NEXT:  -      -      -      -     1.00   1.00    -      -     vadd.vv	v12, v12, v12
 
 # CHECK:      Timeline view:
@@ -54,7 +54,7 @@ vadd.vv v12, v12, v12
 # CHECK-NEXT: Index     0123456789          0
 
 # CHECK:      [0,0]     DeeeE.    .    .    .   vadd.vv	v12, v12, v12
-# CHECK-NEXT: [0,1]     .DeeE.    .    .    .   vsetvli	zero, a0, e8, m8, tu, mu
+# CHECK-NEXT: [0,1]     .DeeE.    .    .    .   vsetvli	zero, a0, e8, mf8, tu, mu
 # CHECK-NEXT: [0,2]     .    .    .    .DeeeE   vadd.vv	v12, v12, v12
 
 # CHECK:      Average Wait times (based on the timeline view):
@@ -65,6 +65,6 @@ vadd.vv v12, v12, v12
 
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     0.0    0.0    0.0       vadd.vv	v12, v12, v12
-# CHECK-NEXT: 1.     1     0.0    0.0    0.0       vsetvli	zero, a0, e8, m8, tu, mu
+# CHECK-NEXT: 1.     1     0.0    0.0    0.0       vsetvli	zero, a0, e8, mf8, tu, mu
 # CHECK-NEXT: 2.     1     0.0    0.0    0.0       vadd.vv	v12, v12, v12
 # CHECK-NEXT:        1     0.0    0.0    0.0       <total>

@@ -52,7 +52,6 @@ body:             |
     ; GFX10: liveins: $vgpr99
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: $vgpr0_vgpr1 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
     ; GFX10-NEXT: $vgpr2_vgpr3 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
     ; GFX10-NEXT: $vgpr4_vgpr5 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
@@ -84,7 +83,6 @@ body:             |
     ; GFX11: liveins: $vgpr99
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: S_WAITCNT 0
-    ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: $vgpr0_vgpr1 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
     ; GFX11-NEXT: $vgpr2_vgpr3 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
     ; GFX11-NEXT: $vgpr4_vgpr5 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
@@ -225,7 +223,6 @@ body:             |
     ; GFX10: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     ; GFX10-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec
     ; GFX10-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec
@@ -303,7 +300,6 @@ body:             |
     ; GFX11: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: S_WAITCNT 0
-    ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, implicit $exec
     ; GFX11-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 4, 0, 0, implicit $exec
     ; GFX11-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 8, 0, 0, implicit $exec
@@ -476,7 +472,6 @@ body:             |
     ; GFX10: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $vgpr0, $vgpr1
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: S_WAITCNT 0
-    ; GFX10-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX10-NEXT: EXP 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     ; GFX10-NEXT: EXP 0, $vgpr1, $vgpr1, $vgpr1, $vgpr1, -1, -1, 15, implicit $exec
     ; GFX10-NEXT: EXP 0, $vgpr1, $vgpr1, $vgpr1, $vgpr1, -1, -1, 15, implicit $exec
@@ -491,7 +486,6 @@ body:             |
     ; GFX11: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, $vgpr0, $vgpr1
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: S_WAITCNT 0
-    ; GFX11-NEXT: S_WAITCNT_VSCNT undef $sgpr_null, 0
     ; GFX11-NEXT: EXP 0, $vgpr0, $vgpr0, $vgpr0, $vgpr0, -1, -1, 15, implicit $exec
     ; GFX11-NEXT: EXP 0, $vgpr1, $vgpr1, $vgpr1, $vgpr1, -1, -1, 15, implicit $exec
     ; GFX11-NEXT: EXP 0, $vgpr1, $vgpr1, $vgpr1, $vgpr1, -1, -1, 15, implicit $exec

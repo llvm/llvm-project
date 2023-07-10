@@ -46,7 +46,10 @@ bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
 }
 
 void InterpState::deallocate(Block *B) {
-  Descriptor *Desc = B->getDescriptor();
+  assert(B);
+  const Descriptor *Desc = B->getDescriptor();
+  assert(Desc);
+
   if (B->hasPointers()) {
     size_t Size = B->getSize();
 

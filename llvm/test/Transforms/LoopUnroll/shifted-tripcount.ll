@@ -17,7 +17,7 @@ define void @latch_exit(ptr nocapture %p, i64 %n) nounwind {
 ; CHECK-NEXT:    [[MUL9:%.*]] = fmul double [[TMP8]], [[TMP4]]
 ; CHECK-NEXT:    store double [[MUL9]], ptr [[ARRAYIDX7]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX7_1:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP16_1]] = add i64 [[TMP16]], 1
+; CHECK-NEXT:    [[TMP16_1]] = add i64 [[I_013]], 2
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP16_1]]
 ; CHECK-NEXT:    [[TMP4_1:%.*]] = load double, ptr [[ARRAYIDX_1]], align 8
 ; CHECK-NEXT:    [[TMP8_1:%.*]] = load double, ptr [[ARRAYIDX7_1]], align 8
@@ -67,7 +67,7 @@ define void @non_latch_exit(ptr nocapture %p, i64 %n) nounwind {
 ; CHECK-NEXT:    br label [[LATCH:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[ARRAYIDX7_1:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP16_1]] = add i64 [[TMP16]], 1
+; CHECK-NEXT:    [[TMP16_1]] = add i64 [[I_013]], 2
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr double, ptr [[P]], i64 [[TMP16_1]]
 ; CHECK-NEXT:    [[TMP4_1:%.*]] = load double, ptr [[ARRAYIDX_1]], align 8
 ; CHECK-NEXT:    [[TMP8_1:%.*]] = load double, ptr [[ARRAYIDX7_1]], align 8

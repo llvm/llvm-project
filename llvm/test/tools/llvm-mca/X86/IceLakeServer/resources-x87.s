@@ -217,7 +217,7 @@ fyl2xp1
 # CHECK-NEXT:  3      13    2.00    *             U     fiadds	(%ecx)
 # CHECK-NEXT:  3      13    2.00    *             U     fiaddl	(%ecx)
 # CHECK-NEXT:  1      100   0.25    *             U     fbld	(%ecx)
-# CHECK-NEXT:  2      1     1.00           *      U     fbstp	(%eax)
+# CHECK-NEXT:  2      1     0.50           *      U     fbstp	(%eax)
 # CHECK-NEXT:  1      1     1.00                  U     fchs
 # CHECK-NEXT:  4      4     1.00                  U     fnclex
 # CHECK-NEXT:  1      3     1.00                  U     fcmovb	%st(1), %st
@@ -309,12 +309,12 @@ fyl2xp1
 # CHECK-NEXT:  1      100   0.25                  U     fsincos
 # CHECK-NEXT:  1      21    7.00                  U     fsqrt
 # CHECK-NEXT:  1      1     0.25                  U     fst	%st(0)
-# CHECK-NEXT:  1      1     1.00           *      U     fsts	(%edx)
-# CHECK-NEXT:  1      1     1.00           *      U     fstl	(%ecx)
+# CHECK-NEXT:  1      1     0.50           *      U     fsts	(%edx)
+# CHECK-NEXT:  1      1     0.50           *      U     fstl	(%ecx)
 # CHECK-NEXT:  1      1     0.25                  U     fstp	%st(0)
-# CHECK-NEXT:  2      1     1.00           *      U     fstpl	(%edx)
-# CHECK-NEXT:  2      1     1.00           *      U     fstpl	(%ecx)
-# CHECK-NEXT:  2      1     1.00           *      U     fstpt	(%eax)
+# CHECK-NEXT:  2      1     0.50           *      U     fstpl	(%edx)
+# CHECK-NEXT:  2      1     0.50           *      U     fstpl	(%ecx)
+# CHECK-NEXT:  2      1     0.50           *      U     fstpt	(%eax)
 # CHECK-NEXT:  3      2     1.00           *      U     fnstcw	(%eax)
 # CHECK-NEXT:  100    106   19.50          *      U     fnstenv	(%eax)
 # CHECK-NEXT:  3      3     1.00           *      U     fnstsw	(%eax)
@@ -371,7 +371,7 @@ fyl2xp1
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT:  -     7.00   127.50 52.00  49.00  49.00  27.00  149.50 69.00  9.00    -      -
+# CHECK-NEXT:  -     7.00   127.50 52.00  40.00  40.00  13.50  149.50 69.00  13.50  13.50  13.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -386,7 +386,7 @@ fyl2xp1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     2.00    -      -      -      -     fiadds	(%ecx)
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     2.00    -      -      -      -     fiaddl	(%ecx)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     fbld	(%ecx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     fbstp	(%eax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   fbstp	(%eax)
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -     fchs
 # CHECK-NEXT:  -      -     1.00   1.00    -      -      -     1.00   1.00    -      -      -     fnclex
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -      -      -     fcmovb	%st(1), %st
@@ -436,14 +436,14 @@ fyl2xp1
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -      -      -     fildll	(%eax)
 # CHECK-NEXT:  -      -     0.50    -      -      -      -     0.50    -      -      -      -     fincstp
 # CHECK-NEXT:  -      -     3.00   1.50    -      -      -     9.00   1.50    -      -      -     fninit
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     fists	(%edx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     fistl	(%ecx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     fistps	(%edx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     fistpl	(%ecx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     fistpll	(%eax)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     fisttps	(%edx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     fisttpl	(%ecx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00   1.00    -     0.33    -      -     fisttpll	(%eax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   fists	(%edx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   fistl	(%ecx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   fistps	(%edx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   fistpl	(%ecx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   fistpll	(%eax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   fisttps	(%edx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   fisttpl	(%ecx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50   1.00    -     0.50   0.50   0.50   fisttpll	(%eax)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     fld	%st(0)
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -     flds	(%edx)
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -      -      -      -      -      -     fldl	(%ecx)
@@ -478,15 +478,15 @@ fyl2xp1
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     fsincos
 # CHECK-NEXT:  -     7.00   1.00    -      -      -      -      -      -      -      -      -     fsqrt
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     fst	%st(0)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     fsts	(%edx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     fstl	(%ecx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   fsts	(%edx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   fstl	(%ecx)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     fstp	%st(0)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     fstpl	(%edx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     fstpl	(%ecx)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -      -     0.33    -      -     fstpt	(%eax)
-# CHECK-NEXT:  -      -      -      -     0.33   0.33   1.00    -     1.00   0.33    -      -     fnstcw	(%eax)
-# CHECK-NEXT:  -      -     27.00  8.50   3.67   3.67   11.00  23.50  19.00  3.67    -      -     fnstenv	(%eax)
-# CHECK-NEXT:  -      -     1.00    -     0.33   0.33   1.00    -      -     0.33    -      -     fnstsw	(%eax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   fstpl	(%edx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   fstpl	(%ecx)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -      -     0.50   0.50   0.50   fstpt	(%eax)
+# CHECK-NEXT:  -      -      -      -      -      -     0.50    -     1.00   0.50   0.50   0.50   fnstcw	(%eax)
+# CHECK-NEXT:  -      -     27.00  8.50    -      -     5.50   23.50  19.00  5.50   5.50   5.50   fnstenv	(%eax)
+# CHECK-NEXT:  -      -     1.00    -      -      -     0.50    -      -     0.50   0.50   0.50   fnstsw	(%eax)
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     frstor	(%eax)
 # CHECK-NEXT:  -      -     0.50   0.50    -      -      -     0.50   0.50    -      -      -     wait
 # CHECK-NEXT:  -      -     0.25   0.25    -      -      -     0.25   0.25    -      -      -     fnsave	(%eax)

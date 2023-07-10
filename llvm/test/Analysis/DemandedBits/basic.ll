@@ -1,5 +1,6 @@
 ; RUN: opt -S -disable-output -passes="print<demanded-bits>" < %s 2>&1 | FileCheck %s
- 
+
+; CHECK-LABEL: Printing analysis 'Demanded Bits Analysis' for function 'test_mul':
 ; CHECK-DAG: DemandedBits: 0xff for   %1 = add nsw i32 %a, 5
 ; CHECK-DAG: DemandedBits: 0xff for   %3 = trunc i32 %2 to i8
 ; CHECK-DAG: DemandedBits: 0xff for   %2 = mul nsw i32 %1, %b

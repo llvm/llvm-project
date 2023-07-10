@@ -272,3 +272,25 @@ auto a = new A('a', {1.1});
 // expected-warning@-1 {{braces around scalar init}}
 // beforecxx20-warning@-2 {{aggregate initialization of type 'A' from a parenthesized list of values is a C++20 extension}}
 }
+
+
+namespace GH63278 {
+struct S {
+  int a = 0;
+  int b {0};
+  auto x = 1; // expected-error {{'auto' not allowed in non-static struct member}}
+  static const auto y = 1;
+};
+
+int test() {
+  // used to crash
+  S a(0, 1);
+  S b(0);
+  S c(0, 0, 1); // beforecxx20-warning {{aggregate initialization of type 'S' from a parenthesized list of values is a C++20 extension}}
+
+  S d {0, 1};
+  S e {0};
+  S f {0, 0, 1};
+}
+
+}

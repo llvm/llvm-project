@@ -163,6 +163,16 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsAF64(MlirType type);
 /// context.
 MLIR_CAPI_EXPORTED MlirType mlirF64TypeGet(MlirContext ctx);
 
+/// Returns the typeID of a TF32 type.
+MLIR_CAPI_EXPORTED MlirTypeID mlirFloatTF32TypeGetTypeID(void);
+
+/// Checks whether the given type is an TF32 type.
+MLIR_CAPI_EXPORTED bool mlirTypeIsATF32(MlirType type);
+
+/// Creates a TF32 type in the given context. The type is owned by the
+/// context.
+MLIR_CAPI_EXPORTED MlirType mlirTF32TypeGet(MlirContext ctx);
+
 //===----------------------------------------------------------------------===//
 // None type.
 //===----------------------------------------------------------------------===//

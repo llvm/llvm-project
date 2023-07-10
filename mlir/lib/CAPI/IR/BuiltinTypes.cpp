@@ -152,6 +152,16 @@ MlirType mlirF16TypeGet(MlirContext ctx) {
   return wrap(FloatType::getF16(unwrap(ctx)));
 }
 
+MlirTypeID mlirFloatTF32TypeGetTypeID() {
+  return wrap(FloatTF32Type::getTypeID());
+}
+
+bool mlirTypeIsATF32(MlirType type) { return unwrap(type).isTF32(); }
+
+MlirType mlirTF32TypeGet(MlirContext ctx) {
+  return wrap(FloatType::getTF32(unwrap(ctx)));
+}
+
 MlirTypeID mlirFloat32TypeGetTypeID() { return wrap(Float32Type::getTypeID()); }
 
 bool mlirTypeIsAF32(MlirType type) { return unwrap(type).isF32(); }

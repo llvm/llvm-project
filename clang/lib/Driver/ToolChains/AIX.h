@@ -68,6 +68,7 @@ public:
   }
   bool isPICDefaultForced() const override { return true; }
   bool HasNativeLLVMSupport() const override { return true; }
+  bool IsIntegratedAssemblerDefault() const override { return true; }
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,

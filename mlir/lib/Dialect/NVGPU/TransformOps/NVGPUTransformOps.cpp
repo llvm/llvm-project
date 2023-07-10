@@ -438,7 +438,7 @@ DiagnosedSilenceableFailure transform::RewriteMatmulAsMmaSyncOp::applyToOne(
     transform::TransformState &state) {
   bool fail = true;
   // TODO: more robust detection of matmulOp, with transposes etc.
-  if (auto matmulOp = isa<linalg::MatmulOp>(linalgOp.getOperation())) {
+  if (isa_and_nonnull<linalg::MatmulOp>(linalgOp.getOperation())) {
     Location loc = linalgOp.getLoc();
     // TODO: more robust computation of laneId, for now assume a single warp.
     Value laneId = rewriter.create<gpu::ThreadIdOp>(

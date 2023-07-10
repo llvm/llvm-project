@@ -66,6 +66,14 @@ struct Relocation {
   std::optional<uint32_t> SymbolTableIndex;
 };
 
+struct SectionDataEntry {
+  std::optional<uint32_t> UInt32;
+  yaml::BinaryRef Binary;
+
+  size_t size() const;
+  void writeAsBinary(raw_ostream &OS) const;
+};
+
 struct Section {
   COFF::section Header;
   unsigned Alignment = 0;
@@ -74,6 +82,7 @@ struct Section {
   std::vector<CodeViewYAML::LeafRecord> DebugT;
   std::vector<CodeViewYAML::LeafRecord> DebugP;
   std::optional<CodeViewYAML::DebugHSection> DebugH;
+  std::vector<SectionDataEntry> StructuredData;
   std::vector<Relocation> Relocations;
   StringRef Name;
 
@@ -117,6 +126,7 @@ struct Object {
 LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::Section)
 LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::Symbol)
 LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::Relocation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(COFFYAML::SectionDataEntry)
 
 namespace llvm {
 namespace yaml {
@@ -239,6 +249,10 @@ template <> struct MappingTraits<COFF::AuxiliaryCLRToken> {
 template <>
 struct MappingTraits<COFFYAML::Symbol> {
   static void mapping(IO &IO, COFFYAML::Symbol &S);
+};
+
+template <> struct MappingTraits<COFFYAML::SectionDataEntry> {
+  static void mapping(IO &IO, COFFYAML::SectionDataEntry &Sec);
 };
 
 template <>

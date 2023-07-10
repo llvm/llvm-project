@@ -21,6 +21,8 @@
 #include "linux.h"
 #include "trusty.h"
 
+#include "mem_map_fuchsia.h"
+
 namespace scudo {
 
 // This will be deprecated when every allocator has been supported by each

@@ -1,6 +1,6 @@
 ; RUN: not mlir-translate -import-llvm -emit-expensive-warnings -split-input-file %s 2>&1 | FileCheck %s
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled instruction: indirectbr ptr %dst, [label %bb1, label %bb2]
 define i32 @unhandled_instruction(ptr %dst) {
   indirectbr ptr %dst, [label %bb1, label %bb2]
@@ -12,7 +12,7 @@ bb2:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled value: ptr asm "bswap $0", "=r,r"
 define i32 @unhandled_value(i32 %arg1) {
   %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1)
@@ -21,9 +21,9 @@ define i32 @unhandled_value(i32 %arg1) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_constant, %bb1) since blockaddress(...) is unsupported
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled instruction: ret ptr blockaddress(@unhandled_constant, %bb1)
 define ptr @unhandled_constant() {
   br label %bb1
@@ -33,9 +33,9 @@ bb1:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: unhandled constant: ptr blockaddress(@unhandled_global, %bb1) since blockaddress(...) is unsupported
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled global variable: @private = private global ptr blockaddress(@unhandled_global, %bb1)
 @private = private global ptr blockaddress(@unhandled_global, %bb1)
 
@@ -49,7 +49,7 @@ bb1:
 
 declare void @llvm.gcroot(ptr %arg1, ptr %arg2)
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled intrinsic: call void @llvm.gcroot(ptr %arg1, ptr null)
 define void @unhandled_intrinsic() gc "example" {
   %arg1 = alloca ptr
@@ -83,7 +83,7 @@ define void @dropped_instruction(i64 %arg1) {
 ; // -----
 
 ; global_dtors with non-null data fields cannot be represented in MLIR.
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: error: unhandled global variable: @llvm.global_dtors
 @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr @foo }]
 
@@ -132,9 +132,9 @@ define void @access_group(ptr %arg1) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected all loop properties to be either debug locations or metadata nodes
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, i32 42}
 define void @invalid_loop_node(i64 %n, ptr %A) {
 entry:
@@ -147,9 +147,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: cannot import empty loop property
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
 define void @invalid_loop_node(i64 %n, ptr %A) {
 entry:
@@ -163,9 +163,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: cannot import loop property without a name
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
 define void @invalid_loop_node(i64 %n, ptr %A) {
 entry:
@@ -179,9 +179,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: cannot import loop properties with duplicated names llvm.loop.disable_nonforced
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !1}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
@@ -195,9 +195,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.disable_nonforced to hold no value
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
@@ -211,9 +211,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata nodes llvm.loop.unroll.enable and llvm.loop.unroll.disable to be mutually exclusive
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !2}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
@@ -228,9 +228,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.enable to hold a boolean value
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
@@ -244,9 +244,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.width to hold an i32 value
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
@@ -260,9 +260,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.followup_all to hold an MDNode
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
@@ -276,9 +276,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected metadata node llvm.loop.parallel_accesses to hold one or multiple MDNodes
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
@@ -292,9 +292,9 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unknown loop annotation llvm.loop.typo
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: !0 = distinct !{!0, !1, !2}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
 entry:
@@ -309,7 +309,7 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: could not lookup access group
 define void @unused_access_group(ptr %arg) {
 entry:
@@ -326,7 +326,7 @@ end:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: expected function_entry_count to be attached to a function
 ; CHECK:      warning: unhandled metadata: !0 = !{!"function_entry_count", i64 42}
 define void @cond_br(i1 %arg) {
@@ -342,7 +342,7 @@ bb2:
 
 ; // -----
 
-; CHECK:      import-failure.ll
+; CHECK:      <unknown>
 ; CHECK-SAME: warning: dropped instruction: call void @llvm.experimental.noalias.scope.decl(metadata !0)
 define void @unused_scope() {
   call void @llvm.experimental.noalias.scope.decl(metadata !0)

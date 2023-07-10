@@ -102,6 +102,8 @@ private:
     Constant *V = ConstantFP::get(BBBuilder.getContext(), APFloat(Val));
     if (!Arg->getType()->isFloatTy())
       V = ConstantExpr::getFPExtend(V, Arg->getType());
+    if (BBBuilder.GetInsertBlock()->getParent()->hasFnAttribute(Attribute::StrictFP))
+      BBBuilder.setIsFPConstrained(true);
     return BBBuilder.CreateFCmp(Cmp, Arg, V);
   }
 

@@ -57,13 +57,17 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
 }
 
-AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
-                        llvm::ArrayRef<SymbolReference> MacroRefs,
-                        const Includes &Inc, const PragmaIncludes *PI,
-                        const SourceManager &SM, const HeaderSearch &HS) {
+AnalysisResults
+analyze(llvm::ArrayRef<Decl *> ASTRoots,
+        llvm::ArrayRef<SymbolReference> MacroRefs, const Includes &Inc,
+        const PragmaIncludes *PI, const SourceManager &SM,
+        const HeaderSearch &HS,
+        llvm::function_ref<bool(llvm::StringRef)> HeaderFilter) {
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
   llvm::DenseSet<const Include *> Used;
   llvm::StringSet<> Missing;
+  if (!HeaderFilter)
+    HeaderFilter = [](llvm::StringRef) { return false; };
   walkUsed(ASTRoots, MacroRefs, PI, SM,
            [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
              bool Satisfied = false;
@@ -76,13 +80,15 @@ AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
                }
              }
              if (!Satisfied && !Providers.empty() &&
-                 Ref.RT == RefType::Explicit)
+                 Ref.RT == RefType::Explicit &&
+                 !HeaderFilter(Providers.front().resolvedPath()))
                Missing.insert(spellHeader({Providers.front(), HS, MainFile}));
            });
 
   AnalysisResults Results;
   for (const Include &I : Inc.all()) {
-    if (Used.contains(&I) || !I.Resolved)
+    if (Used.contains(&I) || !I.Resolved ||
+        HeaderFilter(I.Resolved->tryGetRealPathName()))
       continue;
     if (PI) {
       if (PI->shouldKeep(I.Line))

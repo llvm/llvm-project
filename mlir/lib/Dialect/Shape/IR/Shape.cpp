@@ -1095,7 +1095,7 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   std::optional<int64_t> index = getConstantIndex();
   if (!index.has_value())
     return nullptr;
-  if (index.value() >= valShapedType.getRank())
+  if (index.value() < 0 || index.value() >= valShapedType.getRank())
     return nullptr;
   auto extent = valShapedType.getDimSize(*index);
   if (ShapedType::isDynamic(extent))
@@ -1114,17 +1114,6 @@ LogicalResult mlir::shape::DimOp::inferReturnTypes(
 
 bool mlir::shape::DimOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
   return eachHasOnlyOneOfTypes<SizeType, IndexType>(l, r);
-}
-
-LogicalResult mlir::shape::DimOp::verify() {
-  auto st = llvm::cast<ShapedType>(getValue().getType());
-  if (!st.hasRank())
-    return success();
-  if (auto index = getConstantIndex()) {
-    if (*index < 0 || *index >= st.getRank())
-      return emitOpError("index is out of range");
-  }
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

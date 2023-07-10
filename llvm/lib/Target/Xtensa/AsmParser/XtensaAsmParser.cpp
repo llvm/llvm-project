@@ -35,8 +35,6 @@ class XtensaAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
-  // Override MCTargetAsmParser.
-  ParseStatus parseDirective(AsmToken DirectiveID) override;
   bool parseRegister(MCRegister &RegNo,
                      SMLoc &StartLoc, SMLoc &EndLoc) override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -695,10 +693,6 @@ bool XtensaAsmParser::ParseInstruction(ParseInstructionInfo &Info,
 
   getParser().Lex(); // Consume the EndOfStatement.
   return false;
-}
-
-ParseStatus XtensaAsmParser::parseDirective(AsmToken DirectiveID) {
-  return ParseStatus::NoMatch;
 }
 
 // Force static initialization.

@@ -27,7 +27,7 @@ class EmitC_Type<string name, string typeMnemonic>
 }
 
 def EmitC_OpaqueType : EmitC_Type<"Opaque", "opaque"> {
-  let summary = "An opaque type";
+  let summary = "EmitC opaque type";
 
   let description = [{
     An opaque data type of which the value gets emitted as is.

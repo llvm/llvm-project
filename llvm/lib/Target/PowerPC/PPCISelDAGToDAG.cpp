@@ -705,14 +705,88 @@ bool PPCDAGToDAGISel::isRotateAndMask(SDNode *N, unsigned Mask,
   return false;
 }
 
-bool PPCDAGToDAGISel::tryTLSXFormStore(StoreSDNode *ST) {
-  SDValue Base = ST->getBasePtr();
+// isThreadPointerAcquisitionNode - Check if the operands of an ADD_TLS
+// instruction use the thread pointer.
+static bool isThreadPointerAcquisitionNode(SDValue Base, SelectionDAG *CurDAG) {
+  assert(
+      Base.getOpcode() == PPCISD::ADD_TLS &&
+      "Only expecting the ADD_TLS instruction to acquire the thread pointer!");
+  const PPCSubtarget &Subtarget =
+      CurDAG->getMachineFunction().getSubtarget<PPCSubtarget>();
+  SDValue ADDTLSOp1 = Base.getOperand(0);
+  unsigned ADDTLSOp1Opcode = ADDTLSOp1.getOpcode();
+
+  // Account for when ADD_TLS is used for the initial-exec TLS model on Linux.
+  //
+  // Although ADD_TLS does not explicitly use the thread pointer
+  // register when LD_GOT_TPREL_L is one of it's operands, the LD_GOT_TPREL_L
+  // instruction will have a relocation specifier, @got@tprel, that is used to
+  // generate a GOT entry. The linker replaces this entry with an offset for a
+  // for a thread local variable, which will be relative to the thread pointer.
+  if (ADDTLSOp1Opcode == PPCISD::LD_GOT_TPREL_L)
+    return true;
+  // When using PC-Relative instructions for initial-exec, a MAT_PCREL_ADDR
+  // node is produced instead to represent the aforementioned situation.
+  LoadSDNode *LD = dyn_cast<LoadSDNode>(ADDTLSOp1);
+  if (LD && LD->getBasePtr().getOpcode() == PPCISD::MAT_PCREL_ADDR)
+    return true;
+
+  // A GET_TPOINTER PPCISD node (only produced on AIX 32-bit mode) as an operand
+  // to ADD_TLS represents a call to .__get_tpointer to get the thread pointer,
+  // later returning it into R3.
+  if (ADDTLSOp1Opcode == PPCISD::GET_TPOINTER)
+    return true;
+
+  // The ADD_TLS note is explicitly acquiring the thread pointer (X13/R13).
+  RegisterSDNode *AddFirstOpReg =
+      dyn_cast_or_null<RegisterSDNode>(ADDTLSOp1.getNode());
+  if (AddFirstOpReg &&
+      AddFirstOpReg->getReg() == Subtarget.getThreadPointerRegister())
+      return true;
+
+  return false;
+}
+
+// canOptimizeTLSDFormToXForm - Optimize TLS accesses when an ADD_TLS
+// instruction is present. An ADD_TLS instruction, followed by a D-Form memory
+// operation, can be optimized to use an X-Form load or store, allowing the
+// ADD_TLS node to be removed completely.
+static bool canOptimizeTLSDFormToXForm(SelectionDAG *CurDAG, SDValue Base) {
+
+  // Do not do this transformation at -O0.
+  if (CurDAG->getTarget().getOptLevel() == CodeGenOpt::None)
+    return false;
+
+  // In order to perform this optimization inside tryTLSXForm[Load|Store],
+  // Base is expected to be an ADD_TLS node.
   if (Base.getOpcode() != PPCISD::ADD_TLS)
     return false;
-  SDValue Offset = ST->getOffset();
-  if (!Offset.isUndef())
-    return false;
+  for (auto *ADDTLSUse : Base.getNode()->uses()) {
+    // The optimization to convert the D-Form load/store into its X-Form
+    // counterpart should only occur if the source value offset of the load/
+    // store is 0. This also means that The offset should always be undefined.
+    if (LoadSDNode *LD = dyn_cast<LoadSDNode>(ADDTLSUse)) {
+      if (LD->getSrcValueOffset() != 0 || !LD->getOffset().isUndef())
+        return false;
+    } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(ADDTLSUse)) {
+      if (ST->getSrcValueOffset() != 0 || !ST->getOffset().isUndef())
+        return false;
+    } else // Don't optimize if there are ADD_TLS users that aren't load/stores.
+      return false;
+  }
+
   if (Base.getOperand(1).getOpcode() == PPCISD::TLS_LOCAL_EXEC_MAT_ADDR)
+    return false;
+
+  // Does the ADD_TLS node of the load/store use the thread pointer?
+  // If the thread pointer is not used as one of the operands of ADD_TLS,
+  // then this optimization is not valid.
+  return isThreadPointerAcquisitionNode(Base, CurDAG);
+}
+
+bool PPCDAGToDAGISel::tryTLSXFormStore(StoreSDNode *ST) {
+  SDValue Base = ST->getBasePtr();
+  if (!canOptimizeTLSDFormToXForm(CurDAG, Base))
     return false;
 
   SDLoc dl(ST);
@@ -760,12 +834,7 @@ bool PPCDAGToDAGISel::tryTLSXFormStore(StoreSDNode *ST) {
 
 bool PPCDAGToDAGISel::tryTLSXFormLoad(LoadSDNode *LD) {
   SDValue Base = LD->getBasePtr();
-  if (Base.getOpcode() != PPCISD::ADD_TLS)
-    return false;
-  SDValue Offset = LD->getOffset();
-  if (!Offset.isUndef())
-    return false;
-  if (Base.getOperand(1).getOpcode() == PPCISD::TLS_LOCAL_EXEC_MAT_ADDR)
+  if (!canOptimizeTLSDFormToXForm(CurDAG, Base))
     return false;
 
   SDLoc dl(LD);
@@ -5429,9 +5498,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   }
 
   case ISD::STORE: {
-    // Change TLS initial-exec D-form stores to X-form stores.
+    // Change TLS initial-exec (or TLS local-exec on AIX) D-form stores to
+    // X-form stores.
     StoreSDNode *ST = cast<StoreSDNode>(N);
-    if (EnableTLSOpt && Subtarget->isELFv2ABI() &&
+    if (EnableTLSOpt && (Subtarget->isELFv2ABI() || Subtarget->isAIXABI()) &&
         ST->getAddressingMode() != ISD::PRE_INC)
       if (tryTLSXFormStore(ST))
         return;
@@ -5444,8 +5514,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     // Normal loads are handled by code generated from the .td file.
     if (LD->getAddressingMode() != ISD::PRE_INC) {
-      // Change TLS initial-exec D-form loads to X-form loads.
-      if (EnableTLSOpt && Subtarget->isELFv2ABI())
+      // Change TLS initial-exec (or TLS local-exec on AIX) D-form loads to
+      // X-form loads.
+      if (EnableTLSOpt && (Subtarget->isELFv2ABI() || Subtarget->isAIXABI()))
         if (tryTLSXFormLoad(LD))
           return;
       break;

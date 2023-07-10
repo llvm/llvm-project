@@ -4146,7 +4146,7 @@ options are spelled with a leading ``/``, they will be mistaken for a filename:
 
     clang-cl.exe: error: no such file or directory: '/foobar'
 
-Please `file a bug <https://bugs.llvm.org/enter_bug.cgi?product=clang&component=Driver>`_
+Please `file a bug <https://github.com/llvm/llvm-project/issues/new?labels=clang-cl>`_
 for any valid cl.exe flags that clang-cl does not understand.
 
 Execute ``clang-cl /?`` to see a list of supported options:

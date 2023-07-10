@@ -55,7 +55,7 @@ static Value allocBuffer(ImplicitLocOpBuilder &b,
     alignmentAttr = b.getI64IntegerAttr(alignment.value());
 
   // Static buffer.
-  if (auto cst = allocSize.getDefiningOp<arith::ConstantIndexOp>()) {
+  if (std::optional<int64_t> cst = getConstantIntValue(allocSize)) {
     auto staticBufferType =
         MemRefType::get(width * cst.value(), b.getIntegerType(8));
     if (options.useAlloca) {

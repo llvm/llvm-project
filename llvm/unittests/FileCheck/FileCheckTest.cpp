@@ -208,14 +208,13 @@ struct ExpressionFormatParameterisedFixture
     Expected<ExpressionValue> ResultValue = getValueFromStringReprFailure(Str);
     ASSERT_THAT_EXPECTED(ResultValue, Succeeded())
         << "Failed to get value from " << Str;
-    ASSERT_EQ(ResultValue->isNegative(), ExpectedVal < 0)
+    APInt ResValue = ResultValue->getAPIntValue();
+    ASSERT_EQ(ResValue.isNegative(), ExpectedVal < 0)
         << "Value for " << Str << " is not " << ExpectedVal;
-    if (ResultValue->isNegative())
-      EXPECT_EQ(cantFail(ResultValue->getSignedValue()),
-                static_cast<int64_t>(ExpectedVal));
+    if (ResValue.isNegative())
+      EXPECT_EQ(ResValue.getSExtValue(), static_cast<int64_t>(ExpectedVal));
     else
-      EXPECT_EQ(cantFail(ResultValue->getUnsignedValue()),
-                static_cast<uint64_t>(ExpectedVal));
+      EXPECT_EQ(ResValue.getZExtValue(), static_cast<uint64_t>(ExpectedVal));
   }
 
   void checkValueFromStringReprFailure(
@@ -400,16 +399,12 @@ static Expected<ExpressionValue> doValueOperation(binop_eval_t Operation,
 
 template <class T>
 static void expectValueEqual(ExpressionValue ActualValue, T ExpectedValue) {
-  EXPECT_EQ(ExpectedValue < 0, ActualValue.isNegative());
-  if (ExpectedValue < 0) {
-    Expected<int64_t> SignedActualValue = ActualValue.getSignedValue();
-    ASSERT_THAT_EXPECTED(SignedActualValue, Succeeded());
-    EXPECT_EQ(*SignedActualValue, static_cast<int64_t>(ExpectedValue));
-  } else {
-    Expected<uint64_t> UnsignedActualValue = ActualValue.getUnsignedValue();
-    ASSERT_THAT_EXPECTED(UnsignedActualValue, Succeeded());
-    EXPECT_EQ(*UnsignedActualValue, static_cast<uint64_t>(ExpectedValue));
-  }
+  APInt Value = ActualValue.getAPIntValue();
+  EXPECT_EQ(ExpectedValue < 0, Value.isNegative());
+  if (ExpectedValue < 0)
+    EXPECT_EQ(Value.getSExtValue(), static_cast<int64_t>(ExpectedValue));
+  else
+    EXPECT_EQ(Value.getZExtValue(), static_cast<uint64_t>(ExpectedValue));
 }
 
 template <class T1, class T2, class TR>
@@ -427,88 +422,6 @@ static void expectOperationValueResult(binop_eval_t Operation, T1 LeftValue,
   expectError<OverflowError>(
       "overflow error",
       doValueOperation(Operation, LeftValue, RightValue).takeError());
-}
-
-TEST_F(FileCheckTest, ExpressionValueGetUnsigned) {
-  // Test positive value.
-  Expected<uint64_t> UnsignedValue = ExpressionValue(10).getUnsignedValue();
-  ASSERT_THAT_EXPECTED(UnsignedValue, Succeeded());
-  EXPECT_EQ(*UnsignedValue, 10U);
-
-  // Test 0.
-  UnsignedValue = ExpressionValue(0).getUnsignedValue();
-  ASSERT_THAT_EXPECTED(UnsignedValue, Succeeded());
-  EXPECT_EQ(*UnsignedValue, 0U);
-
-  // Test max positive value.
-  UnsignedValue = ExpressionValue(MaxUint64).getUnsignedValue();
-  ASSERT_THAT_EXPECTED(UnsignedValue, Succeeded());
-  EXPECT_EQ(*UnsignedValue, MaxUint64);
-
-  // Test failure with negative value.
-  expectError<OverflowError>(
-      "overflow error", ExpressionValue(-1).getUnsignedValue().takeError());
-
-  // Test failure with min negative value.
-  expectError<OverflowError>(
-      "overflow error",
-      ExpressionValue(MinInt64).getUnsignedValue().takeError());
-}
-
-TEST_F(FileCheckTest, ExpressionValueGetSigned) {
-  // Test positive value.
-  Expected<int64_t> SignedValue = ExpressionValue(10).getSignedValue();
-  ASSERT_THAT_EXPECTED(SignedValue, Succeeded());
-  EXPECT_EQ(*SignedValue, 10);
-
-  // Test 0.
-  SignedValue = ExpressionValue(0).getSignedValue();
-  ASSERT_THAT_EXPECTED(SignedValue, Succeeded());
-  EXPECT_EQ(*SignedValue, 0);
-
-  // Test max int64_t.
-  SignedValue = ExpressionValue(MaxInt64).getSignedValue();
-  ASSERT_THAT_EXPECTED(SignedValue, Succeeded());
-  EXPECT_EQ(*SignedValue, MaxInt64);
-
-  // Test failure with too big positive value.
-  expectError<OverflowError>(
-      "overflow error", ExpressionValue(static_cast<uint64_t>(MaxInt64) + 1)
-                            .getSignedValue()
-                            .takeError());
-
-  // Test failure with max uint64_t.
-  expectError<OverflowError>(
-      "overflow error",
-      ExpressionValue(MaxUint64).getSignedValue().takeError());
-
-  // Test negative value.
-  SignedValue = ExpressionValue(-10).getSignedValue();
-  ASSERT_THAT_EXPECTED(SignedValue, Succeeded());
-  EXPECT_EQ(*SignedValue, -10);
-
-  // Test min int64_t.
-  SignedValue = ExpressionValue(MinInt64).getSignedValue();
-  ASSERT_THAT_EXPECTED(SignedValue, Succeeded());
-  EXPECT_EQ(*SignedValue, MinInt64);
-}
-
-TEST_F(FileCheckTest, ExpressionValueAbsolute) {
-  // Test positive value.
-  expectValueEqual(ExpressionValue(10).getAbsolute(), 10);
-
-  // Test 0.
-  expectValueEqual(ExpressionValue(0).getAbsolute(), 0);
-
-  // Test max uint64_t.
-  expectValueEqual(ExpressionValue(MaxUint64).getAbsolute(), MaxUint64);
-
-  // Test negative value.
-  expectValueEqual(ExpressionValue(-10).getAbsolute(), 10);
-
-  // Test absence of overflow on min int64_t.
-  expectValueEqual(ExpressionValue(MinInt64).getAbsolute(),
-                   static_cast<uint64_t>(-(MinInt64 + 10)) + 10);
 }
 
 TEST_F(FileCheckTest, ExpressionValueAddition) {
@@ -637,46 +550,6 @@ TEST_F(FileCheckTest, ExpressionValueDivision) {
   expectOperationValueResult(operator/, AbsoluteMaxInt64 + 2, -1);
 }
 
-TEST_F(FileCheckTest, ExpressionValueEquality) {
-  // Test negative and positive value.
-  EXPECT_FALSE(ExpressionValue(5) == ExpressionValue(-3));
-  EXPECT_TRUE(ExpressionValue(5) != ExpressionValue(-3));
-  EXPECT_FALSE(ExpressionValue(-2) == ExpressionValue(6));
-  EXPECT_TRUE(ExpressionValue(-2) != ExpressionValue(6));
-  EXPECT_FALSE(ExpressionValue(-7) == ExpressionValue(7));
-  EXPECT_TRUE(ExpressionValue(-7) != ExpressionValue(7));
-  EXPECT_FALSE(ExpressionValue(4) == ExpressionValue(-4));
-  EXPECT_TRUE(ExpressionValue(4) != ExpressionValue(-4));
-  EXPECT_FALSE(ExpressionValue(MaxUint64) == ExpressionValue(-1));
-  EXPECT_TRUE(ExpressionValue(MaxUint64) != ExpressionValue(-1));
-
-  // Test both negative values.
-  EXPECT_FALSE(ExpressionValue(-2) == ExpressionValue(-7));
-  EXPECT_TRUE(ExpressionValue(-2) != ExpressionValue(-7));
-  EXPECT_TRUE(ExpressionValue(-3) == ExpressionValue(-3));
-  EXPECT_FALSE(ExpressionValue(-3) != ExpressionValue(-3));
-  EXPECT_FALSE(ExpressionValue(MinInt64) == ExpressionValue(-1));
-  EXPECT_TRUE(ExpressionValue(MinInt64) != ExpressionValue(-1));
-  EXPECT_FALSE(ExpressionValue(MinInt64) == ExpressionValue(-0));
-  EXPECT_TRUE(ExpressionValue(MinInt64) != ExpressionValue(-0));
-
-  // Test both positive values.
-  EXPECT_FALSE(ExpressionValue(8) == ExpressionValue(9));
-  EXPECT_TRUE(ExpressionValue(8) != ExpressionValue(9));
-  EXPECT_TRUE(ExpressionValue(1) == ExpressionValue(1));
-  EXPECT_FALSE(ExpressionValue(1) != ExpressionValue(1));
-
-  // Check the signedness of zero doesn't affect equality.
-  EXPECT_TRUE(ExpressionValue(0) == ExpressionValue(0));
-  EXPECT_FALSE(ExpressionValue(0) != ExpressionValue(0));
-  EXPECT_TRUE(ExpressionValue(0) == ExpressionValue(-0));
-  EXPECT_FALSE(ExpressionValue(0) != ExpressionValue(-0));
-  EXPECT_TRUE(ExpressionValue(-0) == ExpressionValue(0));
-  EXPECT_FALSE(ExpressionValue(-0) != ExpressionValue(0));
-  EXPECT_TRUE(ExpressionValue(-0) == ExpressionValue(-0));
-  EXPECT_FALSE(ExpressionValue(-0) != ExpressionValue(-0));
-}
-
 TEST_F(FileCheckTest, Literal) {
   SourceMgr SM;
 
@@ -684,7 +557,7 @@ TEST_F(FileCheckTest, Literal) {
   ExpressionLiteral Ten(bufferize(SM, "10"), 10u);
   Expected<ExpressionValue> Value = Ten.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
-  EXPECT_EQ(10, cantFail(Value->getSignedValue()));
+  EXPECT_EQ(10, Value->getAPIntValue().getSExtValue());
   Expected<ExpressionFormat> ImplicitFormat = Ten.getImplicitFormat(SM);
   ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
   EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::NoFormat);
@@ -693,13 +566,13 @@ TEST_F(FileCheckTest, Literal) {
   ExpressionLiteral Min(bufferize(SM, std::to_string(MinInt64)), MinInt64);
   Value = Min.eval();
   ASSERT_TRUE(bool(Value));
-  EXPECT_EQ(MinInt64, cantFail(Value->getSignedValue()));
+  EXPECT_EQ(MinInt64, Value->getAPIntValue().getSExtValue());
 
   // Max value can be correctly represented.
   ExpressionLiteral Max(bufferize(SM, std::to_string(MaxUint64)), MaxUint64);
   Value = Max.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
-  EXPECT_EQ(MaxUint64, cantFail(Value->getUnsignedValue()));
+  EXPECT_EQ(MaxUint64, Value->getAPIntValue().getZExtValue());
 }
 
 TEST_F(FileCheckTest, Expression) {
@@ -748,11 +621,11 @@ TEST_F(FileCheckTest, NumericVariable) {
   FooVar.setValue(ExpressionValue(42u));
   std::optional<ExpressionValue> Value = FooVar.getValue();
   ASSERT_TRUE(Value);
-  EXPECT_EQ(42, cantFail(Value->getSignedValue()));
+  EXPECT_EQ(42, Value->getAPIntValue().getSExtValue());
   EXPECT_FALSE(FooVar.getStringValue());
   EvalResult = FooVarUse.eval();
   ASSERT_THAT_EXPECTED(EvalResult, Succeeded());
-  EXPECT_EQ(42, cantFail(EvalResult->getSignedValue()));
+  EXPECT_EQ(42, EvalResult->getAPIntValue().getSExtValue());
 
   // Defined variable with string: getValue, eval, and getStringValue return
   // value set.
@@ -760,14 +633,14 @@ TEST_F(FileCheckTest, NumericVariable) {
   FooVar.setValue(ExpressionValue(925u), StringValue);
   Value = FooVar.getValue();
   ASSERT_TRUE(Value);
-  EXPECT_EQ(925, cantFail(Value->getSignedValue()));
+  EXPECT_EQ(925, Value->getAPIntValue().getSExtValue());
   // getStringValue should return the same memory not just the same characters.
   EXPECT_EQ(StringValue.begin(), FooVar.getStringValue()->begin());
   EXPECT_EQ(StringValue.end(), FooVar.getStringValue()->end());
   EvalResult = FooVarUse.eval();
   ASSERT_THAT_EXPECTED(EvalResult, Succeeded());
-  EXPECT_EQ(925, cantFail(EvalResult->getSignedValue()));
-  EXPECT_EQ(925, cantFail(EvalResult->getSignedValue()));
+  EXPECT_EQ(925, EvalResult->getAPIntValue().getSExtValue());
+  EXPECT_EQ(925, EvalResult->getAPIntValue().getSExtValue());
 
   // Clearing variable: getValue and eval fail. Error returned by eval holds
   // the name of the cleared variable.
@@ -802,7 +675,7 @@ TEST_F(FileCheckTest, Binop) {
   // expected.
   Expected<ExpressionValue> Value = Binop.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
-  EXPECT_EQ(60, cantFail(Value->getSignedValue()));
+  EXPECT_EQ(60, Value->getAPIntValue().getSExtValue());
   Expected<ExpressionFormat> ImplicitFormat = Binop.getImplicitFormat(SM);
   ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
   EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::Unsigned);
@@ -1674,21 +1547,21 @@ TEST_F(FileCheckTest, FileCheckContext) {
   Expected<ExpressionValue> ExpressionVal =
       (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(cantFail(ExpressionVal->getSignedValue()), 18);
+  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 18);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar2Ref, DefinedNumericVariable,
       /*IsLegacyLineExpr=*/false, LineNumber, &Cxt, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(cantFail(ExpressionVal->getSignedValue()), 20);
+  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 20);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar3Ref, DefinedNumericVariable,
       /*IsLegacyLineExpr=*/false, LineNumber, &Cxt, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(cantFail(ExpressionVal->getSignedValue()), 12);
+  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 12);
   ASSERT_THAT_EXPECTED(EmptyVar, Succeeded());
   EXPECT_EQ(*EmptyVar, "");
   expectUndefErrors({std::string(UnknownVarStr)}, UnknownVar.takeError());
@@ -1738,7 +1611,7 @@ TEST_F(FileCheckTest, FileCheckContext) {
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(cantFail(ExpressionVal->getSignedValue()), 36);
+  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 36);
 
   // Clear local variables and check global variables remain defined.
   Cxt.clearLocalVars();
@@ -1750,7 +1623,7 @@ TEST_F(FileCheckTest, FileCheckContext) {
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(cantFail(ExpressionVal->getSignedValue()), 36);
+  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 36);
 }
 
 TEST_F(FileCheckTest, CapturedVarDiags) {

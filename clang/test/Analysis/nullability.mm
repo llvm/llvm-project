@@ -69,6 +69,7 @@ void takesNullable(Dummy *_Nullable);
 void takesNonnull(Dummy *_Nonnull);
 void takesUnspecified(Dummy *);
 void takesNonnullBlock(void (^ _Nonnull)(void));
+void takesNonnullObject(NSObject *_Nonnull);
 
 Dummy *_Nullable returnsNullable();
 Dummy *_Nonnull returnsNonnull();
@@ -273,6 +274,17 @@ Dummy * _Nonnull testIndirectCastNullableToNonnull() {
 Dummy * _Nonnull testDirectCastNilToNonnull() {
   takesNonnull((Dummy * _Nonnull)0);  // no-warning
   return (Dummy * _Nonnull)0;         // no-warning
+}
+
+void testImplicitCastNilToNonnull() {
+  id obj = nil;
+  takesNonnullObject(obj); // expected-warning {{nil passed to a callee that requires a non-null 1st parameter}}
+}
+
+void testImplicitCastNullableArgToNonnull(TestObject *_Nullable obj) {
+  if (!obj) {
+    takesNonnullObject(obj); // expected-warning {{nil passed to a callee that requires a non-null 1st parameter}}
+  }
 }
 
 void testIndirectCastNilToNonnullAndPass() {

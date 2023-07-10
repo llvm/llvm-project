@@ -96,7 +96,7 @@ hintedHeadersForStdHeaders(llvm::ArrayRef<tooling::stdlib::Header> Headers,
                            const SourceManager &SM, const PragmaIncludes *PI) {
   llvm::SmallVector<Hinted<Header>> Results;
   for (const auto &H : Headers) {
-    Results.emplace_back(H, Hints::PublicHeader);
+    Results.emplace_back(H, Hints::PublicHeader | Hints::OriginHeader);
     if (!PI)
       continue;
     for (const auto *Export : PI->getExporters(H, SM.getFileManager()))
@@ -186,10 +186,12 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
     if (!FE)
       return {};
     if (!PI)
-      return {{FE, Hints::PublicHeader}};
+      return {{FE, Hints::PublicHeader | Hints::OriginHeader}};
+    bool IsOrigin = true;
     while (FE) {
-      Hints CurrentHints = isPublicHeader(FE, *PI);
-      Results.emplace_back(FE, CurrentHints);
+      Results.emplace_back(FE,
+                           isPublicHeader(FE, *PI) |
+                               (IsOrigin ? Hints::OriginHeader : Hints::None));
       // FIXME: compute transitive exporter headers.
       for (const auto *Export : PI->getExporters(FE, SM.getFileManager()))
         Results.emplace_back(Export, isPublicHeader(Export, *PI));
@@ -205,6 +207,7 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
       // Walkup the include stack for non self-contained headers.
       FID = SM.getDecomposedIncludedLoc(FID).first;
       FE = SM.getFileEntryForID(FID);
+      IsOrigin = false;
     }
     return Results;
   }

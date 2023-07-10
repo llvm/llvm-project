@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_THREADS_CND_SIGNAL_H
 #define LLVM_LIBC_SRC_THREADS_CND_SIGNAL_H
 
-#include "include/threads.h"
+#include <threads.h>
 
 namespace __llvm_libc {
 

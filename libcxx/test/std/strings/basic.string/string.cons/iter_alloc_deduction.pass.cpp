@@ -47,6 +47,7 @@ struct CanDeduce<Iter, Alloc, decltype((void)
 static_assert( CanDeduce<char*, std::allocator<char>>::value);
 static_assert(!CanDeduce<NotAnIterator, std::allocator<char>>::value);
 static_assert(!CanDeduce<NotAnInputIterator, std::allocator<char16_t>>::value);
+static_assert(!CanDeduce<char*, NotAnAllocator<char>>::value);
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert( CanDeduce<wchar_t*, std::allocator<wchar_t>>::value);
 static_assert(!CanDeduce<wchar_t const*, NotAnAllocator<wchar_t>>::value);

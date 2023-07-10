@@ -244,7 +244,8 @@ class MatchStructuredOperandOp<string opname> : Op<Transform_Dialect, opname, [
 
   // TODO: allow this to bind multiple inputs simultaneously after checking that
   // `transform.foreach` works well in matches.
-  let results = (outs Optional<TransformAnyHandle>:$result);
+  let results =
+      (outs Optional<AnyTypeOf<[TransformAnyHandle,Transform_AffineMapParamType]>>:$result);
   let assemblyFormat =
       "$operand_handle `[`"
       "custom<StructuredTransformDims>($raw_position_list, $is_inverted, $is_all)"
@@ -262,12 +263,36 @@ class MatchStructuredOperandOp<string opname> : Op<Transform_Dialect, opname, [
 
 def MatchStructuredInputOp : MatchStructuredOperandOp<"match.structured.input"> {
   let summary =
-    "Captures input operand(s) of a structured operation in an op or value handle";
+    "Captures input operand(s) of a structured operation";
   let description = !strconcat([{
-    Produces a transform dialect value handle associated with the payload value
-    supplied as input operand to the given structured payload operation, or an
-    operation handle to the structured payload operation producing said payload
-    value depending on the result type.
+    Produces a transform dialect value depending on the result type:
+    
+      - If the result type is a value handle, it will be associated with the input
+        operand(s) of the payload operation associated with the operand handle.
+      - If the result type is an operation handle, it will be associated with the
+        operation defining the input operand(s) of the payload operation associated
+        with the operand handle.
+      - If the result type is an affine map parameter type, it will be associated
+        with the indexing map that corresponds to the input operand(s) of the
+        payload operation associated with the operand handle.
+
+    For example, given the following operation:
+
+    ```mlir
+    %arg1 = some.op
+    linalg.matmul ins(%arg1, %arg2 : ...) outs(%arg3 : ...)
+    ```
+
+    in case of a successful match for operand 0 this operation will return, for
+    each of the respective cases above:
+
+      - A handle to `%arg1` if the result is a value handle.
+      - A handle to `some.op` if the result is an operation handle.
+      - A parameter containing the LHS map of the matrix multiplication, i.e.
+        `affine_map<(d0, d1, d2) -> (d0, d2)>` if the result is an affine
+        map parameter.
+
+    The match succeeds if the conditions specified as attributes succeed.
 
     }], 
     StructuredDimDescription<"input">.description,
@@ -288,12 +313,35 @@ def MatchStructuredInputOp : MatchStructuredOperandOp<"match.structured.input"> 
 
 def MatchStructuredInitOp : MatchStructuredOperandOp<"match.structured.init"> {
   let summary =
-    "Captures init operand(s) of a structured operation in an op or value handle";
+    "Captures init operand(s) of a structured operation";
   let description = !strconcat([{
-    Produces a transform dialect value handle associated with the payload value
-    supplied as init(outs) operand to the given structured payload operation,
-    or an operation handle to the structured payload operation producing said
-    payload value depending on the result type.
+    Produces a transform dialect value depending on the result type:
+      - If the result type is a value handle, it will be associated with the init
+        operand(s) of the payload operation associated with the operand handle.
+      - If the result type is an operation handle, it will be associated with the
+        operation defining the init operand(s) of the payload operation associated
+        with the operand handle.
+      - If the result type is an affine map parameter type, it will be associated
+        with the indexing map that corresponds to the init operand(s) of the
+        payload operation associated with the operand handle.
+
+    For example, given the following operation:
+
+    ```mlir
+    %arg3 = linalg.fill
+    linalg.matmul ins(%arg1, %arg2 : ...) outs(%arg3 : ...)
+    ```
+
+    in case of a successful match for init operand 0 this operation will return,
+    for each of the respective cases above:
+
+      - A handle to `%arg3` if the result is a value handle.
+      - A handle to `linalg.fill` if the result is an operation handle.
+      - A parameter containing the result map of the matrix multiplication, i.e.
+        `affine_map<(d0, d1, d2) -> (d0, d1)>` if the result is an affine
+        map parameter.
+
+    The match succeeds if the conditions specified as attributes succeed.
 
     }], 
     StructuredDimDescription<"init">.description,

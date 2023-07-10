@@ -357,7 +357,7 @@ class VOP_MADK_Base<ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
 }
 
 class VOP_MADAK <ValueType vt> : VOP_MADK_Base<vt> {
-  field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
+  field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32, KImmFP16);
   field dag Ins32 = !if(!eq(vt.Size, 32),
                         (ins VSrc_f32_Deferred:$src0, VGPR_32:$src1, ImmOpType:$imm),
                         (ins VSrc_f16_Deferred:$src0, VGPR_32:$src1, ImmOpType:$imm));
@@ -383,7 +383,7 @@ def VOP_MADAK_F16_t16 : VOP_MADAK <f16> {
 def VOP_MADAK_F32 : VOP_MADAK <f32>;
 
 class VOP_MADMK <ValueType vt> : VOP_MADK_Base<vt> {
-  field Operand ImmOpType = !if(!eq(vt.Size, 32), f32kimm, f16kimm);
+  field Operand ImmOpType = !if(!eq(vt.Size, 32), KImmFP32, KImmFP16);
   field dag Ins32 = !if(!eq(vt.Size, 32),
                         (ins VSrc_f32_Deferred:$src0, ImmOpType:$imm, VGPR_32:$src1),
                         (ins VSrc_f16_Deferred:$src0, ImmOpType:$imm, VGPR_32:$src1));

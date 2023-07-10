@@ -34,9 +34,7 @@ static const char *RTLNames[] = {
     /* x86_64 target        */ "libomptarget.rtl.x86_64",
     /* CUDA target          */ "libomptarget.rtl.cuda",
     /* AArch64 target       */ "libomptarget.rtl.aarch64",
-    /* SX-Aurora VE target  */ "libomptarget.rtl.ve",
     /* AMDGPU target        */ "libomptarget.rtl.amdgpu",
-    /* Remote target        */ "libomptarget.rtl.rpc",
 };
 
 PluginManager *PM;
@@ -101,8 +99,6 @@ void RTLsTy::loadRTLs() {
 
   DP("Loading RTLs...\n");
 
-  BoolEnvar NextGenPlugins("LIBOMPTARGET_NEXTGEN_PLUGINS", true);
-
   // Attempt to open all the plugins and, if they exist, check if the interface
   // is correct and if they are supporting any devices.
   for (const char *Name : RTLNames) {
@@ -111,13 +107,6 @@ void RTLsTy::loadRTLs() {
     RTLInfoTy &RTL = AllRTLs.back();
 
     const std::string BaseRTLName(Name);
-    if (NextGenPlugins) {
-      if (attemptLoadRTL(BaseRTLName + ".nextgen.so", RTL))
-        continue;
-
-      DP("Falling back to original plugin...\n");
-    }
-
     if (!attemptLoadRTL(BaseRTLName + ".so", RTL))
       AllRTLs.pop_back();
   }
@@ -196,7 +185,7 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
     return false;
   }
 
-#ifdef LIBOMPTARGET_DEBUG
+#ifdef OMPTARGET_DEBUG
   RTL.RTLName = Name;
 #endif
 

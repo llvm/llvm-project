@@ -33,7 +33,7 @@ void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
                     std::unique_ptr<JITLinkContext> Ctx);
 
 /// Returns a pass that performs linker relaxation. Should be added to
-/// PreFixupPasses.
+/// PostAllocationPasses.
 LinkGraphPassFunction createRelaxationPass_ELF_riscv();
 
 } // end namespace jitlink

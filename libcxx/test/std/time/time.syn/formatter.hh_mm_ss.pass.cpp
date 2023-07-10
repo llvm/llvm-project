@@ -9,9 +9,6 @@
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
 // XFAIL: LIBCXX-FREEBSD-FIXME
 
 // XFAIL: availability-fp_to_chars-missing
@@ -293,7 +290,7 @@ static void test_valid_values() {
         std::chrono::hh_mm_ss(std::chrono::duration<double>(3661.123456)));
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='00'\t"
@@ -314,6 +311,10 @@ static void test_valid_values() {
            "%r='12:00:00 AM'\t"
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
+#  elif defined(_WIN32)
+           "%r='0:00:00'\t"
+           "%X='0:00:00'\t"
+           "%EX='0:00:00'\t"
 #  else
            "%r='午前12:00:00'\t"
            "%X='00:00:00'\t"
@@ -343,6 +344,10 @@ static void test_valid_values() {
            "%r='11:31:30 PM'\t"
            "%X='23時31分30秒'\t"
            "%EX='23時31分30秒'\t"
+#  elif defined(_WIN32)
+           "%r='23:31:30'\t"
+           "%X='23:31:30'\t"
+           "%EX='23:31:30'\t"
 #  else
            "%r='午後11:31:30'\t"
            "%X='23:31:30'\t"
@@ -372,6 +377,10 @@ static void test_valid_values() {
            "%r='03:02:01 AM'\t"
            "%X='03時02分01秒'\t"
            "%EX='03時02分01秒'\t"
+#  elif defined(_WIN32)
+           "%r='3:02:01'\t"
+           "%X='3:02:01'\t"
+           "%EX='3:02:01'\t"
 #  else
            "%r='午前03:02:01'\t"
            "%X='03:02:01'\t"
@@ -401,6 +410,10 @@ static void test_valid_values() {
            "%r='01:01:01 AM'\t"
            "%X='01時01分01秒'\t"
            "%EX='01時01分01秒'\t"
+#  elif defined(_WIN32)
+           "%r='1:01:01'\t"
+           "%X='1:01:01'\t"
+           "%EX='1:01:01'\t"
 #  else
            "%r='午前01:01:01'\t"
            "%X='01:01:01'\t"
@@ -409,7 +422,7 @@ static void test_valid_values() {
            "\n"),
         lfmt,
         std::chrono::hh_mm_ss(std::chrono::duration<double>(3661.123456)));
-#else  // defined(__APPLE__) || defined(_AIX)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='〇'\t"
@@ -486,7 +499,7 @@ static void test_valid_values() {
            "\n"),
         lfmt,
         std::chrono::hh_mm_ss(std::chrono::duration<double>(3661.123456)));
-#endif // defined(__APPLE__) || defined(_AIX)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
 
   std::locale::global(std::locale::classic());
 }

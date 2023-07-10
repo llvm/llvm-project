@@ -12,5 +12,8 @@ program test_resolve04
 !$acc update self(/foo/)
 !$acc end data
 
+!$acc data copy(/foo/)
+!$acc end data
+
 end
 

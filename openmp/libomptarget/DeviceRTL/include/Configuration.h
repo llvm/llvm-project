@@ -37,6 +37,9 @@ uint32_t getDebugKind();
 /// Return the amount of dynamic shared memory that was allocated at launch.
 uint64_t getDynamicMemorySize();
 
+/// Returns the cycles per second of the device's fixed frequency clock.
+uint64_t getClockFrequency();
+
 /// Return if debugging is enabled for the given debug kind.
 bool isDebugMode(DebugKind Level);
 

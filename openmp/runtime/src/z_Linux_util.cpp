@@ -1849,10 +1849,13 @@ int __kmp_read_from_file(char const *path, char const *format, ...) {
 
   va_start(args, format);
   FILE *f = fopen(path, "rb");
-  if (f == NULL)
+  if (f == NULL) {
+    va_end(args);
     return 0;
+  }
   result = vfscanf(f, format, args);
   fclose(f);
+  va_end(args);
 
   return result;
 }

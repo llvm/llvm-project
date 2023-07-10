@@ -53,6 +53,21 @@ public:
                                 PatternRewriter &rewriter) const override;
 };
 
+/// Splits stores which write into multiple adjacent elements of an aggregate
+/// through a pointer. Currently, integers and vector are split and stores
+/// are generated for every element being stored to in a type-consistent manner.
+/// This is done on a best-effort basis.
+class SplitStores : public OpRewritePattern<StoreOp> {
+  unsigned maxVectorSplitSize;
+
+public:
+  SplitStores(MLIRContext *context, unsigned maxVectorSplitSize)
+      : OpRewritePattern(context), maxVectorSplitSize(maxVectorSplitSize) {}
+
+  LogicalResult matchAndRewrite(StoreOp store,
+                                PatternRewriter &rewrite) const override;
+};
+
 } // namespace LLVM
 } // namespace mlir
 

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Arena.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -124,27 +123,6 @@ TEST_F(ArenaTest, GetOrCreateIffReturnsSameExprOnSubsequentCalls) {
   auto &Z = A.create<AtomicBoolValue>();
   auto &XIffZ = A.makeEquals(X, Z);
   EXPECT_NE(&XIffY1, &XIffZ);
-}
-
-TEST_F(ArenaTest, ValueToFormula) {
-  auto &X = A.create<AtomicBoolValue>();
-  auto &Y = A.create<AtomicBoolValue>();
-  auto &XIffY = A.makeEquals(X, Y);
-  auto &XOrNotY = A.makeOr(X, A.makeNot(Y));
-  auto &Implies = A.makeImplies(XIffY, XOrNotY);
-
-  EXPECT_EQ(llvm::to_string(A.getFormula(Implies)),
-            "((V0 = V1) => (V0 | !V1))");
-}
-
-TEST_F(ArenaTest, ValueToFormulaCached) {
-  auto &X = A.create<AtomicBoolValue>();
-  auto &Y = A.create<AtomicBoolValue>();
-  auto &XIffY = A.makeEquals(X, Y);
-
-  auto &Formula1 = A.getFormula(XIffY);
-  auto &Formula2 = A.getFormula(XIffY);
-  EXPECT_EQ(&Formula1, &Formula2);
 }
 
 } // namespace
