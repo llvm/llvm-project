@@ -332,17 +332,6 @@ public:
       rewriter.replaceOpWithNewOp<mlir::arith::XOrIOp>(
           op, op.getType(), op.getLhs(), op.getRhs());
       break;
-      // case mlir::cir::BinOpKind::Shl:
-      //   rewriter.replaceOpWithNewOp<mlir::arith::ShLIOp>(
-      //       op, op.getType(), op.getLhs(), op.getRhs());
-      //   break;
-      // case mlir::cir::BinOpKind::Shr:
-      //   if (type.isSignlessInteger())
-      //     rewriter.replaceOpWithNewOp<mlir::arith::ShRUIOp>(
-      //         op, op.getType(), op.getLhs(), op.getRhs());
-      //   else
-      //     llvm_unreachable("integer type not supported in CIR yet");
-      //   break;
     }
 
     return mlir::LogicalResult::success();

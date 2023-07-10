@@ -1095,15 +1095,62 @@ mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
   return Builder.create<mlir::cir::PtrDiffOp>(CGF.getLoc(Ops.Loc),
                                               CGF.PtrDiffTy, Ops.LHS, Ops.RHS);
 }
+
 mlir::Value ScalarExprEmitter::buildShl(const BinOpInfo &Ops) {
+  // TODO: This misses out on the sanitizer check below.
+  if (Ops.isFixedPointOp())
+    llvm_unreachable("NYI");
+
+  // CIR accepts shift between different types, meaning nothing special
+  // to be done here. OTOH, LLVM requires the LHS and RHS to be the same type:
+  // promote or truncate the RHS to the same size as the LHS.
+
+  bool SanitizeSignedBase = CGF.SanOpts.has(SanitizerKind::ShiftBase) &&
+                            Ops.Ty->hasSignedIntegerRepresentation() &&
+                            !CGF.getLangOpts().isSignedOverflowDefined() &&
+                            !CGF.getLangOpts().CPlusPlus20;
+  bool SanitizeUnsignedBase =
+      CGF.SanOpts.has(SanitizerKind::UnsignedShiftBase) &&
+      Ops.Ty->hasUnsignedIntegerRepresentation();
+  bool SanitizeBase = SanitizeSignedBase || SanitizeUnsignedBase;
+  bool SanitizeExponent = CGF.SanOpts.has(SanitizerKind::ShiftExponent);
+
+  // OpenCL 6.3j: shift values are effectively % word size of LHS.
+  if (CGF.getLangOpts().OpenCL)
+    llvm_unreachable("NYI");
+  else if ((SanitizeBase || SanitizeExponent) &&
+           Ops.LHS.getType().isa<mlir::cir::IntType>()) {
+    llvm_unreachable("NYI");
+  }
+
   return Builder.create<mlir::cir::ShiftOp>(
       CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), Ops.LHS, Ops.RHS,
       CGF.getBuilder().getUnitAttr());
 }
+
 mlir::Value ScalarExprEmitter::buildShr(const BinOpInfo &Ops) {
+  // TODO: This misses out on the sanitizer check below.
+  if (Ops.isFixedPointOp())
+    llvm_unreachable("NYI");
+
+  // CIR accepts shift between different types, meaning nothing special
+  // to be done here. OTOH, LLVM requires the LHS and RHS to be the same type:
+  // promote or truncate the RHS to the same size as the LHS.
+
+  // OpenCL 6.3j: shift values are effectively % word size of LHS.
+  if (CGF.getLangOpts().OpenCL)
+    llvm_unreachable("NYI");
+  else if (CGF.SanOpts.has(SanitizerKind::ShiftExponent) &&
+           Ops.LHS.getType().isa<mlir::cir::IntType>()) {
+    llvm_unreachable("NYI");
+  }
+
+  // Note that we don't need to distinguish unsigned treatment at this
+  // point since it will be handled later by LLVM lowering.
   return Builder.create<mlir::cir::ShiftOp>(
       CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), Ops.LHS, Ops.RHS);
 }
+
 mlir::Value ScalarExprEmitter::buildAnd(const BinOpInfo &Ops) {
   return Builder.create<mlir::cir::BinOp>(
       CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::And,
