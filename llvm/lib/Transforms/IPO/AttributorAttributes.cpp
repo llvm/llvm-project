@@ -957,10 +957,8 @@ ChangeStatus AA::PointerInfo::State::addAccess(
   }
 
   auto AddToBins = [&](const AAPointerInfo::RangeList &ToAdd) {
-    LLVM_DEBUG(
-      if (ToAdd.size())
-        dbgs() << "[AAPointerInfo] Inserting access in new offset bins\n";
-    );
+    LLVM_DEBUG(if (ToAdd.size()) dbgs()
+                   << "[AAPointerInfo] Inserting access in new offset bins\n";);
 
     for (auto Key : ToAdd) {
       LLVM_DEBUG(dbgs() << "    key " << Key << "\n");
@@ -993,10 +991,8 @@ ChangeStatus AA::PointerInfo::State::addAccess(
   // from the offset bins.
   AAPointerInfo::RangeList ToRemove;
   AAPointerInfo::RangeList::set_difference(ExistingRanges, NewRanges, ToRemove);
-  LLVM_DEBUG(
-    if (ToRemove.size())
-      dbgs() << "[AAPointerInfo] Removing access from old offset bins\n";
-  );
+  LLVM_DEBUG(if (ToRemove.size()) dbgs()
+                 << "[AAPointerInfo] Removing access from old offset bins\n";);
 
   for (auto Key : ToRemove) {
     LLVM_DEBUG(dbgs() << "    key " << Key << "\n");
@@ -3119,7 +3115,8 @@ struct AANonConvergentFunction final : AANonConvergentImpl {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    // If all function calls are known to not be convergent, we are not convergent.
+    // If all function calls are known to not be convergent, we are not
+    // convergent.
     auto CalleeIsNotConvergent = [&](Instruction &Inst) {
       CallBase &CB = cast<CallBase>(Inst);
       auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
@@ -3747,8 +3744,9 @@ struct CachedReachabilityAA : public BaseTy {
       QueryCache.erase(&RQI);
 
     // Insert a plain RQI (w/o exclusion set) if that makes sense. Two options:
-    // 1) If it is reachable, it doesn't matter if we have an exclusion set for this query.
-    // 2) We did not use the exclusion set, potentially because there is none.
+    // 1) If it is reachable, it doesn't matter if we have an exclusion set for
+    // this query. 2) We did not use the exclusion set, potentially because
+    // there is none.
     if (Result == RQITy::Reachable::Yes || !UsedExclusionSet) {
       RQITy PlainRQI(RQI.From, RQI.To);
       if (!QueryCache.count(&PlainRQI)) {
@@ -8297,8 +8295,8 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
       ME = MemoryEffects::writeOnly();
 
     A.removeAttrs(getIRPosition(), AttrKinds);
-    return A.manifestAttrs(getIRPosition(),
-                           Attribute::getWithMemoryEffects(CB.getContext(), ME));
+    return A.manifestAttrs(
+        getIRPosition(), Attribute::getWithMemoryEffects(CB.getContext(), ME));
   }
 
   /// See AbstractAttribute::trackStatistics()
@@ -8666,9 +8664,8 @@ struct AAMemoryLocationImpl : public AAMemoryLocation {
       return ChangeStatus::UNCHANGED;
     MemoryEffects ME = DeducedAttrs[0].getMemoryEffects();
 
-    return A.manifestAttrs(
-        IRP,
-        Attribute::getWithMemoryEffects(IRP.getAnchorValue().getContext(), ME));
+    return A.manifestAttrs(IRP, Attribute::getWithMemoryEffects(
+                                    IRP.getAnchorValue().getContext(), ME));
   }
 
   /// See AAMemoryLocation::checkForAllAccessesToMemoryKind(...).
@@ -12023,7 +12020,7 @@ struct AAUnderlyingObjectsFunction final : AAUnderlyingObjectsImpl {
   AAUnderlyingObjectsFunction(const IRPosition &IRP, Attributor &A)
       : AAUnderlyingObjectsImpl(IRP, A) {}
 };
-}
+} // namespace
 
 const char AAReturnedValues::ID = 0;
 const char AANoUnwind::ID = 0;

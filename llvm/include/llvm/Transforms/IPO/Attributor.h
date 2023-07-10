@@ -1125,7 +1125,8 @@ struct AnalysisGetter {
   // allow partial specialization, which is needed in this case. So instead, we
   // use a constexpr bool to perform the SFINAE, and then use this information
   // inside the function template.
-  template <typename, typename = void> static constexpr bool HasLegacyWrapper = false;
+  template <typename, typename = void>
+  static constexpr bool HasLegacyWrapper = false;
 
   template <typename Analysis>
   typename Analysis::Result *getAnalysis(const Function &F,
@@ -1168,7 +1169,7 @@ private:
 
 template <typename Analysis>
 constexpr bool AnalysisGetter::HasLegacyWrapper<
-      Analysis, std::void_t<typename Analysis::LegacyWrapper>> = true;
+    Analysis, std::void_t<typename Analysis::LegacyWrapper>> = true;
 
 /// Data structure to hold cached (LLVM-IR) information.
 ///
@@ -5523,7 +5524,8 @@ struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
   AANonConvergent(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
 
   /// Create an abstract attribute view for the position \p IRP.
-  static AANonConvergent &createForPosition(const IRPosition &IRP, Attributor &A);
+  static AANonConvergent &createForPosition(const IRPosition &IRP,
+                                            Attributor &A);
 
   /// Return true if "non-convergent" is assumed.
   bool isAssumedNotConvergent() const { return getAssumed(); }
@@ -5537,7 +5539,8 @@ struct AANonConvergent : public StateWrapper<BooleanState, AbstractAttribute> {
   /// See AbstractAttribute::getIdAddr()
   const char *getIdAddr() const override { return &ID; }
 
-  /// This function should return true if the type of the \p AA is AANonConvergent.
+  /// This function should return true if the type of the \p AA is
+  /// AANonConvergent.
   static bool classof(const AbstractAttribute *AA) {
     return (AA->getIdAddr() == &ID);
   }
