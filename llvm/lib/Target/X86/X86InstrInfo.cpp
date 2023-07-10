@@ -971,19 +971,18 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
                                    MachineInstr **AndInstr,
                                    const TargetRegisterInfo *TRI,
                                    bool &NoSignFlag, bool &ClearsOverflowFlag) {
-  if (!(CmpValDefInstr.getOpcode() == X86::SUBREG_TO_REG &&
-        CmpInstr.getOpcode() == X86::TEST64rr) &&
-      !(CmpValDefInstr.getOpcode() == X86::COPY &&
-        CmpInstr.getOpcode() == X86::TEST16rr))
+  if (CmpValDefInstr.getOpcode() != X86::SUBREG_TO_REG)
     return false;
 
-  // CmpInstr is a TEST16rr/TEST64rr instruction, and
-  // `X86InstrInfo::analyzeCompare` guarantees that it's analyzable only if two
-  // registers are identical.
-  assert((CmpInstr.getOperand(0).getReg() == CmpInstr.getOperand(1).getReg()) &&
-         "CmpInstr is an analyzable TEST16rr/TEST64rr, and "
-         "`X86InstrInfo::analyzeCompare` requires two reg operands are the"
-         "same.");
+  if (CmpInstr.getOpcode() != X86::TEST64rr)
+    return false;
+
+  // CmpInstr is a TEST64rr instruction, and `X86InstrInfo::analyzeCompare`
+  // guarantees that it's analyzable only if two registers are identical.
+  assert(
+      (CmpInstr.getOperand(0).getReg() == CmpInstr.getOperand(1).getReg()) &&
+      "CmpInstr is an analyzable TEST64rr, and `X86InstrInfo::analyzeCompare` "
+      "requires two reg operands are the same.");
 
   // Caller (`X86InstrInfo::optimizeCompareInstr`) guarantees that
   // `CmpValDefInstr` defines the value that's used by `CmpInstr`; in this case
@@ -991,35 +990,20 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
   // redundant.
   assert(
       (MRI->getVRegDef(CmpInstr.getOperand(0).getReg()) == &CmpValDefInstr) &&
-      "Caller guarantees that TEST64rr is a user of SUBREG_TO_REG or TEST16rr "
-      "is a user of COPY sub16bit.");
-  MachineInstr *VregDefInstr = nullptr;
-  if (CmpInstr.getOpcode() == X86::TEST16rr) {
-    VregDefInstr = MRI->getVRegDef(CmpValDefInstr.getOperand(1).getReg());
-    if (!VregDefInstr)
-      return false;
-    // We can only remove test when AND32ri or AND64ri32 whose imm can fit 16bit
-    // size, others 32/64 bit ops would test higher bits which test16rr don't
-    // want to.
-    if (!((VregDefInstr->getOpcode() == X86::AND32ri ||
-           VregDefInstr->getOpcode() == X86::AND64ri32) &&
-          isUInt<16>(VregDefInstr->getOperand(2).getImm())))
-      return false;
-  }
+      "Caller guarantees that TEST64rr is a user of SUBREG_TO_REG.");
 
-  if (CmpInstr.getOpcode() == X86::TEST64rr) {
-    // As seen in X86 td files, CmpValDefInstr.getOperand(1).getImm() is
-    // typically 0.
-    if (CmpValDefInstr.getOperand(1).getImm() != 0)
-      return false;
+  // As seen in X86 td files, CmpValDefInstr.getOperand(1).getImm() is typically
+  // 0.
+  if (CmpValDefInstr.getOperand(1).getImm() != 0)
+    return false;
 
-    // As seen in X86 td files, CmpValDefInstr.getOperand(3) is typically
-    // sub_32bit or sub_xmm.
-    if (CmpValDefInstr.getOperand(3).getImm() != X86::sub_32bit)
-      return false;
+  // As seen in X86 td files, CmpValDefInstr.getOperand(3) is typically
+  // sub_32bit or sub_xmm.
+  if (CmpValDefInstr.getOperand(3).getImm() != X86::sub_32bit)
+    return false;
 
-    VregDefInstr = MRI->getVRegDef(CmpValDefInstr.getOperand(2).getReg());
-  }
+  MachineInstr *VregDefInstr =
+      MRI->getVRegDef(CmpValDefInstr.getOperand(2).getReg());
 
   assert(VregDefInstr && "Must have a definition (SSA)");
 
@@ -1037,11 +1021,6 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
     //   ...                                // EFLAGS not changed
     //   %extended_reg = subreg_to_reg 0, %reg, %subreg.sub_32bit
     //   test64rr %extended_reg, %extended_reg, implicit-def $eflags
-    // or
-    //   %reg = and32* ...
-    //   ...                         // EFLAGS not changed.
-    //   %src_reg = copy %reg.sub_16bit:gr32
-    //   test16rr %src_reg, %src_reg, implicit-def $eflags
     //
     // If subsequent readers use a subset of bits that don't change
     // after `and*` instructions, it's likely that the test64rr could
@@ -4442,15 +4421,10 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           break;
         }
 
-        // Look back for the following pattern, in which case the
-        // test16rr/test64rr instruction could be erased.
+        // Look back for the following pattern, in which case the test64rr
+        // instruction could be erased.
         //
-        // Example for test16rr:
-        //  %reg = and32ri %in_reg, 5
-        //  ...                         // EFLAGS not changed.
-        //  %src_reg = copy %reg.sub_16bit:gr32
-        //  test16rr %src_reg, %src_reg, implicit-def $eflags
-        // Example for test64rr:
+        // Example:
         //  %reg = and32ri %in_reg, 5
         //  ...                         // EFLAGS not changed.
         //  %src_reg = subreg_to_reg 0, %reg, %subreg.sub_index
