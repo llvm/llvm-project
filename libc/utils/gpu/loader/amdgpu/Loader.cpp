@@ -150,6 +150,8 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
 
   // Register RPC callbacks for the malloc and free functions on HSA.
   uint32_t device_id = 0;
+  register_rpc_callbacks(device_id);
+
   auto tuple = std::make_tuple(dev_agent, coarsegrained_pool);
   rpc_register_callback(
       device_id, RPC_MALLOC,

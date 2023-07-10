@@ -26,6 +26,9 @@ static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
 static_assert(RPC_MAXIMUM_PORT_COUNT == rpc::MAX_PORT_COUNT,
               "Incorrect maximum port count");
 
+static_assert(RPC_MAXIMUM_LANE_SIZE == rpc::MAX_LANE_SIZE,
+              "Incorrect maximum port count");
+
 // The client needs to support different lane sizes for the SIMT model. Because
 // of this we need to select between the possible sizes that the client can use.
 struct Server {
@@ -139,43 +142,6 @@ private:
       port->send([&](rpc::Buffer *, uint32_t id) {
         delete[] reinterpret_cast<uint8_t *>(args[id]);
       });
-      break;
-    }
-    // TODO: Move handling of these  test cases to the loader implementation.
-    case RPC_TEST_INCREMENT: {
-      port->recv_and_send([](rpc::Buffer *buffer) {
-        reinterpret_cast<uint64_t *>(buffer->data)[0] += 1;
-      });
-      break;
-    }
-    case RPC_TEST_INTERFACE: {
-      uint64_t cnt = 0;
-      bool end_with_recv;
-      port->recv([&](rpc::Buffer *buffer) { end_with_recv = buffer->data[0]; });
-      port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
-      port->send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
-      port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
-      port->send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
-      port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
-      port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
-      port->send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
-      port->send([&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
-      if (end_with_recv)
-        port->recv([&](rpc::Buffer *buffer) { cnt = buffer->data[0]; });
-      else
-        port->send(
-            [&](rpc::Buffer *buffer) { buffer->data[0] = cnt = cnt + 1; });
-      break;
-    }
-    case RPC_TEST_STREAM: {
-      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
-      void *dst[rpc::MAX_LANE_SIZE] = {nullptr};
-      port->recv_n(dst, sizes, [](uint64_t size) { return new char[size]; });
-      port->send_n(dst, sizes);
-      for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
-        if (dst[i])
-          delete[] reinterpret_cast<uint8_t *>(dst[i]);
-      }
       break;
     }
     case RPC_NOOP: {
@@ -375,6 +341,11 @@ void rpc_send(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
       port);
 }
 
+void rpc_send_n(rpc_port_t ref, const void *const *src, uint64_t *size) {
+  auto port = get_port(ref);
+  std::visit([=](auto &port) { port->send_n(src, size); }, port);
+}
+
 void rpc_recv(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
   auto port = get_port(ref);
   std::visit(
@@ -384,6 +355,13 @@ void rpc_recv(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
         });
       },
       port);
+}
+
+void rpc_recv_n(rpc_port_t ref, void **dst, uint64_t *size, rpc_alloc_ty alloc,
+                void *data) {
+  auto port = get_port(ref);
+  auto alloc_fn = [=](uint64_t size) { return alloc(size, data); };
+  std::visit([=](auto &port) { port->recv_n(dst, size, alloc_fn); }, port);
 }
 
 void rpc_recv_and_send(rpc_port_t ref, rpc_port_callback_ty callback,
