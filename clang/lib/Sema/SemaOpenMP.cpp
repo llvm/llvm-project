@@ -2010,7 +2010,7 @@ void Sema::popOpenMPFunctionRegion(const FunctionScopeInfo *OldFSI) {
 }
 
 static bool isOpenMPDeviceDelayedContext(Sema &S) {
-  assert(S.LangOpts.OpenMP && S.LangOpts.OpenMPIsDevice &&
+  assert(S.LangOpts.OpenMP && S.LangOpts.OpenMPIsTargetDevice &&
          "Expected OpenMP device compilation.");
   return !S.isInOpenMPTargetExecutionDirective();
 }
@@ -2027,7 +2027,7 @@ enum class FunctionEmissionStatus {
 Sema::SemaDiagnosticBuilder
 Sema::diagIfOpenMPDeviceCode(SourceLocation Loc, unsigned DiagID,
                              const FunctionDecl *FD) {
-  assert(LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
+  assert(LangOpts.OpenMP && LangOpts.OpenMPIsTargetDevice &&
          "Expected OpenMP device compilation.");
 
   SemaDiagnosticBuilder::Kind Kind = SemaDiagnosticBuilder::K_Nop;
@@ -2065,7 +2065,7 @@ Sema::diagIfOpenMPDeviceCode(SourceLocation Loc, unsigned DiagID,
 Sema::SemaDiagnosticBuilder Sema::diagIfOpenMPHostCode(SourceLocation Loc,
                                                        unsigned DiagID,
                                                        const FunctionDecl *FD) {
-  assert(LangOpts.OpenMP && !LangOpts.OpenMPIsDevice &&
+  assert(LangOpts.OpenMP && !LangOpts.OpenMPIsTargetDevice &&
          "Expected OpenMP host compilation.");
 
   SemaDiagnosticBuilder::Kind Kind = SemaDiagnosticBuilder::K_Nop;
@@ -2702,16 +2702,16 @@ void Sema::finalizeOpenMPDelayedAnalysis(const FunctionDecl *Caller,
   std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
       OMPDeclareTargetDeclAttr::getDeviceType(Caller->getMostRecentDecl());
   // Ignore host functions during device analyzis.
-  if (LangOpts.OpenMPIsDevice &&
+  if (LangOpts.OpenMPIsTargetDevice &&
       (!DevTy || *DevTy == OMPDeclareTargetDeclAttr::DT_Host))
     return;
   // Ignore nohost functions during host analyzis.
-  if (!LangOpts.OpenMPIsDevice && DevTy &&
+  if (!LangOpts.OpenMPIsTargetDevice && DevTy &&
       *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost)
     return;
   const FunctionDecl *FD = Callee->getMostRecentDecl();
   DevTy = OMPDeclareTargetDeclAttr::getDeviceType(FD);
-  if (LangOpts.OpenMPIsDevice && DevTy &&
+  if (LangOpts.OpenMPIsTargetDevice && DevTy &&
       *DevTy == OMPDeclareTargetDeclAttr::DT_Host) {
     // Diagnose host function called during device codegen.
     StringRef HostDevTy =
@@ -2722,8 +2722,8 @@ void Sema::finalizeOpenMPDelayedAnalysis(const FunctionDecl *Caller,
         << HostDevTy;
     return;
   }
-  if (!LangOpts.OpenMPIsDevice && !LangOpts.OpenMPOffloadMandatory && DevTy &&
-      *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost) {
+  if (!LangOpts.OpenMPIsTargetDevice && !LangOpts.OpenMPOffloadMandatory &&
+      DevTy && *DevTy == OMPDeclareTargetDeclAttr::DT_NoHost) {
     // In OpenMP 5.2 or later, if the function has a host variant then allow
     // that to be called instead
     auto &&HasHostAttr = [](const FunctionDecl *Callee) {
@@ -3386,7 +3386,7 @@ Sema::ActOnOpenMPAllocateDirective(SourceLocation Loc, ArrayRef<Expr *> VarList,
     // allocate directives that appear in a target region must specify an
     // allocator clause unless a requires directive with the dynamic_allocators
     // clause is present in the same compilation unit.
-    if (LangOpts.OpenMPIsDevice &&
+    if (LangOpts.OpenMPIsTargetDevice &&
         !DSAStack->hasRequiresDeclWithClause<OMPDynamicAllocatorsClause>())
       targetDiag(Loc, diag::err_expected_allocator_clause);
   } else {
@@ -23659,7 +23659,7 @@ OMPClause *Sema::ActOnOpenMPAllocateClause(
     // target region must specify an allocator expression unless a requires
     // directive with the dynamic_allocators clause is present in the same
     // compilation unit.
-    if (LangOpts.OpenMPIsDevice &&
+    if (LangOpts.OpenMPIsTargetDevice &&
         !DSAStack->hasRequiresDeclWithClause<OMPDynamicAllocatorsClause>())
       targetDiag(StartLoc, diag::err_expected_allocator_expression);
   }

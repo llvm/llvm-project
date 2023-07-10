@@ -42,7 +42,7 @@
 // RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FOPENMP-EQ-TARGET %s
 
-// CHK-FOPENMP-EQ-TARGET: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+// CHK-FOPENMP-EQ-TARGET: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
 
 /// ###########################################################################
 
@@ -50,7 +50,7 @@
 // RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu -Xopenmp-target -mcpu=pwr7 %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHK-FOPENMP-TARGET %s
 
-// CHK-FOPENMP-TARGET: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+// CHK-FOPENMP-TARGET: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
 
 /// ##########################################################################
 
@@ -58,7 +58,7 @@
 // RUN:    %clang -### -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu --target=powerpc64le-ibm-linux-gnu -mcpu=pwr7 %s 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MCPU-TO-SAME-TRIPLE %s
 
-// CHK-FOPENMP-MCPU-TO-SAME-TRIPLE: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+// CHK-FOPENMP-MCPU-TO-SAME-TRIPLE: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
 
 /// ##########################################################################
 
@@ -66,7 +66,7 @@
 // RUN:    %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda --target=powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MARCH-TO-GPU %s
 
-// CHK-FOPENMP-MARCH-TO-GPU-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+// CHK-FOPENMP-MARCH-TO-GPU-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
 
 /// ###########################################################################
 
@@ -74,7 +74,7 @@
 // RUN:    %clang -### -fopenmp=libomp -fopenmp-targets=x86_64-unknown-linux-gnu --target=powerpc64le-ibm-linux-gnu -march=pwr7 %s 2>&1 \
 // RUN:    | FileCheck -check-prefix=CHK-FOPENMP-MARCH-TO-X86 %s
 
-// CHK-FOPENMP-MARCH-TO-X86-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-device"
+// CHK-FOPENMP-MARCH-TO-X86-NOT: clang{{.*}} "-target-cpu" "pwr7" {{.*}}"-fopenmp-is-target-device"
 
 /// ###########################################################################
 
@@ -166,11 +166,11 @@
 // CHK-PHASES-FILES-NEXT: 42: assembler, {41}, object, (host-openmp)
 // CHK-PHASES-FILES-NEXT: 43: clang-linker-wrapper, {0, 21, 42}, image, (host-openmp)
 
-/// Check -fopenmp-is-device is passed when compiling for the device.
+/// Check -fopenmp-is-target-device is passed when compiling for the device.
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHK-FOPENMP-IS-DEVICE %s
+// RUN:   | FileCheck -check-prefix=CHK-fopenmp-is-target-device %s
 
-// CHK-FOPENMP-IS-DEVICE: "-cc1"{{.*}} "-aux-triple" "powerpc64le-unknown-linux" {{.*}}"-fopenmp-is-device" "-fopenmp-host-ir-file-path" {{.*}}.c"
+// CHK-fopenmp-is-target-device: "-cc1"{{.*}} "-aux-triple" "powerpc64le-unknown-linux" {{.*}}"-fopenmp-is-target-device" "-fopenmp-host-ir-file-path" {{.*}}.c"
 
 /// Check arguments to the linker wrapper
 // RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu %s 2>&1 \
