@@ -318,9 +318,8 @@ static Type parseArrayType(SPIRVDialect const &dialect,
   return ArrayType::get(elementType, count, stride);
 }
 
-// cooperative-matrix-type ::= `!spirv.coopmatrix` `<` element-type ',' scope
-// ','
-//                                                   rows ',' columns>`
+// cooperative-matrix-type ::=
+//   `!spirv.NV.coopmatrix` `<` rows `x` columns `x` element-type ',' scope>
 static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
                                        DialectAsmParser &parser) {
   if (parser.parseLess())
@@ -786,7 +785,7 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
 
   if (keyword == "array")
     return parseArrayType(*this, parser);
-  if (keyword == "coopmatrix")
+  if (keyword == "NV.coopmatrix")
     return parseCooperativeMatrixType(*this, parser);
   if (keyword == "jointmatrix")
     return parseJointMatrixType(*this, parser);
@@ -891,7 +890,7 @@ static void print(StructType type, DialectAsmPrinter &os) {
 }
 
 static void print(CooperativeMatrixNVType type, DialectAsmPrinter &os) {
-  os << "coopmatrix<" << type.getRows() << "x" << type.getColumns() << "x";
+  os << "NV.coopmatrix<" << type.getRows() << "x" << type.getColumns() << "x";
   os << type.getElementType() << ", " << stringifyScope(type.getScope());
   os << ">";
 }

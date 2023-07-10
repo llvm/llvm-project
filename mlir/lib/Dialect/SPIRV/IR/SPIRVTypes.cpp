@@ -203,23 +203,23 @@ std::optional<int64_t> CompositeType::getSizeInBytes() {
 }
 
 //===----------------------------------------------------------------------===//
-// CooperativeMatrixType
+// CooperativeMatrixNVType
 //===----------------------------------------------------------------------===//
 
-struct spirv::detail::CooperativeMatrixTypeStorage : public TypeStorage {
+struct spirv::detail::CooperativeMatrixNVTypeStorage : public TypeStorage {
   using KeyTy = std::tuple<Type, Scope, unsigned, unsigned>;
 
-  static CooperativeMatrixTypeStorage *
+  static CooperativeMatrixNVTypeStorage *
   construct(TypeStorageAllocator &allocator, const KeyTy &key) {
-    return new (allocator.allocate<CooperativeMatrixTypeStorage>())
-        CooperativeMatrixTypeStorage(key);
+    return new (allocator.allocate<CooperativeMatrixNVTypeStorage>())
+        CooperativeMatrixNVTypeStorage(key);
   }
 
   bool operator==(const KeyTy &key) const {
     return key == KeyTy(elementType, scope, rows, columns);
   }
 
-  CooperativeMatrixTypeStorage(const KeyTy &key)
+  CooperativeMatrixNVTypeStorage(const KeyTy &key)
       : elementType(std::get<0>(key)), rows(std::get<2>(key)),
         columns(std::get<3>(key)), scope(std::get<1>(key)) {}
 
