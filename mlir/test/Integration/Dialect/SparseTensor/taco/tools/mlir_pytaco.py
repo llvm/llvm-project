@@ -785,6 +785,7 @@ class IndexExpr(abc.ABC):
       self,
       dst: "Tensor",
       dst_indices: Tuple["IndexVar", ...],
+      options: str = ""
   ) -> execution_engine.ExecutionEngine:
     """Compiles the tensor assignment dst[dst_indices] = expression.
 
@@ -807,7 +808,7 @@ class IndexExpr(abc.ABC):
       self._emit_assignment(module, dst, dst_indices, expr_to_info,
                             input_accesses)
       backend = KokkosBackend.KokkosBackendLinalgOnTensorsBackend(dump_mlir=True, before_mlir_filename = "dump_pytaco.mlir", after_mlir_filename = "lowered_dump_pytaco.mlir")
-      engine = backend.compile_sparse(module)
+      engine = backend.compile_sparse(module, options=options)
     return engine
 
   def get_module(
