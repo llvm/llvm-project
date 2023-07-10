@@ -565,6 +565,46 @@ LogicalResult BitcastStores::matchAndRewrite(StoreOp store,
   return success();
 }
 
+LogicalResult SplitGEP::matchAndRewrite(GEPOp gepOp,
+                                        PatternRewriter &rewriter) const {
+  FailureOr<Type> typeHint = getRequiredConsistentGEPType(gepOp);
+  if (succeeded(typeHint) || gepOp.getIndices().size() <= 2) {
+    // GEP is not canonical or a single aggregate deep, nothing to do here.
+    return failure();
+  }
+
+  auto indexToGEPArg =
+      [](GEPIndicesAdaptor<ValueRange>::value_type index) -> GEPArg {
+    if (auto integerAttr = dyn_cast<IntegerAttr>(index))
+      return integerAttr.getValue().getSExtValue();
+    return cast<Value>(index);
+  };
+
+  GEPIndicesAdaptor<ValueRange> indices = gepOp.getIndices();
+
+  auto splitIter = std::next(indices.begin(), 2);
+
+  // Split of the first GEP using the first two indices.
+  auto subGepOp = rewriter.create<GEPOp>(
+      gepOp.getLoc(), gepOp.getType(), gepOp.getSourceElementType(),
+      gepOp.getBase(),
+      llvm::map_to_vector(llvm::make_range(indices.begin(), splitIter),
+                          indexToGEPArg),
+      gepOp.getInbounds());
+
+  // The second GEP indexes on the result pointer element type of the previous
+  // with all the remaining indices and a zero upfront. If this GEP has more
+  // than two indices remaining it'll be further split in subsequent pattern
+  // applications.
+  SmallVector<GEPArg> newIndices = {0};
+  llvm::transform(llvm::make_range(splitIter, indices.end()),
+                  std::back_inserter(newIndices), indexToGEPArg);
+  rewriter.replaceOpWithNewOp<GEPOp>(gepOp, gepOp.getType(),
+                                     subGepOp.getResultPtrElementType(),
+                                     subGepOp, newIndices, gepOp.getInbounds());
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Type consistency pass
 //===----------------------------------------------------------------------===//
@@ -580,6 +620,7 @@ struct LLVMTypeConsistencyPass
     rewritePatterns.add<CanonicalizeAlignedGep>(&getContext());
     rewritePatterns.add<SplitStores>(&getContext(), maxVectorSplitSize);
     rewritePatterns.add<BitcastStores>(&getContext());
+    rewritePatterns.add<SplitGEP>(&getContext());
     FrozenRewritePatternSet frozen(std::move(rewritePatterns));
 
     if (failed(applyPatternsAndFoldGreedily(getOperation(), frozen)))
