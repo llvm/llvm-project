@@ -13476,7 +13476,7 @@ void SITargetLowering::AddIMGInit(MachineInstr &MI) const {
     return;
 
   unsigned TFEVal = TFE ? TFE->getImm() : 0;
-  unsigned LWEVal = LWE->getImm();
+  unsigned LWEVal = LWE ? LWE->getImm() : 0;
   unsigned D16Val = D16 ? D16->getImm() : 0;
 
   if (!TFEVal && !LWEVal)
@@ -13603,7 +13603,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     return;
   }
 
-  if (TII->isMIMG(MI)) {
+  if (TII->isImage(MI)) {
     if (!MI.mayStore())
       AddIMGInit(MI);
     TII->enforceOperandRCAlignment(MI, AMDGPU::OpName::vaddr);
