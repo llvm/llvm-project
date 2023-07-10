@@ -286,7 +286,7 @@ public:
   // current computers global settings.
   virtual FileSpecList
   LocateExecutableScriptingResources(Target *target, Module &module,
-                                     Stream *feedback_stream);
+                                     Stream &feedback_stream);
 
   virtual Status GetSharedModule(
       const ModuleSpec &module_spec, Process *process,
