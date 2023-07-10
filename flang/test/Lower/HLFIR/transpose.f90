@@ -28,3 +28,20 @@ subroutine transpose2(a, out)
   out = transpose(reshape(a, (/N, M/)))
 end subroutine
 ! CHECK-LABEL: func.func @_QPtranspose2(
+
+subroutine transpose3(m, res)
+  integer, allocatable :: m(:,:)
+  integer :: res(2, 1)
+  res = TRANSPOSE(m)
+endsubroutine
+! CHECK-LABEL: func.func @_QPtranspose3
+! CHECK:           %[[M_ARG:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
+! CHECK:           %[[RES_ARG:.*]]: !fir.ref<!fir.array<2x1xi32>>
+! CHECK-DAG:     %[[ARG:.*]]:2 = hlfir.declare %[[M_ARG]]
+! CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[RES_ARG]](%[[RES_SHAPE:.*]]) {[[NAME2:.*]]} : (!fir.ref<!fir.array<2x1xi32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<2x1xi32>>, !fir.ref<!fir.array<2x1xi32>>)
+! CHECK:         %[[ARG_LOADED:.*]] = fir.load %[[ARG]]#0
+! CHECK:         %[[EXPR:.*]] = hlfir.transpose %[[ARG_LOADED]] : (!fir.box<!fir.heap<!fir.array<?x?xi32>>>) -> !hlfir.expr<?x?xi32>
+! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[RES]]#0
+! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
+! CHECK-NEXT:    return
+! CHECK-NEXT:  }

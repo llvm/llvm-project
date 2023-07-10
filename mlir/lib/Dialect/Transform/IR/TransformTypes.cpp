@@ -39,12 +39,38 @@ void transform::TransformDialect::initializeTypes() {
 }
 
 //===----------------------------------------------------------------------===//
+// transform::AffineMapParamType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::AffineMapParamType::checkPayload(Location loc,
+                                            ArrayRef<Attribute> payload) const {
+  for (Attribute attr : payload) {
+    if (!attr.isa<AffineMapAttr>()) {
+      return emitSilenceableError(loc)
+             << "expected affine map attribute, got " << attr;
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // transform::AnyOpType
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
 transform::AnyOpType::checkPayload(Location loc,
                                    ArrayRef<Operation *> payload) const {
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// transform::AnyValueType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::AnyValueType::checkPayload(Location loc,
+                                      ArrayRef<Value> payload) const {
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -103,11 +129,17 @@ transform::ParamType::checkPayload(Location loc,
 }
 
 //===----------------------------------------------------------------------===//
-// transform::AnyValueType
+// transform::TypeParamType
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
-transform::AnyValueType::checkPayload(Location loc,
-                                      ArrayRef<Value> payload) const {
+transform::TypeParamType::checkPayload(Location loc,
+                                       ArrayRef<Attribute> payload) const {
+  for (Attribute attr : payload) {
+    if (!attr.isa<TypeAttr>()) {
+      return emitSilenceableError(loc)
+             << "expected type attribute, got " << attr;
+    }
+  }
   return DiagnosedSilenceableFailure::success();
 }

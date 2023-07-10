@@ -49,6 +49,19 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
+        Promotes the loop body to its containing block if the loop is known to
+        have a single iteration. Returns "success" if the promotion was
+        successful.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"promoteIfSingleIteration",
+      /*args=*/(ins "::mlir::RewriterBase &":$rewriter),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::failure();
+      }]
+    >,
+    InterfaceMethod<[{
         If there is a single induction variable return it, otherwise return
         std::nullopt.
       }],

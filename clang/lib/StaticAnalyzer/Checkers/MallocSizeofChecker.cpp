@@ -12,14 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -182,22 +183,20 @@ public:
     AnalysisDeclContext *ADC = mgr.getAnalysisDeclContext(D);
     CastedAllocFinder Finder(&BR.getContext());
     Finder.Visit(D->getBody());
-    for (CastedAllocFinder::CallVec::iterator i = Finder.Calls.begin(),
-         e = Finder.Calls.end(); i != e; ++i) {
-      QualType CastedType = i->CastedExpr->getType();
+    for (const auto &CallRec : Finder.Calls) {
+      QualType CastedType = CallRec.CastedExpr->getType();
       if (!CastedType->isPointerType())
         continue;
       QualType PointeeType = CastedType->getPointeeType();
       if (PointeeType->isVoidType())
         continue;
 
-      for (CallExpr::const_arg_iterator ai = i->AllocCall->arg_begin(),
-           ae = i->AllocCall->arg_end(); ai != ae; ++ai) {
-        if (!(*ai)->getType()->isIntegralOrUnscopedEnumerationType())
+      for (const Expr *Arg : CallRec.AllocCall->arguments()) {
+        if (!Arg->getType()->isIntegralOrUnscopedEnumerationType())
           continue;
 
         SizeofFinder SFinder;
-        SFinder.Visit(*ai);
+        SFinder.Visit(Arg);
         if (SFinder.Sizeofs.size() != 1)
           continue;
 
@@ -212,18 +211,18 @@ public:
           continue;
 
         const TypeSourceInfo *TSI = nullptr;
-        if (i->CastedExprParent.is<const VarDecl *>()) {
-          TSI =
-              i->CastedExprParent.get<const VarDecl *>()->getTypeSourceInfo();
+        if (CallRec.CastedExprParent.is<const VarDecl *>()) {
+          TSI = CallRec.CastedExprParent.get<const VarDecl *>()
+                    ->getTypeSourceInfo();
         } else {
-          TSI = i->ExplicitCastType;
+          TSI = CallRec.ExplicitCastType;
         }
 
         SmallString<64> buf;
         llvm::raw_svector_ostream OS(buf);
 
         OS << "Result of ";
-        const FunctionDecl *Callee = i->AllocCall->getDirectCallee();
+        const FunctionDecl *Callee = CallRec.AllocCall->getDirectCallee();
         if (Callee && Callee->getIdentifier())
           OS << '\'' << Callee->getIdentifier()->getName() << '\'';
         else
@@ -232,14 +231,13 @@ public:
            << "', which is incompatible with "
            << "sizeof operand type '" << SizeofType << "'";
         SmallVector<SourceRange, 4> Ranges;
-        Ranges.push_back(i->AllocCall->getCallee()->getSourceRange());
+        Ranges.push_back(CallRec.AllocCall->getCallee()->getSourceRange());
         Ranges.push_back(SFinder.Sizeofs[0]->getSourceRange());
         if (TSI)
           Ranges.push_back(TSI->getTypeLoc().getSourceRange());
 
-        PathDiagnosticLocation L =
-            PathDiagnosticLocation::createBegin(i->AllocCall->getCallee(),
-                BR.getSourceManager(), ADC);
+        PathDiagnosticLocation L = PathDiagnosticLocation::createBegin(
+            CallRec.AllocCall->getCallee(), BR.getSourceManager(), ADC);
 
         BR.EmitBasicReport(D, this, "Allocator sizeof operand mismatch",
                            categories::UnixAPI, OS.str(), L, Ranges);

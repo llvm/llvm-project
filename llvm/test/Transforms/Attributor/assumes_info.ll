@@ -6,9 +6,9 @@ define dso_local void @entry(i1 %cond) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@entry
 ; CHECK-SAME: (i1 [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @foo(i1 [[COND]])
-; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    call void @qux() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @foo(i1 [[COND]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @bar() #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @qux() #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -19,17 +19,11 @@ entry:
 }
 
 define internal void @foo(i1 %cond) #1 {
-; TUNIT-LABEL: define {{[^@]+}}@foo
-; TUNIT-SAME: (i1 [[COND:%.*]]) #[[ATTR1]] {
-; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    call void @baz(i1 [[COND]])
-; TUNIT-NEXT:    ret void
-;
-; CGSCC-LABEL: define {{[^@]+}}@foo
-; CGSCC-SAME: (i1 [[COND:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    call void @baz(i1 [[COND]]) #[[ATTR1]]
-; CGSCC-NEXT:    ret void
+; CHECK-LABEL: define {{[^@]+}}@foo
+; CHECK-SAME: (i1 [[COND:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @baz(i1 [[COND]]) #[[ATTR1]]
+; CHECK-NEXT:    ret void
 ;
 entry:
   call void @baz(i1 %cond)
@@ -38,7 +32,7 @@ entry:
 
 define internal void @bar() #2 {
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @baz(i1 noundef false) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
@@ -55,10 +49,10 @@ define internal void @baz(i1 %Cond) {
 ; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[COND]], false
 ; TUNIT-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; TUNIT:       if.then:
-; TUNIT-NEXT:    call void @baz(i1 noundef false)
+; TUNIT-NEXT:    call void @baz(i1 noundef false) #[[ATTR1]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
-; TUNIT-NEXT:    call void @qux()
+; TUNIT-NEXT:    call void @qux() #[[ATTR1]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@baz
@@ -67,7 +61,7 @@ define internal void @baz(i1 %Cond) {
 ; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[COND]], false
 ; CGSCC-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CGSCC:       if.then:
-; CGSCC-NEXT:    call void @baz(i1 noundef false)
+; CGSCC-NEXT:    call void @baz(i1 noundef false) #[[ATTR3]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    call void @qux() #[[ATTR3]]
@@ -90,12 +84,12 @@ define internal void @qux() {
 ; TUNIT-LABEL: define {{[^@]+}}@qux
 ; TUNIT-SAME: () #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    call void @call()
+; TUNIT-NEXT:    call void @call() #[[ATTR2]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@qux() {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    call void @call()
+; CGSCC-NEXT:    call void @call() #[[ATTR2]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:

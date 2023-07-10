@@ -62,13 +62,8 @@ ForallOp getForallOpThreadIndexOwner(Value val);
 // TODO: Consider moving this functionality to RegionBranchOpInterface.
 bool insideMutuallyExclusiveBranches(Operation *a, Operation *b);
 
-/// Promotes the loop body of a scf::ForallOp to its containing block if the
-/// loop was known to have a single iteration.
-LogicalResult promoteIfSingleIteration(PatternRewriter &rewriter,
-                                       scf::ForallOp forallOp);
-
 /// Promotes the loop body of a scf::ForallOp to its containing block.
-void promote(PatternRewriter &rewriter, scf::ForallOp forallOp);
+void promote(RewriterBase &rewriter, scf::ForallOp forallOp);
 
 /// An owning vector of values, handy to return from functions.
 using ValueVector = SmallVector<Value>;

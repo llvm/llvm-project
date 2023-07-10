@@ -4564,6 +4564,105 @@ SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
                       ISD::CondCode::SETNE);
 }
 
+/// Get a RISCV target specified VL op for a given SDNode.
+static unsigned getRISCVVLOp(SDValue Op) {
+#define OP_CASE(NODE)                                                          \
+  case ISD::NODE:                                                              \
+    return RISCVISD::NODE##_VL;
+  switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("don't have RISC-V specified VL op for this SDNode");
+    // clang-format off
+  OP_CASE(ADD)
+  OP_CASE(SUB)
+  OP_CASE(MUL)
+  OP_CASE(MULHS)
+  OP_CASE(MULHU)
+  OP_CASE(SDIV)
+  OP_CASE(SREM)
+  OP_CASE(UDIV)
+  OP_CASE(UREM)
+  OP_CASE(SHL)
+  OP_CASE(SRA)
+  OP_CASE(SRL)
+  OP_CASE(SADDSAT)
+  OP_CASE(UADDSAT)
+  OP_CASE(SSUBSAT)
+  OP_CASE(USUBSAT)
+  OP_CASE(FADD)
+  OP_CASE(FSUB)
+  OP_CASE(FMUL)
+  OP_CASE(FDIV)
+  OP_CASE(FNEG)
+  OP_CASE(FABS)
+  OP_CASE(FSQRT)
+  OP_CASE(SMIN)
+  OP_CASE(SMAX)
+  OP_CASE(UMIN)
+  OP_CASE(UMAX)
+  OP_CASE(FMINNUM)
+  OP_CASE(FMAXNUM)
+  OP_CASE(STRICT_FADD)
+  OP_CASE(STRICT_FSUB)
+  OP_CASE(STRICT_FMUL)
+  OP_CASE(STRICT_FDIV)
+  OP_CASE(STRICT_FSQRT)
+    // clang-format on
+#undef OP_CASE
+  case ISD::FMA:
+    return RISCVISD::VFMADD_VL;
+  case ISD::STRICT_FMA:
+    return RISCVISD::STRICT_VFMADD_VL;
+  case ISD::AND:
+    if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
+      return RISCVISD::VMAND_VL;
+    return RISCVISD::AND_VL;
+  case ISD::OR:
+    if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
+      return RISCVISD::VMOR_VL;
+    return RISCVISD::OR_VL;
+  case ISD::XOR:
+    if (Op.getSimpleValueType().getVectorElementType() == MVT::i1)
+      return RISCVISD::VMXOR_VL;
+    return RISCVISD::XOR_VL;
+  }
+}
+
+/// Return true if a RISC-V target specified op has a merge operand.
+static bool hasMergeOp(unsigned Opcode) {
+  assert(Opcode > RISCVISD::FIRST_NUMBER &&
+         Opcode <= RISCVISD::STRICT_VFROUND_NOEXCEPT_VL &&
+         "not a RISC-V target specific op");
+  assert(RISCVISD::STRICT_VFROUND_NOEXCEPT_VL - RISCVISD::FIRST_NUMBER == 421 &&
+         "adding target specific op should update this function");
+  if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::FMAXNUM_VL)
+    return true;
+  if (Opcode == RISCVISD::FCOPYSIGN_VL)
+    return true;
+  if (Opcode >= RISCVISD::VWMUL_VL && Opcode <= RISCVISD::VFWSUB_W_VL)
+    return true;
+  if (Opcode >= RISCVISD::STRICT_FADD_VL && Opcode <= RISCVISD::STRICT_FDIV_VL)
+    return true;
+  return false;
+}
+
+/// Return true if a RISC-V target specified op has a mask operand.
+static bool hasMaskOp(unsigned Opcode) {
+  assert(Opcode > RISCVISD::FIRST_NUMBER &&
+         Opcode <= RISCVISD::STRICT_VFROUND_NOEXCEPT_VL &&
+         "not a RISC-V target specific op");
+  assert(RISCVISD::STRICT_VFROUND_NOEXCEPT_VL - RISCVISD::FIRST_NUMBER == 421 &&
+         "adding target specific op should update this function");
+  if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
+    return true;
+  if (Opcode >= RISCVISD::VRGATHER_VX_VL && Opcode <= RISCVISD::VFIRST_VL)
+    return true;
+  if (Opcode >= RISCVISD::STRICT_FADD_VL &&
+      Opcode <= RISCVISD::STRICT_VFROUND_NOEXCEPT_VL)
+    return true;
+  return false;
+}
+
 SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
                                             SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -5154,83 +5253,46 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerFixedLengthVectorSetccToRVV(Op, DAG);
   }
   case ISD::ADD:
-    return lowerToScalableOp(Op, DAG, RISCVISD::ADD_VL, /*HasMergeOp*/ true);
   case ISD::SUB:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SUB_VL, /*HasMergeOp*/ true);
   case ISD::MUL:
-    return lowerToScalableOp(Op, DAG, RISCVISD::MUL_VL, /*HasMergeOp*/ true);
   case ISD::MULHS:
-    return lowerToScalableOp(Op, DAG, RISCVISD::MULHS_VL, /*HasMergeOp*/ true);
   case ISD::MULHU:
-    return lowerToScalableOp(Op, DAG, RISCVISD::MULHU_VL, /*HasMergeOp*/ true);
   case ISD::AND:
-    return lowerFixedLengthVectorLogicOpToRVV(Op, DAG, RISCVISD::VMAND_VL,
-                                              RISCVISD::AND_VL);
   case ISD::OR:
-    return lowerFixedLengthVectorLogicOpToRVV(Op, DAG, RISCVISD::VMOR_VL,
-                                              RISCVISD::OR_VL);
   case ISD::XOR:
-    return lowerFixedLengthVectorLogicOpToRVV(Op, DAG, RISCVISD::VMXOR_VL,
-                                              RISCVISD::XOR_VL);
   case ISD::SDIV:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SDIV_VL, /*HasMergeOp*/ true);
   case ISD::SREM:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SREM_VL, /*HasMergeOp*/ true);
   case ISD::UDIV:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UDIV_VL, /*HasMergeOp*/ true);
   case ISD::UREM:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UREM_VL, /*HasMergeOp*/ true);
+    return lowerToScalableOp(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
     if (Op.getSimpleValueType().isFixedLengthVector())
-      return lowerFixedLengthVectorShiftToRVV(Op, DAG);
+      return lowerToScalableOp(Op, DAG);
     // This can be called for an i32 shift amount that needs to be promoted.
     assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     return SDValue();
   case ISD::SADDSAT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SADDSAT_VL,
-                             /*HasMergeOp*/ true);
   case ISD::UADDSAT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UADDSAT_VL,
-                             /*HasMergeOp*/ true);
   case ISD::SSUBSAT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SSUBSAT_VL,
-                             /*HasMergeOp*/ true);
   case ISD::USUBSAT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::USUBSAT_VL,
-                             /*HasMergeOp*/ true);
   case ISD::FADD:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FADD_VL, /*HasMergeOp*/ true);
   case ISD::FSUB:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FSUB_VL, /*HasMergeOp*/ true);
   case ISD::FMUL:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FMUL_VL, /*HasMergeOp*/ true);
   case ISD::FDIV:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FDIV_VL, /*HasMergeOp*/ true);
   case ISD::FNEG:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FNEG_VL);
   case ISD::FABS:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FABS_VL);
   case ISD::FSQRT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FSQRT_VL);
   case ISD::FMA:
-    return lowerToScalableOp(Op, DAG, RISCVISD::VFMADD_VL);
   case ISD::SMIN:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SMIN_VL, /*HasMergeOp*/ true);
   case ISD::SMAX:
-    return lowerToScalableOp(Op, DAG, RISCVISD::SMAX_VL, /*HasMergeOp*/ true);
   case ISD::UMIN:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UMIN_VL, /*HasMergeOp*/ true);
   case ISD::UMAX:
-    return lowerToScalableOp(Op, DAG, RISCVISD::UMAX_VL, /*HasMergeOp*/ true);
   case ISD::FMINNUM:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FMINNUM_VL,
-                             /*HasMergeOp*/ true);
   case ISD::FMAXNUM:
-    return lowerToScalableOp(Op, DAG, RISCVISD::FMAXNUM_VL,
-                             /*HasMergeOp*/ true);
+    return lowerToScalableOp(Op, DAG);
   case ISD::ABS:
   case ISD::VP_ABS:
     return lowerABS(Op, DAG);
@@ -5243,21 +5305,12 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FCOPYSIGN:
     return lowerFixedLengthVectorFCOPYSIGNToRVV(Op, DAG);
   case ISD::STRICT_FADD:
-    return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_FADD_VL,
-                             /*HasMergeOp*/ true);
   case ISD::STRICT_FSUB:
-    return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_FSUB_VL,
-                             /*HasMergeOp*/ true);
   case ISD::STRICT_FMUL:
-    return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_FMUL_VL,
-                             /*HasMergeOp*/ true);
   case ISD::STRICT_FDIV:
-    return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_FDIV_VL,
-                             /*HasMergeOp*/ true);
   case ISD::STRICT_FSQRT:
-    return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_FSQRT_VL);
   case ISD::STRICT_FMA:
-    return lowerToScalableOp(Op, DAG, RISCVISD::STRICT_VFMADD_VL);
+    return lowerToScalableOp(Op, DAG);
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
     return lowerVectorStrictFSetcc(Op, DAG);
@@ -8338,31 +8391,6 @@ SDValue RISCVTargetLowering::lowerVectorStrictFSetcc(SDValue Op,
   return Res;
 }
 
-SDValue RISCVTargetLowering::lowerFixedLengthVectorLogicOpToRVV(
-    SDValue Op, SelectionDAG &DAG, unsigned MaskOpc, unsigned VecOpc) const {
-  MVT VT = Op.getSimpleValueType();
-
-  if (VT.getVectorElementType() == MVT::i1)
-    return lowerToScalableOp(Op, DAG, MaskOpc, /*HasMergeOp*/ false,
-                             /*HasMask*/ false);
-
-  return lowerToScalableOp(Op, DAG, VecOpc, /*HasMergeOp*/ true);
-}
-
-SDValue
-RISCVTargetLowering::lowerFixedLengthVectorShiftToRVV(SDValue Op,
-                                                      SelectionDAG &DAG) const {
-  unsigned Opc;
-  switch (Op.getOpcode()) {
-  default: llvm_unreachable("Unexpected opcode!");
-  case ISD::SHL: Opc = RISCVISD::SHL_VL; break;
-  case ISD::SRA: Opc = RISCVISD::SRA_VL; break;
-  case ISD::SRL: Opc = RISCVISD::SRL_VL; break;
-  }
-
-  return lowerToScalableOp(Op, DAG, Opc, /*HasMergeOp*/ true);
-}
-
 // Lower vector ABS to smax(X, sub(0, X)).
 SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -8446,9 +8474,12 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
   return convertFromScalableVector(VT, Select, DAG, Subtarget);
 }
 
-SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
-                                               unsigned NewOpc, bool HasMergeOp,
-                                               bool HasMask) const {
+SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  unsigned NewOpc = getRISCVVLOp(Op);
+  bool HasMergeOp = hasMergeOp(NewOpc);
+  bool HasMask = hasMaskOp(NewOpc);
+
   MVT VT = Op.getSimpleValueType();
   MVT ContainerVT = getContainerForFixedLengthVector(VT);
 
@@ -12377,6 +12408,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return SDValue(N, 0);
     break;
   }
+  case RISCVISD::FMV_W_X_RV64: {
+    // If the input to FMV_W_X_RV64 is just FMV_X_ANYEXTW_RV64 the the
+    // conversion is unnecessary and can be replaced with the
+    // FMV_X_ANYEXTW_RV64 operand.
+    SDValue Op0 = N->getOperand(0);
+    if (Op0.getOpcode() == RISCVISD::FMV_X_ANYEXTW_RV64)
+      return Op0.getOperand(0);
+    break;
+  }
   case RISCVISD::FMV_X_ANYEXTH:
   case RISCVISD::FMV_X_ANYEXTW_RV64: {
     SDLoc DL(N);
@@ -13764,8 +13804,8 @@ static MachineBasicBlock *emitSelectPseudo(MachineInstr &MI,
   return TailMBB;
 }
 
-static MachineBasicBlock *
-emitVFCVT_RM_MASK(MachineInstr &MI, MachineBasicBlock *BB, unsigned Opcode) {
+static MachineBasicBlock *emitVFCVT_RM(MachineInstr &MI, MachineBasicBlock *BB,
+                                       unsigned Opcode) {
   DebugLoc DL = MI.getDebugLoc();
 
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
@@ -13773,20 +13813,20 @@ emitVFCVT_RM_MASK(MachineInstr &MI, MachineBasicBlock *BB, unsigned Opcode) {
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
   Register SavedFRM = MRI.createVirtualRegister(&RISCV::GPRRegClass);
 
+  assert(MI.getNumOperands() == 8 || MI.getNumOperands() == 7);
+  unsigned FRMIdx = MI.getNumOperands() == 8 ? 4 : 3;
+
   // Update FRM and save the old value.
   BuildMI(*BB, MI, DL, TII.get(RISCV::SwapFRMImm), SavedFRM)
-      .addImm(MI.getOperand(4).getImm());
+      .addImm(MI.getOperand(FRMIdx).getImm());
 
   // Emit an VFCVT without the FRM operand.
-  assert(MI.getNumOperands() == 8);
-  auto MIB = BuildMI(*BB, MI, DL, TII.get(Opcode))
-                 .add(MI.getOperand(0))
-                 .add(MI.getOperand(1))
-                 .add(MI.getOperand(2))
-                 .add(MI.getOperand(3))
-                 .add(MI.getOperand(5))
-                 .add(MI.getOperand(6))
-                 .add(MI.getOperand(7));
+  auto MIB = BuildMI(*BB, MI, DL, TII.get(Opcode));
+
+  for (unsigned I = 0; I < MI.getNumOperands(); I++)
+    if (I != FRMIdx)
+      MIB = MIB.add(MI.getOperand(I));
+
   if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
     MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
 
@@ -14035,165 +14075,44 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitQuietFCMP(MI, BB, RISCV::FLT_D_IN32X, RISCV::FEQ_D_IN32X,
                          Subtarget);
 
-    // =========================================================================
-    // VFCVT
-    // =========================================================================
+#define PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, LMUL)                             \
+  case RISCV::RMOpc##_##LMUL:                                                  \
+    return emitVFCVT_RM(MI, BB, RISCV::Opc##_##LMUL);                          \
+  case RISCV::RMOpc##_##LMUL##_MASK:                                           \
+    return emitVFCVT_RM(MI, BB, RISCV::Opc##_##LMUL##_MASK);
 
-  case RISCV::PseudoVFCVT_RM_X_F_V_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M1_MASK);
-  case RISCV::PseudoVFCVT_RM_X_F_V_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M2_MASK);
-  case RISCV::PseudoVFCVT_RM_X_F_V_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M4_MASK);
-  case RISCV::PseudoVFCVT_RM_X_F_V_M8_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M8_MASK);
-  case RISCV::PseudoVFCVT_RM_X_F_V_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF2_MASK);
-  case RISCV::PseudoVFCVT_RM_X_F_V_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF4_MASK);
+#define PseudoVFCVT_RM_CASE(RMOpc, Opc)                                        \
+  PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, M1)                                     \
+  PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, M2)                                     \
+  PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, M4)                                     \
+  PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, MF2)                                    \
+  PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, MF4)
 
-  case RISCV::PseudoVFCVT_RM_XU_F_V_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_XU_F_V_M1_MASK);
-  case RISCV::PseudoVFCVT_RM_XU_F_V_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_XU_F_V_M2_MASK);
-  case RISCV::PseudoVFCVT_RM_XU_F_V_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_XU_F_V_M4_MASK);
-  case RISCV::PseudoVFCVT_RM_XU_F_V_M8_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_XU_F_V_M8_MASK);
-  case RISCV::PseudoVFCVT_RM_XU_F_V_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_XU_F_V_MF2_MASK);
-  case RISCV::PseudoVFCVT_RM_XU_F_V_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_XU_F_V_MF4_MASK);
+#define PseudoVFCVT_RM_CASE_M8(RMOpc, Opc)                                     \
+  PseudoVFCVT_RM_CASE(RMOpc, Opc)                                              \
+  PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, M8)
 
-  case RISCV::PseudoVFCVT_RM_F_XU_V_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_XU_V_M1_MASK);
-  case RISCV::PseudoVFCVT_RM_F_XU_V_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_XU_V_M2_MASK);
-  case RISCV::PseudoVFCVT_RM_F_XU_V_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_XU_V_M4_MASK);
-  case RISCV::PseudoVFCVT_RM_F_XU_V_M8_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_XU_V_M8_MASK);
-  case RISCV::PseudoVFCVT_RM_F_XU_V_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_XU_V_MF2_MASK);
-  case RISCV::PseudoVFCVT_RM_F_XU_V_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_XU_V_MF4_MASK);
+#define PseudoVFCVT_RM_CASE_MF8(RMOpc, Opc)                                    \
+  PseudoVFCVT_RM_CASE(RMOpc, Opc)                                              \
+  PseudoVFCVT_RM_LMUL_CASE(RMOpc, Opc, MF8)
 
-  case RISCV::PseudoVFCVT_RM_F_X_V_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_M1_MASK);
-  case RISCV::PseudoVFCVT_RM_F_X_V_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_M2_MASK);
-  case RISCV::PseudoVFCVT_RM_F_X_V_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_M4_MASK);
-  case RISCV::PseudoVFCVT_RM_F_X_V_M8_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_M8_MASK);
-  case RISCV::PseudoVFCVT_RM_F_X_V_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_MF2_MASK);
-  case RISCV::PseudoVFCVT_RM_F_X_V_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_F_X_V_MF4_MASK);
+  // VFCVT
+  PseudoVFCVT_RM_CASE_M8(PseudoVFCVT_RM_X_F_V, PseudoVFCVT_X_F_V)
+  PseudoVFCVT_RM_CASE_M8(PseudoVFCVT_RM_XU_F_V, PseudoVFCVT_XU_F_V)
+  PseudoVFCVT_RM_CASE_M8(PseudoVFCVT_RM_F_XU_V, PseudoVFCVT_F_XU_V)
+  PseudoVFCVT_RM_CASE_M8(PseudoVFCVT_RM_F_X_V, PseudoVFCVT_F_X_V)
 
-    // =========================================================================
-    // VFWCVT
-    // =========================================================================
+  // VFWCVT
+  PseudoVFCVT_RM_CASE(PseudoVFWCVT_RM_XU_F_V, PseudoVFWCVT_XU_F_V);
+  PseudoVFCVT_RM_CASE(PseudoVFWCVT_RM_X_F_V, PseudoVFWCVT_X_F_V);
+  PseudoVFCVT_RM_CASE_MF8(PseudoVFWCVT_RM_F_XU_V, PseudoVFWCVT_F_XU_V);
+  PseudoVFCVT_RM_CASE_MF8(PseudoVFWCVT_RM_F_X_V, PseudoVFWCVT_F_X_V);
 
-  case RISCV::PseudoVFWCVT_RM_XU_F_V_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M1_MASK);
-  case RISCV::PseudoVFWCVT_RM_XU_F_V_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M2_MASK);
-  case RISCV::PseudoVFWCVT_RM_XU_F_V_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M4_MASK);
-  case RISCV::PseudoVFWCVT_RM_XU_F_V_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_MF2_MASK);
-  case RISCV::PseudoVFWCVT_RM_XU_F_V_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_MF4_MASK);
-
-  case RISCV::PseudoVFWCVT_RM_X_F_V_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M1_MASK);
-  case RISCV::PseudoVFWCVT_RM_X_F_V_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M2_MASK);
-  case RISCV::PseudoVFWCVT_RM_X_F_V_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_M4_MASK);
-  case RISCV::PseudoVFWCVT_RM_X_F_V_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_MF2_MASK);
-  case RISCV::PseudoVFWCVT_RM_X_F_V_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_X_F_V_MF4_MASK);
-
-  case RISCV::PseudoVFWCVT_RM_F_XU_V_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M1_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_XU_V_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M2_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_XU_V_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M4_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_XU_V_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF2_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_XU_V_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF4_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_XU_V_MF8_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF8_MASK);
-
-  case RISCV::PseudoVFWCVT_RM_F_X_V_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M1_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_X_V_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M2_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_X_V_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_M4_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_X_V_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF2_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_X_V_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF4_MASK);
-  case RISCV::PseudoVFWCVT_RM_F_X_V_MF8_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFWCVT_F_XU_V_MF8_MASK);
-
-    // =========================================================================
-    // VFNCVT
-    // =========================================================================
-
-  case RISCV::PseudoVFNCVT_RM_XU_F_W_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M1_MASK);
-  case RISCV::PseudoVFNCVT_RM_XU_F_W_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M2_MASK);
-  case RISCV::PseudoVFNCVT_RM_XU_F_W_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M4_MASK);
-  case RISCV::PseudoVFNCVT_RM_XU_F_W_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF2_MASK);
-  case RISCV::PseudoVFNCVT_RM_XU_F_W_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF4_MASK);
-  case RISCV::PseudoVFNCVT_RM_XU_F_W_MF8_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_XU_F_W_MF8_MASK);
-
-  case RISCV::PseudoVFNCVT_RM_X_F_W_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M1_MASK);
-  case RISCV::PseudoVFNCVT_RM_X_F_W_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M2_MASK);
-  case RISCV::PseudoVFNCVT_RM_X_F_W_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_M4_MASK);
-  case RISCV::PseudoVFNCVT_RM_X_F_W_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF2_MASK);
-  case RISCV::PseudoVFNCVT_RM_X_F_W_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF4_MASK);
-  case RISCV::PseudoVFNCVT_RM_X_F_W_MF8_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_X_F_W_MF8_MASK);
-
-  case RISCV::PseudoVFNCVT_RM_F_XU_W_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M1_MASK);
-  case RISCV::PseudoVFNCVT_RM_F_XU_W_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M2_MASK);
-  case RISCV::PseudoVFNCVT_RM_F_XU_W_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M4_MASK);
-  case RISCV::PseudoVFNCVT_RM_F_XU_W_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_MF2_MASK);
-  case RISCV::PseudoVFNCVT_RM_F_XU_W_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_MF4_MASK);
-
-  case RISCV::PseudoVFNCVT_RM_F_X_W_M1_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M1_MASK);
-  case RISCV::PseudoVFNCVT_RM_F_X_W_M2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M2_MASK);
-  case RISCV::PseudoVFNCVT_RM_F_X_W_M4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_M4_MASK);
-  case RISCV::PseudoVFNCVT_RM_F_X_W_MF2_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_MF2_MASK);
-  case RISCV::PseudoVFNCVT_RM_F_X_W_MF4_MASK:
-    return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFNCVT_F_XU_W_MF4_MASK);
+  // VFNCVT
+  PseudoVFCVT_RM_CASE_MF8(PseudoVFNCVT_RM_XU_F_W, PseudoVFNCVT_XU_F_W);
+  PseudoVFCVT_RM_CASE_MF8(PseudoVFNCVT_RM_X_F_W, PseudoVFNCVT_X_F_W);
+  PseudoVFCVT_RM_CASE(PseudoVFNCVT_RM_F_XU_W, PseudoVFNCVT_F_XU_W);
+  PseudoVFCVT_RM_CASE(PseudoVFNCVT_RM_F_X_W, PseudoVFNCVT_F_X_W);
 
   case RISCV::PseudoVFROUND_NOEXCEPT_V_M1_MASK:
     return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M1_MASK,
@@ -16761,24 +16680,29 @@ Value *RISCVTargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
 }
 
 bool RISCVTargetLowering::isLegalInterleavedAccessType(
-    FixedVectorType *VTy, unsigned Factor, const DataLayout &DL) const {
-  if (!Subtarget.useRVVForFixedLengthVectors())
-    return false;
+    VectorType *VTy, unsigned Factor, const DataLayout &DL) const {
   EVT VT = getValueType(DL, VTy);
-  // Don't lower vlseg/vsseg for fixed length vector types that can't be split.
+  // Don't lower vlseg/vsseg for vector types that can't be split.
   if (!isTypeLegal(VT))
     return false;
 
   if (!isLegalElementTypeForRVV(VT.getScalarType()))
     return false;
 
-  // Sometimes the interleaved access pass picks up splats as interleaves of one
-  // element. Don't lower these.
-  if (VTy->getNumElements() < 2)
-    return false;
+  MVT ContainerVT = VT.getSimpleVT();
+
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+    if (!Subtarget.useRVVForFixedLengthVectors())
+      return false;
+    // Sometimes the interleaved access pass picks up splats as interleaves of
+    // one element. Don't lower these.
+    if (FVTy->getNumElements() < 2)
+      return false;
+
+    ContainerVT = getContainerForFixedLengthVector(VT.getSimpleVT());
+  }
 
   // Need to make sure that EMUL * NFIELDS ≤ 8
-  MVT ContainerVT = getContainerForFixedLengthVector(VT.getSimpleVT());
   auto [LMUL, Fractional] = RISCVVType::decodeVLMUL(getLMUL(ContainerVT));
   if (Fractional)
     return true;
@@ -16805,6 +16729,12 @@ bool RISCVTargetLowering::isLegalStridedLoadStore(EVT DataType,
   return true;
 }
 
+static const Intrinsic::ID FixedVlsegIntrIds[] = {
+    Intrinsic::riscv_seg2_load, Intrinsic::riscv_seg3_load,
+    Intrinsic::riscv_seg4_load, Intrinsic::riscv_seg5_load,
+    Intrinsic::riscv_seg6_load, Intrinsic::riscv_seg7_load,
+    Intrinsic::riscv_seg8_load};
+
 /// Lower an interleaved load into a vlsegN intrinsic.
 ///
 /// E.g. Lower an interleaved load (Factor = 2):
@@ -16829,13 +16759,8 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
 
-  static const Intrinsic::ID FixedLenIntrIds[] = {
-      Intrinsic::riscv_seg2_load, Intrinsic::riscv_seg3_load,
-      Intrinsic::riscv_seg4_load, Intrinsic::riscv_seg5_load,
-      Intrinsic::riscv_seg6_load, Intrinsic::riscv_seg7_load,
-      Intrinsic::riscv_seg8_load};
   Function *VlsegNFunc =
-      Intrinsic::getDeclaration(LI->getModule(), FixedLenIntrIds[Factor - 2],
+      Intrinsic::getDeclaration(LI->getModule(), FixedVlsegIntrIds[Factor - 2],
                                 {VTy, LI->getPointerOperandType(), XLenTy});
 
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
@@ -16850,6 +16775,12 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
 
   return true;
 }
+
+static const Intrinsic::ID FixedVssegIntrIds[] = {
+    Intrinsic::riscv_seg2_store, Intrinsic::riscv_seg3_store,
+    Intrinsic::riscv_seg4_store, Intrinsic::riscv_seg5_store,
+    Intrinsic::riscv_seg6_store, Intrinsic::riscv_seg7_store,
+    Intrinsic::riscv_seg8_store};
 
 /// Lower an interleaved store into a vssegN intrinsic.
 ///
@@ -16881,14 +16812,8 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   auto *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
 
-  static const Intrinsic::ID FixedLenIntrIds[] = {
-      Intrinsic::riscv_seg2_store, Intrinsic::riscv_seg3_store,
-      Intrinsic::riscv_seg4_store, Intrinsic::riscv_seg5_store,
-      Intrinsic::riscv_seg6_store, Intrinsic::riscv_seg7_store,
-      Intrinsic::riscv_seg8_store};
-
   Function *VssegNFunc =
-      Intrinsic::getDeclaration(SI->getModule(), FixedLenIntrIds[Factor - 2],
+      Intrinsic::getDeclaration(SI->getModule(), FixedVssegIntrIds[Factor - 2],
                                 {VTy, SI->getPointerOperandType(), XLenTy});
 
   auto Mask = SVI->getShuffleMask();
@@ -16907,6 +16832,100 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   Ops.append({SI->getPointerOperand(), VL});
 
   Builder.CreateCall(VssegNFunc, Ops);
+
+  return true;
+}
+
+bool RISCVTargetLowering::lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *DI,
+                                                           LoadInst *LI) const {
+  assert(LI->isSimple());
+  IRBuilder<> Builder(LI);
+
+  // Only deinterleave2 supported at present.
+  if (DI->getIntrinsicID() != Intrinsic::experimental_vector_deinterleave2)
+    return false;
+
+  unsigned Factor = 2;
+
+  VectorType *VTy = cast<VectorType>(DI->getOperand(0)->getType());
+  VectorType *ResVTy = cast<VectorType>(DI->getType()->getContainedType(0));
+
+  if (!isLegalInterleavedAccessType(ResVTy, Factor,
+                                    LI->getModule()->getDataLayout()))
+    return false;
+
+  Function *VlsegNFunc;
+  Value *VL;
+  Type *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
+  SmallVector<Value *, 10> Ops;
+
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+    VlsegNFunc = Intrinsic::getDeclaration(
+        LI->getModule(), FixedVlsegIntrIds[Factor - 2],
+        {ResVTy, LI->getPointerOperandType(), XLenTy});
+    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+  } else {
+    static const Intrinsic::ID IntrIds[] = {
+        Intrinsic::riscv_vlseg2, Intrinsic::riscv_vlseg3,
+        Intrinsic::riscv_vlseg4, Intrinsic::riscv_vlseg5,
+        Intrinsic::riscv_vlseg6, Intrinsic::riscv_vlseg7,
+        Intrinsic::riscv_vlseg8};
+
+    VlsegNFunc = Intrinsic::getDeclaration(LI->getModule(), IntrIds[Factor - 2],
+                                           {ResVTy, XLenTy});
+    VL = Constant::getAllOnesValue(XLenTy);
+    Ops.append(Factor, PoisonValue::get(ResVTy));
+  }
+
+  Ops.append({LI->getPointerOperand(), VL});
+
+  Value *Vlseg = Builder.CreateCall(VlsegNFunc, Ops);
+  DI->replaceAllUsesWith(Vlseg);
+
+  return true;
+}
+
+bool RISCVTargetLowering::lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
+                                                          StoreInst *SI) const {
+  assert(SI->isSimple());
+  IRBuilder<> Builder(SI);
+
+  // Only interleave2 supported at present.
+  if (II->getIntrinsicID() != Intrinsic::experimental_vector_interleave2)
+    return false;
+
+  unsigned Factor = 2;
+
+  VectorType *VTy = cast<VectorType>(II->getType());
+  VectorType *InVTy = cast<VectorType>(II->getOperand(0)->getType());
+
+  if (!isLegalInterleavedAccessType(InVTy, Factor,
+                                    SI->getModule()->getDataLayout()))
+    return false;
+
+  Function *VssegNFunc;
+  Value *VL;
+  Type *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
+
+  if (auto *FVTy = dyn_cast<FixedVectorType>(VTy)) {
+    VssegNFunc = Intrinsic::getDeclaration(
+        SI->getModule(), FixedVssegIntrIds[Factor - 2],
+        {InVTy, SI->getPointerOperandType(), XLenTy});
+    VL = ConstantInt::get(XLenTy, FVTy->getNumElements());
+  } else {
+    static const Intrinsic::ID IntrIds[] = {
+        Intrinsic::riscv_vsseg2, Intrinsic::riscv_vsseg3,
+        Intrinsic::riscv_vsseg4, Intrinsic::riscv_vsseg5,
+        Intrinsic::riscv_vsseg6, Intrinsic::riscv_vsseg7,
+        Intrinsic::riscv_vsseg8};
+
+    VssegNFunc = Intrinsic::getDeclaration(SI->getModule(), IntrIds[Factor - 2],
+                                           {InVTy, XLenTy});
+    VL = Constant::getAllOnesValue(XLenTy);
+  }
+
+  Builder.CreateCall(VssegNFunc, {II->getOperand(0), II->getOperand(1),
+                                  SI->getPointerOperand(), VL});
 
   return true;
 }

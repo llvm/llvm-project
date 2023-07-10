@@ -175,6 +175,14 @@ public:
 
   Arena &arena() { return *A; }
 
+  /// Returns the outcome of satisfiability checking on `Constraints`.
+  ///
+  /// Flow conditions are not incorporated, so they may need to be manually
+  /// included in `Constraints` to provide contextually-accurate results, e.g.
+  /// if any definitions or relationships of the values in `Constraints` have
+  /// been stored in flow conditions.
+  Solver::Result querySolver(llvm::SetVector<BoolValue *> Constraints);
+
 private:
   friend class Environment;
 
@@ -203,13 +211,6 @@ private:
   void addTransitiveFlowConditionConstraints(
       AtomicBoolValue &Token, llvm::SetVector<BoolValue *> &Constraints,
       llvm::DenseSet<AtomicBoolValue *> &VisitedTokens);
-
-  /// Returns the outcome of satisfiability checking on `Constraints`.
-  /// Possible outcomes are:
-  /// - `Satisfiable`: A satisfying assignment exists and is returned.
-  /// - `Unsatisfiable`: A satisfying assignment does not exist.
-  /// - `TimedOut`: The search for a satisfying assignment was not completed.
-  Solver::Result querySolver(llvm::SetVector<BoolValue *> Constraints);
 
   /// Returns true if the solver is able to prove that there is no satisfying
   /// assignment for `Constraints`

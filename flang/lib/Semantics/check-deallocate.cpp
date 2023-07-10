@@ -103,7 +103,10 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
               }
               gotStat = true;
             },
-            [&](const parser::MsgVariable &) {
+            [&](const parser::MsgVariable &var) {
+              WarnOnDeferredLengthCharacterScalar(context_,
+                  GetExpr(context_, var), var.v.thing.thing.GetSource(),
+                  "ERRMSG=");
               if (gotMsg) {
                 context_.Say(
                     "ERRMSG may not be duplicated in a DEALLOCATE statement"_err_en_US);

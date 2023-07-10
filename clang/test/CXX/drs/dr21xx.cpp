@@ -120,6 +120,31 @@ namespace dr2140 { // dr2140: 9
 #endif
 }
 
+namespace dr2141 { // dr2141: 17
+struct A{};
+
+template <typename T>
+struct B{};
+
+void foo() {
+  struct A *b = (1 == 1) ? new struct A : new struct A;
+  struct S *a = (1 == 1) ? new struct S : new struct S; // expected-error 2{{allocation of incomplete type}} // expected-note 2{{forward}}
+
+#if __cplusplus >= 201103L
+  A *aa = new struct A{};
+  B<int> *bb = new struct B<int>{};
+  (void)new struct C{}; // expected-error {{allocation of incomplete type }} // expected-note {{forward}}
+
+  struct A *c = (1 == 1) ? new struct A {} : new struct A {};
+
+  alignof(struct D{}); // expected-error {{cannot be defined in a type specifier}}
+#endif
+
+  sizeof(struct E{}); // expected-error {{cannot be defined in a type specifier}}
+
+}
+}
+
 namespace dr2157 { // dr2157: 11
 #if __cplusplus >= 201103L
   enum E : int;

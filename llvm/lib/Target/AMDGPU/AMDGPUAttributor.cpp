@@ -368,8 +368,8 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
 
     AttrList.push_back(Attribute::get(Ctx, "uniform-work-group-size",
                                       getAssumed() ? "true" : "false"));
-    return IRAttributeManifest::manifestAttrs(A, getIRPosition(), AttrList,
-                                              /* ForceReplace */ true);
+    return A.manifestAttrs(getIRPosition(), AttrList,
+                           /* ForceReplace */ true);
   }
 
   bool isValidState() const override {
@@ -526,8 +526,8 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         AttrList.push_back(Attribute::get(Ctx, Attr.second));
     }
 
-    return IRAttributeManifest::manifestAttrs(A, getIRPosition(), AttrList,
-                                              /* ForceReplace */ true);
+    return A.manifestAttrs(getIRPosition(), AttrList,
+                           /* ForceReplace */ true);
   }
 
   const std::string getAsStr() const override {
@@ -732,9 +732,9 @@ struct AAAMDSizeRangeAttribute
     SmallString<10> Buffer;
     raw_svector_ostream OS(Buffer);
     OS << getAssumed().getLower() << ',' << getAssumed().getUpper() - 1;
-    return IRAttributeManifest::manifestAttrs(
-        A, getIRPosition(), {Attribute::get(Ctx, AttrName, OS.str())},
-        /* ForceReplace */ true);
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, AttrName, OS.str())},
+                           /* ForceReplace */ true);
   }
 
   const std::string getAsStr() const override {

@@ -24,8 +24,8 @@ define void @test_regular_pointers(ptr %a, ptr %b) {
 ; CHECK-NEXT:    b.gt LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %then
 ; CHECK-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w19, -24
@@ -36,11 +36,6 @@ define void @test_regular_pointers(ptr %a, ptr %b) {
 ; CHECK-NEXT:    str xzr, [x19]
 ; CHECK-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB0_2: ; %exit
-; CHECK-NEXT:    .cfi_def_cfa wsp, 0
-; CHECK-NEXT:    .cfi_same_value w30
-; CHECK-NEXT:    .cfi_same_value w29
-; CHECK-NEXT:    .cfi_same_value w19
-; CHECK-NEXT:    .cfi_same_value w20
 ; CHECK-NEXT:    ret
 entry:
   %l.a = load double, ptr %a, align 8
@@ -65,8 +60,8 @@ define void @test_byval_pointers(ptr %a, ptr byval(%struct.s) %b) {
 ; CHECK-LABEL: test_byval_pointers:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w19, -24
@@ -113,8 +108,8 @@ define void @test_inalloca_pointers(ptr %a, ptr inalloca(%struct.s) %b) {
 ; CHECK-LABEL: test_inalloca_pointers:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w19, -24
@@ -161,8 +156,8 @@ define void @test_preallocated_pointers(ptr %a, ptr preallocated(%struct.s) %b) 
 ; CHECK-LABEL: test_preallocated_pointers:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w19, -24
@@ -203,4 +198,3 @@ then:
 exit:
   ret void
 }
-

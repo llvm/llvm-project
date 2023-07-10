@@ -378,11 +378,18 @@ public:
 
   void LeaveSession();
 
-  uint32_t IsExecutingPython() const { return m_lock_count > 0; }
+  uint32_t IsExecutingPython() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    return m_lock_count > 0;
+  }
 
-  uint32_t IncrementLockCount() { return ++m_lock_count; }
+  uint32_t IncrementLockCount() {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    return ++m_lock_count;
+  }
 
   uint32_t DecrementLockCount() {
+    std::lock_guard<std::mutex> guard(m_mutex);
     if (m_lock_count > 0)
       --m_lock_count;
     return m_lock_count;
@@ -422,6 +429,7 @@ public:
   bool m_pty_secondary_is_open;
   bool m_valid_session;
   uint32_t m_lock_count;
+  std::mutex m_mutex;
   PyThreadState *m_command_thread_state;
 };
 

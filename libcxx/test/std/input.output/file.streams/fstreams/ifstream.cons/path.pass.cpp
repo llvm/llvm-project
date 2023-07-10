@@ -20,9 +20,10 @@
 // explicit basic_ifstream(const filesystem::path& s,
 //     ios_base::openmode mode = ios_base::in);
 
-#include <fstream>
-#include <filesystem>
 #include <cassert>
+#include <filesystem>
+#include <fstream>
+#include <type_traits>
 
 #include "test_macros.h"
 

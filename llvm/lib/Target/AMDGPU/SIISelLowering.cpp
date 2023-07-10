@@ -1212,6 +1212,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_cond_sub_u32:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_ds_cond_sub_u32:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::getVT(CI.getType());
@@ -1328,6 +1329,7 @@ bool SITargetLowering::getAddrModeArguments(IntrinsicInst *II,
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_global_atomic_fadd_v2bf16:
   case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
+  case Intrinsic::amdgcn_ds_cond_sub_u32:
   case Intrinsic::amdgcn_global_atomic_csub: {
     Value *Ptr = II->getArgOperand(0);
     AccessTy = II->getType();
@@ -8470,6 +8472,31 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                    M->getVTList(), Ops, M->getMemoryVT(),
                                    M->getMemOperand());
   }
+  case Intrinsic::amdgcn_s_get_barrier_state: {
+    SDValue Chain = Op->getOperand(0);
+    SmallVector<SDValue, 2> Ops;
+    unsigned Opc;
+    bool IsInlinableBarID = false;
+    int64_t BarID;
+
+    if (isa<ConstantSDNode>(Op->getOperand(2))) {
+      BarID = cast<ConstantSDNode>(Op->getOperand(2))->getSExtValue();
+      IsInlinableBarID = AMDGPU::isInlinableIntLiteral(BarID);
+    }
+
+    if (IsInlinableBarID) {
+      Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
+      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      Ops.push_back(K);
+    } else {
+      Opc = AMDGPU::S_GET_BARRIER_STATE_M0;
+      SDValue M0Val = copyToM0(DAG, Chain, DL, Op.getOperand(2));
+      Ops.push_back(M0Val.getValue(0));
+    }
+
+    auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    return SDValue(NewMI, 0);
+  }
   default:
 
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
@@ -9059,7 +9086,76 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::amdgcn_end_cf:
     return SDValue(DAG.getMachineNode(AMDGPU::SI_END_CF, DL, MVT::Other,
                                       Op->getOperand(2), Chain), 0);
+  case Intrinsic::amdgcn_s_barrier_init:
+  case Intrinsic::amdgcn_s_barrier_join:
+  case Intrinsic::amdgcn_s_wakeup_barrier: {
+    SDValue Chain = Op->getOperand(0);
+    SmallVector<SDValue, 2> Ops;
+    SDValue BarOp = Op->getOperand(2);
+    unsigned Opc;
+    bool IsInlinableBarID = false;
+    int64_t BarVal;
 
+    if (isa<ConstantSDNode>(BarOp)) {
+      BarVal = cast<ConstantSDNode>(BarOp)->getSExtValue();
+      IsInlinableBarID = AMDGPU::isInlinableIntLiteral(BarVal);
+    }
+
+    if (IsInlinableBarID) {
+      switch (IntrinsicID) {
+      default:
+        return SDValue();
+      case Intrinsic::amdgcn_s_barrier_init:
+        Opc = AMDGPU::S_BARRIER_INIT_IMM;
+        break;
+      case Intrinsic::amdgcn_s_barrier_join:
+        Opc = AMDGPU::S_BARRIER_JOIN_IMM;
+        break;
+      case Intrinsic::amdgcn_s_wakeup_barrier:
+        Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
+        break;
+      }
+
+      SDValue K = DAG.getTargetConstant(BarVal, DL, MVT::i32);
+      Ops.push_back(K);
+    } else {
+      switch (IntrinsicID) {
+      default:
+        return SDValue();
+      case Intrinsic::amdgcn_s_barrier_init:
+        Opc = AMDGPU::S_BARRIER_INIT_M0;
+        break;
+      case Intrinsic::amdgcn_s_barrier_join:
+        Opc = AMDGPU::S_BARRIER_JOIN_M0;
+        break;
+      case Intrinsic::amdgcn_s_wakeup_barrier:
+        Opc = AMDGPU::S_WAKEUP_BARRIER_M0;
+        break;
+      }
+    }
+
+    if (IntrinsicID == Intrinsic::amdgcn_s_barrier_init) {
+      SDValue M0Val;
+      // Member count will be read from M0[16:22]
+      M0Val = DAG.getNode(ISD::SHL, DL, MVT::i32, Op.getOperand(3),
+                          DAG.getShiftAmountConstant(16, MVT::i32, DL));
+
+      if (!IsInlinableBarID) {
+        // If reference to barrier id is not an inline constant then it must be
+        // referenced with M0[4:0]. Perform an OR with the member count to
+        // include it in M0.
+        M0Val = SDValue(DAG.getMachineNode(AMDGPU::S_OR_B32, DL, MVT::i32,
+                                           Op.getOperand(2), M0Val),
+                        0);
+      }
+      Ops.push_back(copyToM0(DAG, Chain, DL, M0Val).getValue(0));
+    } else if (!IsInlinableBarID) {
+      Ops.push_back(copyToM0(DAG, Chain, DL, BarOp).getValue(0));
+    }
+
+    auto NewMI = DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops);
+    return SDValue(NewMI, 0);
+  }
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))
@@ -9546,26 +9642,30 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
   EVT VT = Op.getValueType();
   const SDNodeFlags Flags = Op->getFlags();
 
-  bool AllowInaccurateRcp = Flags.hasApproximateFuncs();
-
-  // Without !fpmath accuracy information, we can't do more because we don't
-  // know exactly whether rcp is accurate enough to meet !fpmath requirement.
-  if (!AllowInaccurateRcp)
-    return SDValue();
+  bool AllowInaccurateRcp = Flags.hasApproximateFuncs() ||
+                            DAG.getTarget().Options.UnsafeFPMath;
 
   if (const ConstantFPSDNode *CLHS = dyn_cast<ConstantFPSDNode>(LHS)) {
+    // Without !fpmath accuracy information, we can't do more because we don't
+    // know exactly whether rcp is accurate enough to meet !fpmath requirement.
+    // f16 is always accurate enough
+    if (!AllowInaccurateRcp && VT != MVT::f16)
+      return SDValue();
+
     if (CLHS->isExactlyValue(1.0)) {
       // v_rcp_f32 and v_rsq_f32 do not support denormals, and according to
       // the CI documentation has a worst case error of 1 ulp.
       // OpenCL requires <= 2.5 ulp for 1.0 / x, so it should always be OK to
       // use it as long as we aren't trying to use denormals.
       //
-      // v_rcp_f16 and v_rsq_f16 DO support denormals.
+      // v_rcp_f16 and v_rsq_f16 DO support denormals and 0.51ulp.
 
       // 1.0 / sqrt(x) -> rsq(x)
 
       // XXX - Is UnsafeFPMath sufficient to do this for f64? The maximum ULP
       // error seems really high at 2^29 ULP.
+
+      // XXX - do we need afn for this or is arcp sufficent?
       if (RHS.getOpcode() == ISD::FSQRT)
         return DAG.getNode(AMDGPUISD::RSQ, SL, VT, RHS.getOperand(0));
 
@@ -9580,6 +9680,11 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
       return DAG.getNode(AMDGPUISD::RCP, SL, VT, FNegRHS);
     }
   }
+
+  // For f16 require arcp only.
+  // For f32 require afn+arcp.
+  if (!AllowInaccurateRcp && (VT != MVT::f16 || !Flags.hasAllowReciprocal()))
+    return SDValue();
 
   // Turn into multiply by the reciprocal.
   // x / y -> x * (1.0 / y)

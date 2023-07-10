@@ -10,14 +10,8 @@ define x86_mmx @f() #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[ADD_7:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[PHI]], 1
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i32 [[ADD]], 1
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i32 [[ADD_1]], 1
-; CHECK-NEXT:    [[ADD_3:%.*]] = add nuw nsw i32 [[ADD_2]], 1
-; CHECK-NEXT:    [[ADD_4:%.*]] = add nuw nsw i32 [[ADD_3]], 1
-; CHECK-NEXT:    [[ADD_5:%.*]] = add nuw nsw i32 [[ADD_4]], 1
-; CHECK-NEXT:    [[ADD_6:%.*]] = add i32 [[ADD_5]], 1
-; CHECK-NEXT:    [[ADD_7]] = add nuw nsw i32 [[ADD_6]], 1
+; CHECK-NEXT:    [[ADD_6:%.*]] = add i32 [[PHI]], 7
+; CHECK-NEXT:    [[ADD_7]] = add i32 [[PHI]], 8
 ; CHECK-NEXT:    [[CMP_7:%.*]] = icmp eq i32 [[ADD_6]], 0
 ; CHECK-NEXT:    br i1 [[CMP_7]], label [[EXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       exit:

@@ -1685,7 +1685,7 @@ AppleObjCRuntimeV2::SharedCacheImageHeaders::CreateSharedCacheImageHeaders(
                                   entsize));
   if (auto Err = shared_cache_image_headers->UpdateIfNeeded()) {
     LLDB_LOG_ERROR(log, std::move(Err),
-                   "Failed to update SharedCacheImageHeaders");
+                   "Failed to update SharedCacheImageHeaders: {0}");
     return nullptr;
   }
 
@@ -1745,7 +1745,7 @@ bool AppleObjCRuntimeV2::SharedCacheImageHeaders::IsImageLoaded(
   if (auto Err = UpdateIfNeeded()) {
     Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
     LLDB_LOG_ERROR(log, std::move(Err),
-                   "Failed to update SharedCacheImageHeaders");
+                   "Failed to update SharedCacheImageHeaders: {0}");
   }
   return m_loaded_images.test(image_index);
 }
@@ -1754,7 +1754,7 @@ uint64_t AppleObjCRuntimeV2::SharedCacheImageHeaders::GetVersion() {
   if (auto Err = UpdateIfNeeded()) {
     Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
     LLDB_LOG_ERROR(log, std::move(Err),
-                   "Failed to update SharedCacheImageHeaders");
+                   "Failed to update SharedCacheImageHeaders: {0}");
   }
   return m_version;
 }

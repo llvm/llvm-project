@@ -26,29 +26,53 @@ target triple = "amdgcn-amd-amdhsa"
 ;.
 define void @kernel() "kernel" {
 ;
-; CHECK: Function Attrs: norecurse
-; CHECK-LABEL: define {{[^@]+}}@kernel
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    br label [[IF_MERGE:%.*]]
-; CHECK:       if.else:
-; CHECK-NEXT:    call void @barrier() #[[ATTR6:[0-9]+]]
-; CHECK-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
-; CHECK-NEXT:    call void @llvm.assume(i1 undef)
-; CHECK-NEXT:    call void @barrier() #[[ATTR6]]
-; CHECK-NEXT:    br label [[IF_MERGE]]
-; CHECK:       if.merge:
-; CHECK-NEXT:    call void @use1(i32 2) #[[ATTR6]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then2:
-; CHECK-NEXT:    call void @barrier() #[[ATTR6]]
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
-; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr undef, i8 1)
-; CHECK-NEXT:    ret void
+; TUNIT: Function Attrs: norecurse
+; TUNIT-LABEL: define {{[^@]+}}@kernel
+; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
+; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
+; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
+; TUNIT-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; TUNIT:       if.then:
+; TUNIT-NEXT:    br label [[IF_MERGE:%.*]]
+; TUNIT:       if.else:
+; TUNIT-NEXT:    call void @barrier() #[[ATTR6:[0-9]+]]
+; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.assume(i1 undef)
+; TUNIT-NEXT:    call void @barrier() #[[ATTR6]]
+; TUNIT-NEXT:    br label [[IF_MERGE]]
+; TUNIT:       if.merge:
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
+; TUNIT-NEXT:    br i1 [[CMP]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
+; TUNIT:       if.then2:
+; TUNIT-NEXT:    call void @barrier() #[[ATTR6]]
+; TUNIT-NEXT:    br label [[IF_END]]
+; TUNIT:       if.end:
+; TUNIT-NEXT:    call void @__kmpc_target_deinit(ptr undef, i8 1)
+; TUNIT-NEXT:    ret void
+;
+; CGSCC: Function Attrs: norecurse
+; CGSCC-LABEL: define {{[^@]+}}@kernel
+; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
+; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
+; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CGSCC:       if.then:
+; CGSCC-NEXT:    br label [[IF_MERGE:%.*]]
+; CGSCC:       if.else:
+; CGSCC-NEXT:    call void @barrier() #[[ATTR6:[0-9]+]]
+; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
+; CGSCC-NEXT:    call void @llvm.assume(i1 undef)
+; CGSCC-NEXT:    call void @barrier() #[[ATTR6]]
+; CGSCC-NEXT:    br label [[IF_MERGE]]
+; CGSCC:       if.merge:
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
+; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN2:%.*]], label [[IF_END:%.*]]
+; CGSCC:       if.then2:
+; CGSCC-NEXT:    call void @barrier() #[[ATTR6]]
+; CGSCC-NEXT:    br label [[IF_END]]
+; CGSCC:       if.end:
+; CGSCC-NEXT:    call void @__kmpc_target_deinit(ptr undef, i8 1)
+; CGSCC-NEXT:    ret void
 ;
   %call = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
   %cmp = icmp eq i32 %call, -1
@@ -161,13 +185,22 @@ declare void @llvm.assume(i1)
 !4 = !{ptr @kernel3, !"kernel", i32 1}
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { norecurse "kernel" }
-; CHECK: attributes #[[ATTR1]] = { "kernel" }
-; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback norecurse nounwind "llvm.assume"="ompx_aligned_barrier" }
-; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback norecurse nosync nounwind }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback }
-; CHECK: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
-; CHECK: attributes #[[ATTR6]] = { nounwind }
+; TUNIT: attributes #[[ATTR0]] = { norecurse "kernel" }
+; TUNIT: attributes #[[ATTR1]] = { "kernel" }
+; TUNIT: attributes #[[ATTR2:[0-9]+]] = { nocallback norecurse nounwind "llvm.assume"="ompx_aligned_barrier" }
+; TUNIT: attributes #[[ATTR3:[0-9]+]] = { nocallback norecurse nosync nounwind }
+; TUNIT: attributes #[[ATTR4:[0-9]+]] = { nocallback }
+; TUNIT: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; TUNIT: attributes #[[ATTR6]] = { nounwind "llvm.assume"="ompx_aligned_barrier" }
+; TUNIT: attributes #[[ATTR7]] = { nounwind }
+;.
+; CGSCC: attributes #[[ATTR0]] = { norecurse "kernel" }
+; CGSCC: attributes #[[ATTR1]] = { "kernel" }
+; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nocallback norecurse nounwind "llvm.assume"="ompx_aligned_barrier" }
+; CGSCC: attributes #[[ATTR3:[0-9]+]] = { nocallback norecurse nosync nounwind }
+; CGSCC: attributes #[[ATTR4:[0-9]+]] = { nocallback }
+; CGSCC: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; CGSCC: attributes #[[ATTR6]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META1:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}

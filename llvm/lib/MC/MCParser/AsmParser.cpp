@@ -1999,20 +1999,12 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 
     getTargetParser().flushPendingInstructions(getStreamer());
 
-    SMLoc StartTokLoc = getTok().getLoc();
-    bool TPDirectiveReturn = getTargetParser().ParseDirective(ID);
-
-    if (hasPendingError())
+    ParseStatus TPDirectiveReturn = getTargetParser().parseDirective(ID);
+    assert(TPDirectiveReturn.isFailure() == hasPendingError() &&
+           "Should only return Failure iff there was an error");
+    if (TPDirectiveReturn.isFailure())
       return true;
-    // Currently the return value should be true if we are
-    // uninterested but as this is at odds with the standard parsing
-    // convention (return true = error) we have instances of a parsed
-    // directive that fails returning true as an error. Catch these
-    // cases as best as possible errors here.
-    if (TPDirectiveReturn && StartTokLoc != getTok().getLoc())
-      return true;
-    // Return if we did some parsing or believe we succeeded.
-    if (!TPDirectiveReturn || StartTokLoc != getTok().getLoc())
+    if (TPDirectiveReturn.isSuccess())
       return false;
 
     // Next, check the extension directive map to see if any extension has

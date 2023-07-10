@@ -126,8 +126,8 @@ void ProcessLaunchInfo::SetWorkingDirectory(const FileSpec &working_dir) {
   m_working_dir = working_dir;
 }
 
-const char *ProcessLaunchInfo::GetProcessPluginName() const {
-  return (m_plugin_name.empty() ? nullptr : m_plugin_name.c_str());
+llvm::StringRef ProcessLaunchInfo::GetProcessPluginName() const {
+  return llvm::StringRef(m_plugin_name);
 }
 
 void ProcessLaunchInfo::SetProcessPluginName(llvm::StringRef plugin) {
@@ -182,8 +182,8 @@ bool ProcessLaunchInfo::MonitorProcess() const {
     llvm::Expected<HostThread> maybe_thread =
         Host::StartMonitoringChildProcess(m_monitor_callback, GetProcessID());
     if (!maybe_thread)
-      LLDB_LOG(GetLog(LLDBLog::Host), "failed to launch host thread: {}",
-               llvm::toString(maybe_thread.takeError()));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Host), maybe_thread.takeError(),
+                     "failed to launch host thread: {0}");
     return true;
   }
   return false;

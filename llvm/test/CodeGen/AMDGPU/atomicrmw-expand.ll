@@ -67,7 +67,6 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX1100-LABEL: syncscope_system:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    flat_load_b32 v3, v[0:1]
 ; GFX1100-NEXT:    s_mov_b32 s0, 0
 ; GFX1100-NEXT:  .LBB0_1: ; %atomicrmw.start
@@ -96,7 +95,6 @@ define float @syncscope_system(ptr %addr, float %val) #0 {
 ; GFX1200:       ; %bb.0:
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    s_wait_expcnt 0x0
-; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
@@ -223,10 +221,10 @@ define float @syncscope_workgroup_rtn(ptr %addr, float %val) #0 {
 ; GFX1200:       ; %bb.0:
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    s_wait_expcnt 0x0
-; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_add_f32 v0, v[0:1], v2 th:TH_ATOMIC_RETURN
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
@@ -363,10 +361,10 @@ define void @syncscope_workgroup_nortn(ptr %addr, float %val) #0 {
 ; GFX1200:       ; %bb.0:
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    s_wait_expcnt 0x0
-; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0
+; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    flat_atomic_add_f32 v[0:1], v2
 ; GFX1200-NEXT:    s_wait_storecnt_dscnt 0x0
 ; GFX1200-NEXT:    global_inv scope:SCOPE_SE
@@ -430,7 +428,6 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1100-LABEL: no_unsafe:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    flat_load_b32 v3, v[0:1]
 ; GFX1100-NEXT:    s_mov_b32 s0, 0
 ; GFX1100-NEXT:  .LBB3_1: ; %atomicrmw.start
@@ -458,7 +455,6 @@ define float @no_unsafe(ptr %addr, float %val) {
 ; GFX1200:       ; %bb.0:
 ; GFX1200-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1200-NEXT:    s_wait_expcnt 0x0
-; GFX1200-NEXT:    s_wait_storecnt 0x0
 ; GFX1200-NEXT:    s_wait_samplecnt 0x0
 ; GFX1200-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1200-NEXT:    s_wait_kmcnt 0x0

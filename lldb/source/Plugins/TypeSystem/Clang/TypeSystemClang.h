@@ -280,13 +280,13 @@ public:
   }
 
   CompilerType CreateStructForIdentifier(
-      ConstString type_name,
+      llvm::StringRef type_name,
       const std::initializer_list<std::pair<const char *, CompilerType>>
           &type_fields,
       bool packed = false);
 
   CompilerType GetOrCreateStructForIdentifier(
-      ConstString type_name,
+      llvm::StringRef type_name,
       const std::initializer_list<std::pair<const char *, CompilerType>>
           &type_fields,
       bool packed = false);

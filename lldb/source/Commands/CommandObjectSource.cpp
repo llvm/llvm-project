@@ -22,6 +22,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/FileSpec.h"
@@ -1213,8 +1214,18 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
+    // Dump the debugger source cache.
+    result.GetOutputStream() << "Debugger Source File Cache\n";
     SourceManager::SourceFileCache &cache = GetDebugger().GetSourceFileCache();
     cache.Dump(result.GetOutputStream());
+
+    // Dump the process source cache.
+    if (ProcessSP process_sp = m_exe_ctx.GetProcessSP()) {
+      result.GetOutputStream() << "\nProcess Source File Cache\n";
+      SourceManager::SourceFileCache &cache = process_sp->GetSourceFileCache();
+      cache.Dump(result.GetOutputStream());
+    }
+
     result.SetStatus(eReturnStatusSuccessFinishResult);
     return result.Succeeded();
   }
@@ -1230,8 +1241,14 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
+    // Clear the debugger cache.
     SourceManager::SourceFileCache &cache = GetDebugger().GetSourceFileCache();
     cache.Clear();
+
+    // Clear the process cache.
+    if (ProcessSP process_sp = m_exe_ctx.GetProcessSP())
+      process_sp->GetSourceFileCache().Clear();
+
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
     return result.Succeeded();
   }

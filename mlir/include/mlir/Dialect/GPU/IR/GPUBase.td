@@ -110,12 +110,6 @@ class MMAMatrixOf<list<Type> allowedTypes> :
   "gpu.mma_matrix", "::mlir::gpu::MMAMatrixType">;
 
 // Types for all sparse handles.
-def GPU_SparseEnvHandle :
-  DialectType<GPU_Dialect,
-    CPred<"llvm::isa<::mlir::gpu::SparseEnvHandleType>($_self)">,
-    "sparse environment handle type">,
-  BuildableType<"mlir::gpu::SparseEnvHandleType::get($_builder.getContext())">;
-
 def GPU_SparseDnTensorHandle :
   DialectType<GPU_Dialect,
     CPred<"llvm::isa<::mlir::gpu::SparseDnTensorHandleType>($_self)">,

@@ -34,7 +34,9 @@
 // supports the attribute.
 #if defined(SWIG) || _cplusplus < 201402L
 #undef LLDB_DEPRECATED
-#define LLDB_DEPRECATED(MSG, FIX)
+#undef LLDB_DEPRECATED_FIXME
+#define LLDB_DEPRECATED(MSG)
+#define LLDB_DEPRECATED_FIXME(MSG, FIX)
 #endif
 
 // Forward Declarations

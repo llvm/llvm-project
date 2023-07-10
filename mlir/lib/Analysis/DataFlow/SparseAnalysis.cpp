@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
 using namespace mlir;
@@ -18,6 +19,8 @@ using namespace mlir::dataflow;
 //===----------------------------------------------------------------------===//
 
 void AbstractSparseLattice::onUpdate(DataFlowSolver *solver) const {
+  AnalysisState::onUpdate(solver);
+
   // Push all users of the value to the queue.
   for (Operation *user : point.get<Value>().getUsers())
     for (DataFlowAnalysis *analysis : useDefSubscribers)

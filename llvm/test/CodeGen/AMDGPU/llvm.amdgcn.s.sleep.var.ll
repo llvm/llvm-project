@@ -9,7 +9,6 @@ define void @test_s_sleep_var1(i32 %arg) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_expcnt 0x0
-; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_bvhcnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
@@ -26,7 +25,6 @@ define void @test_s_sleep_var2() {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GCN-NEXT:    s_wait_expcnt 0x0
-; GCN-NEXT:    s_wait_storecnt 0x0
 ; GCN-NEXT:    s_wait_samplecnt 0x0
 ; GCN-NEXT:    s_wait_bvhcnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0

@@ -143,7 +143,10 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
                         }
                         info.gotStat = true;
                       },
-                      [&](const parser::MsgVariable &) {
+                      [&](const parser::MsgVariable &var) {
+                        WarnOnDeferredLengthCharacterScalar(context,
+                            GetExpr(context, var),
+                            var.v.thing.thing.GetSource(), "ERRMSG=");
                         if (info.gotMsg) { // C943
                           context.Say(
                               "ERRMSG may not be duplicated in a ALLOCATE statement"_err_en_US);

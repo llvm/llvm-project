@@ -26,7 +26,7 @@
 
 namespace __llvm_libc::internal {
 
-inline constexpr auto PLATFORM_SIGNALS = []() {
+LIBC_INLINE_VAR constexpr auto PLATFORM_SIGNALS = []() {
   if constexpr (USE_LINUX_PLATFORM_SIGNALS) {
     return STDC_SIGNALS + POSIX_SIGNALS + LINUX_SIGNALS;
   } else {

@@ -313,7 +313,6 @@ define amdgpu_ps float @mad_i32_vvv_multiuse(i32 %a, i32 %b, i32 %c) {
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, v1, v2
 ; GFX10-NEXT:    flat_store_dword v[0:1], v1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: mad_i32_vvv_multiuse:
@@ -322,7 +321,6 @@ define amdgpu_ps float @mad_i32_vvv_multiuse(i32 %a, i32 %b, i32 %c) {
 ; GFX11-NEXT:    v_add_nc_u32_e32 v0, v1, v2
 ; GFX11-NEXT:    flat_store_b32 v[0:1], v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ; return to shader part epilog
   %mul = mul i32 %a, %b
   %add = add i32 %mul, %c

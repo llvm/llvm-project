@@ -689,10 +689,12 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   for (unsigned i = 0, e = Ops.size(); i != e; ++i)
     NotRewritable.insert(Ops[i].Op);
 
-  // ExpressionChanged - Non-null if the rewritten expression differs from the
-  // original in some non-trivial way, requiring the clearing of optional flags.
-  // Flags are cleared from the operator in ExpressionChanged up to I inclusive.
-  BinaryOperator *ExpressionChanged = nullptr;
+  // ExpressionChangedStart - Non-null if the rewritten expression differs from
+  // the original in some non-trivial way, requiring the clearing of optional
+  // flags. Flags are cleared from the operator in ExpressionChangedStart up to
+  // ExpressionChangedEnd inclusive.
+  BinaryOperator *ExpressionChangedStart = nullptr,
+                 *ExpressionChangedEnd = nullptr;
   for (unsigned i = 0; ; ++i) {
     // The last operation (which comes earliest in the IR) is special as both
     // operands will come from Ops, rather than just one with the other being
@@ -734,7 +736,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       }
       LLVM_DEBUG(dbgs() << "TO: " << *Op << '\n');
 
-      ExpressionChanged = Op;
+      ExpressionChangedStart = Op;
+      if (!ExpressionChangedEnd)
+        ExpressionChangedEnd = Op;
       MadeChange = true;
       ++NumChanged;
 
@@ -756,7 +760,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
         if (BO && !NotRewritable.count(BO))
           NodesToRewrite.push_back(BO);
         Op->setOperand(1, NewRHS);
-        ExpressionChanged = Op;
+        ExpressionChangedStart = Op;
+        if (!ExpressionChangedEnd)
+          ExpressionChangedEnd = Op;
       }
       LLVM_DEBUG(dbgs() << "TO: " << *Op << '\n');
       MadeChange = true;
@@ -793,7 +799,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
     LLVM_DEBUG(dbgs() << "RA: " << *Op << '\n');
     Op->setOperand(0, NewOp);
     LLVM_DEBUG(dbgs() << "TO: " << *Op << '\n');
-    ExpressionChanged = Op;
+    ExpressionChangedStart = Op;
+    if (!ExpressionChangedEnd)
+      ExpressionChangedEnd = Op;
     MadeChange = true;
     ++NumChanged;
     Op = NewOp;
@@ -803,27 +811,36 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   // starting from the operator specified in ExpressionChanged, and compactify
   // the operators to just before the expression root to guarantee that the
   // expression tree is dominated by all of Ops.
-  if (ExpressionChanged)
+  if (ExpressionChangedStart) {
+    bool ClearFlags = true;
     do {
       // Preserve FastMathFlags.
-      if (isa<FPMathOperator>(I)) {
-        FastMathFlags Flags = I->getFastMathFlags();
-        ExpressionChanged->clearSubclassOptionalData();
-        ExpressionChanged->setFastMathFlags(Flags);
-      } else
-        ExpressionChanged->clearSubclassOptionalData();
+      if (ClearFlags) {
+        if (isa<FPMathOperator>(I)) {
+          FastMathFlags Flags = I->getFastMathFlags();
+          ExpressionChangedStart->clearSubclassOptionalData();
+          ExpressionChangedStart->setFastMathFlags(Flags);
+        } else
+          ExpressionChangedStart->clearSubclassOptionalData();
+      }
 
-      if (ExpressionChanged == I)
+      if (ExpressionChangedStart == ExpressionChangedEnd)
+        ClearFlags = false;
+      if (ExpressionChangedStart == I)
         break;
 
       // Discard any debug info related to the expressions that has changed (we
-      // can leave debug infor related to the root, since the result of the
-      // expression tree should be the same even after reassociation).
-      replaceDbgUsesWithUndef(ExpressionChanged);
+      // can leave debug info related to the root and any operation that didn't
+      // change, since the result of the expression tree should be the same
+      // even after reassociation).
+      if (ClearFlags)
+        replaceDbgUsesWithUndef(ExpressionChangedStart);
 
-      ExpressionChanged->moveBefore(I);
-      ExpressionChanged = cast<BinaryOperator>(*ExpressionChanged->user_begin());
+      ExpressionChangedStart->moveBefore(I);
+      ExpressionChangedStart =
+          cast<BinaryOperator>(*ExpressionChangedStart->user_begin());
     } while (true);
+  }
 
   // Throw away any left over nodes from the original expression.
   for (unsigned i = 0, e = NodesToRewrite.size(); i != e; ++i)

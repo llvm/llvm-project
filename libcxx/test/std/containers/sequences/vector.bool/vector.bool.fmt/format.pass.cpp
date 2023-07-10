@@ -25,6 +25,7 @@
 #include <cassert>
 #include <concepts>
 #include <format>
+#include <iterator>
 #include <vector>
 
 #include "test_format_context.h"

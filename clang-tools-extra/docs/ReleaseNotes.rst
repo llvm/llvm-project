@@ -321,6 +321,10 @@ Changes in existing checks
   :doc:`cppcoreguidelines-use-default-member-init
   <clang-tidy/checks/cppcoreguidelines/use-default-member-init>` instead.
 
+- Improved :doc:`cppcoreguidelines-pro-bounds-constant-array-index
+  <clang-tidy/checks/cppcoreguidelines/pro-bounds-constant-array-index>` check
+  to cover type aliases of ``std::array``.
+
 - Fixed a false positive in :doc:`cppcoreguidelines-slicing
   <clang-tidy/checks/cppcoreguidelines/slicing>` check when warning would be
   emitted in constructor for virtual base class initialization.
@@ -359,6 +363,10 @@ Changes in existing checks
 - Fixed false positive in :doc:`misc-definitions-in-headers
   <clang-tidy/checks/misc/definitions-in-headers>` to avoid warning on
   declarations inside anonymous namespaces.
+
+- Fixed false-positive in :doc:`misc-redundant-expression
+  <clang-tidy/checks/misc/redundant-expression>` check where expressions like
+  ``alignof`` or ``sizeof`` were incorrectly flagged as identical.
 
 - Improved :doc:`misc-unused-parameters
   <clang-tidy/checks/misc/unused-parameters>` check with new `IgnoreVirtual`

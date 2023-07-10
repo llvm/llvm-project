@@ -119,21 +119,6 @@ void AMDGPUInstPrinter::printNamedBit(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printOffen(const MCInst *MI, unsigned OpNo,
-                                   raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "offen");
-}
-
-void AMDGPUInstPrinter::printIdxen(const MCInst *MI, unsigned OpNo,
-                                   raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "idxen");
-}
-
-void AMDGPUInstPrinter::printAddr64(const MCInst *MI, unsigned OpNo,
-                                    raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "addr64");
-}
-
 void AMDGPUInstPrinter::printOffset(const MCInst *MI, unsigned OpNo,
                                     const MCSubtargetInfo &STI,
                                     raw_ostream &O) {
@@ -211,11 +196,6 @@ void AMDGPUInstPrinter::printSMRDLiteralOffset(const MCInst *MI, unsigned OpNo,
                                                const MCSubtargetInfo &STI,
                                                raw_ostream &O) {
   printU32ImmOperand(MI, OpNo, STI, O);
-}
-
-void AMDGPUInstPrinter::printGDS(const MCInst *MI, unsigned OpNo,
-                                 const MCSubtargetInfo &STI, raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "gds");
 }
 
 void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
@@ -332,15 +312,6 @@ void AMDGPUInstPrinter::printScope(int64_t Scope, raw_ostream &O) {
   return;
 }
 
-void AMDGPUInstPrinter::printSWZ(const MCInst *MI, unsigned OpNo,
-                                 const MCSubtargetInfo &STI, raw_ostream &O) {
-}
-
-void AMDGPUInstPrinter::printTFE(const MCInst *MI, unsigned OpNo,
-                                 const MCSubtargetInfo &STI, raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "tfe");
-}
-
 void AMDGPUInstPrinter::printDMask(const MCInst *MI, unsigned OpNo,
                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   if (MI->getOperand(OpNo).getImm()) {
@@ -361,49 +332,12 @@ void AMDGPUInstPrinter::printDim(const MCInst *MI, unsigned OpNo,
     O << Dim;
 }
 
-void AMDGPUInstPrinter::printUNorm(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI, raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "unorm");
-}
-
-void AMDGPUInstPrinter::printDA(const MCInst *MI, unsigned OpNo,
-                                const MCSubtargetInfo &STI, raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "da");
-}
-
 void AMDGPUInstPrinter::printR128A16(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   if (STI.hasFeature(AMDGPU::FeatureR128A16))
     printNamedBit(MI, OpNo, O, "a16");
   else
     printNamedBit(MI, OpNo, O, "r128");
-}
-
-void AMDGPUInstPrinter::printA16(const MCInst *MI, unsigned OpNo,
-                                 const MCSubtargetInfo &STI, raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "a16");
-}
-
-void AMDGPUInstPrinter::printLWE(const MCInst *MI, unsigned OpNo,
-                                 const MCSubtargetInfo &STI, raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "lwe");
-}
-
-void AMDGPUInstPrinter::printD16(const MCInst *MI, unsigned OpNo,
-                                 const MCSubtargetInfo &STI, raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "d16");
-}
-
-void AMDGPUInstPrinter::printExpCompr(const MCInst *MI, unsigned OpNo,
-                                      const MCSubtargetInfo &STI,
-                                      raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "compr");
-}
-
-void AMDGPUInstPrinter::printExpVM(const MCInst *MI, unsigned OpNo,
-                                   const MCSubtargetInfo &STI,
-                                   raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "vm");
 }
 
 void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
@@ -1567,18 +1501,6 @@ void AMDGPUInstPrinter::printIfSet(const MCInst *MI, unsigned OpNo,
   assert(Op.isImm());
   if (Op.getImm() == 1)
     O << Asm;
-}
-
-void AMDGPUInstPrinter::printHigh(const MCInst *MI, unsigned OpNo,
-                                  const MCSubtargetInfo &STI,
-                                  raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "high");
-}
-
-void AMDGPUInstPrinter::printClampSI(const MCInst *MI, unsigned OpNo,
-                                     const MCSubtargetInfo &STI,
-                                     raw_ostream &O) {
-  printNamedBit(MI, OpNo, O, "clamp");
 }
 
 void AMDGPUInstPrinter::printOModSI(const MCInst *MI, unsigned OpNo,

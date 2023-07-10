@@ -650,5 +650,11 @@ std::forward_list<std::string> GetAllNames(
 // generic interface,
 const DerivedTypeSpec *GetDtvArgDerivedType(const Symbol &);
 
+// If "expr" exists and is a designator for a deferred length
+// character allocatable whose semantics might change under Fortran 202X,
+// emit a portability warning.
+void WarnOnDeferredLengthCharacterScalar(SemanticsContext &, const SomeExpr *,
+    parser::CharBlock at, const char *what);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

@@ -449,6 +449,12 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
   let has_gds = 0;
 }
 
+class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity = 0,
+  bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
+  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
+  let AddedComplexity = complexity;
+}
+
 defm DS_ADD_U32       : DS_1A1D_NORET_mc<"ds_add_u32">;
 defm DS_SUB_U32       : DS_1A1D_NORET_mc<"ds_sub_u32">;
 defm DS_RSUB_U32      : DS_1A1D_NORET_mc<"ds_rsub_u32">;
@@ -755,6 +761,16 @@ defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32, "ds_c
 defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
 defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32, "ds_sub_clamp_u32">;
 
+multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
+                                  ValueType vt, string frag> {
+  def : DSAtomicRetPat<inst, vt,
+                        !cast<PatFrag>(frag#"_local_addrspace")>;
+  def : DSAtomicRetPat<noRetInst, vt,
+                        !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
+}
+
+defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_ds_cond_sub_u32">;
+
 } // let SubtargetPredicate = isGFX12Plus
 
 //===----------------------------------------------------------------------===//
@@ -990,12 +1006,6 @@ defm : DSWritePat_mc <DS_WRITE_B128, vt, "store_align_less_than_4_local">;
 } // End SubtargetPredicate = isGFX7Plus
 
 } // End AddedComplexity = 100
-
-class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, int complexity = 0,
-  bit gds=0> : GCNPat <(frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
-  (inst $ptr, getVregSrcForVT<vt>.ret:$value, offset:$offset, (i1 gds))> {
-  let AddedComplexity = complexity;
-}
 
 multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {

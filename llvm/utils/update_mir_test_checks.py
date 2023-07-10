@@ -235,9 +235,10 @@ def add_checks_for_function(
                 break
             if not func_dict[prefix][func_name]:
                 continue
-            # if printed_prefixes:
-            #     # Add some space between different check prefixes.
-            #     output_lines.append('')
+            if printed_prefixes:
+                # Add some space between different check prefixes.
+                indent = len(output_lines[-1]) - len(output_lines[-1].lstrip(" "))
+                output_lines.append(" "*indent + ";")
             printed_prefixes.add(prefix)
             log("Adding {} lines for {}".format(prefix, func_name), args.verbose)
             add_check_lines(
@@ -333,9 +334,9 @@ def mangle_vreg(opcode, current_names):
 
 
 def should_add_line_to_output(input_line, prefix_set):
-    # Skip any check lines that we're handling.
+    # Skip any check lines that we're handling as well as comments
     m = common.CHECK_RE.match(input_line)
-    if m and m.group(1) in prefix_set:
+    if (m and m.group(1) in prefix_set) or re.search("^[ \t]*;", input_line):
         return False
     return True
 

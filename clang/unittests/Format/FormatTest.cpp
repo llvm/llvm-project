@@ -2059,6 +2059,8 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int *d;\n"
                "Const unsigned int &e;\n"
                "const unsigned int &f;\n"
+               "int                *f1(int *a, int &b, int &&c);\n"
+               "double             *(*f2)(int *a, double &&b);\n"
                "const unsigned    &&g;\n"
                "Const unsigned      h;",
                Style);
@@ -2104,6 +2106,8 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int* d;\n"
                "Const unsigned int& e;\n"
                "const unsigned int& f;\n"
+               "int*                f1(int* a, int& b, int&& c);\n"
+               "double*             (*f2)(int* a, double&& b);\n"
                "const unsigned&&    g;\n"
                "Const unsigned      h;",
                Style);
@@ -2129,6 +2133,8 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int *d;\n"
                "Const unsigned int& e;\n"
                "const unsigned int& f;\n"
+               "int                *f1(int *a, int& b, int&& c);\n"
+               "double             *(*f2)(int *a, double&& b);\n"
                "const unsigned      g;\n"
                "Const unsigned      h;",
                Style);
@@ -2169,6 +2175,8 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
                "const unsigned int*  d;\n"
                "Const unsigned int & e;\n"
                "const unsigned int & f;\n"
+               "int*                 f1(int* a, int & b, int && c);\n"
+               "double*              (*f2)(int* a, double && b);\n"
                "const unsigned &&    g;\n"
                "Const unsigned       h;",
                Style);
@@ -2188,6 +2196,17 @@ TEST_F(FormatTest, SeparatePointerReferenceAlignment) {
   verifyFormat("for (auto a = 0, b = 0; const Foo * c : {1, 2, 3})", Style);
   verifyFormat("for (int a = 0, b = 0; const Foo * c : {1, 2, 3})", Style);
   verifyFormat("for (int a = 0, b++; const Foo * c : {1, 2, 3})", Style);
+
+  Style.AlignConsecutiveDeclarations.Enabled = true;
+  verifyFormat("Const unsigned int * c;\n"
+               "const unsigned int * d;\n"
+               "Const unsigned int  &e;\n"
+               "const unsigned int  &f;\n"
+               "int *                f1(int * a, int &b, int &&c);\n"
+               "double *             (*f2)(int * a, double &&b);\n"
+               "const unsigned     &&g;\n"
+               "Const unsigned       h;",
+               Style);
 
   // FIXME: we don't handle this yet, so output may be arbitrary until it's
   // specifically handled
@@ -11580,13 +11599,11 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
                    "  }",
                    getLLVMStyleWithColumns(50)));
 
-// FIXME: We should be able to figure out this is an operator call
-#if 0
   verifyFormat("#define FOO             \\\n"
                "  void foo() {          \\\n"
                "    operator+(a * b);   \\\n"
-               "  }", getLLVMStyleWithColumns(25));
-#endif
+               "  }",
+               getLLVMStyleWithColumns(25));
 
   // FIXME: We cannot handle this case yet; we might be able to figure out that
   // foo<x> d > v; doesn't make sense.

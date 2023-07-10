@@ -3131,13 +3131,13 @@ void mlir::python::populateIRCore(py::module &m) {
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAttribute::createFromCapsule)
       .def_static(
           "parse",
-          [](std::string attrSpec, DefaultingPyMlirContext context) {
+          [](const std::string &attrSpec, DefaultingPyMlirContext context) {
             PyMlirContext::ErrorCapture errors(context->getRef());
-            MlirAttribute type = mlirAttributeParseGet(
+            MlirAttribute attr = mlirAttributeParseGet(
                 context->get(), toMlirStringRef(attrSpec));
-            if (mlirAttributeIsNull(type))
+            if (mlirAttributeIsNull(attr))
               throw MLIRError("Unable to parse attribute", errors.take());
-            return type;
+            return attr;
           },
           py::arg("asm"), py::arg("context") = py::none(),
           "Parses an attribute from an assembly form. Raises an MLIRError on "

@@ -101,6 +101,9 @@ public:
   virtual bool
   createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
 
+  virtual void
+  createHostAssociateVarCloneDealloc(const Fortran::semantics::Symbol &sym) = 0;
+
   virtual void copyHostAssociateVar(
       const Fortran::semantics::Symbol &sym,
       mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;

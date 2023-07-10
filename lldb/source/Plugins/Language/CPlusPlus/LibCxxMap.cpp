@@ -291,7 +291,7 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
     if (!ast_ctx)
       return;
     CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
-        ConstString(),
+        llvm::StringRef(),
         {{"ptr0", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
          {"ptr1", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
          {"ptr2", ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},

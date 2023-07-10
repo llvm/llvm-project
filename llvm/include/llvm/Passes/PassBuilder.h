@@ -74,6 +74,9 @@ public:
   /// that of the flag: `-enable-npm-call-graph-profile`.
   bool CallGraphProfile;
 
+  // Add LTO pipeline tuning option to enable the unified LTO pipeline.
+  bool UnifiedLTO;
+
   /// Tuning option to enable/disable function merging. Its default value is
   /// false.
   bool MergeFunctions;

@@ -15,7 +15,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -65,7 +64,6 @@ define float @v_mad_mix_f32_f16hi_f16hi_f16hi_int(i32 %src0, i32 %src1, i32 %src
 ; GFX1100-LABEL: v_mad_mix_f32_f16hi_f16hi_f16hi_int:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -121,7 +119,6 @@ define float @v_mad_mix_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x half> %
 ; GFX1100-LABEL: v_mad_mix_f32_f16hi_f16hi_f16hi_elt:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -174,7 +171,6 @@ define <2 x float> @v_mad_mix_v2f32(<2 x half> %src0, <2 x half> %src1, <2 x hal
 ; GFX1100-LABEL: v_mad_mix_v2f32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v3, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    v_fma_mix_f32 v1, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -282,7 +278,6 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
 ; GFX1100-LABEL: v_mad_mix_v2f32_shuffle:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v3, v0, v1, v2 op_sel:[1,0,1] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    v_fma_mix_f32 v1, v0, v1, v2 op_sel:[0,1,1] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -368,7 +363,6 @@ define float @v_mad_mix_f32_negf16lo_f16lo_f16lo(half %src0, half %src1, half %s
 ; GFX1100-LABEL: v_mad_mix_f32_negf16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, -v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -428,7 +422,6 @@ define float @v_mad_mix_f32_absf16lo_f16lo_f16lo(half %src0, half %src1, half %s
 ; GFX1100-LABEL: v_mad_mix_f32_absf16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -479,7 +472,6 @@ define float @v_mad_mix_f32_negabsf16lo_f16lo_f16lo(half %src0, half %src1, half
 ; GFX1100-LABEL: v_mad_mix_f32_negabsf16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, -|v0|, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -531,7 +523,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32(half %src0, half %src1, float %src2)
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -578,7 +569,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_negf32(half %src0, half %src1, float %sr
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_negf32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, -v2 op_sel_hi:[1,1,0]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -626,7 +616,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_absf32(half %src0, half %src1, float %sr
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_absf32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, |v2| op_sel_hi:[1,1,0]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -674,7 +663,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_negabsf32(half %src0, half %src1, float 
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_negabsf32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, -|v2| op_sel_hi:[1,1,0]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -727,7 +715,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32imm1(half %src0, half %src1) #0 {
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32imm1:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s0, 1.0
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, s0 op_sel_hi:[1,1,0]
@@ -764,7 +751,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32imm1(half %src0, half %src1) #0 {
 ; GISEL-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32imm1:
 ; GISEL-GFX1100:       ; %bb.0:
 ; GISEL-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX1100-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GISEL-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
@@ -801,7 +787,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32imminv2pi(half %src0, half %src1) #0 
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32imminv2pi:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s0, 0.15915494
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, s0 op_sel_hi:[1,1,0]
@@ -838,7 +823,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32imminv2pi(half %src0, half %src1) #0 
 ; GISEL-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32imminv2pi:
 ; GISEL-GFX1100:       ; %bb.0:
 ; GISEL-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX1100-NEXT:    v_mov_b32_e32 v2, 0.15915494
 ; GISEL-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
@@ -882,7 +866,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imminv2pi(half %src0, half %src1) 
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_cvtf16imminv2pi:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s0, 0x3e230000
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, s0 op_sel_hi:[1,1,0]
@@ -919,7 +902,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imminv2pi(half %src0, half %src1) 
 ; GISEL-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_cvtf16imminv2pi:
 ; GISEL-GFX1100:       ; %bb.0:
 ; GISEL-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX1100-NEXT:    v_mov_b32_e32 v2, 0x3e230000
 ; GISEL-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
@@ -968,7 +950,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imm63(half %src0, half %src1) #0 {
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_cvtf16imm63:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX1100-NEXT:    s_mov_b32 s0, 0x367c0000
 ; SDAG-GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, s0 op_sel_hi:[1,1,0]
@@ -1005,7 +986,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_cvtf16imm63(half %src0, half %src1) #0 {
 ; GISEL-GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_cvtf16imm63:
 ; GISEL-GFX1100:       ; %bb.0:
 ; GISEL-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX1100-NEXT:    v_mov_b32_e32 v2, 0x367c0000
 ; GISEL-GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GISEL-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
@@ -1053,7 +1033,6 @@ define <2 x float> @v_mad_mix_v2f32_f32imm1(<2 x half> %src0, <2 x half> %src1) 
 ; GFX1100-LABEL: v_mad_mix_v2f32_f32imm1:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    s_mov_b32 s0, 1.0
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-NEXT:    v_fma_mix_f32 v2, v0, v1, s0 op_sel_hi:[1,1,0]
@@ -1154,7 +1133,6 @@ define <2 x float> @v_mad_mix_v2f32_cvtf16imminv2pi(<2 x half> %src0, <2 x half>
 ; GFX1100-LABEL: v_mad_mix_v2f32_cvtf16imminv2pi:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    s_mov_b32 s0, 0x3e230000
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-NEXT:    v_fma_mix_f32 v2, v0, v1, s0 op_sel_hi:[1,1,0]
@@ -1260,7 +1238,6 @@ define <2 x float> @v_mad_mix_v2f32_f32imminv2pi(<2 x half> %src0, <2 x half> %s
 ; GFX1100-LABEL: v_mad_mix_v2f32_f32imminv2pi:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    s_mov_b32 s0, 0.15915494
 ; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX1100-NEXT:    v_fma_mix_f32 v2, v0, v1, s0 op_sel_hi:[1,1,0]
@@ -1364,7 +1341,6 @@ define float @v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt(<2 x half> %src0, <2 x h
 ; GFX1100-LABEL: v_mad_mix_clamp_f32_f16hi_f16hi_f16hi_elt:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel:[1,1,1] op_sel_hi:[1,1,1] clamp
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1419,7 +1395,6 @@ define float @no_mix_simple(float %src0, float %src1, float %src2) #0 {
 ; GFX1100-LABEL: no_mix_simple:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_f32 v0, v0, v1, v2
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1454,7 +1429,6 @@ define float @no_mix_simple_fabs(float %src0, float %src1, float %src2) #0 {
 ; GFX1100-LABEL: no_mix_simple_fabs:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_f32 v0, |v0|, v1, v2
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1494,7 +1468,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals(half %src0, half %sr
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1548,7 +1521,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals(half %src0, half %src1, fl
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32_denormals:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1598,7 +1570,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd(half %src0,
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_denormals_fmulfadd:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX1100-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX1100-NEXT:    v_cvt_f32_f16_e32 v2, v2
@@ -1665,7 +1636,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd(half %src0, half 
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32_denormals_fmulfadd:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX1100-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1726,7 +1696,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f16lo_f32_flush_fmulfadd(half %src0, hal
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo_f32_flush_fmulfadd:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1777,7 +1746,6 @@ define float @v_mad_mix_f32_f16lo_f16lo_f32_flush_fmulfadd(half %src0, half %src
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f32_flush_fmulfadd:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,0]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1825,7 +1793,6 @@ define float @v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo(i32 %src0.arg, half %src1
 ; GFX1100-LABEL: v_mad_mix_f32_negprecvtf16lo_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, -v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1891,7 +1858,6 @@ define float @v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo(i32 %src0.arg, half %
 ; GFX1100-LABEL: v_mad_mix_f32_precvtnegf16hi_abs_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -1955,7 +1921,6 @@ define float @v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo(i32 %src0.arg, half %src1
 ; GFX1100-LABEL: v_mad_mix_f32_precvtabsf16hi_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2011,7 +1976,6 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo(i32 %src0.arg, half
 ; GFX1100-LABEL: v_mad_mix_f32_preextractfneg_f16hi_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, -v0, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2078,7 +2042,6 @@ define float @v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo(i32 %src0.arg, half
 ; GFX1100-LABEL: v_mad_mix_f32_preextractfabs_f16hi_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2145,7 +2108,6 @@ define float @v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo(i32 %src0.arg, 
 ; GFX1100-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_f16lo_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    v_fma_mix_f32 v0, -|v0|, v1, v2 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;

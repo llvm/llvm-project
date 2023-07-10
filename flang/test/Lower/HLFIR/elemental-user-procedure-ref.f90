@@ -146,3 +146,38 @@ end subroutine
 ! CHECK:           }
 ! CHECK:           return
 ! CHECK:         }
+
+subroutine impure_elemental_arg_eval(x)
+  real :: x(10, 20)
+  interface
+    impure elemental subroutine impure_elem(a)
+      real, intent(in) :: a
+    end subroutine
+  end interface
+  call impure_elem((x))
+end subroutine
+! CHECK-LABEL:   func.func @_QPimpure_elemental_arg_eval(
+! CHECK-SAME:      %[[VAL_0:.*]]: !fir.ref<!fir.array<10x20xf32>> {fir.bindc_name = "x"}) {
+! CHECK:           %[[VAL_1:.*]] = arith.constant 10 : index
+! CHECK:           %[[VAL_2:.*]] = arith.constant 20 : index
+! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]], %[[VAL_2]] : (index, index) -> !fir.shape<2>
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_3]]) {uniq_name = "_QFimpure_elemental_arg_evalEx"} : (!fir.ref<!fir.array<10x20xf32>>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>)
+! CHECK:           %[[VAL_5:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<2>) -> !hlfir.expr<10x20xf32> {
+! CHECK:           ^bb0(%[[VAL_6:.*]]: index, %[[VAL_7:.*]]: index):
+! CHECK:             %[[VAL_8:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_6]], %[[VAL_7]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
+! CHECK:             %[[VAL_9:.*]] = fir.load %[[VAL_8]] : !fir.ref<f32>
+! CHECK:             %[[VAL_10:.*]] = hlfir.no_reassoc %[[VAL_9]] : f32
+! CHECK:             hlfir.yield_element %[[VAL_10]] : f32
+! CHECK:           }
+! CHECK:           %[[VAL_11:.*]]:3 = hlfir.associate %[[VAL_5]](%[[VAL_3]]) {uniq_name = "adapt.impure_arg_eval"} : (!hlfir.expr<10x20xf32>, !fir.shape<2>) -> (!fir.ref<!fir.array<10x20xf32>>, !fir.ref<!fir.array<10x20xf32>>, i1)
+! CHECK:           %[[VAL_13:.*]] = arith.constant 1 : index
+! CHECK:           fir.do_loop %[[VAL_14:.*]] = %[[VAL_13]] to %[[VAL_2]] step %[[VAL_13]] {
+! CHECK:             fir.do_loop %[[VAL_15:.*]] = %[[VAL_13]] to %[[VAL_1]] step %[[VAL_13]] {
+! CHECK:               %[[VAL_16:.*]] = hlfir.designate %[[VAL_11]]#0 (%[[VAL_15]], %[[VAL_14]])  : (!fir.ref<!fir.array<10x20xf32>>, index, index) -> !fir.ref<f32>
+! CHECK:               fir.call @_QPimpure_elem(%[[VAL_16]]) fastmath<contract> : (!fir.ref<f32>) -> ()
+! CHECK:             }
+! CHECK:           }
+! CHECK:           hlfir.end_associate %[[VAL_11]]#1, %[[VAL_11]]#2 : !fir.ref<!fir.array<10x20xf32>>, i1
+! CHECK:           hlfir.destroy %[[VAL_5]] : !hlfir.expr<10x20xf32>
+! CHECK:           return
+! CHECK:         }

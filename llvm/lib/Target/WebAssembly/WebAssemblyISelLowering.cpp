@@ -2809,7 +2809,8 @@ static SDValue performSETCCCombine(SDNode *N,
       int Intrin = isNullConstant(RHS) ? Intrinsic::wasm_anytrue
                                        : Intrinsic::wasm_alltrue;
       unsigned NumElts = FromVT.getVectorNumElements();
-      assert(NumElts == 2 || NumElts == 4 || NumElts == 8 || NumElts == 16);
+      if (NumElts != 2 && NumElts != 4 && NumElts != 8 && NumElts != 16)
+        return SDValue();
       EVT Width = MVT::getIntegerVT(128 / NumElts);
       SDValue Ret = DAG.getZExtOrTrunc(
           DAG.getNode(

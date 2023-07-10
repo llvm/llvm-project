@@ -157,5 +157,5 @@ define linkonce_odr hidden void @__clang_call_terminate() {
 ; CGSCC_ENABLED: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
 ;.
 ; CHECK_ENABLED: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; CHECK_ENABLED: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+; CHECK_ENABLED: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(none) }
 ;.

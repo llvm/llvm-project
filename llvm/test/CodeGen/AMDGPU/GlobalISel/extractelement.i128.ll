@@ -338,7 +338,6 @@ define i128 @extractelement_vgpr_v4i128_vgpr_idx(ptr addrspace(1) %ptr, i32 %idx
 ; GFX10-LABEL: extractelement_vgpr_v4i128_vgpr_idx:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    global_load_dwordx4 v[12:15], v[0:1], off
 ; GFX10-NEXT:    global_load_dwordx4 v[4:7], v[0:1], off offset:16
@@ -397,7 +396,6 @@ define i128 @extractelement_vgpr_v4i128_vgpr_idx(ptr addrspace(1) %ptr, i32 %idx
 ; GFX11-LABEL: extractelement_vgpr_v4i128_vgpr_idx:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_clause 0x3
 ; GFX11-NEXT:    global_load_b128 v[16:19], v[0:1], off
 ; GFX11-NEXT:    global_load_b128 v[4:7], v[0:1], off offset:16
@@ -948,7 +946,6 @@ define i128 @extractelement_vgpr_v4i128_idx0(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v4i128_idx0:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -956,7 +953,6 @@ define i128 @extractelement_vgpr_v4i128_idx0(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v4i128_idx0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -995,7 +991,6 @@ define i128 @extractelement_vgpr_v4i128_idx1(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v4i128_idx1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off offset:16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -1003,7 +998,6 @@ define i128 @extractelement_vgpr_v4i128_idx1(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v4i128_idx1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1042,7 +1036,6 @@ define i128 @extractelement_vgpr_v4i128_idx2(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v4i128_idx2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off offset:32
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -1050,7 +1043,6 @@ define i128 @extractelement_vgpr_v4i128_idx2(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v4i128_idx2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1089,7 +1081,6 @@ define i128 @extractelement_vgpr_v4i128_idx3(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v4i128_idx3:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off offset:48
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -1097,7 +1088,6 @@ define i128 @extractelement_vgpr_v4i128_idx3(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v4i128_idx3:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:48
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]

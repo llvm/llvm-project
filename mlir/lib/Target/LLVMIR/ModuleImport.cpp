@@ -594,13 +594,13 @@ LogicalResult ModuleImport::convertGlobals() {
     if (globalVar.getName() == getGlobalCtorsVarName() ||
         globalVar.getName() == getGlobalDtorsVarName()) {
       if (failed(convertGlobalCtorsAndDtors(&globalVar))) {
-        return emitError(mlirModule.getLoc())
+        return emitError(UnknownLoc::get(context))
                << "unhandled global variable: " << diag(globalVar);
       }
       continue;
     }
     if (failed(convertGlobal(&globalVar))) {
-      return emitError(mlirModule.getLoc())
+      return emitError(UnknownLoc::get(context))
              << "unhandled global variable: " << diag(globalVar);
     }
   }
@@ -1019,7 +1019,7 @@ ModuleImport::getConstantsToConvert(llvm::Constant *constant) {
 }
 
 FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
-  Location loc = mlirModule.getLoc();
+  Location loc = UnknownLoc::get(context);
 
   // Convert constants that can be represented as attributes.
   if (Attribute attr = getConstantAsAttr(constant)) {
@@ -1188,7 +1188,7 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
   if (auto *constant = dyn_cast<llvm::Constant>(value))
     return convertConstantExpr(constant);
 
-  Location loc = mlirModule.getLoc();
+  Location loc = UnknownLoc::get(context);
   if (auto *inst = dyn_cast<llvm::Instruction>(value))
     loc = translateLoc(inst->getDebugLoc());
   return emitError(loc) << "unhandled value: " << diag(*value);
@@ -1721,12 +1721,10 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(mlirModule.getBody(), mlirModule.getBody()->end());
 
+  Location loc = debugImporter->translateFuncLocation(func);
   LLVMFuncOp funcOp = builder.create<LLVMFuncOp>(
-      mlirModule.getLoc(), func->getName(), functionType,
+      loc, func->getName(), functionType,
       convertLinkageFromLLVM(func->getLinkage()), dsoLocal, cconv);
-
-  // Set the function debug information if available.
-  debugImporter->translate(func, funcOp);
 
   convertParameterAttributes(func, funcOp, builder);
 
@@ -1738,6 +1736,9 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   if (func->hasGC())
     funcOp.setGarbageCollector(StringRef(func->getGC()));
 
+  if (func->hasAtLeastLocalUnnamedAddr())
+    funcOp.setUnnamedAddr(convertUnnamedAddrFromLLVM(func->getUnnamedAddr()));
+
   if (func->hasSection())
     funcOp.setSection(StringRef(func->getSection()));
 
@@ -1745,6 +1746,9 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
   if (func->hasComdat())
     funcOp.setComdatAttr(comdatMapping.lookup(func->getComdat()));
+
+  if (llvm::MaybeAlign maybeAlign = func->getAlign())
+    funcOp.setAlignment(maybeAlign->value());
 
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);

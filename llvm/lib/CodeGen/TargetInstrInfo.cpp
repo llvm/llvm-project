@@ -696,6 +696,61 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   return NewMI;
 }
 
+/// transferImplicitOperands - MI is a pseudo-instruction, and the lowered
+/// replacement instructions immediately precede it.  Copy any implicit
+/// operands from MI to the replacement instruction.
+static void transferImplicitOperands(MachineInstr *MI,
+                                     const TargetRegisterInfo *TRI) {
+  MachineBasicBlock::iterator CopyMI = MI;
+  --CopyMI;
+
+  Register DstReg = MI->getOperand(0).getReg();
+  for (const MachineOperand &MO : MI->implicit_operands()) {
+    CopyMI->addOperand(MO);
+
+    // Be conservative about preserving kills when subregister defs are
+    // involved. If there was implicit kill of a super-register overlapping the
+    // copy result, we would kill the subregisters previous copies defined.
+
+    if (MO.isKill() && TRI->regsOverlap(DstReg, MO.getReg()))
+      CopyMI->getOperand(CopyMI->getNumOperands() - 1).setIsKill(false);
+  }
+}
+
+void TargetInstrInfo::lowerCopy(MachineInstr *MI,
+                                const TargetRegisterInfo *TRI) const {
+  if (MI->allDefsAreDead()) {
+    MI->setDesc(get(TargetOpcode::KILL));
+    return;
+  }
+
+  MachineOperand &DstMO = MI->getOperand(0);
+  MachineOperand &SrcMO = MI->getOperand(1);
+
+  bool IdentityCopy = (SrcMO.getReg() == DstMO.getReg());
+  if (IdentityCopy || SrcMO.isUndef()) {
+    // No need to insert an identity copy instruction, but replace with a KILL
+    // if liveness is changed.
+    if (SrcMO.isUndef() || MI->getNumOperands() > 2) {
+      // We must make sure the super-register gets killed. Replace the
+      // instruction with KILL.
+      MI->setDesc(get(TargetOpcode::KILL));
+      return;
+    }
+    // Vanilla identity copy.
+    MI->eraseFromParent();
+    return;
+  }
+
+  copyPhysReg(*MI->getParent(), MI, MI->getDebugLoc(), DstMO.getReg(),
+              SrcMO.getReg(), SrcMO.isKill());
+
+  if (MI->getNumOperands() > 2)
+    transferImplicitOperands(MI, TRI);
+  MI->eraseFromParent();
+  return;
+}
+
 bool TargetInstrInfo::hasReassociableOperands(
     const MachineInstr &Inst, const MachineBasicBlock *MBB) const {
   const MachineOperand &Op1 = Inst.getOperand(1);

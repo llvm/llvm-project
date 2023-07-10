@@ -33,7 +33,7 @@ define dso_local void @assumeDivisibleTC(ptr noalias nocapture %a, ptr noalias n
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[TMP1]], 3
 ; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[INC]]
 ; CHECK-NEXT:    store i8 [[ADD_1]], ptr [[ARRAYIDX4_1]], align 1
-; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[INC]], 1
+; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[I_011]], 2
 ; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp slt i32 [[INC_1]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP1_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit.loopexit:
@@ -104,14 +104,13 @@ define dso_local void @cannotProveDivisibleTC(ptr noalias nocapture %a, ptr noal
 ; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[I_011]]
 ; CHECK-NEXT:    store i8 [[ADD]], ptr [[ARRAYIDX4]], align 1
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i32 [[I_011]], 1
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[INC]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX_1]], align 1
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i8 [[TMP3]], 3
 ; CHECK-NEXT:    [[ARRAYIDX4_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 [[INC]]
 ; CHECK-NEXT:    store i8 [[ADD_1]], ptr [[ARRAYIDX4_1]], align 1
-; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[INC]], 1
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER_NEXT]], 1
+; CHECK-NEXT:    [[INC_1]] = add nuw nsw i32 [[I_011]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp ne i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_BODY]], label [[EXIT_LOOPEXIT_UNR_LCSSA_LOOPEXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit.loopexit.unr-lcssa.loopexit:

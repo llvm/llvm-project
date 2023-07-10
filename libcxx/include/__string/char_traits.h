@@ -170,25 +170,6 @@ struct _LIBCPP_DEPRECATED_("char_traits<T> for T not equal to char, wchar_t, cha
         {return int_type(EOF);}
 };
 
-template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI static inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-_CharT* __char_traits_move(_CharT* __dest, const _CharT* __source, size_t __n) _NOEXCEPT
-{
-#ifdef _LIBCPP_COMPILER_GCC
-  if (__libcpp_is_constant_evaluated()) {
-    if (__n == 0)
-      return __dest;
-    _CharT* __allocation = new _CharT[__n];
-    std::copy_n(__source, __n, __allocation);
-    std::copy_n(static_cast<const _CharT*>(__allocation), __n, __dest);
-    delete[] __allocation;
-    return __dest;
-  }
-#endif
-  ::__builtin_memmove(__dest, __source, __n * sizeof(_CharT));
-  return __dest;
-}
-
 // char_traits<char>
 
 template <>
@@ -249,7 +230,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char>
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type* move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        return std::__char_traits_move(__s1, __s2, __n);
+        return std::__constexpr_memmove(__s1, __s2, __element_count(__n));
     }
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -320,7 +301,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type* move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        return std::__char_traits_move(__s1, __s2, __n);
+        return std::__constexpr_memmove(__s1, __s2, __element_count(__n));
     }
 
     static inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -384,7 +365,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
 
     static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     char_type*       move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        return std::__char_traits_move(__s1, __s2, __n);
+        return std::__constexpr_memmove(__s1, __s2, __element_count(__n));
     }
 
     static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -468,7 +449,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     static char_type*       move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        return std::__char_traits_move(__s1, __s2, __n);
+        return std::__constexpr_memmove(__s1, __s2, __element_count(__n));
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -562,7 +543,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char32_t>
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     static char_type*       move(char_type* __s1, const char_type* __s2, size_t __n) _NOEXCEPT {
-        return std::__char_traits_move(__s1, __s2, __n);
+        return std::__constexpr_memmove(__s1, __s2, __element_count(__n));
     }
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20

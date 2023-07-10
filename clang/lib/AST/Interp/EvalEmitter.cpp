@@ -123,7 +123,7 @@ bool EvalEmitter::emitRetValue(const SourceInfo &Info) {
       Ty = AT->getValueType();
 
     if (auto *RT = Ty->getAs<RecordType>()) {
-      auto *Record = Ptr.getRecord();
+      const auto *Record = Ptr.getRecord();
       assert(Record && "Missing record descriptor");
 
       bool Ok = true;

@@ -1,4 +1,4 @@
-REQUIRES: system-darwin
+REQUIRES: system-darwin,arm-registered-target,aarch64-registered-target
 
 RUN: dsymutil -oso-prepend-path %p %p/Inputs/fat-test.arm.dylib -o %t.fat32.dSYM
 RUN: llvm-objdump -m --universal-headers %t.fat32.dSYM/Contents/Resources/DWARF/fat-test.arm.dylib | FileCheck %s -check-prefixes=FAT32

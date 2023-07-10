@@ -145,7 +145,27 @@ entry:
   ret void
 }
 
-; FUNC-LABEL: {{^}}fdiv_f32_arcp_math:
+; FUNC-LABEL: {{^}}fdiv_f32_arcp_daz:
+; GCN: v_div_scale_f32
+; GCN-DAG: v_rcp_f32
+; GCN-DAG: v_div_scale_f32
+; GCN: {{s_setreg_imm32_b32|s_denorm_mode}}
+; GCN: v_fma{{c?}}_f32
+; GCN: v_fma{{c?}}_f32
+; GCN: v_fma{{c?}}_f32
+; GCN: v_fma{{c?}}_f32
+; GCN: {{s_setreg_imm32_b32|s_denorm_mode}}
+; GCN: v_div_fmas_f32
+; GCN: v_div_fixup_f32
+; GCN-NOT: v_mul_f32
+define amdgpu_kernel void @fdiv_f32_arcp_daz(ptr addrspace(1) %out, float %a, float %b) #0 {
+entry:
+  %fdiv = fdiv arcp float %a, %b
+  store float %fdiv, ptr addrspace(1) %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}fdiv_f32_arcp_ninf:
 ; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[2].W
 ; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, PS, KC0[2].Z,
 
@@ -153,7 +173,7 @@ entry:
 ; GCN: v_mul_f32_e32 [[RESULT:v[0-9]+]], s{{[0-9]+}}, [[RCP]]
 ; GCN-NOT: [[RESULT]]
 ; GCN: buffer_store_{{dword|b32}} [[RESULT]]
-define amdgpu_kernel void @fdiv_f32_arcp_math(ptr addrspace(1) %out, float %a, float %b) #0 {
+define amdgpu_kernel void @fdiv_f32_arcp_ninf(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
   %fdiv = fdiv arcp ninf float %a, %b
   store float %fdiv, ptr addrspace(1) %out

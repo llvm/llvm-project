@@ -1143,6 +1143,31 @@ private:
   size_t size = 0;
 };
 
+// Cortex-M Security Extensions. Prefix for functions that should be exported
+// for the non-secure world.
+const char ACLESESYM_PREFIX[] = "__acle_se_";
+const int ACLESESYM_SIZE = 8;
+
+class ArmCmseSGVeneer;
+
+class ArmCmseSGSection final : public SyntheticSection {
+public:
+  ArmCmseSGSection();
+  bool isNeeded() const override { return !entries.empty(); }
+  size_t getSize() const override;
+  void writeTo(uint8_t *buf) override;
+  void addSGVeneer(Symbol *sym, Symbol *ext_sym);
+  void addMappingSymbol();
+  void finalizeContents() override;
+  void exportEntries(SymbolTableBaseSection *symTab);
+  uint64_t impLibMaxAddr = 0;
+
+private:
+  SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
+  SmallVector<ArmCmseSGVeneer *, 0> sgVeneers;
+  uint64_t newEntries = 0;
+};
+
 // Used to compute outSecOff of .got2 in each object file. This is needed to
 // synthesize PLT entries for PPC32 Secure PLT ABI.
 class PPC32Got2Section final : public SyntheticSection {
@@ -1279,6 +1304,7 @@ struct InStruct {
   std::unique_ptr<GotSection> got;
   std::unique_ptr<GotPltSection> gotPlt;
   std::unique_ptr<IgotPltSection> igotPlt;
+  std::unique_ptr<SyntheticSection> armCmseSGSection;
   std::unique_ptr<PPC64LongBranchTargetSection> ppc64LongBranchTarget;
   std::unique_ptr<SyntheticSection> mipsAbiFlags;
   std::unique_ptr<MipsGotSection> mipsGot;

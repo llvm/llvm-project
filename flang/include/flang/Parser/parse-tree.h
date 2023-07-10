@@ -3978,7 +3978,7 @@ struct OpenMPConstruct {
       u;
 };
 
-// Parse tree nodes for OpenACC 3.1 directives and clauses
+// Parse tree nodes for OpenACC 3.3 directives and clauses
 
 struct AccObject {
   UNION_CLASS_BOILERPLATE(AccObject);
@@ -4037,7 +4037,7 @@ struct AccObjectListWithModifier {
   std::tuple<std::optional<AccDataModifier>, AccObjectList> t;
 };
 
-// 2.5.13: + | * | max | min | iand | ior | ieor | .and. | .or. | .eqv. | .neqv.
+// 2.5.15: + | * | max | min | iand | ior | ieor | .and. | .or. | .eqv. | .neqv.
 struct AccReductionOperator {
   ENUM_CLASS(
       Operator, Plus, Multiply, Max, Min, Iand, Ior, Ieor, And, Or, Eqv, Neqv)

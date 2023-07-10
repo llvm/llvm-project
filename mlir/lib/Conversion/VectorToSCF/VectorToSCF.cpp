@@ -1247,8 +1247,13 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
     Location loc = xferOp.getLoc();
     auto vecType = xferOp.getVectorType();
     auto lb = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    auto ub =
+    Value ub =
         rewriter.create<arith::ConstantIndexOp>(loc, vecType.getDimSize(0));
+    if (vecType.isScalable()) {
+      Value vscale =
+          rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
+      ub = rewriter.create<arith::MulIOp>(loc, ub, vscale);
+    }
     auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
     auto loopState = Strategy1d<OpTy>::initialLoopState(rewriter, xferOp);
 

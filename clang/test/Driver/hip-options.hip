@@ -154,3 +154,18 @@
 // RUN: %clang -### -nogpuinc -nogpulib -mamdgpu-ieee -mno-amdgpu-ieee -ffast-math \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=IEEE-OFF-NEG %s
 // IEEE-OFF-NEG-NOT: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-mamdgpu-ieee"
+
+// Check -fno-hip-fp32-correctly-rounded-divide-sqrt is passed to -cc1 but
+// (default) -fhip-fp32-correctly-rounded-divide-sqrt is not.
+
+// RUN: %clang -### -nogpuinc -nogpulib -fno-hip-fp32-correctly-rounded-divide-sqrt \
+// RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=NOCRDS %s
+// NOCRDS: clang{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fno-hip-fp32-correctly-rounded-divide-sqrt"
+
+// RUN: %clang -### -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=CRDS %s
+// CRDS-NOT: "-f{{(no-)?}}hip-fp32-correctly-rounded-divide-sqrt"
+
+// RUN: %clang -### -nogpuinc -nogpulib -fhip-fp32-correctly-rounded-divide-sqrt \
+// RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=CRDS %s
+// CRDS-NOT: "-f{{(no-)?}}hip-fp32-correctly-rounded-divide-sqrt"

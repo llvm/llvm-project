@@ -38,26 +38,6 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-static std::optional<int64_t> extractConstantIndex(Value v) {
-  if (auto cstOp = v.getDefiningOp<arith::ConstantIndexOp>())
-    return cstOp.value();
-  if (auto affineApplyOp = v.getDefiningOp<affine::AffineApplyOp>())
-    if (affineApplyOp.getAffineMap().isSingleConstant())
-      return affineApplyOp.getAffineMap().getSingleConstantResult();
-  return std::nullopt;
-}
-
-// Missing foldings of scf.if make it necessary to perform poor man's folding
-// eagerly, especially in the case of unrolling. In the future, this should go
-// away once scf.if folds properly.
-static Value createFoldedSLE(RewriterBase &b, Value v, Value ub) {
-  auto maybeCstV = extractConstantIndex(v);
-  auto maybeCstUb = extractConstantIndex(ub);
-  if (maybeCstV && maybeCstUb && *maybeCstV < *maybeCstUb)
-    return Value();
-  return b.create<arith::CmpIOp>(v.getLoc(), arith::CmpIPredicate::sle, v, ub);
-}
-
 /// Build the condition to ensure that a particular VectorTransferOpInterface
 /// is in-bounds.
 static Value createInBoundsCond(RewriterBase &b,
@@ -74,14 +54,19 @@ static Value createInBoundsCond(RewriterBase &b,
     // Fold or create the check that `index + vector_size` <= `memref_size`.
     Location loc = xferOp.getLoc();
     int64_t vectorSize = xferOp.getVectorType().getDimSize(resultIdx);
-    auto d0 = getAffineDimExpr(0, xferOp.getContext());
-    auto vs = getAffineConstantExpr(vectorSize, xferOp.getContext());
-    Value sum = affine::makeComposedAffineApply(b, loc, d0 + vs,
-                                                {xferOp.indices()[indicesIdx]});
-    Value cond = createFoldedSLE(
-        b, sum, vector::createOrFoldDimOp(b, loc, xferOp.source(), indicesIdx));
-    if (!cond)
+    OpFoldResult sum = affine::makeComposedFoldedAffineApply(
+        b, loc, b.getAffineDimExpr(0) + b.getAffineConstantExpr(vectorSize),
+        {xferOp.indices()[indicesIdx]});
+    OpFoldResult dimSz =
+        memref::getMixedSize(b, loc, xferOp.source(), indicesIdx);
+    auto maybeCstSum = getConstantIntValue(sum);
+    auto maybeCstDimSz = getConstantIntValue(dimSz);
+    if (maybeCstSum && maybeCstDimSz && *maybeCstSum <= *maybeCstDimSz)
       return;
+    Value cond =
+        b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sle,
+                                getValueOrCreateConstantIndexOp(b, loc, sum),
+                                getValueOrCreateConstantIndexOp(b, loc, dimSz));
     // Conjunction over all dims for which we are in-bounds.
     if (inBoundsCond)
       inBoundsCond = b.create<arith::AndIOp>(loc, inBoundsCond, cond);
@@ -199,8 +184,8 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
   auto isaWrite = isa<vector::TransferWriteOp>(xferOp);
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    Value dimMemRef = vector::createOrFoldDimOp(b, xferOp.getLoc(),
-                                                xferOp.source(), indicesIdx);
+    Value dimMemRef =
+        b.create<memref::DimOp>(xferOp.getLoc(), xferOp.source(), indicesIdx);
     Value dimAlloc = b.create<memref::DimOp>(loc, alloc, resultIdx);
     Value index = xferOp.indices()[indicesIdx];
     AffineExpr i, j, k;

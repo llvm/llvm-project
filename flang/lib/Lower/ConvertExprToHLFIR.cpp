@@ -719,6 +719,7 @@ private:
     if (recordType.isDependentType())
       TODO(getLoc(), "Designate derived type with length parameters in HLFIR");
     mlir::Type fieldType = recordType.getType(partInfo.componentName);
+    assert(fieldType && "component name is not known");
     mlir::Type fieldBaseType =
         hlfir::getFortranElementOrSequenceType(fieldType);
     partInfo.componentShape = genComponentShape(componentSym, fieldBaseType);

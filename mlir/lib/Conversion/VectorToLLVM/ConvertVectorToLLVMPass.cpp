@@ -109,6 +109,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
   if (armSME) {
     configureArmSMELegalizeForExportTarget(target);
     populateArmSMELegalizeForLLVMExportPatterns(converter, patterns);
+    arm_sme::populateVectorTransferLoweringPatterns(converter, patterns);
   }
   if (amx) {
     configureAMXLegalizeForExportTarget(target);

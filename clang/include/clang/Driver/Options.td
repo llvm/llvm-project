@@ -1198,6 +1198,9 @@ def extract_api : Flag<["-"], "extract-api">, Flags<[CC1Option]>, Group<Action_G
   HelpText<"Extract API information">;
 def product_name_EQ: Joined<["--"], "product-name=">, Flags<[CC1Option]>,
   MarshallingInfoString<FrontendOpts<"ProductName">>;
+def emit_symbol_graph_EQ: JoinedOrSeparate<["--"], "emit-symbol-graph=">, Flags<[CC1Option]>,
+    HelpText<"Generate Extract API information as a side effect of compilation.">,
+    MarshallingInfoString<FrontendOpts<"SymbolGraphOutputDir">>;
 def extract_api_ignores_EQ: CommaJoined<["--"], "extract-api-ignores=">, Flags<[CC1Option]>,
     HelpText<"Comma separated list of files containing a new line separated list of API symbols to ignore when extracting API information.">,
     MarshallingInfoStringVector<FrontendOpts<"ExtractAPIIgnoresFileList">>;

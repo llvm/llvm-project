@@ -9,7 +9,7 @@
 #ifndef __LLVM_LIBC_MACROS_SYS_RANDOM_MACROS_H
 #define __LLVM_LIBC_MACROS_SYS_RANDOM_MACROS_H
 
-#ifdef __unix__
+#ifdef __linux__
 #include "linux/sys-random-macros.h"
 #endif
 

@@ -242,10 +242,13 @@ static bool layoutCOFF(COFFParser &CP) {
         S.SectionData = CodeViewYAML::toDebugH(*S.DebugH, CP.Allocator);
     }
 
-    if (S.SectionData.binary_size() > 0) {
+    size_t DataSize = S.SectionData.binary_size();
+    for (auto E : S.StructuredData)
+      DataSize += E.size();
+    if (DataSize > 0) {
       CurrentSectionDataOffset = alignTo(CurrentSectionDataOffset,
                                          CP.isPE() ? CP.getFileAlignment() : 4);
-      S.Header.SizeOfRawData = S.SectionData.binary_size();
+      S.Header.SizeOfRawData = DataSize;
       if (CP.isPE())
         S.Header.SizeOfRawData =
             alignTo(S.Header.SizeOfRawData, CP.getFileAlignment());
@@ -496,9 +499,12 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
       continue;
     assert(S.Header.PointerToRawData >= OS.tell());
     OS.write_zeros(S.Header.PointerToRawData - OS.tell());
+    for (auto E : S.StructuredData)
+      E.writeAsBinary(OS);
     S.SectionData.writeAsBinary(OS);
     assert(S.Header.SizeOfRawData >= S.SectionData.binary_size());
-    OS.write_zeros(S.Header.SizeOfRawData - S.SectionData.binary_size());
+    OS.write_zeros(S.Header.PointerToRawData + S.Header.SizeOfRawData -
+                   OS.tell());
     if (S.Header.Characteristics & COFF::IMAGE_SCN_LNK_NRELOC_OVFL)
       OS << binary_le<uint32_t>(/*VirtualAddress=*/ S.Relocations.size() + 1)
          << binary_le<uint32_t>(/*SymbolTableIndex=*/ 0)
@@ -586,6 +592,19 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
   if (CP.Obj.Header.PointerToSymbolTable)
     OS.write(&CP.StringTable[0], CP.StringTable.size());
   return true;
+}
+
+size_t COFFYAML::SectionDataEntry::size() const {
+  size_t Size = Binary.binary_size();
+  if (UInt32)
+    Size += sizeof(*UInt32);
+  return Size;
+}
+
+void COFFYAML::SectionDataEntry::writeAsBinary(raw_ostream &OS) const {
+  if (UInt32)
+    OS << binary_le(*UInt32);
+  Binary.writeAsBinary(OS);
 }
 
 namespace llvm {

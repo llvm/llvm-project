@@ -3017,8 +3017,11 @@ _mm256_zeroupper(void)
 static __inline __m128 __DEFAULT_FN_ATTRS128
 _mm_broadcast_ss(float const *__a)
 {
-  float __f = *__a;
-  return __extension__ (__m128)(__v4sf){ __f, __f, __f, __f };
+  struct __mm_broadcast_ss_struct {
+    float __f;
+  } __attribute__((__packed__, __may_alias__));
+  float __f = ((const struct __mm_broadcast_ss_struct*)__a)->__f;
+  return __extension__ (__m128){ __f, __f, __f, __f };
 }
 
 /// Loads a scalar double-precision floating point value from the
@@ -3036,7 +3039,10 @@ _mm_broadcast_ss(float const *__a)
 static __inline __m256d __DEFAULT_FN_ATTRS
 _mm256_broadcast_sd(double const *__a)
 {
-  double __d = *__a;
+  struct __mm256_broadcast_sd_struct {
+    double __d;
+  } __attribute__((__packed__, __may_alias__));
+  double __d = ((const struct __mm256_broadcast_sd_struct*)__a)->__d;
   return __extension__ (__m256d)(__v4df){ __d, __d, __d, __d };
 }
 
@@ -3055,7 +3061,10 @@ _mm256_broadcast_sd(double const *__a)
 static __inline __m256 __DEFAULT_FN_ATTRS
 _mm256_broadcast_ss(float const *__a)
 {
-  float __f = *__a;
+  struct __mm256_broadcast_ss_struct {
+    float __f;
+  } __attribute__((__packed__, __may_alias__));
+  float __f = ((const struct __mm256_broadcast_ss_struct*)__a)->__f;
   return __extension__ (__m256)(__v8sf){ __f, __f, __f, __f, __f, __f, __f, __f };
 }
 

@@ -33,6 +33,7 @@ def ArmSME_Dialect : Dialect {
     https://developer.arm.com/documentation/ddi0616
     https://developer.arm.com/documentation/ddi0602/2023-03/SME-Instructions
   }];
+  let dependentDialects = ["scf::SCFDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -118,6 +119,11 @@ def LLVM_aarch64_sme_st1h_vert : ArmSME_IntrStoreOp<"st1h.vert">;
 def LLVM_aarch64_sme_st1w_vert : ArmSME_IntrStoreOp<"st1w.vert">;
 def LLVM_aarch64_sme_st1d_vert : ArmSME_IntrStoreOp<"st1d.vert">;
 def LLVM_aarch64_sme_st1q_vert : ArmSME_IntrStoreOp<"st1q.vert">;
+
+def LLVM_aarch64_sme_str
+    : ArmSME_IntrOp<"str">,
+      Arguments<(ins Arg<I32, "Index">,
+                 Arg<LLVM_AnyPointer, "Store address", [MemWrite]>)>;
 
 def LLVM_aarch64_sme_za_enable : ArmSME_IntrOp<"za.enable">;
 def LLVM_aarch64_sme_za_disable : ArmSME_IntrOp<"za.disable">;

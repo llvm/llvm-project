@@ -78,3 +78,19 @@ end subroutine
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]] : !hlfir.expr<?x!fir.logical<4>>
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
+
+subroutine all5(a, s)
+  logical, allocatable :: a(:)
+  logical :: s
+  s = ALL(a)
+end subroutine
+! CHECK-LABEL: func.func @_QPall5(
+! CHECK:           %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>>
+! CHECK:           %[[ARG1:.*]]: !fir.ref<!fir.logical<4>>
+! CHECK-DAG:     %[[MASK:.*]]:2 = hlfir.declare %[[ARG0]]
+! CHECK-DAG:     %[[OUT:.*]]:2 = hlfir.declare %[[ARG1]]
+! CHECK-NEXT:    %[[MASK_LOADED:.*]] = fir.load %[[MASK]]#0
+! CHECK-NEXT:    %[[EXPR:.*]] = hlfir.all %[[MASK_LOADED]] : (!fir.box<!fir.heap<!fir.array<?x!fir.logical<4>>>>) -> !fir.logical<4>
+! CHECK-NEXT:    hlfir.assign %[[EXPR]] to %[[OUT]]#0  : !fir.logical<4>, !fir.ref<!fir.logical<4>>
+! CHECK-NEXT:    return
+! CHECK-NEXT:  }

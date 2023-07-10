@@ -174,6 +174,8 @@ public:
 
   /// Checks if the descriptor is of an array of primitives.
   bool isPrimitiveArray() const { return IsArray && !ElemDesc; }
+  /// Checks if the descriptor is of an array of composites.
+  bool isCompositeArray() const { return IsArray && ElemDesc; }
   /// Checks if the descriptor is of an array of zero size.
   bool isZeroSizeArray() const { return Size == 0; }
   /// Checks if the descriptor is of an array of unknown size.

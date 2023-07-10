@@ -485,8 +485,8 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
     auto scalarOperands = llvm::map_to_vector(operands, extractElement);
     Operation *scalarOp =
         rewriter.create(loc, name, scalarOperands, elementType, op->getAttrs());
-    rewriter.create<LLVM::InsertElementOp>(loc, result, scalarOp->getResult(0),
-                                           index);
+    result = rewriter.create<LLVM::InsertElementOp>(
+        loc, result, scalarOp->getResult(0), index);
   }
 
   rewriter.replaceOp(op, result);

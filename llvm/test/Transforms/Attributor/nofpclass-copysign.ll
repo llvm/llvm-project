@@ -7,7 +7,7 @@ declare float @llvm.fabs.f32(float)
 define float @ret_copysign(float %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign
 ; CHECK-SAME: (float [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -17,8 +17,8 @@ define float @ret_copysign(float %arg0, float %arg1) {
 define float @ret_copysign_fabs_rhs(float %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_copysign_fabs_rhs
 ; CHECK-SAME: (float [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[FABS_ARG1:%.*]] = call float @llvm.fabs.f32(float [[ARG1]])
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.copysign.f32(float [[ARG0]], float [[FABS_ARG1]])
+; CHECK-NEXT:    [[FABS_ARG1:%.*]] = call float @llvm.fabs.f32(float [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.copysign.f32(float [[ARG0]], float [[FABS_ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %fabs.arg1 = call float @llvm.fabs.f32(float %arg1)
@@ -29,8 +29,8 @@ define float @ret_copysign_fabs_rhs(float %arg0, float %arg1) {
 define float @ret_copysign_nnan_lhs_fabs_rhs(float nofpclass(nan) %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @ret_copysign_nnan_lhs_fabs_rhs
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[FABS_ARG1:%.*]] = call float @llvm.fabs.f32(float [[ARG1]])
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.copysign.f32(float [[ARG0]], float [[FABS_ARG1]])
+; CHECK-NEXT:    [[FABS_ARG1:%.*]] = call float @llvm.fabs.f32(float [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.copysign.f32(float [[ARG0]], float [[FABS_ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %fabs.arg1 = call float @llvm.fabs.f32(float %arg1)
@@ -42,8 +42,8 @@ define float @ret_copysign_nnan_lhs_fabs_rhs(float nofpclass(nan) %arg0, float %
 define float @ret_copysign_lhs_fabs_nnan_rhs(float %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_copysign_lhs_fabs_nnan_rhs
 ; CHECK-SAME: (float [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[FABS_ARG1:%.*]] = call nnan float @llvm.fabs.f32(float [[ARG1]])
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.copysign.f32(float [[ARG0]], float [[FABS_ARG1]])
+; CHECK-NEXT:    [[FABS_ARG1:%.*]] = call nnan float @llvm.fabs.f32(float [[ARG1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.copysign.f32(float [[ARG0]], float [[FABS_ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %fabs.arg1 = call nnan float @llvm.fabs.f32(float %arg1)
@@ -55,7 +55,7 @@ define float @ret_copysign_lhs_fabs_nnan_rhs(float %arg0, float %arg1) {
 define float @ret_copysign_noneg_lhs(float nofpclass(ninf nnorm nsub nzero) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_noneg_lhs
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -65,7 +65,7 @@ define float @ret_copysign_noneg_lhs(float nofpclass(ninf nnorm nsub nzero) %arg
 define float @ret_copysign_noneg_rhs(float %arg0, float nofpclass(ninf nnorm nsub nzero) %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_noneg_rhs
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(ninf nzero nsub nnorm) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -75,7 +75,7 @@ define float @ret_copysign_noneg_rhs(float %arg0, float nofpclass(ninf nnorm nsu
 define float @ret_copysign_noneg_nonan_rhs(float %arg0, float nofpclass(ninf nnorm nsub nzero nan) %arg1) {
 ; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @ret_copysign_noneg_nonan_rhs
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(nan ninf nzero nsub nnorm) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -85,7 +85,7 @@ define float @ret_copysign_noneg_nonan_rhs(float %arg0, float nofpclass(ninf nno
 define float @ret_copysign_nopos_lhs(float nofpclass(pinf pnorm psub pzero) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nopos_lhs
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -95,7 +95,7 @@ define float @ret_copysign_nopos_lhs(float nofpclass(pinf pnorm psub pzero) %arg
 define float @ret_copysign_nopos_rhs(float %arg0, float nofpclass(pinf pnorm psub pzero) %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nopos_rhs
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(pinf pzero psub pnorm) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -105,7 +105,7 @@ define float @ret_copysign_nopos_rhs(float %arg0, float nofpclass(pinf pnorm psu
 define float @ret_copysign_nonan_lhs(float nofpclass(nan) %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_copysign_nonan_lhs
 ; CHECK-SAME: (float nofpclass(nan) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -115,7 +115,7 @@ define float @ret_copysign_nonan_lhs(float nofpclass(nan) %arg0, float %arg1) {
 define float @ret_copysign_nonan_rhs(float %arg0, float nofpclass(nan) %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nonan_rhs
 ; CHECK-SAME: (float [[ARG0:%.*]], float nofpclass(nan) [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -125,7 +125,7 @@ define float @ret_copysign_nonan_rhs(float %arg0, float nofpclass(nan) %arg1) {
 define float @ret_copysign_noneg_nonan_lhs(float nofpclass(ninf nnorm nsub nzero nan) %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_copysign_noneg_nonan_lhs
 ; CHECK-SAME: (float nofpclass(nan ninf nzero nsub nnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -135,7 +135,7 @@ define float @ret_copysign_noneg_nonan_lhs(float nofpclass(ninf nnorm nsub nzero
 define float @ret_copysign_nopos_nonan_lhs(float nofpclass(pinf pnorm psub pzero nan) %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_copysign_nopos_nonan_lhs
 ; CHECK-SAME: (float nofpclass(nan pinf pzero psub pnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -145,7 +145,7 @@ define float @ret_copysign_nopos_nonan_lhs(float nofpclass(pinf pnorm psub pzero
 define float @ret_copysign_mixed_lhs0(float nofpclass(ninf pnorm nsub nzero) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_mixed_lhs0
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub pnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -155,7 +155,7 @@ define float @ret_copysign_mixed_lhs0(float nofpclass(ninf pnorm nsub nzero) %ar
 define float @ret_copysign_mixed_lhs1(float nofpclass(pinf nnorm psub pzero) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_mixed_lhs1
 ; CHECK-SAME: (float nofpclass(pinf pzero psub nnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -165,7 +165,7 @@ define float @ret_copysign_mixed_lhs1(float nofpclass(pinf nnorm psub pzero) %ar
 define float @ret_copysign_mixed_lhs2(float nofpclass(ninf pnorm psub nzero qnan) %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(qnan) float @ret_copysign_mixed_lhs2
 ; CHECK-SAME: (float nofpclass(qnan ninf nzero psub pnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(qnan) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(qnan) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -175,7 +175,7 @@ define float @ret_copysign_mixed_lhs2(float nofpclass(ninf pnorm psub nzero qnan
 define float @ret_copysign_noninf_lhs(float nofpclass(ninf) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_noninf_lhs
 ; CHECK-SAME: (float nofpclass(ninf) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -185,7 +185,7 @@ define float @ret_copysign_noninf_lhs(float nofpclass(ninf) %arg0, float %arg1) 
 define float @ret_copysign_nopinf_lhs(float nofpclass(pinf) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nopinf_lhs
 ; CHECK-SAME: (float nofpclass(pinf) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -195,7 +195,7 @@ define float @ret_copysign_nopinf_lhs(float nofpclass(pinf) %arg0, float %arg1) 
 define float @ret_copysign_noinf_lhs(float nofpclass(inf) %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_copysign_noinf_lhs
 ; CHECK-SAME: (float nofpclass(inf) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -205,7 +205,7 @@ define float @ret_copysign_noinf_lhs(float nofpclass(inf) %arg0, float %arg1) {
 define float @ret_copysign_nonzero_lhs(float nofpclass(nzero) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nonzero_lhs
 ; CHECK-SAME: (float nofpclass(nzero) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -215,7 +215,7 @@ define float @ret_copysign_nonzero_lhs(float nofpclass(nzero) %arg0, float %arg1
 define float @ret_copysign_nopzero_lhs(float nofpclass(pzero) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nopzero_lhs
 ; CHECK-SAME: (float nofpclass(pzero) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -225,7 +225,7 @@ define float @ret_copysign_nopzero_lhs(float nofpclass(pzero) %arg0, float %arg1
 define float @ret_copysign_nozero_lhs(float nofpclass(zero) %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(zero) float @ret_copysign_nozero_lhs
 ; CHECK-SAME: (float nofpclass(zero) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(zero) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -235,7 +235,7 @@ define float @ret_copysign_nozero_lhs(float nofpclass(zero) %arg0, float %arg1) 
 define float @ret_copysign_nonsub_lhs(float nofpclass(nsub) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nonsub_lhs
 ; CHECK-SAME: (float nofpclass(nsub) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -245,7 +245,7 @@ define float @ret_copysign_nonsub_lhs(float nofpclass(nsub) %arg0, float %arg1) 
 define float @ret_copysign_nopsub_lhs(float nofpclass(psub) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nopsub_lhs
 ; CHECK-SAME: (float nofpclass(psub) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -255,7 +255,7 @@ define float @ret_copysign_nopsub_lhs(float nofpclass(psub) %arg0, float %arg1) 
 define float @ret_copysign_nosub_lhs(float nofpclass(sub) %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(sub) float @ret_copysign_nosub_lhs
 ; CHECK-SAME: (float nofpclass(sub) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -265,7 +265,7 @@ define float @ret_copysign_nosub_lhs(float nofpclass(sub) %arg0, float %arg1) {
 define float @ret_copysign_nonnorm_lhs(float nofpclass(nnorm) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nonnorm_lhs
 ; CHECK-SAME: (float nofpclass(nnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -275,7 +275,7 @@ define float @ret_copysign_nonnorm_lhs(float nofpclass(nnorm) %arg0, float %arg1
 define float @ret_copysign_nopnorm_lhs(float nofpclass(pnorm) %arg0, float %arg1) {
 ; CHECK-LABEL: define float @ret_copysign_nopnorm_lhs
 ; CHECK-SAME: (float nofpclass(pnorm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)
@@ -285,7 +285,7 @@ define float @ret_copysign_nopnorm_lhs(float nofpclass(pnorm) %arg0, float %arg1
 define float @ret_copysign_nonorm_lhs(float nofpclass(norm) %arg0, float %arg1) {
 ; CHECK-LABEL: define nofpclass(norm) float @ret_copysign_nonorm_lhs
 ; CHECK-SAME: (float nofpclass(norm) [[ARG0:%.*]], float [[ARG1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(norm) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]])
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(norm) float @llvm.copysign.f32(float [[ARG0]], float [[ARG1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %call = call float @llvm.copysign.f32(float %arg0, float %arg1)

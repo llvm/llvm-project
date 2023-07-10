@@ -225,7 +225,8 @@ LIBC_INLINE size_t strlcpy(char *__restrict dst, const char *__restrict src,
 }
 
 template <bool ReturnNull = true>
-constexpr static char *strchr_implementation(const char *src, int c) {
+LIBC_INLINE constexpr static char *strchr_implementation(const char *src,
+                                                         int c) {
   char ch = static_cast<char>(c);
   for (; *src && *src != ch; ++src)
     ;
@@ -233,7 +234,8 @@ constexpr static char *strchr_implementation(const char *src, int c) {
   return *src == ch ? const_cast<char *>(src) : ret;
 }
 
-constexpr static char *strrchr_implementation(const char *src, int c) {
+LIBC_INLINE constexpr static char *strrchr_implementation(const char *src,
+                                                          int c) {
   char ch = static_cast<char>(c);
   char *last_occurrence = nullptr;
   for (; *src; ++src) {

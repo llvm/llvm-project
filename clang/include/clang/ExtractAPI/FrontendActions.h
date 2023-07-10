@@ -7,41 +7,27 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file defines the ExtractAPIAction frontend action.
+/// This file defines the ExtractAPIAction and WrappingExtractAPIAction frontend
+/// actions.
 ///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_EXTRACTAPI_FRONTEND_ACTIONS_H
 #define LLVM_CLANG_EXTRACTAPI_FRONTEND_ACTIONS_H
 
-#include "clang/ExtractAPI/API.h"
-#include "clang/ExtractAPI/APIIgnoresList.h"
+#include "clang/ExtractAPI/ExtractAPIActionBase.h"
 #include "clang/Frontend/FrontendAction.h"
 
 namespace clang {
 
 /// ExtractAPIAction sets up the output file and creates the ExtractAPIVisitor.
-class ExtractAPIAction : public ASTFrontendAction {
+class ExtractAPIAction : public ASTFrontendAction,
+                         private ExtractAPIActionBase {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
 private:
-  /// A representation of the APIs this action extracts.
-  std::unique_ptr<extractapi::APISet> API;
-
-  /// A stream to the output file of this action.
-  std::unique_ptr<raw_pwrite_stream> OS;
-
-  /// The product this action is extracting API information for.
-  std::string ProductName;
-
-  /// The synthesized input buffer that contains all the provided input header
-  /// files.
-  std::unique_ptr<llvm::MemoryBuffer> Buffer;
-
-  /// The list of symbols to ignore during serialization
-  extractapi::APIIgnoresList IgnoresList;
 
   /// The input file originally provided on the command line.
   ///
@@ -62,10 +48,46 @@ private:
   /// emit them in this callback.
   void EndSourceFileAction() override;
 
+  static StringRef getInputBufferName() { return "<extract-api-includes>"; }
+
   static std::unique_ptr<llvm::raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile);
+};
 
-  static StringRef getInputBufferName() { return "<extract-api-includes>"; }
+/// Wrap ExtractAPIAction on top of a pre-existing action
+///
+/// Used when the ExtractAPI action needs to be executed as a side effect of a
+/// regular compilation job. Unlike ExtarctAPIAction, this is meant to be used
+/// on regular source files ( .m , .c files) instead of header files
+class WrappingExtractAPIAction : public WrapperFrontendAction,
+                                 private ExtractAPIActionBase {
+public:
+  WrappingExtractAPIAction(std::unique_ptr<FrontendAction> WrappedAction)
+      : WrapperFrontendAction(std::move(WrappedAction)) {}
+
+protected:
+  /// Create ExtractAPI consumer multiplexed on another consumer.
+  ///
+  /// This allows us to execute ExtractAPI action while on top of
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
+                                                 StringRef InFile) override;
+
+private:
+  /// Flag to check if the wrapper front end action's consumer is
+  /// craeted or not
+  bool CreatedASTConsumer = false;
+
+  void EndSourceFile() override { FrontendAction::EndSourceFile(); }
+
+  /// Called after executing the action on the synthesized input buffer.
+  ///
+  /// Executes both Wrapper and ExtractAPIBase end source file
+  /// actions. This is the place where all the gathered symbol graph
+  /// information is emited.
+  void EndSourceFileAction() override;
+
+  static std::unique_ptr<llvm::raw_pwrite_stream>
+  CreateOutputFile(CompilerInstance &CI, StringRef InFile);
 };
 
 } // namespace clang

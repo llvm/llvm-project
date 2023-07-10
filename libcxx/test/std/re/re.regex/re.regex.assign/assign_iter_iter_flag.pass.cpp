@@ -15,8 +15,9 @@
 //    assign(InputIterator first, InputIterator last,
 //           flag_type f = regex_constants::ECMAScript);
 
-#include <regex>
 #include <cassert>
+#include <regex>
+#include <string>
 
 #include "test_macros.h"
 #include "test_iterators.h"

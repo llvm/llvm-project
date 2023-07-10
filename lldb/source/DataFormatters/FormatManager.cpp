@@ -596,6 +596,15 @@ ImplSP FormatManager::GetHardcoded(FormattersMatchData &match_data) {
   return retval_sp;
 }
 
+namespace {
+template <typename ImplSP> const char *FormatterKind;
+template <> const char *FormatterKind<lldb::TypeFormatImplSP> = "format";
+template <> const char *FormatterKind<lldb::TypeSummaryImplSP> = "summary";
+template <> const char *FormatterKind<lldb::SyntheticChildrenSP> = "synthetic";
+} // namespace
+
+#define FORMAT_LOG(Message) "[%s] " Message, FormatterKind<ImplSP>
+
 template <typename ImplSP>
 ImplSP FormatManager::Get(ValueObject &valobj,
                           lldb::DynamicValueType use_dynamic) {
@@ -605,21 +614,19 @@ ImplSP FormatManager::Get(ValueObject &valobj,
 
   Log *log = GetLog(LLDBLog::DataFormatters);
 
-  LLDB_LOGF(log, "[%s] Search failed. Giving language a chance.", __FUNCTION__);
+  LLDB_LOGF(log, FORMAT_LOG("Search failed. Giving language a chance."));
   for (lldb::LanguageType lang_type : match_data.GetCandidateLanguages()) {
     if (LanguageCategory *lang_category = GetCategoryForLanguage(lang_type)) {
       ImplSP retval_sp;
       if (lang_category->Get(match_data, retval_sp))
         if (retval_sp) {
-          LLDB_LOGF(log, "[%s] Language search success. Returning.",
-                    __FUNCTION__);
+          LLDB_LOGF(log, FORMAT_LOG("Language search success. Returning."));
           return retval_sp;
         }
     }
   }
 
-  LLDB_LOGF(log, "[%s] Search failed. Giving hardcoded a chance.",
-            __FUNCTION__);
+  LLDB_LOGF(log, FORMAT_LOG("Search failed. Giving hardcoded a chance."));
   return GetHardcoded<ImplSP>(match_data);
 }
 
@@ -628,24 +635,23 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
   ImplSP retval_sp;
   Log *log = GetLog(LLDBLog::DataFormatters);
   if (match_data.GetTypeForCache()) {
-    LLDB_LOGF(log, "\n\n[%s] Looking into cache for type %s", __FUNCTION__,
+    LLDB_LOGF(log, "\n\n" FORMAT_LOG("Looking into cache for type %s"),
               match_data.GetTypeForCache().AsCString("<invalid>"));
     if (m_format_cache.Get(match_data.GetTypeForCache(), retval_sp)) {
       if (log) {
-        LLDB_LOGF(log, "[%s] Cache search success. Returning.", __FUNCTION__);
+        LLDB_LOGF(log, FORMAT_LOG("Cache search success. Returning."));
         LLDB_LOGV(log, "Cache hits: {0} - Cache Misses: {1}",
                   m_format_cache.GetCacheHits(),
                   m_format_cache.GetCacheMisses());
       }
       return retval_sp;
     }
-    LLDB_LOGF(log, "[%s] Cache search failed. Going normal route",
-              __FUNCTION__);
+    LLDB_LOGF(log, FORMAT_LOG("Cache search failed. Going normal route"));
   }
 
   m_categories_map.Get(match_data, retval_sp);
   if (match_data.GetTypeForCache() && (!retval_sp || !retval_sp->NonCacheable())) {
-    LLDB_LOGF(log, "[%s] Caching %p for type %s", __FUNCTION__,
+    LLDB_LOGF(log, FORMAT_LOG("Caching %p for type %s"),
               static_cast<void *>(retval_sp.get()),
               match_data.GetTypeForCache().AsCString("<invalid>"));
     m_format_cache.Set(match_data.GetTypeForCache(), retval_sp);
@@ -654,6 +660,8 @@ ImplSP FormatManager::GetCached(FormattersMatchData &match_data) {
             m_format_cache.GetCacheHits(), m_format_cache.GetCacheMisses());
   return retval_sp;
 }
+
+#undef FORMAT_LOG
 
 lldb::TypeFormatImplSP
 FormatManager::GetFormat(ValueObject &valobj,

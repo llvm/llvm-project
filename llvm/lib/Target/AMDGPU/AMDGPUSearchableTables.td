@@ -257,6 +257,7 @@ def : SourceOfDivergence<int_amdgcn_ds_fadd>;
 def : SourceOfDivergence<int_amdgcn_ds_fmin>;
 def : SourceOfDivergence<int_amdgcn_ds_fmax>;
 def : SourceOfDivergence<int_amdgcn_ds_fadd_v2bf16>;
+def : SourceOfDivergence<int_amdgcn_ds_cond_sub_u32>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_swap>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_add>;
 def : SourceOfDivergence<int_amdgcn_buffer_atomic_sub>;

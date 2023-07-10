@@ -710,6 +710,12 @@ public:
     return result;
   }
 
+  void resetFPOptions(FPOptions FPO) {
+    CurFPFeatures = FPO;
+    FpPragmaStack.Stack.clear();
+    FpPragmaStack.CurrentValue = FPO.getChangesFrom(FPOptions(LangOpts));
+  }
+
   // RAII object to push / pop sentinel slots for all MS #pragma stacks.
   // Actions should be performed only if we enter / exit a C++ method body.
   class PragmaStackSentinelRAII {
@@ -13745,7 +13751,7 @@ public:
 private:
   void CheckImplicitConversions(Expr *E, SourceLocation CC = SourceLocation());
   void CheckBoolLikeConversion(Expr *E, SourceLocation CC);
-  void CheckForIntOverflow(Expr *E);
+  void CheckForIntOverflow(const Expr *E);
   void CheckUnsequencedOperations(const Expr *E);
 
   /// Perform semantic checks on a completed expression. This will either
@@ -14028,6 +14034,8 @@ struct LateParsedTemplate {
   CachedTokens Toks;
   /// The template function declaration to be late parsed.
   Decl *D;
+  /// Floating-point options in the point of definition.
+  FPOptions FPO;
 };
 
 template <>

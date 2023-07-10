@@ -8,8 +8,10 @@
 
 #include "src/__support/File/file.h"
 
+#include "llvm-libc-types/rpc_opcodes_t.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/errno/libc_errno.h" // For error macros
+#include "src/string/string_utils.h"
 
 #include <stdio.h>
 
@@ -18,6 +20,7 @@ namespace __llvm_libc {
 namespace {
 
 FileIOResult write_func(File *, const void *, size_t);
+int close_func(File *);
 
 } // namespace
 
@@ -26,8 +29,8 @@ class GPUFile : public File {
 
 public:
   constexpr GPUFile(uintptr_t file, File::ModeFlags modeflags)
-      : File(&write_func, nullptr, nullptr, nullptr, nullptr, 0, _IONBF, false,
-             modeflags),
+      : File(&write_func, nullptr, nullptr, &close_func, nullptr, 0, _IONBF,
+             false, modeflags),
         file(file) {}
 
   uintptr_t get_file() const { return file; }
@@ -85,7 +88,41 @@ FileIOResult write_func(File *f, const void *data, size_t size) {
   return ret;
 }
 
+int close_func(File *file) {
+  int ret = 0;
+  GPUFile *gpu_file = reinterpret_cast<GPUFile *>(file);
+  rpc::Client::Port port = rpc::client.open<RPC_CLOSE_FILE>();
+  port.send_and_recv(
+      [=](rpc::Buffer *buffer) { buffer->data[0] = gpu_file->get_file(); },
+      [&](rpc::Buffer *buffer) { ret = buffer->data[0]; });
+  port.close();
+
+  return ret;
+}
+
 } // namespace
+
+void *ptr;
+
+ErrorOr<File *> openfile(const char *path, const char *mode) {
+  auto modeflags = File::mode_flags(mode);
+  if (modeflags == 0)
+    return Error(EINVAL);
+
+  uintptr_t file;
+  rpc::Client::Port port = rpc::client.open<RPC_OPEN_FILE>();
+  port.send_n(path, internal::string_length(path) + 1);
+  port.send_and_recv(
+      [=](rpc::Buffer *buffer) {
+        inline_memcpy(buffer->data, mode, internal::string_length(mode) + 1);
+      },
+      [&](rpc::Buffer *buffer) { file = buffer->data[0]; });
+  port.close();
+
+  static GPUFile gpu_file(0, 0);
+  gpu_file = GPUFile(file, modeflags);
+  return &gpu_file;
+}
 
 static GPUFile StdIn(0UL, File::ModeFlags(File::OpenMode::READ));
 File *stdin = &StdIn;

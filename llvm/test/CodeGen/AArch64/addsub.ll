@@ -674,8 +674,6 @@ define dso_local i32 @_extract_crng_crng() {
 ; CHECK-NEXT:    bl crng_reseed
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB36_3: // %if.end
-; CHECK-NEXT:    .cfi_def_cfa wsp, 0
-; CHECK-NEXT:    .cfi_same_value w30
 ; CHECK-NEXT:    ret
 entry:
   br i1 icmp slt (ptr @_extract_crng_crng, ptr null), label %if.then, label %lor.lhs.false

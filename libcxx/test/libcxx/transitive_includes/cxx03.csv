@@ -42,6 +42,7 @@ array algorithm
 array compare
 array concepts
 array cstddef
+array cstdint
 array cstdlib
 array initializer_list
 array iterator
@@ -506,6 +507,7 @@ locale version
 map compare
 map concepts
 map cstddef
+map cstdint
 map cstdlib
 map functional
 map initializer_list
@@ -731,6 +733,7 @@ semaphore version
 set compare
 set concepts
 set cstddef
+set cstdint
 set cstdlib
 set functional
 set initializer_list

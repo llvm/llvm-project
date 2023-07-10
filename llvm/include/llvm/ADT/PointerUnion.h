@@ -231,7 +231,7 @@ template <typename... PTs> struct CastInfoPointerUnionImpl {
   }
 
   template <typename To> static To doCast(From &F) {
-    assert(isPossible<To>(F) && "cast to an incompatible type !");
+    assert(isPossible<To>(F) && "cast to an incompatible type!");
     return PointerLikeTypeTraits<To>::getFromVoidPointer(F.Val.getPointer());
   }
 };

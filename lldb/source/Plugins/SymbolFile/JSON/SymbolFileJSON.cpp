@@ -48,7 +48,7 @@ void SymbolFileJSON::Terminate() {
 }
 
 llvm::StringRef SymbolFileJSON::GetPluginDescriptionStatic() {
-  return "Reads debug symbols from a textual symbol table.";
+  return "Reads debug symbols from a JSON symbol table.";
 }
 
 SymbolFile *SymbolFileJSON::CreateInstance(ObjectFileSP objfile_sp) {

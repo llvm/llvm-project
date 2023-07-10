@@ -69,19 +69,33 @@ entry:
 }
 
 define i32 @unions() nounwind {
-; CHECK: Function Attrs: nounwind
-; CHECK-LABEL: define {{[^@]+}}@unions
-; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
-; CHECK-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr @mystr, i64 0, i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_0_1]], align 8
-; CHECK-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
-; CHECK-NEXT:    [[MYSTR_0_11:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr @mystr, i64 0, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_0_11]], align 8
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR0]]
-; CHECK-NEXT:    ret i32 [[RESULT]]
+; TUNIT: Function Attrs: nounwind
+; TUNIT-LABEL: define {{[^@]+}}@unions
+; TUNIT-SAME: () #[[ATTR0]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
+; TUNIT-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr @mystr, i64 0, i32 1
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_0_1]], align 8
+; TUNIT-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR0]]
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
+; TUNIT-NEXT:    [[MYSTR_0_11:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr @mystr, i64 0, i32 1
+; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_0_11]], align 8
+; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    ret i32 [[RESULT]]
+;
+; CGSCC: Function Attrs: nounwind
+; CGSCC-LABEL: define {{[^@]+}}@unions
+; CGSCC-SAME: () #[[ATTR0]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
+; CGSCC-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr @mystr, i64 0, i32 1
+; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_0_1]], align 8
+; CGSCC-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR0]]
+; CGSCC-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
+; CGSCC-NEXT:    [[MYSTR_0_11:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr @mystr, i64 0, i32 1
+; CGSCC-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_0_11]], align 8
+; CGSCC-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR0]]
+; CGSCC-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
   call void @vfu1(ptr byval(%struct.MYstr) align 4 @mystr) nounwind
@@ -125,13 +139,13 @@ define i32 @unions_v2() nounwind {
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr @mystr, i64 0, i32 1
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_0_1]], align 8
+; TUNIT-NEXT:    [[MYSTR_0_11:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr @mystr, i64 0, i32 1
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[MYSTR_0_11]], align 8
 ; TUNIT-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]]) #[[ATTR0]]
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, ptr @mystr, align 8
-; TUNIT-NEXT:    [[MYSTR_0_11:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr @mystr, i64 0, i32 1
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_0_11]], align 8
-; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR0]]
+; TUNIT-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr @mystr, i64 0, i32 1
+; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[MYSTR_0_1]], align 8
+; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR2]]
 ; TUNIT-NEXT:    ret i32 [[RESULT]]
 ;
 ; CGSCC: Function Attrs: nounwind
@@ -148,6 +162,10 @@ entry:
   ret i32 %result
 }
 ;.
-; CHECK: attributes #[[ATTR0]] = { nounwind }
-; CHECK: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; TUNIT: attributes #[[ATTR0]] = { nounwind }
+; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
+; TUNIT: attributes #[[ATTR2]] = { nounwind memory(read) }
+;.
+; CGSCC: attributes #[[ATTR0]] = { nounwind }
+; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ;.

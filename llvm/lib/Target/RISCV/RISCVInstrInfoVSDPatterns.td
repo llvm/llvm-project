@@ -34,7 +34,8 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
   defvar store_instr = !cast<Instruction>("PseudoVSE"#sew#"_V_"#vlmul.MX);
   // Load
   def : Pat<(type (load GPR:$rs1)),
-            (load_instr GPR:$rs1, avl, log2sew)>;
+            (load_instr (type (IMPLICIT_DEF)), GPR:$rs1, avl,
+                        log2sew, TU_MU)>;
   // Store
   def : Pat<(store type:$rs2, GPR:$rs1),
             (store_instr reg_class:$rs2, GPR:$rs1, avl, log2sew)>;
@@ -63,7 +64,8 @@ multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m> {
   defvar store_instr = !cast<Instruction>("PseudoVSM_V_"#m.BX);
   // Load
   def : Pat<(m.Mask (load GPR:$rs1)),
-            (load_instr GPR:$rs1, m.AVL, m.Log2SEW)>;
+            (load_instr (m.Mask (IMPLICIT_DEF)), GPR:$rs1, m.AVL,
+                         m.Log2SEW, TA_MA)>;
   // Store
   def : Pat<(store m.Mask:$rs2, GPR:$rs1),
             (store_instr VR:$rs2, GPR:$rs1, m.AVL, m.Log2SEW)>;

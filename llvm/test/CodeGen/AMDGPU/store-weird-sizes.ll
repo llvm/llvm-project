@@ -29,7 +29,6 @@ define void @local_store_i56(ptr addrspace(3) %ptr, i56 %arg) #0 {
 ; GFX10-LABEL: local_store_i56:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ds_write_b8_d16_hi v0, v2 offset:6
 ; GFX10-NEXT:    ds_write_b16 v0, v2 offset:4
 ; GFX10-NEXT:    ds_write_b32 v0, v1
@@ -39,7 +38,6 @@ define void @local_store_i56(ptr addrspace(3) %ptr, i56 %arg) #0 {
 ; GFX11-LABEL: local_store_i56:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_store_b8_d16_hi v0, v2 offset:6
 ; GFX11-NEXT:    ds_store_b16 v0, v2 offset:4
 ; GFX11-NEXT:    ds_store_b32 v0, v1
@@ -325,7 +323,6 @@ define void @local_store_i13(ptr addrspace(3) %ptr, i13 %arg) #0 {
 ; GFX10-LABEL: local_store_i13:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0x1fff, v1
 ; GFX10-NEXT:    ds_write_b16 v0, v1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -334,7 +331,6 @@ define void @local_store_i13(ptr addrspace(3) %ptr, i13 %arg) #0 {
 ; GFX11-LABEL: local_store_i13:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v1, 0x1fff, v1
 ; GFX11-NEXT:    ds_store_b16 v0, v1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
@@ -366,7 +362,6 @@ define void @local_store_i17(ptr addrspace(3) %ptr, i17 %arg) #0 {
 ; GFX10-LABEL: local_store_i17:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_and_b32_e32 v2, 0x1ffff, v1
 ; GFX10-NEXT:    ds_write_b16 v0, v1
 ; GFX10-NEXT:    ds_write_b8_d16_hi v0, v2 offset:2
@@ -376,7 +371,6 @@ define void @local_store_i17(ptr addrspace(3) %ptr, i17 %arg) #0 {
 ; GFX11-LABEL: local_store_i17:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0x1ffff, v1
 ; GFX11-NEXT:    ds_store_b16 v0, v1
 ; GFX11-NEXT:    ds_store_b8_d16_hi v0, v2 offset:2

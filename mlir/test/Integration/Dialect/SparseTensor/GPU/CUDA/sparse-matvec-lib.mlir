@@ -32,6 +32,9 @@
 }>
 
 module {
+  llvm.func @mgpuCreateSparseEnv()
+  llvm.func @mgpuDestroySparseEnv()
+
   // Compute matrix vector y = Ax on COO with default index coordinates.
   func.func @matvecCOO(%A: tensor<?x?xf64, #SortedCOO>, %x: tensor<?xf64>, %y_in: tensor<?xf64>) -> tensor<?xf64> {
     %y_out = linalg.matvec
@@ -49,6 +52,7 @@ module {
   }
 
   func.func @main() {
+    llvm.call @mgpuCreateSparseEnv() : () -> ()
     %f0 = arith.constant 0.0 : f64
     %f1 = arith.constant 1.0 : f64
     %c0 = arith.constant 0 : index
@@ -122,6 +126,8 @@ module {
     // Release the resources.
     bufferization.dealloc_tensor %Acoo : tensor<?x?xf64, #SortedCOO>
     bufferization.dealloc_tensor %Acsr : tensor<?x?xf64, #CSR>
+
+    llvm.call @mgpuDestroySparseEnv() : () -> ()
     return
   }
 }

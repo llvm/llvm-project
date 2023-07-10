@@ -120,7 +120,7 @@ LIBC_INLINE ErrorOr<void *> alloc_stack(size_t stacksize, size_t guardsize) {
 // This must always be inlined as we may be freeing the calling threads stack in
 // which case a normal return from the top the stack would cause an invalid
 // memory read.
-static __attribute__((always_inline)) inline void
+[[gnu::always_inline]] LIBC_INLINE void
 free_stack(void *stack, size_t stacksize, size_t guardsize) {
   uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
   stackaddr -= guardsize;
@@ -144,7 +144,7 @@ struct alignas(STACK_ALIGNMENT) StartArgs {
 // This must always be inlined as we may be freeing the calling threads stack in
 // which case a normal return from the top the stack would cause an invalid
 // memory read.
-static __attribute__((always_inline)) inline void
+[[gnu::always_inline]] LIBC_INLINE void
 cleanup_thread_resources(ThreadAttributes *attrib) {
   // Cleanup the TLS before the stack as the TLS information is stored on
   // the stack.
@@ -153,7 +153,7 @@ cleanup_thread_resources(ThreadAttributes *attrib) {
     free_stack(attrib->stack, attrib->stacksize, attrib->guardsize);
 }
 
-__attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
+[[gnu::always_inline]] LIBC_INLINE uintptr_t get_start_args_addr() {
 // NOTE: For __builtin_frame_address to work reliably across compilers,
 // architectures and various optimization levels, the TU including this file
 // should be compiled with -fno-omit-frame-pointer.
@@ -176,7 +176,7 @@ __attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
 #endif
 }
 
-__attribute__((noinline)) static void start_thread() {
+[[gnu::noinline]] LIBC_INLINE void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
   self.attrib = attrib;

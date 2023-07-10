@@ -17,11 +17,13 @@
 
 // explicit basic_ofstream(const filesystem::path& s, ios_base::openmode mode = ios_base::out);
 
-#include <fstream>
-#include <filesystem>
 #include <cassert>
-#include "test_macros.h"
+#include <filesystem>
+#include <fstream>
+#include <type_traits>
+
 #include "platform_support.h"
+#include "test_macros.h"
 
 namespace fs = std::filesystem;
 

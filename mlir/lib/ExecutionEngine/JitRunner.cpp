@@ -224,6 +224,12 @@ static Error compileAndExecuteVoidFunction(
       SymbolTable::lookupSymbolIn(module, entryPoint));
   if (!mainFunction || mainFunction.empty())
     return makeStringError("entry point not found");
+
+  auto resultType = dyn_cast<LLVM::LLVMVoidType>(
+      mainFunction.getFunctionType().getReturnType());
+  if (!resultType)
+    return makeStringError("expected void function");
+
   void *empty = nullptr;
   return compileAndExecute(options, module, entryPoint, std::move(config),
                            &empty, std::move(tm));

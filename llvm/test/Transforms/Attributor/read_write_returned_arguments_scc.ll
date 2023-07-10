@@ -337,7 +337,7 @@ define ptr @external_source_ret2_nrw(ptr %n0, ptr %r0, ptr %w0) {
 ; CGSCC-LABEL: define {{[^@]+}}@external_source_ret2_nrw
 ; CGSCC-SAME: (ptr nofree [[N0:%.*]], ptr nofree [[R0:%.*]], ptr nofree [[W0:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @external_sink_ret2_nrw(ptr nofree [[N0]], ptr nocapture nofree readonly [[R0]], ptr nofree writeonly [[W0]]) #[[ATTR3]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @external_sink_ret2_nrw(ptr nofree [[N0]], ptr nocapture nofree readonly [[R0]], ptr nofree writeonly [[W0]]) #[[ATTR5:[0-9]+]]
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call ptr @external_ret2_nrw(ptr nofree [[N0]], ptr nofree [[R0]], ptr nofree [[W0]]) #[[ATTR3]]
 ; CGSCC-NEXT:    ret ptr [[CALL1]]
 ;
@@ -359,6 +359,7 @@ entry:
 ; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind }
-; CGSCC: attributes #[[ATTR3]] = { nounwind }
-; CGSCC: attributes #[[ATTR4]] = { nounwind memory(readwrite) }
+; CGSCC: attributes #[[ATTR3]] = { nofree nounwind }
+; CGSCC: attributes #[[ATTR4]] = { nofree nounwind memory(readwrite) }
+; CGSCC: attributes #[[ATTR5]] = { nofree nounwind willreturn }
 ;.

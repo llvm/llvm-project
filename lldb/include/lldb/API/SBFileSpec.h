@@ -19,9 +19,10 @@ public:
 
   SBFileSpec(const lldb::SBFileSpec &rhs);
 
-  LLDB_DEPRECATED("Use the other constructor to determine if this the file "
-                  "spec should be resolved",
-                  "SBFileSpec(const char *, bool)")
+  LLDB_DEPRECATED_FIXME(
+      "Use the other constructor to determine if this the file "
+      "spec should be resolved",
+      "SBFileSpec(const char *, bool)")
   SBFileSpec(const char *path);
 
   SBFileSpec(const char *path, bool resolve);

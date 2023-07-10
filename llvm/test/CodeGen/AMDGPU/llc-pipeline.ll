@@ -378,9 +378,8 @@
 ; GCN-O1-NEXT:        Remove Redundant DEBUG_VALUE analysis
 ; GCN-O1-NEXT:        Fixup Statepoint Caller Saved
 ; GCN-O1-NEXT:        PostRA Machine Sink
-; GCN-O1-NEXT:        MachineDominator Tree Construction
-; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        Machine Block Frequency Analysis
+; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
@@ -684,9 +683,8 @@
 ; GCN-O1-OPTS-NEXT:        Remove Redundant DEBUG_VALUE analysis
 ; GCN-O1-OPTS-NEXT:        Fixup Statepoint Caller Saved
 ; GCN-O1-OPTS-NEXT:        PostRA Machine Sink
-; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
-; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
+; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
@@ -994,9 +992,8 @@
 ; GCN-O2-NEXT:        Remove Redundant DEBUG_VALUE analysis
 ; GCN-O2-NEXT:        Fixup Statepoint Caller Saved
 ; GCN-O2-NEXT:        PostRA Machine Sink
-; GCN-O2-NEXT:        MachineDominator Tree Construction
-; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        Machine Block Frequency Analysis
+; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
@@ -1316,9 +1313,8 @@
 ; GCN-O3-NEXT:        Remove Redundant DEBUG_VALUE analysis
 ; GCN-O3-NEXT:        Fixup Statepoint Caller Saved
 ; GCN-O3-NEXT:        PostRA Machine Sink
-; GCN-O3-NEXT:        MachineDominator Tree Construction
-; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
+; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter

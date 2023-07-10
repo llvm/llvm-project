@@ -2308,12 +2308,12 @@ CompilerType TypeSystemClang::CreateArrayType(const CompilerType &element_type,
 }
 
 CompilerType TypeSystemClang::CreateStructForIdentifier(
-    ConstString type_name,
+    llvm::StringRef type_name,
     const std::initializer_list<std::pair<const char *, CompilerType>>
         &type_fields,
     bool packed) {
   CompilerType type;
-  if (!type_name.IsEmpty() &&
+  if (!type_name.empty() &&
       (type = GetTypeForIdentifier<clang::CXXRecordDecl>(type_name))
           .IsValid()) {
     lldbassert(0 && "Trying to create a type for an existing name");
@@ -2321,8 +2321,7 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
   }
 
   type = CreateRecordType(nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-                          type_name.GetCString(), clang::TTK_Struct,
-                          lldb::eLanguageTypeC);
+                          type_name, clang::TTK_Struct, lldb::eLanguageTypeC);
   StartTagDeclarationDefinition(type);
   for (const auto &field : type_fields)
     AddFieldToRecordType(type, field.first, field.second, lldb::eAccessPublic,
@@ -2334,7 +2333,7 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
 }
 
 CompilerType TypeSystemClang::GetOrCreateStructForIdentifier(
-    ConstString type_name,
+    llvm::StringRef type_name,
     const std::initializer_list<std::pair<const char *, CompilerType>>
         &type_fields,
     bool packed) {

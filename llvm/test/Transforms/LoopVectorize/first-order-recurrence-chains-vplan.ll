@@ -108,3 +108,33 @@ loop:
 exit:
   ret void
 }
+
+; This test has two FORs (for.x and for.y) where incoming value from the previous
+; iteration (for.x.prev) of one FOR (for.y) depends on another FOR (for.x). Due to
+; this dependency all uses of the former FOR (for.y) should be sunk after
+; incoming value from the previous iteration (for.x.prev) of te latter FOR (for.y).
+; That means side-effecting user (store i64 %for.y.i64, ptr %gep) of the latter
+; FOR (for.y) should be moved which is not currently supported.
+define i32 @test_chained_first_order_recurrences_4(ptr %base) {
+; CHECK-LABEL: 'test_chained_first_order_recurrences_4'
+; CHECK: No VPlan could be built for
+
+entry:
+  br label %loop
+
+ret:
+  ret i32 0
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %for.x = phi i64 [ %for.x.next, %loop ], [ 0, %entry ]
+  %for.y = phi i32 [ %for.x.prev, %loop ], [ 0, %entry ]
+  %iv.next = add i64 %iv, 1
+  %gep = getelementptr i64, ptr %base, i64 %iv
+  %for.x.prev = trunc i64 %for.x to i32
+  %for.y.i64 = sext i32 %for.y to i64
+  store i64 %for.y.i64, ptr %gep
+  %for.x.next = mul i64 0, 0
+  %icmp = icmp ugt i64 %iv, 4096
+  br i1 %icmp, label %ret, label %loop
+}

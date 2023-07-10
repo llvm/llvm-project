@@ -611,6 +611,9 @@ void CommandCompletions::Registers(CommandInterpreter &interpreter,
 
   RegisterContext *reg_ctx =
       interpreter.GetExecutionContext().GetRegisterContext();
+  if (!reg_ctx)
+    return;
+
   const size_t reg_num = reg_ctx->GetRegisterCount();
   for (size_t reg_idx = 0; reg_idx < reg_num; ++reg_idx) {
     const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
@@ -754,7 +757,7 @@ void CommandCompletions::StopHookIDs(CommandInterpreter &interpreter,
     // neater.
     strm.SetIndentLevel(11);
     const Target::StopHookSP stophook_sp = target_sp->GetStopHookAtIndex(idx);
-    stophook_sp->GetDescription(&strm, lldb::eDescriptionLevelInitial);
+    stophook_sp->GetDescription(strm, lldb::eDescriptionLevelInitial);
     request.TryCompleteCurrentArg(std::to_string(stophook_sp->GetID()),
                                   strm.GetString());
   }

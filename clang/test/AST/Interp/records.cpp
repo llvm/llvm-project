@@ -111,8 +111,8 @@ static_assert(c.a == 100, "");
 static_assert(c.b == 200, "");
 
 constexpr C c2 = C().get();
-static_assert(c.a == 100, "");
-static_assert(c.b == 200, "");
+static_assert(c2.a == 100, "");
+static_assert(c2.b == 200, "");
 
 constexpr int getB() {
   C c;

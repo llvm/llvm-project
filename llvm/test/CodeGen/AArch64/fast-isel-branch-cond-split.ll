@@ -153,9 +153,6 @@ define i64 @test_or_unpredictable(i32 %a, i32 %b) {
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB4_2: ; %common.ret
-; CHECK-NEXT:    .cfi_def_cfa wsp, 0
-; CHECK-NEXT:    .cfi_same_value w30
-; CHECK-NEXT:    .cfi_same_value w29
 ; CHECK-NEXT:    ret
 bb1:
   %0 = icmp eq i32 %a, 0
@@ -189,9 +186,6 @@ define i64 @test_and_unpredictable(i32 %a, i32 %b) {
 ; CHECK-NEXT:    bl _bar
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB5_2: ; %common.ret
-; CHECK-NEXT:    .cfi_def_cfa wsp, 0
-; CHECK-NEXT:    .cfi_same_value w30
-; CHECK-NEXT:    .cfi_same_value w29
 ; CHECK-NEXT:    ret
 bb1:
   %0 = icmp ne i32 %a, 0
@@ -212,4 +206,3 @@ declare i64 @bar()
 !0 = !{!"branch_weights", i32 5128, i32 32}
 !1 = !{!"branch_weights", i32 1024, i32 4136}
 !2 = !{}
-

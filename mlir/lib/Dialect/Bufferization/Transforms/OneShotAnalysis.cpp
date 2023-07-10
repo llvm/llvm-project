@@ -942,7 +942,7 @@ static LogicalResult checkAliasInfoConsistency(Operation *op,
     // attribute. Such tensors may alias any other tensor, which is currently
     // not handled in the analysis.
     if (auto toTensorOp = dyn_cast<ToTensorOp>(op.getOperation())) {
-      if (!toTensorOp.getRestrict()) {
+      if (!toTensorOp.getRestrict() && !toTensorOp->getUses().empty()) {
         op->emitError("to_tensor ops without `restrict` are not supported by "
                       "One-Shot Analysis");
         return WalkResult::interrupt();

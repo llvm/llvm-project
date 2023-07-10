@@ -914,18 +914,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_0(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpklo p4.h, p3.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
@@ -942,18 +941,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_1(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpklo p4.h, p3.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    punpklo p4.h, p4.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
@@ -970,18 +968,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_2(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p4.h, p3.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
 ; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
@@ -998,18 +995,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_3(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p4.h, p3.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
 ; CHECK-NEXT:    punpklo p4.h, p4.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
@@ -1026,18 +1022,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_4(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p3.h, p2.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpklo p4.h, p3.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
@@ -1054,18 +1049,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_5(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_5:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p3.h, p2.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpklo p4.h, p3.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    punpklo p4.h, p4.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
@@ -1082,18 +1076,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_6(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_6:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p3.h, p2.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p4.h, p3.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
 ; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
@@ -1110,18 +1103,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_7(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_7:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpklo p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpklo p2.h, p0.b
+; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p3.h, p2.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p4.h, p3.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
 ; CHECK-NEXT:    punpklo p4.h, p4.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
@@ -1138,18 +1130,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_8(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpklo p4.h, p3.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
@@ -1166,18 +1157,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_9(<vscale x 16 x i1> %vec, <vsc
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_9:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpklo p4.h, p3.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    punpklo p4.h, p4.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
@@ -1194,18 +1184,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_10(<vscale x 16 x i1> %vec, <vs
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_10:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p4.h, p3.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
 ; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
@@ -1222,18 +1211,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_11(<vscale x 16 x i1> %vec, <vs
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_11:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpklo p3.h, p2.b
 ; CHECK-NEXT:    punpkhi p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p4.h, p3.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
 ; CHECK-NEXT:    punpklo p4.h, p4.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
@@ -1250,18 +1238,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_12(<vscale x 16 x i1> %vec, <vs
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_12:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p3.h, p2.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpklo p4.h, p3.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
@@ -1278,18 +1265,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_13(<vscale x 16 x i1> %vec, <vs
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_13:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p3.h, p2.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpklo p4.h, p3.b
 ; CHECK-NEXT:    punpkhi p3.h, p3.b
 ; CHECK-NEXT:    punpklo p4.h, p4.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p1.s, p3.s
@@ -1306,18 +1292,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_14(<vscale x 16 x i1> %vec, <vs
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_14:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p3.h, p2.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p4.h, p3.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
 ; CHECK-NEXT:    punpkhi p4.h, p4.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p1.d, p4.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s
@@ -1334,18 +1319,17 @@ define <vscale x 16 x i1> @insert_nxv1i1_nxv16i1_15(<vscale x 16 x i1> %vec, <vs
 ; CHECK-LABEL: insert_nxv1i1_nxv16i1_15:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    punpkhi p2.h, p0.b
 ; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    punpkhi p2.h, p0.b
+; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    punpkhi p3.h, p2.b
 ; CHECK-NEXT:    punpklo p2.h, p2.b
 ; CHECK-NEXT:    punpkhi p4.h, p3.b
 ; CHECK-NEXT:    punpklo p3.h, p3.b
 ; CHECK-NEXT:    punpklo p4.h, p4.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    uzp1 p1.d, p4.d, p1.d
 ; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
 ; CHECK-NEXT:    uzp1 p1.s, p3.s, p1.s

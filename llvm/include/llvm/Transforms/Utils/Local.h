@@ -156,11 +156,8 @@ void MergeBasicBlockIntoOnlyPred(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 /// other than PHI nodes, potential debug intrinsics and the branch. If
 /// possible, eliminate BB by rewriting all the predecessors to branch to the
 /// successor block and return true. If we can't transform, return false.
-/// If a RemoveInsts set is specified, the block may additionally contain these
-/// instructions, which will be removed as part of the transform.
-bool TryToSimplifyUncondBranchFromEmptyBlock(
-    BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
-    const SmallPtrSetImpl<const Instruction *> *RemoveInsts = nullptr);
+bool TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
+                                             DomTreeUpdater *DTU = nullptr);
 
 /// Check for and eliminate duplicate PHI nodes in this block. This doesn't try
 /// to be clever about PHI nodes which differ only in the order of the incoming

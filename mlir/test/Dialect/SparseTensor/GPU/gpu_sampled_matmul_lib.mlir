@@ -53,18 +53,16 @@
 // CHECK:           %[[VAL_33:.*]] = gpu.memcpy async {{\[}}%[[VAL_32]]] %[[VAL_31]], %[[VAL_18]] : memref<?xf64>, memref<?xf64>
 // CHECK:           gpu.wait {{\[}}%[[VAL_10]], %[[VAL_15]], %[[VAL_23]], %[[VAL_28]], %[[VAL_33]]]
 // CHECK:           %[[VAL_34:.*]] = gpu.wait async
-// CHECK:           %[[VAL_35:.*]], %[[VAL_36:.*]] = gpu.create_sparse_env async {{\[}}%[[VAL_34]]]
-// CHECK:           %[[VAL_37:.*]], %[[VAL_38:.*]] = gpu.create_dn_tensor async {{\[}}%[[VAL_36]]] %[[VAL_35]], %[[VAL_8]], %[[VAL_3]], %[[VAL_3]] : index, index into memref<8x8xf64>
-// CHECK:           %[[VAL_39:.*]], %[[VAL_40:.*]] = gpu.create_dn_tensor async {{\[}}%[[VAL_38]]] %[[VAL_35]], %[[VAL_13]], %[[VAL_3]], %[[VAL_3]] : index, index into memref<8x8xf64>
+// CHECK:           %[[VAL_37:.*]], %[[VAL_38:.*]] = gpu.create_dn_tensor async {{\[}}%[[VAL_34]]] %[[VAL_8]], %[[VAL_3]], %[[VAL_3]] : index, index into memref<8x8xf64>
+// CHECK:           %[[VAL_39:.*]], %[[VAL_40:.*]] = gpu.create_dn_tensor async {{\[}}%[[VAL_38]]] %[[VAL_13]], %[[VAL_3]], %[[VAL_3]] : index, index into memref<8x8xf64>
 // CHECK:           %[[VAL_41:.*]], %[[VAL_42:.*]] = gpu.create_csr async {{\[}}%[[VAL_40]]] %[[VAL_3]], %[[VAL_3]], %[[VAL_5]], %[[VAL_21]], %[[VAL_26]], %[[VAL_31]] : memref<?xindex>, memref<?xindex>, memref<?xf64>
-// CHECK:           %[[VAL_43:.*]], %[[VAL_44:.*]] = gpu.sddmm_buffer_size async {{\[}}%[[VAL_42]]] %[[VAL_35]], %[[VAL_37]], %[[VAL_39]], %[[VAL_41]] into f64
+// CHECK:           %[[VAL_43:.*]], %[[VAL_44:.*]] = gpu.sddmm_buffer_size async {{\[}}%[[VAL_42]]] %[[VAL_37]], %[[VAL_39]], %[[VAL_41]] into f64
 // CHECK:           %[[VAL_45:.*]], %[[VAL_46:.*]] = gpu.alloc async {{\[}}%[[VAL_44]]] (%[[VAL_43]]) : memref<?xi8>
-// CHECK:           %[[VAL_47:.*]] = gpu.sddmm async {{\[}}%[[VAL_46]]] %[[VAL_35]], %[[VAL_37]], %[[VAL_39]], %[[VAL_41]], %[[VAL_45]] : memref<?xi8> into f64
+// CHECK:           %[[VAL_47:.*]] = gpu.sddmm async {{\[}}%[[VAL_46]]] %[[VAL_37]], %[[VAL_39]], %[[VAL_41]], %[[VAL_45]] : memref<?xi8> into f64
 // CHECK:           %[[VAL_48:.*]] = gpu.destroy_dn_tensor async {{\[}}%[[VAL_47]]] %[[VAL_37]]
 // CHECK:           %[[VAL_49:.*]] = gpu.destroy_dn_tensor async {{\[}}%[[VAL_48]]] %[[VAL_39]]
 // CHECK:           %[[VAL_50:.*]] = gpu.destroy_sp_mat async {{\[}}%[[VAL_49]]] %[[VAL_41]]
-// CHECK:           %[[VAL_51:.*]] = gpu.destroy_sparse_env async {{\[}}%[[VAL_50]]] %[[VAL_35]]
-// CHECK:           %[[VAL_52:.*]] = gpu.dealloc async {{\[}}%[[VAL_51]]] %[[VAL_45]] : memref<?xi8>
+// CHECK:           %[[VAL_52:.*]] = gpu.dealloc async {{\[}}%[[VAL_50]]] %[[VAL_45]] : memref<?xi8>
 // CHECK:           %[[VAL_53:.*]] = gpu.dealloc async {{\[}}%[[VAL_52]]] %[[VAL_8]] : memref<8x8xf64>
 // CHECK:           %[[VAL_54:.*]] = gpu.dealloc async {{\[}}%[[VAL_53]]] %[[VAL_13]] : memref<8x8xf64>
 // CHECK:           %[[VAL_55:.*]] = gpu.dealloc async {{\[}}%[[VAL_54]]] %[[VAL_21]] : memref<?xindex>

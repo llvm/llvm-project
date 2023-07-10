@@ -523,7 +523,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
     // Print access kind for "other" as the default access kind. This way it
     // will apply to any new location kinds that get split out of "other".
-    ModRefInfo OtherMR = ME.getModRef(MemoryEffects::Other);
+    ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
     if (OtherMR != ModRefInfo::NoModRef || ME.getModRef() == OtherMR) {
       First = false;
       OS << getModRefStr(OtherMR);
@@ -539,13 +539,13 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
       First = false;
 
       switch (Loc) {
-      case MemoryEffects::ArgMem:
+      case IRMemLocation::ArgMem:
         OS << "argmem: ";
         break;
-      case MemoryEffects::InaccessibleMem:
+      case IRMemLocation::InaccessibleMem:
         OS << "inaccessiblemem: ";
         break;
-      case MemoryEffects::Other:
+      case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
       }
       OS << getModRefStr(MR);

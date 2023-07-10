@@ -162,11 +162,6 @@ public:
 };
 static_assert(IsZeroCostAbstraction<SymVar>);
 
-// TODO(wrengr): I'd like to give the ctors the types `DimVar(Dimension)`
-// and `LvlVar(Level)`, instead of their current types using `Num`;
-// however, that'd require importing "IR/SparseTensor.h" which nothing else
-// in this file requires.  Also beware the issues about implicit-conversion
-// from `uint64_t` to `Num`.
 class DimVar final : public Var {
 public:
   static constexpr VarKind Kind = VarKind::Dimension;
@@ -189,32 +184,6 @@ public:
 };
 static_assert(IsZeroCostAbstraction<LvlVar>);
 
-// FIXME(wrengr): In order to get the `llvm::{isa,cast,dyn_cast}`
-// free-functions to work (instead of using our hand-rolled methods),
-// we'll need to define something like this:
-// ```
-// namespace llvm {
-// template <typename U> struct CastInfo<U, Var> : OptionalValueCast<U, Var> {};
-// template <> struct ValueIsPresent<Var> {
-//   using UnwrappedType = Var;
-//   static inline bool isPresent(Var const&) { return true; }
-// };
-// } // namespace llvm
-// ```
-// The above will enable the type `llvm::dyn_cast<U>(Var) -> std::optional<U>`.
-//
-// FIXME(wrengr): The default `OptionalValueCast<U,Var>::doCast(Var const&)`
-// implementation uses the expression "`U(var)`", which means that all the
-// subclasses will need to define that upcasting-copy-ctor, and to ensure
-// safety/correctness will need to mark that ctor as private/protected,
-// which in turn means they'll need make the `CastInfo`/`OptionalValueCast`
-// classes friends.
-//
-// We run into similar issues with our hand-rolled methods, the only
-// difference is that the upcasting-copy-ctor would have type `U(Impl)`
-// instead of `U(Var)` and that we'd need to make the `Var` class a friend
-// rather than the `CastInfo`/`OptionalValueCast` classes.
-//
 template <typename U>
 constexpr bool Var::isa() const {
   if constexpr (std::is_same_v<U, SymVar>)
@@ -257,8 +226,6 @@ class Ranks final {
   }
 
 public:
-  // NOTE_TO_SELF(wrengr): According to <https://stackoverflow.com/a/34465458>
-  // we should be able to do this just fine, even though `constexpr`
   constexpr Ranks(unsigned symRank, unsigned dimRank, unsigned lvlRank)
       : impl() {
     impl[to_index(VarKind::Symbol)] = symRank;
@@ -303,16 +270,6 @@ public:
   // TODO(wrengr): void add(VarSet const& vars);
   void add(DimLvlExpr expr);
 };
-
-//===----------------------------------------------------------------------===//
-// TODO(wrengr): For good error messages we'll need to define something like:
-// ```class LocatedVar final { llvm::SMLoc loc; VarInfo::ID id; };```
-// to be the actual thing occuring in our variant of AffineExpr.
-// Though we may also want that struct to contain a pointer back to the
-// `VarEnv` which contains the `VarInfo` for that `VarInfo::ID`.
-//
-// To go along with this, the `VarInfo` record should drop its own `SMLoc`
-// field.
 
 //===----------------------------------------------------------------------===//
 /// A record of metadata for/about a variable, used by `VarEnv`.
@@ -456,6 +413,11 @@ public:
   InFlightDiagnostic emitErrorIfAnyUnbound(AsmParser &parser) const;
 
   Ranks getRanks() const { return Ranks(nextNum); }
+
+  /// Adds all variables of given kind to the vector.
+  void
+  addVars(SmallVectorImpl<std::pair<StringRef, AffineExpr>> &dimsAndSymbols,
+          VarKind vk, MLIRContext *context) const;
 };
 
 //===----------------------------------------------------------------------===//

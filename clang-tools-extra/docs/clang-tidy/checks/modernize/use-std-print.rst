@@ -9,21 +9,25 @@ Converts calls to ``printf``, ``fprintf``, ``absl::PrintF`` and
 The replaced and replacement functions can be customised by configuration
 options. Each argument that is the result of a call to ``std::string::c_str()`` and
 ``std::string::data()`` will have that now-unnecessary call removed in a
-similar manner to the readability-redundant-string-cstr check.
+similar manner to the `readability-redundant-string-cstr` check.
 
-In other words, it turns lines like::
+In other words, it turns lines like:
 
 .. code-block:: c++
 
   fprintf(stderr, "The %s is %3d\n", description.c_str(), value);
 
-into::
+into:
 
 .. code-block:: c++
 
   std::println(stderr, "The {} is {:3}", description, value);
 
-It doesn't do a bad job, but it's not perfect. In particular:
+If the `ReplacementPrintFunction` or `ReplacementPrintlnFunction` options
+are left, or assigned to their default values then this check is only
+enabled with `-std=c++23` or later.
+
+The check doesn't do a bad job, but it's not perfect. In particular:
 
 - It assumes that the format string is correct for the arguments. If you
   get any warnings when compiling with `-Wformat` then misbehaviour is
@@ -35,7 +39,7 @@ It doesn't do a bad job, but it's not perfect. In particular:
   handled. Although it's possible for the check to automatically put the
   escapes back, they may not be exactly as they were written (e.g.
   ``"\x0a"`` will become ``"\n"`` and ``"ab" "cd"`` will become
-  ``"abcd"``.) This is helpful since it means that the PRIx macros from
+  ``"abcd"``.) This is helpful since it means that the ``PRIx`` macros from
   ``<inttypes.h>`` are removed correctly.
 
 - It supports field widths, precision, positional arguments, leading zeros,
@@ -78,7 +82,7 @@ If the call is deemed suitable for conversion then:
   signedness will be wrapped in an approprate ``static_cast`` if `StrictMode`
   is enabled.
 - any arguments that end in a call to ``std::string::c_str()`` or
-  ``std::string_data()`` will have that call removed.
+  ``std::string::data()`` will have that call removed.
 
 Options
 -------
@@ -99,7 +103,7 @@ Options
     unsigned int u = 0xffffffff;
     printf("%d %u\n", i, u);
 
-  would be converted to::
+  would be converted to:
 
   .. code-block:: c++
 

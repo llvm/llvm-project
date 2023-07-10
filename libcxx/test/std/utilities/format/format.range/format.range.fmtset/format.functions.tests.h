@@ -886,7 +886,9 @@ void test_pointer(TestFunction check, ExceptionTest check_exception, auto&& inpu
   check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
+  check(SV("{0x0000}"), SV("{::06}"), input);
+  check(SV("{0x0000}"), SV("{::06p}"), input);
+  check(SV("{0X0000}"), SV("{::06P}"), input);
 
   // *** precision ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
@@ -895,7 +897,7 @@ void test_pointer(TestFunction check, ExceptionTest check_exception, auto&& inpu
   check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
-  for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("p"))
+  for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("pP"))
     check_exception("The format-spec type has a type not supported for a pointer argument", fmt, input);
 
   // ***** Both have a format-spec

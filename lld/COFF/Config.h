@@ -203,6 +203,9 @@ struct Configuration {
   StringRef manifestUIAccess = "'false'";
   StringRef manifestFile;
 
+  // used for /dwodir
+  StringRef dwoDir;
+
   // Used for /aligncomm.
   std::map<std::string, int> alignComm;
 

@@ -164,14 +164,14 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     break;
   case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
-    Val = Builder.CreateElementBitCast(AP, ArgTy);
+    Val = AP.withElementType(ArgTy);
     ArgSize = CharUnits::fromQuantity(
         getDataLayout().getTypeAllocSize(AI.getCoerceToType()));
     ArgSize = ArgSize.alignTo(SlotSize);
     break;
   case ABIArgInfo::Indirect:
   case ABIArgInfo::IndirectAliased:
-    Val = Builder.CreateElementBitCast(AP, ArgPtrTy);
+    Val = AP.withElementType(ArgPtrTy);
     Val = Address(Builder.CreateLoad(Val), ArgTy, TypeAlign);
     ArgSize = SlotSize;
     break;

@@ -47,8 +47,6 @@ class BPFAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
-
   // "=" is used as assignment operator for assembly statment, so can't be used
   // for symbol assignment.
   bool equalIsAsmAssignment() override { return false; }
@@ -515,8 +513,6 @@ bool BPFAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   getParser().Lex();
   return false;
 }
-
-bool BPFAsmParser::ParseDirective(AsmToken DirectiveID) { return true; }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFAsmParser() {
   RegisterMCAsmParser<BPFAsmParser> X(getTheBPFTarget());

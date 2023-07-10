@@ -9387,10 +9387,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
     }
   }
 
+  Expr *Init = CurInit.get();
+  if (!Init)
+    return ExprError();
+
   // Check whether the initializer has a shorter lifetime than the initialized
   // entity, and if not, either lifetime-extend or warn as appropriate.
-  if (auto *Init = CurInit.get())
-    S.checkInitializerLifetime(Entity, Init);
+  S.checkInitializerLifetime(Entity, Init);
 
   // Diagnose non-fatal problems with the completed initialization.
   if (InitializedEntity::EntityKind EK = Entity.getKind();
@@ -9398,16 +9401,13 @@ ExprResult InitializationSequence::Perform(Sema &S,
        EK == InitializedEntity::EK_ParenAggInitMember) &&
       cast<FieldDecl>(Entity.getDecl())->isBitField())
     S.CheckBitFieldInitialization(Kind.getLocation(),
-                                  cast<FieldDecl>(Entity.getDecl()),
-                                  CurInit.get());
+                                  cast<FieldDecl>(Entity.getDecl()), Init);
 
   // Check for std::move on construction.
-  if (const Expr *E = CurInit.get()) {
-    CheckMoveOnConstruction(S, E,
-                            Entity.getKind() == InitializedEntity::EK_Result);
-  }
+  CheckMoveOnConstruction(S, Init,
+                          Entity.getKind() == InitializedEntity::EK_Result);
 
-  return CurInit;
+  return Init;
 }
 
 /// Somewhere within T there is an uninitialized reference subobject.
@@ -10675,7 +10675,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           TD, FoundDecl, /*ExplicitArgs=*/nullptr, TmpInits, Candidates,
           SuppressUserConversions,
           /*PartialOverloading=*/false, AllowExplicit, ADLCallKind::NotADL,
-          /*PO=*/{}, /*AggregateCandidateDeduction=*/true);
+          /*PO=*/{}, AllowAggregateDeductionCandidate);
     } else {
       AddOverloadCandidate(GD, FoundDecl, Inits, Candidates,
                            SuppressUserConversions,
@@ -10714,7 +10714,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
               ElementTypes[I] = Context.getRValueReferenceType(ElementTypes[I]);
             else if (isa<StringLiteral>(
                          ListInit->getInit(I)->IgnoreParenImpCasts()))
-              ElementTypes[I] = Context.getLValueReferenceType(ElementTypes[I]);
+              ElementTypes[I] =
+                  Context.getLValueReferenceType(ElementTypes[I].withConst());
           }
 
         llvm::FoldingSetNodeID ID;
@@ -10772,7 +10773,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
     //   parenthesized expression-list, and there are no deduction-guides for
     //   C, the set contains an additional function template, called the
     //   aggregate deduction candidate, defined as follows.
-    if (!HasAnyDeductionGuide) {
+    if (getLangOpts().CPlusPlus20 && !HasAnyDeductionGuide) {
       if (ListInit && ListInit->getNumInits()) {
         SynthesizeAggrGuide(ListInit);
       } else if (PL && PL->getNumExprs()) {

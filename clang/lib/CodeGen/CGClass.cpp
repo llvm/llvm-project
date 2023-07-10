@@ -236,12 +236,10 @@ CodeGenFunction::GetAddressOfDirectBaseInCompleteClass(Address This,
   // TODO: for complete types, this should be possible with a GEP.
   Address V = This;
   if (!Offset.isZero()) {
-    V = Builder.CreateElementBitCast(V, Int8Ty);
+    V = V.withElementType(Int8Ty);
     V = Builder.CreateConstInBoundsByteGEP(V, Offset);
   }
-  V = Builder.CreateElementBitCast(V, ConvertType(Base));
-
-  return V;
+  return V.withElementType(ConvertType(Base));
 }
 
 static Address
@@ -342,7 +340,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
       EmitTypeCheck(TCK_Upcast, Loc, Value.getPointer(),
                     DerivedTy, DerivedAlign, SkippedChecks);
     }
-    return Builder.CreateElementBitCast(Value, BaseValueTy);
+    return Value.withElementType(BaseValueTy);
   }
 
   llvm::BasicBlock *origBB = nullptr;
@@ -379,7 +377,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
                                           VirtualOffset, Derived, VBase);
 
   // Cast to the destination type.
-  Value = Builder.CreateElementBitCast(Value, BaseValueTy);
+  Value = Value.withElementType(BaseValueTy);
 
   // Build a phi if we needed a null check.
   if (NullCheckValue) {
@@ -416,7 +414,7 @@ CodeGenFunction::GetAddressOfDerivedClass(Address BaseAddr,
 
   if (!NonVirtualOffset) {
     // No offset, we can just cast back.
-    return Builder.CreateElementBitCast(BaseAddr, DerivedValueTy);
+    return BaseAddr.withElementType(DerivedValueTy);
   }
 
   llvm::BasicBlock *CastNull = nullptr;
@@ -997,8 +995,8 @@ namespace {
 
   private:
     void emitMemcpyIR(Address DestPtr, Address SrcPtr, CharUnits Size) {
-      DestPtr = CGF.Builder.CreateElementBitCast(DestPtr, CGF.Int8Ty);
-      SrcPtr = CGF.Builder.CreateElementBitCast(SrcPtr, CGF.Int8Ty);
+      DestPtr = DestPtr.withElementType(CGF.Int8Ty);
+      SrcPtr = SrcPtr.withElementType(CGF.Int8Ty);
       CGF.Builder.CreateMemCpy(DestPtr, SrcPtr, Size.getQuantity());
     }
 
@@ -2581,7 +2579,7 @@ void CodeGenFunction::InitializeVTablePointer(const VPtr &Vptr) {
   llvm::Type *PtrTy = llvm::PointerType::get(CGM.getLLVMContext(), GlobalsAS);
   // vtable field is derived from `this` pointer, therefore they should be in
   // the same addr space. Note that this might not be LLVM address space 0.
-  VTableField = Builder.CreateElementBitCast(VTableField, PtrTy);
+  VTableField = VTableField.withElementType(PtrTy);
 
   llvm::StoreInst *Store = Builder.CreateStore(VTableAddressPoint, VTableField);
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(PtrTy);
@@ -2677,7 +2675,7 @@ void CodeGenFunction::InitializeVTablePointers(const CXXRecordDecl *RD) {
 llvm::Value *CodeGenFunction::GetVTablePtr(Address This,
                                            llvm::Type *VTableTy,
                                            const CXXRecordDecl *RD) {
-  Address VTablePtrSrc = Builder.CreateElementBitCast(This, VTableTy);
+  Address VTablePtrSrc = This.withElementType(VTableTy);
   llvm::Instruction *VTable = Builder.CreateLoad(VTablePtrSrc, "vtable");
   TBAAAccessInfo TBAAInfo = CGM.getTBAAVTablePtrAccessInfo(VTableTy);
   CGM.DecorateInstructionWithTBAA(VTable, TBAAInfo);

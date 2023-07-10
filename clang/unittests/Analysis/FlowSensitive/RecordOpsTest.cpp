@@ -16,14 +16,18 @@ namespace dataflow {
 namespace test {
 namespace {
 
-template <typename VerifyResultsT>
-void runDataflow(llvm::StringRef Code, VerifyResultsT VerifyResults,
-                 LangStandard::Kind Std = LangStandard::lang_cxx17,
-                 llvm::StringRef TargetFun = "target") {
+void runDataflow(
+    llvm::StringRef Code,
+    std::function<
+        void(const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &,
+             ASTContext &)>
+        VerifyResults,
+    LangStandard::Kind Std = LangStandard::lang_cxx17,
+    llvm::StringRef TargetFun = "target") {
   ASSERT_THAT_ERROR(
-      runDataflowReturnError(Code, VerifyResults,
-                             DataflowAnalysisOptions{BuiltinOptions{}}, Std,
-                             TargetFun),
+      checkDataflowWithNoopAnalysis(Code, VerifyResults,
+                                    DataflowAnalysisOptions{BuiltinOptions{}},
+                                    Std, TargetFun),
       llvm::Succeeded());
 }
 

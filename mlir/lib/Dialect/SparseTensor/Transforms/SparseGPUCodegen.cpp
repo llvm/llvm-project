@@ -494,26 +494,21 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 
   // Create sparse environment and sparse matrix/dense vector handles.
   Type indexTp = rewriter.getIndexType();
-  Type envHandleTp = rewriter.getType<gpu::SparseEnvHandleType>();
   Type dnTensorHandleTp = rewriter.getType<gpu::SparseDnTensorHandleType>();
   Type spmatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
-  auto env =
-      rewriter.create<gpu::CreateSparseEnvOp>(loc, envHandleTp, tokenTp, token);
-  Value handle = env.getResult(0);
-  token = env.getAsyncToken();
   Operation *spGenA =
       genSpMat(rewriter, loc, spmatHandleTp, tokenTp, token, szY, szX, nseA,
                rowA, colA, valA, isCOO, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
   auto dvecX = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnTensorHandleTp, tokenTp, token, handle, vecX, szX);
+      loc, dnTensorHandleTp, tokenTp, token, vecX, szX);
   Value dnX = dvecX.getResult(0);
   token = dvecX.getAsyncToken();
   auto dvecY = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnTensorHandleTp, tokenTp, token, handle, vecY, szY);
+      loc, dnTensorHandleTp, tokenTp, token, vecY, szY);
   Value dnY = dvecY.getResult(0);
   token = dvecY.getAsyncToken();
 
@@ -521,7 +516,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 
   // Precompute buffersize for SpMV.
   auto bufferComp = rewriter.create<gpu::SpMVBufferSizeOp>(
-      loc, indexTp, tokenTp, token, handle, spMatA, dnX, dnY,
+      loc, indexTp, tokenTp, token, spMatA, dnX, dnY,
       /*computeType=*/dnYType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -530,9 +525,8 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   token = buf.getAsyncToken();
 
   // Perform the SpMV.
-  auto spmvComp =
-      rewriter.create<gpu::SpMVOp>(loc, tokenTp, token, handle, spMatA, dnX,
-                                   dnY, /*computeType=*/dnYType, buffer);
+  auto spmvComp = rewriter.create<gpu::SpMVOp>(
+      loc, tokenTp, token, spMatA, dnX, dnY, /*computeType=*/dnYType, buffer);
   token = spmvComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -541,8 +535,6 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnX)
               .getAsyncToken();
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnY)
-              .getAsyncToken();
-  token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
               .getAsyncToken();
   token = genDeallocMemRef(rewriter, loc, rowA, token);
   if (colA)
@@ -601,27 +593,22 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
 
   // Create sparse environment and sparse matrix/dense matrix handles.
   Type indexTp = rewriter.getIndexType();
-  Type envHandleTp = rewriter.getType<gpu::SparseEnvHandleType>();
   Type dnTensorHandleTp = rewriter.getType<gpu::SparseDnTensorHandleType>();
   Type spMatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
-  auto env =
-      rewriter.create<gpu::CreateSparseEnvOp>(loc, envHandleTp, tokenTp, token);
-  Value handle = env.getResult(0);
-  token = env.getAsyncToken();
   Operation *spGenA =
       genSpMat(rewriter, loc, spMatHandleTp, tokenTp, token, szm, szk, nseA,
                rowA, colA, valA, isCOO, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
   auto dmatB = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnTensorHandleTp, tokenTp, token, handle, matB,
+      loc, dnTensorHandleTp, tokenTp, token, matB,
       SmallVector<Value>{szk, szn});
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
   auto dmatC = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnTensorHandleTp, tokenTp, token, handle, matC,
+      loc, dnTensorHandleTp, tokenTp, token, matC,
       SmallVector<Value>{szm, szn});
   Value dnC = dmatC.getResult(0);
   token = dmatC.getAsyncToken();
@@ -630,7 +617,7 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
 
   // Precompute buffersize for SpMM.
   auto bufferComp = rewriter.create<gpu::SpMMBufferSizeOp>(
-      loc, indexTp, tokenTp, token, handle, spMatA, dnB, dnC,
+      loc, indexTp, tokenTp, token, spMatA, dnB, dnC,
       /*computeType=*/dmatCType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -641,9 +628,8 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
 
   // Perform the SpMM.
-  auto spmmComp =
-      rewriter.create<gpu::SpMMOp>(loc, tokenTp, token, handle, spMatA, dnB,
-                                   dnC, /*computeType=*/dnCType, buffer);
+  auto spmmComp = rewriter.create<gpu::SpMMOp>(
+      loc, tokenTp, token, spMatA, dnB, dnC, /*computeType=*/dnCType, buffer);
   token = spmmComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -653,9 +639,6 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
               .getAsyncToken();
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnC)
               .getAsyncToken();
-  token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
-              .getAsyncToken();
-  token = genDeallocMemRef(rewriter, loc, rowA, token);
   if (colA)
     token = genDeallocMemRef(rewriter, loc, colA, token);
   token = genDeallocMemRef(rewriter, loc, valA, token);
@@ -715,24 +698,16 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
 
   // Create sparse environment and sparse matrix/dense matrix handles.
   Type indexTp = rewriter.getIndexType();
-  Type envHandleTp = rewriter.getType<gpu::SparseEnvHandleType>();
   Type dnMatHandleTp = rewriter.getType<gpu::SparseDnTensorHandleType>();
   Type spMatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
-  auto env =
-      rewriter.create<gpu::CreateSparseEnvOp>(loc, envHandleTp, tokenTp, token);
-  Value handle = env.getResult(0);
-  token = env.getAsyncToken();
-
   auto dmatA = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnMatHandleTp, tokenTp, token, handle, matA,
-      SmallVector<Value>{szm, szk});
+      loc, dnMatHandleTp, tokenTp, token, matA, SmallVector<Value>{szm, szk});
   Value dnA = dmatA.getResult(0);
   token = dmatA.getAsyncToken();
   auto dmatB = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnMatHandleTp, tokenTp, token, handle, matB,
-      SmallVector<Value>{szk, szn});
+      loc, dnMatHandleTp, tokenTp, token, matB, SmallVector<Value>{szk, szn});
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
 
@@ -745,7 +720,7 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
   // Precompute buffersize for SDDMM.
   auto bufferComp = rewriter.create<gpu::SDDMMBufferSizeOp>(
-      loc, indexTp, tokenTp, token, handle, dnA, dnB, spMatC, dnCType);
+      loc, indexTp, tokenTp, token, dnA, dnB, spMatC, dnCType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
   auto buf = genAllocBuffer(rewriter, loc, bufferSz, token);
@@ -753,8 +728,8 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   token = buf.getAsyncToken();
 
   // Perform the SDDMM.
-  auto sddmmComp = rewriter.create<gpu::SDDMMOp>(
-      loc, tokenTp, token, handle, dnA, dnB, spMatC, dnCType, buffer);
+  auto sddmmComp = rewriter.create<gpu::SDDMMOp>(loc, tokenTp, token, dnA, dnB,
+                                                 spMatC, dnCType, buffer);
   token = sddmmComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -763,8 +738,6 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnB)
               .getAsyncToken();
   token = rewriter.create<gpu::DestroySpMatOp>(loc, tokenTp, token, spMatC)
-              .getAsyncToken();
-  token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
               .getAsyncToken();
   token = genDeallocMemRef(rewriter, loc, buffer, token);
   token = genDeallocMemRef(rewriter, loc, matA, token);

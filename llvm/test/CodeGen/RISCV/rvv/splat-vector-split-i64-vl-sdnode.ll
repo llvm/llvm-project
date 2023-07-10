@@ -36,16 +36,16 @@ define i32 @splat_vector_split_i64() {
 ; CHECK-NEXT:    vsrl.vx v12, v8, a1
 ; CHECK-NEXT:    lui a2, 16
 ; CHECK-NEXT:    addi a2, a2, -256
-; CHECK-NEXT:    vand.vx v12, v12, a2
-; CHECK-NEXT:    vor.vv v10, v12, v10
-; CHECK-NEXT:    vsrl.vi v12, v8, 24
 ; CHECK-NEXT:    mv a3, sp
 ; CHECK-NEXT:    vlse64.v v14, (a3), zero
+; CHECK-NEXT:    vand.vx v12, v12, a2
+; CHECK-NEXT:    vor.vv v10, v12, v10
+; CHECK-NEXT:    vsrl.vi v12, v8, 8
+; CHECK-NEXT:    vand.vv v12, v12, v14
+; CHECK-NEXT:    vsrl.vi v16, v8, 24
 ; CHECK-NEXT:    lui a3, 4080
-; CHECK-NEXT:    vand.vx v12, v12, a3
-; CHECK-NEXT:    vsrl.vi v16, v8, 8
-; CHECK-NEXT:    vand.vv v16, v16, v14
-; CHECK-NEXT:    vor.vv v12, v16, v12
+; CHECK-NEXT:    vand.vx v16, v16, a3
+; CHECK-NEXT:    vor.vv v12, v12, v16
 ; CHECK-NEXT:    vor.vv v10, v12, v10
 ; CHECK-NEXT:    vand.vv v12, v8, v14
 ; CHECK-NEXT:    vsll.vi v12, v12, 8

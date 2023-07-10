@@ -1703,12 +1703,12 @@ define void @vpscatter_v32f64(<32 x double> %val, <32 x ptr> %ptrs, <32 x i1> %m
 ; RV32-NEXT:  .LBB79_2:
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v24, v0.t
+; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32-NEXT:    vslidedown.vi v8, v24, 16
 ; RV32-NEXT:    addi a0, a1, -16
 ; RV32-NEXT:    sltu a1, a1, a0
 ; RV32-NEXT:    addi a1, a1, -1
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
@@ -1771,14 +1771,14 @@ define void @vpscatter_baseidx_v32i32_v32f64(<32 x double> %val, ptr %base, <32 
 ; RV32-NEXT:  .LBB80_2:
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v24, v0.t
+; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32-NEXT:    vslidedown.vi v8, v24, 16
 ; RV32-NEXT:    addi a1, a2, -16
 ; RV32-NEXT:    sltu a2, a2, a1
 ; RV32-NEXT:    addi a2, a2, -1
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v16, (a0), v8, v0.t
 ; RV32-NEXT:    ret
@@ -1856,14 +1856,14 @@ define void @vpscatter_baseidx_sext_v32i32_v32f64(<32 x double> %val, ptr %base,
 ; RV32-NEXT:  .LBB81_2:
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v24, v0.t
+; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32-NEXT:    vslidedown.vi v8, v24, 16
 ; RV32-NEXT:    addi a1, a2, -16
 ; RV32-NEXT:    sltu a2, a2, a1
 ; RV32-NEXT:    addi a2, a2, -1
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v16, (a0), v8, v0.t
 ; RV32-NEXT:    ret
@@ -1943,14 +1943,14 @@ define void @vpscatter_baseidx_zext_v32i32_v32f64(<32 x double> %val, ptr %base,
 ; RV32-NEXT:  .LBB82_2:
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v24, v0.t
+; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32-NEXT:    vslidedown.vi v8, v24, 16
 ; RV32-NEXT:    addi a1, a2, -16
 ; RV32-NEXT:    sltu a2, a2, a1
 ; RV32-NEXT:    addi a2, a2, -1
 ; RV32-NEXT:    and a1, a2, a1
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v16, (a0), v8, v0.t
 ; RV32-NEXT:    ret

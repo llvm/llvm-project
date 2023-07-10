@@ -22,7 +22,7 @@ define void @test_i32_add_optsize(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-V8-NEXT:    [[RES_1:%.*]] = add i32 [[DATA_A_1]], [[DATA_B_1]]
 ; CHECK-V8-NEXT:    [[ADDR_C_1:%.*]] = getelementptr i32, ptr [[C]], i32 [[COUNT]]
 ; CHECK-V8-NEXT:    store i32 [[RES_1]], ptr [[ADDR_C_1]], align 4
-; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[COUNT]], 1
+; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[IV]], 2
 ; CHECK-V8-NEXT:    [[END_1:%.*]] = icmp ne i32 [[COUNT_1]], 100
 ; CHECK-V8-NEXT:    br i1 [[END_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8:       exit:
@@ -69,7 +69,7 @@ define void @test_i32_add_minsize(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-V8-NEXT:    [[RES_1:%.*]] = add i32 [[DATA_A_1]], [[DATA_B_1]]
 ; CHECK-V8-NEXT:    [[ADDR_C_1:%.*]] = getelementptr i32, ptr [[C]], i32 [[COUNT]]
 ; CHECK-V8-NEXT:    store i32 [[RES_1]], ptr [[ADDR_C_1]], align 4
-; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[COUNT]], 1
+; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[IV]], 2
 ; CHECK-V8-NEXT:    [[END_1:%.*]] = icmp ne i32 [[COUNT_1]], 100
 ; CHECK-V8-NEXT:    br i1 [[END_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8:       exit:
@@ -116,7 +116,7 @@ define void @test_i64_add_optsize(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-V8-NEXT:    [[RES_1:%.*]] = add i64 [[DATA_A_1]], [[DATA_B_1]]
 ; CHECK-V8-NEXT:    [[ADDR_C_1:%.*]] = getelementptr i64, ptr [[C]], i32 [[COUNT]]
 ; CHECK-V8-NEXT:    store i64 [[RES_1]], ptr [[ADDR_C_1]], align 4
-; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[COUNT]], 1
+; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[IV]], 2
 ; CHECK-V8-NEXT:    [[END_1:%.*]] = icmp ne i32 [[COUNT_1]], 100
 ; CHECK-V8-NEXT:    br i1 [[END_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8:       exit:
@@ -163,7 +163,7 @@ define void @test_i64_add_minsize(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-V8-NEXT:    [[RES_1:%.*]] = add i64 [[DATA_A_1]], [[DATA_B_1]]
 ; CHECK-V8-NEXT:    [[ADDR_C_1:%.*]] = getelementptr i64, ptr [[C]], i32 [[COUNT]]
 ; CHECK-V8-NEXT:    store i64 [[RES_1]], ptr [[ADDR_C_1]], align 4
-; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[COUNT]], 1
+; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[IV]], 2
 ; CHECK-V8-NEXT:    [[END_1:%.*]] = icmp ne i32 [[COUNT_1]], 100
 ; CHECK-V8-NEXT:    br i1 [[END_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8:       exit:
@@ -215,7 +215,7 @@ define i32 @test_i32_select_optsize(ptr %a, ptr %b, ptr %c) #0 {
 ; CHECK-V8-NEXT:    [[ACC_NEXT_1]] = add i32 [[UMAX_1]], [[ACC_NEXT]]
 ; CHECK-V8-NEXT:    [[ADDR_C_1:%.*]] = getelementptr i32, ptr [[C]], i32 [[COUNT]]
 ; CHECK-V8-NEXT:    store i32 [[UMAX_1]], ptr [[ADDR_C_1]], align 4
-; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[COUNT]], 1
+; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[IV]], 2
 ; CHECK-V8-NEXT:    [[END_1:%.*]] = icmp ne i32 [[COUNT_1]], 100
 ; CHECK-V8-NEXT:    br i1 [[END_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8:       exit:
@@ -271,7 +271,7 @@ define i32 @test_i32_select_minsize(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-V8-NEXT:    [[ACC_NEXT_1]] = add i32 [[UMAX_1]], [[ACC_NEXT]]
 ; CHECK-V8-NEXT:    [[ADDR_C_1:%.*]] = getelementptr i32, ptr [[C]], i32 [[COUNT]]
 ; CHECK-V8-NEXT:    store i32 [[UMAX_1]], ptr [[ADDR_C_1]], align 4
-; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[COUNT]], 1
+; CHECK-V8-NEXT:    [[COUNT_1]] = add nuw nsw i32 [[IV]], 2
 ; CHECK-V8-NEXT:    [[END_1:%.*]] = icmp ne i32 [[COUNT_1]], 100
 ; CHECK-V8-NEXT:    br i1 [[END_1]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK-V8:       exit:

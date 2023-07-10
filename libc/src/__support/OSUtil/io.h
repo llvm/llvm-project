@@ -15,7 +15,7 @@
 #include "gpu/io.h"
 #elif defined(__APPLE__)
 #include "darwin/io.h"
-#elif defined(__unix__)
+#elif defined(__linux__)
 #include "linux/io.h"
 #elif defined(__Fuchsia__)
 #include "fuchsia/io.h"

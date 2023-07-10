@@ -119,7 +119,6 @@ define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX12-UNALIGNED:       ; %bb.0:
 ; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX12-UNALIGNED-NEXT:    s_wait_storecnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
@@ -131,7 +130,6 @@ define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX12-NOUNALIGNED:       ; %bb.0:
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX12-NOUNALIGNED-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
@@ -240,7 +238,6 @@ define <3 x i32> @v_load_constant_v3i32_align2(ptr addrspace(4) %ptr) {
 ; GFX12-UNALIGNED:       ; %bb.0:
 ; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX12-UNALIGNED-NEXT:    s_wait_storecnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
@@ -252,7 +249,6 @@ define <3 x i32> @v_load_constant_v3i32_align2(ptr addrspace(4) %ptr) {
 ; GFX12-NOUNALIGNED:       ; %bb.0:
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX12-NOUNALIGNED-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
@@ -296,7 +292,6 @@ define <3 x i32> @v_load_constant_v3i32_align4(ptr addrspace(4) %ptr) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -329,7 +324,6 @@ define i96 @v_load_constant_i96_align8(ptr addrspace(4) %ptr) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -362,7 +356,6 @@ define <3 x i32> @v_load_constant_v3i32_align8(ptr addrspace(4) %ptr) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -401,7 +394,6 @@ define <6 x i16> @v_load_constant_v6i16_align8(ptr addrspace(4) %ptr) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -460,7 +452,6 @@ define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -505,7 +496,6 @@ define <3 x i32> @v_load_constant_v3i32_align16(ptr addrspace(4) %ptr) {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0

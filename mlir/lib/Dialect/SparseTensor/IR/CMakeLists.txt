@@ -68,6 +68,7 @@ add_mlir_dialect_library(MLIRSparseTensorDialect
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRDialect
+  MLIRDialectUtils
   MLIRIR
   MLIRInferTypeOpInterface
   MLIRSupport

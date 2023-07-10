@@ -407,6 +407,11 @@ def ixlenimm_li : Operand<XLenVT> {
   let ParserMatchClass = ImmXLenAsmOperand<"", "LI">;
 }
 
+// Accepts subset of LI operands, used by LAImm and LLAImm
+def ixlenimm_li_restricted : Operand<XLenVT> {
+  let ParserMatchClass = ImmXLenAsmOperand<"", "LI_Restricted">;
+}
+
 // Standalone (codegen-only) immleaf patterns.
 
 // A 6-bit constant greater than 32.
@@ -1236,7 +1241,6 @@ class binop_oneuse<SDPatternOperator operator>
 }]>;
 
 def and_oneuse : binop_oneuse<and>;
-def add_oneuse : binop_oneuse<add>;
 def mul_oneuse : binop_oneuse<mul>;
 
 def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
@@ -1605,6 +1609,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
 def PseudoLLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                        "lla", "$dst, $src">;
 
+// Refer to comment on PseudoLI for explanation of Size=32
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
+    isAsmParserOnly = 1 in
+def PseudoLLAImm : Pseudo<(outs GPR:$dst), (ins ixlenimm_li_restricted:$imm), [],
+                          "lla", "$dst, $imm">;
 def : Pat<(riscv_lla tglobaladdr:$in), (PseudoLLA tglobaladdr:$in)>;
 def : Pat<(riscv_lla tblockaddress:$in), (PseudoLLA tblockaddress:$in)>;
 def : Pat<(riscv_lla tjumptable:$in), (PseudoLLA tjumptable:$in)>;
@@ -1621,6 +1630,12 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
 def PseudoLA : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                       "la", "$dst, $src">;
+
+// Refer to comment on PseudoLI for explanation of Size=32
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 32,
+    isCodeGenOnly = 0, isAsmParserOnly = 1 in
+def PseudoLAImm : Pseudo<(outs GPR:$rd), (ins ixlenimm_li_restricted:$imm), [],
+                         "la", "$rd, $imm">;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in

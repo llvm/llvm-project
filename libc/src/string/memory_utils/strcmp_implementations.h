@@ -14,8 +14,8 @@
 namespace __llvm_libc {
 
 template <typename Comp>
-constexpr static int strcmp_implementation(const char *left, const char *right,
-                                           Comp &&comp) {
+LIBC_INLINE constexpr int
+strcmp_implementation(const char *left, const char *right, Comp &&comp) {
   // TODO: Look at benefits for comparing words at a time.
   for (; *left && !comp(*left, *right); ++left, ++right)
     ;
@@ -24,8 +24,9 @@ constexpr static int strcmp_implementation(const char *left, const char *right,
 }
 
 template <typename Comp>
-constexpr static int strncmp_implementation(const char *left, const char *right,
-                                            size_t n, Comp &&comp) {
+LIBC_INLINE constexpr int strncmp_implementation(const char *left,
+                                                 const char *right, size_t n,
+                                                 Comp &&comp) {
   if (n == 0)
     return 0;
 

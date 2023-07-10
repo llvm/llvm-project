@@ -27,7 +27,7 @@ define internal void @bar(%p_t %p)  {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
 ; CGSCC-SAME: (ptr nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
-; CGSCC-NEXT:    call void @llvm.dbg.value(metadata ptr [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()), !dbg [[DBG5:![0-9]+]]
+; CGSCC-NEXT:    call void @llvm.dbg.value(metadata ptr [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR2:[0-9]+]], !dbg [[DBG5:![0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @llvm.dbg.value(metadata %p_t %p, metadata !4, metadata !5), !dbg !6
@@ -47,8 +47,12 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !DIExpression()
 !6 = !DILocation(line: 1, column: 1, scope: !3)
 ;.
-; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; TUNIT: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+;.
+; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { nofree willreturn }
 ;.
 ; TUNIT: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; TUNIT: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")

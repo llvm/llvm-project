@@ -166,8 +166,13 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     CHECK(args.size() == 2);
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
         ScalarFunc<T, T, T>(
-            [](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
-              return x.HYPOT(y).value;
+            [&](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
+              ValueWithRealFlags<Scalar<T>> result{x.HYPOT(y)};
+              if (result.flags.test(RealFlag::Overflow)) {
+                context.messages().Say(
+                    "HYPOT intrinsic folding overflow"_warn_en_US);
+              }
+              return result.value;
             }));
   } else if (name == "max") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Greater);

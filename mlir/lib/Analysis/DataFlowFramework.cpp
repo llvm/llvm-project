@@ -30,6 +30,19 @@ GenericProgramPoint::~GenericProgramPoint() = default;
 
 AnalysisState::~AnalysisState() = default;
 
+void AnalysisState::addDependency(ProgramPoint dependent,
+                                  DataFlowAnalysis *analysis) {
+  auto inserted = dependents.insert({dependent, analysis});
+  (void)inserted;
+  DATAFLOW_DEBUG({
+    if (inserted) {
+      llvm::dbgs() << "Creating dependency between " << debugName << " of "
+                   << point << "\nand " << debugName << " on " << dependent
+                   << "\n";
+    }
+  });
+}
+
 //===----------------------------------------------------------------------===//
 // ProgramPoint
 //===----------------------------------------------------------------------===//
@@ -97,24 +110,8 @@ void DataFlowSolver::propagateIfChanged(AnalysisState *state,
     DATAFLOW_DEBUG(llvm::dbgs() << "Propagating update to " << state->debugName
                                 << " of " << state->point << "\n"
                                 << "Value: " << *state << "\n");
-    for (const WorkItem &item : state->dependents)
-      enqueue(item);
     state->onUpdate(this);
   }
-}
-
-void DataFlowSolver::addDependency(AnalysisState *state,
-                                   DataFlowAnalysis *analysis,
-                                   ProgramPoint point) {
-  auto inserted = state->dependents.insert({point, analysis});
-  (void)inserted;
-  DATAFLOW_DEBUG({
-    if (inserted) {
-      llvm::dbgs() << "Creating dependency between " << state->debugName
-                   << " of " << state->point << "\nand " << analysis->debugName
-                   << " on " << point << "\n";
-    }
-  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -126,7 +123,7 @@ DataFlowAnalysis::~DataFlowAnalysis() = default;
 DataFlowAnalysis::DataFlowAnalysis(DataFlowSolver &solver) : solver(solver) {}
 
 void DataFlowAnalysis::addDependency(AnalysisState *state, ProgramPoint point) {
-  solver.addDependency(state, this, point);
+  state->addDependency(point, this);
 }
 
 void DataFlowAnalysis::propagateIfChanged(AnalysisState *state,

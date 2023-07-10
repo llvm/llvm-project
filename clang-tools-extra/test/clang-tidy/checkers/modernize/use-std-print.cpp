@@ -1024,7 +1024,7 @@ void printf_right_justified() {
 
   printf("Right-justified integer with field width argument %*d after\n", 5, 424242);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-  // CHECK-FIXES: std::println("Right-justified integer with field width argument {:{}} after", 5, 424242);
+  // CHECK-FIXES: std::println("Right-justified integer with field width argument {:{}} after", 424242, 5);
 
   printf("Right-justified integer with field width argument %2$*1$d after\n", 5, 424242);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
@@ -1061,7 +1061,7 @@ void printf_left_justified() {
 
   printf("Left-justified integer with field width argument %-*d after\n", 5, 424242);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-  // CHECK-FIXES: std::println("Left-justified integer with field width argument {:<{}} after", 5, 424242);
+  // CHECK-FIXES: std::println("Left-justified integer with field width argument {:<{}} after", 424242, 5);
 
   printf("Left-justified integer with field width argument %2$-*1$d after\n", 5, 424242);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
@@ -1087,15 +1087,15 @@ void printf_precision() {
 
   printf("Hello %.*f after\n", 10, 3.14159265358979323846);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-  // CHECK-FIXES: std::println("Hello {:.{}f} after", 10, 3.14159265358979323846);
+  // CHECK-FIXES: std::println("Hello {:.{}f} after", 3.14159265358979323846, 10);
 
   printf("Hello %10.*f after\n", 3, 3.14159265358979323846);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-  // CHECK-FIXES: std::println("Hello {:10.{}f} after", 3, 3.14159265358979323846);
+  // CHECK-FIXES: std::println("Hello {:10.{}f} after", 3.14159265358979323846, 3);
 
   printf("Hello %*.*f after\n", 10, 4, 3.14159265358979323846);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-  // CHECK-FIXES: std::println("Hello {:{}.{}f} after", 10, 4, 3.14159265358979323846);
+  // CHECK-FIXES: std::println("Hello {:{}.{}f} after", 3.14159265358979323846, 10, 4);
 
   printf("Hello %1$.*2$f after\n", 3.14159265358979323846, 4);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
@@ -1112,9 +1112,33 @@ void printf_precision() {
 }
 
 void printf_field_width_and_precision() {
-  printf("Hello %1$*2$.*3$f after\n", 3.14159265358979323846, 4, 2);
+  printf("width only:%*d width and precision:%*.*f precision only:%.*f\n", 3, 42, 4, 2, 3.14159265358979323846, 5, 2.718);
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
-  // CHECK-FIXES: std::println("Hello {0:{1}.{2}f} after", 3.14159265358979323846, 4, 2);
+  // CHECK-FIXES: std::println("width only:{:{}} width and precision:{:{}.{}f} precision only:{:.{}f}", 42, 3, 3.14159265358979323846, 4, 2, 2.718, 5);
+
+  printf("width and precision positional:%1$*2$.*3$f after\n", 3.14159265358979323846, 4, 2);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println("width and precision positional:{0:{1}.{2}f} after", 3.14159265358979323846, 4, 2);
+
+  const int width = 10, precision = 3;
+  printf("width only:%3$*1$d width and precision:%4$*1$.*2$f precision only:%5$.*2$f\n", width, precision, 42, 3.1415926, 2.718);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println("width only:{2:{0}} width and precision:{3:{0}.{1}f} precision only:{4:.{1}f}", width, precision, 42, 3.1415926, 2.718);
+}
+
+void fprintf_field_width_and_precision() {
+  fprintf(stderr, "width only:%*d width and precision:%*.*f precision only:%.*f\n", 3, 42, 4, 2, 3.14159265358979323846, 5, 2.718);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println(stderr, "width only:{:{}} width and precision:{:{}.{}f} precision only:{:.{}f}", 42, 3, 3.14159265358979323846, 4, 2, 2.718, 5);
+
+  fprintf(stderr, "width and precision positional:%1$*2$.*3$f after\n", 3.14159265358979323846, 4, 2);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println(stderr, "width and precision positional:{0:{1}.{2}f} after", 3.14159265358979323846, 4, 2);
+
+  const int width = 10, precision = 3;
+  fprintf(stderr, "width only:%3$*1$d width and precision:%4$*1$.*2$f precision only:%5$.*2$f\n", width, precision, 42, 3.1415926, 2.718);
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::println' instead of 'fprintf' [modernize-use-std-print]
+  // CHECK-FIXES: std::println(stderr, "width only:{2:{0}} width and precision:{3:{0}.{1}f} precision only:{4:.{1}f}", width, precision, 42, 3.1415926, 2.718);
 }
 
 void printf_alternative_form() {

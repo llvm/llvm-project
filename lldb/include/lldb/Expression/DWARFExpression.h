@@ -50,30 +50,22 @@ public:
   /// Return true if the location expression contains data
   bool IsValid() const;
 
-  /// If a location is not a location list, return true if the location
-  /// contains a DW_OP_addr () opcode in the stream that matches \a file_addr.
-  /// If file_addr is LLDB_INVALID_ADDRESS, the this function will return true
-  /// if the variable there is any DW_OP_addr in a location that (yet still is
-  /// NOT a location list). This helps us detect if a variable is a global or
-  /// static variable since there is no other indication from DWARF debug
-  /// info.
+  /// Return the address specified by the first
+  /// DW_OP_{addr, addrx, GNU_addr_index} in the operation stream.
   ///
   /// \param[in] dwarf_cu
-  ///     The dwarf unit this expression belongs to.
-  ///
-  /// \param[in] op_addr_idx
-  ///     The DW_OP_addr index to retrieve in case there is more than
-  ///     one DW_OP_addr opcode in the location byte stream.
+  ///     The dwarf unit this expression belongs to. Only required to resolve
+  ///     DW_OP{addrx, GNU_addr_index}.
   ///
   /// \param[out] error
   ///     If the location stream contains unknown DW_OP opcodes or the
   ///     data is missing, \a error will be set to \b true.
   ///
   /// \return
-  ///     LLDB_INVALID_ADDRESS if the location doesn't contain a
-  ///     DW_OP_addr for \a op_addr_idx, otherwise a valid file address
+  ///     The address specified by the operation, if the operation exists, or
+  ///     LLDB_INVALID_ADDRESS otherwise.
   lldb::addr_t GetLocation_DW_OP_addr(const DWARFUnit *dwarf_cu,
-                                      uint32_t op_addr_idx, bool &error) const;
+                                      bool &error) const;
 
   bool Update_DW_OP_addr(const DWARFUnit *dwarf_cu, lldb::addr_t file_addr);
 

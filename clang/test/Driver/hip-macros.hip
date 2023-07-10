@@ -17,6 +17,8 @@
 // RUN: %clang -E -dM --offload-arch=gfx1010 -mno-wavefrontsize64 \
 // RUN:   --cuda-device-only -nogpuinc -nogpulib \
 // RUN:   -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=WAVE64 %s
+// WAVE64-DAG: #define __AMDGCN_WAVEFRONT_SIZE__ 64
+// WAVE32-DAG: #define __AMDGCN_WAVEFRONT_SIZE__ 32
 // WAVE64-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
 // WAVE32-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
 

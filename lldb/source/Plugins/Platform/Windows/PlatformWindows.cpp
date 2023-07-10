@@ -533,9 +533,9 @@ lldb::ProcessSP PlatformWindows::Attach(ProcessAttachInfo &attach_info,
   if (!target || error.Fail())
     return process_sp;
 
-  const char *plugin_name = attach_info.GetProcessPluginName();
-  process_sp = target->CreateProcess(
-      attach_info.GetListenerForProcess(debugger), plugin_name, nullptr, false);
+  process_sp =
+      target->CreateProcess(attach_info.GetListenerForProcess(debugger),
+                            attach_info.GetProcessPluginName(), nullptr, false);
 
   process_sp->HijackProcessEvents(attach_info.GetHijackListener());
   if (process_sp)

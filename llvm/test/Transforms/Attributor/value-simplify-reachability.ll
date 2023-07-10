@@ -60,7 +60,7 @@ define void @entry1(i1 %c, i32 %v) {
 ; TUNIT:       F:
 ; TUNIT-NEXT:    [[L3:%.*]] = load i32, ptr @GInt1, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L3]])
-; TUNIT-NEXT:    call void @write1ToGInt1() #[[ATTR11:[0-9]+]]
+; TUNIT-NEXT:    call void @write1ToGInt1() #[[ATTR10]]
 ; TUNIT-NEXT:    [[L4:%.*]] = load i32, ptr @GInt1, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L4]])
 ; TUNIT-NEXT:    ret void
@@ -125,7 +125,7 @@ define void @entry2(i1 %c, i32 %v) {
 ; TUNIT:       F:
 ; TUNIT-NEXT:    [[L3:%.*]] = load i32, ptr @GInt2, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L3]])
-; TUNIT-NEXT:    call void @write1ToGInt2() #[[ATTR11]]
+; TUNIT-NEXT:    call void @write1ToGInt2() #[[ATTR10]]
 ; TUNIT-NEXT:    [[L4:%.*]] = load i32, ptr @GInt2, align 4
 ; TUNIT-NEXT:    call void @useI32(i32 [[L4]])
 ; TUNIT-NEXT:    ret void
@@ -802,7 +802,6 @@ define i32 @exclusion_set3(i1 %c) {
 ; TUNIT: attributes #[[ATTR8]] = { nosync }
 ; TUNIT: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR10]] = { nosync nounwind memory(write) }
-; TUNIT: attributes #[[ATTR11]] = { nosync nounwind }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nosync }
@@ -814,5 +813,5 @@ define i32 @exclusion_set3(i1 %c) {
 ; CGSCC: attributes #[[ATTR7]] = { nocallback }
 ; CGSCC: attributes #[[ATTR8]] = { norecurse }
 ; CGSCC: attributes #[[ATTR9:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR10]] = { nounwind }
+; CGSCC: attributes #[[ATTR10]] = { nounwind memory(write) }
 ;.

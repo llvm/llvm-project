@@ -19,7 +19,8 @@
 namespace __llvm_libc {
 namespace printf_core {
 
-int inline convert_write_int(Writer *writer, const FormatSection &to_conv) {
+LIBC_INLINE int convert_write_int(Writer *writer,
+                                  const FormatSection &to_conv) {
 
   // This is an additional check added by LLVM-libc. The reason it returns -3 is
   // because printf uses negative return values for errors, and -1 and -2 are

@@ -303,6 +303,32 @@ bool DummyDataObject::IsCompatibleWith(
     }
     return false;
   }
+  if (type.type().category() == TypeCategory::Character) {
+    if (actual.type.type().IsAssumedLengthCharacter() !=
+        type.type().IsAssumedLengthCharacter()) {
+      if (whyNot) {
+        *whyNot = "assumed-length character vs explicit-length character";
+      }
+      return false;
+    }
+    if (!type.type().IsAssumedLengthCharacter() && type.LEN() &&
+        actual.type.LEN()) {
+      auto len{ToInt64(*type.LEN())};
+      auto actualLen{ToInt64(*actual.type.LEN())};
+      if (len.has_value() != actualLen.has_value()) {
+        if (whyNot) {
+          *whyNot = "constant-length vs non-constant-length character dummy "
+                    "arguments";
+        }
+        return false;
+      } else if (len && *len != *actualLen) {
+        if (whyNot) {
+          *whyNot = "character dummy arguments with distinct lengths";
+        }
+        return false;
+      }
+    }
+  }
   if (attrs != actual.attrs) {
     if (whyNot) {
       *whyNot = "incompatible dummy data object attributes";

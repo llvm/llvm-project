@@ -37,6 +37,7 @@ Error SubprocessMemory::initializeSubprocessMemory(pid_t ProcessID) {
     return make_error<Failure>("Truncating the auxiliary memory failed: " +
                                Twine(strerror(errno)));
   }
+  SharedMemoryNames.push_back(AuxiliaryMemoryName);
   return Error::success();
 }
 

@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-inline constexpr auto PLATFORM_ERRORS = STDC_ERRORS;
+LIBC_INLINE_VAR constexpr auto PLATFORM_ERRORS = STDC_ERRORS;
 
 } // namespace __llvm_libc
 

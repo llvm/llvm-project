@@ -82,6 +82,18 @@ defm split_stack_adjust_size
 
 def O: JoinedOrSeparate<["-"], "O">, HelpText<"Optimize output file size">;
 
+def cmse_implib: FF<"cmse-implib">,
+  HelpText<"Make the output library to be a CMSE secure code import library">;
+
+defm in_implib: EEq<"in-implib",
+    "Read an existing CMSE secure code import library and preserve entry function addresses in the "
+    "resulting new CMSE secure code import library (optional when creating a CMSE secure image)">,
+  MetaVarName<"<file>">;
+
+defm out_implib: EEq<"out-implib",
+    "Output the CMSE secure code import library to <file> (required when creating a CMSE secure image)">,
+  MetaVarName<"<file>">;
+
 defm Tbss: Eq<"Tbss", "Same as --section-start with .bss as the sectionname">;
 
 defm Tdata: Eq<"Tdata", "Same as --section-start with .data as the sectionname">;

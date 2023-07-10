@@ -72,8 +72,9 @@ public:
   /// Return the integer value if this data structure is an integer type.
   int64_t GetSignedIntegerValue(int64_t fail_value = 0) const;
 
-  LLDB_DEPRECATED("Specify if the value is signed or unsigned",
-                  "uint64_t GetUnsignedIntegerValue(uint64_t fail_value = 0)")
+  LLDB_DEPRECATED_FIXME(
+      "Specify if the value is signed or unsigned",
+      "uint64_t GetUnsignedIntegerValue(uint64_t fail_value = 0)")
   uint64_t GetIntegerValue(uint64_t fail_value = 0) const;
 
   /// Return the floating point value if this data structure is a floating

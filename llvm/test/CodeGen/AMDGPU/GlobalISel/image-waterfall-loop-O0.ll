@@ -11,7 +11,6 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-LABEL: waterfall_loop:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    s_xor_saveexec_b32 s4, -1
 ; CHECK-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:76 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4
@@ -162,7 +161,6 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:76 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %ret = tail call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 1, float 0.000000e+00, float 0.000000e+00, <8 x i32> %vgpr_srd, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)

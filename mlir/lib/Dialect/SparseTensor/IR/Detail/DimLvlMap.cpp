@@ -241,7 +241,7 @@ void LvlSpec::print(llvm::raw_ostream &os, bool wantElision) const {
   if (!wantElision || !elideVar)
     os << var << " = ";
   os << expr;
-  os << ": \"" << toMLIRString(type) << "\"";
+  os << ": " << toMLIRString(type);
 }
 
 //===----------------------------------------------------------------------===//
@@ -264,10 +264,10 @@ DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
   // Third, we set every `LvlSpec::elideVar` according to whether that
   // LvlVar occurs in a non-elided DimExpr (TODO: or CountingExpr).
   VarSet usedVars(getRanks());
-  for (const auto &dimSpec : dimSpecs)
-    // NOTE TO Wren: bypassed for empty
-    if (dimSpec.hasExpr() && !dimSpec.canElideExpr())
-      usedVars.add(dimSpec.getExpr());
+  // NOTE TO Wren: bypassed for now
+  // for (const auto &dimSpec : dimSpecs)
+  //  if (!dimSpec.canElideExpr())
+  //    usedVars.add(dimSpec.getExpr());
   for (auto &lvlSpec : this->lvlSpecs)
     lvlSpec.setElideVar(!usedVars.contains(lvlSpec.getBoundVar()));
 }

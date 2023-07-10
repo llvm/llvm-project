@@ -116,9 +116,10 @@ void ThumbRegisterInfo::emitLoadConstPool(
                                  PredReg, MIFlags);
 }
 
-/// emitThumbRegPlusImmInReg - Emits a series of instructions to materialize
-/// a destreg = basereg + immediate in Thumb code. Materialize the immediate
-/// in a register using mov / mvn sequences or load the immediate from a
+/// emitThumbRegPlusImmInReg - Emits a series of instructions to materialize a
+/// destreg = basereg + immediate in Thumb code. Materialize the immediate in a
+/// register using mov / mvn (armv6-M >) sequences, movs / lsls / adds / lsls /
+/// adds / lsls / adds sequences (armv6-M) or load the immediate from a
 /// constpool entry.
 static void emitThumbRegPlusImmInReg(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
@@ -159,7 +160,8 @@ static void emitThumbRegPlusImmInReg(
         .addReg(LdReg, RegState::Kill)
         .setMIFlags(MIFlags);
   } else if (ST.genExecuteOnly()) {
-    BuildMI(MBB, MBBI, dl, TII.get(ARM::t2MOVi32imm), LdReg)
+    unsigned XOInstr = ST.useMovt() ? ARM::t2MOVi32imm : ARM::tMOVi32imm;
+    BuildMI(MBB, MBBI, dl, TII.get(XOInstr), LdReg)
       .addImm(NumBytes).setMIFlags(MIFlags);
   } else
     MRI.emitLoadConstPool(MBB, MBBI, dl, LdReg, 0, NumBytes, ARMCC::AL, 0,

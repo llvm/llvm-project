@@ -16,8 +16,8 @@
 namespace __llvm_libc {
 
 template <typename Comp>
-constexpr static char *strstr_implementation(const char *haystack,
-                                             const char *needle, Comp &&comp) {
+LIBC_INLINE constexpr char *
+strstr_implementation(const char *haystack, const char *needle, Comp &&comp) {
   void *result = memmem_implementation(
       static_cast<const void *>(haystack), internal::string_length(haystack),
       static_cast<const void *>(needle), internal::string_length(needle), comp);

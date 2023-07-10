@@ -13,7 +13,7 @@
 // UNSUPPORTED: hwasan
 
 // FIXME: Something wrong with MADV_FREE or MAP_NORESERVE there.
-// UNSUPPORTED: solaris
+// UNSUPPORTED: target={{.*solaris.*}}
 
 void *p;
 

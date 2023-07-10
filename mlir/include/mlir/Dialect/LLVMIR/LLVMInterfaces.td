@@ -167,6 +167,30 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
   ];
 }
 
+def GetResultPtrElementType : OpInterface<"GetResultPtrElementType"> {
+  let description = [{
+    An interface for operations that yield an LLVMPointer. Allows the
+    operation to provide the type of the element an LLVMPointer points to,
+    if known. This is only a hint as to how to interpret a given pointer,
+    translating how the current operation understands it.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        [{Returns the the element type hint of the result
+                         LLVMPointer, if known. Returns nullptr if the
+                         requested result is not an LLVMPointer or if the
+                         element type is unknown.}],
+      /*returnType=*/  "Type",
+      /*methodName=*/  "getResultPtrElementType",
+      /*args=*/        (ins)
+      >
+  ];
+}
+
+
 //===----------------------------------------------------------------------===//
 // LLVM dialect type interfaces.
 //===----------------------------------------------------------------------===//

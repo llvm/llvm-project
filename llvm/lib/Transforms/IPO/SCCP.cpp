@@ -191,8 +191,8 @@ static bool runIPSCCP(
           if (ME == MemoryEffects::unknown())
             return AL;
 
-          ME |= MemoryEffects(MemoryEffects::Other,
-                              ME.getModRef(MemoryEffects::ArgMem));
+          ME |= MemoryEffects(IRMemLocation::Other,
+                              ME.getModRef(IRMemLocation::ArgMem));
           return AL.addFnAttribute(
               F.getContext(),
               Attribute::getWithMemoryEffects(F.getContext(), ME));

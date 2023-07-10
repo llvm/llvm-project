@@ -571,12 +571,12 @@ def Ampere1Write_62cyc_1XY : SchedWriteRes<[Ampere1UnitXY]> {
 // across Unit A or B for both uops.
 def Ampere1Write_Arith : SchedWriteVariant<[
                                 SchedVar<RegExtendedPred, [Ampere1Write_2cyc_2AB]>,
-                                SchedVar<AmpereCheapLSL,  [Ampere1Write_1cyc_1AB]>,
+                                SchedVar<IsCheapLSL,      [Ampere1Write_1cyc_1AB]>,
                                 SchedVar<NoSchedPred,     [Ampere1Write_2cyc_1B_1AB]>]>;
 
 def Ampere1Write_ArithFlagsetting : SchedWriteVariant<[
                                 SchedVar<RegExtendedPred, [Ampere1Write_2cyc_1AB_1A]>,
-                                SchedVar<AmpereCheapLSL,  [Ampere1Write_1cyc_1A]>,
+                                SchedVar<IsCheapLSL,      [Ampere1Write_1cyc_1A]>,
                                 SchedVar<NoSchedPred,     [Ampere1Write_2cyc_1B_1A]>]>;
 
 //===----------------------------------------------------------------------===//

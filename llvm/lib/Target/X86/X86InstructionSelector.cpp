@@ -114,8 +114,8 @@ private:
   bool materializeFP(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
   bool selectImplicitDefOrPHI(MachineInstr &I, MachineRegisterInfo &MRI) const;
-  bool selectDivRem(MachineInstr &I, MachineRegisterInfo &MRI,
-                    MachineFunction &MF) const;
+  bool selectMulDivRem(MachineInstr &I, MachineRegisterInfo &MRI,
+                       MachineFunction &MF) const;
   bool selectIntrinsicWSideEffects(MachineInstr &I, MachineRegisterInfo &MRI,
                                    MachineFunction &MF) const;
 
@@ -421,11 +421,14 @@ bool X86InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_IMPLICIT_DEF:
   case TargetOpcode::G_PHI:
     return selectImplicitDefOrPHI(I, MRI);
+  case TargetOpcode::G_MUL:
+  case TargetOpcode::G_SMULH:
+  case TargetOpcode::G_UMULH:
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM:
-    return selectDivRem(I, MRI, MF);
+    return selectMulDivRem(I, MRI, MF);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectIntrinsicWSideEffects(I, MRI, MF);
   }
@@ -1558,11 +1561,14 @@ bool X86InstructionSelector::selectImplicitDefOrPHI(
   return true;
 }
 
-bool X86InstructionSelector::selectDivRem(MachineInstr &I,
-                                          MachineRegisterInfo &MRI,
-                                          MachineFunction &MF) const {
-  // The implementation of this function is taken from X86FastISel.
-  assert((I.getOpcode() == TargetOpcode::G_SDIV ||
+bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
+                                             MachineRegisterInfo &MRI,
+                                             MachineFunction &MF) const {
+  // The implementation of this function is adapted from X86FastISel.
+  assert((I.getOpcode() == TargetOpcode::G_MUL ||
+          I.getOpcode() == TargetOpcode::G_SMULH ||
+          I.getOpcode() == TargetOpcode::G_UMULH ||
+          I.getOpcode() == TargetOpcode::G_SDIV ||
           I.getOpcode() == TargetOpcode::G_SREM ||
           I.getOpcode() == TargetOpcode::G_UDIV ||
           I.getOpcode() == TargetOpcode::G_UREM) &&
@@ -1581,10 +1587,11 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
     return false;
 
   const static unsigned NumTypes = 4; // i8, i16, i32, i64
-  const static unsigned NumOps = 4;   // SDiv, SRem, UDiv, URem
+  const static unsigned NumOps = 7;   // SDiv/SRem/UDiv/URem/Mul/SMulH/UMulh
   const static bool S = true;         // IsSigned
   const static bool U = false;        // !IsSigned
   const static unsigned Copy = TargetOpcode::COPY;
+
   // For the X86 IDIV instruction, in most cases the dividend
   // (numerator) must be in a specific register pair highreg:lowreg,
   // producing the quotient in lowreg and the remainder in highreg.
@@ -1593,19 +1600,19 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   // exception is i8, where the dividend is defined as a single register rather
   // than a register pair, and we therefore directly sign-extend the dividend
   // into lowreg, instead of copying, and ignore the highreg.
-  const static struct DivRemEntry {
+  const static struct MulDivRemEntry {
     // The following portion depends only on the data type.
     unsigned SizeInBits;
     unsigned LowInReg;  // low part of the register pair
     unsigned HighInReg; // high part of the register pair
     // The following portion depends on both the data type and the operation.
-    struct DivRemResult {
-      unsigned OpDivRem;        // The specific DIV/IDIV opcode to use.
+    struct MulDivRemResult {
+      unsigned OpMulDivRem;     // The specific MUL/DIV opcode to use.
       unsigned OpSignExtend;    // Opcode for sign-extending lowreg into
                                 // highreg, or copying a zero into highreg.
       unsigned OpCopy;          // Opcode for copying dividend into lowreg, or
                                 // zero/sign-extending into lowreg for i8.
-      unsigned DivRemResultReg; // Register containing the desired result.
+      unsigned ResultReg;       // Register containing the desired result.
       bool IsOpSigned;          // Whether to use signed or unsigned form.
     } ResultTable[NumOps];
   } OpTable[NumTypes] = {
@@ -1617,25 +1624,34 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
            {X86::IDIV8r, 0, X86::MOVSX16rr8, X86::AH, S}, // SRem
            {X86::DIV8r, 0, X86::MOVZX16rr8, X86::AL, U},  // UDiv
            {X86::DIV8r, 0, X86::MOVZX16rr8, X86::AH, U},  // URem
+           {X86::IMUL8r, 0, X86::MOVSX16rr8, X86::AL, S}, // Mul
+           {X86::IMUL8r, 0, X86::MOVSX16rr8, X86::AH, S}, // SMulH
+           {X86::MUL8r, 0, X86::MOVZX16rr8, X86::AH, U},  // UMulH
        }},                                                // i8
       {16,
        X86::AX,
        X86::DX,
        {
-           {X86::IDIV16r, X86::CWD, Copy, X86::AX, S},    // SDiv
-           {X86::IDIV16r, X86::CWD, Copy, X86::DX, S},    // SRem
-           {X86::DIV16r, X86::MOV32r0, Copy, X86::AX, U}, // UDiv
-           {X86::DIV16r, X86::MOV32r0, Copy, X86::DX, U}, // URem
-       }},                                                // i16
+           {X86::IDIV16r, X86::CWD, Copy, X86::AX, S},     // SDiv
+           {X86::IDIV16r, X86::CWD, Copy, X86::DX, S},     // SRem
+           {X86::DIV16r, X86::MOV32r0, Copy, X86::AX, U},  // UDiv
+           {X86::DIV16r, X86::MOV32r0, Copy, X86::DX, U},  // URem
+           {X86::IMUL16r, X86::MOV32r0, Copy, X86::AX, S}, // Mul
+           {X86::IMUL16r, X86::MOV32r0, Copy, X86::DX, S}, // SMulH
+           {X86::MUL16r, X86::MOV32r0, Copy, X86::DX, U},  // UMulH
+       }},                                                 // i16
       {32,
        X86::EAX,
        X86::EDX,
        {
-           {X86::IDIV32r, X86::CDQ, Copy, X86::EAX, S},    // SDiv
-           {X86::IDIV32r, X86::CDQ, Copy, X86::EDX, S},    // SRem
-           {X86::DIV32r, X86::MOV32r0, Copy, X86::EAX, U}, // UDiv
-           {X86::DIV32r, X86::MOV32r0, Copy, X86::EDX, U}, // URem
-       }},                                                 // i32
+           {X86::IDIV32r, X86::CDQ, Copy, X86::EAX, S},     // SDiv
+           {X86::IDIV32r, X86::CDQ, Copy, X86::EDX, S},     // SRem
+           {X86::DIV32r, X86::MOV32r0, Copy, X86::EAX, U},  // UDiv
+           {X86::DIV32r, X86::MOV32r0, Copy, X86::EDX, U},  // URem
+           {X86::IMUL32r, X86::MOV32r0, Copy, X86::EAX, S}, // Mul
+           {X86::IMUL32r, X86::MOV32r0, Copy, X86::EDX, S}, // SMulH
+           {X86::MUL32r, X86::MOV32r0, Copy, X86::EDX, U},  // UMulH
+       }},                                                  // i32
       {64,
        X86::RAX,
        X86::RDX,
@@ -1644,10 +1660,13 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
            {X86::IDIV64r, X86::CQO, Copy, X86::RDX, S},    // SRem
            {X86::DIV64r, X86::MOV32r0, Copy, X86::RAX, U}, // UDiv
            {X86::DIV64r, X86::MOV32r0, Copy, X86::RDX, U}, // URem
-       }},                                                 // i64
+           {X86::IMUL64r, X86::MOV32r0, Copy, X86::RAX, S}, // Mul
+           {X86::IMUL64r, X86::MOV32r0, Copy, X86::RDX, S}, // SMulH
+           {X86::MUL64r, X86::MOV32r0, Copy, X86::RDX, U},  // UMulH
+       }},                                                  // i64
   };
 
-  auto OpEntryIt = llvm::find_if(OpTable, [RegTy](const DivRemEntry &El) {
+  auto OpEntryIt = llvm::find_if(OpTable, [RegTy](const MulDivRemEntry &El) {
     return El.SizeInBits == RegTy.getSizeInBits();
   });
   if (OpEntryIt == std::end(OpTable))
@@ -1656,7 +1675,7 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   unsigned OpIndex;
   switch (I.getOpcode()) {
   default:
-    llvm_unreachable("Unexpected div/rem opcode");
+    llvm_unreachable("Unexpected mul/div/rem opcode");
   case TargetOpcode::G_SDIV:
     OpIndex = 0;
     break;
@@ -1669,10 +1688,20 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   case TargetOpcode::G_UREM:
     OpIndex = 3;
     break;
+  case TargetOpcode::G_MUL:
+    OpIndex = 4;
+    break;
+  case TargetOpcode::G_SMULH:
+    OpIndex = 5;
+    break;
+  case TargetOpcode::G_UMULH:
+    OpIndex = 6;
+    break;
   }
 
-  const DivRemEntry &TypeEntry = *OpEntryIt;
-  const DivRemEntry::DivRemResult &OpEntry = TypeEntry.ResultTable[OpIndex];
+  const MulDivRemEntry &TypeEntry = *OpEntryIt;
+  const MulDivRemEntry::MulDivRemResult &OpEntry =
+      TypeEntry.ResultTable[OpIndex];
 
   const TargetRegisterClass *RegRC = getRegClass(RegTy, *RegRB);
   if (!RBI.constrainGenericRegister(Op1Reg, *RegRC, MRI) ||
@@ -1687,6 +1716,7 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpEntry.OpCopy),
           TypeEntry.LowInReg)
       .addReg(Op1Reg);
+
   // Zero-extend or sign-extend into high-order input register.
   if (OpEntry.OpSignExtend) {
     if (OpEntry.IsOpSigned)
@@ -1717,9 +1747,11 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
       }
     }
   }
-  // Generate the DIV/IDIV instruction.
-  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpEntry.OpDivRem))
+
+  // Generate the DIV/IDIV/MUL/IMUL instruction.
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(OpEntry.OpMulDivRem))
       .addReg(Op2Reg);
+
   // For i8 remainder, we can't reference ah directly, as we'll end
   // up with bogus copies like %r9b = COPY %ah. Reference ax
   // instead to prevent ah references in a rex instruction.
@@ -1728,7 +1760,7 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   // won't generate explicit references to the GR8_NOREX registers. If
   // the allocator and/or the backend get enhanced to be more robust in
   // that regard, this can be, and should be, removed.
-  if (OpEntry.DivRemResultReg == X86::AH && STI.is64Bit()) {
+  if (OpEntry.ResultReg == X86::AH && STI.is64Bit()) {
     Register SourceSuperReg = MRI.createVirtualRegister(&X86::GR16RegClass);
     Register ResultSuperReg = MRI.createVirtualRegister(&X86::GR16RegClass);
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy), SourceSuperReg)
@@ -1750,9 +1782,10 @@ bool X86InstructionSelector::selectDivRem(MachineInstr &I,
   } else {
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)
-        .addReg(OpEntry.DivRemResultReg);
+        .addReg(OpEntry.ResultReg);
   }
   I.eraseFromParent();
+
   return true;
 }
 

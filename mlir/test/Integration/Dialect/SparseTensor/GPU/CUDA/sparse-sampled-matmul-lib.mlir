@@ -46,6 +46,9 @@
 // runs the resulting code with the JIT compiler.
 //
 module {
+  llvm.func @mgpuCreateSparseEnv()
+  llvm.func @mgpuDestroySparseEnv()
+
   //
   // A kernel that computes a sampled dense matrix matrix multiplication
   // using a "spy" function and in-place update of the sampling sparse matrix.
@@ -81,6 +84,7 @@ module {
   // Main driver.
   //
   func.func @entry() {
+    llvm.call @mgpuCreateSparseEnv() : () -> ()
     %d0 = arith.constant 0.0 : f32
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
@@ -149,6 +153,7 @@ module {
     bufferization.dealloc_tensor %0 : tensor<?x?xf32, #CSR>
     bufferization.dealloc_tensor %1 : tensor<?x?xf32, #CSR>
 
+    llvm.call @mgpuDestroySparseEnv() : () -> ()
     return
   }
 }

@@ -108,18 +108,22 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
   return NoneType::get(type.getContext());
 }
 
+OpFoldResult memref::getMixedSize(OpBuilder &builder, Location loc, Value value,
+                                  int64_t dim) {
+  auto memrefType = llvm::cast<MemRefType>(value.getType());
+  SmallVector<OpFoldResult> result;
+  if (memrefType.isDynamicDim(dim))
+    return builder.createOrFold<memref::DimOp>(loc, value, dim);
+
+  return builder.getIndexAttr(memrefType.getDimSize(dim));
+}
+
 SmallVector<OpFoldResult> memref::getMixedSizes(OpBuilder &builder,
                                                 Location loc, Value value) {
   auto memrefType = llvm::cast<MemRefType>(value.getType());
   SmallVector<OpFoldResult> result;
-  for (int64_t i = 0; i < memrefType.getRank(); ++i) {
-    if (memrefType.isDynamicDim(i)) {
-      Value size = builder.create<memref::DimOp>(loc, value, i);
-      result.push_back(size);
-    } else {
-      result.push_back(builder.getIndexAttr(memrefType.getDimSize(i)));
-    }
-  }
+  for (int64_t i = 0; i < memrefType.getRank(); ++i)
+    result.push_back(getMixedSize(builder, loc, value, i));
   return result;
 }
 

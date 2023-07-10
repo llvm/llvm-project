@@ -35,10 +35,10 @@ define ptr @start(i8 %v) {
 ; CGSCC-NEXT:    [[C2:%.*]] = icmp eq i8 [[V]], 1
 ; CGSCC-NEXT:    br i1 [[C2]], label [[C2_TRUE:%.*]], label [[C2_FALSE:%.*]]
 ; CGSCC:       c2_true:
-; CGSCC-NEXT:    [[CA1:%.*]] = musttail call noundef align 4294967296 ptr @no_side_effects(i8 [[V]])
+; CGSCC-NEXT:    [[CA1:%.*]] = musttail call noalias noundef align 4294967296 ptr @no_side_effects(i8 [[V]])
 ; CGSCC-NEXT:    ret ptr [[CA1]]
 ; CGSCC:       c2_false:
-; CGSCC-NEXT:    [[CA2:%.*]] = musttail call noundef align 4294967296 ptr @dont_zap_me(i8 [[V]])
+; CGSCC-NEXT:    [[CA2:%.*]] = musttail call noalias noundef align 4294967296 ptr @dont_zap_me(i8 [[V]])
 ; CGSCC-NEXT:    ret ptr [[CA2]]
 ;
   %c1 = icmp eq i8 %v, 0

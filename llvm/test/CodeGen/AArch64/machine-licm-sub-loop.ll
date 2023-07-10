@@ -12,10 +12,10 @@ define dso_local void @foo(i32 noundef %limit, ptr nocapture noundef %out, ptr n
 ; CHECK-NEXT:    mov w10, w0
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    and x11, x10, #0xfffffff0
 ; CHECK-NEXT:    add x12, x1, #32
 ; CHECK-NEXT:    ubfiz x13, x0, #2, #32
 ; CHECK-NEXT:    add x14, x2, #16
+; CHECK-NEXT:    and x11, x10, #0xfffffff0
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:    .p2align 5, , 16
 ; CHECK-NEXT:  .LBB0_2: // %for.cond1.for.cond.cleanup3_crit_edge.us
@@ -45,18 +45,18 @@ define dso_local void @foo(i32 noundef %limit, ptr nocapture noundef %out, ptr n
 ; CHECK-NEXT:  .LBB0_6: // %vector.body
 ; CHECK-NEXT:    // Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    dup v0.8h, w15
+; CHECK-NEXT:    ldp q1, q0, [x16, #-16]
+; CHECK-NEXT:    dup v6.8h, w15
 ; CHECK-NEXT:    subs x18, x18, #16
-; CHECK-NEXT:    ldp q1, q2, [x16, #-16]
 ; CHECK-NEXT:    add x16, x16, #32
-; CHECK-NEXT:    ldp q4, q3, [x17, #-32]
-; CHECK-NEXT:    smlal v4.4s, v0.4h, v1.4h
-; CHECK-NEXT:    smlal2 v3.4s, v0.8h, v1.8h
-; CHECK-NEXT:    ldp q6, q5, [x17]
-; CHECK-NEXT:    smlal v6.4s, v0.4h, v2.4h
-; CHECK-NEXT:    smlal2 v5.4s, v0.8h, v2.8h
-; CHECK-NEXT:    stp q4, q3, [x17, #-32]
-; CHECK-NEXT:    stp q6, q5, [x17], #64
+; CHECK-NEXT:    ldp q3, q2, [x17, #-32]
+; CHECK-NEXT:    smlal v3.4s, v6.4h, v1.4h
+; CHECK-NEXT:    ldp q5, q4, [x17]
+; CHECK-NEXT:    smlal2 v2.4s, v6.8h, v1.8h
+; CHECK-NEXT:    smlal v5.4s, v6.4h, v0.4h
+; CHECK-NEXT:    smlal2 v4.4s, v6.8h, v0.8h
+; CHECK-NEXT:    stp q3, q2, [x17, #-32]
+; CHECK-NEXT:    stp q5, q4, [x17], #64
 ; CHECK-NEXT:    b.ne .LBB0_6
 ; CHECK-NEXT:  // %bb.7: // %middle.block
 ; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
@@ -74,8 +74,8 @@ define dso_local void @foo(i32 noundef %limit, ptr nocapture noundef %out, ptr n
 ; CHECK-NEXT:    // Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    ldrsh w3, [x18], #2
-; CHECK-NEXT:    subs x16, x16, #1
 ; CHECK-NEXT:    ldr w4, [x17]
+; CHECK-NEXT:    subs x16, x16, #1
 ; CHECK-NEXT:    madd w3, w3, w15, w4
 ; CHECK-NEXT:    str w3, [x17], #4
 ; CHECK-NEXT:    b.ne .LBB0_9

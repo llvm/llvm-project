@@ -754,9 +754,9 @@ define double @reassociate_adds_from_calls() {
 ; CHECK-STD-LABEL: reassociate_adds_from_calls:
 ; CHECK-STD:       // %bb.0:
 ; CHECK-STD-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-STD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-STD-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
 ; CHECK-STD-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-STD-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-STD-NEXT:    .cfi_offset w30, -8
 ; CHECK-STD-NEXT:    .cfi_offset b8, -16
 ; CHECK-STD-NEXT:    .cfi_offset b9, -24
@@ -779,9 +779,9 @@ define double @reassociate_adds_from_calls() {
 ; CHECK-UNSAFE-LABEL: reassociate_adds_from_calls:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-UNSAFE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-UNSAFE-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
 ; CHECK-UNSAFE-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-UNSAFE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-UNSAFE-NEXT:    .cfi_offset w30, -8
 ; CHECK-UNSAFE-NEXT:    .cfi_offset b8, -16
 ; CHECK-UNSAFE-NEXT:    .cfi_offset b9, -24
@@ -814,9 +814,9 @@ define double @already_reassociated() {
 ; CHECK-LABEL: already_reassociated:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str d10, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp d9, d8, [sp, #8] // 16-byte Folded Spill
 ; CHECK-NEXT:    str x30, [sp, #24] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset b8, -16
 ; CHECK-NEXT:    .cfi_offset b9, -24
@@ -844,4 +844,3 @@ define double @already_reassociated() {
   %t2 = fadd double %t0, %t1
   ret double %t2
 }
-

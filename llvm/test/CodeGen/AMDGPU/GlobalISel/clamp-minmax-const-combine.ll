@@ -6,7 +6,6 @@ define float @test_min_max_ValK0_K1_f32(float %a) #0 {
 ; GFX10-LABEL: test_min_max_ValK0_K1_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -14,7 +13,6 @@ define float @test_min_max_ValK0_K1_f32(float %a) #0 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -30,7 +28,6 @@ define double @test_min_max_K0Val_K1_f64(double %a) #1 {
 ; GFX10-LABEL: test_min_max_K0Val_K1_f64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], 2.0 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -38,7 +35,6 @@ define double @test_min_max_K0Val_K1_f64(double %a) #1 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -55,7 +51,6 @@ define half @test_min_K1max_ValK0_f16(half %a) #2 {
 ; GFX10-LABEL: test_min_K1max_ValK0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f16_e64 v0, v0, 2.0 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -63,7 +58,6 @@ define half @test_min_K1max_ValK0_f16(half %a) #2 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -79,7 +73,6 @@ define <2 x half> @test_min_K1max_K0Val_f16(<2 x half> %a) #1 {
 ; GFX10-LABEL: test_min_K1max_K0Val_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_mul_f16 v0, v0, 2.0 op_sel_hi:[1,0] clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -87,7 +80,6 @@ define <2 x half> @test_min_K1max_K0Val_f16(<2 x half> %a) #1 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -103,7 +95,6 @@ define <2 x half> @test_min_max_splat_padded_with_undef(<2 x half> %a) #2 {
 ; GFX10-LABEL: test_min_max_splat_padded_with_undef:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_mul_f16 v0, v0, 2.0 op_sel_hi:[1,0] clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -111,7 +102,6 @@ define <2 x half> @test_min_max_splat_padded_with_undef(<2 x half> %a) #2 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -129,7 +119,6 @@ define float @test_max_min_ValK1_K0_f32(float %a) #0 {
 ; GFX10-LABEL: test_max_min_ValK1_K0_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e64 v0, v0, 2.0 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -137,7 +126,6 @@ define float @test_max_min_ValK1_K0_f32(float %a) #0 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -153,7 +141,6 @@ define double @test_max_min_K1Val_K0_f64(double %a) #1 {
 ; GFX10-LABEL: test_max_min_K1Val_K0_f64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], 2.0 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -161,7 +148,6 @@ define double @test_max_min_K1Val_K0_f64(double %a) #1 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -177,7 +163,6 @@ define half @test_max_K0min_ValK1_f16(half %a) #0 {
 ; GFX10-LABEL: test_max_K0min_ValK1_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f16_e64 v0, v0, 2.0 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -185,7 +170,6 @@ define half @test_max_K0min_ValK1_f16(half %a) #0 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -202,7 +186,6 @@ define <2 x half> @test_max_K0min_K1Val_v2f16(<2 x half> %a) #1 {
 ; GFX10-LABEL: test_max_K0min_K1Val_v2f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_mul_f16 v0, v0, 2.0 op_sel_hi:[1,0] clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -210,7 +193,6 @@ define <2 x half> @test_max_K0min_K1Val_v2f16(<2 x half> %a) #1 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -228,7 +210,6 @@ define float @test_min_max_global_nnan(float %a) #3 {
 ; GFX10-LABEL: test_min_max_global_nnan:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_max_f32_e64 v0, v0, v0 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -236,7 +217,6 @@ define float @test_min_max_global_nnan(float %a) #3 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -251,7 +231,6 @@ define float @test_max_min_global_nnan(float %a) #3 {
 ; GFX10-LABEL: test_max_min_global_nnan:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_max_f32_e64 v0, v0, v0 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -259,7 +238,6 @@ define float @test_max_min_global_nnan(float %a) #3 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -279,7 +257,6 @@ define float @test_min_max_K0_gt_K1(float %a) #0 {
 ; GFX10-LABEL: test_min_max_K0_gt_K1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -288,7 +265,6 @@ define float @test_min_max_K0_gt_K1(float %a) #0 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -304,7 +280,6 @@ define float @test_max_min_K0_gt_K1(float %a) #0 {
 ; GFX10-LABEL: test_max_min_K0_gt_K1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 0, v0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -313,7 +288,6 @@ define float @test_max_min_K0_gt_K1(float %a) #0 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -331,7 +305,6 @@ define float @test_min_max_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
@@ -341,7 +314,6 @@ define float @test_min_max_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -358,7 +330,6 @@ define float @test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false(float %a) #
 ; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
 ; GFX10-NEXT:    v_med3_f32 v0, v0, 0, 1.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -367,7 +338,6 @@ define float @test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false(float %a) #
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -385,7 +355,6 @@ define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_true:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
@@ -395,7 +364,6 @@ define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
@@ -413,7 +381,6 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, 2.0, v0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 1.0, v0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 0, v0
@@ -423,7 +390,6 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0

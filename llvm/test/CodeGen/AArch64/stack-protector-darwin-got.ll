@@ -9,9 +9,9 @@ define void @test(ptr %a) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    stp x20, x19, [sp, #48] ; 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w19, -24

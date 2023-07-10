@@ -15,7 +15,7 @@
 #include "gpu/quick_exit.h"
 #elif defined(__APPLE__)
 #include "darwin/quick_exit.h"
-#elif defined(__unix__)
+#elif defined(__linux__)
 #include "linux/quick_exit.h"
 #endif
 

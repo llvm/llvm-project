@@ -45,7 +45,7 @@ define void @kernel() "kernel" {
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR1]]
 ; CHECK-NEXT:    call void @convert_and_move_alloca() #[[ATTR1]]
-; CHECK-NEXT:    call void @unknown_no_openmp()
+; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr nonnull null, i8 1)
 ; CHECK-NEXT:    ret void
 ;
@@ -56,7 +56,7 @@ define void @kernel() "kernel" {
 ; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR1]]
 ; CHECK-DISABLED-NEXT:    call void @convert_and_move_alloca() #[[ATTR1]]
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp()
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR4:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(ptr nonnull null, i8 1)
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -95,7 +95,7 @@ define internal void @bar() {
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR5:[0-9]+]], !dbg [[DBG8:![0-9]+]]
-; CHECK-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR1]], !dbg [[DBG8]]
+; CHECK-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR6:[0-9]+]], !dbg [[DBG8]]
 ; CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR5]]
 ; CHECK-NEXT:    ret void
 ;
@@ -259,14 +259,15 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR1]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(write) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK: attributes #[[ATTR4]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK: attributes #[[ATTR5]] = { nounwind }
+; CHECK: attributes #[[ATTR6]] = { nosync nounwind memory(write) }
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { "kernel" }
 ; CHECK-DISABLED: attributes #[[ATTR1]] = { nosync nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(write) }
 ; CHECK-DISABLED: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK-DISABLED: attributes #[[ATTR4]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK-DISABLED: attributes #[[ATTR5]] = { nounwind }
 ; CHECK-DISABLED: attributes #[[ATTR6]] = { nosync nounwind memory(write) }
 ;.

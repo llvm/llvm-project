@@ -123,6 +123,8 @@ def FMA : Predicate<"Subtarget->hasFMA()">;
 
 def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
 
+def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))>;
+
 class CustomOperandClass<string name, bit optional, string parserMethod,
                          string defaultMethod>
     : AsmOperandClass {
@@ -631,6 +633,8 @@ defm int_amdgcn_flat_atomic_fmin_num : noret_op;
 defm int_amdgcn_flat_atomic_fmax_num : noret_op;
 defm int_amdgcn_global_atomic_fmin_num : noret_op;
 defm int_amdgcn_global_atomic_fmax_num : noret_op;
+defm int_amdgcn_ds_cond_sub_u32 : noret_op;
+defm int_amdgcn_ds_cond_sub_u32 : local_addr_space_atomic_op;
 
 multiclass noret_binary_atomic_op<SDNode atomic_op, bit IsInt = 1> {
   let HasNoUse = true in

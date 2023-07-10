@@ -228,7 +228,8 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     // Increment team counter.
     // This counter is incremented by all teams in the current
     // BUFFER_SIZE chunk.
-    ChunkTeamCount = atomic::inc(&Cnt, num_of_records - 1u, atomic::seq_cst);
+    ChunkTeamCount = atomic::inc(&Cnt, num_of_records - 1u, atomic::seq_cst,
+                                 atomic::MemScopeTy::device);
   }
   // Synchronize
   if (mapping::isSPMDMode())

@@ -2812,6 +2812,16 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
       return LT.first * 4; // fcvtl + fcvtl + fcmp + xtn
   }
 
+  // Treat the icmp in icmp(and, 0) as free, as we can make use of ands.
+  // FIXME: This can apply to more conditions and add/sub if it can be shown to
+  // be profitable.
+  if (ValTy->isIntegerTy() && ISD == ISD::SETCC && I &&
+      ICmpInst::isEquality(VecPred) &&
+      TLI->isTypeLegal(TLI->getValueType(DL, ValTy)) &&
+      match(I->getOperand(1), m_Zero()) &&
+      match(I->getOperand(0), m_And(m_Value(), m_Value())))
+    return 0;
+
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
@@ -3264,26 +3274,18 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
 }
 
 InstructionCost
-AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                       bool IsUnsigned, FastMathFlags FMF,
+AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                       FastMathFlags FMF,
                                        TTI::TargetCostKind CostKind) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
   if (LT.second.getScalarType() == MVT::f16 && !ST->hasFullFP16())
-    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, FMF, CostKind);
-
-  assert((isa<ScalableVectorType>(Ty) == isa<ScalableVectorType>(CondTy)) &&
-         "Both vector needs to be equally scalable");
+    return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   InstructionCost LegalizationCost = 0;
   if (LT.first > 1) {
     Type *LegalVTy = EVT(LT.second).getTypeForEVT(Ty->getContext());
-    Intrinsic::ID MinMaxOpcode =
-        Ty->isFPOrFPVectorTy()
-            ? Intrinsic::maxnum
-            : (IsUnsigned ? Intrinsic::umin : Intrinsic::smin);
-    IntrinsicCostAttributes Attrs(MinMaxOpcode, LegalVTy, {LegalVTy, LegalVTy},
-                                  FMF);
+    IntrinsicCostAttributes Attrs(IID, LegalVTy, {LegalVTy, LegalVTy}, FMF);
     LegalizationCost = getIntrinsicInstrCost(Attrs, CostKind) * (LT.first - 1);
   }
 

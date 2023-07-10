@@ -16,14 +16,23 @@ namespace mlir {
 namespace sparse_tensor {
 namespace ir_detail {
 
-//===----------------------------------------------------------------------===//
-// NOTE(wrengr): The idea here was originally based on the
-// "lib/AsmParser/AffineParser.cpp"-static class `AffineParser`.
-// Unfortunately, we can't use that class directly since it's file-local.
-// Even worse, both `mlir::detail::Parser` and `mlir::detail::ParserState`
-// are also file-local classes.  I've been attempting to convert things
-// over to using `AsmParser` wherever possible, though it's not clear that
-// that'll work...
+///
+/// Parses the Sparse Tensor Encoding Attribute (STEA).
+///
+/// General syntax is as follows,
+///
+///   [s0, ...]     // optional forward decl sym-vars
+///   {l0, ...}     // optional forward decl lvl-vars
+///   (
+///     d0 = ...,   // dim-var = dim-exp
+///     ...
+///   ) -> (
+///     l0 = ...,   // lvl-var = lvl-exp
+///     ...
+///   )
+///
+/// with simplifications when variables are implicit.
+///
 class DimLvlMapParser final {
 public:
   explicit DimLvlMapParser(AsmParser &parser) : parser(parser) {}
@@ -33,18 +42,17 @@ public:
   FailureOr<DimLvlMap> parseDimLvlMap();
 
 private:
-  // TODO(wrengr): rather than using `OptionalParseResult` and two
-  // out-parameters, should we define a type to encapsulate all that?
   OptionalParseResult parseVar(VarKind vk, bool isOptional,
                                CreationPolicy creationPolicy, VarInfo::ID &id,
                                bool &didCreate);
   FailureOr<VarInfo::ID> parseVarUsage(VarKind vk);
   FailureOr<std::pair<Var, bool>> parseVarBinding(VarKind vk, bool isOptional);
+  FailureOr<Var> parseLvlVarBinding(bool directAffine);
 
-  ParseResult parseOptionalSymbolIdList();
+  ParseResult parseOptionalIdList(VarKind vk, OpAsmParser::Delimiter delimiter);
   ParseResult parseDimSpec();
   ParseResult parseDimSpecList();
-  ParseResult parseLvlSpec();
+  ParseResult parseLvlSpec(bool directAffine);
   ParseResult parseLvlSpecList();
 
   AsmParser &parser;
@@ -53,8 +61,6 @@ private:
   SmallVector<DimSpec> dimSpecs;
   SmallVector<LvlSpec> lvlSpecs;
 };
-
-//===----------------------------------------------------------------------===//
 
 } // namespace ir_detail
 } // namespace sparse_tensor

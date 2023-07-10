@@ -11,6 +11,16 @@ int c_static_assert();
 int c_generic_selections();
 #endif
 
+// CHECK: has_default_function_template_args
+#if __has_extension(cxx_default_function_template_args)
+int has_default_function_template_args();
+#endif
+
+// CHECK: has_defaulted_functions
+#if __has_extension(cxx_defaulted_functions)
+int has_defaulted_functions();
+#endif
+
 // CHECK: has_deleted_functions
 #if __has_extension(cxx_deleted_functions)
 int has_deleted_functions();

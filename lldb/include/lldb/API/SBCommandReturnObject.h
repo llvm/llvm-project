@@ -47,8 +47,8 @@ public:
   const char *GetError();
 
 #ifndef SWIG
-  LLDB_DEPRECATED("Use PutOutput(SBFile) or PutOutput(FileSP)",
-                  "PutOutput(SBFile)")
+  LLDB_DEPRECATED_FIXME("Use PutOutput(SBFile) or PutOutput(FileSP)",
+                        "PutOutput(SBFile)")
   size_t PutOutput(FILE *fh);
 #endif
 
@@ -61,8 +61,8 @@ public:
   size_t GetErrorSize();
 
 #ifndef SWIG
-  LLDB_DEPRECATED("Use PutError(SBFile) or PutError(FileSP)",
-                  "PutError(SBFile)")
+  LLDB_DEPRECATED_FIXME("Use PutError(SBFile) or PutError(FileSP)",
+                        "PutError(SBFile)")
   size_t PutError(FILE *fh);
 #endif
 
@@ -87,22 +87,22 @@ public:
   bool GetDescription(lldb::SBStream &description);
 
 #ifndef SWIG
-  LLDB_DEPRECATED(
+  LLDB_DEPRECATED_FIXME(
       "Use SetImmediateOutputFile(SBFile) or SetImmediateOutputFile(FileSP)",
       "SetImmediateOutputFile(SBFile)")
   void SetImmediateOutputFile(FILE *fh);
 
-  LLDB_DEPRECATED(
+  LLDB_DEPRECATED_FIXME(
       "Use SetImmediateErrorFile(SBFile) or SetImmediateErrorFile(FileSP)",
       "SetImmediateErrorFile(SBFile)")
   void SetImmediateErrorFile(FILE *fh);
 
-  LLDB_DEPRECATED(
+  LLDB_DEPRECATED_FIXME(
       "Use SetImmediateOutputFile(SBFile) or SetImmediateOutputFile(FileSP)",
       "SetImmediateOutputFile(SBFile)")
   void SetImmediateOutputFile(FILE *fh, bool transfer_ownership);
 
-  LLDB_DEPRECATED(
+  LLDB_DEPRECATED_FIXME(
       "Use SetImmediateErrorFile(SBFile) or SetImmediateErrorFile(FileSP)",
       "SetImmediateErrorFile(SBFile)")
   void SetImmediateErrorFile(FILE *fh, bool transfer_ownership);

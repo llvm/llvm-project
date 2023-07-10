@@ -53,7 +53,7 @@ class MSP430AsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
   bool ParseDirectiveRefSym(AsmToken DirectiveID);
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
@@ -424,27 +424,26 @@ bool MSP430AsmParser::ParseInstruction(ParseInstructionInfo &Info,
 }
 
 bool MSP430AsmParser::ParseDirectiveRefSym(AsmToken DirectiveID) {
-    StringRef Name;
-    if (getParser().parseIdentifier(Name))
-      return TokError("expected identifier in directive");
+  StringRef Name;
+  if (getParser().parseIdentifier(Name))
+    return TokError("expected identifier in directive");
 
-    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
-    getStreamer().emitSymbolAttribute(Sym, MCSA_Global);
-    return false;
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+  getStreamer().emitSymbolAttribute(Sym, MCSA_Global);
+  return parseEOL();
 }
 
-bool MSP430AsmParser::ParseDirective(AsmToken DirectiveID) {
+ParseStatus MSP430AsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
-  if (IDVal.lower() == ".long") {
-    ParseLiteralValues(4, DirectiveID.getLoc());
-  } else if (IDVal.lower() == ".word" || IDVal.lower() == ".short") {
-    ParseLiteralValues(2, DirectiveID.getLoc());
-  } else if (IDVal.lower() == ".byte") {
-    ParseLiteralValues(1, DirectiveID.getLoc());
-  } else if (IDVal.lower() == ".refsym") {
+  if (IDVal.lower() == ".long")
+    return ParseLiteralValues(4, DirectiveID.getLoc());
+  if (IDVal.lower() == ".word" || IDVal.lower() == ".short")
+    return ParseLiteralValues(2, DirectiveID.getLoc());
+  if (IDVal.lower() == ".byte")
+    return ParseLiteralValues(1, DirectiveID.getLoc());
+  if (IDVal.lower() == ".refsym")
     return ParseDirectiveRefSym(DirectiveID);
-  }
-  return true;
+  return ParseStatus::NoMatch;
 }
 
 bool MSP430AsmParser::ParseOperand(OperandVector &Operands) {

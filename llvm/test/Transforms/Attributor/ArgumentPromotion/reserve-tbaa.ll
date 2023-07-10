@@ -89,7 +89,7 @@ entry:
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR2]] = { nounwind }
+; CGSCC: attributes #[[ATTR2]] = { nofree nounwind willreturn }
 ;.
 ; CHECK: [[TBAA0]] = !{!1, !1, i64 0}
 ; CHECK: [[META1:![0-9]+]] = !{!"int", !2, i64 0}

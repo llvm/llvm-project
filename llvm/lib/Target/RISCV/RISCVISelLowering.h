@@ -740,9 +740,9 @@ public:
   /// returns the address of that location. Otherwise, returns nullptr.
   Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
-  /// Returns whether or not generating a fixed length interleaved load/store
-  /// intrinsic for this type will be legal.
-  bool isLegalInterleavedAccessType(FixedVectorType *, unsigned Factor,
+  /// Returns whether or not generating a interleaved load/store intrinsic for
+  /// this type will be legal.
+  bool isLegalInterleavedAccessType(VectorType *, unsigned Factor,
                                     const DataLayout &) const;
 
   /// Return true if a stride load store of the given result type and
@@ -758,6 +758,12 @@ public:
 
   bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
+
+  bool lowerDeinterleaveIntrinsicToLoad(IntrinsicInst *II,
+                                        LoadInst *LI) const override;
+
+  bool lowerInterleaveIntrinsicToStore(IntrinsicInst *II,
+                                       StoreInst *SI) const override;
 
   bool supportKCFIBundles() const override { return true; }
 
@@ -838,14 +844,9 @@ private:
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorStoreToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorSetccToRVV(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorLogicOpToRVV(SDValue Op, SelectionDAG &DAG,
-                                             unsigned MaskOpc,
-                                             unsigned VecOpc) const;
-  SDValue lowerFixedLengthVectorShiftToRVV(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorSelectToRVV(SDValue Op,
                                             SelectionDAG &DAG) const;
-  SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG, unsigned NewOpc,
-                            bool HasMergeOp = false, bool HasMask = true) const;
+  SDValue lowerToScalableOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVPOp(SDValue Op, SelectionDAG &DAG, unsigned RISCVISDOpc,
                     bool HasMergeOp = false) const;

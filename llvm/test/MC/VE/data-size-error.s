@@ -34,3 +34,12 @@ a:
 # CHECK-NEXT: .quad 0xff5588aadeadbeafde
 # CHECK:      data-size-error.s:15:8: error: literal value out of range for directive
 # CHECK-NEXT: .llong 0xff5588aadeadbeafde
+
+# CHECK: [[#@LINE+1]]:17: error: unknown token in expression
+.word 0xd0bb1e +
+
+# CHECK: [[#@LINE+1]]:16: error: unexpected token
+.long 0xd0bb1e =
+
+# CHECK: [[#@LINE+1]]:10: error: unexpected token
+.llong 2 0xd0bb1e

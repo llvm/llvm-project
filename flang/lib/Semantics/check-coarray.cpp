@@ -110,7 +110,10 @@ static void CheckSyncStatList(
               }
               gotStat = true;
             },
-            [&](const parser::MsgVariable &errmsg) {
+            [&](const parser::MsgVariable &var) {
+              WarnOnDeferredLengthCharacterScalar(context,
+                  GetExpr(context, var), var.v.thing.thing.GetSource(),
+                  "ERRMSG=");
               if (gotMsg) {
                 context.Say( // C1172
                     "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
@@ -214,7 +217,10 @@ void CoarrayChecker::Leave(const parser::EventWaitStmt &x) {
                         }
                         gotStat = true;
                       },
-                      [&](const parser::MsgVariable &errmsg) {
+                      [&](const parser::MsgVariable &var) {
+                        WarnOnDeferredLengthCharacterScalar(context_,
+                            GetExpr(context_, var),
+                            var.v.thing.thing.GetSource(), "ERRMSG=");
                         if (gotMsg) {
                           context_.Say( // C1178
                               "A errmsg-variable in a event-wait-spec-list may not be repeated"_err_en_US);

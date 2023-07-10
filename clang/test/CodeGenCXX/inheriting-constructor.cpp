@@ -4,6 +4,24 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple i386-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN32
 // RUN: %clang_cc1 -no-enable-noundef-analysis -std=c++11 -triple x86_64-windows -emit-llvm -o - %s | FileCheck %s --check-prefix=MSABI --check-prefix=WIN64
 
+// PR63618: make sure we generate definitions for all the globals defined in the test
+// MSABI: @"?b@@3UB@@A" = {{.*}} zeroinitializer
+// MSABI: @"?d@@3UD@@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@noninline_nonvirt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@noninline_nonvirt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@noninline_virt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@noninline_virt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inalloca_nonvirt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inalloca_nonvirt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inalloca_virt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inalloca_virt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inline_nonvirt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inline_nonvirt@@3UC@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?b@inline_virt@@3UB@1@A" = {{.*}} zeroinitializer
+// MSABI: @"?c@inline_virt@@3UC@1@A" = {{.*}} zeroinitializer
+
+// MSABI-NOT: @this
+
 // PR12219
 struct A { A(int); virtual ~A(); };
 struct B : A { using A::A; ~B(); };

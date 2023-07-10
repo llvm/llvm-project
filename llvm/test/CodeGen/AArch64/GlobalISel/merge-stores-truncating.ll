@@ -348,8 +348,8 @@ define dso_local void @trunc_from_larger_src_val(i64 %hold.4.lcssa, ptr %check17
 ; CHECK-LABEL: trunc_from_larger_src_val:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    str w0, [sp, #12]

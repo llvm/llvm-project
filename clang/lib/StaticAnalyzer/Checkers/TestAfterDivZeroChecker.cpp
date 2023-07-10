@@ -188,10 +188,7 @@ void TestAfterDivZeroChecker::checkEndFunction(const ReturnStmt *,
     return;
 
   DivZeroMapTy::Factory &F = State->get_context<DivZeroMap>();
-  for (llvm::ImmutableSet<ZeroState>::iterator I = DivZeroes.begin(),
-                                               E = DivZeroes.end();
-       I != E; ++I) {
-    ZeroState ZS = *I;
+  for (const ZeroState &ZS : DivZeroes) {
     if (ZS.getStackFrameContext() == C.getStackFrame())
       DivZeroes = F.remove(DivZeroes, ZS);
   }

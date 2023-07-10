@@ -318,24 +318,24 @@ template <typename T> struct Memmove {
 // Same as load above but with an offset to the pointer.
 // Making the offset explicit hints the compiler to use relevant addressing mode
 // consistently.
-template <typename T> LIBC_INLINE static T load(CPtr ptr, size_t offset) {
+template <typename T> LIBC_INLINE T load(CPtr ptr, size_t offset) {
   return ::__llvm_libc::load<T>(ptr + offset);
 }
 
 // Same as above but also makes sure the loaded value is in big endian format.
 // This is useful when implementing lexicograhic comparisons as big endian
 // scalar comparison directly maps to lexicographic byte comparisons.
-template <typename T> LIBC_INLINE static T load_be(CPtr ptr, size_t offset) {
+template <typename T> LIBC_INLINE T load_be(CPtr ptr, size_t offset) {
   return Endian::to_big_endian(load<T>(ptr, offset));
 }
 
 // Equality: returns true iff values at locations (p1 + offset) and (p2 +
 // offset) compare equal.
-template <typename T> static bool eq(CPtr p1, CPtr p2, size_t offset);
+template <typename T> LIBC_INLINE bool eq(CPtr p1, CPtr p2, size_t offset);
 
 // Not equals: returns non-zero iff values at locations (p1 + offset) and (p2 +
 // offset) differ.
-template <typename T> static uint32_t neq(CPtr p1, CPtr p2, size_t offset);
+template <typename T> LIBC_INLINE uint32_t neq(CPtr p1, CPtr p2, size_t offset);
 
 // Lexicographic comparison:
 // - returns 0 iff values at locations (p1 + offset) and (p2 + offset) compare
@@ -345,7 +345,7 @@ template <typename T> static uint32_t neq(CPtr p1, CPtr p2, size_t offset);
 // - returns a positive value if value at location (p1 + offset) is
 //   lexicographically greater than value at (p2 + offset).
 template <typename T>
-static MemcmpReturnType cmp(CPtr p1, CPtr p2, size_t offset);
+LIBC_INLINE MemcmpReturnType cmp(CPtr p1, CPtr p2, size_t offset);
 
 // Lexicographic comparison of non-equal values:
 // - returns a negative value if value at location (p1 + offset) is
@@ -353,7 +353,7 @@ static MemcmpReturnType cmp(CPtr p1, CPtr p2, size_t offset);
 // - returns a positive value if value at location (p1 + offset) is
 //   lexicographically greater than value at (p2 + offset).
 template <typename T>
-static MemcmpReturnType cmp_neq(CPtr p1, CPtr p2, size_t offset);
+LIBC_INLINE MemcmpReturnType cmp_neq(CPtr p1, CPtr p2, size_t offset);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Memcmp implementation
@@ -563,6 +563,7 @@ LIBC_INLINE MemcmpReturnType cmp<uint8_t>(CPtr p1, CPtr p2, size_t offset) {
 }
 template <>
 LIBC_INLINE MemcmpReturnType cmp_neq<uint8_t>(CPtr p1, CPtr p2, size_t offset);
+
 } // namespace __llvm_libc::generic
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_GENERIC_H

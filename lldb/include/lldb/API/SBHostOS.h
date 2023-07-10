@@ -24,15 +24,26 @@ public:
 
   static lldb::SBFileSpec GetUserHomeDirectory();
 
+  LLDB_DEPRECATED("Threading functionality in SBHostOS is not well supported, "
+                  "not portable, and is difficult to use from Python.")
   static void ThreadCreated(const char *name);
 
+  LLDB_DEPRECATED("Threading functionality in SBHostOS is not well supported, "
+                  "not portable, and is difficult to use from Python.")
   static lldb::thread_t ThreadCreate(const char *name,
                                      lldb::thread_func_t thread_function,
                                      void *thread_arg, lldb::SBError *err);
 
+  LLDB_DEPRECATED("Threading functionality in SBHostOS is not well supported, "
+                  "not portable, and is difficult to use from Python.")
   static bool ThreadCancel(lldb::thread_t thread, lldb::SBError *err);
 
+  LLDB_DEPRECATED("Threading functionality in SBHostOS is not well supported, "
+                  "not portable, and is difficult to use from Python.")
   static bool ThreadDetach(lldb::thread_t thread, lldb::SBError *err);
+
+  LLDB_DEPRECATED("Threading functionality in SBHostOS is not well supported, "
+                  "not portable, and is difficult to use from Python.")
   static bool ThreadJoin(lldb::thread_t thread, lldb::thread_result_t *result,
                          lldb::SBError *err);
 

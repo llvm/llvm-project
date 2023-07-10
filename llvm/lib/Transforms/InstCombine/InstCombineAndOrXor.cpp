@@ -1712,6 +1712,26 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
   assert(I.isBitwiseLogicOp() && "Unexpected opcode for bitwise logic folding");
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+
+  // ( A << (X - 1) ) | ((A > 0) zext to iX)
+  // <=> A < 0 | A > 0
+  // <=> (A != 0) zext to iX
+  Value *A;
+  ICmpInst::Predicate Pred;
+
+  auto MatchOrZExtICmp = [&](Value *Op0, Value *Op1) -> bool {
+    return match(Op0, m_LShr(m_Value(A), m_SpecificInt(Op0->getType()->getScalarSizeInBits() - 1))) &&
+           match(Op1, m_ZExt(m_ICmp(Pred, m_Specific(A), m_Zero())));
+  };
+
+  if (LogicOpc == Instruction::Or &&
+      (MatchOrZExtICmp(Op0, Op1) || MatchOrZExtICmp(Op1, Op0)) &&
+      Pred == ICmpInst::ICMP_SGT) {
+      Value *Cmp =
+          Builder.CreateICmpNE(A, Constant::getNullValue(A->getType()));
+      return new ZExtInst(Cmp, A->getType());
+  }
+
   CastInst *Cast0 = dyn_cast<CastInst>(Op0);
   if (!Cast0)
     return nullptr;

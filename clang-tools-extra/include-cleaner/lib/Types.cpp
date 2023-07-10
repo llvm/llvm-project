@@ -38,6 +38,18 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
   llvm_unreachable("Unhandled Symbol kind");
 }
 
+llvm::StringRef Header::resolvedPath() const {
+  switch (kind()) {
+  case include_cleaner::Header::Physical:
+    return physical()->tryGetRealPathName();
+  case include_cleaner::Header::Standard:
+    return standard().name().trim("<>\"");
+  case include_cleaner::Header::Verbatim:
+    return verbatim().trim("<>\"");
+  }
+  llvm_unreachable("Unknown header kind");
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Header &H) {
   switch (H.kind()) {
   case Header::Physical:

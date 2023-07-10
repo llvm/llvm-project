@@ -1378,7 +1378,7 @@ clause. Examples for both are given below.
 .. code-block:: console
 
     $ clang++ -fopenmp --offload-arch=gfx90a -O3 shared.c
-    $ env LIBOMPTARGET_NEXTGEN_PLUGINS=1 ./shared
+    $ env ./shared
 
 
 .. _libomptarget_device_debugging:

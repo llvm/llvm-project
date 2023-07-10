@@ -11937,7 +11937,8 @@ static SDValue tryAdvSIMDModImm32(unsigned NewOp, SDValue Op, SelectionDAG &DAG,
       SDValue Mov;
 
       if (LHS)
-        Mov = DAG.getNode(NewOp, dl, MovTy, *LHS,
+        Mov = DAG.getNode(NewOp, dl, MovTy,
+                          DAG.getNode(AArch64ISD::NVCAST, dl, MovTy, *LHS),
                           DAG.getConstant(Value, dl, MVT::i32),
                           DAG.getConstant(Shift, dl, MVT::i32));
       else
@@ -11981,7 +11982,8 @@ static SDValue tryAdvSIMDModImm16(unsigned NewOp, SDValue Op, SelectionDAG &DAG,
       SDValue Mov;
 
       if (LHS)
-        Mov = DAG.getNode(NewOp, dl, MovTy, *LHS,
+        Mov = DAG.getNode(NewOp, dl, MovTy,
+                          DAG.getNode(AArch64ISD::NVCAST, dl, MovTy, *LHS),
                           DAG.getConstant(Value, dl, MVT::i32),
                           DAG.getConstant(Shift, dl, MVT::i32));
       else
@@ -17133,14 +17135,22 @@ static SDValue performANDCombine(SDNode *N,
   if (resolveBuildVector(BVN, DefBits, UndefBits)) {
     SDValue NewOp;
 
-    DefBits = ~DefBits;
+    // Any bits known to already be 0 need not be cleared again, which can help
+    // reduce the size of the immediate to one supported by the instruction.
+    KnownBits Known = DAG.computeKnownBits(LHS);
+    APInt ZeroSplat(VT.getSizeInBits(), 0);
+    for (unsigned I = 0; I < VT.getSizeInBits() / Known.Zero.getBitWidth(); I++)
+      ZeroSplat |= Known.Zero.zext(VT.getSizeInBits())
+                   << (Known.Zero.getBitWidth() * I);
+
+    DefBits = ~(DefBits | ZeroSplat);
     if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::BICi, SDValue(N, 0), DAG,
                                     DefBits, &LHS)) ||
         (NewOp = tryAdvSIMDModImm16(AArch64ISD::BICi, SDValue(N, 0), DAG,
                                     DefBits, &LHS)))
       return NewOp;
 
-    UndefBits = ~UndefBits;
+    UndefBits = ~(UndefBits | ZeroSplat);
     if ((NewOp = tryAdvSIMDModImm32(AArch64ISD::BICi, SDValue(N, 0), DAG,
                                     UndefBits, &LHS)) ||
         (NewOp = tryAdvSIMDModImm16(AArch64ISD::BICi, SDValue(N, 0), DAG,

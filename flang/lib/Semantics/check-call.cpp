@@ -196,7 +196,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     characteristics::TypeAndShape &actualType, bool isElemental,
     SemanticsContext &context, evaluate::FoldingContext &foldingContext,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
-    bool allowActualArgumentConversions,
+    bool allowActualArgumentConversions, bool extentErrors,
     const characteristics::Procedure &procedure) {
 
   // Basic type & rank checking
@@ -416,6 +416,24 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         messages.Say(
             "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
             dummyName);
+      }
+    }
+  } else if (actualRank > 0 && dummy.type.Rank() > 0 &&
+      actualType.type().category() != TypeCategory::Character) {
+    // Both arrays, dummy is not assumed-shape, not character
+    if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
+            evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
+      if (auto actualSize{evaluate::ToInt64(evaluate::Fold(foldingContext,
+              evaluate::GetSize(evaluate::Shape{actualType.shape()})))}) {
+        if (*actualSize < *dummySize) {
+          auto msg{
+              "Actual argument array is smaller (%jd element(s)) than %s array (%jd)"_warn_en_US};
+          if (extentErrors) {
+            msg.set_severity(parser::Severity::Error);
+          }
+          messages.Say(std::move(msg), static_cast<std::intmax_t>(*actualSize),
+              dummyName, static_cast<std::intmax_t>(*dummySize));
+        }
       }
     }
   }
@@ -688,6 +706,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
     }
   }
+
+  // Breaking change warnings
+  if (intrinsic && dummy.intent != common::Intent::In) {
+    WarnOnDeferredLengthCharacterScalar(
+        context, &actual, messages.at(), dummyName.c_str());
+  }
 }
 
 static void CheckProcedureArg(evaluate::ActualArgument &arg,
@@ -847,7 +871,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
     const characteristics::DummyArgument &dummy,
     const characteristics::Procedure &proc, SemanticsContext &context,
     const Scope *scope, const evaluate::SpecificIntrinsic *intrinsic,
-    bool allowActualArgumentConversions) {
+    bool allowActualArgumentConversions, bool extentErrors) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   auto &messages{foldingContext.messages()};
   std::string dummyName{"dummy argument"};
@@ -879,7 +903,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                       object.type.Rank() == 0 && proc.IsElemental()};
                   CheckExplicitDataArg(object, dummyName, *expr, *type,
                       isElemental, context, foldingContext, scope, intrinsic,
-                      allowActualArgumentConversions, proc);
+                      allowActualArgumentConversions, extentErrors, proc);
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     IsBOZLiteral(*expr)) {
                   // ok
@@ -1056,7 +1080,7 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
   if (const auto &pointerArg{arguments[0]}) {
     if (const auto *pointerExpr{pointerArg->UnwrapExpr()}) {
       const Symbol *pointerSymbol{GetLastSymbol(*pointerExpr)};
-      if (pointerSymbol && !IsPointer(*pointerSymbol)) {
+      if (pointerSymbol && !IsPointer(pointerSymbol->GetUltimate())) {
         evaluate::AttachDeclaration(
             context.messages().Say(pointerArg->sourceLocation(),
                 "POINTER= argument of ASSOCIATED() must be a POINTER"_err_en_US),
@@ -1269,7 +1293,7 @@ static parser::Messages CheckExplicitInterface(
     const characteristics::Procedure &proc, evaluate::ActualArguments &actuals,
     SemanticsContext &context, const Scope *scope,
     const evaluate::SpecificIntrinsic *intrinsic,
-    bool allowActualArgumentConversions) {
+    bool allowActualArgumentConversions, bool extentErrors) {
   evaluate::FoldingContext &foldingContext{context.foldingContext()};
   parser::ContextualMessages &messages{foldingContext.messages()};
   parser::Messages buffer;
@@ -1283,7 +1307,7 @@ static parser::Messages CheckExplicitInterface(
     const auto &dummy{proc.dummyArguments.at(index++)};
     if (actual) {
       CheckExplicitInterfaceArg(*actual, dummy, proc, context, scope, intrinsic,
-          allowActualArgumentConversions);
+          allowActualArgumentConversions, extentErrors);
     } else if (!dummy.IsOptional()) {
       if (dummy.name.empty()) {
         messages.Say(
@@ -1312,7 +1336,7 @@ bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
     bool allowActualArgumentConversions) {
   return proc.HasExplicitInterface() &&
       !CheckExplicitInterface(proc, actuals, context, nullptr, nullptr,
-          allowActualArgumentConversions)
+          allowActualArgumentConversions, false /*extentErrors*/)
            .AnyFatalError();
 }
 
@@ -1393,7 +1417,7 @@ bool CheckArguments(const characteristics::Procedure &proc,
   }
   if (explicitInterface) {
     auto buffer{CheckExplicitInterface(
-        proc, actuals, context, &scope, intrinsic, true)};
+        proc, actuals, context, &scope, intrinsic, true, true)};
     if (!buffer.empty()) {
       if (treatingExternalAsImplicit) {
         if (auto *msg{messages.Say(
