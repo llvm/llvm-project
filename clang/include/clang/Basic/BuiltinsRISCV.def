@@ -35,7 +35,8 @@ TARGET_BUILTIN(__builtin_riscv_xperm8_32, "iii", "nc", "zbkx,32bit")
 TARGET_BUILTIN(__builtin_riscv_xperm8_64, "WiWiWi", "nc", "zbkx,64bit")
 
 // Zbkb extension
-TARGET_BUILTIN(__builtin_riscv_brev8, "LiLi", "nc", "zbkb")
+TARGET_BUILTIN(__builtin_riscv_brev8_32, "ii", "nc", "zbkb")
+TARGET_BUILTIN(__builtin_riscv_brev8_64, "WiWi", "nc", "zbkb,64bit")
 TARGET_BUILTIN(__builtin_riscv_zip_32, "ZiZi", "nc", "zbkb,32bit")
 TARGET_BUILTIN(__builtin_riscv_unzip_32, "ZiZi", "nc", "zbkb,32bit")
 
