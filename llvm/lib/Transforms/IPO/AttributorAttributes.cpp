@@ -4735,9 +4735,10 @@ struct AAIsDeadFunction : public AAIsDead {
       auto *CB = dyn_cast<CallBase>(DeadEndI);
       if (!CB)
         continue;
-      const auto *NoReturnAA = A.getAndUpdateAAFor<AANoReturn>(
-          *this, IRPosition::callsite_function(*CB), DepClassTy::OPTIONAL);
-      bool MayReturn = !NoReturnAA || !NoReturnAA->isAssumedNoReturn();
+      bool IsKnownNoReturn;
+      bool MayReturn = !AA::hasAssumedIRAttr<Attribute::NoReturn>(
+          A, this, IRPosition::callsite_function(*CB), DepClassTy::OPTIONAL,
+          IsKnownNoReturn);
       if (MayReturn && (!Invoke2CallAllowed || !isa<InvokeInst>(CB)))
         continue;
 
@@ -4860,10 +4861,10 @@ identifyAliveSuccessors(Attributor &A, const CallBase &CB,
                         SmallVectorImpl<const Instruction *> &AliveSuccessors) {
   const IRPosition &IPos = IRPosition::callsite_function(CB);
 
-  const auto *NoReturnAA =
-      A.getAndUpdateAAFor<AANoReturn>(AA, IPos, DepClassTy::OPTIONAL);
-  if (NoReturnAA && NoReturnAA->isAssumedNoReturn())
-    return !NoReturnAA->isKnownNoReturn();
+  bool IsKnownNoReturn;
+  if (AA::hasAssumedIRAttr<Attribute::NoReturn>(
+          A, &AA, IPos, DepClassTy::OPTIONAL, IsKnownNoReturn))
+    return !IsKnownNoReturn;
   if (CB.isTerminator())
     AliveSuccessors.push_back(&CB.getSuccessor(0)->front());
   else
@@ -5646,6 +5647,13 @@ namespace {
 struct AANoReturnImpl : public AANoReturn {
   AANoReturnImpl(const IRPosition &IRP, Attributor &A) : AANoReturn(IRP, A) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    bool IsKnown;
+    assert(!AA::hasAssumedIRAttr<Attribute::NoReturn>(
+        A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+  }
+
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "noreturn" : "may-return";
@@ -5676,17 +5684,6 @@ struct AANoReturnCallSite final : AANoReturnImpl {
   AANoReturnCallSite(const IRPosition &IRP, Attributor &A)
       : AANoReturnImpl(IRP, A) {}
 
-  /// See AbstractAttribute::initialize(...).
-  void initialize(Attributor &A) override {
-    AANoReturnImpl::initialize(A);
-    if (Function *F = getAssociatedFunction()) {
-      const IRPosition &FnPos = IRPosition::function(*F);
-      auto *FnAA = A.getAAFor<AANoReturn>(*this, FnPos, DepClassTy::REQUIRED);
-      if (!FnAA || !FnAA->isAssumedNoReturn())
-        indicatePessimisticFixpoint();
-    }
-  }
-
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // TODO: Once we have call site specific value information we can provide
@@ -5695,10 +5692,11 @@ struct AANoReturnCallSite final : AANoReturnImpl {
     //       redirecting requests to the callee argument.
     Function *F = getAssociatedFunction();
     const IRPosition &FnPos = IRPosition::function(*F);
-    auto *FnAA = A.getAAFor<AANoReturn>(*this, FnPos, DepClassTy::REQUIRED);
-    if (!FnAA)
+    bool IsKnownNoReturn;
+    if (!AA::hasAssumedIRAttr<Attribute::NoReturn>(
+            A, this, FnPos, DepClassTy::REQUIRED, IsKnownNoReturn))
       return indicatePessimisticFixpoint();
-    return clampStateAndIndicateChange(getState(), FnAA->getState());
+    return ChangeStatus::UNCHANGED;
   }
 
   /// See AbstractAttribute::trackStatistics()
