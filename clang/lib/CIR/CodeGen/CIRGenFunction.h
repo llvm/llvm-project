@@ -1270,6 +1270,12 @@ public:
   /// inside a function, including static vars etc.
   void buildVarDecl(const clang::VarDecl &D);
 
+  mlir::cir::GlobalOp addInitializerToStaticVarDecl(const VarDecl &D,
+                                                    mlir::cir::GlobalOp GV);
+
+  void buildStaticVarDecl(const VarDecl &D,
+                          mlir::cir::GlobalLinkageKind Linkage);
+
   /// Perform the usual unary conversions on the specified
   /// expression and compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *E);

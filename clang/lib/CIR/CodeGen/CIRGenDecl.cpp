@@ -11,11 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRDataLayout.h"
+#include "CIRGenBuilder.h"
 #include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 #include "EHScopeStack.h"
+#include "UnimplementedFeatureGuarding.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/SymbolTable.h"
 
 #include "clang/AST/Decl.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <cassert>
 
 using namespace cir;
 using namespace clang;
@@ -76,7 +86,8 @@ CIRGenFunction::buildAutoVarAlloca(const VarDecl &D) {
       // be done as part of lowering down to LLVM.
       if ((!getContext().getLangOpts().OpenCL ||
            Ty.getAddressSpace() == LangAS::opencl_constant) &&
-          (!NRVO && !D.isEscapingByref() && CGM.isTypeConstant(Ty, true)))
+          (!NRVO && !D.isEscapingByref() &&
+           CGM.isTypeConstant(Ty, /*ExcludeCtor=*/true, /*ExcludeDtor=*/false)))
         assert(0 && "not implemented");
 
       // Otherwise, tell the initialization code that we're in this case.
@@ -322,16 +333,276 @@ void CIRGenFunction::buildVarDecl(const VarDecl &D) {
   // Some function-scope variable does not have static storage but still
   // needs to be emitted like a static variable, e.g. a function-scope
   // variable in constant address space in OpenCL.
-  if (D.getStorageDuration() != SD_Automatic)
-    assert(0 && "not implemented");
+  if (D.getStorageDuration() != SD_Automatic) {
+    // Static sampler variables translated to function calls.
+    if (D.getType()->isSamplerT())
+      return;
+
+    auto Linkage = CGM.getCIRLinkageVarDefinition(&D, /*IsConstant=*/false);
+
+    // FIXME: We need to force the emission/use of a guard variable for
+    // some variables even if we can constant-evaluate them because
+    // we can't guarantee every translation unit will constant-evaluate them.
+
+    return buildStaticVarDecl(D, Linkage);
+  }
 
   if (D.getType().getAddressSpace() == LangAS::opencl_local)
-    assert(0 && "not implemented");
+    llvm_unreachable("OpenCL and address space are NYI");
 
   assert(D.hasLocalStorage());
 
   CIRGenFunction::VarDeclContext varDeclCtx{*this, &D};
   return buildAutoVarDecl(D);
+}
+
+static std::string getStaticDeclName(CIRGenModule &CGM, const VarDecl &D) {
+  if (CGM.getLangOpts().CPlusPlus)
+    return CGM.getMangledName(&D).str();
+
+  // If this isn't C++, we don't need a mangled name, just a pretty one.
+  assert(!D.isExternallyVisible() && "name shouldn't matter");
+  std::string ContextName;
+  const DeclContext *DC = D.getDeclContext();
+  if (auto *CD = dyn_cast<CapturedDecl>(DC))
+    DC = cast<DeclContext>(CD->getNonClosureContext());
+  if (const auto *FD = dyn_cast<FunctionDecl>(DC))
+    ContextName = std::string(CGM.getMangledName(FD));
+  else if (const auto *BD = dyn_cast<BlockDecl>(DC))
+    llvm_unreachable("block decl context for static var is NYI");
+  else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(DC))
+    llvm_unreachable("ObjC decl context for static var is NYI");
+  else
+    llvm_unreachable("Unknown context for static var decl");
+
+  ContextName += "." + D.getNameAsString();
+  return ContextName;
+}
+
+// TODO(cir): LLVM uses a Constant base class. Maybe CIR could leverage an
+// interface for all constants?
+mlir::cir::GlobalOp
+CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &D,
+                                       mlir::cir::GlobalLinkageKind Linkage) {
+  // In general, we don't always emit static var decls once before we reference
+  // them. It is possible to reference them before emitting the function that
+  // contains them, and it is possible to emit the containing function multiple
+  // times.
+  if (mlir::cir::GlobalOp ExistingGV = StaticLocalDeclMap[&D])
+    return ExistingGV;
+
+  QualType Ty = D.getType();
+  assert(Ty->isConstantSizeType() && "VLAs can't be static");
+
+  // Use the label if the variable is renamed with the asm-label extension.
+  std::string Name;
+  if (D.hasAttr<AsmLabelAttr>())
+    llvm_unreachable("asm label is NYI");
+  else
+    Name = getStaticDeclName(*this, D);
+
+  mlir::Type LTy = getTypes().convertTypeForMem(Ty);
+  assert(!UnimplementedFeature::addressSpace());
+
+  // OpenCL variables in local address space and CUDA shared
+  // variables cannot have an initializer.
+  mlir::Attribute Init = nullptr;
+  if (Ty.getAddressSpace() == LangAS::opencl_local ||
+      D.hasAttr<CUDASharedAttr>() || D.hasAttr<LoaderUninitializedAttr>())
+    llvm_unreachable("OpenCL & CUDA are NYI");
+  else
+    Init = builder.getZeroInitAttr(getTypes().ConvertType(Ty));
+
+  mlir::cir::GlobalOp GV = builder.createVersionedGlobal(
+      getModule(), getLoc(D.getLocation()), Name, LTy, false, Linkage);
+  // TODO(cir): infer visibility from linkage in global op builder.
+  GV.setVisibility(getMLIRVisibilityFromCIRLinkage(Linkage));
+  GV.setInitialValueAttr(Init);
+  GV.setAlignment(getASTContext().getDeclAlign(&D).getAsAlign().value());
+
+  if (supportsCOMDAT() && GV.isWeakForLinker())
+    llvm_unreachable("COMDAT globals are NYI");
+
+  if (D.getTLSKind())
+    llvm_unreachable("TLS mode is NYI");
+
+  setGVProperties(GV, &D);
+
+  // Make sure the result is of the correct type.
+  assert(!UnimplementedFeature::addressSpace());
+
+  // Ensure that the static local gets initialized by making sure the parent
+  // function gets emitted eventually.
+  const Decl *DC = cast<Decl>(D.getDeclContext());
+
+  // We can't name blocks or captured statements directly, so try to emit their
+  // parents.
+  if (isa<BlockDecl>(DC) || isa<CapturedDecl>(DC)) {
+    DC = DC->getNonClosureContext();
+    // FIXME: Ensure that global blocks get emitted.
+    if (!DC)
+      llvm_unreachable("address space is NYI");
+  }
+
+  GlobalDecl GD;
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(DC))
+    llvm_unreachable("C++ constructors static var context is NYI");
+  else if (const auto *DD = dyn_cast<CXXDestructorDecl>(DC))
+    llvm_unreachable("C++ destructors static var context is NYI");
+  else if (const auto *FD = dyn_cast<FunctionDecl>(DC))
+    GD = GlobalDecl(FD);
+  else {
+    // Don't do anything for Obj-C method decls or global closures. We should
+    // never defer them.
+    assert(isa<ObjCMethodDecl>(DC) && "unexpected parent code decl");
+  }
+  if (GD.getDecl() && UnimplementedFeature::openMP()) {
+    // Disable emission of the parent function for the OpenMP device codegen.
+    llvm_unreachable("OpenMP is NYI");
+  }
+
+  return GV;
+}
+
+/// Add the initializer for 'D' to the global variable that has already been
+/// created for it. If the initializer has a different type than GV does, this
+/// may free GV and return a different one. Otherwise it just returns GV.
+mlir::cir::GlobalOp
+CIRGenFunction::addInitializerToStaticVarDecl(const VarDecl &D,
+                                              mlir::cir::GlobalOp GV) {
+  ConstantEmitter emitter(*this);
+  mlir::TypedAttr Init =
+      emitter.tryEmitForInitializer(D).dyn_cast<mlir::TypedAttr>();
+  assert(Init && "Expected typed attribute");
+
+  // If constant emission failed, then this should be a C++ static
+  // initializer.
+  if (!Init) {
+    if (!getLangOpts().CPlusPlus)
+      CGM.ErrorUnsupported(D.getInit(), "constant l-value expression");
+    else if (D.hasFlexibleArrayInit(getContext()))
+      CGM.ErrorUnsupported(D.getInit(), "flexible array initializer");
+    else {
+      // Since we have a static initializer, this global variable can't
+      // be constant.
+      GV.setConstant(false);
+      llvm_unreachable("C++ guarded init it NYI");
+    }
+    return GV;
+  }
+
+#ifndef NDEBUG
+  CharUnits VarSize = CGM.getASTContext().getTypeSizeInChars(D.getType()) +
+                      D.getFlexibleArrayInitChars(getContext());
+  CharUnits CstSize = CharUnits::fromQuantity(
+      CGM.getDataLayout().getTypeAllocSize(Init.getType()));
+  assert(VarSize == CstSize && "Emitted constant has unexpected size");
+#endif
+
+  // The initializer may differ in type from the global. Rewrite
+  // the global to match the initializer.  (We have to do this
+  // because some types, like unions, can't be completely represented
+  // in the LLVM type system.)
+  if (GV.getSymType() != Init.getType()) {
+    llvm_unreachable("static decl initializer type mismatch is NYI");
+  }
+
+  bool NeedsDtor =
+      D.needsDestruction(getContext()) == QualType::DK_cxx_destructor;
+
+  GV.setConstant(
+      CGM.isTypeConstant(D.getType(), /*ExcludeCtor=*/true, !NeedsDtor));
+  GV.setInitialValueAttr(Init);
+
+  emitter.finalize(GV);
+
+  if (NeedsDtor) {
+    // We have a constant initializer, but a nontrivial destructor. We still
+    // need to perform a guarded "initialization" in order to register the
+    // destructor.
+    llvm_unreachable("C++ guarded init is NYI");
+  }
+
+  return GV;
+}
+
+void CIRGenFunction::buildStaticVarDecl(const VarDecl &D,
+                                        mlir::cir::GlobalLinkageKind Linkage) {
+  // Check to see if we already have a global variable for this
+  // declaration.  This can happen when double-emitting function
+  // bodies, e.g. with complete and base constructors.
+  auto globalOp = CGM.getOrCreateStaticVarDecl(D, Linkage);
+  // TODO(cir): we should have a way to represent global ops as values without
+  // having to emit a get global op. Sometimes these emissions are not used.
+  auto addr = getBuilder().createGetGlobal(globalOp);
+  CharUnits alignment = getContext().getDeclAlign(&D);
+
+  // Store into LocalDeclMap before generating initializer to handle
+  // circular references.
+  mlir::Type elemTy = getTypes().convertTypeForMem(D.getType());
+  setAddrOfLocalVar(&D, Address(addr, elemTy, alignment));
+
+  // We can't have a VLA here, but we can have a pointer to a VLA,
+  // even though that doesn't really make any sense.
+  // Make sure to evaluate VLA bounds now so that we have them for later.
+  if (D.getType()->isVariablyModifiedType())
+    llvm_unreachable("VLAs are NYI");
+
+  // Save the type in case adding the initializer forces a type change.
+  mlir::Type expectedType = addr.getType();
+
+  auto var = globalOp;
+
+  // CUDA's local and local static __shared__ variables should not
+  // have any non-empty initializers. This is ensured by Sema.
+  // Whatever initializer such variable may have when it gets here is
+  // a no-op and should not be emitted.
+  bool isCudaSharedVar = getLangOpts().CUDA && getLangOpts().CUDAIsDevice &&
+                         D.hasAttr<CUDASharedAttr>();
+  // If this value has an initializer, emit it.
+  if (D.getInit() && !isCudaSharedVar)
+    var = addInitializerToStaticVarDecl(D, var);
+
+  var.setAlignment(alignment.getAsAlign().value());
+
+  if (D.hasAttr<AnnotateAttr>())
+    llvm_unreachable("Global annotations are NYI");
+
+  if (auto *SA = D.getAttr<PragmaClangBSSSectionAttr>())
+    llvm_unreachable("CIR global BSS section attribute is NYI");
+  if (auto *SA = D.getAttr<PragmaClangDataSectionAttr>())
+    llvm_unreachable("CIR global Data section attribute is NYI");
+  if (auto *SA = D.getAttr<PragmaClangRodataSectionAttr>())
+    llvm_unreachable("CIR global Rodata section attribute is NYI");
+  if (auto *SA = D.getAttr<PragmaClangRelroSectionAttr>())
+    llvm_unreachable("CIR global Relro section attribute is NYI");
+
+  if (const SectionAttr *SA = D.getAttr<SectionAttr>())
+    llvm_unreachable("CIR global object file section attribute is NYI");
+
+  if (D.hasAttr<RetainAttr>())
+    llvm_unreachable("llvm.used metadata is NYI");
+  else if (D.hasAttr<UsedAttr>())
+    llvm_unreachable("llvm.compiler.used metadata is NYI");
+
+  // We may have to cast the constant because of the initializer
+  // mismatch above.
+  //
+  // FIXME: It is really dangerous to store this in the map; if anyone
+  // RAUW's the GV uses of this constant will be invalid.
+  // TODO(cir): its suppose to be possible that the initializer does not match
+  // the static var type. When this happens, there should be a cast here.
+  assert(var.getSymType() != expectedType &&
+         "static var init type mismatch is NYI");
+  CGM.setStaticLocalDeclAddress(&D, var);
+
+  assert(!UnimplementedFeature::reportGlobalToASan());
+
+  // Emit global variable debug descriptor for static vars.
+  auto *DI = getDebugInfo();
+  if (DI && CGM.getCodeGenOpts().hasReducedDebugInfo()) {
+    llvm_unreachable("Debug info is NYI");
+  }
 }
 
 void CIRGenFunction::buildNullabilityCheck(LValue LHS, mlir::Value RHS,

@@ -76,6 +76,9 @@ struct UnimplementedFeature {
   // Data layout
   static bool dataLayoutGetIndexTypeSizeInBits() { return false; }
 
+  // References related stuff
+  static bool ARC() { return false; } // Automatic reference counting
+
   // Clang early optimizations or things defered to LLVM lowering.
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
   static bool shouldUseMemSetToInitialize() { return false; }
