@@ -576,6 +576,12 @@ Bug Fixes in This Version
 - Fixed false positive error diagnostic when pack expansion appears in template
   parameters of a member expression.
   (`#48731 <https://github.com/llvm/llvm-project/issues/48731>`_)
+- Fix the contains-errors bit not being set for DeclRefExpr that refers to a
+  VarDecl with invalid initializer. This fixes:
+  (`#50236 <https://github.com/llvm/llvm-project/issues/50236>`_),
+  (`#50243 <https://github.com/llvm/llvm-project/issues/50243>`_),
+  (`#48636 <https://github.com/llvm/llvm-project/issues/48636>`_),
+  (`#50320 <https://github.com/llvm/llvm-project/issues/50320>`_).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
