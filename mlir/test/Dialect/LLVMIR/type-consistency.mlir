@@ -624,3 +624,28 @@ llvm.func @undesirable_overlapping_aggregate_store(%arg: i64) {
 
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: llvm.func @coalesced_store_ints_array
+// CHECK-SAME: %[[ARG:.*]]: i64
+llvm.func @coalesced_store_ints_array(%arg: i64) {
+  // CHECK: %[[CST0:.*]] = llvm.mlir.constant(0 : i64) : i64
+  // CHECK: %[[CST32:.*]] = llvm.mlir.constant(32 : i64) : i64
+
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x !llvm.array<2 x i32>
+  %1 = llvm.alloca %0 x !llvm.array<2 x i32> : (i32) -> !llvm.ptr
+
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<2 x i32>
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST0]]
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+  // CHECK: %[[SHR:.*]] = llvm.lshr %[[ARG]], %[[CST32]] : i64
+  // CHECK: %[[TRUNC:.*]] = llvm.trunc %[[SHR]] : i64 to i32
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA]][0, 1] : (!llvm.ptr)  -> !llvm.ptr, !llvm.array<2 x i32>
+  // CHECK: llvm.store %[[TRUNC]], %[[GEP]]
+  llvm.store %arg, %1 : i64, !llvm.ptr
+  // CHECK-NOT: llvm.store %[[ARG]], %[[ALLOCA]]
+  llvm.return
+}
