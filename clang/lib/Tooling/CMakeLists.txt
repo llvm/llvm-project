@@ -13,6 +13,7 @@ add_subdirectory(DumpTool)
 add_subdirectory(Syntax)
 add_subdirectory(DependencyScanning)
 add_subdirectory(Transformer)
+add_subdirectory(ModuleBuildDaemon)
 
 # Replace the last lib component of the current binary directory with include
 string(FIND ${CMAKE_CURRENT_BINARY_DIR} "/lib/" PATH_LIB_START REVERSE)
