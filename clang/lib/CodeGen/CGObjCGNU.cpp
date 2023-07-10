@@ -46,17 +46,13 @@ namespace {
 /// types and the function declaration into a module if they're not used, and
 /// avoids constructing the type more than once if it's used more than once.
 class LazyRuntimeFunction {
-  CodeGenModule *CGM;
-  llvm::FunctionType *FTy;
-  const char *FunctionName;
-  llvm::FunctionCallee Function;
+  CodeGenModule *CGM = nullptr;
+  llvm::FunctionType *FTy = nullptr;
+  const char *FunctionName = nullptr;
+  llvm::FunctionCallee Function = nullptr;
 
 public:
-  /// Constructor leaves this class uninitialized, because it is intended to
-  /// be used as a field in another class and not all of the types that are
-  /// used as arguments will necessarily be available at construction time.
-  LazyRuntimeFunction()
-      : CGM(nullptr), FunctionName(nullptr), Function(nullptr) {}
+  LazyRuntimeFunction() = default;
 
   /// Initialises the lazy function with the name, return type, and the types
   /// of the arguments.
