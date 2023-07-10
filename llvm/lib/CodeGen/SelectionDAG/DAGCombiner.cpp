@@ -17666,6 +17666,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   // can be folded with this one. We should do this to avoid having to keep
   // a copy of the original base pointer.
   SmallVector<SDNode *, 16> OtherUses;
+  constexpr unsigned int MaxSteps = 8192;
   if (isa<ConstantSDNode>(Offset))
     for (SDNode::use_iterator UI = BasePtr->use_begin(),
                               UE = BasePtr->use_end();
@@ -17676,7 +17677,8 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
       if (Use.getUser() == Ptr.getNode() || Use != BasePtr)
         continue;
 
-      if (SDNode::hasPredecessorHelper(Use.getUser(), Visited, Worklist))
+      if (SDNode::hasPredecessorHelper(Use.getUser(), Visited, Worklist,
+                                       MaxSteps))
         continue;
 
       if (Use.getUser()->getOpcode() != ISD::ADD &&
@@ -17709,7 +17711,7 @@ bool DAGCombiner::CombineToPreIndexedLoadStore(SDNode *N) {
   for (SDNode *Use : Ptr->uses()) {
     if (Use == N)
       continue;
-    if (SDNode::hasPredecessorHelper(Use, Visited, Worklist))
+    if (SDNode::hasPredecessorHelper(Use, Visited, Worklist, MaxSteps))
       return false;
 
     // If Ptr may be folded in addressing mode of other use, then it's
@@ -17883,12 +17885,13 @@ static SDNode *getPostIndexedLoadStoreOp(SDNode *N, bool &IsLoad,
     // Check for #2.
     SmallPtrSet<const SDNode *, 32> Visited;
     SmallVector<const SDNode *, 8> Worklist;
+    constexpr unsigned int MaxSteps = 8192;
     // Ptr is predecessor to both N and Op.
     Visited.insert(Ptr.getNode());
     Worklist.push_back(N);
     Worklist.push_back(Op);
-    if (!SDNode::hasPredecessorHelper(N, Visited, Worklist) &&
-        !SDNode::hasPredecessorHelper(Op, Visited, Worklist))
+    if (!SDNode::hasPredecessorHelper(N, Visited, Worklist, MaxSteps) &&
+        !SDNode::hasPredecessorHelper(Op, Visited, Worklist, MaxSteps))
       return Op;
   }
   return nullptr;
