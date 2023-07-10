@@ -52,7 +52,6 @@ MCAsmInfoXCOFF::MCAsmInfoXCOFF() {
   COMMDirectiveAlignmentIsInBytes = false;
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
   HasDotTypeDotSizeDirective = false;
-  UseIntegratedAssembler = false;
   ParseInlineAsmUsingAsmParser = true;
   NeedsFunctionDescriptors = true;
 
