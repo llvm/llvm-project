@@ -36,12 +36,12 @@ module {
     cir.store %19, %2 : !s32i, cir.ptr <!s32i>
     %20 = cir.load %2 : cir.ptr <!s32i>, !s32i
     %21 = cir.load %1 : cir.ptr <!s32i>, !s32i
-    %22 = cir.binop(shr, %20, %21) : !s32i
+    %22 = cir.shift(right, %20 : !s32i, %21 : !s32i) -> !s32i
     // CHECK: = llvm.ashr
     cir.store %22, %2 : !s32i, cir.ptr <!s32i>
     %23 = cir.load %2 : cir.ptr <!s32i>, !s32i
     %24 = cir.load %1 : cir.ptr <!s32i>, !s32i
-    %25 = cir.binop(shl, %23, %24) : !s32i
+    %25 = cir.shift(left, %23 : !s32i, %24 : !s32i) -> !s32i
     // CHECK: = llvm.shl
     cir.store %25, %2 : !s32i, cir.ptr <!s32i>
     %26 = cir.load %2 : cir.ptr <!s32i>, !s32i

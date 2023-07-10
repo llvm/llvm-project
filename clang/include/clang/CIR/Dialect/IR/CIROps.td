@@ -787,8 +787,6 @@ def BinOpKind_Div : I32EnumAttrCase<"Div", 2, "div">;
 def BinOpKind_Rem : I32EnumAttrCase<"Rem", 3, "rem">;
 def BinOpKind_Add : I32EnumAttrCase<"Add", 4, "add">;
 def BinOpKind_Sub : I32EnumAttrCase<"Sub", 5, "sub">;
-def BinOpKind_Shl : I32EnumAttrCase<"Shl", 6, "shl">;
-def BinOpKind_Shr : I32EnumAttrCase<"Shr", 7, "shr">;
 def BinOpKind_And : I32EnumAttrCase<"And", 8, "and">;
 def BinOpKind_Xor : I32EnumAttrCase<"Xor", 9, "xor">;
 def BinOpKind_Or  : I32EnumAttrCase<"Or", 10, "or">;
@@ -797,8 +795,8 @@ def BinOpKind : I32EnumAttr<
     "BinOpKind",
     "binary operation (arith and logic) kind",
     [BinOpKind_Mul, BinOpKind_Div, BinOpKind_Rem,
-     BinOpKind_Add, BinOpKind_Sub, BinOpKind_Shl,
-     BinOpKind_Shr, BinOpKind_And, BinOpKind_Xor,
+     BinOpKind_Add, BinOpKind_Sub,
+     BinOpKind_And, BinOpKind_Xor,
      BinOpKind_Or]> {
   let cppNamespace = "::mlir::cir";
 }
@@ -810,15 +808,15 @@ def BinOp : CIR_Op<"binop", [Pure,
   let summary = "Binary operations (arith and logic)";
   let description = [{
     cir.binop performs the binary operation according to
-    the specified opcode kind: [mul, div, rem, add, sub, shl,
-    shr, and, xor, or].
+    the specified opcode kind: [mul, div, rem, add, sub,
+    and, xor, or].
 
     It requires two input operands and has one result, all types
     should be the same.
 
     ```mlir
-    %7 = binop(add, %1, %2) : i32
-    %7 = binop(mul, %1, %2) : i8
+    %7 = cir.binop(add, %1, %2) : !s32i
+    %7 = cir.binop(mul, %1, %2) : !u8i
     ```
   }];
 
@@ -829,6 +827,37 @@ def BinOp : CIR_Op<"binop", [Pure,
 
   let assemblyFormat = [{
     `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) attr-dict
+  }];
+
+  // Already covered by the traits
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// ShiftOp
+//===----------------------------------------------------------------------===//
+
+def ShiftOp : CIR_Op<"shift", [Pure]> {
+  let summary = "Shift";
+  let description = [{
+    Shift `left` or `right`, according to the first operand. Second operand is
+    the shift target and the third the amount.
+
+    ```mlir
+    %7 = cir.shift(left, %1 : !u64i, %4 : !s32i) -> !u64i
+    ```
+  }];
+
+  let results = (outs CIR_IntType:$result);
+  let arguments = (ins CIR_IntType:$value, CIR_IntType:$amount,
+                       UnitAttr:$isShiftleft);
+
+  let assemblyFormat = [{
+    `(`
+      (`left` $isShiftleft^) : (`right`)?
+      `,` $value `:` type($value)
+      `,` $amount `:` type($amount)
+    `)` `->` type($result) attr-dict
   }];
 
   // Already covered by the traits

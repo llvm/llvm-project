@@ -34,10 +34,10 @@ int foo(int a, int b) {
 // CHECK: = cir.binop(sub,
 // CHECK: cir.store {{.*}}[[Value]]
 // CHECK: = cir.load {{.*}}[[Value]]
-// CHECK: = cir.binop(shr,
+// CHECK: = cir.shift( right
 // CHECK: cir.store {{.*}}[[Value]]
 // CHECK: = cir.load {{.*}}[[Value]]
-// CHECK: = cir.binop(shl,
+// CHECK: = cir.shift(left
 // CHECK: cir.store {{.*}}[[Value]]
 // CHECK: = cir.load {{.*}}[[Value]]
 // CHECK: = cir.binop(and,
