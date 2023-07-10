@@ -14,6 +14,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/FormattedStream.h"
@@ -64,59 +65,6 @@ extern bool UnwindInfo;
 
 extern StringSet<> FoundSectionSet;
 
-typedef std::function<bool(llvm::object::SectionRef const &)> FilterPredicate;
-
-/// A filtered iterator for SectionRefs that skips sections based on some given
-/// predicate.
-class SectionFilterIterator {
-public:
-  SectionFilterIterator(FilterPredicate P,
-                        llvm::object::section_iterator const &I,
-                        llvm::object::section_iterator const &E)
-      : Predicate(std::move(P)), Iterator(I), End(E) {
-    ScanPredicate();
-  }
-  const llvm::object::SectionRef &operator*() const { return *Iterator; }
-  SectionFilterIterator &operator++() {
-    ++Iterator;
-    ScanPredicate();
-    return *this;
-  }
-  bool operator!=(SectionFilterIterator const &Other) const {
-    return Iterator != Other.Iterator;
-  }
-
-private:
-  void ScanPredicate() {
-    while (Iterator != End && !Predicate(*Iterator)) {
-      ++Iterator;
-    }
-  }
-  FilterPredicate Predicate;
-  llvm::object::section_iterator Iterator;
-  llvm::object::section_iterator End;
-};
-
-/// Creates an iterator range of SectionFilterIterators for a given Object and
-/// predicate.
-class SectionFilter {
-public:
-  SectionFilter(FilterPredicate P, llvm::object::ObjectFile const &O)
-      : Predicate(std::move(P)), Object(O) {}
-  SectionFilterIterator begin() {
-    return SectionFilterIterator(Predicate, Object.section_begin(),
-                                 Object.section_end());
-  }
-  SectionFilterIterator end() {
-    return SectionFilterIterator(Predicate, Object.section_end(),
-                                 Object.section_end());
-  }
-
-private:
-  FilterPredicate Predicate;
-  llvm::object::ObjectFile const &Object;
-};
-
 // Various helper functions.
 
 /// Creates a SectionFilter with a standard predicate that conditionally skips
@@ -125,8 +73,8 @@ private:
 /// Idx is an optional output parameter that keeps track of which section index
 /// this is. This may be different than the actual section number, as some
 /// sections may be filtered (e.g. symbol tables).
-SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O,
-                                uint64_t *Idx = nullptr);
+object::SectionFilter ToolSectionFilter(const llvm::object::ObjectFile &O,
+                                        uint64_t *Idx = nullptr);
 
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
 void printRelocations(const object::ObjectFile *O);
