@@ -3016,6 +3016,13 @@ namespace {
 struct AANoRecurseImpl : public AANoRecurse {
   AANoRecurseImpl(const IRPosition &IRP, Attributor &A) : AANoRecurse(IRP, A) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    bool IsKnown;
+    assert(!AA::hasAssumedIRAttr<Attribute::NoRecurse>(
+        A, nullptr, getIRPosition(), DepClassTy::NONE, IsKnown));
+  }
+
   /// See AbstractAttribute::getAsStr()
   const std::string getAsStr(Attributor *A) const override {
     return getAssumed() ? "norecurse" : "may-recurse";
