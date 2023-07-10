@@ -16,9 +16,62 @@
 
 namespace llvm::jitlink::ppc64 {
 
+const char NullPointerContent[8] = {0x00, 0x00, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00};
+
+const char PointerJumpStubContent_little[20] = {
+    0x18,       0x00, 0x41,       (char)0xf8, // std r2, 24(r1)
+    0x00,       0x00, (char)0x82, 0x3d,       // addis r12, r2, OffHa
+    0x00,       0x00, (char)0x8c, (char)0xe9, // ld r12, OffLo(r12)
+    (char)0xa6, 0x03, (char)0x89, 0x7d,       // mtctr r12
+    0x20,       0x04, (char)0x80, 0x4e,       // bctr
+};
+
+const char PointerJumpStubContent_big[20] = {
+    (char)0xf8, 0x41,       0x00, 0x18,       // std r2, 24(r1)
+    0x3d,       (char)0x82, 0x00, 0x00,       // addis r12, r2, OffHa
+    (char)0xe9, (char)0x8c, 0x00, 0x00,       // ld r12, OffLo(r12)
+    0x7d,       (char)0x89, 0x03, (char)0xa6, // mtctr r12
+    0x4e,       (char)0x80, 0x04, 0x20,       // bctr
+};
+
 const char *getEdgeKindName(Edge::Kind K) {
-  // TODO: Add edge names.
-  return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
+  switch (K) {
+  case Pointer64:
+    return "Pointer64";
+  case Pointer32:
+    return "Pointer32";
+  case Delta64:
+    return "Delta64";
+  case Delta32:
+    return "Delta32";
+  case NegDelta32:
+    return "NegDelta32";
+  case Delta16:
+    return "Delta16";
+  case Delta16HA:
+    return "Delta16HA";
+  case Delta16LO:
+    return "Delta16LO";
+  case TOCDelta16HA:
+    return "TOCDelta16HA";
+  case TOCDelta16LO:
+    return "TOCDelta16LO";
+  case TOCDelta16DS:
+    return "TOCDelta16DS";
+  case TOCDelta16LODS:
+    return "TOCDelta16LODS";
+  case CallBranchDelta:
+    return "CallBranchDelta";
+  case CallBranchDeltaRestoreTOC:
+    return "CallBranchDeltaRestoreTOC";
+  case RequestPLTCallStub:
+    return "RequestPLTCallStub";
+  case RequestPLTCallStubSaveTOC:
+    return "RequestPLTCallStubSaveTOC";
+  default:
+    return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
+  }
 }
 
 } // end namespace llvm::jitlink::ppc64
