@@ -69,9 +69,10 @@ registerExistingGOTEntries(LinkGraph &G,
     for (Block *B : dotTOCSection->blocks())
       for (Edge &E : B->edges())
         if (isGOTEntry(E))
-          TOC.appendEntry(E.getTarget(), G.addAnonymousSymbol(
-                                             *B, E.getOffset(),
-                                             G.getPointerSize(), false, false));
+          TOC.registerPreExistingEntry(E.getTarget(),
+                                       G.addAnonymousSymbol(*B, E.getOffset(),
+                                                            G.getPointerSize(),
+                                                            false, false));
   }
 }
 

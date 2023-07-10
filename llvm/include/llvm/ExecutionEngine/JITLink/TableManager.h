@@ -52,7 +52,13 @@ public:
     return *EntryI->second;
   }
 
-  bool appendEntry(Symbol &Target, Symbol &Entry) {
+  /// Register a pre-existing entry.
+  ///
+  /// Objects may include pre-existing table entries (e.g. for GOTs).
+  /// This method can be used to register those entries so that they will not
+  /// be duplicated by createEntry  the first time that getEntryForTarget is
+  /// called.
+  bool registerPreExistingEntry(Symbol &Target, Symbol &Entry) {
     assert(Target.hasName() && "Edge cannot point to anonymous target");
     auto Res = Entries.insert({
         Target.getName(),
