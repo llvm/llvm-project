@@ -1096,14 +1096,13 @@ mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
                                               CGF.PtrDiffTy, Ops.LHS, Ops.RHS);
 }
 mlir::Value ScalarExprEmitter::buildShl(const BinOpInfo &Ops) {
-  return Builder.create<mlir::cir::BinOp>(
-      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Shl,
-      Ops.LHS, Ops.RHS);
+  return Builder.create<mlir::cir::ShiftOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), Ops.LHS, Ops.RHS,
+      CGF.getBuilder().getUnitAttr());
 }
 mlir::Value ScalarExprEmitter::buildShr(const BinOpInfo &Ops) {
-  return Builder.create<mlir::cir::BinOp>(
-      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Shr,
-      Ops.LHS, Ops.RHS);
+  return Builder.create<mlir::cir::ShiftOp>(
+      CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), Ops.LHS, Ops.RHS);
 }
 mlir::Value ScalarExprEmitter::buildAnd(const BinOpInfo &Ops) {
   return Builder.create<mlir::cir::BinOp>(

@@ -31,11 +31,11 @@ module {
     cir.store %19, %2 : !u32i, cir.ptr <!u32i>
     %20 = cir.load %2 : cir.ptr <!u32i>, !u32i
     %21 = cir.load %1 : cir.ptr <!u32i>, !u32i
-    %22 = cir.binop(shr, %20, %21) : !u32i
+    %22 = cir.shift(right, %20 : !u32i, %21 : !u32i) -> !u32i
     cir.store %22, %2 : !u32i, cir.ptr <!u32i>
     %23 = cir.load %2 : cir.ptr <!u32i>, !u32i
     %24 = cir.load %1 : cir.ptr <!u32i>, !u32i
-    %25 = cir.binop(shl, %23, %24) : !u32i
+    %25 = cir.shift(left, %23 : !u32i, %24 : !u32i) -> !u32i
     cir.store %25, %2 : !u32i, cir.ptr <!u32i>
     %26 = cir.load %2 : cir.ptr <!u32i>, !u32i
     %27 = cir.load %1 : cir.ptr <!u32i>, !u32i

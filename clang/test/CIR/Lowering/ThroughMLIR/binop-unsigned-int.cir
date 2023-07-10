@@ -28,14 +28,16 @@ module {
     %18 = cir.load %1 : cir.ptr <i32>, i32
     %19 = cir.binop(sub, %17, %18) : i32
     cir.store %19, %2 : i32, cir.ptr <i32>
-    %20 = cir.load %2 : cir.ptr <i32>, i32
-    %21 = cir.load %1 : cir.ptr <i32>, i32
-    %22 = cir.binop(shr, %20, %21) : i32
-    cir.store %22, %2 : i32, cir.ptr <i32>
-    %23 = cir.load %2 : cir.ptr <i32>, i32
-    %24 = cir.load %1 : cir.ptr <i32>, i32
-    %25 = cir.binop(shl, %23, %24) : i32
-    cir.store %25, %2 : i32, cir.ptr <i32>
+    // should move to cir.shift, which only accepts
+    // CIR types.
+    // %20 = cir.load %2 : cir.ptr <i32>, i32
+    // %21 = cir.load %1 : cir.ptr <i32>, i32
+    // %22 = cir.binop(shr, %20, %21) : i32
+    // cir.store %22, %2 : i32, cir.ptr <i32>
+    // %23 = cir.load %2 : cir.ptr <i32>, i32
+    // %24 = cir.load %1 : cir.ptr <i32>, i32
+    // %25 = cir.binop(shl, %23, %24) : i32
+    // cir.store %25, %2 : i32, cir.ptr <i32>
     %26 = cir.load %2 : cir.ptr <i32>, i32
     %27 = cir.load %1 : cir.ptr <i32>, i32
     %28 = cir.binop(and, %26, %27) : i32
@@ -57,8 +59,8 @@ module {
 // MLIR: = arith.remui
 // MLIR: = arith.addi
 // MLIR: = arith.subi
-// MLIR: = arith.shrui
-// MLIR: = arith.shli
+// arith.shrui
+// arith.shli
 // MLIR: = arith.andi
 // MLIR: = arith.xori
 // MLIR: = arith.ori
@@ -68,8 +70,8 @@ module {
 // LLVM: = urem i32
 // LLVM: = add i32
 // LLVM: = sub i32
-// LLVM: = lshr i32
-// LLVM: = shl i32
+// = lshr i32
+// = shl i32
 // LLVM: = and i32
 // LLVM: = xor i32
 // LLVM: = or i32

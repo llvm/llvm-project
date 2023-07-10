@@ -1100,17 +1100,36 @@ public:
     case mlir::cir::BinOpKind::Xor:
       rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, llvmTy, lhs, rhs);
       break;
-    case mlir::cir::BinOpKind::Shl:
-      rewriter.replaceOpWithNewOp<mlir::LLVM::ShlOp>(op, llvmTy, lhs, rhs);
-      break;
-    case mlir::cir::BinOpKind::Shr:
-      if (auto ty = type.dyn_cast<mlir::cir::IntType>()) {
-        if (ty.isUnsigned())
-          rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, lhs, rhs);
-        else
-          rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, lhs, rhs);
-        break;
-      }
+    }
+
+    return mlir::LogicalResult::success();
+  }
+};
+
+class CIRShiftOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::ShiftOp> {
+public:
+  using OpConversionPattern<mlir::cir::ShiftOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::ShiftOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    assert((op.getValue().getType() == op.getResult().getType()) &&
+           "inconsistent operands' types not supported yet");
+    auto ty = op.getValue().getType().dyn_cast<mlir::cir::IntType>();
+    assert(ty && "NYI for other than mlir::cir::IntType");
+
+    auto llvmTy = getTypeConverter()->convertType(op.getType());
+    auto val = adaptor.getValue();
+    auto amt = adaptor.getAmount();
+
+    if (op.getIsShiftleft())
+      rewriter.replaceOpWithNewOp<mlir::LLVM::ShlOp>(op, llvmTy, val, amt);
+    else {
+      if (ty.isUnsigned())
+        rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, val, amt);
+      else
+        rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, val, amt);
     }
 
     return mlir::LogicalResult::success();
@@ -1284,21 +1303,22 @@ public:
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
-  patterns.add<
-      CIRCmpOpLowering, CIRLoopOpLowering, CIRBrCondOpLowering,
-      CIRPtrStrideOpLowering, CIRCallLowering, CIRUnaryOpLowering,
-      CIRBinOpLowering, CIRLoadLowering, CIRConstantLowering, CIRStoreLowering,
-      CIRAllocaLowering, CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering,
-      CIRIfLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
-      CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering, CIRVAArgLowering,
-      CIRBrOpLowering, CIRTernaryOpLowering, CIRStructElementAddrOpLowering>(
-      converter, patterns.getContext());
+  patterns.add<CIRCmpOpLowering, CIRLoopOpLowering, CIRBrCondOpLowering,
+               CIRPtrStrideOpLowering, CIRCallLowering, CIRUnaryOpLowering,
+               CIRBinOpLowering, CIRShiftOpLowering, CIRLoadLowering,
+               CIRConstantLowering, CIRStoreLowering, CIRAllocaLowering,
+               CIRFuncLowering, CIRScopeOpLowering, CIRCastOpLowering,
+               CIRIfLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
+               CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering,
+               CIRVAArgLowering, CIRBrOpLowering, CIRTernaryOpLowering,
+               CIRStructElementAddrOpLowering>(converter,
+                                               patterns.getContext());
 }
 
 namespace {
 void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
   converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
-    return mlir::LLVM::LLVMPointerType::get(type.getContext());
+    return mlir::LLVM::LLVMPointerType::get(&converter.getContext());
   });
   converter.addConversion([&](mlir::cir::ArrayType type) -> mlir::Type {
     auto ty = converter.convertType(type.getEltType());
@@ -1397,8 +1417,8 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
   pm.addPass(mlir::LLVM::createDIScopeForLLVMFuncOpPass());
 
   // FIXME(cir): this shouldn't be necessary. It's meant to be a temporary
-  // workaround until we understand why some unrealized casts are being emmited
-  // and how to properly avoid them.
+  // workaround until we understand why some unrealized casts are being
+  // emmited and how to properly avoid them.
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
 
   (void)mlir::applyPassManagerCLOptions(pm);
