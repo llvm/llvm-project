@@ -43,6 +43,13 @@ public:
   static bool isRequired() { return true; }
 };
 
+// TODO: Remove this declaration and make readMemprof static once the matching
+// is moved into its own pass.
+class IndexedInstrProfReader;
+class TargetLibraryInfo;
+void readMemprof(Module &M, Function &F, IndexedInstrProfReader *MemProfReader,
+                 const TargetLibraryInfo &TLI);
+
 } // namespace llvm
 
 #endif
