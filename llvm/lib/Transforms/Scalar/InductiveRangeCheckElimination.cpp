@@ -119,16 +119,6 @@ static cl::opt<bool> AllowNarrowLatchCondition(
     cl::desc("If set to true, IRCE may eliminate wide range checks in loops "
              "with narrow latch condition."));
 
-static cl::opt<unsigned> MaxTypeSizeForOverflowCheck(
-    "irce-max-type-size-for-overflow-check", cl::Hidden, cl::init(32),
-    cl::desc(
-        "Maximum size of range check type for which can be produced runtime "
-        "overflow check of its limit's computation"));
-
-static cl::opt<bool>
-    PrintScaledBoundaryRangeChecks("irce-print-scaled-boundary-range-checks",
-                                   cl::Hidden, cl::init(false));
-
 static const char *ClonedLoopTag = "irce.loop.clone";
 
 #define DEBUG_TYPE "irce"
@@ -165,10 +155,6 @@ class InductiveRangeCheck {
                                   ICmpInst::Predicate Pred, ScalarEvolution &SE,
                                   const SCEVAddRecExpr *&Index,
                                   const SCEV *&End);
-
-  static bool reassociateSubLHS(Loop *L, Value *VariantLHS, Value *InvariantRHS,
-                                ICmpInst::Predicate Pred, ScalarEvolution &SE,
-                                const SCEVAddRecExpr *&Index, const SCEV *&End);
 
 public:
   const SCEV *getBegin() const { return Begin; }
@@ -295,10 +281,6 @@ bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   if (parseIvAgaisntLimit(L, LHS, RHS, Pred, SE, Index, End))
     return true;
 
-  if (reassociateSubLHS(L, LHS, RHS, Pred, SE, Index, End))
-    return true;
-
-  // TODO: support ReassociateAddLHS
   return false;
 }
 
@@ -362,126 +344,6 @@ bool InductiveRangeCheck::parseIvAgaisntLimit(Loop *L, Value *LHS, Value *RHS,
   }
 
   llvm_unreachable("default clause returns!");
-}
-
-// Try to parse range check in the form of "IV - Offset vs Limit" or "Offset -
-// IV vs Limit"
-bool InductiveRangeCheck::reassociateSubLHS(
-    Loop *L, Value *VariantLHS, Value *InvariantRHS, ICmpInst::Predicate Pred,
-    ScalarEvolution &SE, const SCEVAddRecExpr *&Index, const SCEV *&End) {
-  Value *LHS, *RHS;
-  if (!match(VariantLHS, m_Sub(m_Value(LHS), m_Value(RHS))))
-    return false;
-
-  const SCEV *IV = SE.getSCEV(LHS);
-  const SCEV *Offset = SE.getSCEV(RHS);
-  const SCEV *Limit = SE.getSCEV(InvariantRHS);
-
-  bool OffsetSubtracted = false;
-  if (SE.isLoopInvariant(IV, L))
-    // "Offset - IV vs Limit"
-    std::swap(IV, Offset);
-  else if (SE.isLoopInvariant(Offset, L))
-    // "IV - Offset vs Limit"
-    OffsetSubtracted = true;
-  else
-    return false;
-
-  const auto *AddRec = dyn_cast<SCEVAddRecExpr>(IV);
-  if (!AddRec)
-    return false;
-
-  // In order to turn "IV - Offset < Limit" into "IV < Limit + Offset", we need
-  // to be able to freely move values from left side of inequality to right side
-  // (just as in normal linear arithmetics). Overflows make things much more
-  // complicated, so we want to avoid this.
-  //
-  // Let's prove that the initial subtraction doesn't overflow with all IV's
-  // values from the safe range constructed for that check.
-  //
-  // [Case 1] IV - Offset < Limit
-  // It doesn't overflow if:
-  //     SINT_MIN <= IV - Offset <= SINT_MAX
-  // In terms of scaled SINT we need to prove:
-  //     SINT_MIN + Offset <= IV <= SINT_MAX + Offset
-  // Safe range will be constructed:
-  //     0 <= IV < Limit + Offset
-  // It means that 'IV - Offset' doesn't underflow, because:
-  //     SINT_MIN + Offset < 0 <= IV
-  // and doesn't overflow:
-  //     IV < Limit + Offset <= SINT_MAX + Offset
-  //
-  // [Case 2] Offset - IV > Limit
-  // It doesn't overflow if:
-  //     SINT_MIN <= Offset - IV <= SINT_MAX
-  // In terms of scaled SINT we need to prove:
-  //     -SINT_MIN >= IV - Offset >= -SINT_MAX
-  //     Offset - SINT_MIN >= IV >= Offset - SINT_MAX
-  // Safe range will be constructed:
-  //     0 <= IV < Offset - Limit
-  // It means that 'Offset - IV' doesn't underflow, because
-  //     Offset - SINT_MAX < 0 <= IV
-  // and doesn't overflow:
-  //     IV < Offset - Limit <= Offset - SINT_MIN
-  //
-  // For the computed upper boundary of the IV's range (Offset +/- Limit) we
-  // don't know exactly whether it overflows or not. So if we can't prove this
-  // fact at compile time, we scale boundary computations to a wider type with
-  // the intention to add runtime overflow check.
-
-  auto getExprScaledIfOverflow = [&](Instruction::BinaryOps BinOp,
-                                     const SCEV *LHS,
-                                     const SCEV *RHS) -> const SCEV * {
-    const SCEV *(ScalarEvolution::*Operation)(const SCEV *, const SCEV *,
-                                              SCEV::NoWrapFlags, unsigned);
-    switch (BinOp) {
-    default:
-      llvm_unreachable("Unsupported binary op");
-    case Instruction::Add:
-      Operation = &ScalarEvolution::getAddExpr;
-      break;
-    case Instruction::Sub:
-      Operation = &ScalarEvolution::getMinusSCEV;
-      break;
-    }
-
-    if (SE.willNotOverflow(BinOp, ICmpInst::isSigned(Pred), LHS, RHS,
-                           cast<Instruction>(VariantLHS)))
-      return (SE.*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0);
-
-    // We couldn't prove that the expression does not overflow.
-    // Than scale it to a wider type to check overflow at runtime.
-    auto *Ty = cast<IntegerType>(LHS->getType());
-    if (Ty->getBitWidth() > MaxTypeSizeForOverflowCheck)
-      return nullptr;
-
-    auto WideTy = IntegerType::get(Ty->getContext(), Ty->getBitWidth() * 2);
-    return (SE.*Operation)(SE.getSignExtendExpr(LHS, WideTy),
-                           SE.getSignExtendExpr(RHS, WideTy), SCEV::FlagAnyWrap,
-                           0);
-  };
-
-  if (OffsetSubtracted)
-    // "IV - Offset < Limit" -> "IV" < Offset + Limit
-    Limit = getExprScaledIfOverflow(Instruction::BinaryOps::Add, Offset, Limit);
-  else {
-    // "Offset - IV > Limit" -> "IV" < Offset - Limit
-    Limit = getExprScaledIfOverflow(Instruction::BinaryOps::Sub, Offset, Limit);
-    Pred = ICmpInst::getSwappedPredicate(Pred);
-  }
-
-  if (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SLE) {
-    // "Expr <= Limit" -> "Expr < Limit + 1"
-    if (Pred == ICmpInst::ICMP_SLE && Limit)
-      Limit = getExprScaledIfOverflow(Instruction::BinaryOps::Add, Limit,
-                                      SE.getOne(Limit->getType()));
-    if (Limit) {
-      Index = AddRec;
-      End = Limit;
-      return true;
-    }
-  }
-  return false;
 }
 
 void InductiveRangeCheck::extractRangeChecksFromCond(
@@ -1731,34 +1593,11 @@ InductiveRangeCheck::computeSafeIterationSpace(ScalarEvolution &SE,
   // if latch check is more narrow.
   auto *IVType = dyn_cast<IntegerType>(IndVar->getType());
   auto *RCType = dyn_cast<IntegerType>(getBegin()->getType());
-  auto *EndType = dyn_cast<IntegerType>(getEnd()->getType());
   // Do not work with pointer types.
   if (!IVType || !RCType)
     return std::nullopt;
   if (IVType->getBitWidth() > RCType->getBitWidth())
     return std::nullopt;
-
-  auto PrintRangeCheck = [&](raw_ostream &OS) {
-    auto L = IndVar->getLoop();
-    OS << "irce: in function ";
-    OS << L->getHeader()->getParent()->getName();
-    OS << ", in ";
-    L->print(OS);
-    OS << "there is range check with scaled boundary:\n";
-    print(OS);
-  };
-
-  if (EndType->getBitWidth() > RCType->getBitWidth()) {
-    assert(EndType->getBitWidth() == RCType->getBitWidth() * 2);
-    if (PrintScaledBoundaryRangeChecks)
-      PrintRangeCheck(errs());
-    // End is computed with extended type but will be truncated to a narrow one
-    // type of range check. Therefore we need a check that the result will not
-    // overflow in terms of narrow type.
-    // TODO: Support runtime overflow check for End
-    return std::nullopt;
-  }
-
   // IndVar is of the form "A + B * I" (where "I" is the canonical induction
   // variable, that may or may not exist as a real llvm::Value in the loop) and
   // this inductive range check is a range check on the "C + D * I" ("C" is
