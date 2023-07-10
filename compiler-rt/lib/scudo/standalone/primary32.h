@@ -307,7 +307,7 @@ public:
     for (uptr I = 0; I < NumClasses; I++) {
       SizeClassInfo *Sci = getSizeClassInfo(I);
       ScopedLock L(Sci->Mutex);
-      getStats(Str, I, Sci, 0);
+      getStats(Str, I, Sci);
     }
   }
 
@@ -832,19 +832,28 @@ private:
     return true;
   }
 
-  void getStats(ScopedString *Str, uptr ClassId, SizeClassInfo *Sci, uptr Rss)
+  void getStats(ScopedString *Str, uptr ClassId, SizeClassInfo *Sci)
       REQUIRES(Sci->Mutex) {
     if (Sci->AllocatedUser == 0)
       return;
+    const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr InUse =
         Sci->FreeListInfo.PoppedBlocks - Sci->FreeListInfo.PushedBlocks;
-    const uptr AvailableChunks = Sci->AllocatedUser / getSizeByClassId(ClassId);
+    const uptr BytesInFreeList = Sci->AllocatedUser - InUse * BlockSize;
+    uptr PushedBytesDelta = 0;
+    if (BytesInFreeList >= Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint) {
+      PushedBytesDelta =
+          BytesInFreeList - Sci->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
+    }
+    const uptr AvailableChunks = Sci->AllocatedUser / BlockSize;
     Str->append("  %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-                "inuse: %6zu avail: %6zu rss: %6zuK releases: %6zu\n",
+                "inuse: %6zu avail: %6zu releases: %6zu last released: %6zuK "
+                "latest pushed bytes: %6zuK\n",
                 ClassId, getSizeByClassId(ClassId), Sci->AllocatedUser >> 10,
                 Sci->FreeListInfo.PoppedBlocks, Sci->FreeListInfo.PushedBlocks,
-                InUse, AvailableChunks, Rss >> 10,
-                Sci->ReleaseInfo.RangesReleased);
+                InUse, AvailableChunks, Sci->ReleaseInfo.RangesReleased,
+                Sci->ReleaseInfo.LastReleasedBytes >> 10,
+                PushedBytesDelta >> 10);
   }
 
   NOINLINE uptr releaseToOSMaybe(SizeClassInfo *Sci, uptr ClassId,
