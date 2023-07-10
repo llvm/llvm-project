@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file \
+// RUN: mlir-opt -split-input-file -verify-diagnostics \
 // RUN:   -test-transform-dialect-interpreter -canonicalize \
 // RUN:   -allow-unregistered-dialect -split-input-file %s | FileCheck %s
 
@@ -32,8 +32,7 @@ func.func @tensor_pad_constant(%t: tensor<?x10xindex>, %l2: index, %h1: index,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.get_result %0[0] : (!transform.any_op) -> !transform.any_value
-  %2, %3 = transform.structured.bufferize_to_allocation %1
+  %2 = transform.structured.bufferize_to_allocation %0 : !transform.any_op
 }
 
 // -----
@@ -58,46 +57,39 @@ func.func @tensor_pad_constant(%t: tensor<?x10xindex>, %l2: index, %h1: index,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.get_result %0[0] : (!transform.any_op) -> !transform.any_value
-  %2, %3 = transform.structured.bufferize_to_allocation %1
+  %2 = transform.structured.bufferize_to_allocation %0 : !transform.any_op
   // Make sure that One-Shot Bufferize can bufferize the rest.
   %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
 
-// CHECK-LABEL: func @materialization_of_bbarg(
-//  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
-//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
-//       CHECK:   %[[dim:.*]] = tensor.dim %[[t]], %[[c0]]
-//       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) : memref<?x10xindex, 4>
-//       CHECK:   memref.tensor_store %[[t]], %[[alloc]]
-//       CHECK:   %[[alloc_t:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
-//       CHECK:   %[[r:.*]] = tensor.extract %[[alloc_t]]
-//       CHECK:   memref.dealloc %[[alloc]]
-//       CHECK:   return %[[r]]
-func.func @materialization_of_bbarg(%t: tensor<?x10xindex>, %idx: index) -> index {
-  %r = tensor.extract %t[%idx, %idx] : tensor<?x10xindex>
-  return %r : index
-}
-
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!transform.any_op) -> !transform.any_value
-  %2, %3 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
-}
-
-// -----
-
-// CHECK-LABEL: func @materialization_of_bbarg(
+// CHECK-LABEL: func @tensor_insert(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
 //       CHECK:   %[[m:.*]] = bufferization.to_memref %[[t]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
 //       CHECK:   memref.copy %[[m]], %[[alloc]]
-//       CHECK:   %[[r:.*]] = memref.load %[[alloc]]
+//       CHECK:   memref.store %{{.*}}, %[[alloc]]
+//       CHECK:   %[[r:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
+//       CHECK:   memref.dealloc %[[alloc]]
 //       CHECK:   return %[[r]]
-func.func @materialization_of_bbarg(%t: tensor<?x10xindex>, %idx: index) -> index {
+func.func @tensor_insert(%t: tensor<?x10xindex>, %idx: index, %v: index) -> tensor<?x10xindex> {
+  %r = tensor.insert %v into %t[%idx, %idx] : tensor<?x10xindex>
+  return %r : tensor<?x10xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.insert"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %2 = transform.structured.bufferize_to_allocation %0 {memory_space = 4} : !transform.any_op
+  // Make sure that One-Shot Bufferize can bufferize the rest.
+  %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
+}
+
+// -----
+
+func.func @tensor_extract(%t: tensor<?x10xindex>, %idx: index) -> index {
+  // expected-note @below{{target payload op}}
   %r = tensor.extract %t[%idx, %idx] : tensor<?x10xindex>
   return %r : index
 }
@@ -105,30 +97,27 @@ func.func @materialization_of_bbarg(%t: tensor<?x10xindex>, %idx: index) -> inde
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.extract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = test_produce_value_handle_to_argument_of_parent_block %0, 0 : (!transform.any_op) -> !transform.any_value
-  %2, %3 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
-  // Make sure that One-Shot Bufferize can bufferize the rest.
-  %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
+  // expected-error @below{{failed to bufferize operation}}
+  %2 = transform.structured.bufferize_to_allocation %0 {memory_space = 4} : !transform.any_op
 }
 
 // -----
 
-// CHECK-LABEL: func @materialization_of_opresult(
-//       CHECK:   %[[t:.*]] = "dummy.some_op"
-//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
+// CHECK-LABEL: func @vector_mask(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>,
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?xf32, 4>
 //       CHECK:   memref.tensor_store %[[t]], %[[alloc]]
-//       CHECK:   %[[r:.*]] = bufferization.to_tensor %[[alloc]]
+//       CHECK:   vector.mask %{{.*}} { vector.transfer_write %{{.*}}, %[[alloc]]
+//       CHECK:   %[[r:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
+//       CHECK:   memref.dealloc %[[alloc]]
 //       CHECK:   return %[[r]]
-func.func @materialization_of_opresult(%idx: index) -> tensor<?x10xindex> {
-  %t = "dummy.some_op"() : () -> (tensor<?x10xindex>)
-  return %t : tensor<?x10xindex>
+func.func @vector_mask(%t: tensor<?xf32>, %val: vector<16xf32>, %idx: index, %m0: vector<16xi1>) -> tensor<?xf32> {
+  %r = vector.mask %m0 { vector.transfer_write %val, %t[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> tensor<?xf32>
+  return %r : tensor<?xf32>
 }
 
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["dummy.some_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.get_result %0[0] : (!transform.any_op) -> !transform.any_value
-  %2, %3 = transform.structured.bufferize_to_allocation %1 {memory_space = 4}
+  %0 = transform.structured.match ops{["vector.mask"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %2 = transform.structured.bufferize_to_allocation %0 {memory_space = 4} : !transform.any_op
 }
-
-

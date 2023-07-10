@@ -130,43 +130,44 @@ class MultiTileSizesOp:
 
 
 class PadOp:
-    """Specialization for PadOp class."""
+  """Specialization for PadOp class."""
 
-    def __init__(
-        self,
-        target: Union[Operation, Value],
-        *,
-        padding_values: Optional[
-            Optional[Union[ArrayAttr, Sequence[Attribute]]]
-        ] = None,
-        padding_dimensions: OptionalIntList = None,
-        pack_paddings: OptionalIntList = None,
-        transpose_paddings: Optional[
-            Union[ArrayAttr, Sequence[Union[ArrayAttr, IntOrAttrList]]]
-        ] = None,
-        loc=None,
-        ip=None,
-    ):
-        if transpose_paddings is None:
-            transpose_paddings = []
-        if pack_paddings is None:
-            pack_paddings = []
-        if padding_dimensions is None:
-            padding_dimensions = []
-        if padding_values is None:
-            padding_values = []
-        pdl_operation_type = pdl.OperationType.get()
-        transpose_paddings_attr = _get_int_int_array_attr(transpose_paddings)
-        super().__init__(
-            pdl_operation_type,
-            _get_op_result_or_value(target),
-            padding_values=padding_values,
-            padding_dimensions=padding_dimensions,
-            pack_paddings=pack_paddings,
-            transpose_paddings=transpose_paddings_attr,
-            loc=loc,
-            ip=ip,
-        )
+  def __init__(
+      self,
+      target: Union[Operation, Value],
+      *,
+      padding_values: Optional[
+          Optional[Union[ArrayAttr, Sequence[Attribute]]]
+      ] = None,
+      padding_dimensions: OptionalIntList = None,
+      pack_paddings: OptionalIntList = None,
+      transpose_paddings: Optional[
+          Union[ArrayAttr, Sequence[Union[ArrayAttr, IntOrAttrList]]]
+      ] = None,
+      loc=None,
+      ip=None,
+  ):
+    if transpose_paddings is None:
+      transpose_paddings = []
+    if pack_paddings is None:
+      pack_paddings = []
+    if padding_dimensions is None:
+      padding_dimensions = []
+    if padding_values is None:
+      padding_values = []
+    pdl_operation_type = pdl.OperationType.get()
+    transpose_paddings_attr = _get_int_int_array_attr(transpose_paddings)
+    super().__init__(
+        pdl_operation_type,
+        pdl_operation_type,
+        _get_op_result_or_value(target),
+        padding_values=padding_values,
+        padding_dimensions=padding_dimensions,
+        pack_paddings=pack_paddings,
+        transpose_paddings=transpose_paddings_attr,
+        loc=loc,
+        ip=ip,
+    )
 
 
 class ScalarizeOp:

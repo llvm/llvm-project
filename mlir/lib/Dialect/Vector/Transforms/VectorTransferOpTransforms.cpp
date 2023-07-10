@@ -297,12 +297,6 @@ static SmallVector<int64_t> getReducedShape(ArrayRef<int64_t> shape) {
   return reducedShape;
 }
 
-/// Returns true if all values are `arith.constant 0 : index`
-static bool isZero(Value v) {
-  auto cst = v.getDefiningOp<arith::ConstantIndexOp>();
-  return cst && cst.value() == 0;
-}
-
 namespace {
 
 /// Rewrites `vector.transfer_read` ops where the source has unit dims, by
@@ -338,8 +332,9 @@ class TransferReadDropUnitDimsPattern
     int vectorReducedRank = getReducedRank(vectorType.getShape());
     if (reducedRank != vectorReducedRank)
       return failure();
-    if (llvm::any_of(transferReadOp.getIndices(),
-                     [](Value v) { return !isZero(v); }))
+    if (llvm::any_of(transferReadOp.getIndices(), [](Value v) {
+          return getConstantIntValue(v) != static_cast<int64_t>(0);
+        }))
       return failure();
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
@@ -392,8 +387,9 @@ class TransferWriteDropUnitDimsPattern
     int vectorReducedRank = getReducedRank(vectorType.getShape());
     if (reducedRank != vectorReducedRank)
       return failure();
-    if (llvm::any_of(transferWriteOp.getIndices(),
-                     [](Value v) { return !isZero(v); }))
+    if (llvm::any_of(transferWriteOp.getIndices(), [](Value v) {
+          return getConstantIntValue(v) != static_cast<int64_t>(0);
+        }))
       return failure();
     Value reducedShapeSource =
         rankReducingSubviewDroppingUnitDims(rewriter, loc, source);
@@ -463,8 +459,7 @@ checkAndCollapseInnerZeroIndices(ValueRange indices, int64_t firstDimToCollapse,
   if (firstDimToCollapse >= rank)
     return failure();
   for (int64_t i = firstDimToCollapse; i < rank; ++i) {
-    arith::ConstantIndexOp cst =
-        indices[i].getDefiningOp<arith::ConstantIndexOp>();
+    std::optional<int64_t> cst = getConstantIntValue(indices[i]);
     if (!cst || cst.value() != 0)
       return failure();
   }

@@ -125,6 +125,10 @@ bool applyCmpPredicate(arith::CmpFPredicate predicate, const APFloat &lhs,
 TypedAttr getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
                                OpBuilder &builder, Location loc);
 
+/// Return the identity numeric value associated to the give op. Return
+/// std::nullopt if there is no known neutral element.
+std::optional<TypedAttr> getNeutralElement(Operation *op);
+
 /// Returns the identity value associated with an AtomicRMWKind op.
 Value getIdentityValue(AtomicRMWKind op, Type resultType, OpBuilder &builder,
                        Location loc);

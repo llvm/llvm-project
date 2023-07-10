@@ -2487,8 +2487,8 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
 /// RISC-V doesn't have general instructions for integer setne/seteq, but we can
 /// check for equality with 0. This function emits instructions that convert the
 /// seteq/setne into something that can be compared with 0.
-/// When \p Equal is false, we match setne. When \p Equal is true, we match
-/// seteq.
+/// \p ExpectedCCVal indicates the condition code to attempt to match (e.g.
+/// ISD::SETNE).
 bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
                                     SDValue &Val) {
   assert(ISD::isIntEqualitySetCC(ExpectedCCVal) &&

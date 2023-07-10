@@ -28,7 +28,6 @@ static_library("FlowSensitive") {
     "DataflowAnalysisContext.cpp",
     "DataflowEnvironment.cpp",
     "DebugSupport.cpp",
-    "Formula.cpp",
     "HTMLLogger.cpp",
     "Logger.cpp",
     "RecordOps.cpp",

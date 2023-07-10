@@ -729,7 +729,7 @@ public:
     return 1;
   }
 
-  InstructionCost getMinMaxReductionCost(VectorType *, VectorType *, bool,
+  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *,
                                          FastMathFlags,
                                          TTI::TargetCostKind) const {
     return 1;
