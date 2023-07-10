@@ -1759,16 +1759,7 @@ MemberExpr *MemberExpr::Create(
   MemberExpr *E = new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, MemberDecl,
                                        NameInfo, T, VK, OK, NOUR);
 
-  // FIXME: remove remaining dependence computation to computeDependence().
-  auto Deps = E->getDependence();
   if (HasQualOrFound) {
-    // FIXME: Wrong. We should be looking at the member declaration we found.
-    if (QualifierLoc && QualifierLoc.getNestedNameSpecifier()->isDependent())
-      Deps |= ExprDependence::TypeValueInstantiation;
-    else if (QualifierLoc &&
-             QualifierLoc.getNestedNameSpecifier()->isInstantiationDependent())
-      Deps |= ExprDependence::Instantiation;
-
     E->MemberExprBits.HasQualifierOrFoundDecl = true;
 
     MemberExprNameQualifier *NQ =
@@ -1780,13 +1771,16 @@ MemberExpr *MemberExpr::Create(
   E->MemberExprBits.HasTemplateKWAndArgsInfo =
       TemplateArgs || TemplateKWLoc.isValid();
 
+  // FIXME: remove remaining dependence computation to computeDependence().
+  auto Deps = E->getDependence();
   if (TemplateArgs) {
     auto TemplateArgDeps = TemplateArgumentDependence::None;
     E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc, *TemplateArgs,
         E->getTrailingObjects<TemplateArgumentLoc>(), TemplateArgDeps);
-    if (TemplateArgDeps & TemplateArgumentDependence::Instantiation)
-      Deps |= ExprDependence::Instantiation;
+    for (const TemplateArgumentLoc &ArgLoc : TemplateArgs->arguments()) {
+      Deps |= toExprDependence(ArgLoc.getArgument().getDependence());
+    }
   } else if (TemplateKWLoc.isValid()) {
     E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);

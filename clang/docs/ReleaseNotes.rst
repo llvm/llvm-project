@@ -573,6 +573,9 @@ Bug Fixes in This Version
 - Stop evaluating a constant expression if the condition expression which in
   switch statement contains errors.
   (`#63453 <https://github.com/llvm/llvm-project/issues/63453>_`)
+- Fixed false positive error diagnostic when pack expansion appears in template
+  parameters of a member expression.
+  (`#48731 <https://github.com/llvm/llvm-project/issues/48731>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
