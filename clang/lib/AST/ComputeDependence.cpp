@@ -611,9 +611,24 @@ ExprDependence clang::computeDependence(OffsetOfExpr *E) {
   return D;
 }
 
+static inline ExprDependence getDependenceInExpr(DeclarationNameInfo Name) {
+  auto D = ExprDependence::None;
+  if (Name.isInstantiationDependent())
+    D |= ExprDependence::Instantiation;
+  if (Name.containsUnexpandedParameterPack())
+    D |= ExprDependence::UnexpandedPack;
+  return D;
+}
+
 ExprDependence clang::computeDependence(MemberExpr *E) {
-  auto *MemberDecl = E->getMemberDecl();
   auto D = E->getBase()->getDependence();
+  D |= getDependenceInExpr(E->getMemberNameInfo());
+
+  if (auto *NNS = E->getQualifier())
+    D |= toExprDependence(NNS->getDependence() &
+                          ~NestedNameSpecifierDependence::Dependent);
+
+  auto *MemberDecl = E->getMemberDecl();
   if (FieldDecl *FD = dyn_cast<FieldDecl>(MemberDecl)) {
     DeclContext *DC = MemberDecl->getDeclContext();
     // dyn_cast_or_null is used to handle objC variables which do not
@@ -720,15 +735,6 @@ ExprDependence clang::computeDependence(CXXPseudoDestructorExpr *E) {
   if (auto *Q = E->getQualifier())
     D |= toExprDependence(Q->getDependence() &
                           ~NestedNameSpecifierDependence::Dependent);
-  return D;
-}
-
-static inline ExprDependence getDependenceInExpr(DeclarationNameInfo Name) {
-  auto D = ExprDependence::None;
-  if (Name.isInstantiationDependent())
-    D |= ExprDependence::Instantiation;
-  if (Name.containsUnexpandedParameterPack())
-    D |= ExprDependence::UnexpandedPack;
   return D;
 }
 
