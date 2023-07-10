@@ -225,16 +225,17 @@ TEST_F(FunctionSpecializationTest, BranchInst) {
 
 TEST_F(FunctionSpecializationTest, Misc) {
   const char *ModuleString = R"(
-    @g = constant [2 x i32] zeroinitializer, align 4
+    %struct_t = type { [8 x i16], [8 x i16], i32, i32, i32, ptr, [8 x i8] }
+    @g = constant %struct_t zeroinitializer, align 16
 
     declare i32 @llvm.smax.i32(i32, i32)
     declare i32 @bar(i32)
 
     define i32 @foo(i8 %a, i1 %cond, ptr %b, i32 %c) {
       %cmp = icmp eq i8 %a, 10
-      %ext = zext i1 %cmp to i32
-      %sel = select i1 %cond, i32 %ext, i32 1
-      %gep = getelementptr i32, ptr %b, i32 %sel
+      %ext = zext i1 %cmp to i64
+      %sel = select i1 %cond, i64 %ext, i64 1
+      %gep = getelementptr inbounds %struct_t, ptr %b, i64 %sel, i32 4
       %ld = load i32, ptr %gep
       %fr = freeze i32 %ld
       %smax = call i32 @llvm.smax.i32(i32 %fr, i32 1)
@@ -280,8 +281,8 @@ TEST_F(FunctionSpecializationTest, Misc) {
   Ref = getInstCost(Gep) + getInstCost(Load) + getInstCost(Freeze) +
         getInstCost(Smax);
   Bonus = Specializer.getSpecializationBonus(F->getArg(2), GV, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  EXPECT_NE(Bonus, Ref);
+  EXPECT_FALSE(Bonus > 0);
 
   Bonus = Specializer.getSpecializationBonus(F->getArg(3), Undef, Visitor);
   EXPECT_TRUE(Bonus == 0);
