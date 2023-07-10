@@ -152,9 +152,9 @@ struct BTFEnum {
 /// The exact number of BTFEnum64 is stored in the vlen (of the
 /// info in "struct CommonType").
 struct BTFEnum64 {
-  uint32_t NameOff; ///< Enum name offset in the string table
-  uint32_t Val_Lo32;     ///< Enum member lo32 value
-  uint32_t Val_Hi32;     ///< Enum member hi32 value
+  uint32_t NameOff;  ///< Enum name offset in the string table
+  uint32_t Val_Lo32; ///< Enum member lo32 value
+  uint32_t Val_Hi32; ///< Enum member hi32 value
 };
 
 /// BTF_KIND_ARRAY is followed by one "struct BTFArray".
@@ -218,10 +218,10 @@ struct ExtHeader {
   uint8_t Flags;
   uint32_t HdrLen;
 
-  uint32_t FuncInfoOff;    ///< Offset of func info section
-  uint32_t FuncInfoLen;    ///< Length of func info section
-  uint32_t LineInfoOff;    ///< Offset of line info section
-  uint32_t LineInfoLen;    ///< Length of line info section
+  uint32_t FuncInfoOff;   ///< Offset of func info section
+  uint32_t FuncInfoLen;   ///< Length of func info section
+  uint32_t LineInfoOff;   ///< Offset of line info section
+  uint32_t LineInfoLen;   ///< Length of line info section
   uint32_t FieldRelocOff; ///< Offset of offset reloc section
   uint32_t FieldRelocLen; ///< Length of offset reloc section
 };
@@ -263,7 +263,7 @@ struct BPFFieldReloc {
 
 /// Specifying offset relocation's in one section.
 struct SecFieldReloc {
-  uint32_t SecNameOff;     ///< Section name index in the .BTF string table
+  uint32_t SecNameOff;    ///< Section name index in the .BTF string table
   uint32_t NumFieldReloc; ///< Number of offset reloc's in this section
 };
 
