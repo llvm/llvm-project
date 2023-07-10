@@ -209,3 +209,24 @@ void pointers(int *p) {
   // %[[BOOLPTR:]] = cir.cast(ptr_to_bool, %15 : !cir.ptr<!s32i>), !cir.bool
   // cir.unary(not, %[[BOOLPTR]]) : !cir.bool, !cir.bool
 }
+
+void chars(char c) {
+// CHECK: cir.func @{{.+}}chars{{.+}}
+
+  +c;
+  // CHECK: %[[#PROMO:]] = cir.cast(integral, %{{.+}} : !s8i), !s32i
+  // CHECK: cir.unary(plus, %[[#PROMO]]) : !s32i, !s32i
+  -c;
+  // CHECK: %[[#PROMO:]] = cir.cast(integral, %{{.+}} : !s8i), !s32i
+  // CHECK: cir.unary(minus, %[[#PROMO]]) : !s32i, !s32i
+
+  // Chars can go through some integer promotion codegen paths even when not promoted.
+  ++c; // CHECK: cir.unary(inc, %7) : !s8i, !s8i
+  --c; // CHECK: cir.unary(dec, %9) : !s8i, !s8i
+  c++; // CHECK: cir.unary(inc, %11) : !s8i, !s8i
+  c--; // CHECK: cir.unary(dec, %13) : !s8i, !s8i
+
+  !c;
+  // CHECK: %[[#C_BOOL:]] = cir.cast(int_to_bool, %{{[0-9]+}} : !s8i), !cir.bool
+  // CHECK: cir.unary(not, %[[#C_BOOL]]) : !cir.bool, !cir.bool
+}
