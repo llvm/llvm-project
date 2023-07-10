@@ -828,10 +828,10 @@ declare i32 @llvm.abs.i32(i32, i1)
 
 define i32 @stride_sum_abs_diff(ptr %p, ptr %q, i64 %stride) {
 ; CHECK-LABEL: @stride_sum_abs_diff(
-; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[STRIDE:%.*]]
-; CHECK-NEXT:    [[Q_2:%.*]] = getelementptr inbounds i32, ptr [[Q:%.*]], i64 [[STRIDE]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[Q]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    [[P_2:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[STRIDE:%.*]]
+; CHECK-NEXT:    [[Q_2:%.*]] = getelementptr inbounds i32, ptr [[Q]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[P_2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[Q_2]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
