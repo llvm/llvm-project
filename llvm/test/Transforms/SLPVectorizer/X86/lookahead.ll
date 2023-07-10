@@ -207,10 +207,10 @@ define void @lookahead_external_uses(ptr %A, ptr %B, ptr %C, ptr %D, ptr %S, ptr
 ; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
 ; CHECK-NEXT:    [[C0:%.*]] = load double, ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[D0:%.*]] = load double, ptr [[D:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[IDXB2]], align 8
 ; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[IDXA2]], align 8
 ; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[B2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP2]]
@@ -285,10 +285,10 @@ define void @lookahead_limit_users_budget(ptr %A, ptr %B, ptr %C, ptr %D, ptr %S
 ; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
 ; CHECK-NEXT:    [[C0:%.*]] = load double, ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[D0:%.*]] = load double, ptr [[D:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[B2:%.*]] = load double, ptr [[IDXB2]], align 8
 ; CHECK-NEXT:    [[A2:%.*]] = load double, ptr [[IDXA2]], align 8
 ; CHECK-NEXT:    [[B1:%.*]] = load double, ptr [[IDXB1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[B2]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub fast <2 x double> [[TMP0]], [[TMP2]]
