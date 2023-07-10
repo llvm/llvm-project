@@ -210,7 +210,7 @@ static auto isInUnspecifiedLvalueContext(internal::Matcher<Expr> innerMatcher) {
         hasLHS(innerMatcher)
       )
     ));
-// clang-format off
+// clang-format on
 }
 
 
