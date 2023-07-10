@@ -2870,23 +2870,29 @@ multiclass VPseudoVMRG_VM_XM_IM {
 
     def "_VVM"  # "_" # m.MX :
       VPseudoBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                           m.vrclass, m.vrclass, m, 1, "">;
+                           m.vrclass, m.vrclass, m, 1, "">,
+      Sched<[WriteVIMergeV_MX, ReadVIMergeV_MX, ReadVIMergeV_MX, ReadVMask]>;
     def "_VXM" # "_" # m.MX :
       VPseudoBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                           m.vrclass, GPR, m, 1, "">;
+                           m.vrclass, GPR, m, 1, "">,
+      Sched<[WriteVIMergeX_MX, ReadVIMergeV_MX, ReadVIMergeX_MX, ReadVMask]>;
     def "_VIM" # "_" # m.MX :
       VPseudoBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                           m.vrclass, simm5, m, 1, "">;
+                           m.vrclass, simm5, m, 1, "">,
+      Sched<[WriteVIMergeI_MX, ReadVIMergeV_MX, ReadVMask]>;
     // Tied versions to allow codegen control over the tail elements
     def "_VVM" # "_" # m.MX # "_TU" :
       VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, m.vrclass, m, 1, "">;
+                               m.vrclass, m.vrclass, m, 1, "">,
+      Sched<[WriteVIMergeV_MX, ReadVIMergeV_MX, ReadVIMergeV_MX, ReadVMask]>;
     def "_VXM" # "_" # m.MX # "_TU":
       VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, GPR, m, 1, "">;
+                               m.vrclass, GPR, m, 1, "">,
+      Sched<[WriteVIMergeX_MX, ReadVIMergeV_MX, ReadVIMergeX_MX, ReadVMask]>;
     def "_VIM" # "_" # m.MX # "_TU":
       VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, simm5, m, 1, "">;
+                               m.vrclass, simm5, m, 1, "">,
+      Sched<[WriteVIMergeI_MX, ReadVIMergeV_MX, ReadVMask]>;
   }
 }
 
