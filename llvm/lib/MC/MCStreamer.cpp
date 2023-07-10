@@ -1208,6 +1208,11 @@ void MCStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
                      "XCOFF targets");
 }
 
+void MCStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
+  llvm_unreachable("emitXCOFFCInfoSym is only supported on"
+                   "XCOFF targets");
+}
+
 void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
 void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}
