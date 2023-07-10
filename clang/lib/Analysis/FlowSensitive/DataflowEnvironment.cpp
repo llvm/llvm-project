@@ -170,8 +170,7 @@ static void insertIfFunction(const Decl &D,
 }
 
 static void
-getFieldsGlobalsAndFuncs(const Decl &D,
-                         llvm::DenseSet<const FieldDecl *> &Fields,
+getFieldsGlobalsAndFuncs(const Decl &D, FieldSet &Fields,
                          llvm::DenseSet<const VarDecl *> &Vars,
                          llvm::DenseSet<const FunctionDecl *> &Funcs) {
   insertIfGlobal(D, Vars);
@@ -188,8 +187,7 @@ getFieldsGlobalsAndFuncs(const Decl &D,
 /// global variables and functions that are declared in or referenced from
 /// sub-statements.
 static void
-getFieldsGlobalsAndFuncs(const Stmt &S,
-                         llvm::DenseSet<const FieldDecl *> &Fields,
+getFieldsGlobalsAndFuncs(const Stmt &S, FieldSet &Fields,
                          llvm::DenseSet<const VarDecl *> &Vars,
                          llvm::DenseSet<const FunctionDecl *> &Funcs) {
   for (auto *Child : S.children())
@@ -222,7 +220,7 @@ getFieldsGlobalsAndFuncs(const Stmt &S,
 void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   assert(FuncDecl->getBody() != nullptr);
 
-  llvm::DenseSet<const FieldDecl *> Fields;
+  FieldSet Fields;
   llvm::DenseSet<const VarDecl *> Vars;
   llvm::DenseSet<const FunctionDecl *> Funcs;
 
@@ -708,7 +706,7 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
     const QualType Type = AggregateLoc.getType();
     assert(Type->isRecordType());
 
-    for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
+    for (const FieldDecl *Field : DACtx->getModeledFields(Type)) {
       assert(Field != nullptr);
       StorageLocation &FieldLoc = AggregateLoc.getChild(*Field);
       MemberLocToStruct[&FieldLoc] = std::make_pair(StructVal, Field);
@@ -846,7 +844,7 @@ Value *Environment::createValueUnlessSelfReferential(
   if (Type->isRecordType()) {
     CreatedValuesCount++;
     llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
-    for (const FieldDecl *Field : DACtx->getReferencedFields(Type)) {
+    for (const FieldDecl *Field : DACtx->getModeledFields(Type)) {
       assert(Field != nullptr);
 
       QualType FieldType = Field->getType();
