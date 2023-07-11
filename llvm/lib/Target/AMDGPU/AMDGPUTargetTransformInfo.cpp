@@ -297,8 +297,9 @@ GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
       TLI(ST->getTargetLowering()), CommonTTI(TM, F),
       IsGraphics(AMDGPU::isGraphics(F.getCallingConv())) {
   SIModeRegisterDefaults Mode(F);
-  HasFP32Denormals = Mode.allFP32Denormals();
-  HasFP64FP16Denormals = Mode.allFP64FP16Denormals();
+  HasFP32Denormals = Mode.FP32Denormals != DenormalMode::getPreserveSign();
+  HasFP64FP16Denormals =
+      Mode.FP64FP16Denormals != DenormalMode::getPreserveSign();
 }
 
 bool GCNTTIImpl::hasBranchDivergence(const Function *F) const {

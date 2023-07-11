@@ -54,14 +54,6 @@ struct SIModeRegisterDefaults {
            FP64FP16Denormals == Other.FP64FP16Denormals;
   }
 
-  bool allFP32Denormals() const {
-    return FP32Denormals == DenormalMode::getIEEE();
-  }
-
-  bool allFP64FP16Denormals() const {
-    return FP64FP16Denormals == DenormalMode::getIEEE();
-  }
-
   /// Get the encoding value for the FP_DENORM bits of the mode register for the
   /// FP32 denormal mode.
   uint32_t fpDenormModeSPValue() const {
