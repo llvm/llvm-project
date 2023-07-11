@@ -44,6 +44,11 @@ def NVGPU_Dialect : Dialect {
     /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
     static bool hasSharedMemoryAddressSpace(MemRefType type);
 
+    /// Return true if the given Attribute has an integer address
+    /// space that matches the NVVM shared memory address space or
+    /// is a gpu::AddressSpaceAttr attribute with value 'workgroup`.
+    static bool isSharedMemoryAddressSpace(Attribute type);
+
     /// Defines the MemRef memory space attribute numeric value that indicates
     /// a memref is located in global memory. This should correspond to the
     /// value used in NVVM.
@@ -76,6 +81,24 @@ def NVGPU_DeviceAsyncToken : NVGPU_Type<"DeviceAsyncToken",
     DeviceAsyncWaitOp).
   }];
 }
+
+def NVGPU_MBarrier : NVGPU_Type<"MBarrier", "mbarrier.barrier", []> {
+  let summary = "mbarrier barrier type";
+  let description = [{
+    This is the type for a mbarrier object in shared memory that is used 
+    to synchronize a variable number of threads.
+
+    The mbarrier object is 64 bit with 8 byte alignment. The mbarrier object 
+    can be initiated and invalidated. 
+
+    See for more details:
+    https://docs.nvidia.com/cuda/parallel-thread-execution/#size-and-alignment-of-mbarrier-object
+  }];    
+  let parameters = (ins "Attribute":$memorySpace);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def NVGPU_MBarrierToken : NVGPU_Type<"MBarrierToken", "mbarrier.token", []> { }
 
 //===----------------------------------------------------------------------===//
 // NVGPU Op Definitions
@@ -353,6 +376,97 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
   let assemblyFormat = [{
     $asyncDependencies attr-dict
   }];
+}
+
+def NVGPU_MBarrierCreateOp : NVGPU_Op<"mbarrier.create", []> {
+  let summary = "Creates a `nvgpu.mbarrier` object.";
+  let description = [{
+    The Op generates an `mbarrier` object, which is a barrier created in 
+    shared memory and supports various synchronization behaviors for threads.
+
+    The `mbarrier` object has the following type and alignment requirements:
+      Type: .b64, Alignment: 8, Memory space: .shared
+    
+    Example:
+    ```mlir
+      %barrier = nvgpu.mbarrier.create -> !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+    ```
+    }];
+  let arguments = (ins);
+  let results = (outs NVGPU_MBarrier:$barrier);
+  let assemblyFormat = [{
+     attr-dict `->` type($barrier)
+  }];
+}
+
+def NVGPU_MBarrierInitOp : NVGPU_Op<"mbarrier.init", []> {
+  let summary = "Initialize the `nvgpu.mbarrier`.";
+  let description = [{
+    The Op initializes the `mbarrier` object with the given number of threads.
+
+    Example:
+    ```mlir
+      %num_threads = gpu.block_dim x
+      %barrier = nvgpu.mbarrier.create -> !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+      nvgpu.mbarrier.init %barrier, %num_threads : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+    ```
+  }];
+  let arguments = (ins NVGPU_MBarrier:$barrier, Index:$count);    
+  let assemblyFormat = "$barrier  `,` $count attr-dict `:` type($barrier)";
+}
+
+def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
+  let summary = "Checks if the `nvgpu.mbarrier` has completed its current phase.";
+  let description = [{
+    Checks whether the mbarrier object has completed the phase. It is is a 
+    non-blocking instruction which tests for the completion of the phase.
+
+    Example:
+    ```mlir
+      %isComplete = nvgpu.mbarrier.test.wait %barrier, %token : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>, !nvgpu.mbarrier.token
+    ```
+  }];
+  let arguments = (ins NVGPU_MBarrier:$barrier, NVGPU_MBarrierToken:$token);
+  let results = (outs I1:$waitComplete);
+  let assemblyFormat = "$barrier `,` $token attr-dict `:` type($barrier) `,` type($token)";
+}
+
+def NVGPU_MBarrierArriveOp : NVGPU_Op<"mbarrier.arrive", []> {
+  let summary = "Performs arrive operation on the `nvgpu.mbarrier.arrive`.";
+  let description = [{
+    The Op performs arrive-on operation on the `mbarrier` object and returns a 
+    `nvgpu.mbarrier.token`.
+
+    For more information, see
+    https://docs.nvidia.com/cuda/parallel-thread-execution/#arrive-on-operation-on-mbarrier-object
+
+    Example:
+    ```mlir
+      %token = nvgpu.mbarrier.arrive %barrier : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>> -> !nvgpu.mbarrier.token
+    ```
+  }];
+  let arguments = (ins NVGPU_MBarrier:$barrier);
+  let results = (outs NVGPU_MBarrierToken:$token);
+let assemblyFormat = "$barrier attr-dict `:` type($barrier) `->` type($token)";
+}
+
+def NVGPU_MBarrierArriveNoCompleteOp : NVGPU_Op<"mbarrier.arrive.nocomplete", []> {
+  let summary = "Performs arrive operation on the `nvgpu.mbarrier.arrive.nocomplete` as non-blocking.";
+  let description = [{
+    The Op performs arrive-on operation on the `mbarrier` object and returns a 
+    `nvgpu.mbarrier.token`.
+
+    The Op does not cause the `nvgpu.mbarrier` to complete its current phase.
+
+    Example:
+    ```mlir
+      %token = nvgpu.mbarrier.arrive.noComplete %barrier, %count : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>> -> !nvgpu.mbarrier.token
+    ```
+  }];
+  let arguments = (ins NVGPU_MBarrier:$barrier,
+                       Index:$count);
+  let results = (outs NVGPU_MBarrierToken:$token);
+  let assemblyFormat = "$barrier `,` $count attr-dict `:` type($barrier) `->` type($token)";
 }
 
 #endif // NVGPU
