@@ -245,13 +245,6 @@ bool isKernelLDS(const Function *F) {
   return AMDGPU::isKernel(F->getCallingConv());
 }
 
-template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
-  llvm::sort(V.begin(), V.end(), [](const auto *L, const auto *R) {
-    return L->getName() < R->getName();
-  });
-  return V;
-}
-
 class AMDGPULowerModuleLDS : public ModulePass {
 
   static void
@@ -736,7 +729,10 @@ public:
       }
 
       // Put them in an arbitrary but reproducible order
-      OrderedKernels = sortByName(std::move(OrderedKernels));
+      llvm::sort(OrderedKernels.begin(), OrderedKernels.end(),
+                 [](const Function *lhs, const Function *rhs) -> bool {
+                   return lhs->getName() < rhs->getName();
+                 });
 
       // Annotate the kernels with their order in this vector
       LLVMContext &Ctx = M->getContext();
@@ -1183,8 +1179,13 @@ public:
 
       // The order must be consistent between lookup table and accesses to
       // lookup table
-      auto TableLookupVariablesOrdered = sortByName(std::vector(
-          TableLookupVariables.begin(), TableLookupVariables.end()));
+      std::vector<GlobalVariable *> TableLookupVariablesOrdered(
+          TableLookupVariables.begin(), TableLookupVariables.end());
+      llvm::sort(TableLookupVariablesOrdered.begin(),
+                 TableLookupVariablesOrdered.end(),
+                 [](const GlobalVariable *lhs, const GlobalVariable *rhs) {
+                   return lhs->getName() < rhs->getName();
+                 });
 
       GlobalVariable *LookupTable = buildLookupTable(
           M, TableLookupVariablesOrdered, OrderedKernels, KernelToReplacement);
@@ -1331,9 +1332,12 @@ private:
       // The order of fields in this struct depends on the order of
       // varables in the argument which varies when changing how they
       // are identified, leading to spurious test breakage.
-      auto Sorted = sortByName(
-          std::vector(LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
-
+      std::vector<GlobalVariable *> Sorted(LDSVarsToTransform.begin(),
+                                           LDSVarsToTransform.end());
+      llvm::sort(Sorted.begin(), Sorted.end(),
+                 [](const GlobalVariable *lhs, const GlobalVariable *rhs) {
+                   return lhs->getName() < rhs->getName();
+                 });
       for (GlobalVariable *GV : Sorted) {
         OptimizedStructLayoutField F(GV,
                                      DL.getTypeAllocSize(GV->getValueType()),
@@ -1414,15 +1418,19 @@ private:
   template <typename PredicateTy>
   static void replaceLDSVariablesWithStruct(
       Module &M, DenseSet<GlobalVariable *> const &LDSVarsToTransformArg,
-      const LDSVariableReplacement &Replacement, PredicateTy Predicate) {
+      LDSVariableReplacement Replacement, PredicateTy Predicate) {
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
 
     // A hack... we need to insert the aliasing info in a predictable order for
     // lit tests. Would like to have them in a stable order already, ideally the
     // same order they get allocated, which might mean an ordered set container
-    std::vector<GlobalVariable *> LDSVarsToTransform = sortByName(std::vector(
-        LDSVarsToTransformArg.begin(), LDSVarsToTransformArg.end()));
+    std::vector<GlobalVariable *> LDSVarsToTransform(
+        LDSVarsToTransformArg.begin(), LDSVarsToTransformArg.end());
+    llvm::sort(LDSVarsToTransform.begin(), LDSVarsToTransform.end(),
+               [](const GlobalVariable *lhs, const GlobalVariable *rhs) {
+                 return lhs->getName() < rhs->getName();
+               });
 
     // Create alias.scope and their lists. Each field in the new structure
     // does not alias with all other fields.
