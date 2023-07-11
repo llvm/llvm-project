@@ -283,6 +283,8 @@ end
 * When a name is brought into a scope by multiple ways,
   such as USE-association as well as an `IMPORT` from its host,
   it's an error only if the resolution is ambiguous.
+* An entity may appear in a `DATA` statement before its explicit
+  type declaration under `IMPLICIT NONE(TYPE)`.
 
 ### Extensions supported when enabled by options
 
