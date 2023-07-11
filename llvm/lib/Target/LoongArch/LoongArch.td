@@ -132,9 +132,7 @@ def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
 //===----------------------------------------------------------------------===//
 
 def LoongArchInstrInfo : InstrInfo {
-  // guess mayLoad, mayStore, and hasSideEffects
-  // This option is a temporary migration help. It will go away.
-  let guessInstructionProperties = 1;
+  let guessInstructionProperties = 0;
 }
 
 def LoongArchAsmParser : AsmParser {
