@@ -50317,8 +50317,7 @@ static SDValue combineAndMaskToShift(SDNode *N, SelectionDAG &DAG,
   }
 
   APInt SplatVal;
-  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) ||
-      !SplatVal.isMask())
+  if (!X86::isConstantSplat(Op1, SplatVal, false) || !SplatVal.isMask())
     return SDValue();
 
   // Don't prevent creation of ANDN.
