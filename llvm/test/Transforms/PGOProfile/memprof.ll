@@ -23,36 +23,19 @@
 ; ALL-NOT: memprof record not found for function hash
 ; ALL-NOT: no profile data available for function
 
-;; Using a memprof-only profile for memprof-use should only give memprof metadata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
+;; Feed back memprof-only profile
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
 ; There should not be any PGO metadata
 ; MEMPROFONLY-NOT: !prof
 
-;; Test the same thing but by passing the memory profile through to a default
-;; pipeline via -memory-profile-file=, which should cause the necessary field
-;; of the PGOOptions structure to be populated with the profile filename.
-; RUN: opt < %s -passes='default<O2>' -memory-profile-file=%t.memprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
-
-;; Using a pgo+memprof profile for memprof-use should only give memprof metadata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,MEMPROFONLY
-
-;; Using a pgo-only profile for memprof-use should give an error
-; RUN: not opt < %s -passes='memprof-use<profile-filename=%t.pgoprofdata>' -S 2>&1 | FileCheck %s --check-prefixes=MEMPROFWITHPGOONLY
-; MEMPROFWITHPGOONLY: Not a memory profile
-
-;; Using a memprof-only profile for pgo-instr-use should give an error
-; RUN: not opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.memprofdata -S 2>&1 | FileCheck %s --check-prefixes=PGOWITHMEMPROFONLY
-; PGOWITHMEMPROFONLY: Not an IR level instrumentation profile
-
-;; Using a pgo+memprof profile for pgo-instr-use should only give pgo metadata
-; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=PGO,ALL,PGOONLY
+;; Feed back pgo-only profile
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.pgoprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=PGO,ALL,PGOONLY
 ; There should not be any memprof related metadata
 ; PGOONLY-NOT: !memprof
 ; PGOONLY-NOT: !callsite
 
-;; Using a pgo+memprof profile for both memprof-use and pgo-instr-use should
-;; give both memprof and pgo metadata.
-; RUN: opt < %s -passes='pgo-instr-use,memprof-use<profile-filename=%t.pgomemprofdata>' -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,ALL,PGO
+;; Feed back pgo+memprof-only profile
+; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.pgomemprofdata -pgo-warn-missing-function -S 2>&1 | FileCheck %s --check-prefixes=MEMPROF,PGO,ALL
 
 ; ModuleID = 'memprof.cc'
 source_filename = "memprof.cc"
