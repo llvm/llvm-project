@@ -236,22 +236,3 @@ This will launch a server and then request a child debug session for a client.
   ]
 }
 ```
-
-## repl-mode
-
-Inspect or adjust the behavior of lldb-vscode repl evaluation requests. The
-supported modes are `variable`, `command` and `auto`.
-
-*  `variable` - Variable mode expressions are evaluated in the context of the
-   current frame. Use a `\`` prefix on the command to run an lldb command.
-*  `command` - Command mode expressions are evaluated as lldb commands, as a
-   result, values printed by lldb are always stringified representations of the
-   expression output.
-*  `auto` - Auto mode will attempt to infer if the expression represents an lldb
-   command or a variable expression. A heuristic is used to infer if the input
-   represents a variable or a command. Use a `\`` prefix to ensure an expression
-   is evaluated as a command.
-
-The initial repl-mode can be configured with the cli flag `--repl-mode=<mode>`
-and may also be adjusted at runtime using the lldb command
-`lldb-vscode repl-mode <mode>`.
