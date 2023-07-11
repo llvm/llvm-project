@@ -465,14 +465,6 @@ bool RTLsTy::requiresAllocForGlobal(const void *HstPtr) {
                    [=](const void *Arg) { return Arg == HstPtr; });
   return It != HostPtrsRequireAlloc.end();
 }
-void RTLsTy::markHostPtrForRequiresAlloc(const void *HstPtr) {
-  if (!requiresAllocForGlobal(HstPtr))
-    HostPtrsRequireAlloc.insert(HstPtr);
-}
-
-void RTLsTy::deMarkHostPtrForRequiresAlloc(const void *HstPtr) {
-  assert(false);
-}
 
 void RTLsTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
@@ -609,7 +601,7 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
         // Add all globals to the list of globals in this image, so later
         // look-ups for globals are faster.
         for (auto *Entry : PM->HostEntriesBeginRegistrationOrder)
-          if (Entry->size > 0) // globals have a size larger 0
+          if (Entry->size > 0) // globals have a size larger than 0
             HostPtrsRequireAlloc.insert(Entry->addr);
         DP("USM_SPECIAL: Marked %i pointers for alloc handling\n",
            HostPtrsRequireAlloc.size());

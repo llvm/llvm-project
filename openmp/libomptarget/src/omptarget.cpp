@@ -764,21 +764,18 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     }
 
     if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
-
       if (prepareAndSubmitData(Device, HstPtrBegin, HstPtrBase, TgtPtrBegin,
                                PointerTpr, PointerHstPtrBegin,
                                PointerTgtPtrBegin,
                                AsyncInfo) != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
-
-    }
-    // XXX Temporary for running a non-USM application on USM-enabled machine
-    // The latter causes the runtime to not copy the data from host to device
-    // although the application will not be able to access the data via the
-    // double indirection that the omp requires unified_shared_memory
-    // clause implies. Therefore, we under the cover perform these transfers
-    // manually for such instances.
-    else if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+    } else if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+      // XXX Temporary for running a non-USM application on USM-enabled machine
+      // The latter causes the runtime to not copy the data from host to device
+      // although the application will not be able to access the data via the
+      // double indirection that the omp requires unified_shared_memory
+      // clause implies. Therefore, we under the cover perform these transfers
+      // manually for such instances.
       // TODO: Can this condition be simplified?
       if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && IsHostPtr &&
           !FromMapper && PM->RTLs.requiresAllocForGlobal(PointerHstPtrBegin)) {
@@ -789,7 +786,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         // allocate memory on the target device
         auto LocalTPR = Device.getTargetPointer(
             HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
-	    HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
+            HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
             HasPresentModifier, HasHoldModifier, AsyncInfo,
             PointerTpr.getEntry());
         // Prepare things so we can copy data to the device.

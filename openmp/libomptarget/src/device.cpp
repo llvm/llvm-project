@@ -365,25 +365,26 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
   } else if (((PM->RTLs.DisableAllocationsForMapsOnApus) ||
               (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) &&
              (!HasCloseModifier)) {
-    // Pointer has been marked for allocation even under USM execution
+    // Pointer has been marked for allocation even under USM execution. This
+    // can happen when handling globals allocated using declare target.
     if (PM->RTLs.requiresAllocForGlobal(HstPtrBegin)) {
       DP("USM_SPECIAL: Requires alloc for HstPtr: %i\n",
          PM->RTLs.requiresAllocForGlobal(HstPtrBegin));
       // This code is copied from below //
       // We allocate the memory on the device to wire up the pointers correctly
-      // in the case that the user did not compile for USM but actually urns in
-      // USM on APU
+      // in the case that the user did not compile for USM but actually runs in
+      // USM on APU.
       if (Size) {
         // We need to allocate
         LR.TPR.Flags.IsNewEntry = true;
         uintptr_t TgtAllocBegin =
-	    (uintptr_t)allocData(TgtPadding + Size, HstPtrBegin);
-	uintptr_t TgtPtrBegin = TgtAllocBegin + TgtPadding; 
+            (uintptr_t)allocData(TgtPadding + Size, HstPtrBegin);
+        uintptr_t TgtPtrBegin = TgtAllocBegin + TgtPadding;
         LR.TPR.setEntry(HDTTMap
                             ->emplace(new HostDataToTargetTy(
                                 (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
                                 (uintptr_t)HstPtrBegin + Size, TgtAllocBegin,
-			       	TgtPtrBegin, HasHoldModifier, HstPtrName))
+                                TgtPtrBegin, HasHoldModifier, HstPtrName))
                             .first->HDTT);
         LR.TPR.TargetPointer = (void *)TgtPtrBegin;
 
@@ -404,9 +405,6 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       // cases maps are respected. In addition to the mapping rules above, the
       // close map modifier forces the mapping of the variable to the device.
       if (Size) {
-        uintptr_t TgtAllocBegin =
-	    (uintptr_t)allocData(TgtPadding + Size, HstPtrBegin);
-	uintptr_t TgtPtrBegin = TgtAllocBegin + TgtPadding; 
         // When allocating under unified_shared_memory, amdgpu plugin
         // can optimize memory access latency by registering allocated
         // memory as coarse-grained. The usage of coarse-grained memory can be
@@ -419,15 +417,15 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
         }
 
         if (!PM->RTLs.NoUSMMapChecks) {
-          // even under unified_shared_memory need to check for correctness of
+          // Even under unified_shared_memory need to check for correctness of
           // use of map clauses. Device pointer is same as host ptr in this case
           LR.TPR.setEntry(
               HDTTMap
                   ->emplace(new HostDataToTargetTy(
                       (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-                      (uintptr_t)HstPtrBegin + Size,  TgtAllocBegin,
-		      TgtPtrBegin, 
-                      HasHoldModifier, HstPtrName, /*IsInf=*/true,
+                      (uintptr_t)HstPtrBegin + Size, (uintptr_t)HstPtrBegin,
+                      (uintptr_t)HstPtrBegin, HasHoldModifier, HstPtrName,
+                      /*IsInf=*/true,
                       /*IsUSMAlloc=*/true))
                   .first->HDTT);
         }

@@ -215,10 +215,6 @@ struct RTLsTy {
 
   /// returns if a pointer requires allocation in USM mode
   bool requiresAllocForGlobal(const void *HstPtr);
-  /// Mark pointer for allocation in USM mode
-  void markHostPtrForRequiresAlloc(const void *HstPtr);
-  /// FIXME: Not implemented yet
-  void deMarkHostPtrForRequiresAlloc(const void *HstPtr);
 
 private:
   static bool attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL);
