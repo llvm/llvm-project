@@ -1071,23 +1071,6 @@ Expected<bool> parseMemorySSAPrinterPassOptions(StringRef Params) {
                                "MemorySSAPrinterPass");
 }
 
-Expected<std::string> parseMemProfUsePassOptions(StringRef Params) {
-  std::string Result;
-  while (!Params.empty()) {
-    StringRef ParamName;
-    std::tie(ParamName, Params) = Params.split(';');
-
-    if (ParamName.consume_front("profile-filename=")) {
-      Result = ParamName.str();
-    } else {
-      return make_error<StringError>(
-          formatv("invalid MemProfUse pass parameter '{0}' ", ParamName).str(),
-          inconvertibleErrorCode());
-    }
-  }
-  return Result;
-}
-
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline

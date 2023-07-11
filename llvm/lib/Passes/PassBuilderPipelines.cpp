@@ -1102,10 +1102,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       PGOOpt->CSAction == PGOOptions::CSIRInstr)
     MPM.addPass(PGOInstrumentationGenCreateVar(PGOOpt->CSProfileGenFile));
 
-  if (PGOOpt && Phase != ThinOrFullLTOPhase::ThinLTOPostLink &&
-      !PGOOpt->MemoryProfile.empty())
-    MPM.addPass(MemProfUsePass(PGOOpt->MemoryProfile, PGOOpt->FS));
-
   // Synthesize function entry counts for non-PGO compilation.
   if (EnableSyntheticCounts && !PGOOpt)
     MPM.addPass(SyntheticCountsPropagation());

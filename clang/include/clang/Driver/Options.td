@@ -1772,10 +1772,6 @@ defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " hea
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
     Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<directory>">,
     HelpText<"Enable heap memory profiling and dump results into <directory>">;
-def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
-    Group<f_Group>, Flags<[CC1Option, CoreOption]>, MetaVarName<"<pathname>">,
-    HelpText<"Use memory profile for profile-guided memory optimization">,
-    MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
