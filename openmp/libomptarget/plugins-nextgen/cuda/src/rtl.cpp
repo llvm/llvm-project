@@ -474,12 +474,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUresult Res;
     // If we have an RPC server running on this device we will continuously
     // query it for work rather than blocking.
-    if (!getRPCHandle()) {
+    if (!getRPCServer()) {
       Res = cuStreamSynchronize(Stream);
     } else {
       do {
         Res = cuStreamQuery(Stream);
-        if (auto Err = getRPCHandle()->runServer())
+        if (auto Err = getRPCServer()->runServer(*this))
           return Err;
       } while (Res == CUDA_ERROR_NOT_READY);
     }

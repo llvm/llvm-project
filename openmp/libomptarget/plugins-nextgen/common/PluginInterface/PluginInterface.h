@@ -762,7 +762,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   }
 
   /// Get the RPC server running on this device.
-  RPCHandleTy *getRPCHandle() const { return RPCHandle; }
+  RPCServerTy *getRPCServer() const { return RPCServer; }
 
 private:
   /// Register offload entry for global variable.
@@ -857,7 +857,7 @@ protected:
 
   /// A pointer to an RPC server instance attached to this device if present.
   /// This is used to run the RPC server during task synchronization.
-  RPCHandleTy *RPCHandle;
+  RPCServerTy *RPCServer;
 
 #ifdef OMPT_SUPPORT
   /// OMPT callback functions
