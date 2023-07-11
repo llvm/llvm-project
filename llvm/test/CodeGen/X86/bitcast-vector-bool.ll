@@ -720,20 +720,16 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 define i1 @trunc_v8i64_cmp(<8 x i64> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: trunc_v8i64_cmp:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; SSE2-SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,0,2,4,5,6,7]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,0,2,4,5,6,7]
-; SSE2-SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE2-SSSE3-NEXT:    movsd {{.*#+}} xmm2 = xmm0[0],xmm2[1]
-; SSE2-SSSE3-NEXT:    psllw $15, %xmm2
-; SSE2-SSSE3-NEXT:    packsswb %xmm2, %xmm2
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %eax
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE2-SSSE3-NEXT:    pslld $16, %xmm2
+; SSE2-SSSE3-NEXT:    psrad $16, %xmm2
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE2-SSSE3-NEXT:    pslld $16, %xmm0
+; SSE2-SSSE3-NEXT:    psrad $16, %xmm0
+; SSE2-SSSE3-NEXT:    packssdw %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    psllw $15, %xmm0
+; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    cmpb $-1, %al
 ; SSE2-SSSE3-NEXT:    sete %al
 ; SSE2-SSSE3-NEXT:    retq
@@ -1471,16 +1467,12 @@ define i8 @PR59526(<8 x i32> %a, <8 x i32> %b, ptr %mask) {
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
 ; SSE-NEXT:    pcmpeqd %xmm3, %xmm1
 ; SSE-NEXT:    movdqu (%rdi), %xmm2
-; SSE-NEXT:    movdqu 16(%rdi), %xmm3
-; SSE-NEXT:    pxor %xmm4, %xmm4
-; SSE-NEXT:    pxor %xmm5, %xmm5
-; SSE-NEXT:    pcmpgtd %xmm2, %xmm5
-; SSE-NEXT:    pand %xmm0, %xmm5
-; SSE-NEXT:    pcmpgtd %xmm3, %xmm4
-; SSE-NEXT:    pand %xmm1, %xmm4
-; SSE-NEXT:    packssdw %xmm4, %xmm5
-; SSE-NEXT:    pmovmskb %xmm5, %eax
-; SSE-NEXT:    testl %eax, %eax
+; SSE-NEXT:    pand %xmm0, %xmm2
+; SSE-NEXT:    movdqu 16(%rdi), %xmm0
+; SSE-NEXT:    pand %xmm1, %xmm0
+; SSE-NEXT:    packssdw %xmm0, %xmm2
+; SSE-NEXT:    pmovmskb %xmm2, %eax
+; SSE-NEXT:    testl $43690, %eax # imm = 0xAAAA
 ; SSE-NEXT:    setne %al
 ; SSE-NEXT:    retq
 ;
