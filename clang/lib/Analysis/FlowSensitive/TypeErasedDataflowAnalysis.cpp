@@ -275,8 +275,7 @@ public:
 ///   `std::nullopt` represent basic blocks that are not evaluated yet.
 static TypeErasedDataflowAnalysisState
 computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
-  llvm::DenseSet<const CFGBlock *> Preds;
-  Preds.insert(Block.pred_begin(), Block.pred_end());
+  std::vector<const CFGBlock *> Preds(Block.pred_begin(), Block.pred_end());
   if (Block.getTerminator().isTemporaryDtorsBranch()) {
     // This handles a special case where the code that produced the CFG includes
     // a conditional operator with a branch that constructs a temporary and
@@ -305,7 +304,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       auto &StmtToBlock = AC.CFCtx.getStmtToBlock();
       auto StmtBlock = StmtToBlock.find(Block.getTerminatorStmt());
       assert(StmtBlock != StmtToBlock.end());
-      Preds.erase(StmtBlock->getSecond());
+      llvm::erase_value(Preds, StmtBlock->getSecond());
     }
   }
 
