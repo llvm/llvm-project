@@ -1143,9 +1143,8 @@ extern "C" __device__ int test_ilogb(double x) {
 
 // DEFAULT-LABEL: @test___finitef(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.fabs.f32(float [[X:%.*]]) #[[ATTR17:[0-9]+]]
-// DEFAULT-NEXT:    [[CMPINF_I:%.*]] = fcmp contract one float [[TMP0]], 0x7FF0000000000000
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMPINF_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 504)
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___finitef(
@@ -1158,9 +1157,8 @@ extern "C" __device__ BOOL_TYPE test___finitef(float x) {
 
 // DEFAULT-LABEL: @test___finite(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.fabs.f64(double [[X:%.*]]) #[[ATTR17]]
-// DEFAULT-NEXT:    [[CMPINF_I:%.*]] = fcmp contract one double [[TMP0]], 0x7FF0000000000000
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMPINF_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X:%.*]], i32 504)
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___finite(
@@ -1173,9 +1171,8 @@ extern "C" __device__ BOOL_TYPE test___finite(double x) {
 
 // DEFAULT-LABEL: @test___isinff(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract float @llvm.fabs.f32(float [[X:%.*]]) #[[ATTR17]]
-// DEFAULT-NEXT:    [[CMPINF_I:%.*]] = fcmp contract oeq float [[TMP0]], 0x7FF0000000000000
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMPINF_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 516)
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___isinff(
@@ -1188,9 +1185,8 @@ extern "C" __device__ BOOL_TYPE test___isinff(float x) {
 
 // DEFAULT-LABEL: @test___isinf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call contract double @llvm.fabs.f64(double [[X:%.*]]) #[[ATTR17]]
-// DEFAULT-NEXT:    [[CMPINF_I:%.*]] = fcmp contract oeq double [[TMP0]], 0x7FF0000000000000
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMPINF_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = tail call i1 @llvm.is.fpclass.f64(double [[X:%.*]], i32 516)
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___isinf(
@@ -1203,8 +1199,8 @@ extern "C" __device__ BOOL_TYPE test___isinf(double x) {
 
 // DEFAULT-LABEL: @test___isnanf(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CMP_I:%.*]] = fcmp contract uno float [[X:%.*]], 0.000000e+00
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMP_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___isnanf(
@@ -1217,8 +1213,8 @@ extern "C" __device__ BOOL_TYPE test___isnanf(float x) {
 
 // DEFAULT-LABEL: @test___isnan(
 // DEFAULT-NEXT:  entry:
-// DEFAULT-NEXT:    [[CMP_I:%.*]] = fcmp contract uno double [[X:%.*]], 0.000000e+00
-// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[CMP_I]] to i32
+// DEFAULT-NEXT:    [[TMP0:%.*]] = fcmp uno double [[X:%.*]], 0.000000e+00
+// DEFAULT-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i32
 // DEFAULT-NEXT:    ret i32 [[CONV]]
 //
 // FINITEONLY-LABEL: @test___isnan(
@@ -1724,11 +1720,11 @@ extern "C" __device__ long int test_lround(double x) {
 // DEFAULT-LABEL: @test_modff(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18:[0-9]+]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17:[0-9]+]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_modf_f32(float noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA16:![0-9]+]]
 // DEFAULT-NEXT:    store float [[TMP0]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA16]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    ret float [[CALL_I]]
 //
 // FINITEONLY-LABEL: @test_modff(
@@ -1748,11 +1744,11 @@ extern "C" __device__ float test_modff(float x, float* y) {
 // DEFAULT-LABEL: @test_modf(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_modf_f64(double noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[TBAA18:![0-9]+]]
 // DEFAULT-NEXT:    store double [[TMP0]], ptr [[Y:%.*]], align 8, !tbaa [[TBAA18]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    ret double [[CALL_I]]
 //
 // FINITEONLY-LABEL: @test_modf(
@@ -2369,11 +2365,11 @@ extern "C" __device__ double test_remainder(double x, double y) {
 // DEFAULT-LABEL: @test_remquof(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_remquo_f32(float noundef [[X:%.*]], float noundef [[Y:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA12]]
 // DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA12]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    ret float [[CALL_I]]
 //
 // FINITEONLY-LABEL: @test_remquof(
@@ -2393,11 +2389,11 @@ extern "C" __device__ float test_remquof(float x, float y, int* z) {
 // DEFAULT-LABEL: @test_remquo(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca i32, align 4, addrspace(5)
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_remquo_f64(double noundef [[X:%.*]], double noundef [[Y:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA12]]
 // DEFAULT-NEXT:    store i32 [[TMP0]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA12]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    ret double [[CALL_I]]
 //
 // FINITEONLY-LABEL: @test_remquo(
@@ -2790,12 +2786,12 @@ extern "C" __device__ BOOL_TYPE test___signbit(double x) {
 // DEFAULT-LABEL: @test_sincosf(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_sincos_f32(float noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    store float [[CALL_I]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA16]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA16]]
 // DEFAULT-NEXT:    store float [[TMP0]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA16]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    ret void
 //
 // FINITEONLY-LABEL: @test_sincosf(
@@ -2816,12 +2812,12 @@ extern "C" __device__ void test_sincosf(float x, float *y, float *z) {
 // DEFAULT-LABEL: @test_sincos(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_sincos_f64(double noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    store double [[CALL_I]], ptr [[Y:%.*]], align 8, !tbaa [[TBAA18]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[TBAA18]]
 // DEFAULT-NEXT:    store double [[TMP0]], ptr [[Z:%.*]], align 8, !tbaa [[TBAA18]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    ret void
 //
 // FINITEONLY-LABEL: @test_sincos(
@@ -2842,12 +2838,12 @@ extern "C" __device__ void test_sincos(double x, double *y, double *z) {
 // DEFAULT-LABEL: @test_sincospif(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_sincospi_f32(float noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    store float [[CALL_I]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA16]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA16]]
 // DEFAULT-NEXT:    store float [[TMP0]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA16]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    ret void
 //
 // FINITEONLY-LABEL: @test_sincospif(
@@ -2868,12 +2864,12 @@ extern "C" __device__ void test_sincospif(float x, float *y, float *z) {
 // DEFAULT-LABEL: @test_sincospi(
 // DEFAULT-NEXT:  entry:
 // DEFAULT-NEXT:    [[__TMP_I:%.*]] = alloca double, align 8, addrspace(5)
-// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.start.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    [[CALL_I:%.*]] = call contract double @__ocml_sincospi_f64(double noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR16]]
 // DEFAULT-NEXT:    store double [[CALL_I]], ptr [[Y:%.*]], align 8, !tbaa [[TBAA18]]
 // DEFAULT-NEXT:    [[TMP0:%.*]] = load double, ptr addrspace(5) [[__TMP_I]], align 8, !tbaa [[TBAA18]]
 // DEFAULT-NEXT:    store double [[TMP0]], ptr [[Z:%.*]], align 8, !tbaa [[TBAA18]]
-// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR18]]
+// DEFAULT-NEXT:    call void @llvm.lifetime.end.p5(i64 8, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // DEFAULT-NEXT:    ret void
 //
 // FINITEONLY-LABEL: @test_sincospi(
