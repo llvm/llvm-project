@@ -36,7 +36,7 @@ namespace llvm {
 struct SubClassReference {
   SMRange RefRange;
   Record *Rec;
-  SmallVector<Init*, 4> TemplateArgs;
+  SmallVector<ArgumentInit *, 4> TemplateArgs;
 
   SubClassReference() : Rec(nullptr) {}
 
@@ -46,7 +46,7 @@ struct SubClassReference {
 struct SubMultiClassReference {
   SMRange RefRange;
   MultiClass *MC;
-  SmallVector<Init*, 4> TemplateArgs;
+  SmallVector<ArgumentInit *, 4> TemplateArgs;
 
   SubMultiClassReference() : MC(nullptr) {}
 
@@ -569,7 +569,7 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
   return false;
 }
 
-bool TGParser::resolveArguments(Record *Rec, ArrayRef<Init *> ArgValues,
+bool TGParser::resolveArguments(Record *Rec, ArrayRef<ArgumentInit *> ArgValues,
                                 SMLoc Loc, ArgValueHandler ArgValueHandler) {
   ArrayRef<Init *> ArgNames = Rec->getTemplateArgs();
   assert(ArgValues.size() <= ArgNames.size() &&
@@ -579,7 +579,7 @@ bool TGParser::resolveArguments(Record *Rec, ArrayRef<Init *> ArgValues,
   // handle the (name, value) pair. If not and there was no default, complain.
   for (unsigned I = 0, E = ArgNames.size(); I != E; ++I) {
     if (I < ArgValues.size())
-      ArgValueHandler(ArgNames[I], ArgValues[I]);
+      ArgValueHandler(ArgNames[I], ArgValues[I]->getValue());
     else {
       Init *Default = Rec->getValue(ArgNames[I])->getValue();
       if (!Default->isComplete())
@@ -597,7 +597,8 @@ bool TGParser::resolveArguments(Record *Rec, ArrayRef<Init *> ArgValues,
 /// Resolve the arguments of class and set them to MapResolver.
 /// Returns true if failed.
 bool TGParser::resolveArgumentsOfClass(MapResolver &R, Record *Rec,
-                                       ArrayRef<Init *> ArgValues, SMLoc Loc) {
+                                       ArrayRef<ArgumentInit *> ArgValues,
+                                       SMLoc Loc) {
   return resolveArguments(Rec, ArgValues, Loc,
                           [&](Init *Name, Init *Value) { R.set(Name, Value); });
 }
@@ -605,7 +606,7 @@ bool TGParser::resolveArgumentsOfClass(MapResolver &R, Record *Rec,
 /// Resolve the arguments of multiclass and store them into SubstStack.
 /// Returns true if failed.
 bool TGParser::resolveArgumentsOfMultiClass(SubstStack &Substs, MultiClass *MC,
-                                            ArrayRef<Init *> ArgValues,
+                                            ArrayRef<ArgumentInit *> ArgValues,
                                             Init *DefmName, SMLoc Loc) {
   // Add an implicit argument NAME.
   Substs.emplace_back(QualifiedNameOfImplicitName(MC), DefmName);
@@ -2596,7 +2597,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
       return nullptr;
     }
 
-    SmallVector<Init *, 8> Args;
+    SmallVector<ArgumentInit *, 8> Args;
     Lex.Lex(); // consume the <
     if (ParseTemplateArgValueList(Args, CurRec, Class))
       return nullptr; // Error parsing value list.
@@ -3121,8 +3122,8 @@ void TGParser::ParseValueList(SmallVectorImpl<Init *> &Result, Record *CurRec,
 // error was detected.
 //
 //   TemplateArgList ::= '<' [Value {',' Value}*] '>'
-bool TGParser::ParseTemplateArgValueList(SmallVectorImpl<Init *> &Result,
-                                         Record *CurRec, Record *ArgsRec) {
+bool TGParser::ParseTemplateArgValueList(
+    SmallVectorImpl<ArgumentInit *> &Result, Record *CurRec, Record *ArgsRec) {
 
   assert(Result.empty() && "Result vector is not empty");
   ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
@@ -3144,7 +3145,7 @@ bool TGParser::ParseTemplateArgValueList(SmallVectorImpl<Init *> &Result,
     Init *Value = ParseValue(CurRec, ItemType);
     if (!Value)
       return true;
-    Result.push_back(Value);
+    Result.push_back(ArgumentInit::get(Value));
 
     if (consume(tgtok::greater)) // end of argument list?
       return false;
@@ -4247,9 +4248,8 @@ bool TGParser::ParseFile() {
 // inheritance, multiclass invocation, or anonymous class invocation.
 // If necessary, replace an argument with a cast to the required type.
 // The argument count has already been checked.
-bool TGParser::CheckTemplateArgValues(SmallVectorImpl<llvm::Init *> &Values,
-                                      SMLoc Loc, Record *ArgsRec) {
-
+bool TGParser::CheckTemplateArgValues(
+    SmallVectorImpl<llvm::ArgumentInit *> &Values, SMLoc Loc, Record *ArgsRec) {
   ArrayRef<Init *> TArgs = ArgsRec->getTemplateArgs();
 
   for (unsigned I = 0, E = Values.size(); I < E; ++I) {
@@ -4257,13 +4257,13 @@ bool TGParser::CheckTemplateArgValues(SmallVectorImpl<llvm::Init *> &Values,
     RecTy *ArgType = Arg->getType();
     auto *Value = Values[I];
 
-    if (TypedInit *ArgValue = dyn_cast<TypedInit>(Value)) { 
+    if (TypedInit *ArgValue = dyn_cast<TypedInit>(Value->getValue())) {
       auto *CastValue = ArgValue->getCastTo(ArgType);
       if (CastValue) {
         assert((!isa<TypedInit>(CastValue) ||
                 cast<TypedInit>(CastValue)->getType()->typeIsA(ArgType)) &&
                "result of template arg value cast has wrong type");
-        Values[I] = CastValue;
+        Values[I] = ArgumentInit::get(CastValue);
       } else {
         PrintFatalError(Loc,
                         "Value specified for template argument '" +
