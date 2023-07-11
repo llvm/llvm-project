@@ -1,6 +1,6 @@
 ;; Tagged symbols are only available on aarch64-linux-android.
 ; RUN: not llc %s -mtriple=aarch64-unknown-linux 2>&1 | FileCheck %s --check-prefix=ERR
-; RUN: not llc %s -mtriple=x86_64-unknown-linux 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: %if x86-registered-target %{ not llc %s -mtriple=x86_64-unknown-linux 2>&1 | FileCheck %s --check-prefix=ERR %}
 
 ; ERR: error: tagged symbols (-fsanitize=memtag-globals) are only supported on AArch64 Android
 
