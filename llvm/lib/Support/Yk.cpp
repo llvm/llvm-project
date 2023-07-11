@@ -96,6 +96,21 @@ static ManagedStatic<cl::opt<bool, true>,
                      CreateYkStackmapsSpillReloadsFixParser>
     YkStackmapsSpillFixParser;
 
+bool YkOptNoneAfterIRPasses;
+namespace {
+struct CreateYkOptNoneAfterIRPassesParser {
+  static void *call() {
+    return new cl::opt<bool, true>(
+        "yk-optnone-after-ir-passes",
+        cl::desc(
+            "Apply `optnone` to all functions prior to instruction selection."),
+        cl::NotHidden, cl::location(YkOptNoneAfterIRPasses));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<bool, true>,
+  CreateYkOptNoneAfterIRPassesParser> YkOptNoneAfterIRPassesParser;
+
 void llvm::initYkOptions() {
   *YkAllocLLVMBCSectionParser;
   *YkAllocLLVMBBAddrMapSectionParser;
@@ -103,4 +118,5 @@ void llvm::initYkOptions() {
   *YkStackMapOffsetFixParser;
   *YkStackMapAdditionalLocsParser;
   *YkStackmapsSpillFixParser;
+  *YkOptNoneAfterIRPassesParser;
 }
