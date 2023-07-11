@@ -1394,6 +1394,9 @@ bool CheckPPCIntrinsic(const Symbol &generic, const Symbol &specific,
   if (specific.name().ToString().compare(0, 15, "__ppc_vec_sldw_") == 0) {
     return CheckArgumentIsConstantExprInRange(actuals, 2, 0, 3, messages);
   }
+  if (specific.name().ToString().compare(0, 14, "__ppc_vec_ctf_") == 0) {
+    return CheckArgumentIsConstantExprInRange(actuals, 1, 0, 31, messages);
+  }
   return false;
 }
 

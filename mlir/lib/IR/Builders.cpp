@@ -153,6 +153,17 @@ DenseIntElementsAttr Builder::getIndexVectorAttr(ArrayRef<int64_t> values) {
       values);
 }
 
+DenseFPElementsAttr Builder::getF32VectorAttr(ArrayRef<float> values) {
+  return DenseFPElementsAttr::get(
+      VectorType::get(static_cast<float>(values.size()), getF32Type()), values);
+}
+
+DenseFPElementsAttr Builder::getF64VectorAttr(ArrayRef<double> values) {
+  return DenseFPElementsAttr::get(
+      VectorType::get(static_cast<double>(values.size()), getF64Type()),
+      values);
+}
+
 DenseBoolArrayAttr Builder::getDenseBoolArrayAttr(ArrayRef<bool> values) {
   return DenseBoolArrayAttr::get(context, values);
 }
