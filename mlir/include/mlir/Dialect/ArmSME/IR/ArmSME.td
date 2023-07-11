@@ -33,7 +33,7 @@ def ArmSME_Dialect : Dialect {
     https://developer.arm.com/documentation/ddi0616
     https://developer.arm.com/documentation/ddi0602/2023-03/SME-Instructions
   }];
-  let dependentDialects = ["scf::SCFDialect"];
+  let dependentDialects = ["scf::SCFDialect", "vector::VectorDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -194,6 +194,64 @@ def GetTileID : ArmSME_Op<"get_tile_id", [Pure]> {
 
   let results = (outs AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
   let assemblyFormat = "attr-dict `:` type($tile_id)";
+}
+
+//
+// Tile reset.
+//
+
+def ZeroOp : ArmSME_Op<"zero", [Pure]> {
+  let summary = "Initialize the two-dimensional ZA array with 0s";
+  let results = (outs nxnxv16i8:$res);
+  let description = [{
+    Initialise ZA with 0. This operation is convenient wrapper for the SME
+    `zero` intrinsic and instruction. 
+
+    NOTE: At the moment it is assumed that the element type is `i8` and that
+    there's only one "virtual tile".
+
+    Example:
+
+    ```mlir
+    %0 = arm_sme.zero : vector<[16]x[16]xi8>
+    ```
+  }];
+  let extraClassDeclaration = [{
+    VectorType getVectorType() {
+      return ::llvm::cast<VectorType>(getRes().getType());
+    }
+  }];
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+def TileStoreOp : ArmSME_Op<"tile_store"> {
+  let summary = "Tile store operation";
+  let description = [{
+    Store a 2D SME "virtual tile" to memory.
+
+    NOTE: At the moment it is assumed that the element type is `i8` and that
+    there's only one "virtual tile".
+
+    Example:
+
+    ```mlir
+    arm_sme.tile_store %0, %arg0[%c0, %c0] : vector<[16]x[16]xi8>, memref<?x?xi8> 
+    ```
+  }];
+  let arguments = (ins nxnxv16i8:$valueToStore,
+      Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
+      Variadic<Index>:$indices);
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return ::llvm::cast<MemRefType>(getBase().getType());
+    }
+    VectorType getVectorType() {
+      return ::llvm::cast<VectorType>(getValueToStore().getType());
+    }
+  }];
+
+  let assemblyFormat = "$valueToStore `,` $base `[` $indices `]` attr-dict "
+                       "`:` type($base) `,` type($valueToStore)";
 }
 
 //===----------------------------------------------------------------------===//
