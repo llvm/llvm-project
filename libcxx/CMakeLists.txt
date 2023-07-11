@@ -38,10 +38,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" ST
 endif()
 
 if (MSVC)
-  set(LIBCXX_TARGETING_MSVC ON)
   message(STATUS "Configuring for MSVC")
-else()
-  set(LIBCXX_TARGETING_MSVC OFF)
 endif()
 
 #===============================================================================
@@ -198,7 +195,7 @@ option(LIBCXX_EXTRA_SITE_DEFINES "Extra defines to add into __config_site")
 option(LIBCXX_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 
 # ABI Library options ---------------------------------------------------------
-if (LIBCXX_TARGETING_MSVC)
+if (MSVC)
   set(LIBCXX_DEFAULT_ABI_LIBRARY "vcruntime")
 elseif (${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
   set(LIBCXX_DEFAULT_ABI_LIBRARY "libcxxrt")
@@ -569,7 +566,7 @@ endfunction()
 # RTTI flags ==================================================================
 function(cxx_add_rtti_flags target)
   if (NOT LIBCXX_ENABLE_RTTI)
-    if (LIBCXX_TARGETING_CLANG_CL OR LIBCXX_TARGETING_MSVC)
+    if (MSVC)
       target_add_compile_flags_if_supported(${target} PUBLIC -GR-)
     else()
       target_add_compile_flags_if_supported(${target} PUBLIC -fno-rtti)
@@ -592,7 +589,7 @@ endif()
 define_if(LIBCXX_DEBUG_BUILD -D_DEBUG)
 if (LIBCXX_ENABLE_ASSERTIONS AND NOT LIBCXX_DEBUG_BUILD)
   # MSVC doesn't like _DEBUG on release builds. See PR 4379.
-  define_if_not(LIBCXX_TARGETING_MSVC -D_DEBUG)
+  define_if_not(MSVC -D_DEBUG)
 endif()
 
 # Modules flags ===============================================================
@@ -713,7 +710,7 @@ function(cxx_link_system_libraries target)
     target_link_libraries(${target} PRIVATE "${MINGW_LIBRARIES}")
   endif()
 
-  if (LIBCXX_TARGETING_MSVC)
+  if (MSVC)
     if (LIBCXX_DEBUG_BUILD)
       set(LIB_SUFFIX "d")
     else()

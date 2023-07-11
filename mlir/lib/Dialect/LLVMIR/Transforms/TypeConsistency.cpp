@@ -43,7 +43,7 @@ static Type isElementTypeInconsistent(Value addr, Type expectedType) {
 }
 
 /// Checks that two types are the same or can be bitcast into one another.
-static bool areCastCompatible(DataLayout &layout, Type lhs, Type rhs) {
+static bool areBitcastCompatible(DataLayout &layout, Type lhs, Type rhs) {
   return lhs == rhs || (!isa<LLVMStructType, LLVMArrayType>(lhs) &&
                         !isa<LLVMStructType, LLVMArrayType>(rhs) &&
                         layout.getTypeSize(lhs) == layout.getTypeSize(rhs));
@@ -104,7 +104,7 @@ LogicalResult AddFieldGetterToStructDirectUse<LoadOp>::matchAndRewrite(
   if (!firstType)
     return failure();
   DataLayout layout = DataLayout::closest(load);
-  if (!areCastCompatible(layout, firstType, load.getResult().getType()))
+  if (!areBitcastCompatible(layout, firstType, load.getResult().getType()))
     return failure();
 
   insertFieldIndirection<LoadOp>(load, rewriter, inconsistentElementType);
@@ -144,20 +144,13 @@ LogicalResult AddFieldGetterToStructDirectUse<StoreOp>::matchAndRewrite(
   DataLayout layout = DataLayout::closest(store);
   // Check that the first field has the right type or can at least be bitcast
   // to the right type.
-  if (!areCastCompatible(layout, firstType, store.getValue().getType()))
+  if (!areBitcastCompatible(layout, firstType, store.getValue().getType()))
     return failure();
 
   insertFieldIndirection<StoreOp>(store, rewriter, inconsistentElementType);
 
-  Value replaceValue = store.getValue();
-  if (firstType != store.getValue().getType()) {
-    rewriter.setInsertionPointAfterValue(store.getValue());
-    replaceValue = rewriter.create<BitcastOp>(store->getLoc(), firstType,
-                                              store.getValue());
-  }
-
   rewriter.updateRootInPlace(
-      store, [&]() { store.getValueMutable().assign(replaceValue); });
+      store, [&]() { store.getValueMutable().assign(store.getValue()); });
 
   return success();
 }
@@ -458,12 +451,6 @@ static void splitIntegerStore(const DataLayout &dataLayout, Location loc,
 
     IntegerType fieldIntType = rewriter.getIntegerType(fieldSize * 8);
     Value valueToStore = rewriter.create<TruncOp>(loc, fieldIntType, shrOp);
-    if (fieldIntType != type) {
-      // Bitcast to the right type. `fieldIntType` was explicitly created
-      // to be of the same size as `type` and must currently be a primitive as
-      // well.
-      valueToStore = rewriter.create<BitcastOp>(loc, type, valueToStore);
-    }
 
     // We create an `i8` indexed GEP here as that is the easiest (offset is
     // already known). Other patterns turn this into a type-consistent GEP.
@@ -558,6 +545,66 @@ LogicalResult SplitStores::matchAndRewrite(StoreOp store,
   return success();
 }
 
+LogicalResult BitcastStores::matchAndRewrite(StoreOp store,
+                                             PatternRewriter &rewriter) const {
+  Type sourceType = store.getValue().getType();
+  Type typeHint = isElementTypeInconsistent(store.getAddr(), sourceType);
+  if (!typeHint) {
+    // Nothing to do, since it is already consistent.
+    return failure();
+  }
+
+  auto dataLayout = DataLayout::closest(store);
+  if (!areBitcastCompatible(dataLayout, typeHint, sourceType))
+    return failure();
+
+  auto bitcastOp =
+      rewriter.create<BitcastOp>(store.getLoc(), typeHint, store.getValue());
+  rewriter.updateRootInPlace(
+      store, [&] { store.getValueMutable().assign(bitcastOp); });
+  return success();
+}
+
+LogicalResult SplitGEP::matchAndRewrite(GEPOp gepOp,
+                                        PatternRewriter &rewriter) const {
+  FailureOr<Type> typeHint = getRequiredConsistentGEPType(gepOp);
+  if (succeeded(typeHint) || gepOp.getIndices().size() <= 2) {
+    // GEP is not canonical or a single aggregate deep, nothing to do here.
+    return failure();
+  }
+
+  auto indexToGEPArg =
+      [](GEPIndicesAdaptor<ValueRange>::value_type index) -> GEPArg {
+    if (auto integerAttr = dyn_cast<IntegerAttr>(index))
+      return integerAttr.getValue().getSExtValue();
+    return cast<Value>(index);
+  };
+
+  GEPIndicesAdaptor<ValueRange> indices = gepOp.getIndices();
+
+  auto splitIter = std::next(indices.begin(), 2);
+
+  // Split of the first GEP using the first two indices.
+  auto subGepOp = rewriter.create<GEPOp>(
+      gepOp.getLoc(), gepOp.getType(), gepOp.getSourceElementType(),
+      gepOp.getBase(),
+      llvm::map_to_vector(llvm::make_range(indices.begin(), splitIter),
+                          indexToGEPArg),
+      gepOp.getInbounds());
+
+  // The second GEP indexes on the result pointer element type of the previous
+  // with all the remaining indices and a zero upfront. If this GEP has more
+  // than two indices remaining it'll be further split in subsequent pattern
+  // applications.
+  SmallVector<GEPArg> newIndices = {0};
+  llvm::transform(llvm::make_range(splitIter, indices.end()),
+                  std::back_inserter(newIndices), indexToGEPArg);
+  rewriter.replaceOpWithNewOp<GEPOp>(gepOp, gepOp.getType(),
+                                     subGepOp.getResultPtrElementType(),
+                                     subGepOp, newIndices, gepOp.getInbounds());
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Type consistency pass
 //===----------------------------------------------------------------------===//
@@ -572,6 +619,8 @@ struct LLVMTypeConsistencyPass
         &getContext());
     rewritePatterns.add<CanonicalizeAlignedGep>(&getContext());
     rewritePatterns.add<SplitStores>(&getContext(), maxVectorSplitSize);
+    rewritePatterns.add<BitcastStores>(&getContext());
+    rewritePatterns.add<SplitGEP>(&getContext());
     FrozenRewritePatternSet frozen(std::move(rewritePatterns));
 
     if (failed(applyPatternsAndFoldGreedily(getOperation(), frozen)))

@@ -119,13 +119,34 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
       /*Flags=*/"", /*RV=*/0);
 }
 
+/// Returns a new `DINodeT` that is either distinct or not, depending on
+/// `isDistinct`.
+template <class DINodeT, class... Ts>
+static DINodeT *getDistinctOrUnique(bool isDistinct, Ts &&...args) {
+  if (isDistinct)
+    return DINodeT::getDistinct(std::forward<Ts>(args)...);
+  return DINodeT::get(std::forward<Ts>(args)...);
+}
+
 llvm::DICompositeType *
 DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
   SmallVector<llvm::Metadata *> elements;
   for (auto member : attr.getElements())
     elements.push_back(translate(member));
-  return llvm::DICompositeType::get(
-      llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
+
+  // TODO: Use distinct attributes to model this, once they have landed.
+  // Depending on the tag, composite types must be distinct.
+  bool isDistinct = false;
+  switch (attr.getTag()) {
+  case llvm::dwarf::DW_TAG_class_type:
+  case llvm::dwarf::DW_TAG_enumeration_type:
+  case llvm::dwarf::DW_TAG_structure_type:
+  case llvm::dwarf::DW_TAG_union_type:
+    isDistinct = true;
+  }
+
+  return getDistinctOrUnique<llvm::DICompositeType>(
+      isDistinct, llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
       translate(attr.getFile()), attr.getLine(), translate(attr.getScope()),
       translate(attr.getBaseType()), attr.getSizeInBits(),
       attr.getAlignInBits(),
@@ -186,19 +207,10 @@ llvm::DIScope *DebugTranslation::translateImpl(DIScopeAttr attr) {
   return cast<llvm::DIScope>(translate(DINodeAttr(attr)));
 }
 
-/// Return a new subprogram that is either distinct or not, depending on
-/// `isDistinct`.
-template <class... Ts>
-static llvm::DISubprogram *getSubprogram(bool isDistinct, Ts &&...args) {
-  if (isDistinct)
-    return llvm::DISubprogram::getDistinct(std::forward<Ts>(args)...);
-  return llvm::DISubprogram::get(std::forward<Ts>(args)...);
-}
-
 llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
   bool isDefinition = static_cast<bool>(attr.getSubprogramFlags() &
                                         LLVM::DISubprogramFlags::Definition);
-  return getSubprogram(
+  return getDistinctOrUnique<llvm::DISubprogram>(
       isDefinition, llvmCtx, translate(attr.getScope()),
       getMDStringOrNull(attr.getName()),
       getMDStringOrNull(attr.getLinkageName()), translate(attr.getFile()),

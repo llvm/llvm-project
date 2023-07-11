@@ -253,6 +253,8 @@ Changes to the RISC-V Backend
 * Assembly support was added for the experimental Zfbfmin (scalar BF16
   conversions), Zvfbfmin (vector BF16 conversions), and Zvfbfwma (vector BF16
   widening mul-add) extensions.
+* Added assembler/disassembler support for the experimental Zacas (atomic
+  compare-and-swap) extension.
 
 Changes to the WebAssembly Backend
 ----------------------------------
