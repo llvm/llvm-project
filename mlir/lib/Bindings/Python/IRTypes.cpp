@@ -505,11 +505,12 @@ public:
         py::arg("encoding") = py::none(), py::arg("loc") = py::none(),
         "Create a ranked tensor type");
     c.def_property_readonly(
-        "encoding", [](PyRankedTensorType &self) -> std::optional<PyAttribute> {
+        "encoding",
+        [](PyRankedTensorType &self) -> std::optional<MlirAttribute> {
           MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
           if (mlirAttributeIsNull(encoding))
             return std::nullopt;
-          return PyAttribute(self.getContext(), encoding);
+          return encoding;
         });
   }
 };
@@ -570,9 +571,8 @@ public:
          py::arg("loc") = py::none(), "Create a memref type")
         .def_property_readonly(
             "layout",
-            [](PyMemRefType &self) -> PyAttribute {
-              MlirAttribute layout = mlirMemRefTypeGetLayout(self);
-              return PyAttribute(self.getContext(), layout);
+            [](PyMemRefType &self) -> MlirAttribute {
+              return mlirMemRefTypeGetLayout(self);
             },
             "The layout of the MemRef type.")
         .def_property_readonly(
@@ -584,9 +584,11 @@ public:
             "The layout of the MemRef type as an affine map.")
         .def_property_readonly(
             "memory_space",
-            [](PyMemRefType &self) -> PyAttribute {
+            [](PyMemRefType &self) -> std::optional<MlirAttribute> {
               MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
-              return PyAttribute(self.getContext(), a);
+              if (mlirAttributeIsNull(a))
+                return std::nullopt;
+              return a;
             },
             "Returns the memory space of the given MemRef type.");
   }
@@ -622,9 +624,11 @@ public:
          py::arg("loc") = py::none(), "Create a unranked memref type")
         .def_property_readonly(
             "memory_space",
-            [](PyUnrankedMemRefType &self) -> PyAttribute {
-              MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
-              return PyAttribute(self.getContext(), a);
+            [](PyUnrankedMemRefType &self) -> std::optional<MlirAttribute> {
+              MlirAttribute a = mlirUnrankedMemrefGetMemorySpace(self);
+              if (mlirAttributeIsNull(a))
+                return std::nullopt;
+              return a;
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }
