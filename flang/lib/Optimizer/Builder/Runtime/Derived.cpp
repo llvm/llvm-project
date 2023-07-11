@@ -50,21 +50,15 @@ void fir::runtime::genNullifyDerivedType(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Value box,
                                          fir::RecordType derivedType,
                                          unsigned rank) {
-  std::string typeDescName =
-      fir::NameUniquer::getTypeDescriptorName(derivedType.getName());
-  fir::GlobalOp typeDescGlobal = builder.getNamedGlobal(typeDescName);
-  if (!typeDescGlobal)
-    fir::emitFatalError(loc, "no type descriptor found for NULLIFY");
-  auto typeDescAddr = builder.create<fir::AddrOfOp>(
-      loc, fir::ReferenceType::get(typeDescGlobal.getType()),
-      typeDescGlobal.getSymbol());
+  mlir::Value typeDesc =
+      builder.create<fir::TypeDescOp>(loc, mlir::TypeAttr::get(derivedType));
   mlir::func::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyDerived)>(loc,
                                                                    builder);
   llvm::ArrayRef<mlir::Type> inputTypes = callee.getFunctionType().getInputs();
   llvm::SmallVector<mlir::Value> args;
   args.push_back(builder.createConvert(loc, inputTypes[0], box));
-  args.push_back(builder.createConvert(loc, inputTypes[1], typeDescAddr));
+  args.push_back(builder.createConvert(loc, inputTypes[1], typeDesc));
   mlir::Value rankCst = builder.createIntegerConstant(loc, inputTypes[2], rank);
   mlir::Value c0 = builder.createIntegerConstant(loc, inputTypes[3], 0);
   args.push_back(rankCst);
