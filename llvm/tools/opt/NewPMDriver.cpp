@@ -176,9 +176,6 @@ static cl::opt<PGOKind>
                                       "Use sampled profile to guide PGO.")));
 static cl::opt<std::string> ProfileFile("profile-file",
                                  cl::desc("Path to the profile."), cl::Hidden);
-static cl::opt<std::string>
-    MemoryProfileFile("memory-profile-file",
-                      cl::desc("Path to the memory profile."), cl::Hidden);
 
 static cl::opt<CSPGOKind> CSPGOKindFlag(
     "cspgo-kind", cl::init(NoCSPGO), cl::Hidden,
@@ -339,21 +336,19 @@ bool llvm::runPassPipeline(
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
-    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, FS,
-                   PGOOptions::IRInstr);
+    P = PGOOptions(ProfileFile, "", "", FS, PGOOptions::IRInstr);
     break;
   case InstrUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, FS,
                    PGOOptions::IRUse);
     break;
   case SampleUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, FS,
                    PGOOptions::SampleUse);
     break;
   case NoPGO:
-    if (DebugInfoForProfiling || PseudoProbeForProfiling ||
-        !MemoryProfileFile.empty())
-      P = PGOOptions("", "", "", MemoryProfileFile, FS, PGOOptions::NoAction,
+    if (DebugInfoForProfiling || PseudoProbeForProfiling)
+      P = PGOOptions("", "", "", nullptr, PGOOptions::NoAction,
                      PGOOptions::NoCSAction, DebugInfoForProfiling,
                      PseudoProbeForProfiling);
     else
@@ -374,9 +369,8 @@ bool llvm::runPassPipeline(
         P->CSAction = PGOOptions::CSIRInstr;
         P->CSProfileGenFile = CSProfileGenFile;
       } else
-        P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile,
-                       /*MemoryProfile=*/"", FS, PGOOptions::NoAction,
-                       PGOOptions::CSIRInstr);
+        P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile, FS,
+                       PGOOptions::NoAction, PGOOptions::CSIRInstr);
     } else /* CSPGOKindFlag == CSInstrUse */ {
       if (!P) {
         errs() << "CSInstrUse needs to be together with InstrUse";
