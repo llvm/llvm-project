@@ -603,7 +603,8 @@ bool HexagonInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned HexagonInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved) const {
+                                        int *BytesRemoved,
+                                        bool *IsConsistent) const {
   assert(!BytesRemoved && "code size not handled");
 
   LLVM_DEBUG(dbgs() << "\nRemoving branches out of " << printMBBReference(MBB));
@@ -629,9 +630,9 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                         MachineBasicBlock *TBB,
                                         MachineBasicBlock *FBB,
                                         ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL,
-                                        int *BytesAdded) const {
-  unsigned BOpc   = Hexagon::J2_jump;
+                                        const DebugLoc &DL, int *BytesAdded,
+                                        bool IsConsistent) const {
+  unsigned BOpc = Hexagon::J2_jump;
   unsigned BccOpc = Hexagon::J2_jumpt;
   assert(validateBranchCond(Cond) && "Invalid branching condition");
   assert(TBB && "insertBranch must not be told to insert a fallthrough");

@@ -238,12 +238,12 @@ public:
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
-  unsigned removeBranch(MachineBasicBlock &MBB,
-                        int *BytesRemoved = nullptr) const override;
+  unsigned removeBranch(MachineBasicBlock &MBB, int *BytesRemoved = nullptr,
+                        bool *IsConsistent = nullptr) const override;
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        const DebugLoc &DL,
-                        int *BytesAdded = nullptr) const override;
+                        const DebugLoc &DL, int *BytesAdded = nullptr,
+                        bool IsConsistent = false) const override;
   bool analyzeCompare(const MachineInstr &MI, Register &SrcReg,
                       Register &SrcReg2, int64_t &Mask,
                       int64_t &Value) const override;

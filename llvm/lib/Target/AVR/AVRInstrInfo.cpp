@@ -398,7 +398,8 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL, int *BytesAdded) const {
+                                    const DebugLoc &DL, int *BytesAdded,
+                                    bool IsConsistent) const {
   if (BytesAdded)
     *BytesAdded = 0;
 
@@ -435,8 +436,8 @@ unsigned AVRInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                    int *BytesRemoved) const {
+unsigned AVRInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                    bool *IsConsistent) const {
   if (BytesRemoved)
     *BytesRemoved = 0;
 

@@ -5401,7 +5401,6 @@ bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
       !isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
 
   auto *BB = SI->getParent();
-
   // Partition the cases into two sets with different destinations.
   BasicBlock *DestA = HasDefault ? SI->getDefaultDest() : nullptr;
   BasicBlock *DestB = nullptr;
@@ -5465,7 +5464,9 @@ bool SimplifyCFGOpt::TurnSwitchRangeIntoICmp(SwitchInst *SI,
     Cmp = ConstantInt::getTrue(SI->getContext());
   else
     Cmp = Builder.CreateICmpULT(Sub, NumCases, "switch");
-  BranchInst *NewBI = Builder.CreateCondBr(Cmp, ContiguousDest, OtherDest);
+  BranchInst *NewBI =
+      Builder.CreateCondBr(Cmp, ContiguousDest, OtherDest, nullptr, nullptr,
+                           SI->getMetadata(LLVMContext::MD_consistent));
 
   // Update weight for the newly-created conditional branch.
   if (hasBranchWeightMD(*SI)) {
@@ -6675,8 +6676,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   } else {
     Value *Cmp = Builder.CreateICmpULT(
         TableIndex, ConstantInt::get(MinCaseVal->getType(), TableSize));
-    RangeCheckBranch =
-        Builder.CreateCondBr(Cmp, LookupBB, SI->getDefaultDest());
+    RangeCheckBranch = Builder.CreateCondBr(
+        Cmp, LookupBB, SI->getDefaultDest(), nullptr, nullptr,
+        SI->getMetadata(LLVMContext::MD_consistent));
     if (DTU)
       Updates.push_back({DominatorTree::Insert, BB, LookupBB});
   }

@@ -657,8 +657,8 @@ unsigned LanaiInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TrueBlock,
                                       MachineBasicBlock *FalseBlock,
                                       ArrayRef<MachineOperand> Condition,
-                                      const DebugLoc &DL,
-                                      int *BytesAdded) const {
+                                      const DebugLoc &DL, int *BytesAdded,
+                                      bool IsConsistent) const {
   // Shouldn't be a fall through.
   assert(TrueBlock && "insertBranch must not be told to insert a fallthrough");
   assert(!BytesAdded && "code size not handled");
@@ -685,8 +685,8 @@ unsigned LanaiInstrInfo::insertBranch(MachineBasicBlock &MBB,
   return 2;
 }
 
-unsigned LanaiInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
+unsigned LanaiInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                      bool *IsConsistent) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator Instruction = MBB.end();

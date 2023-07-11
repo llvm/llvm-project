@@ -67,6 +67,9 @@ public:
   /// Return metadata specifying that a branch or switch is unpredictable.
   MDNode *createUnpredictable();
 
+  /// Return metadata specifying that a branch or switch behaves consistently.
+  MDNode *createConsistent();
+
   /// Return metadata containing the entry \p Count for a function, a boolean
   /// \Synthetic indicating whether the counts were synthetized, and the
   /// GUIDs stored in \p Imports that need to be imported for sample PGO, to

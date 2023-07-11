@@ -146,8 +146,8 @@ bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
+unsigned NVPTXInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                      bool *IsConsistent) const {
   assert(!BytesRemoved && "code size not handled");
   MachineBasicBlock::iterator I = MBB.end();
   if (I == MBB.begin())
@@ -176,8 +176,8 @@ unsigned NVPTXInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                       MachineBasicBlock *TBB,
                                       MachineBasicBlock *FBB,
                                       ArrayRef<MachineOperand> Cond,
-                                      const DebugLoc &DL,
-                                      int *BytesAdded) const {
+                                      const DebugLoc &DL, int *BytesAdded,
+                                      bool IsConsistent) const {
   assert(!BytesAdded && "code size not handled");
 
   // Shouldn't be a fall through.

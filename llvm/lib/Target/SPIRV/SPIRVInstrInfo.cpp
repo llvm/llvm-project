@@ -200,8 +200,8 @@ bool SPIRVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 // returns the number of instructions that were removed.
 // If \p BytesRemoved is non-null, report the change in code size from the
 // removed instructions.
-unsigned SPIRVInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                      int *BytesRemoved) const {
+unsigned SPIRVInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                      bool *IsConsistent) const {
   report_fatal_error("Branch removal not supported, as MBB info not propagated"
                      " to OpPhi instructions. Try using -O0 instead.");
 }
@@ -219,9 +219,12 @@ unsigned SPIRVInstrInfo::removeBranch(MachineBasicBlock &MBB,
 //
 // The CFG information in MBB.Predecessors and MBB.Successors must be valid
 // before calling this function.
-unsigned SPIRVInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned SPIRVInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                      MachineBasicBlock *TBB,
+                                      MachineBasicBlock *FBB,
+                                      ArrayRef<MachineOperand> Cond,
+                                      const DebugLoc &DL, int *BytesAdded,
+                                      bool IsConsistent) const {
   report_fatal_error("Branch insertion not supported, as MBB info not "
                      "propagated to OpPhi instructions. Try using "
                      "-O0 instead.");

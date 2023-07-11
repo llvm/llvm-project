@@ -624,6 +624,9 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
   if (getFlags().hasNoFPExcept())
     OS << " nofpexcept";
 
+  if (getFlags().hasConsistent())
+    OS << " consistent";
+
   if (const MachineSDNode *MN = dyn_cast<MachineSDNode>(this)) {
     if (!MN->memoperands_empty()) {
       OS << "<";

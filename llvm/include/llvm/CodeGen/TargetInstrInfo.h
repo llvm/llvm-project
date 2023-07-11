@@ -698,7 +698,8 @@ public:
   /// If \p BytesRemoved is non-null, report the change in code size from the
   /// removed instructions.
   virtual unsigned removeBranch(MachineBasicBlock &MBB,
-                                int *BytesRemoved = nullptr) const {
+                                int *BytesRemoved = nullptr,
+                                bool *IsConsistent = nullptr) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::removeBranch!");
   }
 
@@ -718,8 +719,8 @@ public:
   virtual unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                                 MachineBasicBlock *FBB,
                                 ArrayRef<MachineOperand> Cond,
-                                const DebugLoc &DL,
-                                int *BytesAdded = nullptr) const {
+                                const DebugLoc &DL, int *BytesAdded = nullptr,
+                                bool IsConsistent = false) const {
     llvm_unreachable("Target didn't implement TargetInstrInfo::insertBranch!");
   }
 

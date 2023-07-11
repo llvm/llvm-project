@@ -1083,6 +1083,9 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
       MI->setFlag(MachineInstr::MIFlag::Unpredictable);
   }
 
+  if (Node->getFlags().hasConsistent())
+    MIB.getInstr()->setFlag(MachineInstr::MIFlag::Consistent);
+
   // Emit all of the actual operands of this instruction, adding them to the
   // instruction as appropriate.
   bool HasOptPRefs = NumDefs > NumResults;

@@ -447,7 +447,8 @@ bool SystemZInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned SystemZInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                        int *BytesRemoved) const {
+                                        int *BytesRemoved,
+                                        bool *IsConsistent) const {
   assert(!BytesRemoved && "code size not handled");
 
   // Most of the code and comments here are boilerplate.
@@ -482,8 +483,8 @@ unsigned SystemZInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                         MachineBasicBlock *TBB,
                                         MachineBasicBlock *FBB,
                                         ArrayRef<MachineOperand> Cond,
-                                        const DebugLoc &DL,
-                                        int *BytesAdded) const {
+                                        const DebugLoc &DL, int *BytesAdded,
+                                        bool IsConsistent) const {
   // In this function we output 32-bit branches, which should always
   // have enough range.  They can be shortened and relaxed by later code
   // in the pipeline, if desired.

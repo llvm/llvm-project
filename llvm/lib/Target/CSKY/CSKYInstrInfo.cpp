@@ -110,8 +110,8 @@ bool CSKYInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
-unsigned CSKYInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                     int *BytesRemoved) const {
+unsigned CSKYInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                     bool *IsConsistent) const {
   if (BytesRemoved)
     *BytesRemoved = 0;
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
@@ -151,9 +151,12 @@ CSKYInstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   return MI.getOperand(NumOp - 1).getMBB();
 }
 
-unsigned CSKYInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned CSKYInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                     MachineBasicBlock *TBB,
+                                     MachineBasicBlock *FBB,
+                                     ArrayRef<MachineOperand> Cond,
+                                     const DebugLoc &DL, int *BytesAdded,
+                                     bool IsConsistent) const {
   if (BytesAdded)
     *BytesAdded = 0;
 

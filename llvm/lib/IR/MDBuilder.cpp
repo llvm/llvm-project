@@ -56,6 +56,11 @@ MDNode *MDBuilder::createUnpredictable() {
   return MDNode::get(Context, std::nullopt);
 }
 
+MDNode *MDBuilder::createConsistent() {
+  return MDNode::get(
+      Context, createConstant(ConstantInt::get(Type::getInt1Ty(Context), 1)));
+}
+
 MDNode *MDBuilder::createFunctionEntryCount(
     uint64_t Count, bool Synthetic,
     const DenseSet<GlobalValue::GUID> *Imports) {

@@ -72,6 +72,7 @@ enum NodeType : unsigned {
             // Offset Table, TLS record).
   RET_GLUE, // Return with a glue operand. Operand 0 is the chain operand.
   BRCOND,   // Conditional branch instruction; "b.cond".
+  BRCCOND,  // Hinted Conditional Branch "BC.cond".
   CSEL,
   CSINV, // Conditional select invert.
   CSNEG, // Conditional select negate.

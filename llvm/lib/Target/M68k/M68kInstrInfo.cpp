@@ -254,8 +254,8 @@ bool M68kInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return AnalyzeBranchImpl(MBB, TBB, FBB, Cond, AllowModify);
 }
 
-unsigned M68kInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                     int *BytesRemoved) const {
+unsigned M68kInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                     bool *IsConsistent) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::iterator I = MBB.end();
@@ -277,9 +277,12 @@ unsigned M68kInstrInfo::removeBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-unsigned M68kInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned M68kInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                     MachineBasicBlock *TBB,
+                                     MachineBasicBlock *FBB,
+                                     ArrayRef<MachineOperand> Cond,
+                                     const DebugLoc &DL, int *BytesAdded,
+                                     bool IsConsistent) const {
   // Shouldn't be a fall through.
   assert(TBB && "InsertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 1 || Cond.size() == 0) &&

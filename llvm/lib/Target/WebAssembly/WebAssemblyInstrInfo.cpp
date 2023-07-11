@@ -135,7 +135,8 @@ bool WebAssemblyInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned WebAssemblyInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                            int *BytesRemoved) const {
+                                            int *BytesRemoved,
+                                            bool *IsConsistent) const {
   assert(!BytesRemoved && "code size not handled");
 
   MachineBasicBlock::instr_iterator I = MBB.instr_end();
@@ -156,9 +157,12 @@ unsigned WebAssemblyInstrInfo::removeBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-unsigned WebAssemblyInstrInfo::insertBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *TBB, MachineBasicBlock *FBB,
-    ArrayRef<MachineOperand> Cond, const DebugLoc &DL, int *BytesAdded) const {
+unsigned WebAssemblyInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                            MachineBasicBlock *TBB,
+                                            MachineBasicBlock *FBB,
+                                            ArrayRef<MachineOperand> Cond,
+                                            const DebugLoc &DL, int *BytesAdded,
+                                            bool IsConsistent) const {
   assert(!BytesAdded && "code size not handled");
 
   if (Cond.empty()) {

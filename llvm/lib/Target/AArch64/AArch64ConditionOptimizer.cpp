@@ -149,7 +149,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
   if (Term == MBB->end())
     return nullptr;
 
-  if (Term->getOpcode() != AArch64::Bcc)
+  if (Term->getOpcode() != AArch64::Bcc && Term->getOpcode() != AArch64::BCcc)
     return nullptr;
 
   // Since we may modify cmp of this MBB, make sure NZCV does not live out.

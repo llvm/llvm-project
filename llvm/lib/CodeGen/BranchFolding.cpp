@@ -465,8 +465,10 @@ static void FixTail(MachineBasicBlock *CurMBB, MachineBasicBlock *SuccBB,
     MachineBasicBlock *NextBB = &*I;
     if (TBB == NextBB && !Cond.empty() && !FBB) {
       if (!TII->reverseBranchCondition(Cond)) {
-        TII->removeBranch(*CurMBB);
-        TII->insertBranch(*CurMBB, SuccBB, nullptr, Cond, dl);
+        bool IsConsistent = false;
+        TII->removeBranch(*CurMBB, nullptr, &IsConsistent);
+        TII->insertBranch(*CurMBB, SuccBB, nullptr, Cond, dl, nullptr,
+                          IsConsistent);
         return;
       }
     }
@@ -1116,12 +1118,13 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
 
         // Remove the unconditional branch at the end, if any.
         if (TBB && (Cond.empty() || FBB)) {
+          bool IsConsistent = false;
           DebugLoc dl = PBB->findBranchDebugLoc();
-          TII->removeBranch(*PBB);
+          TII->removeBranch(*PBB, nullptr, &IsConsistent);
           if (!Cond.empty())
             // reinsert conditional branch only, for now
-            TII->insertBranch(*PBB, (TBB == IBB) ? FBB : TBB, nullptr,
-                              NewCond, dl);
+            TII->insertBranch(*PBB, (TBB == IBB) ? FBB : TBB, nullptr, NewCond,
+                              dl, nullptr, IsConsistent);
         }
 
         MergePotentials.push_back(MergePotentialsElt(HashEndOfMBB(*PBB), PBB));
@@ -1443,9 +1446,11 @@ ReoptimizeBlock:
     // If the prior block branches somewhere else on the condition and here if
     // the condition is false, remove the uncond second branch.
     if (PriorFBB == MBB) {
+      bool IsConsistent = false;
       DebugLoc dl = getBranchDebugLoc(PrevBB);
-      TII->removeBranch(PrevBB);
-      TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl);
+      TII->removeBranch(PrevBB, nullptr, &IsConsistent);
+      TII->insertBranch(PrevBB, PriorTBB, nullptr, PriorCond, dl, nullptr,
+                        IsConsistent);
       MadeChange = true;
       ++NumBranchOpts;
       goto ReoptimizeBlock;
@@ -1457,9 +1462,11 @@ ReoptimizeBlock:
     if (PriorTBB == MBB) {
       SmallVector<MachineOperand, 4> NewPriorCond(PriorCond);
       if (!TII->reverseBranchCondition(NewPriorCond)) {
+        bool IsConsistent = false;
         DebugLoc dl = getBranchDebugLoc(PrevBB);
-        TII->removeBranch(PrevBB);
-        TII->insertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, dl);
+        TII->removeBranch(PrevBB, nullptr, &IsConsistent);
+        TII->insertBranch(PrevBB, PriorFBB, nullptr, NewPriorCond, dl, nullptr,
+                          IsConsistent);
         MadeChange = true;
         ++NumBranchOpts;
         goto ReoptimizeBlock;
@@ -1495,9 +1502,11 @@ ReoptimizeBlock:
           LLVM_DEBUG(dbgs() << "\nMoving MBB: " << *MBB
                             << "To make fallthrough to: " << *PriorTBB << "\n");
 
+          bool IsConsistent = false;
           DebugLoc dl = getBranchDebugLoc(PrevBB);
-          TII->removeBranch(PrevBB);
-          TII->insertBranch(PrevBB, MBB, nullptr, NewPriorCond, dl);
+          TII->removeBranch(PrevBB, nullptr, &IsConsistent);
+          TII->insertBranch(PrevBB, MBB, nullptr, NewPriorCond, dl, nullptr,
+                            IsConsistent);
 
           // Move this block to the end of the function.
           MBB->moveAfter(&MF.back());
@@ -1558,9 +1567,11 @@ ReoptimizeBlock:
     if (CurTBB && CurFBB && CurFBB == MBB && CurTBB != MBB) {
       SmallVector<MachineOperand, 4> NewCond(CurCond);
       if (!TII->reverseBranchCondition(NewCond)) {
+        bool IsConsistent = false;
         DebugLoc dl = getBranchDebugLoc(*MBB);
-        TII->removeBranch(*MBB);
-        TII->insertBranch(*MBB, CurFBB, CurTBB, NewCond, dl);
+        TII->removeBranch(*MBB, nullptr, &IsConsistent);
+        TII->insertBranch(*MBB, CurFBB, CurTBB, NewCond, dl, nullptr,
+                          IsConsistent);
         MadeChange = true;
         ++NumBranchOpts;
         goto ReoptimizeBlock;
@@ -1606,9 +1617,11 @@ ReoptimizeBlock:
               assert(!PriorFBB && "Machine CFG out of date!");
               PriorFBB = MBB;
             }
+            bool IsConsistent = false;
             DebugLoc pdl = getBranchDebugLoc(PrevBB);
-            TII->removeBranch(PrevBB);
-            TII->insertBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, pdl);
+            TII->removeBranch(PrevBB, nullptr, &IsConsistent);
+            TII->insertBranch(PrevBB, PriorTBB, PriorFBB, PriorCond, pdl,
+                              nullptr, IsConsistent);
           }
 
           // Iterate through all the predecessors, revectoring each in-turn.
@@ -1654,7 +1667,7 @@ ReoptimizeBlock:
       }
 
       // Add the branch back if the block is more than just an uncond branch.
-      TII->insertBranch(*MBB, CurTBB, nullptr, CurCond, dl);
+      TII->insertBranch(*MBB, CurTBB, nullptr, CurCond, dl, nullptr, 0);
     }
   }
 

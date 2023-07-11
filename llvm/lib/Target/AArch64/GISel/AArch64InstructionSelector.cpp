@@ -1675,9 +1675,16 @@ bool AArch64InstructionSelector::selectCompareBranchFedByFCmp(
   AArch64CC::CondCode CC1, CC2;
   changeFCMPPredToAArch64CC(static_cast<CmpInst::Predicate>(Pred), CC1, CC2);
   MachineBasicBlock *DestMBB = I.getOperand(1).getMBB();
-  MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC1).addMBB(DestMBB);
-  if (CC2 != AArch64CC::AL)
-    MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC2).addMBB(DestMBB);
+  if (I.getFlag(MachineInstr::MIFlag::Consistent) && STI.hasHBC())
+    MIB.buildInstr(AArch64::BCcc, {}, {}).addImm(CC1).addMBB(DestMBB);
+  else
+    MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC1).addMBB(DestMBB);
+  if (CC2 != AArch64CC::AL) {
+    if (I.getFlag(MachineInstr::MIFlag::Consistent) && STI.hasHBC())
+      MIB.buildInstr(AArch64::BCcc, {}, {}).addImm(CC2).addMBB(DestMBB);
+    else
+      MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC2).addMBB(DestMBB);
+  }
   I.eraseFromParent();
   return true;
 }
@@ -1790,7 +1797,10 @@ bool AArch64InstructionSelector::selectCompareBranchFedByICmp(
   emitIntegerCompare(ICmp.getOperand(2), ICmp.getOperand(3), PredOp, MIB);
   const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(
       static_cast<CmpInst::Predicate>(PredOp.getPredicate()));
-  MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC).addMBB(DestMBB);
+  if (I.getFlag(MachineInstr::MIFlag::Consistent) && STI.hasHBC())
+    MIB.buildInstr(AArch64::BCcc, {}, {}).addImm(CC).addMBB(DestMBB);
+  else
+    MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC).addMBB(DestMBB);
   I.eraseFromParent();
   return true;
 }
@@ -1821,9 +1831,12 @@ bool AArch64InstructionSelector::selectCompareBranch(
   auto TstMI =
       MIB.buildInstr(AArch64::ANDSWri, {LLT::scalar(32)}, {CondReg}).addImm(1);
   constrainSelectedInstRegOperands(*TstMI, TII, TRI, RBI);
-  auto Bcc = MIB.buildInstr(AArch64::Bcc)
-                 .addImm(AArch64CC::NE)
-                 .addMBB(I.getOperand(1).getMBB());
+  auto Bcc =
+      MIB.buildInstr(I.getFlag(MachineInstr::MIFlag::Consistent) && STI.hasHBC()
+                         ? AArch64::BCcc
+                         : AArch64::Bcc)
+          .addImm(AArch64CC::NE)
+          .addMBB(I.getOperand(1).getMBB());
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
 }

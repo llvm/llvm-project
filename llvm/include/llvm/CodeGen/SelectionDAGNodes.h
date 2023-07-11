@@ -398,6 +398,8 @@ private:
   bool NoFPExcept : 1;
   // Instructions with attached 'unpredictable' metadata on IR level.
   bool Unpredictable : 1;
+  // Instructions with attached 'consistent' metadata on IR level.
+  bool Consistent : 1;
 
 public:
   /// Default constructor turns off all optimization flags.
@@ -405,7 +407,8 @@ public:
       : NoUnsignedWrap(false), NoSignedWrap(false), Exact(false), NonNeg(false),
         NoNaNs(false), NoInfs(false), NoSignedZeros(false),
         AllowReciprocal(false), AllowContract(false), ApproximateFuncs(false),
-        AllowReassociation(false), NoFPExcept(false), Unpredictable(false) {}
+        AllowReassociation(false), NoFPExcept(false), Unpredictable(false),
+        Consistent(false) {}
 
   /// Propagate the fast-math-flags from an IR FPMathOperator.
   void copyFMF(const FPMathOperator &FPMO) {
@@ -432,6 +435,7 @@ public:
   void setAllowReassociation(bool b) { AllowReassociation = b; }
   void setNoFPExcept(bool b) { NoFPExcept = b; }
   void setUnpredictable(bool b) { Unpredictable = b; }
+  void setConsistent(bool b) { Consistent = b; }
 
   // These are accessors for each flag.
   bool hasNoUnsignedWrap() const { return NoUnsignedWrap; }
@@ -447,6 +451,7 @@ public:
   bool hasAllowReassociation() const { return AllowReassociation; }
   bool hasNoFPExcept() const { return NoFPExcept; }
   bool hasUnpredictable() const { return Unpredictable; }
+  bool hasConsistent() const { return Consistent; }
 
   /// Clear any flags in this flag set that aren't also set in Flags. All
   /// flags will be cleared if Flags are undefined.
@@ -464,6 +469,7 @@ public:
     AllowReassociation &= Flags.AllowReassociation;
     NoFPExcept &= Flags.NoFPExcept;
     Unpredictable &= Flags.Unpredictable;
+    Consistent &= Flags.Consistent;
   }
 };
 

@@ -57,11 +57,11 @@ public:
 
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
-                        const DebugLoc &,
-                        int *BytesAdded = nullptr) const override;
+                        const DebugLoc &, int *BytesAdded = nullptr,
+                        bool IsConsistent = false) const override;
 
-  unsigned removeBranch(MachineBasicBlock &MBB,
-                        int *BytesRemoved = nullptr) const override;
+  unsigned removeBranch(MachineBasicBlock &MBB, int *BytesRemoved = nullptr,
+                        bool *IsConsistent = nullptr) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &, MCRegister DestReg, MCRegister SrcReg,

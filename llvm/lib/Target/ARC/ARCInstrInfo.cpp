@@ -251,8 +251,8 @@ bool ARCInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return false;
 }
 
-unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB,
-                                    int *BytesRemoved) const {
+unsigned ARCInstrInfo::removeBranch(MachineBasicBlock &MBB, int *BytesRemoved,
+                                    bool *IsConsistent) const {
   assert(!BytesRemoved && "Code size not handled");
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
@@ -370,7 +370,8 @@ unsigned ARCInstrInfo::insertBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *TBB,
                                     MachineBasicBlock *FBB,
                                     ArrayRef<MachineOperand> Cond,
-                                    const DebugLoc &DL, int *BytesAdded) const {
+                                    const DebugLoc &DL, int *BytesAdded,
+                                    bool IsConsistent) const {
   assert(!BytesAdded && "Code size not handled.");
 
   // Shouldn't be a fall through.

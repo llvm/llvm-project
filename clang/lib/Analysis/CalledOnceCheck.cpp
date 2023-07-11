@@ -365,6 +365,7 @@ public:
     }
 
     case Builtin::BI__builtin_unpredictable:
+    case Builtin::BI__builtin_consistent:
       return Visit(CE->getArg(0));
 
     default:
