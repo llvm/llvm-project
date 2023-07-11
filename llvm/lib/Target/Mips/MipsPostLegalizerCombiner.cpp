@@ -18,38 +18,84 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Target/TargetMachine.h"
 
+#define GET_GICOMBINER_DEPS
+#include "MipsGenPostLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_DEPS
+
 #define DEBUG_TYPE "mips-postlegalizer-combiner"
 
 using namespace llvm;
 using namespace MIPatternMatch;
 
-#define MIPSPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
-#include "MipsGenPostLegalizeGICombiner.inc"
-#undef MIPSPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
-
 namespace {
-#define MIPSPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
+#define GET_GICOMBINER_TYPES
 #include "MipsGenPostLegalizeGICombiner.inc"
-#undef MIPSPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
+#undef GET_GICOMBINER_TYPES
+
+class MipsPostLegalizerCombinerImpl : public GIMatchTableExecutor {
+protected:
+  CombinerHelper &Helper;
+  const MipsPostLegalizerCombinerImplRuleConfig &RuleConfig;
+
+  const MipsSubtarget &STI;
+  GISelChangeObserver &Observer;
+  MachineIRBuilder &B;
+  MachineFunction &MF;
+
+  MachineRegisterInfo &MRI;
+
+public:
+  MipsPostLegalizerCombinerImpl(
+      const MipsPostLegalizerCombinerImplRuleConfig &RuleConfig,
+      const MipsSubtarget &STI, GISelChangeObserver &Observer,
+      MachineIRBuilder &B, CombinerHelper &Helper);
+
+  static const char *getName() { return "MipsPostLegalizerCombiner"; }
+
+  bool tryCombineAll(MachineInstr &I) const;
+
+private:
+#define GET_GICOMBINER_CLASS_MEMBERS
+#include "MipsGenPostLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_CLASS_MEMBERS
+};
+
+#define GET_GICOMBINER_IMPL
+#include "MipsGenPostLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_IMPL
+
+MipsPostLegalizerCombinerImpl::MipsPostLegalizerCombinerImpl(
+    const MipsPostLegalizerCombinerImplRuleConfig &RuleConfig,
+    const MipsSubtarget &STI, GISelChangeObserver &Observer,
+    MachineIRBuilder &B, CombinerHelper &Helper)
+    : Helper(Helper), RuleConfig(RuleConfig), STI(STI), Observer(Observer),
+      B(B), MF(B.getMF()), MRI(*B.getMRI()),
+#define GET_GICOMBINER_CONSTRUCTOR_INITS
+#include "MipsGenPostLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_CONSTRUCTOR_INITS
+{
+}
 
 class MipsPostLegalizerCombinerInfo final : public CombinerInfo {
   GISelKnownBits *KB;
 
 public:
-  MipsGenPostLegalizerCombinerHelperRuleConfig GeneratedRuleCfg;
+  MipsPostLegalizerCombinerImplRuleConfig RuleConfig;
 
   MipsPostLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
                                 GISelKnownBits *KB, const MipsLegalizerInfo *LI)
       : CombinerInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      /*LegalizerInfo*/ LI, EnableOpt, OptSize, MinSize),
         KB(KB) {
-    if (!GeneratedRuleCfg.parseCommandLineOption())
+    if (!RuleConfig.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
   }
 
@@ -60,16 +106,13 @@ public:
 bool MipsPostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                             MachineInstr &MI,
                                             MachineIRBuilder &B) const {
-
+  const auto &STI = MI.getMF()->getSubtarget<MipsSubtarget>();
   CombinerHelper Helper(Observer, B, /* IsPreLegalize*/ false, KB,
                         /*DominatorTree*/ nullptr, LInfo);
-  MipsGenPostLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper);
-  return Generated.tryCombineAll(Observer, MI, B, Helper);
+  MipsPostLegalizerCombinerImpl Impl(RuleConfig, STI, Observer, B, Helper);
+  Impl.setupMF(*MI.getMF(), KB);
+  return Impl.tryCombineAll(MI);
 }
-
-#define MIPSPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
-#include "MipsGenPostLegalizeGICombiner.inc"
-#undef MIPSPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
 
 // Pass boilerplate
 // ================

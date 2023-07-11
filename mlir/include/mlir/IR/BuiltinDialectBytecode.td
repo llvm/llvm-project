@@ -181,6 +181,10 @@ def SparseElementsAttr : DialectAttribute<(attr
   DenseElementsAttr:$values
 )>;
 
+def DistinctAttr : DialectAttribute<(attr
+  Attribute:$referencedAttr
+)>;
+
 // Types
 // -----
 
@@ -316,7 +320,8 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     DenseArrayAttr,
     DenseIntOrFPElementsAttr,
     DenseStringElementsAttr,
-    SparseElementsAttr
+    SparseElementsAttr,
+    DistinctAttr
   ];
 }
 

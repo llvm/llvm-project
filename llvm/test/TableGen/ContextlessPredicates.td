@@ -14,7 +14,7 @@ def test_atomic_op_frag : PatFrag<(ops node:$ptr, node:$val),
   let IsAtomic = 1;
   let MemoryVT = i32;
 }
- 
+
 def INSN : I<(outs GPR32:$dst), (ins GPR32Op:$src1, GPR32Op:$src2), []>;
 
 def : Pat<(test_atomic_op_frag GPR32:$ptr, GPR32:$val) ,
@@ -35,7 +35,7 @@ def : Pat<(test_atomic_op_frag GPR32:$ptr, GPR32:$val) ,
 // CHECK_NOPT-NEXT:      // MIs[0] val
 // CHECK_NOPT-NEXT:      GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK_NOPT-NEXT:      GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK_NOPT-NEXT:      GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_test_atomic_op_frag,
+// CHECK_NOPT-NEXT:      GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_test_atomic_op_frag,
 // CHECK_NOPT-NEXT:      // (atomic_swap:{ *:[i32] } GPR32:{ *:[i32] }:$ptr, GPR32:{ *:[i32] }:$val)<<P:Predicate_test_atomic_op_frag>>  =>  (INSN:{ *:[i32] } GPR32:{ *:[i32] }:$ptr, GPR32:{ *:[i32] }:$val)
 // CHECK_NOPT-NEXT:      GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::INSN,
 // CHECK_NOPT-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,
@@ -61,7 +61,7 @@ def : Pat<(test_atomic_op_frag GPR32:$ptr, GPR32:$val) ,
 // CHECK_OPT-NEXT:      GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // CHECK_OPT-NEXT:      GIM_CheckRegBankForClass, /*MI*/0, /*Op*/1, /*RC*/MyTarget::GPR32RegClassID,
 // CHECK_OPT-NEXT:      GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK_OPT-NEXT:      GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_test_atomic_op_frag,
+// CHECK_OPT-NEXT:      GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_test_atomic_op_frag,
 // CHECK_OPT-NEXT:      // (atomic_swap:{ *:[i32] } GPR32:{ *:[i32] }:$ptr, GPR32:{ *:[i32] }:$val)<<P:Predicate_test_atomic_op_frag>>  =>  (INSN:{ *:[i32] } GPR32:{ *:[i32] }:$ptr, GPR32:{ *:[i32] }:$val)
 // CHECK_OPT-NEXT:      GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/MyTarget::INSN,
 // CHECK_OPT-NEXT:      GIR_ConstrainSelectedInstOperands, /*InsnID*/0,

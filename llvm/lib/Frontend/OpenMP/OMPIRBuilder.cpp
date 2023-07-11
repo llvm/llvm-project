@@ -4097,7 +4097,7 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
 
 void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
     Function *OutlinedFn, int32_t NumTeams, int32_t NumThreads) {
-  if (Config.isEmbedded()) {
+  if (Config.isTargetDevice()) {
     OutlinedFn->setLinkage(GlobalValue::WeakODRLinkage);
     // TODO: Determine if DSO local can be set to true.
     OutlinedFn->setDSOLocal(false);
@@ -4115,7 +4115,7 @@ void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
 
 Constant *OpenMPIRBuilder::createOutlinedFunctionID(Function *OutlinedFn,
                                                     StringRef EntryFnIDName) {
-  if (Config.isEmbedded()) {
+  if (Config.isTargetDevice()) {
     assert(OutlinedFn && "The outlined function must exist if embedded");
     return ConstantExpr::getBitCast(OutlinedFn, Builder.getInt8PtrTy());
   }
@@ -4146,7 +4146,7 @@ void OpenMPIRBuilder::emitTargetRegionFunction(
   SmallString<64> EntryFnName;
   OffloadInfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
 
-  OutlinedFn = Config.isEmbedded() || !Config.openMPOffloadMandatory()
+  OutlinedFn = Config.isTargetDevice() || !Config.openMPOffloadMandatory()
                    ? GenerateFunctionCallback(EntryFnName)
                    : nullptr;
 
@@ -4157,7 +4157,7 @@ void OpenMPIRBuilder::emitTargetRegionFunction(
     return;
 
   std::string EntryFnIDName =
-      Config.isEmbedded()
+      Config.isTargetDevice()
           ? std::string(EntryFnName)
           : createPlatformSpecificName({EntryFnName, "region_id"});
 
@@ -4327,13 +4327,13 @@ createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   Builder.SetInsertPoint(EntryBB);
 
   // Insert target init call in the device compilation pass.
-  if (OMPBuilder.Config.isEmbedded())
+  if (OMPBuilder.Config.isTargetDevice())
     Builder.restoreIP(OMPBuilder.createTargetInit(Builder, /*IsSPMD*/ false));
 
   Builder.restoreIP(CBFunc(Builder.saveIP(), Builder.saveIP()));
 
   // Insert target deinit call in the device compilation pass.
-  if (OMPBuilder.Config.isEmbedded())
+  if (OMPBuilder.Config.isTargetDevice())
     OMPBuilder.createTargetDeinit(Builder, /*IsSPMD*/ false);
 
   // Insert return instruction.
@@ -4394,7 +4394,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
   Function *OutlinedFn;
   emitTargetOutlinedFunction(*this, Builder, EntryInfo, OutlinedFn, NumTeams,
                              NumThreads, Args, CBFunc);
-  if (!Config.isEmbedded())
+  if (!Config.isTargetDevice())
     emitTargetCall(Builder, OutlinedFn, Args);
   return Builder.saveIP();
 }
@@ -5463,7 +5463,7 @@ void OpenMPIRBuilder::OutlineInfo::collectBlocks(
 void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          uint64_t Size, int32_t Flags,
                                          GlobalValue::LinkageTypes) {
-  if (!Config.isTargetCodegen()) {
+  if (!Config.isGPU()) {
     emitOffloadingEntry(ID, Addr->getName(), Size, Flags);
     return;
   }
@@ -5597,7 +5597,7 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
       switch (Flags) {
       case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter:
       case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo:
-        if (Config.isEmbedded() && Config.hasRequiresUnifiedSharedMemory())
+        if (Config.isTargetDevice() && Config.hasRequiresUnifiedSharedMemory())
           continue;
         if (!CE->getAddress()) {
           ErrorFn(EMIT_MD_DECLARE_TARGET_ERROR, E.second);
@@ -5608,10 +5608,10 @@ void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
           continue;
         break;
       case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink:
-        assert(((Config.isEmbedded() && !CE->getAddress()) ||
-                (!Config.isEmbedded() && CE->getAddress())) &&
+        assert(((Config.isTargetDevice() && !CE->getAddress()) ||
+                (!Config.isTargetDevice() && CE->getAddress())) &&
                "Declaret target link address is set.");
-        if (Config.isEmbedded())
+        if (Config.isTargetDevice())
           continue;
         if (!CE->getAddress()) {
           ErrorFn(EMIT_MD_GLOBAL_VAR_LINK_ERROR, TargetRegionEntryInfo());
@@ -5709,7 +5709,7 @@ Constant *OpenMPIRBuilder::getAddrOfDeclareTargetVar(
       auto *GV = cast<GlobalVariable>(Ptr);
       GV->setLinkage(GlobalValue::WeakAnyLinkage);
 
-      if (!Config.isEmbedded()) {
+      if (!Config.isTargetDevice()) {
         if (GlobalInitializer)
           GV->setInitializer(GlobalInitializer());
         else
@@ -5739,7 +5739,7 @@ void OpenMPIRBuilder::registerTargetGlobalVariable(
     std::function<GlobalValue::LinkageTypes()> VariableLinkage, Type *LlvmPtrTy,
     Constant *Addr) {
   if (DeviceClause != OffloadEntriesInfoManager::OMPTargetDeviceClauseAny ||
-      (TargetTriple.empty() && !Config.isEmbedded()))
+      (TargetTriple.empty() && !Config.isTargetDevice()))
     return;
 
   OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind Flags;
@@ -5764,7 +5764,7 @@ void OpenMPIRBuilder::registerTargetGlobalVariable(
 
     // This is a workaround carried over from Clang which prevents undesired
     // optimisation of internal variables.
-    if (Config.isEmbedded() &&
+    if (Config.isTargetDevice() &&
         (!IsExternallyVisible || Linkage == GlobalValue::LinkOnceODRLinkage)) {
       // Do not create a "ref-variable" if the original is not also available
       // on the host.
@@ -5789,7 +5789,7 @@ void OpenMPIRBuilder::registerTargetGlobalVariable(
     else
       Flags = OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo;
 
-    if (Config.isEmbedded()) {
+    if (Config.isTargetDevice()) {
       VarName = (Addr) ? Addr->getName() : "";
       Addr = nullptr;
     } else {
@@ -5894,7 +5894,7 @@ void OffloadEntriesInfoManager::registerTargetRegionEntryInfo(
 
   // If we are emitting code for a target, the entry is already initialized,
   // only has to be registered.
-  if (OMPBuilder->Config.isEmbedded()) {
+  if (OMPBuilder->Config.isTargetDevice()) {
     // This could happen if the device compilation is invoked standalone.
     if (!hasTargetRegionEntryInfo(EntryInfo)) {
       return;
@@ -5949,7 +5949,7 @@ void OffloadEntriesInfoManager::initializeDeviceGlobalVarEntryInfo(
 void OffloadEntriesInfoManager::registerDeviceGlobalVarEntryInfo(
     StringRef VarName, Constant *Addr, int64_t VarSize,
     OMPTargetGlobalVarEntryKind Flags, GlobalValue::LinkageTypes Linkage) {
-  if (OMPBuilder->Config.isEmbedded()) {
+  if (OMPBuilder->Config.isTargetDevice()) {
     // This could happen if the device compilation is invoked standalone.
     if (!hasDeviceGlobalVarEntryInfo(VarName))
       return;

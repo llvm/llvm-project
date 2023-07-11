@@ -532,6 +532,7 @@ include "LoongArchLASXInstrFormats.td"
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class ALU_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), opstr, "$rd, $rj, $rk">;
 class ALU_2R<bits<22> op, string opstr>
@@ -557,13 +558,17 @@ class ALU_2RI16<bits<6> op, string opstr, Operand ImmOpnd>
                "$rd, $rj, $imm16">;
 class ALU_1RI20<bits<7> op, string opstr, Operand ImmOpnd>
     : Fmt1RI20<op, (outs GPR:$rd), (ins ImmOpnd:$imm20), opstr, "$rd, $imm20">;
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class MISC_I15<bits<17> op, string opstr>
     : FmtI15<op, (outs), (ins uimm15:$imm15), opstr, "$imm15">;
 
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class RDTIME_2R<bits<22> op, string opstr>
     : Fmt2R<op, (outs GPR:$rd, GPR:$rj), (ins), opstr, "$rd, $rj">;
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class BrCC_2RI16<bits<6> op, string opstr>
     : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2_br:$imm16), opstr,
                "$rj, $rd, $imm16"> {
@@ -581,8 +586,9 @@ class Br_I26<bits<6> op, string opstr>
   let isBranch = 1;
   let isTerminator = 1;
 }
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let mayLoad = 1 in {
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class LOAD_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), opstr, "$rd, $rj, $rk">;
 class LOAD_2RI12<bits<10> op, string opstr>
@@ -591,9 +597,9 @@ class LOAD_2RI12<bits<10> op, string opstr>
 class LOAD_2RI14<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14), opstr,
                "$rd, $rj, $imm14">;
-} // mayLoad = 1
+} // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
-let mayStore = 1 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class STORE_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs), (ins GPR:$rd, GPR:$rj, GPR:$rk), opstr,
             "$rd, $rj, $rk">;
@@ -603,26 +609,28 @@ class STORE_2RI12<bits<10> op, string opstr>
 class STORE_2RI14<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14), opstr,
                "$rd, $rj, $imm14">;
-} // mayStore = 1
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
-let mayLoad = 1, mayStore = 1, Constraints = "@earlyclobber $rd" in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1, Constraints = "@earlyclobber $rd" in
 class AM_3R<bits<17> op, string opstr>
     : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj), opstr,
             "$rd, $rk, $rj">;
 
-let mayLoad = 1 in
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class LLBase<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14), opstr,
                "$rd, $rj, $imm14">;
 
-let mayStore = 1, Constraints = "$rd = $dst" in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Constraints = "$rd = $dst" in
 class SCBase<bits<8> op, string opstr>
     : Fmt2RI14<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14),
                opstr, "$rd, $rj, $imm14">;
 
+let hasSideEffects = 1 in
 class IOCSRRD<bits<22> op, string opstr>
     : Fmt2R<op, (outs GPR:$rd), (ins GPR:$rj), opstr, "$rd, $rj">;
 
+let hasSideEffects = 1 in
 class IOCSRWR<bits<22> op, string opstr>
     : Fmt2R<op, (outs), (ins GPR:$rd, GPR:$rj), opstr, "$rd, $rj">;
 
@@ -706,8 +714,9 @@ def BEQZ : BrCCZ_1RI21<0b010000, "beqz">;
 def BNEZ : BrCCZ_1RI21<0b010001, "bnez">;
 def B : Br_I26<0b010100, "b">;
 
-let isCall = 1, Defs=[R1] in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1, Defs=[R1] in
 def BL : FmtI26<0b010101, (outs), (ins simm26_symbol:$imm26), "bl", "$imm26">;
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def JIRL : Fmt2RI16<0b010011, (outs GPR:$rd),
                     (ins GPR:$rj, simm16_lsl2:$imm16), "jirl",
                     "$rd, $rj, $imm16">;
@@ -721,6 +730,7 @@ def LD_HU : LOAD_2RI12<0b0010101001, "ld.hu">;
 def ST_B : STORE_2RI12<0b0010100100, "st.b">;
 def ST_H : STORE_2RI12<0b0010100101, "st.h">;
 def ST_W : STORE_2RI12<0b0010100110, "st.w">;
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 def PRELD : FmtPRELD<(outs), (ins uimm5:$imm5, GPR:$rj, simm12:$imm12), "preld",
                      "$imm5, $rj, $imm12">;
 
@@ -755,6 +765,7 @@ def ADDU16I_D : ALU_2RI16<0b000100, "addu16i.d", simm16>;
 def ALSL_WU : ALU_3RI2<0b000000000000011, "alsl.wu", uimm2_plus1>;
 def ALSL_D  : ALU_3RI2<0b000000000010110, "alsl.d", uimm2_plus1>;
 let Constraints = "$rd = $dst" in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def LU32I_D : Fmt1RI20<0b0001011, (outs GPR:$dst),
                        (ins GPR:$rd, simm20_lu32id:$imm20), "lu32i.d",
                        "$rd, $imm20">;
@@ -824,6 +835,7 @@ def LDPTR_W : LOAD_2RI14<0b00100100, "ldptr.w">;
 def LDPTR_D : LOAD_2RI14<0b00100110, "ldptr.d">;
 def STPTR_W : STORE_2RI14<0b00100101, "stptr.w">;
 def STPTR_D : STORE_2RI14<0b00100111, "stptr.d">;
+let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
 def PRELDX : FmtPRELDX<(outs), (ins uimm5:$imm5, GPR:$rj, GPR:$rk), "preldx",
                        "$imm5, $rj, $rk">;
 
@@ -1321,7 +1333,7 @@ def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rj),
                                 [(loongarch_call GPR:$rj)]>,
                          PseudoInstExpansion<(JIRL R1, GPR:$rj, 0)>;
 
-let isCall = 1, Defs = [R1] in
+let isCall = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0, Defs = [R1] in
 def PseudoJIRL_CALL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL R1, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
@@ -1343,11 +1355,13 @@ def PseudoTAILIndirect : Pseudo<(outs), (ins GPRT:$rj),
                                 [(loongarch_tail GPRT:$rj)]>,
                          PseudoInstExpansion<(JIRL R0, GPR:$rj, 0)>;
 
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
+    hasSideEffects = 0, mayStore = 0, mayLoad = 0, Uses = [R3] in
 def PseudoB_TAIL : Pseudo<(outs), (ins simm26_b:$imm26)>,
                    PseudoInstExpansion<(B simm26_b:$imm26)>;
 
-let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
+    hasSideEffects = 0, mayStore = 0, mayLoad = 0, Uses = [R3] in
 def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL R0, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
@@ -1934,15 +1948,16 @@ let Predicates = [HasBasicF], usesCustomInserter = 1 in {
 //===----------------------------------------------------------------------===//
 
 // CSR Access Instructions
+let hasSideEffects = 1 in
 def CSRRD : FmtCSR<0b0000010000000, (outs GPR:$rd), (ins uimm14:$csr_num),
                    "csrrd", "$rd, $csr_num">;
-let Constraints = "$rd = $dst" in {
+let hasSideEffects = 1, Constraints = "$rd = $dst" in {
 def CSRWR : FmtCSR<0b0000010000001, (outs GPR:$dst),
                    (ins GPR:$rd, uimm14:$csr_num), "csrwr", "$rd, $csr_num">;
 def CSRXCHG : FmtCSRXCHG<0b00000100, (outs GPR:$dst),
                          (ins GPR:$rd, GPR:$rj, uimm14:$csr_num),
                          "csrxchg", "$rd, $rj, $csr_num">;
-} // Constraints = "$rd = $dst"
+} // hasSideEffects = 1, Constraints = "$rd = $dst"
 
 // IOCSR Access Instructions
 def IOCSRRD_B : IOCSRRD<0b0000011001001000000000, "iocsrrd.b">;
@@ -1957,6 +1972,7 @@ def IOCSRWR_D : IOCSRWR<0b0000011001001000000111, "iocsrwr.d">;
 } // Predicates = [IsLA64]
 
 // TLB Maintenance Instructions
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 def TLBSRCH  : FmtI32<0b00000110010010000010100000000000, "tlbsrch">;
 def TLBRD    : FmtI32<0b00000110010010000010110000000000, "tlbrd">;
 def TLBWR    : FmtI32<0b00000110010010000011000000000000, "tlbwr">;
@@ -1965,6 +1981,7 @@ def TLBCLR   : FmtI32<0b00000110010010000010000000000000, "tlbclr">;
 def TLBFLUSH : FmtI32<0b00000110010010000010010000000000, "tlbflush">;
 def INVTLB : FmtINVTLB<(outs), (ins GPR:$rk, GPR:$rj, uimm5:$op), "invtlb",
                        "$op, $rj, $rk">;
+} // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 
 // Software Page Walking Instructions
 def LDDIR : Fmt2RI8<0b00000110010000, (outs GPR:$rd),
@@ -1973,6 +1990,7 @@ def LDPTE : FmtLDPTE<(outs), (ins GPR:$rj, uimm8:$seq), "ldpte", "$rj, $seq">;
 
 
 // Other Miscellaneous Instructions
+let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 def ERTN : FmtI32<0b00000110010010000011100000000000, "ertn">;
 def DBCL : MISC_I15<0b00000000001010101, "dbcl">;
 def IDLE : MISC_I15<0b00000110010010001, "idle">;

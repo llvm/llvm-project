@@ -43,7 +43,8 @@ genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::Type idxTy = builder.getIndexType();
   mlir::Type boundTy = builder.getType<mlir::acc::DataBoundsType>();
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  assert(box.getType().isa<fir::BaseBoxType>() && "expect firbox or fir.class");
+  assert(box.getType().isa<fir::BaseBoxType>() &&
+         "expect fir.box or fir.class");
   for (unsigned dim = 0; dim < dataExv.rank(); ++dim) {
     mlir::Value d = builder.createIntegerConstant(loc, idxTy, dim);
     mlir::Value baseLb =

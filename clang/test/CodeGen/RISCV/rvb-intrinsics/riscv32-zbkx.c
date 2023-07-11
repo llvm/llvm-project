@@ -13,9 +13,9 @@
 // RV32ZBKX-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.xperm8.i32(i32 [[TMP0]], i32 [[TMP1]])
 // RV32ZBKX-NEXT:    ret i32 [[TMP2]]
 //
-long xperm8(long rs1, long rs2)
+int xperm8(int rs1, int rs2)
 {
-  return __builtin_riscv_xperm8(rs1, rs2);
+  return __builtin_riscv_xperm8_32(rs1, rs2);
 }
 
 // RV32ZBKX-LABEL: @xperm4(
@@ -29,7 +29,7 @@ long xperm8(long rs1, long rs2)
 // RV32ZBKX-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.xperm4.i32(i32 [[TMP0]], i32 [[TMP1]])
 // RV32ZBKX-NEXT:    ret i32 [[TMP2]]
 //
-long xperm4(long rs1, long rs2)
+int xperm4(int rs1, int rs2)
 {
-  return __builtin_riscv_xperm4(rs1, rs2);
+  return __builtin_riscv_xperm4_32(rs1, rs2);
 }

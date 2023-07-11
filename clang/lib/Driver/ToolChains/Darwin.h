@@ -238,10 +238,6 @@ public:
     // expected to use /usr/include/Block.h.
     return true;
   }
-  bool IsIntegratedAssemblerDefault() const override {
-    // Default integrated assembler to on for Apple's MachO targets.
-    return true;
-  }
 
   bool IsMathErrnoDefault() const override { return false; }
 

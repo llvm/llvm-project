@@ -2588,7 +2588,7 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
     return CGF.CGM.getCXXABI().EmitThreadLocalVarDeclLValue(CGF, VD, T);
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
-  if (CGF.getLangOpts().OpenMPIsDevice) {
+  if (CGF.getLangOpts().OpenMPIsTargetDevice) {
     Address Addr = emitDeclTargetVarDeclLValue(CGF, VD, T);
     if (Addr.isValid())
       return CGF.MakeAddrLValue(Addr, T, AlignmentSource::Decl);

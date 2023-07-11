@@ -95,22 +95,32 @@ STATISTIC(NumUDivURemsNarrowedExpanded,
           "Number of bound udiv's/urem's expanded");
 
 static bool processSelect(SelectInst *S, LazyValueInfo *LVI) {
-  if (S->getType()->isVectorTy()) return false;
-  if (isa<Constant>(S->getCondition())) return false;
+  if (S->getType()->isVectorTy() || isa<Constant>(S->getCondition()))
+    return false;
 
-  Constant *C = LVI->getConstant(S->getCondition(), S);
-  if (!C) return false;
+  bool Changed = false;
+  for (Use &U : make_early_inc_range(S->uses())) {
+    auto *I = cast<Instruction>(U.getUser());
+    Constant *C;
+    if (auto *PN = dyn_cast<PHINode>(I))
+      C = LVI->getConstantOnEdge(S->getCondition(), PN->getIncomingBlock(U),
+                                 I->getParent(), I);
+    else
+      C = LVI->getConstant(S->getCondition(), I);
 
-  ConstantInt *CI = dyn_cast<ConstantInt>(C);
-  if (!CI) return false;
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    if (!CI)
+      continue;
 
-  Value *ReplaceWith = CI->isOne() ? S->getTrueValue() : S->getFalseValue();
-  S->replaceAllUsesWith(ReplaceWith);
-  S->eraseFromParent();
+    U.set(CI->isOne() ? S->getTrueValue() : S->getFalseValue());
+    Changed = true;
+    ++NumSelects;
+  }
 
-  ++NumSelects;
+  if (Changed && S->use_empty())
+    S->eraseFromParent();
 
-  return true;
+  return Changed;
 }
 
 /// Try to simplify a phi with constant incoming values that match the edge

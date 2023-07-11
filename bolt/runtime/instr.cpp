@@ -684,8 +684,7 @@ static char *getBinaryPath() {
     return TargetPath;
 
   unsigned long CurAddr = (unsigned long)__get_pc();
-  uint64_t FDdir = __open(DirPath,
-                          /*flags=*/0 /*O_RDONLY*/,
+  uint64_t FDdir = __open(DirPath, O_RDONLY,
                           /*mode=*/0666);
   assert(static_cast<int64_t>(FDdir) >= 0,
          "failed to open /proc/self/map_files");
@@ -720,15 +719,14 @@ ProfileWriterContext readDescriptions() {
   char *BinPath = getBinaryPath();
   assert(BinPath && BinPath[0] != '\0', "failed to find binary path");
 
-  uint64_t FD = __open(BinPath,
-                       /*flags=*/0 /*O_RDONLY*/,
+  uint64_t FD = __open(BinPath, O_RDONLY,
                        /*mode=*/0666);
   assert(static_cast<int64_t>(FD) >= 0, "failed to open binary path");
 
   Result.FileDesc = FD;
 
   // mmap our binary to memory
-  uint64_t Size = __lseek(FD, 0, 2 /*SEEK_END*/);
+  uint64_t Size = __lseek(FD, 0, SEEK_END);
   uint8_t *BinContents = reinterpret_cast<uint8_t *>(
       __mmap(0, Size, PROT_READ, MAP_PRIVATE, FD, 0));
   assert(BinContents != MAP_FAILED, "readDescriptions: Failed to mmap self!");
@@ -1470,8 +1468,7 @@ int openProfile() {
     Ptr = strCopy(Ptr, ".fdata", BufSize - (Ptr - Buf + 1));
   }
   *Ptr++ = '\0';
-  uint64_t FD = __open(Buf,
-                       /*flags=*/0x241 /*O_WRONLY|O_TRUNC|O_CREAT*/,
+  uint64_t FD = __open(Buf, O_WRONLY | O_TRUNC | O_CREAT,
                        /*mode=*/0666);
   if (static_cast<int64_t>(FD) < 0) {
     report("Error while trying to open profile file for writing: ");

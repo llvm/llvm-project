@@ -104,6 +104,7 @@ private:
     case Equal:
       return 2;
     }
+    llvm_unreachable("Unhandled Formula::Kind enum");
   }
 
   Kind FormulaKind;

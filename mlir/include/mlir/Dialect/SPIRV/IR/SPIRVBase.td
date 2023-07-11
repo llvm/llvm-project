@@ -4069,7 +4069,7 @@ class SignlessOrUnsignedIntOfWidths<list<int> widths> :
               !interleave(widths, "/") # "-bit signless/unsigned integer">;
 
 def SPIRV_IsArrayType : CPred<"::llvm::isa<::mlir::spirv::ArrayType>($_self)">;
-def SPIRV_IsCooperativeMatrixType :
+def SPIRV_IsCooperativeMatrixNVType :
   CPred<"::llvm::isa<::mlir::spirv::CooperativeMatrixNVType>($_self)">;
 def SPIRV_IsImageType : CPred<"::llvm::isa<::mlir::spirv::ImageType>($_self)">;
 def SPIRV_IsJointMatrixType :
@@ -4100,9 +4100,9 @@ def SPIRV_AnyPtr : DialectType<SPIRV_Dialect, SPIRV_IsPtrType,
                              "any SPIR-V pointer type">;
 def SPIRV_AnyArray : DialectType<SPIRV_Dialect, SPIRV_IsArrayType,
                                "any SPIR-V array type">;
-def SPIRV_AnyCooperativeMatrix : DialectType<SPIRV_Dialect,
-                               SPIRV_IsCooperativeMatrixType,
-                               "any SPIR-V cooperative matrix type">;
+def SPIRV_AnyCooperativeMatrixNV : DialectType<SPIRV_Dialect,
+                                     SPIRV_IsCooperativeMatrixNVType,
+                                     "any SPIR-V NV cooperative matrix type">;
 def SPIRV_AnyImage : DialectType<SPIRV_Dialect, SPIRV_IsImageType,
                                 "any SPIR-V image type">;
 def SPIRV_AnyJointMatrix : DialectType<SPIRV_Dialect, SPIRV_IsJointMatrixType,
@@ -4121,21 +4121,21 @@ def SPIRV_Scalar : AnyTypeOf<[SPIRV_Numerical, SPIRV_Bool]>;
 def SPIRV_Aggregate : AnyTypeOf<[SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct]>;
 def SPIRV_Composite :
     AnyTypeOf<[SPIRV_Vector, SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
-               SPIRV_AnyCooperativeMatrix, SPIRV_AnyJointMatrix, SPIRV_AnyMatrix]>;
+               SPIRV_AnyCooperativeMatrixNV, SPIRV_AnyJointMatrix, SPIRV_AnyMatrix]>;
 def SPIRV_Type : AnyTypeOf<[
     SPIRV_Void, SPIRV_Bool, SPIRV_Integer, SPIRV_Float, SPIRV_Vector,
     SPIRV_AnyPtr, SPIRV_AnyArray, SPIRV_AnyRTArray, SPIRV_AnyStruct,
-    SPIRV_AnyCooperativeMatrix, SPIRV_AnyJointMatrix, SPIRV_AnyMatrix,
+    SPIRV_AnyCooperativeMatrixNV, SPIRV_AnyJointMatrix, SPIRV_AnyMatrix,
     SPIRV_AnySampledImage
   ]>;
 
 def SPIRV_SignedInt : SignedIntOfWidths<[8, 16, 32, 64]>;
 def SPIRV_SignlessOrUnsignedInt : SignlessOrUnsignedIntOfWidths<[8, 16, 32, 64]>;
 
-class SPIRV_CoopMatrixOfType<list<Type> allowedTypes> :
-  ContainerType<AnyTypeOf<allowedTypes>, SPIRV_IsCooperativeMatrixType,
+class SPIRV_CoopMatrixNVOfType<list<Type> allowedTypes> :
+  ContainerType<AnyTypeOf<allowedTypes>, SPIRV_IsCooperativeMatrixNVType,
     "::llvm::cast<::mlir::spirv::CooperativeMatrixNVType>($_self).getElementType()",
-    "Cooperative Matrix">;
+    "Cooperative Matrix NV">;
 
 class SPIRV_JointMatrixOfType<list<Type> allowedTypes> :
   ContainerType<AnyTypeOf<allowedTypes>, SPIRV_IsJointMatrixType,
@@ -4147,10 +4147,10 @@ class SPIRV_ScalarOrVectorOf<Type type> :
 
 class SPIRV_ScalarOrVectorOrCoopMatrixOf<Type type> :
     AnyTypeOf<[type, VectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>,
-               SPIRV_CoopMatrixOfType<[type]>]>;
+               SPIRV_CoopMatrixNVOfType<[type]>]>;
 
 class SPIRV_MatrixOrCoopMatrixOf<Type type> :
-    AnyTypeOf<[SPIRV_AnyMatrix, SPIRV_CoopMatrixOfType<[type]>]>;
+    AnyTypeOf<[SPIRV_AnyMatrix, SPIRV_CoopMatrixNVOfType<[type]>]>;
 
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;

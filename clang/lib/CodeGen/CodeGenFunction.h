@@ -318,10 +318,10 @@ public:
 
   /// CurFuncDecl - Holds the Decl for the current outermost
   /// non-closure context.
-  const Decl *CurFuncDecl;
+  const Decl *CurFuncDecl = nullptr;
   /// CurCodeDecl - This is the inner-most code context, which includes blocks.
-  const Decl *CurCodeDecl;
-  const CGFunctionInfo *CurFnInfo;
+  const Decl *CurCodeDecl = nullptr;
+  const CGFunctionInfo *CurFnInfo = nullptr;
   QualType FnRetTy;
   llvm::Function *CurFn = nullptr;
 
@@ -748,11 +748,11 @@ public:
 
     /// An i1 variable indicating whether or not the @finally is
     /// running for an exception.
-    llvm::AllocaInst *ForEHVar;
+    llvm::AllocaInst *ForEHVar = nullptr;
 
     /// An i8* variable into which the exception pointer to rethrow
     /// has been saved.
-    llvm::AllocaInst *SavedExnVar;
+    llvm::AllocaInst *SavedExnVar = nullptr;
 
   public:
     void enter(CodeGenFunction &CGF, const Stmt *Finally,

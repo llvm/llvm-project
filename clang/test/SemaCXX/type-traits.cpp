@@ -3141,6 +3141,13 @@ struct TriviallyEqualityComparableContainsArray {
 };
 static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsArray));
 
+struct TriviallyEqualityComparableContainsMultiDimensionArray {
+  int a[4][4];
+
+  bool operator==(const TriviallyEqualityComparableContainsMultiDimensionArray&) const = default;
+};
+static_assert(__is_trivially_equality_comparable(TriviallyEqualityComparableContainsMultiDimensionArray));
+
 struct TriviallyEqualityComparableNonTriviallyCopyable {
   TriviallyEqualityComparableNonTriviallyCopyable(const TriviallyEqualityComparableNonTriviallyCopyable&);
   ~TriviallyEqualityComparableNonTriviallyCopyable();
@@ -3291,6 +3298,20 @@ struct NotTriviallyEqualityComparableHasEnum {
   bool operator==(const NotTriviallyEqualityComparableHasEnum&) const = default;
 };
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableHasEnum));
+
+struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs {
+  E e[1];
+
+  bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs&) const = default;
+};
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs));
+
+struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
+  E e[1][1];
+
+  bool operator==(const NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2&) const = default;
+};
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
 
 namespace hidden_friend {
 

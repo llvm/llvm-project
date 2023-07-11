@@ -943,7 +943,7 @@ public:
   class DelayedDiagnostics;
 
   class DelayedDiagnosticsState {
-    sema::DelayedDiagnosticPool *SavedPool;
+    sema::DelayedDiagnosticPool *SavedPool = nullptr;
     friend class Sema::DelayedDiagnostics;
   };
   typedef DelayedDiagnosticsState ParsingDeclState;

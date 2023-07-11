@@ -7070,6 +7070,10 @@ SDValue ARMTargetLowering::LowerConstantFP(SDValue Op, SelectionDAG &DAG,
   // Prevent floating-point constants from using literal loads
   // when execute-only is enabled.
   if (ST->genExecuteOnly()) {
+    // We shouldn't trigger this for v6m execute-only
+    assert((!ST->isThumb1Only() || ST->hasV8MBaselineOps()) &&
+           "Unexpected architecture");
+
     // If we can represent the constant as an immediate, don't lower it
     if (isFPImmLegal(FPVal, VT))
       return Op;

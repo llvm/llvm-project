@@ -25,7 +25,7 @@ class UncountedLambdaCapturesChecker
 private:
   BugType Bug{this, "Lambda capture of uncounted variable",
               "WebKit coding guidelines"};
-  mutable BugReporter *BR;
+  mutable BugReporter *BR = nullptr;
 
 public:
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,

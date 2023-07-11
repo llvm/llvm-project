@@ -2239,6 +2239,14 @@ RedirectingFileSystem::LookupResult::LookupResult(
   }
 }
 
+void RedirectingFileSystem::LookupResult::getPath(
+    llvm::SmallVectorImpl<char> &Result) const {
+  Result.clear();
+  for (Entry *Parent : Parents)
+    llvm::sys::path::append(Result, Parent->getName());
+  llvm::sys::path::append(Result, E->getName());
+}
+
 std::error_code
 RedirectingFileSystem::makeCanonical(SmallVectorImpl<char> &Path) const {
   if (std::error_code EC = makeAbsolute(Path))
@@ -2257,11 +2265,14 @@ ErrorOr<RedirectingFileSystem::LookupResult>
 RedirectingFileSystem::lookupPath(StringRef Path) const {
   sys::path::const_iterator Start = sys::path::begin(Path);
   sys::path::const_iterator End = sys::path::end(Path);
+  llvm::SmallVector<Entry *, 32> Entries;
   for (const auto &Root : Roots) {
     ErrorOr<RedirectingFileSystem::LookupResult> Result =
-        lookupPathImpl(Start, End, Root.get());
-    if (Result || Result.getError() != llvm::errc::no_such_file_or_directory)
+        lookupPathImpl(Start, End, Root.get(), Entries);
+    if (Result || Result.getError() != llvm::errc::no_such_file_or_directory) {
+      Result->Parents = std::move(Entries);
       return Result;
+    }
   }
   return make_error_code(llvm::errc::no_such_file_or_directory);
 }
@@ -2269,7 +2280,8 @@ RedirectingFileSystem::lookupPath(StringRef Path) const {
 ErrorOr<RedirectingFileSystem::LookupResult>
 RedirectingFileSystem::lookupPathImpl(
     sys::path::const_iterator Start, sys::path::const_iterator End,
-    RedirectingFileSystem::Entry *From) const {
+    RedirectingFileSystem::Entry *From,
+    llvm::SmallVectorImpl<Entry *> &Entries) const {
   assert(!isTraversalComponent(*Start) &&
          !isTraversalComponent(From->getName()) &&
          "Paths should not contain traversal components");
@@ -2298,10 +2310,12 @@ RedirectingFileSystem::lookupPathImpl(
   auto *DE = cast<RedirectingFileSystem::DirectoryEntry>(From);
   for (const std::unique_ptr<RedirectingFileSystem::Entry> &DirEntry :
        llvm::make_range(DE->contents_begin(), DE->contents_end())) {
+    Entries.push_back(From);
     ErrorOr<RedirectingFileSystem::LookupResult> Result =
-        lookupPathImpl(Start, End, DirEntry.get());
+        lookupPathImpl(Start, End, DirEntry.get(), Entries);
     if (Result || Result.getError() != llvm::errc::no_such_file_or_directory)
       return Result;
+    Entries.pop_back();
   }
 
   return make_error_code(llvm::errc::no_such_file_or_directory);
@@ -2543,10 +2557,12 @@ RedirectingFileSystem::getRealPath(const Twine &OriginalPath,
     return P;
   }
 
-  // If we found a DirectoryEntry, still fallthrough to the original path if
-  // allowed, because directories don't have a single external contents path.
-  if (Redirection == RedirectKind::Fallthrough)
-    return ExternalFS->getRealPath(CanonicalPath, Output);
+  // We found a DirectoryEntry, which does not have a single external contents
+  // path. Use the canonical virtual path.
+  if (Redirection == RedirectKind::Fallthrough) {
+    Result->getPath(Output);
+    return {};
+  }
   return llvm::errc::invalid_argument;
 }
 

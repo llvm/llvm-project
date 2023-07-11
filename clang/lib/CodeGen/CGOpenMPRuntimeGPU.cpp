@@ -1009,7 +1009,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
     // signature of the offloading routine has to match across host and device.
     bool LoopTransformed = false;
     if (CGM.getTriple().isAMDGCN()) {
-      assert(CGM.getLangOpts().OpenMPIsDevice && "Unexpected host path");
+      assert(CGM.getLangOpts().OpenMPIsTargetDevice && "Unexpected host path");
       CodeGenModule::NoLoopXteamErr NxStatus = CGM.checkAndSetNoLoopKernel(D);
       DEBUG_WITH_TYPE(NO_LOOP_XTEAM_RED,
                       CGM.emitNxResult("[No-Loop/Big-Jump-Loop]", D, NxStatus));
@@ -1048,12 +1048,12 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
 CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
     : CGOpenMPRuntime(CGM) {
-  llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsDevice, true,
-                                     hasRequiresUnifiedSharedMemory(),
+  llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsTargetDevice,
+                                     isGPU(), hasRequiresUnifiedSharedMemory(),
                                      CGM.getLangOpts().OpenMPOffloadMandatory);
   OMPBuilder.setConfig(Config);
 
-  if (!CGM.getLangOpts().OpenMPIsDevice)
+  if (!CGM.getLangOpts().OpenMPIsTargetDevice)
     llvm_unreachable("OpenMP can only handle device code.");
 
   llvm::OpenMPIRBuilder &OMPBuilder = getOMPBuilder();
@@ -4348,7 +4348,7 @@ bool CGOpenMPRuntimeGPU::mustEmitSafeAtomic(CodeGenFunction &CGF, LValue X,
   CudaArch Arch = getCudaArch(CGM);
 
   if (!Context.getTargetInfo().getTriple().isAMDGCN() ||
-      !CGF.CGM.getLangOpts().OpenMPIsDevice)
+      !CGF.CGM.getLangOpts().OpenMPIsTargetDevice)
     return false;
 
   if (Arch != CudaArch::GFX941)

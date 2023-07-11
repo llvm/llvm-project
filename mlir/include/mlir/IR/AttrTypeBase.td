@@ -342,11 +342,12 @@ class DefaultValuedParameter<string type, string value, string desc = ""> :
 }
 
 // For StringRefs, which require allocation.
-class StringRefParameter<string desc = ""> :
+class StringRefParameter<string desc = "", string value = ""> :
     AttrOrTypeParameter<"::llvm::StringRef", desc> {
   let allocator = [{$_dst = $_allocator.copyInto($_self);}];
   let printer = [{$_printer << '"' << $_self << '"';}];
   let cppStorageType = "std::string";
+  let defaultValue = value;
 }
 
 // For APFloats, which require comparison.

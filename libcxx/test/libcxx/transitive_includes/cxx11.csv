@@ -42,11 +42,11 @@ array algorithm
 array compare
 array concepts
 array cstddef
-array cstdint
 array cstdlib
 array initializer_list
 array iterator
 array limits
+array new
 array stdexcept
 array type_traits
 array utility
@@ -110,6 +110,7 @@ charconv cstring
 charconv initializer_list
 charconv iosfwd
 charconv limits
+charconv new
 charconv type_traits
 chrono bit
 chrono compare
@@ -307,6 +308,7 @@ format cstdlib
 format initializer_list
 format limits
 format locale
+format new
 format optional
 format queue
 format stack
@@ -508,7 +510,6 @@ locale version
 map compare
 map concepts
 map cstddef
-map cstdint
 map cstdlib
 map functional
 map initializer_list
@@ -648,6 +649,7 @@ queue deque
 queue functional
 queue initializer_list
 queue limits
+queue new
 queue type_traits
 queue vector
 queue version
@@ -736,7 +738,6 @@ semaphore version
 set compare
 set concepts
 set cstddef
-set cstdint
 set cstdlib
 set functional
 set initializer_list
@@ -783,6 +784,7 @@ stack deque
 stack functional
 stack initializer_list
 stack limits
+stack new
 stack type_traits
 stack version
 stdexcept cstdlib
@@ -833,6 +835,7 @@ string_view initializer_list
 string_view iosfwd
 string_view iterator
 string_view limits
+string_view new
 string_view stdexcept
 string_view type_traits
 string_view version

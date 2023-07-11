@@ -880,3 +880,11 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("breakpoint set -N n", "breakpoint set -N n")
         self.assertTrue(bp1.AddNameWithErrorHandling("nn"))
         self.complete_from_to("breakpoint set -N ", "breakpoint set -N nn")
+
+    def test_ambiguous_command(self):
+        """Test completing an ambiguous commands"""
+        self.complete_from_to("settings s", ['set', 'show'])
+
+    def test_ambiguous_subcommand(self):
+        """Test completing a subcommand of an ambiguous command"""
+        self.complete_from_to("settings s ta", [])

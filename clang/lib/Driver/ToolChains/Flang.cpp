@@ -231,10 +231,9 @@ void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
   }
 
   if (IsOpenMPDevice) {
-    // -fopenmp-is-device is passed along to tell the frontend that it is
-    // generating code for a device, so that only the relevant code is
-    // emitted.
-    CmdArgs.push_back("-fopenmp-is-device");
+    // -fopenmp-is-target-device is passed along to tell the frontend that it is
+    // generating code for a device, so that only the relevant code is emitted.
+    CmdArgs.push_back("-fopenmp-is-target-device");
 
     // When in OpenMP offloading mode, enable debugging on the device.
     Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);

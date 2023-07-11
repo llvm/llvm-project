@@ -437,3 +437,82 @@ define void @scalable.scatter.nxv4f32(<vscale x 4 x float> %val, <vscale x 4 x p
   tail call void @llvm.masked.scatter.nxv4f32.nxv4p0(<vscale x 4 x float> %val, <vscale x 4 x ptr>  %vp, i32 4, <vscale x 4 x i1> %mask)
   ret void
 }
+
+declare <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr, <vscale x 4 x i1>, <vscale x 4 x float>)
+declare void @llvm.masked.compressstore.nxv4f32(<vscale x 4 x float>, ptr, <vscale x 4 x i1>)
+
+define <vscale x 4 x float> @scalable.expandload.nxv4f32(ptr align 4 %p, <vscale x 4 x i1> %mask) sanitize_address {
+; CHECK-LABEL: @scalable.expandload.nxv4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 4 x i1> [[MASK:%.*]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP13:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP6]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP12:%.*]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP12]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <vscale x 4 x float>, ptr [[P:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
+; CHECK-NEXT:    call void @__asan_load4(i64 [[TMP11]])
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP13]]
+; CHECK:       13:
+; CHECK-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr [[P]], <vscale x 4 x i1> [[MASK]], <vscale x 4 x float> undef)
+; CHECK-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+; DISABLED-LABEL: @scalable.expandload.nxv4f32(
+; DISABLED-NEXT:    [[RES:%.*]] = tail call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr [[P:%.*]], <vscale x 4 x i1> [[MASK:%.*]], <vscale x 4 x float> undef)
+; DISABLED-NEXT:    ret <vscale x 4 x float> [[RES]]
+;
+  %res = tail call <vscale x 4 x float> @llvm.masked.expandload.nxv4f32(ptr %p, <vscale x 4 x i1> %mask, <vscale x 4 x float> undef)
+  ret <vscale x 4 x float> %res
+}
+
+define void @scalable.compressstore.nxv4f32(ptr align 4 %p, <vscale x 4 x float> %arg, <vscale x 4 x i1> %mask) sanitize_address {
+; CHECK-LABEL: @scalable.compressstore.nxv4f32(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 4 x i1> [[MASK:%.*]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vector.reduce.add.nxv4i64(<vscale x 4 x i64> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP13:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 4
+; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP6]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP12:%.*]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP12]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr <vscale x 4 x float>, ptr [[P:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP11:%.*]] = ptrtoint ptr [[TMP10]] to i64
+; CHECK-NEXT:    call void @__asan_store4(i64 [[TMP11]])
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP13]]
+; CHECK:       13:
+; CHECK-NEXT:    tail call void @llvm.masked.compressstore.nxv4f32(<vscale x 4 x float> [[ARG:%.*]], ptr [[P]], <vscale x 4 x i1> [[MASK]])
+; CHECK-NEXT:    ret void
+;
+; DISABLED-LABEL: @scalable.compressstore.nxv4f32(
+; DISABLED-NEXT:    tail call void @llvm.masked.compressstore.nxv4f32(<vscale x 4 x float> [[ARG:%.*]], ptr [[P:%.*]], <vscale x 4 x i1> [[MASK:%.*]])
+; DISABLED-NEXT:    ret void
+;
+  tail call void @llvm.masked.compressstore.nxv4f32(<vscale x 4 x float> %arg, ptr %p, <vscale x 4 x i1> %mask)
+  ret void
+}
