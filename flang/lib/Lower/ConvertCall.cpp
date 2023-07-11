@@ -1192,20 +1192,26 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   return extendedValueToHlfirEntity(loc, builder, result, ".tmp.func_result");
 }
 
-/// Create an optional dummy argument value from \p entity that may be
-/// absent. This can only be called with numerical or logical scalar \p entity.
-/// If \p entity is considered absent according to 15.5.2.12 point 1., the
-/// returned value is zero (or false), otherwise it is the value of \p entity.
+/// Create an optional dummy argument value from an entity that may be
+/// absent. \p actualGetter callback returns hlfir::Entity denoting
+/// the lowered actual argument. \p actualGetter can only return numerical
+/// or logical scalar entity.
+/// If the entity is considered absent according to 15.5.2.12 point 1., the
+/// returned value is zero (or false), otherwise it is the value of the entity.
+/// \p eleType specifies the entity's Fortran element type.
+template <typename T>
 static ExvAndCleanup genOptionalValue(fir::FirOpBuilder &builder,
-                                      mlir::Location loc, hlfir::Entity entity,
-                                      mlir::Value isPresent) {
-  mlir::Type eleType = entity.getFortranElementType();
-  assert(entity.isScalar() && fir::isa_trivial(eleType) &&
-         "must be a numerical or logical scalar");
+                                      mlir::Location loc, mlir::Type eleType,
+                                      T actualGetter, mlir::Value isPresent) {
   return {builder
               .genIfOp(loc, {eleType}, isPresent,
                        /*withElseRegion=*/true)
               .genThen([&]() {
+                hlfir::Entity entity = actualGetter(loc, builder);
+                assert(eleType == entity.getFortranElementType() &&
+                       "result type mismatch in genOptionalValue");
+                assert(entity.isScalar() && fir::isa_trivial(eleType) &&
+                       "must be a numerical or logical scalar");
                 mlir::Value val =
                     hlfir::loadTrivialScalar(loc, builder, entity);
                 builder.create<fir::ResultOp>(loc, val);
@@ -1288,9 +1294,9 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
       operands.emplace_back(fir::getAbsentIntrinsicArgument());
       continue;
     }
-    hlfir::Entity actual = arg.value()->getActual(loc, builder);
     if (!argLowering) {
       // No argument lowering instruction, lower by value.
+      hlfir::Entity actual = arg.value()->getActual(loc, builder);
       operands.emplace_back(
           Fortran::lower::convertToValue(loc, converter, actual, stmtCtx));
       continue;
@@ -1316,24 +1322,40 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
       mlir::Value isPresent = arg.value()->getIsPresent();
       switch (argRules.lowerAs) {
       case fir::LowerIntrinsicArgAs::Value: {
-        auto [exv, cleanup] = genOptionalValue(builder, loc, actual, isPresent);
+        // In case of elemental call, getActual() may produce
+        // a designator denoting the array element to be passed
+        // to the subprogram. If the actual array is dynamically
+        // optional the designator must be generated under
+        // isPresent check, because the box bounds reads will be
+        // generated in the codegen. These reads are illegal,
+        // if the dynamically optional argument is absent.
+        auto getActualCb = [&](mlir::Location loc,
+                               fir::FirOpBuilder &builder) -> hlfir::Entity {
+          return arg.value()->getActual(loc, builder);
+        };
+        auto [exv, cleanup] =
+            genOptionalValue(builder, loc, getActualFortranElementType(),
+                             getActualCb, isPresent);
         addToCleanups(std::move(cleanup));
         operands.emplace_back(exv);
         continue;
       }
       case fir::LowerIntrinsicArgAs::Addr: {
+        hlfir::Entity actual = arg.value()->getActual(loc, builder);
         auto [exv, cleanup] = genOptionalAddr(builder, loc, actual, isPresent);
         addToCleanups(std::move(cleanup));
         operands.emplace_back(exv);
         continue;
       }
       case fir::LowerIntrinsicArgAs::Box: {
+        hlfir::Entity actual = arg.value()->getActual(loc, builder);
         auto [exv, cleanup] = genOptionalBox(builder, loc, actual, isPresent);
         addToCleanups(std::move(cleanup));
         operands.emplace_back(exv);
         continue;
       }
       case fir::LowerIntrinsicArgAs::Inquired: {
+        hlfir::Entity actual = arg.value()->getActual(loc, builder);
         auto [exv, cleanup] =
             hlfir::translateToExtendedValue(loc, builder, actual);
         addToCleanups(std::move(cleanup));
@@ -1343,6 +1365,8 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
       }
       llvm_unreachable("bad switch");
     }
+
+    hlfir::Entity actual = arg.value()->getActual(loc, builder);
     switch (argRules.lowerAs) {
     case fir::LowerIntrinsicArgAs::Value:
       operands.emplace_back(
