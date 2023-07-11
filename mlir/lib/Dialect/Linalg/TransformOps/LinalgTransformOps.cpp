@@ -173,6 +173,26 @@ void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
 
+void transform::BufferizeToAllocationOp::build(OpBuilder &b,
+                                               OperationState &result,
+                                               Value target,
+                                               Attribute memorySpace) {
+  return build(b, result,
+               /*resultTypes=*/b.getType<transform::AnyValueType>(),
+               /*target=*/target,
+               /*memorySpace=*/memorySpace);
+}
+
+void transform::BufferizeToAllocationOp::build(OpBuilder &b,
+                                               OperationState &result,
+                                               Value target,
+                                               int64_t memorySpace) {
+  return build(b, result,
+               /*resultTypes=*/b.getType<transform::AnyValueType>(),
+               /*target=*/target,
+               /*memorySpace=*/b.getI64IntegerAttr(memorySpace));
+}
+
 DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
@@ -1447,6 +1467,27 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
 //===---------------------------------------------------------------------===//
 // PadOp
 //===---------------------------------------------------------------------===//
+
+void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
+                             ArrayRef<int64_t> paddingDimensions,
+                             ArrayRef<int64_t> padToMultipleOf,
+                             ArrayRef<int64_t> packPaddings,
+                             ArrayRef<Attribute> transposePaddings,
+                             bool copyBack) {
+  auto resultType = transform::AnyOpType::get(b.getContext());
+  return build(/*builder=*/b,
+               /*result=*/result,
+               /*types=*/TypeRange{resultType, resultType},
+               /*target=*/target,
+               /*paddingValues=*/ArrayAttr(), // let inference handle this
+               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*padToMultipleOf=*/
+               (padToMultipleOf.empty() ? ArrayAttr()
+                                        : b.getI64ArrayAttr(padToMultipleOf)),
+               /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
+               /*transposePaddings=*/b.getArrayAttr(transposePaddings),
+               /*copyBack=*/b.getBoolAttr(copyBack));
+}
 
 DiagnosedSilenceableFailure
 transform::PadOp::apply(transform::TransformRewriter &rewriter,
