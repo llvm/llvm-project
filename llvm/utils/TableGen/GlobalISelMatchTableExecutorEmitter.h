@@ -102,21 +102,21 @@ class GlobalISelMatchTableExecutorEmitter {
        << AdditionalDeclarations;
     if (!AdditionalDeclarations.empty())
       OS << "\n";
-    if (!Predicates.empty())
+    if (!Predicates.empty()) {
       OS << "  switch (PredicateID) {\n";
-    for (const auto &Pred : Predicates) {
-      const auto Code = GetPredCode(Pred);
-      OS << "  case GICXXPred_" << TypeIdentifier << "_Predicate_"
-         << GetPredEnumName(Pred) << ": {\n"
-         << "    " << Code << "\n";
-      if (!StringRef(Code).ltrim().startswith("return")) {
-        OS << "    llvm_unreachable(\"" << GetPredEnumName(Pred)
-           << " should have returned\");\n";
+      for (const auto &Pred : Predicates) {
+        const auto Code = GetPredCode(Pred);
+        OS << "  case GICXXPred_" << TypeIdentifier << "_Predicate_"
+           << GetPredEnumName(Pred) << ": {\n"
+           << "    " << Code << "\n";
+        if (!StringRef(Code).ltrim().startswith("return")) {
+          OS << "    llvm_unreachable(\"" << GetPredEnumName(Pred)
+             << " should have returned\");\n";
+        }
+        OS << "  }\n";
       }
       OS << "  }\n";
     }
-    if (!Predicates.empty())
-      OS << "  }\n";
     OS << "  llvm_unreachable(\"Unknown predicate\");\n"
        << "  return false;\n"
        << "}\n";
