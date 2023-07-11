@@ -317,7 +317,8 @@ protected:
     IK_VarBitInit,
     IK_VarDefInit,
     IK_LastTypedInit,
-    IK_UnsetInit
+    IK_UnsetInit,
+    IK_ArgumentInit,
   };
 
 private:
@@ -478,6 +479,39 @@ public:
 
   /// Get the string representation of the Init.
   std::string getAsString() const override { return "?"; }
+};
+
+// Represent an argument.
+class ArgumentInit : public Init, public FoldingSetNode {
+  Init *Value;
+
+protected:
+  explicit ArgumentInit(Init *Value) : Init(IK_ArgumentInit), Value(Value) {}
+
+public:
+  ArgumentInit(const ArgumentInit &) = delete;
+  ArgumentInit &operator=(const ArgumentInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_ArgumentInit; }
+
+  RecordKeeper &getRecordKeeper() const { return Value->getRecordKeeper(); }
+
+  static ArgumentInit *get(Init *Value);
+
+  Init *getValue() const { return Value; }
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  Init *resolveReferences(Resolver &R) const override;
+  std::string getAsString() const override { return Value->getAsString(); }
+
+  bool isComplete() const override { return false; }
+  bool isConcrete() const override { return false; }
+  Init *getBit(unsigned Bit) const override { return Value->getBit(Bit); }
+  Init *getCastTo(RecTy *Ty) const override { return Value->getCastTo(Ty); }
+  Init *convertInitializerTo(RecTy *Ty) const override {
+    return Value->convertInitializerTo(Ty);
+  }
 };
 
 /// 'true'/'false' - Represent a concrete initializer for a bit.
@@ -1278,8 +1312,9 @@ public:
 
 /// classname<targs...> - Represent an uninstantiated anonymous class
 /// instantiation.
-class VarDefInit final : public TypedInit, public FoldingSetNode,
-                         public TrailingObjects<VarDefInit, Init *> {
+class VarDefInit final : public TypedInit,
+                         public FoldingSetNode,
+                         public TrailingObjects<VarDefInit, ArgumentInit *> {
   Record *Class;
   DefInit *Def = nullptr; // after instantiation
   unsigned NumArgs;
@@ -1298,7 +1333,7 @@ public:
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarDefInit;
   }
-  static VarDefInit *get(Record *Class, ArrayRef<Init *> Args);
+  static VarDefInit *get(Record *Class, ArrayRef<ArgumentInit *> Args);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1307,20 +1342,24 @@ public:
 
   std::string getAsString() const override;
 
-  Init *getArg(unsigned i) const {
+  ArgumentInit *getArg(unsigned i) const {
     assert(i < NumArgs && "Argument index out of range!");
-    return getTrailingObjects<Init *>()[i];
+    return getTrailingObjects<ArgumentInit *>()[i];
   }
 
-  using const_iterator = Init *const *;
+  using const_iterator = ArgumentInit *const *;
 
-  const_iterator args_begin() const { return getTrailingObjects<Init *>(); }
+  const_iterator args_begin() const {
+    return getTrailingObjects<ArgumentInit *>();
+  }
   const_iterator args_end  () const { return args_begin() + NumArgs; }
 
   size_t         args_size () const { return NumArgs; }
   bool           args_empty() const { return NumArgs == 0; }
 
-  ArrayRef<Init *> args() const { return ArrayRef(args_begin(), NumArgs); }
+  ArrayRef<ArgumentInit *> args() const {
+    return ArrayRef(args_begin(), NumArgs);
+  }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off anonymous def");
