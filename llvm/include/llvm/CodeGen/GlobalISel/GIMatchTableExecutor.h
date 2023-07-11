@@ -479,9 +479,10 @@ public:
 
   /// Setup per-MF executor state.
   virtual void setupMF(MachineFunction &mf, GISelKnownBits *KB,
-                       CodeGenCoverage &covinfo, ProfileSummaryInfo *psi,
-                       BlockFrequencyInfo *bfi) {
-    CoverageInfo = &covinfo;
+                       CodeGenCoverage *covinfo = nullptr,
+                       ProfileSummaryInfo *psi = nullptr,
+                       BlockFrequencyInfo *bfi = nullptr) {
+    CoverageInfo = covinfo;
     KnownBits = KB;
     MF = &mf;
     PSI = psi;

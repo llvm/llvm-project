@@ -17,12 +17,12 @@ tablegen(LLVM AMDGPUGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS AMDGPUGISel.td)
 tablegen(LLVM AMDGPUGenGlobalISel.inc -gen-global-isel)
-tablegen(LLVM AMDGPUGenPreLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="AMDGPUPreLegalizerCombinerHelper")
-tablegen(LLVM AMDGPUGenPostLegalizeGICombiner.inc -gen-global-isel-combiner
-              -combiners="AMDGPUPostLegalizerCombinerHelper")
-tablegen(LLVM AMDGPUGenRegBankGICombiner.inc -gen-global-isel-combiner
-              -combiners="AMDGPURegBankCombinerHelper")
+tablegen(LLVM AMDGPUGenPreLegalizeGICombiner.inc -gen-global-isel-combiner-matchtable
+              -combiners="AMDGPUPreLegalizerCombiner")
+tablegen(LLVM AMDGPUGenPostLegalizeGICombiner.inc -gen-global-isel-combiner-matchtable
+              -combiners="AMDGPUPostLegalizerCombiner")
+tablegen(LLVM AMDGPUGenRegBankGICombiner.inc -gen-global-isel-combiner-matchtable
+              -combiners="AMDGPURegBankCombiner")
 
 set(LLVM_TARGET_DEFINITIONS R600.td)
 tablegen(LLVM R600GenAsmWriter.inc -gen-asm-writer)
