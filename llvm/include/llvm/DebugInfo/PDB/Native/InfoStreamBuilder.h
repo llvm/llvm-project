@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAMBUILDER_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_INFOSTREAMBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 #include "llvm/DebugInfo/CodeView/GUID.h"

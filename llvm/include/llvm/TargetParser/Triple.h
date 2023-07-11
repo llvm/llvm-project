@@ -10,6 +10,7 @@
 #define LLVM_TARGETPARSER_TRIPLE_H
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 
 // Some system headers or GCC predefined macros conflict with identifiers in

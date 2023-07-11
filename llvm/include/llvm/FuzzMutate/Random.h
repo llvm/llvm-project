@@ -13,6 +13,7 @@
 #ifndef LLVM_FUZZMUTATE_RANDOM_H
 #define LLVM_FUZZMUTATE_RANDOM_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <random>
 namespace llvm {

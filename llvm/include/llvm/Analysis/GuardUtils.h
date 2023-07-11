@@ -12,6 +12,8 @@
 #ifndef LLVM_ANALYSIS_GUARDUTILS_H
 #define LLVM_ANALYSIS_GUARDUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class BasicBlock;

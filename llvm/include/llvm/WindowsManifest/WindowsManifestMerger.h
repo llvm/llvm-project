@@ -25,6 +25,7 @@
 #ifndef LLVM_WINDOWSMANIFEST_WINDOWSMANIFESTMERGER_H
 #define LLVM_WINDOWSMANIFEST_WINDOWSMANIFESTMERGER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

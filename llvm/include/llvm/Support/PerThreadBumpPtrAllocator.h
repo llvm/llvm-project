@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_PERTHREADBUMPPTRALLOCATOR_H
 
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Parallel.h"
 
 namespace llvm {

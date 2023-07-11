@@ -13,6 +13,7 @@
 #include "PDBExtras.h"
 #include "PDBTypes.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 
 #define FORWARD_SYMBOL_METHOD(MethodName)                                      \
   decltype(auto) MethodName() const { return RawSymbol->MethodName(); }

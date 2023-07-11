@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_FORMATADAPTERS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatCommon.h"
 #include "llvm/Support/FormatVariadicDetails.h"

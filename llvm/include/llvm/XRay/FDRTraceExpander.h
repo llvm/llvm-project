@@ -14,6 +14,7 @@
 #define LLVM_XRAY_FDRTRACEEXPANDER_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/XRay/FDRRecords.h"
 #include "llvm/XRay/XRayRecord.h"
 

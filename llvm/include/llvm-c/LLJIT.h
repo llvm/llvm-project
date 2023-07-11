@@ -24,6 +24,7 @@
 #ifndef LLVM_C_LLJIT_H
 #define LLVM_C_LLJIT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/Orc.h"
 #include "llvm-c/TargetMachine.h"

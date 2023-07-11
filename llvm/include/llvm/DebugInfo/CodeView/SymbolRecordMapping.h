@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class BinaryStreamReader;

@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_DURATION_H
 #define LLVM_SUPPORT_DURATION_H
 
+#include "llvm/Support/Compiler.h"
 #include <chrono>
 
 namespace llvm {

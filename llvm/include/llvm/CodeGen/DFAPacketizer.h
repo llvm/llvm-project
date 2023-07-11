@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/Support/Automaton.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <map>
 #include <memory>

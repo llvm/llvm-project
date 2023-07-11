@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <unordered_map>
 #include <utility>

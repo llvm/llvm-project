@@ -31,6 +31,7 @@
 #define LLVM_REMARKS_REMARKSTREAMER_H
 
 #include "llvm/Remarks/RemarkSerializer.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 #include <memory>

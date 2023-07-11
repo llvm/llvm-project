@@ -16,6 +16,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_INTEGERDIVISION_H
 #define LLVM_TRANSFORMS_UTILS_INTEGERDIVISION_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
   class BinaryOperator;
 }

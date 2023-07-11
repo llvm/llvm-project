@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_SMLOC_H
 #define LLVM_SUPPORT_SMLOC_H
 
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <optional>
 

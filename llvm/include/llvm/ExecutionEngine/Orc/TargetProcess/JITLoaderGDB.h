@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_JITLOADERGDB_H
 
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 extern "C" llvm::orc::shared::CWrapperFunctionResult

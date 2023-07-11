@@ -9,6 +9,8 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_ISECTIONCONTRIBVISITOR_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_ISECTIONCONTRIBVISITOR_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 namespace pdb {
 

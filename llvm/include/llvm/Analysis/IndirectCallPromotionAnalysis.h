@@ -14,6 +14,7 @@
 #define LLVM_ANALYSIS_INDIRECTCALLPROMOTIONANALYSIS_H
 
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

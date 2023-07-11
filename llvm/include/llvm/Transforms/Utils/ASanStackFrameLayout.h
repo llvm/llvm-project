@@ -13,6 +13,7 @@
 #define LLVM_TRANSFORMS_UTILS_ASANSTACKFRAMELAYOUT_H
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

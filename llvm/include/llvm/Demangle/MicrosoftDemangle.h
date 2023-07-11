@@ -10,6 +10,7 @@
 #define LLVM_DEMANGLE_MICROSOFTDEMANGLE_H
 
 #include "llvm/Demangle/MicrosoftDemangleNodes.h"
+#include "llvm/Support/Compiler.h"
 
 #include <cassert>
 #include <string_view>

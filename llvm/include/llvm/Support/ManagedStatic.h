@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_MANAGEDSTATIC_H
 #define LLVM_SUPPORT_MANAGEDSTATIC_H
 
+#include "llvm/Support/Compiler.h"
 #include <atomic>
 #include <cstddef>
 

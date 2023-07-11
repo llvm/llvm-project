@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class LostDebugLocObserver : public GISelChangeObserver {

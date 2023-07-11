@@ -10,6 +10,7 @@
 #define LLVM_TESTING_SUPPORT_SUPPORTHELPERS_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"

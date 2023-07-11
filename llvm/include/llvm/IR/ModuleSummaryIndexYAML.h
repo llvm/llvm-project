@@ -10,6 +10,7 @@
 #define LLVM_IR_MODULESUMMARYINDEXYAML_H
 
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 
 namespace llvm {

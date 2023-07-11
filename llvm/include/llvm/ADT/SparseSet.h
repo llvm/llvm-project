@@ -23,6 +23,7 @@
 #include "llvm/ADT/identity.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/AllocatorBase.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <cstdlib>

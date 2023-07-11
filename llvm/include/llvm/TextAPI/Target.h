@@ -9,6 +9,7 @@
 #ifndef LLVM_TEXTAPI_TARGET_H
 #define LLVM_TEXTAPI_TARGET_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TargetParser/Triple.h"

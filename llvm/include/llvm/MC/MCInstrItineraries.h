@@ -16,6 +16,7 @@
 #define LLVM_MC_MCINSTRITINERARIES_H
 
 #include "llvm/MC/MCSchedule.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 
 namespace llvm {

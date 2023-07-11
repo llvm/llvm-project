@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSupport.h"
+#include "llvm/Support/Compiler.h"
 #include <limits>
 #include <list>
 #include <map>

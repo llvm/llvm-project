@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFSECTION_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

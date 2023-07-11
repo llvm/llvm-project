@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBINJECTEDSOURCE_H
 #define LLVM_DEBUGINFO_PDB_IPDBINJECTEDSOURCE_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <string>
 

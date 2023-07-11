@@ -16,6 +16,7 @@
 #include "llvm-c/Types.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Triple.h"

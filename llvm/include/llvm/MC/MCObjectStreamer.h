@@ -15,6 +15,7 @@
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MCContext;

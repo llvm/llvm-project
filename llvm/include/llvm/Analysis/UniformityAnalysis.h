@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/GenericUniformityInfo.h"
 #include "llvm/Analysis/CycleAnalysis.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

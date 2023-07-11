@@ -13,6 +13,7 @@
 #ifndef LLVM_XRAY_FILEHEADERREADER_H
 #define LLVM_XRAY_FILEHEADERREADER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/XRay/XRayRecord.h"

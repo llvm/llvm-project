@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_COMBINERINFO_H
 #define LLVM_CODEGEN_GLOBALISEL_COMBINERINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 namespace llvm {
 

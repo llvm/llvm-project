@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/aarch32.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {

@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_JITLINK_ELF_PPC64_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::jitlink {
 

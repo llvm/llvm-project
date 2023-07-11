@@ -14,6 +14,7 @@
 #ifndef LLVM_TABLEGEN_ERROR_H
 #define LLVM_TABLEGEN_ERROR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Record.h"
 

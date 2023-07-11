@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_PASSES_H
 
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Discriminator.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
 

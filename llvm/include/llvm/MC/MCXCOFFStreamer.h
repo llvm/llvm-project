@@ -10,6 +10,7 @@
 #define LLVM_MC_MCXCOFFSTREAMER_H
 
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

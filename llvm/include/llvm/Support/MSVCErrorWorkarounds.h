@@ -18,6 +18,7 @@
 #ifndef LLVM_SUPPORT_MSVCERRORWORKAROUNDS_H
 #define LLVM_SUPPORT_MSVCERRORWORKAROUNDS_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

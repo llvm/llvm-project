@@ -16,6 +16,7 @@
 #define LLVM_REMARKS_HOTNESSTHRESHOLDPARSER_H
 
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {

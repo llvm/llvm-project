@@ -23,6 +23,7 @@
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
 #include "llvm/MCA/Pipeline.h"
 #include "llvm/MCA/SourceMgr.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

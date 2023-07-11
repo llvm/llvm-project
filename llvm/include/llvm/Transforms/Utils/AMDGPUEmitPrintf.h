@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_UTILS_AMDGPUEMITPRINTF_H
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

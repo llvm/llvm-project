@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOWERSWITCH_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 struct LowerSwitchPass : public PassInfoMixin<LowerSwitchPass> {

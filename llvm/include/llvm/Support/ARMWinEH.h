@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_ARMWINEH_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {

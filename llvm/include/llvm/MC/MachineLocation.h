@@ -16,6 +16,7 @@
 
 #include <cstdint>
 #include <cassert>
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

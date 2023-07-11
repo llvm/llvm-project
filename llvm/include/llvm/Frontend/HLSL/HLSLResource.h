@@ -14,6 +14,7 @@
 #define LLVM_FRONTEND_HLSL_HLSLRESOURCE_H
 
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class GlobalVariable;

@@ -15,6 +15,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_OBJECTFILEINTERFACE_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {

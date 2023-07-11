@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_UTILS_MATRIXUTILS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class DomTreeUpdater;

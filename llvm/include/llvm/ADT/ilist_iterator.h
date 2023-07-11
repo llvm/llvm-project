@@ -10,6 +10,7 @@
 #define LLVM_ADT_ILIST_ITERATOR_H
 
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>

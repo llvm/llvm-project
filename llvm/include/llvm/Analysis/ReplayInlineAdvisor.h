@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class CallBase;

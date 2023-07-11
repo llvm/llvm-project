@@ -16,6 +16,7 @@
 #define LLVM_EXECUTIONENGINE_JITLINK_ELF_I386_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {

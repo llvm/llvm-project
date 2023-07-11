@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Linker/IRMover.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Remarks/RemarkFormat.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>

@@ -14,6 +14,7 @@
 #ifndef LLVM_INTERFACESTUB_IFSSTUB_H
 #define LLVM_INTERFACESTUB_IFSSTUB_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include <optional>
 #include <vector>

@@ -17,6 +17,7 @@
 #include "llvm/ADT/GenericCycleInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

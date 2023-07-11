@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_MIRFORMATTER_H
 
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <optional>

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

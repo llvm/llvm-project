@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_JITLINK_JITLINKDYLIB_H
 #define LLVM_EXECUTIONENGINE_JITLINK_JITLINKDYLIB_H
 
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

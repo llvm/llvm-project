@@ -12,6 +12,7 @@
 #include "llvm/BinaryFormat/Minidump.h"
 #include "llvm/Object/Minidump.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 
 namespace llvm {

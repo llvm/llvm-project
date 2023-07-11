@@ -8,6 +8,7 @@
 #ifndef LLVM_ADT_DAGDELTAALGORITHM_H
 #define LLVM_ADT_DAGDELTAALGORITHM_H
 
+#include "llvm/Support/Compiler.h"
 #include <set>
 #include <utility>
 #include <vector>

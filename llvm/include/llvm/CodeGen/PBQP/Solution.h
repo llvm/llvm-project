@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_PBQP_SOLUTION_H
 
 #include "llvm/CodeGen/PBQP/Graph.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <map>
 

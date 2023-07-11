@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_MACHINEMODULESLOTTRACKER_H
 
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

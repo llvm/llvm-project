@@ -15,6 +15,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 #define LLVM_TRANSFORMS_UTILS_SIMPLIFYINDVAR_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class Type;

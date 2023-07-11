@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_GSYM_LINETABLE_H
 
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>

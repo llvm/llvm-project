@@ -9,6 +9,7 @@
 #ifndef LLVM_EXECUTIONENGINE_OBJECTCACHE_H
 #define LLVM_EXECUTIONENGINE_OBJECTCACHE_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

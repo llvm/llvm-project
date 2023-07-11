@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <iterator>
 

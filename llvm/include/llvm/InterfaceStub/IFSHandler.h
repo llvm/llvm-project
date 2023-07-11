@@ -16,6 +16,7 @@
 #define LLVM_INTERFACESTUB_IFSHANDLER_H
 
 #include "IFSStub.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include <memory>

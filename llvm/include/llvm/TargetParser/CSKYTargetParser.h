@@ -15,6 +15,7 @@
 #ifndef LLVM_TARGETPARSER_CSKYTARGETPARSER_H
 #define LLVM_TARGETPARSER_CSKYTARGETPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <vector>
 

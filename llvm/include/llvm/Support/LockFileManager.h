@@ -9,6 +9,7 @@
 #define LLVM_SUPPORT_LOCKFILEMANAGER_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <system_error>
 #include <utility> // for std::pair

@@ -15,6 +15,7 @@
 
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/SectionKind.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

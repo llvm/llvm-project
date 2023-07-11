@@ -10,6 +10,7 @@
 
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

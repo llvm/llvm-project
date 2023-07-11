@@ -16,6 +16,7 @@
 #define LLVM_MCA_PIPELINE_H
 
 #include "llvm/MCA/Stages/Stage.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class BasicBlock;

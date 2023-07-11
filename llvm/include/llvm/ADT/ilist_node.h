@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ilist_node_base.h"
 #include "llvm/ADT/ilist_node_options.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

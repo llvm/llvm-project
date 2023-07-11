@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/Native/NativeLineNumber.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

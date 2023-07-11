@@ -9,6 +9,8 @@
 #ifndef LLVM_MC_MCFIXUPKINDINFO_H
 #define LLVM_MC_MCFIXUPKINDINFO_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 /// Target independent information on a fixup kind.

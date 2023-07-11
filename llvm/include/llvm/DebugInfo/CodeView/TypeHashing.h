@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatProviders.h"
 
 #include <type_traits>

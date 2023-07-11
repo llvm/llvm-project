@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_WIN64EH_H
 #define LLVM_SUPPORT_WIN64EH_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Endian.h"
 

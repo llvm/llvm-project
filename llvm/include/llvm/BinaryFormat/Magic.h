@@ -9,6 +9,7 @@
 #ifndef LLVM_BINARYFORMAT_MAGIC_H
 #define LLVM_BINARYFORMAT_MAGIC_H
 
+#include "llvm/Support/Compiler.h"
 #include <system_error>
 
 namespace llvm {

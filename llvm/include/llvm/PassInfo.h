@@ -14,6 +14,7 @@
 #define LLVM_PASSINFO_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <vector>
 

@@ -19,6 +19,7 @@
 #ifndef LLVM_C_TARGETMACHINE_H
 #define LLVM_C_TARGETMACHINE_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/Types.h"

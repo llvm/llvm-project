@@ -18,6 +18,7 @@
 #define LLVM_CODEGEN_PBQP_COSTALLOCATOR_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cstdint>
 #include <memory>

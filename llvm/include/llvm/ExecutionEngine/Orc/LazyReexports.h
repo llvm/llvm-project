@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

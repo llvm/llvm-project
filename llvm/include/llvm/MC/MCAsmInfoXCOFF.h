@@ -10,6 +10,7 @@
 #define LLVM_MC_MCASMINFOXCOFF_H
 
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

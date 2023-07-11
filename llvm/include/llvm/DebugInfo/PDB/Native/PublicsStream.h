@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/Support/BinaryStreamArray.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

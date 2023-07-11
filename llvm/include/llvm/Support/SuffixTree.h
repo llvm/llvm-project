@@ -34,6 +34,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SuffixTreeNode.h"
 
 namespace llvm {

@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_PARALLELCG_H
 
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include <functional>
 #include <memory>
 

@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_STRUCTURALHASH_H
 #define LLVM_IR_STRUCTURALHASH_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

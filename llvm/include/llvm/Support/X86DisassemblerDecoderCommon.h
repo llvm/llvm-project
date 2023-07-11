@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_X86DISASSEMBLERDECODERCOMMON_H
 #define LLVM_SUPPORT_X86DISASSEMBLERDECODERCOMMON_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {

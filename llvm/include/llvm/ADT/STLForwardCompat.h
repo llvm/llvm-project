@@ -17,6 +17,7 @@
 #ifndef LLVM_ADT_STLFORWARDCOMPAT_H
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <type_traits>
 

@@ -20,6 +20,7 @@
 
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace object {

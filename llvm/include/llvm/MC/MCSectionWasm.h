@@ -14,6 +14,7 @@
 #define LLVM_MC_MCSECTIONWASM_H
 
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

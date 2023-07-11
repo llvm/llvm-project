@@ -14,6 +14,7 @@
 
 #include <type_traits>
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/XRay/XRayRecord.h"
 

@@ -14,6 +14,7 @@
 #define LLVM_SUPPORT_DIVISIONBYCONSTANTINFO_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

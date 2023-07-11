@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_GSYM_OBJECTFILETRANSFORMER_H
 #define LLVM_DEBUGINFO_GSYM_OBJECTFILETRANSFORMER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

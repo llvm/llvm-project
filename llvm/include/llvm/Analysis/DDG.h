@@ -18,6 +18,7 @@
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DependenceGraphBuilder.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Function;

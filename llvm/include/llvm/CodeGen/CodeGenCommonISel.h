@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_CODEGENCOMMONISEL_H
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 namespace llvm {
 

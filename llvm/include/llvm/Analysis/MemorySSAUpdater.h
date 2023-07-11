@@ -37,6 +37,7 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/CFGDiff.h"
 
 namespace llvm {

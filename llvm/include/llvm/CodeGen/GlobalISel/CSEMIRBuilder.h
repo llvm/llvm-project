@@ -13,6 +13,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_CSEMIRBUILDER_H
 
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

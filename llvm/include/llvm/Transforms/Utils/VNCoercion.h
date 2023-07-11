@@ -21,6 +21,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_VNCOERCION_H
 #define LLVM_TRANSFORMS_UTILS_VNCOERCION_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Constant;
 class StoreInst;

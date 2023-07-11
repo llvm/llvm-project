@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_SCALAR_WARNMISSEDTRANSFORMS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 // New pass manager boilerplate.

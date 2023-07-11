@@ -16,6 +16,7 @@
 #define LLVM_DEBUGINFOD_DIFETCHER_H
 
 #include "llvm/Object/BuildID.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {

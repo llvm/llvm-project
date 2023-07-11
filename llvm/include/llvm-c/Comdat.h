@@ -16,6 +16,7 @@
 
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
+#include "llvm/Support/Compiler.h"
 
 LLVM_C_EXTERN_C_BEGIN
 

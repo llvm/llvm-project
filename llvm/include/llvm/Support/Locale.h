@@ -1,6 +1,8 @@
 #ifndef LLVM_SUPPORT_LOCALE_H
 #define LLVM_SUPPORT_LOCALE_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class StringRef;
 

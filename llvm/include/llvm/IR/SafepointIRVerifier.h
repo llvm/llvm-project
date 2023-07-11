@@ -19,6 +19,7 @@
 #define LLVM_IR_SAFEPOINTIRVERIFIER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

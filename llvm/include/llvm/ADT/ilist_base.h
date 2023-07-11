@@ -10,6 +10,7 @@
 #define LLVM_ADT_ILIST_BASE_H
 
 #include "llvm/ADT/ilist_node_base.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {

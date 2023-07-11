@@ -17,6 +17,7 @@
 #define LLVM_ADT_EPOCHTRACKER_H
 
 #include "llvm/Config/abi-breaking.h"
+#include "llvm/Support/Compiler.h"
 
 #include <cstdint>
 

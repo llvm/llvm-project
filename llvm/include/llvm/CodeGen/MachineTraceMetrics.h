@@ -53,6 +53,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

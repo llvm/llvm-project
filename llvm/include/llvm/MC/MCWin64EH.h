@@ -15,6 +15,7 @@
 #define LLVM_MC_MCWIN64EH_H
 
 #include "llvm/MC/MCWinEH.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Win64EH.h"
 
 namespace llvm {

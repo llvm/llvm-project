@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

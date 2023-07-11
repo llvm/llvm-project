@@ -28,6 +28,7 @@
 #ifndef LLVM_BINARYFORMAT_MSGPACKWRITER_H
 #define LLVM_BINARYFORMAT_MSGPACKWRITER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/MemoryBufferRef.h"
 

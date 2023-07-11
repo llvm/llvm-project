@@ -16,6 +16,7 @@
 #include "llvm/ObjCopy/MultiFormatConfig.h"
 #include "llvm/ObjCopy/wasm/WasmConfig.h"
 #include "llvm/ObjCopy/XCOFF/XCOFFConfig.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace objcopy {

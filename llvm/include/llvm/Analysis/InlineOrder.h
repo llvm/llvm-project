@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/InlineCost.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {

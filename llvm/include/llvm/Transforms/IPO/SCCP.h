@@ -21,6 +21,7 @@
 #define LLVM_TRANSFORMS_IPO_SCCP_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

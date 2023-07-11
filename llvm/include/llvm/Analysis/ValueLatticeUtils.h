@@ -14,6 +14,8 @@
 #ifndef LLVM_ANALYSIS_VALUELATTICEUTILS_H
 #define LLVM_ANALYSIS_VALUELATTICEUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class Function;

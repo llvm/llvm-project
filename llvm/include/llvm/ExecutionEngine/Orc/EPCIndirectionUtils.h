@@ -17,6 +17,7 @@
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/LazyReexports.h"
+#include "llvm/Support/Compiler.h"
 
 #include <mutex>
 

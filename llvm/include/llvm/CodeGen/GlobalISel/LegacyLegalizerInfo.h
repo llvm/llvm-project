@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/Support/Compiler.h"
 #include <unordered_map>
 
 namespace llvm {

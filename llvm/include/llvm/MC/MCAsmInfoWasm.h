@@ -10,6 +10,7 @@
 #define LLVM_MC_MCASMINFOWASM_H
 
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class MCAsmInfoWasm : public MCAsmInfo {

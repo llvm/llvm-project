@@ -12,6 +12,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 
 namespace llvm {

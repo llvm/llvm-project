@@ -32,6 +32,7 @@
 #define LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 
 #include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

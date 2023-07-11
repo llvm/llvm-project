@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
 #include "llvm/Support/BinaryStreamRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace codeview {

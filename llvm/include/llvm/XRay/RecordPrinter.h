@@ -13,6 +13,7 @@
 #ifndef LLVM_XRAY_RECORDPRINTER_H
 #define LLVM_XRAY_RECORDPRINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/XRay/FDRRecords.h"
 

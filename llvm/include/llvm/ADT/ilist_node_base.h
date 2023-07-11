@@ -10,6 +10,7 @@
 #define LLVM_ADT_ILIST_NODE_BASE_H
 
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

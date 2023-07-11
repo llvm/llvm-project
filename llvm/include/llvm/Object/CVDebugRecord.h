@@ -10,6 +10,7 @@
 #define LLVM_OBJECT_CVDEBUGRECORD_H
 
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace OMF {

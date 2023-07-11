@@ -18,6 +18,7 @@
 #include "llvm/DebugInfo/CodeView/TypeHashing.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>

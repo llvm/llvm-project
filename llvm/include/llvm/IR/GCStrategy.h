@@ -47,6 +47,7 @@
 #ifndef LLVM_IR_GCSTRATEGY_H
 #define LLVM_IR_GCSTRATEGY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Registry.h"
 #include <optional>
 #include <string>

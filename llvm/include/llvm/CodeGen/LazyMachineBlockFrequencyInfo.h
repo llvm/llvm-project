@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 /// This is an alternative analysis pass to MachineBlockFrequencyInfo.

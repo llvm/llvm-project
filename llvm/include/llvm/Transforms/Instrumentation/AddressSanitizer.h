@@ -15,6 +15,7 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;

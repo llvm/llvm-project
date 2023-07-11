@@ -17,6 +17,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MCA/HardwareUnits/HardwareUnit.h"
 #include "llvm/MCA/Instruction.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

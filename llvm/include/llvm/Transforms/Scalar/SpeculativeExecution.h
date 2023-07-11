@@ -63,6 +63,7 @@
 #define LLVM_TRANSFORMS_SCALAR_SPECULATIVEEXECUTION_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class TargetTransformInfo;

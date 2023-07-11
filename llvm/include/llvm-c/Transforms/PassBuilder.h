@@ -14,6 +14,7 @@
 #ifndef LLVM_C_TRANSFORMS_PASSBUILDER_H
 #define LLVM_C_TRANSFORMS_PASSBUILDER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"

@@ -19,6 +19,7 @@
 #define LLVM_CODEGEN_LOOPTRAVERSAL_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

@@ -24,6 +24,7 @@
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Constant;

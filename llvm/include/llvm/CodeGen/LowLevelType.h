@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/CodeGen/MachineValueType.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include <cassert>
 

@@ -14,6 +14,7 @@
 #ifndef LLVM_SUPPORT_CIRCULAR_RAW_OSTREAM_H
 #define LLVM_SUPPORT_CIRCULAR_RAW_OSTREAM_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {

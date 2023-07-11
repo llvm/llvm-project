@@ -20,6 +20,7 @@
 
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {

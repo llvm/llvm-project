@@ -15,6 +15,7 @@
 #define LLVM_ADT_STRINGSET_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

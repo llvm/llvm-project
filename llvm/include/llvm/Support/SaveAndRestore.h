@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_SAVEANDRESTORE_H
 #define LLVM_SUPPORT_SAVEANDRESTORE_H
 
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {

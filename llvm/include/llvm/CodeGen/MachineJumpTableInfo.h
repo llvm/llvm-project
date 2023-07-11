@@ -19,6 +19,7 @@
 #ifndef LLVM_CODEGEN_MACHINEJUMPTABLEINFO_H
 #define LLVM_CODEGEN_MACHINEJUMPTABLEINFO_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Printable.h"
 #include <cassert>
 #include <vector>

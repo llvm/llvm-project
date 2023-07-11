@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_SELECTIONDAGADDRESSANALYSIS_H
 
 #include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

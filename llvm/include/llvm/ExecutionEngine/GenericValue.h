@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_GENERICVALUE_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

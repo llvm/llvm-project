@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_REGISTER_H
 
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {

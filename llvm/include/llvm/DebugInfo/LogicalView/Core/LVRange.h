@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/IntervalTree.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace logicalview {

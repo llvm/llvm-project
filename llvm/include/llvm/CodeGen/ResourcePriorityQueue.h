@@ -17,6 +17,7 @@
 #define LLVM_CODEGEN_RESOURCEPRIORITYQUEUE_H
 
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
   class DFAPacketizer;

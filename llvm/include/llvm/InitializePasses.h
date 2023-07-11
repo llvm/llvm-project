@@ -14,6 +14,8 @@
 #ifndef LLVM_INITIALIZEPASSES_H
 #define LLVM_INITIALIZEPASSES_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class PassRegistry;

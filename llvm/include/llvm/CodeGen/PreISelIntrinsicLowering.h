@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_PREISELINTRINSICLOWERING_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

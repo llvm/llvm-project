@@ -14,6 +14,8 @@
 #ifndef LLVM_TOOLDRIVERS_LLVM_DLLTOOL_DLLTOOLDRIVER_H
 #define LLVM_TOOLDRIVERS_LLVM_DLLTOOL_DLLTOOLDRIVER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 template <typename T> class ArrayRef;
 

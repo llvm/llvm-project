@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class CFIFixup : public MachineFunctionPass {

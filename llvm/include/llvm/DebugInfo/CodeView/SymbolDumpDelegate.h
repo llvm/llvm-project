@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorDelegate.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

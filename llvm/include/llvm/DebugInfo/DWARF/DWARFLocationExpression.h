@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_DWARF_DWARFLOCATIONEXPRESSION_H
 
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

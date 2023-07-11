@@ -9,6 +9,8 @@
 #ifndef LLVM_MC_SECTIONKIND_H
 #define LLVM_MC_SECTIONKIND_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 /// SectionKind - This is a simple POD value that classifies the properties of

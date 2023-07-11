@@ -18,6 +18,7 @@
 #include "llvm/ObjectYAML/OffloadYAML.h"
 #include "llvm/ObjectYAML/WasmYAML.h"
 #include "llvm/ObjectYAML/XCOFFYAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <memory>
 

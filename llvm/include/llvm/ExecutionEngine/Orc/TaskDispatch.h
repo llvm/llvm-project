@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_TASKDISPATCH_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/raw_ostream.h"

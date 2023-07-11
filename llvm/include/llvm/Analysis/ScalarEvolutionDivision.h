@@ -14,6 +14,7 @@
 #define LLVM_ANALYSIS_SCALAREVOLUTIONDIVISION_H
 
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

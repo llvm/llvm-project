@@ -14,6 +14,7 @@
 #ifndef LLVM_FUZZMUTATE_FUZZERCLI_H
 #define LLVM_FUZZMUTATE_FUZZERCLI_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include <stddef.h>
 

@@ -30,6 +30,7 @@
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Mutex.h"
 #include <algorithm>
 #include <cassert>

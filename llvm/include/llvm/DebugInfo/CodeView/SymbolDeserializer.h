@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/CodeView/SymbolVisitorDelegate.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

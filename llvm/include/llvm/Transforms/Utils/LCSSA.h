@@ -30,6 +30,7 @@
 #define LLVM_TRANSFORMS_UTILS_LCSSA_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

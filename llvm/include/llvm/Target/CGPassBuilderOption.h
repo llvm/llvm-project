@@ -15,6 +15,7 @@
 #define LLVM_TARGET_CGPASSBUILDEROPTION_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
 

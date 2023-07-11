@@ -13,6 +13,7 @@
 #ifndef LLVM_ANALYSIS_HEATUTILS_H
 #define LLVM_ANALYSIS_HEATUTILS_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <string>
 

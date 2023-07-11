@@ -19,6 +19,7 @@
 #define LLVM_FUZZMUTATE_IRMUTATOR_H
 
 #include "llvm/FuzzMutate/OpDescriptor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <optional>
 

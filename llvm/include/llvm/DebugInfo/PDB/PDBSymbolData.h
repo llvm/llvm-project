@@ -12,6 +12,7 @@
 #include "PDBSymbol.h"
 #include "PDBTypes.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

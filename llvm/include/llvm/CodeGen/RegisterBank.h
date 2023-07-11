@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_REGISTERBANK_H
 
 #include <cstdint>
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 // Forward declarations.

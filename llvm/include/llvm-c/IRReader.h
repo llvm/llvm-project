@@ -14,6 +14,7 @@
 #ifndef LLVM_C_IRREADER_H
 #define LLVM_C_IRREADER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 

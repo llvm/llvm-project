@@ -9,6 +9,7 @@
 #ifndef LLVM_IR_MODULESLOTTRACKER_H
 #define LLVM_IR_MODULESLOTTRACKER_H
 
+#include "llvm/Support/Compiler.h"
 #include <functional>
 #include <memory>
 #include <utility>

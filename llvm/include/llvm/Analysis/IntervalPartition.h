@@ -23,6 +23,7 @@
 #define LLVM_ANALYSIS_INTERVALPARTITION_H
 
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 #include <vector>
 

@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_ERRNO_H
 #define LLVM_SUPPORT_ERRNO_H
 
+#include "llvm/Support/Compiler.h"
 #include <cerrno>
 #include <string>
 

@@ -17,6 +17,7 @@
 #ifndef LLVM_C_BLAKE3_H
 #define LLVM_C_BLAKE3_H
 
+#include "llvm/Support/Compiler.h"
 #include <stddef.h>
 #include <stdint.h>
 

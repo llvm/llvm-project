@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

@@ -14,6 +14,8 @@
 #ifndef LLVM_ANALYSIS_OVERFLOWINSTANALYSIS_H
 #define LLVM_ANALYSIS_OVERFLOWINSTANALYSIS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Use;
 class Value;

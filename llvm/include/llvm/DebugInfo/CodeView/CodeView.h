@@ -16,6 +16,7 @@
 #include <cinttypes>
 #include <type_traits>
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {

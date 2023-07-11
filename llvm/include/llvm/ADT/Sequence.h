@@ -86,6 +86,7 @@
 #include <type_traits> // std::is_integral, std::is_enum, std::underlying_type,
                        // std::enable_if
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h" // AddOverflow / SubOverflow
 
 namespace llvm {

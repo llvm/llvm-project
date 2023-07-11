@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_OBJECTFORMATS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {

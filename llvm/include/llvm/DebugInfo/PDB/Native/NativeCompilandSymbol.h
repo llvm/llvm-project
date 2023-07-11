@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {

@@ -15,6 +15,7 @@
 #define LLVM_MCA_INCREMENTALSOURCEMGR_H
 
 #include "llvm/MCA/SourceMgr.h"
+#include "llvm/Support/Compiler.h"
 #include <deque>
 
 namespace llvm {

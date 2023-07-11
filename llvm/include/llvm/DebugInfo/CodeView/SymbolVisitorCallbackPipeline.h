@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <vector>
 

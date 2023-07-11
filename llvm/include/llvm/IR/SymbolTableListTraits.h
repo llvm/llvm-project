@@ -26,6 +26,7 @@
 
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/simple_ilist.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 
 namespace llvm {

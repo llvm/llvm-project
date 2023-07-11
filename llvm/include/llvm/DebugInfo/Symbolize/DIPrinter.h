@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
 #include <vector>

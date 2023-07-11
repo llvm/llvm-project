@@ -13,6 +13,7 @@
 #define LLVM_ANALYSIS_INDIRECTCALLVISITOR_H
 
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

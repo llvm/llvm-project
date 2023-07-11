@@ -13,6 +13,7 @@
 #ifndef LLVM_XRAY_BLOCKVERIFIER_H
 #define LLVM_XRAY_BLOCKVERIFIER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/XRay/FDRRecords.h"
 #include <array>
 #include <bitset>

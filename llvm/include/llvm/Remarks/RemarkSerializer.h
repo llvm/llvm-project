@@ -15,6 +15,7 @@
 
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkStringTable.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {

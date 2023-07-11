@@ -25,6 +25,7 @@
 #define LLVM_ADT_ILIST_H
 
 #include "llvm/ADT/simple_ilist.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 // Forward declarations.

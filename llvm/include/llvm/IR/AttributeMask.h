@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/Support/Compiler.h"
 #include <bitset>
 #include <cassert>
 #include <set>

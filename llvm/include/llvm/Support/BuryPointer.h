@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_BURYPOINTER_H
 #define LLVM_SUPPORT_BURYPOINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

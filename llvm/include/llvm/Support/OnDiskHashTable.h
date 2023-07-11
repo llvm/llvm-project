@@ -15,6 +15,7 @@
 
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/MathExtras.h"

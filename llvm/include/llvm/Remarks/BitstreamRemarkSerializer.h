@@ -17,6 +17,7 @@
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Remarks/BitstreamRemarkContainer.h"
 #include "llvm/Remarks/RemarkSerializer.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {

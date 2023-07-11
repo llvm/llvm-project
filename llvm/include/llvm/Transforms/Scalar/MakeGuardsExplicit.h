@@ -34,6 +34,7 @@
 #define LLVM_TRANSFORMS_SCALAR_MAKEGUARDSEXPLICIT_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

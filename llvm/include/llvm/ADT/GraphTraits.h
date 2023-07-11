@@ -20,6 +20,7 @@
 #define LLVM_ADT_GRAPHTRAITS_H
 
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

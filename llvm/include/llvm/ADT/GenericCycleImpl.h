@@ -26,6 +26,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GenericCycleInfo.h"
+#include "llvm/Support/Compiler.h"
 
 #define DEBUG_TYPE "generic-cycle-impl"
 

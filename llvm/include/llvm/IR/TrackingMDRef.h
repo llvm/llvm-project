@@ -14,6 +14,7 @@
 #define LLVM_IR_TRACKINGMDREF_H
 
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 

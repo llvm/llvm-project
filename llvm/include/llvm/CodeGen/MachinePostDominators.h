@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

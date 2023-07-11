@@ -13,6 +13,7 @@
 #define LLVM_DEBUGINFO_SYMBOLIZE_SYMBOLIZABLEMODULE_H
 
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

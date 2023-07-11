@@ -9,6 +9,8 @@
 #ifndef LLVM_CODEGEN_CSECONFIGBASE_H
 #define LLVM_CODEGEN_CSECONFIGBASE_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 // Class representing some configuration that can be done during GlobalISel's
 // CSEInfo analysis. We define it here because TargetPassConfig can't depend on

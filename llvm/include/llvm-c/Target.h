@@ -19,6 +19,7 @@
 #ifndef LLVM_C_TARGET_H
 #define LLVM_C_TARGET_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"
 #include "llvm/Config/llvm-config.h"

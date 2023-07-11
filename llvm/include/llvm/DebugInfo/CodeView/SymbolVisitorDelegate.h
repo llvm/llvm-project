@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLVISITORDELEGATE_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

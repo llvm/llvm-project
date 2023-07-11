@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSYMBOL_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace logicalview {

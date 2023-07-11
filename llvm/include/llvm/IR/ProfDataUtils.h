@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

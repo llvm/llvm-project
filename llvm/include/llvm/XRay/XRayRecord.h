@@ -14,6 +14,7 @@
 #ifndef LLVM_XRAY_XRAYRECORD_H
 #define LLVM_XRAY_XRAYRECORD_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <vector>
 #include <string>

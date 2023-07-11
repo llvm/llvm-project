@@ -14,6 +14,8 @@
 #ifndef LLVM_IR_BUILTINGCS_H
 #define LLVM_IR_BUILTINGCS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 /// FIXME: Collector instances are not useful on their own. These no longer

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/TrackingMDRef.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 #include <vector>
 

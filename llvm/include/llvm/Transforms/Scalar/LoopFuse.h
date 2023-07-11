@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_SCALAR_LOOPFUSE_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

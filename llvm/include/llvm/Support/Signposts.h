@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_SIGNPOSTS_H
 #define LLVM_SUPPORT_SIGNPOSTS_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

@@ -14,6 +14,7 @@
 #define LLVM_MC_MCSYMBOLGOFF_H
 
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

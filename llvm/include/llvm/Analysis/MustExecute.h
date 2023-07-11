@@ -28,6 +28,7 @@
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

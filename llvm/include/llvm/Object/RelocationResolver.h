@@ -15,6 +15,7 @@
 #ifndef LLVM_OBJECT_RELOCATIONRESOLVER_H
 #define LLVM_OBJECT_RELOCATIONRESOLVER_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <utility>
 

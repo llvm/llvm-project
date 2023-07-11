@@ -30,6 +30,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
 #include <deque>
 
 namespace llvm {

@@ -14,6 +14,7 @@
 #ifndef LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 #define LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <string>
 

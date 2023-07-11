@@ -14,6 +14,8 @@
 #ifndef LLVM_CODEGEN_SCHEDULEHAZARDRECOGNIZER_H
 #define LLVM_CODEGEN_SCHEDULEHAZARDRECOGNIZER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class MachineInstr;

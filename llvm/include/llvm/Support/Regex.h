@@ -17,6 +17,7 @@
 #define LLVM_SUPPORT_REGEX_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 struct llvm_regex;

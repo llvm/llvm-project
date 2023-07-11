@@ -13,6 +13,7 @@
 #ifndef LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
 #define LLVM_DEMANGLE_MICROSOFTDEMANGLENODES_H
 
+#include "llvm/Support/Compiler.h"
 #include <array>
 #include <cstdint>
 #include <string>

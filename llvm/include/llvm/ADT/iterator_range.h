@@ -19,6 +19,7 @@
 #define LLVM_ADT_ITERATOR_RANGE_H
 
 #include "llvm/ADT/ADL.h"
+#include "llvm/Support/Compiler.h"
 #include <type_traits>
 #include <utility>
 

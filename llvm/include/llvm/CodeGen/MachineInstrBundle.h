@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_MACHINEINSTRBUNDLE_H
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

@@ -15,6 +15,7 @@
 #ifndef LLVM_PASSES_OPTIMIZATIONLEVEL_H
 #define LLVM_PASSES_OPTIMIZATIONLEVEL_H
 
+#include "llvm/Support/Compiler.h"
 #include <assert.h>
 
 namespace llvm {

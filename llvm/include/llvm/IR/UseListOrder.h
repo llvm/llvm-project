@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_USELISTORDER_H
 #define LLVM_IR_USELISTORDER_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <vector>
 

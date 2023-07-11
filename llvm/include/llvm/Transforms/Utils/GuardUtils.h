@@ -12,6 +12,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_GUARDUTILS_H
 #define LLVM_TRANSFORMS_UTILS_GUARDUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class BranchInst;

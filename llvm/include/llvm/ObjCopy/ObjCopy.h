@@ -9,6 +9,7 @@
 #ifndef LLVM_OBJCOPY_OBJCOPY_H
 #define LLVM_OBJCOPY_OBJCOPY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

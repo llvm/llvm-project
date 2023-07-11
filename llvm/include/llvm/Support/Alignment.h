@@ -21,6 +21,7 @@
 #ifndef LLVM_SUPPORT_ALIGNMENT_H_
 #define LLVM_SUPPORT_ALIGNMENT_H_
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <optional>

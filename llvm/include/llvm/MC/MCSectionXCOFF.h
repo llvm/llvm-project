@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

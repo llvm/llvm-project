@@ -9,6 +9,7 @@
 #ifndef LLVM_ADT_UNIQUEVECTOR_H
 #define LLVM_ADT_UNIQUEVECTOR_H
 
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <map>

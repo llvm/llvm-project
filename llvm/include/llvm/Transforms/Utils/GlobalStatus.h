@@ -11,6 +11,7 @@
 
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

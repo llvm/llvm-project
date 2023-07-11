@@ -13,6 +13,7 @@
 #ifndef LLVM_BINARYFORMAT_XCOFF_H
 #define LLVM_BINARYFORMAT_XCOFF_H
 
+#include "llvm/Support/Compiler.h"
 #include <stddef.h>
 #include <stdint.h>
 

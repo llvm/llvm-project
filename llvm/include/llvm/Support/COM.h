@@ -14,6 +14,8 @@
 #ifndef LLVM_SUPPORT_COM_H
 #define LLVM_SUPPORT_COM_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 namespace sys {
 

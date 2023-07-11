@@ -16,6 +16,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPVERSIONING_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 

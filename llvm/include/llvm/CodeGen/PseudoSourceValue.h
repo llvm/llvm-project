@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/ValueMap.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 
 namespace llvm {

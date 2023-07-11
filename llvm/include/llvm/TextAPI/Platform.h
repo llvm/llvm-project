@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/VersionTuple.h"
 
 namespace llvm {

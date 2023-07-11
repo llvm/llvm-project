@@ -9,6 +9,8 @@
 #ifndef LLVM_OBJCOPY_XCOFF_XCOFFOBJCOPY_H
 #define LLVM_OBJCOPY_XCOFF_XCOFFOBJCOPY_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class Error;
 class raw_ostream;

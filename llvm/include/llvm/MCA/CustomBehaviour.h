@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/SourceMgr.h"
 #include "llvm/MCA/View.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace mca {

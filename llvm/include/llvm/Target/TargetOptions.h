@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Support/Compiler.h"
 
 #include <memory>
 

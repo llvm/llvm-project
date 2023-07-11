@@ -16,6 +16,7 @@
 #ifndef LLVM_SUPPORT_DOTGRAPHTRAITS_H
 #define LLVM_SUPPORT_DOTGRAPHTRAITS_H
 
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

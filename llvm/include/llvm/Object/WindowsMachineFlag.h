@@ -13,6 +13,8 @@
 #ifndef LLVM_OBJECT_WINDOWSMACHINEFLAG_H
 #define LLVM_OBJECT_WINDOWSMACHINEFLAG_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class StringRef;

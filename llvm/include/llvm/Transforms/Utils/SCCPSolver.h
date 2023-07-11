@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/PredicateInfo.h"
 #include <vector>
 

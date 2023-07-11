@@ -16,6 +16,7 @@
 
 #include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

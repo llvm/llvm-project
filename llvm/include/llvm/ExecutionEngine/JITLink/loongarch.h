@@ -16,6 +16,7 @@
 #include "TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {

@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/GlobPattern.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include <memory>
 #include <string>

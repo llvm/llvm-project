@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_IPO_FORCEFUNCTIONATTRS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Module;

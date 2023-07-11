@@ -17,6 +17,7 @@
 #define LLVM_DEBUGINFOD_HTTPSERVER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 #ifdef LLVM_ENABLE_HTTPLIB

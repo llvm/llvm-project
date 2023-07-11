@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

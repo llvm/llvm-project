@@ -15,6 +15,7 @@
 #ifndef LLVM_C_DISASSEMBLER_H
 #define LLVM_C_DISASSEMBLER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm-c/DisassemblerTypes.h"
 #include "llvm-c/ExternC.h"
 

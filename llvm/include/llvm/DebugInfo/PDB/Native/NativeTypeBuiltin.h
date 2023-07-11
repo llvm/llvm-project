@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/PDB/Native/NativeRawSymbol.h"
 
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {

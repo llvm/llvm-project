@@ -58,6 +58,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 
 #include <memory>

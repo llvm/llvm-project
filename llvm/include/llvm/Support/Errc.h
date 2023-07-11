@@ -29,6 +29,7 @@
 #ifndef LLVM_SUPPORT_ERRC_H
 #define LLVM_SUPPORT_ERRC_H
 
+#include "llvm/Support/Compiler.h"
 #include <system_error>
 
 namespace llvm {

@@ -13,6 +13,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/Support/Compiler.h"
 #include <utility>
 
 namespace llvm {

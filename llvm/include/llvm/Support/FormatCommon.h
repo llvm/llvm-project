@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_FORMATCOMMON_H
 
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatVariadicDetails.h"
 #include "llvm/Support/raw_ostream.h"
 

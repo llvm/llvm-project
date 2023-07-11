@@ -13,6 +13,7 @@
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/Analysis/TensorSpec.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 namespace llvm {
 /// A pseudo model runner. We use it to store feature values when collecting
 /// logs for the default policy, in 'development' mode, but never ask it to

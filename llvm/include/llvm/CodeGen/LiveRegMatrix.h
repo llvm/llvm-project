@@ -26,6 +26,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

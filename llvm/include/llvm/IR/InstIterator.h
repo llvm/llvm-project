@@ -22,6 +22,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/Support/Compiler.h"
 #include <iterator>
 
 namespace llvm {

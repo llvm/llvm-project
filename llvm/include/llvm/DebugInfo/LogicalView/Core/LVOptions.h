@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Regex.h"
 #include <set>
 #include <string>

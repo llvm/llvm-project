@@ -17,6 +17,7 @@
 #include "llvm/FuzzMutate/OpDescriptor.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

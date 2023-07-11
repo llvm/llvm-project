@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_SCALAR_CORRELATEDVALUEPROPAGATION_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

@@ -14,6 +14,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOWERMEMINTRINSICS_H
 #define LLVM_TRANSFORMS_UTILS_LOWERMEMINTRINSICS_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <optional>
 

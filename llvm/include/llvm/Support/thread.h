@@ -17,6 +17,7 @@
 #define LLVM_SUPPORT_THREAD_H
 
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 #ifdef _WIN32

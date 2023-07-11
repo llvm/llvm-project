@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ProfileData/SampleProfReader.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
 #include <queue>
 #include <set>

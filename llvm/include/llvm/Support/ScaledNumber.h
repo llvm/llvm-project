@@ -21,6 +21,7 @@
 #ifndef LLVM_SUPPORT_SCALEDNUMBER_H
 #define LLVM_SUPPORT_SCALEDNUMBER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 #include <cstdint>

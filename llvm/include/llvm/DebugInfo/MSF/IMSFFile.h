@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_MSF_IMSFFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>

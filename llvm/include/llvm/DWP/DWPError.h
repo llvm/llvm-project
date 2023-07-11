@@ -1,6 +1,7 @@
 #ifndef LLVM_DWP_DWPERROR_H
 #define LLVM_DWP_DWPERROR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <string>

@@ -13,6 +13,7 @@
 #ifndef LLVM_TABLEGEN_MAIN_H
 #define LLVM_TABLEGEN_MAIN_H
 
+#include "llvm/Support/Compiler.h"
 #include <functional>
 
 namespace llvm {

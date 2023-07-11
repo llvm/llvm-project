@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_ASMPRINTERHANDLER_H
 #define LLVM_CODEGEN_ASMPRINTERHANDLER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 
 namespace llvm {

@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_PRINTABLE_H
 #define LLVM_SUPPORT_PRINTABLE_H
 
+#include "llvm/Support/Compiler.h"
 #include <functional>
 #include <utility>
 

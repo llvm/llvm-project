@@ -18,6 +18,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_ORCABISUPPORT_H
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"

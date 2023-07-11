@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/MemoryBuffer.h"
 

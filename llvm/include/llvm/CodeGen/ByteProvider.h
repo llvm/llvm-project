@@ -17,6 +17,7 @@
 #ifndef LLVM_CODEGEN_BYTEPROVIDER_H
 #define LLVM_CODEGEN_BYTEPROVIDER_H
 
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <type_traits>
 

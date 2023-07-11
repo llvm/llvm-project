@@ -9,6 +9,8 @@
 #ifndef LLVM_CODEGEN_SPILLER_H
 #define LLVM_CODEGEN_SPILLER_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class LiveRangeEdit;

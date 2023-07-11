@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/Line.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {

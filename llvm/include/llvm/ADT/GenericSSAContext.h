@@ -17,6 +17,7 @@
 #ifndef LLVM_ADT_GENERICSSACONTEXT_H
 #define LLVM_ADT_GENERICSSACONTEXT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Printable.h"
 
 namespace llvm {

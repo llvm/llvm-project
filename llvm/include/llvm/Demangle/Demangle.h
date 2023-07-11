@@ -9,6 +9,7 @@
 #ifndef LLVM_DEMANGLE_DEMANGLE_H
 #define LLVM_DEMANGLE_DEMANGLE_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <string>
 #include <string_view>

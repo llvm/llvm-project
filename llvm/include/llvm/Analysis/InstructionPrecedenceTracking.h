@@ -21,6 +21,7 @@
 #define LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

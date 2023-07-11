@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_UTILS_CTORUTILS_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

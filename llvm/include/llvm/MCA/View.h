@@ -17,6 +17,7 @@
 
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MCA/HWEventListener.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 

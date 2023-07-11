@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_SCALAR_LOOPREROLL_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {

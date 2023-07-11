@@ -12,6 +12,7 @@
 #ifndef LLVM_SUPPORT_CSKYATTRIBUTES_H
 #define LLVM_SUPPORT_CSKYATTRIBUTES_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttributes.h"
 
 namespace llvm {

@@ -10,6 +10,7 @@
 #define LLVM_IR_DERIVEDUSER_H
 
 #include "llvm/IR/User.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

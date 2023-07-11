@@ -15,6 +15,7 @@
 #define LLVM_SUPPORT_FILEUTILITIES_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 

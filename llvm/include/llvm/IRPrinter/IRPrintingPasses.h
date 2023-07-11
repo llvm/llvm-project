@@ -19,6 +19,7 @@
 #define LLVM_IRPRINTER_IRPRINTINGPASSES_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

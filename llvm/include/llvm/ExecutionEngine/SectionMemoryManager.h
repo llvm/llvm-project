@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Memory.h"
 #include <cstdint>
 #include <string>

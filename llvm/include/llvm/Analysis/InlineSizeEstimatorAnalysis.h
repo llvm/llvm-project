@@ -11,6 +11,7 @@
 #define LLVM_ANALYSIS_INLINESIZEESTIMATORANALYSIS_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Function;

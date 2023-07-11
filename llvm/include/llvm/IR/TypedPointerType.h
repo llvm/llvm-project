@@ -15,6 +15,7 @@
 #define LLVM_IR_TYPEDPOINTERTYPE_H
 
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_SHA1_H
 #define LLVM_SUPPORT_SHA1_H
 
+#include "llvm/Support/Compiler.h"
 #include <array>
 #include <cstdint>
 

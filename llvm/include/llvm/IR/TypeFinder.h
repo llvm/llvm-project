@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <vector>
 

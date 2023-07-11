@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_ALIGNOF_H
 #define LLVM_SUPPORT_ALIGNOF_H
 
+#include "llvm/Support/Compiler.h"
 #include <type_traits>
 
 namespace llvm {

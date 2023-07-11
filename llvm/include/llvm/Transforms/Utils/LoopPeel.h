@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPPEEL_H
 
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
 namespace llvm {

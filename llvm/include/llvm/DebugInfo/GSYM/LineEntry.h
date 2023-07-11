@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_GSYM_LINEENTRY_H
 
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace gsym {

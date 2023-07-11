@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCRegister.h" // definition of MCPhysReg.
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 
 #ifndef NDEBUG

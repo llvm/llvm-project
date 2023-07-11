@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_CODEVIEW_GUID_H
 #define LLVM_DEBUGINFO_CODEVIEW_GUID_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <cstring>
 

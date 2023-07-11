@@ -13,6 +13,8 @@
 #ifndef LLVM_MC_MCLABEL_H
 #define LLVM_MC_MCLABEL_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class raw_ostream;

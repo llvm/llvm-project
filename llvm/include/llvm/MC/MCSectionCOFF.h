@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/SectionKind.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace llvm {

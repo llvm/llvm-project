@@ -19,6 +19,7 @@
 #ifndef LLVM_ANALYSIS_CONSTANTFOLDING_H
 #define LLVM_ANALYSIS_CONSTANTFOLDING_H
 
+#include "llvm/Support/Compiler.h"
 #include <stdint.h>
 
 namespace llvm {

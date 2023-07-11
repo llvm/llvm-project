@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

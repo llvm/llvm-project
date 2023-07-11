@@ -79,6 +79,7 @@
 #ifndef LLVM_ADT_BITFIELDS_H
 #define LLVM_ADT_BITFIELDS_H
 
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <climits> // CHAR_BIT
 #include <cstddef> // size_t

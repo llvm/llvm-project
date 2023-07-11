@@ -10,6 +10,7 @@
 #define LLVM_MC_MCWINCOFFOBJECTWRITER_H
 
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

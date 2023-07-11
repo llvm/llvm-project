@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_INSTRUCTIONSELECTOR_H
 
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class InstructionSelector : public GIMatchTableExecutor {

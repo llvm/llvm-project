@@ -105,6 +105,7 @@
 #ifndef LLVM_SUPPORT_CONVERTUTF_H
 #define LLVM_SUPPORT_CONVERTUTF_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 #include <string>
 

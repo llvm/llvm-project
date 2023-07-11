@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_IPDBTABLE_H
 
 #include "PDBTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {

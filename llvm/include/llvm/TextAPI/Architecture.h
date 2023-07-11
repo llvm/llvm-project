@@ -13,6 +13,7 @@
 #ifndef LLVM_TEXTAPI_ARCHITECTURE_H
 #define LLVM_TEXTAPI_ARCHITECTURE_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <utility>
 

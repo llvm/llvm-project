@@ -9,6 +9,7 @@
 #ifndef LLVM_TESTING_SUPPORT_ERROR_H
 #define LLVM_TESTING_SUPPORT_ERROR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 

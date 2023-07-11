@@ -14,6 +14,7 @@
 #define LLVM_XRAY_BLOCKINDEXER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/XRay/FDRRecords.h"
 #include <cstdint>
 #include <vector>

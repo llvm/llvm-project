@@ -17,6 +17,7 @@
 #ifndef LLVM_IR_GVMATERIALIZER_H
 #define LLVM_IR_GVMATERIALIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

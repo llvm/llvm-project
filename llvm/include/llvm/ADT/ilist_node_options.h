@@ -10,6 +10,7 @@
 #define LLVM_ADT_ILIST_NODE_OPTIONS_H
 
 #include "llvm/Config/abi-breaking.h"
+#include "llvm/Support/Compiler.h"
 
 #include <type_traits>
 

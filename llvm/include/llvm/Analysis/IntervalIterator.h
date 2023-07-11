@@ -36,6 +36,7 @@
 #include "llvm/Analysis/Interval.h"
 #include "llvm/Analysis/IntervalPartition.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>

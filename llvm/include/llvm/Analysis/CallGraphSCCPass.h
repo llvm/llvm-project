@@ -22,6 +22,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

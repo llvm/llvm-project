@@ -10,6 +10,7 @@
 #define LLVM_TEXTAPI_TEXTAPIWRITER_H
 
 #include "llvm/TextAPI/InterfaceFile.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_CODEVIEW_SYMBOLVISITORCALLBACKS_H
 
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

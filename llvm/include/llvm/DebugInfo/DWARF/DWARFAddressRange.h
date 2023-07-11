@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>

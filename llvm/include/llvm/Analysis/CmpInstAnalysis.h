@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_CMPINSTANALYSIS_H
 
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
   class Type;

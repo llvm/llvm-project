@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_JITLINK_TABLEMANAGER_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 
 namespace llvm {

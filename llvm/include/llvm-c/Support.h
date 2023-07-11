@@ -14,6 +14,7 @@
 #ifndef LLVM_C_SUPPORT_H
 #define LLVM_C_SUPPORT_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm-c/DataTypes.h"
 #include "llvm-c/ExternC.h"
 #include "llvm-c/Types.h"

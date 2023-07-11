@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVBinaryReader.h"
+#include "llvm/Support/Compiler.h"
 #include <unordered_set>
 
 namespace llvm {

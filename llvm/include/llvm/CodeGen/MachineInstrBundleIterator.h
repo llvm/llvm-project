@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/simple_ilist.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <iterator>
 #include <type_traits>

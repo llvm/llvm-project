@@ -41,6 +41,7 @@
 
 #include "raw_ostream.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Compiler.h"
 
 #include <atomic>
 #include <condition_variable>

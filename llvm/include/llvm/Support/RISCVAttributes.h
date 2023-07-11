@@ -17,6 +17,7 @@
 #ifndef LLVM_SUPPORT_RISCVATTRIBUTES_H
 #define LLVM_SUPPORT_RISCVATTRIBUTES_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttributes.h"
 
 namespace llvm {

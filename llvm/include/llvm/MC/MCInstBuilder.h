@@ -15,6 +15,7 @@
 #define LLVM_MC_MCINSTBUILDER_H
 
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

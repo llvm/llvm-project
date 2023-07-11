@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_DIAGNOSTICPRINTER_H
 #define LLVM_IR_DIAGNOSTICPRINTER_H
 
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

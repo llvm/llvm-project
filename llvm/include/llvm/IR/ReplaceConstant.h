@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_REPLACECONSTANT_H
 #define LLVM_IR_REPLACECONSTANT_H
 
+#include "llvm/Support/Compiler.h"
 #include <map>
 #include <vector>
 

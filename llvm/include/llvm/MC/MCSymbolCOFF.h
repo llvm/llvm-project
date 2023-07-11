@@ -11,6 +11,7 @@
 
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {

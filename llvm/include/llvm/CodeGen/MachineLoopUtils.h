@@ -9,6 +9,8 @@
 #ifndef LLVM_CODEGEN_MACHINELOOPUTILS_H
 #define LLVM_CODEGEN_MACHINELOOPUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class MachineBasicBlock;
 class MachineRegisterInfo;

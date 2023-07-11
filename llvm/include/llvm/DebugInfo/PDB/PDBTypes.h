@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBFrameData.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
+#include "llvm/Support/Compiler.h"
 #include <cctype>
 #include <cstddef>
 #include <cstdint>

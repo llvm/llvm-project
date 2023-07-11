@@ -15,6 +15,7 @@
 
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

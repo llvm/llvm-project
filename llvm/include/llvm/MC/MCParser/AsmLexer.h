@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 
 namespace llvm {

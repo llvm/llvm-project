@@ -13,6 +13,7 @@
 #ifndef LLVM_TEXTAPI_ARCHITECTURESET_H
 #define LLVM_TEXTAPI_ARCHITECTURESET_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/TextAPI/Architecture.h"
 #include <cstddef>
 #include <iterator>

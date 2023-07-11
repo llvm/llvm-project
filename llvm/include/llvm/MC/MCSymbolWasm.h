@@ -10,6 +10,7 @@
 
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

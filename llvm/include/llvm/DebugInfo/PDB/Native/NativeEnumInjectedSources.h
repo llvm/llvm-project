@@ -12,6 +12,7 @@
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBInjectedSource.h"
 #include "llvm/DebugInfo/PDB/Native/InjectedSourceStream.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace pdb {

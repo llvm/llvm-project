@@ -19,6 +19,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/SSAContext.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

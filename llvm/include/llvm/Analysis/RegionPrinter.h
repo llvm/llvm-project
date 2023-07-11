@@ -16,6 +16,7 @@
 
 #include "llvm/Analysis/DOTGraphTraitsPass.h"
 #include "llvm/Analysis/RegionInfo.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
   class FunctionPass;

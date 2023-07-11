@@ -19,6 +19,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICMEMORYACCESS_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {

@@ -9,6 +9,8 @@
 #ifndef LLVM_OBJCOPY_WASM_WASMCONFIG_H
 #define LLVM_OBJCOPY_WASM_WASMCONFIG_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 namespace objcopy {
 

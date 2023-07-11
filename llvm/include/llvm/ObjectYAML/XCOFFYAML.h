@@ -14,6 +14,7 @@
 
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <vector>
 

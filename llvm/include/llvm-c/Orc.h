@@ -27,6 +27,7 @@
 #ifndef LLVM_C_ORC_H
 #define LLVM_C_ORC_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm-c/Error.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm-c/Types.h"

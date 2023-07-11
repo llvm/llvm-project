@@ -15,6 +15,7 @@
 
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 extern cl::opt<bool> EnablePGSO;

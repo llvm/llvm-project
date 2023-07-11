@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_CSKYATTRIBUTEPARSER_H
 
 #include "llvm/Support/CSKYAttributes.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ELFAttributeParser.h"
 
 namespace llvm {

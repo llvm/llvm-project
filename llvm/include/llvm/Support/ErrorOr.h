@@ -16,6 +16,7 @@
 #define LLVM_SUPPORT_ERROROR_H
 
 #include "llvm/Support/AlignOf.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <system_error>
 #include <type_traits>

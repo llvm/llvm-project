@@ -9,6 +9,7 @@
 #ifndef LLVM_SUPPORT_WINDOWSERROR_H
 #define LLVM_SUPPORT_WINDOWSERROR_H
 
+#include "llvm/Support/Compiler.h"
 #include <system_error>
 
 namespace llvm {

@@ -16,6 +16,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Speculation.h"
+#include "llvm/Support/Compiler.h"
 
 #include <vector>
 

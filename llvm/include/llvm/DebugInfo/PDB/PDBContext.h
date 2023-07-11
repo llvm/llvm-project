@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <memory>
 #include <string>

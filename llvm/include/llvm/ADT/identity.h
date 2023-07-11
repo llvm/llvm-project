@@ -15,6 +15,7 @@
 #ifndef LLVM_ADT_IDENTITY_H
 #define LLVM_ADT_IDENTITY_H
 
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

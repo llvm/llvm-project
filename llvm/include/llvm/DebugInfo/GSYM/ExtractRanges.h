@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_GSYM_EXTRACTRANGES_H
 
 #include "llvm/ADT/AddressRanges.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include <stdint.h>

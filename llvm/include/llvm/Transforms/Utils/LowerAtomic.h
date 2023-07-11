@@ -15,6 +15,7 @@
 #define LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H
 
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

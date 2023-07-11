@@ -16,6 +16,8 @@
 #ifndef LLVM_SUPPORT_PLUGINLOADER_H
 #define LLVM_SUPPORT_PLUGINLOADER_H
 
+#include "llvm/Support/Compiler.h"
+
 #ifndef DONT_GET_PLUGIN_LOADER_OPTION
 #include "llvm/Support/CommandLine.h"
 #endif

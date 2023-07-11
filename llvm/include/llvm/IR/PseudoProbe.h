@@ -13,6 +13,7 @@
 #ifndef LLVM_IR_PSEUDOPROBE_H
 #define LLVM_IR_PSEUDOPROBE_H
 
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>

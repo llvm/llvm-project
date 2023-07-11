@@ -16,6 +16,7 @@
 #include "RDFRegisters.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/LaneBitmask.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 #include <set>
 #include <unordered_map>

@@ -14,6 +14,7 @@
 #ifndef LLVM_TARGETPARSER_LOONGARCHTARGETPARSER_H
 #define LLVM_TARGETPARSER_LOONGARCHTARGETPARSER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
 #include <vector>
 

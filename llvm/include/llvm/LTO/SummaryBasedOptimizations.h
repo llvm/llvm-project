@@ -8,6 +8,9 @@
 
 #ifndef LLVM_LTO_SUMMARYBASEDOPTIMIZATIONS_H
 #define LLVM_LTO_SUMMARYBASEDOPTIMIZATIONS_H
+
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class ModuleSummaryIndex;
 

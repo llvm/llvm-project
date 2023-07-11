@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {

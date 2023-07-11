@@ -22,6 +22,7 @@
 #include "llvm/LTO/Config.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Support/Caching.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/thread.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"

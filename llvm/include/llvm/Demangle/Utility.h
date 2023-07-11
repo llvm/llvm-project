@@ -17,6 +17,7 @@
 #define DEMANGLE_UTILITY_H
 
 #include "DemangleConfig.h"
+#include "llvm/Support/Compiler.h"
 
 #include <array>
 #include <cassert>

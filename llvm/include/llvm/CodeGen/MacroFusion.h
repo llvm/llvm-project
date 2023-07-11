@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MACROFUSION_H
 #define LLVM_CODEGEN_MACROFUSION_H
 
+#include "llvm/Support/Compiler.h"
 #include <functional>
 #include <memory>
 

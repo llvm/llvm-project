@@ -12,6 +12,7 @@
 #define LLVM_OBJECTYAML_YAML2OBJ_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 namespace llvm {

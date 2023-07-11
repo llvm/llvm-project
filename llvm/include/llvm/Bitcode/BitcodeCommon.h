@@ -15,6 +15,7 @@
 #define LLVM_BITCODE_BITCODECOMMON_H
 
 #include "llvm/ADT/Bitfields.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 

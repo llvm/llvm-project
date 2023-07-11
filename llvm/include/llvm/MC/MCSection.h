@@ -17,6 +17,7 @@
 #include "llvm/ADT/ilist.h"
 #include "llvm/MC/MCFragment.h"
 #include "llvm/MC/SectionKind.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Alignment.h"
 #include <cassert>
 #include <utility>

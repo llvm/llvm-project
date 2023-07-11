@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_IPDBDATASTREAM_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <optional>
 #include <string>

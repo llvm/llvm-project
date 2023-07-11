@@ -16,6 +16,7 @@
 #define LLVM_ANALYSIS_DDGPRINTER_H
 
 #include "llvm/Analysis/DDG.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 
 namespace llvm {

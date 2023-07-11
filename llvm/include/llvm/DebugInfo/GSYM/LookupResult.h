@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <inttypes.h>
 #include <vector>
 

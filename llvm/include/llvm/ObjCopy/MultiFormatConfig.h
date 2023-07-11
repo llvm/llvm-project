@@ -9,6 +9,7 @@
 #ifndef LLVM_OBJCOPY_MULTIFORMATCONFIG_H
 #define LLVM_OBJCOPY_MULTIFORMATCONFIG_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

@@ -20,6 +20,7 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <string>
 #include <utility>

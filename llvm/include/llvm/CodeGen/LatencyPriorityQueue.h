@@ -17,6 +17,7 @@
 
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
   class LatencyPriorityQueue;

@@ -20,6 +20,7 @@
 #define LLVM_ANALYSIS_INTERVAL_H
 
 #include "llvm/ADT/GraphTraits.h"
+#include "llvm/Support/Compiler.h"
 #include <vector>
 
 namespace llvm {

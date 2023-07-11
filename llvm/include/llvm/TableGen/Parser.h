@@ -14,6 +14,7 @@
 #define LLVM_TABLEGEN_PARSER_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
 #include <string>
 #include <vector>
 

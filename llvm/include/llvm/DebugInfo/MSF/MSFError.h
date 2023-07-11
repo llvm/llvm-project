@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_MSF_MSFERROR_H
 #define LLVM_DEBUGINFO_MSF_MSFERROR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

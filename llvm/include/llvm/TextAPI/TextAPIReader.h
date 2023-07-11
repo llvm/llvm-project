@@ -9,6 +9,7 @@
 #ifndef LLVM_TEXTAPI_TEXTAPIREADER_H
 #define LLVM_TEXTAPI_TEXTAPIREADER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {

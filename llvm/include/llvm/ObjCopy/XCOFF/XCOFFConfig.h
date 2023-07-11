@@ -9,6 +9,8 @@
 #ifndef LLVM_OBJCOPY_XCOFF_XCOFFCONFIG_H
 #define LLVM_OBJCOPY_XCOFF_XCOFFCONFIG_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 namespace objcopy {
 

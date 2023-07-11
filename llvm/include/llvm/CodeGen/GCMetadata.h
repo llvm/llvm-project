@@ -39,6 +39,7 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/GCStrategy.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>

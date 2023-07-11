@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {

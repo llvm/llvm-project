@@ -11,6 +11,8 @@
 #ifndef LLVM_TRANSFORMS_CFGUARD_H
 #define LLVM_TRANSFORMS_CFGUARD_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class FunctionPass;

@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::jitlink::i386 {
 /// Represets i386 fixups

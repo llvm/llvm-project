@@ -9,6 +9,7 @@
 #ifndef LLVM_OBJCOPY_COFF_COFFCONFIG_H
 #define LLVM_OBJCOPY_COFF_COFFCONFIG_H
 
+#include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {

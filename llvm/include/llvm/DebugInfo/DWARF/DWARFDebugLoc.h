@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Errc.h"
 #include <cstdint>
 

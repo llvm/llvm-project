@@ -15,6 +15,8 @@
 #ifndef LLVM_MC_MCDISASSEMBLER_MCRELOCATIONINFO_H
 #define LLVM_MC_MCDISASSEMBLER_MCRELOCATIONINFO_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class MCContext;

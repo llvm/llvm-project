@@ -9,6 +9,7 @@
 #ifndef LLVM_DEBUGINFO_GSYM_HEADER_H
 #define LLVM_DEBUGINFO_GSYM_HEADER_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 #include <cstddef>
