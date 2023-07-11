@@ -34560,15 +34560,15 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     MVT WidenVT = getTypeToTransformTo(*DAG.getContext(), VT).getSimpleVT();
     SDValue In = N->getOperand(0);
     EVT InVT = In.getValueType();
+    EVT InEltVT = InVT.getVectorElementType();
+    EVT EltVT = VT.getVectorElementType();
+    unsigned WidenNumElts = WidenVT.getVectorNumElements();
 
     unsigned InBits = InVT.getSizeInBits();
     if (128 % InBits == 0) {
       // 128 bit and smaller inputs should avoid truncate all together and
       // just use a build_vector that will become a shuffle.
       // TODO: Widen and use a shuffle directly?
-      MVT InEltVT = InVT.getSimpleVT().getVectorElementType();
-      EVT EltVT = VT.getVectorElementType();
-      unsigned WidenNumElts = WidenVT.getVectorNumElements();
       SmallVector<SDValue, 16> Ops(WidenNumElts, DAG.getUNDEF(EltVT));
       // Use the original element count so we don't do more scalar opts than
       // necessary.
@@ -34612,6 +34612,18 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                                          { 0,  1,  2,  3, 16, 17, 18, 19,
                                           -1, -1, -1, -1, -1, -1, -1, -1 });
       Results.push_back(Res);
+      return;
+    }
+
+    // Pre-SSSE3 (or v4i64 -> v4i16) widen the truncation input vector to let
+    // LowerTRUNCATE handle this via type legalization.
+    if ((InEltVT == MVT::i16 || InEltVT == MVT::i32 || InEltVT == MVT::i64) &&
+        (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32) &&
+        (!Subtarget.hasSSSE3() || (InVT == MVT::v4i64 && VT == MVT::v4i16)) &&
+        !Subtarget.hasAVX()) {
+      SDValue WidenIn = widenSubVector(In, false, Subtarget, DAG, dl,
+                                       InEltVT.getSizeInBits() * WidenNumElts);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, WidenVT, WidenIn));
       return;
     }
 
