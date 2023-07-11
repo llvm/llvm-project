@@ -15,23 +15,22 @@
 // template<container-compatible-range<value_type> R>
 //   void insert_range(R&& rg); // C++23
 
-#include <unordered_set>
+#include <set>
 
 #include "../../insert_range_maps_sets.h"
 #include "test_macros.h"
 
 int main(int, char**) {
   for_all_iterators_and_allocators<int, const int*>([]<class Iter, class Sent, class Alloc>() {
-    test_map_set_insert_range<std::unordered_multiset<int, test_hash<int>, test_equal_to<int>, Alloc>, int, Iter, Sent>(/*allow_duplicates=*/true);
+    test_map_set_insert_range<std::multiset<int, test_less<int>, Alloc>, int, Iter, Sent>(/*allow_duplicates=*/true);
   });
 
-  static_assert(test_set_constraints_insert_range<std::unordered_multiset, int, double>());
+  static_assert(test_set_constraints_insert_range<std::multiset, int, double>());
 
-  test_set_insert_range_move_only<std::unordered_multiset>();
+  test_set_insert_range_move_only<std::multiset>();
 
-  test_set_insert_range_exception_safety_throwing_copy<std::unordered_multiset>();
-  test_unord_set_insert_range_exception_safety_throwing_allocator<std::unordered_multiset, int>();
+  test_set_insert_range_exception_safety_throwing_copy<std::multiset>();
+  test_assoc_set_insert_range_exception_safety_throwing_allocator<std::multiset, int>();
 
   return 0;
 }
-
