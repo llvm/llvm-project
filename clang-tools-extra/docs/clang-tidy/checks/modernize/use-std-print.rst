@@ -70,8 +70,10 @@ If the call is deemed suitable for conversion then:
   `FprintfLikeFunctions` are replaced with the function specified by the
   `ReplacementPrintlnFunction` option if the format string ends with ``\n``
   or `ReplacementPrintFunction` otherwise.
-- the format string is rewritten to use the ``std::formatter`` language and
-  a ``\n`` is removed from the end.
+- the format string is rewritten to use the ``std::formatter`` language. If
+  a ``\n`` is found at the end of the format string not preceded by ``r``
+  then it is removed and `ReplacementPrintlnFunction` is used rather than
+  `ReplacementPrintFunction`.
 - any arguments that corresponded to ``%p`` specifiers that
   ``std::formatter`` wouldn't accept are wrapped in a ``static_cast``
   to ``const void *``.
