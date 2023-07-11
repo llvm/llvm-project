@@ -593,7 +593,7 @@ void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   ID.AddInteger(Record->getNumBases());
   auto Bases = Record->bases();
   for (const auto &Base : Bases) {
-    AddQualType(Base.getType());
+    AddQualType(Base.getType().getCanonicalType());
     ID.AddInteger(Base.isVirtual());
     ID.AddInteger(Base.getAccessSpecifierAsWritten());
   }
