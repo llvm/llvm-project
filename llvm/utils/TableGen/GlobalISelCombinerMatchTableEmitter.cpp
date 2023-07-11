@@ -1389,16 +1389,18 @@ void GICombinerEmitter::emitRunCustomAction(raw_ostream &OS) {
 
   OS << "void " << getClassName()
      << "::runCustomAction(unsigned ApplyID, const MatcherState &State) const "
-        "{\n"
-     << "  switch(ApplyID) {\n";
-  for (const auto &Apply : ApplyCode) {
-    OS << "  case " << Apply->getEnumNameWithPrefix(CXXApplyPrefix) << ":{\n"
-       << "    " << Apply->Code << "\n"
-       << "    return;\n";
-    OS << "  }\n";
+        "{\n";
+  if (!ApplyCode.empty()) {
+    OS << "  switch(ApplyID) {\n";
+    for (const auto &Apply : ApplyCode) {
+      OS << "  case " << Apply->getEnumNameWithPrefix(CXXApplyPrefix) << ":{\n"
+         << "    " << Apply->Code << "\n"
+         << "    return;\n";
+      OS << "  }\n";
+    }
+    OS << "}\n";
   }
-  OS << "}\n"
-     << "  llvm_unreachable(\"Unknown Apply Action\");\n"
+  OS << "  llvm_unreachable(\"Unknown Apply Action\");\n"
      << "}\n";
 }
 
