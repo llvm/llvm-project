@@ -373,20 +373,16 @@ define i1 @trunc_v8i64_v8i1(<8 x i64>) nounwind {
 ; X86-SSE2-NEXT:    movl %esp, %ebp
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $16, %esp
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = mem[0,2,2,3]
-; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,0,2,4,5,6,7]
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; X86-SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,0,2,4,5,6,7]
-; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm0[0],xmm2[1]
-; X86-SSE2-NEXT:    psllw $15, %xmm2
-; X86-SSE2-NEXT:    packsswb %xmm2, %xmm2
-; X86-SSE2-NEXT:    pmovmskb %xmm2, %eax
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X86-SSE2-NEXT:    pslld $16, %xmm0
+; X86-SSE2-NEXT:    psrad $16, %xmm0
+; X86-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],mem[0,2]
+; X86-SSE2-NEXT:    pslld $16, %xmm2
+; X86-SSE2-NEXT:    psrad $16, %xmm2
+; X86-SSE2-NEXT:    packssdw %xmm2, %xmm0
+; X86-SSE2-NEXT:    psllw $15, %xmm0
+; X86-SSE2-NEXT:    packsswb %xmm0, %xmm0
+; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X86-SSE2-NEXT:    cmpb $-1, %al
 ; X86-SSE2-NEXT:    sete %al
 ; X86-SSE2-NEXT:    movl %ebp, %esp
@@ -395,20 +391,16 @@ define i1 @trunc_v8i64_v8i1(<8 x i64>) nounwind {
 ;
 ; X64-SSE2-LABEL: trunc_v8i64_v8i1:
 ; X64-SSE2:       # %bb.0:
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; X64-SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; X64-SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
-; X64-SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,1,0,2,4,5,6,7]
-; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; X64-SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,0,2,4,5,6,7]
-; X64-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; X64-SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm0[0],xmm2[1]
-; X64-SSE2-NEXT:    psllw $15, %xmm2
-; X64-SSE2-NEXT:    packsswb %xmm2, %xmm2
-; X64-SSE2-NEXT:    pmovmskb %xmm2, %eax
+; X64-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; X64-SSE2-NEXT:    pslld $16, %xmm2
+; X64-SSE2-NEXT:    psrad $16, %xmm2
+; X64-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X64-SSE2-NEXT:    pslld $16, %xmm0
+; X64-SSE2-NEXT:    psrad $16, %xmm0
+; X64-SSE2-NEXT:    packssdw %xmm2, %xmm0
+; X64-SSE2-NEXT:    psllw $15, %xmm0
+; X64-SSE2-NEXT:    packsswb %xmm0, %xmm0
+; X64-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X64-SSE2-NEXT:    cmpb $-1, %al
 ; X64-SSE2-NEXT:    sete %al
 ; X64-SSE2-NEXT:    retq

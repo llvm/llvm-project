@@ -318,10 +318,10 @@ define dso_local void @example25() nounwind {
 ; SSE41-NEXT:    andps %xmm2, %xmm4
 ; SSE41-NEXT:    cmpltps dd+4112(%rax), %xmm3
 ; SSE41-NEXT:    andps %xmm1, %xmm3
-; SSE41-NEXT:    andps %xmm0, %xmm4
 ; SSE41-NEXT:    andps %xmm0, %xmm3
+; SSE41-NEXT:    psrld $31, %xmm4
 ; SSE41-NEXT:    movaps %xmm3, dj+4112(%rax)
-; SSE41-NEXT:    movaps %xmm4, dj+4096(%rax)
+; SSE41-NEXT:    movdqa %xmm4, dj+4096(%rax)
 ; SSE41-NEXT:    addq $32, %rax
 ; SSE41-NEXT:    jne .LBB5_1
 ; SSE41-NEXT:  # %bb.2: # %for.end

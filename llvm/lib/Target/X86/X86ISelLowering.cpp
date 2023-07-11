@@ -1239,7 +1239,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE,    MVT::v2i32, Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v4i8,  Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v4i16, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v4i32, Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v8i8,  Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v8i16, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v8i32, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v8i64, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v16i8, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v16i16, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v16i32, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v16i64, Custom);
 
     // In the customized shift lowering, the legal v4i32/v2i64 cases
     // in AVX2 will be recognized.
@@ -1480,9 +1488,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ANY_EXTEND,      VT, Custom);
     }
 
-    setOperationAction(ISD::TRUNCATE,          MVT::v16i8, Custom);
-    setOperationAction(ISD::TRUNCATE,          MVT::v8i16, Custom);
-    setOperationAction(ISD::TRUNCATE,          MVT::v4i32, Custom);
+    setOperationAction(ISD::TRUNCATE,          MVT::v32i8, Custom);
+    setOperationAction(ISD::TRUNCATE,          MVT::v32i16, Custom);
+    setOperationAction(ISD::TRUNCATE,          MVT::v32i32, Custom);
+    setOperationAction(ISD::TRUNCATE,          MVT::v32i64, Custom);
+
     setOperationAction(ISD::BITREVERSE,        MVT::v32i8, Custom);
 
     for (auto VT : { MVT::v32i8, MVT::v16i16, MVT::v8i32, MVT::v4i64 }) {
@@ -1802,7 +1812,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE,    MVT::v8i32,  Legal);
     setOperationAction(ISD::TRUNCATE,    MVT::v16i16, Legal);
     setOperationAction(ISD::TRUNCATE,    MVT::v32i8,  HasBWI ? Legal : Custom);
-    setOperationAction(ISD::TRUNCATE,    MVT::v16i64, Custom);
     setOperationAction(ISD::ZERO_EXTEND, MVT::v32i16, Custom);
     setOperationAction(ISD::ZERO_EXTEND, MVT::v16i32, Custom);
     setOperationAction(ISD::ZERO_EXTEND, MVT::v8i64,  Custom);
@@ -2338,10 +2347,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_EXTEND,         MVT::v4f16, Custom);
       setOperationAction(ISD::STRICT_FP_EXTEND,  MVT::v4f16, Custom);
     }
-
-    setOperationAction(ISD::TRUNCATE, MVT::v16i32, Custom);
-    setOperationAction(ISD::TRUNCATE, MVT::v8i64, Custom);
-    setOperationAction(ISD::TRUNCATE, MVT::v16i64, Custom);
   }
 
   if (Subtarget.hasAMXTILE()) {
@@ -22869,6 +22874,84 @@ static SDValue truncateVectorWithPACKSS(EVT DstVT, SDValue In, const SDLoc &DL,
   return truncateVectorWithPACK(X86ISD::PACKSS, DstVT, In, DL, DAG, Subtarget);
 }
 
+/// This function lowers a vector truncation of 'extended sign-bits' or
+/// 'extended zero-bits' values.
+/// vXi16/vXi32/vXi64 to vXi8/vXi16/vXi32 into X86ISD::PACKSS/PACKUS operations.
+static SDValue LowerTruncateVecPackWithSignBits(MVT DstVT, SDValue In,
+                                                const SDLoc &DL,
+                                                const X86Subtarget &Subtarget,
+                                                SelectionDAG &DAG) {
+  MVT SrcVT = In.getSimpleValueType();
+  MVT DstSVT = DstVT.getVectorElementType();
+  MVT SrcSVT = SrcVT.getVectorElementType();
+  if (!((SrcSVT == MVT::i16 || SrcSVT == MVT::i32 || SrcSVT == MVT::i64) &&
+        (DstSVT == MVT::i8 || DstSVT == MVT::i16 || DstSVT == MVT::i32)))
+    return SDValue();
+
+  unsigned NumSrcEltBits = SrcVT.getScalarSizeInBits();
+  unsigned NumPackedSignBits = std::min<unsigned>(DstSVT.getSizeInBits(), 16);
+  unsigned NumPackedZeroBits = Subtarget.hasSSE41() ? NumPackedSignBits : 8;
+
+  // Truncate with PACKUS if we are truncating a vector with leading zero
+  // bits that extend all the way to the packed/truncated value. Pre-SSE41
+  // we can only use PACKUSWB.
+  KnownBits Known = DAG.computeKnownBits(In);
+  if ((NumSrcEltBits - NumPackedZeroBits) <= Known.countMinLeadingZeros())
+    if (SDValue V = truncateVectorWithPACK(X86ISD::PACKUS, DstVT, In, DL, DAG,
+                                           Subtarget))
+      return V;
+
+  // Truncate with PACKSS if we are truncating a vector with sign-bits
+  // that extend all the way to the packed/truncated value.
+  if ((NumSrcEltBits - NumPackedSignBits) < DAG.ComputeNumSignBits(In))
+    if (SDValue V = truncateVectorWithPACK(X86ISD::PACKSS, DstVT, In, DL, DAG,
+                                           Subtarget))
+      return V;
+
+  return SDValue();
+}
+
+/// This function lowers a vector truncation from vXi32/vXi64 to vXi8/vXi16 into
+/// X86ISD::PACKUS/X86ISD::PACKSS operations.
+static SDValue LowerTruncateVecPack(MVT DstVT, SDValue In, const SDLoc &DL,
+                                    const X86Subtarget &Subtarget,
+                                    SelectionDAG &DAG) {
+  MVT SrcVT = In.getSimpleValueType();
+  MVT DstSVT = DstVT.getVectorElementType();
+  MVT SrcSVT = SrcVT.getVectorElementType();
+  unsigned NumElems = DstVT.getVectorNumElements();
+  if (!((SrcSVT == MVT::i16 || SrcSVT == MVT::i32 || SrcSVT == MVT::i64) &&
+        (DstSVT == MVT::i8 || DstSVT == MVT::i16) && isPowerOf2_32(NumElems) &&
+        NumElems >= 8))
+    return SDValue();
+
+  // SSSE3's pshufb results in less instructions in the cases below.
+  if (Subtarget.hasSSSE3() && NumElems == 8) {
+    if (SrcSVT == MVT::i16)
+      return SDValue();
+    if (SrcSVT == MVT::i32 && (DstSVT == MVT::i8 || !Subtarget.hasSSE41()))
+      return SDValue();
+  }
+
+  // SSE2 provides PACKUS for only 2 x v8i16 -> v16i8 and SSE4.1 provides PACKUS
+  // for 2 x v4i32 -> v8i16. For SSSE3 and below, we need to use PACKSS to
+  // truncate 2 x v4i32 to v8i16.
+  if (Subtarget.hasSSE41() || DstSVT == MVT::i8)
+    return truncateVectorWithPACKUS(DstVT, In, DL, Subtarget, DAG);
+
+  if (SrcSVT == MVT::i16 || SrcSVT == MVT::i32)
+    return truncateVectorWithPACKSS(DstVT, In, DL, Subtarget, DAG);
+
+  // Special case vXi64 -> vXi16, shuffle to vXi32 and then use PACKSS.
+  if (DstSVT == MVT::i16 && SrcSVT == MVT::i64) {
+    MVT TruncVT = MVT::getVectorVT(MVT::i32, NumElems);
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, In);
+    return truncateVectorWithPACKSS(DstVT, Trunc, DL, Subtarget, DAG);
+  }
+
+  return SDValue();
+}
+
 static SDValue LowerTruncateVecI1(SDValue Op, SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
 
@@ -22955,8 +23038,6 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   SDValue In = Op.getOperand(0);
   MVT InVT = In.getSimpleValueType();
-  unsigned InNumEltBits = InVT.getScalarSizeInBits();
-
   assert(VT.getVectorNumElements() == InVT.getVectorNumElements() &&
          "Invalid TRUNCATE operation");
 
@@ -22964,7 +23045,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isTypeLegal(InVT)) {
     if ((InVT == MVT::v8i64 || InVT == MVT::v16i32 || InVT == MVT::v16i64) &&
-        VT.is128BitVector()) {
+        VT.is128BitVector() && Subtarget.hasAVX512()) {
       assert((InVT == MVT::v16i64 || Subtarget.hasVLX()) &&
              "Unexpected subtarget!");
       // The default behavior is to truncate one step, concatenate, and then
@@ -22981,6 +23062,15 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
 
+    // Pre-AVX512 see if we can make use of PACKSS/PACKUS.
+    if (!Subtarget.hasAVX512()) {
+      if (SDValue SignPack =
+              LowerTruncateVecPackWithSignBits(VT, In, DL, Subtarget, DAG))
+        return SignPack;
+
+      return LowerTruncateVecPack(VT, In, DL, Subtarget, DAG);
+    }
+
     // Otherwise let default legalization handle it.
     return SDValue();
   }
@@ -22988,28 +23078,12 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   if (VT.getVectorElementType() == MVT::i1)
     return LowerTruncateVecI1(Op, DAG, Subtarget);
 
-  unsigned NumPackedSignBits = std::min<unsigned>(VT.getScalarSizeInBits(), 16);
-  unsigned NumPackedZeroBits = Subtarget.hasSSE41() ? NumPackedSignBits : 8;
-
   // Attempt to truncate with PACKUS/PACKSS even on AVX512 if we'd have to
   // concat from subvectors to use VPTRUNC etc.
-  if (!Subtarget.hasAVX512() || isFreeToSplitVector(In.getNode(), DAG)) {
-    // Truncate with PACKUS if we are truncating a vector with leading zero
-    // bits that extend all the way to the packed/truncated value. Pre-SSE41
-    // we can only use PACKUSWB.
-    KnownBits Known = DAG.computeKnownBits(In);
-    if ((InNumEltBits - NumPackedZeroBits) <= Known.countMinLeadingZeros())
-      if (SDValue V = truncateVectorWithPACK(X86ISD::PACKUS, VT, In, DL, DAG,
-                                             Subtarget))
-        return V;
-
-    // Truncate with PACKSS if we are truncating a vector with sign-bits
-    // that extend all the way to the packed/truncated value.
-    if ((InNumEltBits - NumPackedSignBits) < DAG.ComputeNumSignBits(In))
-      if (SDValue V = truncateVectorWithPACK(X86ISD::PACKSS, VT, In, DL, DAG,
-                                             Subtarget))
-        return V;
-  }
+  if (!Subtarget.hasAVX512() || isFreeToSplitVector(In.getNode(), DAG))
+    if (SDValue SignPack =
+            LowerTruncateVecPackWithSignBits(VT, In, DL, Subtarget, DAG))
+      return SignPack;
 
   // vpmovqb/w/d, vpmovdb/w, vpmovwb
   if (Subtarget.hasAVX512()) {
@@ -23068,27 +23142,9 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getBitcast(MVT::v8i16, In);
     }
 
-    SDValue OpLo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i32, In,
-                               DAG.getIntPtrConstant(0, DL));
-    SDValue OpHi = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v4i32, In,
-                               DAG.getIntPtrConstant(4, DL));
-
-    // The PSHUFB mask:
-    static const int ShufMask1[] = {0, 2, 4, 6, -1, -1, -1, -1};
-
-    OpLo = DAG.getBitcast(MVT::v8i16, OpLo);
-    OpHi = DAG.getBitcast(MVT::v8i16, OpHi);
-
-    OpLo = DAG.getVectorShuffle(MVT::v8i16, DL, OpLo, OpLo, ShufMask1);
-    OpHi = DAG.getVectorShuffle(MVT::v8i16, DL, OpHi, OpHi, ShufMask1);
-
-    OpLo = DAG.getBitcast(MVT::v4i32, OpLo);
-    OpHi = DAG.getBitcast(MVT::v4i32, OpHi);
-
-    // The MOVLHPS Mask:
-    static const int ShufMask2[] = {0, 1, 4, 5};
-    SDValue res = DAG.getVectorShuffle(MVT::v4i32, DL, OpLo, OpHi, ShufMask2);
-    return DAG.getBitcast(MVT::v8i16, res);
+    return Subtarget.hasSSE41()
+               ? truncateVectorWithPACKUS(VT, In, DL, Subtarget, DAG)
+               : truncateVectorWithPACKSS(VT, In, DL, Subtarget, DAG);
   }
 
   if (VT == MVT::v16i8 && InVT == MVT::v16i16)
@@ -53152,6 +53208,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
 /// legalization the truncation will be translated into a BUILD_VECTOR with each
 /// element that is extracted from a vector and then truncated, and it is
 /// difficult to do this optimization based on them.
+/// TODO: Remove this and just use LowerTruncateVecPack.
 static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
                                        const X86Subtarget &Subtarget) {
   EVT OutVT = N->getValueType(0);
@@ -53200,6 +53257,7 @@ static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
 /// This function transforms vector truncation of 'extended sign-bits' or
 /// 'extended zero-bits' values.
 /// vXi16/vXi32/vXi64 to vXi8/vXi16/vXi32 into X86ISD::PACKSS/PACKUS operations.
+/// TODO: Remove this and just use LowerTruncateVecPackWithSignBits.
 static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
                                                SelectionDAG &DAG,
                                                const X86Subtarget &Subtarget) {
