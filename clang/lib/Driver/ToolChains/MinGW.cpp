@@ -518,8 +518,6 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
           .equals_insensitive("lld");
 }
 
-bool toolchains::MinGW::IsIntegratedAssemblerDefault() const { return true; }
-
 Tool *toolchains::MinGW::getTool(Action::ActionClass AC) const {
   switch (AC) {
   case Action::PreprocessJobClass:
