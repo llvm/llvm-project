@@ -274,7 +274,7 @@ TEST_F(AnalyzeTest, NoCrashWhenUnresolved) {
 }
 
 TEST(FixIncludes, Basic) {
-  llvm::StringRef Code = R"cpp(
+  llvm::StringRef Code = R"cpp(#include "d.h"
 #include "a.h"
 #include "b.h"
 #include <c.h>
@@ -300,11 +300,22 @@ TEST(FixIncludes, Basic) {
   Results.Unused.push_back(Inc.atLine(3));
   Results.Unused.push_back(Inc.atLine(4));
 
-  EXPECT_EQ(fixIncludes(Results, Code, format::getLLVMStyle()), R"cpp(
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
+R"cpp(#include "d.h"
 #include "a.h"
 #include "aa.h"
 #include "ab.h"
 #include <e.h>
+)cpp");
+
+  Results = {};
+  Results.Missing.push_back("\"d.h\"");
+  Code = R"cpp(#include "a.h")cpp";
+  // FIXME: this isn't correct, the main-file header d.h should be added before
+  // a.h.
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
+R"cpp(#include "a.h"
+#include "d.h"
 )cpp");
 }
 
