@@ -84,14 +84,6 @@ enum class PacketStatus {
   JSONNotObject
 };
 
-enum class ReplMode { Variable = 0, Command, Auto };
-
-/// The detected context of an expression based off the current repl mode.
-enum class ExpressionContext {
-  Variable = 0,
-  Command,
-};
-
 struct Variables {
   /// Variable_reference start index of permanent expandable variable.
   static constexpr int64_t PermanentVariableStartIndex = (1ll << 32);
@@ -117,7 +109,7 @@ struct Variables {
   /// \return a new variableReference.
   /// Specify is_permanent as true for variable that should persist entire
   /// debug session.
-  int64_t GetNewVariableReference(bool is_permanent);
+  int64_t GetNewVariableRefence(bool is_permanent);
 
   /// \return the expandable variable corresponding with variableReference
   /// value of \p value.
@@ -133,11 +125,6 @@ struct Variables {
 };
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
-  bool DoExecute(lldb::SBDebugger debugger, char **command,
-                 lldb::SBCommandReturnObject &result) override;
-};
-
-struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
@@ -186,9 +173,6 @@ struct VSCode {
   std::map<int /* request_seq */, ResponseCallback /* reply handler */>
       inflight_reverse_requests;
   StartDebuggingRequestHandler start_debugging_request_handler;
-  ReplModeRequestHandler repl_mode_request_handler;
-  ReplMode repl_mode;
-  bool auto_repl_mode_collision_warning;
 
   VSCode();
   ~VSCode();
@@ -221,9 +205,6 @@ struct VSCode {
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   llvm::json::Value CreateTopLevelScopes();
-
-  ExpressionContext DetectExpressionContext(lldb::SBFrame &frame,
-                                            std::string &text);
 
   void RunLLDBCommands(llvm::StringRef prefix,
                        const std::vector<std::string> &commands);
