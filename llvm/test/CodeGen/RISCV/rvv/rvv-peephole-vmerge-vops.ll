@@ -361,6 +361,36 @@ define <vscale x 2 x float> @vpmerge_fadd(<vscale x 2 x float> %passthru, <vscal
   ret <vscale x 2 x float> %b
 }
 
+; This shouldn't be folded because we need to preserve exceptions with
+; "fpexcept.strict" exception behaviour, and masking may hide them.
+define <vscale x 2 x float> @vpmerge_constrained_fadd(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 %vl) strictfp {
+; CHECK-LABEL: vpmerge_constrained_fadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v9, v9, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 %vl)
+  ret <vscale x 2 x float> %b
+}
+declare <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float>, <vscale x 2 x float>, metadata, metadata)
+declare <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x i1>, i64)
+
+; FIXME: This shouldn't be folded because we need to preserve exceptions with
+; "fpexcept.strict" exception behaviour, and masking may hide them.
+define <vscale x 2 x float> @vpmerge_constrained_fadd_vlmax(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m) strictfp {
+; CHECK-LABEL: vpmerge_constrained_fadd_vlmax:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, tu, mu
+; CHECK-NEXT:    vfadd.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 -1)
+  ret <vscale x 2 x float> %b
+}
+
 ; Test conversion by fptosi.
 define <vscale x 2 x i16> @vpmerge_fptosi(<vscale x 2 x i16> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_fptosi:
