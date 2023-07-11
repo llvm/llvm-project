@@ -43,7 +43,7 @@
 ! CHECK:         fir.store %[[VAL_41]] to %[[VAL_31]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_42:.*]] = fir.load %[[VAL_31]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (i32) -> f32
-! CHECK:         %[[VAL_44:.*]] = fir.call @fir.cos.f32.f32(%[[VAL_43]]) {{.*}}: (f32) -> f32
+! CHECK:         %[[VAL_44:.*]] = fir.call @fir.cos.contract.f32.f32(%[[VAL_43]]) {{.*}}: (f32) -> f32
 ! CHECK:         %[[VAL_45:.*]] = fir.load %[[VAL_28]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_46:.*]] = fir.convert %[[VAL_45]] : (i32) -> i64
 ! CHECK:         %[[VAL_47:.*]] = arith.subi %[[VAL_46]], %[[VAL_20]] : i64
@@ -60,7 +60,7 @@
 ! CHECK:         fir.store %[[VAL_36]] to %[[VAL_28]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_55:.*]] = fir.load %[[VAL_31]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_56:.*]] = fir.convert %[[VAL_55]] : (i32) -> f32
-! CHECK:         %[[VAL_57:.*]] = fir.call @fir.sin.f32.f32(%[[VAL_56]]) {{.*}}: (f32) -> f32
+! CHECK:         %[[VAL_57:.*]] = fir.call @fir.sin.contract.f32.f32(%[[VAL_56]]) {{.*}}: (f32) -> f32
 ! CHECK:         %[[VAL_58:.*]] = fir.load %[[VAL_30]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_59:.*]] = fir.convert %[[VAL_58]] : (i32) -> i64
 ! CHECK:         %[[VAL_60:.*]] = arith.subi %[[VAL_59]], %[[VAL_20]] : i64
