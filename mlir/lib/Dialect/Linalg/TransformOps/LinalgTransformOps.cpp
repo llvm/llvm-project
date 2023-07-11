@@ -177,8 +177,11 @@ void transform::BufferizeToAllocationOp::build(OpBuilder &b,
                                                OperationState &result,
                                                Value target,
                                                Attribute memorySpace) {
+  SmallVector<Type> resultTypes;
+  resultTypes.push_back(b.getType<transform::AnyValueType>());
+  resultTypes.push_back(b.getType<transform::AnyOpType>());
   return build(b, result,
-               /*resultTypes=*/b.getType<transform::AnyValueType>(),
+               /*resultTypes=*/resultTypes,
                /*target=*/target,
                /*memorySpace=*/memorySpace);
 }
@@ -187,15 +190,52 @@ void transform::BufferizeToAllocationOp::build(OpBuilder &b,
                                                OperationState &result,
                                                Value target,
                                                int64_t memorySpace) {
+  SmallVector<Type> resultTypes;
+  resultTypes.push_back(b.getType<transform::AnyValueType>());
+  resultTypes.push_back(b.getType<transform::AnyOpType>());
   return build(b, result,
-               /*resultTypes=*/b.getType<transform::AnyValueType>(),
+               /*resultTypes=*/resultTypes,
                /*target=*/target,
                /*memorySpace=*/b.getI64IntegerAttr(memorySpace));
 }
 
+namespace {
+class NewOpsListener : public RewriterBase::ForwardingListener {
+public:
+  using RewriterBase::ForwardingListener::ForwardingListener;
+
+  SmallVector<Operation *> getNewOps() const {
+    return SmallVector<Operation *>(newOps.begin(), newOps.end());
+  }
+
+private:
+  void notifyOperationInserted(Operation *op) override {
+    ForwardingListener::notifyOperationInserted(op);
+    auto inserted = newOps.insert(op);
+    (void)inserted;
+    assert(inserted.second && "expected newly created op");
+  }
+
+  void notifyOperationRemoved(Operation *op) override {
+    ForwardingListener::notifyOperationRemoved(op);
+    op->walk([&](Operation *op) { newOps.erase(op); });
+  }
+
+  DenseSet<Operation *> newOps;
+};
+} // namespace
+
 DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
+  // Attach listener to keep track of newly created ops.
+  OpBuilder::Listener *previousListener = rewriter.getListener();
+  auto resetListener =
+      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  NewOpsListener newOpsListener(previousListener);
+  rewriter.setListener(&newOpsListener);
+
+  // Bufferize ops.
   Attribute memorySpace =
       getMemorySpace().has_value() ? getMemorySpace().value() : Attribute();
   SmallVector<Value> allocatedBuffers;
@@ -209,7 +249,10 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     }
     allocatedBuffers.push_back(buffer);
   }
+
+  // Set results.
   results.setValues(cast<OpResult>(getAllocatedBuffer()), allocatedBuffers);
+  results.set(cast<OpResult>(getNewOps()), newOpsListener.getNewOps());
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -217,6 +260,7 @@ void transform::BufferizeToAllocationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
   producesHandle(getAllocatedBuffer(), effects);
+  producesHandle(getNewOps(), effects);
   modifiesPayload(effects);
 }
 
