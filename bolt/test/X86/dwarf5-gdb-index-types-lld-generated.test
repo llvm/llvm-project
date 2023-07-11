@@ -10,7 +10,7 @@
 
 # POSTCHECK:          Version = 7
 # POSTCHECK:          CU list offset = 0x18, has 2 entries
-# POSTCHECK-NEXT:         0: Offset = 0x40, Length = 0x52
+# POSTCHECK-NEXT:         0: Offset = 0x80, Length = 0x52
 # POSTCHECK-NEXT:         1: Offset = 0xd2, Length = 0x53
 # POSTCHECK:          Types CU list offset = 0x38, has 0 entries
 # POSTCHECK:          Address area offset = 0x38, has 2 entries
