@@ -247,6 +247,15 @@ static StringRef ToolName;
 std::unique_ptr<BuildIDFetcher> BIDFetcher;
 ExitOnError ExitOnErr;
 
+void Dumper::reportUniqueWarning(Error Err) {
+  reportUniqueWarning(toString(std::move(Err)));
+}
+
+void Dumper::reportUniqueWarning(const Twine &Msg) {
+  if (Warnings.insert(StringRef(Msg.str())).second)
+    reportWarning(Msg, O.getFileName());
+}
+
 namespace {
 struct FilterResult {
   // True if the section should not be skipped.
@@ -2168,23 +2177,22 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
                     SecondarySTI.get(), PIP, SP, InlineRelocs);
 }
 
-void objdump::printRelocations(const ObjectFile *Obj) {
-  StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 :
-                                                 "%08" PRIx64;
+void Dumper::printRelocations() {
+  StringRef Fmt = O.getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
 
   // Build a mapping from relocation target to a vector of relocation
   // sections. Usually, there is an only one relocation section for
   // each relocated section.
   MapVector<SectionRef, std::vector<SectionRef>> SecToRelSec;
   uint64_t Ndx;
-  for (const SectionRef &Section : ToolSectionFilter(*Obj, &Ndx)) {
-    if (Obj->isELF() && (ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC))
+  for (const SectionRef &Section : ToolSectionFilter(O, &Ndx)) {
+    if (O.isELF() && (ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC))
       continue;
     if (Section.relocation_begin() == Section.relocation_end())
       continue;
     Expected<section_iterator> SecOrErr = Section.getRelocatedSection();
     if (!SecOrErr)
-      reportError(Obj->getFileName(),
+      reportError(O.getFileName(),
                   "section (" + Twine(Ndx) +
                       "): unable to get a relocation target: " +
                       toString(SecOrErr.takeError()));
@@ -2192,9 +2200,9 @@ void objdump::printRelocations(const ObjectFile *Obj) {
   }
 
   for (std::pair<SectionRef, std::vector<SectionRef>> &P : SecToRelSec) {
-    StringRef SecName = unwrapOrError(P.first.getName(), Obj->getFileName());
+    StringRef SecName = unwrapOrError(P.first.getName(), O.getFileName());
     outs() << "\nRELOCATION RECORDS FOR [" << SecName << "]:\n";
-    uint32_t OffsetPadding = (Obj->getBytesInAddress() > 4 ? 16 : 8);
+    uint32_t OffsetPadding = (O.getBytesInAddress() > 4 ? 16 : 8);
     uint32_t TypePadding = 24;
     outs() << left_justify("OFFSET", OffsetPadding) << " "
            << left_justify("TYPE", TypePadding) << " "
@@ -2209,7 +2217,7 @@ void objdump::printRelocations(const ObjectFile *Obj) {
           continue;
         Reloc.getTypeName(RelocName);
         if (Error E = getRelocationValueString(Reloc, ValueStr))
-          reportError(std::move(E), Obj->getFileName());
+          reportUniqueWarning(std::move(E));
 
         outs() << format(Fmt.data(), Address) << " "
                << left_justify(RelocName, TypePadding) << " " << ValueStr
@@ -2374,8 +2382,8 @@ void objdump::printSectionContents(const ObjectFile *Obj) {
   }
 }
 
-void objdump::printSymbolTable(const ObjectFile &O, StringRef ArchiveName,
-                               StringRef ArchitectureName, bool DumpDynamic) {
+void Dumper::printSymbolTable(StringRef ArchiveName, StringRef ArchitectureName,
+                              bool DumpDynamic) {
   if (O.isCOFF() && !DumpDynamic) {
     outs() << "\nSYMBOL TABLE:\n";
     printCOFFSymbolTable(cast<const COFFObjectFile>(O));
@@ -2387,8 +2395,7 @@ void objdump::printSymbolTable(const ObjectFile &O, StringRef ArchiveName,
   if (!DumpDynamic) {
     outs() << "\nSYMBOL TABLE:\n";
     for (auto I = O.symbol_begin(); I != O.symbol_end(); ++I)
-      printSymbol(O, *I, {}, FileName, ArchiveName, ArchitectureName,
-                  DumpDynamic);
+      printSymbol(*I, {}, FileName, ArchiveName, ArchitectureName, DumpDynamic);
     return;
   }
 
@@ -2410,17 +2417,21 @@ void objdump::printSymbolTable(const ObjectFile &O, StringRef ArchiveName,
     (void)!SymbolVersionsOrErr;
   }
   for (auto &Sym : Symbols)
-    printSymbol(O, Sym, *SymbolVersionsOrErr, FileName, ArchiveName,
+    printSymbol(Sym, *SymbolVersionsOrErr, FileName, ArchiveName,
                 ArchitectureName, DumpDynamic);
 }
 
-void objdump::printSymbol(const ObjectFile &O, const SymbolRef &Symbol,
-                          ArrayRef<VersionEntry> SymbolVersions,
-                          StringRef FileName, StringRef ArchiveName,
-                          StringRef ArchitectureName, bool DumpDynamic) {
+void Dumper::printSymbol(const SymbolRef &Symbol,
+                         ArrayRef<VersionEntry> SymbolVersions,
+                         StringRef FileName, StringRef ArchiveName,
+                         StringRef ArchitectureName, bool DumpDynamic) {
   const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(&O);
-  uint64_t Address = unwrapOrError(Symbol.getAddress(), FileName, ArchiveName,
-                                   ArchitectureName);
+  Expected<uint64_t> AddrOrErr = Symbol.getAddress();
+  if (!AddrOrErr) {
+    reportUniqueWarning(AddrOrErr.takeError());
+    return;
+  }
+  uint64_t Address = *AddrOrErr;
   if ((Address < StartAddress) || (Address > StopAddress))
     return;
   SymbolRef::Type Type =
@@ -2806,6 +2817,8 @@ static void checkForInvalidStartStopAddress(ObjectFile *Obj,
 
 static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
                        const Archive::Child *C = nullptr) {
+  Dumper D(*O);
+
   // Avoid other output when using a raw option.
   if (!RawClangAST) {
     outs() << '\n';
@@ -2819,6 +2832,9 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (HasStartAddressFlag || HasStopAddressFlag)
     checkForInvalidStartStopAddress(O, StartAddress, StopAddress);
 
+  // TODO: Change print* free functions to Dumper member functions to utilitize
+  // stateful functions like reportUniqueWarning.
+
   // Note: the order here matches GNU objdump for compatability.
   StringRef ArchiveName = A ? A->getFileName() : "";
   if (ArchiveHeaders && !MachOOpt && C)
@@ -2830,10 +2846,10 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (SectionHeaders)
     printSectionHeaders(*O);
   if (SymbolTable)
-    printSymbolTable(*O, ArchiveName);
+    D.printSymbolTable(ArchiveName);
   if (DynamicSymbolTable)
-    printSymbolTable(*O, ArchiveName, /*ArchitectureName=*/"",
-                     /*DumpDynamic=*/true);
+    D.printSymbolTable(ArchiveName, /*ArchitectureName=*/"",
+                       /*DumpDynamic=*/true);
   if (DwarfDumpType != DIDT_Null) {
     std::unique_ptr<DIContext> DICtx = DWARFContext::create(*O);
     // Dump the complete DWARF structure.
@@ -2842,7 +2858,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
     DICtx->dump(outs(), DumpOpts);
   }
   if (Relocations && !Disassemble)
-    printRelocations(O);
+    D.printRelocations();
   if (DynamicRelocations)
     printDynamicRelocations(O);
   if (SectionContents)
