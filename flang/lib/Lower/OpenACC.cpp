@@ -615,6 +615,12 @@ static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
       return llvm::APFloat::getSmallest(floatTy.getFloatSemantics(),
                                         /*negative=*/true);
     }
+  } else if (op == mlir::acc::ReductionOperator::AccIand) {
+    if constexpr (std::is_same_v<R, llvm::APInt>) {
+      assert(ty.isIntOrIndex() && "expect integer type");
+      unsigned bits = ty.getIntOrFloatBitWidth();
+      return llvm::APInt::getAllOnes(bits);
+    }
   } else {
     // +, ior, ieor init value -> 0
     // * init value -> 1
@@ -642,7 +648,8 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
   if (op != mlir::acc::ReductionOperator::AccAdd &&
       op != mlir::acc::ReductionOperator::AccMul &&
       op != mlir::acc::ReductionOperator::AccMin &&
-      op != mlir::acc::ReductionOperator::AccMax)
+      op != mlir::acc::ReductionOperator::AccMax &&
+      op != mlir::acc::ReductionOperator::AccIand)
     TODO(loc, "reduction operator");
 
   if (ty.isIntOrIndex())
@@ -745,6 +752,9 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
 
   if (op == mlir::acc::ReductionOperator::AccMax)
     return fir::genMax(builder, loc, {value1, value2});
+
+  if (op == mlir::acc::ReductionOperator::AccIand)
+    return builder.create<mlir::arith::AndIOp>(loc, value1, value2);
 
   TODO(loc, "reduction operator");
 }
