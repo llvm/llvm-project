@@ -709,6 +709,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
+        "//mlir:VectorTransforms",
     ],
 )
 
