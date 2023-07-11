@@ -331,8 +331,6 @@ private:
   Instruction *foldNot(BinaryOperator &I);
   Instruction *foldBinOpOfDisplacedShifts(BinaryOperator &I);
 
-  void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
-
   /// Determine if a pair of casts can be replaced by a single cast.
   ///
   /// \param CI1 The first of a pair of casts.
@@ -665,6 +663,7 @@ public:
   bool removeInstructionsBeforeUnreachable(Instruction &I);
   bool handleUnreachableFrom(Instruction *I);
   bool handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
+  void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
 };
 
 class Negator final {
