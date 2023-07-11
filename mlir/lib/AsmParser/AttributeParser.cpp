@@ -46,6 +46,7 @@ using namespace mlir::detail;
 ///                      `:` (tensor-type | vector-type)
 ///                    | `strided` `<` `[` comma-separated-int-or-question `]`
 ///                      (`,` `offset` `:` integer-literal)? `>`
+///                    | distinct-attribute
 ///                    | extended-attribute
 ///
 Attribute Parser::parseAttribute(Type type) {
@@ -154,6 +155,10 @@ Attribute Parser::parseAttribute(Type type) {
   // Parse a strided layout attribute.
   case Token::kw_strided:
     return parseStridedLayoutAttr();
+
+  // Parse a distinct attribute.
+  case Token::kw_distinct:
+    return parseDistinctAttr(type);
 
   // Parse a string attribute.
   case Token::string: {
@@ -1213,4 +1218,55 @@ Attribute Parser::parseStridedLayoutAttr() {
     return nullptr;
   return StridedLayoutAttr::get(getContext(), *offset, strides);
   // return getChecked<StridedLayoutAttr>(loc,getContext(), *offset, strides);
+}
+
+/// Parse a distinct attribute.
+///
+///  distinct-attribute ::= `distinct`
+///                         `[` integer-literal `]<` attribute-value `>`
+///
+Attribute Parser::parseDistinctAttr(Type type) {
+  consumeToken(Token::kw_distinct);
+  if (parseToken(Token::l_square, "expected '[' after 'distinct'"))
+    return {};
+
+  // Parse the distinct integer identifier.
+  Token token = getToken();
+  if (parseToken(Token::integer, "expected distinct ID"))
+    return {};
+  std::optional<uint64_t> value = token.getUInt64IntegerValue();
+  if (!value) {
+    emitError("expected an unsigned 64-bit integer");
+    return {};
+  }
+
+  // Parse the referenced attribute.
+  if (parseToken(Token::r_square, "expected ']' to close distinct ID") ||
+      parseToken(Token::less, "expected '<' after distinct ID"))
+    return {};
+  Attribute referencedAttr = parseAttribute(type);
+  if (!referencedAttr) {
+    emitError("expected attribute");
+    return {};
+  }
+
+  // Add the distinct attribute to the parser state, if it has not been parsed
+  // before. Otherwise, check if the parsed reference attribute matches the one
+  // found in the parser state.
+  DenseMap<uint64_t, DistinctAttr> &distinctAttrs =
+      state.symbols.distinctAttributes;
+  auto it = distinctAttrs.find(*value);
+  if (it == distinctAttrs.end()) {
+    DistinctAttr distinctAttr = DistinctAttr::create(referencedAttr);
+    it = distinctAttrs.try_emplace(*value, distinctAttr).first;
+  } else if (it->getSecond().getReferencedAttr() != referencedAttr) {
+    emitError("referenced attribute does not match previous definition: ")
+        << it->getSecond().getReferencedAttr();
+    return {};
+  }
+
+  if (parseToken(Token::greater, "expected '>' to close distinct attribute"))
+    return {};
+
+  return it->getSecond();
 }
