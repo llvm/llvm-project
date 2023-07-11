@@ -240,7 +240,6 @@ __attribute__((objc_root_class))
 }
 @end
 
-// rdar://16261494
 @class GEOPDAnalyticMetadata; // expected-note {{forward declaration of class here}}
 
 @implementation GEOPDAnalyticMetadata (PlaceCardExtras) // expected-error {{cannot find interface declaration for 'GEOPDAnalyticMetadata'}}
@@ -250,7 +249,6 @@ __attribute__((objc_root_class))
 }
 @end
 
-// rdar://16305460
 __attribute__((objc_root_class))
 @interface MyObject
 - (instancetype)initWithStuff:(id)stuff __attribute__((objc_designated_initializer));
@@ -264,7 +262,6 @@ __attribute__((objc_root_class))
 }
 @end
 
-// rdar://16323233
 __attribute__((objc_root_class))
 @interface B4 
 -(id)initB4 NS_DESIGNATED_INITIALIZER; // expected-note 4 {{method marked as designated initializer of the class here}}

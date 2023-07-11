@@ -52,19 +52,19 @@ define i32 @range_use1() #0 {
 ; CHECK_DISABLED: Function Attrs: noinline nounwind uwtable
 ; CHECK_DISABLED-LABEL: define {{[^@]+}}@range_use1
 ; CHECK_DISABLED-SAME: () #[[ATTR0]] {
-; CHECK_DISABLED-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 123)
+; CHECK_DISABLED-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 noundef 123)
 ; CHECK_DISABLED-NEXT:    ret i32 [[TMP1]]
 ;
 ; CHECK_ENABLED: Function Attrs: noinline nounwind uwtable
 ; CHECK_ENABLED-LABEL: define {{[^@]+}}@range_use1
 ; CHECK_ENABLED-SAME: () #[[ATTR0]] {
-; CHECK_ENABLED-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 123)
+; CHECK_ENABLED-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 noundef 123)
 ; CHECK_ENABLED-NEXT:    ret i32 [[TMP1]]
 ;
 ; CHECK_DISABLED_FUNCTION: Function Attrs: noinline nounwind uwtable
 ; CHECK_DISABLED_FUNCTION-LABEL: define {{[^@]+}}@range_use1
 ; CHECK_DISABLED_FUNCTION-SAME: () #[[ATTR0]] {
-; CHECK_DISABLED_FUNCTION-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 123)
+; CHECK_DISABLED_FUNCTION-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 noundef 123)
 ; CHECK_DISABLED_FUNCTION-NEXT:    ret i32 [[TMP1]]
 ;
 ; CHECK_ENABLED_FUNCTION: Function Attrs: noinline norecurse nounwind uwtable
@@ -82,25 +82,25 @@ define i32 @range_use2() #0 {
 ; CHECK_DISABLED: Function Attrs: noinline nounwind uwtable
 ; CHECK_DISABLED-LABEL: define {{[^@]+}}@range_use2
 ; CHECK_DISABLED-SAME: () #[[ATTR0]] {
-; CHECK_DISABLED-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 123)
+; CHECK_DISABLED-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 noundef 123)
 ; CHECK_DISABLED-NEXT:    ret i32 [[TMP1]]
 ;
 ; CHECK_ENABLED: Function Attrs: noinline nounwind uwtable
 ; CHECK_ENABLED-LABEL: define {{[^@]+}}@range_use2
 ; CHECK_ENABLED-SAME: () #[[ATTR0]] {
-; CHECK_ENABLED-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 123)
+; CHECK_ENABLED-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 noundef 123)
 ; CHECK_ENABLED-NEXT:    ret i32 [[TMP1]]
 ;
 ; CHECK_DISABLED_FUNCTION: Function Attrs: noinline nounwind uwtable
 ; CHECK_DISABLED_FUNCTION-LABEL: define {{[^@]+}}@range_use2
 ; CHECK_DISABLED_FUNCTION-SAME: () #[[ATTR0]] {
-; CHECK_DISABLED_FUNCTION-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 123)
+; CHECK_DISABLED_FUNCTION-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 noundef 123)
 ; CHECK_DISABLED_FUNCTION-NEXT:    ret i32 [[TMP1]]
 ;
 ; CHECK_ENABLED_FUNCTION: Function Attrs: noinline nounwind uwtable
 ; CHECK_ENABLED_FUNCTION-LABEL: define {{[^@]+}}@range_use2
 ; CHECK_ENABLED_FUNCTION-SAME: () #[[ATTR0]] {
-; CHECK_ENABLED_FUNCTION-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 123)
+; CHECK_ENABLED_FUNCTION-NEXT:    [[TMP1:%.*]] = call i32 @range_test(i32 noundef 123)
 ; CHECK_ENABLED_FUNCTION-NEXT:    ret i32 [[TMP1]]
 ;
   %1 = call i32 @range_test(i32 123)

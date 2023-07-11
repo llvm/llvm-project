@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
-// rdar://10904488
 
 @interface Test
 - (int)objectAtIndexedSubscript:(int)index; // expected-note {{method 'objectAtIndexedSubscript:' declared here}}

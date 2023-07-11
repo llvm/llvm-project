@@ -746,3 +746,35 @@ bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
   }
   return true;
 }
+
+void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
+  for (VPRecipeBase &R :
+       Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!PhiR)
+      continue;
+    const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
+    RecurKind RK = RdxDesc.getRecurrenceKind();
+    if (RK != RecurKind::Add && RK != RecurKind::Mul)
+      continue;
+
+    SmallSetVector<VPValue *, 8> Worklist;
+    Worklist.insert(PhiR);
+
+    for (unsigned I = 0; I != Worklist.size(); ++I) {
+      VPValue *Cur = Worklist[I];
+      if (auto *RecWithFlags =
+              dyn_cast<VPRecipeWithIRFlags>(Cur->getDefiningRecipe())) {
+        RecWithFlags->dropPoisonGeneratingFlags();
+      }
+
+      for (VPUser *U : Cur->users()) {
+        auto *UserRecipe = dyn_cast<VPRecipeBase>(U);
+        if (!UserRecipe)
+          continue;
+        for (VPValue *V : UserRecipe->definedValues())
+          Worklist.insert(V);
+      }
+    }
+  }
+}

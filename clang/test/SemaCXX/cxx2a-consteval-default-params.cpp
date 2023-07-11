@@ -20,7 +20,7 @@ int check_lambdas_used(
                               // expected-note  {{declared here}} \
                               // expected-note  {{undefined function 'undefined'}}
         return defaulted;
-    }(),  // expected-note {{in the default initalizer of 'defaulted'}}
+    }(),  // expected-note {{in the default initializer of 'defaulted'}}
     int d = [](int defaulted = sizeof(undefined())) {
         return defaulted;
     }()

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify
 // expected-no-diagnostics
-// rdar://8686888
 
 typedef struct objc_selector *SEL;
 typedef struct objc_object *id;

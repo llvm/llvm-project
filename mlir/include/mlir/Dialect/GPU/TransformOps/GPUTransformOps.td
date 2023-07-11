@@ -14,6 +14,38 @@ include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
+def EliminateBarriersOp :
+  Op<Transform_Dialect, "apply_patterns.gpu.eliminate_barriers",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Removes unnecessary GPU barriers from the function. If a barrier does not
+    enforce any conflicting pair of memory effects, including a pair that is
+    enforced by another barrier, it is unnecessary and can be removed.
+
+    The approach is based on "High-Performance GPU-to-CPU Transpilation and
+    Optimization via High-Level Parallel Constructs" by  Moses, Ivanov,
+    Domke, Endo, Doerfert, and Zinenko in PPoPP 2023. Specifically, it
+    analyzes the memory effects of the operations before and after the given
+    barrier and checks if the barrier enforces any of the memory
+    effect-induced dependencies that aren't already enforced by another
+    barrier.
+
+    For example, in the following code
+
+    ```mlir
+      store %A
+      barrier  // enforces load-after-store
+      load %A
+      barrier  // load-after-store already enforced by the previous barrier
+      load %A
+    ```
+
+    the second barrier can be removed.
+  }];
+
+  let assemblyFormat = [{ attr-dict }];
+}
+
 def MapNestedForallToThreads :
   Op<Transform_Dialect, "gpu.map_nested_forall_to_threads",
     [FunctionalStyleTransformOpTrait,

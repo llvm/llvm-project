@@ -289,10 +289,10 @@ func.func @nvvm_wmma_mma(%0 : i32, %1 : i32, %2 : i32, %3 : i32, %4 : i32, %5 : 
 
 // CHECK-LABEL: @cp_async
 llvm.func @cp_async(%arg0: !llvm.ptr<3>, %arg1: !llvm.ptr<1>) {
-// CHECK:  nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16
-  nvvm.cp.async.shared.global %arg0, %arg1, 16 : !llvm.ptr<3>, !llvm.ptr<1>
-// CHECK:  nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16 {bypass_l1}
-  nvvm.cp.async.shared.global %arg0, %arg1, 16 {bypass_l1} : !llvm.ptr<3>, !llvm.ptr<1>
+// CHECK:  nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = ca
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache = ca : !llvm.ptr<3>, !llvm.ptr<1>
+// CHECK:  nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = cg
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache = cg : !llvm.ptr<3>, !llvm.ptr<1>
 // CHECK: nvvm.cp.async.commit.group
   nvvm.cp.async.commit.group
 // CHECK: nvvm.cp.async.wait.group 0

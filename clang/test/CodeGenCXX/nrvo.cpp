@@ -760,7 +760,6 @@ X test5() { // http://wg21.link/p2025r2#ex-14
 }
 #endif
 
-// rdar://problem/10430868
 // CHECK-LABEL: @_Z5test6v(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RESULT_PTR:%.*]] = alloca ptr, align 4

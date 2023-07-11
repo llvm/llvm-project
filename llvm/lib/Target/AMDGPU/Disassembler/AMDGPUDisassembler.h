@@ -25,6 +25,7 @@
 
 namespace llvm {
 
+class MCAsmInfo;
 class MCInst;
 class MCOperand;
 class MCSubtargetInfo;
@@ -92,10 +93,12 @@ class AMDGPUDisassembler : public MCDisassembler {
 private:
   std::unique_ptr<MCInstrInfo const> const MCII;
   const MCRegisterInfo &MRI;
+  const MCAsmInfo &MAI;
   const unsigned TargetMaxInstBytes;
   mutable ArrayRef<uint8_t> Bytes;
   mutable uint32_t Literal;
   mutable bool HasLiteral;
+  mutable std::optional<bool> EnableWavefrontSize32;
 
 public:
   AMDGPUDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,

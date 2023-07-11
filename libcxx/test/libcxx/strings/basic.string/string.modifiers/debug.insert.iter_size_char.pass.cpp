@@ -11,7 +11,7 @@
 // iterator insert(const_iterator p, size_type n, charT c);
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 #include <string>
 

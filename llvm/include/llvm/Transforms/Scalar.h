@@ -21,7 +21,6 @@ namespace llvm {
 
 class Function;
 class FunctionPass;
-class ModulePass;
 class Pass;
 
 //===----------------------------------------------------------------------===//

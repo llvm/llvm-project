@@ -218,6 +218,66 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
   let assemblyFormat = "attr-dict";
 }
 
+//===----------------------------------------------------------------------===//
+// 2.7 teams Construct
+//===----------------------------------------------------------------------===//
+def TeamsOp : OpenMP_Op<"teams", [
+              AttrSizedOperandSegments, RecursiveMemoryEffects,
+              ReductionClauseInterface]> {
+  let summary = "teams construct";
+  let description = [{
+    The teams construct defines a region of code that triggers the creation of a
+    league of teams. Once created, the number of teams remains constant for the
+    duration of its code region.
+
+    The optional $num_teams_upper and $num_teams_lower specify the limit on the
+    number of teams to be created. If only the upper bound is specified, it acts
+    as if the lower bound was set to the same value. It is not supported to set
+    $num_teams_lower if $num_teams_upper is not specified. They define a closed
+    range, where both the lower and upper bounds are included.
+
+    If the $if_expr is present and it evaluates to `false`, the number of teams
+    created is one.
+
+    The optional $thread_limit specifies the limit on the number of threads.
+
+    The $allocators_vars and $allocate_vars parameters are a variadic list of
+    values that specify the memory allocator to be used to obtain storage for
+    private values.
+  }];
+
+  let arguments = (ins Optional<AnyInteger>:$num_teams_lower,
+                       Optional<AnyInteger>:$num_teams_upper,
+                       Optional<I1>:$if_expr,
+                       Optional<AnyInteger>:$thread_limit,
+                       Variadic<AnyType>:$allocate_vars,
+                       Variadic<AnyType>:$allocators_vars,
+                       Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+                       OptionalAttr<SymbolRefArrayAttr>:$reductions);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(
+      `num_teams` `(` ( $num_teams_lower^ `:` type($num_teams_lower) )? `to`
+                        $num_teams_upper `:` type($num_teams_upper) `)`
+    | `if` `(` $if_expr `)`
+    | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
+    | `reduction` `(`
+        custom<ReductionVarList>(
+          $reduction_vars, type($reduction_vars), $reductions
+        ) `)`
+    | `allocate` `(`
+        custom<AllocateAndAllocator>(
+          $allocate_vars, type($allocate_vars),
+          $allocators_vars, type($allocators_vars)
+        ) `)`
+    ) $region attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
 def OMP_ScheduleModNone         : I32EnumAttrCase<"none", 0>;
 def OMP_ScheduleModMonotonic    : I32EnumAttrCase<"monotonic", 1>;
 def OMP_ScheduleModNonmonotonic : I32EnumAttrCase<"nonmonotonic", 2>;

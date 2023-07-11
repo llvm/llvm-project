@@ -40,6 +40,10 @@ public:
   void emitXCOFFExceptDirective(const MCSymbol *Symbol, const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;
+  void emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) override {
+    report_fatal_error("emitXCOFFCInfoSym is not implemented yet on "
+                       "object generation path");
+  }
 };
 
 } // end namespace llvm

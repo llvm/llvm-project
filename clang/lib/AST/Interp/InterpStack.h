@@ -44,8 +44,8 @@ public:
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
-    auto *Ptr = &peekInternal<T>();
-    auto Value = std::move(*Ptr);
+    T *Ptr = &peekInternal<T>();
+    T Value = std::move(*Ptr);
     Ptr->~T();
     shrink(aligned_size<T>());
     return Value;
@@ -57,7 +57,7 @@ public:
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
-    auto *Ptr = &peekInternal<T>();
+    T *Ptr = &peekInternal<T>();
     Ptr->~T();
     shrink(aligned_size<T>());
   }

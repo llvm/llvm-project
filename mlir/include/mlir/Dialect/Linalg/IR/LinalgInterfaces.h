@@ -72,8 +72,28 @@ bool isaConvolutionOpInterface(LinalgOp linalgOp);
 
 namespace detail {
 
+/// Returns true if the block contains a contraction of the following form:
+///
+///   %0 = <elemwise>(permutation-of(cu(block-argument-0),
+///                                  cu(block-argument-1)))
+///   %1 = <reduce>(permutation-of(cu(%0), cu(block-argument-2)))
+///   return-like cu(%1)
+///
+/// where <elemwise> and <reduce> are binary operations constituting a
+/// contraction (in the canonical case, <elemwise> is a multiplication and
+/// <reduce> is an addition). The name and other properties of these operations
+/// are checked by `isaPair`. All operands of all operations may be supplied
+/// through a chain of side effect-free unary operations, such as casts, which
+/// is denoted as `cu` above.
+///
+/// When the body does not contain a contraction, a more precise description of
+/// the failed precondition is send to the `errs` stream, if provided.
+bool isContractionBody(Block &block,
+                       function_ref<bool(Operation *, Operation *)> isaPair,
+                       llvm::raw_ostream &errs = llvm::nulls());
+
 /// Result of matching a Linalg generic against the predicates of it being a
-/// contractiom.
+/// contraction.
 enum class MatchContractionResult;
 
 /// Checks whether `op` conforms to ContractionOpInterface and populates

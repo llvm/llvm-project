@@ -118,13 +118,16 @@ protected:
   Block(Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
     : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {}
 
-  // Deletes a dead block at the end of its lifetime.
+  /// Deletes a dead block at the end of its lifetime.
   void cleanup();
 
-  // Pointer chain management.
+  /// Pointer chain management.
   void addPointer(Pointer *P);
   void removePointer(Pointer *P);
-  void movePointer(Pointer *From, Pointer *To);
+  void replacePointer(Pointer *Old, Pointer *New);
+#ifndef NDEBUG
+  bool hasPointer(const Pointer *P) const;
+#endif
 
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;

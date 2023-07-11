@@ -45,7 +45,6 @@ L3: ;
   L8: ;
   }
   
-  // rdar://6810106
   id X;
   goto L9;    // expected-error{{cannot jump}}
   goto L10;   // ok
@@ -63,7 +62,6 @@ void test2(int a) {
   return;
 }
 
-// rdar://6803963
 void test3(void) {
   @try {
     goto blargh;

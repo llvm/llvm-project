@@ -54,7 +54,8 @@
 // CHECK:           %[[VAL_55:.*]] = gpu.destroy_sp_mat async {{\[}}%[[VAL_54]]] %[[VAL_44]]
 // CHECK:           %[[VAL_56:.*]] = gpu.destroy_dn_tensor async {{\[}}%[[VAL_55]]] %[[VAL_46]]
 // CHECK:           %[[VAL_57:.*]] = gpu.destroy_dn_tensor async {{\[}}%[[VAL_56]]] %[[VAL_48]]
-// CHECK:           %[[VAL_60:.*]] = gpu.dealloc async {{\[}}%[[VAL_57]]] %[[VAL_19]] : memref<?xindex>
+// CHECK:           %[[VAL_59:.*]] = gpu.dealloc async {{\[}}%[[VAL_57]]] %[[VAL_14]] : memref<?xindex>
+// CHECK:           %[[VAL_60:.*]] = gpu.dealloc async {{\[}}%[[VAL_59]]] %[[VAL_19]] : memref<?xindex>
 // CHECK:           %[[VAL_61:.*]] = gpu.dealloc async {{\[}}%[[VAL_60]]] %[[VAL_24]] : memref<?xf64>
 // CHECK:           %[[VAL_62:.*]] = gpu.dealloc async {{\[}}%[[VAL_61]]] %[[VAL_52]] : memref<?xi8>
 // CHECK:           %[[VAL_63:.*]] = gpu.dealloc async {{\[}}%[[VAL_62]]] %[[VAL_31]] : memref<?x?xf64>

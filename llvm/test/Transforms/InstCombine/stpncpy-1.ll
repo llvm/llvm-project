@@ -47,8 +47,8 @@ define void @fold_stpncpy_overlap(ptr %dst, i64 %n) {
 ; ANY-NEXT:    [[STXNCPY_CHAR0:%.*]] = load i8, ptr [[DST]], align 1
 ; ANY-NEXT:    [[STPNCPY_CHAR0CMP:%.*]] = icmp ne i8 [[STXNCPY_CHAR0]], 0
 ; ANY-NEXT:    [[STPNCPY_SEL_IDX:%.*]] = zext i1 [[STPNCPY_CHAR0CMP]] to i64
-; ANY-NEXT:    [[STPNCPY_SEL:%.*]] = getelementptr i8, ptr [[DST]], i64 [[STPNCPY_SEL_IDX]]
-; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[STPNCPY_SEL]])
+; ANY-NEXT:    [[STPNCPY_SEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[STPNCPY_SEL_IDX]]
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[STPNCPY_SEL]])
 ; ANY-NEXT:    ret void
 ;
 ; Fold stpncpy(D, D, 0) to just D.
@@ -398,8 +398,8 @@ define void @fold_stpncpy_s(ptr %dst, ptr %src) {
 ; ANY-NEXT:    store i8 [[STXNCPY_CHAR0]], ptr [[DST]], align 1
 ; ANY-NEXT:    [[STPNCPY_CHAR0CMP:%.*]] = icmp ne i8 [[STXNCPY_CHAR0]], 0
 ; ANY-NEXT:    [[STPNCPY_SEL_IDX:%.*]] = zext i1 [[STPNCPY_CHAR0CMP]] to i64
-; ANY-NEXT:    [[STPNCPY_SEL:%.*]] = getelementptr i8, ptr [[DST]], i64 [[STPNCPY_SEL_IDX]]
-; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], ptr [[STPNCPY_SEL]])
+; ANY-NEXT:    [[STPNCPY_SEL:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[STPNCPY_SEL_IDX]]
+; ANY-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[STPNCPY_SEL]])
 ; ANY-NEXT:    ret void
 ;
 ; Fold stpncpy(D, S, 0) to just D.

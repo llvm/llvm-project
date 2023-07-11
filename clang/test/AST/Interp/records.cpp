@@ -404,7 +404,7 @@ namespace DeriveFailures {
   static_assert(D.Val == 0, ""); // ref-error {{not an integral constant expression}} \
                                  // ref-note {{initializer of 'D' is not a constant expression}} \
                                  // expected-error {{not an integral constant expression}} \
-                                 // expected-note {{read of object outside its lifetime}}
+                                 // expected-note {{read of uninitialized object}}
 #endif
 
   struct AnotherBase {
@@ -467,7 +467,7 @@ namespace DeclRefs {
   constexpr A a{10}; // expected-error {{must be initialized by a constant expression}}
   static_assert(a.m == 10, "");
   static_assert(a.f == 10, ""); // expected-error {{not an integral constant expression}} \
-                                // expected-note {{read of object outside its lifetime}}
+                                // expected-note {{read of uninitialized object}}
 
   class Foo {
   public:

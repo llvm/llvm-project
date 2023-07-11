@@ -1718,8 +1718,9 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           // distance to the next symbol, and sometimes it will be just a
           // prologue and we should start disassembling instructions from where
           // it left off.
-          outs() << "// Error in decoding " << SymNamesHere[SHI]
-                 << " : Decoding failed region as bytes.\n";
+          outs() << Ctx.getAsmInfo()->getCommentString()
+                 << " error in decoding " << SymNamesHere[SHI]
+                 << " : decoding failed region as bytes.\n";
           for (uint64_t I = 0; I < Size; ++I) {
             outs() << "\t.byte\t " << format_hex(Bytes[I], 1, /*Upper=*/true)
                    << "\n";

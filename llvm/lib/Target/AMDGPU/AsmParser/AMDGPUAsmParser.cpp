@@ -5237,7 +5237,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
 
   if (IVersion.Major >= 10) {
     // SharedVGPRCount < 16 checked by PARSE_ENTRY_BITS
-    if (SharedVGPRCount && EnableWavefrontSize32) {
+    if (SharedVGPRCount && EnableWavefrontSize32 && *EnableWavefrontSize32) {
       return TokError("shared_vgpr_count directive not valid on "
                       "wavefront size 32");
     }

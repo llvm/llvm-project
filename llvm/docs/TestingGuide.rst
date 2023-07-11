@@ -283,14 +283,23 @@ In that case to reduce the human work we can use the scripts available in
 llvm/utils/ to generate the assertions.
 
 For example to generate assertions in an :program:`llc`-based test, after
-adding RUN line use:
+adding one or more RUN lines use:
 
  .. code-block:: bash
 
      % llvm/utils/update_llc_test_checks.py --llc-binary build/bin/llc test.ll
 
-And if you want to update assertions in an existing test case, pass `-u` option
-which first check the ``NOTE:`` line exists and matches the script name.
+This will generate FileCheck assertions, and insert a ``NOTE:`` line at the
+top to indicate that assertions were automatically generated.
+
+If you want to update assertions in an existing test case, pass the `-u` option
+which first checks the ``NOTE:`` line exists and matches the script name.
+
+Sometimes a test absolutely depends on hand-written assertions and should not
+have assertions automatically generated. In that case, add the text ``NOTE: Do
+not autogenerate`` to the first line, and the scripts will skip that test. It
+is a good idea to explain why generated assertions will not work for the test
+so future developers will understand what is going on.
 
 These are the most common scripts and their purposes/applications in generating
 assertions:

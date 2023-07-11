@@ -19,7 +19,10 @@ declare double @llvm.powi.f64.i32(double, i32)
 declare double @llvm.log.f64(double)
 declare double @llvm.exp.f64(double)
 declare double @llvm.ldexp.f64.i32(double, i32)
+declare {double, i32} @llvm.frexp.f64.i32(double)
 declare i32 @llvm.lround(double)
+
+declare void @escape_value(i32)
 
 define fp128 @fp128libcalls(fp128 %x, fp128 %y, i32 %z) {
   ; compiler-rt call
@@ -234,21 +237,42 @@ define i128 @i128libcalls(i128 %x, i128 %y) {
 define double @f64libcalls(double %x, double %y, i32 %z) {
 ; CHECK-LABEL: f64libcalls:
 ; CHECK:         .functype f64libcalls (f64, f64, i32) -> (f64)
+; CHECK-NEXT:    .local i32
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    local.get $push12=, 0
-; CHECK-NEXT:    local.get $push9=, 0
-; CHECK-NEXT:    call $push0=, cos, $pop9
+; CHECK-NEXT:    global.get $push10=, __stack_pointer
+; CHECK-NEXT:    i32.const $push11=, 16
+; CHECK-NEXT:    i32.sub $push17=, $pop10, $pop11
+; CHECK-NEXT:    local.tee $push16=, 3, $pop17
+; CHECK-NEXT:    global.set __stack_pointer, $pop16
+; CHECK-NEXT:    local.get $push21=, 0
+; CHECK-NEXT:    local.get $push18=, 0
+; CHECK-NEXT:    call $push0=, cos, $pop18
 ; CHECK-NEXT:    call $push1=, log10, $pop0
-; CHECK-NEXT:    local.get $push10=, 1
-; CHECK-NEXT:    call $push2=, pow, $pop1, $pop10
-; CHECK-NEXT:    local.get $push11=, 2
-; CHECK-NEXT:    call $push3=, __powidf2, $pop2, $pop11
+; CHECK-NEXT:    local.get $push19=, 1
+; CHECK-NEXT:    call $push2=, pow, $pop1, $pop19
+; CHECK-NEXT:    local.get $push20=, 2
+; CHECK-NEXT:    call $push3=, __powidf2, $pop2, $pop20
 ; CHECK-NEXT:    call $push4=, log, $pop3
 ; CHECK-NEXT:    call $push5=, exp, $pop4
 ; CHECK-NEXT:    call $push6=, cbrt, $pop5
 ; CHECK-NEXT:    call $push7=, lround, $pop6
-; CHECK-NEXT:    call $push8=, ldexp, $pop12, $pop7
-; CHECK-NEXT:    return $pop8
+; CHECK-NEXT:    call $push8=, ldexp, $pop21, $pop7
+; CHECK-NEXT:    local.get $push22=, 3
+; CHECK-NEXT:    i32.const $push14=, 12
+; CHECK-NEXT:    i32.add $push15=, $pop22, $pop14
+; CHECK-NEXT:    call $push23=, frexp, $pop8, $pop15
+; CHECK-NEXT:    local.set 0, $pop23
+; CHECK-NEXT:    local.get $push24=, 3
+; CHECK-NEXT:    i32.load $push9=, 12($pop24)
+; CHECK-NEXT:    call escape_value, $pop9
+; CHECK-NEXT:    local.get $push25=, 3
+; CHECK-NEXT:    i32.const $push12=, 16
+; CHECK-NEXT:    i32.add $push13=, $pop25, $pop12
+; CHECK-NEXT:    global.set __stack_pointer, $pop13
+; CHECK-NEXT:    local.get $push26=, 0
+; CHECK-NEXT:    return $pop26
+
+
  %a = call double @llvm.cos.f64(double %x)
  %b = call double @llvm.log10.f64(double %a)
  %c = call double @llvm.pow.f64(double %b, double %y)
@@ -258,7 +282,11 @@ define double @f64libcalls(double %x, double %y, i32 %z) {
  %g = call fast double @llvm.pow.f64(double %f, double 0x3FD5555555555555)
  %h = call i32 @llvm.lround(double %g)
  %i = call double @llvm.ldexp.f64.i32(double %x, i32 %h);
- ret double %i
+ %result = call {double, i32} @llvm.frexp.f64.i32(double %i)
+ %result.0 = extractvalue { double, i32 } %result, 0
+ %result.1 = extractvalue { double, i32 } %result, 1
+ call void @escape_value(i32 %result.1)
+ ret double %result.0
 }
 
 ; fcmp ord and unord (RTLIB::O_F32 / RTLIB::UO_F32 etc) are a special case (see

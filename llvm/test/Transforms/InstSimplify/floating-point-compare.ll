@@ -1207,8 +1207,7 @@ define i1 @assumed_positive_ugt_with_negative_constant(float %a) {
 ; CHECK-LABEL: @assumed_positive_ugt_with_negative_constant(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[A]], -3.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp ogt float %a, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1220,8 +1219,7 @@ define i1 @assumed_positive_uge_with_negative_constant(float %a) {
 ; CHECK-LABEL: @assumed_positive_uge_with_negative_constant(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[A]], -3.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp ogt float %a, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1233,8 +1231,7 @@ define i1 @assumed_positive_une_with_negative_constant(float %a) {
 ; CHECK-LABEL: @assumed_positive_une_with_negative_constant(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[A]], -3.000000e+00
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp ogt float %a, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1481,8 +1478,7 @@ define i1 @fcmp_oge_0_assumed_oge_zero(float %x) {
 ; CHECK-LABEL: @fcmp_oge_0_assumed_oge_zero(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp oge float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp oge float %x, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1494,8 +1490,7 @@ define i1 @fcmp_ult_0_assumed_oge_zero(float %x) {
 ; CHECK-LABEL: @fcmp_ult_0_assumed_oge_zero(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp ult float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %assume.cmp = fcmp oge float %x, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1507,8 +1502,7 @@ define i1 @fcmp_uge_0_assumed_oge_zero(float %x) {
 ; CHECK-LABEL: @fcmp_uge_0_assumed_oge_zero(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp uge float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %assume.cmp = fcmp oge float %x, 0.0
   call void @llvm.assume(i1 %assume.cmp)
@@ -1520,8 +1514,7 @@ define i1 @fcmp_olt_0_assumed_oge_zero(float %x) {
 ; CHECK-LABEL: @fcmp_olt_0_assumed_oge_zero(
 ; CHECK-NEXT:    [[ASSUME_CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME_CMP]])
-; CHECK-NEXT:    [[R:%.*]] = fcmp olt float [[X]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %assume.cmp = fcmp oge float %x, 0.0
   call void @llvm.assume(i1 %assume.cmp)

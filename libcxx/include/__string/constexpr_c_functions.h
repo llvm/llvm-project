@@ -10,9 +10,13 @@
 #define _LIBCPP___STRING_CONSTEXPR_C_FUNCTIONS_H
 
 #include <__config>
+#include <__memory/addressof.h>
+#include <__memory/construct_at.h>
 #include <__type_traits/datasizeof.h>
 #include <__type_traits/is_always_bitcastable.h>
+#include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_constructible.h>
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
@@ -133,6 +137,59 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_memchr(_Tp*
   }
 }
 
+// This function performs an assignment to an existing, already alive TriviallyCopyable object
+// from another TriviallyCopyable object.
+//
+// It basically works around the fact that TriviallyCopyable objects are not required to be
+// syntactically copy/move constructible or copy/move assignable. Technically, only one of the
+// four operations is required to be syntactically valid -- but at least one definitely has to
+// be valid.
+//
+// This is necessary in order to implement __constexpr_memmove below in a way that mirrors as
+// closely as possible what the compiler's __builtin_memmove is able to do.
+template <class _Tp, class _Up, __enable_if_t<is_assignable<_Tp&, _Up const&>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp& __assign_trivially_copyable(_Tp& __dest, _Up const& __src) {
+  __dest = __src;
+  return __dest;
+}
+
+// clang-format off
+template <class _Tp, class _Up, __enable_if_t<!is_assignable<_Tp&, _Up const&>::value &&
+                                               is_assignable<_Tp&, _Up&&>::value, int> = 0>
+// clang-format on
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp& __assign_trivially_copyable(_Tp& __dest, _Up& __src) {
+  __dest =
+      static_cast<_Up&&>(__src); // this is safe, we're not actually moving anything since the assignment is trivial
+  return __dest;
+}
+
+// clang-format off
+template <class _Tp, class _Up, __enable_if_t<!is_assignable<_Tp&, _Up const&>::value &&
+                                              !is_assignable<_Tp&, _Up&&>::value &&
+                                               is_constructible<_Tp, _Up const&>::value, int> = 0>
+// clang-format on
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __assign_trivially_copyable(_Tp& __dest, _Up const& __src) {
+  // _Tp is trivially destructible, so we don't need to call its destructor to end the lifetime of the object
+  // that was there previously
+  std::__construct_at(std::addressof(__dest), __src);
+  return __dest;
+}
+
+// clang-format off
+template <class _Tp, class _Up, __enable_if_t<!is_assignable<_Tp&, _Up const&>::value &&
+                                              !is_assignable<_Tp&, _Up&&>::value &&
+                                              !is_constructible<_Tp, _Up const&>::value &&
+                                               is_constructible<_Tp, _Up&&>::value, int> = 0>
+// clang-format on
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __assign_trivially_copyable(_Tp& __dest, _Up& __src) {
+  // _Tp is trivially destructible, so we don't need to call its destructor to end the lifetime of the object
+  // that was there previously
+  std::__construct_at(
+      std::addressof(__dest),
+      static_cast<_Up&&>(__src)); // this is safe, we're not actually moving anything since the constructor is trivial
+  return __dest;
+}
+
 template <class _Tp, class _Up, __enable_if_t<__is_always_bitcastable<_Up, _Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp*
 __constexpr_memmove(_Tp* __dest, _Up* __src, __element_count __n) {
@@ -146,10 +203,10 @@ __constexpr_memmove(_Tp* __dest, _Up* __src, __element_count __n) {
 #endif
     if (std::__is_pointer_in_range(__src, __src + __count, __dest)) {
       for (; __count > 0; --__count)
-        __dest[__count - 1] = __src[__count - 1];
+        std::__assign_trivially_copyable(__dest[__count - 1], __src[__count - 1]);
     } else {
       for (size_t __i = 0; __i != __count; ++__i)
-        __dest[__i] = __src[__i];
+        std::__assign_trivially_copyable(__dest[__i], __src[__i]);
     }
   } else if (__count > 0) {
     ::__builtin_memmove(__dest, __src, (__count - 1) * sizeof(_Tp) + __libcpp_datasizeof<_Tp>::value);

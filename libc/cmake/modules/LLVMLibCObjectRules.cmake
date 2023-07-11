@@ -134,7 +134,7 @@ function(_build_gpu_objects fq_target_name internal_target_name)
     ${ARGN}
   )
 
-  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
+  set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
   set(common_compile_options ${ADD_GPU_OBJ_COMPILE_OPTIONS})
   if(NOT ADD_GPU_OBJ_CXX_STANDARD)
     set(ADD_GPU_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
@@ -184,8 +184,14 @@ function(_build_gpu_objects fq_target_name internal_target_name)
 
       # Append this target to a list of images to package into a single binary.
       set(input_file $<TARGET_OBJECTS:${gpu_target_name}>)
-      list(APPEND packager_images
-           --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
+      if("${gpu_arch}" IN_LIST all_nvptx_architectures)
+        string(REGEX MATCH "\\+ptx[0-9]+" nvptx_ptx_feature ${nvptx_options})
+        list(APPEND packager_images
+             --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple},feature=${nvptx_ptx_feature})
+      else()
+        list(APPEND packager_images
+             --image=file=${input_file},arch=${gpu_arch},triple=${gpu_target_triple})
+       endif()
       list(APPEND gpu_target_names ${gpu_target_name})
     endforeach()
 
@@ -585,7 +591,7 @@ function(create_entrypoint_object fq_target_name)
     ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS}
   )
   set(internal_target_name ${fq_target_name}.__internal__)
-  set(include_dirs ${LIBC_BUILD_DIR}/include ${LIBC_SOURCE_DIR} ${LIBC_BUILD_DIR})
+  set(include_dirs ${LIBC_SOURCE_DIR} ${LIBC_INCLUDE_DIR})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
