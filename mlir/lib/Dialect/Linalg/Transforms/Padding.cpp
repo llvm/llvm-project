@@ -139,11 +139,23 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
 
 LogicalResult
 linalg::rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
-                          const LinalgPaddingOptions &options,
+                          const LinalgPaddingOptions &constOptions,
                           LinalgOp &paddedOp, SmallVector<Value> &replacements,
                           SmallVector<tensor::PadOp> &padOps, bool copyBack) {
   LLVM_DEBUG(DBGS() << "Start rewriteAsPaddedOp : " << opToPad << "\n");
   Location loc = opToPad->getLoc();
+
+  LinalgPaddingOptions options(constOptions);
+  // Allow inference of pad values if they are not explicitly specified.
+  // TODO: be mindful about the value depending on the actual operation.
+  if (options.paddingValues.empty()) {
+    SmallVector<Type> types(opToPad->getOperandTypes());
+    llvm::append_range(types, opToPad->getResultTypes());
+    for (Type t : types) {
+      options.paddingValues.push_back(
+          rewriter.getZeroAttr(getElementTypeOrSelf(t)));
+    }
+  }
 
   // TODO: there are cases where we may still want to pad to larger sizes.
   if (!opToPad.hasTensorSemantics())

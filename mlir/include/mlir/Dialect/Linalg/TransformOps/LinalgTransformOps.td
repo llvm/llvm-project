@@ -128,6 +128,11 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
                        OptionalAttr<AnyAttr>:$memory_space);
   let results = (outs Transform_AnyValue:$allocated_buffer);
   let assemblyFormat = "$target attr-dict `:` type($target)";
+  
+  let builders = [
+    OpBuilder<(ins "Value":$target, "Attribute":$memorySpace)>,
+    OpBuilder<(ins "Value":$target, "int64_t":$memorySpace)>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -928,6 +933,20 @@ def PadOp : Op<Transform_Dialect, "structured.pad",
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
   let hasVerifier = 1;
+
+  let builders = [
+    // Builder for a transform::PadOp with automatic inference of padding
+    // value. Warning: this will set the value 0 for the inferred elemental
+    // type without taking the op into account and thus only work for the 
+    // add/mul ring at the moment.
+    // TODO: support other operations (e.g. min, max etc).
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<int64_t>":$paddingDimensions,
+                   CArg<"ArrayRef<int64_t>", "{}">:$padToMultipleOf,
+                   CArg<"ArrayRef<int64_t>", "{}">:$packPaddings,
+                   CArg<"ArrayRef<Attribute>", "{}">:$transposePaddings,
+                   CArg<"bool", "false">:$copyBack)>
+  ];
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
