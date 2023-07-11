@@ -3328,10 +3328,24 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
       True.getNumOperands() - HasVecPolicyOp - HasChainOp - HasGlueOp - 2;
   SDValue TrueVL = True.getOperand(TrueVLIndex);
 
-  // We need the VLs to be the same. But if True has a VL of VLMAX then we can
-  // go ahead and use N's VL because we know it will be smaller, so any tail
-  // elements in the result will be from Merge.
-  if (TrueVL != VL && !isAllOnesConstant(TrueVL))
+  auto GetMinVL = [](SDValue LHS, SDValue RHS) {
+    if (LHS == RHS)
+      return LHS;
+    if (isAllOnesConstant(LHS))
+      return RHS;
+    if (isAllOnesConstant(RHS))
+      return LHS;
+    auto *CLHS = dyn_cast<ConstantSDNode>(LHS);
+    auto *CRHS = dyn_cast<ConstantSDNode>(RHS);
+    if (!CLHS || !CRHS)
+      return SDValue();
+    return CLHS->getZExtValue() <= CRHS->getZExtValue() ? LHS : RHS;
+  };
+
+  // Because N and True must have the same merge operand (or True's operand is
+  // implicit_def), the "effective" body is the minimum of their VLs.
+  VL = GetMinVL(TrueVL, VL);
+  if (!VL)
     return false;
 
   // If we end up changing the VL or mask of True, then we need to make sure it

@@ -155,11 +155,8 @@ define <vscale x 2 x i32> @vpmerge_vslide1down(<vscale x 2 x i32> %passthru, <vs
 define <vscale x 2 x i32> @vmerge_smaller_vl_same_passthru(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: vmerge_smaller_vl_same_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, mu
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vadd.vv v11, v9, v10, v0.t
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v11
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vadd.mask.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 3, i64 0)
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
@@ -173,10 +170,7 @@ define <vscale x 2 x i32> @vmerge_larger_vl_same_passthru(<vscale x 2 x i32> %pa
 ; CHECK-LABEL: vmerge_larger_vl_same_passthru:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
-; CHECK-NEXT:    vmv1r.v v11, v8
-; CHECK-NEXT:    vadd.vv v11, v9, v10, v0.t
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v11
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vadd.mask.nxv2i32.nxv2i32(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 2, i64 0)
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
@@ -223,10 +217,8 @@ define <vscale x 2 x i32> @vmerge_larger_vl_different_passthru(<vscale x 2 x i32
 define <vscale x 2 x i32> @vmerge_smaller_vl_poison_passthru(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: vmerge_smaller_vl_poison_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v9, v9, v10, v0.t
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vadd.mask.nxv2i32.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 3, i64 0)
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
@@ -239,10 +231,8 @@ define <vscale x 2 x i32> @vmerge_smaller_vl_poison_passthru(<vscale x 2 x i32> 
 define <vscale x 2 x i32> @vmerge_larger_vl_poison_passthru(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m) {
 ; CHECK-LABEL: vmerge_larger_vl_poison_passthru:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v9, v9, v10, v0.t
-; CHECK-NEXT:    vsetivli zero, 3, e32, m1, tu, ma
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vadd.mask.nxv2i32.nxv2i32(<vscale x 2 x i32> poison, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i64 2, i64 0)
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
