@@ -33552,7 +33552,9 @@ static SDValue lowerAtomicArith(SDValue N, SelectionDAG &DAG,
   // changing, all we need is a lowering for the *ordering* impacts of the
   // atomicrmw.  As such, we can chose a different operation and memory
   // location to minimize impact on other code.
-  if (Opc == ISD::ATOMIC_LOAD_OR && isNullConstant(RHS)) {
+  // The above holds unless the node is marked volatile in which
+  // case it needs to be preserved according to the langref.
+  if (Opc == ISD::ATOMIC_LOAD_OR && isNullConstant(RHS) && !AN->isVolatile()) {
     // On X86, the only ordering which actually requires an instruction is
     // seq_cst which isn't SingleThread, everything just needs to be preserved
     // during codegen and then dropped. Note that we expect (but don't assume),

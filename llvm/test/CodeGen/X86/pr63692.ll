@@ -9,7 +9,7 @@ define void @prefault(ptr noundef %range_start, ptr noundef readnone %range_end)
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_1: # %while.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    #MEMBARRIER
+; CHECK-NEXT:    lock orb $0, (%rdi)
 ; CHECK-NEXT:    addq $4096, %rdi # imm = 0x1000
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    jb .LBB0_1
