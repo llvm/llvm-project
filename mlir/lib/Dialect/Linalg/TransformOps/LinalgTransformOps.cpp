@@ -235,12 +235,27 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
   NewOpsListener newOpsListener(previousListener);
   rewriter.setListener(&newOpsListener);
 
+  linalg::BufferizeToAllocationOptions options;
+  if (getMemcpyOp() == "memref.tensor_store") {
+    options.memcpyOp =
+        linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefTensorStore;
+  } else if (getMemcpyOp() == "memref.copy") {
+    options.memcpyOp =
+        linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefCopy;
+  } else if (getMemcpyOp() == "linalg.copy") {
+    options.memcpyOp =
+        linalg::BufferizeToAllocationOptions::MemcpyOp::LinalgCopy;
+  } else {
+    llvm_unreachable("invalid memcpy op");
+  }
+
   // Bufferize ops.
   Attribute memorySpace =
       getMemorySpace().has_value() ? getMemorySpace().value() : Attribute();
   SmallVector<Value> allocatedBuffers;
   for (Operation *op : state.getPayloadOps(getTarget())) {
-    Value buffer = linalg::bufferizeToAllocation(rewriter, op, memorySpace);
+    Value buffer =
+        linalg::bufferizeToAllocation(rewriter, options, op, memorySpace);
     if (!buffer) {
       DiagnosedSilenceableFailure diag = emitSilenceableError()
                                          << "failed to bufferize operation";
@@ -262,6 +277,13 @@ void transform::BufferizeToAllocationOp::getEffects(
   producesHandle(getAllocatedBuffer(), effects);
   producesHandle(getNewOps(), effects);
   modifiesPayload(effects);
+}
+
+LogicalResult transform::BufferizeToAllocationOp::verify() {
+  if (getMemcpyOp() != "memref.tensor_store" &&
+      getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
+    return emitOpError() << "unsupported memcpy op";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
