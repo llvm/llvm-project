@@ -41,22 +41,6 @@ namespace llvm::RISCV {
 #include "RISCVGenSearchableTables.inc"
 } // namespace llvm::RISCV
 
-static unsigned getLastNonGlueOrChainOpIdx(const SDNode *Node) {
-  assert(Node->getNumOperands() > 0 && "Node with no operands");
-  unsigned LastOpIdx = Node->getNumOperands() - 1;
-  if (Node->getOperand(LastOpIdx).getValueType() == MVT::Glue)
-    --LastOpIdx;
-  if (Node->getOperand(LastOpIdx).getValueType() == MVT::Other)
-    --LastOpIdx;
-  return LastOpIdx;
-}
-
-static unsigned getVecPolicyOpIdx(const SDNode *Node, const MCInstrDesc &MCID) {
-  assert(RISCVII::hasVecPolicyOp(MCID.TSFlags));
-  (void)MCID;
-  return getLastNonGlueOrChainOpIdx(Node);
-}
-
 void RISCVDAGToDAGISel::PreprocessISelDAG() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
@@ -3167,46 +3151,27 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   if (!usesAllOnesMask(N, MaskOpIdx))
     return false;
 
-  // Retrieve the tail policy operand index, if any.
-  std::optional<unsigned> TailPolicyOpIdx;
-  const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
 
-  bool UseTUPseudo = false;
-  if (RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags)) {
-    TailPolicyOpIdx = getVecPolicyOpIdx(N, MaskedMCID);
-    // Some operations are their own TU.
-    if (I->UnmaskedTUPseudo == I->UnmaskedPseudo) {
-      UseTUPseudo = true;
-    } else {
-      if (!isImplicitDef(N->getOperand(0))) {
-        // Keep the true-masked instruction when there is no unmasked TU
-        // instruction
-        if (I->UnmaskedTUPseudo == I->MaskedPseudo)
-          return false;
-        UseTUPseudo = true;
-      }
-    }
-  }
-
-  unsigned Opc = UseTUPseudo ? I->UnmaskedTUPseudo : I->UnmaskedPseudo;
+  // There are two classes of pseudos in the table - compares and
+  // everything else.  See the comment on RISCVMaskedPseudo for details.
+  const unsigned Opc = I->UnmaskedPseudo;
   const MCInstrDesc &MCID = TII->get(Opc);
-
-  // If this instruction is tail agnostic, the unmasked instruction should not
-  // have a tied destination.
+  const bool UseTUPseudo = RISCVII::hasVecPolicyOp(MCID.TSFlags);
 #ifndef NDEBUG
-  bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
-  assert((UseTUPseudo == HasTiedDest) && "Unexpected pseudo to transform to");
+  const MCInstrDesc &MaskedMCID = TII->get(N->getMachineOpcode());
+  assert(RISCVII::hasVecPolicyOp(MaskedMCID.TSFlags) ==
+         RISCVII::hasVecPolicyOp(MCID.TSFlags) &&
+         "Masked and unmasked pseudos are inconsistent");
+  const bool HasTiedDest = RISCVII::isFirstDefTiedToFirstUse(MCID);
+  assert(UseTUPseudo == HasTiedDest && "Unexpected pseudo structure");
 #endif
 
   SmallVector<SDValue, 8> Ops;
   // Skip the merge operand at index 0 if !UseTUPseudo.
   for (unsigned I = !UseTUPseudo, E = N->getNumOperands(); I != E; I++) {
-    // Skip the mask, the policy (if the unmasked doesn't have a policy op), and
-    // the Glue.
+    // Skip the mask, and the Glue.
     SDValue Op = N->getOperand(I);
-    if (I == MaskOpIdx ||
-        (I == TailPolicyOpIdx && !RISCVII::hasVecPolicyOp(MCID.TSFlags)) ||
-        Op.getValueType() == MVT::Glue)
+    if (I == MaskOpIdx || Op.getValueType() == MVT::Glue)
       continue;
     Ops.push_back(Op);
   }
@@ -3269,17 +3234,10 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
 
   bool IsMasked = false;
   const RISCV::RISCVMaskedPseudoInfo *Info =
-      RISCV::lookupMaskedIntrinsicByUnmaskedTA(TrueOpc);
+      RISCV::lookupMaskedIntrinsicByUnmasked(TrueOpc);
   if (!Info && HasTiedDest) {
-    Info = RISCV::lookupMaskedIntrinsicByUnmaskedTU(TrueOpc);
-    if (Info && !isImplicitDef(True->getOperand(0)))
-      // We only support the TA form of the _TU pseudos
-      return false;
-    // FIXME: Expect undef operand here?
-    if (!Info) {
-      Info = RISCV::getMaskedPseudoInfo(TrueOpc);
-      IsMasked = true;
-    }
+    Info = RISCV::getMaskedPseudoInfo(TrueOpc);
+    IsMasked = true;
   }
 
   if (!Info)
