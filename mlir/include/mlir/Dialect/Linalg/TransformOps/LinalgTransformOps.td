@@ -87,8 +87,8 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
     result in a new allocation. It replaces all original uses of the target
     result with the newly allocated buffer, wrapped in a
     `bufferization.to_tensor` op. It returns a handle to the newly allocated
-    buffer. Furthermore, it returns a handle to the result of the `to_tensor`
-    op.
+    buffer. Furthermore, it returns a handle that is mapped to all newly created
+    ops.
 
     Only bufferizable ops are that bufferize to a memory write or have an
     aliasing OpOperand (and do not themselves bufferize to an allocation) are
@@ -121,12 +121,13 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
     #### Return modes
 
     This operation consumes the `target` handle and produces the
-    `allocated_buffer` handle. It always succeeds.
+    `allocated_buffer` and `new_ops` handles. It always succeeds.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        OptionalAttr<AnyAttr>:$memory_space);
-  let results = (outs Transform_AnyValue:$allocated_buffer);
+  let results = (outs Transform_AnyValue:$allocated_buffer,
+                      Transform_AnyOpType:$new_ops);
   let assemblyFormat = "$target attr-dict `:` type($target)";
   
   let builders = [
