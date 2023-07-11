@@ -528,30 +528,20 @@ def RISCVVIntrinsicsTable : GenericTable {
 }
 
 // Describes the relation of a masked pseudo to the unmasked variants.
-// (HasTU = true, IsCombined = false)
-//    Has both a TA (unsuffixed) and _TU variant defined.  TU variant
-//    may (or may not) have a vector policy operand.
-// (HasTU = false, IsCombined = false)
-//    No TA (unsuffixed) or _TU variants.  Masked version is only pseudo
-// (HasTU = false, IsCombined = true)
-//    The unsuffixed version has a merge operand; no explicit _TU variant
-//    exists.  The unsuffixed version has a policy operand, and can thus
-//    represent all policy states.
-// (HasTU = true, IsCombined = true)
-//    Invalid and unused state.
-class RISCVMaskedPseudo<bits<4> MaskIdx, bit HasTU = true, bit IsCombined = false> {
+//    Note that all masked variants (in this table) have exactly one
+//    unmasked variant.  For all but compares, both the masked and
+//    unmasked variant have a passthru and policy operand.  For compares,
+//    neither has a policy op, and only the masked version has a passthru.
+class RISCVMaskedPseudo<bits<4> MaskIdx> {
   Pseudo MaskedPseudo = !cast<Pseudo>(NAME);
   Pseudo UnmaskedPseudo = !cast<Pseudo>(!subst("_MASK", "", NAME));
-  Pseudo UnmaskedTUPseudo = !cond(HasTU : !cast<Pseudo>(!subst("_MASK", "", NAME # "_TU")),
-                                  IsCombined : UnmaskedPseudo,
-                                  true  :  MaskedPseudo);
   bits<4> MaskOpIdx = MaskIdx;
 }
 
 def RISCVMaskedPseudosTable : GenericTable {
   let FilterClass = "RISCVMaskedPseudo";
   let CppTypeName = "RISCVMaskedPseudoInfo";
-  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "UnmaskedTUPseudo", "MaskOpIdx"];
+  let Fields = ["MaskedPseudo", "UnmaskedPseudo", "MaskOpIdx"];
   let PrimaryKey = ["MaskedPseudo"];
   let PrimaryKeyName = "getMaskedPseudoInfo";
 }
@@ -565,14 +555,9 @@ class RISCVVLE<bit M, bit Str, bit F, bits<3> S, bits<3> L> {
   Pseudo Pseudo = !cast<Pseudo>(NAME);
 }
 
-def lookupMaskedIntrinsicByUnmaskedTA : SearchIndex {
+def lookupMaskedIntrinsicByUnmasked : SearchIndex {
   let Table = RISCVMaskedPseudosTable;
   let Key = ["UnmaskedPseudo"];
-}
-
-def lookupMaskedIntrinsicByUnmaskedTU : SearchIndex {
-  let Table = RISCVMaskedPseudosTable;
-  let Key = ["UnmaskedTUPseudo"];
 }
 
 def RISCVVLETable : GenericTable {
@@ -1600,8 +1585,7 @@ multiclass VPseudoUSLoad {
           VLESched<LInfo>;
         def "E" # eew # "_V_" # LInfo # "_MASK" :
           VPseudoUSLoadMask<vreg, eew>,
-          RISCVMaskedPseudo</*MaskOpIdx*/ 2, /*HasTU=*/false,
-                            /*IsCombined=*/true>,
+          RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
           VLESched<LInfo>;
       }
     }
@@ -1619,8 +1603,7 @@ multiclass VPseudoFFLoad {
           VLFSched<LInfo>;
         def "E" # eew # "FF_V_" # LInfo # "_MASK":
           VPseudoUSLoadFFMask<vreg, eew>,
-          RISCVMaskedPseudo</*MaskOpIdx*/ 2, /*HasTU=*/false,
-                            /*IsCombined=*/true>,
+          RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
           VLFSched<LInfo>;
       }
     }
@@ -1648,8 +1631,7 @@ multiclass VPseudoSLoad {
                                         VLSSched<eew, LInfo>;
         def "E" # eew # "_V_" # LInfo # "_MASK" :
           VPseudoSLoadMask<vreg, eew>,
-          RISCVMaskedPseudo</*MaskOpIdx*/ 3, /*HasTU=*/false,
-                            /*IsCombined=*/true>,
+          RISCVMaskedPseudo</*MaskOpIdx*/ 3>,
           VLSSched<eew, LInfo>;
       }
     }
@@ -1678,8 +1660,7 @@ multiclass VPseudoILoad<bit Ordered> {
               VLXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoILoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint>,
-              RISCVMaskedPseudo</*MaskOpIdx*/ 3, /*HasTU=*/false,
-                            /*IsCombined=*/true>,
+              RISCVMaskedPseudo</*MaskOpIdx*/ 3>,
               VLXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
           }
         }
@@ -1811,9 +1792,7 @@ multiclass VPseudoVID_V {
       def "_V_" # m.MX : VPseudoNullaryNoMask<m.vrclass>,
                          Sched<[WriteVMIdxV_MX, ReadVMask]>;
       def "_V_" # m.MX # "_MASK" : VPseudoNullaryMask<m.vrclass>,
-                                   RISCVMaskedPseudo</*MaskOpIdx*/ 1,
-                                                     /*HasTU=*/false,
-                                                     /*IsCombined=*/true>,
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 1>,
                                    Sched<[WriteVMIdxV_MX, ReadVMask]>;
     }
   }
@@ -1842,9 +1821,7 @@ multiclass VPseudoVIOT_M {
       def "_" # m.MX : VPseudoUnaryNoMask<m.vrclass, VR, constraint>,
                        Sched<[WriteVMIotV_MX, ReadVMIotV_MX, ReadVMask]>;
       def "_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
-                                 RISCVMaskedPseudo</*MaskOpIdx*/ 2,
-                                                   /*HasTU*/ false,
-                                                   /*IsCombined*/true>,
+                                 RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                  Sched<[WriteVMIotV_MX, ReadVMIotV_MX, ReadVMask]>;
     }
   }
@@ -1878,8 +1855,7 @@ multiclass VPseudoBinary<VReg RetClass,
                                        Constraint>;
     def suffix # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
                                                    Constraint>,
-                           RISCVMaskedPseudo</*MaskOpIdx*/ 3, /*HasTU*/ false,
-                                             /*IsCombined*/ true>;
+                           RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
 
@@ -1897,9 +1873,7 @@ multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                                                Op1Class,
                                                                Op2Class,
                                                                Constraint>,
-                           RISCVMaskedPseudo</*MaskOpIdx*/ 3,
-                                             /*HasTU*/false,
-                                             /*IsCombined*/true>;
+                           RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
 
@@ -1914,7 +1888,7 @@ multiclass VPseudoBinaryM<VReg RetClass,
     let ForceTailAgnostic = true in
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMOutMask<RetClass, Op1Class,
                                                          Op2Class, Constraint>,
-                                   RISCVMaskedPseudo</*MaskOpIdx*/ 3, /*HasTU*/ false>;
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
 
@@ -1931,9 +1905,7 @@ multiclass VPseudoBinaryEmul<VReg RetClass,
                                                        Constraint>;
     def suffix # "_" # emul.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
                                                                           Constraint>,
-                                                  RISCVMaskedPseudo</*MaskOpIdx*/ 3,
-                                                                    /*HasTU*/ false,
-                                                                    /*IsCombined*/ true>;
+                                                  RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
 
@@ -2240,9 +2212,7 @@ multiclass VPseudoVCLS_V {
       def "_V_" # mx : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
                        Sched<[WriteVFClassV_MX, ReadVFClassV_MX, ReadVMask]>;
       def "_V_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, m.vrclass>,
-                                 RISCVMaskedPseudo</*MaskOpIdx*/ 2,
-                                                   /*HasTU*/ false,
-                                                   /*IsCombined*/true>,
+                                 RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                  Sched<[WriteVFClassV_MX, ReadVFClassV_MX, ReadVMask]>;
     }
   }
@@ -2263,9 +2233,7 @@ multiclass VPseudoVSQR_V {
                             Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
                                    ReadVMask]>;
         def "_V" # suffix # "_MASK" : VPseudoUnaryMask<m.vrclass, m.vrclass>,
-                                      RISCVMaskedPseudo</*MaskOpIdx*/ 2,
-                                                        /*HasTU*/ false,
-                                                        /*IsCombined*/true>,
+                                      RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                       Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
                                              ReadVMask]>;
       }
@@ -2282,9 +2250,7 @@ multiclass VPseudoVRCP_V {
       def "_V_" # mx : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
                          Sched<[WriteVFRecpV_MX, ReadVFRecpV_MX, ReadVMask]>;
       def "_V_" # mx # "_MASK" : VPseudoUnaryMask<m.vrclass, m.vrclass>,
-                                 RISCVMaskedPseudo</*MaskOpIdx*/ 2,
-                                                   /*HasTU*/ false,
-                                                   /*IsCombined*/true>,
+                                 RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
                                  Sched<[WriteVFRecpV_MX, ReadVFRecpV_MX, ReadVMask]>;
     }
   }
@@ -2302,7 +2268,7 @@ multiclass PseudoVEXT_VF2 {
                      Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
       def "_" # mx # "_MASK" :
         VPseudoUnaryMask<m.vrclass, m.f2vrclass, constraints>,
-        RISCVMaskedPseudo</*MaskOpIdx*/ 2, /*HasTU*/ false, /*IsCombined*/true>,
+        RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
         Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
     }
   }
@@ -2320,7 +2286,7 @@ multiclass PseudoVEXT_VF4 {
                      Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
       def "_" # mx # "_MASK" :
         VPseudoUnaryMask<m.vrclass, m.f4vrclass, constraints>,
-        RISCVMaskedPseudo</*MaskOpIdx*/ 2, /*HasTU*/ false, /*IsCombined*/true>,
+        RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
         Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
     }
   }
@@ -2338,7 +2304,7 @@ multiclass PseudoVEXT_VF8 {
                      Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
       def "_" # mx # "_MASK" :
         VPseudoUnaryMask<m.vrclass, m.f8vrclass, constraints>,
-        RISCVMaskedPseudo</*MaskOpIdx*/ 2, /*HasTU*/ false, /*IsCombined*/true>,
+        RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
         Sched<[WriteVExtV_MX, ReadVExtV_MX, ReadVMask]>;
     }
   }
@@ -3090,7 +3056,7 @@ multiclass VPseudoTernaryWithPolicy<VReg RetClass,
     let isCommutable = Commutable in
     def "_" # MInfo.MX : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>,
-                                   RISCVMaskedPseudo</*MaskOpIdx*/ 3, /*HasTU*/ false, /*IsCombined*/true>;
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
 
@@ -3136,7 +3102,7 @@ multiclass VPseudoVSLDVWithPolicy<VReg RetClass,
   let VLMul = MInfo.value in {
     def "_" # MInfo.MX : VPseudoTernaryNoMaskWithPolicy<RetClass, Op1Class, Op2Class, Constraint>;
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class, Constraint>,
-                                   RISCVMaskedPseudo</*MaskOpIdx*/ 3, /*HasTU*/ false, /*IsTernary*/ true>;
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
 
@@ -3424,9 +3390,7 @@ multiclass VPseudoConversion<VReg RetClass,
     def "_" # MInfo.MX : VPseudoUnaryNoMask<RetClass, Op1Class, Constraint>;
     def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMask<RetClass, Op1Class,
                                                     Constraint>,
-                                   RISCVMaskedPseudo</*MaskOpIdx*/ 2,
-                                                     /*HasTU*/ false,
-                                                     /*IsCombined*/true>;
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 2>;
   }
 }
 
@@ -3439,9 +3403,7 @@ multiclass VPseudoConversionRM<VReg RetClass,
                                                         Constraint>;
     def "_" # MInfo.MX # "_MASK" : VPseudoUnaryMask_FRM<RetClass, Op1Class,
                                                         Constraint>,
-                                   RISCVMaskedPseudo</*MaskOpIdx*/ 2,
-                                                     /*HasTU*/ false,
-                                                     /*IsCombined*/true>;
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 2>;
   }
 }
 
