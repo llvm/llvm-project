@@ -186,6 +186,8 @@ class MatchTable {
   unsigned CurrentLabelID = 0;
   /// Determines if the table should be instrumented for rule coverage tracking.
   bool IsWithCoverage;
+  /// Whether this table is for the GISel combiner.
+  bool IsCombinerTable;
 
 public:
   static MatchTableRecord LineBreak;
@@ -200,12 +202,15 @@ public:
   static MatchTableRecord Label(unsigned LabelID);
   static MatchTableRecord JumpTarget(unsigned LabelID);
 
-  static MatchTable buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage);
+  static MatchTable buildTable(ArrayRef<Matcher *> Rules, bool WithCoverage,
+                               bool IsCombiner = false);
 
-  MatchTable(bool WithCoverage, unsigned ID = 0)
-      : ID(ID), IsWithCoverage(WithCoverage) {}
+  MatchTable(bool WithCoverage, bool IsCombinerTable, unsigned ID = 0)
+      : ID(ID), IsWithCoverage(WithCoverage), IsCombinerTable(IsCombinerTable) {
+  }
 
   bool isWithCoverage() const { return IsWithCoverage; }
+  bool isCombiner() const { return IsCombinerTable; }
 
   void push_back(const MatchTableRecord &Value) {
     if (Value.Flags & MatchTableRecord::MTRF_Label)
@@ -456,6 +461,7 @@ protected:
   /// Current GISelFlags
   GISelFlags Flags = 0;
 
+  std::vector<std::string> RequiredSimplePredicates;
   std::vector<Record *> RequiredFeatures;
   std::vector<std::unique_ptr<PredicateMatcher>> EpilogueMatchers;
 
@@ -491,6 +497,9 @@ public:
   InstructionMatcher &addInstructionMatcher(StringRef SymbolicName);
   void addRequiredFeature(Record *Feature);
   const std::vector<Record *> &getRequiredFeatures() const;
+
+  void addRequiredSimplePredicate(StringRef PredName);
+  const std::vector<std::string> &getRequiredSimplePredicates();
 
   // Emplaces an action of the specified Kind at the end of the action list.
   //
@@ -1508,13 +1517,16 @@ public:
 /// Generates code to check an arbitrary C++ instruction predicate.
 class GenericInstructionPredicateMatcher : public InstructionPredicateMatcher {
 protected:
-  TreePredicateFn Predicate;
+  std::string EnumVal;
 
 public:
   GenericInstructionPredicateMatcher(unsigned InsnVarID,
-                                     TreePredicateFn Predicate)
+                                     TreePredicateFn Predicate);
+
+  GenericInstructionPredicateMatcher(unsigned InsnVarID,
+                                     const std::string &EnumVal)
       : InstructionPredicateMatcher(IPM_GenericPredicate, InsnVarID),
-        Predicate(Predicate) {}
+        EnumVal(EnumVal) {}
 
   static bool classof(const InstructionPredicateMatcher *P) {
     return P->getKind() == IPM_GenericPredicate;
@@ -2057,6 +2069,15 @@ public:
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Comment(S) << MatchTable::LineBreak;
   }
+};
+
+class CustomCXXAction : public MatchAction {
+  std::string FnEnumName;
+
+public:
+  CustomCXXAction(StringRef FnEnumName) : FnEnumName(FnEnumName.str()) {}
+
+  void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override;
 };
 
 /// Generates code to build an instruction or mutate an existing instruction

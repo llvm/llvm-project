@@ -81,6 +81,8 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT:    bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat &Imm) const override;
 // CHECK-NEXT:    const int64_t *getMatchTable() const override;
 // CHECK-NEXT:    bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI, const MatcherState &State) const override;
+// CHECK-NEXT:    bool testSimplePredicate(unsigned PredicateID) const override;
+// CHECK-NEXT:    void runCustomAction(unsigned FnID, const MatcherState &State) const override;
 // CHECK-NEXT:  #endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL
 
 // CHECK-LABEL: #ifdef GET_GLOBALISEL_TEMPORARIES_INIT
@@ -151,12 +153,12 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:   GICXXPred_MI_Predicate_frag = GICXXPred_MI_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_frag = GICXXPred_Invalid + 1,
 // CHECK-NEXT:  };
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GICXXPred_I64_Predicate_cimm8 = GICXXPred_I64_Invalid + 1,
+// CHECK-NEXT:    GICXXPred_I64_Predicate_cimm8 = GICXXPred_Invalid + 1,
 // CHECK-NEXT:    GICXXPred_I64_Predicate_simm8,
 // CHECK-NEXT:  };
 
@@ -175,7 +177,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GICXXPred_APFloat_Predicate_fpimmz = GICXXPred_APFloat_Invalid + 1,
+// CHECK-NEXT:    GICXXPred_APFloat_Predicate_fpimmz = GICXXPred_Invalid + 1,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  bool MyTargetInstructionSelector::testImmPredicate_APFloat(unsigned PredicateID, const APFloat & Imm) const {
 // CHECK-NEXT:    switch (PredicateID) {
@@ -189,7 +191,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // PatFrag predicates.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GICXXPred_APInt_Predicate_simm9 = GICXXPred_APInt_Invalid + 1,
+// CHECK-NEXT:    GICXXPred_APInt_Predicate_simm9 = GICXXPred_Invalid + 1,
 // CHECK-NEXT:  };
 // CHECK-NEXT:  bool MyTargetInstructionSelector::testImmPredicate_APInt(unsigned PredicateID, const APInt & Imm) const {
 // CHECK-NEXT:    switch (PredicateID) {
@@ -213,13 +215,12 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT: };
 
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
-// CHECK-NEXT: MachineRegisterInfo &MRI = MF->getRegInfo();
 // CHECK-NEXT: const PredicateBitset AvailableFeatures = getAvailableFeatures();
 // CHECK-NEXT: NewMIVector OutMIs;
 // CHECK-NEXT: State.MIs.clear();
 // CHECK-NEXT: State.MIs.push_back(&I);
 
-// CHECK:      if (executeMatchTable(*this, OutMIs, State, ExecInfo, getMatchTable(), TII, MRI, TRI, RBI, AvailableFeatures, &CoverageInfo)) {
+// CHECK:      if (executeMatchTable(*this, OutMIs, State, ExecInfo, getMatchTable(), TII, MF->getRegInfo(), TRI, RBI, AvailableFeatures, &CoverageInfo)) {
 // CHECK-NEXT:   return true;
 // CHECK-NEXT: }
 

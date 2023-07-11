@@ -275,7 +275,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       assert((State.MIs[InsnID]->getOperand(OpIdx).isImm() ||
               State.MIs[InsnID]->getOperand(OpIdx).isCImm()) &&
              "Expected immediate operand");
-      assert(Predicate > GICXXPred_I64_Invalid && "Expected a valid predicate");
+      assert(Predicate > GICXXPred_Invalid && "Expected a valid predicate");
       int64_t Value = 0;
       if (State.MIs[InsnID]->getOperand(OpIdx).isCImm())
         Value = State.MIs[InsnID]->getOperand(OpIdx).getCImm()->getSExtValue();
@@ -299,7 +299,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       assert(State.MIs[InsnID]->getOpcode() == TargetOpcode::G_CONSTANT &&
              "Expected G_CONSTANT");
-      assert(Predicate > GICXXPred_APInt_Invalid &&
+      assert(Predicate > GICXXPred_Invalid &&
              "Expected a valid predicate");
       if (!State.MIs[InsnID]->getOperand(1).isCImm())
         llvm_unreachable("Expected Imm or CImm operand");
@@ -323,7 +323,7 @@ bool GIMatchTableExecutor::executeMatchTable(
              "Expected G_FCONSTANT");
       assert(State.MIs[InsnID]->getOperand(1).isFPImm() &&
              "Expected FPImm operand");
-      assert(Predicate > GICXXPred_APFloat_Invalid &&
+      assert(Predicate > GICXXPred_Invalid &&
              "Expected a valid predicate");
       const APFloat &Value =
           State.MIs[InsnID]->getOperand(1).getFPImm()->getValueAPF();
@@ -362,6 +362,22 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       break;
     }
+    case GIM_CheckSimplePredicate: {
+      // Note: we don't check for invalid here because this is purely a hook to
+      // allow some executors (such as the combiner) to check arbitrary,
+      // contextless predicates, such as whether a rule is enabled or not.
+      int64_t Predicate = MatchTable[CurrentIdx++];
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIM_CheckSimplePredicate(Predicate="
+                             << Predicate << ")\n");
+      assert(Predicate > GICXXPred_Invalid && "Expected a valid predicate");
+      if (!testSimplePredicate(Predicate)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+      break;
+    }
     case GIM_CheckCxxInsnPredicate: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t Predicate = MatchTable[CurrentIdx++];
@@ -370,7 +386,7 @@ bool GIMatchTableExecutor::executeMatchTable(
                           << CurrentIdx << ": GIM_CheckCxxPredicate(MIs["
                           << InsnID << "], Predicate=" << Predicate << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
-      assert(Predicate > GICXXPred_MI_Invalid && "Expected a valid predicate");
+      assert(Predicate > GICXXPred_Invalid && "Expected a valid predicate");
 
       if (!testMIPredicate_MI(Predicate, *State.MIs[InsnID], State))
         if (handleReject() == RejectAndGiveUp)
@@ -1086,6 +1102,15 @@ bool GIMatchTableExecutor::executeMatchTable(
       (Exec.*ExecInfo.CustomRenderers[RendererFnID])(
           OutMIs[InsnID], *State.MIs[OldInsnID],
           -1); // Not a source operand of the old instruction.
+      break;
+    }
+    case GIR_CustomAction: {
+      int64_t FnID = MatchTable[CurrentIdx++];
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_CustomAction(FnID=" << FnID
+                             << ")\n");
+      assert(FnID > GICXXCustomAction_Invalid && "Expected a valid FnID");
+      runCustomAction(FnID, State);
       break;
     }
     case GIR_CustomOperandRenderer: {

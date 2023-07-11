@@ -174,8 +174,10 @@ void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
   emitI64ImmPredicateFns(OS);
   emitAPFloatImmPredicateFns(OS);
   emitAPIntImmPredicateFns(OS);
+  emitTestSimplePredicate(OS);
   emitCustomOperandRenderers(OS, CustomOperandRenderers);
   emitAdditionalImpl(OS);
+  emitRunCustomAction(OS);
   emitMatchTable(OS, Table);
   OS << "#endif // ifdef " << IfDefName << "\n\n";
 }
@@ -218,6 +220,9 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
      << "  const int64_t *getMatchTable() const override;\n"
      << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
         ", const MatcherState &State) "
+        "const override;\n"
+     << "  bool testSimplePredicate(unsigned PredicateID) const override;\n"
+     << "  void runCustomAction(unsigned FnID, const MatcherState &State) "
         "const override;\n";
   emitAdditionalTemporariesDecl(OS, "  ");
   OS << "#endif // ifdef " << IfDefName << "\n\n";
