@@ -13,10 +13,6 @@ configure_lit_site_cfg(
 
 include(builtin-config-ix)
 
-if (COMPILER_RT_HAS_CRT)
-  list(APPEND BUILTINS_TEST_DEPS crt)
-endif()
-
 # Indicate if this is an MSVC environment.
 pythonize_bool(MSVC)
 
