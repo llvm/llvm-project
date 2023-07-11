@@ -2235,10 +2235,10 @@ void GlobalISelEmitter::emitCxxPredicateFns(
     OS << "// PatFrag predicates.\n"
        << "enum {\n";
     std::string EnumeratorSeparator =
-        (" = GIPFP_" + TypeIdentifier + "_Invalid + 1,\n").str();
+        (" = GICXXPred_" + TypeIdentifier + "_Invalid + 1,\n").str();
     for (const auto *Record : MatchedRecords) {
-      OS << "  GIPFP_" << TypeIdentifier << "_Predicate_" << Record->getName()
-         << EnumeratorSeparator;
+      OS << "  GICXXPred_" << TypeIdentifier << "_Predicate_"
+         << Record->getName() << EnumeratorSeparator;
       EnumeratorSeparator = ",\n";
     }
     OS << "};\n";
@@ -2253,7 +2253,7 @@ void GlobalISelEmitter::emitCxxPredicateFns(
   if (!MatchedRecords.empty())
     OS << "  switch (PredicateID) {\n";
   for (const auto *Record : MatchedRecords) {
-    OS << "  case GIPFP_" << TypeIdentifier << "_Predicate_"
+    OS << "  case GICXXPred_" << TypeIdentifier << "_Predicate_"
        << Record->getName() << ": {\n"
        << "    " << Record->getValueAsString(CodeFieldName) << "\n"
        << "    llvm_unreachable(\"" << CodeFieldName
@@ -2278,9 +2278,11 @@ void GlobalISelEmitter::emitImmPredicateFns(
 void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
   return emitCxxPredicateFns(
       OS, "GISelPredicateCode", "MI", "const MachineInstr &", "MI",
-      ", const std::array<const MachineOperand *, 3> &Operands",
+      ", const MatcherState &State",
       "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
       "  const MachineRegisterInfo &MRI = MF.getRegInfo();\n"
+      "  const auto &Operands = State.RecordedOperands;\n"
+      "  (void)Operands;\n"
       "  (void)MRI;",
       [](const Record *R) { return true; });
 }
@@ -2427,9 +2429,9 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
      << "InstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const "
         "MachineInstr &, int) "
         "const;\n"
-     << "  const ISelInfoTy<PredicateBitset, ComplexMatcherMemFn, "
+     << "  const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn, "
         "CustomRendererFn> "
-        "ISelInfo;\n";
+        "ExecInfo;\n";
   OS << "  static " << Target.getName()
      << "InstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];\n"
      << "  static " << Target.getName()
@@ -2442,13 +2444,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
         "&Imm) const override;\n"
      << "  const int64_t *getMatchTable() const override;\n"
      << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
-        ", const std::array<const MachineOperand *, 3> &Operands) "
+        ", const MatcherState &State) "
         "const override;\n"
      << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n\n";
 
   OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n"
      << ", State(" << MaxTemporaries << "),\n"
-     << "ISelInfo(TypeObjects, NumTypeObjects, FeatureBitsets"
+     << "ExecInfo(TypeObjects, NumTypeObjects, FeatureBitsets"
      << ", ComplexPredicateFns, CustomRenderers)\n"
      << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n\n";
 
@@ -2629,9 +2631,9 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
      << "  NewMIVector OutMIs;\n"
      << "  State.MIs.clear();\n"
      << "  State.MIs.push_back(&I);\n\n"
-     << "  if (executeMatchTable(*this, OutMIs, State, ISelInfo"
+     << "  if (executeMatchTable(*this, OutMIs, State, ExecInfo"
      << ", getMatchTable(), TII, MRI, TRI, RBI, AvailableFeatures"
-     << ", CoverageInfo)) {\n"
+     << ", &CoverageInfo)) {\n"
      << "    return true;\n"
      << "  }\n\n"
      << "  return false;\n"

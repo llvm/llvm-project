@@ -4,22 +4,22 @@
 //
 // CHECK: // PatFrag predicates.
 // CHECK-NEXT: enum {
-// CHECK-NEXT:   GIPFP_MI_Predicate_and_or_pat = GIPFP_MI_Invalid + 1,
-// CHECK-NEXT:   GIPFP_MI_Predicate_or_oneuse,
-// CHECK-NEXT:   GIPFP_MI_Predicate_patfrags_test_pat,
-// CHECK-NEXT:   GIPFP_MI_Predicate_sub3_pat,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_and_or_pat = GICXXPred_MI_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_or_oneuse,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_patfrags_test_pat,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_sub3_pat,
 // CHECK-NEXT: };
 
 // Verify that we emit cases for all MI predicates.
 //
 // CHECK: bool MyTargetInstructionSelector::testMIPredicate_MI(
-// CHECK:    case GIPFP_MI_Predicate_and_or_pat: {
+// CHECK:    case GICXXPred_MI_Predicate_and_or_pat: {
 // CHECK:      llvm_unreachable("GISelPredicateCode should have returned");
-// CHECK:    case GIPFP_MI_Predicate_or_oneuse: {
+// CHECK:    case GICXXPred_MI_Predicate_or_oneuse: {
 // CHECK:      llvm_unreachable("GISelPredicateCode should have returned");
-// CHECK:    case GIPFP_MI_Predicate_patfrags_test_pat: {
+// CHECK:    case GICXXPred_MI_Predicate_patfrags_test_pat: {
 // CHECK:      llvm_unreachable("GISelPredicateCode should have returned");
-// CHECK:    case GIPFP_MI_Predicate_sub3_pat: {
+// CHECK:    case GICXXPred_MI_Predicate_sub3_pat: {
 // CHECK:      llvm_unreachable("GISelPredicateCode should have returned");
 
 include "llvm/Target/Target.td"
@@ -94,7 +94,7 @@ def and_or_pat : PatFrag<
 // CHECK-NEXT: GIM_CheckType, /*MI*/1, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/1, /*Op*/2, /*StoreIdx*/1, // Name : pred:3:y
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/1, /*Op*/2, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_and_or_pat,
+// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_and_or_pat,
 // CHECK-NEXT: GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT: // (and:{ *:[i32] } DOP:{ *:[i32] }:$src2:$pred:3:z, (or:{ *:[i32] } DOP:{ *:[i32] }:$src0:$pred:3:x, DOP:{ *:[i32] }:$src1:$pred:3:y))<<P:3:Predicate_and_or_pat>>  =>  (AND_OR:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::AND_OR,
@@ -124,7 +124,7 @@ def and_or_pat : PatFrag<
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/0, /*Op*/2, /*StoreIdx*/2, // Name : pred:3:z
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/Test::DRegsRegClassID,
-// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_and_or_pat,
+// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_and_or_pat,
 // CHECK-NEXT: GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT: // (and:{ *:[i32] } (or:{ *:[i32] } DOP:{ *:[i32] }:$src0:$pred:3:x, DOP:{ *:[i32] }:$src1:$pred:3:y), DOP:{ *:[i32] }:$src2:$pred:3:z)<<P:3:Predicate_and_or_pat>>  =>  (AND_OR:{ *:[i32] } DOP:{ *:[i32] }:$src0, DOP:{ *:[i32] }:$src1, DOP:{ *:[i32] }:$src2)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::AND_OR,
@@ -168,7 +168,7 @@ def sub3_pat : PatFrag<
 // CHECK-NEXT: // MIs[0] src2
 // CHECK-NEXT: GIM_CheckType, /*MI*/0, /*Op*/2, /*Type*/GILLT_s32,
 // CHECK-NEXT: GIM_RecordNamedOperand, /*MI*/0, /*Op*/2, /*StoreIdx*/2, // Name : pred:1:z
-// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_sub3_pat,
+// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_sub3_pat,
 // CHECK-NEXT: GIM_CheckIsSafeToFold, /*InsnID*/1,
 // CHECK-NEXT: // (sub:{ *:[i32] } (sub:{ *:[i32] } i32:{ *:[i32] }:$src0:$pred:1:x, i32:{ *:[i32] }:$src1:$pred:1:y), i32:{ *:[i32] }:$src2:$pred:1:z)<<P:1:Predicate_sub3_pat>>  =>  (SUB3:{ *:[i32] } i32:{ *:[i32] }:$src0, i32:{ *:[i32] }:$src1, i32:{ *:[i32] }:$src2)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::SUB3,
