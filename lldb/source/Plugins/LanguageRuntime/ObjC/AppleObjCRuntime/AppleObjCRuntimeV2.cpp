@@ -33,6 +33,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -751,6 +752,19 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
       HasSymbol(g_objc_getRealizedClassList_trylock);
   WarnIfNoExpandedSharedCache();
   RegisterObjCExceptionRecognizer(process);
+}
+
+LanguageRuntime *
+AppleObjCRuntimeV2::GetPreferredLanguageRuntime(ValueObject &in_value) {
+  if (auto process_sp = in_value.GetProcessSP()) {
+    assert(process_sp.get() == m_process);
+    if (auto descriptor_sp = GetNonKVOClassDescriptor(in_value)) {
+      LanguageType impl_lang = descriptor_sp->GetImplementationLanguage();
+      if (impl_lang != eLanguageTypeUnknown)
+        return process_sp->GetLanguageRuntime(impl_lang);
+    }
+  }
+  return nullptr;
 }
 
 bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
