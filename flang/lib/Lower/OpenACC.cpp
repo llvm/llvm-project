@@ -650,7 +650,8 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
       op != mlir::acc::ReductionOperator::AccMin &&
       op != mlir::acc::ReductionOperator::AccMax &&
       op != mlir::acc::ReductionOperator::AccIand &&
-      op != mlir::acc::ReductionOperator::AccIor)
+      op != mlir::acc::ReductionOperator::AccIor &&
+      op != mlir::acc::ReductionOperator::AccXor)
     TODO(loc, "reduction operator");
 
   if (ty.isIntOrIndex())
@@ -759,6 +760,9 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
 
   if (op == mlir::acc::ReductionOperator::AccIor)
     return builder.create<mlir::arith::OrIOp>(loc, value1, value2);
+
+  if (op == mlir::acc::ReductionOperator::AccXor)
+    return builder.create<mlir::arith::XOrIOp>(loc, value1, value2);
 
   TODO(loc, "reduction operator");
 }
