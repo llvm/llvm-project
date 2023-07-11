@@ -65,6 +65,26 @@ extern bool UnwindInfo;
 
 extern StringSet<> FoundSectionSet;
 
+class Dumper {
+  const object::ObjectFile &O;
+  StringSet<> Warnings;
+
+public:
+  Dumper(const object::ObjectFile &O) : O(O) {}
+
+  void reportUniqueWarning(Error Err);
+  void reportUniqueWarning(const Twine &Msg);
+
+  void printSymbolTable(StringRef ArchiveName,
+                        StringRef ArchitectureName = StringRef(),
+                        bool DumpDynamic = false);
+  void printSymbol(const object::SymbolRef &Symbol,
+                   ArrayRef<object::VersionEntry> SymbolVersions,
+                   StringRef FileName, StringRef ArchiveName,
+                   StringRef ArchitectureName, bool DumpDynamic);
+  void printRelocations();
+};
+
 // Various helper functions.
 
 /// Creates a SectionFilter with a standard predicate that conditionally skips
@@ -77,17 +97,9 @@ object::SectionFilter ToolSectionFilter(const llvm::object::ObjectFile &O,
                                         uint64_t *Idx = nullptr);
 
 bool isRelocAddressLess(object::RelocationRef A, object::RelocationRef B);
-void printRelocations(const object::ObjectFile *O);
 void printDynamicRelocations(const object::ObjectFile *O);
 void printSectionHeaders(object::ObjectFile &O);
 void printSectionContents(const object::ObjectFile *O);
-void printSymbolTable(const object::ObjectFile &O, StringRef ArchiveName,
-                      StringRef ArchitectureName = StringRef(),
-                      bool DumpDynamic = false);
-void printSymbol(const object::ObjectFile &O, const object::SymbolRef &Symbol,
-                 ArrayRef<object::VersionEntry> SymbolVersions,
-                 StringRef FileName, StringRef ArchiveName,
-                 StringRef ArchitectureName, bool DumpDynamic);
 [[noreturn]] void reportError(StringRef File, const Twine &Message);
 [[noreturn]] void reportError(Error E, StringRef FileName,
                               StringRef ArchiveName = "",
