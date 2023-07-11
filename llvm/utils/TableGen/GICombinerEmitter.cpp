@@ -1019,6 +1019,13 @@ void GICombinerEmitter::run(raw_ostream &OS) {
 //===----------------------------------------------------------------------===//
 
 static void EmitGICombiner(RecordKeeper &RK, raw_ostream &OS) {
+  PrintWarning(
+      "'-gen-global-isel-combiner' is deprecated and will be removed soon; "
+      "please use '-gen-global-isel-combiner-match-table' instead");
+  PrintNote(
+      "See "
+      "https://discourse.llvm.org/t/rfc-matchtable-based-globalisel-combiners");
+
   CodeGenTarget Target(RK);
   emitSourceFileHeader("Global Combiner", OS);
 
