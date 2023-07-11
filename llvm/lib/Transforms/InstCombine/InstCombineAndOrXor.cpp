@@ -3996,20 +3996,15 @@ static Instruction *canonicalizeAbs(BinaryOperator &Xor,
 
 static bool canFreelyInvert(InstCombiner &IC, Value *Op,
                             Instruction *IgnoredUser) {
-  if (!IC.isFreeToInvert(Op, /*WillInvertAllUses=*/true))
-    return false;
-  return match(Op, m_ImmConstant()) ||
-         (isa<Instruction>(Op) && InstCombiner::canFreelyInvertAllUsersOf(
-                                      cast<Instruction>(Op), IgnoredUser));
+  auto *I = dyn_cast<Instruction>(Op);
+  return I && IC.isFreeToInvert(I, /*WillInvertAllUses=*/true) &&
+         InstCombiner::canFreelyInvertAllUsersOf(I, IgnoredUser);
 }
 
 static Value *freelyInvert(InstCombinerImpl &IC, Value *Op,
                            Instruction *IgnoredUser) {
-  if (auto *C = dyn_cast<Constant>(Op))
-    return ConstantExpr::getNot(C);
-
-  IC.Builder.SetInsertPoint(
-      &*cast<Instruction>(Op)->getInsertionPointAfterDef());
+  auto *I = cast<Instruction>(Op);
+  IC.Builder.SetInsertPoint(&*I->getInsertionPointAfterDef());
   Value *NotOp = IC.Builder.CreateNot(Op, Op->getName() + ".not");
   Op->replaceUsesWithIf(NotOp,
                         [NotOp](Use &U) { return U.getUser() != NotOp; });
