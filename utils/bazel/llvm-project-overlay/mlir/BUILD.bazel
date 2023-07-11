@@ -3263,6 +3263,7 @@ cc_library(
         ":MemRefToLLVM",
         ":MemRefToSPIRV",
         ":NVGPUToNVVM",
+        ":NVVMToLLVM",
         ":OpenACCToLLVM",
         ":OpenACCToSCF",
         ":OpenMPToLLVM",
@@ -5268,6 +5269,20 @@ gentbl_cc_library(
             ],
             "include/mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc",
         ),
+        (
+            [
+                "-gen-op-interface-decls",
+                "-attrdefs-dialect=nvvm",
+            ],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsInterface.h.inc",
+        ),
+        (
+            [
+                "-gen-op-interface-defs",
+                "-attrdefs-dialect=nvvm",
+            ],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsInterface.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
@@ -5286,6 +5301,27 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/NVVMOps.td",
     deps = [":NVVMOpsTdFiles"],
+)
+
+cc_library(
+    name = "NVVMToLLVM",
+    srcs = glob(["lib/Conversion/NVVMToLLVM/NVVMToLLVM.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/NVVMToLLVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":GPUDialect",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MemRefDialect",
+        ":NVVMDialect",
+        ":NVVMOpsIncGen",
+        ":Pass",
+        ":Support",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
