@@ -27,6 +27,8 @@
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -438,6 +440,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
 
   EmitProducerInfo(M);
   EmitTargetFeatures(M);
+  EmitFunctionAttributes(M);
 }
 
 void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
@@ -554,6 +557,49 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   }
 
   OutStreamer->popSection();
+}
+
+void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
+  auto V = M.getNamedGlobal("llvm.global.annotations");
+  if (!V)
+    return;
+
+  // Group all the custom attributes by name.
+  StringMap<SmallVector<MCSymbol *, 4>> CustomSections;
+  const ConstantArray *CA = cast<ConstantArray>(V->getOperand(0));
+  for (Value *Op : CA->operands()) {
+    auto *CS = cast<ConstantStruct>(Op);
+    // The first field is a pointer to the annotated variable.
+    Value *AnnotatedVar = CS->getOperand(0)->stripPointerCasts();
+    // Only annotated functions are supported for now.
+    if (!isa<Function>(AnnotatedVar))
+      continue;
+    auto *F = cast<Function>(AnnotatedVar);
+
+    // The second field is a pointer to a global annotation string.
+    auto *GV = cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
+    StringRef AnnotationString;
+    getConstantStringInfo(GV, AnnotationString);
+    std::string Name = "annotate." + AnnotationString.str();
+    auto *Sym = cast<MCSymbolWasm>(getSymbol(F));
+    CustomSections[Name].push_back(Sym);
+  }
+
+  // Emit a custom section for each unique attribute.
+  for (const auto &[Name, Symbols] : CustomSections) {
+    MCSectionWasm *CustomSection = OutContext.getWasmSection(
+        ".custom_section.llvm.func_attr." + Name, SectionKind::getMetadata());
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(CustomSection);
+
+    for (auto &Sym : Symbols) {
+      OutStreamer->emitValue(
+          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_WASM_FUNCINDEX,
+                                  OutContext),
+          4);
+    }
+    OutStreamer->popSection();
+  }
 }
 
 void WebAssemblyAsmPrinter::emitConstantPool() {
