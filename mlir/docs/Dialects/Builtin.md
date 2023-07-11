@@ -23,6 +23,37 @@ Operations.
 
 [include "Dialects/BuiltinLocationAttributes.md"]
 
+## DistinctAttribute
+
+A DistinctAttribute associates an attribute with a unique identifier.
+As a result, multiple DistinctAttribute instances may point to the same
+attribute. Every call to the `create` function allocates a new
+DistinctAttribute instance. The address of the attribute instance serves as a
+temporary unique identifier. Similar to the names of SSA values, the final
+unique identifiers are generated during pretty printing. This delayed
+numbering ensures the printed identifiers are deterministic even if
+multiple DistinctAttribute instances are created in-parallel.
+
+Syntax:
+
+```
+distinct-id ::= integer-literal
+distinct-attribute ::= `distinct` `[` distinct-id `]<` attribute `>`
+```
+
+Examples:
+
+```mlir
+#distinct = distinct[0]<42.0 : f32>
+#distinct1 = distinct[1]<42.0 : f32>
+#distinct2 = distinct[2]<array<i32: 10, 42>>
+```
+
+This mechanism is meant to generate attributes with a unique
+identifier, which can be used to mark groups of operations that share a
+common property. For example, groups of aliasing memory operations may be
+marked using one DistinctAttribute instance per alias group.
+
 ## Operations
 
 [include "Dialects/BuiltinOps.md"]
