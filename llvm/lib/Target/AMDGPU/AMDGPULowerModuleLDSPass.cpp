@@ -513,11 +513,15 @@ public:
     ArrayType *AllKernelsOffsetsType =
         ArrayType::get(KernelOffsetsType, NumberKernels);
 
+    Constant *Missing = PoisonValue::get(KernelOffsetsType);
     std::vector<Constant *> overallConstantExprElts(NumberKernels);
     for (size_t i = 0; i < NumberKernels; i++) {
-      LDSVariableReplacement Replacement = KernelToReplacement[kernels[i]];
-      overallConstantExprElts[i] = getAddressesOfVariablesInKernel(
-          Ctx, Variables, Replacement.LDSVarsToConstantGEP);
+      auto Replacement = KernelToReplacement.find(kernels[i]);
+      overallConstantExprElts[i] =
+          (Replacement == KernelToReplacement.end())
+              ? Missing
+              : getAddressesOfVariablesInKernel(
+                    Ctx, Variables, Replacement->second.LDSVarsToConstantGEP);
     }
 
     Constant *init =
@@ -911,6 +915,7 @@ public:
 
     // Create a struct for each kernel for the non-module-scope variables.
 
+    IRBuilder<> Builder(M.getContext());
     DenseMap<Function *, LDSVariableReplacement> KernelToReplacement;
     for (Function &Func : M.functions()) {
       if (Func.isDeclaration() || !isKernelLDS(&Func))
@@ -962,6 +967,14 @@ public:
 
       auto Replacement =
           createLDSVariableReplacement(M, VarName, KernelUsedVariables);
+
+      // If any indirect uses, create a direct use to ensure allocation
+      // TODO: Simpler to unconditionally mark used but that regresses
+      // codegen in test/CodeGen/AMDGPU/noclobber-barrier.ll
+      auto Accesses = LDSUsesInfo.indirect_access.find(&Func);
+      if ((Accesses != LDSUsesInfo.indirect_access.end()) &&
+          !Accesses->second.empty())
+        markUsedByKernel(Builder, &Func, Replacement.SGV);
 
       // remove preserves existing codegen
       removeLocalVarsFromUsedLists(M, KernelUsedVariables);
@@ -1156,8 +1169,6 @@ public:
       DenseSet<GlobalVariable *> Vec;
       Vec.insert(GV);
 
-      // TODO: Looks like a latent bug, Replacement may not be marked
-      // UsedByKernel here
       replaceLDSVariablesWithStruct(M, Vec, Replacement, [](Use &U) {
         return isa<Instruction>(U.getUser());
       });
@@ -1171,11 +1182,6 @@ public:
     if (!KernelsThatAllocateTableLDS.empty()) {
       LLVMContext &Ctx = M.getContext();
       IRBuilder<> Builder(Ctx);
-
-      for (size_t i = 0; i < OrderedKernels.size(); i++) {
-        markUsedByKernel(Builder, OrderedKernels[i],
-                         KernelToReplacement[OrderedKernels[i]].SGV);
-      }
 
       // The order must be consistent between lookup table and accesses to
       // lookup table
