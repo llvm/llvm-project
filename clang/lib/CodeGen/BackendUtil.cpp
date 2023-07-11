@@ -831,6 +831,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   // Only enable CGProfilePass when using integrated assembler, since
   // non-integrated assemblers don't recognize .cgprofile section.
   PTO.CallGraphProfile = !CodeGenOpts.DisableIntegratedAS;
+  PTO.UnifiedLTO = CodeGenOpts.UnifiedLTO;
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -1010,7 +1011,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           });
     }
 
-    if (IsThinLTO) {
+    if (IsThinLTO || (IsLTO && CodeGenOpts.UnifiedLTO)) {
       MPM = PB.buildThinLTOPreLinkDefaultPipeline(Level);
     } else if (IsLTO) {
       MPM = PB.buildLTOPreLinkDefaultPipeline(Level);
@@ -1036,8 +1037,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
           if (!ThinLinkOS)
             return;
         }
-        MPM.addPass(ThinLTOBitcodeWriterPass(*OS, ThinLinkOS ? &ThinLinkOS->os()
-                                                             : nullptr));
+        if (CodeGenOpts.UnifiedLTO)
+          TheModule->addModuleFlag(Module::Error, "UnifiedLTO", uint32_t(1));
+        MPM.addPass(ThinLTOBitcodeWriterPass(
+            *OS, ThinLinkOS ? &ThinLinkOS->os() : nullptr));
       } else {
         MPM.addPass(PrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists,
                                     /*EmitLTOSummary=*/true));
@@ -1048,11 +1051,13 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       // targets
       bool EmitLTOSummary = shouldEmitRegularLTOSummary();
       if (EmitLTOSummary) {
-        if (!TheModule->getModuleFlag("ThinLTO"))
+        if (!TheModule->getModuleFlag("ThinLTO") && !CodeGenOpts.UnifiedLTO)
           TheModule->addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
         if (!TheModule->getModuleFlag("EnableSplitLTOUnit"))
           TheModule->addModuleFlag(Module::Error, "EnableSplitLTOUnit",
                                    uint32_t(1));
+        if (CodeGenOpts.UnifiedLTO)
+          TheModule->addModuleFlag(Module::Error, "UnifiedLTO", uint32_t(1));
       }
       if (Action == Backend_EmitBC)
         MPM.addPass(BitcodeWriterPass(*OS, CodeGenOpts.EmitLLVMUseLists,
