@@ -3,6 +3,8 @@ static_library("Core") {
   configs += [ "//llvm/utils/gn/build:bolt_code" ]
   deps = [
     "//bolt/lib/Utils",
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/CodeGen/AsmPrinter",
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/Demangle",
     "//llvm/lib/MC",
@@ -20,6 +22,7 @@ static_library("Core") {
     "BinaryFunction.cpp",
     "BinaryFunctionProfile.cpp",
     "BinarySection.cpp",
+    "DIEBuilder.cpp",
     "DebugData.cpp",
     "DynoStats.cpp",
     "Exceptions.cpp",
