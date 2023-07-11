@@ -70,7 +70,6 @@ elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
   find_library(llvmlibc_rpc_server NAMES llvmlibc_rpc_server
                PATHS ${LIBOMPTARGET_LLVM_LIBRARY_DIR} NO_DEFAULT_PATH)
   if(llvmlibc_rpc_server)
-    message(WARNING ${llvmlibc_rpc_server})
     target_link_libraries(PluginInterface PRIVATE llvmlibc_rpc_server)
     target_compile_definitions(PluginInterface PRIVATE LIBOMPTARGET_RPC_SUPPORT)
   endif()
