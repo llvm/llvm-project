@@ -112,15 +112,16 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
   return Results;
 }
 
-std::string fixIncludes(const AnalysisResults &Results, llvm::StringRef Code,
+std::string fixIncludes(const AnalysisResults &Results,
+                        llvm::StringRef FileName, llvm::StringRef Code,
                         const format::FormatStyle &Style) {
   assert(Style.isCpp() && "Only C++ style supports include insertions!");
   tooling::Replacements R;
   // Encode insertions/deletions in the magic way clang-format understands.
   for (const Include *I : Results.Unused)
-    cantFail(R.add(tooling::Replacement("input", UINT_MAX, 1, I->quote())));
+    cantFail(R.add(tooling::Replacement(FileName, UINT_MAX, 1, I->quote())));
   for (llvm::StringRef Spelled : Results.Missing)
-    cantFail(R.add(tooling::Replacement("input", UINT_MAX, 0,
+    cantFail(R.add(tooling::Replacement(FileName, UINT_MAX, 0,
                                         ("#include " + Spelled).str())));
   // "cleanup" actually turns the UINT_MAX replacements into concrete edits.
   auto Positioned = cantFail(format::cleanupAroundReplacements(Code, R, Style));
