@@ -125,14 +125,14 @@ func.func @extract_vector_type(%arg0: index) {
 // -----
 
 func.func @extract_position_rank_overflow(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected position attribute of rank smaller than vector}}
+  // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
   %1 = vector.extract %arg0[0, 0, 0, 0] : vector<4x8x16xf32>
 }
 
 // -----
 
 func.func @extract_position_rank_overflow_generic(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected position attribute of rank smaller than vector}}
+  // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
   %1 = "vector.extract" (%arg0) { position = [0, 0, 0, 0] } : (vector<4x8x16xf32>) -> (vector<16xf32>)
 }
 
@@ -153,7 +153,7 @@ func.func @extract_precise_position_overflow(%arg0: vector<4x8x16xf32>) {
 // -----
 
 func.func @extract_0d(%arg0: vector<f32>) {
-  // expected-error@+1 {{expected position attribute of rank smaller than vector rank}}
+  // expected-error@+1 {{expected position attribute of rank no greater than vector rank}}
   %1 = vector.extract %arg0[0] : vector<f32>
 }
 
@@ -587,7 +587,7 @@ func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
 // -----
 
 func.func @insert_strided_slice(%a: vector<4x4xf32>, %b: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected source rank to be smaller than destination rank}}
+  // expected-error@+1 {{expected source rank to be no greater than destination rank}}
   %1 = vector.insert_strided_slice %b, %a {offsets = [2, 2], strides = [1, 1, 1]} : vector<4x8x16xf32> into vector<4x4xf32>
 }
 
@@ -622,14 +622,14 @@ func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected offsets attribute of rank smaller than vector rank}}
+  // expected-error@+1 {{expected offsets attribute of rank no greater than vector rank}}
   %1 = vector.extract_strided_slice %arg0 {offsets = [2, 2, 2, 2], sizes = [2, 2, 2, 2], strides = [1, 1, 1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
 }
 
 // -----
 
 func.func @extract_strided_slice(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected offsets attribute of rank smaller than vector rank}}
+  // expected-error@+1 {{expected offsets attribute of rank no greater than vector rank}}
   %1 = vector.extract_strided_slice %arg0 {offsets = [2, 2, 2, 2], sizes = [2, 2, 2, 2], strides = [1, 1, 1, 1]} : vector<4x8x16xf32> to vector<2x2x16xf32>
 }
 
