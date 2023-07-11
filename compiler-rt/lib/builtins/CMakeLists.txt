@@ -51,8 +51,11 @@ if (COMPILER_RT_STANDALONE_BUILD)
 endif()
 
 include(builtin-config-ix)
-include(CMakeDependentOption)
 include(CMakePushCheckState)
+
+if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+  include(CompilerRTAIXUtils)
+endif()
 
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
@@ -687,7 +690,7 @@ set(powerpc64_SOURCES
   ${GENERIC_SOURCES}
 )
 # These routines require __int128, which isn't supported on AIX.
-if (NOT OS_NAME MATCHES "AIX")
+if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   set(powerpc64_SOURCES
     ppc/floattitf.c
     ppc/fixtfti.c
@@ -852,8 +855,6 @@ else ()
   endforeach ()
 endif ()
 
-add_dependencies(compiler-rt builtins)
-
 option(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC
   "Build standalone shared atomic library."
   OFF)
@@ -861,8 +862,7 @@ option(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC
 if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
   add_custom_target(builtins-standalone-atomic)
   set(BUILTIN_TYPE SHARED)
-  if(OS_NAME MATCHES "AIX")
-    include(CompilerRTAIXUtils)
+  if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     if(NOT COMPILER_RT_LIBATOMIC_LINK_FLAGS)
       get_aix_libatomic_default_link_flags(COMPILER_RT_LIBATOMIC_LINK_FLAGS
         "${CMAKE_CURRENT_SOURCE_DIR}/ppc/atomic.exp")
@@ -887,7 +887,7 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
   # FIXME: On AIX, we have to archive built shared libraries into a static
   # archive, i.e., libatomic.a. Once cmake adds support of such usage for AIX,
   # this ad-hoc part can be removed.
-  if(OS_NAME MATCHES "AIX")
+  if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     archive_aix_libatomic(clang_rt.atomic libatomic
                           ARCHS ${BUILTIN_SUPPORTED_ARCH}
                           PARENT_TARGET builtins-standalone-atomic)
@@ -895,40 +895,4 @@ if(COMPILER_RT_BUILD_STANDALONE_LIBATOMIC)
   add_dependencies(compiler-rt builtins-standalone-atomic)
 endif()
 
-cmake_dependent_option(COMPILER_RT_BUILD_CRT "Build crtbegin.o/crtend.o" ON "COMPILER_RT_HAS_CRT" OFF)
-
-if(COMPILER_RT_BUILD_CRT)
-  add_compiler_rt_component(crt)
-
-  option(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY "Use eh_frame in crtbegin.o/crtend.o" ON)
-
-  include(CheckSectionExists)
-  check_section_exists(".init_array" COMPILER_RT_HAS_INITFINI_ARRAY
-    SOURCE "volatile int x;\n__attribute__((constructor)) void f(void) {x = 0;}\nint main(void) { return 0; }\n")
-
-  append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 CRT_CFLAGS)
-  append_list_if(COMPILER_RT_HAS_INITFINI_ARRAY -DCRT_HAS_INITFINI_ARRAY CRT_CFLAGS)
-  append_list_if(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY -DEH_USE_FRAME_REGISTRY CRT_CFLAGS)
-  append_list_if(COMPILER_RT_HAS_FPIC_FLAG -fPIC CRT_CFLAGS)
-  append_list_if(COMPILER_RT_HAS_WNO_PEDANTIC -Wno-pedantic CRT_CFLAGS)
-  if (COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
-    append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full CRT_CFLAGS)
-  endif()
-
-  foreach(arch ${BUILTIN_SUPPORTED_ARCH})
-    add_compiler_rt_runtime(clang_rt.crtbegin
-      OBJECT
-      ARCHS ${arch}
-      SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/crtbegin.c
-      CFLAGS ${CRT_CFLAGS}
-      PARENT_TARGET crt)
-    add_compiler_rt_runtime(clang_rt.crtend
-      OBJECT
-      ARCHS ${arch}
-      SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/crtend.c
-      CFLAGS ${CRT_CFLAGS}
-      PARENT_TARGET crt)
-  endforeach()
-
-  add_dependencies(compiler-rt crt)
-endif()
+add_dependencies(compiler-rt builtins)
