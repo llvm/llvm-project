@@ -345,6 +345,6 @@ bool SBInstruction::TestEmulation(lldb::SBStream &output_stream,
 
   lldb::InstructionSP inst_sp(GetOpaque());
   if (inst_sp)
-    return inst_sp->TestEmulation(output_stream.get(), test_file);
+    return inst_sp->TestEmulation(output_stream.ref(), test_file);
   return false;
 }

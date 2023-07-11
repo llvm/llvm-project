@@ -304,32 +304,16 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
   Record *SC = SubClass.Rec;
   MapResolver R(CurRec);
 
-  // Loop over all the subclass record's fields. Add template arguments
-  // to the resolver map. Add regular fields to the new record.
-  for (const RecordVal &Field : SC->getValues()) {
-    if (Field.isTemplateArg()) {
-      R.set(Field.getNameInit(), Field.getValue());
-    } else {
+  // Loop over all the subclass record's fields. Add regular fields to the new
+  // record.
+  for (const RecordVal &Field : SC->getValues())
+    if (!Field.isTemplateArg())
       if (AddValue(CurRec, SubClass.RefRange.Start, Field))
         return true;
-    }
-  }
 
-  ArrayRef<Init *> TArgs = SC->getTemplateArgs();
-  assert(SubClass.TemplateArgs.size() <= TArgs.size() &&
-         "Too many template arguments allowed");
-
-  // Loop over the template argument names. If a value was specified,
-  // reset the map value. If not and there was no default, complain.
-  for (unsigned I = 0, E = TArgs.size(); I != E; ++I) {
-    if (I < SubClass.TemplateArgs.size())
-      R.set(TArgs[I], SubClass.TemplateArgs[I]);
-    else if (!R.isComplete(TArgs[I]))
-      return Error(SubClass.RefRange.Start,
-                   "Value not specified for template argument '" +
-                       TArgs[I]->getAsUnquotedString() + "' (#" + Twine(I) +
-                       ") of parent class '" + SC->getNameInitAsString() + "'");
-  }
+  if (resolveArgumentsOfClass(R, SC, SubClass.TemplateArgs,
+                              SubClass.RefRange.Start))
+    return true;
 
   // Copy the subclass record's assertions to the new record.
   CurRec->appendAssertions(SC);
@@ -383,36 +367,16 @@ bool TGParser::AddSubMultiClass(MultiClass *CurMC,
                                 SubMultiClassReference &SubMultiClass) {
   MultiClass *SMC = SubMultiClass.MC;
 
-  ArrayRef<Init *> SMCTArgs = SMC->Rec.getTemplateArgs();
-  if (SMCTArgs.size() < SubMultiClass.TemplateArgs.size())
-    return Error(SubMultiClass.RefRange.Start,
-                 "More template args specified than expected");
-
-  // Prepare the mapping of template argument name to value, filling in default
-  // values if necessary.
-  SubstStack TemplateArgs;
-  for (unsigned i = 0, e = SMCTArgs.size(); i != e; ++i) {
-    if (i < SubMultiClass.TemplateArgs.size()) {
-      TemplateArgs.emplace_back(SMCTArgs[i], SubMultiClass.TemplateArgs[i]);
-    } else {
-      Init *Default = SMC->Rec.getValue(SMCTArgs[i])->getValue();
-      if (!Default->isComplete()) {
-        return Error(SubMultiClass.RefRange.Start,
-                     "value not specified for template argument #" + Twine(i) +
-                         " (" + SMCTArgs[i]->getAsUnquotedString() +
-                         ") of multiclass '" + SMC->Rec.getNameInitAsString() +
-                         "'");
-      }
-      TemplateArgs.emplace_back(SMCTArgs[i], Default);
-    }
-  }
-
-  TemplateArgs.emplace_back(QualifiedNameOfImplicitName(SMC),
-                            VarInit::get(QualifiedNameOfImplicitName(CurMC),
-                                         StringRecTy::get(Records)));
+  SubstStack Substs;
+  if (resolveArgumentsOfMultiClass(
+          Substs, SMC, SubMultiClass.TemplateArgs,
+          VarInit::get(QualifiedNameOfImplicitName(CurMC),
+                       StringRecTy::get(Records)),
+          SubMultiClass.RefRange.Start))
+    return true;
 
   // Add all of the defs in the subclass into the current multiclass.
-  return resolve(SMC->Entries, TemplateArgs, false, &CurMC->Entries);
+  return resolve(SMC->Entries, Substs, false, &CurMC->Entries);
 }
 
 /// Add a record, foreach loop, or assertion to the current context.
@@ -603,6 +567,51 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
 
   Records.addDef(std::move(Rec));
   return false;
+}
+
+bool TGParser::resolveArguments(Record *Rec, ArrayRef<Init *> ArgValues,
+                                SMLoc Loc, ArgValueHandler ArgValueHandler) {
+  ArrayRef<Init *> ArgNames = Rec->getTemplateArgs();
+  assert(ArgValues.size() <= ArgNames.size() &&
+         "Too many template arguments allowed");
+
+  // Loop over the template argument names. If a value was specified,
+  // handle the (name, value) pair. If not and there was no default, complain.
+  for (unsigned I = 0, E = ArgNames.size(); I != E; ++I) {
+    if (I < ArgValues.size())
+      ArgValueHandler(ArgNames[I], ArgValues[I]);
+    else {
+      Init *Default = Rec->getValue(ArgNames[I])->getValue();
+      if (!Default->isComplete())
+        return Error(Loc, "Value not specified for template argument '" +
+                              ArgNames[I]->getAsUnquotedString() + "' (#" +
+                              Twine(I) + ") of parent class '" +
+                              Rec->getNameInitAsString() + "'");
+      ArgValueHandler(ArgNames[I], Default);
+    }
+  }
+
+  return false;
+}
+
+/// Resolve the arguments of class and set them to MapResolver.
+/// Returns true if failed.
+bool TGParser::resolveArgumentsOfClass(MapResolver &R, Record *Rec,
+                                       ArrayRef<Init *> ArgValues, SMLoc Loc) {
+  return resolveArguments(Rec, ArgValues, Loc,
+                          [&](Init *Name, Init *Value) { R.set(Name, Value); });
+}
+
+/// Resolve the arguments of multiclass and store them into SubstStack.
+/// Returns true if failed.
+bool TGParser::resolveArgumentsOfMultiClass(SubstStack &Substs, MultiClass *MC,
+                                            ArrayRef<Init *> ArgValues,
+                                            Init *DefmName, SMLoc Loc) {
+  // Add an implicit argument NAME.
+  Substs.emplace_back(QualifiedNameOfImplicitName(MC), DefmName);
+  return resolveArguments(
+      &MC->Rec, ArgValues, Loc,
+      [&](Init *Name, Init *Value) { Substs.emplace_back(Name, Value); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -2595,18 +2604,8 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     if (CheckTemplateArgValues(Args, NameLoc.Start, Class))
       return nullptr; // Error checking template argument values.
 
-    // Loop through the arguments that were not specified and make sure
-    // they have a complete value.
-    ArrayRef<Init *> TArgs = Class->getTemplateArgs();
-    for (unsigned I = Args.size(), E = TArgs.size(); I < E; ++I) {
-      RecordVal *Arg = Class->getValue(TArgs[I]);
-      if (!Arg->getValue()->isComplete()) {
-        Error(NameLoc.Start, "Value not specified for template argument '" +
-                                 TArgs[I]->getAsUnquotedString() + "' (#" +
-                                 Twine(I) + ") of parent class '" +
-                                 Class->getNameInitAsString() + "'");
-      }
-    }
+    if (resolveArguments(Class, Args, NameLoc.Start))
+      return nullptr;
 
     if (TrackReferenceLocs)
       Class->appendReferenceLoc(NameLoc);
@@ -4119,26 +4118,10 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     MultiClass *MC = MultiClasses[std::string(Ref.Rec->getName())].get();
     assert(MC && "Didn't lookup multiclass correctly?");
 
-    ArrayRef<Init *> TemplateVals = Ref.TemplateArgs;
-    ArrayRef<Init *> TArgs = MC->Rec.getTemplateArgs();
     SubstStack Substs;
-
-    for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
-      if (i < TemplateVals.size()) {
-        Substs.emplace_back(TArgs[i], TemplateVals[i]);
-      } else {
-        Init *Default = MC->Rec.getValue(TArgs[i])->getValue();
-        if (!Default->isComplete())
-          return Error(SubClassLoc,
-                       "value not specified for template argument '" +
-                           TArgs[i]->getAsUnquotedString() + "' (#" +
-                           Twine(i) + ") of multiclass '" +
-                           MC->Rec.getNameInitAsString() + "'");
-        Substs.emplace_back(TArgs[i], Default);
-      }
-    }
-
-    Substs.emplace_back(QualifiedNameOfImplicitName(MC), DefmName);
+    if (resolveArgumentsOfMultiClass(Substs, MC, Ref.TemplateArgs, DefmName,
+                                     SubClassLoc))
+      return true;
 
     if (resolve(MC->Entries, Substs, !CurMultiClass && Loops.empty(),
                 &NewEntries, &SubClassLoc))

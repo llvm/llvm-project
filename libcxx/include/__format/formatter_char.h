@@ -19,6 +19,7 @@
 #include <__format/formatter_integral.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
+#include <__format/write_escaped.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_signed.h>
 

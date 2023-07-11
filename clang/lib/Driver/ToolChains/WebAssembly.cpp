@@ -212,8 +212,6 @@ bool WebAssembly::isPIEDefault(const llvm::opt::ArgList &Args) const {
 
 bool WebAssembly::isPICDefaultForced() const { return false; }
 
-bool WebAssembly::IsIntegratedAssemblerDefault() const { return true; }
-
 bool WebAssembly::hasBlocksRuntime() const { return false; }
 
 // TODO: Support profiling.

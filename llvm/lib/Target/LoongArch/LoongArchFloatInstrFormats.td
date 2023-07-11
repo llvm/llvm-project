@@ -157,6 +157,7 @@ class FPFmtMEM<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
 // Instruction class templates
 //===----------------------------------------------------------------------===//
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class FP_ALU_2R<bits<22> op, string opstr, RegisterClass rc>
     : FPFmt2R<op, (outs rc:$fd), (ins rc:$fj), opstr, "$fd, $fj">;
 
@@ -166,6 +167,7 @@ class FP_ALU_3R<bits<17> op, string opstr, RegisterClass rc>
 class FP_ALU_4R<bits<12> op, string opstr, RegisterClass rc>
     : FPFmt4R<op, (outs rc:$fd), (ins rc:$fj, rc:$fk, rc:$fa), opstr,
               "$fd, $fj, $fk, $fa">;
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 class FPCMPOpc<bits<12> value> {
   bits<12> val = value;
@@ -175,6 +177,7 @@ class FPCMPCond<bits<5> value> {
   bits<5> val = value;
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class FP_CMP<FPCMPOpc op, FPCMPCond cond, string opstr, RegisterClass rc>
     : FPFmtFCMP<op.val, cond.val, (outs CFR:$cd), (ins rc:$fj, rc:$fk), opstr,
                 "$cd, $fj, $fk">;
@@ -195,24 +198,25 @@ class FP_BRANCH<bits<8> opcode, string opstr>
   let isBranch = 1;
   let isTerminator = 1;
 }
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let mayLoad = 1 in {
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class FP_LOAD_3R<bits<17> op, string opstr, RegisterClass rc>
     : FPFmtMEM<op, (outs rc:$fd), (ins GPR:$rj, GPR:$rk), opstr,
                "$fd, $rj, $rk">;
 class FP_LOAD_2RI12<bits<10> op, string opstr, RegisterClass rc>
     : FPFmt2RI12<op, (outs rc:$fd), (ins GPR:$rj, simm12:$imm12), opstr,
                  "$fd, $rj, $imm12">;
-} // mayLoad = 1
+} // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
-let mayStore = 1 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class FP_STORE_3R<bits<17> op, string opstr, RegisterClass rc>
     : FPFmtMEM<op, (outs), (ins rc:$fd, GPR:$rj, GPR:$rk), opstr,
                "$fd, $rj, $rk">;
 class FP_STORE_2RI12<bits<10> op, string opstr, RegisterClass rc>
     : FPFmt2RI12<op, (outs), (ins rc:$fd, GPR:$rj, simm12:$imm12), opstr,
                  "$fd, $rj, $imm12">;
-} // mayStore = 1
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
 def FPCMP_OPC_S : FPCMPOpc<0b000011000001>;
 def FPCMP_OPC_D : FPCMPOpc<0b000011000010>;

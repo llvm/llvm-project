@@ -243,7 +243,7 @@ LANGOPT(OpenMP            , 32, 0, "OpenMP support and version of OpenMP (31, 40
 LANGOPT(OpenMPExtensions  , 1, 1, "Enable all Clang extensions for OpenMP directives and clauses")
 LANGOPT(OpenMPSimd        , 1, 0, "Use SIMD only OpenMP support.")
 LANGOPT(OpenMPUseTLS      , 1, 0, "Use TLS for threadprivates or runtime calls")
-LANGOPT(OpenMPIsDevice    , 1, 0, "Generate code only for OpenMP target device")
+LANGOPT(OpenMPIsTargetDevice    , 1, 0, "Generate code only for OpenMP target device")
 LANGOPT(OpenMPCUDAMode    , 1, 0, "Generate code for OpenMP pragmas in SIMT/SPMD mode")
 LANGOPT(OpenMPIRBuilder   , 1, 0, "Use the experimental OpenMP-IR-Builder codegen path.")
 LANGOPT(OpenMPCUDANumSMs  , 32, 0, "Number of SMs for CUDA devices.")

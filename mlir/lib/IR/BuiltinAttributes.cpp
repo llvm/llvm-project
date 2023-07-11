@@ -42,6 +42,7 @@ void BuiltinDialect::registerAttributes() {
 #define GET_ATTRDEF_LIST
 #include "mlir/IR/BuiltinAttributes.cpp.inc"
       >();
+  addAttributes<DistinctAttr>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1743,6 +1744,18 @@ SparseElementsAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DistinctAttr
+//===----------------------------------------------------------------------===//
+
+DistinctAttr DistinctAttr::create(Attribute referencedAttr) {
+  return Base::get(referencedAttr.getContext(), referencedAttr);
+}
+
+Attribute DistinctAttr::getReferencedAttr() const {
+  return getImpl()->referencedAttr;
 }
 
 //===----------------------------------------------------------------------===//

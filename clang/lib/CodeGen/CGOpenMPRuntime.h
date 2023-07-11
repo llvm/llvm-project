@@ -688,7 +688,7 @@ public:
           SizeEmitter);
 
   /// Returns true if the current target is a GPU.
-  virtual bool isTargetCodegen() const { return false; }
+  virtual bool isGPU() const { return false; }
 
   /// Check if the variable length declaration is delayed:
   virtual bool isDelayedVariableLengthDecl(CodeGenFunction &CGF,

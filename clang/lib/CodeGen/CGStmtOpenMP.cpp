@@ -802,7 +802,7 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
   if (!HaveInsertPoint())
     return false;
   bool DeviceConstTarget =
-      getLangOpts().OpenMPIsDevice &&
+      getLangOpts().OpenMPIsTargetDevice &&
       isOpenMPTargetExecutionDirective(D.getDirectiveKind());
   bool FirstprivateIsLastprivate = false;
   llvm::DenseMap<const VarDecl *, OpenMPLastprivateModifier> Lastprivates;
@@ -6577,7 +6577,7 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
   CodeGenModule &CGM = CGF.CGM;
 
   // On device emit this construct as inlined code.
-  if (CGM.getLangOpts().OpenMPIsDevice) {
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
     OMPLexicalScope Scope(CGF, S, OMPD_target);
     CGM.getOpenMPRuntime().emitInlinedDirective(
         CGF, OMPD_target, [&S](CodeGenFunction &CGF, PrePostActionTy &) {

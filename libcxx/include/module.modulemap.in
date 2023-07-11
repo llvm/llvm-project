@@ -1015,6 +1015,7 @@ module std [system] {
       module range_formatter                 { private header "__format/range_formatter.h" }
       module unicode                         { private header "__format/unicode.h" }
       module width_estimation_table          { private header "__format/width_estimation_table.h" }
+      module write_escaped                   { private header "__format/write_escaped.h" }
     }
   }
   module forward_list {

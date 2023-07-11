@@ -215,17 +215,13 @@ define void @truncstore_v8i64_v8i16(<8 x i64> %x, ptr %p, <8 x i32> %mask) {
 ; SSE2-LABEL: truncstore_v8i64_v8i16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm6, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm7 = xmm0[0,2,2,3,4,5,6,7]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm1[0],xmm7[1],xmm1[1]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,2,2,3]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,1,0,2,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,0,2,4,5,6,7]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm7[0],xmm0[1]
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE2-NEXT:    pslld $16, %xmm2
+; SSE2-NEXT:    psrad $16, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    packssdw %xmm2, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm6, %xmm5
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
 ; SSE2-NEXT:    pxor %xmm1, %xmm5

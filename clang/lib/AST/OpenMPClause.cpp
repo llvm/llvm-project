@@ -2712,7 +2712,7 @@ TargetOMPContext::TargetOMPContext(
     ASTContext &ASTCtx, std::function<void(StringRef)> &&DiagUnknownTrait,
     const FunctionDecl *CurrentFunctionDecl,
     ArrayRef<llvm::omp::TraitProperty> ConstructTraits)
-    : OMPContext(ASTCtx.getLangOpts().OpenMPIsDevice,
+    : OMPContext(ASTCtx.getLangOpts().OpenMPIsTargetDevice,
                  ASTCtx.getTargetInfo().getTriple()),
       FeatureValidityCheck([&](StringRef FeatureName) {
         return ASTCtx.getTargetInfo().isValidFeatureName(FeatureName);

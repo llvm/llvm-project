@@ -5296,7 +5296,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIprintf:
     if (getTarget().getTriple().isNVPTX() ||
         getTarget().getTriple().isAMDGCN()) {
-      if (getLangOpts().OpenMPIsDevice)
+      if (getLangOpts().OpenMPIsTargetDevice)
         return EmitOpenMPDevicePrintfCallExpr(E);
       if (getTarget().getTriple().isNVPTX())
         return EmitNVPTXDevicePrintfCallExpr(E);
@@ -20202,9 +20202,12 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   case RISCV::BI__builtin_riscv_clmul:
   case RISCV::BI__builtin_riscv_clmulh:
   case RISCV::BI__builtin_riscv_clmulr:
-  case RISCV::BI__builtin_riscv_xperm4:
-  case RISCV::BI__builtin_riscv_xperm8:
-  case RISCV::BI__builtin_riscv_brev8:
+  case RISCV::BI__builtin_riscv_xperm4_32:
+  case RISCV::BI__builtin_riscv_xperm4_64:
+  case RISCV::BI__builtin_riscv_xperm8_32:
+  case RISCV::BI__builtin_riscv_xperm8_64:
+  case RISCV::BI__builtin_riscv_brev8_32:
+  case RISCV::BI__builtin_riscv_brev8_64:
   case RISCV::BI__builtin_riscv_zip_32:
   case RISCV::BI__builtin_riscv_unzip_32: {
     switch (BuiltinID) {
@@ -20245,15 +20248,18 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
       break;
 
     // Zbkx
-    case RISCV::BI__builtin_riscv_xperm8:
+    case RISCV::BI__builtin_riscv_xperm8_32:
+    case RISCV::BI__builtin_riscv_xperm8_64:
       ID = Intrinsic::riscv_xperm8;
       break;
-    case RISCV::BI__builtin_riscv_xperm4:
+    case RISCV::BI__builtin_riscv_xperm4_32:
+    case RISCV::BI__builtin_riscv_xperm4_64:
       ID = Intrinsic::riscv_xperm4;
       break;
 
     // Zbkb
-    case RISCV::BI__builtin_riscv_brev8:
+    case RISCV::BI__builtin_riscv_brev8_32:
+    case RISCV::BI__builtin_riscv_brev8_64:
       ID = Intrinsic::riscv_brev8;
       break;
     case RISCV::BI__builtin_riscv_zip_32:

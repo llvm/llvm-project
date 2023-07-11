@@ -257,7 +257,8 @@ constexpr const char *RewriteInstance::SectionsToOverwrite[];
 std::vector<std::string> RewriteInstance::DebugSectionsToOverwrite = {
     ".debug_abbrev", ".debug_aranges",  ".debug_line",   ".debug_line_str",
     ".debug_loc",    ".debug_loclists", ".debug_ranges", ".debug_rnglists",
-    ".gdb_index",    ".debug_addr",     ".pseudo_probe"};
+    ".gdb_index",    ".debug_addr",     ".debug_abbrev", ".debug_info",
+    ".debug_types",  ".pseudo_probe"};
 
 const char RewriteInstance::TimerGroupName[] = "rewrite";
 const char RewriteInstance::TimerGroupDesc[] = "Rewrite passes";
@@ -1173,6 +1174,8 @@ void RewriteInstance::discoverFileObjects() {
                << SymName;
         if (BC->HasRelocations)
           errs() << ". The support is limited in relocation mode\n";
+        else
+          errs() << '\n';
       }
       BC->HasSplitFunctions = true;
       BF->IsFragment = true;
@@ -3166,24 +3169,14 @@ void RewriteInstance::preregisterSections() {
 void RewriteInstance::emitAndLink() {
   NamedRegionTimer T("emitAndLink", "emit and link", TimerGroupName,
                      TimerGroupDesc, opts::TimeRewrite);
-  std::error_code EC;
 
-  // This is an object file, which we keep for debugging purposes.
-  // Once we decide it's useless, we should create it in memory.
-  SmallString<128> OutObjectPath;
-  sys::fs::getPotentiallyUniqueTempFileName("output", "o", OutObjectPath);
-  std::unique_ptr<ToolOutputFile> TempOut =
-      std::make_unique<ToolOutputFile>(OutObjectPath, EC, sys::fs::OF_None);
-  check_error(EC, "cannot create output object file");
-
-  std::unique_ptr<buffer_ostream> BOS =
-      std::make_unique<buffer_ostream>(TempOut->os());
-  raw_pwrite_stream *OS = BOS.get();
+  SmallString<0> ObjectBuffer;
+  raw_svector_ostream OS(ObjectBuffer);
 
   // Implicitly MCObjectStreamer takes ownership of MCAsmBackend (MAB)
   // and MCCodeEmitter (MCE). ~MCObjectStreamer() will delete these
   // two instances.
-  std::unique_ptr<MCStreamer> Streamer = BC->createStreamer(*OS);
+  std::unique_ptr<MCStreamer> Streamer = BC->createStreamer(OS);
 
   if (EHFrameSection) {
     if (opts::UseOldText || opts::StrictMode) {
@@ -3204,6 +3197,18 @@ void RewriteInstance::emitAndLink() {
     exit(1);
   }
 
+  if (opts::KeepTmp) {
+    SmallString<128> OutObjectPath;
+    sys::fs::getPotentiallyUniqueTempFileName("output", "o", OutObjectPath);
+    std::error_code EC;
+    raw_fd_ostream FOS(OutObjectPath, EC);
+    check_error(EC, "cannot create output object file");
+    FOS << ObjectBuffer;
+    outs() << "BOLT-INFO: intermediary output object file saved for debugging "
+              "purposes: "
+           << OutObjectPath << "\n";
+  }
+
   ErrorOr<BinarySection &> TextSection =
       BC->getUniqueSectionByName(BC->getMainCodeSectionName());
   if (BC->HasRelocations && TextSection)
@@ -3215,7 +3220,7 @@ void RewriteInstance::emitAndLink() {
 
   // Get output object as ObjectFile.
   std::unique_ptr<MemoryBuffer> ObjectMemBuffer =
-      MemoryBuffer::getMemBuffer(BOS->str(), "in-memory object file", false);
+      MemoryBuffer::getMemBuffer(ObjectBuffer, "in-memory object file", false);
 
   auto EFMM = std::make_unique<ExecutableFileMemoryManager>(*BC);
   EFMM->setNewSecPrefix(getNewSecPrefix());
@@ -3268,13 +3273,6 @@ void RewriteInstance::emitAndLink() {
   if (opts::PrintCacheMetrics) {
     outs() << "BOLT-INFO: cache metrics after emitting functions:\n";
     CacheMetrics::printAll(BC->getSortedFunctions());
-  }
-
-  if (opts::KeepTmp) {
-    TempOut->keep();
-    outs() << "BOLT-INFO: intermediary output object file saved for debugging "
-              "purposes: "
-           << OutObjectPath << "\n";
   }
 }
 

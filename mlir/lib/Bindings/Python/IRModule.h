@@ -1174,14 +1174,14 @@ public:
 
   /// Inserts the given operation into the symbol table. The operation must have
   /// the symbol trait.
-  PyAttribute insert(PyOperationBase &symbol);
+  MlirAttribute insert(PyOperationBase &symbol);
 
   /// Gets and sets the name of a symbol op.
-  static PyAttribute getSymbolName(PyOperationBase &symbol);
+  static MlirAttribute getSymbolName(PyOperationBase &symbol);
   static void setSymbolName(PyOperationBase &symbol, const std::string &name);
 
   /// Gets and sets the visibility of a symbol op.
-  static PyAttribute getVisibility(PyOperationBase &symbol);
+  static MlirAttribute getVisibility(PyOperationBase &symbol);
   static void setVisibility(PyOperationBase &symbol,
                             const std::string &visibility);
 

@@ -84,7 +84,18 @@ typedef struct MlirNamedAttribute MlirNamedAttribute;
 //===----------------------------------------------------------------------===//
 
 /// Creates an MLIR context and transfers its ownership to the caller.
+/// This sets the default multithreading option (enabled).
 MLIR_CAPI_EXPORTED MlirContext mlirContextCreate(void);
+
+/// Creates an MLIR context with an explicit setting of the multithreading
+/// setting and transfers its ownership to the caller.
+MLIR_CAPI_EXPORTED MlirContext
+mlirContextCreateWithThreading(bool threadingEnabled);
+
+/// Creates an MLIR context, setting the multithreading setting explicitly and
+/// pre-loading the dialects from the provided DialectRegistry.
+MLIR_CAPI_EXPORTED MlirContext mlirContextCreateWithRegistry(
+    MlirDialectRegistry registry, bool threadingEnabled);
 
 /// Checks if two contexts are equal.
 MLIR_CAPI_EXPORTED bool mlirContextEqual(MlirContext ctx1, MlirContext ctx2);
@@ -143,6 +154,13 @@ mlirContextLoadAllAvailableDialects(MlirContext context);
 /// dialect.
 MLIR_CAPI_EXPORTED bool mlirContextIsRegisteredOperation(MlirContext context,
                                                          MlirStringRef name);
+
+/// Sets the thread pool of the context explicitly, enabling multithreading in
+/// the process. This API should be used to avoid re-creating thread pools in
+/// long-running applications that perform multiple compilations, see
+/// the C++ documentation for MLIRContext for details.
+MLIR_CAPI_EXPORTED void mlirContextSetThreadPool(MlirContext context,
+                                                 MlirLlvmThreadPool threadPool);
 
 //===----------------------------------------------------------------------===//
 // Dialect API.

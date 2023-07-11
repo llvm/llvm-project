@@ -18065,7 +18065,7 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
     return;
   // Do not mark as used if compiling for the device outside of the target
   // region.
-  if (TUKind != TU_Prefix && LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
+  if (TUKind != TU_Prefix && LangOpts.OpenMP && LangOpts.OpenMPIsTargetDevice &&
       !isInOpenMPDeclareTargetContext() &&
       !isInOpenMPTargetExecutionDirective()) {
     if (!DefinitionRequired)
