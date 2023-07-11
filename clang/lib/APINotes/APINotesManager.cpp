@@ -154,13 +154,13 @@ bool APINotesManager::loadAPINotes(const DirectoryEntry *HeaderDir,
   return true;
 }
 
-const FileEntry *APINotesManager::findAPINotesFile(const DirectoryEntry *directory,
+const FileEntry *APINotesManager::findAPINotesFile(DirectoryEntryRef directory,
                                                    StringRef basename,
                                                    bool wantPublic) {
   FileManager &fileMgr = SourceMgr.getFileManager();
 
   llvm::SmallString<128> path;
-  path += directory->getName();
+  path += directory.getName();
 
   StringRef basenameSuffix = "";
   if (!wantPublic) basenameSuffix = "_private";
@@ -172,10 +172,8 @@ const FileEntry *APINotesManager::findAPINotesFile(const DirectoryEntry *directo
   return file ? *file : nullptr;
 }
 
-const DirectoryEntry *APINotesManager::loadFrameworkAPINotes(
-                        llvm::StringRef FrameworkPath,
-                        llvm::StringRef FrameworkName,
-                        bool Public) {
+OptionalDirectoryEntryRef APINotesManager::loadFrameworkAPINotes(
+    llvm::StringRef FrameworkPath, llvm::StringRef FrameworkName, bool Public) {
   FileManager &FileMgr = SourceMgr.getFileManager();
   
   llvm::SmallString<128> Path;
@@ -196,7 +194,7 @@ const DirectoryEntry *APINotesManager::loadFrameworkAPINotes(
   // Try to open the APINotes file.
   auto APINotesFile = FileMgr.getFile(Path);
   if (!APINotesFile)
-    return nullptr;
+    return std::nullopt;
 
   // Form the path to the corresponding header directory.
   Path.resize(FrameworkNameLength);
@@ -206,13 +204,13 @@ const DirectoryEntry *APINotesManager::loadFrameworkAPINotes(
     llvm::sys::path::append(Path, "PrivateHeaders");
 
   // Try to access the header directory.
-  auto HeaderDir = FileMgr.getDirectory(Path);
+  auto HeaderDir = FileMgr.getDirectoryRef(Path);
   if (!HeaderDir)
-    return nullptr;
+    return std::nullopt;
 
   // Try to load the API notes.
   if (loadAPINotes(*HeaderDir, *APINotesFile))
-    return nullptr;
+    return std::nullopt;
 
   // Success: return the header directory.
   if (Public)
@@ -258,7 +256,7 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
   // First, look relative to the module itself.
   if (lookInModule) {
     // Local function to try loading an API notes file in the given directory.
-    auto tryAPINotes = [&](const DirectoryEntry *dir, bool wantPublic) {
+    auto tryAPINotes = [&](DirectoryEntryRef dir, bool wantPublic) {
       if (auto *file = findAPINotesFile(dir, moduleName, wantPublic)) {
         if (!wantPublic)
           checkPrivateAPINotesName(SourceMgr.getDiagnostics(), file, module);
@@ -284,7 +282,7 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
         unsigned pathLen = path.size();
 
         llvm::sys::path::append(path, "Headers");
-        if (auto apinotesDir = fileMgr.getDirectory(path))
+        if (auto apinotesDir = fileMgr.getDirectoryRef(path))
           tryAPINotes(*apinotesDir, /*wantPublic=*/true);
 
         path.resize(pathLen);
@@ -292,7 +290,7 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
 
       if (module->ModuleMapIsPrivate || hasPrivateSubmodules(module)) {
         llvm::sys::path::append(path, "PrivateHeaders");
-        if (auto privateAPINotesDir = fileMgr.getDirectory(path)) {
+        if (auto privateAPINotesDir = fileMgr.getDirectoryRef(path)) {
           tryAPINotes(*privateAPINotesDir,
                       /*wantPublic=*/module->ModuleMapIsPrivate);
         }
@@ -304,9 +302,9 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
       // Private modules:
       // - Bar.apinotes (except that 'Bar' probably already has the word
       //   "Private" in it in practice)
-      tryAPINotes(module->Directory, /*wantPublic=*/true);
+      tryAPINotes(*module->Directory, /*wantPublic=*/true);
       if (!module->ModuleMapIsPrivate && hasPrivateSubmodules(module))
-        tryAPINotes(module->Directory, /*wantPublic=*/false);
+        tryAPINotes(*module->Directory, /*wantPublic=*/false);
     }
 
     if (!APINotes.empty())
@@ -316,7 +314,7 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
   // Second, look for API notes for this module in the module API
   // notes search paths.
   for (const auto &searchPath : searchPaths) {
-    if (auto searchDir = fileMgr.getDirectory(searchPath)) {
+    if (auto searchDir = fileMgr.getDirectoryRef(searchPath)) {
       if (auto *file = findAPINotesFile(*searchDir, moduleName)) {
         APINotes.push_back(file);
         return APINotes;
@@ -377,28 +375,28 @@ llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocat
   SourceLocation ExpansionLoc = SourceMgr.getExpansionLoc(Loc);
   FileID ID = SourceMgr.getFileID(ExpansionLoc);
   if (ID.isInvalid()) return Results;
-  const FileEntry *File = SourceMgr.getFileEntryForID(ID);
+  OptionalFileEntryRef File = SourceMgr.getFileEntryRefForID(ID);
   if (!File) return Results;
 
   // Look for API notes in the directory corresponding to this file, or one of
   // its its parent directories.
-  const DirectoryEntry *Dir = File->getDir();
+  OptionalDirectoryEntryRef Dir = File->getDir();
   FileManager &FileMgr = SourceMgr.getFileManager();
   llvm::SetVector<const DirectoryEntry *,
                   SmallVector<const DirectoryEntry *, 4>,
                   llvm::SmallPtrSet<const DirectoryEntry *, 4>> DirsVisited;
   do {
     // Look for an API notes reader for this header search directory.
-    auto Known = Readers.find(Dir);
+    auto Known = Readers.find(*Dir);
 
     // If we already know the answer, chase it.
     if (Known != Readers.end()) {
       ++NumDirectoryCacheHits;
 
       // We've been redirected to another directory for answers. Follow it.
-      if (auto OtherDir = Known->second.dyn_cast<const DirectoryEntry *>()) {
-        DirsVisited.insert(Dir);
-        Dir = OtherDir;
+      if (Known->second && Known->second.is<DirectoryEntryRef>()) {
+        DirsVisited.insert(*Dir);
+        Dir = Known->second.get<DirectoryEntryRef>();
         continue;
       }
 
@@ -417,30 +415,30 @@ llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocat
       ++NumFrameworksSearched;
 
       // Look for API notes for both the public and private headers.
-      const DirectoryEntry *PublicDir
-        = loadFrameworkAPINotes(Path, FrameworkName, /*Public=*/true);
-      const DirectoryEntry *PrivateDir
-        = loadFrameworkAPINotes(Path, FrameworkName, /*Public=*/false);
+      OptionalDirectoryEntryRef PublicDir =
+          loadFrameworkAPINotes(Path, FrameworkName, /*Public=*/true);
+      OptionalDirectoryEntryRef PrivateDir =
+          loadFrameworkAPINotes(Path, FrameworkName, /*Public=*/false);
 
       if (PublicDir || PrivateDir) {
         // We found API notes: don't ever look past the framework directory.
-        Readers[Dir] = nullptr;
+        Readers[*Dir] = nullptr;
 
         // Pretend we found the result in the public or private directory,
         // as appropriate. All headers should be in one of those two places,
         // but be defensive here.
         if (!DirsVisited.empty()) {
-          if (DirsVisited.back() == PublicDir) {
+          if (PublicDir && DirsVisited.back() == *PublicDir) {
             DirsVisited.pop_back();
-            Dir = PublicDir;
-          } else if (DirsVisited.back() == PrivateDir) {
+            Dir = *PublicDir;
+          } else if (PrivateDir && DirsVisited.back() == *PrivateDir) {
             DirsVisited.pop_back();
-            Dir = PrivateDir;
+            Dir = *PrivateDir;
           }
         }
 
         // Grab the result.
-        if (auto Reader = Readers[Dir].dyn_cast<APINotesReader *>())
+        if (auto Reader = Readers[*Dir].dyn_cast<APINotesReader *>())
           Results.push_back(Reader);
         break;
       }
@@ -455,9 +453,9 @@ llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocat
       // If there is an API notes file here, try to load it.
       ++NumDirectoriesSearched;
       if (auto APINotesFile = FileMgr.getFile(APINotesPath)) {
-        if (!loadAPINotes(Dir, *APINotesFile)) {
+        if (!loadAPINotes(*Dir, *APINotesFile)) {
           ++NumHeaderAPINotes;
-          if (auto Reader = Readers[Dir].dyn_cast<APINotesReader *>())
+          if (auto Reader = Readers[*Dir].dyn_cast<APINotesReader *>())
             Results.push_back(Reader);
           break;
         }
@@ -465,8 +463,8 @@ llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocat
     }
 
     // We didn't find anything. Look at the parent directory.
-    if (!DirsVisited.insert(Dir)) {
-      Dir = 0;
+    if (!DirsVisited.insert(*Dir)) {
+      Dir = std::nullopt;
       break;
     }
 
@@ -475,10 +473,9 @@ llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocat
       ParentPath = llvm::sys::path::parent_path(ParentPath);
     }
     if (ParentPath.empty()) {
-      Dir = nullptr;
+      Dir = std::nullopt;
     } else {
-      auto DirEntry = FileMgr.getDirectory(ParentPath);
-      Dir = DirEntry ? *DirEntry : nullptr;
+      Dir = FileMgr.getOptionalDirectoryRef(ParentPath);
     }
   } while (Dir);
 
@@ -486,7 +483,7 @@ llvm::SmallVector<APINotesReader *, 2> APINotesManager::findAPINotes(SourceLocat
   // them to the directory we ended on. If no API notes were found, the
   // resulting directory will be NULL, indicating no API notes.
   for (const auto Visited : DirsVisited) {
-    Readers[Visited] = Dir;
+    Readers[Visited] = Dir ? ReaderEntry(*Dir) : ReaderEntry();
   }
 
   return Results;
