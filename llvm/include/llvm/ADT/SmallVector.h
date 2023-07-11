@@ -764,7 +764,7 @@ public:
     iterator I = std::move(E, this->end(), S);
     // Drop the last elts.
     this->destroy_range(I, this->end());
-    this->set_size(I - this->begin());
+    this->set_size(static_cast<size_type>(I - this->begin()));
     return(N);
   }
 
