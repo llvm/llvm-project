@@ -57,7 +57,6 @@ atomic cstdint
 atomic cstdlib
 atomic cstring
 atomic ctime
-atomic iosfwd
 atomic limits
 atomic ratio
 atomic type_traits
@@ -68,7 +67,6 @@ barrier cstddef
 barrier cstdint
 barrier cstring
 barrier ctime
-barrier iosfwd
 barrier iterator
 barrier limits
 barrier memory
@@ -180,7 +178,6 @@ condition_variable cstdlib
 condition_variable cstring
 condition_variable ctime
 condition_variable initializer_list
-condition_variable iosfwd
 condition_variable limits
 condition_variable new
 condition_variable ratio
@@ -463,7 +460,6 @@ latch cstddef
 latch cstdint
 latch cstring
 latch ctime
-latch iosfwd
 latch limits
 latch ratio
 latch type_traits
@@ -600,7 +596,6 @@ numeric ctime
 numeric execution
 numeric functional
 numeric initializer_list
-numeric iosfwd
 numeric iterator
 numeric limits
 numeric new
@@ -738,7 +733,6 @@ semaphore cstddef
 semaphore cstdint
 semaphore cstring
 semaphore ctime
-semaphore iosfwd
 semaphore limits
 semaphore ratio
 semaphore type_traits
@@ -760,7 +754,6 @@ set version
 shared_mutex cerrno
 shared_mutex cstddef
 shared_mutex ctime
-shared_mutex iosfwd
 shared_mutex limits
 shared_mutex ratio
 shared_mutex stdexcept
