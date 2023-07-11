@@ -101,6 +101,9 @@ Operation *TosaDialect::materializeConstant(OpBuilder &builder, Attribute value,
 //===----------------------------------------------------------------------===//
 
 static bool hasZeroDimension(ShapedType shapedType) {
+  if (!shapedType.hasRank())
+    return false;
+
   auto rank = shapedType.getRank();
 
   for (int i = 0; i < rank; i++) {
