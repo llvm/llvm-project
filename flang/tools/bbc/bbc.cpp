@@ -131,7 +131,7 @@ static llvm::cl::opt<bool> enableOpenMP("fopenmp",
                                         llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
-    enableOpenMPDevice("fopenmp-is-device",
+    enableOpenMPDevice("fopenmp-is-target-device",
                        llvm::cl::desc("enable openmp device compilation"),
                        llvm::cl::init(false));
 

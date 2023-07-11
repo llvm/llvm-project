@@ -8,8 +8,6 @@
 
 include "llvm/Target/GlobalISel/Combine.td"
 
-def MipsPostLegalizerCombinerHelper: GICombinerHelper<
-  "MipsGenPostLegalizerCombinerHelper", []> {
-  let DisableRuleOption = "mipspostlegalizercombiner-disable-rule";
+def MipsPostLegalizerCombiner: GICombinerHelper<
+  "MipsPostLegalizerCombinerImpl", []> {
 }
-

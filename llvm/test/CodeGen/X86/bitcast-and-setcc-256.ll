@@ -451,13 +451,13 @@ define i8 @v8i32_or_and(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d, 
 define i8 @v8i32_or_vselect(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
 ; SSE2-SSSE3-LABEL: v8i32_or_vselect:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm3, %xmm1
+; SSE2-SSSE3-NEXT:    por %xmm5, %xmm1
+; SSE2-SSSE3-NEXT:    por %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
-; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm4
-; SSE2-SSSE3-NEXT:    por %xmm0, %xmm4
-; SSE2-SSSE3-NEXT:    packsswb %xmm4, %xmm4
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
+; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    # kill: def $al killed $al killed $eax
 ; SSE2-SSSE3-NEXT:    retq
 ;
@@ -514,10 +514,8 @@ define i8 @v8i32_or_vselect(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2) {
 define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3, i1 %a4) {
 ; SSE2-SSSE3-LABEL: v8i32_or_select:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
+; SSE2-SSSE3-NEXT:    pcmpeqd %xmm1, %xmm3
 ; SSE2-SSSE3-NEXT:    testb $1, %dil
 ; SSE2-SSSE3-NEXT:    jne .LBB7_1
 ; SSE2-SSSE3-NEXT:  # %bb.2:
@@ -528,7 +526,9 @@ define i8 @v8i32_or_select(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32
 ; SSE2-SSSE3-NEXT:    pcmpeqd %xmm4, %xmm0
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-SSSE3-NEXT:  .LBB7_3:
+; SSE2-SSSE3-NEXT:    por %xmm3, %xmm7
 ; SSE2-SSSE3-NEXT:    por %xmm2, %xmm6
+; SSE2-SSSE3-NEXT:    packssdw %xmm7, %xmm6
 ; SSE2-SSSE3-NEXT:    por %xmm0, %xmm6
 ; SSE2-SSSE3-NEXT:    packsswb %xmm6, %xmm6
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax

@@ -875,6 +875,7 @@ define i32 @test_frexp_f64_i32_only_use_exp(double %a) {
 ; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    fstpl (%esp)
 ; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstp %st(0)
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    retl

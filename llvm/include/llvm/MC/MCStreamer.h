@@ -647,6 +647,12 @@ public:
   /// \param Sym - The symbol on the .ref directive.
   virtual void emitXCOFFRefDirective(const MCSymbol *Symbol);
 
+  /// Emit a C_INFO symbol with XCOFF embedded metadata to the .info section.
+  ///
+  /// \param Name - The embedded metadata name
+  /// \param Metadata - The embedded metadata
+  virtual void emitXCOFFCInfoSym(StringRef Name, StringRef Metadata);
+
   /// Emit an ELF .size directive.
   ///
   /// This corresponds to an assembler statement such as:

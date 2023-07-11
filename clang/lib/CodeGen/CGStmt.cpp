@@ -1552,7 +1552,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
   Address BigJumpLoopIvAddr = Address::invalid();
   const VarDecl *LoopVar = nullptr;
   const OMPLoopDirective *BigJumpLoopLD = nullptr;
-  if (CGM.getLangOpts().OpenMPIsDevice &&
+  if (CGM.getLangOpts().OpenMPIsTargetDevice &&
       (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
     const CodeGenModule::OptKernelNestDirectives &Directives =
         CGM.isXteamRedKernel(&S) ? CGM.getXteamRedNestDirs(&S)
@@ -1656,7 +1656,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // a compound statement.
     RunCleanupsScope BodyScope(*this);
 
-    if (CGM.getLangOpts().OpenMPIsDevice &&
+    if (CGM.getLangOpts().OpenMPIsTargetDevice &&
         (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
       EmitBigJumpLoopUpdates(S);
       EmitOMPNoLoopBody(*BigJumpLoopLD);
@@ -1665,7 +1665,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     }
   }
 
-  if (CGM.getLangOpts().OpenMPIsDevice &&
+  if (CGM.getLangOpts().OpenMPIsTargetDevice &&
       (CGM.isXteamRedKernel(&S) || CGM.isBigJumpLoopKernel(&S))) {
     EmitBlock(Continue.getBlock());
     EmitBigJumpLoopInc(

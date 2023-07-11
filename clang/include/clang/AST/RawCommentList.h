@@ -173,7 +173,7 @@ private:
   SourceRange Range;
 
   mutable StringRef RawText;
-  mutable const char *BriefText;
+  mutable const char *BriefText = nullptr;
 
   mutable bool RawTextValid : 1;   ///< True if RawText is valid
   mutable bool BriefTextValid : 1; ///< True if BriefText is valid

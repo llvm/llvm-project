@@ -501,7 +501,7 @@ def i2p_to_p2i: GICombineRule<
   (defs root:$dst, register_matchinfo:$info),
   (match (G_INTTOPTR $t, $ptr),
          (G_PTRTOINT $dst, $t):$mi,
-    [{ ${info} = ${ptr}.getReg(); }]),
+    [{ ${info} = ${ptr}.getReg(); return true; }]),
   (apply [{ Helper.applyCombineP2IToI2P(*${mi}, ${info}); }])
 >;
 
@@ -615,7 +615,7 @@ def fneg_fneg_fold: GICombineRule <
   (defs root:$dst, register_matchinfo:$matchinfo),
   (match (G_FNEG $t, $src),
          (G_FNEG $dst, $t):$mi,
-         [{ ${matchinfo} = ${src}.getReg(); }]),
+         [{ ${matchinfo} = ${src}.getReg(); return true; }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${mi}, ${matchinfo}); }])
 >;
 

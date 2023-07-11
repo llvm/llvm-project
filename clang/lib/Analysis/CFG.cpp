@@ -4152,7 +4152,7 @@ CFGBlock *CFGBuilder::VisitCXXTypeidExpr(CXXTypeidExpr *S, AddStmtChoice asc) {
   //   operand. [...]
   // We add only potentially evaluated statements to the block to avoid
   // CFG generation for unevaluated operands.
-  if (S && !S->isTypeDependent() && S->isPotentiallyEvaluated())
+  if (!S->isTypeDependent() && S->isPotentiallyEvaluated())
     return VisitChildren(S);
 
   // Return block without CFG for unevaluated operands.

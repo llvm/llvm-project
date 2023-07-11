@@ -105,11 +105,11 @@ let isCodeGenOnly = 1 in {
 def MOVFR2GR_S_64 : FP_MOV<0b0000000100010100101101, "movfr2gr.s", GPR, FPR64>;
 def FSEL_D : FP_SEL<0b00001101000000, "fsel", FPR64>;
 } // isCodeGenOnly = 1
-let Constraints = "$dst = $out" in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Constraints = "$dst = $out" in {
 def MOVGR2FRH_W : FPFmtMOV<0b0000000100010100101011, (outs FPR64:$out),
                            (ins FPR64:$dst, GPR:$src), "movgr2frh.w",
                            "$dst, $src">;
-} // Constraints = "$dst = $out"
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0, Constraints = "$dst = $out"
 
 // Common Memory Access Instructions
 def FLD_D : FP_LOAD_2RI12<0b0010101110, "fld.d", FPR64>;

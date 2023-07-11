@@ -250,6 +250,9 @@ public:
   /// Parse an attribute dictionary.
   ParseResult parseAttributeDict(NamedAttrList &attributes);
 
+  /// Parse a distinct attribute.
+  Attribute parseDistinctAttr(Type type);
+
   /// Parse an extended attribute.
   Attribute parseExtendedAttr(Type type);
 

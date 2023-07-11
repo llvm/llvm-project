@@ -46,6 +46,21 @@ static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
   return builder.create<vector::BroadcastOp>(loc, newVecType, vec);
 }
 
+/// Extend the rank of a vector Value by `addedRanks` by adding inner unit
+/// dimensions.
+static Value extendMaskRank(OpBuilder &builder, Location loc, Value vec,
+                            int64_t addedRank) {
+  Value broadcasted = extendVectorRank(builder, loc, vec, addedRank);
+  SmallVector<int64_t> permutation;
+  for (int64_t i = addedRank,
+               e = broadcasted.getType().cast<VectorType>().getRank();
+       i < e; ++i)
+    permutation.push_back(i);
+  for (int64_t i = 0; i < addedRank; ++i)
+    permutation.push_back(i);
+  return builder.create<vector::TransposeOp>(loc, broadcasted, permutation);
+}
+
 //===----------------------------------------------------------------------===//
 // populateVectorTransferPermutationMapLoweringPatterns
 //===----------------------------------------------------------------------===//
@@ -246,9 +261,14 @@ struct TransferWriteNonPermutationLowering
       missingInnerDim.push_back(i);
       exprs.push_back(rewriter.getAffineDimExpr(i));
     }
-    // Add unit dims at the beginning of the shape.
+    // Vector: add unit dims at the beginning of the shape.
     Value newVec = extendVectorRank(rewriter, op.getLoc(), op.getVector(),
                                     missingInnerDim.size());
+    // Mask: add unit dims at the end of the shape.
+    Value newMask;
+    if (op.getMask())
+      newMask = extendMaskRank(rewriter, op.getLoc(), op.getMask(),
+                               missingInnerDim.size());
     exprs.append(map.getResults().begin(), map.getResults().end());
     AffineMap newMap =
         AffineMap::get(map.getNumDims(), 0, exprs, op.getContext());
@@ -263,7 +283,7 @@ struct TransferWriteNonPermutationLowering
     }
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         op, newVec, op.getSource(), op.getIndices(), AffineMapAttr::get(newMap),
-        op.getMask(), newInBoundsAttr);
+        newMask, newInBoundsAttr);
     return success();
   }
 };

@@ -1,6 +1,6 @@
 // RUN: fir-opt --fir-to-llvm-ir %s | FileCheck %s
 
-module attributes {omp.is_device = false} {
+module attributes {omp.is_target_device = false} {
 
   // CHECK: llvm.mlir.global external @_QMtest_0Earray_1d(dense<[1, 2, 3]> : tensor<3xi32>) {{{.*}}omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>{{.*}}} : !llvm.array<3 x i32>
   fir.global @_QMtest_0Earray_1d(dense<[1, 2, 3]> : tensor<3xi32>) {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link)>} : !fir.array<3xi32>

@@ -410,7 +410,7 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
   // The Xteam reduction variable capture must happen after all other captures.
   const ForStmt *FStmt = CGM.getSingleForStmt(XteamRedNestKey);
   if (FStmt && CGM.isXteamRedKernel(FStmt)) {
-    assert(!CGM.getLangOpts().OpenMPIsDevice && "Expecting host CG");
+    assert(!CGM.getLangOpts().OpenMPIsTargetDevice && "Expecting host CG");
     CodeGenModule::XteamRedVarMap &XteamRVM = CGM.getXteamRedVarMap(FStmt);
     for (auto &XteamRVElem : XteamRVM)
       InitializeXteamRedCapturedVars(CapturedVars,
@@ -425,7 +425,7 @@ static Address castValueFromUintptr(CodeGenFunction &CGF, SourceLocation Loc,
 
   Address Addr = AddrLV.getAddress(CGF);
   if (Ctx.getTargetInfo().getTriple().isAMDGCN() &&
-      CGF.CGM.getLangOpts().OpenMPIsDevice) {
+      CGF.CGM.getLangOpts().OpenMPIsTargetDevice) {
     auto *Ty = CGF.ConvertType(Ctx.getPointerType(DstType));
     auto *PTy = dyn_cast<llvm::PointerType>(Ty);
     // For device path, add addrspacecast if needed before emitscalar conversion
@@ -543,7 +543,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
       ArgType = getCanonicalParamType(Ctx, ArgType);
 
     // Set the IPD QualType for kernel args to be in device AS (1)
-    if (CapVar && CGM.getLangOpts().OpenMPIsDevice && argsNeedAddrSpace &&
+    if (CapVar && CGM.getLangOpts().OpenMPIsTargetDevice && argsNeedAddrSpace &&
         (Ctx.getTargetInfo().getTriple().isAMDGCN())) {
       const clang::Type *ty = ArgType.getTypePtr();
       if (ty->isAnyPointerType() || ty->isReferenceType()) {
@@ -607,7 +607,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
   }
 
   SmallVector<CanQualType, 16> argCanQualTypes;
-  if (CGM.getLangOpts().OpenMPIsDevice && argsNeedAddrSpace &&
+  if (CGM.getLangOpts().OpenMPIsTargetDevice && argsNeedAddrSpace &&
       (Ctx.getTargetInfo().getTriple().isAMDGCN())) {
     // We need Canonical Param Types WITH addrspace qualifier
     for (const auto &Arg : TargetArgs) {
@@ -623,7 +623,7 @@ static llvm::Function *emitOutlinedFunctionPrologue(
 
   // Create the function declaration.
   const CGFunctionInfo &FuncInfo =
-      (CGM.getLangOpts().OpenMPIsDevice && argsNeedAddrSpace &&
+      (CGM.getLangOpts().OpenMPIsTargetDevice && argsNeedAddrSpace &&
        (Ctx.getTargetInfo().getTriple().isAMDGCN()))
           ? CGM.getTypes().arrangeLLVMFunctionInfo(
                 Ctx.VoidTy, false, false, argCanQualTypes,
@@ -754,7 +754,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
   if (OptKernelKey)
     FStmt = CGM.getSingleForStmt(OptKernelKey);
   bool isXteamKernel = false;
-  if (CGM.getLangOpts().OpenMPIsDevice)
+  if (CGM.getLangOpts().OpenMPIsTargetDevice)
     isXteamKernel = FStmt && CGM.isXteamRedKernel(FStmt);
   else {
     // If Xteam found, use it. Otherwise, query again. This is required to make
@@ -791,7 +791,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
   PGO.assignRegionCounters(GlobalDecl(CD), F);
 
   // Generate specialized kernels for device only
-  if (CGM.getLangOpts().OpenMPIsDevice && D.hasAssociatedStmt() &&
+  if (CGM.getLangOpts().OpenMPIsTargetDevice && D.hasAssociatedStmt() &&
       ((FStmt && CGM.isNoLoopKernel(FStmt)) ||
        (FStmt && CGM.isBigJumpLoopKernel(FStmt)))) {
     if (CGM.isNoLoopKernel(FStmt))
@@ -804,7 +804,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
           D, FStmt,
           llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_BIG_JUMP_LOOP,
           Loc, /*Args=*/nullptr);
-  } else if (CGM.getLangOpts().OpenMPIsDevice && isXteamKernel) {
+  } else if (CGM.getLangOpts().OpenMPIsTargetDevice && isXteamKernel) {
     EmitOptKernel(D, FStmt,
                   llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_XTEAM_RED,
                   Loc, &Args);
@@ -980,7 +980,7 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
   if (!HaveInsertPoint())
     return false;
   bool DeviceConstTarget =
-      getLangOpts().OpenMPIsDevice &&
+      getLangOpts().OpenMPIsTargetDevice &&
       isOpenMPTargetExecutionDirective(D.getDirectiveKind());
   bool FirstprivateIsLastprivate = false;
   llvm::DenseMap<const VarDecl *, OpenMPLastprivateModifier> Lastprivates;
@@ -6324,7 +6324,7 @@ static bool canUseAMDGPUFastFPAtomics(CodeGenFunction &CGF, LValue X,
 
   return Context.getTargetInfo().getTriple().isAMDGCN() &&
          CGF.CGM.getOpenMPRuntime().supportFastFPAtomics() &&
-         CGF.CGM.getLangOpts().OpenMPIsDevice &&
+         CGF.CGM.getLangOpts().OpenMPIsTargetDevice &&
          userRequestsAMDGPUFastFPAtomics &&
          (addOpHasAMDGPUFastVersion || minMaxOpHasAMDGPUFastVersion) &&
          X.isSimple();
@@ -6862,7 +6862,7 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
   CodeGenModule &CGM = CGF.CGM;
 
   // On device emit this construct as inlined code.
-  if (CGM.getLangOpts().OpenMPIsDevice) {
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
     OMPLexicalScope Scope(CGF, S, OMPD_target);
     CGM.getOpenMPRuntime().emitInlinedDirective(
         CGF, OMPD_target, [&S](CodeGenFunction &CGF, PrePostActionTy &) {
@@ -8234,7 +8234,7 @@ static void emitTargetTeamsGenericLoopRegionAsParallel(
   DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
       CGF.CGM.emitTargetTeamsLoopCodegenStatus(
           TTL_CODEGEN_TYPE " as parallel for", S,
-          CGF.CGM.getLangOpts().OpenMPIsDevice));
+          CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute_parallel_for,
                               CodeGenTeams);
   emitPostUpdateForReductionClause(CGF, S,
@@ -8264,7 +8264,7 @@ static void emitTargetTeamsGenericLoopRegionAsDistribute(
   DEBUG_WITH_TYPE(TTL_CODEGEN_TYPE,
       CGF.CGM.emitTargetTeamsLoopCodegenStatus(
           TTL_CODEGEN_TYPE " as distribute", S,
-          CGF.CGM.getLangOpts().OpenMPIsDevice));
+          CGF.CGM.getLangOpts().OpenMPIsTargetDevice));
   emitCommonOMPTeamsDirective(CGF, S, OMPD_distribute, CodeGen);
   emitPostUpdateForReductionClause(CGF, S,
                                    [](CodeGenFunction &) { return nullptr; });

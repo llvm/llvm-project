@@ -14345,10 +14345,10 @@ EmulateInstructionARM::GetInstructionCondition() {
   return cond;
 }
 
-bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
+bool EmulateInstructionARM::TestEmulation(Stream &out_stream, ArchSpec &arch,
                                           OptionValueDictionary *test_data) {
   if (!test_data) {
-    out_stream->Printf("TestEmulation: Missing test data.\n");
+    out_stream.Printf("TestEmulation: Missing test data.\n");
     return false;
   }
 
@@ -14361,7 +14361,7 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
   uint32_t test_opcode;
   if ((value_sp.get() == nullptr) ||
       (value_sp->GetType() != OptionValue::eTypeUInt64)) {
-    out_stream->Printf("TestEmulation: Error reading opcode from test file.\n");
+    out_stream.Printf("TestEmulation: Error reading opcode from test file.\n");
     return false;
   }
   test_opcode = value_sp->GetValueAs<uint64_t>().value_or(0);
@@ -14377,7 +14377,7 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
     m_opcode_mode = eModeARM;
     m_opcode.SetOpcode32(test_opcode, endian::InlHostByteOrder());
   } else {
-    out_stream->Printf("TestEmulation:  Invalid arch.\n");
+    out_stream.Printf("TestEmulation:  Invalid arch.\n");
     return false;
   }
 
@@ -14387,26 +14387,26 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
   value_sp = test_data->GetValueForKey(before_key);
   if ((value_sp.get() == nullptr) ||
       (value_sp->GetType() != OptionValue::eTypeDictionary)) {
-    out_stream->Printf("TestEmulation:  Failed to find 'before' state.\n");
+    out_stream.Printf("TestEmulation:  Failed to find 'before' state.\n");
     return false;
   }
 
   OptionValueDictionary *state_dictionary = value_sp->GetAsDictionary();
   if (!before_state.LoadStateFromDictionary(state_dictionary)) {
-    out_stream->Printf("TestEmulation:  Failed loading 'before' state.\n");
+    out_stream.Printf("TestEmulation:  Failed loading 'before' state.\n");
     return false;
   }
 
   value_sp = test_data->GetValueForKey(after_key);
   if ((value_sp.get() == nullptr) ||
       (value_sp->GetType() != OptionValue::eTypeDictionary)) {
-    out_stream->Printf("TestEmulation:  Failed to find 'after' state.\n");
+    out_stream.Printf("TestEmulation:  Failed to find 'after' state.\n");
     return false;
   }
 
   state_dictionary = value_sp->GetAsDictionary();
   if (!after_state.LoadStateFromDictionary(state_dictionary)) {
-    out_stream->Printf("TestEmulation: Failed loading 'after' state.\n");
+    out_stream.Printf("TestEmulation: Failed loading 'after' state.\n");
     return false;
   }
 
@@ -14418,14 +14418,14 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
 
   bool success = EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC);
   if (!success) {
-    out_stream->Printf("TestEmulation:  EvaluateInstruction() failed.\n");
+    out_stream.Printf("TestEmulation:  EvaluateInstruction() failed.\n");
     return false;
   }
 
   success = before_state.CompareState(after_state, out_stream);
   if (!success)
-    out_stream->Printf(
-        "TestEmulation:  State after emulation does not match 'after' state.\n");
+    out_stream.Printf("TestEmulation:  State after emulation does not match "
+                      "'after' state.\n");
 
   return success;
 }

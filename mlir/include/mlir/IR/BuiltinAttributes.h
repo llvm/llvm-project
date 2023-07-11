@@ -1001,6 +1001,46 @@ auto SparseElementsAttr::try_value_begin_impl(OverloadToken<T>) const
 }
 
 //===----------------------------------------------------------------------===//
+// DistinctAttr
+//===----------------------------------------------------------------------===//
+
+namespace detail {
+struct DistinctAttrStorage;
+class DistinctAttributeUniquer;
+} // namespace detail
+
+/// An attribute that associates a referenced attribute with a unique
+/// identifier. Every call to the create function allocates a new distinct
+/// attribute instance. The address of the attribute instance serves as a
+/// temporary identifier. Similar to the names of SSA values, the final
+/// identifiers are generated during pretty printing. This delayed numbering
+/// ensures the printed identifiers are deterministic even if multiple distinct
+/// attribute instances are created in-parallel.
+///
+/// Examples:
+///
+/// #distinct = distinct[0]<42.0 : f32>
+/// #distinct1 = distinct[1]<42.0 : f32>
+/// #distinct2 = distinct[2]<array<i32: 10, 42>>
+///
+/// NOTE: The distinct attribute cannot be defined using ODS since it uses a
+/// custom distinct attribute uniquer that cannot be set from ODS.
+class DistinctAttr
+    : public detail::StorageUserBase<DistinctAttr, Attribute,
+                                     detail::DistinctAttrStorage,
+                                     detail::DistinctAttributeUniquer> {
+public:
+  using Base::Base;
+
+  /// Returns the referenced attribute.
+  Attribute getReferencedAttr() const;
+
+  /// Creates a distinct attribute that associates a referenced attribute with a
+  /// unique identifier.
+  static DistinctAttr create(Attribute referencedAttr);
+};
+
+//===----------------------------------------------------------------------===//
 // StringAttr
 //===----------------------------------------------------------------------===//
 

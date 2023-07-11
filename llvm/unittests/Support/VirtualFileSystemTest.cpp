@@ -2580,6 +2580,7 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
   Lower->addSymlink("/link");
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
       "{ 'use-external-names': false,\n"
+      "  'case-sensitive': false,\n"
       "  'roots': [\n"
       "{\n"
       "  'type': 'directory',\n"
@@ -2588,6 +2589,11 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
       "                  'type': 'file',\n"
       "                  'name': 'bar',\n"
       "                  'external-contents': '/link'\n"
+      "                },\n"
+      "                {\n"
+      "                  'type': 'directory',\n"
+      "                  'name': 'baz',\n"
+      "                  'contents': []\n"
       "                }\n"
       "              ]\n"
       "},\n"
@@ -2610,9 +2616,9 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
   EXPECT_FALSE(FS->getRealPath("//root/bar", RealPath));
   EXPECT_EQ(RealPath.str(), "/symlink");
 
-  // Directories should fall back to the underlying file system is possible.
-  EXPECT_FALSE(FS->getRealPath("//dir/", RealPath));
-  EXPECT_EQ(RealPath.str(), "//dir/");
+  // Directories should return the virtual path as written in the definition.
+  EXPECT_FALSE(FS->getRealPath("//ROOT/baz", RealPath));
+  EXPECT_EQ(RealPath.str(), "//root/baz");
 
   // Try a non-existing file.
   EXPECT_EQ(FS->getRealPath("/non_existing", RealPath),

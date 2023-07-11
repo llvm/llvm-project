@@ -710,6 +710,21 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVMToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertNVVMToLLVMPass : Pass<"convert-nvvm-to-llvm"> {
+  let summary = "Convert NVVM dialect to LLVM dialect";
+  let description = [{
+    This pass generates inline assembly for the NVVM ops which is not 
+    implemented in LLVM core.
+  }];
+  let dependentDialects = [
+    "NVVM::NVVMDialect",
+  ];  
+}
+
+//===----------------------------------------------------------------------===//
 // NVGPUToNVVM
 //===----------------------------------------------------------------------===//
 

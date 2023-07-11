@@ -83,7 +83,7 @@ public:
 
   CodeGenerator *getCodeGenerator() const;
 
-  BackendConsumer *BEConsumer;
+  BackendConsumer *BEConsumer = nullptr;
 };
 
 class EmitAssemblyAction : public CodeGenAction {

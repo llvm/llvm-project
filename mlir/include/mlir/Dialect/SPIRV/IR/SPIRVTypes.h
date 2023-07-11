@@ -27,7 +27,7 @@ namespace spirv {
 
 namespace detail {
 struct ArrayTypeStorage;
-struct CooperativeMatrixTypeStorage;
+struct CooperativeMatrixNVTypeStorage;
 struct ImageTypeStorage;
 struct JointMatrixTypeStorage;
 struct MatrixTypeStorage;
@@ -398,10 +398,10 @@ public:
 llvm::hash_code
 hash_value(const StructType::MemberDecorationInfo &memberDecorationInfo);
 
-// SPIR-V cooperative matrix type
+// SPIR-V NV cooperative matrix type
 class CooperativeMatrixNVType
     : public Type::TypeBase<CooperativeMatrixNVType, CompositeType,
-                            detail::CooperativeMatrixTypeStorage> {
+                            detail::CooperativeMatrixNVTypeStorage> {
 public:
   using Base::Base;
 
@@ -409,11 +409,11 @@ public:
                                      unsigned rows, unsigned columns);
   Type getElementType() const;
 
-  /// Return the scope of the cooperative matrix.
+  /// Returns the scope of the matrix.
   Scope getScope() const;
-  /// return the number of rows of the matrix.
+  /// Returns the number of rows of the matrix.
   unsigned getRows() const;
-  /// return the number of columns of the matrix.
+  /// Returns the number of columns of the matrix.
   unsigned getColumns() const;
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,

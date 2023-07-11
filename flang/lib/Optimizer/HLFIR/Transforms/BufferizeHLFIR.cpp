@@ -439,7 +439,7 @@ struct AssociateOpConversion
     // that was bufferized, re-use the storage.
     // Otherwise, create a temp and assign the storage to it.
     if (!isTrivialValue && allOtherUsesAreSafeForAssociate(
-                               associate.getSource(), associate.getOperation(),
+                               adaptor.getSource(), associate.getOperation(),
                                getEndAssociate(associate))) {
       // Re-use hlfir.expr buffer if this is the only use of the hlfir.expr
       // outside of the hlfir.destroy. Take on the cleaning-up responsibility
@@ -459,7 +459,19 @@ struct AssociateOpConversion
       replaceWith(temp, temp, mustFree);
       return mlir::success();
     }
-    TODO(loc, "hlfir.associate of hlfir.expr with more than one use");
+    // non-trivial value with more than one use. We will have to make a copy and
+    // use that
+    hlfir::Entity source = hlfir::Entity{adaptor.getSource()};
+    auto [temp, cleanup] = createTempFromMold(loc, builder, source);
+    builder.create<hlfir::AssignOp>(loc, source, temp, /*reassoc=*/false,
+                                    /*keep_lhs_length_if_realloc=*/false,
+                                    /*temporary_lhs=*/true);
+    mlir::Value bufferTuple =
+        packageBufferizedExpr(loc, builder, temp, cleanup);
+    bufferizedExpr = getBufferizedExprStorage(bufferTuple);
+    replaceWith(bufferizedExpr, hlfir::Entity{bufferizedExpr}.getFirBase(),
+                getBufferizedExprMustFreeFlag(bufferTuple));
+    return mlir::success();
   }
 };
 

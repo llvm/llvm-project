@@ -126,6 +126,20 @@ module @TestType attributes {
 } {}
 
 //===----------------------------------------------------------------------===//
+// DistinctAttr
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestDistinct
+module @TestDistinct attributes {
+  // CHECK: bytecode.distinct = distinct[0]<42 : i32>
+  // CHECK: bytecode.distinct2 = distinct[0]<42 : i32>
+  // CHECK: bytecode.distinct3 = distinct[1]<42 : i32>
+  bytecode.distinct = distinct[0]<42 : i32>,
+  bytecode.distinct2 = distinct[0]<42 : i32>,
+  bytecode.distinct3 = distinct[1]<42 : i32>
+} {}
+
+//===----------------------------------------------------------------------===//
 // CallSiteLoc
 //===----------------------------------------------------------------------===//
 
