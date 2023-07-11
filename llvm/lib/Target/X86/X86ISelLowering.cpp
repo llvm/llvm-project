@@ -52991,7 +52991,7 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
       }
     }
     if (const auto *CF = dyn_cast<ConstantFP>(c))
-      return CF->isNegativeZeroValue();
+      return CF->getType()->isFloatTy() && CF->isNegativeZeroValue();
     return false;
   };
   auto combineConjugation = [&](SDValue &r) {
