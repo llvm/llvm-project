@@ -194,7 +194,7 @@ PlatformDarwin::PutFile(const lldb_private::FileSpec &source,
 }
 
 FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
-    Target *target, Module &module, Stream *feedback_stream) {
+    Target *target, Module &module, Stream &feedback_stream) {
   FileSpecList file_list;
   if (target &&
       target->GetDebugger().GetScriptLanguage() == eScriptLanguagePython) {
@@ -266,33 +266,31 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
               // if we did some replacements of reserved characters, and a
               // file with the untampered name exists, then warn the user
               // that the file as-is shall not be loaded
-              if (feedback_stream) {
-                if (module_basename != original_module_basename &&
-                    FileSystem::Instance().Exists(orig_script_fspec)) {
-                  const char *reason_for_complaint =
-                      was_keyword ? "conflicts with a keyword"
-                                  : "contains reserved characters";
-                  if (FileSystem::Instance().Exists(script_fspec))
-                    feedback_stream->Printf(
-                        "warning: the symbol file '%s' contains a debug "
-                        "script. However, its name"
-                        " '%s' %s and as such cannot be loaded. LLDB will"
-                        " load '%s' instead. Consider removing the file with "
-                        "the malformed name to"
-                        " eliminate this warning.\n",
-                        symfile_spec.GetPath().c_str(),
-                        original_path_string.GetData(), reason_for_complaint,
-                        path_string.GetData());
-                  else
-                    feedback_stream->Printf(
-                        "warning: the symbol file '%s' contains a debug "
-                        "script. However, its name"
-                        " %s and as such cannot be loaded. If you intend"
-                        " to have this script loaded, please rename '%s' to "
-                        "'%s' and retry.\n",
-                        symfile_spec.GetPath().c_str(), reason_for_complaint,
-                        original_path_string.GetData(), path_string.GetData());
-                }
+              if (module_basename != original_module_basename &&
+                  FileSystem::Instance().Exists(orig_script_fspec)) {
+                const char *reason_for_complaint =
+                    was_keyword ? "conflicts with a keyword"
+                                : "contains reserved characters";
+                if (FileSystem::Instance().Exists(script_fspec))
+                  feedback_stream.Printf(
+                      "warning: the symbol file '%s' contains a debug "
+                      "script. However, its name"
+                      " '%s' %s and as such cannot be loaded. LLDB will"
+                      " load '%s' instead. Consider removing the file with "
+                      "the malformed name to"
+                      " eliminate this warning.\n",
+                      symfile_spec.GetPath().c_str(),
+                      original_path_string.GetData(), reason_for_complaint,
+                      path_string.GetData());
+                else
+                  feedback_stream.Printf(
+                      "warning: the symbol file '%s' contains a debug "
+                      "script. However, its name"
+                      " %s and as such cannot be loaded. If you intend"
+                      " to have this script loaded, please rename '%s' to "
+                      "'%s' and retry.\n",
+                      symfile_spec.GetPath().c_str(), reason_for_complaint,
+                      original_path_string.GetData(), path_string.GetData());
               }
 
               if (FileSystem::Instance().Exists(script_fspec)) {
