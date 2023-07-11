@@ -17,6 +17,7 @@
 #define LLVM_ADT_OPTIONAL_H
 
 #include <optional>
+#include "llvm/ADT/None.h"
 
 namespace llvm {
 // Legacy alias of llvm::Optional to std::optional.
