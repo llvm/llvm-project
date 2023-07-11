@@ -1284,28 +1284,24 @@ entry:
 define <8 x i16> @trunc2x4i64_8i16(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2-SSSE3-LABEL: trunc2x4i64_8i16:
 ; SSE2-SSSE3:       # %bb.0: # %entry
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm4 = xmm0[0,2,2,3,4,5,6,7]
-; SSE2-SSSE3-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm1 = xmm0[0,1,0,2,4,5,6,7]
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
-; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,0,2,4,5,6,7]
-; SSE2-SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-SSSE3-NEXT:    movsd {{.*#+}} xmm0 = xmm4[0],xmm0[1]
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; SSE2-SSSE3-NEXT:    pslld $16, %xmm0
+; SSE2-SSSE3-NEXT:    psrad $16, %xmm0
+; SSE2-SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[0,2]
+; SSE2-SSSE3-NEXT:    pslld $16, %xmm2
+; SSE2-SSSE3-NEXT:    psrad $16, %xmm2
+; SSE2-SSSE3-NEXT:    packssdw %xmm2, %xmm0
 ; SSE2-SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc2x4i64_8i16:
 ; SSE41:       # %bb.0: # %entry
 ; SSE41-NEXT:    pxor %xmm4, %xmm4
-; SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0],xmm4[1,2,3],xmm3[4],xmm4[5,6,7]
-; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0],xmm4[1,2,3],xmm2[4],xmm4[5,6,7]
-; SSE41-NEXT:    packusdw %xmm3, %xmm2
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0],xmm4[1,2,3],xmm1[4],xmm4[5,6,7]
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm4[1,2,3],xmm0[4],xmm4[5,6,7]
 ; SSE41-NEXT:    packusdw %xmm1, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0],xmm4[1,2,3],xmm3[4],xmm4[5,6,7]
+; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0],xmm4[1,2,3],xmm2[4],xmm4[5,6,7]
+; SSE41-NEXT:    packusdw %xmm3, %xmm2
 ; SSE41-NEXT:    packusdw %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
