@@ -127,6 +127,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           Ctx.reportError(
               SMLoc(),
               Twine("Wasm globals should only be accessed symbolically!"));
+          break;
         default:
           encodeULEB128(uint64_t(MO.getImm()), OS);
         }
