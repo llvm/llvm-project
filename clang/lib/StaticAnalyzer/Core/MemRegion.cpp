@@ -1077,13 +1077,16 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
     }
   }
 
-  return getSubRegion<NonParamVarRegion>(D, sReg);
+  return getNonParamVarRegion(D, sReg);
 }
 
 const NonParamVarRegion *
 MemRegionManager::getNonParamVarRegion(const VarDecl *D,
                                        const MemRegion *superR) {
+  // Prefer the definition over the canonical decl as the canonical form.
   D = D->getCanonicalDecl();
+  if (const VarDecl *Def = D->getDefinition())
+    D = Def;
   return getSubRegion<NonParamVarRegion>(D, superR);
 }
 
