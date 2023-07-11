@@ -65,8 +65,8 @@ func.func @memref_load_i4_zero_rank() {
 // CHECK-NEXT:    %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]], %[[STRIDES:.*]] = memref.extract_strided_metadata %[[M]] : memref<4xi8> -> memref<i8>, index, index, index
 // CHECK-NEXT:    %[[INDEX:.*]] = affine.apply #[[$MAP0]]()[%[[ARG]], %[[STRIDES]]]
 // CHECK-NEXT:    %[[AOFF:.*]] = affine.apply #[[$MAP1]]()[%[[OFFSET]]]
-// CHECK-NEXT:    %[[CAST:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[AOFF]]], sizes: [%[[SIZES]]], strides: [%[[STRIDES]]] : memref<i8> to memref<4xi8, strided<[?], offset: ?>>
-// CHECK-NEXT:    %[[LOAD:.*]] = memref.load %[[CAST]][%[[INDEX]]] : memref<4xi8, strided<[?], offset: ?>>
+// CHECK-NEXT:    %[[CAST:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[AOFF]]], sizes: [%[[SIZES]]], strides: [%[[STRIDES]]] : memref<i8> to memref<4xi8, strided<[1], offset: ?>>
+// CHECK-NEXT:    %[[LOAD:.*]] = memref.load %[[CAST]][%[[INDEX]]] : memref<4xi8, strided<[1], offset: ?>>
 // CHECK-NEXT:    %[[I:.*]] = arith.index_castui %[[ARG]] : index to i8
 // CHECK-NEXT:    %[[C2:.*]] = arith.constant 2 : i8
 // CHECK-NEXT:    %[[C4:.*]] = arith.constant 4 : i8
@@ -90,8 +90,8 @@ func.func @memref_load_i4(%arg0: index) {
 // CHECK-NEXT:    %[[INDEX:.*]] = affine.apply #[[$MAP2]]()[%[[ARG0]], %[[STRIDES]]#0, %[[ARG1]], %[[STRIDES]]#1]
 // CHECK-NEXT:    %[[LSIZE:.*]] = affine.apply #[[$MAP3]]()[%[[SIZES]]#0, %[[SIZES]]#1]
 // CHECK-NEXT:    %[[AOFF:.*]] = affine.apply #[[$MAP1]]()[%[[OFFSET]]]
-// CHECK-NEXT:    %[[CAST:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[AOFF]]], sizes: [%[[LSIZE]]], strides: [%[[STRIDES]]#1] : memref<i8> to memref<512xi8, strided<[?], offset: ?>>
-// CHECK-NEXT:    %[[LOAD:.*]] = memref.load %[[CAST]][%[[INDEX]]] : memref<512xi8, strided<[?], offset: ?>>
+// CHECK-NEXT:    %[[CAST:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[AOFF]]], sizes: [%[[LSIZE]]], strides: [%[[STRIDES]]#1] : memref<i8> to memref<512xi8, strided<[1], offset: ?>>
+// CHECK-NEXT:    %[[LOAD:.*]] = memref.load %[[CAST]][%[[INDEX]]] : memref<512xi8, strided<[1], offset: ?>>
 // CHECK-NEXT:    %[[I:.*]] = arith.index_castui %[[ARG1]] : index to i8
 // CHECK-NEXT:    %[[C2:.*]] = arith.constant 2 : i8
 // CHECK-NEXT:    %[[C4:.*]] = arith.constant 4 : i8
