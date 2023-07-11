@@ -580,8 +580,8 @@ define <vscale x 16 x i64> @add_stepvector_nxv16i64() {
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vid.v v8
 ; RV32-NEXT:    vadd.vv v8, v8, v8
@@ -591,11 +591,11 @@ define <vscale x 16 x i64> @add_stepvector_nxv16i64() {
 ;
 ; RV64-LABEL: add_stepvector_nxv16i64:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    slli a0, a0, 1
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; RV64-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vid.v v8
 ; RV64-NEXT:    vadd.vv v8, v8, v8
+; RV64-NEXT:    csrr a0, vlenb
+; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    vadd.vx v16, v8, a0
 ; RV64-NEXT:    ret
 entry:
