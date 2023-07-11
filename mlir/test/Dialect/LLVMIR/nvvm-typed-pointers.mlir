@@ -11,10 +11,10 @@ func.func @nvvm_wmma_load_tf32(%arg0: !llvm.ptr<i32>, %arg1 : i32) -> !llvm.stru
 
 // CHECK-LABEL: @cp_async
 llvm.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
-// CHECK:  nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16
-  nvvm.cp.async.shared.global %arg0, %arg1, 16 : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
-// CHECK:  nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16 {bypass_l1}
-  nvvm.cp.async.shared.global %arg0, %arg1, 16 {bypass_l1} : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+// CHECK:  nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, cache =  ca
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache=ca : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+// CHECK:  nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, cache =  cg 
+  nvvm.cp.async.shared.global %arg0, %arg1, 16, cache=cg : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
 // CHECK: nvvm.cp.async.commit.group
   nvvm.cp.async.commit.group
 // CHECK: nvvm.cp.async.wait.group 0
