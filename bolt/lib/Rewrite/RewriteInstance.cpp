@@ -257,7 +257,8 @@ constexpr const char *RewriteInstance::SectionsToOverwrite[];
 std::vector<std::string> RewriteInstance::DebugSectionsToOverwrite = {
     ".debug_abbrev", ".debug_aranges",  ".debug_line",   ".debug_line_str",
     ".debug_loc",    ".debug_loclists", ".debug_ranges", ".debug_rnglists",
-    ".gdb_index",    ".debug_addr",     ".pseudo_probe"};
+    ".gdb_index",    ".debug_addr",     ".debug_abbrev", ".debug_info",
+    ".debug_types",  ".pseudo_probe"};
 
 const char RewriteInstance::TimerGroupName[] = "rewrite";
 const char RewriteInstance::TimerGroupDesc[] = "Rewrite passes";

@@ -15,6 +15,7 @@
 #define BOLT_CORE_DEBUG_DATA_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/SMLoc.h"
@@ -34,6 +35,7 @@ namespace llvm {
 
 namespace bolt {
 
+class DIEBuilder;
 struct AttrInfo {
   DWARFFormValue V;
   const DWARFAbbreviationDeclaration *AbbrevDecl;
@@ -497,13 +499,11 @@ public:
   virtual ~DebugLocWriter(){};
 
   /// Writes out location lists and stores internal patches.
-  virtual void addList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
-                       DebugInfoBinaryPatcher &DebugInfoPatcher,
-                       DebugAbbrevWriter &AbbrevWriter);
+  virtual void addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
+                       DebugLocationsVector &LocList);
 
   /// Writes out locations in to a local buffer, and adds Debug Info patches.
-  virtual void finalize(DebugInfoBinaryPatcher &DebugInfoPatcher,
-                        DebugAbbrevWriter &AbbrevWriter);
+  virtual void finalize(DIEBuilder &DIEBldr, DIE &Die);
 
   /// Return internal buffer.
   virtual std::unique_ptr<DebugBufferVector> getBuffer();
@@ -569,13 +569,11 @@ public:
   static void setAddressWriter(DebugAddrWriter *AddrW) { AddrWriter = AddrW; }
 
   /// Stores location lists internally to be written out during finalize phase.
-  void addList(AttrInfo &AttrVal, DebugLocationsVector &LocList,
-               DebugInfoBinaryPatcher &DebugInfoPatcher,
-               DebugAbbrevWriter &AbbrevWriter) override;
+  virtual void addList(DIEBuilder &DIEBldr, DIE &Die, DIEValue &AttrInfo,
+                       DebugLocationsVector &LocList) override;
 
   /// Writes out locations in to a local buffer and applies debug info patches.
-  void finalize(DebugInfoBinaryPatcher &DebugInfoPatcher,
-                DebugAbbrevWriter &AbbrevWriter) override;
+  void finalize(DIEBuilder &DIEBldr, DIE &Die) override;
 
   /// Returns CU ID.
   /// For Skelton CU it is a CU Offset.
@@ -596,8 +594,7 @@ public:
 
 private:
   /// Writes out locations in to a local buffer and applies debug info patches.
-  void finalizeDWARF5(DebugInfoBinaryPatcher &DebugInfoPatcher,
-                      DebugAbbrevWriter &AbbrevWriter);
+  void finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die);
 
   static DebugAddrWriter *AddrWriter;
   DWARFUnit &CU;
