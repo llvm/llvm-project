@@ -120,12 +120,12 @@ __device__ double test_isnan() {
   double d = 5.0;
   float f = 5.0;
 
-  // AMD_INT_RETURN: fcmp contract uno float
-  // AMD_BOOL_RETURN: fcmp contract uno float
+  // AMD_INT_RETURN: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 3)
+  // AMD_BOOL_RETURN: call i1 @llvm.is.fpclass.f32(float {{.*}}, i32 3)
   r += isnan(f);
 
-  // AMD_INT_RETURN: fcmp contract uno double
-  // AMD_BOOL_RETURN: fcmp contract uno double
+  // AMD_INT_RETURN: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 3)
+  // AMD_BOOL_RETURN: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 3)
   r += isnan(d);
 
   return r ;
