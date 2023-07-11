@@ -204,7 +204,7 @@ OptionalDirectoryEntryRef APINotesManager::loadFrameworkAPINotes(
     llvm::sys::path::append(Path, "PrivateHeaders");
 
   // Try to access the header directory.
-  auto HeaderDir = FileMgr.getDirectoryRef(Path);
+  auto HeaderDir = FileMgr.getOptionalDirectoryRef(Path);
   if (!HeaderDir)
     return std::nullopt;
 
@@ -282,7 +282,7 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
         unsigned pathLen = path.size();
 
         llvm::sys::path::append(path, "Headers");
-        if (auto apinotesDir = fileMgr.getDirectoryRef(path))
+        if (auto apinotesDir = fileMgr.getOptionalDirectoryRef(path))
           tryAPINotes(*apinotesDir, /*wantPublic=*/true);
 
         path.resize(pathLen);
@@ -290,7 +290,7 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
 
       if (module->ModuleMapIsPrivate || hasPrivateSubmodules(module)) {
         llvm::sys::path::append(path, "PrivateHeaders");
-        if (auto privateAPINotesDir = fileMgr.getDirectoryRef(path)) {
+        if (auto privateAPINotesDir = fileMgr.getOptionalDirectoryRef(path)) {
           tryAPINotes(*privateAPINotesDir,
                       /*wantPublic=*/module->ModuleMapIsPrivate);
         }
@@ -314,7 +314,7 @@ llvm::SmallVector<const FileEntry *, 2> APINotesManager::getCurrentModuleAPINote
   // Second, look for API notes for this module in the module API
   // notes search paths.
   for (const auto &searchPath : searchPaths) {
-    if (auto searchDir = fileMgr.getDirectoryRef(searchPath)) {
+    if (auto searchDir = fileMgr.getOptionalDirectoryRef(searchPath)) {
       if (auto *file = findAPINotesFile(*searchDir, moduleName)) {
         APINotes.push_back(file);
         return APINotes;
