@@ -169,7 +169,7 @@ public:
 
   // Detect and signal any end-of-record condition after input.
   // Returns true if at EOR and remaining input should be padded with blanks.
-  bool CheckForEndOfRecord();
+  bool CheckForEndOfRecord(std::size_t afterReading);
 
   // Skips spaces, advances records, and ignores NAMELIST comments
   std::optional<char32_t> GetNextNonBlank(std::size_t &byteCount) {
