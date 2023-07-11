@@ -118,6 +118,16 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
     An optional memory space attribute can be specified for the materialized
     buffer allocation.
 
+    If a memory copy is needed, a "memref.tensor_store" is used when possible.
+    This is an op with tensor semantics that will bufferize to a memory copy
+    later. Which concrete op will be used for the memory copy is up to the
+    bufferization framework. Alternatively, a custom memcpy op can be specified
+    via `memcpy_op`. Currently supported are "memref.copy" and "linalg.copy".
+    In that case, the source of each memcpy must not have a custom memory space.
+    Furthermore, because the future buffer layout unknown for a given tensor,
+    a fully dynamic layout is assumed for best compatibility. Users should use
+    "memref.tensor_store" when possible.
+
     #### Return modes
 
     This operation consumes the `target` handle and produces the
@@ -125,7 +135,10 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                       OptionalAttr<AnyAttr>:$memory_space);
+                       OptionalAttr<AnyAttr>:$memory_space,
+                       DefaultValuedAttr<StrAttr, "\"memref.tensor_store\"">:
+                           $memcpy_op);
+  let hasVerifier = 1;
   let results = (outs Transform_AnyValue:$allocated_buffer,
                       Transform_AnyOpType:$new_ops);
   let assemblyFormat = "$target attr-dict `:` type($target)";

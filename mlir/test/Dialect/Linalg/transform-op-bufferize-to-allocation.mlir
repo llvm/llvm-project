@@ -39,10 +39,47 @@ transform.sequence failures(propagate) {
   // expected-remark @below{{1}}
   test_print_number_of_associated_payload_ir_ops %fill_op : !transform.any_op
 
-  // Ensure that one memref.tensor_store was generated.
+  // Ensure that one linalg.copy was generated.
   %tensor_store = transform.select "memref.tensor_store" in %new : (!transform.any_op) -> !transform.any_op
   // expected-remark @below{{1}}
   test_print_number_of_associated_payload_ir_ops %tensor_store : !transform.any_op
+}
+
+// -----
+
+// CHECK-LABEL: func @tensor_pad_constant_with_custom_copy(
+//   CHECK-NOT:   memref.tensor_store
+//   CHECK-NOT:   memref.copy
+//       CHECK:   linalg.copy
+func.func @tensor_pad_constant_with_custom_copy(
+    %t: tensor<?x10xindex>, %l2: index, %h1: index, %h2: index)
+        -> tensor<?x?xindex>
+{
+  %0 = tensor.pad %t low[5, %l2] high[%h1, %h2] {
+  ^bb0(%arg0: index, %arg1: index):
+    %c = arith.constant 50 : index
+    tensor.yield %c : index
+  } : tensor<?x10xindex> to tensor<?x?xindex>
+  return %0 : tensor<?x?xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 3, memcpy_op = "linalg.copy"}: !transform.any_op
+
+  // Ensure that one linalg.fill was generated.
+  %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
+  // expected-remark @below{{1}}
+  test_print_number_of_associated_payload_ir_ops %fill_op : !transform.any_op
+
+  // Ensure that one linalg.copy was generated.
+  %linalg_copy = transform.select "linalg.copy" in %new : (!transform.any_op) -> !transform.any_op
+  // expected-remark @below{{1}}
+  test_print_number_of_associated_payload_ir_ops %linalg_copy : !transform.any_op
+
+  // Make sure that One-Shot Bufferize can bufferize the rest.
+  %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
