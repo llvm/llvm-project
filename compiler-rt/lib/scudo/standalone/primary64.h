@@ -359,7 +359,7 @@ public:
       RegionInfo *Region = getRegionInfo(I);
       ScopedLock L1(Region->MMLock);
       ScopedLock L2(Region->FLLock);
-      getStats(Str, I, Region, 0);
+      getStats(Str, I, Region);
     }
   }
 
@@ -952,24 +952,33 @@ private:
     return B;
   }
 
-  void getStats(ScopedString *Str, uptr ClassId, RegionInfo *Region, uptr Rss)
+  void getStats(ScopedString *Str, uptr ClassId, RegionInfo *Region)
       REQUIRES(Region->MMLock, Region->FLLock) {
     if (Region->MemMapInfo.MappedUser == 0)
       return;
+    const uptr BlockSize = getSizeByClassId(ClassId);
     const uptr InUse =
         Region->FreeListInfo.PoppedBlocks - Region->FreeListInfo.PushedBlocks;
-    const uptr TotalChunks =
-        Region->MemMapInfo.AllocatedUser / getSizeByClassId(ClassId);
-    Str->append("%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
-                "inuse: %6zu total: %6zu rss: %6zuK releases: %6zu last "
-                "released: %6zuK region: 0x%zx (0x%zx)\n",
-                Region->Exhausted ? "F" : " ", ClassId,
-                getSizeByClassId(ClassId), Region->MemMapInfo.MappedUser >> 10,
-                Region->FreeListInfo.PoppedBlocks,
-                Region->FreeListInfo.PushedBlocks, InUse, TotalChunks,
-                Rss >> 10, Region->ReleaseInfo.RangesReleased,
-                Region->ReleaseInfo.LastReleasedBytes >> 10, Region->RegionBeg,
-                getRegionBaseByClassId(ClassId));
+    const uptr BytesInFreeList =
+        Region->MemMapInfo.AllocatedUser - InUse * BlockSize;
+    uptr RegionPushedBytesDelta = 0;
+    if (BytesInFreeList >=
+        Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint) {
+      RegionPushedBytesDelta =
+          BytesInFreeList - Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
+    }
+    const uptr TotalChunks = Region->MemMapInfo.AllocatedUser / BlockSize;
+    Str->append(
+        "%s %02zu (%6zu): mapped: %6zuK popped: %7zu pushed: %7zu "
+        "inuse: %6zu total: %6zu releases: %6zu last "
+        "released: %6zuK latest pushed bytes: %6zuK region: 0x%zx (0x%zx)\n",
+        Region->Exhausted ? "F" : " ", ClassId, getSizeByClassId(ClassId),
+        Region->MemMapInfo.MappedUser >> 10, Region->FreeListInfo.PoppedBlocks,
+        Region->FreeListInfo.PushedBlocks, InUse, TotalChunks,
+        Region->ReleaseInfo.RangesReleased,
+        Region->ReleaseInfo.LastReleasedBytes >> 10,
+        RegionPushedBytesDelta >> 10, Region->RegionBeg,
+        getRegionBaseByClassId(ClassId));
   }
 
   NOINLINE uptr releaseToOSMaybe(RegionInfo *Region, uptr ClassId,
