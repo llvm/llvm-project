@@ -9562,8 +9562,10 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     else
       T.unionAssumed(ConstantRange(/* BitWidth */ 1, /* isFullSet */ true));
 
-    LLVM_DEBUG(dbgs() << "[AAValueConstantRange] " << *CmpI << " " << LHSAA
-                      << " " << RHSAA << "\n");
+    LLVM_DEBUG(dbgs() << "[AAValueConstantRange] " << *CmpI << " after "
+                      << (MustTrue ? "true" : (MustFalse ? "false" : "unknown"))
+                      << ": " << T << "\n\t" << *LHSAA << "\t<op>\n\t"
+                      << *RHSAA);
 
     // TODO: Track a known state too.
     return T.isValidState();
