@@ -463,10 +463,6 @@ Tool *MSVCToolChain::buildAssembler() const {
   return nullptr;
 }
 
-bool MSVCToolChain::IsIntegratedAssemblerDefault() const {
-  return true;
-}
-
 ToolChain::UnwindTableLevel
 MSVCToolChain::getDefaultUnwindTableLevel(const ArgList &Args) const {
   // Don't emit unwind tables by default for MachO targets.
