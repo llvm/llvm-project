@@ -2,6 +2,16 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.reduction.recipe @reduction_iand_i32 : i32 reduction_operator <iand> init {
+! CHECK: ^bb0(%{{.*}}: i32):
+! CHECK:   %[[CST:.*]] = arith.constant -1 : i32
+! CHECK:   acc.yield %[[CST]] : i32
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32):
+! CHECK:   %[[COMBINED:.*]] = arith.andi %[[ARG0]], %[[ARG1]] : i32
+! CHECK:   acc.yield %[[COMBINED]] : i32
+! CHECK: }
+
 ! CHECK-LABEL: acc.reduction.recipe @reduction_max_ref_100xf32 : !fir.ref<!fir.array<100xf32>> reduction_operator <max> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<100xf32>>):
 ! CHECK:   %[[CST:.*]] = arith.constant dense<-1.401300e-45> : vector<100xf32>
@@ -578,3 +588,12 @@ end subroutine
 ! CHECK:       %[[RED_ARG1:.*]] = acc.reduction varPtr(%[[ARG1]] : !fir.ref<!fir.array<100xf32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xf32>> {name = "b"} 
 ! CHECK:       acc.loop reduction(@reduction_max_ref_100xf32 -> %[[RED_ARG1]] : !fir.ref<!fir.array<100xf32>>) {
 
+subroutine acc_reduction_iand()
+  integer :: i
+  !$acc parallel reduction(iand:i)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_iand()
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>)   -> !fir.ref<i32> {name = "i"}
+! CHECK: acc.parallel   reduction(@reduction_iand_i32 -> %[[RED]] : !fir.ref<i32>)
