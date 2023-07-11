@@ -1945,3 +1945,32 @@ transform.sequence failures(propagate) {
   // expected-error @below{{failed to verify payload op}}
   transform.verify %0 : !transform.any_op
 }
+
+// -----
+
+func.func @select() {
+  // expected-remark @below{{found foo}}
+  "test.foo"() : () -> ()
+  // expected-remark @below{{found bar}}
+  "test.bar"() : () -> ()
+  // expected-remark @below{{found foo}}
+  "test.foo"() : () -> ()
+  func.return
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // Match all ops inside the function (including the function itself).
+  %func_op = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %0 = transform.structured.match in %func_op : (!transform.any_op) -> !transform.any_op
+  // expected-remark @below{{5}}
+  test_print_number_of_associated_payload_ir_ops %0 : !transform.any_op
+
+  // Select "test.foo".
+  %foo = transform.select "test.foo" in %0 : (!transform.any_op) -> !transform.any_op
+  test_print_remark_at_operand %foo, "found foo" : !transform.any_op
+
+  // Select "test.bar".
+  %bar = transform.select "test.bar" in %0 : (!transform.any_op) -> !transform.any_op
+  test_print_remark_at_operand %bar, "found bar" : !transform.any_op
+}
