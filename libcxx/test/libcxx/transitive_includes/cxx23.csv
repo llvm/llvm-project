@@ -453,6 +453,12 @@ ostream streambuf
 ostream string
 ostream typeinfo
 ostream version
+print cstddef
+print cstdint
+print initializer_list
+print limits
+print string_view
+print version
 queue compare
 queue cstddef
 queue cstdint

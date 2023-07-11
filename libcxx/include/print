@@ -1,0 +1,119 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP_PRINT
+#define _LIBCPP_PRINT
+
+#include <__assert> // all public C++ headers provide the assertion handler
+#include <__concepts/same_as.h>
+#include <__config>
+#include <__format/unicode.h>
+#include <string_view>
+#include <version>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER >= 23
+
+#  ifndef _LIBCPP_HAS_NO_UNICODE
+// This is the code to transcode UTF-8 to UTF-16. This is used on
+// Windows for the native Unicode API. The code is modeled to make it
+// easier to extend to
+//
+//  P2728R0 Unicode in the Library, Part 1: UTF Transcoding
+//
+// This paper is still under heavy development so it makes no sense yet
+// to strictly follow the paper.
+namespace __unicode {
+
+// The names of these concepts are modelled after P2728R0, but the
+// implementation is not. char16_t may contain 32-bits so depending on the
+// number of bits is an issue.
+#    ifdef _LIBCPP_SHORT_WCHAR
+template <class _Tp>
+concept __utf16_code_unit =
+    same_as<_Tp, char16_t>
+#      ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+    || same_as<_Tp, wchar_t>
+#      endif
+    ;
+template <class _Tp>
+concept __utf32_code_unit = same_as<_Tp, char32_t>;
+#    else // _LIBCPP_SHORT_WCHAR
+template <class _Tp>
+concept __utf16_code_unit = same_as<_Tp, char16_t>;
+template <class _Tp>
+concept __utf32_code_unit =
+    same_as<_Tp, char32_t>
+#      ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+    || same_as<_Tp, wchar_t>
+#      endif
+    ;
+#    endif // _LIBCPP_SHORT_WCHAR
+
+// Pass by reference since an output_iterator may not be copyable.
+template <class _OutIt>
+_LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt&, char32_t) = delete;
+
+template <class _OutIt>
+  requires __utf16_code_unit<iter_value_t<_OutIt>>
+_LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value) {
+  _LIBCPP_ASSERT(__is_scalar_value(__value), "an invalid unicode scalar value results in invalid UTF-16");
+
+  if (__value < 0x10000) {
+    *__out_it++ = __value;
+    return;
+  }
+
+  __value -= 0x10000;
+  *__out_it++ = 0xd800 + (__value >> 10);
+  *__out_it++ = 0xdc00 + (__value & 0x3FF);
+}
+
+template <class _OutIt>
+  requires __utf32_code_unit<iter_value_t<_OutIt>>
+_LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value) {
+  _LIBCPP_ASSERT(__is_scalar_value(__value), "an invalid unicode scalar value results in invalid UTF-32");
+  *__out_it++ = __value;
+}
+
+template <class _OutIt, input_iterator _InIt>
+  requires output_iterator<_OutIt, const iter_value_t<_OutIt>&> && (!same_as<iter_value_t<_OutIt>, iter_value_t<_InIt>>)
+_LIBCPP_HIDE_FROM_ABI constexpr _OutIt __transcode(_InIt __first, _InIt __last, _OutIt __out_it) {
+  // The __code_point_view has a basic_string_view interface.
+  // When transcoding becomes part of the standard we probably want to
+  // look at smarter algorithms.
+  // For example, when processing a code point that is encoded in
+  // 1 to 3 code units in UTF-8, the result will always be encoded
+  // in 1 code unit in UTF-16 (code points that require 4 code
+  // units in UTF-8 will require 2 code units in UTF-16).
+  //
+  // Note if P2728 is accepted types like int may become valid. In that case
+  // the __code_point_view should use a span. Libc++ will remove support for
+  // char_traits<int>.
+  basic_string_view<iter_value_t<_InIt>> __data{__first, __last};
+  __code_point_view<iter_value_t<_InIt>> __view{__data.begin(), __data.end()};
+  while (!__view.__at_end())
+    __unicode::__encode(__out_it, __view.__consume().__code_point);
+  return __out_it;
+}
+
+} // namespace __unicode
+
+#  endif //  _LIBCPP_HAS_NO_UNICODE
+
+#endif // _LIBCPP_STD_VER >= 23
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_PRINT
