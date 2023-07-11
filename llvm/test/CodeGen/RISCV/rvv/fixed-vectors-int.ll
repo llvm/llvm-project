@@ -1249,11 +1249,12 @@ define void @mulhu_v6i16(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a1)
 ; CHECK-NEXT:    vdivu.vv v9, v8, v9
-; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 4
 ; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v10
 ; CHECK-NEXT:    vadd.vi v10, v10, 12
+; CHECK-NEXT:    vsetivli zero, 2, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 4
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vdivu.vv v8, v8, v10
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vslideup.vi v9, v8, 4
@@ -5723,7 +5724,7 @@ define void @mulhs_v4i64(ptr %x) {
 ; LMULMAX1-RV64-NEXT:    vsra.vv v11, v11, v12
 ; LMULMAX1-RV64-NEXT:    vadd.vv v9, v11, v9
 ; LMULMAX1-RV64-NEXT:    vmulh.vv v10, v8, v10
-; LMULMAX1-RV64-NEXT:    vmacc.vv v10, v13, v8
+; LMULMAX1-RV64-NEXT:    vmacc.vv v10, v8, v13
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v8, v10, a2
 ; LMULMAX1-RV64-NEXT:    vsra.vv v10, v10, v12
 ; LMULMAX1-RV64-NEXT:    vadd.vv v8, v10, v8
