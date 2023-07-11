@@ -6328,8 +6328,8 @@ bool ASTContext::isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const {
     return true;
 
   llvm::FoldingSetNodeID XCEID, YCEID;
-  XCE->Profile(XCEID, *this, /*Canonical=*/true);
-  YCE->Profile(YCEID, *this, /*Canonical=*/true);
+  XCE->Profile(XCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true);
+  YCE->Profile(YCEID, *this, /*Canonical=*/true, /*ProfileLambdaExpr=*/true);
   return XCEID == YCEID;
 }
 
@@ -6694,13 +6694,8 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
     // ConceptDecl wouldn't be the same if their constraint expression differs.
     if (const auto *ConceptX = dyn_cast<ConceptDecl>(X)) {
       const auto *ConceptY = cast<ConceptDecl>(Y);
-      const Expr *XCE = ConceptX->getConstraintExpr();
-      const Expr *YCE = ConceptY->getConstraintExpr();
-      assert(XCE && YCE && "ConceptDecl without constraint expression?");
-      llvm::FoldingSetNodeID XID, YID;
-      XCE->Profile(XID, *this, /*Canonical=*/true);
-      YCE->Profile(YID, *this, /*Canonical=*/true);
-      if (XID != YID)
+      if (!isSameConstraintExpr(ConceptX->getConstraintExpr(),
+                                ConceptY->getConstraintExpr()))
         return false;
     }
 

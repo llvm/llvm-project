@@ -1297,8 +1297,13 @@ public:
   /// parameters are identified by index/level rather than their
   /// declaration pointers) or the exact representation of the statement as
   /// written in the source.
+  /// \param ProfileLambdaExpr whether or not to profile lambda expressions.
+  /// When false, the lambda expressions are never considered to be equal to
+  /// other lambda expressions. When true, the lambda expressions with the same
+  /// implementation will be considered to be the same. ProfileLambdaExpr should
+  /// only be true when we try to merge two declarations within modules.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-               bool Canonical) const;
+               bool Canonical, bool ProfileLambdaExpr = false) const;
 
   /// Calculate a unique representation for a statement that is
   /// stable across compiler invocations.
