@@ -242,6 +242,16 @@ private: // Semantic analysis methods.
                SMLoc *Loc = nullptr);
   bool addDefOne(std::unique_ptr<Record> Rec);
 
+  using ArgValueHandler = std::function<void(Init *, Init *)>;
+  bool resolveArguments(
+      Record *Rec, ArrayRef<Init *> ArgValues, SMLoc Loc,
+      ArgValueHandler ArgValueHandler = [](Init *, Init *) {});
+  bool resolveArgumentsOfClass(MapResolver &R, Record *Rec,
+                               ArrayRef<Init *> ArgValues, SMLoc Loc);
+  bool resolveArgumentsOfMultiClass(SubstStack &Substs, MultiClass *MC,
+                                    ArrayRef<Init *> ArgValues, Init *DefmName,
+                                    SMLoc Loc);
+
 private:  // Parser methods.
   bool consume(tgtok::TokKind K);
   bool ParseObjectList(MultiClass *MC = nullptr);
