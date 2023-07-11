@@ -13,12 +13,13 @@ using namespace llvm;
 
 PGOOptions::PGOOptions(std::string ProfileFile, std::string CSProfileGenFile,
                        std::string ProfileRemappingFile,
+                       std::string MemoryProfile,
                        IntrusiveRefCntPtr<vfs::FileSystem> FS, PGOAction Action,
                        CSPGOAction CSAction, bool DebugInfoForProfiling,
                        bool PseudoProbeForProfiling)
     : ProfileFile(ProfileFile), CSProfileGenFile(CSProfileGenFile),
-      ProfileRemappingFile(ProfileRemappingFile), Action(Action),
-      CSAction(CSAction),
+      ProfileRemappingFile(ProfileRemappingFile), MemoryProfile(MemoryProfile),
+      Action(Action), CSAction(CSAction),
       DebugInfoForProfiling(DebugInfoForProfiling ||
                             (Action == SampleUse && !PseudoProbeForProfiling)),
       PseudoProbeForProfiling(PseudoProbeForProfiling), FS(std::move(FS)) {
@@ -36,13 +37,18 @@ PGOOptions::PGOOptions(std::string ProfileFile, std::string CSProfileGenFile,
   // a profile.
   assert(this->CSAction != CSIRUse || this->Action == IRUse);
 
-  // If neither Action nor CSAction, DebugInfoForProfiling or
-  // PseudoProbeForProfiling needs to be true.
+  // Cannot optimize with MemProf profile during IR instrumentation.
+  assert(this->MemoryProfile.empty() || this->Action != PGOOptions::IRInstr);
+
+  // If neither Action nor CSAction nor MemoryProfile are set,
+  // DebugInfoForProfiling or PseudoProbeForProfiling needs to be true.
   assert(this->Action != NoAction || this->CSAction != NoCSAction ||
-         this->DebugInfoForProfiling || this->PseudoProbeForProfiling);
+         !this->MemoryProfile.empty() || this->DebugInfoForProfiling ||
+         this->PseudoProbeForProfiling);
 
   // If we need to use the profile, the VFS cannot be nullptr.
-  assert(this->FS || !(this->Action == IRUse || this->CSAction == CSIRUse));
+  assert(this->FS || !(this->Action == IRUse || this->CSAction == CSIRUse ||
+                       !this->MemoryProfile.empty()));
 }
 
 PGOOptions::PGOOptions(const PGOOptions &) = default;
