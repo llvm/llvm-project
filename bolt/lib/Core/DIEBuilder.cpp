@@ -484,6 +484,7 @@ void DIEBuilder::cloneDieReferenceAttribute(
 
   if (!DieInfo.Die) {
     assert(Ref > InputDIE.getOffset());
+    (void)Ref;
     errs() << "BOLT-WARNING: [internal-dwarf-error]: encounter unexpected "
               "unallocated DIE. Should be alloc!\n";
     // We haven't cloned this DIE yet. Just create an empty one and
