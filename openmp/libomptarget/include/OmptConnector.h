@@ -1,4 +1,4 @@
-//=== ompt_connector.h - Target independent OpenMP target RTL -- C++ ------===//
+//===- OmptConnector.h - Target independent OpenMP target RTL -- C++ ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _OMPT_CONNECTOR_H
-#define _OMPT_CONNECTOR_H
+#ifndef _OMPTCONNECTOR_H
+#define _OMPTCONNECTOR_H
 
 #ifdef OMPT_SUPPORT
 
@@ -101,8 +101,6 @@ private:
   std::string LibIdent;
 };
 
-#undef DEBUG_PREFIX
-
 #endif // OMPT_SUPPORT
 
-#endif // _OMPT_CONNECTOR_H
+#endif // _OMPTCONNECTOR_H

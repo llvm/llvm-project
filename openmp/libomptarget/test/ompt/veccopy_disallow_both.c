@@ -1,8 +1,5 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // REQUIRES: ompt
-// UNSUPPORTED: nvptx64-nvidia-cuda
-// UNSUPPORTED: nvptx64-nvidia-cuda-oldDriver
-// UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-oldDriver
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
@@ -59,11 +56,10 @@ int main() {
   return rc;
 }
 
-/// CHECK: Could not register callback 'ompt_callback_device_initialize'
-/// CHECK: Could not register callback 'ompt_callback_device_finalize'
-/// CHECK: Could not register callback 'ompt_callback_device_load'
 /// CHECK: Could not register callback 'ompt_callback_target_data_op'
 /// CHECK: Could not register callback 'ompt_callback_target'
 /// CHECK: Could not register callback 'ompt_callback_target_submit'
 
-/// CHECK: Success
+/// CHECK: Callback Init:
+/// CHECK: Callback Load:
+/// CHECK: Callback Fini:

@@ -23,6 +23,7 @@
 #include "Debug.h"
 #include "DeviceEnvironment.h"
 #include "GlobalHandler.h"
+#include "OmptCallback.h"
 #include "PluginInterface.h"
 #include "Utilities.h"
 #include "UtilitiesRTL.h"
@@ -2622,6 +2623,10 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // The initialization of HSA was successful. It should be safe to call
     // HSA functions from now on, e.g., hsa_shut_down.
     Initialized = true;
+
+#ifdef OMPT_SUPPORT
+    ompt::connectLibrary();
+#endif
 
     // Register event handler to detect memory errors on the devices.
     Status = hsa_amd_register_system_event_handler(eventHandler, nullptr);

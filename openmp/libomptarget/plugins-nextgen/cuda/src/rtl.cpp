@@ -19,6 +19,7 @@
 #include "Debug.h"
 #include "DeviceEnvironment.h"
 #include "GlobalHandler.h"
+#include "OmptCallback.h"
 #include "PluginInterface.h"
 
 #include "llvm/BinaryFormat/ELF.h"
@@ -945,6 +946,10 @@ struct CUDAPluginTy final : public GenericPluginTy {
       DP("Failed to load CUDA shared library\n");
       return 0;
     }
+
+#ifdef OMPT_SUPPORT
+    ompt::connectLibrary();
+#endif
 
     if (Res == CUDA_ERROR_NO_DEVICE) {
       // Do not initialize if there are no devices.
