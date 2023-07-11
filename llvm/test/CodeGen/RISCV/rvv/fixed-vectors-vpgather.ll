@@ -2299,28 +2299,27 @@ define <32 x double> @vpgather_baseidx_zext_v32i16_v32f64(ptr %base, <32 x i16> 
 define <32 x double> @vpgather_baseidx_v32i32_v32f64(ptr %base, <32 x i32> %idxs, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_baseidx_v32i32_v32f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vmv1r.v v1, v0
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vsll.vi v24, v8, 3
-; RV32-NEXT:    addi a2, a1, -16
-; RV32-NEXT:    sltu a3, a1, a2
-; RV32-NEXT:    addi a3, a3, -1
-; RV32-NEXT:    and a2, a3, a2
+; RV32-NEXT:    li a3, 16
+; RV32-NEXT:    vsll.vi v16, v8, 3
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    bltu a1, a3, .LBB93_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a2, 16
+; RV32-NEXT:  .LBB93_2:
+; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; RV32-NEXT:    vluxei32.v v8, (a0), v16, v0.t
 ; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
+; RV32-NEXT:    vslidedown.vi v24, v16, 16
+; RV32-NEXT:    addi a2, a1, -16
+; RV32-NEXT:    sltu a1, a1, a2
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a1, a1, a2
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; RV32-NEXT:    vluxei32.v v16, (a0), v8, v0.t
-; RV32-NEXT:    li a2, 16
-; RV32-NEXT:    bltu a1, a2, .LBB93_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a1, 16
-; RV32-NEXT:  .LBB93_2:
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vmv1r.v v0, v1
-; RV32-NEXT:    vluxei32.v v8, (a0), v24, v0.t
+; RV32-NEXT:    vluxei32.v v16, (a0), v24, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_baseidx_v32i32_v32f64:
@@ -2373,28 +2372,27 @@ define <32 x double> @vpgather_baseidx_v32i32_v32f64(ptr %base, <32 x i32> %idxs
 define <32 x double> @vpgather_baseidx_sext_v32i32_v32f64(ptr %base, <32 x i32> %idxs, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_baseidx_sext_v32i32_v32f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vmv1r.v v1, v0
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vsll.vi v24, v8, 3
-; RV32-NEXT:    addi a2, a1, -16
-; RV32-NEXT:    sltu a3, a1, a2
-; RV32-NEXT:    addi a3, a3, -1
-; RV32-NEXT:    and a2, a3, a2
+; RV32-NEXT:    li a3, 16
+; RV32-NEXT:    vsll.vi v16, v8, 3
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    bltu a1, a3, .LBB94_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a2, 16
+; RV32-NEXT:  .LBB94_2:
+; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; RV32-NEXT:    vluxei32.v v8, (a0), v16, v0.t
 ; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
+; RV32-NEXT:    vslidedown.vi v24, v16, 16
+; RV32-NEXT:    addi a2, a1, -16
+; RV32-NEXT:    sltu a1, a1, a2
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a1, a1, a2
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; RV32-NEXT:    vluxei32.v v16, (a0), v8, v0.t
-; RV32-NEXT:    li a2, 16
-; RV32-NEXT:    bltu a1, a2, .LBB94_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a1, 16
-; RV32-NEXT:  .LBB94_2:
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vmv1r.v v0, v1
-; RV32-NEXT:    vluxei32.v v8, (a0), v24, v0.t
+; RV32-NEXT:    vluxei32.v v16, (a0), v24, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_baseidx_sext_v32i32_v32f64:
@@ -2433,28 +2431,27 @@ define <32 x double> @vpgather_baseidx_sext_v32i32_v32f64(ptr %base, <32 x i32> 
 define <32 x double> @vpgather_baseidx_zext_v32i32_v32f64(ptr %base, <32 x i32> %idxs, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_baseidx_zext_v32i32_v32f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vmv1r.v v1, v0
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vsll.vi v24, v8, 3
-; RV32-NEXT:    addi a2, a1, -16
-; RV32-NEXT:    sltu a3, a1, a2
-; RV32-NEXT:    addi a3, a3, -1
-; RV32-NEXT:    and a2, a3, a2
+; RV32-NEXT:    li a3, 16
+; RV32-NEXT:    vsll.vi v16, v8, 3
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    bltu a1, a3, .LBB95_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a2, 16
+; RV32-NEXT:  .LBB95_2:
+; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; RV32-NEXT:    vluxei32.v v8, (a0), v16, v0.t
 ; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
+; RV32-NEXT:    vslidedown.vi v24, v16, 16
+; RV32-NEXT:    addi a2, a1, -16
+; RV32-NEXT:    sltu a1, a1, a2
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    and a1, a1, a2
 ; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; RV32-NEXT:    vluxei32.v v16, (a0), v8, v0.t
-; RV32-NEXT:    li a2, 16
-; RV32-NEXT:    bltu a1, a2, .LBB95_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a1, 16
-; RV32-NEXT:  .LBB95_2:
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vmv1r.v v0, v1
-; RV32-NEXT:    vluxei32.v v8, (a0), v24, v0.t
+; RV32-NEXT:    vluxei32.v v16, (a0), v24, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_baseidx_zext_v32i32_v32f64:

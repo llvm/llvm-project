@@ -44,11 +44,11 @@ define float @fmul_f32(<4 x float> %a, <4 x float> %b) {
 define float @fmin_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmin_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 523264
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
-; CHECK-NEXT:    vfredmin.vs v8, v8, v10
+; CHECK-NEXT:    lui a0, 523264
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vfredmin.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> %a)
@@ -60,11 +60,11 @@ define float @fmin_f32(<4 x float> %a, <4 x float> %b) {
 define float @fmax_f32(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: fmax_f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 1047552
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
-; CHECK-NEXT:    vfredmax.vs v8, v8, v10
+; CHECK-NEXT:    lui a0, 1047552
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vfredmax.vs v8, v8, v9
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> %a)
@@ -78,9 +78,9 @@ define i32 @add_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: add_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vredsum.vs v8, v8, v10
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vredsum.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.add.i32.v4i32(<4 x i32> %a)
@@ -92,12 +92,11 @@ define i32 @add_i32(<4 x i32> %a, <4 x i32> %b) {
 define i16 @add_ext_i16(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: add_ext_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vwaddu.vv v12, v8, v9
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vredsum.vs v8, v12, v10
+; CHECK-NEXT:    vwaddu.vv v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    vredsum.vs v8, v10, v8
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %ae = zext <16 x i8> %a to <16 x i16>
@@ -190,9 +189,9 @@ define i32 @or_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: or_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vor.vv v8, v8, v9
-; CHECK-NEXT:    vredor.vs v8, v8, v10
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vredor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.or.i32.v4i32(<4 x i32> %a)
@@ -205,9 +204,9 @@ define i32 @xor_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: xor_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vxor.vv v8, v8, v9
-; CHECK-NEXT:    vredxor.vs v8, v8, v10
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vredxor.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.xor.i32.v4i32(<4 x i32> %a)
@@ -235,9 +234,9 @@ define i32 @umax_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: umax_i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, zero
 ; CHECK-NEXT:    vmaxu.vv v8, v8, v9
-; CHECK-NEXT:    vredmaxu.vs v8, v8, v10
+; CHECK-NEXT:    vmv.s.x v9, zero
+; CHECK-NEXT:    vredmaxu.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.umax.i32.v4i32(<4 x i32> %a)
@@ -277,11 +276,11 @@ define i32 @smin_i32(<4 x i32> %a, <4 x i32> %b) {
 define i32 @smax_i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: smax_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, 524288
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v10, a0
 ; CHECK-NEXT:    vmax.vv v8, v8, v9
-; CHECK-NEXT:    vredmax.vs v8, v8, v10
+; CHECK-NEXT:    lui a0, 524288
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vredmax.vs v8, v8, v9
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %r1 = call i32 @llvm.vector.reduce.smax.i32.v4i32(<4 x i32> %a)
