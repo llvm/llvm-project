@@ -72,6 +72,74 @@ private:
 } // namespace interp
 } // namespace clang
 
+//  This function is constexpr if and only if To, From, and the types of
+//  all subobjects of To and From are types T such that...
+//  (3.1) - is_union_v<T> is false;
+//  (3.2) - is_pointer_v<T> is false;
+//  (3.3) - is_member_pointer_v<T> is false;
+//  (3.4) - is_volatile_v<T> is false; and
+//  (3.5) - T has no non-static data members of reference type
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitBuiltinBitCast(const CastExpr *E) {
+  const Expr *SubExpr = E->getSubExpr();
+  QualType FromType = SubExpr->getType();
+  QualType ToType = E->getType();
+  std::optional<PrimType> ToT = classify(ToType);
+
+  // FIXME: This is wrong. We need to do the bitcast and then
+  //   throw away the result, so we still get the diagnostics.
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
+  if (ToType->isNullPtrType()) {
+    if (!this->discard(SubExpr))
+      return false;
+
+    return this->emitNullPtr(E);
+  }
+
+  if (FromType->isNullPtrType() && ToT) {
+    if (!this->discard(SubExpr))
+      return false;
+
+    return visitZeroInitializer(*ToT, ToType, E);
+  }
+  assert(!ToType->isReferenceType());
+
+  // Get a pointer to the value-to-cast on the stack.
+  if (!this->visit(SubExpr))
+    return false;
+
+  if (!ToT || ToT == PT_Ptr) {
+    // Conversion to an array or record type.
+    return this->emitBitCastPtr(E);
+  }
+
+  assert(ToT);
+
+  // Conversion to a primitive type. FromType can be another
+  // primitive type, or a record/array.
+  //
+  // Same thing for floats, but we need the target
+  // semantics here.
+  if (ToT == PT_Float) {
+    const auto *TargetSemantics = &Ctx.getFloatSemantics(ToType);
+    CharUnits FloatSize = Ctx.getASTContext().getTypeSizeInChars(ToType);
+    return this->emitBitCastFP(TargetSemantics, FloatSize.getQuantity(), E);
+  }
+
+  bool ToTypeIsUChar = (ToType->isSpecificBuiltinType(BuiltinType::UChar) ||
+                        ToType->isSpecificBuiltinType(BuiltinType::Char_U));
+
+  if (!this->emitBitCast(*ToT, ToTypeIsUChar || ToType->isStdByteType(), E))
+    return false;
+
+  if (DiscardResult)
+    return this->emitPop(*ToT, E);
+
+  return true;
+}
+
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   const Expr *SubExpr = CE->getSubExpr();
@@ -91,6 +159,9 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
           return DiscardResult ? this->emitPop(T, CE) : true;
         });
   }
+
+  case CK_LValueToRValueBitCast:
+    return this->emitBuiltinBitCast(CE);
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {

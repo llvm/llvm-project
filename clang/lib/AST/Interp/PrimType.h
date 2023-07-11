@@ -87,6 +87,10 @@ template <> struct PrimConv<PT_FnPtr> {
 /// Returns the size of a primitive type in bytes.
 size_t primSize(PrimType Type);
 
+template <PrimType PrimT> constexpr size_t primSize() {
+  return sizeof(typename PrimConv<PrimT>::T);
+}
+
 /// Aligns a size to the pointer alignment.
 constexpr size_t align(size_t Size) {
   return ((Size + alignof(void *) - 1) / alignof(void *)) * alignof(void *);

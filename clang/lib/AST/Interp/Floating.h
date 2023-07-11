@@ -15,6 +15,7 @@
 
 #include "Primitives.h"
 #include "clang/AST/APValue.h"
+#include "clang/AST/ASTContext.h"
 #include "llvm/ADT/APFloat.h"
 
 namespace clang {
@@ -84,6 +85,12 @@ public:
   }
 
   unsigned bitWidth() const { return F.semanticsSizeInBits(F.getSemantics()); }
+  unsigned objectReprBits() { return F.semanticsSizeInBits(F.getSemantics()); }
+
+  unsigned valueReprBytes(const ASTContext &Ctx) {
+    return Ctx.toCharUnitsFromBits(F.semanticsSizeInBits(F.getSemantics()))
+        .getQuantity();
+  }
 
   bool isSigned() const { return true; }
   bool isNegative() const { return F.isNegative(); }
@@ -133,6 +140,10 @@ public:
     llvm::LoadIntFromMemory(API, (const uint8_t *)Buff, Size / 8);
 
     return Floating(APFloat(Sem, API));
+  }
+  void bitcastToMemory(std::byte *Buff) {
+    llvm::APInt API = F.bitcastToAPInt();
+    llvm::StoreIntToMemory(API, (uint8_t *)Buff, bitWidth() / 8);
   }
 
   // === Serialization support ===

@@ -187,6 +187,9 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
 /// Checks why the given DeclRefExpr is invalid.
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
 
+bool CheckBitcast(InterpState &S, CodePtr OpPC, unsigned IndeterminateBits,
+                  bool TargetIsUCharOrByte);
+
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
 
@@ -197,6 +200,18 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
 /// Interpret an offsetof operation.
 bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
                        llvm::ArrayRef<int64_t> ArrayIndices, int64_t &Result);
+
+/// Perform a bitcast of all fields of P into Buff. This performs the
+/// actions of a __builtin_bit_cast expression when the target type
+/// is primitive.
+bool DoBitCast(InterpState &S, CodePtr OpPC, const Pointer &P, std::byte *Buff,
+               size_t BuffSize, unsigned &IndeterminateBits);
+
+/// Perform a bitcast of all fields of P into the fields of DestPtr.
+/// This performs the actions of a __builtin_bit_cast expression when
+/// the target type is a composite type.
+bool DoBitCastToPtr(InterpState &S, const Pointer &P, Pointer &DestPtr,
+                    CodePtr PC);
 
 enum class ArithOp { Add, Sub };
 
@@ -1558,6 +1573,57 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
   using T = typename PrimConv<TIn>::T;
   using U = typename PrimConv<TOut>::T;
   S.Stk.push<U>(U::from(S.Stk.pop<T>()));
+  return true;
+}
+
+template <PrimType Name, class ToT = typename PrimConv<Name>::T>
+bool BitCast(InterpState &S, CodePtr OpPC, bool TargetIsUCharOrByte) {
+  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+
+  size_t BuffSize = ToT::valueReprBytes(S.getCtx());
+  std::vector<std::byte> Buff(BuffSize);
+  unsigned IndeterminateBits = 0;
+
+  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), BuffSize, IndeterminateBits))
+    return false;
+
+  if (!CheckBitcast(S, OpPC, IndeterminateBits, TargetIsUCharOrByte))
+    return false;
+
+  S.Stk.push<ToT>(ToT::bitcastFromMemory(Buff.data()));
+  return true;
+}
+
+/// Bitcast TO a float.
+inline bool BitCastFP(InterpState &S, CodePtr OpPC,
+                      const llvm::fltSemantics *Sem, uint32_t TargetSize) {
+  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+
+  std::vector<std::byte> Buff(TargetSize);
+  unsigned IndeterminateBits = 0;
+
+  if (!DoBitCast(S, OpPC, FromPtr, Buff.data(), TargetSize, IndeterminateBits))
+    return false;
+
+  if (!CheckBitcast(S, OpPC, IndeterminateBits, /*TargetIsUCharOrByte=*/false))
+    return false;
+
+  S.Stk.push<Floating>(Floating::bitcastFromMemory(Buff.data(), *Sem));
+  return true;
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Peeks a pointer
+/// 3) Bitcasts the contents of the first pointer to the
+///    fields of the second pointer.
+inline bool BitCastPtr(InterpState &S, CodePtr OpPC) {
+  const Pointer &FromPtr = S.Stk.pop<Pointer>();
+  Pointer &ToPtr = S.Stk.peek<Pointer>();
+
+  // FIXME: We should CheckLoad() for FromPtr and ToPtr here, I think.
+  if (!DoBitCastToPtr(S, FromPtr, ToPtr, OpPC))
+    return false;
+
   return true;
 }
 

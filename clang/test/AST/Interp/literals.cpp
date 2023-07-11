@@ -148,6 +148,11 @@ constexpr const int *p = &m;
 static_assert(p != nullptr, "");
 static_assert(*p == 10, "");
 
+constexpr const void *cp = (void *)p;
+// FIXME: This should be an error in the new interpreter.
+constexpr const int *pm = (int*)cp; // ref-error {{ must be initialized by a constant expression}} \
+                                    // ref-note {{cast from 'const void *' is not allowed}}
+
 constexpr const int* getIntPointer() {
   return &m;
 }

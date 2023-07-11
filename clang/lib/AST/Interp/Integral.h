@@ -13,8 +13,9 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTEGRAL_H
 #define LLVM_CLANG_AST_INTERP_INTEGRAL_H
 
-#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/APValue.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -119,6 +120,10 @@ public:
   }
 
   constexpr static unsigned bitWidth() { return Bits; }
+  constexpr static unsigned objectReprBits() { return Bits; }
+  constexpr static unsigned valueReprBytes(const ASTContext &Ctx) {
+    return Ctx.toCharUnitsFromBits(Bits).getQuantity();
+  }
 
   bool isZero() const { return !V; }
 
@@ -183,6 +188,18 @@ public:
 
   template <typename T> static Integral from(T Value, unsigned NumBits) {
     return Integral(Value);
+  }
+
+  static Integral bitcastFromMemory(const std::byte *Buff) {
+    ReprT V;
+
+    std::memcpy(&V, Buff, sizeof(ReprT));
+    return Integral(V);
+  }
+
+  void bitcastToMemory(std::byte *Buff) const {
+    assert(Buff);
+    std::memcpy(Buff, &V, sizeof(ReprT));
   }
 
   static bool inRange(int64_t Value, unsigned NumBits) {
