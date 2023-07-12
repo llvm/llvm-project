@@ -25,6 +25,7 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <variant>
 
 using namespace clang;
 using namespace clang::cas;
