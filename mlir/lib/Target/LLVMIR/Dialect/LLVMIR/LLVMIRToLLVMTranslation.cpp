@@ -191,13 +191,12 @@ static LogicalResult setLoopAttr(const llvm::MDNode *node, Operation *op,
       .Default([](auto) { return failure(); });
 }
 
-/// Looks up all the symbol references pointing to the alias scope operations
-/// that map to the alias scope nodes starting from the alias scope metadata
-/// `node`, and attaches all of them to the imported operation if the lookups
-/// succeed. Returns failure otherwise.
+/// Looks up all the alias scope attributes that map to the alias scope nodes
+/// starting from the alias scope metadata `node`, and attaches all of them to
+/// the imported operation if the lookups succeed. Returns failure otherwise.
 static LogicalResult setAliasScopesAttr(const llvm::MDNode *node, Operation *op,
                                         LLVM::ModuleImport &moduleImport) {
-  FailureOr<SmallVector<SymbolRefAttr>> aliasScopes =
+  FailureOr<SmallVector<AliasScopeAttr>> aliasScopes =
       moduleImport.lookupAliasScopeAttrs(node);
   if (failed(aliasScopes))
     return failure();
@@ -207,8 +206,7 @@ static LogicalResult setAliasScopesAttr(const llvm::MDNode *node, Operation *op,
     return failure();
 
   iface.setAliasScopes(ArrayAttr::get(
-      iface.getContext(),
-      SmallVector<Attribute>{aliasScopes->begin(), aliasScopes->end()}));
+      iface.getContext(), llvm::to_vector_of<Attribute>(*aliasScopes)));
   return success();
 }
 
@@ -219,7 +217,7 @@ static LogicalResult setAliasScopesAttr(const llvm::MDNode *node, Operation *op,
 static LogicalResult setNoaliasScopesAttr(const llvm::MDNode *node,
                                           Operation *op,
                                           LLVM::ModuleImport &moduleImport) {
-  FailureOr<SmallVector<SymbolRefAttr>> noAliasScopes =
+  FailureOr<SmallVector<AliasScopeAttr>> noAliasScopes =
       moduleImport.lookupAliasScopeAttrs(node);
   if (failed(noAliasScopes))
     return failure();
@@ -229,8 +227,7 @@ static LogicalResult setNoaliasScopesAttr(const llvm::MDNode *node,
     return failure();
 
   iface.setNoAliasScopes(ArrayAttr::get(
-      iface.getContext(),
-      SmallVector<Attribute>{noAliasScopes->begin(), noAliasScopes->end()}));
+      iface.getContext(), llvm::to_vector_of<Attribute>(*noAliasScopes)));
   return success();
 }
 

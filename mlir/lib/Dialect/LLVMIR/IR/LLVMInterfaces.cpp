@@ -100,12 +100,6 @@ LogicalResult mlir::LLVM::detail::verifyAccessGroupOpInterface(Operation *op) {
 LogicalResult
 mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
   auto iface = cast<AliasAnalysisOpInterface>(op);
-  if (failed(verifySymbolRefsPointTo<LLVM::AliasScopeMetadataOp>(
-          iface, "alias scopes", iface.getAliasScopesOrNull())))
-    return failure();
-  if (failed(verifySymbolRefsPointTo<LLVM::AliasScopeMetadataOp>(
-          iface, "noalias scopes", iface.getNoAliasScopesOrNull())))
-    return failure();
   if (failed(verifySymbolRefsPointTo<LLVM::TBAATagOp>(
           iface, "tbaa tags", iface.getTBAATagsOrNull())))
     return failure();
