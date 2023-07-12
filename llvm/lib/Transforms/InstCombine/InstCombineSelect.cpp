@@ -98,7 +98,8 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   // +0.0 compares equal to -0.0, and so it does not behave as required for this
   // transform. Bail out if we can not exclude that possibility.
   if (isa<FPMathOperator>(BO))
-    if (!BO->hasNoSignedZeros() && !CannotBeNegativeZero(Y, &TLI))
+    if (!BO->hasNoSignedZeros() &&
+        !cannotBeNegativeZero(Y, IC.getDataLayout(), &TLI))
       return nullptr;
 
   // BO = binop Y, X

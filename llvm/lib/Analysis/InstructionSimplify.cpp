@@ -5555,7 +5555,7 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fadd X, 0 ==> X, when we know X is not -0
   if (canIgnoreSNaN(ExBehavior, FMF))
     if (match(Op1, m_PosZeroFP()) &&
-        (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
+        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q.DL, Q.TLI)))
       return Op0;
 
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
@@ -5617,7 +5617,7 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub X, -0 ==> X, when we know X is not -0
   if (canIgnoreSNaN(ExBehavior, FMF))
     if (match(Op1, m_NegZeroFP()) &&
-        (FMF.noSignedZeros() || CannotBeNegativeZero(Op0, Q.TLI)))
+        (FMF.noSignedZeros() || cannotBeNegativeZero(Op0, Q.DL, Q.TLI)))
       return Op0;
 
   // fsub -0.0, (fsub -0.0, X) ==> X
