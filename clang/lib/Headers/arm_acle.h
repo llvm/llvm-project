@@ -140,17 +140,21 @@ __rorl(unsigned long __x, uint32_t __y) {
 /* CLZ */
 static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clz(uint32_t __t) {
-  return (unsigned int)__builtin_clz(__t);
+  return __builtin_arm_clz(__t);
 }
 
 static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clzl(unsigned long __t) {
-  return (unsigned int)__builtin_clzl(__t);
+#if __SIZEOF_LONG__ == 4
+  return __builtin_arm_clz(__t);
+#else
+  return __builtin_arm_clz64(__t);
+#endif
 }
 
 static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__))
 __clzll(uint64_t __t) {
-  return (unsigned int)__builtin_clzll(__t);
+  return __builtin_arm_clz64(__t);
 }
 
 /* CLS */
