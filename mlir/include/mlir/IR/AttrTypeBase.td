@@ -21,7 +21,14 @@ include "mlir/IR/OpBase.td"
 //===----------------------------------------------------------------------===//
 
 // These classes are used to define attribute specific traits.
-class NativeAttrTrait<string name> : NativeTrait<name, "Attribute">;
+
+// Specify attribute specific declarations and definitions in `extraAttrDeclaration`
+// and `extraAttrDefinition` template arguments.
+class NativeAttrTrait<string name,
+                      code extraAttrDeclaration = [{}],
+                      code extraAttrDefinition = [{}]>
+    : NativeTrait<name, "Attribute", extraAttrDeclaration, extraAttrDefinition>;
+
 class ParamNativeAttrTrait<string prop, string params>
     : ParamNativeTrait<prop, params, "Attribute">;
 class GenInternalAttrTrait<string prop> : GenInternalTrait<prop, "Attribute">;
@@ -32,7 +39,14 @@ class PredAttrTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 //===----------------------------------------------------------------------===//
 
 // These classes are used to define type specific traits.
-class NativeTypeTrait<string name> : NativeTrait<name, "Type">;
+
+// Specify type specific declarations and definitions in `extraTypeDeclaration`
+// and `extraTypeDefinition` template arguments.
+class NativeTypeTrait<string name,
+                      code extraTypeDeclaration = [{}],
+                      code extraTypeDefinition = [{}]>
+    : NativeTrait<name, "Type", extraTypeDeclaration, extraTypeDefinition>;
+
 class ParamNativeTypeTrait<string prop, string params>
     : ParamNativeTrait<prop, params, "Type">;
 class GenInternalTypeTrait<string prop> : GenInternalTrait<prop, "Type">;
