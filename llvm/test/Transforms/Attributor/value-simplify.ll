@@ -1384,11 +1384,11 @@ define internal void @indirect() {
 ; CGSCC-NEXT:    store i32 0, ptr @x, align 4
 ; CGSCC-NEXT:    ret void
 ;
-  store i32 0, i32* @x
+  store i32 0, ptr @x
   ret void
 }
 
-define internal void @broker(void ()* %ptr) {
+define internal void @broker(ptr %ptr) {
 ; TUNIT-LABEL: define {{[^@]+}}@broker() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    call void @indirect()
@@ -1414,7 +1414,7 @@ define void @entry() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  call void @broker(void ()* @indirect)
+  call void @broker(ptr @indirect)
   ret void
 }
 
