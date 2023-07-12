@@ -831,9 +831,8 @@ namespace StmtExpr {
     case 0:
       return 0;
 
-      ({  // expected-note {{jump enters a statement expression}}
-        case 1:// expected-error {{cannot jump from switch statement to this case label}} \
-               // expected-note  {{not supported}}
+      ({
+        case 1: // expected-note {{not supported}}
           return 1;
       });
     }

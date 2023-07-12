@@ -585,10 +585,6 @@ Bug Fixes in This Version
   (`#50243 <https://github.com/llvm/llvm-project/issues/50243>`_),
   (`#48636 <https://github.com/llvm/llvm-project/issues/48636>`_),
   (`#50320 <https://github.com/llvm/llvm-project/issues/50320>`_).
-- Correcly diagnose jumps into statement expressions.
-  This ensures the behavior of Clang is consistent with GCC.
-  (`#63682 <https://github.com/llvm/llvm-project/issues/63682>`_)
-  (`#38717 <https://github.com/llvm/llvm-project/issues/38717>_`).
 - Fix an assertion when using ``\u0024`` (``$``) as an identifier, by disallowing
   that construct (`#62133 <https://github.com/llvm/llvm-project/issues/38717>_`).
 
