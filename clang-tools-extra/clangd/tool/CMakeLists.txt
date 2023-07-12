@@ -32,14 +32,19 @@ clang_target_link_libraries(clangdMain
   clangToolingCore
   clangToolingRefactoring
   clangToolingSyntax
+  )
+
+target_link_libraries(clangdMain
+  PRIVATE
   clangTidy
+
   clangDaemon
   clangdRemoteIndex
   clangdSupport
   ${CLANGD_XPC_LIBS}
   )
 
-clang_target_link_libraries(clangd
+target_link_libraries(clangd
   PRIVATE
   clangdMain
   )
