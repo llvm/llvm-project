@@ -121,7 +121,7 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
       Results<(outs LLVM_Type:$res)>, Arguments<(ins LLVM_i64ptr_any:$addr, I32:$txcount)> {
       ...
       let extraClassDefinition = [{
-        const char* $cppClass::getPtx() { return \"mbarrier.arrive.expect_tx.b64 %0, [%1], %2;\"; }
+        std::string $cppClass::getPtx() { return std::string(\"mbarrier.arrive.expect_tx.b64 %0, [%1], %2;\"); }
       }\];
     }
     ```
@@ -160,7 +160,7 @@ def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
       >,
     InterfaceMethod<
         /*desc=*/[{ Returns PTX code. }],
-        /*retType=*/"const char*",
+        /*retType=*/"std::string",
         /*methodName=*/"getPtx"
       >,
     InterfaceMethod<
@@ -377,7 +377,7 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_Op<"mbarrier.arrive.expect_tx",
   Arguments<(ins LLVM_i64ptr_any:$addr, I32:$txcount)> {
   let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) `->` type($res)";
   let extraClassDefinition = [{
-    const char* $cppClass::getPtx() { return "mbarrier.arrive.expect_tx.b64 %0, [%1], %2;"; }
+    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.b64 %0, [%1], %2;"); }
   }];
 }
 
@@ -387,7 +387,7 @@ def NVVM_MBarrierArriveExpectTxSharedOp : NVVM_Op<"mbarrier.arrive.expect_tx.sha
   Arguments<(ins LLVM_i64ptr_shared:$addr, I32:$txcount)> {    
   let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) `->` type($res)";
   let extraClassDefinition = [{
-    const char* $cppClass::getPtx() { return "mbarrier.arrive.expect_tx.shared.b64 %0, [%1], %2;"; }
+    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.shared.b64 %0, [%1], %2;"); }
   }];
 }
 
@@ -397,12 +397,12 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_Op<"mbarrier.try_wait.parity",
   Arguments<(ins LLVM_i64ptr_any:$addr, LLVM_Type:$token)> {
   let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
   let extraClassDefinition = [{
-    const char* $cppClass::getPtx() {
-      return "{\n\t"
+    std::string $cppClass::getPtx() {
+      return std::string("{\n\t"
               ".reg .pred P1; \n\t"
               "mbarrier.try_wait.parity.b64 P1, [%1], %2; \n\t"
               "selp.b32 %0, 1, 0, P1; \n\t"
-              "}"; 
+              "}"); 
     }
   }];
 }
@@ -413,12 +413,12 @@ def NVVM_MBarrierTryWaitParitySharedOp : NVVM_Op<"mbarrier.try_wait.parity.share
   Arguments<(ins LLVM_i64ptr_shared:$addr, LLVM_Type:$token)> {  
   let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
   let extraClassDefinition = [{
-    const char* $cppClass::getPtx() {
-      return "{\n\t"
+    std::string $cppClass::getPtx() {
+      return std::string("{\n\t"
               ".reg .pred P1; \n\t"
               "mbarrier.try_wait.parity.shared.b64 P1, [%1], %2; \n\t"
               "selp.b32 %0, 1, 0, P1; \n\t"
-              "}"; 
+              "}"); 
     }
   }];
 }
@@ -567,11 +567,11 @@ def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global", [DeclareOpInterfaceMethod
     }        
   }];
   let extraClassDefinition = [{        
-    const char* $cppClass::getPtx() { 
+    std::string $cppClass::getPtx() { 
       if(getModifier() == NVVM::LoadCacheModifierKind::CG)
-        return "cp.async.cg.shared.global [%0], [%1], %2, %3;\n"; 
+        return std::string("cp.async.cg.shared.global [%0], [%1], %2, %3;\n");
       if(getModifier() == NVVM::LoadCacheModifierKind::CA)
-        return "cp.async.ca.shared.global [%0], [%1], %2, %3;\n";        
+        return std::string("cp.async.ca.shared.global [%0], [%1], %2, %3;\n");
       llvm_unreachable("unsupported cache modifier");      
     }
   }];
