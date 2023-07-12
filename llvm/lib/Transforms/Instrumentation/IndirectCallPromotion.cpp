@@ -327,7 +327,7 @@ bool ICallPromotionFunc::processFunction(ProfileSummaryInfo *PSI) {
 
 // A wrapper function that does the actual work.
 static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
-                                 bool SamplePGO, ModuleAnalysisManager &AM) {
+                                 bool SamplePGO, ModuleAnalysisManager &MAM) {
   if (DisableICP)
     return false;
   InstrProfSymtab Symtab;
@@ -342,7 +342,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
       continue;
 
     auto &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
     ICallPromotionFunc ICallPromotion(F, &M, &Symtab, SamplePGO, ORE);
@@ -361,11 +361,11 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
 }
 
 PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
-                                                ModuleAnalysisManager &AM) {
-  ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
+                                                ModuleAnalysisManager &MAM) {
+  ProfileSummaryInfo *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
 
   if (!promoteIndirectCalls(M, PSI, InLTO | ICPLTOMode,
-                            SamplePGO | ICPSamplePGOMode, AM))
+                            SamplePGO | ICPSamplePGOMode, MAM))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
