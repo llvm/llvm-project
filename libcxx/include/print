@@ -14,13 +14,19 @@
 namespace std {
   // [print.fun], print functions
   template<class... Args>
+    void print(format_string<Args...> fmt, Args&&... args);
+  template<class... Args>
     void print(FILE* stream, format_string<Args...> fmt, Args&&... args);
 
   template<class... Args>
+    void println(format_string<Args...> fmt, Args&&... args);
+  template<class... Args>
     void println(FILE* stream, format_string<Args...> fmt, Args&&... args);
 
+  void vprint_unicode(string_view fmt, format_args args);
   void vprint_unicode(FILE* stream, string_view fmt, format_args args);
 
+  void vprint_nonunicode(string_view fmt, format_args args);
   void vprint_nonunicode(FILE* stream, string_view fmt, format_args args);
 }
 */
@@ -329,6 +335,11 @@ _LIBCPP_HIDE_FROM_ABI void print(FILE* __stream, format_string<_Args...> __fmt, 
 }
 
 template <class... _Args>
+_LIBCPP_HIDE_FROM_ABI void print(format_string<_Args...> __fmt, _Args&&... __args) {
+  std::print(stdout, __fmt, std::forward<_Args>(__args)...);
+}
+
+template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void println(FILE* __stream, format_string<_Args...> __fmt, _Args&&... __args) {
 #  ifndef _LIBCPP_HAS_NO_UNICODE
   // Note the wording in the Standard is inefficient. The output of
@@ -343,16 +354,32 @@ _LIBCPP_HIDE_FROM_ABI void println(FILE* __stream, format_string<_Args...> __fmt
 #  endif // _LIBCPP_HAS_NO_UNICODE
 }
 
+template <class... _Args>
+_LIBCPP_HIDE_FROM_ABI void println(format_string<_Args...> __fmt, _Args&&... __args) {
+  std::println(stdout, __fmt, std::forward<_Args>(__args)...);
+}
+
 #  ifndef _LIBCPP_HAS_NO_UNICODE
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(FILE* __stream, string_view __fmt, format_args __args) {
   __print::__vprint_unicode(__stream, __fmt, __args, false);
 }
+
+template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
+_LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(string_view __fmt, format_args __args) {
+  std::vprint_unicode(stdout, __fmt, __args);
+}
+
 #  endif // _LIBCPP_HAS_NO_UNICODE
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args) {
   __print::__vprint_nonunicode(__stream, __fmt, __args, false);
+}
+
+template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
+_LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(string_view __fmt, format_args __args) {
+  std::vprint_nonunicode(stdout, __fmt, __args);
 }
 
 #endif // _LIBCPP_STD_VER >= 23
