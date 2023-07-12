@@ -943,6 +943,8 @@ AST Matchers
 
 - The ``hasBody`` matcher now matches coroutine body nodes in
   ``CoroutineBodyStmts``.
+  
+- Add ``arrayInitIndexExpr`` and ``arrayInitLoopExpr`` matchers.
 
 clang-format
 ------------
