@@ -663,34 +663,35 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 define dso_local void @test_nested(ptr noalias nocapture %pInT1, ptr noalias nocapture readonly %pOutT1, ptr noalias nocapture readonly %pPRT_in, ptr noalias nocapture readnone %pPRT_pDst, i32 %numRows, i32 %numCols, i32 %l) local_unnamed_addr {
 ; CHECK-LABEL: test_nested:
 ; CHECK:       @ %bb.0: @ %for.body.us.preheader
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    ldrd lr, r12, [sp, #16]
+; CHECK-NEXT:    lsl.w r3, r12, #1
 ; CHECK-NEXT:  .LBB14_1: @ %for.body.us
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB14_2 Depth 2
-; CHECK-NEXT:    ldrh r3, [r1]
+; CHECK-NEXT:    ldrh r4, [r1]
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    mov r6, r12
+; CHECK-NEXT:    vdup.16 q0, r4
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r5, r12
-; CHECK-NEXT:    vdup.16 q0, r3
-; CHECK-NEXT:    add.w r3, r2, r12, lsl #1
 ; CHECK-NEXT:  .LBB14_2: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB14_1 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vldrw.u32 q1, [r2], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r5], #16
 ; CHECK-NEXT:    vldrw.u32 q2, [r4]
-; CHECK-NEXT:    subs r5, #8
+; CHECK-NEXT:    subs r6, #8
 ; CHECK-NEXT:    vfms.f16 q2, q1, q0
 ; CHECK-NEXT:    vstrb.8 q2, [r4], #16
 ; CHECK-NEXT:    bne .LBB14_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond6.for.end_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB14_1 Depth=1
-; CHECK-NEXT:    add.w r0, r0, r12, lsl #1
+; CHECK-NEXT:    add r0, r3
+; CHECK-NEXT:    add r2, r3
 ; CHECK-NEXT:    adds r1, #2
-; CHECK-NEXT:    mov r2, r3
 ; CHECK-NEXT:    le lr, .LBB14_1
 ; CHECK-NEXT:  @ %bb.4: @ %for.end14
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 for.body.us.preheader:
   %cmp = icmp sgt i32 %numRows, 0
   tail call void @llvm.assume(i1 %cmp)

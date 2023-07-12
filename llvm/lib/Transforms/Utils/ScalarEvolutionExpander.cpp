@@ -999,15 +999,8 @@ Instruction *SCEVExpander::getIVIncOperand(Instruction *IncV,
         // allow any kind of GEP as long as it can be hoisted.
         continue;
       }
-      // This must be a pointer addition of constants (pretty), which is already
-      // handled, or some number of address-size elements (ugly). Ugly geps
-      // have 2 operands. i1* is used by the expander to represent an
-      // address-size element.
-      if (IncV->getNumOperands() != 2)
-        return nullptr;
-      unsigned AS = cast<PointerType>(IncV->getType())->getAddressSpace();
-      if (IncV->getType() != Type::getInt1PtrTy(SE.getContext(), AS)
-          && IncV->getType() != Type::getInt8PtrTy(SE.getContext(), AS))
+      // GEPs produced by SCEVExpander use i8 element type.
+      if (!cast<GEPOperator>(IncV)->getSourceElementType()->isIntegerTy(8))
         return nullptr;
       break;
     }
