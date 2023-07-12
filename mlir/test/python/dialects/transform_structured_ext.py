@@ -256,6 +256,98 @@ def testTileExplicitLoopTypeAll():
 
 
 @run
+def testTileToForallCompact():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE,
+        [],
+        transform.OperationType.get("linalg.matmul"),
+    )
+    with InsertionPoint(sequence.body):
+        structured.TileToForallOp(sequence.bodyTarget, num_threads=[2, 3, 4])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallCompact
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK-SAME: (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+def testTileToForallLoopsAndTileOpTypes():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.TileToForallOp(
+            transform.OperationType.get("scf.forall"),  # loops_type
+            transform.OperationType.get("linalg.matmul"),  # tiled_op_type
+            sequence.bodyTarget,
+            num_threads=[2, 3, 4],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallLoopsAndTileOpTypes
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK-SAME: (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.matmul">)
+
+
+@run
+def testTileToForallTileSizes():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.TileToForallOp(sequence.bodyTarget, tile_sizes=[2, 3, 4])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallTileSizes
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads [] tile_sizes [2, 3, 4]
+
+
+@run
+def testTileToForallMixedDynamic():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        n = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        structured.TileToForallOp(sequence.bodyTarget, num_threads=[n, 3, 4])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallMixedDynamic
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads [%{{.*}} : !pdl.operation, 3, 4]
+
+
+@run
+def testTileToForallMPackedDynamic():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        n = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        structured.TileToForallOp(sequence.bodyTarget, num_threads=n)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallMPackedDynamic
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads *(%0 : !pdl.operation)
+
+
+@run
+def testTileToForallMapping():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        mapping = Attribute.parse("[ #gpu.thread<y>, #gpu.thread<x> ]")
+        structured.TileToForallOp(
+            sequence.bodyTarget, num_threads=[2, 3], mapping=mapping
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallMapping
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: mapping = [#gpu.thread<y>, #gpu.thread<x>]
+
+
+@run
 def testVectorize():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()

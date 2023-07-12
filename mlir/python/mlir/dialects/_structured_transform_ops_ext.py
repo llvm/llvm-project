@@ -9,13 +9,54 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
-from typing import List, Optional, Sequence, Union, overload
+from typing import List, Optional, Sequence, Tuple, Union, overload
 
 IntOrAttrList = Sequence[Union[IntegerAttr, int]]
 OptionalIntList = Optional[Union[ArrayAttr, IntOrAttrList]]
 
 BoolOrAttrList = Sequence[Union[BoolAttr, bool]]
 OptionalBoolList = Optional[Union[ArrayAttr, BoolOrAttrList]]
+
+MixedValues = Union[
+    Sequence[Union[int, IntegerAttr, Operation, Value, OpView]],
+    ArrayAttr,
+    Operation,
+    Value,
+    OpView,
+]
+
+
+# Dispatches `MixedValues` that all represents integers in various forms into
+# the following three categories:
+#   - `dynamic_values`: a list of `Value`s, potentially from op results;
+#   - `packed_values`: a value handle, potentially from an op result, associated
+#                      to one or more payload operations of integer type;
+#   - `static_values`: an `ArrayAttr` of `i64`s with static values, from Python
+#                      `int`s, from `IntegerAttr`s, or from an `ArrayAttr`.
+# The input is in the form for `packed_values`, only that result is set and the
+# other two are empty. Otherwise, the input can be a mix of the other two forms,
+# and for each dynamic value, a special value is added to the `static_values`.
+def _dispatch_mixed_values(
+    values: MixedValues,
+) -> Tuple[List[Value], Union[Operation, Value, OpView], DenseI64ArrayAttr]:
+    dynamic_values = []
+    packed_values = None
+    static_values = None
+    if isinstance(values, ArrayAttr):
+        static_values = values
+    elif isinstance(values, (Operation, Value, OpView)):
+        packed_values = values
+    else:
+        static_values = []
+        for size in values or []:
+            if isinstance(size, int):
+                static_values.append(size)
+            else:
+                static_values.append(ShapedType.get_dynamic_size())
+                dynamic_values.append(_get_op_result_or_value(size))
+        static_values = DenseI64ArrayAttr.get(static_values)
+
+    return (dynamic_values, packed_values, static_values)
 
 
 def _get_int_int_array_attr(
@@ -352,6 +393,98 @@ class TileOp:
     if not attr:
       return []
     return [element for element in attr]
+
+
+class TileToForallOp:
+    """Specialization for TileToForallOp class."""
+
+    @overload
+    def __init__(
+        self,
+        loops_type: Type,
+        tiled_op_type: Type,
+        target: Union[Operation, Value, OpView],
+        *,
+        num_threads: Optional[MixedValues] = None,
+        tile_sizes: MixedValues = None,
+        mapping=None,
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self,
+        target: Union[Operation, Value, OpView],
+        *,
+        num_threads: Optional[MixedValues] = None,
+        tile_sizes: MixedValues = None,
+        mapping=None,
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    def __init__(
+        self,
+        loops_type_or_target: Union[
+            Type, Union[Operation, Value, OpView]  # loops_type
+        ],  # target
+        tiled_op_type_or_none: Optional[Type] = None,
+        target_or_none: Optional[Union[Operation, Value, OpView]] = None,
+        *,
+        num_threads: MixedValues = None,
+        tile_sizes: MixedValues = None,
+        mapping=None,
+        loc=None,
+        ip=None,
+    ):
+        # `Type` arguments in the front are optional: add default values to front.
+        if isinstance(loops_type_or_target, Type):
+            # First overload: type arguments provided.
+            if not isinstance(tiled_op_type_or_none, Type):
+                raise TypeError(
+                    "If 'loops_type_or_target' is a type, then "
+                    "'tiled_op_type_or_none' is expected to be one as well."
+                )
+            loops_type = loops_type_or_target
+            tiled_op_type = tiled_op_type_or_none
+            target = target_or_none
+        else:
+            # Last overload: type arguments missing.
+            loops_type = transform.AnyOpType.get()
+            tiled_op_type = transform.AnyOpType.get()
+            target = loops_type_or_target
+
+        # Unpack mixed num_threads.
+        (
+            dynamic_num_threads,
+            packed_num_threads,
+            num_threads_attr,
+        ) = _dispatch_mixed_values(num_threads)
+
+        # Unpack mixed tile_sizes.
+        (
+            dynamic_tile_sizes,
+            packed_tile_sizes,
+            tile_sizes_attr,
+        ) = _dispatch_mixed_values(tile_sizes)
+
+        super().__init__(
+            loops_type,
+            tiled_op_type,
+            target=target,
+            tile_sizes=dynamic_tile_sizes,
+            packed_tile_sizes=packed_tile_sizes,
+            static_tile_sizes=tile_sizes_attr,
+            num_threads=dynamic_num_threads,
+            packed_num_threads=packed_num_threads,
+            static_num_threads=num_threads_attr,
+            mapping=mapping,
+            loc=loc,
+            ip=ip,
+        )
 
 
 class VectorizeOp:
