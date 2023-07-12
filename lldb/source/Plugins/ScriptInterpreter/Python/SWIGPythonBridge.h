@@ -30,6 +30,8 @@ class SBCommandReturnObject;
 class SBValue;
 class SBStream;
 class SBStructuredData;
+class SBFileSpec;
+class SBModuleSpec;
 } // namespace lldb
 
 namespace lldb_private {
@@ -102,6 +104,10 @@ public:
   static PythonObject ToSWIGWrapper(std::unique_ptr<lldb::SBStream> stream_sb);
   static PythonObject
   ToSWIGWrapper(std::unique_ptr<lldb::SBStructuredData> data_sb);
+  static PythonObject
+  ToSWIGWrapper(std::unique_ptr<lldb::SBFileSpec> file_spec_sb);
+  static PythonObject
+  ToSWIGWrapper(std::unique_ptr<lldb::SBModuleSpec> module_spec_sb);
 
   static python::ScopedPythonObject<lldb::SBCommandReturnObject>
   ToSWIGWrapper(CommandReturnObject &cmd_retobj);
