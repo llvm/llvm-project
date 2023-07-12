@@ -163,7 +163,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp __pstl_transform_reduce(
           std::move(__last),
           [__transform](_ForwardIterator __iter) { return __transform(*__iter); },
           std::move(__init),
-          std::move(__reduce),
+          __reduce,
           [=](_ForwardIterator __brick_first, _ForwardIterator __brick_last, _Tp __brick_init) {
             return std::__pstl_transform_reduce<__remove_parallel_policy_t<_ExecutionPolicy>>(
                 __cpu_backend_tag{},
