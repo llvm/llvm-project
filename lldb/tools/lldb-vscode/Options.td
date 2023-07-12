@@ -39,3 +39,7 @@ def debugger_pid: Separate<["--", "-"], "debugger-pid">,
   MetaVarName<"<pid>">,
   HelpText<"The PID of the lldb-vscode instance that sent the launchInTerminal "
     "request when using --launch-target.">;
+
+def repl_mode: S<"repl-mode">,
+  MetaVarName<"<mode>">,
+  HelpText<"The mode for handling repl evaluation requests, supported modes: variable, command, auto.">;
