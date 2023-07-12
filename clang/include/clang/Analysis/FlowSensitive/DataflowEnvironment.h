@@ -644,6 +644,10 @@ getImplicitObjectLocation(const CXXMemberCallExpr &MCE, const Environment &Env);
 AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
                                                 const Environment &Env);
 
+/// Returns the fields of `RD` that are initialized by an `InitListExpr`, in the
+/// order in which they appear in `InitListExpr::inits()`.
+std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
+
 } // namespace dataflow
 } // namespace clang
 

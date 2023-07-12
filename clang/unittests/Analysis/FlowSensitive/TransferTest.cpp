@@ -2833,6 +2833,7 @@ TEST(TransferTest, AggregateInitialization) {
 
     void target(int BarArg, int FooArg, int QuxArg) {
       B Quux{BarArg, {FooArg}, QuxArg};
+      B OtherB;
       /*[[p]]*/
     }
   )";
@@ -2849,6 +2850,7 @@ TEST(TransferTest, AggregateInitialization) {
 
     void target(int BarArg, int FooArg, int QuxArg) {
       B Quux = {BarArg, FooArg, QuxArg};
+      B OtherB;
       /*[[p]]*/
     }
   )";
@@ -2898,6 +2900,14 @@ TEST(TransferTest, AggregateInitialization) {
           EXPECT_EQ(getFieldValue(QuuxVal, *BarDecl, Env), BarArgVal);
           EXPECT_EQ(getFieldValue(BazVal, *FooDecl, Env), FooArgVal);
           EXPECT_EQ(getFieldValue(QuuxVal, *QuxDecl, Env), QuxArgVal);
+
+          // Check that fields initialized in an initializer list are always
+          // modeled in other instances of the same type.
+          const auto &OtherBVal =
+              getValueForDecl<StructValue>(ASTCtx, Env, "OtherB");
+          EXPECT_THAT(OtherBVal.getChild(*BarDecl), NotNull());
+          EXPECT_THAT(OtherBVal.getChild(*BazDecl), NotNull());
+          EXPECT_THAT(OtherBVal.getChild(*QuxDecl), NotNull());
         });
   }
 }
