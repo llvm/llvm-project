@@ -15,9 +15,9 @@
 /// placed at aligned offsets.
 
 // L4: 0000002b N .Ltable0_end
-// MULT4:      Address            Line   Column File   ISA Discriminator Flags
-// MULT4-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-// MULT4-NEXT: 0x0000000000000000      1      0      1   0             0  is_stmt end_sequence
+// MULT4:      Address            Line   Column File   ISA Discriminator OpIndex Flags
+// MULT4-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+// MULT4-NEXT: 0x0000000000000000      1      0      1   0             0       0  is_stmt end_sequence
 // MULT4-EMPTY:
 // MULT4-NEXT: debug_line[0x0000002c]
 // MULT4-NEXT: Line table prologue:
@@ -29,9 +29,9 @@
 // MULT4-NEXT: default_is_stmt: 1
 
 // L8: 00000027 N .Ltable0_end
-// MULT8:      Address            Line   Column File   ISA Discriminator Flags
-// MULT8-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-// MULT8-NEXT: 0x0000000000000000      1      0      1   0             0  is_stmt end_sequence
+// MULT8:      Address            Line   Column File   ISA Discriminator OpIndex Flags
+// MULT8-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+// MULT8-NEXT: 0x0000000000000000      1      0      1   0             0       0  is_stmt end_sequence
 // MULT8-EMPTY:
 // MULT8-NEXT: debug_line[0x00000028]
 // MULT8-NEXT: Line table prologue:

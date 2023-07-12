@@ -1554,8 +1554,10 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   EXPECT_EQ(NextLine(), "           name: \"a file\"");
   EXPECT_EQ(NextLine(), "      dir_index: 0");
   EXPECT_EQ(NextLine(), "");
-  EXPECT_EQ(NextLine(), "            Address            Line   Column File   ISA Discriminator Flags");
-  EXPECT_EQ(NextLine(), "            ------------------ ------ ------ ------ --- ------------- -------------");
+  EXPECT_EQ(NextLine(), "            Address            Line   Column File   "
+                        "ISA Discriminator OpIndex Flags");
+  EXPECT_EQ(NextLine(), "            ------------------ ------ ------ ------ "
+                        "--- ------------- ------- -------------");
   EXPECT_EQ(NextLine(),
             "0x00000038: 00 Badly formed extended line op (length 0)");
   EXPECT_EQ(NextLine(),
@@ -1569,7 +1571,7 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   EXPECT_EQ(NextLine(), "0x00000055: 00 DW_LNE_set_discriminator (127)");
   EXPECT_EQ(NextLine(), "0x00000059: 01 DW_LNS_copy");
   EXPECT_EQ(NextLine(), "            0x0123456789abcdef      1      0      1   "
-                        "0           127  is_stmt");
+                        "0           127       0  is_stmt");
   EXPECT_EQ(NextLine(), "0x0000005a: 02 DW_LNS_advance_pc (11)");
   EXPECT_EQ(NextLine(), "0x0000005c: 03 DW_LNS_advance_line (23)");
   EXPECT_EQ(NextLine(), "0x0000005e: 04 DW_LNS_set_file (33)");
@@ -1588,10 +1590,10 @@ TEST_F(DebugLineBasicFixture, VerboseOutput) {
   EXPECT_EQ(NextLine(), "0x00000078: ff address += 17,  line += -3");
   EXPECT_EQ(NextLine(),
             "            0x0123456789abce53     20     44     33  66           "
-            "  0  basic_block prologue_end epilogue_begin");
+            "  0       0  basic_block prologue_end epilogue_begin");
   EXPECT_EQ(NextLine(), "0x00000079: 00 DW_LNE_end_sequence");
   EXPECT_EQ(NextLine(), "            0x0123456789abce53     20     44     33  "
-                        "66             0  end_sequence");
+                        "66             0       0  end_sequence");
   EXPECT_EQ(NextLine(), "");
   EXPECT_EQ(Output.size(), Pos);
 }
