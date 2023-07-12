@@ -37,7 +37,11 @@ struct DILineInfo {
   std::string FileName;
   std::string FunctionName;
   std::string StartFileName;
+  // Full source corresponding to `FileName`
   std::optional<StringRef> Source;
+  // Source code for this particular line
+  // (in case if `Source` is not available)
+  std::optional<StringRef> LineSource;
   uint32_t Line = 0;
   uint32_t Column = 0;
   uint32_t StartLine = 0;
@@ -228,7 +232,7 @@ struct DIDumpOptions {
 
 class DIContext {
 public:
-  enum DIContextKind { CK_DWARF, CK_PDB };
+  enum DIContextKind { CK_DWARF, CK_PDB, CK_BTF };
 
   DIContext(DIContextKind K) : Kind(K) {}
   virtual ~DIContext() = default;
