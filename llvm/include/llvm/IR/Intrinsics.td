@@ -389,32 +389,21 @@ class LLVMAnyType<ValueType vt> : LLVMType<vt> {
   assert isAny, "LLVMAnyType.VT should have isOverloaded";
 }
 
-class LLVMQualPointerType<LLVMType elty, int addrspace>
-  : LLVMType<iPTR>{
-  LLVMType ElTy = elty;
+class LLVMQualPointerType<int addrspace>
+  : LLVMType<iPTR> {
   assert !and(!le(0, addrspace), !le(addrspace, 255)),
     "Address space exceeds 255";
 
-  // D63507: LLVMPointerType<llvm_any_ty>
-  let isAny = elty.isAny;
-
-  let Sig = !listconcat(
+  let Sig =
     !if(addrspace, [
       IIT_ANYPTR.Number,
       addrspace,
     ], [
       IIT_PTR.Number,
-    ]),
-    ElTy.Sig);
+    ]);
 }
 
-class LLVMPointerType<LLVMType elty>
-  : LLVMQualPointerType<elty, 0>;
-
-class LLVMAnyPointerType<LLVMType elty>
-  : LLVMAnyType<iPTRAny> {
-  LLVMType ElTy = elty;
-
+class LLVMAnyPointerType : LLVMAnyType<iPTRAny> {
   assert isAny, "iPTRAny should have isOverloaded";
 }
 
@@ -506,16 +495,13 @@ def llvm_double_ty     : LLVMType<f64>;
 def llvm_f80_ty        : LLVMType<f80>;
 def llvm_f128_ty       : LLVMType<f128>;
 def llvm_ppcf128_ty    : LLVMType<ppcf128>;
-def llvm_ptr_ty        : LLVMPointerType<llvm_i8_ty>;             // i8*
-def llvm_ptrptr_ty     : LLVMPointerType<llvm_ptr_ty>;            // i8**
-def llvm_anyptr_ty     : LLVMAnyPointerType<llvm_i8_ty>;          // (space)i8*
-def llvm_empty_ty      : LLVMType<OtherVT>;                       // { }
-def llvm_descriptor_ty : LLVMPointerType<llvm_empty_ty>;          // { }*
-def llvm_metadata_ty   : LLVMType<MetadataVT>;                    // !{...}
-def llvm_token_ty      : LLVMType<token>;                         // token
+def llvm_ptr_ty        : LLVMQualPointerType<0>; // ptr
+def llvm_anyptr_ty     : LLVMAnyPointerType;     // ptr addrspace(N)
+def llvm_empty_ty      : LLVMType<OtherVT>;      // { }
+def llvm_metadata_ty   : LLVMType<MetadataVT>;   // !{...}
+def llvm_token_ty      : LLVMType<token>;        // token
 
 def llvm_x86mmx_ty     : LLVMType<x86mmx>;
-def llvm_ptrx86mmx_ty  : LLVMPointerType<llvm_x86mmx_ty>;         // <1 x i64>*
 
 def llvm_aarch64_svcount_ty : LLVMType<aarch64svcount>;
 
@@ -726,12 +712,12 @@ def int_vaend   : DefaultAttrsIntrinsic<[], [llvm_ptr_ty], [], "llvm.va_end">;
 //===------------------- Garbage Collection Intrinsics --------------------===//
 //
 def int_gcroot  : Intrinsic<[],
-                            [llvm_ptrptr_ty, llvm_ptr_ty]>;
+                            [llvm_ptr_ty, llvm_ptr_ty]>;
 def int_gcread  : Intrinsic<[llvm_ptr_ty],
-                            [llvm_ptr_ty, llvm_ptrptr_ty],
+                            [llvm_ptr_ty, llvm_ptr_ty],
                             [IntrReadMem, IntrArgMemOnly]>;
 def int_gcwrite : Intrinsic<[],
-                            [llvm_ptr_ty, llvm_ptr_ty, llvm_ptrptr_ty],
+                            [llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
                             [IntrArgMemOnly, NoCapture<ArgIndex<1>>,
                              NoCapture<ArgIndex<2>>]>;
 
@@ -747,19 +733,19 @@ def int_objc_autoreleasePoolPush            : Intrinsic<[llvm_ptr_ty], []>;
 def int_objc_autoreleaseReturnValue         : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty]>;
 def int_objc_copyWeak                       : Intrinsic<[],
-                                                        [llvm_ptrptr_ty,
-                                                         llvm_ptrptr_ty]>;
-def int_objc_destroyWeak                    : Intrinsic<[], [llvm_ptrptr_ty]>;
+                                                        [llvm_ptr_ty,
+                                                         llvm_ptr_ty]>;
+def int_objc_destroyWeak                    : Intrinsic<[], [llvm_ptr_ty]>;
 def int_objc_initWeak                       : Intrinsic<[llvm_ptr_ty],
-                                                        [llvm_ptrptr_ty,
+                                                        [llvm_ptr_ty,
                                                          llvm_ptr_ty]>;
 def int_objc_loadWeak                       : Intrinsic<[llvm_ptr_ty],
-                                                        [llvm_ptrptr_ty]>;
+                                                        [llvm_ptr_ty]>;
 def int_objc_loadWeakRetained               : Intrinsic<[llvm_ptr_ty],
-                                                        [llvm_ptrptr_ty]>;
+                                                        [llvm_ptr_ty]>;
 def int_objc_moveWeak                       : Intrinsic<[],
-                                                        [llvm_ptrptr_ty,
-                                                         llvm_ptrptr_ty]>;
+                                                        [llvm_ptr_ty,
+                                                         llvm_ptr_ty]>;
 def int_objc_release                        : Intrinsic<[], [llvm_ptr_ty]>;
 def int_objc_retain                         : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty]>;
@@ -772,10 +758,10 @@ def int_objc_retainAutoreleasedReturnValue  : Intrinsic<[llvm_ptr_ty],
 def int_objc_retainBlock                    : Intrinsic<[llvm_ptr_ty],
                                                         [llvm_ptr_ty]>;
 def int_objc_storeStrong                    : Intrinsic<[],
-                                                        [llvm_ptrptr_ty,
+                                                        [llvm_ptr_ty,
                                                          llvm_ptr_ty]>;
 def int_objc_storeWeak                      : Intrinsic<[llvm_ptr_ty],
-                                                        [llvm_ptrptr_ty,
+                                                        [llvm_ptr_ty,
                                                          llvm_ptr_ty]>;
 def int_objc_clang_arc_use                  : Intrinsic<[],
                                                         [llvm_vararg_ty]>;
@@ -797,23 +783,23 @@ def int_objc_sync_enter                     : Intrinsic<[llvm_i32_ty],
 def int_objc_sync_exit                      : Intrinsic<[llvm_i32_ty],
                                                         [llvm_ptr_ty]>;
 def int_objc_arc_annotation_topdown_bbstart : Intrinsic<[],
-                                                        [llvm_ptrptr_ty,
-                                                         llvm_ptrptr_ty]>;
+                                                        [llvm_ptr_ty,
+                                                         llvm_ptr_ty]>;
 def int_objc_arc_annotation_topdown_bbend   : Intrinsic<[],
-                                                        [llvm_ptrptr_ty,
-                                                         llvm_ptrptr_ty]>;
+                                                        [llvm_ptr_ty,
+                                                         llvm_ptr_ty]>;
 def int_objc_arc_annotation_bottomup_bbstart  : Intrinsic<[],
-                                                          [llvm_ptrptr_ty,
-                                                           llvm_ptrptr_ty]>;
+                                                          [llvm_ptr_ty,
+                                                           llvm_ptr_ty]>;
 def int_objc_arc_annotation_bottomup_bbend  : Intrinsic<[],
-                                                        [llvm_ptrptr_ty,
-                                                         llvm_ptrptr_ty]>;
+                                                        [llvm_ptr_ty,
+                                                         llvm_ptr_ty]>;
 //===--------------- Swift asynchronous context intrinsics ----------------===//
 
 // Returns the location of the Swift asynchronous context (usually stored just
 // before the frame pointer), and triggers the creation of a null context if it
 // would otherwise be unneeded.
-def int_swift_async_context_addr : Intrinsic<[llvm_ptrptr_ty], [], []>;
+def int_swift_async_context_addr : Intrinsic<[llvm_ptr_ty], [], []>;
 
 //===--------------------- Code Generator Intrinsics ----------------------===//
 //
@@ -902,7 +888,7 @@ def int_experimental_noalias_scope_decl
 
 // Stack Protector Intrinsic - The stackprotector intrinsic writes the stack
 // guard to the correct place on the stack frame.
-def int_stackprotector : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_ptrptr_ty], []>;
+def int_stackprotector : DefaultAttrsIntrinsic<[], [llvm_ptr_ty, llvm_ptr_ty], []>;
 def int_stackguard : DefaultAttrsIntrinsic<[llvm_ptr_ty], [], []>;
 
 // A cover for instrumentation based profiling.
@@ -1387,7 +1373,7 @@ def int_var_annotation : DefaultAttrsIntrinsic<
     [IntrInaccessibleMemOnly], "llvm.var.annotation">;
 
 def int_ptr_annotation : DefaultAttrsIntrinsic<
-    [LLVMAnyPointerType<llvm_anyint_ty>],
+    [llvm_anyptr_ty],
     [LLVMMatchType<0>, llvm_anyptr_ty, LLVMMatchType<1>, llvm_i32_ty, LLVMMatchType<1>],
     [IntrInaccessibleMemOnly], "llvm.ptr.annotation">;
 
@@ -1532,13 +1518,13 @@ def int_lifetime_end    : DefaultAttrsIntrinsic<[],
                                     [IntrArgMemOnly, IntrWillReturn,
                                      NoCapture<ArgIndex<1>>,
                                      ImmArg<ArgIndex<0>>]>;
-def int_invariant_start : DefaultAttrsIntrinsic<[llvm_descriptor_ty],
+def int_invariant_start : DefaultAttrsIntrinsic<[llvm_ptr_ty],
                                     [llvm_i64_ty, llvm_anyptr_ty],
                                     [IntrArgMemOnly, IntrWillReturn,
                                      NoCapture<ArgIndex<1>>,
                                      ImmArg<ArgIndex<0>>]>;
 def int_invariant_end   : DefaultAttrsIntrinsic<[],
-                                    [llvm_descriptor_ty, llvm_i64_ty,
+                                    [llvm_ptr_ty, llvm_i64_ty,
                                      llvm_anyptr_ty],
                                     [IntrArgMemOnly, IntrWillReturn,
                                      NoCapture<ArgIndex<2>>,
@@ -1764,13 +1750,13 @@ def int_experimental_stepvector : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 // Memory Intrinsics
 def int_vp_store : DefaultAttrsIntrinsic<[],
                              [ llvm_anyvector_ty,
-                               LLVMAnyPointerType<LLVMMatchType<0>>,
+                               llvm_anyptr_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<1>>, IntrNoSync, IntrWriteMem, IntrArgMemOnly, IntrWillReturn ]>;
 
 def int_vp_load  : DefaultAttrsIntrinsic<[ llvm_anyvector_ty],
-                             [ LLVMAnyPointerType<LLVMMatchType<0>>,
+                             [ llvm_anyptr_ty,
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<0>>, IntrNoSync, IntrReadMem, IntrWillReturn, IntrArgMemOnly ]>;
@@ -1791,14 +1777,14 @@ def int_vp_scatter: DefaultAttrsIntrinsic<[],
 // Experimental strided memory accesses
 def int_experimental_vp_strided_store : DefaultAttrsIntrinsic<[],
                              [ llvm_anyvector_ty,
-                               LLVMAnyPointerToElt<0>,
+                               llvm_anyptr_ty,
                                llvm_anyint_ty, // Stride in bytes
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty],
                              [ NoCapture<ArgIndex<1>>, IntrNoSync, IntrWriteMem, IntrArgMemOnly, IntrWillReturn ]>;
 
 def int_experimental_vp_strided_load  : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                             [ LLVMAnyPointerToElt<0>,
+                             [ llvm_anyptr_ty,
                                llvm_anyint_ty, // Stride in bytes
                                LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                llvm_i32_ty],
@@ -2192,14 +2178,14 @@ def int_experimental_vp_splice:
 //
 def int_masked_load:
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-            [LLVMAnyPointerType<LLVMMatchType<0>>, llvm_i32_ty,
+            [llvm_anyptr_ty, llvm_i32_ty,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
             [IntrReadMem, IntrArgMemOnly, IntrWillReturn, ImmArg<ArgIndex<1>>,
              NoCapture<ArgIndex<0>>]>;
 
 def int_masked_store:
   DefaultAttrsIntrinsic<[],
-            [llvm_anyvector_ty, LLVMAnyPointerType<LLVMMatchType<0>>,
+            [llvm_anyvector_ty, llvm_anyptr_ty,
              llvm_i32_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrWriteMem, IntrArgMemOnly, IntrWillReturn,
              ImmArg<ArgIndex<2>>, NoCapture<ArgIndex<1>>]>;
