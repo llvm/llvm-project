@@ -49,6 +49,13 @@ struct Test {
       assert((out == std::array{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
     }
 
+    { // check that it works with both ranges being empty
+      std::array<int, 0> a;
+      std::array<int, 0> b;
+      std::array<int, std::size(a) + std::size(b)> out;
+      std::merge(
+          policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b)), std::begin(out));
+    }
     { // check that it works with the first range being empty
       std::array<int, 0> a;
       int b[] = {2, 4, 6, 8, 10};
