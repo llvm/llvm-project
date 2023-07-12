@@ -4,7 +4,7 @@
 struct Bar {
   int a;
   char b;
-};
+} bar;
 
 struct Foo {
   int a;
@@ -25,4 +25,6 @@ void baz(void) {
 // CHECK-NEXT:     %1 = cir.alloca !ty_22struct2EFoo22, cir.ptr <!ty_22struct2EFoo22>, ["f"] {alignment = 4 : i64}
 // CHECK-NEXT:     cir.return
 // CHECK-NEXT:   }
-// CHECK-NEXT: }
+
+// Check if global structs are zero-initialized.
+//      CHECK: cir.global external @bar = #cir.zero : !ty_22struct2EBar22
