@@ -593,10 +593,8 @@ protected:
 
     unsigned : NumExprBits;
 
-    // These don't need to be particularly wide, because they're
-    // strictly limited by the forms of expressions we permit.
-    unsigned NumSubExprs : 8;
-    unsigned ResultIndex : 32 - 8 - NumExprBits;
+    unsigned NumSubExprs : 16;
+    unsigned ResultIndex : 16;
   };
 
   class SourceLocExprBitfields {
