@@ -660,6 +660,9 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
         builder.getIntegerAttr(ty, getReductionInitValue<llvm::APInt>(op, ty)));
   if (op == mlir::acc::ReductionOperator::AccMin ||
       op == mlir::acc::ReductionOperator::AccMax) {
+    if (mlir::isa<fir::ComplexType>(ty))
+      llvm::report_fatal_error(
+          "min/max reduction not supported for complex type");
     if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty))
       return builder.create<mlir::arith::ConstantOp>(
           loc, ty,
