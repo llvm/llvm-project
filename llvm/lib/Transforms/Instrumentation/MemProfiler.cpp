@@ -38,6 +38,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/HashBuilder.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -673,9 +674,9 @@ stackFrameIncludesInlinedCallStack(ArrayRef<Frame> ProfileCallStack,
   return InlCallStackIter == InlinedCallStack.end();
 }
 
-void llvm::readMemprof(Module &M, Function &F,
-                       IndexedInstrProfReader *MemProfReader,
-                       const TargetLibraryInfo &TLI) {
+static void readMemprof(Module &M, Function &F,
+                        IndexedInstrProfReader *MemProfReader,
+                        const TargetLibraryInfo &TLI) {
   auto &Ctx = M.getContext();
 
   auto FuncName = getPGOFuncName(F);
@@ -864,4 +865,50 @@ void llvm::readMemprof(Module &M, Function &F,
       }
     }
   }
+}
+
+MemProfUsePass::MemProfUsePass(std::string MemoryProfileFile,
+                               IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : MemoryProfileFileName(MemoryProfileFile), FS(FS) {
+  if (!FS)
+    this->FS = vfs::getRealFileSystem();
+}
+
+PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
+  LLVM_DEBUG(dbgs() << "Read in memory profile:");
+  auto &Ctx = M.getContext();
+  auto ReaderOrErr = IndexedInstrProfReader::create(MemoryProfileFileName, *FS);
+  if (Error E = ReaderOrErr.takeError()) {
+    handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
+      Ctx.diagnose(
+          DiagnosticInfoPGOProfile(MemoryProfileFileName.data(), EI.message()));
+    });
+    return PreservedAnalyses::all();
+  }
+
+  std::unique_ptr<IndexedInstrProfReader> MemProfReader =
+      std::move(ReaderOrErr.get());
+  if (!MemProfReader) {
+    Ctx.diagnose(DiagnosticInfoPGOProfile(
+        MemoryProfileFileName.data(), StringRef("Cannot get MemProfReader")));
+    return PreservedAnalyses::all();
+  }
+
+  if (!MemProfReader->hasMemoryProfile()) {
+    Ctx.diagnose(DiagnosticInfoPGOProfile(MemoryProfileFileName.data(),
+                                          "Not a memory profile"));
+    return PreservedAnalyses::all();
+  }
+
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    const TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+    readMemprof(M, F, MemProfReader.get(), TLI);
+  }
+
+  return PreservedAnalyses::none();
 }
