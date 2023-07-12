@@ -684,7 +684,7 @@ if( WIN32 AND NOT CYGWIN )
 endif()
 set(LLVM_NATIVE_TOOL_DIR "" CACHE PATH "Path to a directory containing prebuilt matching native tools (such as llvm-tblgen)")
 
-set(LLVM_INTEGRATED_CRT_ALLOC "" CACHE PATH "Replace the Windows CRT allocator with any of {rpmalloc|mimalloc|snmalloc}. Only works with /MT enabled.")
+set(LLVM_INTEGRATED_CRT_ALLOC "" CACHE PATH "Replace the Windows CRT allocator with any of {rpmalloc|mimalloc|snmalloc}. Only works with CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.")
 if(LLVM_INTEGRATED_CRT_ALLOC)
   if(NOT WIN32)
     message(FATAL_ERROR "LLVM_INTEGRATED_CRT_ALLOC is only supported on Windows.")
