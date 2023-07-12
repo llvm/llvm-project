@@ -480,13 +480,6 @@ if (LIBCXX_GENERATE_COVERAGE)
   set(CMAKE_BUILD_TYPE "COVERAGE" CACHE STRING "" FORCE)
 endif()
 
-string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
-if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-  set(LIBCXX_DEBUG_BUILD ON)
-else()
-  set(LIBCXX_DEBUG_BUILD OFF)
-endif()
-
 #===============================================================================
 # Setup Compiler Flags
 #===============================================================================
@@ -595,13 +588,6 @@ if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXX_ENABLE_SHARED)
   endif()
 endif()
 
-# Assertion flags =============================================================
-define_if(LIBCXX_DEBUG_BUILD -D_DEBUG)
-if (LIBCXX_ENABLE_ASSERTIONS AND NOT LIBCXX_DEBUG_BUILD)
-  # MSVC doesn't like _DEBUG on release builds. See PR 4379.
-  define_if_not(MSVC -D_DEBUG)
-endif()
-
 # Modules flags ===============================================================
 # FIXME The libc++ sources are fundamentally non-modular. They need special
 # versions of the headers in order to provide C++03 and legacy ABI definitions.
@@ -613,6 +599,8 @@ function(cxx_add_module_flags target)
     target_compile_options(${target} PUBLIC -fno-modules)
   endif()
 endfunction()
+
+string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
 # Sanitizer flags =============================================================
 
@@ -721,7 +709,7 @@ function(cxx_link_system_libraries target)
   endif()
 
   if (MSVC)
-    if (LIBCXX_DEBUG_BUILD)
+    if (uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
       set(LIB_SUFFIX "d")
     else()
       set(LIB_SUFFIX "")
