@@ -687,12 +687,10 @@ static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
 static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Type ty,
                                          mlir::acc::ReductionOperator op) {
-  if (op == mlir::acc::ReductionOperator::AccEqv &&
-      op == mlir::acc::ReductionOperator::AccNeqv)
-    TODO(loc, "reduction operator");
-
   if (op == mlir::acc::ReductionOperator::AccLand ||
-      op == mlir::acc::ReductionOperator::AccLor) {
+      op == mlir::acc::ReductionOperator::AccLor ||
+      op == mlir::acc::ReductionOperator::AccEqv ||
+      op == mlir::acc::ReductionOperator::AccNeqv) {
     assert(mlir::isa<fir::LogicalType>(ty) && "expect fir.logical type");
     bool value = true; // .true. for .and. and .eqv.
     if (op == mlir::acc::ReductionOperator::AccLor ||
@@ -845,6 +843,10 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
 
   if (op == mlir::acc::ReductionOperator::AccEqv)
     return genComparisonCombiner(builder, loc, mlir::arith::CmpIPredicate::eq,
+                                 value1, value2);
+
+  if (op == mlir::acc::ReductionOperator::AccNeqv)
+    return genComparisonCombiner(builder, loc, mlir::arith::CmpIPredicate::ne,
                                  value1, value2);
 
   TODO(loc, "reduction operator");
