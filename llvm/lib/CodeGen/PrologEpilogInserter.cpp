@@ -1348,7 +1348,7 @@ void PEI::replaceFrameIndices(MachineFunction &MF) {
     // longer track the SP adjustment (but that's OK because in that case, frame
     // index elimination does not care about the SP adjustment).
     if (!TFI.canSimplifyCallFramePseudos(MF)) {
-      for (auto *Succ : MBB.successors())
+      for ([[maybe_unused]] auto *Succ : MBB.successors())
         assert(Succ->getSPAdjustment() == SPAdj);
     }
   }
