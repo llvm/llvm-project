@@ -2009,6 +2009,7 @@ libc_support_library(
     ],
     defines = MEMORY_COPTS,
     textual_hdrs = [
+        "src/string/memory_utils/aarch64/bcmp_implementations.h",
         "src/string/memory_utils/aarch64/memcmp_implementations.h",
         "src/string/memory_utils/aarch64/memcpy_implementations.h",
         "src/string/memory_utils/bcmp_implementations.h",
@@ -2020,8 +2021,10 @@ libc_support_library(
         "src/string/memory_utils/memmem_implementations.h",
         "src/string/memory_utils/memmove_implementations.h",
         "src/string/memory_utils/memset_implementations.h",
+        "src/string/memory_utils/riscv/bcmp_implementations.h",
         "src/string/memory_utils/strcmp_implementations.h",
         "src/string/memory_utils/strstr_implementations.h",
+        "src/string/memory_utils/x86_64/bcmp_implementations.h",
         "src/string/memory_utils/x86_64/memcmp_implementations.h",
         "src/string/memory_utils/x86_64/memcpy_implementations.h",
     ],
