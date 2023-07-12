@@ -67,12 +67,12 @@
 ; DWARF-DUMP-NEXT:    md5_checksum: 05ab89f5481bc9f2d037e7886641e919
 ; DWARF-DUMP-NEXT:          source: "int main()\n{\n    return 0;\n}\n"
 ; DWARF-DUMP-EMPTY:
-; DWARF-DUMP-NEXT: Address            Line   Column File   ISA Discriminator Flags
-; DWARF-DUMP-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-; DWARF-DUMP-NEXT: 0x0000000000000000      2      0      0   0             0  is_stmt
-; DWARF-DUMP-NEXT: 0x0000000000000014      3      5      0   0             0  is_stmt prologue_end
-; DWARF-DUMP-NEXT: 0x0000000000000020      3      5      0   0             0  epilogue_begin
-; DWARF-DUMP-NEXT: 0x0000000000000028      3      5      0   0             0  end_sequence
+; DWARF-DUMP-NEXT: Address            Line   Column File   ISA Discriminator OpIndex Flags
+; DWARF-DUMP-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+; DWARF-DUMP-NEXT: 0x0000000000000000      2      0      0   0             0       0  is_stmt
+; DWARF-DUMP-NEXT: 0x0000000000000014      3      5      0   0             0       0  is_stmt prologue_end
+; DWARF-DUMP-NEXT: 0x0000000000000020      3      5      0   0             0       0  epilogue_begin
+; DWARF-DUMP-NEXT: 0x0000000000000028      3      5      0   0             0       0  end_sequence
 
 ; ModuleID = 'dwarf-riscv-relocs.c'
 source_filename = "dwarf-riscv-relocs.c"

@@ -5,11 +5,11 @@
 # RUN: llvm-dwarfdump --debug-line %t.o | FileCheck %s --check-prefixes=HEADER,ROWS
 # RUN: llvm-dwarfdump --debug-line %t.o --verbose | FileCheck %s --check-prefix=ROWS
 
-# HEADER:      Address            Line   Column File   ISA Discriminator Flags
-# HEADER-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-# ROWS:        0x0000000012345678      1      0      1   0             1  is_stmt basic_block prologue_end epilogue_begin end_sequence
-# ROWS:        0x0000000000000001      2      0      1   0             0  is_stmt
-# ROWS:        0x0000000000000001      2      0      1   0             0  is_stmt end_sequence
+# HEADER:      Address            Line   Column File   ISA Discriminator OpIndex Flags
+# HEADER-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+# ROWS:        0x0000000012345678      1      0      1   0             1       0  is_stmt basic_block prologue_end epilogue_begin end_sequence
+# ROWS:        0x0000000000000001      2      0      1   0             0       0  is_stmt
+# ROWS:        0x0000000000000001      2      0      1   0             0       0  is_stmt end_sequence
 
 .section .debug_line,"",@progbits
 .Line_table_start0:

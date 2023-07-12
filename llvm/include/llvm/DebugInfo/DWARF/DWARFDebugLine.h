@@ -167,6 +167,10 @@ public:
     /// An unsigned integer whose value encodes the applicable instruction set
     /// architecture for the current instruction.
     uint8_t Isa;
+    /// An unsigned integer representing the index of an operation within a
+    /// VLIW instruction. The index of the first operation is 0.
+    /// For non-VLIW architectures, this register will always be 0.
+    uint8_t OpIndex;
     /// A boolean indicating that the current instruction is the beginning of a
     /// statement.
     uint8_t IsStmt : 1,

@@ -477,6 +477,7 @@ void DWARFDebugLine::Row::reset(bool DefaultIsStmt) {
   Isa = 0;
   Discriminator = 0;
   IsStmt = DefaultIsStmt;
+  OpIndex = 0;
   BasicBlock = false;
   EndSequence = false;
   PrologueEnd = false;
@@ -485,15 +486,16 @@ void DWARFDebugLine::Row::reset(bool DefaultIsStmt) {
 
 void DWARFDebugLine::Row::dumpTableHeader(raw_ostream &OS, unsigned Indent) {
   OS.indent(Indent)
-      << "Address            Line   Column File   ISA Discriminator Flags\n";
+      << "Address            Line   Column File   ISA Discriminator OpIndex "
+         "Flags\n";
   OS.indent(Indent)
-      << "------------------ ------ ------ ------ --- ------------- "
+      << "------------------ ------ ------ ------ --- ------------- ------- "
          "-------------\n";
 }
 
 void DWARFDebugLine::Row::dump(raw_ostream &OS) const {
   OS << format("0x%16.16" PRIx64 " %6u %6u", Address.Address, Line, Column)
-     << format(" %6u %3u %13u ", File, Isa, Discriminator)
+     << format(" %6u %3u %13u %7u ", File, Isa, Discriminator, OpIndex)
      << (IsStmt ? " is_stmt" : "") << (BasicBlock ? " basic_block" : "")
      << (PrologueEnd ? " prologue_end" : "")
      << (EpilogueBegin ? " epilogue_begin" : "")
