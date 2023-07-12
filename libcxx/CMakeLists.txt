@@ -59,6 +59,16 @@ option(LIBCXX_ENABLE_FILESYSTEM
    available on the platform. This includes things like most parts of <filesystem> and
    others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
+set(LIBCXX_SUPPORTED_HARDENING_MODES unchecked hardened debug)
+set(LIBCXX_HARDENING_MODE "unchecked" CACHE STRING
+  "Specify the default hardening mode to use. This mode will be used inside the
+   compiled library and will be the default when compiling user code. Note that
+   users can override this setting in their own code. This does not affect the
+   ABI. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
+if (NOT "${LIBCXX_HARDENING_MODE}" IN_LIST LIBCXX_SUPPORTED_HARDENING_MODES)
+  message(FATAL_ERROR
+    "Unsupported hardening mode: '${LIBCXX_HARDENING_MODE}'. Supported values are ${LIBCXX_SUPPORTED_HARDENING_MODES}.")
+endif()
 option(LIBCXX_ENABLE_RANDOM_DEVICE
   "Whether to include support for std::random_device in the library. Disabling
    this can be useful when building the library for platforms that don't have
@@ -783,6 +793,16 @@ if (LIBCXX_ENABLE_ASSERTIONS)
   config_define(1 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
 else()
   config_define(0 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT)
+endif()
+if (LIBCXX_HARDENING_MODE STREQUAL "hardened")
+  config_define(1 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
+elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
+  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(1 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
+elseif (LIBCXX_HARDENING_MODE STREQUAL "unchecked")
+  config_define(0 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT)
+  config_define(0 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT)
 endif()
 
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "serial")
