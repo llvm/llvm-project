@@ -1385,6 +1385,19 @@ LogicalResult OpWithInferTypeInterfaceOp::inferReturnTypes(
   return success();
 }
 
+LogicalResult OpWithInferTypeAdaptorInterfaceOp::inferReturnTypes(
+    MLIRContext *, std::optional<Location> location,
+    OpWithInferTypeAdaptorInterfaceOp::Adaptor adaptor,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  if (adaptor.getX().getType() != adaptor.getY().getType()) {
+    return emitOptionalError(location, "operand type mismatch ",
+                             adaptor.getX().getType(), " vs ",
+                             adaptor.getY().getType());
+  }
+  inferredReturnTypes.assign({adaptor.getX().getType()});
+  return success();
+}
+
 // TODO: We should be able to only define either inferReturnType or
 // refineReturnType, currently only refineReturnType can be omitted.
 LogicalResult OpWithRefineTypeInterfaceOp::inferReturnTypes(

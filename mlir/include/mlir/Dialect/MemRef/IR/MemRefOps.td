@@ -903,7 +903,7 @@ def MemRef_ExtractStridedMetadataOp : MemRef_Op<"extract_strided_metadata", [
     Pure,
     SameVariadicResultSize,
     ViewLikeOpInterface,
-    InferTypeOpInterfaceAdaptor]> {
+    InferTypeOpAdaptor]> {
   let summary = "Extracts a buffer base with offset and strides";
   let description = [{
     Extracts a base buffer, offset and strides. This op allows additional layers

@@ -186,34 +186,41 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
 
 // Convenient trait to define a wrapper to inferReturnTypes that passes in the
 // Op Adaptor directly
-def InferTypeOpInterfaceAdaptor : TraitList<
+class InferTypeOpAdaptorBase<code additionalDecls = [{}]> : TraitList<
   [
     // Op implements infer type op interface.
     DeclareOpInterfaceMethods<InferTypeOpInterface>,
     NativeOpTrait<
-      /*name=*/"InferTypeOpInterfaceAdaptor",
+      /*name=*/"InferTypeOpAdaptor",
       /*traits=*/[],
       /*extraOpDeclaration=*/[{
-        static LogicalResult
-        inferReturnTypesAdaptor(MLIRContext *context,
-                                std::optional<Location> location,
+        static ::mlir::LogicalResult
+        inferReturnTypes(::mlir::MLIRContext *context,
+                                std::optional<::mlir::Location> location,
                                 Adaptor adaptor,
-                                SmallVectorImpl<Type> &inferredReturnTypes);
-      }],
+                                ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes);
+      }] # additionalDecls,
       /*extraOpDefinition=*/[{
-        LogicalResult
-        $cppClass::inferReturnTypes(MLIRContext *context,
-                          std::optional<Location> location,
-                          ValueRange operands, DictionaryAttr attributes,
-                          OpaqueProperties properties, RegionRange regions,
-                          SmallVectorImpl<Type> &inferredReturnTypes) {
+        ::mlir::LogicalResult
+        $cppClass::inferReturnTypes(::mlir::MLIRContext *context,
+                          std::optional<::mlir::Location> location,
+                          ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
           $cppClass::Adaptor adaptor(operands, attributes, properties, regions);
-          return $cppClass::inferReturnTypesAdaptor(context,
+          return $cppClass::inferReturnTypes(context,
             location, adaptor, inferredReturnTypes);
         }
       }]
     >
   ]>;
+
+def InferTypeOpAdaptor : InferTypeOpAdaptorBase;
+def InferTypeOpAdaptorWithIsCompatible : InferTypeOpAdaptorBase<
+  [{
+    static bool isCompatibleReturnTypes(::mlir::TypeRange l, ::mlir::TypeRange r);
+  }]
+>;
 
 // Convenience class grouping together type and shaped type op interfaces for
 // ops that have tensor return types.
@@ -231,13 +238,13 @@ class InferTensorTypeBase<list<string> overridenMethods = []> : TraitList<
       /*traits=*/[],
       /*extraOpDeclaration=*/[{}],
       /*extraOpDefinition=*/[{
-        LogicalResult
-        $cppClass::inferReturnTypes(MLIRContext *context,
-                          std::optional<Location> location,
-                          ValueRange operands, DictionaryAttr attributes,
-                          OpaqueProperties properties, RegionRange regions,
-                          SmallVectorImpl<Type> &inferredReturnTypes) {
-          SmallVector<ShapedTypeComponents, 2> retComponents;
+        ::mlir::LogicalResult
+        $cppClass::inferReturnTypes(::mlir::MLIRContext *context,
+                          std::optional<::mlir::Location> location,
+                          ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
+                          ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions,
+                          ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
+          ::llvm::SmallVector<::mlir::ShapedTypeComponents, 2> retComponents;
           if (failed($cppClass::inferReturnTypeComponents(context, location,
                                     operands, attributes, properties, regions,
                                     retComponents)))

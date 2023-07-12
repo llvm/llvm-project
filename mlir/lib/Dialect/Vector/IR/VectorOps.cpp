@@ -1146,15 +1146,15 @@ void vector::ExtractOp::build(OpBuilder &builder, OperationState &result,
 
 LogicalResult
 ExtractOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
-                            ValueRange operands, DictionaryAttr attributes,
-                            OpaqueProperties properties, RegionRange,
+                            ExtractOp::Adaptor adaptor,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
-  ExtractOp::Adaptor op(operands, attributes, properties);
-  auto vectorType = llvm::cast<VectorType>(op.getVector().getType());
-  if (static_cast<int64_t>(op.getPosition().size()) == vectorType.getRank()) {
+  auto vectorType = llvm::cast<VectorType>(adaptor.getVector().getType());
+  if (static_cast<int64_t>(adaptor.getPosition().size()) ==
+      vectorType.getRank()) {
     inferredReturnTypes.push_back(vectorType.getElementType());
   } else {
-    auto n = std::min<size_t>(op.getPosition().size(), vectorType.getRank());
+    auto n =
+        std::min<size_t>(adaptor.getPosition().size(), vectorType.getRank());
     inferredReturnTypes.push_back(VectorType::get(
         vectorType.getShape().drop_front(n), vectorType.getElementType()));
   }
@@ -2114,17 +2114,15 @@ LogicalResult ShuffleOp::verify() {
 
 LogicalResult
 ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
-                            ValueRange operands, DictionaryAttr attributes,
-                            OpaqueProperties properties, RegionRange,
+                            ShuffleOp::Adaptor adaptor,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
-  ShuffleOp::Adaptor op(operands, attributes, properties);
-  auto v1Type = llvm::cast<VectorType>(op.getV1().getType());
+  auto v1Type = llvm::cast<VectorType>(adaptor.getV1().getType());
   auto v1Rank = v1Type.getRank();
   // Construct resulting type: leading dimension matches mask
   // length, all trailing dimensions match the operands.
   SmallVector<int64_t, 4> shape;
   shape.reserve(v1Rank);
-  shape.push_back(std::max<size_t>(1, op.getMask().size()));
+  shape.push_back(std::max<size_t>(1, adaptor.getMask().size()));
   // In the 0-D case there is no trailing shape to append.
   if (v1Rank > 0)
     llvm::append_range(shape, v1Type.getShape().drop_front());
