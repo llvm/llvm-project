@@ -552,7 +552,7 @@ RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
   // callback is the main program."
   // https://man7.org/linux/man-pages/man3/dl_iterate_phdr.3.html
   std::vector<std::string> BuildIds;
-  llvm::SmallSet<StringRef, 4> BuildIdsSet;
+  llvm::SmallSet<std::string, 10> BuildIdsSet;
   while (Next < DataBuffer->getBufferEnd()) {
     auto *Header = reinterpret_cast<const memprof::Header *>(Next);
 
@@ -564,7 +564,7 @@ RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
       if (BuildIdsSet.contains(Id))
         continue;
       BuildIds.push_back(Id);
-      BuildIdsSet.insert(BuildIds.back());
+      BuildIdsSet.insert(Id);
     }
 
     Next += Header->TotalSize;
