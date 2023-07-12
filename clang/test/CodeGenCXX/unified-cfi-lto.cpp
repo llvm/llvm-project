@@ -1,6 +1,6 @@
 // Ensure that the frontend adds the proper metadata when CFI is
 // enabled.
-// RUN: %clang --target=x86_64-scei-ps4 -funified-lto -flto -fsanitize=cfi -fvisibility=hidden -c %s -o %t.o
+// RUN: %clang --target=x86_64-scei-ps4 -funified-lto -flto -fsanitize=cfi -fvisibility=hidden -fno-sanitize-ignorelist -c %s -o %t.o
 // RUN: llvm-dis %t.o -o %t1
 // RUN: FileCheck <%t1.0 %s
 
