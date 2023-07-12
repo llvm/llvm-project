@@ -2022,6 +2022,7 @@ libc_support_library(
         "src/string/memory_utils/memmove_implementations.h",
         "src/string/memory_utils/memset_implementations.h",
         "src/string/memory_utils/riscv/bcmp_implementations.h",
+        "src/string/memory_utils/riscv/memcpy_implementations.h",
         "src/string/memory_utils/strcmp_implementations.h",
         "src/string/memory_utils/strstr_implementations.h",
         "src/string/memory_utils/x86_64/bcmp_implementations.h",

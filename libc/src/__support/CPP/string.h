@@ -56,7 +56,7 @@ public:
   }
   LIBC_INLINE string(const char *cstr, size_t count) {
     resize(count);
-    inline_memcpy((void *)buffer_, (const void *)cstr, count);
+    inline_memcpy(buffer_, cstr, count);
   }
   LIBC_INLINE string(const char *cstr)
       : string(cstr, ::__llvm_libc::internal::string_length(cstr)) {}
