@@ -2970,14 +2970,11 @@ void UnwrappedLineParser::parseNamespace() {
     if (ManageWhitesmithsBraces)
       ++Line->Level;
 
+    // Munch the semicolon after a namespace. This is more common than one would
+    // think. Putting the semicolon into its own line is very ugly.
     parseBlock(/*MustBeDeclaration=*/true, AddLevels, /*MunchSemi=*/true,
                /*KeepBraces=*/true, /*IfKind=*/nullptr,
                ManageWhitesmithsBraces);
-
-    // Munch the semicolon after a namespace. This is more common than one would
-    // think. Putting the semicolon into its own line is very ugly.
-    if (FormatTok->is(tok::semi))
-      nextToken();
 
     addUnwrappedLine(AddLevels > 0 ? LineLevel::Remove : LineLevel::Keep);
 
