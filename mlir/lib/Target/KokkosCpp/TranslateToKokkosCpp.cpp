@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -1148,7 +1149,25 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
     //shifted and scaled to match the actual range.
     emitter << "int64_t unit_" << emitter.getOrCreateName(inductionVars[i]);
   }
-  //TODO: declare local update vars for each reduction here
+  if(isReduction)
+  { 
+    //Loop over the parallel body to get information about the reduction types
+    Region& body = op.getRegion();
+
+    for (auto reduce : op.getOps<scf::ReduceOp>())
+    {
+      Type type = reduce.getOperand().getType();
+      Block &reduction = reduce.getRegion().front();
+      
+      emitter << ", ";
+
+      if (failed(emitter.emitType(reduce.getLoc(), reduce.getOperand().getType(), true)))
+        return failure();
+
+      emitter << "& " << emitter.getOrCreateName(reduce.getRegion().getOps().begin()->getResult(0));
+
+    }
+  }
   emitter << ")\n{\n";
   emitter.ostream().indent();
   // Declare the actual induction variables, with the correct bounds and step
@@ -1170,9 +1189,23 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
       return failure();
   }
   emitter.ostream().unindent();
-  //TODO: add Kokkos reducers here. Then join with the 'init' values,
-  // since Kokkos always assumes the init is identity.
-  emitter << "})\n";
+
+  if(isReduction)
+  {
+    emitter << "}, ";
+
+    for(size_t i = 0; i < results.size(); i++) {
+      if(failed(emitter.emitValue(results[i])))
+        return failure();
+      if ( i != results.size() - 1)
+        emitter << ", ";
+    }
+
+    emitter << ")\n";
+  }
+  else {
+    emitter << "})\n";
+  }
   return success();
   /*
 
@@ -1239,6 +1272,53 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
   */
 }
 
+/// Matches a block containing a "simple" reduction. The expected shape of the
+/// block is as follows.
+///
+///   ^bb(%arg0, %arg1):
+///     %0 = OpTy(%arg0, %arg1)
+///     scf.reduce.return %0
+template <typename... OpTy>
+static bool matchSimpleReduction(Block &block) {
+  if (block.empty() || llvm::hasSingleElement(block) ||
+      std::next(block.begin(), 2) != block.end())
+    return false;
+
+  if (block.getNumArguments() != 2)
+    return false;
+
+  SmallVector<Operation *, 4> combinerOps;
+  Value reducedVal = matchReduction({block.getArguments()[1]},
+                                    /*redPos=*/0, combinerOps);
+
+  if (!reducedVal || !reducedVal.isa<BlockArgument>() ||
+      combinerOps.size() != 1)
+    return false;
+
+  return isa<OpTy...>(combinerOps[0]) &&
+         isa<scf::ReduceReturnOp>(block.back()) &&
+         block.front().getOperands() == block.getArguments();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ReduceOp reduceOp) {
+  raw_indented_ostream &os = emitter.ostream();
+
+  Block &reduction = reduceOp.getRegion().front();
+
+  Operation *terminator = &reduceOp.getRegion().front().back();
+  assert(isa<scf::ReduceReturnOp>(terminator) &&
+         "expected reduce op to be terminated by redure return");
+
+  if (matchSimpleReduction<arith::AddFOp, LLVM::FAddOp>(reduction)) {
+    os << emitter.getOrCreateName(reduceOp.getRegion().getOps().begin()->getResult(0));
+    os << " += ";
+    os << emitter.getOrCreateName(reduceOp.getOperand());
+    return success();
+  }
+
+  return failure();
+}
+
 static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
   raw_indented_ostream &os = emitter.ostream();
 
@@ -1286,10 +1366,12 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::YieldOp yiel
   raw_ostream &os = emitter.ostream();
   Operation &parentOp = *yieldOp.getOperation()->getParentOp();
 
+/*
   if (yieldOp.getNumOperands() != parentOp.getNumResults()) {
     return yieldOp.emitError("number of operands does not to match the number "
                              "of the parent op's results");
   }
+*/
 
   if (failed(interleaveWithError(
           llvm::zip(parentOp.getResults(), yieldOp.getOperands()),
@@ -2610,7 +2692,7 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
           .Case<func::CallOp, func::ConstantOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           // SCF ops.
-          .Case<scf::ForOp, scf::WhileOp, scf::IfOp, scf::YieldOp, scf::ConditionOp, scf::ParallelOp>(
+          .Case<scf::ForOp, scf::WhileOp, scf::IfOp, scf::YieldOp, scf::ConditionOp, scf::ParallelOp, scf::ReduceOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Arithmetic ops: general
           .Case<arith::FPToUIOp, arith::NegFOp, arith::CmpFOp, arith::CmpIOp, arith::SelectOp>(
