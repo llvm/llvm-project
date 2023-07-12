@@ -633,7 +633,7 @@ for llvm users and not imposing a big burden on llvm developers:
   expected, but no promises are made.
 
 C API Changes
-----------------
+-------------
 
 * Stability Guarantees: The C API is, in general, a "best effort" for stability.
   This means that we make every attempt to keep the C API stable, but that
