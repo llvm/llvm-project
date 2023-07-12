@@ -231,7 +231,7 @@ rpc_status_t rpc_init(uint32_t num_devices) {
 }
 
 rpc_status_t rpc_shutdown(void) {
-  if (state->reference_count-- == 1)
+  if (state && state->reference_count-- == 1)
     delete state;
 
   return RPC_STATUS_SUCCESS;
