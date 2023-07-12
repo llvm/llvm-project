@@ -35,7 +35,7 @@ void UnpoisonDllAddr1ExtraInfo(void **extra_info, int flags) {
   if (flags == RTLD_DL_SYMENT) {
     __msan_unpoison(extra_info, sizeof(void *));
 
-    const ElfW(Sym) *s = (const ElfW(Sym) *)*((const ElfW(Sym) **)(extra_info));
+    ElfW(Sym) *s = *((ElfW(Sym) **)(extra_info));
     __msan_unpoison(s, sizeof(ElfW(Sym)));
   } else if (flags == RTLD_DL_LINKMAP) {
     __msan_unpoison(extra_info, sizeof(void *));
