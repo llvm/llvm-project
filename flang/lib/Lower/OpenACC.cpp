@@ -416,6 +416,24 @@ static void genDataExitOperations(fir::FirOpBuilder &builder,
   }
 }
 
+template <typename RecipeOp>
+static void genPrivateLikeInitRegion(mlir::OpBuilder &builder, RecipeOp recipe,
+                                     mlir::Type ty, mlir::Location loc) {
+  mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
+  if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
+    if (fir::isa_trivial(refTy.getEleTy()))
+      retVal = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
+    else if (auto seqTy =
+                 mlir::dyn_cast_or_null<fir::SequenceType>(refTy.getEleTy())) {
+      if (seqTy.hasDynamicExtents())
+        TODO(loc, "private recipe of array with dynamic extents");
+      if (fir::isa_trivial(seqTy.getEleTy()))
+        retVal = builder.create<fir::AllocaOp>(loc, seqTy);
+    }
+  }
+  builder.create<mlir::acc::YieldOp>(loc, retVal);
+}
+
 mlir::acc::PrivateRecipeOp
 Fortran::lower::createOrGetPrivateRecipe(mlir::OpBuilder &builder,
                                          llvm::StringRef recipeName,
@@ -432,20 +450,8 @@ Fortran::lower::createOrGetPrivateRecipe(mlir::OpBuilder &builder,
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
                       {ty}, {loc});
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-
-  mlir::Value retVal = recipe.getInitRegion().front().getArgument(0);
-  if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
-    if (fir::isa_trivial(refTy.getEleTy()))
-      retVal = builder.create<fir::AllocaOp>(loc, refTy.getEleTy());
-    else if (auto seqTy =
-                 mlir::dyn_cast_or_null<fir::SequenceType>(refTy.getEleTy())) {
-      if (seqTy.hasDynamicExtents())
-        TODO(loc, "private recipe of array with dynamic extents");
-      if (fir::isa_trivial(seqTy.getEleTy()))
-        retVal = builder.create<fir::AllocaOp>(loc, seqTy);
-    }
-  }
-  builder.create<mlir::acc::YieldOp>(loc, retVal);
+  genPrivateLikeInitRegion<mlir::acc::PrivateRecipeOp>(builder, recipe, ty,
+                                                       loc);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
 }
@@ -466,15 +472,51 @@ mlir::acc::FirstprivateRecipeOp Fortran::lower::createOrGetFirstprivateRecipe(
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
                       {ty}, {loc});
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-  builder.create<mlir::acc::YieldOp>(
-      loc, recipe.getInitRegion().front().getArgument(0));
+  genPrivateLikeInitRegion<mlir::acc::FirstprivateRecipeOp>(builder, recipe, ty,
+                                                            loc);
 
   // Add empty copy region for firstprivate. TODO add copy sequence.
   builder.createBlock(&recipe.getCopyRegion(), recipe.getCopyRegion().end(),
                       {ty, ty}, {loc, loc});
-  builder.setInsertionPointToEnd(&recipe.getCopyRegion().back());
-  builder.create<mlir::acc::TerminatorOp>(loc);
 
+  builder.setInsertionPointToEnd(&recipe.getCopyRegion().back());
+  if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
+    if (fir::isa_trivial(refTy.getEleTy())) {
+      mlir::Value initValue = builder.create<fir::LoadOp>(
+          loc, recipe.getCopyRegion().front().getArgument(0));
+      builder.create<fir::StoreOp>(
+          loc, initValue, recipe.getCopyRegion().front().getArgument(1));
+    } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(
+                   refTy.getEleTy())) {
+      if (seqTy.hasDynamicExtents())
+        TODO(loc, "private recipe of array with dynamic extents");
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
+      mlir::Value arraySrc = recipe.getCopyRegion().front().getArgument(0);
+      mlir::Value arrayDst = recipe.getCopyRegion().front().getArgument(1);
+      llvm::SmallVector<fir::DoLoopOp> loops;
+      llvm::SmallVector<mlir::Value> ivs;
+      for (auto ext : llvm::reverse(seqTy.getShape())) {
+        auto lb = builder.create<mlir::arith::ConstantOp>(
+            loc, idxTy, builder.getIntegerAttr(idxTy, 0));
+        auto ub = builder.create<mlir::arith::ConstantOp>(
+            loc, idxTy, builder.getIntegerAttr(idxTy, ext - 1));
+        auto step = builder.create<mlir::arith::ConstantOp>(
+            loc, idxTy, builder.getIntegerAttr(idxTy, 1));
+        auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
+                                                  /*unordered=*/false);
+        builder.setInsertionPointToStart(loop.getBody());
+        loops.push_back(loop);
+        ivs.push_back(loop.getInductionVar());
+      }
+      auto addr1 = builder.create<fir::CoordinateOp>(loc, refTy, arraySrc, ivs);
+      auto addr2 = builder.create<fir::CoordinateOp>(loc, refTy, arrayDst, ivs);
+      auto loadedValue = builder.create<fir::LoadOp>(loc, addr1);
+      builder.create<fir::StoreOp>(loc, loadedValue, addr2);
+      builder.setInsertionPointAfter(loops[0]);
+    }
+  }
+  builder.create<mlir::acc::TerminatorOp>(loc);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
 }
