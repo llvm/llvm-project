@@ -530,10 +530,10 @@ Expected<StringRef> ELFObjectFile<ELFT>::getSymbolName(DataRefImpl Sym) const {
 
   // If the symbol name is empty use the section name.
   if ((*SymOrErr)->getType() == ELF::STT_SECTION) {
-    if (Expected<section_iterator> SecOrErr = getSymbolSection(Sym)) {
-      consumeError(Name.takeError());
+    Expected<section_iterator> SecOrErr = getSymbolSection(Sym);
+    if (SecOrErr)
       return (*SecOrErr)->getName();
-    }
+    return SecOrErr.takeError();
   }
   return Name;
 }

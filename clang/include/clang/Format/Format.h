@@ -3383,6 +3383,42 @@ struct FormatStyle {
   /// \version 14
   bool RemoveBracesLLVM;
 
+  /// Types of redundant parentheses to remove.
+  enum RemoveParenthesesStyle : int8_t {
+    /// Do not remove parentheses.
+    /// \code
+    ///   class __declspec((dllimport)) X {};
+    ///   co_return (((0)));
+    ///   return ((a + b) - ((c + d)));
+    /// \endcode
+    RPS_Leave,
+    /// Replace multiple parentheses with single parentheses.
+    /// \code
+    ///   class __declspec(dllimport) X {};
+    ///   co_return (0);
+    ///   return ((a + b) - (c + d));
+    /// \endcode
+    RPS_MultipleParentheses,
+    /// Also remove parentheses enclosing the expression in a
+    /// ``return``/``co_return`` statement.
+    /// \code
+    ///   class __declspec(dllimport) X {};
+    ///   co_return 0;
+    ///   return (a + b) - (c + d);
+    /// \endcode
+    RPS_ReturnStatement,
+  };
+
+  /// Remove redundant parentheses.
+  /// \warning
+  ///  Setting this option to any value other than ``Leave`` could lead to
+  ///  incorrect code formatting due to clang-format's lack of complete semantic
+  ///  information. As such, extra care should be taken to review code changes
+  ///  made by this option.
+  /// \endwarning
+  /// \version 17
+  RemoveParenthesesStyle RemoveParentheses;
+
   /// Remove semicolons after the closing brace of a non-empty function.
   /// \warning
   ///  Setting this option to `true` could lead to incorrect code formatting due
@@ -4416,6 +4452,7 @@ struct FormatStyle {
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
            RemoveBracesLLVM == R.RemoveBracesLLVM &&
+           RemoveParentheses == R.RemoveParentheses &&
            RemoveSemicolon == R.RemoveSemicolon &&
            RequiresClausePosition == R.RequiresClausePosition &&
            RequiresExpressionIndentation == R.RequiresExpressionIndentation &&

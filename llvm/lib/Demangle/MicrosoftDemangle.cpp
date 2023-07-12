@@ -2404,7 +2404,8 @@ char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,
   std::string_view Name{MangledName};
   SymbolNode *AST = D.parse(Name);
   if (!D.Error && NMangled)
-    *NMangled = Name.empty() ? 0 : &*Name.begin() - &*MangledName.begin();
+    *NMangled = Name.empty() ? MangledName.size()
+                             : &*Name.begin() - &*MangledName.begin();
 
   if (Flags & MSDF_DumpBackrefs)
     D.dumpBackReferences();

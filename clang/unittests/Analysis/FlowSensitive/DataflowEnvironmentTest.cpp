@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "TestingSupport.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -23,6 +24,7 @@ namespace {
 
 using namespace clang;
 using namespace dataflow;
+using ::clang::dataflow::test::getFieldValue;
 using ::testing::ElementsAre;
 using ::testing::NotNull;
 using ::testing::Pair;
@@ -89,14 +91,9 @@ TEST_F(EnvironmentTest, CreateValueRecursiveType) {
   // Verify that the struct and the field (`R`) with first appearance of the
   // type is created successfully.
   Environment Env(DAContext, *Fun);
-  Value *Val = Env.createValue(Ty);
-  ASSERT_NE(Val, nullptr);
-  StructValue *SVal = clang::dyn_cast<StructValue>(Val);
-  ASSERT_NE(SVal, nullptr);
-  Val = SVal->getChild(*R);
-  ASSERT_NE(Val, nullptr);
-  PointerValue *PV = clang::dyn_cast<PointerValue>(Val);
-  EXPECT_NE(PV, nullptr);
+  StructValue *SVal = cast<StructValue>(Env.createValue(Ty));
+  PointerValue *PV = cast_or_null<PointerValue>(getFieldValue(SVal, *R, Env));
+  EXPECT_THAT(PV, NotNull());
 }
 
 TEST_F(EnvironmentTest, InitGlobalVarsFun) {
@@ -175,8 +172,7 @@ TEST_F(EnvironmentTest, IncludeFieldsFromDefaultInitializers) {
   // constructor, even though it is not referenced directly in the constructor.
   Environment Env(DAContext, *Constructor);
   auto *Val = cast<StructValue>(Env.createValue(QTy));
-  ASSERT_THAT(Val, NotNull());
-  EXPECT_THAT(Val->getChild(*XDecl), NotNull());
+  EXPECT_THAT(getFieldValue(Val, *XDecl, Env), NotNull());
 }
 
 TEST_F(EnvironmentTest, InitGlobalVarsFieldFun) {
@@ -221,8 +217,7 @@ TEST_F(EnvironmentTest, InitGlobalVarsFieldFun) {
   const auto *GlobalLoc =
       cast<AggregateStorageLocation>(Env.getStorageLocation(*GlobalDecl));
   const auto *GlobalVal = cast<StructValue>(Env.getValue(*GlobalLoc));
-  const auto *BarVal = GlobalVal->getChild(*BarDecl);
-  ASSERT_THAT(BarVal, NotNull());
+  auto *BarVal = getFieldValue(GlobalVal, *BarDecl, Env);
   EXPECT_TRUE(isa<IntegerValue>(BarVal));
 }
 

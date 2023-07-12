@@ -293,6 +293,10 @@
 #    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
 #  endif
 
+#  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
+#    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
+#  endif
+
 // Need to detect which libc we're using if we're on Linux.
 #  if defined(__linux__)
 #    include <features.h>

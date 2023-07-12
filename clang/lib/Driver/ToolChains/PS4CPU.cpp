@@ -204,6 +204,13 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
+  if (D.isUsingLTO() && Args.hasArg(options::OPT_funified_lto)) {
+    if (D.getLTOMode() == LTOK_Thin)
+      CmdArgs.push_back("--lto=thin");
+    else if (D.getLTOMode() == LTOK_Full)
+      CmdArgs.push_back("--lto=full");
+  }
+
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
   Args.AddAllArgs(CmdArgs, options::OPT_s);

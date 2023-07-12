@@ -1883,7 +1883,8 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   bool UseFmadFtz = false;
   if (Subtarget->isGCN()) {
     const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-    UseFmadFtz = MFI->getMode().allFP32Denormals();
+    UseFmadFtz =
+        MFI->getMode().FP32Denormals != DenormalMode::getPreserveSign();
   }
 
   // float fr = mad(fqneg, fb, fa);
@@ -1975,11 +1976,11 @@ void AMDGPUTargetLowering::LowerUDIVREM64(SDValue Op,
     const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
     // Compute denominator reciprocal.
-    unsigned FMAD = !Subtarget->hasMadMacF32Insts() ?
-                    (unsigned)ISD::FMA :
-                    !MFI->getMode().allFP32Denormals() ?
-                    (unsigned)ISD::FMAD :
-                    (unsigned)AMDGPUISD::FMAD_FTZ;
+    unsigned FMAD =
+        !Subtarget->hasMadMacF32Insts() ? (unsigned)ISD::FMA
+        : MFI->getMode().FP32Denormals == DenormalMode::getPreserveSign()
+            ? (unsigned)ISD::FMAD
+            : (unsigned)AMDGPUISD::FMAD_FTZ;
 
     SDValue Cvt_Lo = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f32, RHS_Lo);
     SDValue Cvt_Hi = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f32, RHS_Hi);

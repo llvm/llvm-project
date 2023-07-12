@@ -17,7 +17,7 @@
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
 #include <__format/parser_std_format_spec.h>
-#include <__threading_support>
+#include <__thread/id.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>

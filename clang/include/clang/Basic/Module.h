@@ -156,9 +156,7 @@ public:
   std::string PresumedModuleMapFile;
 
   /// The umbrella header or directory.
-  llvm::PointerUnion<const FileEntryRef::MapEntry *,
-                     const DirectoryEntryRef::MapEntry *>
-      Umbrella;
+  llvm::PointerUnion<FileEntryRef, DirectoryEntryRef> Umbrella;
 
   /// The module signature.
   ASTFileSignature Signature;
@@ -650,19 +648,18 @@ public:
 
   /// Retrieve the umbrella directory as written.
   std::optional<DirectoryName> getUmbrellaDirAsWritten() const {
-    if (const auto *ME =
-            Umbrella.dyn_cast<const DirectoryEntryRef::MapEntry *>())
+    if (Umbrella && Umbrella.is<DirectoryEntryRef>())
       return DirectoryName{UmbrellaAsWritten,
                            UmbrellaRelativeToRootModuleDirectory,
-                           DirectoryEntryRef(*ME)};
+                           Umbrella.get<DirectoryEntryRef>()};
     return std::nullopt;
   }
 
   /// Retrieve the umbrella header as written.
   std::optional<Header> getUmbrellaHeaderAsWritten() const {
-    if (const auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
+    if (Umbrella && Umbrella.is<FileEntryRef>())
       return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
-                    FileEntryRef(*ME)};
+                    Umbrella.get<FileEntryRef>()};
     return std::nullopt;
   }
 

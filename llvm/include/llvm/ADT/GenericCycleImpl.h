@@ -15,8 +15,8 @@
 ///
 /// This file should only be included by files that implement a
 /// specialization of the relevant templates. Currently these are:
-/// - CycleAnalysis.cpp
-/// - MachineCycleAnalysis.cpp
+/// - llvm/lib/IR/CycleInfo.cpp
+/// - llvm/lib/CodeGen/MachineCycleAnalysis.cpp
 ///
 //===----------------------------------------------------------------------===//
 

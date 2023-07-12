@@ -52,7 +52,7 @@ define double @PR21780_only_access3_with_inbounds(ptr %ptr) {
 ; CHECK-NEXT:    ret double [[T3]]
 ;
 
-  %arrayidx3 = getelementptr inbounds double, double* %ptr, i64 3
+  %arrayidx3 = getelementptr inbounds double, ptr %ptr, i64 3
   %t3 = load double, ptr %arrayidx3, align 8
   ret double %t3
 }
@@ -65,7 +65,7 @@ define double @PR21780_only_access3_without_inbounds(ptr %ptr) {
 ; CHECK-NEXT:    [[T3:%.*]] = load double, ptr [[ARRAYIDX3]], align 8
 ; CHECK-NEXT:    ret double [[T3]]
 ;
-  %arrayidx3 = getelementptr double, double* %ptr, i64 3
+  %arrayidx3 = getelementptr double, ptr %ptr, i64 3
   %t3 = load double, ptr %arrayidx3, align 8
   ret double %t3
 }
@@ -79,7 +79,7 @@ define double @PR21780_without_inbounds(ptr %ptr) {
 ; CHECK-NEXT:    ret double [[T3]]
 ;
 
-  %arrayidx1 = getelementptr double, double* %ptr, i64 1
+  %arrayidx1 = getelementptr double, ptr %ptr, i64 1
   %arrayidx2 = getelementptr double, ptr %ptr, i64 2
   %arrayidx3 = getelementptr double, ptr %ptr, i64 3
 
@@ -102,7 +102,7 @@ define void @gep0(ptr %unused, ptr %other, ptr %ptr) {
 ; CHECK-NEXT:    store i8 [[T2]], ptr [[OTHER]], align 1
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx0 = getelementptr i8, i8* %ptr, i64 0
+  %arrayidx0 = getelementptr i8, ptr %ptr, i64 0
   %arrayidx1 = getelementptr i8, ptr %ptr, i64 1
   %arrayidx2 = getelementptr i8, ptr %ptr, i64 2
   %t0 = load i8, ptr %arrayidx0
@@ -121,7 +121,7 @@ define void @ordering(ptr %ptr1, ptr %ptr2) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone dereferenceable(3) [[PTR1:%.*]], ptr nocapture nofree nonnull readnone align 4 dereferenceable(8) [[PTR2:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    ret void
 ;
-  %a20 = getelementptr i32, i32* %ptr2, i64 0
+  %a20 = getelementptr i32, ptr %ptr2, i64 0
   %a12 = getelementptr i8, ptr %ptr1, i64 2
   %t12 = load i8, ptr %a12
   %a11 = getelementptr i8, ptr %ptr1, i64 1
@@ -217,7 +217,7 @@ define void @volatile_is_not_dereferenceable(ptr %ptr) {
 ; CHECK-NEXT:    [[T0:%.*]] = load volatile i16, ptr [[PTR]], align 2
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx0 = getelementptr i16, i16* %ptr, i64 0
+  %arrayidx0 = getelementptr i16, ptr %ptr, i64 0
   %arrayidx1 = getelementptr i16, ptr %ptr, i64 1
   %arrayidx2 = getelementptr i16, ptr %ptr, i64 2
   %t0 = load volatile i16, ptr %arrayidx0
@@ -234,7 +234,7 @@ define void @atomic_is_alright(ptr %ptr) {
 ; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 2 dereferenceable(6) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx0 = getelementptr i16, i16* %ptr, i64 0
+  %arrayidx0 = getelementptr i16, ptr %ptr, i64 0
   %arrayidx1 = getelementptr i16, ptr %ptr, i64 1
   %arrayidx2 = getelementptr i16, ptr %ptr, i64 2
   %t0 = load atomic i16, ptr %arrayidx0 unordered, align 2
@@ -251,7 +251,7 @@ define void @not_guaranteed_to_transfer_execution(ptr %ptr) {
 ; CHECK-NEXT:    call void @may_not_return()
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx0 = getelementptr i16, i16* %ptr, i64 0
+  %arrayidx0 = getelementptr i16, ptr %ptr, i64 0
   %arrayidx1 = getelementptr i16, ptr %ptr, i64 1
   %arrayidx2 = getelementptr i16, ptr %ptr, i64 2
   %t0 = load i16, ptr %arrayidx0
@@ -269,7 +269,7 @@ define void @variable_gep_index(ptr %unused, ptr %ptr, i64 %variable_index) {
 ; CHECK-SAME: (ptr nocapture nofree readnone [[UNUSED:%.*]], ptr nocapture nofree noundef nonnull readnone dereferenceable(1) [[PTR:%.*]], i64 [[VARIABLE_INDEX:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx1 = getelementptr i8, i8* %ptr, i64 %variable_index
+  %arrayidx1 = getelementptr i8, ptr %ptr, i64 %variable_index
   %arrayidx2 = getelementptr i8, ptr %ptr, i64 2
   %t0 = load i8, ptr %ptr
   %t1 = load i8, ptr %arrayidx1
@@ -299,7 +299,7 @@ define void @not_byte_multiple(ptr %ptr) {
 ; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 2 dereferenceable(2) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx0 = getelementptr i9, i9* %ptr, i64 0
+  %arrayidx0 = getelementptr i9, ptr %ptr, i64 0
   %t0 = load i9, ptr %arrayidx0
   ret void
 }
@@ -312,7 +312,7 @@ define void @no_pointer_deref(ptr %ptr) {
 ; CHECK-SAME: (ptr nocapture nofree readnone align 2 [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx1 = getelementptr i16, i16* %ptr, i64 1
+  %arrayidx1 = getelementptr i16, ptr %ptr, i64 1
   %arrayidx2 = getelementptr i16, ptr %ptr, i64 2
   %t1 = load i16, ptr %arrayidx1
   %t2 = load i16, ptr %arrayidx2
@@ -327,7 +327,7 @@ define void @non_consecutive(ptr %ptr) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(8) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx1 = getelementptr i32, i32* %ptr, i64 1
+  %arrayidx1 = getelementptr i32, ptr %ptr, i64 1
   %arrayidx3 = getelementptr i32, ptr %ptr, i64 3
   %t1 = load i32, ptr %arrayidx1
   %t0 = load i32, ptr %ptr
@@ -343,7 +343,7 @@ define void @more_bytes(ptr dereferenceable(8) %ptr) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(16) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx3 = getelementptr i32, i32* %ptr, i64 3
+  %arrayidx3 = getelementptr i32, ptr %ptr, i64 3
   %arrayidx1 = getelementptr i32, ptr %ptr, i64 1
   %arrayidx2 = getelementptr i32, ptr %ptr, i64 2
   %t3 = load i32, ptr %arrayidx3
@@ -361,7 +361,7 @@ define void @more_bytes_and_not_null(ptr dereferenceable_or_null(8) %ptr) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(16) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx3 = getelementptr i32, i32* %ptr, i64 3
+  %arrayidx3 = getelementptr i32, ptr %ptr, i64 3
   %arrayidx1 = getelementptr i32, ptr %ptr, i64 1
   %arrayidx2 = getelementptr i32, ptr %ptr, i64 2
   %t3 = load i32, ptr %arrayidx3
@@ -379,7 +379,7 @@ define void @better_bytes(ptr dereferenceable(100) %ptr) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(100) [[PTR:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %arrayidx3 = getelementptr i32, i32* %ptr, i64 3
+  %arrayidx3 = getelementptr i32, ptr %ptr, i64 3
   %arrayidx1 = getelementptr i32, ptr %ptr, i64 1
   %arrayidx2 = getelementptr i32, ptr %ptr, i64 2
   %t3 = load i32, ptr %arrayidx3
@@ -395,7 +395,7 @@ define void @bitcast(ptr %arg) {
 ; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 4 dereferenceable(8) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %ptr = bitcast i32* %arg to float*
+  %ptr = bitcast ptr %arg to ptr
   %arrayidx1 = getelementptr float, ptr %ptr, i64 1
   %t0 = load float, ptr %ptr
   %t1 = load float, ptr %arrayidx1
@@ -408,7 +408,7 @@ define void @bitcast_different_sizes(ptr %arg1, ptr %arg2) {
 ; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 4 dereferenceable(12) [[ARG1:%.*]], ptr nocapture nofree noundef nonnull readnone align 4 dereferenceable(16) [[ARG2:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %ptr1 = bitcast double* %arg1 to float*
+  %ptr1 = bitcast ptr %arg1 to ptr
   %a11 = getelementptr float, ptr %ptr1, i64 1
   %a12 = getelementptr float, ptr %ptr1, i64 2
   %ld10 = load float, ptr %ptr1
@@ -427,7 +427,7 @@ define void @negative_offset(ptr %arg) {
 ; CHECK-SAME: (ptr nocapture nofree nonnull readnone align 4 dereferenceable(4) [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret void
 ;
-  %ptr = bitcast i32* %arg to float*
+  %ptr = bitcast ptr %arg to ptr
   %arrayidx1 = getelementptr float, ptr %ptr, i64 -1
   %t0 = load float, ptr %ptr
   %t1 = load float, ptr %arrayidx1
@@ -443,7 +443,7 @@ define void @stores(ptr %arg) {
 ; CHECK-NEXT:    store float 2.000000e+00, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %ptr = bitcast i32* %arg to float*
+  %ptr = bitcast ptr %arg to ptr
   %arrayidx1 = getelementptr float, ptr %ptr, i64 1
   store float 1.0, ptr %ptr
   store float 2.0, ptr %arrayidx1
@@ -458,7 +458,7 @@ define void @load_store(ptr %arg) {
 ; CHECK-NEXT:    store float 2.000000e+00, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
-  %ptr = bitcast i32* %arg to float*
+  %ptr = bitcast ptr %arg to ptr
   %arrayidx1 = getelementptr float, ptr %ptr, i64 1
   %t1 = load float, ptr %ptr
   store float 2.0, ptr %arrayidx1
@@ -473,7 +473,7 @@ define void @different_size1(ptr %arg) {
 ; CHECK-NEXT:    store i32 0, ptr [[ARG]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %arg-cast = bitcast i32* %arg to double*
+  %arg-cast = bitcast ptr %arg to ptr
   store double 0.000000e+00, ptr %arg-cast
   store i32 0, ptr %arg
   ret void
@@ -487,7 +487,7 @@ define void @different_size2(ptr %arg) {
 ; CHECK-NEXT:    store double 0.000000e+00, ptr [[ARG]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32* %arg
+  store i32 0, ptr %arg
   store double 0.000000e+00, ptr %arg
   ret void
 }
@@ -509,7 +509,7 @@ define void @different_size2(ptr %arg) {
 ; According to the above CFG, we can see that instructions in l5 Block must be executed.
 ; Therefore, %p must be dereferenced.
 ;
-; ATTRIBUTOR_CGSCC_NPM-LABEL: define i32 @require_cfg_analysis(i32 %c, i32* {{.*}} dereferenceable(4) %p)
+; ATTRIBUTOR_CGSCC_NPM-LABEL: define i32 @require_cfg_analysis(i32 %c, ptr {{.*}} dereferenceable(4) %p)
 define i32 @require_cfg_analysis(i32 %c, ptr %p) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@require_cfg_analysis

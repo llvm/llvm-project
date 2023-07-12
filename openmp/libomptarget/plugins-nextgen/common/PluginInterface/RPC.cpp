@@ -28,7 +28,6 @@ RPCServerTy::RPCServerTy(uint32_t NumDevices) {
   // If this fails then something is catastrophically wrong, just exit.
   if (rpc_status_t Err = rpc_init(NumDevices))
     FATAL_MESSAGE(1, "Error initializing the RPC server: %d\n", Err);
-  Handles.resize(NumDevices);
 #endif
 }
 
@@ -118,26 +117,8 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
   if (auto Err = Device.dataSubmit(ClientPtr, ClientBuffer,
                                    rpc_get_client_size(), nullptr))
     return Err;
-
-  Handles[DeviceId] = std::make_unique<RPCHandleTy>(*this, Device);
 #endif
   return Error::success();
-}
-
-llvm::Expected<RPCHandleTy *>
-RPCServerTy::getDevice(plugin::GenericDeviceTy &Device) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  uint32_t DeviceId = Device.getDeviceId();
-  if (!Handles[DeviceId] || !rpc_get_buffer(DeviceId) ||
-      !rpc_get_client_buffer(DeviceId))
-    return plugin::Plugin::error(
-        "Attempt to get an RPC device while not initialized");
-
-  return Handles[DeviceId].get();
-#else
-  return plugin::Plugin::error(
-      "Attempt to get an RPC device while not available");
-#endif
 }
 
 Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {

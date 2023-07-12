@@ -248,7 +248,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
           eLoadScriptFromSymFileTrue) {
         std::list<Status> errors;
         StreamString feedback_stream;
-        if (!target_sp->LoadScriptingResources(errors, &feedback_stream)) {
+        if (!target_sp->LoadScriptingResources(errors, feedback_stream)) {
           Stream &s = GetErrorStream();
           for (auto error : errors) {
             s.Printf("%s\n", error.AsCString());

@@ -6,7 +6,7 @@
 subroutine fmadd_testr(a, x, y)
   real :: a, x, y, z
   z = fmadd(a, x, y)
-! CHECK-FIR: fir.call @fir.__ppc_fmadd.f32.f32.f32.f32
+! CHECK-FIR: fir.call @fir.__ppc_fmadd.contract.f32.f32.f32.f32
 ! CHECK-LLVMIR: call contract float @llvm.fma.f32(float %{{[0-9]}}, float %{{[0-9]}}, float %{{[0-9]}})
 end
 
@@ -14,7 +14,7 @@ end
 subroutine fmadd_testd(a, x, y)
   real(8) :: a, x, y, z
   z = fmadd(a, x, y)
-! CHECK-FIR: fir.call @fir.__ppc_fmadd.f64.f64.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fmadd.contract.f64.f64.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.fma.f64(double %{{[0-9]}}, double %{{[0-9]}}, double %{{[0-9]}})
 end
 
@@ -22,7 +22,7 @@ end
 subroutine fnmadd_testr(a, x, y)
   real :: a, x, y, z
   z = fnmadd(a, x, y)
-! CHECK-FIR: fir.call @fir.__ppc_fnmadd.f32.f32.f32.f32
+! CHECK-FIR: fir.call @fir.__ppc_fnmadd.contract.f32.f32.f32.f32
 ! CHECK-LLVMIR: call contract float @llvm.ppc.fnmadds(float %{{[0-9]}}, float %{{[0-9]}}, float %{{[0-9]}})
 end
 
@@ -30,7 +30,7 @@ end
 subroutine fnmadd_testd(a, x, y)
   real(8) :: a, x, y, z
   z = fnmadd(a, x, y)
-! CHECK-FIR: fir.call @fir.__ppc_fnmadd.f64.f64.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fnmadd.contract.f64.f64.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fnmadd(double %{{[0-9]}}, double %{{[0-9]}}, double %{{[0-9]}})
 end
 
@@ -38,7 +38,7 @@ end
 subroutine fmsub_testr(a, x, y)
   real :: a, x, y, z
   z = fmsub(a, x, y)
-! CHECK-FIR: fir.call @fir.__ppc_fmsub.f32.f32.f32.f32
+! CHECK-FIR: fir.call @fir.__ppc_fmsub.contract.f32.f32.f32.f32
 ! CHECK-LLVMIR: call contract float @llvm.ppc.fmsubs(float %{{[0-9]}}, float %{{[0-9]}}, float %{{[0-9]}})
 end
 
@@ -46,7 +46,7 @@ end
 subroutine fmsub_testd(a, x, y)
   real(8) :: a, x, y, z
   z = fmsub(a, x, y)
-! CHECK-FIR: fir.call @fir.__ppc_fmsub.f64.f64.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fmsub.contract.f64.f64.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fmsub(double %{{[0-9]}}, double %{{[0-9]}}, double %{{[0-9]}})
 end
 
@@ -54,7 +54,7 @@ end
 subroutine fnmsub_testr(a, x, y)
   real :: a, x, y, z
   z = fnmsub(a, x, y)
-! CHECK-FIR: fir.call @fir.__ppc_fnmsub.f32.f32.f32.f32
+! CHECK-FIR: fir.call @fir.__ppc_fnmsub.contract.f32.f32.f32.f32
 ! CHECK-LLVMIR: call contract float @llvm.ppc.fnmsub.f32(float %{{[0-9]}}, float %{{[0-9]}}, float %{{[0-9]}})
 end
 
@@ -62,7 +62,7 @@ end
 subroutine fnmsub_testd(a, x, y)
   real(8) :: a, x, y, z
   z = fnmsub(a, x, y)
-! CHECK-FIR: fir.call @fir.__ppc_fnmsub.f64.f64.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fnmsub.contract.f64.f64.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fnmsub.f64(double %{{[0-9]}}, double %{{[0-9]}}, double %{{[0-9]}})
 end
 
@@ -70,7 +70,7 @@ end
 subroutine fctid_test(x)
   real(8) :: x, r
   r = fctid(x)
-! CHECK-FIR: fir.call @fir.__ppc_fctid.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fctid.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fctid(double %{{[0-9]}})
 end
 
@@ -78,7 +78,7 @@ end
 subroutine fctidz_test(x)
   real(8) :: x, r
   r = fctidz(x)
-! CHECK-FIR: fir.call @fir.__ppc_fctidz.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fctidz.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fctidz(double %{{[0-9]}})
 end
 
@@ -86,7 +86,7 @@ end
 subroutine fctiw_test(x)
   real(8) :: x, r
   r = fctiw(x)
-! CHECK-FIR: fir.call @fir.__ppc_fctiw.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fctiw.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fctiw(double %{{[0-9]}})
 end
 
@@ -94,7 +94,7 @@ end
 subroutine fctiwz_test(x)
   real(8) :: x, r
   r = fctiwz(x)
-! CHECK-FIR: fir.call @fir.__ppc_fctiwz.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fctiwz.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fctiwz(double %{{[0-9]}})
 end
 
@@ -102,7 +102,7 @@ end
 subroutine fctudz_test(x)
   real(8) :: x, r
   r = fctudz(x)
-! CHECK-FIR: fir.call @fir.__ppc_fctudz.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fctudz.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fctudz(double %{{[0-9]}})
 end
 
@@ -110,7 +110,7 @@ end
 subroutine fctuwz_test(x)
   real(8) :: x, r
   r = fctuwz(x)
-! CHECK-FIR: fir.call @fir.__ppc_fctuwz.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fctuwz.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fctuwz(double %{{[0-9]}})
 end
 
@@ -118,7 +118,7 @@ end
 subroutine fcfi_test(i)
   real(8) :: i, r
   r = fcfi(i)
-! CHECK-FIR: fir.call @fir.__ppc_fcfi.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fcfi.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fcfid(double %{{[0-9]}})
 end
 
@@ -126,7 +126,7 @@ end
 subroutine fcfid_test(i)
   real(8) :: i, r
   r = fcfid(i)
-! CHECK-FIR: fir.call @fir.__ppc_fcfid.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fcfid.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fcfid(double %{{[0-9]}})
 end
 
@@ -134,7 +134,7 @@ end
 subroutine fcfud_test(i)
   real(8) :: i, r
   r = fcfud(i)
-! CHECK-FIR: fir.call @fir.__ppc_fcfud.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fcfud.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fcfud(double %{{[0-9]}})
 end
 
@@ -142,7 +142,7 @@ end
 subroutine fnabs_testr(x)
   real :: x, y
   y = fnabs(x)
-! CHECK-FIR: fir.call @fir.__ppc_fnabs.f32.f32
+! CHECK-FIR: fir.call @fir.__ppc_fnabs.contract.f32.f32
 ! CHECK-LLVMIR: call contract float @llvm.ppc.fnabss(float %{{[0-9]}})
 end
 
@@ -150,7 +150,7 @@ end
 subroutine fnabs_testd(x)
   real(8) :: x, y
   y = fnabs(x)
-! CHECK-FIR: fir.call @fir.__ppc_fnabs.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fnabs.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fnabs(double %{{[0-9]}})
 end
 
@@ -158,7 +158,7 @@ end
 subroutine fre_test(x)
   real(8) :: x, y
   y = fre(x)
-! CHECK-FIR: fir.call @fir.__ppc_fre.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_fre.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.fre(double %{{[0-9]}})
 end
 
@@ -166,7 +166,7 @@ end
 subroutine fres_test(x)
   real :: x, y
   y = fres(x)
-! CHECK-FIR: fir.call @fir.__ppc_fres.f32.f32
+! CHECK-FIR: fir.call @fir.__ppc_fres.contract.f32.f32
 ! CHECK-LLVMIR: call contract float @llvm.ppc.fres(float %{{[0-9]}})
 end
 
@@ -174,7 +174,7 @@ end
 subroutine frsqrte_test(x)
   real(8) :: x, y
   y = frsqrte(x)
-! CHECK-FIR: fir.call @fir.__ppc_frsqrte.f64.f64
+! CHECK-FIR: fir.call @fir.__ppc_frsqrte.contract.f64.f64
 ! CHECK-LLVMIR: call contract double @llvm.ppc.frsqrte(double %{{[0-9]}})
 end
 
@@ -182,7 +182,7 @@ end
 subroutine frsqrtes_test(x)
   real :: x, y
   y = frsqrtes(x)
-! CHECK-FIR: fir.call @fir.__ppc_frsqrtes.f32.f32
+! CHECK-FIR: fir.call @fir.__ppc_frsqrtes.contract.f32.f32
 ! CHECK-LLVMIR: call contract float @llvm.ppc.frsqrtes(float %{{[0-9]}})
 end
 
