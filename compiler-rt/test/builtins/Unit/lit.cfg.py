@@ -106,26 +106,29 @@ else:
         base_lib = base_lib.replace("\\", "/")
     config.substitutions.append(("%librt ", base_lib + " -lc -lm "))
 
-    if config.host_os == "Linux":
-        base_obj = os.path.join(
-            config.compiler_rt_libdir, "clang_rt.%%s%s.o" % config.target_suffix
-        )
-        if sys.platform in ["win32"] and execute_external:
-            # Don't pass dosish path separator to msys bash.exe.
-            base_obj = base_obj.replace("\\", "/")
+builtins_build_crt = get_required_attr(config, "builtins_build_crt")
+if builtins_build_crt:
+    base_obj = os.path.join(
+        config.compiler_rt_libdir, "clang_rt.%%s%s.o" % config.target_suffix
+    )
+    if sys.platform in ["win32"] and execute_external:
+        # Don't pass dosish path separator to msys bash.exe.
+        base_obj = base_obj.replace("\\", "/")
 
-        config.substitutions.append(("%crtbegin", base_obj % "crtbegin"))
-        config.substitutions.append(("%crtend", base_obj % "crtend"))
+    config.substitutions.append(("%crtbegin", base_obj % "crtbegin"))
+    config.substitutions.append(("%crtend", base_obj % "crtend"))
 
-        config.substitutions.append(("%crt1", get_library_path("crt1.o")))
-        config.substitutions.append(("%crti", get_library_path("crti.o")))
-        config.substitutions.append(("%crtn", get_library_path("crtn.o")))
+    config.substitutions.append(("%crt1", get_library_path("crt1.o")))
+    config.substitutions.append(("%crti", get_library_path("crti.o")))
+    config.substitutions.append(("%crtn", get_library_path("crtn.o")))
 
-        config.substitutions.append(("%libgcc", get_libgcc_file_name()))
+    config.substitutions.append(("%libgcc", get_libgcc_file_name()))
 
-        config.substitutions.append(
-            ("%libstdcxx", "-l" + config.sanitizer_cxx_lib.lstrip("lib"))
-        )
+    config.substitutions.append(
+        ("%libstdcxx", "-l" + config.sanitizer_cxx_lib.lstrip("lib"))
+    )
+
+    config.available_features.add("crt")
 
 builtins_source_dir = os.path.join(
     get_required_attr(config, "compiler_rt_src_root"), "lib", "builtins"

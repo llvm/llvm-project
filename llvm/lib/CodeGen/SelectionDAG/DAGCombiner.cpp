@@ -2434,11 +2434,12 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
   if (N1.getOpcode() != ISD::VSELECT || !N1.hasOneUse())
     return SDValue();
 
-  // We can't hoist div/rem because of immediate UB (not speculatable).
-  unsigned Opcode = N->getOpcode();
-  if (!DAG.isSafeToSpeculativelyExecute(Opcode))
+  // We can't hoist all instructions because of immediate UB (not speculatable).
+  // For example div/rem by zero.
+  if (!DAG.isSafeToSpeculativelyExecuteNode(N))
     return SDValue();
 
+  unsigned Opcode = N->getOpcode();
   EVT VT = N->getValueType(0);
   SDValue Cond = N1.getOperand(0);
   SDValue TVal = N1.getOperand(1);

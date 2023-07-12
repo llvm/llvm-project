@@ -68,14 +68,6 @@ void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
     dispatchIndexOpFoldResult(ofr, dynamicVec, staticVec);
 }
 
-/// Extract int64_t values from the assumed ArrayAttr of IntegerAttr.
-SmallVector<int64_t, 4> extractFromI64ArrayAttr(Attribute attr) {
-  return llvm::to_vector<4>(
-      llvm::map_range(cast<ArrayAttr>(attr), [](Attribute a) -> int64_t {
-        return cast<IntegerAttr>(a).getInt();
-      }));
-}
-
 /// Given a value, try to extract a constant Attribute. If this fails, return
 /// the original value.
 OpFoldResult getAsOpFoldResult(Value val) {

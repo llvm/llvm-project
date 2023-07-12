@@ -78,6 +78,7 @@ set(files
   __algorithm/pstl_backends/cpu_backends/fill.h
   __algorithm/pstl_backends/cpu_backends/find_if.h
   __algorithm/pstl_backends/cpu_backends/for_each.h
+  __algorithm/pstl_backends/cpu_backends/libdispatch.h
   __algorithm/pstl_backends/cpu_backends/merge.h
   __algorithm/pstl_backends/cpu_backends/serial.h
   __algorithm/pstl_backends/cpu_backends/stable_sort.h

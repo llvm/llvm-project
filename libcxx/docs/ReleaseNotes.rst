@@ -72,14 +72,25 @@ Improvements and New Features
   Anything that does not rely on having an actual filesystem available will now work, such as ``std::filesystem::path``,
   ``std::filesystem::perms`` and similar classes.
 
+- The library now provides a hardened mode under which common cases of library undefined behavior will be turned into
+  a reliable program termination. Vendors can configure whether the hardened mode is enabled by default with the
+  ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control whether the hardened mode is
+  enabled on a per translation unit basis using the ``-D_LIBCPP_ENABLE_HARDENED_MODE=1`` macro. See
+  ``libcxx/docs/HardenedMode.rst`` for more details.
+
+- The library now provides a debug mode which is a superset of the hardened mode, additionally enabling more expensive
+  checks that are not suitable to be used in production. This replaces the legacy debug mode that was removed in this
+  release. Unlike the legacy debug mode, this doesn't affect the ABI and doesn't require locking. Vendors can configure
+  whether the debug mode is enabled by default with the ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time.
+  Users can control whether the debug mode is enabled on a per translation unit basis using the
+  ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See ``libcxx/docs/HardenedMode.rst`` for more details.
+
 Deprecations and Removals
 -------------------------
 
-- The legacy debug mode has been removed in this release. Defining the macro
-  `_LIBCPP_ENABLE_DEBUG_MODE` is now a no-op, and the `LIBCXX_ENABLE_DEBUG_MODE`
-  CMake variable has been removed. The legacy debug mode will be replaced by
-  finer-grained hardened modes. For additional context, refer to the `Discourse
-  post
+- The legacy debug mode has been removed in this release. Setting the macro ``_LIBCPP_ENABLE_DEBUG_MODE`` to ``1`` now
+  enables the new debug mode which is part of hardening (see the "Improvements and New Features" section above). The
+  ``LIBCXX_ENABLE_DEBUG_MODE`` CMake variable has been removed. For additional context, refer to the `Discourse post
   <https://discourse.llvm.org/t/rfc-removing-the-legacy-debug-mode-from-libc/71026>`_.
 
 - The ``<experimental/coroutine>`` header has been removed in this release. The ``<coroutine>`` header

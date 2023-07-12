@@ -1046,6 +1046,7 @@ void ARMExpandPseudo::ExpandTMOV32BitImm(MachineBasicBlock &MBB,
               .addImm(PendingShift)
               .add(predOps(ARMCC::AL))
               .setMIFlags(MIFlags);
+      (void)Lsl;
       LLVM_DEBUG(dbgs() << "And:       "; Lsl->dump(););
       PendingShift = 0;
     }

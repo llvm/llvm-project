@@ -230,6 +230,8 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoFree] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state nofree
 ; GRAPH-EMPTY:
+; GRAPH-NEXT: [AAAddressSpace] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state addrspace(0)
+; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AADereferenceable] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state unknown-dereferenceable
 
 ; GRAPH-NOT: update
@@ -308,6 +310,7 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node71:0x[a-z0-9]+]] [shape=record,label="{[AANoAlias]
 ; DOT-DAG: Node[[Node72:0x[a-z0-9]+]] [shape=record,label="{[AANoAlias]
 ; DOT-DAG: Node[[Node73:0x[a-z0-9]+]] [shape=record,label="{[AANoFree]
+; DOT-DAG: Node[[Node75:0x[a-z0-9]+]] [shape=record,label="{[AAAddressSpace]
 ; DOT-DAG: Node[[Node74:0x[a-z0-9]+]] [shape=record,label="{[AADereferenceable]
 
 ; DOT-DAG: Node[[Node20]] -> Node[[Node19]];

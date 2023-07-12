@@ -376,8 +376,9 @@ __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEPT
 {
     _LIBCPP_ASSERT_UNCATEGORIZED(__root != nullptr, "Root node should not be null");
     _LIBCPP_ASSERT_UNCATEGORIZED(__z != nullptr, "The node to remove should not be null");
-    // TODO: Use in the new debug mode:
-    // _LIBCPP_DEBUG_ASSERT(std::__tree_invariant(__root), "The tree invariants should hold");
+#if _LIBCPP_ENABLE_DEBUG_MODE
+    _LIBCPP_ASSERT_UNCATEGORIZED(std::__tree_invariant(__root), "The tree invariants should hold");
+#endif
     // __z will be removed from the tree.  Client still needs to destruct/deallocate it
     // __y is either __z, or if __z has two children, __tree_next(__z).
     // __y will have at most one child.

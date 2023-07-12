@@ -64,7 +64,9 @@ int main(int, char**)
   std::make_heap(v.begin(), v.end());
   assert(stats.copied == 0);
   assert(stats.moved == 153'486);
+#if !_LIBCPP_ENABLE_DEBUG_MODE
   assert(stats.compared == 188'285);
+#endif
 
   assert(std::is_heap(v.begin(), v.end()));
 

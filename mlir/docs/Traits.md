@@ -100,6 +100,22 @@ Note: It is generally good practice to define the implementation of the
 `foldTrait` hook out-of-line as a free function when possible to avoid
 instantiating the implementation for every concrete operation type.
 
+### Extra Declarations and Definitions
+A trait may require additional declarations and definitions directly on
+the Operation, Attribute or Type instances which specify that trait.
+The `extraConcreteClassDeclaration` and `extraConcreteClassDefinition`
+fields under the `NativeTrait` class are mechanisms designed for injecting
+code directly into generated C++ Operation, Attribute or Type classes.
+
+Code within the `extraConcreteClassDeclaration` field will be formatted and copied
+into the generated C++ Operation, Attribute or Type class. Code within
+`extraConcreteClassDefinition` will be added to the generated source file inside
+the class’s C++ namespace. The substitution `$cppClass` is replaced by the C++ class
+name.
+
+The intention is to group trait specific logic together and reduce
+redundant extra declarations and definitions on the instances themselves.
+
 ### Parametric Traits
 
 The above demonstrates the definition of a simple self-contained trait. It is

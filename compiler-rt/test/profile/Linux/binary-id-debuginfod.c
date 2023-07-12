@@ -9,10 +9,12 @@
 // RUN: cp %t/libfoo.so %t/buildid/12345678/debuginfo
 // RUN: cp %t/main %t/buildid/abcd1234/debuginfo
 // RUN: llvm-profdata merge -o %t/profdata %t/profdir/default_*.profraw
-// RUN: env DEBUGINFOD_URLS=file://%t llvm-cov show -instr-profile %t/profdata | FileCheck %s
+// RUN: mkdir -p %t/debuginfod-cache
+// RUN: env DEBUGINFOD_CACHE_PATH=%t/debuginfod-cache DEBUGINFOD_URLS=file://%t llvm-cov show -instr-profile %t/profdata | FileCheck %s
 // RUN: echo "bad" > %t/libfoo.so %t/buildid/12345678/debuginfo
 // RUN: echo "bad" > %t/buildid/abcd1234/debuginfo
-// RUN: env DEBUGINFOD_URLS=file://%t llvm-cov show -instr-profile %t/profdata -debuginfod=false %t/main | FileCheck %s --check-prefix=NODEBUGINFOD
+// RUN: rm -rf %t/debuginfod-cache/*
+// RUN: env DEBUGINFOD_CACHE_PTH=%t/debuginfod-cache DEBUGINFOD_URLS=file://%t llvm-cov show -instr-profile %t/profdata -debuginfod=false %t/main | FileCheck %s --check-prefix=NODEBUGINFOD
 
 // CHECK: 1| 1|void foo(void) {}
 // CHECK: 2| 1|void bar(void) {}

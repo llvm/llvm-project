@@ -308,10 +308,18 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
         if (P)
           V.push_back(std::make_pair(ClassId, P));
       }
+
+      // Try to interleave pushBlocks(), popBatch() and releaseToOS().
+      Allocator->releaseToOS(scudo::ReleaseToOS::Force);
+
       while (!V.empty()) {
         auto Pair = V.back();
         Cache.deallocate(Pair.first, Pair.second);
         V.pop_back();
+        // This increases the chance of having non-full TransferBatches and it
+        // will jump into the code path of merging TransferBatches.
+        if (std::rand() % 8 == 0)
+          Cache.drain();
       }
       Cache.destroy(nullptr);
     });

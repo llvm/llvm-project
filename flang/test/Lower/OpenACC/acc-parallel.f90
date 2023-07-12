@@ -3,8 +3,9 @@
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: acc.firstprivate.recipe @firstprivatization_ref_10x10xf32 : !fir.ref<!fir.array<10x10xf32>> init {
-! CHECK: ^bb0(%arg0: !fir.ref<!fir.array<10x10xf32>>):
-! CHECK:   acc.yield %arg0 : !fir.ref<!fir.array<10x10xf32>>
+! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10x10xf32>>):
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<10x10xf32> 
+! CHECK:   acc.yield %[[ALLOCA]] : !fir.ref<!fir.array<10x10xf32>>
 ! CHECK: } copy {
 ! CHECK: ^bb0(%arg0: !fir.ref<!fir.array<10x10xf32>>, %arg1: !fir.ref<!fir.array<10x10xf32>>):
 ! CHECK:   acc.terminator

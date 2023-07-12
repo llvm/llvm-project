@@ -169,6 +169,18 @@ public:
   ///     environment.
   SBEnvironment GetEnvironment();
 
+  /// Set a callback as an implementation for locating module in order to
+  /// implement own module cache system. For example, to leverage distributed
+  /// build system, to bypass pulling files from remote platform, or to search
+  /// symbol files from symbol servers. The target will call this callback to
+  /// get a module file and a symbol file, and it will fallback to the LLDB
+  /// implementation when this callback failed or returned non-existent file.
+  /// This callback can set either module_file_spec or symbol_file_spec, or both
+  /// module_file_spec and symbol_file_spec. The callback will be cleared if
+  /// nullptr or None is set.
+  SBError SetLocateModuleCallback(lldb::SBPlatformLocateModuleCallback callback,
+                                  void *callback_baton);
+
 protected:
   friend class SBDebugger;
   friend class SBTarget;

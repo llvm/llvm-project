@@ -5096,14 +5096,95 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
                                [](ConstantSDNode *C) { return !C->isZero(); }))
     return true;
 
-  // TODO: Recognize more cases here.
+  // TODO: Recognize more cases here. Most of the cases are also incomplete to
+  // some degree.
   switch (Op.getOpcode()) {
-  default: break;
+  default:
+    break;
+
   case ISD::OR:
-    if (isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
-        isKnownNeverZero(Op.getOperand(0), Depth + 1))
+    return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
+           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+
+  case ISD::VSELECT:
+  case ISD::SELECT:
+    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(2), Depth + 1);
+
+  case ISD::SHL:
+    if (Op->getFlags().hasNoSignedWrap() || Op->getFlags().hasNoUnsignedWrap())
+      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+
+    // 1 << X is never zero. TODO: This can be expanded if we can bound X.
+    // The expression is really !Known.One[BitWidth-MaxLog2(Known):0].isZero()
+    if (computeKnownBits(Op.getOperand(0), Depth + 1).One[0])
       return true;
     break;
+
+  case ISD::UADDSAT:
+  case ISD::UMAX:
+    return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
+           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+
+  case ISD::UMIN:
+    return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
+           isKnownNeverZero(Op.getOperand(0), Depth + 1);
+
+  case ISD::ROTL:
+  case ISD::ROTR:
+  case ISD::BITREVERSE:
+  case ISD::BSWAP:
+  case ISD::CTPOP:
+  case ISD::ABS:
+    return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+
+  case ISD::SRA:
+  case ISD::SRL:
+    if (Op->getFlags().hasExact())
+      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    // Signed >> X is never zero. TODO: This can be expanded if we can bound X.
+    // The expression is really
+    // !Known.One[SignBit:SignBit-(BitWidth-MaxLog2(Known))].isZero()
+    if (computeKnownBits(Op.getOperand(0), Depth + 1).isNegative())
+      return true;
+    break;
+
+  case ISD::UDIV:
+  case ISD::SDIV:
+    // div exact can only produce a zero if the dividend is zero.
+    // TODO: For udiv this is also true if Op1 u<= Op0
+    if (Op->getFlags().hasExact())
+      return isKnownNeverZero(Op.getOperand(0), Depth + 1);
+    break;
+
+  case ISD::ADD:
+    if (Op->getFlags().hasNoUnsignedWrap())
+      if (isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
+          isKnownNeverZero(Op.getOperand(0), Depth + 1))
+        return true;
+    // TODO: There are a lot more cases we can prove for add.
+    break;
+
+  case ISD::SUB: {
+    if (isNullConstant(Op.getOperand(0)))
+      return isKnownNeverZero(Op.getOperand(1), Depth + 1);
+
+    std::optional<bool> ne =
+        KnownBits::ne(computeKnownBits(Op.getOperand(0), Depth + 1),
+                      computeKnownBits(Op.getOperand(1), Depth + 1));
+    return ne && *ne;
+  }
+
+  case ISD::MUL:
+    if (Op->getFlags().hasNoSignedWrap() || Op->getFlags().hasNoUnsignedWrap())
+      if (isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
+          isKnownNeverZero(Op.getOperand(0), Depth + 1))
+        return true;
+    break;
+
+  case ISD::ZERO_EXTEND:
+  case ISD::SIGN_EXTEND:
+    return isKnownNeverZero(Op.getOperand(0), Depth + 1);
   }
 
   return computeKnownBits(Op, Depth).isNonZero();
