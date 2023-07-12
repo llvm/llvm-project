@@ -1848,3 +1848,11 @@ bool DNBGetAddressingBits(uint32_t &addressing_bits) {
 
   return addressing_bits > 0;
 }
+
+nub_process_t DNBGetParentProcessID(nub_process_t child_pid) {
+  return MachProcess::GetParentProcessID(child_pid);
+}
+
+bool DNBProcessIsBeingDebugged(nub_process_t pid) {
+  return MachProcess::ProcessIsBeingDebugged(pid);
+}
