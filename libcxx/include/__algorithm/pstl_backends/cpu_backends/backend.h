@@ -16,6 +16,8 @@
 #  include <__algorithm/pstl_backends/cpu_backends/serial.h>
 #elif defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD)
 #  include <__algorithm/pstl_backends/cpu_backends/thread.h>
+#elif defined(_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH)
+#  include <__algorithm/pstl_backends/cpu_backends/libdispatch.h>
 #else
 #  error "Invalid CPU backend choice"
 #endif

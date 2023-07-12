@@ -122,3 +122,57 @@
 # CHECK-LE: drintnq. 1, 10, 6, 2           # encoding: [0xc7,0x35,0x41,0xfd]
 # CHECK-BE: drintnq. 1, 10, 6, 2           # encoding: [0xfd,0x41,0x35,0xc7]
             drintnq. 1, 10, 6, 2
+# CHECK-LE: dctdp 8, 2                     # encoding: [0x04,0x12,0x00,0xed]
+# CHECK-BE: dctdp 8, 2                     # encoding: [0xed,0x00,0x12,0x04]
+            dctdp 8, 2
+# CHECK-LE: dctdp. 8, 2                     # encoding: [0x05,0x12,0x00,0xed]
+# CHECK-BE: dctdp. 8, 2                     # encoding: [0xed,0x00,0x12,0x05]
+            dctdp. 8, 2
+# CHECK-LE: dctqpq 8, 2                     # encoding: [0x04,0x12,0x00,0xfd]
+# CHECK-BE: dctqpq 8, 2                     # encoding: [0xfd,0x00,0x12,0x04]
+            dctqpq 8, 2
+# CHECK-LE: dctqpq. 8, 2                    # encoding: [0x05,0x12,0x00,0xfd]
+# CHECK-BE: dctqpq. 8, 2                    # encoding: [0xfd,0x00,0x12,0x05]
+            dctqpq. 8, 2
+# CHECK-LE: drsp 20, 8                      # encoding: [0x04,0x46,0x80,0xee]
+# CHECK-BE: drsp 20, 8                      # encoding: [0xee,0x80,0x46,0x04]
+            drsp 20, 8
+# CHECK-LE: drsp. 20, 8                     # encoding: [0x05,0x46,0x80,0xee]
+# CHECK-BE: drsp. 20, 8                     # encoding: [0xee,0x80,0x46,0x05]
+            drsp. 20, 8
+# CHECK-LE: drdpq 20, 8                     # encoding: [0x04,0x46,0x80,0xfe]
+# CHECK-BE: drdpq 20, 8                     # encoding: [0xfe,0x80,0x46,0x04]
+            drdpq 20, 8
+# CHECK-LE: drdpq. 20, 8                    # encoding: [0x05,0x46,0x80,0xfe]
+# CHECK-BE: drdpq. 20, 8                    # encoding: [0xfe,0x80,0x46,0x05]
+            drdpq. 20, 8
+# CHECK-LE: dcffix 12, 7                    # encoding: [0x44,0x3e,0x80,0xed]
+# CHECK-BE: dcffix 12, 7                    # encoding: [0xed,0x80,0x3e,0x44]
+            dcffix 12, 7
+# CHECK-LE: dcffix. 12, 7                   # encoding: [0x45,0x3e,0x80,0xed]
+# CHECK-BE: dcffix. 12, 7                   # encoding: [0xed,0x80,0x3e,0x45]
+            dcffix. 12, 7
+# CHECK-LE: dcffixq 12, 8                   # encoding: [0x44,0x46,0x80,0xfd]
+# CHECK-BE: dcffixq 12, 8                   # encoding: [0xfd,0x80,0x46,0x44]
+            dcffixq 12, 8
+# CHECK-LE: dcffixq. 12, 8                  # encoding: [0x45,0x46,0x80,0xfd]
+# CHECK-BE: dcffixq. 12, 8                  # encoding: [0xfd,0x80,0x46,0x45]
+            dcffixq. 12, 8
+# CHECK-LE: dctfix 8, 4                     # encoding: [0x44,0x22,0x00,0xed]
+# CHECK-BE: dctfix 8, 4                     # encoding: [0xed,0x00,0x22,0x44]
+            dctfix 8, 4
+# CHECK-LE: dctfix. 8, 4                    # encoding: [0x45,0x22,0x00,0xed]
+# CHECK-BE: dctfix. 8, 4                    # encoding: [0xed,0x00,0x22,0x45]
+            dctfix. 8, 4
+# CHECK-LE: dctfixq 8, 4                    # encoding: [0x44,0x22,0x00,0xfd]
+# CHECK-BE: dctfixq 8, 4                    # encoding: [0xfd,0x00,0x22,0x44]
+            dctfixq 8, 4
+# CHECK-LE: dctfixq. 8, 4                   # encoding: [0x45,0x22,0x00,0xfd]
+# CHECK-BE: dctfixq. 8, 4                   # encoding: [0xfd,0x00,0x22,0x45]
+            dctfixq. 8, 4
+# CHECK-LE: dcffixqq 18, 20                 # encoding: [0xc4,0xa7,0x40,0xfe]
+# CHECK-BE: dcffixqq 18, 20                 # encoding: [0xfe,0x40,0xa7,0xc4]
+            dcffixqq 18, 20
+# CHECK-LE: dctfixqq 8, 10                  # encoding: [0xc4,0x57,0x01,0xfd]
+# CHECK-BE: dctfixqq 8, 10                  # encoding: [0xfd,0x01,0x57,0xc4]
+            dctfixqq 8, 10

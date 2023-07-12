@@ -307,6 +307,7 @@ macros = {
     "_LIBCPP_HAS_NO_LOCALIZATION": "no-localization",
     "_LIBCPP_HAS_NO_WIDE_CHARACTERS": "no-wide-characters",
     "_LIBCPP_HAS_NO_UNICODE": "libcpp-has-no-unicode",
+    "_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH": "libcpp-pstl-cpu-backend-libdispatch",
 }
 for macro, feature in macros.items():
     DEFAULT_FEATURES.append(

@@ -12135,10 +12135,6 @@ static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
   if (Subtarget.hasShortForwardBranchOpt())
     return SDValue();
 
-  // Only support XLenVT.
-  if (N->getValueType(0) != Subtarget.getXLenVT())
-    return SDValue();
-
   SDValue TrueVal = N->getOperand(1);
   SDValue FalseVal = N->getOperand(2);
   if (SDValue V = tryFoldSelectIntoOp(N, DAG, TrueVal, FalseVal, /*Swapped*/false))

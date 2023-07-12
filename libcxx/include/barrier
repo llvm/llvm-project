@@ -298,7 +298,7 @@ public:
     }
 
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
-    barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
+    explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
         : __b_(__count, _VSTD::move(__completion)) {
     }
 

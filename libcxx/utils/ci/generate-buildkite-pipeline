@@ -9,18 +9,9 @@
 
 #
 # This script generates the appropriate libc++ CI pipeline based on which project(s) were changed.
+# TODO: Remove this once the libcxx CI pipeline uploads the buildkite-pipeline.yml file directly.
 #
 
 if git diff --name-only HEAD~1 | grep -q -E "^libcxx/|^libcxxabi/|^libunwind/|^runtimes/|^cmake/"; then
-  LIBCXX_CHANGED=true
-fi
-
-if git diff --name-only HEAD~1 | grep -q -E "^clang/"; then
-  CLANG_CHANGED=true
-fi
-
-if [[ "${CLANG_CHANGED}" == "true" && "${LIBCXX_CHANGED}" != "true" ]]; then
-  cat clang/utils/ci/buildkite-pipeline.yml
-else
   cat libcxx/utils/ci/buildkite-pipeline.yml
 fi
