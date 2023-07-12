@@ -186,8 +186,14 @@ RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
     return report(errorCodeToError(EC), Path.getSingleStringRef());
 
   std::unique_ptr<MemoryBuffer> Buffer(BufferOr.get().release());
+  return create(std::move(Buffer), ProfiledBinary, KeepName);
+}
+
+Expected<std::unique_ptr<RawMemProfReader>>
+RawMemProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
+                         const StringRef ProfiledBinary, bool KeepName) {
   if (Error E = checkBuffer(*Buffer))
-    return report(std::move(E), Path.getSingleStringRef());
+    return report(std::move(E), Buffer->getBufferIdentifier());
 
   if (ProfiledBinary.empty()) {
     // Peek the build ids to print a helpful error message.
