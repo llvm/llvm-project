@@ -39,6 +39,7 @@
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Yk.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
@@ -507,6 +508,16 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
              /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
              /*CmdArgs*/ std::vector<uint8_t>()))
       return Error::success();
+  }
+
+  // Yk can't tolerate backend optimisations, so we mark every function with
+  // `optnone` from here onwards.
+  if (YkOptNoneAfterIRPasses) {
+    for (Function &F: Mod) {
+      if (!F.isDeclaration()) {
+        F.addFnAttr(Attribute::OptimizeNone);
+      }
+    }
   }
 
   if (ParallelCodeGenParallelismLevel == 1) {

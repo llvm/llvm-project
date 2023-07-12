@@ -5,4 +5,8 @@ namespace llvm {
 void initYkOptions(void);
 } // namespace llvm
 
+// YKFIXME: all of our command-line arguments should be collected here instead
+// of us randomly introducing `extern bool`s all over the place.
+extern bool YkOptNoneAfterIRPasses;
+
 #endif
