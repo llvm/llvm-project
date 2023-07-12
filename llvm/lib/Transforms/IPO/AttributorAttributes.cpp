@@ -188,6 +188,7 @@ PIPE_OPERATOR(AAInterFnReachability)
 PIPE_OPERATOR(AAPointerInfo)
 PIPE_OPERATOR(AAAssumptionInfo)
 PIPE_OPERATOR(AAUnderlyingObjects)
+PIPE_OPERATOR(AAAddressSpace)
 
 #undef PIPE_OPERATOR
 
@@ -12022,6 +12023,182 @@ struct AAUnderlyingObjectsFunction final : AAUnderlyingObjectsImpl {
 };
 } // namespace
 
+/// ------------------------ Address Space  ------------------------------------
+namespace {
+struct AAAddressSpaceImpl : public AAAddressSpace {
+  AAAddressSpaceImpl(const IRPosition &IRP, Attributor &A)
+      : AAAddressSpace(IRP, A) {}
+
+  int32_t getAddressSpace() const override {
+    assert(isValidState() && "the AA is invalid");
+    return AssumedAddressSpace;
+  }
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    assert(getAssociatedType()->isPtrOrPtrVectorTy() &&
+           "Associated value is not a pointer");
+  }
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    int32_t OldAddressSpace = AssumedAddressSpace;
+    auto *AUO = A.getOrCreateAAFor<AAUnderlyingObjects>(getIRPosition(), this,
+                                                        DepClassTy::REQUIRED);
+    auto Pred = [&](Value &Obj) {
+      if (isa<UndefValue>(&Obj))
+        return true;
+      return takeAddressSpace(Obj.getType()->getPointerAddressSpace());
+    };
+
+    if (!AUO->forallUnderlyingObjects(Pred))
+      return indicatePessimisticFixpoint();
+
+    return OldAddressSpace == AssumedAddressSpace ? ChangeStatus::UNCHANGED
+                                                  : ChangeStatus::CHANGED;
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    Value *AssociatedValue = &getAssociatedValue();
+    Value *OriginalValue = peelAddrspacecast(AssociatedValue);
+    if (getAddressSpace() == NoAddressSpace ||
+        static_cast<uint32_t>(getAddressSpace()) ==
+            getAssociatedType()->getPointerAddressSpace())
+      return ChangeStatus::UNCHANGED;
+
+    Type *NewPtrTy = PointerType::getWithSamePointeeType(
+        cast<PointerType>(getAssociatedType()),
+        static_cast<uint32_t>(getAddressSpace()));
+    bool UseOriginalValue =
+        OriginalValue->getType()->getPointerAddressSpace() ==
+        static_cast<uint32_t>(getAddressSpace());
+
+    bool Changed = false;
+
+    auto MakeChange = [&](Instruction *I, Use &U) {
+      Changed = true;
+      if (UseOriginalValue) {
+        A.changeUseAfterManifest(U, *OriginalValue);
+        return;
+      }
+      Instruction *CastInst = new AddrSpaceCastInst(OriginalValue, NewPtrTy);
+      CastInst->insertBefore(cast<Instruction>(I));
+      A.changeUseAfterManifest(U, *CastInst);
+    };
+
+    auto Pred = [&](const Use &U, bool &) {
+      if (U.get() != AssociatedValue)
+        return true;
+      auto *Inst = dyn_cast<Instruction>(U.getUser());
+      if (!Inst)
+        return true;
+      // This is a WA to make sure we only change uses from the corresponding
+      // CGSCC if the AA is run on CGSCC instead of the entire module.
+      if (!A.isRunOn(Inst->getFunction()))
+        return true;
+      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
+        MakeChange(Inst, const_cast<Use &>(U));
+      return true;
+    };
+
+    // It doesn't matter if we can't check all uses as we can simply
+    // conservatively ignore those that can not be visited.
+    (void)A.checkForAllUses(Pred, *this, getAssociatedValue(),
+                            /* CheckBBLivenessOnly */ true);
+
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr(Attributor *A) const override {
+    if (!isValidState())
+      return "addrspace(<invalid>)";
+    return "addrspace(" +
+           (AssumedAddressSpace == NoAddressSpace
+                ? "none"
+                : std::to_string(AssumedAddressSpace)) +
+           ")";
+  }
+
+private:
+  int32_t AssumedAddressSpace = NoAddressSpace;
+
+  bool takeAddressSpace(int32_t AS) {
+    if (AssumedAddressSpace == NoAddressSpace) {
+      AssumedAddressSpace = AS;
+      return true;
+    }
+    return AssumedAddressSpace == AS;
+  }
+
+  static Value *peelAddrspacecast(Value *V) {
+    if (auto *I = dyn_cast<AddrSpaceCastInst>(V))
+      return peelAddrspacecast(I->getPointerOperand());
+    if (auto *C = dyn_cast<ConstantExpr>(V))
+      if (C->getOpcode() == Instruction::AddrSpaceCast)
+        return peelAddrspacecast(C->getOperand(0));
+    return V;
+  }
+};
+
+struct AAAddressSpaceFloating final : AAAddressSpaceImpl {
+  AAAddressSpaceFloating(const IRPosition &IRP, Attributor &A)
+      : AAAddressSpaceImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FLOATING_ATTR(addrspace);
+  }
+};
+
+struct AAAddressSpaceReturned final : AAAddressSpaceImpl {
+  AAAddressSpaceReturned(const IRPosition &IRP, Attributor &A)
+      : AAAddressSpaceImpl(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // TODO: we don't rewrite function argument for now because it will need to
+    // rewrite the function signature and all call sites.
+    (void)indicatePessimisticFixpoint();
+  }
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_FNRET_ATTR(addrspace);
+  }
+};
+
+struct AAAddressSpaceCallSiteReturned final : AAAddressSpaceImpl {
+  AAAddressSpaceCallSiteReturned(const IRPosition &IRP, Attributor &A)
+      : AAAddressSpaceImpl(IRP, A) {}
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSRET_ATTR(addrspace);
+  }
+};
+
+struct AAAddressSpaceArgument final : AAAddressSpaceImpl {
+  AAAddressSpaceArgument(const IRPosition &IRP, Attributor &A)
+      : AAAddressSpaceImpl(IRP, A) {}
+
+  void trackStatistics() const override { STATS_DECLTRACK_ARG_ATTR(addrspace); }
+};
+
+struct AAAddressSpaceCallSiteArgument final : AAAddressSpaceImpl {
+  AAAddressSpaceCallSiteArgument(const IRPosition &IRP, Attributor &A)
+      : AAAddressSpaceImpl(IRP, A) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // TODO: we don't rewrite call site argument for now because it will need to
+    // rewrite the function signature of the callee.
+    (void)indicatePessimisticFixpoint();
+  }
+
+  void trackStatistics() const override {
+    STATS_DECLTRACK_CSARG_ATTR(addrspace);
+  }
+};
+} // namespace
+
 const char AAReturnedValues::ID = 0;
 const char AANoUnwind::ID = 0;
 const char AANoSync::ID = 0;
@@ -12055,6 +12232,7 @@ const char AAInterFnReachability::ID = 0;
 const char AAPointerInfo::ID = 0;
 const char AAAssumptionInfo::ID = 0;
 const char AAUnderlyingObjects::ID = 0;
+const char AAAddressSpace::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
 // follow the naming scheme.
@@ -12173,6 +12351,7 @@ CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPotentialValues)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoUndef)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoFPClass)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAPointerInfo)
+CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAAddressSpace)
 
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAValueSimplify)
 CREATE_ALL_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAIsDead)
