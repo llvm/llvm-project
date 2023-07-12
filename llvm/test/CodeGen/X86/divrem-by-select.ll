@@ -69,20 +69,16 @@ define <2 x i64> @udiv_identity_const_todo_getter_nonzero(<2 x i1> %c, <2 x i64>
 ; CHECK-X64-V4:       # %bb.0:
 ; CHECK-X64-V4-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; CHECK-X64-V4-NEXT:    vpmovq2m %xmm0, %k1
-; CHECK-X64-V4-NEXT:    vpbroadcastq {{.*#+}} xmm0 = [1,1]
-; CHECK-X64-V4-NEXT:    vpbroadcastq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 {%k1}
-; CHECK-X64-V4-NEXT:    vpextrq $1, %xmm0, %rcx
-; CHECK-X64-V4-NEXT:    vpextrq $1, %xmm1, %rax
-; CHECK-X64-V4-NEXT:    xorl %edx, %edx
-; CHECK-X64-V4-NEXT:    divq %rcx
-; CHECK-X64-V4-NEXT:    movq %rax, %rcx
-; CHECK-X64-V4-NEXT:    vmovq %xmm0, %rsi
-; CHECK-X64-V4-NEXT:    vmovq %xmm1, %rax
-; CHECK-X64-V4-NEXT:    xorl %edx, %edx
-; CHECK-X64-V4-NEXT:    divq %rsi
+; CHECK-X64-V4-NEXT:    vpextrq $1, %xmm1, %rdx
+; CHECK-X64-V4-NEXT:    movabsq $-3689348814741910323, %rax # imm = 0xCCCCCCCCCCCCCCCD
+; CHECK-X64-V4-NEXT:    mulxq %rax, %rcx, %rcx
 ; CHECK-X64-V4-NEXT:    vmovq %rcx, %xmm0
-; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm1
-; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; CHECK-X64-V4-NEXT:    vmovq %xmm1, %rdx
+; CHECK-X64-V4-NEXT:    mulxq %rax, %rax, %rax
+; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm2
+; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; CHECK-X64-V4-NEXT:    vpsrlq $3, %xmm0, %xmm1 {%k1}
+; CHECK-X64-V4-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-X64-V4-NEXT:    retq
 
   ;; Fails at the moment because `10` is even so there is no common
@@ -118,23 +114,23 @@ define <2 x i64> @udiv_indentity_non_zero(<2 x i1> %c, <2 x i64> %x, <2 x i64> %
 ;
 ; CHECK-X64-V4-LABEL: udiv_indentity_non_zero:
 ; CHECK-X64-V4:       # %bb.0:
-; CHECK-X64-V4-NEXT:    vpsllq $63, %xmm0, %xmm0
-; CHECK-X64-V4-NEXT:    vpmovq2m %xmm0, %k1
-; CHECK-X64-V4-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
-; CHECK-X64-V4-NEXT:    vpbroadcastq {{.*#+}} xmm3 = [1,1]
-; CHECK-X64-V4-NEXT:    vpsubq %xmm0, %xmm2, %xmm3 {%k1}
-; CHECK-X64-V4-NEXT:    vpextrq $1, %xmm3, %rcx
+; CHECK-X64-V4-NEXT:    vpcmpeqd %xmm3, %xmm3, %xmm3
+; CHECK-X64-V4-NEXT:    vpsubq %xmm3, %xmm2, %xmm2
+; CHECK-X64-V4-NEXT:    vpextrq $1, %xmm2, %rcx
 ; CHECK-X64-V4-NEXT:    vpextrq $1, %xmm1, %rax
 ; CHECK-X64-V4-NEXT:    xorl %edx, %edx
 ; CHECK-X64-V4-NEXT:    divq %rcx
 ; CHECK-X64-V4-NEXT:    movq %rax, %rcx
-; CHECK-X64-V4-NEXT:    vmovq %xmm3, %rsi
+; CHECK-X64-V4-NEXT:    vmovq %xmm2, %rsi
 ; CHECK-X64-V4-NEXT:    vmovq %xmm1, %rax
 ; CHECK-X64-V4-NEXT:    xorl %edx, %edx
 ; CHECK-X64-V4-NEXT:    divq %rsi
+; CHECK-X64-V4-NEXT:    vpsllq $63, %xmm0, %xmm0
+; CHECK-X64-V4-NEXT:    vpmovq2m %xmm0, %k1
 ; CHECK-X64-V4-NEXT:    vmovq %rcx, %xmm0
-; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm1
-; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; CHECK-X64-V4-NEXT:    vmovq %rax, %xmm2
+; CHECK-X64-V4-NEXT:    vpunpcklqdq {{.*#+}} xmm1 {%k1} = xmm2[0],xmm0[0]
+; CHECK-X64-V4-NEXT:    vmovdqa %xmm1, %xmm0
 ; CHECK-X64-V4-NEXT:    retq
   %non_zero = add nsw nuw <2 x i64> %y, <i64 1, i64 1>
   %d = select <2 x i1> %c, <2 x i64> %non_zero, <2 x i64> <i64 1, i64 1>
