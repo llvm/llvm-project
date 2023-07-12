@@ -81,7 +81,7 @@ struct KokkosCppEmitter {
   LogicalResult emitAttribute(Location loc, Attribute attr);
 
   /// Emits operation 'op' with/without training semicolon or returns failure.
-  LogicalResult emitOperation(Operation &op, bool trailingSemicolon);
+  LogicalResult emitOperation(Operation &op, bool trailingSemicolon, int parallelLvl);
 
   /// Emits the functions kokkos_mlir_initialize() and kokkos_mlir_finalize()
   /// These are responsible for init/finalize of Kokkos, and allocation/initialization/deallocation
@@ -886,7 +886,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::CallOp call
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp, int parallelLvl) {
 
   raw_indented_ostream &os = emitter.ostream();
 
@@ -940,7 +940,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp)
   // the end of a loop iteration and set the result variables after the for
   // loop.
   for (auto it = regionOps.begin(); std::next(it) != regionOps.end(); ++it) {
-    if (failed(emitter.emitOperation(*it, /*trailingSemicolon=*/true)))
+    if (failed(emitter.emitOperation(*it, /*trailingSemicolon=*/true, parallelLvl)))
       return failure();
   }
 
@@ -971,7 +971,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp)
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whileOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whileOp, int parallelLvl) {
   //Declare the before args, after args, and results.
   for (auto pair : llvm::zip(whileOp.getBeforeArguments(), whileOp.getInits())) {
   //for (OpResult beforeArg : whileOp.getBeforeArguments()) {
@@ -1013,7 +1013,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whil
 
   //Emit the "before" block(s)
   for (auto& beforeOp : whileOp.getBefore().getOps()) {
-    if (failed(emitter.emitOperation(beforeOp, /*trailingSemicolon=*/true)))
+    if (failed(emitter.emitOperation(beforeOp, /*trailingSemicolon=*/true, parallelLvl)))
       return failure();
   }
 
@@ -1029,7 +1029,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whil
 
   //Emit the "after" block(s)
   for (auto& afterOp : whileOp.getAfter().getOps()) {
-    if (failed(emitter.emitOperation(afterOp, /*trailingSemicolon=*/true)))
+    if (failed(emitter.emitOperation(afterOp, /*trailingSemicolon=*/true, parallelLvl)))
       return failure();
   }
 
@@ -1049,7 +1049,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whil
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp condOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp condOp, int parallelLvl) {
   //The condition value should already be in scope. Just break out of loop if it's falsey.
   emitter << "if(";
   if(failed(emitter.emitValue(condOp.getCondition())))
@@ -1063,7 +1063,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp 
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp op) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp op, int parallelLvl) {
   OperandRange lowerBounds = op.getLowerBound();
   OperandRange upperBounds = op.getUpperBound();
   OperandRange step = op.getStep();
@@ -1185,7 +1185,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
   Region& body = op.getRegion();
   for (auto& op : body.getOps())
   {
-    if (failed(emitter.emitOperation(op, true)))
+    if (failed(emitter.emitOperation(op, true, parallelLvl+1)))
       return failure();
   }
   emitter.ostream().unindent();
@@ -1300,7 +1300,7 @@ static bool matchSimpleReduction(Block &block) {
          block.front().getOperands() == block.getArguments();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ReduceOp reduceOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ReduceOp reduceOp, int parallelLvl) {
   raw_indented_ostream &os = emitter.ostream();
 
   Block &reduction = reduceOp.getRegion().front();
@@ -1319,7 +1319,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ReduceOp red
   return failure();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp, int parallelLvl) {
   raw_indented_ostream &os = emitter.ostream();
 
   for (OpResult result : ifOp.getResults()) {
@@ -1338,7 +1338,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
   for (Operation &op : thenRegion.getOps()) {
     // Note: This prints a superfluous semicolon if the terminating yield op has
     // zero results.
-    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true, parallelLvl)))
       return failure();
   }
 
@@ -1352,7 +1352,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
     for (Operation &op : elseRegion.getOps()) {
       // Note: This prints a superfluous semicolon if the terminating yield op
       // has zero results.
-      if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+      if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true, parallelLvl)))
         return failure();
     }
 
@@ -1362,7 +1362,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::YieldOp yieldOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::YieldOp yieldOp, int parallelLvl) {
   raw_ostream &os = emitter.ostream();
   Operation &parentOp = *yieldOp.getOperation()->getParentOp();
 
@@ -1410,17 +1410,17 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
   }
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, ModuleOp moduleOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, ModuleOp moduleOp, int parallelLvl) {
   KokkosCppEmitter::Scope scope(emitter);
 
   for (Operation &op : moduleOp) {
-    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false, parallelLvl)))
       return failure();
   }
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp functionOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp functionOp, int parallelLvl) {
   // Need to replace function names in 2 cases:
   //  1. functionOp is a forward declaration for a sparse support function
   //  2. functionOp's name is "main"
@@ -1580,7 +1580,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
           !isa<scf::IfOp, scf::ForOp, cf::CondBranchOp>(op);
 
       if (failed(emitter.emitOperation(
-              op, /*trailingSemicolon=*/trailingSemicolon)))
+              op, /*trailingSemicolon=*/trailingSemicolon,parallelLvl)))
         return failure();
     }
   }
@@ -2673,7 +2673,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
   return success();
 }
 
-LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
+LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemicolon, int parallelLvl) {
   if(auto constantOp = dyn_cast<arith::ConstantOp>(&op)) {
     //arith.constant is not directly emitted in the code, so always skip the
     // "// arith.constant" comment and trailing semicolon.
@@ -2684,7 +2684,7 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
       llvm::TypeSwitch<Operation *, LogicalResult>(&op)
           // Builtin ops.
           .Case<func::FuncOp, ModuleOp>(
-              [&](auto op) { return printOperation(*this, op); })
+              [&](auto op) { return printOperation(*this, op, parallelLvl); })
           // CF ops.
           .Case<cf::BranchOp, cf::CondBranchOp, cf::AssertOp>(
               [&](auto op) { /* Do nothing */ return success(); })
@@ -2693,7 +2693,7 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
               [&](auto op) { return printOperation(*this, op); })
           // SCF ops.
           .Case<scf::ForOp, scf::WhileOp, scf::IfOp, scf::YieldOp, scf::ConditionOp, scf::ParallelOp, scf::ReduceOp>(
-              [&](auto op) { return printOperation(*this, op); })
+              [&](auto op) { return printOperation(*this, op, parallelLvl); })
           // Arithmetic ops: general
           .Case<arith::FPToUIOp, arith::NegFOp, arith::CmpFOp, arith::CmpIOp, arith::SelectOp>(
               [&](auto op) { return printOperation(*this, op); })
@@ -3044,7 +3044,7 @@ LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, bool e
   KokkosCppEmitter emitter(os, enableSparseSupport);
   emitCppBoilerplate(emitter, false, enableSparseSupport);
   //Emit the actual module (global variables and functions)
-  if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false)))
+  if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false, 0)))
     return failure();
   return success();
 }
@@ -3061,7 +3061,7 @@ LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_os
       return failure();
   //Global preamble.
   //Emit the actual module (global variables and functions)
-  if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false)))
+  if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false, 0)))
     return failure();
   //Emit the init and finalize function definitions.
   if(failed(emitter.emitInitAndFinalize()))
