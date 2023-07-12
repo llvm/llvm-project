@@ -388,6 +388,18 @@ generic-assertions)
     check-runtimes
     check-abi-list
 ;;
+generic-hardened-mode)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardened-mode.cmake"
+    check-runtimes
+    check-abi-list
+;;
+generic-debug-mode)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-mode.cmake"
+    check-runtimes
+    check-abi-list
+;;
 generic-with_llvm_unwinder)
     clean
     generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON

@@ -206,6 +206,71 @@
 
 // } ABI
 
+// HARDENING {
+
+// Enables the hardened mode which consists of all checks intended to be used in production. Hardened mode prioritizes
+// security-critical checks that can be done with relatively little overhead in constant time. Mutually exclusive with
+// `_LIBCPP_ENABLE_DEBUG_MODE`.
+//
+// #define _LIBCPP_ENABLE_HARDENED_MODE 1
+
+// Enables the debug mode which contains all the checks from the hardened mode and additionally more expensive checks
+// that may affect the complexity of algorithms. The debug mode is intended to be used for testing, not in production.
+// Mutually exclusive with `_LIBCPP_ENABLE_HARDENED_MODE`.
+//
+// #define _LIBCPP_ENABLE_DEBUG_MODE 1
+
+// Available checks:
+
+// TODO(hardening): add documentation for different checks here.
+
+#  ifndef _LIBCPP_ENABLE_HARDENED_MODE
+#    define _LIBCPP_ENABLE_HARDENED_MODE _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT
+#  endif
+#  if _LIBCPP_ENABLE_HARDENED_MODE != 0 && _LIBCPP_ENABLE_HARDENED_MODE != 1
+#    error "_LIBCPP_ENABLE_HARDENED_MODE must be set to 0 or 1."
+#  endif
+
+#  ifndef _LIBCPP_ENABLE_DEBUG_MODE
+#    define _LIBCPP_ENABLE_DEBUG_MODE _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT
+#  endif
+#  if _LIBCPP_ENABLE_DEBUG_MODE != 0 && _LIBCPP_ENABLE_DEBUG_MODE != 1
+#    error "_LIBCPP_ENABLE_DEBUG_MODE must be set to 0 or 1."
+#  endif
+
+#  if _LIBCPP_ENABLE_HARDENED_MODE && _LIBCPP_ENABLE_DEBUG_MODE
+#    error "Only one of _LIBCPP_ENABLE_HARDENED_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled."
+#  endif
+
+// Hardened mode checks.
+#  if _LIBCPP_ENABLE_HARDENED_MODE
+
+// Automatically enable assertions in hardened mode (unless the user explicitly turned them off).
+#    ifndef _LIBCPP_ENABLE_ASSERTIONS
+#      define _LIBCPP_ENABLE_ASSERTIONS 1
+#    endif
+
+// TODO(hardening): more checks to be added here...
+
+// Debug mode checks.
+#  elif _LIBCPP_ENABLE_DEBUG_MODE
+
+// Automatically enable assertions in debug mode (unless the user explicitly turned them off).
+#    ifndef _LIBCPP_ENABLE_ASSERTIONS
+#      define _LIBCPP_ENABLE_ASSERTIONS 1
+#    endif
+
+// TODO(hardening): more checks to be added here...
+
+// Disable all checks if neither the hardened mode nor the debug mode is enabled.
+#  else
+
+// TODO: more checks to be added here...
+
+#  endif // _LIBCPP_ENABLE_HARDENED_MODE
+
+// } HARDENING
+
 #  define _LIBCPP_TOSTRING2(x) #x
 #  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 

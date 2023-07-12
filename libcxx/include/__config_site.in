@@ -34,6 +34,10 @@
 #cmakedefine _LIBCPP_PSTL_CPU_BACKEND_SERIAL
 #cmakedefine _LIBCPP_PSTL_CPU_BACKEND_THREAD
 
+// Hardening.
+#cmakedefine01 _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT
+#cmakedefine01 _LIBCPP_ENABLE_DEBUG_MODE_DEFAULT
+
 // __USE_MINGW_ANSI_STDIO gets redefined on MinGW
 #ifdef __clang__
 #  pragma clang diagnostic push
