@@ -1744,6 +1744,8 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
   if (!ARC)
     return false;
 
+  bool IsAGPR32 = (ARC == &AMDGPU::AGPR_32RegClass);
+
   // Rewrite the PHI's incoming values to ARC.
   LLVM_DEBUG(dbgs() << "Folding AGPR copies into: " << PHI);
   for (unsigned K = 1; K < PHI.getNumExplicitOperands(); K += 2) {
@@ -1754,7 +1756,7 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
     MachineBasicBlock *InsertMBB = nullptr;
 
     // Look at the def of Reg, ignoring all copies.
-    bool UseAccVGPRWrite = false;
+    unsigned CopyOpc = AMDGPU::COPY;
     if (MachineInstr *Def = MRI->getVRegDef(Reg)) {
 
       // Look at pre-existing COPY instructions from ARC: Steal the operand. If
@@ -1772,21 +1774,21 @@ bool SIFoldOperands::tryFoldPhiAGPR(MachineInstr &PHI) {
         // GFX908 directly instead of a COPY. Otherwise, SIFoldOperand may try
         // to fold the sgpr -> vgpr -> agpr copy into a sgpr -> agpr copy which
         // is unlikely to be profitable.
+        //
+        // Note that V_ACCVGPR_WRITE is only used for AGPR_32.
         MachineOperand &CopyIn = Def->getOperand(1);
-        if (!ST->hasGFX90AInsts() && !MRI->hasOneNonDBGUse(Reg) &&
+        if (IsAGPR32 && !ST->hasGFX90AInsts() && !MRI->hasOneNonDBGUse(Reg) &&
             TRI->isSGPRReg(*MRI, CopyIn.getReg()))
-          UseAccVGPRWrite = true;
+          CopyOpc = AMDGPU::V_ACCVGPR_WRITE_B32_e64;
       }
 
-      InsertPt = ++Def->getIterator();
       InsertMBB = Def->getParent();
+      InsertPt = InsertMBB->SkipPHIsLabelsAndDebug(++Def->getIterator());
     } else {
       InsertMBB = PHI.getOperand(MO.getOperandNo() + 1).getMBB();
       InsertPt = InsertMBB->getFirstTerminator();
     }
 
-    const unsigned CopyOpc =
-        UseAccVGPRWrite ? AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::COPY;
     Register NewReg = MRI->createVirtualRegister(ARC);
     MachineInstr *MI = BuildMI(*InsertMBB, InsertPt, PHI.getDebugLoc(),
                                TII->get(CopyOpc), NewReg)
