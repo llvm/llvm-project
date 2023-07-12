@@ -58,8 +58,8 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   };
 
   bool isWideningInstruction(Type *DstTy, unsigned Opcode,
-                             ArrayRef<Type *> SrcTys,
-                             ArrayRef<const Value *> Args);
+                             ArrayRef<const Value *> Args,
+                             Type *SrcOverrideTy = nullptr);
 
   // A helper function called by 'getVectorInstrCost'.
   //
