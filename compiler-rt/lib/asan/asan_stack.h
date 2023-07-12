@@ -47,6 +47,21 @@ u32 GetMallocContextSize();
                  fast, max_size);                                          \
   }
 
+#define GET_STACK_TRACE_EXPLICIT(max_size, fast, pc, bp, caller_pc, \
+                                 extra_context)                     \
+  UNINITIALIZED __sanitizer::BufferedStackTrace stack;                            \
+  if (max_size <= 2) {                                              \
+    stack.size = max_size;                                          \
+    if (max_size > 0) {                                             \
+      stack.top_frame_bp = bp;                                      \
+      stack.trace_buffer[0] = pc;                                   \
+      if (max_size > 1)                                             \
+        stack.trace_buffer[1] = caller_pc;                          \
+    }                                                               \
+  } else {                                                          \
+    stack.Unwind(pc, bp, nullptr, fast, max_size + extra_context);  \
+  }
+
 #define GET_STACK_TRACE_FATAL(pc, bp)     \
   UNINITIALIZED BufferedStackTrace stack; \
   stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal)
@@ -60,7 +75,15 @@ u32 GetMallocContextSize();
 #define GET_STACK_TRACE_MALLOC                                                 \
   GET_STACK_TRACE(GetMallocContextSize(), common_flags()->fast_unwind_on_malloc)
 
+#define GET_STACK_TRACE_MALLOC_WIN(pc, bp, caller_pc, extra_context)      \
+  GET_STACK_TRACE_EXPLICIT(__asan::GetMallocContextSize(),                \
+                           common_flags()->fast_unwind_on_malloc, pc, bp, \
+                           caller_pc, extra_context)
+
 #define GET_STACK_TRACE_FREE GET_STACK_TRACE_MALLOC
+
+#define GET_STACK_TRACE_FREE_WIN(pc, bp, caller_pc, extra_context) \
+  GET_STACK_TRACE_MALLOC_WIN(pc, bp, caller_pc, extra_context)
 
 #define PRINT_CURRENT_STACK()   \
   {                             \
