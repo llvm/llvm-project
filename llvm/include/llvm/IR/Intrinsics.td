@@ -1099,7 +1099,11 @@ def int_is_fpclass
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //
 
-let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
+/// IntrStrictFP - The intrinsic is allowed to be used in an alternate
+/// floating point environment.
+def IntrStrictFP : IntrinsicProperty;
+
+let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn, IntrStrictFP] in {
   def int_experimental_constrained_fadd : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
