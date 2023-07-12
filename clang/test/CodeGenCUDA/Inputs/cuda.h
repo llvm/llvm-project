@@ -58,6 +58,10 @@ extern "C" int __cudaPushCallConfiguration(dim3 gridSize, dim3 blockSize,
 extern "C" cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim,
                                         dim3 blockDim, void **args,
                                         size_t sharedMem, cudaStream_t stream);
+extern "C" cudaError_t cudaLaunchKernel_ptsz(const void *func, dim3 gridDim,
+                                        dim3 blockDim, void **args,
+                                        size_t sharedMem, cudaStream_t stream);
+
 #endif
 
 extern "C" __device__ int printf(const char*, ...);
