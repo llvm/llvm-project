@@ -175,31 +175,15 @@ define double @reduction_v2f64(ptr %p) {
 define float @reduction_v4f32(ptr %p) {
 ; SSE-LABEL: define float @reduction_v4f32
 ; SSE-SAME: (ptr [[P:%.*]]) {
-; SSE-NEXT:    [[G1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
-; SSE-NEXT:    [[G2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
-; SSE-NEXT:    [[G3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
-; SSE-NEXT:    [[T0:%.*]] = load float, ptr [[P]], align 4
-; SSE-NEXT:    [[T1:%.*]] = load float, ptr [[G1]], align 4
-; SSE-NEXT:    [[T2:%.*]] = load float, ptr [[G2]], align 4
-; SSE-NEXT:    [[T3:%.*]] = load float, ptr [[G3]], align 4
-; SSE-NEXT:    [[M1:%.*]] = tail call float @llvm.maximum.f32(float [[T1]], float [[T0]])
-; SSE-NEXT:    [[M2:%.*]] = tail call float @llvm.maximum.f32(float [[T2]], float [[M1]])
-; SSE-NEXT:    [[M3:%.*]] = tail call float @llvm.maximum.f32(float [[T3]], float [[M2]])
-; SSE-NEXT:    ret float [[M3]]
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P]], align 4
+; SSE-NEXT:    [[TMP2:%.*]] = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[TMP1]])
+; SSE-NEXT:    ret float [[TMP2]]
 ;
 ; AVX-LABEL: define float @reduction_v4f32
 ; AVX-SAME: (ptr [[P:%.*]]) #[[ATTR1]] {
-; AVX-NEXT:    [[G1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
-; AVX-NEXT:    [[G2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
-; AVX-NEXT:    [[G3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
-; AVX-NEXT:    [[T0:%.*]] = load float, ptr [[P]], align 4
-; AVX-NEXT:    [[T1:%.*]] = load float, ptr [[G1]], align 4
-; AVX-NEXT:    [[T2:%.*]] = load float, ptr [[G2]], align 4
-; AVX-NEXT:    [[T3:%.*]] = load float, ptr [[G3]], align 4
-; AVX-NEXT:    [[M1:%.*]] = tail call float @llvm.maximum.f32(float [[T1]], float [[T0]])
-; AVX-NEXT:    [[M2:%.*]] = tail call float @llvm.maximum.f32(float [[T2]], float [[M1]])
-; AVX-NEXT:    [[M3:%.*]] = tail call float @llvm.maximum.f32(float [[T3]], float [[M2]])
-; AVX-NEXT:    ret float [[M3]]
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[P]], align 4
+; AVX-NEXT:    [[TMP2:%.*]] = call float @llvm.vector.reduce.fmaximum.v4f32(<4 x float> [[TMP1]])
+; AVX-NEXT:    ret float [[TMP2]]
 ;
   %g1 = getelementptr inbounds float, ptr %p, i64 1
   %g2 = getelementptr inbounds float, ptr %p, i64 2
@@ -217,31 +201,15 @@ define float @reduction_v4f32(ptr %p) {
 define double @reduction_v4f64_fminimum(ptr %p) {
 ; SSE-LABEL: define double @reduction_v4f64_fminimum
 ; SSE-SAME: (ptr [[P:%.*]]) {
-; SSE-NEXT:    [[G1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 1
-; SSE-NEXT:    [[G2:%.*]] = getelementptr inbounds double, ptr [[P]], i64 2
-; SSE-NEXT:    [[G3:%.*]] = getelementptr inbounds double, ptr [[P]], i64 3
-; SSE-NEXT:    [[T0:%.*]] = load double, ptr [[P]], align 4
-; SSE-NEXT:    [[T1:%.*]] = load double, ptr [[G1]], align 4
-; SSE-NEXT:    [[T2:%.*]] = load double, ptr [[G2]], align 4
-; SSE-NEXT:    [[T3:%.*]] = load double, ptr [[G3]], align 4
-; SSE-NEXT:    [[M1:%.*]] = tail call double @llvm.minimum.f64(double [[T1]], double [[T0]])
-; SSE-NEXT:    [[M2:%.*]] = tail call double @llvm.minimum.f64(double [[T2]], double [[M1]])
-; SSE-NEXT:    [[M3:%.*]] = tail call double @llvm.minimum.f64(double [[T3]], double [[M2]])
-; SSE-NEXT:    ret double [[M3]]
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[P]], align 4
+; SSE-NEXT:    [[TMP2:%.*]] = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> [[TMP1]])
+; SSE-NEXT:    ret double [[TMP2]]
 ;
 ; AVX-LABEL: define double @reduction_v4f64_fminimum
 ; AVX-SAME: (ptr [[P:%.*]]) #[[ATTR1]] {
-; AVX-NEXT:    [[G1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 1
-; AVX-NEXT:    [[G2:%.*]] = getelementptr inbounds double, ptr [[P]], i64 2
-; AVX-NEXT:    [[G3:%.*]] = getelementptr inbounds double, ptr [[P]], i64 3
-; AVX-NEXT:    [[T0:%.*]] = load double, ptr [[P]], align 4
-; AVX-NEXT:    [[T1:%.*]] = load double, ptr [[G1]], align 4
-; AVX-NEXT:    [[T2:%.*]] = load double, ptr [[G2]], align 4
-; AVX-NEXT:    [[T3:%.*]] = load double, ptr [[G3]], align 4
-; AVX-NEXT:    [[M1:%.*]] = tail call double @llvm.minimum.f64(double [[T1]], double [[T0]])
-; AVX-NEXT:    [[M2:%.*]] = tail call double @llvm.minimum.f64(double [[T2]], double [[M1]])
-; AVX-NEXT:    [[M3:%.*]] = tail call double @llvm.minimum.f64(double [[T3]], double [[M2]])
-; AVX-NEXT:    ret double [[M3]]
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[P]], align 4
+; AVX-NEXT:    [[TMP2:%.*]] = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> [[TMP1]])
+; AVX-NEXT:    ret double [[TMP2]]
 ;
   %g1 = getelementptr inbounds double, ptr %p, i64 1
   %g2 = getelementptr inbounds double, ptr %p, i64 2
@@ -259,55 +227,15 @@ define double @reduction_v4f64_fminimum(ptr %p) {
 define float @reduction_v8f32_fminimum(ptr %p) {
 ; SSE-LABEL: define float @reduction_v8f32_fminimum
 ; SSE-SAME: (ptr [[P:%.*]]) {
-; SSE-NEXT:    [[G1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
-; SSE-NEXT:    [[G2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
-; SSE-NEXT:    [[G3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
-; SSE-NEXT:    [[G4:%.*]] = getelementptr inbounds float, ptr [[P]], i64 4
-; SSE-NEXT:    [[G5:%.*]] = getelementptr inbounds float, ptr [[P]], i64 5
-; SSE-NEXT:    [[G6:%.*]] = getelementptr inbounds float, ptr [[P]], i64 6
-; SSE-NEXT:    [[G7:%.*]] = getelementptr inbounds float, ptr [[P]], i64 7
-; SSE-NEXT:    [[T0:%.*]] = load float, ptr [[P]], align 4
-; SSE-NEXT:    [[T1:%.*]] = load float, ptr [[G1]], align 4
-; SSE-NEXT:    [[T2:%.*]] = load float, ptr [[G2]], align 4
-; SSE-NEXT:    [[T3:%.*]] = load float, ptr [[G3]], align 4
-; SSE-NEXT:    [[T4:%.*]] = load float, ptr [[G4]], align 4
-; SSE-NEXT:    [[T5:%.*]] = load float, ptr [[G5]], align 4
-; SSE-NEXT:    [[T6:%.*]] = load float, ptr [[G6]], align 4
-; SSE-NEXT:    [[T7:%.*]] = load float, ptr [[G7]], align 4
-; SSE-NEXT:    [[M1:%.*]] = tail call float @llvm.minimum.f32(float [[T1]], float [[T0]])
-; SSE-NEXT:    [[M2:%.*]] = tail call float @llvm.minimum.f32(float [[T2]], float [[M1]])
-; SSE-NEXT:    [[M3:%.*]] = tail call float @llvm.minimum.f32(float [[T3]], float [[M2]])
-; SSE-NEXT:    [[M4:%.*]] = tail call float @llvm.minimum.f32(float [[T4]], float [[M3]])
-; SSE-NEXT:    [[M5:%.*]] = tail call float @llvm.minimum.f32(float [[M4]], float [[T6]])
-; SSE-NEXT:    [[M6:%.*]] = tail call float @llvm.minimum.f32(float [[M5]], float [[T5]])
-; SSE-NEXT:    [[M7:%.*]] = tail call float @llvm.minimum.f32(float [[M6]], float [[T7]])
-; SSE-NEXT:    ret float [[M7]]
+; SSE-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[P]], align 4
+; SSE-NEXT:    [[TMP2:%.*]] = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> [[TMP1]])
+; SSE-NEXT:    ret float [[TMP2]]
 ;
 ; AVX-LABEL: define float @reduction_v8f32_fminimum
 ; AVX-SAME: (ptr [[P:%.*]]) #[[ATTR1]] {
-; AVX-NEXT:    [[G1:%.*]] = getelementptr inbounds float, ptr [[P]], i64 1
-; AVX-NEXT:    [[G2:%.*]] = getelementptr inbounds float, ptr [[P]], i64 2
-; AVX-NEXT:    [[G3:%.*]] = getelementptr inbounds float, ptr [[P]], i64 3
-; AVX-NEXT:    [[G4:%.*]] = getelementptr inbounds float, ptr [[P]], i64 4
-; AVX-NEXT:    [[G5:%.*]] = getelementptr inbounds float, ptr [[P]], i64 5
-; AVX-NEXT:    [[G6:%.*]] = getelementptr inbounds float, ptr [[P]], i64 6
-; AVX-NEXT:    [[G7:%.*]] = getelementptr inbounds float, ptr [[P]], i64 7
-; AVX-NEXT:    [[T0:%.*]] = load float, ptr [[P]], align 4
-; AVX-NEXT:    [[T1:%.*]] = load float, ptr [[G1]], align 4
-; AVX-NEXT:    [[T2:%.*]] = load float, ptr [[G2]], align 4
-; AVX-NEXT:    [[T3:%.*]] = load float, ptr [[G3]], align 4
-; AVX-NEXT:    [[T4:%.*]] = load float, ptr [[G4]], align 4
-; AVX-NEXT:    [[T5:%.*]] = load float, ptr [[G5]], align 4
-; AVX-NEXT:    [[T6:%.*]] = load float, ptr [[G6]], align 4
-; AVX-NEXT:    [[T7:%.*]] = load float, ptr [[G7]], align 4
-; AVX-NEXT:    [[M1:%.*]] = tail call float @llvm.minimum.f32(float [[T1]], float [[T0]])
-; AVX-NEXT:    [[M2:%.*]] = tail call float @llvm.minimum.f32(float [[T2]], float [[M1]])
-; AVX-NEXT:    [[M3:%.*]] = tail call float @llvm.minimum.f32(float [[T3]], float [[M2]])
-; AVX-NEXT:    [[M4:%.*]] = tail call float @llvm.minimum.f32(float [[T4]], float [[M3]])
-; AVX-NEXT:    [[M5:%.*]] = tail call float @llvm.minimum.f32(float [[M4]], float [[T6]])
-; AVX-NEXT:    [[M6:%.*]] = tail call float @llvm.minimum.f32(float [[M5]], float [[T5]])
-; AVX-NEXT:    [[M7:%.*]] = tail call float @llvm.minimum.f32(float [[M6]], float [[T7]])
-; AVX-NEXT:    ret float [[M7]]
+; AVX-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[P]], align 4
+; AVX-NEXT:    [[TMP2:%.*]] = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> [[TMP1]])
+; AVX-NEXT:    ret float [[TMP2]]
 ;
   %g1 = getelementptr inbounds float, ptr %p, i64 1
   %g2 = getelementptr inbounds float, ptr %p, i64 2
