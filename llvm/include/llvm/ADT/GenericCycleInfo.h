@@ -270,6 +270,7 @@ public:
 #endif
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
+  Printable print(const CycleT *Cycle) { return Cycle->print(Context); }
   //@}
 
   /// Iteration over top-level cycles.

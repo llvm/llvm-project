@@ -2525,6 +2525,14 @@ def int_ptrauth_sign_generic :
   DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 
 //===----------------------------------------------------------------------===//
+//===------- Convergence Intrinsics ---------------------------------------===//
+
+def int_experimental_convergence_entry
+  : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
+def int_experimental_convergence_anchor
+  : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
+def int_experimental_convergence_loop
+  : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
 
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics
