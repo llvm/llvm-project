@@ -64,9 +64,9 @@ public:
 private:
   friend class Function;
   /// Constructor used by Function to generate pointers.
-  CodePtr(const char *Ptr) : Ptr(Ptr) {}
+  CodePtr(const std::byte *Ptr) : Ptr(Ptr) {}
   /// Pointer into the code owned by a function.
-  const char *Ptr;
+  const std::byte *Ptr;
 };
 
 /// Describes the statement/declaration an opcode was generated from.

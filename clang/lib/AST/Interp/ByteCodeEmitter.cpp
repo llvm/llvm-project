@@ -167,7 +167,7 @@ bool ByteCodeEmitter::bail(const SourceLocation &Loc) {
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
 /// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
-static void emit(Program &P, std::vector<char> &Code, const T &Val,
+static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
                  bool &Success) {
   size_t Size;
 
