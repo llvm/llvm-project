@@ -2,7 +2,7 @@
 ; PR41445: This test checks the case when LSR split critical edge
 ; and phi node has other pending fixup operands
 
-; RUN: opt -opaque-pointers=0 -S -loop-reduce < %s | FileCheck %s
+; RUN: opt -S -loop-reduce < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -12,9 +12,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; When we try to rewrite %tmp1, we first split the critical edge.
 ; All the other PHI inputs besides %tmp1 go to a new phi node.
 ; This test checks that LSR is still able to rewrite %tmp2, %tmp3, %tmp4.
-define i32 @foo(i32* %A, i32 %t) {
+define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-LABEL: define i32 @foo
-; CHECK-SAME: (i32* [[A:%.*]], i32 [[T:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]], i32 [[T:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP_32:%.*]]
 ; CHECK:       loop.exit.loopexitsplitsplitsplit:
@@ -50,36 +50,41 @@ define i32 @foo(i32* %A, i32 %t) {
 ; CHECK:       loop.32:
 ; CHECK-NEXT:    [[LSR_IV]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[IFMERGE_46:%.*]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I1_I64_0:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXTIVLOOP_32:%.*]], [[IFMERGE_46]] ]
-; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i32, i32* [[A]], i64 [[LSR_IV]]
-; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i32, i32* [[SCEVGEP7]], i64 -1
-; CHECK-NEXT:    [[GEPLOAD:%.*]] = load i32, i32* [[SCEVGEP8]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[LSR_IV]], 2
+; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[SCEVGEP7]], i64 -4
+; CHECK-NEXT:    [[GEPLOAD:%.*]] = load i32, ptr [[SCEVGEP8]], align 4
 ; CHECK-NEXT:    [[CMP_34:%.*]] = icmp sgt i32 [[GEPLOAD]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_34]], label [[THEN_34]], label [[IFMERGE_34:%.*]]
 ; CHECK:       then.34:
-; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i32, i32* [[A]], i64 [[LSR_IV]]
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i32, i32* [[SCEVGEP5]], i64 -2
-; CHECK-NEXT:    [[GEPLOAD18:%.*]] = load i32, i32* [[SCEVGEP6]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[LSR_IV]], 2
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 -8
+; CHECK-NEXT:    [[GEPLOAD18:%.*]] = load i32, ptr [[SCEVGEP6]], align 4
 ; CHECK-NEXT:    [[CMP_35:%.*]] = icmp slt i32 [[GEPLOAD18]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_35]], label [[THEN_34_LOOP_EXIT_LOOPEXIT_CRIT_EDGE]], label [[IFMERGE_34]]
 ; CHECK:       ifmerge.34:
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i32, i32* [[A]], i64 [[LSR_IV]]
-; CHECK-NEXT:    [[GEPLOAD20:%.*]] = load i32, i32* [[SCEVGEP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[LSR_IV]], 2
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[GEPLOAD20:%.*]] = load i32, ptr [[SCEVGEP4]], align 4
 ; CHECK-NEXT:    [[CMP_38:%.*]] = icmp sgt i32 [[GEPLOAD20]], [[T]]
 ; CHECK-NEXT:    [[CMP_39:%.*]] = icmp slt i32 [[GEPLOAD]], [[T]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP_38]], [[CMP_39]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[LOOP_EXIT_LOOPEXITSPLITSPLITSPLIT]], label [[IFMERGE_38]]
 ; CHECK:       ifmerge.38:
-; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i32, i32* [[A]], i64 [[LSR_IV]]
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i32, i32* [[SCEVGEP2]], i64 1
-; CHECK-NEXT:    [[GEPLOAD24:%.*]] = load i32, i32* [[SCEVGEP3]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[LSR_IV]], 2
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP2]], i64 4
+; CHECK-NEXT:    [[GEPLOAD24:%.*]] = load i32, ptr [[SCEVGEP3]], align 4
 ; CHECK-NEXT:    [[CMP_42:%.*]] = icmp sgt i32 [[GEPLOAD24]], [[T]]
 ; CHECK-NEXT:    [[CMP_43:%.*]] = icmp slt i32 [[GEPLOAD20]], [[T]]
 ; CHECK-NEXT:    [[OR_COND55:%.*]] = and i1 [[CMP_42]], [[CMP_43]]
 ; CHECK-NEXT:    br i1 [[OR_COND55]], label [[IFMERGE_38_LOOP_EXIT_LOOPEXITSPLITSPLIT_CRIT_EDGE]], label [[IFMERGE_42]]
 ; CHECK:       ifmerge.42:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[A]], i64 [[LSR_IV]]
-; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i32, i32* [[SCEVGEP]], i64 2
-; CHECK-NEXT:    [[GEPLOAD28:%.*]] = load i32, i32* [[SCEVGEP1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[LSR_IV]], 2
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP7]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 8
+; CHECK-NEXT:    [[GEPLOAD28:%.*]] = load i32, ptr [[SCEVGEP1]], align 4
 ; CHECK-NEXT:    [[CMP_46:%.*]] = icmp sgt i32 [[GEPLOAD28]], [[T]]
 ; CHECK-NEXT:    [[CMP_47:%.*]] = icmp slt i32 [[GEPLOAD24]], [[T]]
 ; CHECK-NEXT:    [[OR_COND56:%.*]] = and i1 [[CMP_46]], [[CMP_47]]
@@ -90,23 +95,23 @@ define i32 @foo(i32* %A, i32 %t) {
 ; CHECK-NEXT:    [[CONDLOOP_32:%.*]] = icmp ult i64 [[NEXTIVLOOP_32]], 12
 ; CHECK-NEXT:    br i1 [[CONDLOOP_32]], label [[LOOP_32]], label [[LOOP_25:%.*]]
 ; CHECK:       loop.25:
-; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 49
-; CHECK-NEXT:    [[GEPLOAD32:%.*]] = load i32, i32* [[ARRAYIDX31]], align 4
+; CHECK-NEXT:    [[ARRAYIDX31:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 49
+; CHECK-NEXT:    [[GEPLOAD32:%.*]] = load i32, ptr [[ARRAYIDX31]], align 4
 ; CHECK-NEXT:    [[CMP_8:%.*]] = icmp sgt i32 [[GEPLOAD32]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_8]], label [[THEN_8]], label [[IFMERGE_8]]
 ; CHECK:       then.8:
-; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 48
-; CHECK-NEXT:    [[GEPLOAD34:%.*]] = load i32, i32* [[ARRAYIDX33]], align 4
+; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 48
+; CHECK-NEXT:    [[GEPLOAD34:%.*]] = load i32, ptr [[ARRAYIDX33]], align 4
 ; CHECK-NEXT:    [[CMP_15:%.*]] = icmp slt i32 [[GEPLOAD34]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_15]], label [[LOOP_EXIT]], label [[IFMERGE_8]]
 ; CHECK:       ifmerge.8:
-; CHECK-NEXT:    [[ARRAYIDX31_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 50
-; CHECK-NEXT:    [[GEPLOAD32_1:%.*]] = load i32, i32* [[ARRAYIDX31_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX31_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 50
+; CHECK-NEXT:    [[GEPLOAD32_1:%.*]] = load i32, ptr [[ARRAYIDX31_1]], align 4
 ; CHECK-NEXT:    [[CMP_8_1:%.*]] = icmp sgt i32 [[GEPLOAD32_1]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_8_1]], label [[THEN_8_1]], label [[FOR_END]]
 ; CHECK:       then.8.1:
-; CHECK-NEXT:    [[ARRAYIDX33_1:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 49
-; CHECK-NEXT:    [[GEPLOAD34_1:%.*]] = load i32, i32* [[ARRAYIDX33_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX33_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 49
+; CHECK-NEXT:    [[GEPLOAD34_1:%.*]] = load i32, ptr [[ARRAYIDX33_1]], align 4
 ; CHECK-NEXT:    [[CMP_15_1:%.*]] = icmp slt i32 [[GEPLOAD34_1]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_15_1]], label [[LOOP_EXIT]], label [[FOR_END]]
 ;
@@ -127,21 +132,21 @@ loop.32:                                          ; preds = %ifmerge.46, %entry
   %i1.i64.0 = phi i64 [ 0, %entry ], [ %nextivloop.32, %ifmerge.46 ]
   %tmp1 = shl i64 %i1.i64.0, 2
   %tmp2 = or i64 %tmp1, 1
-  %arrayIdx = getelementptr inbounds i32, i32* %A, i64 %tmp2
-  %gepload = load i32, i32* %arrayIdx, align 4
+  %arrayIdx = getelementptr inbounds i32, ptr %A, i64 %tmp2
+  %gepload = load i32, ptr %arrayIdx, align 4
   %cmp.34 = icmp sgt i32 %gepload, %t
   br i1 %cmp.34, label %then.34, label %ifmerge.34
 
 then.34:                                          ; preds = %loop.32
-  %arrayIdx17 = getelementptr inbounds i32, i32* %A, i64 %tmp1
-  %gepload18 = load i32, i32* %arrayIdx17, align 4
+  %arrayIdx17 = getelementptr inbounds i32, ptr %A, i64 %tmp1
+  %gepload18 = load i32, ptr %arrayIdx17, align 4
   %cmp.35 = icmp slt i32 %gepload18, %t
   br i1 %cmp.35, label %loop.exit, label %ifmerge.34
 
 ifmerge.34:                                       ; preds = %then.34, %loop.32
   %tmp3 = or i64 %tmp1, 2
-  %arrayIdx19 = getelementptr inbounds i32, i32* %A, i64 %tmp3
-  %gepload20 = load i32, i32* %arrayIdx19, align 4
+  %arrayIdx19 = getelementptr inbounds i32, ptr %A, i64 %tmp3
+  %gepload20 = load i32, ptr %arrayIdx19, align 4
   %cmp.38 = icmp sgt i32 %gepload20, %t
   %cmp.39 = icmp slt i32 %gepload, %t
   %or.cond = and i1 %cmp.38, %cmp.39
@@ -149,8 +154,8 @@ ifmerge.34:                                       ; preds = %then.34, %loop.32
 
 ifmerge.38:                                       ; preds = %ifmerge.34
   %tmp4 = or i64 %tmp1, 3
-  %arrayIdx23 = getelementptr inbounds i32, i32* %A, i64 %tmp4
-  %gepload24 = load i32, i32* %arrayIdx23, align 4
+  %arrayIdx23 = getelementptr inbounds i32, ptr %A, i64 %tmp4
+  %gepload24 = load i32, ptr %arrayIdx23, align 4
   %cmp.42 = icmp sgt i32 %gepload24, %t
   %cmp.43 = icmp slt i32 %gepload20, %t
   %or.cond55 = and i1 %cmp.42, %cmp.43
@@ -158,8 +163,8 @@ ifmerge.38:                                       ; preds = %ifmerge.34
 
 ifmerge.42:                                       ; preds = %ifmerge.38
   %tmp5 = add i64 %tmp1, 4
-  %arrayIdx27 = getelementptr inbounds i32, i32* %A, i64 %tmp5
-  %gepload28 = load i32, i32* %arrayIdx27, align 4
+  %arrayIdx27 = getelementptr inbounds i32, ptr %A, i64 %tmp5
+  %gepload28 = load i32, ptr %arrayIdx27, align 4
   %cmp.46 = icmp sgt i32 %gepload28, %t
   %cmp.47 = icmp slt i32 %gepload24, %t
   %or.cond56 = and i1 %cmp.46, %cmp.47
@@ -171,26 +176,26 @@ ifmerge.46:                                       ; preds = %ifmerge.42
   br i1 %condloop.32, label %loop.32, label %loop.25
 
 loop.25:                                          ; preds = %ifmerge.46
-  %arrayIdx31 = getelementptr inbounds i32, i32* %A, i64 49
-  %gepload32 = load i32, i32* %arrayIdx31, align 4
+  %arrayIdx31 = getelementptr inbounds i32, ptr %A, i64 49
+  %gepload32 = load i32, ptr %arrayIdx31, align 4
   %cmp.8 = icmp sgt i32 %gepload32, %t
   br i1 %cmp.8, label %then.8, label %ifmerge.8
 
 then.8:                                           ; preds = %loop.25
-  %arrayIdx33 = getelementptr inbounds i32, i32* %A, i64 48
-  %gepload34 = load i32, i32* %arrayIdx33, align 4
+  %arrayIdx33 = getelementptr inbounds i32, ptr %A, i64 48
+  %gepload34 = load i32, ptr %arrayIdx33, align 4
   %cmp.15 = icmp slt i32 %gepload34, %t
   br i1 %cmp.15, label %loop.exit, label %ifmerge.8
 
 ifmerge.8:                                        ; preds = %then.8, %loop.25
-  %arrayIdx31.1 = getelementptr inbounds i32, i32* %A, i64 50
-  %gepload32.1 = load i32, i32* %arrayIdx31.1, align 4
+  %arrayIdx31.1 = getelementptr inbounds i32, ptr %A, i64 50
+  %gepload32.1 = load i32, ptr %arrayIdx31.1, align 4
   %cmp.8.1 = icmp sgt i32 %gepload32.1, %t
   br i1 %cmp.8.1, label %then.8.1, label %for.end
 
 then.8.1:                                         ; preds = %ifmerge.8
-  %arrayIdx33.1 = getelementptr inbounds i32, i32* %A, i64 49
-  %gepload34.1 = load i32, i32* %arrayIdx33.1, align 4
+  %arrayIdx33.1 = getelementptr inbounds i32, ptr %A, i64 49
+  %gepload34.1 = load i32, ptr %arrayIdx33.1, align 4
   %cmp.15.1 = icmp slt i32 %gepload34.1, %t
   br i1 %cmp.15.1, label %loop.exit, label %for.end
 }
