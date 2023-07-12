@@ -23,6 +23,7 @@
 #include "Debug.h"
 #include "DeviceEnvironment.h"
 #include "GlobalHandler.h"
+#include "OmptCallback.h"
 #include "PluginInterface.h"
 #include "Utilities.h"
 #include "UtilitiesRTL.h"
@@ -519,9 +520,9 @@ struct AMDGPUSignalTy {
   }
 
   /// Wait until the signal gets a zero value.
-  Error wait(const uint64_t ActiveTimeout = 0,
-             RPCHandleTy *RPCHandle = nullptr) const {
-    if (ActiveTimeout && !RPCHandle) {
+  Error wait(const uint64_t ActiveTimeout = 0, RPCServerTy *RPCServer = nullptr,
+             GenericDeviceTy *Device = nullptr) const {
+    if (ActiveTimeout && !RPCServer) {
       hsa_signal_value_t Got = 1;
       Got = hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
                                       ActiveTimeout, HSA_WAIT_STATE_ACTIVE);
@@ -530,12 +531,12 @@ struct AMDGPUSignalTy {
     }
 
     // If there is an RPC device attached to this stream we run it as a server.
-    uint64_t Timeout = RPCHandle ? 8192 : UINT64_MAX;
-    auto WaitState = RPCHandle ? HSA_WAIT_STATE_ACTIVE : HSA_WAIT_STATE_BLOCKED;
+    uint64_t Timeout = RPCServer ? 8192 : UINT64_MAX;
+    auto WaitState = RPCServer ? HSA_WAIT_STATE_ACTIVE : HSA_WAIT_STATE_BLOCKED;
     while (hsa_signal_wait_scacquire(Signal, HSA_SIGNAL_CONDITION_EQ, 0,
                                      Timeout, WaitState) != 0) {
-      if (RPCHandle)
-        if (auto Err = RPCHandle->runServer())
+      if (RPCServer && Device)
+        if (auto Err = RPCServer->runServer(*Device))
           return Err;
     }
     return Plugin::success();
@@ -887,6 +888,9 @@ private:
   /// The manager of signals to reuse signals.
   AMDGPUSignalManagerTy &SignalManager;
 
+  /// A reference to the associated device.
+  GenericDeviceTy &Device;
+
   /// Array of stream slots. Use std::deque because it can dynamically grow
   /// without invalidating the already inserted elements. For instance, the
   /// std::vector may invalidate the elements by reallocating the internal
@@ -906,7 +910,7 @@ private:
   /// A pointer associated with an RPC server running on the given device. If
   /// RPC is not being used this will be a null pointer. Otherwise, this
   /// indicates that an RPC server is expected to be run on this stream.
-  RPCHandleTy *RPCHandle;
+  RPCServerTy *RPCServer;
 
   /// Mutex to protect stream's management.
   mutable std::mutex Mutex;
@@ -1063,8 +1067,8 @@ public:
   /// Deinitialize the stream's signals.
   Error deinit() { return Plugin::success(); }
 
-  /// Attach an RPC handle to this stream.
-  void setRPCHandle(RPCHandleTy *Handle) { RPCHandle = Handle; }
+  /// Attach an RPC server to this stream.
+  void setRPCServer(RPCServerTy *Server) { RPCServer = Server; }
 
   /// Push a asynchronous kernel to the stream. The kernel arguments must be
   /// placed in a special allocation for kernel args and must keep alive until
@@ -1280,8 +1284,8 @@ public:
       return Plugin::success();
 
     // Wait until all previous operations on the stream have completed.
-    if (auto Err =
-            Slots[last()].Signal->wait(StreamBusyWaitMicroseconds, RPCHandle))
+    if (auto Err = Slots[last()].Signal->wait(StreamBusyWaitMicroseconds,
+                                              RPCServer, &Device))
       return Err;
 
     // Reset the stream and perform all pending post actions.
@@ -2528,9 +2532,9 @@ Error AMDGPUResourceRef<ResourceTy>::create(GenericDeviceTy &Device) {
 
 AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
     : Agent(Device.getAgent()), Queue(Device.getNextQueue()),
-      SignalManager(Device.getSignalManager()),
+      SignalManager(Device.getSignalManager()), Device(Device),
       // Initialize the std::deque with some empty positions.
-      Slots(32), NextSlot(0), SyncCycle(0), RPCHandle(nullptr),
+      Slots(32), NextSlot(0), SyncCycle(0), RPCServer(nullptr),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()) {}
 
 /// Class implementing the AMDGPU-specific functionalities of the global
@@ -2622,6 +2626,10 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     // The initialization of HSA was successful. It should be safe to call
     // HSA functions from now on, e.g., hsa_shut_down.
     Initialized = true;
+
+#ifdef OMPT_SUPPORT
+    ompt::connectLibrary();
+#endif
 
     // Register event handler to detect memory errors on the devices.
     Status = hsa_amd_register_system_event_handler(eventHandler, nullptr);
@@ -2861,8 +2869,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   AMDGPUStreamTy &Stream = AMDGPUDevice.getStream(AsyncInfoWrapper);
 
   // If this kernel requires an RPC server we attach its pointer to the stream.
-  if (GenericDevice.getRPCHandle())
-    Stream.setRPCHandle(GenericDevice.getRPCHandle());
+  if (GenericDevice.getRPCServer())
+    Stream.setRPCServer(GenericDevice.getRPCServer());
 
   // Push the kernel launch into the stream.
   return Stream.pushKernelLaunch(*this, AllArgs, NumThreads, NumBlocks,

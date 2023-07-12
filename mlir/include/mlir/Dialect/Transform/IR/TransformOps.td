@@ -854,6 +854,30 @@ def ReplicateOp : TransformDialectOp<"replicate",
                        "type($pattern) `,` type($handles)";
 }
 
+def SelectOp : TransformDialectOp<"select",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Select payload ops by name";
+  let description = [{
+    The handle defined by this Transform op corresponds to all operations among
+    `target` that have the specified properties. Currently the following
+    properties are supported:
+
+    - `op_name`: The op must have the specified name.
+
+    The result payload ops are in the same relative order as the targeted ops.
+    This transform op reads the `target` handle and produces the `result`
+    handle. It reads the payload, but does not modify it.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       StrAttr:$op_name);
+  let results = (outs TransformHandleTypeInterface:$result);
+  let assemblyFormat = [{
+    $op_name `in` $target attr-dict `:` functional-type(operands, results)
+  }];
+}
+
 def SequenceOp : TransformDialectOp<"sequence",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getSuccessorEntryOperands", "getSuccessorRegions",

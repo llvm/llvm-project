@@ -2603,7 +2603,7 @@ instrumentation:
    environment variable to specify an alternate file. If non-default file name
    is specified by both the environment variable and the command line option,
    the environment variable takes precedence. The file name pattern specified
-   can include different modifiers: ``%p``, ``%h``, and ``%m``.
+   can include different modifiers: ``%p``, ``%h``, ``%m``, ``%t``, and ``%c``.
 
    Any instance of ``%p`` in that file name will be replaced by the process
    ID, so that you can easily distinguish the profile output from multiple
@@ -2639,6 +2639,8 @@ instrumentation:
 
      $ LLVM_PROFILE_FILE="code-%m.profraw" ./code
 
+   See `this <SourceBasedCodeCoverage.html#running-the-instrumented-program>`_ section
+   about the ``%t``, and ``%c`` modifiers.
 
 3. Combine profiles from multiple runs and convert the "raw" profile format to
    the input expected by clang. Use the ``merge`` command of the
@@ -2700,6 +2702,8 @@ programs using the same instrumentation method as ``-fprofile-generate``.
   the profile dumping path specified at command line, the environment variable
   ``LLVM_PROFILE_FILE`` can still be used to override
   the directory and filename for the profile file at runtime.
+  To override the path and filename at compile time, use
+  ``-Xclang -fprofile-instrument-path=/path/to/file_pattern.profraw``.
 
 .. option:: -fcs-profile-generate[=<dirname>]
 

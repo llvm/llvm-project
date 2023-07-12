@@ -1,10 +1,29 @@
-; RUN: llc < %s -mcpu=arm1136jf-s -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=armv6-apple-ios0.0.0 -mcpu=arm1136jf-s -verify-machineinstrs | FileCheck %s
+; RUN: llc -mtriple=thumbv6m-eabi -mattr=+execute-only -verify-machineinstrs %s -o - | FileCheck --check-prefix=CHECK-T1 %s
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32-S32"
-target triple = "armv6-apple-ios0.0.0"
 
 ; Don't CSE a cmp across a call that clobbers CPSR.
 ;
 ; CHECK: cmp
+
+; CHECK-T1: movs [[REG:r[0-7]+]], :upper8_15:
+; CHECK-T1-NEXT: lsls    [[REG]], [[REG]], #8
+; CHECK-T1-NEXT: adds    [[REG]], :upper0_7:
+; CHECK-T1-NEXT: lsls    [[REG]], [[REG]], #8
+; CHECK-T1-NEXT: adds    [[REG]], :lower8_15:
+; CHECK-T1-NEXT: lsls    [[REG]], [[REG]], #8
+; CHECK-T1-NEXT: adds    [[REG]], :lower0_7:
+
+; CHECK-T1: movs [[REG:r[0-7]+]], :upper8_15:
+; CHECK-T1-NEXT: lsls    [[REG]], [[REG]], #8
+; CHECK-T1-NEXT: adds    [[REG]], :upper0_7:
+; CHECK-T1-NEXT: lsls    [[REG]], [[REG]], #8
+; CHECK-T1-NEXT: adds    [[REG]], :lower8_15:
+; CHECK-T1-NEXT: lsls    [[REG]], [[REG]], #8
+; CHECK-T1-NEXT: adds    [[REG]], :lower0_7:
+
+; CHECK-T1: cmp
+
 ; CHECK: S_trimzeros
 ; CHECK: cmp
 ; CHECK: strlen

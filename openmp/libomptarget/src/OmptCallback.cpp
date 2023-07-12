@@ -12,123 +12,127 @@
 
 #ifdef OMPT_SUPPORT
 
-#include <assert.h>
-#include <atomic>
+#include "llvm/Support/DynamicLibrary.h"
+
 #include <cstdlib>
 #include <cstring>
-
-#include "omp-tools.h"
+#include <memory>
 
 #include "Debug.h"
-#include "ompt_connector.h"
-#include "ompt_device_callbacks.h"
-#include "private.h"
+#include "OmptCallback.h"
+#include "OmptConnector.h"
 
-#define fnptr_to_ptr(x) ((void *)(uint64_t)x)
+using namespace llvm::omp::target::ompt;
 
-/// Used to indicate whether OMPT was enabled for this library
-bool OmptEnabled = false;
-/// Object maintaining all the callbacks for this library
-OmptDeviceCallbacksTy OmptDeviceCallbacks;
+// Define OMPT callback functions (bound to actual callbacks later on)
+#define defineOmptCallback(Name, Type, Code)                                   \
+  Name##_t llvm::omp::target::ompt::Name##_fn = nullptr;
+FOREACH_OMPT_NOEMI_EVENT(defineOmptCallback)
+FOREACH_OMPT_EMI_EVENT(defineOmptCallback)
+#undef defineOmptCallback
 
-/// Used to maintain the finalization function that is received
-/// from the plugin during connect
+/// Used to maintain the finalization functions that are received
+/// from the plugins during connect.
+/// Note: Currently, there are no plugin-specific finalizations, so each plugin
+/// will call the same (empty) function.
 class LibomptargetRtlFinalizer {
 public:
-  LibomptargetRtlFinalizer() : RtlFinalization(nullptr) {}
+  LibomptargetRtlFinalizer() {}
+
   void registerRtl(ompt_finalize_t FinalizationFunction) {
-    assert((RtlFinalization == nullptr) &&
-           "RTL finalization may only be registered once");
-    RtlFinalization = FinalizationFunction;
+    if (FinalizationFunction) {
+      RtlFinalizationFunctions.emplace_back(FinalizationFunction);
+    }
   }
+
   void finalize() {
-    if (RtlFinalization)
-      RtlFinalization(nullptr /* tool_data */);
-    RtlFinalization = nullptr;
+    for (auto FinalizationFunction : RtlFinalizationFunctions)
+      FinalizationFunction(/* tool_data */ nullptr);
+    RtlFinalizationFunctions.clear();
   }
 
 private:
-  ompt_finalize_t RtlFinalization;
+  llvm::SmallVector<ompt_finalize_t> RtlFinalizationFunctions;
 };
 
 /// Object that will maintain the RTL finalizer from the plugin
-static LibomptargetRtlFinalizer LibraryFinalizer;
+LibomptargetRtlFinalizer *LibraryFinalizer = nullptr;
 
-/// Lookup function to be used by libomptarget library
-ompt_interface_fn_t
-OmptDeviceCallbacksTy::doLookup(const char *InterfaceFunctionName) {
-  return OmptDeviceCallbacks.lookupCallback(InterfaceFunctionName);
-}
+ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
+ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
 
-/// This is the function called by the higher layer (libomp) responsible
-/// for initializing OMPT in this library. This is passed to libomp
-/// as part of the OMPT connector object.
-/// \p lookup to be used to query callbacks registered with libomp
-/// \p initial_device_num Initial device num provided by libomp
-/// \p tool_data as provided by the tool
-static int ompt_libomptarget_initialize(ompt_function_lookup_t lookup,
-                                        int initial_device_num,
-                                        ompt_data_t *tool_data) {
-  DP("enter ompt_libomptarget_initialize!\n");
-  OmptEnabled = true;
-  // The lookup parameter is provided by libomp which already has the
-  // tool callbacks registered at this point. The registration call
-  // below causes the same callback functions to be registered in
-  // libomptarget as well
-  OmptDeviceCallbacks.registerCallbacks(lookup);
-  DP("exit ompt_libomptarget_initialize!\n");
+int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
+                                               int initial_device_num,
+                                               ompt_data_t *tool_data) {
+  DP("OMPT: Executing initializeLibrary (libomp)\n");
+#define bindOmptFunctionName(OmptFunction, DestinationFunction)                \
+  DestinationFunction = (OmptFunction##_t)lookup(#OmptFunction);               \
+  DP("OMPT: initializeLibrary (libomp) bound %s=%p\n", #DestinationFunction,   \
+     ((void *)(uint64_t)DestinationFunction));
+
+  bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
+#undef bindOmptFunctionName
+
+  // Store pointer of 'ompt_libomp_target_fn_lookup' for use by libomptarget
+  lookupCallbackByName = lookup;
+
+  assert(lookupCallbackByCode && "lookupCallbackByCode should be non-null");
+  assert(lookupCallbackByName && "lookupCallbackByName should be non-null");
+  assert(LibraryFinalizer == nullptr &&
+         "LibraryFinalizer should not be initialized yet");
+
+  LibraryFinalizer = new LibomptargetRtlFinalizer();
+
   return 0;
 }
 
-/// This function is passed to libomp as part of the OMPT connector object.
-/// It is called by libomp during finalization of OMPT in libomptarget.
-static void ompt_libomptarget_finalize(ompt_data_t *data) {
-  DP("enter ompt_libomptarget_finalize!\n");
-  // Before disabling OMPT, call the finalizer (of the plugin) that was
-  // registered with this library
-  LibraryFinalizer.finalize();
-  OmptEnabled = false;
-  DP("exit ompt_libomptarget_finalize!\n");
+void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
+  DP("OMPT: Executing finalizeLibrary (libomp)\n");
+  // Before disabling OMPT, call the (plugin) finalizations that were registered
+  // with this library
+  LibraryFinalizer->finalize();
+  delete LibraryFinalizer;
 }
 
-/*****************************************************************************
- * constructor
- *****************************************************************************/
-/// Used to initialize callbacks implemented by the tool. This interface
-/// will lookup the callbacks table in libomp and assign them to the callbacks
-/// maintained in libomptarget.
-void InitOmptLibomp() {
-  DP("OMPT: Enter InitOmptLibomp\n");
+void llvm::omp::target::ompt::connectLibrary() {
+  DP("OMPT: Entering connectLibrary (libomp)\n");
   // Connect with libomp
   static OmptLibraryConnectorTy LibompConnector("libomp");
   static ompt_start_tool_result_t OmptResult;
 
   // Initialize OmptResult with the init and fini functions that will be
   // called by the connector
-  OmptResult.initialize = ompt_libomptarget_initialize;
-  OmptResult.finalize = ompt_libomptarget_finalize;
+  OmptResult.initialize = ompt::initializeLibrary;
+  OmptResult.finalize = ompt::finalizeLibrary;
   OmptResult.tool_data.value = 0;
-
-  // Initialize the device callbacks first
-  OmptDeviceCallbacks.init();
 
   // Now call connect that causes the above init/fini functions to be called
   LibompConnector.connect(&OmptResult);
-  DP("OMPT: Exit InitOmptLibomp\n");
+
+#define bindOmptCallback(Name, Type, Code)                                     \
+  if (lookupCallbackByCode)                                                    \
+    lookupCallbackByCode(                                                      \
+        (ompt_callbacks_t)(Code),                                              \
+        (ompt_callback_t *)&(llvm::omp::target::ompt::Name##_fn));
+  FOREACH_OMPT_NOEMI_EVENT(bindOmptCallback)
+  FOREACH_OMPT_EMI_EVENT(bindOmptCallback)
+#undef bindOmptCallback
+
+  DP("OMPT: Exiting connectLibrary (libomp)\n");
 }
 
 extern "C" {
 /// Used for connecting libomptarget with a plugin
 void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {
   DP("OMPT: Enter ompt_libomptarget_connect\n");
-  if (OmptEnabled && result) {
-    // Cache the fini function so that it can be invoked on exit
-    LibraryFinalizer.registerRtl(result->finalize);
+  if (result && LibraryFinalizer) {
+    // Cache each fini function, so that they can be invoked on exit
+    LibraryFinalizer->registerRtl(result->finalize);
     // Invoke the provided init function with the lookup function maintained
     // in this library so that callbacks maintained by this library are
     // retrieved.
-    result->initialize(OmptDeviceCallbacksTy::doLookup,
-                       0 /* initial_device_num */, nullptr /* tool_data */);
+    result->initialize(lookupCallbackByName,
+                       /* initial_device_num */ 0, /* tool_data */ nullptr);
   }
   DP("OMPT: Leave ompt_libomptarget_connect\n");
 }

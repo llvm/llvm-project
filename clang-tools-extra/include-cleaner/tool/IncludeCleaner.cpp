@@ -164,7 +164,7 @@ private:
       Results.Missing.clear();
     if (!Remove)
       Results.Unused.clear();
-    std::string Final = fixIncludes(Results, Code, getStyle(Path));
+    std::string Final = fixIncludes(Results, Path, Code, getStyle(Path));
 
     if (Print.getNumOccurrences()) {
       switch (Print) {

@@ -155,11 +155,6 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
                    Fn.getEntryBlock(),
                    &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
 
-  if (MadeChange) {
-    LLVM_DEBUG(dbgs() << "********** Function after Constant Hoisting: "
-                      << Fn.getName() << '\n');
-    LLVM_DEBUG(dbgs() << Fn);
-  }
   LLVM_DEBUG(dbgs() << "********** End Constant Hoisting **********\n");
 
   return MadeChange;

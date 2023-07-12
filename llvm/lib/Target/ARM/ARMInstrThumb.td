@@ -1609,7 +1609,7 @@ def tLDRLIT_ga_abs : PseudoInst<(outs tGPR:$dst), (ins i32imm:$src),
 // relocations.
 // This is a single pseudo instruction to make it re-materializable.
 // FIXME: Remove this when we can do generalized remat.
-let isReMaterializable = 1, isMoveImm = 1, Size = 16, hasNoSchedulingInfo = 1 in
+let Defs = [CPSR], isReMaterializable = 1, isMoveImm = 1, Size = 16, hasNoSchedulingInfo = 1 in
 def tMOVi32imm : PseudoInst<(outs rGPR:$dst), (ins i32imm:$src), NoItinerary,
                             [(set rGPR:$dst, (i32 imm:$src))]>,
                             Requires<[IsThumb1Only, GenExecuteOnly, DontUseMovt]>;

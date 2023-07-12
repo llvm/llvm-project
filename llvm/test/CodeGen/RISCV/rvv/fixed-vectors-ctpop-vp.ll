@@ -1618,14 +1618,15 @@ define <15 x i64> @vp_ctpop_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroext %ev
 define <15 x i64> @vp_ctpop_v15i64_unmasked(<15 x i64> %va, i32 zeroext %evl) {
 ; RV32-LABEL: vp_ctpop_v15i64_unmasked:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV32-NEXT:    vsrl.vi v16, v8, 1
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vmv.v.x v16, a1
+; RV32-NEXT:    vmv.v.x v24, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vsrl.vi v24, v8, 1
-; RV32-NEXT:    vand.vv v16, v24, v16
+; RV32-NEXT:    vand.vv v16, v16, v24
 ; RV32-NEXT:    vsub.vv v8, v8, v16
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819
@@ -1775,14 +1776,15 @@ define <16 x i64> @vp_ctpop_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroext %ev
 define <16 x i64> @vp_ctpop_v16i64_unmasked(<16 x i64> %va, i32 zeroext %evl) {
 ; RV32-LABEL: vp_ctpop_v16i64_unmasked:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; RV32-NEXT:    vsrl.vi v16, v8, 1
 ; RV32-NEXT:    lui a1, 349525
 ; RV32-NEXT:    addi a1, a1, 1365
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; RV32-NEXT:    vmv.v.x v16, a1
+; RV32-NEXT:    vmv.v.x v24, a1
 ; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; RV32-NEXT:    vsrl.vi v24, v8, 1
-; RV32-NEXT:    vand.vv v16, v24, v16
+; RV32-NEXT:    vand.vv v16, v16, v24
 ; RV32-NEXT:    vsub.vv v8, v8, v16
 ; RV32-NEXT:    lui a1, 209715
 ; RV32-NEXT:    addi a1, a1, 819

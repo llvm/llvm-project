@@ -2540,10 +2540,12 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
     MachineBasicBlock &MBB = *MI.getParent();
     MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
                                   .add(MI.getOperand(0))
+                                  .addReg(MI.getOperand(0).getReg(), RegState::Undef)
                                   .add(MI.getOperand(1))
                                   .add(MI.getOperand(2))
                                   .add(MI.getOperand(3))
-                                  .add(MI.getOperand(4));
+                                  .add(MI.getOperand(4))
+                                  .add(MI.getOperand(5));
     MIB.copyImplicitOps(MI);
 
     if (LV) {

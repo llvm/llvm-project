@@ -659,13 +659,32 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       continue;
 
     for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end())) {
-      if (!isa<Instruction>(M))
+      auto *MI = dyn_cast<Instruction>(M);
+      if (!MI)
         continue;
       Type *Ty = M->getType();
       if (Roots.count(M))
-        Ty = cast<Instruction>(M)->getOperand(0)->getType();
-      if (MinBW < Ty->getScalarSizeInBits())
-        MinBWs[cast<Instruction>(M)] = MinBW;
+        Ty = MI->getOperand(0)->getType();
+
+      if (MinBW >= Ty->getScalarSizeInBits())
+        continue;
+
+      // If any of M's operands demand more bits than MinBW then M cannot be
+      // performed safely in MinBW.
+      if (any_of(MI->operands(), [&DB, MinBW](Use &U) {
+            auto *CI = dyn_cast<ConstantInt>(U);
+            // For constants shift amounts, check if the shift would result in
+            // poison.
+            if (CI &&
+                isa<ShlOperator, LShrOperator, AShrOperator>(U.getUser()) &&
+                U.getOperandNo() == 1)
+              return CI->uge(MinBW);
+            uint64_t BW = bit_width(DB.getDemandedBits(&U).getZExtValue());
+            return bit_ceil(BW) > MinBW;
+          }))
+        continue;
+
+      MinBWs[MI] = MinBW;
     }
   }
 

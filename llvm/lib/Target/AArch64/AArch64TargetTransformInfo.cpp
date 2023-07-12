@@ -401,7 +401,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::smin:
   case Intrinsic::smax: {
     static const auto ValidMinMaxTys = {MVT::v8i8,  MVT::v16i8, MVT::v4i16,
-                                        MVT::v8i16, MVT::v2i32, MVT::v4i32};
+                                        MVT::v8i16, MVT::v2i32, MVT::v4i32,
+                                        MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32,
+                                        MVT::nxv2i64};
     auto LT = getTypeLegalizationCost(RetTy);
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)

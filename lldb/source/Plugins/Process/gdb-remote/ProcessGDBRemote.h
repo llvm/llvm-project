@@ -77,6 +77,8 @@ public:
                 bool plugin_specified_by_name) override;
 
   CommandObject *GetPluginCommandObject() override;
+  
+  void DumpPluginHistory(Stream &s) override;
 
   // Creating a new process, or attaching to an existing one
   Status DoWillLaunch(Module *module) override;

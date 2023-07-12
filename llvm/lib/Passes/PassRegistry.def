@@ -183,6 +183,13 @@ MODULE_PASS_WITH_PARAMS("embed-bitcode",
                         },
                         parseEmbedBitcodePassOptions,
                         "thinlto;emit-summary")
+MODULE_PASS_WITH_PARAMS("memprof-use",
+                         "MemProfUsePass",
+                        [](std::string Opts) {
+                          return MemProfUsePass(Opts);
+                        },
+                        parseMemProfUsePassOptions,
+                        "profile-filename=S")
 #undef MODULE_PASS_WITH_PARAMS
 
 #ifndef CGSCC_ANALYSIS

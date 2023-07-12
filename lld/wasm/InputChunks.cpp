@@ -150,6 +150,7 @@ void InputChunk::relocate(uint8_t *buf) const {
     case R_WASM_TABLE_INDEX_I32:
     case R_WASM_MEMORY_ADDR_I32:
     case R_WASM_FUNCTION_OFFSET_I32:
+    case R_WASM_FUNCTION_INDEX_I32:
     case R_WASM_SECTION_OFFSET_I32:
     case R_WASM_GLOBAL_INDEX_I32:
     case R_WASM_MEMORY_ADDR_LOCREL_I32:
@@ -518,14 +519,18 @@ uint64_t InputSection::getTombstoneForSection(StringRef name) {
   // If they occur in DWARF debug symbols, we want to change the pc of the
   // function to -1 to avoid overlapping with a valid range. However for the
   // debug_ranges and debug_loc sections that would conflict with the existing
-  // meaning of -1 so we use -2.
-  // Returning 0 means there is no tombstone value for this section, and relocation
-  // will just use the addend.
-  if (!name.starts_with(".debug_"))
-    return 0;
+  // meaning of -1 so we use -2.  
   if (name.equals(".debug_ranges") || name.equals(".debug_loc"))
     return UINT64_C(-2);
-  return UINT64_C(-1);
+  if (name.starts_with(".debug_"))
+    return UINT64_C(-1);
+  // If the function occurs in an function attribute section change it to -1 since
+  // 0 is a valid function index.
+  if (name.starts_with("llvm.func_attr."))
+    return UINT64_C(-1);
+  // Returning 0 means there is no tombstone value for this section, and relocation
+  // will just use the addend.
+  return 0;
 }
 
 } // namespace wasm

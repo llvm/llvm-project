@@ -623,8 +623,11 @@ void FormatStringConverter::finalizeFormatText() {
                 PrintfFormatString.size() - PrintfFormatStringPos));
   PrintfFormatStringPos = PrintfFormatString.size();
 
+  // It's clearer to convert printf("Hello\r\n"); to std::print("Hello\r\n")
+  // than to std::println("Hello\r");
   if (StringRef(StandardFormatString).ends_with("\\n") &&
-      !StringRef(StandardFormatString).ends_with("\\\\n")) {
+      !StringRef(StandardFormatString).ends_with("\\\\n") &&
+      !StringRef(StandardFormatString).ends_with("\\r\\n")) {
     UsePrintNewlineFunction = true;
     FormatStringNeededRewriting = true;
     StandardFormatString.erase(StandardFormatString.end() - 2,
