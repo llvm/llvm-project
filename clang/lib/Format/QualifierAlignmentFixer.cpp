@@ -618,7 +618,7 @@ bool LeftRightQualifierAlignmentFixer::isPossibleMacro(const FormatToken *Tok) {
     return false;
   if (Tok->TokenText.upper() == Tok->TokenText.str()) {
     // T,K,U,V likely could be template arguments
-    return (Tok->TokenText.size() != 1);
+    return Tok->TokenText.size() != 1;
   }
   return false;
 }
