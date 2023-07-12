@@ -3322,6 +3322,18 @@ multiclass VPseudoVRED_VS {
   }
 }
 
+multiclass VPseudoVREDMINMAX_VS {
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    foreach e = SchedSEWSet<mx>.val in {
+      defvar WriteVIRedMinMaxV_From_MX_E = !cast<SchedWrite>("WriteVIRedMinMaxV_From_" # mx # "_E" # e);
+      defm _VS : VPseudoTernaryWithTailPolicy<V_M1.vrclass, m.vrclass, V_M1.vrclass, m, e>,
+                 Sched<[WriteVIRedMinMaxV_From_MX_E, ReadVIRedV, ReadVIRedV,
+                        ReadVIRedV, ReadVMask]>;
+    }
+  }
+}
+
 multiclass VPseudoVWRED_VS {
   foreach m = MxListWRed in {
     defvar mx = m.MX;
@@ -5895,10 +5907,10 @@ defm PseudoVREDSUM  : VPseudoVRED_VS;
 defm PseudoVREDAND  : VPseudoVRED_VS;
 defm PseudoVREDOR   : VPseudoVRED_VS;
 defm PseudoVREDXOR  : VPseudoVRED_VS;
-defm PseudoVREDMINU : VPseudoVRED_VS;
-defm PseudoVREDMIN  : VPseudoVRED_VS;
-defm PseudoVREDMAXU : VPseudoVRED_VS;
-defm PseudoVREDMAX  : VPseudoVRED_VS;
+defm PseudoVREDMINU : VPseudoVREDMINMAX_VS;
+defm PseudoVREDMIN  : VPseudoVREDMINMAX_VS;
+defm PseudoVREDMAXU : VPseudoVREDMINMAX_VS;
+defm PseudoVREDMAX  : VPseudoVREDMINMAX_VS;
 
 //===----------------------------------------------------------------------===//
 // 14.2. Vector Widening Integer Reduction Instructions

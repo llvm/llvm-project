@@ -779,6 +779,8 @@ foreach mx = SchedMxList in {
     let Latency = Cycles, ResourceCycles = [Cycles] in
     defm "" : LMULSEWWriteResMXSEW<"WriteVIRedV_From", [SiFive7VA],
                                    mx, sew, IsWorstCase>;
+    defm "" : LMULSEWWriteResMXSEW<"WriteVIRedMinMaxV_From", [SiFive7VA],
+                                   mx, sew, IsWorstCase>;
   }
 }
 
