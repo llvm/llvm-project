@@ -8,8 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
-
 // Check that __constexpr_* cstring functions are actually constexpr
 
 #include <__string/constexpr_c_functions.h>
