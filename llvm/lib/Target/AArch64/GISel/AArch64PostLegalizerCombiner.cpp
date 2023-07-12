@@ -24,6 +24,8 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
@@ -37,10 +39,20 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
 
+#define GET_GICOMBINER_DEPS
+#include "AArch64GenPostLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_DEPS
+
 #define DEBUG_TYPE "aarch64-postlegalizer-combiner"
 
 using namespace llvm;
 using namespace MIPatternMatch;
+
+namespace {
+
+#define GET_GICOMBINER_TYPES
+#include "AArch64GenPostLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_TYPES
 
 /// This combine tries do what performExtractVectorEltCombine does in SDAG.
 /// Rewrite for pairwise fadd pattern
@@ -109,13 +121,13 @@ void applyExtractVecEltPairwiseAdd(
   MI.eraseFromParent();
 }
 
-static bool isSignExtended(Register R, MachineRegisterInfo &MRI) {
+bool isSignExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
   unsigned Opc = MRI.getVRegDef(R)->getOpcode();
   return Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_SEXT_INREG;
 }
 
-static bool isZeroExtended(Register R, MachineRegisterInfo &MRI) {
+bool isZeroExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
   return MRI.getVRegDef(R)->getOpcode() == TargetOpcode::G_ZEXT;
 }
@@ -264,7 +276,7 @@ void applyFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 /// \returns True if a G_ANYEXT instruction \p MI should be mutated to a G_ZEXT
 /// instruction.
-static bool matchMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI) {
+bool matchMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI) {
   // If this is coming from a scalar compare then we can use a G_ZEXT instead of
   // a G_ANYEXT:
   //
@@ -281,9 +293,9 @@ static bool matchMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI) 
                            m_GFCmp(m_Pred(), m_Reg(), m_Reg())));
 }
 
-static void applyMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI,
-                              MachineIRBuilder &B,
-                              GISelChangeObserver &Observer) {
+void applyMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &B,
+                             GISelChangeObserver &Observer) {
   Observer.changingInstr(MI);
   MI.setDesc(B.getTII().get(TargetOpcode::G_ZEXT));
   Observer.changedInstr(MI);
@@ -291,7 +303,7 @@ static void applyMutateAnyExtToZExt(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 /// Match a 128b store of zero and split it into two 64 bit stores, for
 /// size/performance reasons.
-static bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
+bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
   GStore &Store = cast<GStore>(MI);
   if (!Store.isSimple())
     return false;
@@ -307,9 +319,9 @@ static bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
   return MaybeCst && MaybeCst->isZero();
 }
 
-static void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                   MachineIRBuilder &B,
-                                   GISelChangeObserver &Observer) {
+void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
+                            MachineIRBuilder &B,
+                            GISelChangeObserver &Observer) {
   B.setInstrAndDebugLoc(MI);
   GStore &Store = cast<GStore>(MI);
   assert(MRI.getType(Store.getValueReg()).isVector() &&
@@ -327,21 +339,55 @@ static void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   Store.eraseFromParent();
 }
 
-#define AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
-#include "AArch64GenPostLegalizeGICombiner.inc"
-#undef AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
+class AArch64PostLegalizerCombinerImpl : public GIMatchTableExecutor {
+protected:
+  CombinerHelper &Helper;
+  const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig;
 
-namespace {
-#define AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
+  const AArch64Subtarget &STI;
+  MachineRegisterInfo &MRI;
+  GISelChangeObserver &Observer;
+  MachineIRBuilder &B;
+  MachineFunction &MF;
+
+public:
+  AArch64PostLegalizerCombinerImpl(
+      const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
+      const AArch64Subtarget &STI, GISelChangeObserver &Observer,
+      MachineIRBuilder &B, CombinerHelper &Helper);
+
+  static const char *getName() { return "AArch64PostLegalizerCombiner"; }
+
+  bool tryCombineAll(MachineInstr &I) const;
+
+private:
+#define GET_GICOMBINER_CLASS_MEMBERS
 #include "AArch64GenPostLegalizeGICombiner.inc"
-#undef AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
+#undef GET_GICOMBINER_CLASS_MEMBERS
+};
+
+#define GET_GICOMBINER_IMPL
+#include "AArch64GenPostLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_IMPL
+
+AArch64PostLegalizerCombinerImpl::AArch64PostLegalizerCombinerImpl(
+    const AArch64PostLegalizerCombinerImplRuleConfig &RuleConfig,
+    const AArch64Subtarget &STI, GISelChangeObserver &Observer,
+    MachineIRBuilder &B, CombinerHelper &Helper)
+    : Helper(Helper), RuleConfig(RuleConfig), STI(STI), MRI(*B.getMRI()),
+      Observer(Observer), B(B), MF(B.getMF()),
+#define GET_GICOMBINER_CONSTRUCTOR_INITS
+#include "AArch64GenPostLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_CONSTRUCTOR_INITS
+{
+}
 
 class AArch64PostLegalizerCombinerInfo : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
 
 public:
-  AArch64GenPostLegalizerCombinerHelperRuleConfig GeneratedRuleCfg;
+  AArch64PostLegalizerCombinerImplRuleConfig RuleConfig;
 
   AArch64PostLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
                                    GISelKnownBits *KB,
@@ -349,7 +395,7 @@ public:
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
-    if (!GeneratedRuleCfg.parseCommandLineOption())
+    if (!RuleConfig.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
   }
 
@@ -360,16 +406,13 @@ public:
 bool AArch64PostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                                MachineInstr &MI,
                                                MachineIRBuilder &B) const {
-  const auto *LI =
-      MI.getParent()->getParent()->getSubtarget().getLegalizerInfo();
+  const auto &STI = MI.getMF()->getSubtarget<AArch64Subtarget>();
+  const auto *LI = STI.getLegalizerInfo();
   CombinerHelper Helper(Observer, B, /*IsPreLegalize*/ false, KB, MDT, LI);
-  AArch64GenPostLegalizerCombinerHelper Generated(GeneratedRuleCfg);
-  return Generated.tryCombineAll(Observer, MI, B, Helper);
+  AArch64PostLegalizerCombinerImpl Impl(RuleConfig, STI, Observer, B, Helper);
+  Impl.setupMF(*MI.getMF(), KB);
+  return Impl.tryCombineAll(MI);
 }
-
-#define AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
-#include "AArch64GenPostLegalizeGICombiner.inc"
-#undef AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
 
 class AArch64PostLegalizerCombiner : public MachineFunctionPass {
 public:

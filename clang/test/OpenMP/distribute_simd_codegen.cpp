@@ -28,38 +28,38 @@
 
 // Test target codegen - host bc file has to be created first. (no significant differences with host version of target region)
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK17
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK17
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK17
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK17
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK19
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK19
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK19
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK19
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -DOMP5
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DOMP5 | FileCheck %s --check-prefix=CHECK21
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s -DOMP5
-// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - -DOMP5 | FileCheck %s --check-prefix=CHECK21
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DOMP5 | FileCheck %s --check-prefix=CHECK21
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - -DOMP5 | FileCheck %s --check-prefix=CHECK21
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc -DOMP5
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -DOMP5 | FileCheck %s --check-prefix=CHECK23
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s -DOMP5
-// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - -DOMP5 | FileCheck %s --check-prefix=CHECK23
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -DOMP5 | FileCheck %s --check-prefix=CHECK23
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - -DOMP5 | FileCheck %s --check-prefix=CHECK23
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK9
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK9
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=CHECK9
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK9
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK11
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s --check-prefix=CHECK11
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK11
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc -DOMP5
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DOMP5 | FileCheck %s --check-prefix=CHECK13
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s -DOMP5
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - -DOMP5 | FileCheck %s --check-prefix=CHECK13
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - -DOMP5 | FileCheck %s --check-prefix=CHECK13
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - -DOMP5 | FileCheck %s --check-prefix=CHECK13
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc -DOMP5
-// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -DOMP5 | FileCheck %s --check-prefix=CHECK15
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s -DOMP5
-// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - -DOMP5 | FileCheck %s --check-prefix=CHECK15
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - -DOMP5 | FileCheck %s --check-prefix=CHECK15
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s -DOMP5
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - -DOMP5 | FileCheck %s --check-prefix=CHECK15
 
 // expected-no-diagnostics
 #ifndef HEADER
@@ -2470,7 +2470,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK5-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 7
 // CHECK5-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK5-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK5-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 8, !nontemporal !15
+// CHECK5-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 8, !nontemporal [[META15:![0-9]+]]
 // CHECK5-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
 // CHECK5-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP13]] to i64
 // CHECK5-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[IDXPROM]]
@@ -2487,7 +2487,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK5-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i64 [[IDXPROM5]]
 // CHECK5-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
 // CHECK5-NEXT:    [[MUL7:%.*]] = fmul float [[MUL4]], [[TMP20]]
-// CHECK5-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 8, !nontemporal !15
+// CHECK5-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 8, !nontemporal [[META15]]
 // CHECK5-NEXT:    [[TMP22:%.*]] = load i32, ptr [[I]], align 4
 // CHECK5-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[TMP22]] to i64
 // CHECK5-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i64 [[IDXPROM8]]
@@ -2904,7 +2904,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK5-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP18]], 1
 // CHECK5-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK5-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK5-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !15, !llvm.access.group [[ACC_GRP21]]
+// CHECK5-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META15]], !llvm.access.group [[ACC_GRP21]]
 // CHECK5-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK5:       omp.body.continue:
 // CHECK5-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -3489,7 +3489,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK7-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 7
 // CHECK7-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK7-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK7-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 4, !nontemporal !16
+// CHECK7-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 4, !nontemporal [[META16:![0-9]+]]
 // CHECK7-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
 // CHECK7-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 [[TMP13]]
 // CHECK7-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -3503,7 +3503,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK7-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i32 [[TMP19]]
 // CHECK7-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
 // CHECK7-NEXT:    [[MUL5:%.*]] = fmul float [[MUL3]], [[TMP20]]
-// CHECK7-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 4, !nontemporal !16
+// CHECK7-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 4, !nontemporal [[META16]]
 // CHECK7-NEXT:    [[TMP22:%.*]] = load i32, ptr [[I]], align 4
 // CHECK7-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i32 [[TMP22]]
 // CHECK7-NEXT:    store float [[MUL5]], ptr [[ARRAYIDX6]], align 4
@@ -3915,7 +3915,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK7-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP18]], 1
 // CHECK7-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK7-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK7-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !16, !llvm.access.group [[ACC_GRP22]]
+// CHECK7-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META16]], !llvm.access.group [[ACC_GRP22]]
 // CHECK7-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK7:       omp.body.continue:
 // CHECK7-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -4887,7 +4887,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK13-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP3]], 7
 // CHECK13-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK13-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK13-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nontemporal !7
+// CHECK13-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 8, !nontemporal [[META7:![0-9]+]]
 // CHECK13-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4
 // CHECK13-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP5]] to i64
 // CHECK13-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i64 [[IDXPROM]]
@@ -4904,7 +4904,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK13-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i64 [[IDXPROM4]]
 // CHECK13-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX5]], align 4
 // CHECK13-NEXT:    [[MUL6:%.*]] = fmul float [[MUL3]], [[TMP12]]
-// CHECK13-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nontemporal !7
+// CHECK13-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[A_ADDR]], align 8, !nontemporal [[META7]]
 // CHECK13-NEXT:    [[TMP14:%.*]] = load i32, ptr [[I]], align 4
 // CHECK13-NEXT:    [[IDXPROM7:%.*]] = sext i32 [[TMP14]] to i64
 // CHECK13-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[IDXPROM7]]
@@ -5045,7 +5045,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK13-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 1
 // CHECK13-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK13-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK13-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !7, !llvm.access.group [[ACC_GRP13]]
+// CHECK13-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META7]], !llvm.access.group [[ACC_GRP13]]
 // CHECK13-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK13:       omp.body.continue:
 // CHECK13-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -5239,7 +5239,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK15-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP3]], 7
 // CHECK15-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK15-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK15-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 4, !nontemporal !8
+// CHECK15-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[B_ADDR]], align 4, !nontemporal [[META8:![0-9]+]]
 // CHECK15-NEXT:    [[TMP5:%.*]] = load i32, ptr [[I]], align 4
 // CHECK15-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 [[TMP5]]
 // CHECK15-NEXT:    [[TMP6:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -5253,7 +5253,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK15-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i32 [[TMP11]]
 // CHECK15-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
 // CHECK15-NEXT:    [[MUL4:%.*]] = fmul float [[MUL2]], [[TMP12]]
-// CHECK15-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nontemporal !8
+// CHECK15-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[A_ADDR]], align 4, !nontemporal [[META8]]
 // CHECK15-NEXT:    [[TMP14:%.*]] = load i32, ptr [[I]], align 4
 // CHECK15-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i32 [[TMP14]]
 // CHECK15-NEXT:    store float [[MUL4]], ptr [[ARRAYIDX5]], align 4
@@ -5389,7 +5389,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK15-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 1
 // CHECK15-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK15-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK15-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !8, !llvm.access.group [[ACC_GRP14]]
+// CHECK15-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META8]], !llvm.access.group [[ACC_GRP14]]
 // CHECK15-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK15:       omp.body.continue:
 // CHECK15-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -6846,7 +6846,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK21-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 7
 // CHECK21-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK21-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK21-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 8, !nontemporal !16
+// CHECK21-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 8, !nontemporal [[META16:![0-9]+]]
 // CHECK21-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
 // CHECK21-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP13]] to i64
 // CHECK21-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[IDXPROM]]
@@ -6863,7 +6863,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK21-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i64 [[IDXPROM5]]
 // CHECK21-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDX6]], align 4
 // CHECK21-NEXT:    [[MUL7:%.*]] = fmul float [[MUL4]], [[TMP20]]
-// CHECK21-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 8, !nontemporal !16
+// CHECK21-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 8, !nontemporal [[META16]]
 // CHECK21-NEXT:    [[TMP22:%.*]] = load i32, ptr [[I]], align 4
 // CHECK21-NEXT:    [[IDXPROM8:%.*]] = sext i32 [[TMP22]] to i64
 // CHECK21-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i64 [[IDXPROM8]]
@@ -7114,7 +7114,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK21-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP18]], 1
 // CHECK21-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK21-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK21-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !16, !llvm.access.group [[ACC_GRP22]]
+// CHECK21-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META16]], !llvm.access.group [[ACC_GRP22]]
 // CHECK21-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK21:       omp.body.continue:
 // CHECK21-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -7463,7 +7463,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK23-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP11]], 7
 // CHECK23-NEXT:    [[SUB:%.*]] = sub nsw i32 32000000, [[MUL]]
 // CHECK23-NEXT:    store i32 [[SUB]], ptr [[I]], align 4
-// CHECK23-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 4, !nontemporal !17
+// CHECK23-NEXT:    [[TMP12:%.*]] = load ptr, ptr [[TMP1]], align 4, !nontemporal [[META17:![0-9]+]]
 // CHECK23-NEXT:    [[TMP13:%.*]] = load i32, ptr [[I]], align 4
 // CHECK23-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i32 [[TMP13]]
 // CHECK23-NEXT:    [[TMP14:%.*]] = load float, ptr [[ARRAYIDX]], align 4
@@ -7477,7 +7477,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK23-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[TMP18]], i32 [[TMP19]]
 // CHECK23-NEXT:    [[TMP20:%.*]] = load float, ptr [[ARRAYIDX4]], align 4
 // CHECK23-NEXT:    [[MUL5:%.*]] = fmul float [[MUL3]], [[TMP20]]
-// CHECK23-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 4, !nontemporal !17
+// CHECK23-NEXT:    [[TMP21:%.*]] = load ptr, ptr [[TMP0]], align 4, !nontemporal [[META17]]
 // CHECK23-NEXT:    [[TMP22:%.*]] = load i32, ptr [[I]], align 4
 // CHECK23-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP21]], i32 [[TMP22]]
 // CHECK23-NEXT:    store float [[MUL5]], ptr [[ARRAYIDX6]], align 4
@@ -7723,7 +7723,7 @@ int fint(void) { return ftemplate<int>(); }
 // CHECK23-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP18]], 1
 // CHECK23-NEXT:    [[ADD10:%.*]] = add nsw i32 [[CONV9]], [[MUL]]
 // CHECK23-NEXT:    [[CONV11:%.*]] = trunc i32 [[ADD10]] to i8
-// CHECK23-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal !17, !llvm.access.group [[ACC_GRP23]]
+// CHECK23-NEXT:    store i8 [[CONV11]], ptr [[I6]], align 1, !nontemporal [[META17]], !llvm.access.group [[ACC_GRP23]]
 // CHECK23-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK23:       omp.body.continue:
 // CHECK23-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]

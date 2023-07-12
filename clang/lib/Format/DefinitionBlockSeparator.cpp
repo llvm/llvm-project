@@ -52,10 +52,10 @@ void DefinitionBlockSeparator::separateBlocks(
     for (const FormatToken *CurrentToken = Line->First; CurrentToken;
          CurrentToken = CurrentToken->Next) {
       if (BracketLevel == 0) {
-        if ((CurrentToken->isOneOf(tok::kw_class, tok::kw_struct,
-                                   tok::kw_union) ||
-             (Style.isJavaScript() &&
-              CurrentToken->is(ExtraKeywords.kw_function)))) {
+        if (CurrentToken->isOneOf(tok::kw_class, tok::kw_struct,
+                                  tok::kw_union) ||
+            (Style.isJavaScript() &&
+             CurrentToken->is(ExtraKeywords.kw_function))) {
           return true;
         }
         if (!ExcludeEnum && CurrentToken->is(tok::kw_enum))
@@ -164,7 +164,7 @@ void DefinitionBlockSeparator::separateBlocks(
         }
       }
 
-      if ((Style.isCSharp() && OperateLine->First->is(TT_AttributeSquare)))
+      if (Style.isCSharp() && OperateLine->First->is(TT_AttributeSquare))
         return true;
       return false;
     };

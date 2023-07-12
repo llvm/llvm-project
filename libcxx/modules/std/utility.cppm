@@ -70,9 +70,6 @@ export namespace std {
   using std::tuple_element;
   using std::tuple_size;
 
-  using std::tuple_element;
-  using std::tuple_size;
-
   using std::get;
 
   // [pair.piecewise], pair piecewise construction

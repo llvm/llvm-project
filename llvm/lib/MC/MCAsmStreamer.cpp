@@ -36,6 +36,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
+#include <algorithm>
 #include <optional>
 
 using namespace llvm;
@@ -200,6 +201,7 @@ public:
                                 const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;
+  void emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) override;
 
   void emitELFSize(MCSymbol *Symbol, const MCExpr *Value) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -963,6 +965,70 @@ void MCAsmStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
   OS << "\t.except\t";
   Symbol->print(OS, MAI);
   OS << ", " << Lang << ", " << Reason;
+  EmitEOL();
+}
+
+void MCAsmStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
+  const char InfoDirective[] = "\t.info ";
+  const char *Separator = ", ";
+  constexpr int WordSize = sizeof(uint32_t);
+
+  // Start by emitting the .info pseudo-op and C_INFO symbol name.
+  OS << InfoDirective;
+  PrintQuotedString(Name, OS);
+  OS << Separator;
+
+  size_t MetadataSize = Metadata.size();
+
+  // Emit the 4-byte length of the metadata.
+  OS << format_hex(MetadataSize, 10) << Separator;
+
+  // Nothing left to do if there's no metadata.
+  if (MetadataSize == 0) {
+    EmitEOL();
+    return;
+  }
+
+  // Metadata needs to be padded out to an even word size when generating
+  // assembly because the .info pseudo-op can only generate words of data. We
+  // apply the same restriction to the object case for consistency, however the
+  // linker doesn't require padding, so it will only save bytes specified by the
+  // length and discard any padding.
+  uint32_t PaddedSize = alignTo(MetadataSize, WordSize);
+  uint32_t PaddingSize = PaddedSize - MetadataSize;
+
+  // Write out the payload a word at a time.
+  //
+  // The assembler has a limit on the number of operands in an expression,
+  // so we need multiple .info pseudo-ops. We choose a small number of words
+  // per pseudo-op to keep the assembly readable.
+  constexpr int WordsPerDirective = 5;
+  // Force emitting a new directive to keep the first directive purely about the
+  // name and size of the note.
+  int WordsBeforeNextDirective = 0;
+  auto PrintWord = [&](const uint8_t *WordPtr) {
+    if (WordsBeforeNextDirective-- == 0) {
+      EmitEOL();
+      OS << InfoDirective;
+      WordsBeforeNextDirective = WordsPerDirective;
+    }
+    OS << Separator;
+    uint32_t Word = llvm::support::endian::read32be(WordPtr);
+    OS << format_hex(Word, 10);
+  };
+
+  size_t Index = 0;
+  for (; Index + WordSize <= MetadataSize; Index += WordSize)
+    PrintWord(reinterpret_cast<const uint8_t *>(Metadata.data()) + Index);
+
+  // If there is padding, then we have at least one byte of payload left
+  // to emit.
+  if (PaddingSize) {
+    assert(PaddedSize - Index == WordSize);
+    std::array<uint8_t, WordSize> LastWord = {0};
+    ::memcpy(LastWord.data(), Metadata.data() + Index, MetadataSize - Index);
+    PrintWord(LastWord.data());
+  }
   EmitEOL();
 }
 

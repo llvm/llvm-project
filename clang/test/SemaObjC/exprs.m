@@ -1,12 +1,9 @@
 // RUN: %clang_cc1 %s -fsyntax-only -fblocks -verify -Wno-unreachable-code
 
-// rdar://6597252
 Class test1(Class X) {
   return 1 ? X : X;
 }
 
-
-// rdar://6079877
 void test2(void) {
   id str = @"foo" 
           "bar\0"    // no-warning
@@ -23,9 +20,6 @@ void test2(void) {
 #define MAX(A,B) ({ __typeof__(A) __a = (A); __typeof__(B) __b = (B); __a < __b ? __b : __a; })
 void (^foo)(int, int) = ^(int x, int y) { int z = MAX(x, y); };
 
-
-
-// rdar://8445858
 @class Object;
 static Object *g;
 void test3(Object *o) {

@@ -248,6 +248,12 @@ public:
   DenseMap<StringRef, SmallVector<StringAttrStorage *>>
       dialectReferencingStrAttrs;
 
+  /// A distinct attribute allocator that allocates every time since the
+  /// address of the distinct attribute storage serves as unique identifier. The
+  /// allocator is thread safe and frees the allocated storage after its
+  /// destruction.
+  DistinctAttributeAllocator distinctAttributeAllocator;
+
 public:
   MLIRContextImpl(bool threadingIsEnabled)
       : threadingIsEnabled(threadingIsEnabled) {
@@ -1062,6 +1068,12 @@ UnitAttr UnitAttr::get(MLIRContext *context) {
 
 UnknownLoc UnknownLoc::get(MLIRContext *context) {
   return context->getImpl().unknownLocAttr;
+}
+
+DistinctAttrStorage *
+detail::DistinctAttributeUniquer::allocateStorage(MLIRContext *context,
+                                                  Attribute referencedAttr) {
+  return context->getImpl().distinctAttributeAllocator.allocate(referencedAttr);
 }
 
 /// Return empty dictionary.

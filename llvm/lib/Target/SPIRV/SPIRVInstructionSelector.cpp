@@ -20,8 +20,8 @@
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
@@ -55,7 +55,7 @@ public:
                            const SPIRVSubtarget &ST,
                            const RegisterBankInfo &RBI);
   void setupMF(MachineFunction &MF, GISelKnownBits *KB,
-               CodeGenCoverage &CoverageInfo, ProfileSummaryInfo *PSI,
+               CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI) override;
   // Common selection code. Instruction-specific selection occurs in spvSelect.
   bool select(MachineInstr &I) override;
@@ -201,7 +201,7 @@ SPIRVInstructionSelector::SPIRVInstructionSelector(const SPIRVTargetMachine &TM,
 }
 
 void SPIRVInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
-                                       CodeGenCoverage &CoverageInfo,
+                                       CodeGenCoverage *CoverageInfo,
                                        ProfileSummaryInfo *PSI,
                                        BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();

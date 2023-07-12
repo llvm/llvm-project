@@ -135,6 +135,8 @@ C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 - Compiler flags ``-std=c++2c`` and ``-std=gnu++2c`` have been added for experimental C++2c implementation work.
 - Implemented `P2738R1: constexpr cast from void* <https://wg21.link/P2738R1>`_.
+- Partially implemented `P2361R6: Unevaluated strings <https://wg21.link/P2361R6>`_.
+  The changes to attributes declarations are not part of this release.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -202,6 +204,9 @@ C2x Feature Support
     val = (void *)0; // Previously required to be rejected, is now accepted.
 
     bool b = nullptr; // Was incorrectly rejected by Clang, is now accepted.
+
+- Implemented `WG14 N3124 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3124.pdf>_`,
+  which allows any universal character name to appear in character and string literals.
 
 
 Non-comprehensive list of changes in this release
@@ -568,6 +573,24 @@ Bug Fixes in This Version
 - Clang now correctly evaluates ``__has_extension (cxx_defaulted_functions)``
   and ``__has_extension (cxx_default_function_template_args)`` to 1.
   (`#61758 <https://github.com/llvm/llvm-project/issues/61758>`_)
+- Stop evaluating a constant expression if the condition expression which in
+  switch statement contains errors.
+  (`#63453 <https://github.com/llvm/llvm-project/issues/63453>_`)
+- Fixed false positive error diagnostic when pack expansion appears in template
+  parameters of a member expression.
+  (`#48731 <https://github.com/llvm/llvm-project/issues/48731>`_)
+- Fix the contains-errors bit not being set for DeclRefExpr that refers to a
+  VarDecl with invalid initializer. This fixes:
+  (`#50236 <https://github.com/llvm/llvm-project/issues/50236>`_),
+  (`#50243 <https://github.com/llvm/llvm-project/issues/50243>`_),
+  (`#48636 <https://github.com/llvm/llvm-project/issues/48636>`_),
+  (`#50320 <https://github.com/llvm/llvm-project/issues/50320>`_).
+- Correcly diagnose jumps into statement expressions.
+  This ensures the behavior of Clang is consistent with GCC.
+  (`#63682 <https://github.com/llvm/llvm-project/issues/63682>`_)
+  (`#38717 <https://github.com/llvm/llvm-project/issues/38717>_`).
+- Fix an assertion when using ``\u0024`` (``$``) as an identifier, by disallowing
+  that construct (`#62133 <https://github.com/llvm/llvm-project/issues/38717>_`).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -804,6 +827,7 @@ clang-format
 - Add ``BracedInitializerIndentWidth`` which can be used to configure
   the indentation level of the contents of braced init lists.
 - Add ``KeepEmptyLinesAtEOF`` to keep empty lines at end of file.
+- Add ``RemoveParentheses`` to remove redundant parentheses.
 
 libclang
 --------

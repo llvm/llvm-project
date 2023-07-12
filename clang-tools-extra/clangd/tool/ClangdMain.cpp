@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ClangdMain.h"
 #include "ClangdLSPServer.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
@@ -710,8 +711,6 @@ public:
   }
 };
 } // namespace
-} // namespace clangd
-} // namespace clang
 
 enum class ErrorResultCode : int {
   NoShutdownRequest = 1,
@@ -719,10 +718,7 @@ enum class ErrorResultCode : int {
   CheckFailed = 3
 };
 
-int main(int argc, char *argv[]) {
-  using namespace clang;
-  using namespace clang::clangd;
-
+int clangdMain(int argc, char *argv[]) {
   llvm::InitializeAllTargetInfos();
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   llvm::sys::AddSignalHandler(
@@ -1041,3 +1037,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
 
   return ExitCode;
 }
+
+} // namespace clangd
+} // namespace clang

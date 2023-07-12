@@ -3276,6 +3276,25 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     return Error(Loc, "Operand must be constant 4.");
   }
 
+  bool IsAMOCAS_D = Opcode == RISCV::AMOCAS_D || Opcode == RISCV::AMOCAS_D_AQ ||
+                    Opcode == RISCV::AMOCAS_D_RL ||
+                    Opcode == RISCV::AMOCAS_D_AQ_RL;
+  bool IsAMOCAS_Q = Opcode == RISCV::AMOCAS_Q || Opcode == RISCV::AMOCAS_Q_AQ ||
+                    Opcode == RISCV::AMOCAS_Q_RL ||
+                    Opcode == RISCV::AMOCAS_Q_AQ_RL;
+  if ((!isRV64() && IsAMOCAS_D) || IsAMOCAS_Q) {
+    unsigned Rd = Inst.getOperand(0).getReg();
+    unsigned Rs2 = Inst.getOperand(2).getReg();
+    if (Rd % 2 != 0) {
+      SMLoc Loc = Operands[1]->getStartLoc();
+      return Error(Loc, "The destination register must be even.");
+    }
+    if (Rs2 % 2 != 0) {
+      SMLoc Loc = Operands[2]->getStartLoc();
+      return Error(Loc, "The source register must be even.");
+    }
+  }
+
   const MCInstrDesc &MCID = MII.get(Opcode);
   if (!(MCID.TSFlags & RISCVII::ConstraintMask))
     return false;

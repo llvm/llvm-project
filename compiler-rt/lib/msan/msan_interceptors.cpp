@@ -1530,6 +1530,7 @@ INTERCEPTOR(int, dladdr, void *addr, void *info) {
   return res;
 }
 
+#if SANITIZER_GLIBC
 INTERCEPTOR(int, dladdr1, void *addr, void *info, void **extra_info,
             int flags) {
   void *ctx;
@@ -1541,6 +1542,10 @@ INTERCEPTOR(int, dladdr1, void *addr, void *info, void **extra_info,
   }
   return res;
 }
+#  define MSAN_MAYBE_INTERCEPT_DLADDR1 MSAN_INTERCEPT_FUNC(dladdr1)
+#else
+#define MSAN_MAYBE_INTERCEPT_DLADDR1
+#endif
 
 INTERCEPTOR(char *, dlerror, int fake) {
   void *ctx;
@@ -1789,7 +1794,7 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;
   INTERCEPT_FUNCTION(strsignal);
   INTERCEPT_FUNCTION(dladdr);
-  INTERCEPT_FUNCTION(dladdr1);
+  MSAN_MAYBE_INTERCEPT_DLADDR1;
   INTERCEPT_FUNCTION(dlerror);
   INTERCEPT_FUNCTION(dl_iterate_phdr);
   INTERCEPT_FUNCTION(getrusage);

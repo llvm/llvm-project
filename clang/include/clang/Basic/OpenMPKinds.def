@@ -207,6 +207,8 @@ OPENMP_NUMTASKS_MODIFIER(strict)
 // Modifiers for the 'doacross' clause.
 OPENMP_DOACROSS_MODIFIER(source)
 OPENMP_DOACROSS_MODIFIER(sink)
+OPENMP_DOACROSS_MODIFIER(sink_omp_cur_iteration)
+OPENMP_DOACROSS_MODIFIER(source_omp_cur_iteration)
 
 #undef OPENMP_NUMTASKS_MODIFIER
 #undef OPENMP_GRAINSIZE_MODIFIER

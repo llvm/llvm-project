@@ -1088,7 +1088,8 @@ struct PragmaDebugHandler : public PragmaHandler {
       if (DiagName.is(tok::eod))
         PP.getDiagnostics().dump();
       else if (DiagName.is(tok::string_literal) && !DiagName.hasUDSuffix()) {
-        StringLiteralParser Literal(DiagName, PP);
+        StringLiteralParser Literal(DiagName, PP,
+                                    StringLiteralEvalMethod::Unevaluated);
         if (Literal.hadError)
           return;
         PP.getDiagnostics().dump(Literal.GetString());

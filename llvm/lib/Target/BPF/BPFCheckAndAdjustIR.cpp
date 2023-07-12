@@ -299,10 +299,8 @@ static bool sinkMinMaxInBB(BasicBlock &BB,
 
     Instruction *ToRemove[] = {ICmp, Info.ZExt, Info.SExt, MinMax};
     for (Instruction *I : ToRemove)
-      if (I && I->use_empty()) {
-        I->dropAllReferences();
-        I->removeFromParent();
-      }
+      if (I && I->use_empty())
+        I->eraseFromParent();
 
     Changed = true;
   }

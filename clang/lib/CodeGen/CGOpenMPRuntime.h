@@ -688,7 +688,7 @@ public:
           SizeEmitter);
 
   /// Returns true if the current target is a GPU.
-  virtual bool isTargetCodegen() const { return false; }
+  virtual bool isGPU() const { return false; }
 
   /// Check if the variable length declaration is delayed:
   virtual bool isDelayedVariableLengthDecl(CodeGenFunction &CGF,
@@ -1458,9 +1458,9 @@ public:
                             bool SeparateBeginEndCalls)
         : llvm::OpenMPIRBuilder::TargetDataInfo(RequiresDevicePointerInfo,
                                                 SeparateBeginEndCalls) {}
-    /// Map between the a declaration of a capture and the corresponding base
-    /// pointer address where the runtime returns the device pointers.
-    llvm::DenseMap<const ValueDecl *, Address> CaptureDeviceAddrMap;
+    /// Map between the a declaration of a capture and the corresponding new
+    /// llvm address where the runtime returns the device pointers.
+    llvm::DenseMap<const ValueDecl *, llvm::Value *> CaptureDeviceAddrMap;
   };
 
   /// Emit the target data mapping code associated with \a D.
@@ -2310,10 +2310,12 @@ public:
 template <> class OMPDoacrossKind<OMPDoacrossClause> {
 public:
   bool isSource(const OMPDoacrossClause *C) {
-    return (C->getDependenceType() == OMPC_DOACROSS_source);
+    return C->getDependenceType() == OMPC_DOACROSS_source ||
+           C->getDependenceType() == OMPC_DOACROSS_source_omp_cur_iteration;
   }
   bool isSink(const OMPDoacrossClause *C) {
-    return (C->getDependenceType() == OMPC_DOACROSS_sink);
+    return C->getDependenceType() == OMPC_DOACROSS_sink ||
+           C->getDependenceType() == OMPC_DOACROSS_sink_omp_cur_iteration;
   }
 };
 } // namespace

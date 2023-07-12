@@ -56,12 +56,9 @@ public:
   }
 
 private:
+  friend class Function;
   /// Constructor used by Function to generate pointers.
   CodePtr(const char *Ptr) : Ptr(Ptr) {}
-
-private:
-  friend class Function;
-
   /// Pointer into the code owned by a function.
   const char *Ptr;
 };

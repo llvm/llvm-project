@@ -95,14 +95,13 @@ Deprecations and Removals
 
 - ``<algorithm>`` no longer includes ``<chrono>`` in any C++ version (it was previously included in C++17 and earlier).
 
-- ``<limits>`` no longer includes ``<type_traits>`` in any C++ version (it was previously included in C++20 and earlier).
-
-- ``<new>`` no longer includes ``<exception>`` or ``<type_traits>`` in any C++ version (they were previously included in C++20 and earlier).
-
 - ``<string>`` no longer includes ``<vector>`` in any C++ version (it was previously included in C++20 and earlier).
 
 - ``<string>``, ``<string_view>``, and ``<mutex>`` no longer include ``<functional>``
   in any C++ version (it was previously included in C++20 and earlier).
+
+- ``<atomic>``, ``<barrier>``, ``<latch>``, ``<numeric>``, ``<semaphore>`` and ``<shared_mutex>`` no longer include ``<iosfwd>``
+  (it was previously included in all Standard versions).
 
 - The headers ``<experimental/algorithm>`` and ``<experimental/functional>`` have been removed, since all the contents
   have been implemented in namespace ``std`` for at least two releases.

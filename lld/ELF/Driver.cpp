@@ -107,6 +107,14 @@ void Ctx::reset() {
   needsTlsLd.store(false, std::memory_order_relaxed);
 }
 
+llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
+                                            std::error_code &ec) {
+  using namespace llvm::sys::fs;
+  OpenFlags flags =
+      auxiliaryFiles.insert(filename).second ? OF_None : OF_Append;
+  return {filename, ec, flags};
+}
+
 namespace lld {
 namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -1013,21 +1021,19 @@ template <class ELFT> static void readCallGraphsFromObjectFiles() {
   }
 }
 
-static DebugCompressionType getCompressDebugSections(opt::InputArgList &args) {
-  StringRef s = args.getLastArgValue(OPT_compress_debug_sections, "none");
-  if (s == "zlib") {
-    if (!compression::zlib::isAvailable())
-      error("--compress-debug-sections: zlib is not available");
-    return DebugCompressionType::Zlib;
+static DebugCompressionType getCompressionType(StringRef s, StringRef option) {
+  DebugCompressionType type = StringSwitch<DebugCompressionType>(s)
+                                  .Case("zlib", DebugCompressionType::Zlib)
+                                  .Case("zstd", DebugCompressionType::Zstd)
+                                  .Default(DebugCompressionType::None);
+  if (type == DebugCompressionType::None) {
+    if (s != "none")
+      error("unknown " + option + " value: " + s);
+  } else if (const char *reason = compression::getReasonIfUnsupported(
+                 compression::formatFor(type))) {
+    error(option + ": " + reason);
   }
-  if (s == "zstd") {
-    if (!compression::zstd::isAvailable())
-      error("--compress-debug-sections: zstd is not available");
-    return DebugCompressionType::Zstd;
-  }
-  if (s != "none")
-    error("unknown --compress-debug-sections value: " + s);
-  return DebugCompressionType::None;
+  return type;
 }
 
 static StringRef getAliasSpelling(opt::Arg *arg) {
@@ -1148,7 +1154,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->checkSections =
       args.hasFlag(OPT_check_sections, OPT_no_check_sections, true);
   config->chroot = args.getLastArgValue(OPT_chroot);
-  config->compressDebugSections = getCompressDebugSections(args);
+  config->compressDebugSections = getCompressionType(
+      args.getLastArgValue(OPT_compress_debug_sections, "none"),
+      "--compress-debug-sections");
   config->cref = args.hasArg(OPT_cref);
   config->optimizeBBJumps =
       args.hasFlag(OPT_optimize_bb_jumps, OPT_no_optimize_bb_jumps, false);
@@ -1982,7 +1990,7 @@ static void writeArchiveStats() {
     return;
 
   std::error_code ec;
-  raw_fd_ostream os(config->printArchiveStats, ec, sys::fs::OF_None);
+  raw_fd_ostream os = ctx.openAuxiliaryFile(config->printArchiveStats, ec);
   if (ec) {
     error("--print-archive-stats=: cannot open " + config->printArchiveStats +
           ": " + ec.message());
@@ -2012,7 +2020,7 @@ static void writeWhyExtract() {
     return;
 
   std::error_code ec;
-  raw_fd_ostream os(config->whyExtract, ec, sys::fs::OF_None);
+  raw_fd_ostream os = ctx.openAuxiliaryFile(config->whyExtract, ec);
   if (ec) {
     error("cannot open --why-extract= file " + config->whyExtract + ": " +
           ec.message());
@@ -2071,7 +2079,7 @@ static void reportBackrefs() {
 // easily.
 static void writeDependencyFile() {
   std::error_code ec;
-  raw_fd_ostream os(config->dependencyFile, ec, sys::fs::OF_None);
+  raw_fd_ostream os = ctx.openAuxiliaryFile(config->dependencyFile, ec);
   if (ec) {
     error("cannot open " + config->dependencyFile + ": " + ec.message());
     return;

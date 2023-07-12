@@ -24,6 +24,7 @@ array cstddef
 array cstdint
 array initializer_list
 array limits
+array new
 array stdexcept
 array version
 atomic cstddef
@@ -31,7 +32,6 @@ atomic cstdint
 atomic cstdlib
 atomic cstring
 atomic ctime
-atomic iosfwd
 atomic limits
 atomic ratio
 atomic version
@@ -39,7 +39,6 @@ barrier cstddef
 barrier cstdint
 barrier cstring
 barrier ctime
-barrier iosfwd
 barrier limits
 barrier new
 barrier ratio
@@ -65,6 +64,7 @@ charconv cstddef
 charconv cstdint
 charconv initializer_list
 charconv limits
+charconv new
 chrono array
 chrono cmath
 chrono compare
@@ -328,7 +328,6 @@ latch cstddef
 latch cstdint
 latch cstring
 latch ctime
-latch iosfwd
 latch limits
 latch ratio
 latch version
@@ -425,7 +424,6 @@ numeric cstring
 numeric ctime
 numeric execution
 numeric initializer_list
-numeric iosfwd
 numeric limits
 numeric new
 numeric ratio
@@ -455,12 +453,19 @@ ostream streambuf
 ostream string
 ostream typeinfo
 ostream version
+print cstddef
+print cstdint
+print initializer_list
+print limits
+print string_view
+print version
 queue compare
 queue cstddef
 queue cstdint
 queue deque
 queue initializer_list
 queue limits
+queue new
 queue vector
 queue version
 random cmath
@@ -480,7 +485,6 @@ ranges initializer_list
 ranges iosfwd
 ranges iterator
 ranges limits
-ranges new
 ranges optional
 ranges span
 ranges tuple
@@ -517,7 +521,6 @@ semaphore cstddef
 semaphore cstdint
 semaphore cstring
 semaphore ctime
-semaphore iosfwd
 semaphore limits
 semaphore ratio
 semaphore version
@@ -534,7 +537,6 @@ set version
 shared_mutex cerrno
 shared_mutex cstddef
 shared_mutex ctime
-shared_mutex iosfwd
 shared_mutex limits
 shared_mutex ratio
 shared_mutex stdexcept
@@ -558,6 +560,7 @@ stack cstdint
 stack deque
 stack initializer_list
 stack limits
+stack new
 stack version
 stdexcept iosfwd
 stop_token atomic
@@ -594,6 +597,7 @@ string_view cwchar
 string_view initializer_list
 string_view iosfwd
 string_view limits
+string_view new
 string_view stdexcept
 string_view version
 strstream istream

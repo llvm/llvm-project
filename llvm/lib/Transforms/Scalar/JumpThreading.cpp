@@ -246,7 +246,7 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   // Jump Threading has no sense for the targets with divergent CF
-  if (TTI.hasBranchDivergence())
+  if (TTI.hasBranchDivergence(&F))
     return PreservedAnalyses::all();
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &LVI = AM.getResult<LazyValueAnalysis>(F);

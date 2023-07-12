@@ -23,10 +23,10 @@ target triple = "x86_64-pc_linux"
 ; Function Attrs: nounwind uwtable
 define void @foo1(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr noalias %index) {
 ; AVX512-LABEL: @foo1(
-; AVX512-NEXT:  iter.check:
+; AVX512-NEXT:  entry:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
-; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ITER_CHECK:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX1]], 0
 ; AVX512-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], i64 [[TMP0]]
 ; AVX512-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
@@ -164,11 +164,11 @@ for.end:
 
 define void @foo2(ptr noalias %in, ptr noalias %out, ptr noalias %trigger, ptr noalias %index) #0 {
 ; AVX512-LABEL: @foo2(
-; AVX512-NEXT:  iter.check:
+; AVX512-NEXT:  entry:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
-; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ITER_CHECK:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ITER_CHECK]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], <16 x i64> [[VEC_IND]]
 ; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> [[TMP0]], i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i32> poison)
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i32> [[WIDE_MASKED_GATHER]], zeroinitializer
@@ -311,11 +311,11 @@ for.end:
 
 define void @foo3(ptr noalias %in, ptr noalias %out, ptr noalias %trigger) {
 ; AVX512-LABEL: @foo3(
-; AVX512-NEXT:  iter.check:
+; AVX512-NEXT:  entry:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
-; AVX512-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ITER_CHECK:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ITER_CHECK]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], <16 x i64> [[VEC_IND]]
 ; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> [[TMP0]], i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i32> poison)
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i32> [[WIDE_MASKED_GATHER]], zeroinitializer
@@ -445,11 +445,11 @@ declare void @llvm.masked.scatter.v16f32.v16p0(<16 x float>, <16 x ptr>, i32, <1
 
 define void @foo2_addrspace(ptr addrspace(1) noalias %in, ptr addrspace(1) noalias %out, ptr noalias %trigger, ptr noalias %index) #0 {
 ; AVX512-LABEL: @foo2_addrspace(
-; AVX512-NEXT:  iter.check:
+; AVX512-NEXT:  entry:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
-; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ITER_CHECK:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ITER_CHECK]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], <16 x i64> [[VEC_IND]]
 ; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> [[TMP0]], i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i32> poison)
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i32> [[WIDE_MASKED_GATHER]], zeroinitializer
@@ -578,11 +578,11 @@ for.end:
 
 define void @foo2_addrspace2(ptr addrspace(1) noalias %in, ptr addrspace(0) noalias %out, ptr noalias %trigger, ptr noalias %index) {
 ; AVX512-LABEL: @foo2_addrspace2(
-; AVX512-NEXT:  iter.check:
+; AVX512-NEXT:  entry:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
-; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ITER_CHECK:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ITER_CHECK]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], <16 x i64> [[VEC_IND]]
 ; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> [[TMP0]], i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i32> poison)
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i32> [[WIDE_MASKED_GATHER]], zeroinitializer
@@ -711,11 +711,11 @@ for.end:
 
 define void @foo2_addrspace3(ptr addrspace(0) noalias %in, ptr addrspace(1) noalias %out, ptr noalias %trigger, ptr noalias %index) {
 ; AVX512-LABEL: @foo2_addrspace3(
-; AVX512-NEXT:  iter.check:
+; AVX512-NEXT:  entry:
 ; AVX512-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; AVX512:       vector.body:
-; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ITER_CHECK:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ITER_CHECK]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; AVX512-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ <i64 0, i64 16, i64 32, i64 48, i64 64, i64 80, i64 96, i64 112, i64 128, i64 144, i64 160, i64 176, i64 192, i64 208, i64 224, i64 240>, [[ENTRY]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; AVX512-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[TRIGGER:%.*]], <16 x i64> [[VEC_IND]]
 ; AVX512-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> [[TMP0]], i32 4, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i32> poison)
 ; AVX512-NEXT:    [[TMP1:%.*]] = icmp sgt <16 x i32> [[WIDE_MASKED_GATHER]], zeroinitializer

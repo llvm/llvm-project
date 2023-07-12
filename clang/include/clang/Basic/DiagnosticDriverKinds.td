@@ -416,10 +416,10 @@ def warn_drv_assuming_mfloat_abi_is : Warning<
   "unknown platform, assuming -mfloat-abi=%0">;
 def warn_drv_unsupported_float_abi_by_lib : Warning<
   "float ABI '%0' is not supported by current library">,
-  InGroup<DiagGroup<"unsupported-abi">>;
+  InGroup<UnsupportedABI>;
 def warn_drv_no_floating_point_registers: Warning<
-  "'%0': selected processor lacks floating point registers; flag ignored">,
-  InGroup<OptionIgnored>;
+  "'%0': selected processor lacks floating point registers">,
+  InGroup<UnsupportedABI>;
 def warn_ignoring_ftabstop_value : Warning<
   "ignoring invalid -ftabstop value '%0', using default value %1">;
 def warn_drv_overriding_flag_option : Warning<

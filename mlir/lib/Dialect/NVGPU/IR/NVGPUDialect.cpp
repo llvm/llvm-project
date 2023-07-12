@@ -34,8 +34,7 @@ void nvgpu::NVGPUDialect::initialize() {
       >();
 }
 
-bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
-  Attribute memorySpace = type.getMemorySpace();
+bool nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
   if (!memorySpace)
     return false;
   if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
@@ -43,6 +42,11 @@ bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
   if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     return gpuAttr.getValue() == gpu::AddressSpace::Workgroup;
   return false;
+}
+
+bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
+  Attribute memorySpace = type.getMemorySpace();
+  return isSharedMemoryAddressSpace(memorySpace);
 }
 
 //===----------------------------------------------------------------------===//
@@ -83,6 +87,20 @@ LogicalResult DeviceAsyncCopyOp::verify() {
     return emitOpError() << "expected " << dstMemref.getRank()
                          << " destination indices, got "
                          << getDstIndices().size();
+  if (getBypassL1().has_value()) {
+    int64_t dstElements = getDstElements().getZExtValue();
+    int64_t sizeInBytes =
+        (dstMemref.getElementTypeBitWidth() * dstElements) / 8;
+    int64_t req = 16 * 8 / dstMemref.getElementTypeBitWidth();
+    if (getBypassL1().value() && sizeInBytes != 16) {
+      return emitOpError() << "bypassL1 does not satify alignment for "
+                           << dstMemref << " with destination element "
+                           << dstElements
+                           << ". Unset bypassL1, or set "
+                              "destination element to "
+                           << req;
+    }
+  }
   return success();
 }
 

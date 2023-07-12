@@ -59,7 +59,7 @@ struct TypedefInit {
   typedef int A = 0; // expected-error {{illegal initializer}}
 };
 
-// PR10578 / <rdar://problem/9877267>
+// PR10578
 namespace PR10578 {
   template<typename T>
   struct X { 

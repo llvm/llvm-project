@@ -39,6 +39,7 @@
 ; AFTER-PEI-NEXT: occupancy: 5
 ; AFTER-PEI-NEXT: scavengeFI: '%fixed-stack.0'
 ; AFTER-PEI-NEXT: vgprForAGPRCopy: ''
+; AFTER-PEI-NEXT: sgprForEXECCopy: ''
 ; AFTER-PEI-NEXT: longBranchReservedReg: ''
 ; AFTER-PEI-NEXT: body:
 define amdgpu_kernel void @scavenge_fi(ptr addrspace(1) %out, i32 %in) #0 {

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// rdar://8283484
 @interface blah { // expected-note {{class started here}}
     @private
 }

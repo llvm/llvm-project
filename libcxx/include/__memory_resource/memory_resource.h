@@ -11,6 +11,7 @@
 
 #include <__availability>
 #include <__config>
+#include <__fwd/memory_resource.h>
 #include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

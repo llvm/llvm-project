@@ -11,6 +11,7 @@
 
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
 #include "src/string/memory_utils/op_aarch64.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/op_generic.h"
@@ -18,21 +19,6 @@
 #include <stddef.h> // size_t, ptrdiff_t
 
 namespace __llvm_libc {
-
-[[maybe_unused]] LIBC_INLINE void
-inline_memmove_embedded_tiny(Ptr dst, CPtr src, size_t count) {
-  if ((count == 0) || (dst == src))
-    return;
-  if (dst < src) {
-    LIBC_LOOP_NOUNROLL
-    for (size_t offset = 0; offset < count; ++offset)
-      builtin::Memcpy<1>::block(dst + offset, src + offset);
-  } else {
-    LIBC_LOOP_NOUNROLL
-    for (ptrdiff_t offset = count - 1; offset >= 0; --offset)
-      builtin::Memcpy<1>::block(dst + offset, src + offset);
-  }
-}
 
 LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
 #if defined(LIBC_TARGET_ARCH_IS_X86) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
@@ -84,7 +70,7 @@ LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
     return generic::Memmove<uint512_t>::loop_and_tail_backward(dst, src, count);
   }
 #else
-  return inline_memmove_embedded_tiny(dst, src, count);
+  return inline_memmove_byte_per_byte(dst, src, count);
 #endif
 }
 

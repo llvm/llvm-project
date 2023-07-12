@@ -19,9 +19,9 @@
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
-#include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -64,7 +64,7 @@ AMDGPUInstructionSelector::AMDGPUInstructionSelector(
 const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
 
 void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
-                                        CodeGenCoverage &CoverageInfo,
+                                        CodeGenCoverage *CoverageInfo,
                                         ProfileSummaryInfo *PSI,
                                         BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();

@@ -612,8 +612,13 @@ void hlfir::genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
       return;
     } else if (auto apply = expr.getDefiningOp<hlfir::ApplyOp>()) {
       result.append(apply.getTypeparams().begin(), apply.getTypeparams().end());
+      return;
     }
-    TODO(loc, "inquire type parameters of hlfir.expr");
+    if (entity.isCharacter()) {
+      result.push_back(builder.create<hlfir::GetLengthOp>(loc, expr));
+      return;
+    }
+    TODO(loc, "inquire PDTs length parameters of hlfir.expr");
   }
 
   if (entity.isCharacter()) {

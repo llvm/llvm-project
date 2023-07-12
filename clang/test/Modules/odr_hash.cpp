@@ -334,7 +334,7 @@ struct S10 {
 };
 #else
 S10 s10;
-// expected-error@second.h:* {{'Field::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with no initalizer}}
+// expected-error@second.h:* {{'Field::S10' has different definitions in different modules; first difference is definition in module 'SecondModule' found field 'x' with no initializer}}
 // expected-note@first.h:* {{but in 'FirstModule' found field 'x' with an initializer}}
 #endif
 

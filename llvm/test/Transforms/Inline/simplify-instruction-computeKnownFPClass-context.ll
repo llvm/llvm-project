@@ -165,5 +165,24 @@ bb:
   ret void
 }
 
+define i1 @simplify_fcmp_ord_ldexp_caller(double nofpclass(zero inf) %i0) {
+; CHECK-LABEL: define i1 @simplify_fcmp_ord_ldexp_caller
+; CHECK-SAME: (double nofpclass(inf zero) [[I0:%.*]]) {
+; CHECK-NEXT:    [[LDEXP_I:%.*]] = call double @llvm.ldexp.f64.i32(double [[I0]], i32 42)
+; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp one double [[LDEXP_I]], 0x7FF0000000000000
+; CHECK-NEXT:    ret i1 [[CMP_I]]
+;
+  %call = call i1 @simplify_fcmp_ord_ldexp_callee(double %i0)
+  ret i1 %call
+}
+
+define internal i1 @simplify_fcmp_ord_ldexp_callee(double %a) {
+  %ldexp = call double @llvm.ldexp.f64.i32(double %a, i32 42)
+  %cmp = fcmp one double %ldexp, 0x7FF0000000000000
+  ret i1 %cmp
+}
+
+declare double @llvm.ldexp.f64.i32(double, i32)
+
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }

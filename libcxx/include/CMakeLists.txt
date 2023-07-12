@@ -384,6 +384,7 @@ set(files
   __format/range_formatter.h
   __format/unicode.h
   __format/width_estimation_table.h
+  __format/write_escaped.h
   __functional/binary_function.h
   __functional/binary_negate.h
   __functional/bind.h
@@ -675,6 +676,7 @@ set(files
   __system_error/error_condition.h
   __system_error/system_error.h
   __thread/formatter.h
+  __thread/id.h
   __thread/poll_with_backoff.h
   __thread/this_thread.h
   __thread/thread.h
@@ -954,6 +956,7 @@ set(files
   numeric
   optional
   ostream
+  print
   queue
   random
   ranges

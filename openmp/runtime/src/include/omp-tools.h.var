@@ -413,13 +413,15 @@ typedef enum ompt_target_map_flag_t {
 } ompt_target_map_flag_t;
 
 typedef enum ompt_dependence_type_t {
-  ompt_dependence_type_in              = 1,
-  ompt_dependence_type_out             = 2,
-  ompt_dependence_type_inout           = 3,
-  ompt_dependence_type_mutexinoutset   = 4,
-  ompt_dependence_type_source          = 5,
-  ompt_dependence_type_sink            = 6,
-  ompt_dependence_type_inoutset        = 7
+  ompt_dependence_type_in               = 1,
+  ompt_dependence_type_out              = 2,
+  ompt_dependence_type_inout            = 3,
+  ompt_dependence_type_mutexinoutset    = 4,
+  ompt_dependence_type_source           = 5,
+  ompt_dependence_type_sink             = 6,
+  ompt_dependence_type_inoutset         = 7,
+  ompt_dependence_type_out_all_memory   = 34,
+  ompt_dependence_type_inout_all_memory = 35
 } ompt_dependence_type_t;
 
 typedef enum ompt_severity_t {

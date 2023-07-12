@@ -5,8 +5,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -emit-llvm -o - | FileCheck -check-prefix CHECK-X64 %s
 // CHECK-X64: %struct.s0 = type <{ i64, i64, i32, [12 x i32] }>
 // CHECK-X64: %struct.s1 = type { [15 x i32], %struct.s0 }
-
-// rdar://problem/7095436
 #pragma pack(4)
 
 struct s0 {

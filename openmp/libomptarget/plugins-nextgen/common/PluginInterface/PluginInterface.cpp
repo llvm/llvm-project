@@ -16,6 +16,11 @@
 #include "omptarget.h"
 #include "omptargetplugin.h"
 
+#ifdef OMPT_SUPPORT
+#include "OmptCallback.h"
+#include "omp-tools.h"
+#endif
+
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
@@ -396,11 +401,36 @@ GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
       OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 32),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
-      PinnedAllocs(*this) {}
+      PinnedAllocs(*this), RPCServer(nullptr) {
+#ifdef OMPT_SUPPORT
+  OmptInitialized.store(false);
+  // Bind the callbacks to this device's member functions
+#define bindOmptCallback(Name, Type, Code)                                     \
+  if (ompt::lookupCallbackByCode)                                              \
+    ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
+                               ((ompt_callback_t *)&(Name##_fn)));             \
+  DP("OMPT: class bound %s=%p\n", #Name, ((void *)(uint64_t)Name##_fn));
+
+  FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
+#undef bindOmptCallback
+
+#endif
+}
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
     return Err;
+
+#ifdef OMPT_SUPPORT
+  bool ExpectedStatus = false;
+  if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
+    performOmptCallback(device_initialize,
+                        /* device_num */ DeviceId,
+                        /* type */ getComputeUnitKind().c_str(),
+                        /* device */ reinterpret_cast<ompt_device_t *>(this),
+                        /* lookup */ ompt::lookupCallbackByName,
+                        /* documentation */ nullptr);
+#endif
 
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
@@ -444,7 +474,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 }
 
 Error GenericDeviceTy::deinit() {
-  // Delete the memory manager before deinitilizing the device. Otherwise,
+  // Delete the memory manager before deinitializing the device. Otherwise,
   // we may delete device allocations after the device is deinitialized.
   if (MemoryManager)
     delete MemoryManager;
@@ -453,9 +483,18 @@ Error GenericDeviceTy::deinit() {
   if (RecordReplay.isRecordingOrReplaying())
     RecordReplay.deinit();
 
+  if (RPCServer)
+    if (auto Err = RPCServer->deinitDevice(*this))
+      return Err;
+
+#ifdef OMPT_SUPPORT
+  bool ExpectedStatus = true;
+  if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
+    performOmptCallback(device_finalize, /* device_num */ DeviceId);
+#endif
+
   return deinitImpl();
 }
-
 Expected<__tgt_target_table *>
 GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                             const __tgt_device_image *InputTgtImage) {
@@ -493,6 +532,22 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (auto Err = registerOffloadEntries(*Image))
     return std::move(Err);
 
+  if (auto Err = setupRPCServer(Plugin, *Image))
+    return std::move(Err);
+
+#ifdef OMPT_SUPPORT
+  size_t Bytes = getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
+  performOmptCallback(device_load,
+                      /* device_num */ DeviceId,
+                      /* FileName */ nullptr,
+                      /* File Offset */ 0,
+                      /* VmaInFile */ nullptr,
+                      /* ImgSize */ Bytes,
+                      /* HostAddr */ InputTgtImage->ImageStart,
+                      /* DeviceAddr */ nullptr,
+                      /* FIXME: ModuleId */ 0);
+#endif
+
   // Return the pointer to the table of entries.
   return Image->getOffloadEntryTable();
 }
@@ -522,6 +577,30 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
        DevEnvGlobal.getName().data());
     consumeError(std::move(Err));
   }
+  return Plugin::success();
+}
+
+Error GenericDeviceTy::setupRPCServer(GenericPluginTy &Plugin,
+                                      DeviceImageTy &Image) {
+  // The plugin either does not need an RPC server or it is unavailible.
+  if (!shouldSetupRPCServer())
+    return Plugin::success();
+
+  // Check if this device needs to run an RPC server.
+  RPCServerTy &Server = Plugin.getRPCServer();
+  auto UsingOrErr =
+      Server.isDeviceUsingRPC(*this, Plugin.getGlobalHandler(), Image);
+  if (!UsingOrErr)
+    return UsingOrErr.takeError();
+
+  if (!UsingOrErr.get())
+    return Plugin::success();
+
+  if (auto Err = Server.initDevice(*this, Plugin.getGlobalHandler(), Image))
+    return Err;
+
+  RPCServer = &Server;
+  DP("Running an RPC server on device %d\n", getDeviceId());
   return Plugin::success();
 }
 
@@ -1088,6 +1167,9 @@ Error GenericPluginTy::init() {
   GlobalHandler = Plugin::createGlobalHandler();
   assert(GlobalHandler && "Invalid global handler");
 
+  RPCServer = new RPCServerTy(NumDevices);
+  assert(RPCServer && "Invalid RPC server");
+
   return Plugin::success();
 }
 
@@ -1104,6 +1186,9 @@ Error GenericPluginTy::deinit() {
     }
     assert(!Devices[DeviceId] && "Device was not deinitialized");
   }
+
+  if (RPCServer)
+    delete RPCServer;
 
   // Perform last deinitializations on the plugin.
   return deinitImpl();
@@ -1137,6 +1222,14 @@ Error GenericPluginTy::deinitDevice(int32_t DeviceId) {
   Devices[DeviceId] = nullptr;
 
   return Plugin::success();
+}
+
+const bool llvm::omp::target::plugin::libomptargetSupportsRPC() {
+#ifdef LIBOMPTARGET_RPC_SUPPORT
+  return true;
+#else
+  return false;
+#endif
 }
 
 /// Exposed library API function, basically wrappers around the GenericDeviceTy

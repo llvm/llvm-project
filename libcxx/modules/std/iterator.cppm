@@ -101,8 +101,6 @@ export namespace std {
   // [projected], projected
   using std::projected;
 
-  using std::incrementable_traits;
-
   // [alg.req], common algorithm requirements
   // [alg.req.ind.move], concept indirectly_movable
   using std::indirectly_movable;
@@ -209,8 +207,6 @@ export namespace std {
   using std::move_sentinel;
 
   using std::common_iterator;
-
-  using std::incrementable_traits;
 
   // [default.sentinel], default sentinel
   using std::default_sentinel;

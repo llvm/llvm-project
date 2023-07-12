@@ -2955,8 +2955,8 @@ private:
         Tok = Next;
         if (Tok)
           Tok = Tok->getNextNonComment();
-      } else if ((Keywords.isVerilogQualifier(*Tok) ||
-                  Keywords.isVerilogIdentifier(*Tok))) {
+      } else if (Keywords.isVerilogQualifier(*Tok) ||
+                 Keywords.isVerilogIdentifier(*Tok)) {
         First = Tok;
         Tok = Next;
         // The name may have dots like `interface_foo.modport_foo`.
@@ -3129,6 +3129,9 @@ void TokenAnnotator::annotate(AnnotatedLine &Line) {
 static bool isFunctionDeclarationName(bool IsCpp, const FormatToken &Current,
                                       const AnnotatedLine &Line) {
   assert(Current.Previous);
+  if (!Current.Tok.getIdentifierInfo())
+    return false;
+
   auto skipOperatorName = [](const FormatToken *Next) -> const FormatToken * {
     for (; Next; Next = Next->Next) {
       if (Next->is(TT_OverloadedOperatorLParen))
@@ -5482,8 +5485,10 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
 
   // We only break before r_brace if there was a corresponding break before
   // the l_brace, which is tracked by BreakBeforeClosingBrace.
-  if (Right.is(tok::r_brace))
-    return Right.MatchingParen && Right.MatchingParen->is(BK_Block);
+  if (Right.is(tok::r_brace)) {
+    return Right.MatchingParen && (Right.MatchingParen->is(BK_Block) ||
+                                   (Right.isBlockIndentedInitRBrace(Style)));
+  }
 
   // We only break before r_paren if we're in a block indented context.
   if (Right.is(tok::r_paren)) {

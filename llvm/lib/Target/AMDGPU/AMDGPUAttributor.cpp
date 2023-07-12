@@ -377,7 +377,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
     return true;
   }
 
-  const std::string getAsStr() const override {
+  const std::string getAsStr(Attributor *) const override {
     return "AMDWorkGroupSize[" + std::to_string(getAssumed()) + "]";
   }
 
@@ -530,7 +530,7 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
                            /* ForceReplace */ true);
   }
 
-  const std::string getAsStr() const override {
+  const std::string getAsStr(Attributor *) const override {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << "AMDInfo[";
@@ -737,7 +737,7 @@ struct AAAMDSizeRangeAttribute
                            /* ForceReplace */ true);
   }
 
-  const std::string getAsStr() const override {
+  const std::string getAsStr(Attributor *) const override {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << getName() << '[';

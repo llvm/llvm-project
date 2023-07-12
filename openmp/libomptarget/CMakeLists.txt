@@ -83,10 +83,21 @@ if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
   add_definitions(-DOMPT_SUPPORT=1)
   message(STATUS "OMPT target enabled")
 else()
+  set(LIBOMPTARGET_OMPT_SUPPORT FALSE)
   message(STATUS "OMPT target disabled")
 endif()
 
 pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
+
+# Check if this build supports the GPU libc.
+set(LIBC_GPU_SUPPORT FALSE)
+if("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND (LIBC_GPU_BUILD OR
+                                            LIBC_GPU_ARCHITECTURES))
+  set(LIBC_GPU_SUPPORT TRUE)
+endif()
+set(LIBOMPTARGET_GPU_LIBC_SUPPORT ${LIBC_GPU_SUPPORT} CACHE BOOL
+    "Libomptarget support for the GPU libc")
+pythonize_bool(LIBOMPTARGET_GPU_LIBC_SUPPORT)
 
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")

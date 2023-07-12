@@ -5,7 +5,7 @@
 
 define internal void @dead() {
 ; CGSCC-LABEL: define {{[^@]+}}@dead() {
-; CGSCC-NEXT:    [[TMP1:%.*]] = call i32 @test(ptr null)
+; CGSCC-NEXT:    [[TMP1:%.*]] = call i32 @test(ptr nonnull null)
 ; CGSCC-NEXT:    ret void
 ;
   call i32 @test(ptr null, ptr null)

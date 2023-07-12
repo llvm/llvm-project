@@ -747,6 +747,12 @@ void mlir::test::TestDummyPayloadOp::getEffects(
     transform::producesHandle(result, effects);
 }
 
+LogicalResult mlir::test::TestDummyPayloadOp::verify() {
+  if (getFailToVerify())
+    return emitOpError() << "fail_to_verify is set";
+  return success();
+}
+
 DiagnosedSilenceableFailure
 mlir::test::TestTrackedRewriteOp::apply(transform::TransformRewriter &rewriter,
                                         transform::TransformResults &results,
@@ -890,6 +896,23 @@ void mlir::test::TestNotifyPayloadOpReplacedOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::onlyReadsHandle(getOriginal(), effects);
   transform::onlyReadsHandle(getReplacement(), effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestProduceInvalidIR::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  // Provide some IR that does not verify.
+  rewriter.setInsertionPointToStart(&target->getRegion(0).front());
+  rewriter.create<TestDummyPayloadOp>(target->getLoc(), TypeRange(),
+                                      ValueRange(), /*failToVerify=*/true);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestProduceInvalidIR::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
 }
 
 namespace {

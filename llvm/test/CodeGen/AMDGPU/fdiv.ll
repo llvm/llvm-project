@@ -370,8 +370,20 @@ entry:
   ret void
 }
 
+; FUNC-LABEL: {{^}}v_fdiv_f32_dynamic_denorm:
+; PREGFX10: s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
+; GFX10: s_denorm_mode 15
+
+; PREGFX10: s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
+; GFX10: s_denorm_mode 12
+define float @v_fdiv_f32_dynamic_denorm(float %a, float %b) #3 {
+  %fdiv = fdiv float %a, %b
+  ret float %fdiv
+}
+
 attributes #0 = { nounwind "enable-unsafe-fp-math"="false" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-features"="-flat-for-global" }
 attributes #1 = { nounwind "enable-unsafe-fp-math"="true" "denormal-fp-math-f32"="preserve-sign,preserve-sign" "target-features"="-flat-for-global" }
 attributes #2 = { nounwind "enable-unsafe-fp-math"="false" "denormal-fp-math-f32"="ieee,ieee" "target-features"="-flat-for-global" }
+attributes #3 = { nounwind "denormal-fp-math-f32"="dynamic,dynamic" "target-features"="-flat-for-global" }
 
 !0 = !{float 2.500000e+00}

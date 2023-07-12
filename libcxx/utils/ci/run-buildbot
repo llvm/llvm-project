@@ -247,6 +247,7 @@ check-generated-output)
            --exclude 'locale-specific_form.pass.cpp' \
            --exclude 'ostream.pass.cpp' \
            --exclude 'std_format_spec_string_unicode.bench.cpp' \
+           --exclude 'transcoding.pass.cpp' \
            --exclude 'underflow.pass.cpp' \
            || false
 

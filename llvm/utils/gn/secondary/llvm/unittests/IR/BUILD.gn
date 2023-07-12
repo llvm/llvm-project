@@ -38,6 +38,7 @@ unittest("IRTests") {
     "PassBuilderCallbacksTest.cpp",
     "PassManagerTest.cpp",
     "PatternMatch.cpp",
+    "StructuralHashTest.cpp",
     "ShuffleVectorInstTest.cpp",
     "TimePassesTest.cpp",
     "TypesTest.cpp",

@@ -1064,15 +1064,19 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
 
 Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
     const parser::Name *name) {
-  if (!name) {
-    return nullptr;
-  } else if (auto *prev{
-                 GetContext().scope.parent().FindCommonBlock(name->source)}) {
+  if (auto *prev{name
+              ? GetContext().scope.parent().FindCommonBlock(name->source)
+              : nullptr}) {
     name->symbol = prev;
     return prev;
-  } else {
-    return nullptr;
   }
+  // Check if the Common Block is declared in the current scope
+  if (auto *commonBlockSymbol{
+          name ? GetContext().scope.FindCommonBlock(name->source) : nullptr}) {
+    name->symbol = commonBlockSymbol;
+    return commonBlockSymbol;
+  }
+  return nullptr;
 }
 
 void AccAttributeVisitor::ResolveAccObjectList(

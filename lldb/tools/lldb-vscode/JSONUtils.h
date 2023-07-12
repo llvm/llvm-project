@@ -232,13 +232,21 @@ void AppendBreakpoint(
 ///     provided by the setBreakpoints request are returned to the IDE as a
 ///     fallback.
 ///
+/// \param[in] request_column
+///     An optional column to use when creating the resulting "Breakpoint" object.
+///     It is used if the breakpoint has no valid locations.
+///     It is useful to ensure the same column
+///     provided by the setBreakpoints request are returned to the IDE as a
+///     fallback.
+///
 /// \return
 ///     A "Breakpoint" JSON object with that follows the formal JSON
 ///     definition outlined by Microsoft.
 llvm::json::Value
 CreateBreakpoint(lldb::SBBreakpoint &bp,
                  std::optional<llvm::StringRef> request_path = std::nullopt,
-                 std::optional<uint32_t> request_line = std::nullopt);
+                 std::optional<uint32_t> request_line = std::nullopt,
+                 std::optional<uint32_t> request_column = std::nullopt);
 
 /// Converts a LLDB module to a VS Code DAP module for use in "modules" events.
 ///

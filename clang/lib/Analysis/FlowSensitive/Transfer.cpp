@@ -62,64 +62,12 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
   return Env.makeAtomicBoolValue();
 }
 
-// Functionally updates `V` such that any instances of `TopBool` are replaced
-// with fresh atomic bools. Note: This implementation assumes that `B` is a
-// tree; if `B` is a DAG, it will lose any sharing between subvalues that was
-// present in the original .
-static BoolValue &unpackValue(BoolValue &V, Environment &Env);
-
-template <typename Derived, typename M>
-BoolValue &unpackBinaryBoolValue(Environment &Env, BoolValue &B, M build) {
-  auto &V = *cast<Derived>(&B);
-  BoolValue &Left = V.getLeftSubValue();
-  BoolValue &Right = V.getRightSubValue();
-  BoolValue &ULeft = unpackValue(Left, Env);
-  BoolValue &URight = unpackValue(Right, Env);
-
-  if (&ULeft == &Left && &URight == &Right)
-    return V;
-
-  return (Env.*build)(ULeft, URight);
-}
-
 static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
-  switch (V.getKind()) {
-  case Value::Kind::Integer:
-  case Value::Kind::Reference:
-  case Value::Kind::Pointer:
-  case Value::Kind::Struct:
-    llvm_unreachable("BoolValue cannot have any of these kinds.");
-
-  case Value::Kind::AtomicBool:
-    return V;
-
-  case Value::Kind::TopBool:
-    // Unpack `TopBool` into a fresh atomic bool.
-    return Env.makeAtomicBoolValue();
-
-  case Value::Kind::Negation: {
-    auto &N = *cast<NegationValue>(&V);
-    BoolValue &Sub = N.getSubVal();
-    BoolValue &USub = unpackValue(Sub, Env);
-
-    if (&USub == &Sub)
-      return V;
-    return Env.makeNot(USub);
+  if (auto *Top = llvm::dyn_cast<TopBoolValue>(&V)) {
+    auto &A = Env.getDataflowAnalysisContext().arena();
+    return A.makeBoolValue(A.makeAtomRef(Top->getAtom()));
   }
-  case Value::Kind::Conjunction:
-    return unpackBinaryBoolValue<ConjunctionValue>(Env, V,
-                                                   &Environment::makeAnd);
-  case Value::Kind::Disjunction:
-    return unpackBinaryBoolValue<DisjunctionValue>(Env, V,
-                                                   &Environment::makeOr);
-  case Value::Kind::Implication:
-    return unpackBinaryBoolValue<ImplicationValue>(
-        Env, V, &Environment::makeImplication);
-  case Value::Kind::Biconditional:
-    return unpackBinaryBoolValue<BiconditionalValue>(Env, V,
-                                                     &Environment::makeIff);
-  }
-  llvm_unreachable("All reachable cases in switch return");
+  return V;
 }
 
 // Unpacks the value (if any) associated with `E` and updates `E` to the new
@@ -767,22 +715,17 @@ public:
     Env.setValue(Loc, *Val);
 
     if (Type->isStructureOrClassType()) {
-      // Unnamed bitfields are only used for padding and are not appearing in
-      // `InitListExpr`'s inits. However, those fields do appear in RecordDecl's
-      // field list, and we thus need to remove them before mapping inits to
-      // fields to avoid mapping inits to the wrongs fields.
-      std::vector<FieldDecl *> Fields;
-      llvm::copy_if(
-          Type->getAsRecordDecl()->fields(), std::back_inserter(Fields),
-          [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });
-      for (auto It : llvm::zip(Fields, S->inits())) {
-        const FieldDecl *Field = std::get<0>(It);
+      std::vector<FieldDecl *> Fields =
+          getFieldsForInitListExpr(Type->getAsRecordDecl());
+      for (auto [Field, Init] : llvm::zip(Fields, S->inits())) {
         assert(Field != nullptr);
-
-        const Expr *Init = std::get<1>(It);
         assert(Init != nullptr);
 
-        if (Value *InitVal = Env.getValue(*Init, SkipPast::None))
+        if (Field->getType()->isReferenceType()) {
+          if (StorageLocation *Loc = Env.getStorageLocationStrict(*Init))
+            cast<StructValue>(Val)->setChild(*Field,
+                                             Env.create<ReferenceValue>(*Loc));
+        } else if (Value *InitVal = Env.getValue(*Init, SkipPast::None))
           cast<StructValue>(Val)->setChild(*Field, *InitVal);
       }
     }

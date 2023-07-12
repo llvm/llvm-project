@@ -43,6 +43,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Annotations/Annotations.h"
@@ -142,6 +143,12 @@ template <typename AnalysisT> struct AnalysisInputs {
     BuiltinOptions = std::move(Options);
     return std::move(*this);
   }
+  AnalysisInputs<AnalysisT> &&
+  withSolverFactory(std::function<std::unique_ptr<Solver>()> Factory) && {
+    assert(Factory);
+    SolverFactory = std::move(Factory);
+    return std::move(*this);
+  }
 
   /// Required. Input code that is analyzed.
   llvm::StringRef Code;
@@ -169,6 +176,10 @@ template <typename AnalysisT> struct AnalysisInputs {
   tooling::FileContentMappings ASTBuildVirtualMappedFiles = {};
   /// Configuration options for the built-in model.
   DataflowAnalysisContext::Options BuiltinOptions;
+  /// SAT solver factory.
+  std::function<std::unique_ptr<Solver>()> SolverFactory = [] {
+    return std::make_unique<WatchedLiteralsSolver>();
+  };
 };
 
 /// Returns assertions based on annotations that are present after statements in
@@ -247,7 +258,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
     auto &CFCtx = *MaybeCFCtx;
 
     // Initialize states for running dataflow analysis.
-    DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>(),
+    DataflowAnalysisContext DACtx(AI.SolverFactory(),
                                   {/*Opts=*/AI.BuiltinOptions});
     Environment InitEnv(DACtx, *Target);
     auto Analysis = AI.MakeAnalysis(Context, InitEnv);
@@ -440,57 +451,68 @@ ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
   return *cast<ValueT>(Env.getValue(*VD));
 }
 
+/// Returns the value of a `Field` on the record referenced by `Loc.`
+/// Returns null if `Loc` is null.
+inline Value *getFieldValue(const AggregateStorageLocation *Loc,
+                            const ValueDecl &Field, const Environment &Env) {
+  if (Loc == nullptr)
+    return nullptr;
+  return Env.getValue(Loc->getChild(Field));
+}
+
+/// Returns the value of a `Field` on a `Struct.
+/// Returns null if `Struct` is null.
+///
+/// Note: This function currently does not use the `Env` parameter, but it will
+/// soon be needed to look up the `Value` when `setChild()` changes to return a
+/// `StorageLocation *`.
+inline Value *getFieldValue(const StructValue *Struct, const ValueDecl &Field,
+                            const Environment &Env) {
+  if (Struct == nullptr)
+    return nullptr;
+  return Struct->getChild(Field);
+}
+
 /// Creates and owns constraints which are boolean values.
 class ConstraintContext {
+  unsigned NextAtom = 0;
+  llvm::BumpPtrAllocator A;
+
+  const Formula *make(Formula::Kind K,
+                      llvm::ArrayRef<const Formula *> Operands) {
+    return &Formula::create(A, K, Operands);
+  }
+
 public:
-  // Creates an atomic boolean value.
-  BoolValue *atom() {
-    Vals.push_back(std::make_unique<AtomicBoolValue>());
-    return Vals.back().get();
+  // Returns a reference to a fresh atomic variable.
+  const Formula *atom() {
+    return &Formula::create(A, Formula::AtomRef, {}, NextAtom++);
   }
 
-  // Creates an instance of the Top boolean value.
-  BoolValue *top() {
-    Vals.push_back(std::make_unique<TopBoolValue>());
-    return Vals.back().get();
+  // Creates a boolean conjunction.
+  const Formula *conj(const Formula *LHS, const Formula *RHS) {
+    return make(Formula::And, {LHS, RHS});
   }
 
-  // Creates a boolean conjunction value.
-  BoolValue *conj(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<ConjunctionValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
+  // Creates a boolean disjunction.
+  const Formula *disj(const Formula *LHS, const Formula *RHS) {
+    return make(Formula::Or, {LHS, RHS});
   }
 
-  // Creates a boolean disjunction value.
-  BoolValue *disj(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<DisjunctionValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
+  // Creates a boolean negation.
+  const Formula *neg(const Formula *Operand) {
+    return make(Formula::Not, {Operand});
   }
 
-  // Creates a boolean negation value.
-  BoolValue *neg(BoolValue *SubVal) {
-    Vals.push_back(std::make_unique<NegationValue>(*SubVal));
-    return Vals.back().get();
+  // Creates a boolean implication.
+  const Formula *impl(const Formula *LHS, const Formula *RHS) {
+    return make(Formula::Implies, {LHS, RHS});
   }
 
-  // Creates a boolean implication value.
-  BoolValue *impl(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<ImplicationValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
+  // Creates a boolean biconditional.
+  const Formula *iff(const Formula *LHS, const Formula *RHS) {
+    return make(Formula::Equal, {LHS, RHS});
   }
-
-  // Creates a boolean biconditional value.
-  BoolValue *iff(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
-    Vals.push_back(
-        std::make_unique<BiconditionalValue>(*LeftSubVal, *RightSubVal));
-    return Vals.back().get();
-  }
-
-private:
-  std::vector<std::unique_ptr<BoolValue>> Vals;
 };
 
 } // namespace test

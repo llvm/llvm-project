@@ -36,8 +36,6 @@ export namespace std::filesystem {
   using std::filesystem::recursive_directory_iterator;
 
   // [fs.rec.dir.itr.nonmembers], range access for recursive directory iterators
-  using std::filesystem::begin;
-  using std::filesystem::end;
 
   // [fs.class.file.status], file status
   using std::filesystem::file_status;

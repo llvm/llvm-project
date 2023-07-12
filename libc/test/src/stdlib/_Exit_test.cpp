@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/stdlib.h"
 #include "src/stdlib/_Exit.h"
 #include "src/stdlib/exit.h"
 #include "test/UnitTest/Test.h"
+
+#include <stdlib.h>
 
 TEST(LlvmLibcStdlib, _Exit) {
   EXPECT_EXITS([] { __llvm_libc::_Exit(1); }, 1);

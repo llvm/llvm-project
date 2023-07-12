@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/TransformOps/GPUHeuristics.h"
 #include "mlir/Dialect/Linalg/TransformOps/Syntax.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -31,6 +32,7 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/TilingInterface.h"
@@ -171,14 +173,89 @@ void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
 
+void transform::BufferizeToAllocationOp::build(OpBuilder &b,
+                                               OperationState &result,
+                                               Value target,
+                                               Attribute memorySpace) {
+  SmallVector<Type> resultTypes;
+  resultTypes.push_back(b.getType<transform::AnyValueType>());
+  resultTypes.push_back(b.getType<transform::AnyOpType>());
+  return build(b, result,
+               /*resultTypes=*/resultTypes,
+               /*target=*/target,
+               /*memorySpace=*/memorySpace);
+}
+
+void transform::BufferizeToAllocationOp::build(OpBuilder &b,
+                                               OperationState &result,
+                                               Value target,
+                                               int64_t memorySpace) {
+  SmallVector<Type> resultTypes;
+  resultTypes.push_back(b.getType<transform::AnyValueType>());
+  resultTypes.push_back(b.getType<transform::AnyOpType>());
+  return build(b, result,
+               /*resultTypes=*/resultTypes,
+               /*target=*/target,
+               /*memorySpace=*/b.getI64IntegerAttr(memorySpace));
+}
+
+namespace {
+class NewOpsListener : public RewriterBase::ForwardingListener {
+public:
+  using RewriterBase::ForwardingListener::ForwardingListener;
+
+  SmallVector<Operation *> getNewOps() const {
+    return SmallVector<Operation *>(newOps.begin(), newOps.end());
+  }
+
+private:
+  void notifyOperationInserted(Operation *op) override {
+    ForwardingListener::notifyOperationInserted(op);
+    auto inserted = newOps.insert(op);
+    (void)inserted;
+    assert(inserted.second && "expected newly created op");
+  }
+
+  void notifyOperationRemoved(Operation *op) override {
+    ForwardingListener::notifyOperationRemoved(op);
+    op->walk([&](Operation *op) { newOps.erase(op); });
+  }
+
+  DenseSet<Operation *> newOps;
+};
+} // namespace
+
 DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
+  // Attach listener to keep track of newly created ops.
+  OpBuilder::Listener *previousListener = rewriter.getListener();
+  auto resetListener =
+      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  NewOpsListener newOpsListener(previousListener);
+  rewriter.setListener(&newOpsListener);
+
+  linalg::BufferizeToAllocationOptions options;
+  if (getMemcpyOp() == "memref.tensor_store") {
+    options.memcpyOp =
+        linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefTensorStore;
+  } else if (getMemcpyOp() == "memref.copy") {
+    options.memcpyOp =
+        linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefCopy;
+  } else if (getMemcpyOp() == "linalg.copy") {
+    options.memcpyOp =
+        linalg::BufferizeToAllocationOptions::MemcpyOp::LinalgCopy;
+  } else {
+    llvm_unreachable("invalid memcpy op");
+  }
+
+  // Bufferize ops.
   Attribute memorySpace =
       getMemorySpace().has_value() ? getMemorySpace().value() : Attribute();
   SmallVector<Value> allocatedBuffers;
   for (Operation *op : state.getPayloadOps(getTarget())) {
-    Value buffer = linalg::bufferizeToAllocation(rewriter, op, memorySpace);
+    Value buffer =
+        linalg::bufferizeToAllocation(rewriter, options, op, memorySpace);
     if (!buffer) {
       DiagnosedSilenceableFailure diag = emitSilenceableError()
                                          << "failed to bufferize operation";
@@ -187,7 +264,10 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     }
     allocatedBuffers.push_back(buffer);
   }
+
+  // Set results.
   results.setValues(cast<OpResult>(getAllocatedBuffer()), allocatedBuffers);
+  results.set(cast<OpResult>(getNewOps()), newOpsListener.getNewOps());
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -195,7 +275,15 @@ void transform::BufferizeToAllocationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
   producesHandle(getAllocatedBuffer(), effects);
+  producesHandle(getNewOps(), effects);
   modifiesPayload(effects);
+}
+
+LogicalResult transform::BufferizeToAllocationOp::verify() {
+  if (getMemcpyOp() != "memref.tensor_store" &&
+      getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
+    return emitOpError() << "unsupported memcpy op";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1446,6 +1534,27 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
 // PadOp
 //===---------------------------------------------------------------------===//
 
+void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
+                             ArrayRef<int64_t> paddingDimensions,
+                             ArrayRef<int64_t> padToMultipleOf,
+                             ArrayRef<int64_t> packPaddings,
+                             ArrayRef<Attribute> transposePaddings,
+                             bool copyBack) {
+  auto resultType = transform::AnyOpType::get(b.getContext());
+  return build(/*builder=*/b,
+               /*result=*/result,
+               /*types=*/TypeRange{resultType, resultType},
+               /*target=*/target,
+               /*paddingValues=*/ArrayAttr(), // let inference handle this
+               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*padToMultipleOf=*/
+               (padToMultipleOf.empty() ? ArrayAttr()
+                                        : b.getI64ArrayAttr(padToMultipleOf)),
+               /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
+               /*transposePaddings=*/b.getArrayAttr(transposePaddings),
+               /*copyBack=*/b.getBoolAttr(copyBack));
+}
+
 DiagnosedSilenceableFailure
 transform::PadOp::apply(transform::TransformRewriter &rewriter,
                         transform::TransformResults &results,
@@ -1700,10 +1809,10 @@ transform::PromoteOp::applyToOne(transform::TransformRewriter &rewriter,
     if (mapping.size() > 1)
       return emitDefaultDefiniteFailure(target);
 
-    auto addressSpace = cast<gpu::GPUMemorySpaceMappingAttr>(mapping[0]);
+    auto addressSpace = cast<mlir::gpu::GPUMemorySpaceMappingAttr>(mapping[0]);
 
     if (addressSpace.getAddressSpace() ==
-        gpu::GPUDialect::getWorkgroupAddressSpace()) {
+        mlir::gpu::GPUDialect::getWorkgroupAddressSpace()) {
       promotionOptions =
           promotionOptions
               .setAllocationDeallocationFns(allocateWorkgroupMemory,
@@ -1711,7 +1820,7 @@ transform::PromoteOp::applyToOne(transform::TransformRewriter &rewriter,
               .setCopyInOutFns(copyToWorkgroupMemory, copyToWorkgroupMemory)
               .setUseFullTileBuffers({false, false});
     } else if (addressSpace.getAddressSpace() ==
-               gpu::GPUDialect::getPrivateAddressSpace()) {
+               mlir::gpu::GPUDialect::getPrivateAddressSpace()) {
       promotionOptions =
           promotionOptions
               .setAllocationDeallocationFns(allocateGPUPrivateMemory,
@@ -2971,7 +3080,7 @@ transform::VectorizeOp::applyToOne(transform::TransformRewriter &rewriter,
                                                        /*benefit=*/2);
   vector::TransferReadOp::getCanonicalizationPatterns(patterns, ctx);
   vector::TransferWriteOp::getCanonicalizationPatterns(patterns, ctx);
-  vector::populateVectorTransferTensorSliceTransforms(patterns);
+  tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
 
   patterns.add<CopyVectorizationPattern>(ctx);
 
@@ -3209,6 +3318,72 @@ DiagnosedSilenceableFailure transform::InsertSliceToCopyOp::applyToOne(
       << "only InsertSliceOp and ParallelInsertSliceOp ops are supported";
   diag.attachNote(targetOp->getLoc()) << "target op";
   return diag;
+}
+
+//===----------------------------------------------------------------------===//
+// MapCopyToThreadsOp
+//===----------------------------------------------------------------------===//
+DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
+    transform::TransformRewriter &rewriter, linalg::CopyOp copyOp,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  auto transformOp = cast<TransformOpInterface>(getOperation());
+  ShapedType resultShapedType;
+  if (copyOp) {
+    resultShapedType =
+        cast<ShapedType>(copyOp.getDpsInitOperand(0)->get().getType());
+  }
+  if (!copyOp || !resultShapedType.hasStaticShape()) {
+    DiagnosedSilenceableFailure diag =
+        transformOp.emitSilenceableError()
+        << "only statically sized linalg.copy ops of rank <= 3 are supported";
+    diag.attachNote(copyOp->getLoc()) << "target op";
+    return diag;
+  }
+
+  // Conservatively set the minimum viable desired bitwidth alignment.
+  int64_t desiredBitAlignment = getDesiredBitAlignment();
+  int64_t eltBitwidth =
+      resultShapedType.getElementType().getIntOrFloatBitWidth();
+  if (desiredBitAlignment % eltBitwidth != 0) {
+    desiredBitAlignment = eltBitwidth;
+  }
+
+  gpu::CopyMappingInfo mapping(
+      /*ctx=*/getContext(),
+      /*totalNumThreads=*/getTotalNumThreads(),
+      /*alignment=*/desiredBitAlignment,
+      /*sizes=*/resultShapedType.getShape(),
+      /*favorPredication=*/false,
+      /*elementalBitwidth=*/
+      resultShapedType.getElementType().getIntOrFloatBitWidth());
+  if (mapping.status == gpu::CopyMappingInfo::Status::Invalid) {
+    DiagnosedSilenceableFailure diag =
+        transformOp.emitSilenceableError()
+        << "too few threads to map copy op to threads on the most minor "
+           "dimension, given alignment and vector size constraints, try "
+           "smaller tile size of mapping to more threads";
+    diag.attachNote(copyOp->getLoc()) << "target op";
+    return diag;
+  }
+
+  // OpBuilder only used to compute attributes.
+  OpBuilder b(getContext());
+  linalg::ForallTilingResult tilingResult;
+  DiagnosedSilenceableFailure diag = tileToForallOpImpl(
+      /*rewriter=*/rewriter,
+      /*state=*/state,
+      /*transformOp=*/transformOp,
+      /*target=*/copyOp,
+      /*mixedNumThreads=*/getMixedValues(mapping.numThreads, {}, b),
+      /*mixedTileSizes=*/ArrayRef<OpFoldResult>{},
+      /*mapping=*/b.getArrayAttr(mapping.threadMapping),
+      /*tilingResult=*/tilingResult);
+  if (!diag.succeeded())
+    return diag;
+
+  results.push_back(tilingResult.tiledOp);
+  return DiagnosedSilenceableFailure::success();
 }
 
 #include "mlir/Dialect/Linalg/TransformOps/LinalgTransformOpsEnums.cpp.inc"

@@ -84,11 +84,10 @@ class OpenMPIRBuilderConfig {
 public:
   /// Flag for specifying if the compilation is done for embedded device code
   /// or host code.
-  std::optional<bool> IsEmbedded;
+  std::optional<bool> IsTargetDevice;
 
-  /// Flag for specifying if the compilation is done for an offloading target,
-  /// like GPU.
-  std::optional<bool> IsTargetCodegen;
+  /// Flag for specifying if the compilation is done for an accelerator.
+  std::optional<bool> IsGPU;
 
   /// Flag for specifying weather a requires unified_shared_memory
   /// directive is present or not.
@@ -103,22 +102,22 @@ public:
   std::optional<StringRef> Separator;
 
   OpenMPIRBuilderConfig() {}
-  OpenMPIRBuilderConfig(bool IsEmbedded, bool IsTargetCodegen,
+  OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
                         bool HasRequiresUnifiedSharedMemory,
                         bool OpenMPOffloadMandatory)
-      : IsEmbedded(IsEmbedded), IsTargetCodegen(IsTargetCodegen),
+      : IsTargetDevice(IsTargetDevice), IsGPU(IsGPU),
         HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory),
         OpenMPOffloadMandatory(OpenMPOffloadMandatory) {}
 
   // Getters functions that assert if the required values are not present.
-  bool isEmbedded() const {
-    assert(IsEmbedded.has_value() && "IsEmbedded is not set");
-    return *IsEmbedded;
+  bool isTargetDevice() const {
+    assert(IsTargetDevice.has_value() && "IsTargetDevice is not set");
+    return *IsTargetDevice;
   }
 
-  bool isTargetCodegen() const {
-    assert(IsTargetCodegen.has_value() && "IsTargetCodegen is not set");
-    return *IsTargetCodegen;
+  bool isGPU() const {
+    assert(IsGPU.has_value() && "IsGPU is not set");
+    return *IsGPU;
   }
 
   bool hasRequiresUnifiedSharedMemory() const {
@@ -132,28 +131,28 @@ public:
            "OpenMPOffloadMandatory is not set");
     return *OpenMPOffloadMandatory;
   }
-  // Returns the FirstSeparator if set, otherwise use the default
-  // separator depending on isTargetCodegen
+  // Returns the FirstSeparator if set, otherwise use the default separator
+  // depending on isGPU
   StringRef firstSeparator() const {
     if (FirstSeparator.has_value())
       return *FirstSeparator;
-    if (isTargetCodegen())
+    if (isGPU())
       return "_";
     return ".";
   }
 
-  // Returns the Separator if set, otherwise use the default
-  // separator depending on isTargetCodegen
+  // Returns the Separator if set, otherwise use the default separator depending
+  // on isGPU
   StringRef separator() const {
     if (Separator.has_value())
       return *Separator;
-    if (isTargetCodegen())
+    if (isGPU())
       return "$";
     return ".";
   }
 
-  void setIsEmbedded(bool Value) { IsEmbedded = Value; }
-  void setIsTargetCodegen(bool Value) { IsTargetCodegen = Value; }
+  void setIsTargetDevice(bool Value) { IsTargetDevice = Value; }
+  void setIsGPU(bool Value) { IsGPU = Value; }
   void setHasRequiresUnifiedSharedMemory(bool Value) {
     HasRequiresUnifiedSharedMemory = Value;
   }
@@ -1611,6 +1610,9 @@ public:
   public:
     TargetDataRTArgs RTArgs;
 
+    SmallMapVector<const Value *, std::pair<Value *, Value *>, 4>
+        DevicePtrInfoMap;
+
     /// Indicate whether any user-defined mapper exists.
     bool HasMapper = false;
     /// The total number of pointers passed to the runtime library.
@@ -1637,7 +1639,9 @@ public:
     bool separateBeginEndCalls() { return SeparateBeginEndCalls; }
   };
 
+  enum class DeviceInfoTy { None, Pointer, Address };
   using MapValuesArrayTy = SmallVector<Value *, 4>;
+  using MapDeviceInfoArrayTy = SmallVector<DeviceInfoTy, 4>;
   using MapFlagsArrayTy = SmallVector<omp::OpenMPOffloadMappingFlags, 4>;
   using MapNamesArrayTy = SmallVector<Constant *, 4>;
   using MapDimArrayTy = SmallVector<uint64_t, 4>;
@@ -1656,6 +1660,7 @@ public:
     };
     MapValuesArrayTy BasePointers;
     MapValuesArrayTy Pointers;
+    MapDeviceInfoArrayTy DevicePointers;
     MapValuesArrayTy Sizes;
     MapFlagsArrayTy Types;
     MapNamesArrayTy Names;
@@ -1666,6 +1671,8 @@ public:
       BasePointers.append(CurInfo.BasePointers.begin(),
                           CurInfo.BasePointers.end());
       Pointers.append(CurInfo.Pointers.begin(), CurInfo.Pointers.end());
+      DevicePointers.append(CurInfo.DevicePointers.begin(),
+                            CurInfo.DevicePointers.end());
       Sizes.append(CurInfo.Sizes.begin(), CurInfo.Sizes.end());
       Types.append(CurInfo.Types.begin(), CurInfo.Types.end());
       Names.append(CurInfo.Names.begin(), CurInfo.Names.end());
@@ -1724,7 +1731,7 @@ public:
   void emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
       TargetDataInfo &Info, bool IsNonContiguous = false,
-      function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB = nullptr,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
 
   /// Creates offloading entry for the provided entry ID \a ID, address \a
@@ -2111,7 +2118,7 @@ public:
       function_ref<InsertPointTy(InsertPointTy CodeGenIP,
                                  BodyGenTy BodyGenType)>
           BodyGenCB = nullptr,
-      function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB = nullptr,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr,
       Value *SrcLocInfo = nullptr);
 

@@ -2,7 +2,6 @@
 // expected-no-diagnostics
 // FIXME: must also compile as Objective-C++ 
 
-// <rdar://problem/6487662>
 typedef struct objc_selector *SEL;
 typedef signed char BOOL;
 typedef unsigned int NSUInteger;
@@ -74,7 +73,6 @@ static NSMapTable *_defaultMenuForClass = 0;
 }
 @end
 
-// <rdar://problem/6487684>
 @interface WizKing_MIKeep {
 struct __LoreStuffNode *_historyStuff;
 }
@@ -88,7 +86,6 @@ typedef struct __LoreStuffNode {} LoreStuffNode;
 }
 @end
 
-// <rdar://problem/6487702>
 typedef long unsigned int __darwin_size_t;
 typedef __darwin_size_t size_t;
 void *memset(void *, int, size_t);

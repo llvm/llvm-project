@@ -24,6 +24,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
@@ -94,16 +96,26 @@ static void setDescendantEHBlocksCold(MachineFunction &MF) {
   }
 }
 
+static void finishAdjustingBasicBlocksAndLandingPads(MachineFunction &MF) {
+  auto Comparator = [](const MachineBasicBlock &X, const MachineBasicBlock &Y) {
+    return X.getSectionID().Type < Y.getSectionID().Type;
+  };
+  llvm::sortBasicBlocksAndUpdateBranches(MF, Comparator);
+  llvm::avoidZeroOffsetLandingPad(MF);
+}
+
 static bool isColdBlock(const MachineBasicBlock &MBB,
                         const MachineBlockFrequencyInfo *MBFI,
-                        ProfileSummaryInfo *PSI) {
+                        ProfileSummaryInfo *PSI, bool HasAccurateProfile) {
   std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
+  // If using accurate profile, no count means cold.
+  // If no accurate profile, no count means "do not judge
+  // coldness".
   if (!Count)
-    return true;
+    return HasAccurateProfile;
 
-  if (PercentileCutoff > 0) {
+  if (PercentileCutoff > 0)
     return PSI->isColdCountNthPercentile(PercentileCutoff, *Count);
-  }
   return (*Count < ColdCountThreshold);
 }
 
@@ -140,9 +152,28 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
   MachineBlockFrequencyInfo *MBFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
+  // Whether this pass is using FSAFDO profile (not accurate) or IRPGO
+  // (accurate). HasAccurateProfile is only used when UseProfileData is true,
+  // but giving it a default value to silent any possible warning.
+  bool HasAccurateProfile = false;
   if (UseProfileData) {
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+    // "HasAccurateProfile" is false for FSAFDO, true when using IRPGO
+    // (traditional instrumented FDO) or CSPGO profiles.
+    HasAccurateProfile =
+        PSI->hasInstrumentationProfile() || PSI->hasCSInstrumentationProfile();
+    // If HasAccurateProfile is false, we only trust hot functions,
+    // which have many samples, and consider them as split
+    // candidates. On the other hand, if HasAccurateProfile (likeIRPGO), we
+    // trust both cold and hot functions.
+    if (!HasAccurateProfile && !PSI->isFunctionHotInCallGraph(&MF, *MBFI)) {
+      // Split all EH code and it's descendant statically by default.
+      if (SplitAllEHCode)
+        setDescendantEHBlocksCold(MF);
+      finishAdjustingBasicBlocksAndLandingPads(MF);
+      return true;
+    }
   }
 
   SmallVector<MachineBasicBlock *, 2> LandingPads;
@@ -152,7 +183,8 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
     if (MBB.isEHPad())
       LandingPads.push_back(&MBB);
-    else if (UseProfileData && isColdBlock(MBB, MBFI, PSI) && !SplitAllEHCode)
+    else if (UseProfileData &&
+             isColdBlock(MBB, MBFI, PSI, HasAccurateProfile) && !SplitAllEHCode)
       MBB.setSectionID(MBBSectionID::ColdSectionID);
   }
 
@@ -161,9 +193,10 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
     setDescendantEHBlocksCold(MF);
   // We only split out eh pads if all of them are cold.
   else {
+    // Here we have UseProfileData == true.
     bool HasHotLandingPads = false;
     for (const MachineBasicBlock *LP : LandingPads) {
-      if (!isColdBlock(*LP, MBFI, PSI))
+      if (!isColdBlock(*LP, MBFI, PSI, HasAccurateProfile))
         HasHotLandingPads = true;
     }
     if (!HasHotLandingPads) {
@@ -171,11 +204,8 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
         LP->setSectionID(MBBSectionID::ColdSectionID);
     }
   }
-  auto Comparator = [](const MachineBasicBlock &X, const MachineBasicBlock &Y) {
-    return X.getSectionID().Type < Y.getSectionID().Type;
-  };
-  llvm::sortBasicBlocksAndUpdateBranches(MF, Comparator);
-  llvm::avoidZeroOffsetLandingPad(MF);
+
+  finishAdjustingBasicBlocksAndLandingPads(MF);
   return true;
 }
 

@@ -110,12 +110,12 @@ let GIIgnoreCopies = 1 in
 class AMDGPUPatIgnoreCopies<dag pattern, dag result> : AMDGPUPat<pattern, result>;
 
 let RecomputePerFunction = 1 in {
-def FP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().allFP64FP16Denormals()">;
-def FP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().allFP32Denormals()">;
-def FP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().allFP64FP16Denormals()">;
-def NoFP16Denormals : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().allFP64FP16Denormals()">;
-def NoFP32Denormals : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().allFP32Denormals()">;
-def NoFP64Denormals : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode().allFP64FP16Denormals()">;
+def FP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals != DenormalMode::getPreserveSign()">;
+def FP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals != DenormalMode::getPreserveSign()">;
+def FP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals != DenormalMode::getPreserveSign()">;
+def NoFP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
+def NoFP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals == DenormalMode::getPreserveSign()">;
+def NoFP64Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign()">;
 def UnsafeFPMath : Predicate<"TM.Options.UnsafeFPMath">;
 }
 

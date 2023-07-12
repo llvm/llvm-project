@@ -43,6 +43,8 @@ void AnalysisState::addDependency(ProgramPoint dependent,
   });
 }
 
+void AnalysisState::dump() const { print(llvm::errs()); }
+
 //===----------------------------------------------------------------------===//
 // ProgramPoint
 //===----------------------------------------------------------------------===//
@@ -55,9 +57,9 @@ void ProgramPoint::print(raw_ostream &os) const {
   if (auto *programPoint = llvm::dyn_cast<GenericProgramPoint *>(*this))
     return programPoint->print(os);
   if (auto *op = llvm::dyn_cast<Operation *>(*this))
-    return op->print(os);
+    return op->print(os, OpPrintingFlags().skipRegions());
   if (auto value = llvm::dyn_cast<Value>(*this))
-    return value.print(os);
+    return value.print(os, OpPrintingFlags().skipRegions());
   return get<Block *>()->print(os);
 }
 

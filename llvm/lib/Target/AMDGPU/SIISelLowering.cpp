@@ -59,14 +59,14 @@ static cl::opt<bool> UseDivergentRegisterIndexing(
   cl::desc("Use indirect register addressing for divergent indexes"),
   cl::init(false));
 
-static bool hasFP32Denormals(const MachineFunction &MF) {
+static bool denormalModeIsFlushAllF32(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  return Info->getMode().allFP32Denormals();
+  return Info->getMode().FP32Denormals == DenormalMode::getPreserveSign();
 }
 
-static bool hasFP64FP16Denormals(const MachineFunction &MF) {
+static bool denormalModeIsFlushAllF64F16(const MachineFunction &MF) {
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  return Info->getMode().allFP64FP16Denormals();
+  return Info->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign();
 }
 
 static unsigned findFirstFreeSGPR(CCState &CCInfo) {
@@ -842,10 +842,10 @@ bool SITargetLowering::isFPExtFoldable(const SelectionDAG &DAG, unsigned Opcode,
                                        EVT DestVT, EVT SrcVT) const {
   return ((Opcode == ISD::FMAD && Subtarget->hasMadMixInsts()) ||
           (Opcode == ISD::FMA && Subtarget->hasFmaMixInsts())) &&
-    DestVT.getScalarType() == MVT::f32 &&
-    SrcVT.getScalarType() == MVT::f16 &&
-    // TODO: This probably only requires no input flushing?
-    !hasFP32Denormals(DAG.getMachineFunction());
+         DestVT.getScalarType() == MVT::f32 &&
+         SrcVT.getScalarType() == MVT::f16 &&
+         // TODO: This probably only requires no input flushing?
+         denormalModeIsFlushAllF32(DAG.getMachineFunction());
 }
 
 bool SITargetLowering::isFPExtFoldable(const MachineInstr &MI, unsigned Opcode,
@@ -855,7 +855,7 @@ bool SITargetLowering::isFPExtFoldable(const MachineInstr &MI, unsigned Opcode,
          DestTy.getScalarSizeInBits() == 32 &&
          SrcTy.getScalarSizeInBits() == 16 &&
          // TODO: This probably only requires no input flushing?
-         !hasFP32Denormals(*MI.getMF());
+         denormalModeIsFlushAllF32(*MI.getMF());
 }
 
 bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT) const {
@@ -4780,7 +4780,7 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
     // Otherwise f32 mad is always full rate and returns the same result as
     // the separate operations so should be preferred over fma.
     // However does not support denormals.
-    if (hasFP32Denormals(MF))
+    if (!denormalModeIsFlushAllF32(MF))
       return Subtarget->hasFastFMAF32() || Subtarget->hasDLInsts();
 
     // If the subtarget has v_fmac_f32, that's just as good as v_mac_f32.
@@ -4789,7 +4789,7 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   case MVT::f64:
     return true;
   case MVT::f16:
-    return Subtarget->has16BitInsts() && hasFP64FP16Denormals(MF);
+    return Subtarget->has16BitInsts() && !denormalModeIsFlushAllF64F16(MF);
   default:
     break;
   }
@@ -4818,9 +4818,10 @@ bool SITargetLowering::isFMADLegal(const MachineInstr &MI, LLT Ty) const {
     return false;
 
   if (Ty.getScalarSizeInBits() == 16)
-    return Subtarget->hasMadF16() && !hasFP64FP16Denormals(*MI.getMF());
+    return Subtarget->hasMadF16() && denormalModeIsFlushAllF64F16(*MI.getMF());
   if (Ty.getScalarSizeInBits() == 32)
-    return Subtarget->hasMadMacF32Insts() && !hasFP32Denormals(*MI.getMF());
+    return Subtarget->hasMadMacF32Insts() &&
+           denormalModeIsFlushAllF32(*MI.getMF());
 
   return false;
 }
@@ -4832,10 +4833,10 @@ bool SITargetLowering::isFMADLegal(const SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   if (VT == MVT::f32)
     return Subtarget->hasMadMacF32Insts() &&
-           !hasFP32Denormals(DAG.getMachineFunction());
+           denormalModeIsFlushAllF32(DAG.getMachineFunction());
   if (VT == MVT::f16) {
     return Subtarget->hasMadF16() &&
-           !hasFP64FP16Denormals(DAG.getMachineFunction());
+           denormalModeIsFlushAllF64F16(DAG.getMachineFunction());
   }
 
   return false;
@@ -9819,15 +9820,13 @@ SDValue SITargetLowering::lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const {
 
 // Returns immediate value for setting the F32 denorm mode when using the
 // S_DENORM_MODE instruction.
-static SDValue getSPDenormModeValue(int SPDenormMode, SelectionDAG &DAG,
-                                    const SDLoc &SL, const GCNSubtarget *ST) {
+static SDValue getSPDenormModeValue(uint32_t SPDenormMode, SelectionDAG &DAG,
+                                    const SIMachineFunctionInfo *Info,
+                                    const GCNSubtarget *ST) {
   assert(ST->hasDenormModeInst() && "Requires S_DENORM_MODE");
-  int DPDenormModeDefault = hasFP64FP16Denormals(DAG.getMachineFunction())
-                                ? FP_DENORM_FLUSH_NONE
-                                : FP_DENORM_FLUSH_IN_FLUSH_OUT;
-
-  int Mode = SPDenormMode | (DPDenormModeDefault << 2);
-  return DAG.getTargetConstant(Mode, SL, MVT::i32);
+  uint32_t DPDenormModeDefault = Info->getMode().fpDenormModeDPValue();
+  uint32_t Mode = SPDenormMode | (DPDenormModeDefault << 2);
+  return DAG.getTargetConstant(Mode, SDLoc(), MVT::i32);
 }
 
 SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
@@ -9865,7 +9864,11 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
                                (1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_);
   const SDValue BitField = DAG.getTargetConstant(Denorm32Reg, SL, MVT::i32);
 
-  const bool HasFP32Denormals = hasFP32Denormals(DAG.getMachineFunction());
+  const MachineFunction &MF = DAG.getMachineFunction();
+  const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  const DenormalMode DenormMode = Info->getMode().FP32Denormals;
+
+  const bool HasFP32Denormals = DenormMode == DenormalMode::getIEEE();
 
   if (!HasFP32Denormals) {
     // Note we can't use the STRICT_FMA/STRICT_FMUL for the non-strict FDIV
@@ -9877,7 +9880,7 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
     SDNode *EnableDenorm;
     if (Subtarget->hasDenormModeInst()) {
       const SDValue EnableDenormValue =
-          getSPDenormModeValue(FP_DENORM_FLUSH_NONE, DAG, SL, Subtarget);
+          getSPDenormModeValue(FP_DENORM_FLUSH_NONE, DAG, Info, Subtarget);
 
       EnableDenorm = DAG.getNode(AMDGPUISD::DENORM_MODE, SL, BindParamVTs,
                                  DAG.getEntryNode(), EnableDenormValue).getNode();
@@ -9917,10 +9920,13 @@ SDValue SITargetLowering::LowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
                              NumeratorScaled, Fma3, Flags);
 
   if (!HasFP32Denormals) {
+    // FIXME: This mishandles dynamic denormal mode. We need to query the
+    // current mode and restore the original.
+
     SDNode *DisableDenorm;
     if (Subtarget->hasDenormModeInst()) {
-      const SDValue DisableDenormValue =
-          getSPDenormModeValue(FP_DENORM_FLUSH_IN_FLUSH_OUT, DAG, SL, Subtarget);
+      const SDValue DisableDenormValue = getSPDenormModeValue(
+          FP_DENORM_FLUSH_IN_FLUSH_OUT, DAG, Info, Subtarget);
 
       DisableDenorm = DAG.getNode(AMDGPUISD::DENORM_MODE, SL, MVT::Other,
                                   Fma4.getValue(1), DisableDenormValue,
@@ -10921,6 +10927,9 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     return std::nullopt;
   }
 
+  case ISD::BSWAP:
+    return calculateByteProvider(Op->getOperand(0), BitWidth / 8 - Index - 1,
+                                 Depth + 1, StartingIndex);
   default: {
     return std::nullopt;
   }
@@ -12331,10 +12340,11 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
 
   // Only do this if we are not trying to support denormals. v_mad_f32 does not
   // support denormals ever.
-  if (((VT == MVT::f32 && !hasFP32Denormals(DAG.getMachineFunction())) ||
-       (VT == MVT::f16 && !hasFP64FP16Denormals(DAG.getMachineFunction()) &&
-        getSubtarget()->hasMadF16())) &&
-       isOperationLegal(ISD::FMAD, VT))
+  if (((VT == MVT::f32 &&
+        denormalModeIsFlushAllF32(DAG.getMachineFunction())) ||
+       (VT == MVT::f16 && Subtarget->hasMadF16() &&
+        denormalModeIsFlushAllF64F16(DAG.getMachineFunction()))) &&
+      isOperationLegal(ISD::FMAD, VT))
     return ISD::FMAD;
 
   const TargetOptions &Options = DAG.getTarget().Options;
@@ -13954,6 +13964,15 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     reservePrivateMemoryRegs(getTargetMachine(), MF, *TRI, *Info);
   }
 
+  // TODO: Move this logic to getReservedRegs()
+  // Reserve the SGPR(s) to save/restore EXEC for WWM spill/copy handling.
+  unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
+  Register SReg = ST.isWave32()
+                      ? AMDGPU::SGPR_32RegClass.getRegister(MaxNumSGPRs - 1)
+                      : TRI->getAlignedHighSGPRForRC(MF, /*Align=*/2,
+                                                     &AMDGPU::SGPR_64RegClass);
+  Info->setSGPRForEXECCopy(SReg);
+
   assert(!TRI->isSubRegister(Info->getScratchRSrcReg(),
                              Info->getStackPtrOffsetReg()));
   if (Info->getStackPtrOffsetReg() != AMDGPU::SP_REG)
@@ -14294,10 +14313,10 @@ bool SITargetLowering::denormalsEnabledForType(const SelectionDAG &DAG,
                                                EVT VT) const {
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f32:
-    return hasFP32Denormals(DAG.getMachineFunction());
+    return !denormalModeIsFlushAllF32(DAG.getMachineFunction());
   case MVT::f64:
   case MVT::f16:
-    return hasFP64FP16Denormals(DAG.getMachineFunction());
+    return !denormalModeIsFlushAllF64F16(DAG.getMachineFunction());
   default:
     return false;
   }
@@ -14307,10 +14326,10 @@ bool SITargetLowering::denormalsEnabledForType(LLT Ty,
                                                MachineFunction &MF) const {
   switch (Ty.getScalarSizeInBits()) {
   case 32:
-    return hasFP32Denormals(MF);
+    return !denormalModeIsFlushAllF32(MF);
   case 64:
   case 16:
-    return hasFP64FP16Denormals(MF);
+    return !denormalModeIsFlushAllF64F16(MF);
   default:
     return false;
   }
@@ -14624,7 +14643,7 @@ bool SITargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
 
 bool SITargetLowering::isReassocProfitable(MachineRegisterInfo &MRI,
                                            Register N0, Register N1) const {
-  return true; // FIXME: handle regbanks
+  return MRI.hasOneNonDBGUse(N0); // FIXME: handle regbanks
 }
 
 MachineMemOperand::Flags

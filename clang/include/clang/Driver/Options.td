@@ -1772,6 +1772,10 @@ defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " hea
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
     Group<f_Group>, Flags<[CC1Option]>, MetaVarName<"<directory>">,
     HelpText<"Enable heap memory profiling and dump results into <directory>">;
+def fmemory_profile_use_EQ : Joined<["-"], "fmemory-profile-use=">,
+    Group<f_Group>, Flags<[CC1Option, CoreOption]>, MetaVarName<"<pathname>">,
+    HelpText<"Use memory profile for profile-guided memory optimization">,
+    MarshallingInfoString<CodeGenOpts<"MemoryProfileUsePath">>;
 
 // Begin sanitizer flags. These should all be core options exposed in all driver
 // modes.
@@ -2337,6 +2341,11 @@ def flto_EQ_auto : Flag<["-"], "flto=auto">, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
 def flto : Flag<["-"], "flto">, Flags<[CoreOption, CC1Option, FC1Option, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
+defm unified_lto : BoolFOption<"unified-lto",
+  CodeGenOpts<"UnifiedLTO">, DefaultFalse,
+  PosFlag<SetTrue, [], "Use the unified LTO pipeline">,
+  NegFlag<SetFalse, [], "Use distinct LTO pipelines">,
+  BothFlags<[CC1Option], "">>;
 def fno_lto : Flag<["-"], "fno-lto">, Flags<[CoreOption, CC1Option]>, Group<f_Group>,
   HelpText<"Disable LTO mode (default)">;
 def foffload_lto_EQ : Joined<["-"], "foffload-lto=">, Flags<[CoreOption]>, Group<f_Group>,
@@ -6737,8 +6746,9 @@ def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr
 
 let Flags = [CC1Option, FC1Option, NoDriverOption] in {
 
-def fopenmp_is_device : Flag<["-"], "fopenmp-is-device">,
+def fopenmp_is_target_device : Flag<["-"], "fopenmp-is-target-device">,
   HelpText<"Generate code only for an OpenMP target device.">;
+def : Flag<["-"], "fopenmp-is-device">, Alias<fopenmp_is_target_device>;
 def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
   HelpText<"Path to the IR file produced by the frontend for the host.">;
 

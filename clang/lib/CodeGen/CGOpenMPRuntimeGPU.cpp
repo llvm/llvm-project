@@ -873,12 +873,12 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
 CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
     : CGOpenMPRuntime(CGM) {
-  llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsDevice, true,
-                                     hasRequiresUnifiedSharedMemory(),
+  llvm::OpenMPIRBuilderConfig Config(CGM.getLangOpts().OpenMPIsTargetDevice,
+                                     isGPU(), hasRequiresUnifiedSharedMemory(),
                                      CGM.getLangOpts().OpenMPOffloadMandatory);
   OMPBuilder.setConfig(Config);
 
-  if (!CGM.getLangOpts().OpenMPIsDevice)
+  if (!CGM.getLangOpts().OpenMPIsTargetDevice)
     llvm_unreachable("OpenMP can only handle device code.");
 
   llvm::OpenMPIRBuilder &OMPBuilder = getOMPBuilder();

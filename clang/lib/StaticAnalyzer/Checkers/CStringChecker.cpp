@@ -36,24 +36,12 @@ using namespace std::placeholders;
 
 namespace {
 struct AnyArgExpr {
-  // FIXME: Remove constructor in C++17 to turn it into an aggregate.
-  AnyArgExpr(const Expr *Expression, unsigned ArgumentIndex)
-      : Expression{Expression}, ArgumentIndex{ArgumentIndex} {}
   const Expr *Expression;
   unsigned ArgumentIndex;
 };
-
-struct SourceArgExpr : AnyArgExpr {
-  using AnyArgExpr::AnyArgExpr; // FIXME: Remove using in C++17.
-};
-
-struct DestinationArgExpr : AnyArgExpr {
-  using AnyArgExpr::AnyArgExpr; // FIXME: Same.
-};
-
-struct SizeArgExpr : AnyArgExpr {
-  using AnyArgExpr::AnyArgExpr; // FIXME: Same.
-};
+struct SourceArgExpr : AnyArgExpr {};
+struct DestinationArgExpr : AnyArgExpr {};
+struct SizeArgExpr : AnyArgExpr {};
 
 using ErrorMessage = SmallString<128>;
 enum class AccessKind { write, read };
@@ -96,7 +84,7 @@ class CStringChecker : public Checker< eval::Call,
   mutable std::unique_ptr<BugType> BT_Null, BT_Bounds, BT_Overlap,
       BT_NotCString, BT_AdditionOverflow, BT_UninitRead;
 
-  mutable const char *CurrentFunctionDescription;
+  mutable const char *CurrentFunctionDescription = nullptr;
 
 public:
   /// The filter is used to filter out the diagnostics which are not enabled by
@@ -1384,9 +1372,9 @@ void CStringChecker::evalMemcpy(CheckerContext &C, const CallExpr *CE,
                                 CharKind CK) const {
   // void *memcpy(void *restrict dst, const void *restrict src, size_t n);
   // The return value is the address of the destination buffer.
-  DestinationArgExpr Dest = {CE->getArg(0), 0};
-  SourceArgExpr Src = {CE->getArg(1), 1};
-  SizeArgExpr Size = {CE->getArg(2), 2};
+  DestinationArgExpr Dest = {{CE->getArg(0), 0}};
+  SourceArgExpr Src = {{CE->getArg(1), 1}};
+  SizeArgExpr Size = {{CE->getArg(2), 2}};
 
   ProgramStateRef State = C.getState();
 
@@ -1399,9 +1387,9 @@ void CStringChecker::evalMempcpy(CheckerContext &C, const CallExpr *CE,
                                  CharKind CK) const {
   // void *mempcpy(void *restrict dst, const void *restrict src, size_t n);
   // The return value is a pointer to the byte following the last written byte.
-  DestinationArgExpr Dest = {CE->getArg(0), 0};
-  SourceArgExpr Src = {CE->getArg(1), 1};
-  SizeArgExpr Size = {CE->getArg(2), 2};
+  DestinationArgExpr Dest = {{CE->getArg(0), 0}};
+  SourceArgExpr Src = {{CE->getArg(1), 1}};
+  SizeArgExpr Size = {{CE->getArg(2), 2}};
 
   constexpr bool IsRestricted = true;
   constexpr bool IsMempcpy = true;
@@ -1413,9 +1401,9 @@ void CStringChecker::evalMemmove(CheckerContext &C, const CallExpr *CE,
                                  CharKind CK) const {
   // void *memmove(void *dst, const void *src, size_t n);
   // The return value is the address of the destination buffer.
-  DestinationArgExpr Dest = {CE->getArg(0), 0};
-  SourceArgExpr Src = {CE->getArg(1), 1};
-  SizeArgExpr Size = {CE->getArg(2), 2};
+  DestinationArgExpr Dest = {{CE->getArg(0), 0}};
+  SourceArgExpr Src = {{CE->getArg(1), 1}};
+  SizeArgExpr Size = {{CE->getArg(2), 2}};
 
   constexpr bool IsRestricted = false;
   constexpr bool IsMempcpy = false;
@@ -1425,9 +1413,9 @@ void CStringChecker::evalMemmove(CheckerContext &C, const CallExpr *CE,
 
 void CStringChecker::evalBcopy(CheckerContext &C, const CallExpr *CE) const {
   // void bcopy(const void *src, void *dst, size_t n);
-  SourceArgExpr Src(CE->getArg(0), 0);
-  DestinationArgExpr Dest = {CE->getArg(1), 1};
-  SizeArgExpr Size = {CE->getArg(2), 2};
+  SourceArgExpr Src{{CE->getArg(0), 0}};
+  DestinationArgExpr Dest = {{CE->getArg(1), 1}};
+  SizeArgExpr Size = {{CE->getArg(2), 2}};
 
   constexpr bool IsRestricted = false;
   constexpr bool IsMempcpy = false;
@@ -1442,7 +1430,7 @@ void CStringChecker::evalMemcmp(CheckerContext &C, const CallExpr *CE,
 
   AnyArgExpr Left = {CE->getArg(0), 0};
   AnyArgExpr Right = {CE->getArg(1), 1};
-  SizeArgExpr Size = {CE->getArg(2), 2};
+  SizeArgExpr Size = {{CE->getArg(2), 2}};
 
   ProgramStateRef State = C.getState();
   SValBuilder &Builder = C.getSValBuilder();
@@ -1710,14 +1698,14 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
   const LocationContext *LCtx = C.getLocationContext();
 
   // Check that the destination is non-null.
-  DestinationArgExpr Dst = {CE->getArg(0), 0};
+  DestinationArgExpr Dst = {{CE->getArg(0), 0}};
   SVal DstVal = state->getSVal(Dst.Expression, LCtx);
   state = checkNonNull(C, state, Dst, DstVal);
   if (!state)
     return;
 
   // Check that the source is non-null.
-  SourceArgExpr srcExpr = {CE->getArg(1), 1};
+  SourceArgExpr srcExpr = {{CE->getArg(1), 1}};
   SVal srcVal = state->getSVal(srcExpr.Expression, LCtx);
   state = checkNonNull(C, state, srcExpr, srcVal);
   if (!state)
@@ -1748,10 +1736,11 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
 
   // FIXME: Why do we choose the srcExpr if the access has no size?
   //  Note that the 3rd argument of the call would be the size parameter.
-  SizeArgExpr SrcExprAsSizeDummy = {srcExpr.Expression, srcExpr.ArgumentIndex};
+  SizeArgExpr SrcExprAsSizeDummy = {
+      {srcExpr.Expression, srcExpr.ArgumentIndex}};
   state = CheckOverlap(
       C, state,
-      (IsBounded ? SizeArgExpr{CE->getArg(2), 2} : SrcExprAsSizeDummy), Dst,
+      (IsBounded ? SizeArgExpr{{CE->getArg(2), 2}} : SrcExprAsSizeDummy), Dst,
       srcExpr);
 
   if (!state)
@@ -1760,7 +1749,7 @@ void CStringChecker::evalStrcpyCommon(CheckerContext &C, const CallExpr *CE,
   // If the function is strncpy, strncat, etc... it is bounded.
   if (IsBounded) {
     // Get the max number of characters to copy.
-    SizeArgExpr lenExpr = {CE->getArg(2), 2};
+    SizeArgExpr lenExpr = {{CE->getArg(2), 2}};
     SVal lenVal = state->getSVal(lenExpr.Expression, LCtx);
 
     // Protect against misdeclared strncpy().
@@ -2234,7 +2223,7 @@ void CStringChecker::evalStrcmpCommon(CheckerContext &C, const CallExpr *CE,
 void CStringChecker::evalStrsep(CheckerContext &C, const CallExpr *CE) const {
   // char *strsep(char **stringp, const char *delim);
   // Verify whether the search string parameter matches the return type.
-  SourceArgExpr SearchStrPtr = {CE->getArg(0), 0};
+  SourceArgExpr SearchStrPtr = {{CE->getArg(0), 0}};
 
   QualType CharPtrTy = SearchStrPtr.Expression->getType()->getPointeeType();
   if (CharPtrTy.isNull() ||
@@ -2335,9 +2324,9 @@ void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
   // void *memset(void *s, int c, size_t n);
   CurrentFunctionDescription = "memory set function";
 
-  DestinationArgExpr Buffer = {CE->getArg(0), 0};
+  DestinationArgExpr Buffer = {{CE->getArg(0), 0}};
   AnyArgExpr CharE = {CE->getArg(1), 1};
-  SizeArgExpr Size = {CE->getArg(2), 2};
+  SizeArgExpr Size = {{CE->getArg(2), 2}};
 
   ProgramStateRef State = C.getState();
 
@@ -2384,8 +2373,8 @@ void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
 void CStringChecker::evalBzero(CheckerContext &C, const CallExpr *CE) const {
   CurrentFunctionDescription = "memory clearance function";
 
-  DestinationArgExpr Buffer = {CE->getArg(0), 0};
-  SizeArgExpr Size = {CE->getArg(1), 1};
+  DestinationArgExpr Buffer = {{CE->getArg(0), 0}};
+  SizeArgExpr Size = {{CE->getArg(1), 1}};
   SVal Zero = C.getSValBuilder().makeZeroVal(C.getASTContext().IntTy);
 
   ProgramStateRef State = C.getState();
@@ -2439,7 +2428,7 @@ void CStringChecker::evalSnprintf(CheckerContext &C, const CallExpr *CE) const {
 void CStringChecker::evalSprintfCommon(CheckerContext &C, const CallExpr *CE,
                                        bool IsBounded, bool IsBuiltin) const {
   ProgramStateRef State = C.getState();
-  DestinationArgExpr Dest = {CE->getArg(0), 0};
+  DestinationArgExpr Dest = {{CE->getArg(0), 0}};
 
   const auto NumParams = CE->getCalleeDecl()->getAsFunction()->getNumParams();
   assert(CE->getNumArgs() >= NumParams);
@@ -2454,14 +2443,15 @@ void CStringChecker::evalSprintfCommon(CheckerContext &C, const CallExpr *CE,
         !type->isAnyPointerType() ||
         !type->getPointeeType()->isAnyCharacterType())
       continue;
-    SourceArgExpr Source = {ArgExpr, unsigned(ArgIdx)};
+    SourceArgExpr Source = {{ArgExpr, unsigned(ArgIdx)}};
 
     // Ensure the buffers do not overlap.
-    SizeArgExpr SrcExprAsSizeDummy = {Source.Expression, Source.ArgumentIndex};
+    SizeArgExpr SrcExprAsSizeDummy = {
+        {Source.Expression, Source.ArgumentIndex}};
     State = CheckOverlap(
         C, State,
-        (IsBounded ? SizeArgExpr{CE->getArg(1), 1} : SrcExprAsSizeDummy), Dest,
-        Source);
+        (IsBounded ? SizeArgExpr{{CE->getArg(1), 1}} : SrcExprAsSizeDummy),
+        Dest, Source);
     if (!State)
       return;
   }

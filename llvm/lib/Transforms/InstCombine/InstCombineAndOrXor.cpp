@@ -2978,34 +2978,47 @@ Value *InstCombinerImpl::matchSelectFromAndOr(Value *A, Value *C, Value *B,
   return nullptr;
 }
 
-// (icmp eq X, 0) | (icmp ult Other, X) -> (icmp ule Other, X-1)
-// (icmp ne X, 0) & (icmp uge Other, X) -> (icmp ugt Other, X-1)
-static Value *foldAndOrOfICmpEqZeroAndICmp(ICmpInst *LHS, ICmpInst *RHS,
-                                           bool IsAnd, bool IsLogical,
-                                           IRBuilderBase &Builder) {
+// (icmp eq X, C) | (icmp ult Other, (X - C)) -> (icmp ule Other, (X - (C + 1)))
+// (icmp ne X, C) & (icmp uge Other, (X - C)) -> (icmp ugt Other, (X - (C + 1)))
+static Value *foldAndOrOfICmpEqConstantAndICmp(ICmpInst *LHS, ICmpInst *RHS,
+                                               bool IsAnd, bool IsLogical,
+                                               IRBuilderBase &Builder) {
+  Value *LHS0 = LHS->getOperand(0);
+  Value *RHS0 = RHS->getOperand(0);
+  Value *RHS1 = RHS->getOperand(1);
+
   ICmpInst::Predicate LPred =
       IsAnd ? LHS->getInversePredicate() : LHS->getPredicate();
   ICmpInst::Predicate RPred =
       IsAnd ? RHS->getInversePredicate() : RHS->getPredicate();
-  Value *LHS0 = LHS->getOperand(0);
-  if (LPred != ICmpInst::ICMP_EQ || !match(LHS->getOperand(1), m_Zero()) ||
+
+  const APInt *CInt;
+  if (LPred != ICmpInst::ICMP_EQ ||
+      !match(LHS->getOperand(1), m_APIntAllowUndef(CInt)) ||
       !LHS0->getType()->isIntOrIntVectorTy() ||
       !(LHS->hasOneUse() || RHS->hasOneUse()))
     return nullptr;
 
+  auto MatchRHSOp = [LHS0, CInt](const Value *RHSOp) {
+    return match(RHSOp,
+                 m_Add(m_Specific(LHS0), m_SpecificIntAllowUndef(-*CInt))) ||
+           (CInt->isZero() && RHSOp == LHS0);
+  };
+
   Value *Other;
-  if (RPred == ICmpInst::ICMP_ULT && RHS->getOperand(1) == LHS0)
-    Other = RHS->getOperand(0);
-  else if (RPred == ICmpInst::ICMP_UGT && RHS->getOperand(0) == LHS0)
-    Other = RHS->getOperand(1);
+  if (RPred == ICmpInst::ICMP_ULT && MatchRHSOp(RHS1))
+    Other = RHS0;
+  else if (RPred == ICmpInst::ICMP_UGT && MatchRHSOp(RHS0))
+    Other = RHS1;
   else
     return nullptr;
 
   if (IsLogical)
     Other = Builder.CreateFreeze(Other);
+
   return Builder.CreateICmp(
       IsAnd ? ICmpInst::ICMP_ULT : ICmpInst::ICMP_UGE,
-      Builder.CreateAdd(LHS0, Constant::getAllOnesValue(LHS0->getType())),
+      Builder.CreateSub(LHS0, ConstantInt::get(LHS0->getType(), *CInt + 1)),
       Other);
 }
 
@@ -3052,12 +3065,12 @@ Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     return V;
 
   if (Value *V =
-          foldAndOrOfICmpEqZeroAndICmp(LHS, RHS, IsAnd, IsLogical, Builder))
+          foldAndOrOfICmpEqConstantAndICmp(LHS, RHS, IsAnd, IsLogical, Builder))
     return V;
   // We can treat logical like bitwise here, because both operands are used on
   // the LHS, and as such poison from both will propagate.
-  if (Value *V = foldAndOrOfICmpEqZeroAndICmp(RHS, LHS, IsAnd,
-                                              /*IsLogical*/ false, Builder))
+  if (Value *V = foldAndOrOfICmpEqConstantAndICmp(RHS, LHS, IsAnd,
+                                                  /*IsLogical*/ false, Builder))
     return V;
 
   if (Value *V =
@@ -3994,6 +4007,24 @@ static Instruction *canonicalizeAbs(BinaryOperator &Xor,
   return nullptr;
 }
 
+static bool canFreelyInvert(InstCombiner &IC, Value *Op,
+                            Instruction *IgnoredUser) {
+  auto *I = dyn_cast<Instruction>(Op);
+  return I && IC.isFreeToInvert(I, /*WillInvertAllUses=*/true) &&
+         InstCombiner::canFreelyInvertAllUsersOf(I, IgnoredUser);
+}
+
+static Value *freelyInvert(InstCombinerImpl &IC, Value *Op,
+                           Instruction *IgnoredUser) {
+  auto *I = cast<Instruction>(Op);
+  IC.Builder.SetInsertPoint(&*I->getInsertionPointAfterDef());
+  Value *NotOp = IC.Builder.CreateNot(Op, Op->getName() + ".not");
+  Op->replaceUsesWithIf(NotOp,
+                        [NotOp](Use &U) { return U.getUser() != NotOp; });
+  IC.freelyInvertAllUsersOf(NotOp, IgnoredUser);
+  return NotOp;
+}
+
 // Transform
 //   z = ~(x &/| y)
 // into:
@@ -4018,28 +4049,11 @@ bool InstCombinerImpl::sinkNotIntoLogicalOp(Instruction &I) {
     return false;
 
   // And can the operands be adapted?
-  for (Value *Op : {Op0, Op1})
-    if (!(InstCombiner::isFreeToInvert(Op, /*WillInvertAllUses=*/true) &&
-          (match(Op, m_ImmConstant()) ||
-           (isa<Instruction>(Op) &&
-            InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op),
-                                                    /*IgnoredUser=*/&I)))))
-      return false;
+  if (!canFreelyInvert(*this, Op0, &I) || !canFreelyInvert(*this, Op1, &I))
+    return false;
 
-  for (Value **Op : {&Op0, &Op1}) {
-    Value *NotOp;
-    if (auto *C = dyn_cast<Constant>(*Op)) {
-      NotOp = ConstantExpr::getNot(C);
-    } else {
-      Builder.SetInsertPoint(
-          &*cast<Instruction>(*Op)->getInsertionPointAfterDef());
-      NotOp = Builder.CreateNot(*Op, (*Op)->getName() + ".not");
-      (*Op)->replaceUsesWithIf(
-          NotOp, [NotOp](Use &U) { return U.getUser() != NotOp; });
-      freelyInvertAllUsersOf(NotOp, /*IgnoredUser=*/&I);
-    }
-    *Op = NotOp;
-  }
+  Op0 = freelyInvert(*this, Op0, &I);
+  Op1 = freelyInvert(*this, Op1, &I);
 
   Builder.SetInsertPoint(I.getInsertionPointAfterDef());
   Value *NewLogicOp;
@@ -4073,20 +4087,11 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   Value *NotOp0 = nullptr;
   Value *NotOp1 = nullptr;
   Value **OpToInvert = nullptr;
-  if (match(Op0, m_Not(m_Value(NotOp0))) &&
-      InstCombiner::isFreeToInvert(Op1, /*WillInvertAllUses=*/true) &&
-      (match(Op1, m_ImmConstant()) ||
-       (isa<Instruction>(Op1) &&
-        InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op1),
-                                                /*IgnoredUser=*/&I)))) {
+  if (match(Op0, m_Not(m_Value(NotOp0))) && canFreelyInvert(*this, Op1, &I)) {
     Op0 = NotOp0;
     OpToInvert = &Op1;
   } else if (match(Op1, m_Not(m_Value(NotOp1))) &&
-             InstCombiner::isFreeToInvert(Op0, /*WillInvertAllUses=*/true) &&
-             (match(Op0, m_ImmConstant()) ||
-              (isa<Instruction>(Op0) &&
-               InstCombiner::canFreelyInvertAllUsersOf(cast<Instruction>(Op0),
-                                                       /*IgnoredUser=*/&I)))) {
+             canFreelyInvert(*this, Op0, &I)) {
     Op1 = NotOp1;
     OpToInvert = &Op0;
   } else
@@ -4096,19 +4101,7 @@ bool InstCombinerImpl::sinkNotIntoOtherHandOfLogicalOp(Instruction &I) {
   if (!InstCombiner::canFreelyInvertAllUsersOf(&I, /*IgnoredUser=*/nullptr))
     return false;
 
-  if (auto *C = dyn_cast<Constant>(*OpToInvert)) {
-    *OpToInvert = ConstantExpr::getNot(C);
-  } else {
-    Builder.SetInsertPoint(
-        &*cast<Instruction>(*OpToInvert)->getInsertionPointAfterDef());
-    Value *NotOpToInvert =
-        Builder.CreateNot(*OpToInvert, (*OpToInvert)->getName() + ".not");
-    (*OpToInvert)->replaceUsesWithIf(NotOpToInvert, [NotOpToInvert](Use &U) {
-      return U.getUser() != NotOpToInvert;
-    });
-    freelyInvertAllUsersOf(NotOpToInvert, /*IgnoredUser=*/&I);
-    *OpToInvert = NotOpToInvert;
-  }
+  *OpToInvert = freelyInvert(*this, *OpToInvert, &I);
 
   Builder.SetInsertPoint(&*I.getInsertionPointAfterDef());
   Value *NewBinOp;

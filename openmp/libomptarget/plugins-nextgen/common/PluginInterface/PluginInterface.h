@@ -24,8 +24,13 @@
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
+#include "RPC.h"
 #include "Utilities.h"
 #include "omptarget.h"
+
+#ifdef OMPT_SUPPORT
+#include "omp-tools.h"
+#endif
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -238,8 +243,8 @@ public:
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
   GenericKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : Name(Name), ExecutionMode(ExecutionMode),
-        PreferredNumThreads(0), MaxNumThreads(0) {}
+      : Name(Name), ExecutionMode(ExecutionMode), PreferredNumThreads(0),
+        MaxNumThreads(0) {}
 
   virtual ~GenericKernelTy() {}
 
@@ -254,8 +259,8 @@ struct GenericKernelTy {
                ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                           uint64_t NumBlocks,
-                           KernelArgsTy &KernelArgs, void *Args,
+                           uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+                           void *Args,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
@@ -600,6 +605,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this behavior by overriding the shouldSetupDeviceEnvironment function.
   Error setupDeviceEnvironment(GenericPluginTy &Plugin, DeviceImageTy &Image);
 
+  // Setup the RPC server for this device if needed. This may not run on some
+  // plugins like the CPU targets. By default, it will not be executed so it is
+  // up to the target to override this using the shouldSetupRPCServer function.
+  Error setupRPCServer(GenericPluginTy &Plugin, DeviceImageTy &Image);
+
   /// Register the offload entries for a specific image on the device.
   Error registerOffloadEntries(DeviceImageTy &Image);
 
@@ -751,6 +761,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return OMPX_MinThreadsForLowTripCount;
   }
 
+  /// Get the RPC server running on this device.
+  RPCServerTy *getRPCServer() const { return RPCServer; }
+
 private:
   /// Register offload entry for global variable.
   Error registerGlobalOffloadEntry(DeviceImageTy &DeviceImage,
@@ -779,6 +792,10 @@ private:
   /// that returning false in this function will change the behavior of the
   /// setupDeviceEnvironment() function.
   virtual bool shouldSetupDeviceEnvironment() const { return true; }
+
+  /// Indicate whether or not the device should setup the RPC server. This is
+  /// only necessary for unhosted targets like the GPU.
+  virtual bool shouldSetupRPCServer() const { return false; }
 
   /// Pointer to the memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
@@ -837,6 +854,20 @@ protected:
 
   /// Map of host pinned allocations used for optimize device transfers.
   PinnedAllocationMapTy PinnedAllocs;
+
+  /// A pointer to an RPC server instance attached to this device if present.
+  /// This is used to run the RPC server during task synchronization.
+  RPCServerTy *RPCServer;
+
+#ifdef OMPT_SUPPORT
+  /// OMPT callback functions
+#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
+  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
+#undef defineOmptCallback
+
+  /// Internal representation for OMPT device (initialize & finalize)
+  std::atomic<bool> OmptInitialized;
+#endif
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
@@ -846,7 +877,8 @@ struct GenericPluginTy {
 
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
-      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA) {}
+      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA),
+        RPCServer(nullptr) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -891,6 +923,12 @@ struct GenericPluginTy {
   /// Get the reference to the JIT used for all devices connected to this
   /// plugin.
   JITEngine &getJIT() { return JIT; }
+
+  /// Get a reference to the RPC server used to provide host services.
+  RPCServerTy &getRPCServer() {
+    assert(RPCServer && "RPC server not initialized");
+    return *RPCServer;
+  }
 
   /// Get the OpenMP requires flags set for this plugin.
   int64_t getRequiresFlags() const { return RequiresFlags; }
@@ -946,6 +984,9 @@ private:
 
   /// The JIT engine shared by all devices connected to this plugin.
   JITEngine JIT;
+
+  /// The interface between the plugin and the GPU for host services.
+  RPCServerTy *RPCServer;
 };
 
 /// Class for simplifying the getter operation of the plugin. Anywhere on the
@@ -1208,6 +1249,9 @@ private:
   /// The actual resource pool.
   std::deque<ResourceRef> ResourcePool;
 };
+
+/// A static check on whether or not we support RPC in libomptarget.
+const bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

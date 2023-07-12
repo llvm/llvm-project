@@ -6255,15 +6255,29 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPTOSI(MachineInstr &MI) {
 // f64 -> f16 conversion using round-to-nearest-even rounding mode.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
+  const LLT S1 = LLT::scalar(1);
+  const LLT S16 = LLT::scalar(16);
+  const LLT S32 = LLT::scalar(32);
+  const LLT S64 = LLT::scalar(64);
+
   auto [Dst, Src] = MI.getFirst2Regs();
+  assert(MRI.getType(Dst).getScalarType() == S16 &&
+         MRI.getType(Src).getScalarType() == S64);
+
   if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
     return UnableToLegalize;
+
+  if (MIRBuilder.getMF().getTarget().Options.UnsafeFPMath) {
+    unsigned Flags = MI.getFlags();
+    auto Src32 = MIRBuilder.buildFPTrunc(S32, Src, Flags);
+    MIRBuilder.buildFPTrunc(Dst, Src32, Flags);
+    MI.eraseFromParent();
+    return Legalized;
+  }
 
   const unsigned ExpMask = 0x7ff;
   const unsigned ExpBiasf64 = 1023;
   const unsigned ExpBiasf16 = 15;
-  const LLT S32 = LLT::scalar(32);
-  const LLT S1 = LLT::scalar(1);
 
   auto Unmerge = MIRBuilder.buildUnmerge(S32, Src);
   Register U = Unmerge.getReg(0);
@@ -7274,6 +7288,9 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     return Legalized;
   }
 
+  // TODO: Try inverting the test with getInvertedFPClassTest like the DAG
+  // version
+
   unsigned BitSize = SrcTy.getScalarSizeInBits();
   const fltSemantics &Semantics = getFltSemanticForLLT(SrcTy.getScalarType());
 
@@ -7327,6 +7344,18 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     auto And = MIRBuilder.buildAnd(DstTy, Cmp, Sign);
     appendToRes(And);
     Mask &= ~fcNegFinite;
+  }
+
+  if (FPClassTest PartialCheck = Mask & (fcZero | fcSubnormal)) {
+    // fcZero | fcSubnormal => test all exponent bits are 0
+    // TODO: Handle sign bit specific cases
+    // TODO: Handle inverted case
+    if (PartialCheck == (fcZero | fcSubnormal)) {
+      auto ExpBits = MIRBuilder.buildAnd(IntTy, AsInt, ExpMaskC);
+      appendToRes(MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, DstTy,
+                                       ExpBits, ZeroC));
+      Mask &= ~PartialCheck;
+    }
   }
 
   // Check for individual classes.

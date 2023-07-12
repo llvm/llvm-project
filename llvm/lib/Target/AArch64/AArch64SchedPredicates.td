@@ -59,6 +59,19 @@ let FunctionMapper = "AArch64_AM::getShiftType" in {
 }
 
 // Generic predicates.
+
+// Check for ZR in a register operand.
+foreach I = {1-3} in {
+  def CheckIsReg#I#Zero : CheckAll<
+                            [CheckIsRegOperand<I>,
+                             CheckAny<
+                               [CheckRegOperand<I, WZR>,
+                                CheckRegOperand<I, XZR>]>]>;
+}
+def IsReg1ZeroPred  : MCSchedPredicate<CheckIsReg1Zero>;
+def IsReg2ZeroPred  : MCSchedPredicate<CheckIsReg2Zero>;
+def IsReg3ZeroPred  : MCSchedPredicate<CheckIsReg3Zero>;
+
 // Identify whether an instruction is NEON or floating point
 def CheckFpOrNEON : CheckFunctionPredicateWithTII<
   "AArch64_MC::isFpOrNEON",
@@ -288,11 +301,8 @@ def IsCopyIdiomFn     : TIIPredicate<"isCopyIdiom",
                                           [ORRWrs, ORRXrs],
                                           MCReturnStatement<
                                             CheckAll<
-                                              [CheckIsRegOperand<1>,
+                                              [CheckIsReg1Zero,
                                                CheckIsRegOperand<2>,
-                                               CheckAny<
-                                                 [CheckRegOperand<1, WZR>,
-                                                  CheckRegOperand<1, XZR>]>,
                                                CheckShiftBy0]>>>],
                                        MCReturnStatement<FalsePred>>>;
 def IsCopyIdiomPred   : MCSchedPredicate<IsCopyIdiomFn>;
@@ -305,10 +315,7 @@ def IsZeroIdiomFn     : TIIPredicate<"isZeroIdiom",
                                          [ORRWri, ORRXri],
                                          MCReturnStatement<
                                            CheckAll<
-                                             [CheckIsRegOperand<1>,
-                                              CheckAny<
-                                                [CheckRegOperand<1, WZR>,
-                                                 CheckRegOperand<1, XZR>]>,
+                                             [CheckIsReg1Zero,
                                               CheckZeroOperand<2>]>>>],
                                       MCReturnStatement<FalsePred>>>;
 def IsZeroIdiomPred   : MCSchedPredicate<IsZeroIdiomFn>;
@@ -333,6 +340,6 @@ def IsZeroFPIdiomFn   : TIIPredicate<"isZeroFPIdiom",
 def IsZeroFPIdiomPred : MCSchedPredicate<IsZeroFPIdiomFn>;
 
 // Identify EXTR as the alias for ROR (immediate).
-def IsRORImmIdiomPred : MCSchedPredicate<
+def IsRORImmIdiomPred : MCSchedPredicate< // EXTR Rd, Rs, Rs, #Imm
                           CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
                                     CheckSameRegOperand<1, 2>]>>;

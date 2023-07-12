@@ -7070,6 +7070,10 @@ SDValue ARMTargetLowering::LowerConstantFP(SDValue Op, SelectionDAG &DAG,
   // Prevent floating-point constants from using literal loads
   // when execute-only is enabled.
   if (ST->genExecuteOnly()) {
+    // We shouldn't trigger this for v6m execute-only
+    assert((!ST->isThumb1Only() || ST->hasV8MBaselineOps()) &&
+           "Unexpected architecture");
+
     // If we can represent the constant as an immediate, don't lower it
     if (isFPImmLegal(FPVal, VT))
       return Op;
@@ -11489,18 +11493,12 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
   // Load an immediate to varEnd.
   Register varEnd = MRI.createVirtualRegister(TRC);
   if (Subtarget->useMovt()) {
-    unsigned Vtmp = varEnd;
-    if ((LoopSize & 0xFFFF0000) != 0)
-      Vtmp = MRI.createVirtualRegister(TRC);
-    BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVi16 : ARM::MOVi16), Vtmp)
-        .addImm(LoopSize & 0xFFFF)
-        .add(predOps(ARMCC::AL));
-
-    if ((LoopSize & 0xFFFF0000) != 0)
-      BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVTi16 : ARM::MOVTi16), varEnd)
-          .addReg(Vtmp)
-          .addImm(LoopSize >> 16)
-          .add(predOps(ARMCC::AL));
+    BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVi32imm : ARM::MOVi32imm),
+            varEnd)
+        .addImm(LoopSize);
+  } else if (Subtarget->genExecuteOnly()) {
+    assert(IsThumb && "Non-thumb expected to have used movt");
+    BuildMI(BB, dl, TII->get(ARM::tMOVi32imm), varEnd).addImm(LoopSize);
   } else {
     MachineConstantPool *ConstantPool = MF->getConstantPool();
     Type *Int32Ty = Type::getInt32Ty(MF->getFunction().getContext());

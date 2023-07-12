@@ -4,7 +4,6 @@
 //
 // Note: gcc forces the alignment to 4 bytes, regardless of the type of the
 // zero length bitfield.
-// rdar://9859156
 
 #include <stddef.h>
 

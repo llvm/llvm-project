@@ -17,6 +17,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -1586,6 +1587,24 @@ LogicalResult transform::NamedSequenceOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::SelectOp::apply(transform::TransformRewriter &rewriter,
+                           transform::TransformResults &results,
+                           transform::TransformState &state) {
+  SmallVector<Operation *> result;
+  auto payloadOps = state.getPayloadOps(getTarget());
+  for (Operation *op : payloadOps) {
+    if (op->getName().getStringRef() == getOpName())
+      result.push_back(op);
+  }
+  results.set(cast<OpResult>(getResult()), result);
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // SplitHandleOp
 //===----------------------------------------------------------------------===//
 
@@ -2017,6 +2036,29 @@ void transform::PrintOp::getEffects(
   // There is no resource for stderr file descriptor, so just declare print
   // writes into the default resource.
   effects.emplace_back(MemoryEffects::Write::get());
+}
+
+//===----------------------------------------------------------------------===//
+// VerifyOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::VerifyOp::applyToOne(transform::TransformRewriter &rewriter,
+                                Operation *target,
+                                transform::ApplyToEachResultList &results,
+                                transform::TransformState &state) {
+  if (failed(::mlir::verify(target))) {
+    DiagnosedDefiniteFailure diag = emitDefiniteFailure()
+                                    << "failed to verify payload op";
+    diag.attachNote(target->getLoc()) << "payload op";
+    return diag;
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::VerifyOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
 }
 
 //===----------------------------------------------------------------------===//

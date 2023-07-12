@@ -115,7 +115,12 @@ C++23, informally referred to as C++26.</p>
  <tr>
   <td>Unevaluated strings</td>
   <td><a href="https://wg21.link/P2361R6">P2361R6</a></td>
-  <td class="none" align="center">No</td>
+  <td class="partial" align="center">
+    <details>
+      <summary>Clang 17 (Partial)</summary>
+      Attributes arguments don't yet parse as unevaluated string literals.
+    </details>
+  </td>
  </tr>
  <tr>
   <td>Add @, $, and ` to the basic character set</td>
@@ -351,7 +356,7 @@ C++23, informally referred to as C++26.</p>
     </tr>
     <tr>
       <td>Using unknown pointers and references in constant expressions</td>
-      <td><a href="https://wg21.link/P2280R4">P2280R4</a></td>
+      <td><a href="https://wg21.link/P2280R4">P2280R4</a> (<a href="#dr">DR</a>)</td>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
@@ -688,7 +693,7 @@ C++23, informally referred to as C++26.</p>
     <tr>
       <td rowspan=2>Immediate functions (<tt>consteval</tt>)</td>
       <td><a href="https://wg21.link/p1073r3">P1073R3</a></td>
-      <td class="full" align="center">Clang 17</td>
+      <td class="unreleased" align="center">Clang 17</td>
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1937r2">P1937R2</a></td>

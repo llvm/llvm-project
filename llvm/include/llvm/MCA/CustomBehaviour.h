@@ -156,8 +156,15 @@ public:
   // Instrument.Desc equal to Type
   virtual bool supportsInstrumentType(StringRef Type) const { return false; }
 
-  /// Allocate an Instrument, and return a unique pointer to it.
+  /// Allocate an Instrument, and return a unique pointer to it. This function
+  /// may be useful to create instruments coming from comments in the assembly.
+  /// See createInstruments to create Instruments from MCInst
   virtual UniqueInstrument createInstrument(StringRef Desc, StringRef Data);
+
+  /// Return a list of unique pointers to Instruments, where each Instrument
+  /// is allocated by this function. See createInstrument to create Instrument
+  /// from a description and data.
+  virtual SmallVector<UniqueInstrument> createInstruments(const MCInst &Inst);
 
   /// Given an MCInst and a vector of Instrument, a target can
   /// return a SchedClassID. This can be used by a subtarget to return a

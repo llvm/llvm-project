@@ -742,7 +742,8 @@ public:
 
   /// Returns whether or not generating a interleaved load/store intrinsic for
   /// this type will be legal.
-  bool isLegalInterleavedAccessType(VectorType *, unsigned Factor,
+  bool isLegalInterleavedAccessType(VectorType *VTy, unsigned Factor,
+                                    Align Alignment, unsigned AddrSpace,
                                     const DataLayout &) const;
 
   /// Return true if a stride load store of the given result type and

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__assert>
+#include <__thread/id.h>
 #include <limits>
 #include <mutex>
 

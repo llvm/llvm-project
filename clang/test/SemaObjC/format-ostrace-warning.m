@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -Wcstring-format-directive -verify -fsyntax-only %s
-// rdar://19904147
 
 typedef __builtin_va_list __darwin_va_list;
 typedef __builtin_va_list va_list;

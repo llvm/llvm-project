@@ -215,6 +215,7 @@ libcxx/include/__format/formatter_pointer.h
 libcxx/include/__format/formatter_string.h
 libcxx/include/__format/parser_std_format_spec.h
 libcxx/include/__format/unicode.h
+libcxx/include/__format/write_escaped.h
 libcxx/include/forward_list
 libcxx/include/fstream
 libcxx/include/__functional/binary_function.h
@@ -473,6 +474,7 @@ libcxx/include/__support/xlocale/__nop_locale_mgmt.h
 libcxx/include/__system_error/errc.h
 libcxx/include/thread
 libcxx/include/__thread/formatter.h
+libcxx/include/__thread/id.h
 libcxx/include/__threading_support
 libcxx/include/__thread/poll_with_backoff.h
 libcxx/include/__thread/this_thread.h

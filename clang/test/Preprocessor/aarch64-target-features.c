@@ -27,6 +27,7 @@
 // CHECK: __ARM_FEATURE_LDREX 0xF
 // CHECK: __ARM_FEATURE_NUMERIC_MAXMIN 1
 // CHECK-NOT: __ARM_FEATURE_RCPC 1
+// CHECK-NOT: __ARM_FEATURE_RCPC 3
 // CHECK-NOT: __ARM_FEATURE_SHA2 1
 // CHECK-NOT: __ARM_FEATURE_SHA3 1
 // CHECK-NOT: __ARM_FEATURE_SHA512 1
@@ -612,3 +613,6 @@
 
 // RUN: %clang --target=aarch64 -march=armv8.2-a+rcpc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-RCPC %s
 // CHECK-RCPC: __ARM_FEATURE_RCPC 1
+
+// RUN: %clang --target=aarch64 -march=armv8.2-a+rcpc3 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-RCPC3 %s
+// CHECK-RCPC3: __ARM_FEATURE_RCPC 3

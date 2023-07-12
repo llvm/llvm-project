@@ -290,6 +290,8 @@ public:
   bool doFinalization(Module &M) override;
 
   void emitTTypeReference(const GlobalValue *GV, unsigned Encoding) override;
+
+  void emitModuleCommandLines(Module &M) override;
 };
 
 } // end anonymous namespace
@@ -2952,6 +2954,26 @@ createPPCAsmPrinterPass(TargetMachine &tm,
     return new PPCAIXAsmPrinter(tm, std::move(Streamer));
 
   return new PPCLinuxAsmPrinter(tm, std::move(Streamer));
+}
+
+void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
+  const NamedMDNode *NMD = M.getNamedMetadata("llvm.commandline");
+  if (!NMD || !NMD->getNumOperands())
+    return;
+
+  std::string S;
+  raw_string_ostream RSOS(S);
+  for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i) {
+    const MDNode *N = NMD->getOperand(i);
+    assert(N->getNumOperands() == 1 &&
+           "llvm.commandline metadata entry can have only one operand");
+    const MDString *MDS = cast<MDString>(N->getOperand(0));
+    // Add "@(#)" to support retrieving the command line information with the
+    // AIX "what" command
+    RSOS << "@(#)opt " << MDS->getString() << "\n";
+    RSOS.write('\0');
+  }
+  OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
 }
 
 // Force static initialization.

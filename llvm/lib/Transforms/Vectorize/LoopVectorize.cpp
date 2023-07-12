@@ -630,10 +630,6 @@ protected:
   /// Create code for the loop exit value of the reduction.
   void fixReduction(VPReductionPHIRecipe *Phi, VPTransformState &State);
 
-  /// Clear NSW/NUW flags from reduction instructions if necessary.
-  void clearReductionWrapFlags(VPReductionPHIRecipe *PhiR,
-                               VPTransformState &State);
-
   /// Iteratively sink the scalarized operands of a predicated instruction into
   /// the block that was created for it.
   void sinkScalarOperands(Instruction *PredInst);
@@ -3929,9 +3925,6 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   // This is the vector-clone of the value that leaves the loop.
   Type *VecTy = State.get(LoopExitInstDef, 0)->getType();
 
-  // Wrap flags are in general invalid after vectorization, clear them.
-  clearReductionWrapFlags(PhiR, State);
-
   // Before each round, move the insertion point right between
   // the PHIs and the values we are going to write.
   // This allows us to write both PHINodes and the extractelement
@@ -4109,38 +4102,6 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
   int SelfEdgeBlockIdx = (IncomingEdgeBlockIdx ? 0 : 1);
   OrigPhi->setIncomingValue(SelfEdgeBlockIdx, BCBlockPhi);
   OrigPhi->setIncomingValue(IncomingEdgeBlockIdx, LoopExitInst);
-}
-
-void InnerLoopVectorizer::clearReductionWrapFlags(VPReductionPHIRecipe *PhiR,
-                                                  VPTransformState &State) {
-  const RecurrenceDescriptor &RdxDesc = PhiR->getRecurrenceDescriptor();
-  RecurKind RK = RdxDesc.getRecurrenceKind();
-  if (RK != RecurKind::Add && RK != RecurKind::Mul)
-    return;
-
-  SmallVector<VPValue *, 8> Worklist;
-  SmallPtrSet<VPValue *, 8> Visited;
-  Worklist.push_back(PhiR);
-  Visited.insert(PhiR);
-
-  while (!Worklist.empty()) {
-    VPValue *Cur = Worklist.pop_back_val();
-    for (unsigned Part = 0; Part < UF; ++Part) {
-      Value *V = State.get(Cur, Part);
-      if (!isa<OverflowingBinaryOperator>(V))
-        break;
-      cast<Instruction>(V)->dropPoisonGeneratingFlags();
-      }
-
-      for (VPUser *U : Cur->users()) {
-        auto *UserRecipe = dyn_cast<VPRecipeBase>(U);
-        if (!UserRecipe)
-          continue;
-        for (VPValue *V : UserRecipe->definedValues())
-          if (Visited.insert(V).second)
-            Worklist.push_back(V);
-      }
-  }
 }
 
 void InnerLoopVectorizer::sinkScalarOperands(Instruction *PredInst) {
@@ -5630,7 +5591,7 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
 }
 
 VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
-    const ElementCount MainLoopVF) {
+    const ElementCount MainLoopVF, unsigned IC) {
   VectorizationFactor Result = VectorizationFactor::Disabled();
   if (!EnableEpilogueVectorization) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization is disabled.\n");
@@ -5686,6 +5647,9 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
       EstimatedRuntimeVF *= *VScale;
   }
 
+  ScalarEvolution &SE = *PSE.getSE();
+  Type *TCType = Legal->getWidestInductionType();
+  const SCEV *RemainingIterations = nullptr;
   for (auto &NextVF : ProfitableVFs) {
     // Skip candidate VFs without a corresponding VPlan.
     if (!hasPlanWithVF(NextVF.Width))
@@ -5697,6 +5661,22 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
          ElementCount::isKnownGE(NextVF.Width, EstimatedRuntimeVF)) ||
         ElementCount::isKnownGE(NextVF.Width, MainLoopVF))
       continue;
+
+    // If NextVF is greater than the number of remaining iterations, the
+    // epilogue loop would be dead. Skip such factors.
+    if (!MainLoopVF.isScalable() && !NextVF.Width.isScalable()) {
+      // TODO: extend to support scalable VFs.
+      if (!RemainingIterations) {
+        const SCEV *TC = createTripCountSCEV(TCType, PSE, OrigLoop);
+        RemainingIterations = SE.getURemExpr(
+            TC, SE.getConstant(TCType, MainLoopVF.getKnownMinValue() * IC));
+      }
+      if (SE.isKnownPredicate(
+              CmpInst::ICMP_UGT,
+              SE.getConstant(TCType, NextVF.Width.getKnownMinValue()),
+              RemainingIterations))
+        continue;
+    }
 
     if (Result.Width.isScalar() || isMoreProfitable(NextVF, Result))
       Result = NextVF;
@@ -9298,6 +9278,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       Builder.createNaryOp(Instruction::Select, {Cond, Red, PhiR});
     }
   }
+
+  VPlanTransforms::clearReductionWrapFlags(*Plan);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -10470,7 +10452,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
       // Consider vectorizing the epilogue too if it's profitable.
       VectorizationFactor EpilogueVF =
-          LVP.selectEpilogueVectorizationFactor(VF.Width);
+          LVP.selectEpilogueVectorizationFactor(VF.Width, IC);
       if (EpilogueVF.Width.isVector()) {
 
         // The first pass vectorizes the main loop and creates a scalar epilogue

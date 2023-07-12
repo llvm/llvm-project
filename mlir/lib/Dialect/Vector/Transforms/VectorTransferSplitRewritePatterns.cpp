@@ -166,6 +166,24 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
       StridedLayoutAttr::get(aT.getContext(), resOffset, resStrides));
 }
 
+/// Casts the given memref to a compatible memref type. If the source memref has
+/// a different address space than the target type, a `memref.memory_space_cast`
+/// is first inserted, followed by a `memref.cast`.
+static Value castToCompatibleMemRefType(OpBuilder &b, Value memref,
+                                        MemRefType compatibleMemRefType) {
+  MemRefType sourceType = memref.getType().cast<MemRefType>();
+  Value res = memref;
+  if (sourceType.getMemorySpace() != compatibleMemRefType.getMemorySpace()) {
+    sourceType = MemRefType::get(
+        sourceType.getShape(), sourceType.getElementType(),
+        sourceType.getLayout(), compatibleMemRefType.getMemorySpace());
+    res = b.create<memref::MemorySpaceCastOp>(memref.getLoc(), sourceType, res);
+  }
+  if (sourceType == compatibleMemRefType)
+    return res;
+  return b.create<memref::CastOp>(memref.getLoc(), compatibleMemRefType, res);
+}
+
 /// Operates under a scoped context to build the intersection between the
 /// view `xferOp.source()` @ `xferOp.indices()` and the view `alloc`.
 // TODO: view intersection/union/differences should be a proper std op.
@@ -215,6 +233,7 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
 /// Produce IR resembling:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
+///      (memref.memory_space_cast %A: memref<A..., addr_space> to memref<A...>)
 ///      %view = memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
@@ -237,9 +256,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
   return b.create<scf::IfOp>(
       loc, inBoundsCond,
       [&](OpBuilder &b, Location loc) {
-        Value res = memref;
-        if (compatibleMemRefType != xferOp.getShapedType())
-          res = b.create<memref::CastOp>(loc, compatibleMemRefType, memref);
+        Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getIndices().begin(),
                               xferOp.getIndices().end());
@@ -256,7 +273,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
             alloc);
         b.create<memref::CopyOp>(loc, copyArgs.first, copyArgs.second);
         Value casted =
-            b.create<memref::CastOp>(loc, compatibleMemRefType, alloc);
+            castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
@@ -270,6 +287,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
 /// Produce IR resembling:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
+///      (memref.memory_space_cast %A: memref<A..., addr_space> to memref<A...>)
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
@@ -292,9 +310,7 @@ static scf::IfOp createFullPartialVectorTransferRead(
   return b.create<scf::IfOp>(
       loc, inBoundsCond,
       [&](OpBuilder &b, Location loc) {
-        Value res = memref;
-        if (compatibleMemRefType != xferOp.getShapedType())
-          res = b.create<memref::CastOp>(loc, compatibleMemRefType, memref);
+        Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getIndices().begin(),
                               xferOp.getIndices().end());
@@ -309,7 +325,7 @@ static scf::IfOp createFullPartialVectorTransferRead(
                 loc, MemRefType::get({}, vector.getType()), alloc));
 
         Value casted =
-            b.create<memref::CastOp>(loc, compatibleMemRefType, alloc);
+            castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
@@ -343,9 +359,8 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
       .create<scf::IfOp>(
           loc, inBoundsCond,
           [&](OpBuilder &b, Location loc) {
-            Value res = memref;
-            if (compatibleMemRefType != xferOp.getShapedType())
-              res = b.create<memref::CastOp>(loc, compatibleMemRefType, memref);
+            Value res =
+                castToCompatibleMemRefType(b, memref, compatibleMemRefType);
             scf::ValueVector viewAndIndices{res};
             viewAndIndices.insert(viewAndIndices.end(),
                                   xferOp.getIndices().begin(),
@@ -354,7 +369,7 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
           },
           [&](OpBuilder &b, Location loc) {
             Value casted =
-                b.create<memref::CastOp>(loc, compatibleMemRefType, alloc);
+                castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
             scf::ValueVector viewAndIndices{casted};
             viewAndIndices.insert(viewAndIndices.end(),
                                   xferOp.getTransferRank(), zero);

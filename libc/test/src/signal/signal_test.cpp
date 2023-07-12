@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/signal.h"
 #include "src/errno/libc_errno.h"
 #include "src/signal/raise.h"
 #include "src/signal/signal.h"
 
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+
+#include <signal.h>
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
 using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;

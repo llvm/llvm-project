@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - | FileCheck %s
-// rdar://10188258
 
 struct Foo {int i;};
 static Foo gFoo;

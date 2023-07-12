@@ -126,7 +126,6 @@ void (A::*a)();
 void (B::*b)() = reinterpret_cast<void (B::*)()>(a);
 }
 
-// <rdar://problem/8018292>
 void const_arrays() {
   typedef char STRING[10];
   const STRING *s;

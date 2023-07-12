@@ -471,7 +471,8 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
       // it's getMemoryOpCost returns a really expensive cost for types like
       // <6 x i8>, which show up when doing interleaves of Factor=3 etc.
       // Should the memory op cost of these be cheaper?
-      if (TLI->isLegalInterleavedAccessType(LegalFVTy, Factor, DL)) {
+      if (TLI->isLegalInterleavedAccessType(LegalFVTy, Factor, Alignment,
+                                            AddressSpace, DL)) {
         InstructionCost LegalMemCost = getMemoryOpCost(
             Opcode, LegalFVTy, Alignment, AddressSpace, CostKind);
         return LT.first + LegalMemCost;

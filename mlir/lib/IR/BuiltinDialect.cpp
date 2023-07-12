@@ -60,6 +60,10 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
       os << "loc";
       return AliasResult::OverridableAlias;
     }
+    if (llvm::isa<DistinctAttr>(attr)) {
+      os << "distinct";
+      return AliasResult::OverridableAlias;
+    }
     return AliasResult::NoAlias;
   }
 

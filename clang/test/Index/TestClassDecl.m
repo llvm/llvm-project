@@ -3,7 +3,7 @@
 // RUN: c-index-test -test-load-tu %t.ast local | FileCheck -check-prefix=CHECK-load %s
 
 // This test checks how the @class resolves as a cursor when there is a real definition
-// that follows. <rdar://problem/7383421>
+// that follows.
 
 @class Foo;
 

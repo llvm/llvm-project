@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://9224670
 
 @interface RandomObject {
 @private
@@ -32,8 +31,6 @@ int main (void)
     Class<Test2Protocol> c2 = [c2 alloc]; //  ok
     return 0;
 }
-
-// rdar://22812517
 
 @protocol NSObject
 

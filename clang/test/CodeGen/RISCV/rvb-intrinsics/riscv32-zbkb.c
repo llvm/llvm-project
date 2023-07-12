@@ -10,9 +10,9 @@
 // RV32ZBKB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.brev8.i32(i32 [[TMP0]])
 // RV32ZBKB-NEXT:    ret i32 [[TMP1]]
 //
-long brev8(long rs1)
+int brev8(int rs1)
 {
-  return __builtin_riscv_brev8(rs1);
+  return __builtin_riscv_brev8_32(rs1);
 }
 
 // RV32ZBKB-LABEL: @zip(

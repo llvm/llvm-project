@@ -2672,6 +2672,9 @@ HasNonDeletedDefaultedEqualityComparison(const CXXRecordDecl *Decl) {
                       }) &&
          llvm::all_of(Decl->fields(), [](const FieldDecl *FD) {
            auto Type = FD->getType();
+           if (Type->isArrayType())
+             Type = Type->getBaseElementTypeUnsafe()->getCanonicalTypeUnqualified();
+
            if (Type->isReferenceType() || Type->isEnumeralType())
              return false;
            if (const auto *RD = Type->getAsCXXRecordDecl())

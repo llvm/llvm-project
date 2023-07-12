@@ -242,6 +242,16 @@ private: // Semantic analysis methods.
                SMLoc *Loc = nullptr);
   bool addDefOne(std::unique_ptr<Record> Rec);
 
+  using ArgValueHandler = std::function<void(Init *, Init *)>;
+  bool resolveArguments(
+      Record *Rec, ArrayRef<ArgumentInit *> ArgValues, SMLoc Loc,
+      ArgValueHandler ArgValueHandler = [](Init *, Init *) {});
+  bool resolveArgumentsOfClass(MapResolver &R, Record *Rec,
+                               ArrayRef<ArgumentInit *> ArgValues, SMLoc Loc);
+  bool resolveArgumentsOfMultiClass(SubstStack &Substs, MultiClass *MC,
+                                    ArrayRef<ArgumentInit *> ArgValues,
+                                    Init *DefmName, SMLoc Loc);
+
 private:  // Parser methods.
   bool consume(tgtok::TokKind K);
   bool ParseObjectList(MultiClass *MC = nullptr);
@@ -278,7 +288,7 @@ private:  // Parser methods.
                    IDParseMode Mode = ParseValueMode);
   void ParseValueList(SmallVectorImpl<llvm::Init*> &Result,
                       Record *CurRec, RecTy *ItemType = nullptr);
-  bool ParseTemplateArgValueList(SmallVectorImpl<llvm::Init *> &Result,
+  bool ParseTemplateArgValueList(SmallVectorImpl<llvm::ArgumentInit *> &Result,
                                  Record *CurRec, Record *ArgsRec);
   void ParseDagArgList(
       SmallVectorImpl<std::pair<llvm::Init*, StringInit*>> &Result,
@@ -302,7 +312,7 @@ private:  // Parser methods.
   MultiClass *ParseMultiClassID();
   bool ApplyLetStack(Record *CurRec);
   bool ApplyLetStack(RecordsEntry &Entry);
-  bool CheckTemplateArgValues(SmallVectorImpl<llvm::Init *> &Values,
+  bool CheckTemplateArgValues(SmallVectorImpl<llvm::ArgumentInit *> &Values,
                               SMLoc Loc, Record *ArgsRec);
 };
 

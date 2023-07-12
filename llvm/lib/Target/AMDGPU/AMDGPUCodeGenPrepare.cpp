@@ -99,7 +99,7 @@ public:
   Module *Mod = nullptr;
   const DataLayout *DL = nullptr;
   bool HasUnsafeFPMath = false;
-  bool HasFP32Denormals = false;
+  bool HasFP32DenormalFlush = false;
   bool FlowChanged = false;
 
   DenseMap<const PHINode *, bool> BreakPhiNodesCache;
@@ -235,7 +235,6 @@ public:
 
 public:
   bool visitFDiv(BinaryOperator &I);
-  bool visitXor(BinaryOperator &I);
 
   bool visitInstruction(Instruction &I) { return false; }
   bool visitBinaryOperator(BinaryOperator &I);
@@ -794,8 +793,8 @@ static Value *optimizeWithRcp(Value *Num, Value *Den, bool AllowInaccurateRcp,
 //
 // NOTE: optimizeWithRcp should be tried first because rcp is the preference.
 static Value *optimizeWithFDivFast(Value *Num, Value *Den, float ReqdAccuracy,
-                                   bool HasDenormals, IRBuilder<> &Builder,
-                                   Module *Mod) {
+                                   bool HasFP32DenormalFlush,
+                                   IRBuilder<> &Builder, Module *Mod) {
   // fdiv.fast can achieve 2.5 ULP accuracy.
   if (ReqdAccuracy < 2.5f)
     return nullptr;
@@ -812,7 +811,7 @@ static Value *optimizeWithFDivFast(Value *Num, Value *Den, float ReqdAccuracy,
   }
 
   // fdiv does not support denormals. But 1.0/x is always fine to use it.
-  if (HasDenormals && !NumIsOne)
+  if (!HasFP32DenormalFlush && !NumIsOne)
     return nullptr;
 
   Function *Decl = Intrinsic::getDeclaration(Mod, Intrinsic::amdgcn_fdiv_fast);
@@ -852,7 +851,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   // rcp_f16 is accurate to 0.51 ulp.
   // rcp_f32 is accurate for !fpmath >= 1.0ulp and denormals are flushed.
   // rcp_f64 is never accurate.
-  const bool RcpIsAccurate = !HasFP32Denormals && ReqdAccuracy >= 1.0f;
+  const bool RcpIsAccurate = HasFP32DenormalFlush && ReqdAccuracy >= 1.0f;
 
   IRBuilder<> Builder(FDiv.getParent(), std::next(FDiv.getIterator()));
   Builder.setFastMathFlags(FMF);
@@ -874,8 +873,8 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
       Value *NewElt = optimizeWithRcp(NumEltI, DenEltI, AllowInaccurateRcp,
                                       RcpIsAccurate, Builder, Mod);
       if (!NewElt) // Try fdiv.fast.
-        NewElt = optimizeWithFDivFast(NumEltI, DenEltI, ReqdAccuracy,
-                                      HasFP32Denormals, Builder, Mod);
+         NewElt = optimizeWithFDivFast(NumEltI, DenEltI, ReqdAccuracy,
+                                       HasFP32DenormalFlush, Builder, Mod);
       if (!NewElt) // Keep the original.
         NewElt = Builder.CreateFDiv(NumEltI, DenEltI);
 
@@ -886,8 +885,8 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
     NewFDiv = optimizeWithRcp(Num, Den, AllowInaccurateRcp, RcpIsAccurate,
                               Builder, Mod);
     if (!NewFDiv) { // Try fdiv.fast.
-      NewFDiv = optimizeWithFDivFast(Num, Den, ReqdAccuracy, HasFP32Denormals,
-                                     Builder, Mod);
+      NewFDiv = optimizeWithFDivFast(Num, Den, ReqdAccuracy,
+                                     HasFP32DenormalFlush, Builder, Mod);
     }
   }
 
@@ -898,31 +897,6 @@ bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
   }
 
   return !!NewFDiv;
-}
-
-bool AMDGPUCodeGenPrepareImpl::visitXor(BinaryOperator &I) {
-  // Match the Xor instruction, its type and its operands
-  IntrinsicInst *IntrinsicCall = dyn_cast<IntrinsicInst>(I.getOperand(0));
-  ConstantInt *RHS = dyn_cast<ConstantInt>(I.getOperand(1));
-  if (!RHS || !IntrinsicCall || RHS->getSExtValue() != -1)
-    return visitBinaryOperator(I);
-
-  // Check if the Call is an intrinsic instruction to amdgcn_class intrinsic
-  // has only one use
-  if (IntrinsicCall->getIntrinsicID() != Intrinsic::amdgcn_class ||
-      !IntrinsicCall->hasOneUse())
-    return visitBinaryOperator(I);
-
-  // "Not" the second argument of the intrinsic call
-  ConstantInt *Arg = dyn_cast<ConstantInt>(IntrinsicCall->getOperand(1));
-  if (!Arg)
-    return visitBinaryOperator(I);
-
-  IntrinsicCall->setOperand(
-      1, ConstantInt::get(Arg->getType(), Arg->getZExtValue() ^ 0x3ff));
-  I.replaceAllUsesWith(IntrinsicCall);
-  I.eraseFromParent();
-  return true;
 }
 
 static bool hasUnsafeFPMath(const Function &F) {
@@ -1858,7 +1832,8 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
   Impl.DT = DTWP ? &DTWP->getDomTree() : nullptr;
   Impl.HasUnsafeFPMath = hasUnsafeFPMath(F);
   SIModeRegisterDefaults Mode(F, *Impl.ST);
-  Impl.HasFP32Denormals = Mode.allFP32Denormals();
+  Impl.HasFP32DenormalFlush =
+      Mode.FP32Denormals == DenormalMode::getPreserveSign();
   return Impl.run(F);
 }
 
@@ -1874,7 +1849,8 @@ PreservedAnalyses AMDGPUCodeGenPreparePass::run(Function &F,
   Impl.DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   Impl.HasUnsafeFPMath = hasUnsafeFPMath(F);
   SIModeRegisterDefaults Mode(F, *Impl.ST);
-  Impl.HasFP32Denormals = Mode.allFP32Denormals();
+  Impl.HasFP32DenormalFlush =
+      Mode.FP32Denormals == DenormalMode::getPreserveSign();
   PreservedAnalyses PA = PreservedAnalyses::none();
   if (!Impl.FlowChanged)
     PA.preserveSet<CFGAnalyses>();

@@ -362,7 +362,9 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
     return true;
   }
   if (CurrentState.BreakBeforeClosingBrace &&
-      Current.closesBlockOrBlockTypeList(Style)) {
+      (Current.closesBlockOrBlockTypeList(Style) ||
+       (Current.is(tok::r_brace) &&
+        Current.isBlockIndentedInitRBrace(Style)))) {
     return true;
   }
   if (CurrentState.BreakBeforeClosingParen && Current.is(tok::r_paren))
@@ -615,10 +617,10 @@ unsigned ContinuationIndenter::addTokenToState(LineState &State, bool Newline,
   assert(!State.Stack.empty());
   State.NoContinuation = false;
 
-  if ((Current.is(TT_ImplicitStringLiteral) &&
-       (!Previous.Tok.getIdentifierInfo() ||
-        Previous.Tok.getIdentifierInfo()->getPPKeywordID() ==
-            tok::pp_not_keyword))) {
+  if (Current.is(TT_ImplicitStringLiteral) &&
+      (!Previous.Tok.getIdentifierInfo() ||
+       Previous.Tok.getIdentifierInfo()->getPPKeywordID() ==
+           tok::pp_not_keyword)) {
     unsigned EndColumn =
         SourceMgr.getSpellingColumnNumber(Current.WhitespaceRange.getEnd());
     if (Current.LastNewlineOffset != 0) {
@@ -1168,7 +1170,10 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent &&
-      Current.is(tok::r_paren) && State.Stack.size() > 1) {
+      (Current.is(tok::r_paren) ||
+       (Current.is(tok::r_brace) &&
+        Current.MatchingParen->is(BK_BracedInit))) &&
+      State.Stack.size() > 1) {
     return State.Stack[State.Stack.size() - 2].LastSpace;
   }
   if (NextNonComment->is(TT_TemplateString) && NextNonComment->closesScope())
