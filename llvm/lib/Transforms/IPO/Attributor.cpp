@@ -3501,18 +3501,21 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   assert(Success && "Expected the check call to be successful!");
 
   auto LoadStorePred = [&](Instruction &I) -> bool {
-    if (isa<LoadInst>(I)) {
-      getOrCreateAAFor<AAAlign>(
-          IRPosition::value(*cast<LoadInst>(I).getPointerOperand()));
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      getOrCreateAAFor<AAAlign>(IRPosition::value(*LI->getPointerOperand()));
       if (SimplifyAllLoads)
         getAssumedSimplified(IRPosition::value(I), nullptr,
                              UsedAssumedInformation, AA::Intraprocedural);
+      getOrCreateAAFor<AAAddressSpace>(
+          IRPosition::value(*LI->getPointerOperand()));
     } else {
       auto &SI = cast<StoreInst>(I);
       getOrCreateAAFor<AAIsDead>(IRPosition::inst(I));
       getAssumedSimplified(IRPosition::value(*SI.getValueOperand()), nullptr,
                            UsedAssumedInformation, AA::Intraprocedural);
       getOrCreateAAFor<AAAlign>(IRPosition::value(*SI.getPointerOperand()));
+      getOrCreateAAFor<AAAddressSpace>(
+          IRPosition::value(*SI.getPointerOperand()));
     }
     return true;
   };
