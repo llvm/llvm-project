@@ -13,10 +13,12 @@
 #include "flang/Lower/OpenACC.h"
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
+#include "flang/Lower/ConvertType.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -712,11 +714,17 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
           loc, ty,
           builder.getFloatAttr(ty,
                                getReductionInitValue<llvm::APFloat>(op, ty)));
-  } else {
-    if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty))
-      return builder.create<mlir::arith::ConstantOp>(
-          loc, ty,
-          builder.getFloatAttr(ty, getReductionInitValue<int64_t>(op, ty)));
+  } else if (auto floatTy = mlir::dyn_cast_or_null<mlir::FloatType>(ty)) {
+    return builder.create<mlir::arith::ConstantOp>(
+        loc, ty,
+        builder.getFloatAttr(ty, getReductionInitValue<int64_t>(op, ty)));
+  } else if (auto cmplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(ty)) {
+    mlir::Type floatTy =
+        Fortran::lower::convertReal(builder.getContext(), cmplxTy.getFKind());
+    mlir::Value init = builder.createRealConstant(
+        loc, floatTy, getReductionInitValue<int64_t>(op, cmplxTy));
+    return fir::factory::Complex{builder, loc}.createComplex(cmplxTy.getFKind(),
+                                                             init, init);
   }
   if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
@@ -738,7 +746,7 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
     }
   }
 
-  TODO(loc, "reduction type");
+  llvm::report_fatal_error("Unsupported OpenACC reduction type");
 }
 
 template <typename Op>
@@ -808,6 +816,8 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
       return builder.create<mlir::arith::AddIOp>(loc, value1, value2);
     if (mlir::isa<mlir::FloatType>(ty))
       return builder.create<mlir::arith::AddFOp>(loc, value1, value2);
+    if (auto cmplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(ty))
+      return builder.create<fir::AddcOp>(loc, value1, value2);
     TODO(loc, "reduction add type");
   }
 

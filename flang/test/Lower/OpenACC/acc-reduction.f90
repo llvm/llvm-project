@@ -2,6 +2,19 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.reduction.recipe @reduction_add_z32 : !fir.complex<4> reduction_operator <add> init {
+! CHECK: ^bb0(%{{.*}}: !fir.complex<4>):
+! CHECK:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK:   %[[UNDEF:.*]] = fir.undefined !fir.complex<4>
+! CHECK:   %[[UNDEF1:.*]] = fir.insert_value %[[UNDEF]], %[[CST]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:   %[[UNDEF2:.*]] = fir.insert_value %[[UNDEF1]], %[[CST]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:   acc.yield %[[UNDEF2]] : !fir.complex<4>
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.complex<4>, %[[ARG1:.*]]: !fir.complex<4>):
+! CHECK:   %[[COMBINED:.*]] = fir.addc %[[ARG0]], %[[ARG1]] : !fir.complex<4> 
+! CHECK:   acc.yield %[[COMBINED]] : !fir.complex<4>
+! CHECK: }
+
 ! CHECK-LABEL: acc.reduction.recipe @reduction_neqv_l32 : !fir.logical<4> reduction_operator <neqv> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.logical<4>):
 ! CHECK:   %[[CST:.*]] = arith.constant false
@@ -729,3 +742,13 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_neqv()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(@reduction_neqv_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+
+subroutine acc_reduction_add_cmplx()
+  complex :: c
+  !$acc parallel reduction(+:c)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_cmplx()
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>> {name = "c"}
+! CHECK: acc.parallel reduction(@reduction_add_z32 -> %[[RED]] : !fir.ref<!fir.complex<4>>)
