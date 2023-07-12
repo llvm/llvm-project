@@ -163,7 +163,7 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
          "InsertNoopCastOfTo cannot change sizes!");
 
   // inttoptr only works for integral pointers. For non-integral pointers, we
-  // can create a GEP on i8* null  with the integral value as index. Note that
+  // can create a GEP on null with the integral value as index. Note that
   // it is safe to use GEP of null instead of inttoptr here, because only
   // expressions already based on a GEP of null should be converted to pointers
   // during expansion.
@@ -173,9 +173,8 @@ Value *SCEVExpander::InsertNoopCastOfTo(Value *V, Type *Ty) {
       auto *Int8PtrTy = Builder.getInt8PtrTy(PtrTy->getAddressSpace());
       assert(DL.getTypeAllocSize(Builder.getInt8Ty()) == 1 &&
              "alloc size of i8 must by 1 byte for the GEP to be correct");
-      auto *GEP = Builder.CreateGEP(
+      return Builder.CreateGEP(
           Builder.getInt8Ty(), Constant::getNullValue(Int8PtrTy), V, "scevgep");
-      return Builder.CreateBitCast(GEP, Ty);
     }
   }
   // Short-circuit unnecessary bitcasts.
@@ -451,212 +450,66 @@ static void SplitAddRecs(SmallVectorImpl<const SCEV *> &Ops,
 /// can be folded using target addressing modes.
 ///
 Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
-                                    const SCEV *const *op_end,
-                                    PointerType *PTy,
-                                    Type *Ty,
+                                    const SCEV *const *op_end, Type *Ty,
                                     Value *V) {
-  SmallVector<Value *, 4> GepIndices;
   SmallVector<const SCEV *, 8> Ops(op_begin, op_end);
-  bool AnyNonZeroIndices = false;
 
   // Split AddRecs up into parts as either of the parts may be usable
   // without the other.
   SplitAddRecs(Ops, Ty, SE);
 
-  Type *IntIdxTy = DL.getIndexType(PTy);
+  assert(!isa<Instruction>(V) ||
+         SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
-  // For opaque pointers, always generate i8 GEP.
-  if (!PTy->isOpaque()) {
-    // Descend down the pointer's type and attempt to convert the other
-    // operands into GEP indices, at each level. The first index in a GEP
-    // indexes into the array implied by the pointer operand; the rest of
-    // the indices index into the element or field type selected by the
-    // preceding index.
-    Type *ElTy = PTy->getNonOpaquePointerElementType();
-    for (;;) {
-      // If the scale size is not 0, attempt to factor out a scale for
-      // array indexing.
-      SmallVector<const SCEV *, 8> ScaledOps;
-      if (ElTy->isSized()) {
-        const SCEV *ElSize = SE.getSizeOfExpr(IntIdxTy, ElTy);
-        if (!ElSize->isZero()) {
-          SmallVector<const SCEV *, 8> NewOps;
-          for (const SCEV *Op : Ops) {
-            const SCEV *Remainder = SE.getConstant(Ty, 0);
-            if (FactorOutConstant(Op, Remainder, ElSize, SE, DL)) {
-              // Op now has ElSize factored out.
-              ScaledOps.push_back(Op);
-              if (!Remainder->isZero())
-                NewOps.push_back(Remainder);
-              AnyNonZeroIndices = true;
-            } else {
-              // The operand was not divisible, so add it to the list of
-              // operands we'll scan next iteration.
-              NewOps.push_back(Op);
-            }
-          }
-          // If we made any changes, update Ops.
-          if (!ScaledOps.empty()) {
-            Ops = NewOps;
-            SimplifyAddOperands(Ops, Ty, SE);
-          }
-        }
-      }
+  // Expand the operands for a plain byte offset.
+  Value *Idx = expandCodeForImpl(SE.getAddExpr(Ops), Ty);
 
-      // Record the scaled array index for this level of the type. If
-      // we didn't find any operands that could be factored, tentatively
-      // assume that element zero was selected (since the zero offset
-      // would obviously be folded away).
-      Value *Scaled =
-          ScaledOps.empty()
-              ? Constant::getNullValue(Ty)
-              : expandCodeForImpl(SE.getAddExpr(ScaledOps), Ty);
-      GepIndices.push_back(Scaled);
+  // Fold a GEP with constant operands.
+  if (Constant *CLHS = dyn_cast<Constant>(V))
+    if (Constant *CRHS = dyn_cast<Constant>(Idx))
+      return Builder.CreateGEP(Builder.getInt8Ty(), CLHS, CRHS);
 
-      // Collect struct field index operands.
-      while (StructType *STy = dyn_cast<StructType>(ElTy)) {
-        bool FoundFieldNo = false;
-        // An empty struct has no fields.
-        if (STy->getNumElements() == 0) break;
-        // Field offsets are known. See if a constant offset falls within any of
-        // the struct fields.
-        if (Ops.empty())
-          break;
-        assert(
-            !STy->containsScalableVectorType() &&
-            "GEPs are not supported on structures containing scalable vectors");
-        if (const SCEVConstant *C = dyn_cast<SCEVConstant>(Ops[0]))
-          if (SE.getTypeSizeInBits(C->getType()) <= 64) {
-            const StructLayout &SL = *DL.getStructLayout(STy);
-            uint64_t FullOffset = C->getValue()->getZExtValue();
-            if (FullOffset < SL.getSizeInBytes()) {
-              unsigned ElIdx = SL.getElementContainingOffset(FullOffset);
-              GepIndices.push_back(
-                  ConstantInt::get(Type::getInt32Ty(Ty->getContext()), ElIdx));
-              ElTy = STy->getTypeAtIndex(ElIdx);
-              Ops[0] =
-                  SE.getConstant(Ty, FullOffset - SL.getElementOffset(ElIdx));
-              AnyNonZeroIndices = true;
-              FoundFieldNo = true;
-            }
-          }
-        // If no struct field offsets were found, tentatively assume that
-        // field zero was selected (since the zero offset would obviously
-        // be folded away).
-        if (!FoundFieldNo) {
-          ElTy = STy->getTypeAtIndex(0u);
-          GepIndices.push_back(
-            Constant::getNullValue(Type::getInt32Ty(Ty->getContext())));
-        }
-      }
-
-      if (ArrayType *ATy = dyn_cast<ArrayType>(ElTy))
-        ElTy = ATy->getElementType();
-      else
-        // FIXME: Handle VectorType.
-        // E.g., If ElTy is scalable vector, then ElSize is not a compile-time
-        // constant, therefore can not be factored out. The generated IR is less
-        // ideal with base 'V' cast to i8* and do ugly getelementptr over that.
-        break;
+  // Do a quick scan to see if we have this GEP nearby.  If so, reuse it.
+  unsigned ScanLimit = 6;
+  BasicBlock::iterator BlockBegin = Builder.GetInsertBlock()->begin();
+  // Scanning starts from the last instruction before the insertion point.
+  BasicBlock::iterator IP = Builder.GetInsertPoint();
+  if (IP != BlockBegin) {
+    --IP;
+    for (; ScanLimit; --IP, --ScanLimit) {
+      // Don't count dbg.value against the ScanLimit, to avoid perturbing the
+      // generated code.
+      if (isa<DbgInfoIntrinsic>(IP))
+        ScanLimit++;
+      if (IP->getOpcode() == Instruction::GetElementPtr &&
+          IP->getOperand(0) == V && IP->getOperand(1) == Idx &&
+          cast<GEPOperator>(&*IP)->getSourceElementType() ==
+              Type::getInt8Ty(Ty->getContext()))
+        return &*IP;
+      if (IP == BlockBegin) break;
     }
   }
 
-  // If none of the operands were convertible to proper GEP indices, cast
-  // the base to i8* and do an ugly getelementptr with that. It's still
-  // better than ptrtoint+arithmetic+inttoptr at least.
-  if (!AnyNonZeroIndices) {
-    // Cast the base to i8*.
-    if (!PTy->isOpaque())
-      V = InsertNoopCastOfTo(V,
-         Type::getInt8PtrTy(Ty->getContext(), PTy->getAddressSpace()));
+  // Save the original insertion point so we can restore it when we're done.
+  SCEVInsertPointGuard Guard(Builder, this);
 
-    assert(!isa<Instruction>(V) ||
-           SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
+  // Move the insertion point out of as many loops as we can.
+  while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
+    if (!L->isLoopInvariant(V) || !L->isLoopInvariant(Idx)) break;
+    BasicBlock *Preheader = L->getLoopPreheader();
+    if (!Preheader) break;
 
-    // Expand the operands for a plain byte offset.
-    Value *Idx = expandCodeForImpl(SE.getAddExpr(Ops), Ty);
-
-    // Fold a GEP with constant operands.
-    if (Constant *CLHS = dyn_cast<Constant>(V))
-      if (Constant *CRHS = dyn_cast<Constant>(Idx))
-        return Builder.CreateGEP(Builder.getInt8Ty(), CLHS, CRHS);
-
-    // Do a quick scan to see if we have this GEP nearby.  If so, reuse it.
-    unsigned ScanLimit = 6;
-    BasicBlock::iterator BlockBegin = Builder.GetInsertBlock()->begin();
-    // Scanning starts from the last instruction before the insertion point.
-    BasicBlock::iterator IP = Builder.GetInsertPoint();
-    if (IP != BlockBegin) {
-      --IP;
-      for (; ScanLimit; --IP, --ScanLimit) {
-        // Don't count dbg.value against the ScanLimit, to avoid perturbing the
-        // generated code.
-        if (isa<DbgInfoIntrinsic>(IP))
-          ScanLimit++;
-        if (IP->getOpcode() == Instruction::GetElementPtr &&
-            IP->getOperand(0) == V && IP->getOperand(1) == Idx &&
-            cast<GEPOperator>(&*IP)->getSourceElementType() ==
-                Type::getInt8Ty(Ty->getContext()))
-          return &*IP;
-        if (IP == BlockBegin) break;
-      }
-    }
-
-    // Save the original insertion point so we can restore it when we're done.
-    SCEVInsertPointGuard Guard(Builder, this);
-
-    // Move the insertion point out of as many loops as we can.
-    while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
-      if (!L->isLoopInvariant(V) || !L->isLoopInvariant(Idx)) break;
-      BasicBlock *Preheader = L->getLoopPreheader();
-      if (!Preheader) break;
-
-      // Ok, move up a level.
-      Builder.SetInsertPoint(Preheader->getTerminator());
-    }
-
-    // Emit a GEP.
-    return Builder.CreateGEP(Builder.getInt8Ty(), V, Idx, "scevgep");
+    // Ok, move up a level.
+    Builder.SetInsertPoint(Preheader->getTerminator());
   }
 
-  {
-    SCEVInsertPointGuard Guard(Builder, this);
-
-    // Move the insertion point out of as many loops as we can.
-    while (const Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock())) {
-      if (!L->isLoopInvariant(V)) break;
-
-      bool AnyIndexNotLoopInvariant = any_of(
-          GepIndices, [L](Value *Op) { return !L->isLoopInvariant(Op); });
-
-      if (AnyIndexNotLoopInvariant)
-        break;
-
-      BasicBlock *Preheader = L->getLoopPreheader();
-      if (!Preheader) break;
-
-      // Ok, move up a level.
-      Builder.SetInsertPoint(Preheader->getTerminator());
-    }
-
-    // Insert a pretty getelementptr. Note that this GEP is not marked inbounds,
-    // because ScalarEvolution may have changed the address arithmetic to
-    // compute a value which is beyond the end of the allocated object.
-    Value *Casted = V;
-    if (V->getType() != PTy)
-      Casted = InsertNoopCastOfTo(Casted, PTy);
-    Value *GEP = Builder.CreateGEP(PTy->getNonOpaquePointerElementType(),
-                                   Casted, GepIndices, "scevgep");
-    Ops.push_back(SE.getUnknown(GEP));
-  }
-
-  return expand(SE.getAddExpr(Ops));
+  // Emit a GEP.
+  return Builder.CreateGEP(Builder.getInt8Ty(), V, Idx, "scevgep");
 }
 
-Value *SCEVExpander::expandAddToGEP(const SCEV *Op, PointerType *PTy, Type *Ty,
-                                    Value *V) {
+Value *SCEVExpander::expandAddToGEP(const SCEV *Op, Type *Ty, Value *V) {
   const SCEV *const Ops[1] = {Op};
-  return expandAddToGEP(Ops, Ops + 1, PTy, Ty, V);
+  return expandAddToGEP(Ops, Ops + 1, Ty, V);
 }
 
 /// PickMostRelevantLoop - Given two loops pick the one that's most relevant for
@@ -782,7 +635,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
     }
 
     assert(!Op->getType()->isPointerTy() && "Only first op can be pointer");
-    if (PointerType *PTy = dyn_cast<PointerType>(Sum->getType())) {
+    if (isa<PointerType>(Sum->getType())) {
       // The running sum expression is a pointer. Try to form a getelementptr
       // at this level with that as the base.
       SmallVector<const SCEV *, 4> NewOps;
@@ -795,7 +648,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
             X = SE.getSCEV(U->getValue());
         NewOps.push_back(X);
       }
-      Sum = expandAddToGEP(NewOps.begin(), NewOps.end(), PTy, Ty, Sum);
+      Sum = expandAddToGEP(NewOps.begin(), NewOps.end(), Ty, Sum);
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expandCodeForImpl(SE.getNegativeSCEV(Op), Ty);
@@ -1105,15 +958,7 @@ Value *SCEVExpander::expandIVInc(PHINode *PN, Value *StepV, const Loop *L,
   Value *IncV;
   // If the PHI is a pointer, use a GEP, otherwise use an add or sub.
   if (ExpandTy->isPointerTy()) {
-    PointerType *GEPPtrTy = cast<PointerType>(ExpandTy);
-    // If the step isn't constant, don't use an implicitly scaled GEP, because
-    // that would require a multiply inside the loop.
-    if (!isa<ConstantInt>(StepV))
-      GEPPtrTy = PointerType::get(Type::getInt1Ty(SE.getContext()),
-                                  GEPPtrTy->getAddressSpace());
-    IncV = expandAddToGEP(SE.getSCEV(StepV), GEPPtrTy, IntTy, PN);
-    if (IncV->getType() != PN->getType())
-      IncV = Builder.CreateBitCast(IncV, PN->getType());
+    IncV = expandAddToGEP(SE.getSCEV(StepV), IntTy, PN);
   } else {
     IncV = useSubtract ?
       Builder.CreateSub(PN, StepV, Twine(IVName) + ".iv.next") :
@@ -1513,12 +1358,12 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
 
   // Re-apply any non-loop-dominating offset.
   if (PostLoopOffset) {
-    if (PointerType *PTy = dyn_cast<PointerType>(ExpandTy)) {
+    if (isa<PointerType>(ExpandTy)) {
       if (Result->getType()->isIntegerTy()) {
         Value *Base = expandCodeForImpl(PostLoopOffset, ExpandTy);
-        Result = expandAddToGEP(SE.getUnknown(Result), PTy, IntTy, Base);
+        Result = expandAddToGEP(SE.getUnknown(Result), IntTy, Base);
       } else {
-        Result = expandAddToGEP(PostLoopOffset, PTy, IntTy, Result);
+        Result = expandAddToGEP(PostLoopOffset, IntTy, Result);
       }
     } else {
       Result = InsertNoopCastOfTo(Result, IntTy);
@@ -1572,10 +1417,9 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 
   // {X,+,F} --> X + {0,+,F}
   if (!S->getStart()->isZero()) {
-    if (PointerType *PTy = dyn_cast<PointerType>(S->getType())) {
+    if (isa<PointerType>(S->getType())) {
       Value *StartV = expand(SE.getPointerBase(S));
-      assert(StartV->getType() == PTy && "Pointer type mismatch for GEP!");
-      return expandAddToGEP(SE.removePointerBase(S), PTy, Ty, StartV);
+      return expandAddToGEP(SE.removePointerBase(S), Ty, StartV);
     }
 
     SmallVector<const SCEV *, 4> NewOps(S->operands());
