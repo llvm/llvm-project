@@ -112,6 +112,7 @@ cc_test(
         "//clang:basic",
         "//clang:lex",
         "//clang:parse",
+        "//clang:testing",
         "//clang:tooling",
         "//llvm:Support",
         "//third-party/unittest:gmock",
