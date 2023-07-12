@@ -13,7 +13,7 @@ configure_lit_site_cfg(
 
 include(builtin-config-ix)
 
-if (COMPILER_RT_BUILD_CRT)
+if (COMPILER_RT_HAS_CRT)
   list(APPEND BUILTINS_TEST_DEPS crt)
 endif()
 
