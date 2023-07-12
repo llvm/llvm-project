@@ -373,8 +373,8 @@ public:
                             unsigned Opc_rr, unsigned Opc_ri,
                             bool IsIntr = false);
   void SelectContiguousMultiVectorLoad(SDNode *N, unsigned NumVecs,
-                                       unsigned Scale, unsigned Opc_rr,
-                                       unsigned Opc_ri);
+                                       unsigned Scale, unsigned Opc_ri,
+                                       unsigned Opc_rr);
   void SelectDestructiveMultiIntrinsic(SDNode *N, unsigned NumVecs,
                                        bool IsZmMulti, unsigned Opcode,
                                        bool HasPred = false);
@@ -1921,10 +1921,12 @@ void AArch64DAGToDAGISel::SelectContiguousMultiVectorLoad(SDNode *N,
   EVT VT = N->getValueType(0);
   SDValue Chain = N->getOperand(0);
 
-  // Use simplest addressing mode for now - base + 0 offset
   SDValue PNg = N->getOperand(2);
   SDValue Base = N->getOperand(3);
   SDValue Offset = CurDAG->getTargetConstant(0, DL, MVT::i64);
+  unsigned Opc;
+  std::tie(Opc, Base, Offset) =
+      findAddrModeSVELoadStore(N, Opc_rr, Opc_ri, Base, Offset, Scale);
 
   SDValue Ops[] = {PNg,            // Predicate-as-counter
                    Base,           // Memory operand
@@ -1932,7 +1934,7 @@ void AArch64DAGToDAGISel::SelectContiguousMultiVectorLoad(SDNode *N,
 
   const EVT ResTys[] = {MVT::Untyped, MVT::Other};
 
-  SDNode *Load = CurDAG->getMachineNode(Opc_ri, DL, ResTys, Ops);
+  SDNode *Load = CurDAG->getMachineNode(Opc, DL, ResTys, Ops);
   SDValue SuperReg = SDValue(Load, 0);
   for (unsigned i = 0; i < NumVecs; ++i)
     ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
