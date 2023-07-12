@@ -687,14 +687,15 @@ static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
 static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
                                          mlir::Location loc, mlir::Type ty,
                                          mlir::acc::ReductionOperator op) {
-  if (op != mlir::acc::ReductionOperator::AccAdd &&
-      op != mlir::acc::ReductionOperator::AccMul &&
-      op != mlir::acc::ReductionOperator::AccMin &&
-      op != mlir::acc::ReductionOperator::AccMax &&
-      op != mlir::acc::ReductionOperator::AccIand &&
-      op != mlir::acc::ReductionOperator::AccIor &&
-      op != mlir::acc::ReductionOperator::AccXor)
+  if (op == mlir::acc::ReductionOperator::AccLor &&
+      op == mlir::acc::ReductionOperator::AccEqv &&
+      op == mlir::acc::ReductionOperator::AccNeqv)
     TODO(loc, "reduction operator");
+
+  if (op == mlir::acc::ReductionOperator::AccLand) {
+    assert(mlir::isa<fir::LogicalType>(ty) && "expect fir.logical type");
+    return builder.createBool(loc, true);
+  }
 
   if (ty.isIntOrIndex())
     return builder.create<mlir::arith::ConstantOp>(
@@ -808,6 +809,14 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
 
   if (op == mlir::acc::ReductionOperator::AccXor)
     return builder.create<mlir::arith::XOrIOp>(loc, value1, value2);
+
+  if (op == mlir::acc::ReductionOperator::AccLand) {
+    mlir::Type i1 = builder.getI1Type();
+    mlir::Value v1 = builder.create<fir::ConvertOp>(loc, i1, value1);
+    mlir::Value v2 = builder.create<fir::ConvertOp>(loc, i1, value2);
+    mlir::Value add = builder.create<mlir::arith::AndIOp>(loc, v1, v2);
+    return builder.create<fir::ConvertOp>(loc, value1.getType(), add);
+  }
 
   TODO(loc, "reduction operator");
 }
