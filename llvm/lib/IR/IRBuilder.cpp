@@ -1032,23 +1032,6 @@ CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
   return C;
 }
 
-CallInst *IRBuilderBase::CreateConstrainedFPUnroundedBinOp(
-    Intrinsic::ID ID, Value *L, Value *R, Instruction *FMFSource,
-    const Twine &Name, MDNode *FPMathTag,
-    std::optional<fp::ExceptionBehavior> Except) {
-  Value *ExceptV = getConstrainedFPExcept(Except);
-
-  FastMathFlags UseFMF = FMF;
-  if (FMFSource)
-    UseFMF = FMFSource->getFastMathFlags();
-
-  CallInst *C =
-      CreateIntrinsic(ID, {L->getType()}, {L, R, ExceptV}, nullptr, Name);
-  setConstrainedFPCallAttr(C);
-  setFPAttrs(C, FPMathTag, UseFMF);
-  return C;
-}
-
 Value *IRBuilderBase::CreateNAryOp(unsigned Opc, ArrayRef<Value *> Ops,
                                    const Twine &Name, MDNode *FPMathTag) {
   if (Instruction::isBinaryOp(Opc)) {
