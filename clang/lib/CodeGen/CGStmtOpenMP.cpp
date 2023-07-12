@@ -412,9 +412,15 @@ void CodeGenFunction::GenerateOpenMPCapturedVars(
   if (FStmt && CGM.isXteamRedKernel(FStmt)) {
     assert(!CGM.getLangOpts().OpenMPIsTargetDevice && "Expecting host CG");
     CodeGenModule::XteamRedVarMap &XteamRVM = CGM.getXteamRedVarMap(FStmt);
-    for (auto &XteamRVElem : XteamRVM)
+    auto XteamOrdVars = CGM.getXteamOrderedRedVar(FStmt);
+    // Always generate Xteam metadata in the same order as user-specified
+    // reduction variables.
+    for (auto XteamVD : XteamOrdVars) {
+      auto Itr = XteamRVM.find(XteamVD);
+      assert(Itr != XteamRVM.end() && "Metadata not found");
       InitializeXteamRedCapturedVars(CapturedVars,
-                                     XteamRVElem.second.RedVarExpr->getType());
+                                     Itr->second.RedVarExpr->getType());
+    }
   }
 }
 
@@ -590,11 +596,16 @@ static llvm::Function *emitOutlinedFunctionPrologue(
     const ForStmt *FStmt = CGM.getSingleForStmt(CGM.getOptKernelKey(D));
     assert(FStmt && "For statement for directive not found");
     CodeGenModule::XteamRedVarMap &XteamRVM = CGM.getXteamRedVarMap(FStmt);
-    auto &XteamArgMap = CGM.getXteamArg2VarMap(FStmt);
-    for (auto &XteamRVElem : XteamRVM) {
-      CGM.updateXteamRedVarArgPos(&XteamRVElem.second, Args.size());
-      CGM.updateXteamArg2Var(&XteamArgMap, Args.size(),
-                             XteamRVElem.second.RedVarExpr->getType());
+    auto XteamOrdVars = CGM.getXteamOrderedRedVar(FStmt);
+    // Always add Xteam arguments to the signature in the same order as
+    // user-specified reduction variables.
+    for (auto XteamVD : XteamOrdVars) {
+      auto Itr = XteamRVM.find(XteamVD);
+      assert(Itr != XteamRVM.end() && "Metadata not found");
+
+      // Cached argument positions are used for device codegen alone
+      if (CGM.getLangOpts().OpenMPIsTargetDevice)
+        CGM.updateXteamRedVarArgPos(&Itr->second, Args.size());
       VarDecl *DTeamValsVD = ImplicitParamDecl::Create(
           Ctx, Ctx.VoidPtrTy, ImplicitParamDecl::CapturedContext);
       Args.emplace_back(DTeamValsVD);

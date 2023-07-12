@@ -8198,7 +8198,9 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedStatusForClauses(
 
 /// Given a directive, collect metadata for the reduction variables for Xteam
 /// reduction, if applicable
-std::pair<CodeGenModule::NoLoopXteamErr, CodeGenModule::XteamRedVarMap>
+std::pair<
+    CodeGenModule::NoLoopXteamErr,
+    std::pair<CodeGenModule::XteamRedVarMap, CodeGenModule::XteamRedVarVecTy>>
 CodeGenModule::collectXteamRedVars(const OptKernelNestDirectives &NestDirs) {
   // Check all nest directives. A reduction clause is treated
   // equivalently regardless the nesting level it is at -- this is
@@ -8206,51 +8208,62 @@ CodeGenModule::collectXteamRedVars(const OptKernelNestDirectives &NestDirs) {
   // satisfies target-teams-distribute-parallel-for.
   XteamRedVarMap VarMap;
 
+  // This vector defines the order in which Xteam metadata will always be
+  // generated.
+  XteamRedVarVecTy VarVec;
   // Either we emit Xteam code for all reduction variables or none at all
   for (auto &D : NestDirs) {
     for (const auto *C : D->getClausesOfKind<OMPReductionClause>()) {
       for (const Expr *Ref : C->varlists()) {
         // Only scalar variables supported today
         if (!isa<DeclRefExpr>(Ref))
-          return std::make_pair(NxNotScalarRed, VarMap);
+          return std::make_pair(NxNotScalarRed, std::make_pair(VarMap, VarVec));
         const ValueDecl *ValDecl = cast<DeclRefExpr>(Ref)->getDecl();
         if (!isa<VarDecl>(ValDecl))
-          return std::make_pair(NxNotScalarRed, VarMap);
+          return std::make_pair(NxNotScalarRed, std::make_pair(VarMap, VarVec));
 
         llvm::Type *RefType = getTypes().ConvertTypeForMem(Ref->getType());
         // TODO support more data types
         if (!RefType->isFloatTy() && !RefType->isDoubleTy() &&
             !RefType->isIntegerTy())
-          return std::make_pair(NxUnsupportedRedType, VarMap);
+          return std::make_pair(NxUnsupportedRedType,
+                                std::make_pair(VarMap, VarVec));
         if (RefType->isIntegerTy() && RefType->getPrimitiveSizeInBits() != 32 &&
             RefType->getPrimitiveSizeInBits() != 64)
-          return std::make_pair(NxUnsupportedRedIntSize, VarMap);
+          return std::make_pair(NxUnsupportedRedIntSize,
+                                std::make_pair(VarMap, VarVec));
 
         const VarDecl *VD = cast<VarDecl>(ValDecl);
-        // Address of the local var and arg pos will be populated later
-        XteamRedVarInfo XRVI(Ref, Address::invalid(), -1);
-        VarMap.insert(std::make_pair(VD, XRVI));
+        // Filter out duplicates
+        if (VarMap.find(VD) == VarMap.end()) {
+          // Address of the local var and arg pos will be populated later
+          XteamRedVarInfo XRVI(Ref, Address::invalid(),
+                               std::numeric_limits<size_t>::max());
+          VarMap.insert(std::make_pair(VD, XRVI));
+          VarVec.push_back(VD);
+        }
       }
       // Now make sure that we support all the operators. Today, only sum
       for (const Expr *Ref : C->reduction_ops()) {
         if (!isa<BinaryOperator>(Ref))
-          return std::make_pair(NxNotBinOpRed, VarMap);
+          return std::make_pair(NxNotBinOpRed, std::make_pair(VarMap, VarVec));
         auto BinExpr = cast<BinaryOperator>(Ref);
         if (BinExpr->getOpcode() != BO_Assign)
-          return std::make_pair(NxNotBinOpRed, VarMap);
+          return std::make_pair(NxNotBinOpRed, std::make_pair(VarMap, VarVec));
         auto BinExprRhs = BinExpr->getRHS()->IgnoreImpCasts();
         if (!isa<BinaryOperator>(BinExprRhs) ||
             cast<BinaryOperator>(BinExprRhs)->getOpcode() != BO_Add)
-          return std::make_pair(NxUnsupportedRedOp, VarMap);
+          return std::make_pair(NxUnsupportedRedOp,
+                                std::make_pair(VarMap, VarVec));
       }
     }
   }
   // We support multiple reduction operations in the same loop with the new
   // DeviceRTL APIs. So bail out only if none was found.
   if (VarMap.size() == 0)
-    return std::make_pair(NxNoRedVar, VarMap);
+    return std::make_pair(NxNoRedVar, std::make_pair(VarMap, VarVec));
 
-  return std::make_pair(NxSuccess, VarMap);
+  return std::make_pair(NxSuccess, std::make_pair(VarMap, VarVec));
 }
 
 const OMPExecutableDirective *
@@ -8449,8 +8462,9 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   if ((NxStatus = getXteamRedStatusForClauses(NestDirs)))
     return NxStatus;
 
-  std::pair<NoLoopXteamErr, CodeGenModule::XteamRedVarMap> RedVarMapPair =
-      collectXteamRedVars(NestDirs);
+  std::pair<NoLoopXteamErr, std::pair<CodeGenModule::XteamRedVarMap,
+                                      CodeGenModule::XteamRedVarVecTy>>
+      RedVarMapPair = collectXteamRedVars(NestDirs);
   if (RedVarMapPair.first)
     return RedVarMapPair.first;
 
@@ -8462,8 +8476,9 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   if (!InnermostDir.hasAssociatedStmt())
     return NxNoStmt;
 
-  auto ForStmtStatus = getXteamRedForStmtStatus(
-      InnermostDir, InnermostDir.getAssociatedStmt(), RedVarMapPair.second);
+  auto ForStmtStatus =
+      getXteamRedForStmtStatus(InnermostDir, InnermostDir.getAssociatedStmt(),
+                               RedVarMapPair.second.first);
   if ((NxStatus = ForStmtStatus.first))
     return NxStatus;
 
@@ -8484,7 +8499,8 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
         std::make_pair(FStmt, XteamRedKernelInfo(/*ThreadStartIndex=*/nullptr,
                                                  /*NumTeams=*/nullptr,
                                                  /*BlockSize=*/0, NestDirs,
-                                                 RedVarMapPair.second)));
+                                                 RedVarMapPair.second.first,
+                                                 RedVarMapPair.second.second)));
 
     // The blocksize has to be computed after adding this kernel to the metadata
     // above, since the computation below depends on that metadata. Compute

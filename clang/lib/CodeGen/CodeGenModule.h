@@ -362,19 +362,20 @@ public:
     /// Address of local reduction variable used in device codegen.
     Address RedVarAddr;
     /// Argument position for the corresponding metadata in the outlined
-    /// signature, populated during signature generation.
+    /// signature, populated during signature generation. Used for device
+    /// codegen only.
     size_t ArgPos;
   };
 
   using XteamRedVarMap = llvm::DenseMap<const VarDecl *, XteamRedVarInfo>;
-  using XteamArg2VarMapTy =
-      llvm::DenseMap<size_t /* ArgPos */, QualType /* RedVarType */>;
+  using XteamRedVarVecTy = llvm::SmallVector<const VarDecl *>;
 
   struct XteamRedKernelInfo {
     XteamRedKernelInfo(llvm::Value *TSI, llvm::Value *NT, int BlkSz,
-                       OptKernelNestDirectives Dirs, XteamRedVarMap RVM)
+                       OptKernelNestDirectives Dirs, XteamRedVarMap RVM,
+                       XteamRedVarVecTy RVV)
         : ThreadStartIndex{TSI}, NumTeams{NT}, BlockSize{BlkSz},
-          XteamNestDirs{Dirs}, XteamRedVars{RVM} {}
+          XteamNestDirs{Dirs}, XteamRedVars{RVM}, XteamOrderedRedVar{RVV} {}
 
     /// Start index of every thread used in device codegen.
     llvm::Value *ThreadStartIndex;
@@ -387,8 +388,8 @@ public:
     OptKernelNestDirectives XteamNestDirs;
     /// Map from reduction variable to metadata, populated during analysis.
     XteamRedVarMap XteamRedVars;
-    /// Map from captured arg position, populated during signature generation.
-    XteamArg2VarMapTy XteamArg2Var;
+    /// Vector of reduction variables in the same order they appear in the AST
+    XteamRedVarVecTy XteamOrderedRedVar;
   };
   using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
 
@@ -1817,9 +1818,9 @@ public:
     return XteamRedKernels.find(S)->second.XteamRedVars;
   }
 
-  XteamArg2VarMapTy &getXteamArg2VarMap(const Stmt *S) {
+  XteamRedVarVecTy &getXteamOrderedRedVar(const Stmt *S) {
     assert(isXteamRedKernel(S));
-    return XteamRedKernels.find(S)->second.XteamArg2Var;
+    return XteamRedKernels.find(S)->second.XteamOrderedRedVar;
   }
 
   llvm::Value *getXteamRedThreadStartIndex(const Stmt *S) {
@@ -1860,10 +1861,6 @@ public:
   void updateXteamRedKernel(const Stmt *S, int BlkSz) {
     assert(isXteamRedKernel(S));
     XteamRedKernels.find(S)->second.BlockSize = BlkSz;
-  }
-
-  void updateXteamArg2Var(XteamArg2VarMapTy *ArgInfo, size_t Pos, QualType T) {
-    ArgInfo->insert(std::make_pair(Pos, T));
   }
 
   // Get the cached block size used by Xteam reduction
@@ -2126,7 +2123,8 @@ private:
   getXteamRedStatusForClauses(const OptKernelNestDirectives &NestDirs);
 
   /// Collect the reduction variables that may satisfy Xteam criteria
-  std::pair<NoLoopXteamErr, CodeGenModule::XteamRedVarMap>
+  std::pair<NoLoopXteamErr, std::pair<CodeGenModule::XteamRedVarMap,
+                                      CodeGenModule::XteamRedVarVecTy>>
   collectXteamRedVars(const OptKernelNestDirectives &NestDirs);
 };
 

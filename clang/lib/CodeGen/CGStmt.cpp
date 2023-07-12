@@ -417,8 +417,13 @@ void CodeGenFunction::EmitXteamRedCode(const OMPExecutableDirective &D,
 /// an initializer for each of them
 void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
   const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(FStmt);
-  for (const auto &RedVarInfo : RedVarMap) {
-    const Expr *RedVarExpr = RedVarInfo.second.RedVarExpr;
+  auto XteamOrdVars = CGM.getXteamOrderedRedVar(FStmt);
+  // Always emit thread-local reduction variables  in the same order as
+  // user-specified reduction variables.
+  for (auto XteamVD : XteamOrdVars) {
+    auto Itr = RedVarMap.find(XteamVD);
+    assert(Itr != RedVarMap.end() && "Metadata not found");
+    const Expr *RedVarExpr = Itr->second.RedVarExpr;
     llvm::Type *RedVarType = ConvertTypeForMem(RedVarExpr->getType());
     assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
             RedVarType->isIntegerTy()) &&
@@ -439,8 +444,7 @@ void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
     // Update the map with the local aggregator address
     // TODO update only the address, the expression is already there
     // TODO don't do a lookup again, use the element avail here
-    CGM.updateXteamRedVarMap(FStmt, RedVarInfo.first, RedVarExpr,
-                             XteamRedVarAddr);
+    CGM.updateXteamRedVarMap(FStmt, XteamVD, RedVarExpr, XteamRedVarAddr);
   }
 }
 
@@ -451,12 +455,20 @@ void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
                                       int BlockSize) {
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
   const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(FStmt);
+
   llvm::Value *ThreadStartIdx = CGM.getXteamRedThreadStartIndex(FStmt);
   assert(ThreadStartIdx && "Thread start index cannot be null");
   llvm::Value *NumTeams = CGM.getXteamRedNumTeams(FStmt);
   assert(NumTeams && "Number of teams cannot be null");
-  for (const auto &RedVarInfo : RedVarMap) {
-    const CodeGenModule::XteamRedVarInfo &RVI = RedVarInfo.second;
+
+  auto XteamOrdVars = CGM.getXteamOrderedRedVar(FStmt);
+  // Always emit calls to Xteam device functions in the same order as
+  // user-specified reduction variables.
+  for (auto XteamVD : XteamOrdVars) {
+    auto Itr = RedVarMap.find(XteamVD);
+    assert(Itr != RedVarMap.end() && "Metadata not found");
+
+    const CodeGenModule::XteamRedVarInfo &RVI = Itr->second;
 
     assert(RVI.ArgPos + 1 < Args.size() && "Arg position beyond bounds");
 

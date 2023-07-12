@@ -9820,7 +9820,7 @@ static void emitTargetCallKernelLaunch(
   bool HasXTeamReduction = FStmt && CGF.CGM.isXteamRedKernel(FStmt);
   if (HasXTeamReduction) {
     CodeGenModule::XteamRedVarMap &XteamRVM = CGF.CGM.getXteamRedVarMap(FStmt);
-    auto &XteamArgMap = CGF.CGM.getXteamArg2VarMap(FStmt);
+    auto &XteamOrdVars = CGF.CGM.getXteamOrderedRedVar(FStmt);
 
     assert((CapturedVars.size() == CapturedCount + 2 * XteamRVM.size()) &&
            "Unexpected number of captured vars");
@@ -9851,16 +9851,23 @@ static void emitTargetCallKernelLaunch(
     // pairs. Each xteam reduction variable leads to the use of 2 extra
     // variables in the generated code.
     // TODO: change the magic number 2 into a variable.
-    for (; CapturedCount < CapturedVars.size();) {
+    // Always generate Xteam metadata in the same order as user-specified
+    // reduction variables.
+    size_t ArgPos = 0;
+    size_t RedVarCount = 0;
+    for (; CapturedCount + ArgPos < CapturedVars.size();) {
       // Process the pair of captured variables:
       llvm::Value *DTeamValsInst = nullptr;
 
-      // Reduction variable type is obtained from the info cached during
-      // signature generation
-      assert((XteamArgMap.find(CapturedCount) != XteamArgMap.end()) &&
-             "Argument type not found");
-      llvm::Type *RedVarType =
-          CGF.ConvertTypeForMem(XteamArgMap.find(CapturedCount)->second);
+      assert(CapturedCount + ArgPos < CapturedVars.size() &&
+             "Xteam reduction argument position out of bounds");
+      assert(RedVarCount < XteamOrdVars.size() &&
+             "Reduction variable count out of bounds");
+      const VarDecl *UserRedVar = XteamOrdVars[RedVarCount];
+      assert(XteamRVM.find(UserRedVar) != XteamRVM.end() &&
+             "Reduction variable not found in metadata");
+      llvm::Type *RedVarType = CGF.ConvertTypeForMem(
+          XteamRVM.find(UserRedVar)->second.RedVarExpr->getType());
 
       // dteam_vals = omp_target_alloc(sizeof(red-type) * team_procs, devid)
       llvm::Type *Int64Ty = llvm::Type::getInt64Ty(CGF.CGM.getLLVMContext());
@@ -9877,16 +9884,14 @@ static void emitTargetCallKernelLaunch(
       addXTeamReductionComponentHelper(CGF, CombinedInfo, DTeamValsInst);
 
       // Advance to the next reduction variable in the pair:
-      ++CapturedCount;
+      ++ArgPos;
 
-      // and then initialize it:
       llvm::Value *DTeamsDonePtrInst = nullptr;
-
       // uint32 teams_done = 0
       // llvm::AllocaInst *TeamsDoneInst =
       //     CGF.Builder.CreateAlloca(Int32Ty, nullptr, "teams_done");
       Address TeamsDoneAddr(
-          CapturedVars[CapturedCount], Int32Ty,
+          CapturedVars[CapturedCount + ArgPos], Int32Ty,
           CGF.getContext().getTypeAlignInChars(CGF.getContext().IntTy));
       CGF.Builder.CreateStore(Int32Zero, TeamsDoneAddr);
 
@@ -9915,7 +9920,9 @@ static void emitTargetCallKernelLaunch(
       addXTeamReductionComponentHelper(CGF, CombinedInfo, DTeamsDonePtrInst);
 
       // Advance to the next reduction variable in the pair:
-      ++CapturedCount;
+      ++ArgPos;
+
+      ++RedVarCount;
     }
   }
 
