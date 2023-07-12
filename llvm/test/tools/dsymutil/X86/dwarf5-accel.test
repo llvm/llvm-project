@@ -1,5 +1,5 @@
 ## This test checks that DIE name with stripped template parameters
-## is not stored into .debug_name section.
+## is stored into .debug_name section.
 
 ## cat dwarf5-accel.cpp
 ##
@@ -13,15 +13,16 @@
 ## $ clang -gdwarf-5 dwarf5-accel.cpp -c -o dwarf5-accel.o
 
 #RUN: dsymutil -accelerator=Dwarf -oso-prepend-path %p/Inputs -y %s -o %t.dSYM
-#RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s --check-prefix VERIFY
+#COM: Uncomment next line when dwarfdump will handle stripped template names.
+#COM: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s --check-prefix VERIFY
 #RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s
 
-#VERIFY: No errors.
+#COM: Uncomment next line when dwarfdump will handle stripped template names.
+#COM: #VERIFY: No errors.
 
 #CHECK: .debug_names
-#CHECK-NOT: "foo"
+#CHECK: "foo"
 #CHECK: _Z3fooIcEvv
-#CHECK-NOT: "foo"
 #CHECK: "foo<char>"
 
 ---
