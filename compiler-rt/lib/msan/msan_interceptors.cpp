@@ -19,6 +19,7 @@
 #include "interception/interception.h"
 #include "msan.h"
 #include "msan_chained_origin_depot.h"
+#include "msan_dl.h"
 #include "msan_origin.h"
 #include "msan_poisoning.h"
 #include "msan_report.h"
@@ -1520,26 +1521,31 @@ INTERCEPTOR(const char *, strsignal, int sig) {
   return res;
 }
 
-struct dlinfo {
-  char *dli_fname;
-  void *dli_fbase;
-  char *dli_sname;
-  void *dli_saddr;
-};
-
-INTERCEPTOR(int, dladdr, void *addr, dlinfo *info) {
+INTERCEPTOR(int, dladdr, void *addr, void *info) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, dladdr, addr, info);
   int res = REAL(dladdr)(addr, info);
+  if (res != 0)
+    UnpoisonDllAddrInfo(info);
+  return res;
+}
+
+#if SANITIZER_GLIBC
+INTERCEPTOR(int, dladdr1, void *addr, void *info, void **extra_info,
+            int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, dladdr1, addr, info, extra_info, flags);
+  int res = REAL(dladdr1)(addr, info, extra_info, flags);
   if (res != 0) {
-    __msan_unpoison(info, sizeof(*info));
-    if (info->dli_fname)
-      __msan_unpoison(info->dli_fname, internal_strlen(info->dli_fname) + 1);
-    if (info->dli_sname)
-      __msan_unpoison(info->dli_sname, internal_strlen(info->dli_sname) + 1);
+    UnpoisonDllAddrInfo(info);
+    UnpoisonDllAddr1ExtraInfo(extra_info, flags);
   }
   return res;
 }
+#  define MSAN_MAYBE_INTERCEPT_DLADDR1 MSAN_INTERCEPT_FUNC(dladdr1)
+#else
+#define MSAN_MAYBE_INTERCEPT_DLADDR1
+#endif
 
 INTERCEPTOR(char *, dlerror, int fake) {
   void *ctx;
@@ -1788,6 +1794,7 @@ void InitializeInterceptors() {
   MSAN_MAYBE_INTERCEPT_EPOLL_PWAIT;
   INTERCEPT_FUNCTION(strsignal);
   INTERCEPT_FUNCTION(dladdr);
+  MSAN_MAYBE_INTERCEPT_DLADDR1;
   INTERCEPT_FUNCTION(dlerror);
   INTERCEPT_FUNCTION(dl_iterate_phdr);
   INTERCEPT_FUNCTION(getrusage);

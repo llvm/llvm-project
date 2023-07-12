@@ -65,7 +65,8 @@ int test8(int x) {
 
   // Statement expressions.
   goto L3;   // expected-error {{cannot jump from this goto statement to its label}}
-  int Y = ({  int a[x];   // expected-note {{jump bypasses initialization of variable length array}}  
+  int Y = ({  int a[x];   // expected-note {{jump bypasses initialization of variable length array}} \
+                          // expected-note {{jump enters a statement expression}}
            L3: 4; });
   
   goto L4; // expected-error {{cannot jump from this goto statement to its label}}
@@ -107,25 +108,25 @@ int test8(int x) {
            4; })];
   L10:; // bad
   }
-  
+
   {
     // FIXME: Crashes goto checker.
     //goto L11;// ok
     //int A[({   L11: 4; })];
   }
-  
+
   {
     goto L12;
-    
+
     int y = 4;   // fixme-warn: skips initializer.
   L12:
     ;
   }
-  
+
   // Statement expressions 2.
   goto L1;     // expected-error {{cannot jump from this goto statement to its label}}
-  return x == ({
-                 int a[x];   // expected-note {{jump bypasses initialization of variable length array}}  
+  return x == ({             // expected-note {{jump enters a statement expression}}
+                 int a[x];   // expected-note {{jump bypasses initialization of variable length array}}
                L1:
                  42; });
 }
@@ -231,3 +232,27 @@ void test15(int n, void *pc) {
 }
 
 int test16(int [sizeof &&z]); // expected-error {{use of address-of-label extension outside of a function body}}
+
+void GH63682() {
+  {
+    goto L; // expected-error {{cannot jump from this goto statement to its label}}
+    (void)sizeof (int){({ L:; 1; })}; // expected-note {{jump enters a statement expression}}
+  }
+  {
+    goto M; // expected-error {{cannot jump from this goto statement to its label}}
+    (void)({ M:; 1; }); // expected-note {{jump enters a statement expression}}
+  }
+  {
+    (void)({ goto N; 1; });  // ok
+    N: ;
+  }
+  {
+    (void)sizeof (int){({ goto O; 1; })}; // ok (not evaluated)
+    O: ;
+  }
+  {
+    (void)sizeof(({goto P;}), 0); // expected-error {{cannot jump from this goto statement to its label}}
+    return;
+    (void)({P:1;});  // expected-note {{jump enters a statement expression}}
+  }
+}

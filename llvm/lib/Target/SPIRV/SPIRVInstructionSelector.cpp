@@ -201,7 +201,7 @@ SPIRVInstructionSelector::SPIRVInstructionSelector(const SPIRVTargetMachine &TM,
 }
 
 void SPIRVInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
-                                       CodeGenCoverage &CoverageInfo,
+                                       CodeGenCoverage *CoverageInfo,
                                        ProfileSummaryInfo *PSI,
                                        BlockFrequencyInfo *BFI) {
   MRI = &MF.getRegInfo();

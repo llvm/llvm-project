@@ -131,6 +131,17 @@ public:
   /// false otherwise.
   bool isIntegerEmpty() const;
 
+  /// Return true if there is no disjunct, false otherwise.
+  bool isPlainEmpty() const;
+
+  /// Return true if the set is known to have one unconstrained disjunct, false
+  /// otherwise.
+  bool isPlainUniverse() const;
+
+  /// Return true if the set is consist of a single disjunct, without any local
+  /// variables, false otherwise.
+  bool isConvexNoLocals() const;
+
   /// Find an integer sample from the given set. This should not be called if
   /// any of the disjuncts in the union are unbounded.
   bool findIntegerSample(SmallVectorImpl<MPInt> &sample);

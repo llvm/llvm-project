@@ -362,6 +362,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_WASM_TLSREL: return "TLSREL";
   case VK_WASM_TBREL: return "TBREL";
   case VK_WASM_GOT_TLS: return "GOT@TLS";
+  case VK_WASM_FUNCINDEX: return "FUNCINDEX";
   case VK_AMDGPU_GOTPCREL32_LO: return "gotpcrel32@lo";
   case VK_AMDGPU_GOTPCREL32_HI: return "gotpcrel32@hi";
   case VK_AMDGPU_REL32_LO: return "rel32@lo";
@@ -505,6 +506,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("mbrel", VK_WASM_MBREL)
     .Case("tlsrel", VK_WASM_TLSREL)
     .Case("got@tls", VK_WASM_GOT_TLS)
+    .Case("funcindex", VK_WASM_FUNCINDEX)
     .Case("gotpcrel32@lo", VK_AMDGPU_GOTPCREL32_LO)
     .Case("gotpcrel32@hi", VK_AMDGPU_GOTPCREL32_HI)
     .Case("rel32@lo", VK_AMDGPU_REL32_LO)

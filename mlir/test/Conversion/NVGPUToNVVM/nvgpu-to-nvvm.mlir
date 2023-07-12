@@ -503,3 +503,58 @@ func.func @mma_sp_sync_i8_16864(%arg0: vector<4x4xi8>,
     (vector<4x4xi8>, vector<4x4xi8>, vector<2x2xi32>) -> vector<2x2xi32>
   return %d : vector<2x2xi32>
 }
+
+// -----
+!barrierType = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+!tokenType = !nvgpu.mbarrier.token
+
+// CHECK-LABEL: func @mbarrier
+func.func @mbarrier() {
+  %num_threads = arith.constant 128 : index
+
+  // CHECK: %[[barMemref:.+]] = memref.get_global @__mbarrier : memref<1xi64, 3>
+  %barrier = nvgpu.mbarrier.create -> !barrierType
+
+  // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[barPtr:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: nvvm.mbarrier.init.shared %[[barPtr]]
+  nvgpu.mbarrier.init %barrier, %num_threads : !barrierType
+  
+  // CHECK: %[[barPtr2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive.shared %[[barPtr2]]
+  %token = nvgpu.mbarrier.arrive %barrier : !barrierType -> !tokenType
+    
+  // CHECK: %[[barPtr3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: nvvm.mbarrier.test.wait.shared %[[barPtr3]], %[[token]]
+  %isDone = nvgpu.mbarrier.test.wait %barrier, %token : !barrierType, !tokenType
+
+  func.return 
+}
+
+// -----
+!barrierType = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+!tokenType = !nvgpu.mbarrier.token
+
+// CHECK-LABEL: func @mbarrier_nocomplete
+func.func @mbarrier_nocomplete() {
+  %num_threads = arith.constant 128 : index
+  %count = arith.constant 12 : index
+
+  // CHECK: %[[barMemref:.+]] = memref.get_global @__mbarrier : memref<1xi64, 3>
+  %barrier = nvgpu.mbarrier.create -> !barrierType
+
+  // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[barPtr:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: nvvm.mbarrier.init.shared %[[barPtr]]
+  nvgpu.mbarrier.init %barrier, %num_threads : !barrierType
+  
+  // CHECK: %[[barPtr2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive.nocomplete.shared %[[barPtr2]]
+  %token = nvgpu.mbarrier.arrive.nocomplete %barrier, %count : !barrierType -> !tokenType
+    
+  // CHECK: %[[barPtr3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: nvvm.mbarrier.test.wait.shared %[[barPtr3]], %[[token]]
+  %isDone = nvgpu.mbarrier.test.wait %barrier, %token : !barrierType, !tokenType
+
+  func.return 
+}

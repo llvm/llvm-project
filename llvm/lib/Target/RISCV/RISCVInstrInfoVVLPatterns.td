@@ -1185,7 +1185,8 @@ multiclass VPatBinaryExtVL_WV_WX<SDNode op, PatFrags extop, string instruction_n
             (vti.Mask true_mask),
             VLOpFrag)),
         (!cast<Instruction>(instruction_name#"_WV_"#vti.LMul.MX)
-          wti.RegClass:$rs2, vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
+          (vti.Vector (IMPLICIT_DEF)),
+          wti.RegClass:$rs2, vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
       def : Pat<
         (vti.Vector
           (riscv_trunc_vector_vl
@@ -1194,7 +1195,8 @@ multiclass VPatBinaryExtVL_WV_WX<SDNode op, PatFrags extop, string instruction_n
             (vti.Mask true_mask),
             VLOpFrag)),
         (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)
-          wti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.Log2SEW)>;
+          (vti.Vector (IMPLICIT_DEF)),
+          wti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
     }
   }
 }
@@ -1214,7 +1216,8 @@ multiclass VPatBinaryVL_WV_WX_WI<SDNode op, string instruction_name>
               (wti.Vector (SplatPat_uimm5 uimm5:$rs1))), (vti.Mask true_mask),
           VLOpFrag)),
       (!cast<Instruction>(instruction_name#"_WI_"#vti.LMul.MX)
-        wti.RegClass:$rs2, uimm5:$rs1, GPR:$vl, vti.Log2SEW)>;
+        (vti.Vector (IMPLICIT_DEF)),
+        wti.RegClass:$rs2, uimm5:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -1327,7 +1330,8 @@ multiclass VPatNarrowShiftSplatExt_WX<SDNode op, PatFrags extop, string instruct
           srcvalue, (wti.Mask true_mask), VLOpFrag),
         (vti.Mask true_mask), VLOpFrag)),
       (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)
-        wti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.Log2SEW)>;
+        (vti.Vector (IMPLICIT_DEF)),
+        wti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
   }
 }
 
@@ -1440,12 +1444,14 @@ multiclass VPatNarrowShiftSplat_WX_WI<SDNode op, string instruction_name> {
                 (wti.Vector (op wti.RegClass:$rs1, (SplatPat XLenVT:$rs2),
                                 srcvalue, true_mask, VLOpFrag)), true_mask, VLOpFrag)),
                 (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)
-                     wti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
+                    (vti.Vector (IMPLICIT_DEF)),
+                     wti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
       def : Pat<(vti.Vector (riscv_trunc_vector_vl
                 (wti.Vector (op wti.RegClass:$rs1, (SplatPat_uimm5 uimm5:$rs2),
                                 srcvalue, true_mask, VLOpFrag)), true_mask, VLOpFrag)),
                 (!cast<Instruction>(instruction_name#"_WI_"#vti.LMul.MX)
-                     wti.RegClass:$rs1, uimm5:$rs2, GPR:$vl, vti.Log2SEW)>;
+                (vti.Vector (IMPLICIT_DEF)),
+                wti.RegClass:$rs1, uimm5:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
     }
   }
 }
@@ -1624,7 +1630,8 @@ foreach vti = AllIntegerVectors in {
                           (riscv_vmv_v_x_vl (vti.Vector undef), 1, (XLenVT srcvalue)),
                           srcvalue, (vti.Mask true_mask), VLOpFrag),
             (!cast<Instruction>("PseudoVADD_VV_"# vti.LMul.MX)
-                 vti.RegClass:$rs1, vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW)>;
+                 (vti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs1, vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
 }
 
 // 11.7. Vector Narrowing Integer Right Shift Instructions
@@ -1925,7 +1932,8 @@ foreach vti = AllFloatVectors in {
                                   (vti.Mask true_mask),
                                   VLOpFrag),
               (!cast<Instruction>("PseudoVFSGNJN_VV_"# vti.LMul.MX)
-                   vti.RegClass:$rs1, vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
+        (vti.Vector (IMPLICIT_DEF)),
+                   vti.RegClass:$rs1, vti.RegClass:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
 
     def : Pat<(riscv_fcopysign_vl (vti.Vector vti.RegClass:$rs1),
                                   (SplatFPOp vti.ScalarRegClass:$rs2),
@@ -2395,59 +2403,34 @@ foreach vti = AllIntegerVectors in {
               (!cast<Instruction>("PseudoVID_V_"#vti.LMul.MX#"_MASK")
                   (vti.Vector (IMPLICIT_DEF)), (vti.Mask V0), GPR:$vl, vti.Log2SEW,
                   TAIL_AGNOSTIC)>;
-
-    def : Pat<(vti.Vector (riscv_slide1up_vl (vti.Vector undef),
-                                             (vti.Vector vti.RegClass:$rs1),
-                                             GPR:$rs2, (vti.Mask true_mask),
-                                             VLOpFrag)),
-              (!cast<Instruction>("PseudoVSLIDE1UP_VX_"#vti.LMul.MX)
-                  vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
     def : Pat<(vti.Vector (riscv_slide1up_vl (vti.Vector vti.RegClass:$rd),
                                              (vti.Vector vti.RegClass:$rs1),
                                              GPR:$rs2, (vti.Mask true_mask),
                                              VLOpFrag)),
-              (!cast<Instruction>("PseudoVSLIDE1UP_VX_"#vti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVSLIDE1UP_VX_"#vti.LMul.MX)
                   vti.RegClass:$rd, vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
-    def : Pat<(vti.Vector (riscv_slide1down_vl (vti.Vector undef),
-                                               (vti.Vector vti.RegClass:$rs1),
-                                               GPR:$rs2, (vti.Mask true_mask),
-                                               VLOpFrag)),
-              (!cast<Instruction>("PseudoVSLIDE1DOWN_VX_"#vti.LMul.MX)
-                  vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW)>;
     def : Pat<(vti.Vector (riscv_slide1down_vl (vti.Vector vti.RegClass:$rd),
                                                (vti.Vector vti.RegClass:$rs1),
                                                GPR:$rs2, (vti.Mask true_mask),
                                                VLOpFrag)),
-              (!cast<Instruction>("PseudoVSLIDE1DOWN_VX_"#vti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVSLIDE1DOWN_VX_"#vti.LMul.MX)
                   vti.RegClass:$rd, vti.RegClass:$rs1, GPR:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
   }
 }
 
 foreach vti = AllFloatVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
-  def : Pat<(vti.Vector (riscv_fslide1up_vl (vti.Vector undef),
-                                            (vti.Vector vti.RegClass:$rs1),
-                                            vti.Scalar:$rs2, (vti.Mask true_mask),
-                                            VLOpFrag)),
-            (!cast<Instruction>("PseudoVFSLIDE1UP_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
-                vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
   def : Pat<(vti.Vector (riscv_fslide1up_vl (vti.Vector vti.RegClass:$rd),
                                             (vti.Vector vti.RegClass:$rs1),
                                             vti.Scalar:$rs2, (vti.Mask true_mask),
                                             VLOpFrag)),
-            (!cast<Instruction>("PseudoVFSLIDE1UP_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_TU")
+            (!cast<Instruction>("PseudoVFSLIDE1UP_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
-  def : Pat<(vti.Vector (riscv_fslide1down_vl (vti.Vector undef),
-                                              (vti.Vector vti.RegClass:$rs1),
-                                              vti.Scalar:$rs2, (vti.Mask true_mask),
-                                              VLOpFrag)),
-            (!cast<Instruction>("PseudoVFSLIDE1DOWN_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
-                vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, GPR:$vl, vti.Log2SEW)>;
   def : Pat<(vti.Vector (riscv_fslide1down_vl (vti.Vector vti.RegClass:$rd),
                                               (vti.Vector vti.RegClass:$rs1),
                                               vti.Scalar:$rs2, (vti.Mask true_mask),
                                               VLOpFrag)),
-            (!cast<Instruction>("PseudoVFSLIDE1DOWN_V"#vti.ScalarSuffix#"_"#vti.LMul.MX#"_TU")
+            (!cast<Instruction>("PseudoVFSLIDE1DOWN_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                 vti.RegClass:$rd, vti.RegClass:$rs1, vti.ScalarRegClass:$rs2, GPR:$vl, vti.Log2SEW, TU_MU)>;
   }
 }

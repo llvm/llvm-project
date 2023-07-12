@@ -63,6 +63,28 @@ def ArithIntRangeOpts : Pass<"int-range-optimizations"> {
   }];
 }
 
+def ArithEmulateUnsupportedFloats : Pass<"arith-emulate-unsupported-floats"> {
+  let summary = "Emulate operations on unsupported floats with extf/truncf";
+  let description = [{
+    Emulate arith and vector floating point operations that use float types
+    which are unspported on a target by inserting extf/truncf pairs around all
+    such operations in order to produce arithmetic that can be performed while
+    preserving the original rounding behavior.
+
+    This pass does not attempt to reason about the operations being performed
+    to determine when type conversions can be elided.
+  }];
+
+  let options = [
+    ListOption<"sourceTypeStrs", "source-types", "std::string",
+      "MLIR types without arithmetic support on a given target">,
+    Option<"targetTypeStr", "target-type", "std::string", "\"f32\"",
+      "MLIR type to convert the unsupported source types to">,
+  ];
+
+  let dependentDialects = ["vector::VectorDialect"];
+}
+
 def ArithEmulateWideInt : Pass<"arith-emulate-wide-int"> {
   let summary = "Emulate 2*N-bit integer operations using N-bit operations";
   let description = [{

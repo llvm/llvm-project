@@ -1163,8 +1163,7 @@ ExtractOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
   if (static_cast<int64_t>(op.getPosition().size()) == vectorType.getRank()) {
     inferredReturnTypes.push_back(vectorType.getElementType());
   } else {
-    auto n =
-        std::min<size_t>(op.getPosition().size(), vectorType.getRank() - 1);
+    auto n = std::min<size_t>(op.getPosition().size(), vectorType.getRank());
     inferredReturnTypes.push_back(VectorType::get(
         vectorType.getShape().drop_front(n), vectorType.getElementType()));
   }
@@ -2328,7 +2327,7 @@ LogicalResult InsertOp::verify() {
   auto destVectorType = getDestVectorType();
   if (positionAttr.size() > static_cast<unsigned>(destVectorType.getRank()))
     return emitOpError(
-        "expected position attribute of rank smaller than dest vector rank");
+        "expected position attribute of rank no greater than dest vector rank");
   auto srcVectorType = llvm::dyn_cast<VectorType>(getSourceType());
   if (srcVectorType &&
       (static_cast<unsigned>(srcVectorType.getRank()) + positionAttr.size() !=

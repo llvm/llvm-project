@@ -259,7 +259,10 @@ Changes to the RISC-V Backend
 Changes to the WebAssembly Backend
 ----------------------------------
 
-* ...
+* Function annotations (``__attribute__((annotate(<name>)))``)
+  now generate custom sections in the Wasm output file. A custom section
+  for each unique name will be created that contains each function
+  index the annotation applies to.
 
 Changes to the Windows Target
 -----------------------------

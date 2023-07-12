@@ -113,7 +113,7 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
     return;
   }
   StreamFile stream(std::move(file.get()));
-  ((ProcessGDBRemote *)p)->GetGDBRemote().DumpHistory(stream);
+  ((Process *)p)->DumpPluginHistory(stream);
 }
 } // namespace lldb
 
@@ -203,6 +203,11 @@ lldb::ProcessSP ProcessGDBRemote::CreateInstance(
     process_sp = std::shared_ptr<ProcessGDBRemote>(
         new ProcessGDBRemote(target_sp, listener_sp));
   return process_sp;
+}
+
+void ProcessGDBRemote::DumpPluginHistory(Stream &s) {
+  GDBRemoteCommunicationClient &gdb_comm(GetGDBRemote());
+  gdb_comm.DumpHistory(s);
 }
 
 std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
@@ -5217,7 +5222,7 @@ public:
     ProcessGDBRemote *process =
         (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
     if (process) {
-      process->GetGDBRemote().DumpHistory(result.GetOutputStream());
+      process->DumpPluginHistory(result.GetOutputStream());
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }

@@ -19,6 +19,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/StorageUniquer.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeName.h"
 #include <queue>
 
@@ -181,7 +182,7 @@ class DataFlowAnalysis;
 /// The general data-flow analysis solver. This class is responsible for
 /// orchestrating child data-flow analyses, running the fixed-point iteration
 /// algorithm, managing analysis state and program point memory, and tracking
-/// dependencies beteen analyses, program points, and analysis states.
+/// dependencies between analyses, program points, and analysis states.
 ///
 /// Steps to run a data-flow analysis:
 ///
@@ -282,11 +283,12 @@ public:
   /// Create the analysis state at the given program point.
   AnalysisState(ProgramPoint point) : point(point) {}
 
-  /// Returns the program point this static is located at.
+  /// Returns the program point this state is located at.
   ProgramPoint getPoint() const { return point; }
 
   /// Print the contents of the analysis state.
   virtual void print(raw_ostream &os) const = 0;
+  LLVM_DUMP_METHOD void dump() const;
 
   /// Add a dependency to this analysis state on a program point and an
   /// analysis. If this state is updated, the analysis will be invoked on the
@@ -378,7 +380,7 @@ public:
   /// dependents are placed on the worklist.
   ///
   /// The dependency graph does not need to be static. Each invocation of
-  /// `visit` can add new dependencies, but these dependecies will not be
+  /// `visit` can add new dependencies, but these dependencies will not be
   /// dynamically added to the worklist because the solver doesn't know what
   /// will provide a value for then.
   virtual LogicalResult visit(ProgramPoint point) = 0;
@@ -403,7 +405,7 @@ protected:
     return solver.getProgramPoint<PointT>(std::forward<Args>(args)...);
   }
 
-  /// Get the analysis state assiocated with the program point. The returned
+  /// Get the analysis state associated with the program point. The returned
   /// state is expected to be "write-only", and any updates need to be
   /// propagated by `propagateIfChanged`.
   template <typename StateT, typename PointT>

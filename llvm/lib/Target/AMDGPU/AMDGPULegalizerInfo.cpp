@@ -2964,9 +2964,11 @@ bool AMDGPULegalizerInfo::legalizeFMad(
 
   // TODO: Always legal with future ftz flag.
   // FIXME: Do we need just output?
-  if (Ty == LLT::scalar(32) && !MFI->getMode().allFP32Denormals())
+  if (Ty == LLT::scalar(32) &&
+      MFI->getMode().FP32Denormals == DenormalMode::getPreserveSign())
     return true;
-  if (Ty == LLT::scalar(16) && !MFI->getMode().allFP64FP16Denormals())
+  if (Ty == LLT::scalar(16) &&
+      MFI->getMode().FP64FP16Denormals == DenormalMode::getPreserveSign())
     return true;
 
   MachineIRBuilder HelperBuilder(MI);
@@ -4641,7 +4643,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
 
   // FIXME: Doesn't correctly model the FP mode switch, and the FP operations
   // aren't modeled as reading it.
-  if (!Mode.allFP32Denormals())
+  if (Mode.FP32Denormals != DenormalMode::getIEEE())
     toggleSPDenormMode(true, B, ST, Mode);
 
   auto Fma0 = B.buildFMA(S32, NegDivScale0, ApproxRcp, One, Flags);
@@ -4651,7 +4653,9 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
   auto Fma3 = B.buildFMA(S32, Fma2, Fma1, Mul, Flags);
   auto Fma4 = B.buildFMA(S32, NegDivScale0, Fma3, NumeratorScaled, Flags);
 
-  if (!Mode.allFP32Denormals())
+  // FIXME: This mishandles dynamic denormal mode. We need to query the
+  // current mode and restore the original.
+  if (Mode.FP32Denormals != DenormalMode::getIEEE())
     toggleSPDenormMode(false, B, ST, Mode);
 
   auto Fmas = B.buildIntrinsic(Intrinsic::amdgcn_div_fmas, {S32}, false)

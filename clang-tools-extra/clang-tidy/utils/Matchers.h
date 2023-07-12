@@ -112,7 +112,9 @@ private:
       case MatchMode::MatchFullyQualified:
         return Regex.match("::" + ND.getQualifiedNameAsString());
       default:
-        return Regex.match(ND.getName());
+        if (const IdentifierInfo *II = ND.getIdentifier())
+          return Regex.match(II->getName());
+        return false;
       }
     }
 

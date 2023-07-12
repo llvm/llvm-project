@@ -2497,7 +2497,7 @@ int main (int argc, char **argv) {
 // CHECK21-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK21-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP4]]
 // CHECK21-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], ptr [[TMP0]], i32 0, i32 1
-// CHECK21-NEXT:    [[TMP10:%.*]] = load float, ptr [[B]], align 4, !nontemporal !5, !llvm.access.group [[ACC_GRP4]]
+// CHECK21-NEXT:    [[TMP10:%.*]] = load float, ptr [[B]], align 4, !nontemporal [[META5:![0-9]+]], !llvm.access.group [[ACC_GRP4]]
 // CHECK21-NEXT:    [[CONV:%.*]] = fptosi float [[TMP10]] to i32
 // CHECK21-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[TMP0]], i32 0, i32 0
 // CHECK21-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP4]]
@@ -2732,7 +2732,7 @@ int main (int argc, char **argv) {
 // CHECK23-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK23-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP5]]
 // CHECK23-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_SS:%.*]], ptr [[TMP0]], i32 0, i32 1
-// CHECK23-NEXT:    [[TMP10:%.*]] = load float, ptr [[B]], align 4, !nontemporal !6, !llvm.access.group [[ACC_GRP5]]
+// CHECK23-NEXT:    [[TMP10:%.*]] = load float, ptr [[B]], align 4, !nontemporal [[META6:![0-9]+]], !llvm.access.group [[ACC_GRP5]]
 // CHECK23-NEXT:    [[CONV:%.*]] = fptosi float [[TMP10]] to i32
 // CHECK23-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[TMP0]], i32 0, i32 0
 // CHECK23-NEXT:    [[TMP11:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP5]]
@@ -2958,7 +2958,7 @@ int main (int argc, char **argv) {
 // CHECK29-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK29-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
 // CHECK29-NEXT:    [[B3:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
-// CHECK29-NEXT:    [[TMP6:%.*]] = load float, ptr [[B3]], align 4, !nontemporal !3, !llvm.access.group [[ACC_GRP2]]
+// CHECK29-NEXT:    [[TMP6:%.*]] = load float, ptr [[B3]], align 4, !nontemporal [[META3:![0-9]+]], !llvm.access.group [[ACC_GRP2]]
 // CHECK29-NEXT:    [[CONV:%.*]] = fptosi float [[TMP6]] to i32
 // CHECK29-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
 // CHECK29-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP2]]
@@ -3058,7 +3058,7 @@ int main (int argc, char **argv) {
 // CHECK31-NEXT:    [[ADD:%.*]] = add nsw i32 0, [[MUL]]
 // CHECK31-NEXT:    store i32 [[ADD]], ptr [[I]], align 4, !llvm.access.group [[ACC_GRP3]]
 // CHECK31-NEXT:    [[B3:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 1
-// CHECK31-NEXT:    [[TMP6:%.*]] = load float, ptr [[B3]], align 4, !nontemporal !4, !llvm.access.group [[ACC_GRP3]]
+// CHECK31-NEXT:    [[TMP6:%.*]] = load float, ptr [[B3]], align 4, !nontemporal [[META4:![0-9]+]], !llvm.access.group [[ACC_GRP3]]
 // CHECK31-NEXT:    [[CONV:%.*]] = fptosi float [[TMP6]] to i32
 // CHECK31-NEXT:    [[A:%.*]] = getelementptr inbounds [[STRUCT_SS]], ptr [[THIS1]], i32 0, i32 0
 // CHECK31-NEXT:    [[TMP7:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP3]]
