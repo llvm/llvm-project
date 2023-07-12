@@ -49,9 +49,7 @@ define i32 @select_known_nonzero(i1 %c, i32 %x) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    movl $122, %eax
 ; CHECK-NEXT:    cmovnel %esi, %eax
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %y = or i32 %x, 1
   %z = select i1 %c, i32 %y, i32 122
@@ -87,9 +85,7 @@ define i32 @shl_known_nonzero_1s_bit_set(i32 %x) {
 ; CHECK-NEXT:    movl $123, %eax
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %z = shl i32 123, %x
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
@@ -103,9 +99,7 @@ define i32 @shl_known_nonzero_nsw(i32 %x, i32 %yy) {
 ; CHECK-NEXT:    orl $256, %esi # imm = 0x100
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %esi
-; CHECK-NEXT:    bsfl %esi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
   %y = or i32 %yy, 256
   %z = shl nsw i32 %y, %x
@@ -120,9 +114,7 @@ define i32 @shl_known_nonzero_nuw(i32 %x, i32 %yy) {
 ; CHECK-NEXT:    orl $256, %esi # imm = 0x100
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %esi
-; CHECK-NEXT:    bsfl %esi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
   %y = or i32 %yy, 256
   %z = shl nuw i32 %y, %x
@@ -155,9 +147,7 @@ define i32 @uaddsat_known_nonzero(i32 %x) {
 ; CHECK-NEXT:    incl %edi
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    cmovnel %edi, %eax
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %z = call i32 @llvm.uadd.sat.i32(i32 %x, i32 1)
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
@@ -192,9 +182,7 @@ define i32 @umax_known_nonzero(i32 %x, i32 %y) {
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    cmpl %eax, %edi
 ; CHECK-NEXT:    cmoval %edi, %eax
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %yy = shl nuw i32 4, %y
   %z = call i32 @llvm.umax.i32(i32 %x, i32 %yy)
@@ -230,9 +218,7 @@ define i32 @umin_known_nonzero(i32 %xx, i32 %yy) {
 ; CHECK-NEXT:    addl $4, %esi
 ; CHECK-NEXT:    cmpl %esi, %eax
 ; CHECK-NEXT:    cmovbl %eax, %esi
-; CHECK-NEXT:    bsfl %esi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
   %x = shl nuw i32 4, %xx
   %y = add nuw nsw i32 %yy, 4
@@ -313,9 +299,7 @@ define i32 @rotr_with_fshr_known_nonzero(i32 %xx, i32 %y) {
 ; CHECK-NEXT:    orl $256, %edi # imm = 0x100
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    rorl %cl, %edi
-; CHECK-NEXT:    bsfl %edi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
   %x = or i32 %xx, 256
   %z = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %y)
@@ -395,9 +379,7 @@ define i32 @rotl_with_fshl_known_nonzero(i32 %xx, i32 %y) {
 ; CHECK-NEXT:    orl $256, %edi # imm = 0x100
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    roll %cl, %edi
-; CHECK-NEXT:    bsfl %edi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
   %x = or i32 %xx, 256
   %z = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %y)
@@ -445,9 +427,7 @@ define i32 @sra_known_nonzero_exact(i32 %x, i32 %yy) {
 ; CHECK-NEXT:    orl $256, %esi # imm = 0x100
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    sarl %cl, %esi
-; CHECK-NEXT:    bsfl %esi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
   %y = or i32 %yy, 256
   %z = ashr exact i32 %y, %x
@@ -481,9 +461,7 @@ define i32 @srl_known_nonzero_sign_bit_set(i32 %x) {
 ; CHECK-NEXT:    movl $-2147360405, %eax # imm = 0x8001E16B
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %eax
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %z = lshr i32 2147606891, %x
   %r = call i32 @llvm.cttz.i32(i32 %z, i1 false)
@@ -497,9 +475,7 @@ define i32 @srl_known_nonzero_exact(i32 %x, i32 %yy) {
 ; CHECK-NEXT:    orl $256, %esi # imm = 0x100
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shrl %cl, %esi
-; CHECK-NEXT:    bsfl %esi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
   %y = or i32 %yy, 256
   %z = lshr exact i32 %y, %x
@@ -533,9 +509,7 @@ define i32 @udiv_known_nonzero(i32 %xx, i32 %y) {
 ; CHECK-NEXT:    orl $64, %eax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %x = or i32 %xx, 64
   %z = udiv exact i32 %x, %y
@@ -569,9 +543,7 @@ define i32 @sdiv_known_nonzero(i32 %xx, i32 %y) {
 ; CHECK-NEXT:    orl $64, %eax
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %esi
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %x = or i32 %xx, 64
   %z = sdiv exact i32 %x, %y
@@ -603,9 +575,7 @@ define i32 @add_known_nonzero(i32 %xx, i32 %y) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    orl $1, %edi
 ; CHECK-NEXT:    addl %esi, %edi
-; CHECK-NEXT:    bsfl %edi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
   %x = or i32 %xx, 1
   %z = add nuw i32 %x, %y
@@ -639,9 +609,7 @@ define i32 @sub_known_nonzero_neg_case(i32 %xx) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    negl %eax
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %x = shl nuw nsw i32 256, %xx
   %z = sub i32 0, %x
@@ -656,9 +624,7 @@ define i32 @sub_known_nonzero_ne_case(i32 %xx, i32 %yy) {
 ; CHECK-NEXT:    orl $64, %eax
 ; CHECK-NEXT:    andl $-65, %edi
 ; CHECK-NEXT:    subl %eax, %edi
-; CHECK-NEXT:    bsfl %edi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %edi, %eax
 ; CHECK-NEXT:    retq
   %x = or i32 %xx, 64
   %y = and i32 %xx, -65
@@ -819,9 +785,7 @@ define i32 @zext_known_nonzero(i16 %xx) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    movzwl %ax, %eax
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %x = shl nuw nsw i16 256, %xx
   %z = zext i16 %x to i32
@@ -854,9 +818,7 @@ define i32 @sext_known_nonzero(i16 %xx) {
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %eax
 ; CHECK-NEXT:    cwtl
-; CHECK-NEXT:    bsfl %eax, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %eax, %eax
 ; CHECK-NEXT:    retq
   %x = shl nuw nsw i16 256, %xx
   %z = sext i16 %x to i32
