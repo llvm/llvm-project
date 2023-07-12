@@ -94,6 +94,10 @@ using RegionVariable = OpVariableElement<NamedRegion, VariableElement::Region>;
 /// This class represents a variable that refers to a successor.
 using SuccessorVariable =
     OpVariableElement<NamedSuccessor, VariableElement::Successor>;
+
+/// This class represents a variable that refers to a property argument.
+using PropertyVariable =
+    OpVariableElement<NamedProperty, VariableElement::Property>;
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -939,6 +943,9 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
     ctx.addSubst("_ctxt", "parser.getContext()");
     body << tgfmt(string->getValue(), &ctx);
 
+  } else if (auto *property = dyn_cast<PropertyVariable>(param)) {
+    body << llvm::formatv("result.getOrAddProperties<Properties>().{0}",
+                          property->getVar()->name);
   } else {
     llvm_unreachable("unknown custom directive parameter");
   }
@@ -1862,6 +1869,12 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
     ctx.addSubst("_ctxt", "getContext()");
     body << tgfmt(string->getValue(), &ctx);
 
+  } else if (auto *property = dyn_cast<PropertyVariable>(element)) {
+    FmtContext ctx;
+    ctx.addSubst("_ctxt", "getContext()");
+    const NamedProperty *namedProperty = property->getVar();
+    ctx.addSubst("_storage", "getProperties()." + namedProperty->name);
+    body << tgfmt(namedProperty->prop.getConvertFromStorageCall(), &ctx);
   } else {
     llvm_unreachable("unknown custom directive parameter");
   }
@@ -2457,6 +2470,7 @@ private:
   llvm::DenseSet<const NamedTypeConstraint *> seenOperands;
   llvm::DenseSet<const NamedRegion *> seenRegions;
   llvm::DenseSet<const NamedSuccessor *> seenSuccessors;
+  llvm::DenseSet<const NamedProperty *> seenProperties;
 };
 } // namespace
 
@@ -2941,6 +2955,18 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
 
     return create<AttributeVariable>(attr);
   }
+
+  if (const NamedProperty *property = findArg(op.getProperties(), name)) {
+    if (ctx != CustomDirectiveContext)
+      return emitError(
+          loc, "properties currently only supported in `custom` directive");
+
+    if (!seenProperties.insert(property).second)
+      return emitError(loc, "property '" + name + "' is already bound");
+
+    return create<PropertyVariable>(property);
+  }
+
   // Operands
   if (const NamedTypeConstraint *operand = findArg(op.getOperands(), name)) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
@@ -3068,9 +3094,9 @@ OpFormatParser::parsePropDictDirective(SMLoc loc, Context context) {
 LogicalResult OpFormatParser::verifyCustomDirectiveArguments(
     SMLoc loc, ArrayRef<FormatElement *> arguments) {
   for (FormatElement *argument : arguments) {
-    if (!isa<StringElement, RefDirective, TypeDirective, AttrDictDirective,
-             AttributeVariable, OperandVariable, RegionVariable,
-             SuccessorVariable>(argument)) {
+    if (!isa<AttrDictDirective, AttributeVariable, OperandVariable,
+             PropertyVariable, RefDirective, RegionVariable, SuccessorVariable,
+             StringElement, TypeDirective>(argument)) {
       // TODO: FormatElement should have location info attached.
       return emitError(loc, "only variables and types may be used as "
                             "parameters to a custom directive");

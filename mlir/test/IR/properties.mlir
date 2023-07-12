@@ -18,3 +18,9 @@ test.with_nice_properties "foo bar" is -3
 // GENERIC: "test.with_wrapped_properties"()
 // GENERIC-SAME:  <{prop = "content for properties"}> : () -> ()
 test.with_wrapped_properties <{prop = "content for properties"}>
+
+// CHECK: test.using_property_in_custom
+// CHECK-SAME: [1, 4, 20]
+// GENERIC: "test.using_property_in_custom"()
+// GENERIC-SAME: prop = array<i64: 1, 4, 20>
+test.using_property_in_custom [1, 4, 20]
