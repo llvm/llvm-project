@@ -853,12 +853,12 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
     unsigned NotRebasedNum = 0;
     for (Instruction *IP : IPSet) {
       // First, collect constants depending on this IP of the base.
-      unsigned Uses = 0;
+      UsesNum = 0;
       using RebasedUse = std::tuple<Constant *, Type *, ConstantUser>;
       SmallVector<RebasedUse, 4> ToBeRebased;
       for (auto const &RCI : ConstInfo.RebasedConstants) {
+        UsesNum += RCI.Uses.size();
         for (auto const &U : RCI.Uses) {
-          Uses++;
           BasicBlock *OrigMatInsertBB =
               findMatInsertPt(U.Inst, U.OpndIdx)->getParent();
           // If Base constant is to be inserted in multiple places,
@@ -868,7 +868,6 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
             ToBeRebased.push_back(RebasedUse(RCI.Offset, RCI.Ty, U));
         }
       }
-      UsesNum = Uses;
 
       // If only few constants depend on this IP of base, skip rebasing,
       // assuming the base and the rebased have the same materialization cost.
