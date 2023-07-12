@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/BTF/BTFContext.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/ObjectYAML/yaml2obj.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Testing/Support/Error.h"
 
 using namespace llvm;
@@ -112,8 +113,12 @@ struct MockData1 {
     Yaml << R"(
 !ELF
 FileHeader:
-  Class:    ELFCLASS64
-  Data:     ELFDATA2LSB
+  Class:    ELFCLASS64)";
+    if (sys::IsBigEndianHost)
+      Yaml << "\n  Data:     ELFDATA2MSB";
+    else
+      Yaml << "\n  Data:     ELFDATA2LSB";
+    Yaml << R"(
   Type:     ET_REL
   Machine:  EM_BPF
 Sections:
@@ -162,21 +167,21 @@ TEST(BTFParserTest, simpleCorrectInput) {
   EXPECT_EQ(BTF.findString(sizeof(MockData1::B::S)), StringRef());
 
   const BTF::BPFLineInfo *I1 = BTF.findLineInfo({16, 1});
-  EXPECT_TRUE(I1);
+  ASSERT_TRUE(I1);
   EXPECT_EQ(I1->getLine(), 7u);
   EXPECT_EQ(I1->getCol(), 1u);
   EXPECT_EQ(BTF.findString(I1->FileNameOff), "a.c");
   EXPECT_EQ(BTF.findString(I1->LineOff), "first line");
 
   const BTF::BPFLineInfo *I2 = BTF.findLineInfo({32, 1});
-  EXPECT_TRUE(I2);
+  ASSERT_TRUE(I2);
   EXPECT_EQ(I2->getLine(), 14u);
   EXPECT_EQ(I2->getCol(), 5u);
   EXPECT_EQ(BTF.findString(I2->FileNameOff), "a.c");
   EXPECT_EQ(BTF.findString(I2->LineOff), "second line");
 
   const BTF::BPFLineInfo *I3 = BTF.findLineInfo({0, 2});
-  EXPECT_TRUE(I3);
+  ASSERT_TRUE(I3);
   EXPECT_EQ(I3->getLine(), 42u);
   EXPECT_EQ(I3->getCol(), 4u);
   EXPECT_EQ(BTF.findString(I3->FileNameOff), "b.c");
