@@ -726,6 +726,12 @@ multiclass VRED_MV_V<string opcodestr, bits<6> funct6> {
                    ReadVMask]>;
 }
 
+multiclass VREDMINMAX_MV_V<string opcodestr, bits<6> funct6> {
+  def _VS : VALUVV<funct6, OPMVV, opcodestr # ".vs">,
+            Sched<[WriteVIRedMinMaxV_From_WorstCase, ReadVIRedV, ReadVIRedV0,
+                   ReadVMask]>;
+}
+
 multiclass VWRED_IV_V<string opcodestr, bits<6> funct6> {
   def _VS : VALUVV<funct6, OPIVV, opcodestr # ".vs">,
             Sched<[WriteVIWRedV_From_WorstCase, ReadVIWRedV, ReadVIWRedV0,
@@ -1490,14 +1496,14 @@ let Predicates = [HasVInstructions] in {
 
 // Vector Single-Width Integer Reduction Instructions
 let RVVConstraint = NoConstraint in {
-defm VREDSUM : VRED_MV_V<"vredsum", 0b000000>;
-defm VREDMAXU : VRED_MV_V<"vredmaxu", 0b000110>;
-defm VREDMAX : VRED_MV_V<"vredmax", 0b000111>;
-defm VREDMINU : VRED_MV_V<"vredminu", 0b000100>;
-defm VREDMIN : VRED_MV_V<"vredmin", 0b000101>;
-defm VREDAND : VRED_MV_V<"vredand", 0b000001>;
-defm VREDOR : VRED_MV_V<"vredor", 0b000010>;
-defm VREDXOR : VRED_MV_V<"vredxor", 0b000011>;
+defm VREDSUM  : VRED_MV_V<"vredsum", 0b000000>;
+defm VREDMAXU : VREDMINMAX_MV_V<"vredmaxu", 0b000110>;
+defm VREDMAX  : VREDMINMAX_MV_V<"vredmax", 0b000111>;
+defm VREDMINU : VREDMINMAX_MV_V<"vredminu", 0b000100>;
+defm VREDMIN  : VREDMINMAX_MV_V<"vredmin", 0b000101>;
+defm VREDAND  : VRED_MV_V<"vredand", 0b000001>;
+defm VREDOR   : VRED_MV_V<"vredor", 0b000010>;
+defm VREDXOR  : VRED_MV_V<"vredxor", 0b000011>;
 } // RVVConstraint = NoConstraint
 
 // Vector Widening Integer Reduction Instructions
