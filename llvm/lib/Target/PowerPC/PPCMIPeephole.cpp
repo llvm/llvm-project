@@ -657,12 +657,14 @@ bool PPCMIPeephole::simplifyCode() {
           LLVM_DEBUG(MI.dump());
         } else if (Immed == 2 &&
                    (DefOpc == PPC::VSPLTB || DefOpc == PPC::VSPLTH ||
-                    DefOpc == PPC::VSPLTW || DefOpc == PPC::XXSPLTW)) {
+                    DefOpc == PPC::VSPLTW || DefOpc == PPC::XXSPLTW ||
+                    DefOpc == PPC::VSPLTISB || DefOpc == PPC::VSPLTISH ||
+                    DefOpc == PPC::VSPLTISW)) {
           // Swap of various vector splats, convert to copy.
           ToErase = &MI;
           Simplified = true;
-          LLVM_DEBUG(dbgs() << "Optimizing swap(vsplt[b|h|w]|xxspltw) => "
-                               "copy(vsplt[b|h|w]|xxspltw): ");
+          LLVM_DEBUG(dbgs() << "Optimizing swap(vsplt(is)?[b|h|w]|xxspltw) => "
+                               "copy(vsplt(is)?[b|h|w]|xxspltw): ");
           LLVM_DEBUG(MI.dump());
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
                   MI.getOperand(0).getReg())
