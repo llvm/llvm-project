@@ -43,6 +43,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
@@ -172,12 +173,6 @@ static cl::opt<GlobalISelAbortMode> EnableGlobalISelAbort(
         clEnumValN(GlobalISelAbortMode::DisableWithDiag, "2",
                    "Disable the abort but emit a diagnostic on failure")));
 
-// An option that disables inserting FS-AFDO discriminators before emit.
-// This is mainly for debugging and tuning purpose.
-static cl::opt<bool>
-    FSNoFinalDiscrim("fs-no-final-discrim", cl::init(false), cl::Hidden,
-                     cl::desc("Do not insert FS-AFDO discriminators before "
-                              "emit."));
 // Disable MIRProfileLoader before RegAlloc. This is for for debugging and
 // tuning purpose.
 static cl::opt<bool> DisableRAFSProfileLoader(
@@ -1225,14 +1220,6 @@ void TargetPassConfig::addMachinePasses() {
   addPass(&XRayInstrumentationID);
   addPass(&PatchableFunctionID);
 
-  if (EnableFSDiscriminator && !FSNoFinalDiscrim)
-    // Add FS discriminators here so that all the instruction duplicates
-    // in different BBs get their own discriminators. With this, we can "sum"
-    // the SampleFDO counters instead of using MAX. This will improve the
-    // SampleFDO profile quality.
-    addPass(createMIRAddFSDiscriminatorsPass(
-        sampleprof::FSDiscriminatorPass::PassLast));
-
   addPreEmitPass();
 
   if (TM->Options.EnableIPRA)
@@ -1258,6 +1245,10 @@ void TargetPassConfig::addMachinePasses() {
       addPass(createMachineOutlinerPass(RunOnAllFunctions));
   }
 
+  if (EnableFSDiscriminator)
+    addPass(createMIRAddFSDiscriminatorsPass(
+        sampleprof::FSDiscriminatorPass::PassLast));
+
   // Machine function splitter uses the basic block sections feature. Both
   // cannot be enabled at the same time. Basic block sections takes precedence.
   // FIXME: In principle, BasicBlockSection::Labels and splitting can used
@@ -1270,6 +1261,20 @@ void TargetPassConfig::addMachinePasses() {
     addPass(llvm::createBasicBlockSectionsPass());
   } else if (TM->Options.EnableMachineFunctionSplitter ||
              EnableMachineFunctionSplitter) {
+    const std::string ProfileFile = getFSProfileFile(TM);
+    if (!ProfileFile.empty()) {
+      if (EnableFSDiscriminator) {
+        addPass(createMIRProfileLoaderPass(
+            ProfileFile, getFSRemappingFile(TM),
+            sampleprof::FSDiscriminatorPass::PassLast, nullptr));
+      } else {
+        // Sample profile is given, but FSDiscriminator is not
+        // enabled, this may result in performance regression.
+        WithColor::warning()
+            << "Using AutoFDO without FSDiscriminator for MFS may regress "
+               "performance.";
+      }
+    }
     addPass(createMachineFunctionSplitterPass());
   }
 
