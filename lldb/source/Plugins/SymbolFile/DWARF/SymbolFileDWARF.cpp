@@ -3323,6 +3323,38 @@ GetExprListFromAtConstValue(DWARFFormValue form_value, ModuleSP module,
   return DWARFExpressionList(module, DWARFExpression(), die.GetCU());
 }
 
+/// Global variables that are not initialized may have their address set to
+/// zero. Since multiple variables may have this address, we cannot apply the
+/// OSO relink address approach we normally use.
+/// However, the executable will have a matching symbol with a good address;
+/// this function attempts to find the correct address by looking into the
+/// executable's symbol table. If it succeeds, the expr_list is updated with
+/// the new address and the executable's symbol is returned.
+static Symbol *fixupExternalAddrZeroVariable(
+    SymbolFileDWARFDebugMap &debug_map_symfile, llvm::StringRef name,
+    DWARFExpressionList &expr_list, const DWARFDIE &die) {
+  ObjectFile *debug_map_objfile = debug_map_symfile.GetObjectFile();
+  if (!debug_map_objfile)
+    return nullptr;
+
+  Symtab *debug_map_symtab = debug_map_objfile->GetSymtab();
+  if (!debug_map_symtab)
+    return nullptr;
+  Symbol *exe_symbol = debug_map_symtab->FindFirstSymbolWithNameAndType(
+      ConstString(name), eSymbolTypeData, Symtab::eDebugYes,
+      Symtab::eVisibilityExtern);
+  if (!exe_symbol || !exe_symbol->ValueIsAddress())
+    return nullptr;
+  const addr_t exe_file_addr = exe_symbol->GetAddressRef().GetFileAddress();
+  if (exe_file_addr == LLDB_INVALID_ADDRESS)
+    return nullptr;
+
+  DWARFExpression *location = expr_list.GetMutableExpressionAtAddress();
+  if (location->Update_DW_OP_addr(die.GetCU(), exe_file_addr))
+    return exe_symbol;
+  return nullptr;
+}
+
 VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                                              const DWARFDIE &die,
                                              const lldb::addr_t func_low_pc) {
@@ -3496,49 +3528,14 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         scope = eValueTypeVariableStatic;
 
       if (debug_map_symfile) {
-        // When leaving the DWARF in the .o files on darwin, when we have a
-        // global variable that wasn't initialized, the .o file might not
-        // have allocated a virtual address for the global variable. In
-        // this case it will have created a symbol for the global variable
-        // that is undefined/data and external and the value will be the
-        // byte size of the variable. When we do the address map in
-        // SymbolFileDWARFDebugMap we rely on having an address, we need to
-        // do some magic here so we can get the correct address for our
-        // global variable. The address for all of these entries will be
-        // zero, and there will be an undefined symbol in this object file,
-        // and the executable will have a matching symbol with a good
-        // address. So here we dig up the correct address and replace it in
-        // the location for the variable, and set the variable's symbol
-        // context scope to be that of the main executable so the file
-        // address will resolve correctly.
         bool linked_oso_file_addr = false;
+
         if (is_external && location_DW_OP_addr == 0) {
-          // we have a possible uninitialized extern global
-          ConstString const_name(mangled ? mangled : name);
-          ObjectFile *debug_map_objfile = debug_map_symfile->GetObjectFile();
-          if (debug_map_objfile) {
-            Symtab *debug_map_symtab = debug_map_objfile->GetSymtab();
-            if (debug_map_symtab) {
-              Symbol *exe_symbol =
-                  debug_map_symtab->FindFirstSymbolWithNameAndType(
-                      const_name, eSymbolTypeData, Symtab::eDebugYes,
-                      Symtab::eVisibilityExtern);
-              if (exe_symbol) {
-                if (exe_symbol->ValueIsAddress()) {
-                  const addr_t exe_file_addr =
-                      exe_symbol->GetAddressRef().GetFileAddress();
-                  if (exe_file_addr != LLDB_INVALID_ADDRESS) {
-                    DWARFExpression *location =
-                        location_list.GetMutableExpressionAtAddress();
-                    if (location->Update_DW_OP_addr(die.GetCU(),
-                                                    exe_file_addr)) {
-                      linked_oso_file_addr = true;
-                      symbol_context_scope = exe_symbol;
-                    }
-                  }
-                }
-              }
-            }
+          if (Symbol *exe_symbol = fixupExternalAddrZeroVariable(
+                  *debug_map_symfile, mangled ? mangled : name, location_list,
+                  die)) {
+            linked_oso_file_addr = true;
+            symbol_context_scope = exe_symbol;
           }
         }
 
