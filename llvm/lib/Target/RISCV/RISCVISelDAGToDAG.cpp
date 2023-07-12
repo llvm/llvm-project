@@ -3201,20 +3201,17 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
 // not the pseudo name.  That is, a TA VMERGE_VVM can be either the _TU pseudo
 // form with an IMPLICIT_DEF passthrough operand or the unsuffixed (TA) pseudo
 // form.
-bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
+bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
 
-  SDValue Merge;
-  if (!IsTA)
-    Merge = N->getOperand(0);
-  unsigned Offset = IsTA ? 0 : 1;
-  SDValue False = N->getOperand(0 + Offset);
-  SDValue True = N->getOperand(1 + Offset);
-  SDValue Mask = N->getOperand(2 + Offset);
-  SDValue VL = N->getOperand(3 + Offset);
+  SDValue Merge = N->getOperand(0);
+  SDValue False = N->getOperand(1);
+  SDValue True = N->getOperand(2);
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
 
-  // For the _TU psuedo form, we require that either merge and false
-  // are the same, or that merge is undefined.
-  if (!IsTA && Merge != False && !isImplicitDef(Merge))
+  // We require that either merge and false are the same, or that merge
+  // is undefined.
+  if (Merge != False && !isImplicitDef(Merge))
     return false;
 
   assert(True.getResNo() == 0 &&
@@ -3247,7 +3244,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
     // The vmerge instruction must be TU.
     // FIXME: This could be relaxed, but we need to handle the policy for the
     // resulting op correctly.
-    if (IsTA || isImplicitDef(Merge))
+    if (isImplicitDef(Merge))
       return false;
     SDValue MergeOpTrue = True->getOperand(0);
     // Both the vmerge instruction and the True instruction must have the same
@@ -3259,7 +3256,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
   if (IsMasked) {
     assert(HasTiedDest && "Expected tied dest");
     // The vmerge instruction must be TU.
-    if (IsTA || isImplicitDef(Merge))
+    if (isImplicitDef(Merge))
       return false;
     // The vmerge instruction must have an all 1s mask since we're going to keep
     // the mask from the True instruction.
@@ -3325,7 +3322,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
          "Expected instructions with mask have a tied dest.");
 #endif
 
-  uint64_t Policy = (IsTA || isImplicitDef(N->getOperand(0))) ?
+  uint64_t Policy = isImplicitDef(N->getOperand(0)) ?
     RISCVII::TAIL_AGNOSTIC : /*TUMU*/ 0;
   SDValue PolicyOp =
     CurDAG->getTargetConstant(Policy, DL, Subtarget->getXLenVT());
@@ -3367,17 +3364,17 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N, bool IsTA) {
   return true;
 }
 
-// Transform (VMERGE_VVM_<LMUL>_TU false, false, true, allones, vl, sew) to
-// (VMV_V_V_<LMUL>_TU false, true, vl, sew). It may decrease uses of VMSET.
+// Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
+// (VMV_V_V_<LMUL> false, true, vl, sew). It may decrease uses of VMSET.
 bool RISCVDAGToDAGISel::performVMergeToVMv(SDNode *N) {
 #define CASE_VMERGE_TO_VMV(lmul)                                               \
-  case RISCV::PseudoVMERGE_VVM_##lmul##_TU:                                    \
+  case RISCV::PseudoVMERGE_VVM_##lmul:                                    \
     NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                 \
     break;
   unsigned NewOpc;
   switch (N->getMachineOpcode()) {
   default:
-    llvm_unreachable("Expected VMERGE_VVM_<LMUL>_TU instruction.");
+    llvm_unreachable("Expected VMERGE_VVM_<LMUL> instruction.");
   CASE_VMERGE_TO_VMV(MF8)
   CASE_VMERGE_TO_VMV(MF4)
   CASE_VMERGE_TO_VMV(MF2)
@@ -3410,17 +3407,7 @@ bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
     if (N->use_empty() || !N->isMachineOpcode())
       continue;
 
-    auto IsVMergeTU = [](unsigned Opcode) {
-      return Opcode == RISCV::PseudoVMERGE_VVM_MF8_TU ||
-             Opcode == RISCV::PseudoVMERGE_VVM_MF4_TU ||
-             Opcode == RISCV::PseudoVMERGE_VVM_MF2_TU ||
-             Opcode == RISCV::PseudoVMERGE_VVM_M1_TU ||
-             Opcode == RISCV::PseudoVMERGE_VVM_M2_TU ||
-             Opcode == RISCV::PseudoVMERGE_VVM_M4_TU ||
-             Opcode == RISCV::PseudoVMERGE_VVM_M8_TU;
-    };
-
-    auto IsVMergeTA = [](unsigned Opcode) {
+    auto IsVMerge = [](unsigned Opcode) {
       return Opcode == RISCV::PseudoVMERGE_VVM_MF8 ||
              Opcode == RISCV::PseudoVMERGE_VVM_MF4 ||
              Opcode == RISCV::PseudoVMERGE_VVM_MF2 ||
@@ -3431,9 +3418,9 @@ bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
     };
 
     unsigned Opc = N->getMachineOpcode();
-    if (IsVMergeTU(Opc) || IsVMergeTA(Opc))
-      MadeChange |= performCombineVMergeAndVOps(N, IsVMergeTA(Opc));
-    if (IsVMergeTU(Opc) && N->getOperand(0) == N->getOperand(1))
+    if (IsVMerge(Opc))
+      MadeChange |= performCombineVMergeAndVOps(N);
+    if (IsVMerge(Opc) && N->getOperand(0) == N->getOperand(1))
       MadeChange |= performVMergeToVMv(N);
   }
   return MadeChange;
