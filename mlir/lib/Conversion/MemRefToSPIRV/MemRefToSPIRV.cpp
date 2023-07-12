@@ -490,14 +490,6 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   result = rewriter.create<spirv::ShiftRightArithmeticOp>(loc, dstType, result,
                                                           shiftValue);
 
-  if (isBool) {
-    dstType = typeConverter.convertType(loadOp.getType());
-    mask = spirv::ConstantOp::getOne(result.getType(), loc, rewriter);
-    result = rewriter.create<spirv::IEqualOp>(loc, result, mask);
-  } else if (result.getType().getIntOrFloatBitWidth() !=
-             static_cast<unsigned>(dstBits)) {
-    result = rewriter.create<spirv::SConvertOp>(loc, dstType, result);
-  }
   rewriter.replaceOp(loadOp, result);
 
   assert(accessChainOp.use_empty());

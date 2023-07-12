@@ -5,10 +5,10 @@
 ; access, and end with another non-atomic access; this is to test that the
 ; !pcsections propagation doesn't accidentally touch adjacent instructions.
 ;
-; RUN: llc -O0 < %s | FileCheck %s --check-prefixes=O0
-; RUN: llc -O1 < %s | FileCheck %s --check-prefixes=O1
-; RUN: llc -O2 < %s | FileCheck %s --check-prefixes=O2
-; RUN: llc -O3 < %s | FileCheck %s --check-prefixes=O3
+; RUN: llc -O0 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O0
+; RUN: llc -O1 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O1
+; RUN: llc -O2 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O2
+; RUN: llc -O3 -mattr=cx16 < %s | FileCheck %s --check-prefixes=O3
 
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -9977,6 +9977,6322 @@ then:
 
 else:
   ret i64 2
+}
+
+define i128 @atomic128_load_unordered(ptr %a) {
+; O0-LABEL: atomic128_load_unordered:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection414:
+; O0-NEXT:    xorl %eax, %eax
+; O0-NEXT:    movl %eax, %ebx
+; O0-NEXT:    movq %rbx, %rax
+; O0-NEXT:    movq %rbx, %rdx
+; O0-NEXT:    movq %rbx, %rcx
+; O0-NEXT:  .Lpcsection415:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq $1, foo(%rip)
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_load_unordered:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection328:
+; O1-NEXT:    xorl %eax, %eax
+; O1-NEXT:  .Lpcsection329:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection330:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection331:
+; O1-NEXT:    xorl %ebx, %ebx
+; O1-NEXT:  .Lpcsection332:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_load_unordered:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection328:
+; O2-NEXT:    xorl %eax, %eax
+; O2-NEXT:  .Lpcsection329:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection330:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection331:
+; O2-NEXT:    xorl %ebx, %ebx
+; O2-NEXT:  .Lpcsection332:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_load_unordered:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection328:
+; O3-NEXT:    xorl %eax, %eax
+; O3-NEXT:  .Lpcsection329:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection330:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection331:
+; O3-NEXT:    xorl %ebx, %ebx
+; O3-NEXT:  .Lpcsection332:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = load atomic i128, ptr %a unordered, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret i128 %x
+}
+
+define i128 @atomic128_load_monotonic(ptr %a) {
+; O0-LABEL: atomic128_load_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection416:
+; O0-NEXT:    xorl %eax, %eax
+; O0-NEXT:    movl %eax, %ebx
+; O0-NEXT:    movq %rbx, %rax
+; O0-NEXT:    movq %rbx, %rdx
+; O0-NEXT:    movq %rbx, %rcx
+; O0-NEXT:  .Lpcsection417:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq $1, foo(%rip)
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_load_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection333:
+; O1-NEXT:    xorl %eax, %eax
+; O1-NEXT:  .Lpcsection334:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection335:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection336:
+; O1-NEXT:    xorl %ebx, %ebx
+; O1-NEXT:  .Lpcsection337:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_load_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection333:
+; O2-NEXT:    xorl %eax, %eax
+; O2-NEXT:  .Lpcsection334:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection335:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection336:
+; O2-NEXT:    xorl %ebx, %ebx
+; O2-NEXT:  .Lpcsection337:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_load_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection333:
+; O3-NEXT:    xorl %eax, %eax
+; O3-NEXT:  .Lpcsection334:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection335:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection336:
+; O3-NEXT:    xorl %ebx, %ebx
+; O3-NEXT:  .Lpcsection337:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = load atomic i128, ptr %a monotonic, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret i128 %x
+}
+
+define i128 @atomic128_load_acquire(ptr %a) {
+; O0-LABEL: atomic128_load_acquire:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection418:
+; O0-NEXT:    xorl %eax, %eax
+; O0-NEXT:    movl %eax, %ebx
+; O0-NEXT:    movq %rbx, %rax
+; O0-NEXT:    movq %rbx, %rdx
+; O0-NEXT:    movq %rbx, %rcx
+; O0-NEXT:  .Lpcsection419:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq $1, foo(%rip)
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_load_acquire:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection338:
+; O1-NEXT:    xorl %eax, %eax
+; O1-NEXT:  .Lpcsection339:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection340:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection341:
+; O1-NEXT:    xorl %ebx, %ebx
+; O1-NEXT:  .Lpcsection342:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_load_acquire:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection338:
+; O2-NEXT:    xorl %eax, %eax
+; O2-NEXT:  .Lpcsection339:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection340:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection341:
+; O2-NEXT:    xorl %ebx, %ebx
+; O2-NEXT:  .Lpcsection342:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_load_acquire:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection338:
+; O3-NEXT:    xorl %eax, %eax
+; O3-NEXT:  .Lpcsection339:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection340:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection341:
+; O3-NEXT:    xorl %ebx, %ebx
+; O3-NEXT:  .Lpcsection342:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = load atomic i128, ptr %a acquire, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret i128 %x
+}
+
+define i128 @atomic128_load_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_load_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection420:
+; O0-NEXT:    xorl %eax, %eax
+; O0-NEXT:    movl %eax, %ebx
+; O0-NEXT:    movq %rbx, %rax
+; O0-NEXT:    movq %rbx, %rdx
+; O0-NEXT:    movq %rbx, %rcx
+; O0-NEXT:  .Lpcsection421:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq $1, foo(%rip)
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_load_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection343:
+; O1-NEXT:    xorl %eax, %eax
+; O1-NEXT:  .Lpcsection344:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection345:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection346:
+; O1-NEXT:    xorl %ebx, %ebx
+; O1-NEXT:  .Lpcsection347:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_load_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection343:
+; O2-NEXT:    xorl %eax, %eax
+; O2-NEXT:  .Lpcsection344:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection345:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection346:
+; O2-NEXT:    xorl %ebx, %ebx
+; O2-NEXT:  .Lpcsection347:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_load_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection343:
+; O3-NEXT:    xorl %eax, %eax
+; O3-NEXT:  .Lpcsection344:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection345:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection346:
+; O3-NEXT:    xorl %ebx, %ebx
+; O3-NEXT:  .Lpcsection347:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = load atomic i128, ptr %a seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret i128 %x
+}
+
+define ptr @atomic128_load_seq_cst_ptr_ty(ptr %a) {
+; O0-LABEL: atomic128_load_seq_cst_ptr_ty:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection422:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_load_seq_cst_ptr_ty:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection348:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_load_seq_cst_ptr_ty:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection348:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_load_seq_cst_ptr_ty:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection348:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = load atomic ptr, ptr %a seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret ptr %x
+}
+
+define void @atomic128_store_unordered(ptr %a) {
+; O0-LABEL: atomic128_store_unordered:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection423:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection424:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection425:
+; O0-NEXT:    jmp .LBB203_1
+; O0-NEXT:  .LBB203_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:  .Lpcsection426:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection427:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection428:
+; O0-NEXT:    movl $42, %ebx
+; O0-NEXT:  .Lpcsection429:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection430:
+; O0-NEXT:    jne .LBB203_1
+; O0-NEXT:    jmp .LBB203_2
+; O0-NEXT:  .LBB203_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_store_unordered:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection349:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection350:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection351:
+; O1-NEXT:    movl $42, %ebx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB203_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:  .Lpcsection352:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection353:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection354:
+; O1-NEXT:    jne .LBB203_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_store_unordered:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection349:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection350:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection351:
+; O2-NEXT:    movl $42, %ebx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB203_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:  .Lpcsection352:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection353:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection354:
+; O2-NEXT:    jne .LBB203_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_store_unordered:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection349:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection350:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection351:
+; O3-NEXT:    movl $42, %ebx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB203_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:  .Lpcsection352:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection353:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection354:
+; O3-NEXT:    jne .LBB203_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  store atomic i128 42, ptr %a unordered, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_store_monotonic(ptr %a) {
+; O0-LABEL: atomic128_store_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection431:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection432:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection433:
+; O0-NEXT:    jmp .LBB204_1
+; O0-NEXT:  .LBB204_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:  .Lpcsection434:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection435:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection436:
+; O0-NEXT:    movl $42, %ebx
+; O0-NEXT:  .Lpcsection437:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection438:
+; O0-NEXT:    jne .LBB204_1
+; O0-NEXT:    jmp .LBB204_2
+; O0-NEXT:  .LBB204_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_store_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection355:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection356:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection357:
+; O1-NEXT:    movl $42, %ebx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB204_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:  .Lpcsection358:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection359:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection360:
+; O1-NEXT:    jne .LBB204_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_store_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection355:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection356:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection357:
+; O2-NEXT:    movl $42, %ebx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB204_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:  .Lpcsection358:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection359:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection360:
+; O2-NEXT:    jne .LBB204_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_store_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection355:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection356:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection357:
+; O3-NEXT:    movl $42, %ebx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB204_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:  .Lpcsection358:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection359:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection360:
+; O3-NEXT:    jne .LBB204_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  store atomic i128 42, ptr %a monotonic, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_store_release(ptr %a) {
+; O0-LABEL: atomic128_store_release:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection439:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection440:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection441:
+; O0-NEXT:    jmp .LBB205_1
+; O0-NEXT:  .LBB205_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:  .Lpcsection442:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection443:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection444:
+; O0-NEXT:    movl $42, %ebx
+; O0-NEXT:  .Lpcsection445:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection446:
+; O0-NEXT:    jne .LBB205_1
+; O0-NEXT:    jmp .LBB205_2
+; O0-NEXT:  .LBB205_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_store_release:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection361:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection362:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection363:
+; O1-NEXT:    movl $42, %ebx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB205_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:  .Lpcsection364:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection365:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection366:
+; O1-NEXT:    jne .LBB205_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_store_release:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection361:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection362:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection363:
+; O2-NEXT:    movl $42, %ebx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB205_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:  .Lpcsection364:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection365:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection366:
+; O2-NEXT:    jne .LBB205_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_store_release:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection361:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection362:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection363:
+; O3-NEXT:    movl $42, %ebx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB205_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:  .Lpcsection364:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection365:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection366:
+; O3-NEXT:    jne .LBB205_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  store atomic i128 42, ptr %a release, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_store_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_store_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection447:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection448:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection449:
+; O0-NEXT:    jmp .LBB206_1
+; O0-NEXT:  .LBB206_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:  .Lpcsection450:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection451:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection452:
+; O0-NEXT:    movl $42, %ebx
+; O0-NEXT:  .Lpcsection453:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection454:
+; O0-NEXT:    jne .LBB206_1
+; O0-NEXT:    jmp .LBB206_2
+; O0-NEXT:  .LBB206_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_store_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection367:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection368:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection369:
+; O1-NEXT:    movl $42, %ebx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB206_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:  .Lpcsection370:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection371:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection372:
+; O1-NEXT:    jne .LBB206_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_store_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection367:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection368:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection369:
+; O2-NEXT:    movl $42, %ebx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB206_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:  .Lpcsection370:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection371:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection372:
+; O2-NEXT:    jne .LBB206_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_store_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection367:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection368:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection369:
+; O3-NEXT:    movl $42, %ebx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB206_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:  .Lpcsection370:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection371:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection372:
+; O3-NEXT:    jne .LBB206_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  store atomic i128 42, ptr %a seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_store_seq_cst_ptr_ty(ptr %a, ptr %v) {
+; O0-LABEL: atomic128_store_seq_cst_ptr_ty:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection455:
+; O0-NEXT:    xchgq %rsi, (%rdi)
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_store_seq_cst_ptr_ty:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection373:
+; O1-NEXT:    xchgq %rsi, (%rdi)
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_store_seq_cst_ptr_ty:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection373:
+; O2-NEXT:    xchgq %rsi, (%rdi)
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_store_seq_cst_ptr_ty:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection373:
+; O3-NEXT:    xchgq %rsi, (%rdi)
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  store atomic ptr %v, ptr %a seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xchg_monotonic(ptr %a) {
+; O0-LABEL: atomic128_xchg_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection456:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection457:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection458:
+; O0-NEXT:    jmp .LBB208_1
+; O0-NEXT:  .LBB208_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:  .Lpcsection459:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection460:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection461:
+; O0-NEXT:    movl $42, %ebx
+; O0-NEXT:  .Lpcsection462:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection463:
+; O0-NEXT:    jne .LBB208_1
+; O0-NEXT:    jmp .LBB208_2
+; O0-NEXT:  .LBB208_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xchg_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection374:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection375:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection376:
+; O1-NEXT:    movl $42, %ebx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB208_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:  .Lpcsection377:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection378:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection379:
+; O1-NEXT:    jne .LBB208_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xchg_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection374:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection375:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection376:
+; O2-NEXT:    movl $42, %ebx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB208_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:  .Lpcsection377:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection378:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection379:
+; O2-NEXT:    jne .LBB208_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xchg_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection374:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection375:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection376:
+; O3-NEXT:    movl $42, %ebx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB208_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:  .Lpcsection377:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection378:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection379:
+; O3-NEXT:    jne .LBB208_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xchg ptr %a, i128 42 monotonic, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_add_monotonic(ptr %a) {
+; O0-LABEL: atomic128_add_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection464:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection465:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection466:
+; O0-NEXT:    jmp .LBB209_1
+; O0-NEXT:  .LBB209_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection467:
+; O0-NEXT:    addq $42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection468:
+; O0-NEXT:    adcq $0, %rcx
+; O0-NEXT:  .Lpcsection469:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection470:
+; O0-NEXT:    jne .LBB209_1
+; O0-NEXT:    jmp .LBB209_2
+; O0-NEXT:  .LBB209_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_add_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection380:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection381:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB209_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection382:
+; O1-NEXT:    addq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection383:
+; O1-NEXT:    adcq $0, %rcx
+; O1-NEXT:  .Lpcsection384:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection385:
+; O1-NEXT:    jne .LBB209_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_add_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection380:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection381:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB209_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection382:
+; O2-NEXT:    addq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection383:
+; O2-NEXT:    adcq $0, %rcx
+; O2-NEXT:  .Lpcsection384:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection385:
+; O2-NEXT:    jne .LBB209_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_add_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection380:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection381:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB209_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection382:
+; O3-NEXT:    addq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection383:
+; O3-NEXT:    adcq $0, %rcx
+; O3-NEXT:  .Lpcsection384:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection385:
+; O3-NEXT:    jne .LBB209_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw add ptr %a, i128 42 monotonic, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_sub_monotonic(ptr %a) {
+; O0-LABEL: atomic128_sub_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection471:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection472:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection473:
+; O0-NEXT:    jmp .LBB210_1
+; O0-NEXT:  .LBB210_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection474:
+; O0-NEXT:    addq $-42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection475:
+; O0-NEXT:    adcq $-1, %rcx
+; O0-NEXT:  .Lpcsection476:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection477:
+; O0-NEXT:    jne .LBB210_1
+; O0-NEXT:    jmp .LBB210_2
+; O0-NEXT:  .LBB210_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_sub_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection386:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection387:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB210_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection388:
+; O1-NEXT:    addq $-42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection389:
+; O1-NEXT:    adcq $-1, %rcx
+; O1-NEXT:  .Lpcsection390:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection391:
+; O1-NEXT:    jne .LBB210_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_sub_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection386:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection387:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB210_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection388:
+; O2-NEXT:    addq $-42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection389:
+; O2-NEXT:    adcq $-1, %rcx
+; O2-NEXT:  .Lpcsection390:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection391:
+; O2-NEXT:    jne .LBB210_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_sub_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection386:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection387:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB210_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection388:
+; O3-NEXT:    addq $-42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection389:
+; O3-NEXT:    adcq $-1, %rcx
+; O3-NEXT:  .Lpcsection390:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection391:
+; O3-NEXT:    jne .LBB210_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw sub ptr %a, i128 42 monotonic, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_and_monotonic(ptr %a) {
+; O0-LABEL: atomic128_and_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection478:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection479:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection480:
+; O0-NEXT:    jmp .LBB211_1
+; O0-NEXT:  .LBB211_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection481:
+; O0-NEXT:    andl $42, %ecx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection482:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection483:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection484:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection485:
+; O0-NEXT:    jne .LBB211_1
+; O0-NEXT:    jmp .LBB211_2
+; O0-NEXT:  .LBB211_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_and_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection392:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection393:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB211_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection394:
+; O1-NEXT:    andl $42, %ebx
+; O1-NEXT:  .Lpcsection395:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection396:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection397:
+; O1-NEXT:    jne .LBB211_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_and_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection392:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection393:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB211_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection394:
+; O2-NEXT:    andl $42, %ebx
+; O2-NEXT:  .Lpcsection395:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection396:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection397:
+; O2-NEXT:    jne .LBB211_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_and_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection392:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection393:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB211_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection394:
+; O3-NEXT:    andl $42, %ebx
+; O3-NEXT:  .Lpcsection395:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection396:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection397:
+; O3-NEXT:    jne .LBB211_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw and ptr %a, i128 42 monotonic, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_or_monotonic(ptr %a) {
+; O0-LABEL: atomic128_or_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection486:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection487:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection488:
+; O0-NEXT:    jmp .LBB212_1
+; O0-NEXT:  .LBB212_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection489:
+; O0-NEXT:    orq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection490:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection491:
+; O0-NEXT:    jne .LBB212_1
+; O0-NEXT:    jmp .LBB212_2
+; O0-NEXT:  .LBB212_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_or_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection398:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection399:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB212_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection400:
+; O1-NEXT:    orq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection401:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection402:
+; O1-NEXT:    jne .LBB212_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_or_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection398:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection399:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB212_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection400:
+; O2-NEXT:    orq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection401:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection402:
+; O2-NEXT:    jne .LBB212_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_or_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection398:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection399:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB212_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection400:
+; O3-NEXT:    orq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection401:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection402:
+; O3-NEXT:    jne .LBB212_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw or ptr %a, i128 42 monotonic, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xor_monotonic(ptr %a) {
+; O0-LABEL: atomic128_xor_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection492:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection493:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection494:
+; O0-NEXT:    jmp .LBB213_1
+; O0-NEXT:  .LBB213_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection495:
+; O0-NEXT:    xorq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection496:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection497:
+; O0-NEXT:    jne .LBB213_1
+; O0-NEXT:    jmp .LBB213_2
+; O0-NEXT:  .LBB213_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xor_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection403:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection404:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB213_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection405:
+; O1-NEXT:    xorq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection406:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection407:
+; O1-NEXT:    jne .LBB213_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xor_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection403:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection404:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB213_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection405:
+; O2-NEXT:    xorq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection406:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection407:
+; O2-NEXT:    jne .LBB213_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xor_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection403:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection404:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB213_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection405:
+; O3-NEXT:    xorq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection406:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection407:
+; O3-NEXT:    jne .LBB213_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xor ptr %a, i128 42 monotonic, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_nand_monotonic(ptr %a) {
+; O0-LABEL: atomic128_nand_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection498:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection499:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection500:
+; O0-NEXT:    jmp .LBB214_1
+; O0-NEXT:  .LBB214_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection501:
+; O0-NEXT:    notl %ecx
+; O0-NEXT:  .Lpcsection502:
+; O0-NEXT:    # implicit-def: $rbx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection503:
+; O0-NEXT:    orq $-43, %rbx
+; O0-NEXT:  .Lpcsection504:
+; O0-NEXT:    movq $-1, %rcx
+; O0-NEXT:  .Lpcsection505:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection506:
+; O0-NEXT:    jne .LBB214_1
+; O0-NEXT:    jmp .LBB214_2
+; O0-NEXT:  .LBB214_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_nand_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection408:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection409:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection410:
+; O1-NEXT:    movq $-1, %rcx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB214_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection411:
+; O1-NEXT:    notl %ebx
+; O1-NEXT:  .Lpcsection412:
+; O1-NEXT:    orq $-43, %rbx
+; O1-NEXT:  .Lpcsection413:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection414:
+; O1-NEXT:    jne .LBB214_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_nand_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection408:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection409:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection410:
+; O2-NEXT:    movq $-1, %rcx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB214_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection411:
+; O2-NEXT:    notl %ebx
+; O2-NEXT:  .Lpcsection412:
+; O2-NEXT:    orq $-43, %rbx
+; O2-NEXT:  .Lpcsection413:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection414:
+; O2-NEXT:    jne .LBB214_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_nand_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection408:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection409:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection410:
+; O3-NEXT:    movq $-1, %rcx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB214_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection411:
+; O3-NEXT:    notl %ebx
+; O3-NEXT:  .Lpcsection412:
+; O3-NEXT:    orq $-43, %rbx
+; O3-NEXT:  .Lpcsection413:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection414:
+; O3-NEXT:    jne .LBB214_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw nand ptr %a, i128 42 monotonic, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xchg_acquire(ptr %a) {
+; O0-LABEL: atomic128_xchg_acquire:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection507:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection508:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection509:
+; O0-NEXT:    jmp .LBB215_1
+; O0-NEXT:  .LBB215_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:  .Lpcsection510:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection511:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection512:
+; O0-NEXT:    movl $42, %ebx
+; O0-NEXT:  .Lpcsection513:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection514:
+; O0-NEXT:    jne .LBB215_1
+; O0-NEXT:    jmp .LBB215_2
+; O0-NEXT:  .LBB215_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xchg_acquire:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection415:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection416:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection417:
+; O1-NEXT:    movl $42, %ebx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB215_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:  .Lpcsection418:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection419:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection420:
+; O1-NEXT:    jne .LBB215_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xchg_acquire:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection415:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection416:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection417:
+; O2-NEXT:    movl $42, %ebx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB215_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:  .Lpcsection418:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection419:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection420:
+; O2-NEXT:    jne .LBB215_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xchg_acquire:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection415:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection416:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection417:
+; O3-NEXT:    movl $42, %ebx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB215_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:  .Lpcsection418:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection419:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection420:
+; O3-NEXT:    jne .LBB215_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xchg ptr %a, i128 42 acquire, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_add_acquire(ptr %a) {
+; O0-LABEL: atomic128_add_acquire:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection515:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection516:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection517:
+; O0-NEXT:    jmp .LBB216_1
+; O0-NEXT:  .LBB216_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection518:
+; O0-NEXT:    addq $42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection519:
+; O0-NEXT:    adcq $0, %rcx
+; O0-NEXT:  .Lpcsection520:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection521:
+; O0-NEXT:    jne .LBB216_1
+; O0-NEXT:    jmp .LBB216_2
+; O0-NEXT:  .LBB216_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_add_acquire:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection421:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection422:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB216_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection423:
+; O1-NEXT:    addq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection424:
+; O1-NEXT:    adcq $0, %rcx
+; O1-NEXT:  .Lpcsection425:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection426:
+; O1-NEXT:    jne .LBB216_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_add_acquire:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection421:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection422:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB216_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection423:
+; O2-NEXT:    addq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection424:
+; O2-NEXT:    adcq $0, %rcx
+; O2-NEXT:  .Lpcsection425:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection426:
+; O2-NEXT:    jne .LBB216_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_add_acquire:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection421:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection422:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB216_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection423:
+; O3-NEXT:    addq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection424:
+; O3-NEXT:    adcq $0, %rcx
+; O3-NEXT:  .Lpcsection425:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection426:
+; O3-NEXT:    jne .LBB216_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw add ptr %a, i128 42 acquire, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_sub_acquire(ptr %a) {
+; O0-LABEL: atomic128_sub_acquire:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection522:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection523:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection524:
+; O0-NEXT:    jmp .LBB217_1
+; O0-NEXT:  .LBB217_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection525:
+; O0-NEXT:    addq $-42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection526:
+; O0-NEXT:    adcq $-1, %rcx
+; O0-NEXT:  .Lpcsection527:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection528:
+; O0-NEXT:    jne .LBB217_1
+; O0-NEXT:    jmp .LBB217_2
+; O0-NEXT:  .LBB217_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_sub_acquire:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection427:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection428:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB217_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection429:
+; O1-NEXT:    addq $-42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection430:
+; O1-NEXT:    adcq $-1, %rcx
+; O1-NEXT:  .Lpcsection431:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection432:
+; O1-NEXT:    jne .LBB217_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_sub_acquire:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection427:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection428:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB217_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection429:
+; O2-NEXT:    addq $-42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection430:
+; O2-NEXT:    adcq $-1, %rcx
+; O2-NEXT:  .Lpcsection431:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection432:
+; O2-NEXT:    jne .LBB217_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_sub_acquire:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection427:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection428:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB217_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection429:
+; O3-NEXT:    addq $-42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection430:
+; O3-NEXT:    adcq $-1, %rcx
+; O3-NEXT:  .Lpcsection431:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection432:
+; O3-NEXT:    jne .LBB217_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw sub ptr %a, i128 42 acquire, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_and_acquire(ptr %a) {
+; O0-LABEL: atomic128_and_acquire:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection529:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection530:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection531:
+; O0-NEXT:    jmp .LBB218_1
+; O0-NEXT:  .LBB218_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection532:
+; O0-NEXT:    andl $42, %ecx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection533:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection534:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection535:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection536:
+; O0-NEXT:    jne .LBB218_1
+; O0-NEXT:    jmp .LBB218_2
+; O0-NEXT:  .LBB218_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_and_acquire:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection433:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection434:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB218_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection435:
+; O1-NEXT:    andl $42, %ebx
+; O1-NEXT:  .Lpcsection436:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection437:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection438:
+; O1-NEXT:    jne .LBB218_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_and_acquire:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection433:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection434:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB218_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection435:
+; O2-NEXT:    andl $42, %ebx
+; O2-NEXT:  .Lpcsection436:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection437:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection438:
+; O2-NEXT:    jne .LBB218_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_and_acquire:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection433:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection434:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB218_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection435:
+; O3-NEXT:    andl $42, %ebx
+; O3-NEXT:  .Lpcsection436:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection437:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection438:
+; O3-NEXT:    jne .LBB218_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw and ptr %a, i128 42 acquire, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_or_acquire(ptr %a) {
+; O0-LABEL: atomic128_or_acquire:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection537:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection538:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection539:
+; O0-NEXT:    jmp .LBB219_1
+; O0-NEXT:  .LBB219_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection540:
+; O0-NEXT:    orq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection541:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection542:
+; O0-NEXT:    jne .LBB219_1
+; O0-NEXT:    jmp .LBB219_2
+; O0-NEXT:  .LBB219_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_or_acquire:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection439:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection440:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB219_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection441:
+; O1-NEXT:    orq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection442:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection443:
+; O1-NEXT:    jne .LBB219_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_or_acquire:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection439:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection440:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB219_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection441:
+; O2-NEXT:    orq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection442:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection443:
+; O2-NEXT:    jne .LBB219_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_or_acquire:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection439:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection440:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB219_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection441:
+; O3-NEXT:    orq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection442:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection443:
+; O3-NEXT:    jne .LBB219_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw or ptr %a, i128 42 acquire, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xor_acquire(ptr %a) {
+; O0-LABEL: atomic128_xor_acquire:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection543:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection544:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection545:
+; O0-NEXT:    jmp .LBB220_1
+; O0-NEXT:  .LBB220_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection546:
+; O0-NEXT:    xorq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection547:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection548:
+; O0-NEXT:    jne .LBB220_1
+; O0-NEXT:    jmp .LBB220_2
+; O0-NEXT:  .LBB220_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xor_acquire:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection444:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection445:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB220_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection446:
+; O1-NEXT:    xorq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection447:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection448:
+; O1-NEXT:    jne .LBB220_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xor_acquire:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection444:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection445:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB220_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection446:
+; O2-NEXT:    xorq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection447:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection448:
+; O2-NEXT:    jne .LBB220_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xor_acquire:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection444:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection445:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB220_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection446:
+; O3-NEXT:    xorq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection447:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection448:
+; O3-NEXT:    jne .LBB220_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xor ptr %a, i128 42 acquire, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_nand_acquire(ptr %a) {
+; O0-LABEL: atomic128_nand_acquire:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection549:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection550:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection551:
+; O0-NEXT:    jmp .LBB221_1
+; O0-NEXT:  .LBB221_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection552:
+; O0-NEXT:    notl %ecx
+; O0-NEXT:  .Lpcsection553:
+; O0-NEXT:    # implicit-def: $rbx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection554:
+; O0-NEXT:    orq $-43, %rbx
+; O0-NEXT:  .Lpcsection555:
+; O0-NEXT:    movq $-1, %rcx
+; O0-NEXT:  .Lpcsection556:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection557:
+; O0-NEXT:    jne .LBB221_1
+; O0-NEXT:    jmp .LBB221_2
+; O0-NEXT:  .LBB221_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_nand_acquire:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection449:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection450:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection451:
+; O1-NEXT:    movq $-1, %rcx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB221_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection452:
+; O1-NEXT:    notl %ebx
+; O1-NEXT:  .Lpcsection453:
+; O1-NEXT:    orq $-43, %rbx
+; O1-NEXT:  .Lpcsection454:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection455:
+; O1-NEXT:    jne .LBB221_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_nand_acquire:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection449:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection450:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection451:
+; O2-NEXT:    movq $-1, %rcx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB221_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection452:
+; O2-NEXT:    notl %ebx
+; O2-NEXT:  .Lpcsection453:
+; O2-NEXT:    orq $-43, %rbx
+; O2-NEXT:  .Lpcsection454:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection455:
+; O2-NEXT:    jne .LBB221_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_nand_acquire:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection449:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection450:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection451:
+; O3-NEXT:    movq $-1, %rcx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB221_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection452:
+; O3-NEXT:    notl %ebx
+; O3-NEXT:  .Lpcsection453:
+; O3-NEXT:    orq $-43, %rbx
+; O3-NEXT:  .Lpcsection454:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection455:
+; O3-NEXT:    jne .LBB221_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw nand ptr %a, i128 42 acquire, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xchg_release(ptr %a) {
+; O0-LABEL: atomic128_xchg_release:
+; O0:       # %bb.0:
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection558:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection559:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection560:
+; O0-NEXT:    jmp .LBB222_1
+; O0-NEXT:  .LBB222_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:  .Lpcsection561:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection562:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection563:
+; O0-NEXT:    movl $42, %ebx
+; O0-NEXT:  .Lpcsection564:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection565:
+; O0-NEXT:    jne .LBB222_1
+; O0-NEXT:    jmp .LBB222_2
+; O0-NEXT:  .LBB222_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xchg_release:
+; O1:       # %bb.0:
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection456:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection457:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection458:
+; O1-NEXT:    movl $42, %ebx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB222_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:  .Lpcsection459:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection460:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection461:
+; O1-NEXT:    jne .LBB222_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xchg_release:
+; O2:       # %bb.0:
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection456:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection457:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection458:
+; O2-NEXT:    movl $42, %ebx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB222_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:  .Lpcsection459:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection460:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection461:
+; O2-NEXT:    jne .LBB222_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xchg_release:
+; O3:       # %bb.0:
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection456:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection457:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection458:
+; O3-NEXT:    movl $42, %ebx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB222_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:  .Lpcsection459:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection460:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection461:
+; O3-NEXT:    jne .LBB222_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xchg ptr %a, i128 42 release, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_add_release(ptr %a) {
+; O0-LABEL: atomic128_add_release:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection566:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection567:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection568:
+; O0-NEXT:    jmp .LBB223_1
+; O0-NEXT:  .LBB223_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection569:
+; O0-NEXT:    addq $42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection570:
+; O0-NEXT:    adcq $0, %rcx
+; O0-NEXT:  .Lpcsection571:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection572:
+; O0-NEXT:    jne .LBB223_1
+; O0-NEXT:    jmp .LBB223_2
+; O0-NEXT:  .LBB223_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_add_release:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection462:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection463:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB223_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection464:
+; O1-NEXT:    addq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection465:
+; O1-NEXT:    adcq $0, %rcx
+; O1-NEXT:  .Lpcsection466:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection467:
+; O1-NEXT:    jne .LBB223_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_add_release:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection462:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection463:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB223_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection464:
+; O2-NEXT:    addq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection465:
+; O2-NEXT:    adcq $0, %rcx
+; O2-NEXT:  .Lpcsection466:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection467:
+; O2-NEXT:    jne .LBB223_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_add_release:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection462:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection463:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB223_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection464:
+; O3-NEXT:    addq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection465:
+; O3-NEXT:    adcq $0, %rcx
+; O3-NEXT:  .Lpcsection466:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection467:
+; O3-NEXT:    jne .LBB223_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw add ptr %a, i128 42 release, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_sub_release(ptr %a) {
+; O0-LABEL: atomic128_sub_release:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection573:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection574:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection575:
+; O0-NEXT:    jmp .LBB224_1
+; O0-NEXT:  .LBB224_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection576:
+; O0-NEXT:    addq $-42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection577:
+; O0-NEXT:    adcq $-1, %rcx
+; O0-NEXT:  .Lpcsection578:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection579:
+; O0-NEXT:    jne .LBB224_1
+; O0-NEXT:    jmp .LBB224_2
+; O0-NEXT:  .LBB224_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_sub_release:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection468:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection469:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB224_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection470:
+; O1-NEXT:    addq $-42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection471:
+; O1-NEXT:    adcq $-1, %rcx
+; O1-NEXT:  .Lpcsection472:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection473:
+; O1-NEXT:    jne .LBB224_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_sub_release:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection468:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection469:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB224_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection470:
+; O2-NEXT:    addq $-42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection471:
+; O2-NEXT:    adcq $-1, %rcx
+; O2-NEXT:  .Lpcsection472:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection473:
+; O2-NEXT:    jne .LBB224_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_sub_release:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection468:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection469:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB224_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection470:
+; O3-NEXT:    addq $-42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection471:
+; O3-NEXT:    adcq $-1, %rcx
+; O3-NEXT:  .Lpcsection472:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection473:
+; O3-NEXT:    jne .LBB224_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw sub ptr %a, i128 42 release, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_and_release(ptr %a) {
+; O0-LABEL: atomic128_and_release:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection580:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection581:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection582:
+; O0-NEXT:    jmp .LBB225_1
+; O0-NEXT:  .LBB225_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection583:
+; O0-NEXT:    andl $42, %ecx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection584:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection585:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection586:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection587:
+; O0-NEXT:    jne .LBB225_1
+; O0-NEXT:    jmp .LBB225_2
+; O0-NEXT:  .LBB225_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_and_release:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection474:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection475:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB225_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection476:
+; O1-NEXT:    andl $42, %ebx
+; O1-NEXT:  .Lpcsection477:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection478:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection479:
+; O1-NEXT:    jne .LBB225_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_and_release:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection474:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection475:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB225_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection476:
+; O2-NEXT:    andl $42, %ebx
+; O2-NEXT:  .Lpcsection477:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection478:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection479:
+; O2-NEXT:    jne .LBB225_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_and_release:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection474:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection475:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB225_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection476:
+; O3-NEXT:    andl $42, %ebx
+; O3-NEXT:  .Lpcsection477:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection478:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection479:
+; O3-NEXT:    jne .LBB225_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw and ptr %a, i128 42 release, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_or_release(ptr %a) {
+; O0-LABEL: atomic128_or_release:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection588:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection589:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection590:
+; O0-NEXT:    jmp .LBB226_1
+; O0-NEXT:  .LBB226_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection591:
+; O0-NEXT:    orq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection592:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection593:
+; O0-NEXT:    jne .LBB226_1
+; O0-NEXT:    jmp .LBB226_2
+; O0-NEXT:  .LBB226_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_or_release:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection480:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection481:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB226_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection482:
+; O1-NEXT:    orq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection483:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection484:
+; O1-NEXT:    jne .LBB226_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_or_release:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection480:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection481:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB226_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection482:
+; O2-NEXT:    orq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection483:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection484:
+; O2-NEXT:    jne .LBB226_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_or_release:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection480:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection481:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB226_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection482:
+; O3-NEXT:    orq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection483:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection484:
+; O3-NEXT:    jne .LBB226_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw or ptr %a, i128 42 release, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xor_release(ptr %a) {
+; O0-LABEL: atomic128_xor_release:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection594:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection595:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection596:
+; O0-NEXT:    jmp .LBB227_1
+; O0-NEXT:  .LBB227_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection597:
+; O0-NEXT:    xorq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection598:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection599:
+; O0-NEXT:    jne .LBB227_1
+; O0-NEXT:    jmp .LBB227_2
+; O0-NEXT:  .LBB227_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xor_release:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection485:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection486:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB227_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection487:
+; O1-NEXT:    xorq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection488:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection489:
+; O1-NEXT:    jne .LBB227_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xor_release:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection485:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection486:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB227_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection487:
+; O2-NEXT:    xorq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection488:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection489:
+; O2-NEXT:    jne .LBB227_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xor_release:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection485:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection486:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB227_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection487:
+; O3-NEXT:    xorq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection488:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection489:
+; O3-NEXT:    jne .LBB227_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xor ptr %a, i128 42 release, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_nand_release(ptr %a) {
+; O0-LABEL: atomic128_nand_release:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection600:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection601:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection602:
+; O0-NEXT:    jmp .LBB228_1
+; O0-NEXT:  .LBB228_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection603:
+; O0-NEXT:    notl %ecx
+; O0-NEXT:  .Lpcsection604:
+; O0-NEXT:    # implicit-def: $rbx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection605:
+; O0-NEXT:    orq $-43, %rbx
+; O0-NEXT:  .Lpcsection606:
+; O0-NEXT:    movq $-1, %rcx
+; O0-NEXT:  .Lpcsection607:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection608:
+; O0-NEXT:    jne .LBB228_1
+; O0-NEXT:    jmp .LBB228_2
+; O0-NEXT:  .LBB228_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_nand_release:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection490:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection491:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection492:
+; O1-NEXT:    movq $-1, %rcx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB228_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection493:
+; O1-NEXT:    notl %ebx
+; O1-NEXT:  .Lpcsection494:
+; O1-NEXT:    orq $-43, %rbx
+; O1-NEXT:  .Lpcsection495:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection496:
+; O1-NEXT:    jne .LBB228_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_nand_release:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection490:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection491:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection492:
+; O2-NEXT:    movq $-1, %rcx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB228_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection493:
+; O2-NEXT:    notl %ebx
+; O2-NEXT:  .Lpcsection494:
+; O2-NEXT:    orq $-43, %rbx
+; O2-NEXT:  .Lpcsection495:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection496:
+; O2-NEXT:    jne .LBB228_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_nand_release:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection490:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection491:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection492:
+; O3-NEXT:    movq $-1, %rcx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB228_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection493:
+; O3-NEXT:    notl %ebx
+; O3-NEXT:  .Lpcsection494:
+; O3-NEXT:    orq $-43, %rbx
+; O3-NEXT:  .Lpcsection495:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection496:
+; O3-NEXT:    jne .LBB228_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw nand ptr %a, i128 42 release, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xchg_acq_rel(ptr %a) {
+; O0-LABEL: atomic128_xchg_acq_rel:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection609:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection610:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection611:
+; O0-NEXT:    jmp .LBB229_1
+; O0-NEXT:  .LBB229_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:  .Lpcsection612:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection613:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection614:
+; O0-NEXT:    movl $42, %ebx
+; O0-NEXT:  .Lpcsection615:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection616:
+; O0-NEXT:    jne .LBB229_1
+; O0-NEXT:    jmp .LBB229_2
+; O0-NEXT:  .LBB229_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xchg_acq_rel:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection497:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection498:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection499:
+; O1-NEXT:    movl $42, %ebx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB229_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:  .Lpcsection500:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection501:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection502:
+; O1-NEXT:    jne .LBB229_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xchg_acq_rel:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection497:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection498:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection499:
+; O2-NEXT:    movl $42, %ebx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB229_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:  .Lpcsection500:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection501:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection502:
+; O2-NEXT:    jne .LBB229_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xchg_acq_rel:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection497:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection498:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection499:
+; O3-NEXT:    movl $42, %ebx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB229_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:  .Lpcsection500:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection501:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection502:
+; O3-NEXT:    jne .LBB229_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xchg ptr %a, i128 42 acq_rel, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_add_acq_rel(ptr %a) {
+; O0-LABEL: atomic128_add_acq_rel:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection617:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection618:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection619:
+; O0-NEXT:    jmp .LBB230_1
+; O0-NEXT:  .LBB230_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection620:
+; O0-NEXT:    addq $42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection621:
+; O0-NEXT:    adcq $0, %rcx
+; O0-NEXT:  .Lpcsection622:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection623:
+; O0-NEXT:    jne .LBB230_1
+; O0-NEXT:    jmp .LBB230_2
+; O0-NEXT:  .LBB230_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_add_acq_rel:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection503:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection504:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB230_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection505:
+; O1-NEXT:    addq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection506:
+; O1-NEXT:    adcq $0, %rcx
+; O1-NEXT:  .Lpcsection507:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection508:
+; O1-NEXT:    jne .LBB230_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_add_acq_rel:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection503:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection504:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB230_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection505:
+; O2-NEXT:    addq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection506:
+; O2-NEXT:    adcq $0, %rcx
+; O2-NEXT:  .Lpcsection507:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection508:
+; O2-NEXT:    jne .LBB230_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_add_acq_rel:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection503:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection504:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB230_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection505:
+; O3-NEXT:    addq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection506:
+; O3-NEXT:    adcq $0, %rcx
+; O3-NEXT:  .Lpcsection507:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection508:
+; O3-NEXT:    jne .LBB230_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw add ptr %a, i128 42 acq_rel, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_sub_acq_rel(ptr %a) {
+; O0-LABEL: atomic128_sub_acq_rel:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection624:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection625:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection626:
+; O0-NEXT:    jmp .LBB231_1
+; O0-NEXT:  .LBB231_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection627:
+; O0-NEXT:    addq $-42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection628:
+; O0-NEXT:    adcq $-1, %rcx
+; O0-NEXT:  .Lpcsection629:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection630:
+; O0-NEXT:    jne .LBB231_1
+; O0-NEXT:    jmp .LBB231_2
+; O0-NEXT:  .LBB231_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_sub_acq_rel:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection509:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection510:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB231_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection511:
+; O1-NEXT:    addq $-42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection512:
+; O1-NEXT:    adcq $-1, %rcx
+; O1-NEXT:  .Lpcsection513:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection514:
+; O1-NEXT:    jne .LBB231_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_sub_acq_rel:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection509:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection510:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB231_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection511:
+; O2-NEXT:    addq $-42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection512:
+; O2-NEXT:    adcq $-1, %rcx
+; O2-NEXT:  .Lpcsection513:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection514:
+; O2-NEXT:    jne .LBB231_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_sub_acq_rel:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection509:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection510:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB231_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection511:
+; O3-NEXT:    addq $-42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection512:
+; O3-NEXT:    adcq $-1, %rcx
+; O3-NEXT:  .Lpcsection513:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection514:
+; O3-NEXT:    jne .LBB231_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw sub ptr %a, i128 42 acq_rel, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_and_acq_rel(ptr %a) {
+; O0-LABEL: atomic128_and_acq_rel:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection631:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection632:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection633:
+; O0-NEXT:    jmp .LBB232_1
+; O0-NEXT:  .LBB232_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection634:
+; O0-NEXT:    andl $42, %ecx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection635:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection636:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection637:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection638:
+; O0-NEXT:    jne .LBB232_1
+; O0-NEXT:    jmp .LBB232_2
+; O0-NEXT:  .LBB232_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_and_acq_rel:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection515:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection516:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB232_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection517:
+; O1-NEXT:    andl $42, %ebx
+; O1-NEXT:  .Lpcsection518:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection519:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection520:
+; O1-NEXT:    jne .LBB232_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_and_acq_rel:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection515:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection516:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB232_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection517:
+; O2-NEXT:    andl $42, %ebx
+; O2-NEXT:  .Lpcsection518:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection519:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection520:
+; O2-NEXT:    jne .LBB232_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_and_acq_rel:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection515:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection516:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB232_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection517:
+; O3-NEXT:    andl $42, %ebx
+; O3-NEXT:  .Lpcsection518:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection519:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection520:
+; O3-NEXT:    jne .LBB232_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw and ptr %a, i128 42 acq_rel, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_or_acq_rel(ptr %a) {
+; O0-LABEL: atomic128_or_acq_rel:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection639:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection640:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection641:
+; O0-NEXT:    jmp .LBB233_1
+; O0-NEXT:  .LBB233_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection642:
+; O0-NEXT:    orq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection643:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection644:
+; O0-NEXT:    jne .LBB233_1
+; O0-NEXT:    jmp .LBB233_2
+; O0-NEXT:  .LBB233_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_or_acq_rel:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection521:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection522:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB233_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection523:
+; O1-NEXT:    orq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection524:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection525:
+; O1-NEXT:    jne .LBB233_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_or_acq_rel:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection521:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection522:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB233_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection523:
+; O2-NEXT:    orq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection524:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection525:
+; O2-NEXT:    jne .LBB233_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_or_acq_rel:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection521:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection522:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB233_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection523:
+; O3-NEXT:    orq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection524:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection525:
+; O3-NEXT:    jne .LBB233_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw or ptr %a, i128 42 acq_rel, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xor_acq_rel(ptr %a) {
+; O0-LABEL: atomic128_xor_acq_rel:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection645:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection646:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection647:
+; O0-NEXT:    jmp .LBB234_1
+; O0-NEXT:  .LBB234_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection648:
+; O0-NEXT:    xorq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection649:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection650:
+; O0-NEXT:    jne .LBB234_1
+; O0-NEXT:    jmp .LBB234_2
+; O0-NEXT:  .LBB234_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xor_acq_rel:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection526:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection527:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB234_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection528:
+; O1-NEXT:    xorq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection529:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection530:
+; O1-NEXT:    jne .LBB234_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xor_acq_rel:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection526:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection527:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB234_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection528:
+; O2-NEXT:    xorq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection529:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection530:
+; O2-NEXT:    jne .LBB234_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xor_acq_rel:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection526:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection527:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB234_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection528:
+; O3-NEXT:    xorq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection529:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection530:
+; O3-NEXT:    jne .LBB234_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xor ptr %a, i128 42 acq_rel, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_nand_acq_rel(ptr %a) {
+; O0-LABEL: atomic128_nand_acq_rel:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection651:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection652:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection653:
+; O0-NEXT:    jmp .LBB235_1
+; O0-NEXT:  .LBB235_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection654:
+; O0-NEXT:    notl %ecx
+; O0-NEXT:  .Lpcsection655:
+; O0-NEXT:    # implicit-def: $rbx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection656:
+; O0-NEXT:    orq $-43, %rbx
+; O0-NEXT:  .Lpcsection657:
+; O0-NEXT:    movq $-1, %rcx
+; O0-NEXT:  .Lpcsection658:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection659:
+; O0-NEXT:    jne .LBB235_1
+; O0-NEXT:    jmp .LBB235_2
+; O0-NEXT:  .LBB235_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_nand_acq_rel:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection531:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection532:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection533:
+; O1-NEXT:    movq $-1, %rcx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB235_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection534:
+; O1-NEXT:    notl %ebx
+; O1-NEXT:  .Lpcsection535:
+; O1-NEXT:    orq $-43, %rbx
+; O1-NEXT:  .Lpcsection536:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection537:
+; O1-NEXT:    jne .LBB235_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_nand_acq_rel:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection531:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection532:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection533:
+; O2-NEXT:    movq $-1, %rcx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB235_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection534:
+; O2-NEXT:    notl %ebx
+; O2-NEXT:  .Lpcsection535:
+; O2-NEXT:    orq $-43, %rbx
+; O2-NEXT:  .Lpcsection536:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection537:
+; O2-NEXT:    jne .LBB235_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_nand_acq_rel:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection531:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection532:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection533:
+; O3-NEXT:    movq $-1, %rcx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB235_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection534:
+; O3-NEXT:    notl %ebx
+; O3-NEXT:  .Lpcsection535:
+; O3-NEXT:    orq $-43, %rbx
+; O3-NEXT:  .Lpcsection536:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection537:
+; O3-NEXT:    jne .LBB235_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw nand ptr %a, i128 42 acq_rel, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xchg_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_xchg_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection660:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection661:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection662:
+; O0-NEXT:    jmp .LBB236_1
+; O0-NEXT:  .LBB236_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:  .Lpcsection663:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection664:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection665:
+; O0-NEXT:    movl $42, %ebx
+; O0-NEXT:  .Lpcsection666:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection667:
+; O0-NEXT:    jne .LBB236_1
+; O0-NEXT:    jmp .LBB236_2
+; O0-NEXT:  .LBB236_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xchg_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection538:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection539:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection540:
+; O1-NEXT:    movl $42, %ebx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB236_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:  .Lpcsection541:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection542:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection543:
+; O1-NEXT:    jne .LBB236_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xchg_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection538:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection539:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection540:
+; O2-NEXT:    movl $42, %ebx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB236_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:  .Lpcsection541:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection542:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection543:
+; O2-NEXT:    jne .LBB236_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xchg_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection538:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection539:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection540:
+; O3-NEXT:    movl $42, %ebx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB236_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:  .Lpcsection541:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection542:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection543:
+; O3-NEXT:    jne .LBB236_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xchg ptr %a, i128 42 seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_add_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_add_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection668:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection669:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection670:
+; O0-NEXT:    jmp .LBB237_1
+; O0-NEXT:  .LBB237_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection671:
+; O0-NEXT:    addq $42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection672:
+; O0-NEXT:    adcq $0, %rcx
+; O0-NEXT:  .Lpcsection673:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection674:
+; O0-NEXT:    jne .LBB237_1
+; O0-NEXT:    jmp .LBB237_2
+; O0-NEXT:  .LBB237_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_add_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection544:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection545:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB237_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection546:
+; O1-NEXT:    addq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection547:
+; O1-NEXT:    adcq $0, %rcx
+; O1-NEXT:  .Lpcsection548:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection549:
+; O1-NEXT:    jne .LBB237_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_add_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection544:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection545:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB237_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection546:
+; O2-NEXT:    addq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection547:
+; O2-NEXT:    adcq $0, %rcx
+; O2-NEXT:  .Lpcsection548:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection549:
+; O2-NEXT:    jne .LBB237_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_add_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection544:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection545:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB237_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection546:
+; O3-NEXT:    addq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection547:
+; O3-NEXT:    adcq $0, %rcx
+; O3-NEXT:  .Lpcsection548:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection549:
+; O3-NEXT:    jne .LBB237_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw add ptr %a, i128 42 seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_sub_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_sub_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection675:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection676:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection677:
+; O0-NEXT:    jmp .LBB238_1
+; O0-NEXT:  .LBB238_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection678:
+; O0-NEXT:    addq $-42, %rbx
+; O0-NEXT:    movq %rdx, %rcx
+; O0-NEXT:  .Lpcsection679:
+; O0-NEXT:    adcq $-1, %rcx
+; O0-NEXT:  .Lpcsection680:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection681:
+; O0-NEXT:    jne .LBB238_1
+; O0-NEXT:    jmp .LBB238_2
+; O0-NEXT:  .LBB238_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_sub_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection550:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection551:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB238_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection552:
+; O1-NEXT:    addq $-42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection553:
+; O1-NEXT:    adcq $-1, %rcx
+; O1-NEXT:  .Lpcsection554:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection555:
+; O1-NEXT:    jne .LBB238_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_sub_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection550:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection551:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB238_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection552:
+; O2-NEXT:    addq $-42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection553:
+; O2-NEXT:    adcq $-1, %rcx
+; O2-NEXT:  .Lpcsection554:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection555:
+; O2-NEXT:    jne .LBB238_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_sub_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection550:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection551:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB238_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection552:
+; O3-NEXT:    addq $-42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection553:
+; O3-NEXT:    adcq $-1, %rcx
+; O3-NEXT:  .Lpcsection554:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection555:
+; O3-NEXT:    jne .LBB238_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw sub ptr %a, i128 42 seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_and_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_and_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection682:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection683:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection684:
+; O0-NEXT:    jmp .LBB239_1
+; O0-NEXT:  .LBB239_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection685:
+; O0-NEXT:    andl $42, %ecx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection686:
+; O0-NEXT:    xorl %ecx, %ecx
+; O0-NEXT:  .Lpcsection687:
+; O0-NEXT:    # kill: def $rcx killed $ecx
+; O0-NEXT:  .Lpcsection688:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection689:
+; O0-NEXT:    jne .LBB239_1
+; O0-NEXT:    jmp .LBB239_2
+; O0-NEXT:  .LBB239_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_and_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection556:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection557:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB239_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection558:
+; O1-NEXT:    andl $42, %ebx
+; O1-NEXT:  .Lpcsection559:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection560:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection561:
+; O1-NEXT:    jne .LBB239_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_and_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection556:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection557:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB239_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection558:
+; O2-NEXT:    andl $42, %ebx
+; O2-NEXT:  .Lpcsection559:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection560:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection561:
+; O2-NEXT:    jne .LBB239_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_and_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection556:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection557:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB239_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection558:
+; O3-NEXT:    andl $42, %ebx
+; O3-NEXT:  .Lpcsection559:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection560:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection561:
+; O3-NEXT:    jne .LBB239_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw and ptr %a, i128 42 seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_or_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_or_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection690:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection691:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection692:
+; O0-NEXT:    jmp .LBB240_1
+; O0-NEXT:  .LBB240_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection693:
+; O0-NEXT:    orq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection694:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection695:
+; O0-NEXT:    jne .LBB240_1
+; O0-NEXT:    jmp .LBB240_2
+; O0-NEXT:  .LBB240_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_or_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection562:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection563:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB240_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection564:
+; O1-NEXT:    orq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection565:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection566:
+; O1-NEXT:    jne .LBB240_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_or_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection562:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection563:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB240_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection564:
+; O2-NEXT:    orq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection565:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection566:
+; O2-NEXT:    jne .LBB240_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_or_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection562:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection563:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB240_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection564:
+; O3-NEXT:    orq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection565:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection566:
+; O3-NEXT:    jne .LBB240_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw or ptr %a, i128 42 seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_xor_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_xor_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection696:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection697:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection698:
+; O0-NEXT:    jmp .LBB241_1
+; O0-NEXT:  .LBB241_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movq %rax, %rbx
+; O0-NEXT:  .Lpcsection699:
+; O0-NEXT:    xorq $42, %rbx
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection700:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection701:
+; O0-NEXT:    jne .LBB241_1
+; O0-NEXT:    jmp .LBB241_2
+; O0-NEXT:  .LBB241_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_xor_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection567:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection568:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB241_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movq %rax, %rbx
+; O1-NEXT:  .Lpcsection569:
+; O1-NEXT:    xorq $42, %rbx
+; O1-NEXT:    movq %rdx, %rcx
+; O1-NEXT:  .Lpcsection570:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection571:
+; O1-NEXT:    jne .LBB241_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_xor_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection567:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection568:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB241_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movq %rax, %rbx
+; O2-NEXT:  .Lpcsection569:
+; O2-NEXT:    xorq $42, %rbx
+; O2-NEXT:    movq %rdx, %rcx
+; O2-NEXT:  .Lpcsection570:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection571:
+; O2-NEXT:    jne .LBB241_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_xor_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection567:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection568:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB241_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movq %rax, %rbx
+; O3-NEXT:  .Lpcsection569:
+; O3-NEXT:    xorq $42, %rbx
+; O3-NEXT:    movq %rdx, %rcx
+; O3-NEXT:  .Lpcsection570:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection571:
+; O3-NEXT:    jne .LBB241_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw xor ptr %a, i128 42 seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_nand_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_nand_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection702:
+; O0-NEXT:    movq (%rdi), %rax
+; O0-NEXT:  .Lpcsection703:
+; O0-NEXT:    movq 8(%rdi), %rdx
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection704:
+; O0-NEXT:    jmp .LBB242_1
+; O0-NEXT:  .LBB242_1: # %atomicrmw.start
+; O0-NEXT:    # =>This Inner Loop Header: Depth=1
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:  .Lpcsection705:
+; O0-NEXT:    notl %ecx
+; O0-NEXT:  .Lpcsection706:
+; O0-NEXT:    # implicit-def: $rbx
+; O0-NEXT:    movl %ecx, %ebx
+; O0-NEXT:  .Lpcsection707:
+; O0-NEXT:    orq $-43, %rbx
+; O0-NEXT:  .Lpcsection708:
+; O0-NEXT:    movq $-1, %rcx
+; O0-NEXT:  .Lpcsection709:
+; O0-NEXT:    lock cmpxchg16b (%rsi)
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection710:
+; O0-NEXT:    jne .LBB242_1
+; O0-NEXT:    jmp .LBB242_2
+; O0-NEXT:  .LBB242_2: # %atomicrmw.end
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_nand_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection572:
+; O1-NEXT:    movq (%rdi), %rax
+; O1-NEXT:  .Lpcsection573:
+; O1-NEXT:    movq 8(%rdi), %rdx
+; O1-NEXT:  .Lpcsection574:
+; O1-NEXT:    movq $-1, %rcx
+; O1-NEXT:    .p2align 4, 0x90
+; O1-NEXT:  .LBB242_1: # %atomicrmw.start
+; O1-NEXT:    # =>This Inner Loop Header: Depth=1
+; O1-NEXT:    movl %eax, %ebx
+; O1-NEXT:  .Lpcsection575:
+; O1-NEXT:    notl %ebx
+; O1-NEXT:  .Lpcsection576:
+; O1-NEXT:    orq $-43, %rbx
+; O1-NEXT:  .Lpcsection577:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection578:
+; O1-NEXT:    jne .LBB242_1
+; O1-NEXT:  # %bb.2: # %atomicrmw.end
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_nand_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection572:
+; O2-NEXT:    movq (%rdi), %rax
+; O2-NEXT:  .Lpcsection573:
+; O2-NEXT:    movq 8(%rdi), %rdx
+; O2-NEXT:  .Lpcsection574:
+; O2-NEXT:    movq $-1, %rcx
+; O2-NEXT:    .p2align 4, 0x90
+; O2-NEXT:  .LBB242_1: # %atomicrmw.start
+; O2-NEXT:    # =>This Inner Loop Header: Depth=1
+; O2-NEXT:    movl %eax, %ebx
+; O2-NEXT:  .Lpcsection575:
+; O2-NEXT:    notl %ebx
+; O2-NEXT:  .Lpcsection576:
+; O2-NEXT:    orq $-43, %rbx
+; O2-NEXT:  .Lpcsection577:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection578:
+; O2-NEXT:    jne .LBB242_1
+; O2-NEXT:  # %bb.2: # %atomicrmw.end
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_nand_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection572:
+; O3-NEXT:    movq (%rdi), %rax
+; O3-NEXT:  .Lpcsection573:
+; O3-NEXT:    movq 8(%rdi), %rdx
+; O3-NEXT:  .Lpcsection574:
+; O3-NEXT:    movq $-1, %rcx
+; O3-NEXT:    .p2align 4, 0x90
+; O3-NEXT:  .LBB242_1: # %atomicrmw.start
+; O3-NEXT:    # =>This Inner Loop Header: Depth=1
+; O3-NEXT:    movl %eax, %ebx
+; O3-NEXT:  .Lpcsection575:
+; O3-NEXT:    notl %ebx
+; O3-NEXT:  .Lpcsection576:
+; O3-NEXT:    orq $-43, %rbx
+; O3-NEXT:  .Lpcsection577:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection578:
+; O3-NEXT:    jne .LBB242_1
+; O3-NEXT:  # %bb.2: # %atomicrmw.end
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = atomicrmw nand ptr %a, i128 42 seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_cas_monotonic(ptr %a) {
+; O0-LABEL: atomic128_cas_monotonic:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection711:
+; O0-NEXT:    xorl %eax, %eax
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection712:
+; O0-NEXT:    movl $42, %eax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection713:
+; O0-NEXT:    movl $1, %ebx
+; O0-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection714:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection715:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection716:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection717:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection718:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_cas_monotonic:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection579:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection580:
+; O1-NEXT:    movl $1, %ebx
+; O1-NEXT:  .Lpcsection581:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection582:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection583:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection584:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection585:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection586:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection587:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection588:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection589:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection590:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection591:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_cas_monotonic:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection579:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection580:
+; O2-NEXT:    movl $1, %ebx
+; O2-NEXT:  .Lpcsection581:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection582:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection583:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection584:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection585:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection586:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection587:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection588:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection589:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection590:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection591:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_cas_monotonic:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection579:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection580:
+; O3-NEXT:    movl $1, %ebx
+; O3-NEXT:  .Lpcsection581:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection582:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection583:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection584:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection585:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection586:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection587:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection588:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection589:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection590:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection591:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = cmpxchg ptr %a, i128 42, i128 1 monotonic monotonic, align 16, !pcsections !0
+  %y = cmpxchg ptr %a, i128 42, i128 1 monotonic acquire, align 16, !pcsections !0
+  %z = cmpxchg ptr %a, i128 42, i128 1 monotonic seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_cas_acquire(ptr %a) {
+; O0-LABEL: atomic128_cas_acquire:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection719:
+; O0-NEXT:    xorl %eax, %eax
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection720:
+; O0-NEXT:    movl $42, %eax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection721:
+; O0-NEXT:    movl $1, %ebx
+; O0-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection722:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection723:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection724:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection725:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection726:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_cas_acquire:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection592:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection593:
+; O1-NEXT:    movl $1, %ebx
+; O1-NEXT:  .Lpcsection594:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection595:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection596:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection597:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection598:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection599:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection600:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection601:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection602:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection603:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection604:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_cas_acquire:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection592:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection593:
+; O2-NEXT:    movl $1, %ebx
+; O2-NEXT:  .Lpcsection594:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection595:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection596:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection597:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection598:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection599:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection600:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection601:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection602:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection603:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection604:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_cas_acquire:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection592:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection593:
+; O3-NEXT:    movl $1, %ebx
+; O3-NEXT:  .Lpcsection594:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection595:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection596:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection597:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection598:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection599:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection600:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection601:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection602:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection603:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection604:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = cmpxchg ptr %a, i128 42, i128 1 acquire monotonic, align 16, !pcsections !0
+  %y = cmpxchg ptr %a, i128 42, i128 1 acquire acquire, align 16, !pcsections !0
+  %z = cmpxchg ptr %a, i128 42, i128 1 acquire seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_cas_release(ptr %a) {
+; O0-LABEL: atomic128_cas_release:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection727:
+; O0-NEXT:    xorl %eax, %eax
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection728:
+; O0-NEXT:    movl $42, %eax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection729:
+; O0-NEXT:    movl $1, %ebx
+; O0-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection730:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection731:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection732:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection733:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection734:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_cas_release:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection605:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection606:
+; O1-NEXT:    movl $1, %ebx
+; O1-NEXT:  .Lpcsection607:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection608:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection609:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection610:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection611:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection612:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection613:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection614:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection615:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection616:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection617:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_cas_release:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection605:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection606:
+; O2-NEXT:    movl $1, %ebx
+; O2-NEXT:  .Lpcsection607:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection608:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection609:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection610:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection611:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection612:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection613:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection614:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection615:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection616:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection617:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_cas_release:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection605:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection606:
+; O3-NEXT:    movl $1, %ebx
+; O3-NEXT:  .Lpcsection607:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection608:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection609:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection610:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection611:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection612:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection613:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection614:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection615:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection616:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection617:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = cmpxchg ptr %a, i128 42, i128 1 release monotonic, align 16, !pcsections !0
+  %y = cmpxchg ptr %a, i128 42, i128 1 release acquire, align 16, !pcsections !0
+  %z = cmpxchg ptr %a, i128 42, i128 1 release seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_cas_acq_rel(ptr %a) {
+; O0-LABEL: atomic128_cas_acq_rel:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection735:
+; O0-NEXT:    xorl %eax, %eax
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection736:
+; O0-NEXT:    movl $42, %eax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection737:
+; O0-NEXT:    movl $1, %ebx
+; O0-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection738:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection739:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection740:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection741:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection742:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq $1, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_cas_acq_rel:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection618:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection619:
+; O1-NEXT:    movl $1, %ebx
+; O1-NEXT:  .Lpcsection620:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection621:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection622:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection623:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection624:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection625:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection626:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection627:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection628:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection629:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection630:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:    movq $1, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_cas_acq_rel:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection618:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection619:
+; O2-NEXT:    movl $1, %ebx
+; O2-NEXT:  .Lpcsection620:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection621:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection622:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection623:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection624:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection625:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection626:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection627:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection628:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection629:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection630:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:    movq $1, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_cas_acq_rel:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection618:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection619:
+; O3-NEXT:    movl $1, %ebx
+; O3-NEXT:  .Lpcsection620:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection621:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection622:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection623:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection624:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection625:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection626:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection627:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection628:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection629:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection630:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:    movq $1, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = cmpxchg ptr %a, i128 42, i128 1 acq_rel monotonic, align 16, !pcsections !0
+  %y = cmpxchg ptr %a, i128 42, i128 1 acq_rel acquire, align 16, !pcsections !0
+  %z = cmpxchg ptr %a, i128 42, i128 1 acq_rel seq_cst, align 16, !pcsections !0
+  store volatile i64 1, ptr @foo, align 8
+  ret void
+}
+
+define void @atomic128_cas_seq_cst(ptr %a) {
+; O0-LABEL: atomic128_cas_seq_cst:
+; O0:       # %bb.0: # %entry
+; O0-NEXT:    pushq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 16
+; O0-NEXT:    .cfi_offset %rbx, -16
+; O0-NEXT:    movq foo(%rip), %rax
+; O0-NEXT:  .Lpcsection743:
+; O0-NEXT:    xorl %eax, %eax
+; O0-NEXT:    movl %eax, %ecx
+; O0-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection744:
+; O0-NEXT:    movl $42, %eax
+; O0-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:  .Lpcsection745:
+; O0-NEXT:    movl $1, %ebx
+; O0-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection746:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection747:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection748:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; O0-NEXT:  .Lpcsection749:
+; O0-NEXT:    # kill: def $rsi killed $rax
+; O0-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; O0-NEXT:    movq %rcx, %rdx
+; O0-NEXT:  .Lpcsection750:
+; O0-NEXT:    lock cmpxchg16b (%rdi)
+; O0-NEXT:    movq $3, foo
+; O0-NEXT:    popq %rbx
+; O0-NEXT:    .cfi_def_cfa_offset 8
+; O0-NEXT:    retq
+;
+; O1-LABEL: atomic128_cas_seq_cst:
+; O1:       # %bb.0: # %entry
+; O1-NEXT:    pushq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 16
+; O1-NEXT:    .cfi_offset %rbx, -16
+; O1-NEXT:    movq foo(%rip), %rax
+; O1-NEXT:  .Lpcsection631:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection632:
+; O1-NEXT:    movl $1, %ebx
+; O1-NEXT:  .Lpcsection633:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection634:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection635:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection636:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection637:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection638:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection639:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:  .Lpcsection640:
+; O1-NEXT:    movl $42, %eax
+; O1-NEXT:  .Lpcsection641:
+; O1-NEXT:    xorl %edx, %edx
+; O1-NEXT:  .Lpcsection642:
+; O1-NEXT:    xorl %ecx, %ecx
+; O1-NEXT:  .Lpcsection643:
+; O1-NEXT:    lock cmpxchg16b (%rdi)
+; O1-NEXT:    movq $3, foo(%rip)
+; O1-NEXT:    popq %rbx
+; O1-NEXT:    .cfi_def_cfa_offset 8
+; O1-NEXT:    retq
+;
+; O2-LABEL: atomic128_cas_seq_cst:
+; O2:       # %bb.0: # %entry
+; O2-NEXT:    pushq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 16
+; O2-NEXT:    .cfi_offset %rbx, -16
+; O2-NEXT:    movq foo(%rip), %rax
+; O2-NEXT:  .Lpcsection631:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection632:
+; O2-NEXT:    movl $1, %ebx
+; O2-NEXT:  .Lpcsection633:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection634:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection635:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection636:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection637:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection638:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection639:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:  .Lpcsection640:
+; O2-NEXT:    movl $42, %eax
+; O2-NEXT:  .Lpcsection641:
+; O2-NEXT:    xorl %edx, %edx
+; O2-NEXT:  .Lpcsection642:
+; O2-NEXT:    xorl %ecx, %ecx
+; O2-NEXT:  .Lpcsection643:
+; O2-NEXT:    lock cmpxchg16b (%rdi)
+; O2-NEXT:    movq $3, foo(%rip)
+; O2-NEXT:    popq %rbx
+; O2-NEXT:    .cfi_def_cfa_offset 8
+; O2-NEXT:    retq
+;
+; O3-LABEL: atomic128_cas_seq_cst:
+; O3:       # %bb.0: # %entry
+; O3-NEXT:    pushq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 16
+; O3-NEXT:    .cfi_offset %rbx, -16
+; O3-NEXT:    movq foo(%rip), %rax
+; O3-NEXT:  .Lpcsection631:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection632:
+; O3-NEXT:    movl $1, %ebx
+; O3-NEXT:  .Lpcsection633:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection634:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection635:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection636:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection637:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection638:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection639:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:  .Lpcsection640:
+; O3-NEXT:    movl $42, %eax
+; O3-NEXT:  .Lpcsection641:
+; O3-NEXT:    xorl %edx, %edx
+; O3-NEXT:  .Lpcsection642:
+; O3-NEXT:    xorl %ecx, %ecx
+; O3-NEXT:  .Lpcsection643:
+; O3-NEXT:    lock cmpxchg16b (%rdi)
+; O3-NEXT:    movq $3, foo(%rip)
+; O3-NEXT:    popq %rbx
+; O3-NEXT:    .cfi_def_cfa_offset 8
+; O3-NEXT:    retq
+entry:
+  load volatile i64, ptr @foo, align 8
+  %x = cmpxchg ptr %a, i128 42, i128 1 seq_cst monotonic, align 16, !pcsections !0
+  %y = cmpxchg ptr %a, i128 42, i128 1 seq_cst acquire, align 16, !pcsections !0
+  %z = cmpxchg ptr %a, i128 42, i128 1 seq_cst seq_cst, align 16, !pcsections !0
+  store volatile i64 3, ptr @foo, align 8
+  ret void
 }
 
 !0 = !{!"somesection"}

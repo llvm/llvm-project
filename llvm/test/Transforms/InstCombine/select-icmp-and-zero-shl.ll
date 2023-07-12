@@ -5,11 +5,8 @@
 
 define i32 @test_eq(i32 %x) {
 ; CHECK-LABEL: @test_eq(
-; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i32 [[X:%.*]], 1073741823
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[SHL_MASK]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X]], 2
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 [[MUL]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %shl.mask = and i32 %x, 1073741823
   %tobool = icmp eq i32 %shl.mask, 0
@@ -20,11 +17,8 @@ define i32 @test_eq(i32 %x) {
 
 define <2 x i32> @test_eq_vect(<2 x i32> %x) {
 ; CHECK-LABEL: @test_eq_vect(
-; CHECK-NEXT:    [[SHL_MASK:%.*]] = and <2 x i32> [[X:%.*]], <i32 1073741823, i32 1073741823>
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq <2 x i32> [[SHL_MASK]], zeroinitializer
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X]], <i32 2, i32 2>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[TOBOOL]], <2 x i32> zeroinitializer, <2 x i32> [[MUL]]
-; CHECK-NEXT:    ret <2 x i32> [[COND]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %shl.mask = and <2 x i32> %x, <i32 1073741823, i32 1073741823>
   %tobool = icmp eq <2 x i32> %shl.mask, zeroinitializer
@@ -35,11 +29,8 @@ define <2 x i32> @test_eq_vect(<2 x i32> %x) {
 
 define i32 @test_ne(i32 %x) {
 ; CHECK-LABEL: @test_ne(
-; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i32 [[X:%.*]], 1073741823
-; CHECK-NEXT:    [[TOBOOL_NOT_NOT:%.*]] = icmp eq i32 [[SHL_MASK]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X]], 2
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT_NOT]], i32 0, i32 [[MUL]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %shl.mask = and i32 %x, 1073741823
   %tobool.not = icmp ne i32 %shl.mask, 0
@@ -50,11 +41,8 @@ define i32 @test_ne(i32 %x) {
 
 define <2 x i32> @test_ne_vect(<2 x i32> %x) {
 ; CHECK-LABEL: @test_ne_vect(
-; CHECK-NEXT:    [[SHL_MASK:%.*]] = and <2 x i32> [[X:%.*]], <i32 1073741823, i32 1073741823>
-; CHECK-NEXT:    [[TOBOOL_NOT_NOT:%.*]] = icmp eq <2 x i32> [[SHL_MASK]], zeroinitializer
-; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X]], <i32 2, i32 2>
-; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[TOBOOL_NOT_NOT]], <2 x i32> zeroinitializer, <2 x i32> [[MUL]]
-; CHECK-NEXT:    ret <2 x i32> [[COND]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl <2 x i32> [[X:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %shl.mask = and <2 x i32> %x, <i32 1073741823, i32 1073741823>
   %tobool.not = icmp ne <2 x i32> %shl.mask, zeroinitializer
@@ -65,11 +53,8 @@ define <2 x i32> @test_ne_vect(<2 x i32> %x) {
 
 define i32 @test_nuw_dropped(i32 %x) {
 ; CHECK-LABEL: @test_nuw_dropped(
-; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i32 [[X:%.*]], 1073741823
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[SHL_MASK]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = shl nuw i32 [[X]], 2
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 [[MUL]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %shl.mask = and i32 %x, 1073741823
   %tobool = icmp eq i32 %shl.mask, 0
@@ -80,11 +65,8 @@ define i32 @test_nuw_dropped(i32 %x) {
 
 define i32 @test_nsw_dropped(i32 %x) {
 ; CHECK-LABEL: @test_nsw_dropped(
-; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i32 [[X:%.*]], 1073741823
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[SHL_MASK]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i32 [[X]], 2
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 [[MUL]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X:%.*]], 2
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %shl.mask = and i32 %x, 1073741823
   %tobool = icmp eq i32 %shl.mask, 0
@@ -101,9 +83,8 @@ define i32 @test_multi_use(i32 %x) {
 ; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i32 [[X:%.*]], 1073741823
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp ne i32 [[SHL_MASK]], 0
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X]], 2
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL_NOT]], i32 [[MUL]], i32 0
 ; CHECK-NEXT:    call void @use_multi(i32 [[SHL_MASK]], i1 [[TOBOOL_NOT]], i32 [[MUL]])
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %shl.mask = and i32 %x, 1073741823
   %tobool.not = icmp ne i32 %shl.mask, 0
@@ -117,10 +98,9 @@ define i32 @test_multi_use_nuw_dropped(i32 %x) {
 ; CHECK-LABEL: @test_multi_use_nuw_dropped(
 ; CHECK-NEXT:    [[SHL_MASK:%.*]] = and i32 [[X:%.*]], 1073741823
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[SHL_MASK]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = shl nuw i32 [[X]], 2
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 0, i32 [[MUL]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[X]], 2
 ; CHECK-NEXT:    call void @use_multi(i32 [[SHL_MASK]], i1 [[TOBOOL]], i32 [[MUL]])
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %shl.mask = and i32 %x, 1073741823
   %tobool = icmp eq i32 %shl.mask, 0

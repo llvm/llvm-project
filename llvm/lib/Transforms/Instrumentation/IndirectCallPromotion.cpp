@@ -326,9 +326,8 @@ bool ICallPromotionFunc::processFunction(ProfileSummaryInfo *PSI) {
 }
 
 // A wrapper function that does the actual work.
-static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
-                                 bool InLTO, bool SamplePGO,
-                                 ModuleAnalysisManager *AM = nullptr) {
+static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
+                                 bool SamplePGO, ModuleAnalysisManager &MAM) {
   if (DisableICP)
     return false;
   InstrProfSymtab Symtab;
@@ -342,18 +341,11 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
     if (F.isDeclaration() || F.hasOptNone())
       continue;
 
-    std::unique_ptr<OptimizationRemarkEmitter> OwnedORE;
-    OptimizationRemarkEmitter *ORE;
-    if (AM) {
-      auto &FAM =
-          AM->getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-      ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-    } else {
-      OwnedORE = std::make_unique<OptimizationRemarkEmitter>(&F);
-      ORE = OwnedORE.get();
-    }
+    auto &FAM =
+        MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+    auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-    ICallPromotionFunc ICallPromotion(F, &M, &Symtab, SamplePGO, *ORE);
+    ICallPromotionFunc ICallPromotion(F, &M, &Symtab, SamplePGO, ORE);
     bool FuncChanged = ICallPromotion.processFunction(PSI);
     if (ICPDUMPAFTER && FuncChanged) {
       LLVM_DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
@@ -369,11 +361,11 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
 }
 
 PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
-                                                ModuleAnalysisManager &AM) {
-  ProfileSummaryInfo *PSI = &AM.getResult<ProfileSummaryAnalysis>(M);
+                                                ModuleAnalysisManager &MAM) {
+  ProfileSummaryInfo *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
 
   if (!promoteIndirectCalls(M, PSI, InLTO | ICPLTOMode,
-                            SamplePGO | ICPSamplePGOMode, &AM))
+                            SamplePGO | ICPSamplePGOMode, MAM))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

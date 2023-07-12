@@ -44,13 +44,6 @@ void ConvertVectorToSPIRVPass::runOnOperation() {
 
   // Use UnrealizedConversionCast as the bridge so that we don't need to pull in
   // patterns for other dialects.
-  auto addUnrealizedCast = [](OpBuilder &builder, Type type, ValueRange inputs,
-                              Location loc) {
-    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
-    return std::optional<Value>(cast.getResult(0));
-  };
-  typeConverter.addSourceMaterialization(addUnrealizedCast);
-  typeConverter.addTargetMaterialization(addUnrealizedCast);
   target->addLegalOp<UnrealizedConversionCastOp>();
 
   RewritePatternSet patterns(context);

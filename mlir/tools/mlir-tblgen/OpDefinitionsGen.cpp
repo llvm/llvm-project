@@ -853,17 +853,45 @@ while (true) {{
       emitVerifier(namedAttr.attr, namedAttr.name, getVarName(namedAttr.name));
 }
 
+/// Include declarations specified on NativeTrait
+static std::string formatExtraDeclarations(const Operator &op) {
+  SmallVector<StringRef> extraDeclarations;
+  // Include extra class declarations from NativeTrait
+  for (const auto &trait : op.getTraits()) {
+    if (auto *opTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
+      StringRef value = opTrait->getExtraConcreteClassDeclaration();
+      if (value.empty())
+        continue;
+      extraDeclarations.push_back(value);
+    }
+  }
+  extraDeclarations.push_back(op.getExtraClassDeclaration());
+  return llvm::join(extraDeclarations, "\n");
+}
+
 /// Op extra class definitions have a `$cppClass` substitution that is to be
 /// replaced by the C++ class name.
+/// Include declarations specified on NativeTrait
 static std::string formatExtraDefinitions(const Operator &op) {
+  SmallVector<StringRef> extraDefinitions;
+  // Include extra class definitions from NativeTrait
+  for (const auto &trait : op.getTraits()) {
+    if (auto *opTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
+      StringRef value = opTrait->getExtraConcreteClassDefinition();
+      if (value.empty())
+        continue;
+      extraDefinitions.push_back(value);
+    }
+  }
+  extraDefinitions.push_back(op.getExtraClassDefinition());
   FmtContext ctx = FmtContext().addSubst("cppClass", op.getCppClassName());
-  return tgfmt(op.getExtraClassDefinition(), &ctx).str();
+  return tgfmt(llvm::join(extraDefinitions, "\n"), &ctx).str();
 }
 
 OpEmitter::OpEmitter(const Operator &op,
                      const StaticVerifierFunctionEmitter &staticVerifierEmitter)
     : def(op.getDef()), op(op),
-      opClass(op.getCppClassName(), op.getExtraClassDeclaration(),
+      opClass(op.getCppClassName(), formatExtraDeclarations(op),
               formatExtraDefinitions(op)),
       staticVerifierEmitter(staticVerifierEmitter),
       emitHelper(op, /*emitForOp=*/true) {

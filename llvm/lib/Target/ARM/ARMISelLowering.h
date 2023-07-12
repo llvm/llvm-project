@@ -970,6 +970,8 @@ class VectorType;
 
     void EmitSjLjDispatchBlock(MachineInstr &MI, MachineBasicBlock *MBB) const;
 
+    int getSPAdjustment(MachineInstr &MI) const;
+
     MachineBasicBlock *EmitStructByval(MachineInstr &MI,
                                        MachineBasicBlock *MBB) const;
 

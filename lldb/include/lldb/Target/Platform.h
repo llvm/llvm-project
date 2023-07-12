@@ -881,6 +881,19 @@ public:
   
   virtual Args GetExtraStartupCommands();
 
+  typedef std::function<Status(const ModuleSpec &module_spec,
+                               FileSpec &module_file_spec,
+                               FileSpec &symbol_file_spec)>
+      LocateModuleCallback;
+
+  /// Set locate module callback. This allows users to implement their own
+  /// module cache system. For example, to leverage artifacts of build system,
+  /// to bypass pulling files from remote platform, or to search symbol files
+  /// from symbol servers.
+  void SetLocateModuleCallback(LocateModuleCallback callback);
+
+  LocateModuleCallback GetLocateModuleCallback() const;
+
 protected:
   /// Create a list of ArchSpecs with the given OS and a architectures. The
   /// vendor field is left as an "unspecified unknown".
@@ -928,6 +941,7 @@ protected:
   std::vector<ConstString> m_trap_handlers;
   bool m_calculated_trap_handlers;
   const std::unique_ptr<ModuleCache> m_module_cache;
+  LocateModuleCallback m_locate_module_callback;
 
   /// Ask the Platform subclass to fill in the list of trap handler names
   ///
