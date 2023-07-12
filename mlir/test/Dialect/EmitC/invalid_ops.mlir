@@ -145,6 +145,38 @@ func.func @add_float_pointer(%arg0: f32, %arg1: !emitc.ptr<f32>) {
 
 // -----
 
+func.func @div_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
+    // expected-error @+1 {{'emitc.div' op operand #0 must be floating-point or integer or index or EmitC opaque type, but got 'tensor<i32>'}}
+    %1 = "emitc.div" (%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
+    return
+}
+
+// -----
+
+func.func @mul_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
+    // expected-error @+1 {{'emitc.mul' op operand #0 must be floating-point or integer or index or EmitC opaque type, but got 'tensor<i32>'}}
+    %1 = "emitc.mul" (%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
+    return
+}
+
+// -----
+
+func.func @rem_tensor(%arg0: tensor<i32>, %arg1: tensor<i32>) {
+    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer or index or EmitC opaque type, but got 'tensor<i32>'}}
+    %1 = "emitc.rem" (%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
+    return
+}
+
+// -----
+
+func.func @rem_float(%arg0: f32, %arg1: f32) {
+    // expected-error @+1 {{'emitc.rem' op operand #0 must be integer or index or EmitC opaque type, but got 'f32'}}
+    %1 = "emitc.rem" (%arg0, %arg1) : (f32, f32) -> f32
+    return
+}
+
+// -----
+
 func.func @sub_int_pointer(%arg0: i32, %arg1: !emitc.ptr<f32>) {
     // expected-error @+1 {{'emitc.sub' op rhs can only be a pointer if lhs is a pointer}}
     %1 = "emitc.sub" (%arg0, %arg1) : (i32, !emitc.ptr<f32>) -> !emitc.ptr<f32>

@@ -95,10 +95,10 @@ _x:	.long 1
 // CHECK-NEXT: name: "gen-dwarf.s"
 // CHECK-NEXT: dir_index: 1
 
-// CHECK: Address            Line   Column File   ISA Discriminator Flags
-// CHECK: ------------------ ------ ------ ------ --- ------------- -------------
-// CHECK: 0x0000000000000000      6      0      1   0             0  is_stmt
-// CHECK: 0x0000000000000005      7      0      1   0             0  is_stmt
-// CHECK: 0x0000000000000006      8      0      1   0             0  is_stmt
-// CHECK: 0x0000000000000007     11      0      1   0             0  is_stmt
-// CHECK: 0x0000000000000008     11      0      1   0             0  is_stmt end_sequence
+// CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+// CHECK: ------------------ ------ ------ ------ --- ------------- ------- -------------
+// CHECK: 0x0000000000000000      6      0      1   0             0       0  is_stmt
+// CHECK: 0x0000000000000005      7      0      1   0             0       0  is_stmt
+// CHECK: 0x0000000000000006      8      0      1   0             0       0  is_stmt
+// CHECK: 0x0000000000000007     11      0      1   0             0       0  is_stmt
+// CHECK: 0x0000000000000008     11      0      1   0             0       0  is_stmt end_sequence

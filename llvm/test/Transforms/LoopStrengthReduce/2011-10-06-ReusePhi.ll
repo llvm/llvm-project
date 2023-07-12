@@ -19,19 +19,21 @@ define float @test(ptr nocapture %A, ptr nocapture %B, i32 %N, i32 %IA, i32 %IB)
 ; CHECK:       while.body.lr.ph:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IA]] to i64
 ; CHECK-NEXT:    [[IDX_EXT2:%.*]] = sext i32 [[IB]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i64 [[IDX_EXT]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[IDX_EXT2]], 2
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[A_ADDR_05:%.*]] = phi ptr [ [[A]], [[WHILE_BODY_LR_PH]] ], [ [[ADD_PTR:%.*]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[B_ADDR_04:%.*]] = phi ptr [ [[B]], [[WHILE_BODY_LR_PH]] ], [ [[ADD_PTR3:%.*]], [[WHILE_BODY]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi ptr [ [[SCEVGEP2:%.*]], [[WHILE_BODY]] ], [ [[B]], [[WHILE_BODY_LR_PH]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi ptr [ [[SCEVGEP:%.*]], [[WHILE_BODY]] ], [ [[A]], [[WHILE_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[N_ADDR_03:%.*]] = phi i32 [ [[N]], [[WHILE_BODY_LR_PH]] ], [ [[SUB:%.*]], [[WHILE_BODY]] ]
 ; CHECK-NEXT:    [[SUM0_02:%.*]] = phi float [ 0.000000e+00, [[WHILE_BODY_LR_PH]] ], [ [[ADD:%.*]], [[WHILE_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A_ADDR_05]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[B_ADDR_04]], align 4
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[LSR_IV]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[LSR_IV1]], align 4
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD]] = fadd float [[SUM0_02]], [[MUL]]
-; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds float, ptr [[A_ADDR_05]], i64 [[IDX_EXT]]
-; CHECK-NEXT:    [[ADD_PTR3]] = getelementptr inbounds float, ptr [[B_ADDR_04]], i64 [[IDX_EXT2]]
 ; CHECK-NEXT:    [[SUB]] = add nsw i32 [[N_ADDR_03]], -1
+; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP2]] = getelementptr i8, ptr [[LSR_IV1]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[WHILE_BODY]], label [[WHILE_END_LOOPEXIT:%.*]]
 ; CHECK:       while.end.loopexit:

@@ -138,8 +138,8 @@ attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; DWARFDUMP-COMMON-NEXT:            name: "<stdin>"
 ; DWARFDUMP-COMMON-NEXT:       dir_index: 0
 ; DWARFDUMP-COMMON-EMPTY:
-; DWARFDUMP-COMMON-NEXT: Address            Line   Column File   ISA Discriminator Flags
-; DWARFDUMP-COMMON-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1      0      1   0             0  is_stmt
-; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0  is_stmt prologue_end epilogue_begin
-; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0  is_stmt end_sequence
+; DWARFDUMP-COMMON-NEXT: Address            Line   Column File   ISA Discriminator OpIndex  Flags
+; DWARFDUMP-COMMON-NEXT: ------------------ ------ ------ ------ --- -------------  ------- -------------
+; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1      0      1   0             0 0  is_stmt
+; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0 0  is_stmt prologue_end epilogue_begin
+; DWARFDUMP-COMMON-NEXT: 0x[[#%x,]]              1     88      1   0             0 0  is_stmt end_sequence

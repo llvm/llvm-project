@@ -501,6 +501,7 @@ public:
   bool parseAddrspace(unsigned &Addrspace);
   bool parseSectionID(std::optional<MBBSectionID> &SID);
   bool parseBBID(std::optional<unsigned> &BBID);
+  bool parseSPAdjustment(int &SPAdjustment);
   bool parseOperandsOffset(MachineOperand &Op);
   bool parseIRValue(const Value *&V);
   bool parseMemoryOperandFlag(MachineMemOperand::Flags &Flags);
@@ -676,6 +677,18 @@ bool MIParser::parseBBID(std::optional<unsigned> &BBID) {
   return false;
 }
 
+// Parse basic block SP adjustment.
+bool MIParser::parseSPAdjustment(int &SPAdjustment) {
+  assert(Token.is(MIToken::kw_sp_adjustment));
+  lex();
+  unsigned Value = 0;
+  if (getUnsigned(Value) || !isInt<32>(Value))
+    return error("Unknown SP adjustment");
+  SPAdjustment = (int)Value;
+  lex();
+  return false;
+}
+
 bool MIParser::parseBasicBlockDefinition(
     DenseMap<unsigned, MachineBasicBlock *> &MBBSlots) {
   assert(Token.is(MIToken::MachineBasicBlockLabel));
@@ -693,6 +706,7 @@ bool MIParser::parseBasicBlockDefinition(
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   std::optional<unsigned> BBID;
+  int SPAdjustment = 0;
   BasicBlock *BB = nullptr;
   if (consumeIfPresent(MIToken::lparen)) {
     do {
@@ -735,6 +749,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_bb_id:
         if (parseBBID(BBID))
+          return true;
+        break;
+      case MIToken::kw_sp_adjustment:
+        if (parseSPAdjustment(SPAdjustment))
           return true;
         break;
       default:
@@ -781,6 +799,7 @@ bool MIParser::parseBasicBlockDefinition(
       MF.setBBSectionsType(BasicBlockSection::Labels);
     MBB->setBBID(BBID.value());
   }
+  MBB->setSPAdjustment(SPAdjustment);
   return false;
 }
 

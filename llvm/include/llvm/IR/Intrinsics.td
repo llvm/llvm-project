@@ -1097,7 +1097,11 @@ def int_is_fpclass
 //===--------------- Constrained Floating Point Intrinsics ----------------===//
 //
 
-let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
+/// IntrStrictFP - The intrinsic is allowed to be used in an alternate
+/// floating point environment.
+def IntrStrictFP : IntrinsicProperty;
+
+let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn, IntrStrictFP] in {
   def int_experimental_constrained_fadd : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                     [ LLVMMatchType<0>,
                                                       LLVMMatchType<0>,
@@ -2528,6 +2532,14 @@ def int_ptrauth_sign_generic :
   DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 
 //===----------------------------------------------------------------------===//
+//===------- Convergence Intrinsics ---------------------------------------===//
+
+def int_experimental_convergence_entry
+  : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
+def int_experimental_convergence_anchor
+  : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
+def int_experimental_convergence_loop
+  : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
 
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics

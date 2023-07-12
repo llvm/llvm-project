@@ -1188,7 +1188,7 @@ LogicalResult vector::ExtractOp::verify() {
   if (positionAttr.size() >
       static_cast<unsigned>(getSourceVectorType().getRank()))
     return emitOpError(
-        "expected position attribute of rank smaller than vector rank");
+        "expected position attribute of rank no greater than vector rank");
   for (const auto &en : llvm::enumerate(positionAttr)) {
     auto attr = llvm::dyn_cast<IntegerAttr>(en.value());
     if (!attr || attr.getInt() < 0 ||
@@ -2488,7 +2488,7 @@ static LogicalResult isIntegerArrayAttrSmallerThanShape(OpType op,
                                                         StringRef attrName) {
   if (arrayAttr.size() > shape.size())
     return op.emitOpError("expected ")
-           << attrName << " attribute of rank smaller than vector rank";
+           << attrName << " attribute of rank no greater than vector rank";
   return success();
 }
 
@@ -2579,7 +2579,7 @@ LogicalResult InsertStridedSliceOp::verify() {
     return emitOpError("expected strides of same size as source vector rank");
   if (sourceVectorType.getRank() > destVectorType.getRank())
     return emitOpError(
-        "expected source rank to be smaller than destination rank");
+        "expected source rank to be no greater than destination rank");
 
   auto sourceShape = sourceVectorType.getShape();
   auto destShape = destVectorType.getShape();

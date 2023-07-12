@@ -4187,7 +4187,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
     omp::RuntimeFunction *MapperFunc,
     function_ref<InsertPointTy(InsertPointTy CodeGenIP, BodyGenTy BodyGenType)>
         BodyGenCB,
-    function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB,
+    function_ref<void(unsigned int, Value *)> DeviceAddrCB,
     function_ref<Value *(unsigned int)> CustomMapperCB, Value *SrcLocInfo) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -4233,6 +4233,14 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
           omp::OMPRTL___tgt_target_data_begin_mapper);
 
       Builder.CreateCall(BeginMapperFunc, OffloadingArgs);
+
+      for (auto DeviceMap : Info.DevicePtrInfoMap) {
+        if (isa<AllocaInst>(DeviceMap.second.second)) {
+          auto *LI =
+              Builder.CreateLoad(Builder.getPtrTy(), DeviceMap.second.first);
+          Builder.CreateStore(LI, DeviceMap.second.second);
+        }
+      }
 
       // If device pointer privatization is required, emit the body of the
       // region here. It will have to be duplicated: with and without
@@ -4649,7 +4657,7 @@ void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
 void OpenMPIRBuilder::emitOffloadingArrays(
     InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
     TargetDataInfo &Info, bool IsNonContiguous,
-    function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB,
+    function_ref<void(unsigned int, Value *)> DeviceAddrCB,
     function_ref<Value *(unsigned int)> CustomMapperCB) {
 
   // Reset the array information.
@@ -4787,9 +4795,21 @@ void OpenMPIRBuilder::emitOffloadingArrays(
         BPVal, BP, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
 
     if (Info.requiresDevicePointerInfo()) {
-      assert(DeviceAddrCB &&
-             "DeviceAddrCB missing for DevicePtr code generation");
-      DeviceAddrCB(I, BP, BPVal);
+      if (CombinedInfo.DevicePointers[I] == DeviceInfoTy::Pointer) {
+        CodeGenIP = Builder.saveIP();
+        Builder.restoreIP(AllocaIP);
+        Info.DevicePtrInfoMap[BPVal] = {
+            BP, Builder.CreateAlloca(Builder.getPtrTy())};
+        Builder.restoreIP(CodeGenIP);
+        assert(DeviceAddrCB &&
+               "DeviceAddrCB missing for DevicePtr code generation");
+        DeviceAddrCB(I, Info.DevicePtrInfoMap[BPVal].second);
+      } else if (CombinedInfo.DevicePointers[I] == DeviceInfoTy::Address) {
+        Info.DevicePtrInfoMap[BPVal] = {BP, BP};
+        assert(DeviceAddrCB &&
+               "DeviceAddrCB missing for DevicePtr code generation");
+        DeviceAddrCB(I, BP);
+      }
     }
 
     Value *PVal = CombinedInfo.Pointers[I];

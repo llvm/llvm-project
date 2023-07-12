@@ -441,8 +441,8 @@ private:
   /// Expand a SCEVAddExpr with a pointer type into a GEP instead of using
   /// ptrtoint+arithmetic+inttoptr.
   Value *expandAddToGEP(const SCEV *const *op_begin, const SCEV *const *op_end,
-                        PointerType *PTy, Type *Ty, Value *V);
-  Value *expandAddToGEP(const SCEV *Op, PointerType *PTy, Type *Ty, Value *V);
+                        Type *Ty, Value *V);
+  Value *expandAddToGEP(const SCEV *Op, Type *Ty, Value *V);
 
   /// Find a previous Value in ExprValueMap for expand.
   Value *FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);

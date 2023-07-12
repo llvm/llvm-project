@@ -70,6 +70,10 @@ Changes to the LLVM IR
 
   * ``select``
 
+* Introduced a set of experimental `convergence control intrinsics
+  <ConvergentOperations.html>`__ to explicitly define the semantics of convergent
+  operations.
+
 Changes to LLVM infrastructure
 ------------------------------
 

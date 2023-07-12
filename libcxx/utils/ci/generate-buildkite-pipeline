@@ -20,7 +20,7 @@ if git diff --name-only HEAD~1 | grep -q -E "^clang/"; then
 fi
 
 if [[ "${CLANG_CHANGED}" == "true" && "${LIBCXX_CHANGED}" != "true" ]]; then
-  cat libcxx/utils/ci/buildkite-pipeline-clang.yml
+  cat clang/utils/ci/buildkite-pipeline.yml
 else
   cat libcxx/utils/ci/buildkite-pipeline.yml
 fi

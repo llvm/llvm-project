@@ -11369,6 +11369,21 @@ static void emitPostSt(MachineBasicBlock *BB, MachineBasicBlock::iterator Pos,
   }
 }
 
+// Get the SP adjustment just before MI.
+int ARMTargetLowering::getSPAdjustment(MachineInstr &MI) const {
+  const ARMBaseInstrInfo *TII = Subtarget->getInstrInfo();
+
+  // Search backwards from MI for the most recent call frame setup instruction.
+  MachineBasicBlock *MBB = MI.getParent();
+  for (auto &AdjI : reverse(make_range(MBB->instr_begin(), MI.getIterator()))) {
+    if (AdjI.getOpcode() == ARM::ADJCALLSTACKDOWN)
+      return TII->getSPAdjust(AdjI);
+  }
+
+  // If none was found, use the SP adjustment from the start of the basic block.
+  return MBB->getSPAdjustment();
+}
+
 MachineBasicBlock *
 ARMTargetLowering::EmitStructByval(MachineInstr &MI,
                                    MachineBasicBlock *BB) const {
@@ -11485,6 +11500,11 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
   MF->insert(It, loopMBB);
   MF->insert(It, exitMBB);
 
+  // Set the SP adjustment on entry to the new basic blocks.
+  int SPAdj = getSPAdjustment(MI);
+  loopMBB->setSPAdjustment(SPAdj);
+  exitMBB->setSPAdjustment(SPAdj);
+
   // Transfer the remainder of BB and its successor edges to exitMBB.
   exitMBB->splice(exitMBB->begin(), BB,
                   std::next(MachineBasicBlock::iterator(MI)), BB->end());
@@ -11493,18 +11513,12 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
   // Load an immediate to varEnd.
   Register varEnd = MRI.createVirtualRegister(TRC);
   if (Subtarget->useMovt()) {
-    unsigned Vtmp = varEnd;
-    if ((LoopSize & 0xFFFF0000) != 0)
-      Vtmp = MRI.createVirtualRegister(TRC);
-    BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVi16 : ARM::MOVi16), Vtmp)
-        .addImm(LoopSize & 0xFFFF)
-        .add(predOps(ARMCC::AL));
-
-    if ((LoopSize & 0xFFFF0000) != 0)
-      BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVTi16 : ARM::MOVTi16), varEnd)
-          .addReg(Vtmp)
-          .addImm(LoopSize >> 16)
-          .add(predOps(ARMCC::AL));
+    BuildMI(BB, dl, TII->get(IsThumb ? ARM::t2MOVi32imm : ARM::MOVi32imm),
+            varEnd)
+        .addImm(LoopSize);
+  } else if (Subtarget->genExecuteOnly()) {
+    assert(IsThumb && "Non-thumb expected to have used movt");
+    BuildMI(BB, dl, TII->get(ARM::tMOVi32imm), varEnd).addImm(LoopSize);
   } else {
     MachineConstantPool *ConstantPool = MF->getConstantPool();
     Type *Int32Ty = Type::getInt32Ty(MF->getFunction().getContext());

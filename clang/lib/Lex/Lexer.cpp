@@ -3484,9 +3484,14 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
   if (LangOpts.AsmPreprocessor)
     return CodePoint;
 
-  // C99 6.4.3p2: A universal character name shall not specify a character whose
-  //   short identifier is less than 00A0 other than 0024 ($), 0040 (@), or
-  //   0060 (`), nor one in the range D800 through DFFF inclusive.)
+  // C2x 6.4.3p2: A universal character name shall not designate a code point
+  // where the hexadecimal value is:
+  // - in the range D800 through DFFF inclusive; or
+  // - greater than 10FFFF.
+  // A universal-character-name outside the c-char-sequence of a character
+  // constant, or the s-char-sequence of a string-literal shall not designate
+  // a control character or a character in the basic character set.
+
   // C++11 [lex.charset]p2: If the hexadecimal value for a
   //   universal-character-name corresponds to a surrogate code point (in the
   //   range 0xD800-0xDFFF, inclusive), the program is ill-formed. Additionally,
@@ -3496,9 +3501,6 @@ uint32_t Lexer::tryReadUCN(const char *&StartPtr, const char *SlashLoc,
   //   ranges 0x00-0x1F or 0x7F-0x9F, both inclusive) or to a character in the
   //   basic source character set, the program is ill-formed.
   if (CodePoint < 0xA0) {
-    if (CodePoint == 0x24 || CodePoint == 0x40 || CodePoint == 0x60)
-      return CodePoint;
-
     // We don't use isLexingRawMode() here because we need to warn about bad
     // UCNs even when skipping preprocessing tokens in a #if block.
     if (Result && PP) {

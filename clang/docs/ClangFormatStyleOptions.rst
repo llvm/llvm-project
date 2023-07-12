@@ -4357,6 +4357,50 @@ the configuration (without a prefix: ``Auto``).
       }
     }
 
+.. _RemoveParentheses:
+
+**RemoveParentheses** (``RemoveParenthesesStyle``) :versionbadge:`clang-format 17` :ref:`¶ <RemoveParentheses>`
+  Remove redundant parentheses.
+
+  .. warning::
+
+   Setting this option to any value other than ``Leave`` could lead to
+   incorrect code formatting due to clang-format's lack of complete semantic
+   information. As such, extra care should be taken to review code changes
+   made by this option.
+
+  Possible values:
+
+  * ``RPS_Leave`` (in configuration: ``Leave``)
+    Do not remove parentheses.
+
+    .. code-block:: c++
+
+      class __declspec((dllimport)) X {};
+      co_return (((0)));
+      return ((a + b) - ((c + d)));
+
+  * ``RPS_MultipleParentheses`` (in configuration: ``MultipleParentheses``)
+    Replace multiple parentheses with single parentheses.
+
+    .. code-block:: c++
+
+      class __declspec(dllimport) X {};
+      co_return (0);
+      return ((a + b) - (c + d));
+
+  * ``RPS_ReturnStatement`` (in configuration: ``ReturnStatement``)
+    Also remove parentheses enclosing the expression in a
+    ``return``/``co_return`` statement.
+
+    .. code-block:: c++
+
+      class __declspec(dllimport) X {};
+      co_return 0;
+      return (a + b) - (c + d);
+
+
+
 .. _RemoveSemicolon:
 
 **RemoveSemicolon** (``Boolean``) :versionbadge:`clang-format 16` :ref:`¶ <RemoveSemicolon>`
