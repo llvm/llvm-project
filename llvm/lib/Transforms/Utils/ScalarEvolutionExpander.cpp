@@ -1652,11 +1652,17 @@ SCEVExpander::replaceCongruentIVs(Loop *L, const DominatorTree *DT,
       OrigPhiRef = Phi;
       if (Phi->getType()->isIntegerTy() && TTI &&
           TTI->isTruncateFree(Phi->getType(), Phis.back()->getType())) {
-        // This phi can be freely truncated to the narrowest phi type. Map the
-        // truncated expression to it so it will be reused for narrow types.
-        const SCEV *TruncExpr =
-          SE.getTruncateExpr(SE.getSCEV(Phi), Phis.back()->getType());
-        ExprToIVMap[TruncExpr] = Phi;
+        // Make sure we only rewrite using simple induction variables;
+        // otherwise, we can make the trip count of a loop unanalyzable
+        // to SCEV.
+        const SCEV *PhiExpr = SE.getSCEV(Phi);
+        if (isa<SCEVAddRecExpr>(PhiExpr)) {
+          // This phi can be freely truncated to the narrowest phi type. Map the
+          // truncated expression to it so it will be reused for narrow types.
+          const SCEV *TruncExpr =
+              SE.getTruncateExpr(PhiExpr, Phis.back()->getType());
+          ExprToIVMap[TruncExpr] = Phi;
+        }
       }
       continue;
     }
