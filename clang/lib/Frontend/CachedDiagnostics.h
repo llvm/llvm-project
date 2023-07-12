@@ -11,6 +11,8 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/Support/PrefixMapper.h"
+#include <memory>
+#include <optional>
 
 namespace clang {
 class DiagnosticConsumer;
