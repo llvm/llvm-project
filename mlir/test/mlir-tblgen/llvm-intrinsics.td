@@ -72,8 +72,8 @@
 // It implements the alias analysis interface.
 // ALIAS: 1>
 // It has alias scopes, noalias, and tbaa.
-// ALIAS: OptionalAttr<SymbolRefArrayAttr>:$alias_scopes
-// ALIAS: OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes
+// ALIAS: OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes
+// ALIAS: OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes
 // ALIAS: OptionalAttr<SymbolRefArrayAttr>:$tbaa
 
 //---------------------------------------------------------------------------//

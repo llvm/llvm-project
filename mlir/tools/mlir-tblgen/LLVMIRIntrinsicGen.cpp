@@ -219,8 +219,9 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   if (requiresAccessGroup)
     operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$access_groups");
   if (requiresAliasAnalysis) {
-    operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$alias_scopes");
-    operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes");
+    operands.push_back("OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes");
+    operands.push_back(
+        "OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes");
     operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$tbaa");
   }
 

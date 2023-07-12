@@ -122,14 +122,13 @@ public:
   /// in these blocks.
   void forgetMapping(Region &region);
 
-  /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
-  /// LLVM dialect alias scope operation.
-  llvm::MDNode *getAliasScope(Operation *op, SymbolRefAttr aliasScopeRef) const;
+  /// Returns the LLVM metadata corresponding to a mlir LLVM dialect alias scope
+  /// attribute.
+  llvm::MDNode *getAliasScope(AliasScopeAttr aliasScopeAttr) const;
 
-  /// Returns the LLVM metadata corresponding to an array of symbol references
-  /// to mlir LLVM dialect alias scope operations.
-  llvm::MDNode *getAliasScopes(Operation *op,
-                               ArrayRef<SymbolRefAttr> aliasScopeRefs) const;
+  /// Returns the LLVM metadata corresponding to an array of mlir LLVM dialect
+  /// alias scope attributes.
+  llvm::MDNode *getAliasScopes(ArrayRef<AliasScopeAttr> aliasScopeAttrs) const;
 
   // Sets LLVM metadata for memory operations that are in a parallel loop.
   void setAccessGroupsMetadata(AccessGroupOpInterface op,
@@ -335,7 +334,7 @@ private:
 
   /// Mapping from an alias scope metadata operation to its LLVM metadata.
   /// This map is populated on module entry.
-  DenseMap<Operation *, llvm::MDNode *> aliasScopeMetadataMapping;
+  DenseMap<Attribute, llvm::MDNode *> aliasScopeMetadataMapping;
 
   /// Mapping from a tbaa metadata operation to its LLVM metadata.
   /// This map is populated on module entry.
