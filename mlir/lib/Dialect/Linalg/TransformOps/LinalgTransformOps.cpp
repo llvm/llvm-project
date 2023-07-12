@@ -416,9 +416,10 @@ DiagnosedSilenceableFailure
 transform::FuseOp::apply(transform::TransformRewriter &rewriter,
                          mlir::transform::TransformResults &transformResults,
                          mlir::transform::TransformState &state) {
-  SmallVector<int64_t> tileSizes = extractFromI64ArrayAttr(getTileSizes());
+  SmallVector<int64_t> tileSizes =
+      extractFromIntegerArrayAttr<int64_t>(getTileSizes());
   SmallVector<int64_t> tileInterchange =
-      extractFromI64ArrayAttr(getTileInterchange());
+      extractFromIntegerArrayAttr<int64_t>(getTileInterchange());
 
   scf::SCFTilingOptions tilingOptions;
   tilingOptions.interchangeVector = tileInterchange;
@@ -471,7 +472,7 @@ void transform::FuseOp::print(OpAsmPrinter &p) {
 
 LogicalResult transform::FuseOp::verify() {
   SmallVector<int64_t> permutation =
-      extractFromI64ArrayAttr(getTileInterchange());
+      extractFromIntegerArrayAttr<int64_t>(getTileInterchange());
   auto sequence = llvm::to_vector(llvm::seq<int64_t>(0, permutation.size()));
   if (!std::is_permutation(sequence.begin(), sequence.end(),
                            permutation.begin(), permutation.end())) {
@@ -479,7 +480,8 @@ LogicalResult transform::FuseOp::verify() {
                          << getTileInterchange();
   }
 
-  SmallVector<int64_t> sizes = extractFromI64ArrayAttr(getTileSizes());
+  SmallVector<int64_t> sizes =
+      extractFromIntegerArrayAttr<int64_t>(getTileSizes());
   size_t numExpectedLoops = sizes.size() - llvm::count(sizes, 0);
   if (numExpectedLoops != getNumResults() - 1)
     return emitOpError() << "expects " << numExpectedLoops << " loop results";
@@ -1571,7 +1573,8 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
 
     // Convert the integer packing flags to booleans.
     SmallVector<bool> packPaddings;
-    for (int64_t packPadding : extractFromI64ArrayAttr(getPackPaddings()))
+    for (int64_t packPadding :
+         extractFromIntegerArrayAttr<int64_t>(getPackPaddings()))
       packPaddings.push_back(static_cast<bool>(packPadding));
 
     // Convert the padding values to attributes.
@@ -1611,15 +1614,17 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
     // Extract the transpose vectors.
     SmallVector<SmallVector<int64_t>> transposePaddings;
     for (Attribute transposeVector : cast<ArrayAttr>(getTransposePaddings()))
-      transposePaddings.push_back(
-          extractFromI64ArrayAttr(cast<ArrayAttr>(transposeVector)));
+      transposePaddings.push_back(extractFromIntegerArrayAttr<int64_t>(
+          cast<ArrayAttr>(transposeVector)));
 
     LinalgOp paddedOp;
     LinalgPaddingOptions options;
-    options.paddingDimensions = extractFromI64ArrayAttr(getPaddingDimensions());
+    options.paddingDimensions =
+        extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions());
     SmallVector<int64_t> padToMultipleOf(options.paddingDimensions.size(), 1);
     if (getPadToMultipleOf().has_value())
-      padToMultipleOf = extractFromI64ArrayAttr(*getPadToMultipleOf());
+      padToMultipleOf =
+          extractFromIntegerArrayAttr<int64_t>(*getPadToMultipleOf());
     options.padToMultipleOf = padToMultipleOf;
     options.paddingValues = paddingValues;
     options.packPaddings = packPaddings;
@@ -1650,7 +1655,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
 
 LogicalResult transform::PadOp::verify() {
   SmallVector<int64_t> packPaddings =
-      extractFromI64ArrayAttr(getPackPaddings());
+      extractFromIntegerArrayAttr<int64_t>(getPackPaddings());
   if (any_of(packPaddings, [](int64_t packPadding) {
         return packPadding != 0 && packPadding != 1;
       })) {
@@ -1660,7 +1665,7 @@ LogicalResult transform::PadOp::verify() {
   }
 
   SmallVector<int64_t> paddingDimensions =
-      extractFromI64ArrayAttr(getPaddingDimensions());
+      extractFromIntegerArrayAttr<int64_t>(getPaddingDimensions());
   if (any_of(paddingDimensions,
              [](int64_t paddingDimension) { return paddingDimension < 0; })) {
     return emitOpError() << "expects padding_dimensions to contain positive "
@@ -1674,7 +1679,7 @@ LogicalResult transform::PadOp::verify() {
   }
   ArrayAttr transposes = getTransposePaddings();
   for (Attribute attr : transposes) {
-    SmallVector<int64_t> transpose = extractFromI64ArrayAttr(attr);
+    SmallVector<int64_t> transpose = extractFromIntegerArrayAttr<int64_t>(attr);
     auto sequence = llvm::to_vector(llvm::seq<int64_t>(0, transpose.size()));
     if (!std::is_permutation(sequence.begin(), sequence.end(),
                              transpose.begin(), transpose.end())) {
@@ -1791,7 +1796,7 @@ transform::PromoteOp::applyToOne(transform::TransformRewriter &rewriter,
   LinalgPromotionOptions promotionOptions;
   if (!getOperandsToPromote().empty())
     promotionOptions = promotionOptions.setOperandsToPromote(
-        extractFromI64ArrayAttr(getOperandsToPromote()));
+        extractFromIntegerArrayAttr<int64_t>(getOperandsToPromote()));
   if (getUseFullTilesByDefault())
     promotionOptions = promotionOptions.setUseFullTileBuffersByDefault(
         getUseFullTilesByDefault());
