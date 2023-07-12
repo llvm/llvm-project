@@ -56,6 +56,6 @@ foo:
 # CHECK-NEXT:     0x2E R_386_32 .text
 # CHECK-NEXT:   }
 
-# DWARF-DUMP: Address            Line   Column File   ISA Discriminator Flags
-# DWARF-DUMP: ------------------ ------ ------ ------ --- ------------- -------------
-# DWARF-DUMP: 0x0000000000000000     2      0      1   0             1  is_stmt
+# DWARF-DUMP: Address            Line   Column File   ISA Discriminator OpIndex Flags
+# DWARF-DUMP: ------------------ ------ ------ ------ --- ------------- ------- -------------
+# DWARF-DUMP: 0x0000000000000000     2      0      1   0             1        0  is_stmt
