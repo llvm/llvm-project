@@ -184,18 +184,69 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
   ];
 }
 
+// Convenient trait to define a wrapper to inferReturnTypes that passes in the
+// Op Adaptor directly
+def InferTypeOpInterfaceAdaptor : TraitList<
+  [
+    // Op implements infer type op interface.
+    DeclareOpInterfaceMethods<InferTypeOpInterface>,
+    NativeOpTrait<
+      /*name=*/"InferTypeOpInterfaceAdaptor",
+      /*traits=*/[],
+      /*extraOpDeclaration=*/[{
+        static LogicalResult
+        inferReturnTypesAdaptor(MLIRContext *context,
+                                std::optional<Location> location,
+                                Adaptor adaptor,
+                                SmallVectorImpl<Type> &inferredReturnTypes);
+      }],
+      /*extraOpDefinition=*/[{
+        LogicalResult
+        $cppClass::inferReturnTypes(MLIRContext *context,
+                          std::optional<Location> location,
+                          ValueRange operands, DictionaryAttr attributes,
+                          OpaqueProperties properties, RegionRange regions,
+                          SmallVectorImpl<Type> &inferredReturnTypes) {
+          $cppClass::Adaptor adaptor(operands, attributes, properties, regions);
+          return $cppClass::inferReturnTypesAdaptor(context,
+            location, adaptor, inferredReturnTypes);
+        }
+      }]
+    >
+  ]>;
+
 // Convenience class grouping together type and shaped type op interfaces for
 // ops that have tensor return types.
 class InferTensorTypeBase<list<string> overridenMethods = []> : TraitList<
   [
     // Op implements infer type op interface.
-    InferTypeOpInterface,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>,
     // The op will have methods implementing the ShapedType type inference
     // interface.
     DeclareOpInterfaceMethods<InferShapedTypeOpInterface, overridenMethods>,
     // The op produces tensors and will use the ShapedType type infer interface
     // along with knowledge that it is producing Tensors to infer the type.
-    NativeOpTrait<"InferTensorType">
+    NativeOpTrait<
+      /*name=*/"InferTensorType",
+      /*traits=*/[],
+      /*extraOpDeclaration=*/[{}],
+      /*extraOpDefinition=*/[{
+        LogicalResult
+        $cppClass::inferReturnTypes(MLIRContext *context,
+                          std::optional<Location> location,
+                          ValueRange operands, DictionaryAttr attributes,
+                          OpaqueProperties properties, RegionRange regions,
+                          SmallVectorImpl<Type> &inferredReturnTypes) {
+          SmallVector<ShapedTypeComponents, 2> retComponents;
+          if (failed($cppClass::inferReturnTypeComponents(context, location,
+                                    operands, attributes, properties, regions,
+                                    retComponents)))
+            return failure();
+          return ::mlir::detail::inferReturnTensorTypes(retComponents,
+                                    inferredReturnTypes);
+        }
+      }]
+    >
   ]>;
 
 def InferTensorType : InferTensorTypeBase<["inferReturnTypeComponents"]>;
