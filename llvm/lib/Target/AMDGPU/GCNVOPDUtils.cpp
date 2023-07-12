@@ -108,6 +108,17 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
       UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
 
     if (IsVOPD3) {
+      for (auto OpName : {AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
+        const MachineOperand *Src = TII.getNamedOperand(MI, OpName);
+        if (!Src)
+          continue;
+        if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3) &&
+            OpName == AMDGPU::OpName::src2)
+          continue;
+        if (!Src->isReg() || !TRI->isVGPR(MRI, Src->getReg()))
+          return false;
+      }
+
       for (auto OpName : {AMDGPU::OpName::clamp, AMDGPU::OpName::omod,
                           AMDGPU::OpName::op_sel}) {
         if (TII.hasModifiersSet(MI, OpName))
