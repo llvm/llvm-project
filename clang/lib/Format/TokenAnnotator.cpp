@@ -2955,8 +2955,8 @@ private:
         Tok = Next;
         if (Tok)
           Tok = Tok->getNextNonComment();
-      } else if ((Keywords.isVerilogQualifier(*Tok) ||
-                  Keywords.isVerilogIdentifier(*Tok))) {
+      } else if (Keywords.isVerilogQualifier(*Tok) ||
+                 Keywords.isVerilogIdentifier(*Tok)) {
         First = Tok;
         Tok = Next;
         // The name may have dots like `interface_foo.modport_foo`.

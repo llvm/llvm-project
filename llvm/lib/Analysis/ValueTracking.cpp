@@ -3933,6 +3933,41 @@ bool KnownFPClass::isKnownNeverLogicalPosZero(const Function &F,
   llvm_unreachable("covered switch over denormal mode");
 }
 
+void KnownFPClass::propagateDenormal(const KnownFPClass &Src, const Function &F,
+                                     Type *Ty) {
+  KnownFPClasses = Src.KnownFPClasses;
+  // If we aren't assuming the source can't be a zero, we don't have to check if
+  // a denormal input could be flushed.
+  if (!Src.isKnownNeverPosZero() && !Src.isKnownNeverNegZero())
+    return;
+
+  // If we know the input can't be a denormal, it can't be flushed to 0.
+  if (Src.isKnownNeverSubnormal())
+    return;
+
+  DenormalMode Mode = F.getDenormalMode(Ty->getScalarType()->getFltSemantics());
+
+  if (!Src.isKnownNeverPosSubnormal() && Mode != DenormalMode::getIEEE())
+    KnownFPClasses |= fcPosZero;
+
+  if (!Src.isKnownNeverNegSubnormal() && Mode != DenormalMode::getIEEE()) {
+    if (Mode != DenormalMode::getPositiveZero())
+      KnownFPClasses |= fcNegZero;
+
+    if (Mode.Input == DenormalMode::PositiveZero ||
+        Mode.Output == DenormalMode::PositiveZero ||
+        Mode.Input == DenormalMode::Dynamic ||
+        Mode.Output == DenormalMode::Dynamic)
+      KnownFPClasses |= fcPosZero;
+  }
+}
+
+void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
+                                              const Function &F, Type *Ty) {
+  propagateDenormal(Src, F, Ty);
+  propagateNaN(Src, /*PreserveSign=*/true);
+}
+
 /// Returns a pair of values, which if passed to llvm.is.fpclass, returns the
 /// same result as an fcmp with the given operands.
 std::pair<Value *, FPClassTest> llvm::fcmpToClassTest(FCmpInst::Predicate Pred,
@@ -4639,6 +4674,67 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                             KnownSrc, Depth + 1, Q);
         if (KnownSrc.isKnownNever(fcNegative))
           Known.knownNot(fcNegative);
+        break;
+      }
+      case Intrinsic::ldexp: {
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownSrc, Depth + 1, Q);
+        Known.propagateNaN(KnownSrc, /*PropagateSign=*/true);
+
+        // Sign is preserved, but underflows may produce zeroes.
+        if (KnownSrc.isKnownNever(fcNegative))
+          Known.knownNot(fcNegative);
+        else if (KnownSrc.cannotBeOrderedLessThanZero())
+          Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+
+        if (KnownSrc.isKnownNever(fcPositive))
+          Known.knownNot(fcPositive);
+        else if (KnownSrc.cannotBeOrderedGreaterThanZero())
+          Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+
+        // Can refine inf/zero handling based on the exponent operand.
+        const FPClassTest ExpInfoMask = fcZero | fcSubnormal | fcInf;
+        if ((InterestedClasses & ExpInfoMask) == fcNone)
+          break;
+        if ((KnownSrc.KnownFPClasses & ExpInfoMask) == fcNone)
+          break;
+
+        const fltSemantics &Flt
+          = II->getType()->getScalarType()->getFltSemantics();
+        unsigned Precision = APFloat::semanticsPrecision(Flt);
+        const Value *ExpArg = II->getArgOperand(1);
+        ConstantRange ExpRange = computeConstantRange(
+            ExpArg, true, Q.IIQ.UseInstrInfo, Q.AC, Q.CxtI, Q.DT, Depth + 1);
+
+        const int MantissaBits = Precision - 1;
+        if (ExpRange.getSignedMin().sge(static_cast<int64_t>(MantissaBits)))
+          Known.knownNot(fcSubnormal);
+
+        const Function *F = II->getFunction();
+        const APInt *ConstVal = ExpRange.getSingleElement();
+        if (ConstVal && ConstVal->isZero()) {
+          // ldexp(x, 0) -> x, so propagate everything.
+          Known.propagateCanonicalizingSrc(KnownSrc, *F,
+                                           II->getType());
+        } else if (ExpRange.isAllNegative()) {
+          // If we know the power is <= 0, can't introduce inf
+          if (KnownSrc.isKnownNeverPosInfinity())
+            Known.knownNot(fcPosInf);
+          if (KnownSrc.isKnownNeverNegInfinity())
+            Known.knownNot(fcNegInf);
+        } else if (ExpRange.isAllNonNegative()) {
+          // If we know the power is >= 0, can't introduce subnormal or zero
+          if (KnownSrc.isKnownNeverPosSubnormal())
+            Known.knownNot(fcPosSubnormal);
+          if (KnownSrc.isKnownNeverNegSubnormal())
+            Known.knownNot(fcNegSubnormal);
+          if (F && KnownSrc.isKnownNeverLogicalPosZero(*F, II->getType()))
+            Known.knownNot(fcPosZero);
+          if (F && KnownSrc.isKnownNeverLogicalNegZero(*F, II->getType()))
+            Known.knownNot(fcNegZero);
+        }
+
         break;
       }
       case Intrinsic::arithmetic_fence: {

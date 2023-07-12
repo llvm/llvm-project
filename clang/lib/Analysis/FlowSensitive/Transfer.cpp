@@ -715,22 +715,17 @@ public:
     Env.setValue(Loc, *Val);
 
     if (Type->isStructureOrClassType()) {
-      // Unnamed bitfields are only used for padding and are not appearing in
-      // `InitListExpr`'s inits. However, those fields do appear in RecordDecl's
-      // field list, and we thus need to remove them before mapping inits to
-      // fields to avoid mapping inits to the wrongs fields.
-      std::vector<FieldDecl *> Fields;
-      llvm::copy_if(
-          Type->getAsRecordDecl()->fields(), std::back_inserter(Fields),
-          [](const FieldDecl *Field) { return !Field->isUnnamedBitfield(); });
-      for (auto It : llvm::zip(Fields, S->inits())) {
-        const FieldDecl *Field = std::get<0>(It);
+      std::vector<FieldDecl *> Fields =
+          getFieldsForInitListExpr(Type->getAsRecordDecl());
+      for (auto [Field, Init] : llvm::zip(Fields, S->inits())) {
         assert(Field != nullptr);
-
-        const Expr *Init = std::get<1>(It);
         assert(Init != nullptr);
 
-        if (Value *InitVal = Env.getValue(*Init, SkipPast::None))
+        if (Field->getType()->isReferenceType()) {
+          if (StorageLocation *Loc = Env.getStorageLocationStrict(*Init))
+            cast<StructValue>(Val)->setChild(*Field,
+                                             Env.create<ReferenceValue>(*Loc));
+        } else if (Value *InitVal = Env.getValue(*Init, SkipPast::None))
           cast<StructValue>(Val)->setChild(*Field, *InitVal);
       }
     }

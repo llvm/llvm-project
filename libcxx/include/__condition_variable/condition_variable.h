@@ -20,6 +20,7 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_floating_point.h>
 #include <__utility/move.h>
+#include <limits>
 #include <ratio>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

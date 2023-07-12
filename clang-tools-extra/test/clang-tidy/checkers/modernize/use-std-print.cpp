@@ -44,6 +44,16 @@ void printf_deceptive_newline() {
   // CHECK-FIXES: std::println("Hello");
 }
 
+void printf_crlf_newline() {
+  printf("Hello\r\n");
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::print' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::print("Hello\r\n");
+
+  printf("Hello\r\\n");
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: use 'std::print' instead of 'printf' [modernize-use-std-print]
+  // CHECK-FIXES: std::print("Hello\r\\n");
+}
+
 // std::print returns nothing, so any callers that use the return
 // value cannot be automatically translated.
 int printf_uses_return_value(int choice) {

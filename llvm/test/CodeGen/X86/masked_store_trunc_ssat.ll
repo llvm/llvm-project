@@ -2088,12 +2088,12 @@ define void @truncstore_v4i64_v4i8(<4 x i64> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-NEXT:    pand %xmm4, %xmm5
 ; SSE2-NEXT:    pandn %xmm1, %xmm4
 ; SSE2-NEXT:    por %xmm5, %xmm4
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [255,0,0,0,255,0,0,0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0]
 ; SSE2-NEXT:    pand %xmm1, %xmm4
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    packuswb %xmm4, %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-NEXT:    packuswb %xmm3, %xmm0
+; SSE2-NEXT:    packuswb %xmm3, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm3, %xmm2
 ; SSE2-NEXT:    movmskps %xmm2, %ecx
 ; SSE2-NEXT:    xorl $15, %ecx

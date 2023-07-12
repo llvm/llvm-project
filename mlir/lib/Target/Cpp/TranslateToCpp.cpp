@@ -266,6 +266,24 @@ static LogicalResult printOperation(CppEmitter &emitter, emitc::AddOp addOp) {
   return printBinaryArithOperation(emitter, operation, "+");
 }
 
+static LogicalResult printOperation(CppEmitter &emitter, emitc::DivOp divOp) {
+  Operation *operation = divOp.getOperation();
+
+  return printBinaryArithOperation(emitter, operation, "/");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::MulOp mulOp) {
+  Operation *operation = mulOp.getOperation();
+
+  return printBinaryArithOperation(emitter, operation, "*");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::RemOp remOp) {
+  Operation *operation = remOp.getOperation();
+
+  return printBinaryArithOperation(emitter, operation, "%");
+}
+
 static LogicalResult printOperation(CppEmitter &emitter, emitc::SubOp subOp) {
   Operation *operation = subOp.getOperation();
 
@@ -957,8 +975,8 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
           .Case<emitc::AddOp, emitc::ApplyOp, emitc::CallOp, emitc::CastOp,
-                emitc::ConstantOp, emitc::IncludeOp, emitc::SubOp,
-                emitc::VariableOp>(
+                emitc::ConstantOp, emitc::DivOp, emitc::IncludeOp, emitc::MulOp,
+                emitc::RemOp, emitc::SubOp, emitc::VariableOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(

@@ -392,8 +392,8 @@ private:
   // We assume instructions do not raise floating-point exceptions by default,
   // and only those marked explicitly may do so.  We could choose to represent
   // this via a positive "FPExcept" flags like on the MI level, but having a
-  // negative "NoFPExcept" flag here (that defaults to true) makes the flag
-  // intersection logic more straightforward.
+  // negative "NoFPExcept" flag here makes the flag intersection logic more
+  // straightforward.
   bool NoFPExcept : 1;
   // Instructions with attached 'unpredictable' metadata on IR level.
   bool Unpredictable : 1;

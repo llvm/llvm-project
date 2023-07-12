@@ -236,20 +236,21 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   auto FS = vfs::getRealFileSystem();
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
-    PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping, FS,
-                        PGOOptions::SampleUse, PGOOptions::NoCSAction, true);
+    PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
+                        /*MemoryProfile=*/"", FS, PGOOptions::SampleUse,
+                        PGOOptions::NoCSAction, true);
   else if (Conf.RunCSIRInstr) {
-    PGOOpt = PGOOptions("", Conf.CSIRProfile, Conf.ProfileRemapping, FS,
-                        PGOOptions::IRUse, PGOOptions::CSIRInstr,
-                        Conf.AddFSDiscriminator);
+    PGOOpt = PGOOptions("", Conf.CSIRProfile, Conf.ProfileRemapping,
+                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
+                        PGOOptions::CSIRInstr, Conf.AddFSDiscriminator);
   } else if (!Conf.CSIRProfile.empty()) {
-    PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping, FS,
-                        PGOOptions::IRUse, PGOOptions::CSIRUse,
-                        Conf.AddFSDiscriminator);
+    PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
+                        /*MemoryProfile=*/"", FS, PGOOptions::IRUse,
+                        PGOOptions::CSIRUse, Conf.AddFSDiscriminator);
     NoPGOWarnMismatch = !Conf.PGOWarnMismatch;
   } else if (Conf.AddFSDiscriminator) {
-    PGOOpt = PGOOptions("", "", "", nullptr, PGOOptions::NoAction,
-                        PGOOptions::NoCSAction, true);
+    PGOOpt = PGOOptions("", "", "", /*MemoryProfile=*/"", nullptr,
+                        PGOOptions::NoAction, PGOOptions::NoCSAction, true);
   }
   TM->setPGOOption(PGOOpt);
 

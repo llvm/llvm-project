@@ -1393,8 +1393,8 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
                                            Target *target) {
   Status error;
   StreamString feedback_stream;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(
-                       target, error, &feedback_stream)) {
+  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error,
+                                                             feedback_stream)) {
     if (error.AsCString())
       target->GetDebugger().GetErrorStream().Printf(
           "unable to load scripting data for module %s - error reported was "

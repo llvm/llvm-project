@@ -173,14 +173,89 @@ void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
 
+void transform::BufferizeToAllocationOp::build(OpBuilder &b,
+                                               OperationState &result,
+                                               Value target,
+                                               Attribute memorySpace) {
+  SmallVector<Type> resultTypes;
+  resultTypes.push_back(b.getType<transform::AnyValueType>());
+  resultTypes.push_back(b.getType<transform::AnyOpType>());
+  return build(b, result,
+               /*resultTypes=*/resultTypes,
+               /*target=*/target,
+               /*memorySpace=*/memorySpace);
+}
+
+void transform::BufferizeToAllocationOp::build(OpBuilder &b,
+                                               OperationState &result,
+                                               Value target,
+                                               int64_t memorySpace) {
+  SmallVector<Type> resultTypes;
+  resultTypes.push_back(b.getType<transform::AnyValueType>());
+  resultTypes.push_back(b.getType<transform::AnyOpType>());
+  return build(b, result,
+               /*resultTypes=*/resultTypes,
+               /*target=*/target,
+               /*memorySpace=*/b.getI64IntegerAttr(memorySpace));
+}
+
+namespace {
+class NewOpsListener : public RewriterBase::ForwardingListener {
+public:
+  using RewriterBase::ForwardingListener::ForwardingListener;
+
+  SmallVector<Operation *> getNewOps() const {
+    return SmallVector<Operation *>(newOps.begin(), newOps.end());
+  }
+
+private:
+  void notifyOperationInserted(Operation *op) override {
+    ForwardingListener::notifyOperationInserted(op);
+    auto inserted = newOps.insert(op);
+    (void)inserted;
+    assert(inserted.second && "expected newly created op");
+  }
+
+  void notifyOperationRemoved(Operation *op) override {
+    ForwardingListener::notifyOperationRemoved(op);
+    op->walk([&](Operation *op) { newOps.erase(op); });
+  }
+
+  DenseSet<Operation *> newOps;
+};
+} // namespace
+
 DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
+  // Attach listener to keep track of newly created ops.
+  OpBuilder::Listener *previousListener = rewriter.getListener();
+  auto resetListener =
+      llvm::make_scope_exit([&]() { rewriter.setListener(previousListener); });
+  NewOpsListener newOpsListener(previousListener);
+  rewriter.setListener(&newOpsListener);
+
+  linalg::BufferizeToAllocationOptions options;
+  if (getMemcpyOp() == "memref.tensor_store") {
+    options.memcpyOp =
+        linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefTensorStore;
+  } else if (getMemcpyOp() == "memref.copy") {
+    options.memcpyOp =
+        linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefCopy;
+  } else if (getMemcpyOp() == "linalg.copy") {
+    options.memcpyOp =
+        linalg::BufferizeToAllocationOptions::MemcpyOp::LinalgCopy;
+  } else {
+    llvm_unreachable("invalid memcpy op");
+  }
+
+  // Bufferize ops.
   Attribute memorySpace =
       getMemorySpace().has_value() ? getMemorySpace().value() : Attribute();
   SmallVector<Value> allocatedBuffers;
   for (Operation *op : state.getPayloadOps(getTarget())) {
-    Value buffer = linalg::bufferizeToAllocation(rewriter, op, memorySpace);
+    Value buffer =
+        linalg::bufferizeToAllocation(rewriter, options, op, memorySpace);
     if (!buffer) {
       DiagnosedSilenceableFailure diag = emitSilenceableError()
                                          << "failed to bufferize operation";
@@ -189,7 +264,10 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
     }
     allocatedBuffers.push_back(buffer);
   }
+
+  // Set results.
   results.setValues(cast<OpResult>(getAllocatedBuffer()), allocatedBuffers);
+  results.set(cast<OpResult>(getNewOps()), newOpsListener.getNewOps());
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -197,7 +275,15 @@ void transform::BufferizeToAllocationOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   consumesHandle(getTarget(), effects);
   producesHandle(getAllocatedBuffer(), effects);
+  producesHandle(getNewOps(), effects);
   modifiesPayload(effects);
+}
+
+LogicalResult transform::BufferizeToAllocationOp::verify() {
+  if (getMemcpyOp() != "memref.tensor_store" &&
+      getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
+    return emitOpError() << "unsupported memcpy op";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1447,6 +1533,27 @@ transform::PackTransposeOp::apply(transform::TransformRewriter &rewriter,
 //===---------------------------------------------------------------------===//
 // PadOp
 //===---------------------------------------------------------------------===//
+
+void transform::PadOp::build(OpBuilder &b, OperationState &result, Value target,
+                             ArrayRef<int64_t> paddingDimensions,
+                             ArrayRef<int64_t> padToMultipleOf,
+                             ArrayRef<int64_t> packPaddings,
+                             ArrayRef<Attribute> transposePaddings,
+                             bool copyBack) {
+  auto resultType = transform::AnyOpType::get(b.getContext());
+  return build(/*builder=*/b,
+               /*result=*/result,
+               /*types=*/TypeRange{resultType, resultType},
+               /*target=*/target,
+               /*paddingValues=*/ArrayAttr(), // let inference handle this
+               /*paddingDimensions=*/b.getI64ArrayAttr(paddingDimensions),
+               /*padToMultipleOf=*/
+               (padToMultipleOf.empty() ? ArrayAttr()
+                                        : b.getI64ArrayAttr(padToMultipleOf)),
+               /*packPaddings=*/b.getI64ArrayAttr(packPaddings),
+               /*transposePaddings=*/b.getArrayAttr(transposePaddings),
+               /*copyBack=*/b.getBoolAttr(copyBack));
+}
 
 DiagnosedSilenceableFailure
 transform::PadOp::apply(transform::TransformRewriter &rewriter,

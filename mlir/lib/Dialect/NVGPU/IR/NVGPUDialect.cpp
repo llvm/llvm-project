@@ -34,8 +34,7 @@ void nvgpu::NVGPUDialect::initialize() {
       >();
 }
 
-bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
-  Attribute memorySpace = type.getMemorySpace();
+bool nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
   if (!memorySpace)
     return false;
   if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
@@ -43,6 +42,11 @@ bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
   if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
     return gpuAttr.getValue() == gpu::AddressSpace::Workgroup;
   return false;
+}
+
+bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
+  Attribute memorySpace = type.getMemorySpace();
+  return isSharedMemoryAddressSpace(memorySpace);
 }
 
 //===----------------------------------------------------------------------===//

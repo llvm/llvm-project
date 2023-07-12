@@ -95,6 +95,7 @@ public:
     OB_clang_arc_attachedcall = 6, // "clang.arc.attachedcall"
     OB_ptrauth = 7,                // "ptrauth"
     OB_kcfi = 8,                   // "kcfi"
+    OB_convergencectrl = 9,        // "convergencectrl"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.

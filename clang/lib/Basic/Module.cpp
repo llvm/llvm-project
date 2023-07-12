@@ -264,10 +264,10 @@ bool Module::fullModuleNameIs(ArrayRef<StringRef> nameParts) const {
 }
 
 OptionalDirectoryEntryRef Module::getEffectiveUmbrellaDir() const {
-  if (const auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
-    return FileEntryRef(*ME).getDir();
-  if (const auto *ME = Umbrella.dyn_cast<const DirectoryEntryRef::MapEntry *>())
-    return DirectoryEntryRef(*ME);
+  if (Umbrella && Umbrella.is<FileEntryRef>())
+    return Umbrella.get<FileEntryRef>().getDir();
+  if (Umbrella && Umbrella.is<DirectoryEntryRef>())
+    return Umbrella.get<DirectoryEntryRef>();
   return std::nullopt;
 }
 

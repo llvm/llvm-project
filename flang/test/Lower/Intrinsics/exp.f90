@@ -10,7 +10,7 @@
 subroutine exp_testr(a, b)
   real :: a, b
 ! CHECK:  %[[A:.*]] = fir.load %[[AREF:.*]] : !fir.ref<f32>
-! CHECK:  %[[RES:.*]] = fir.call @fir.exp.f32.f32(%[[A]]) {{.*}}: (f32) -> f32
+! CHECK:  %[[RES:.*]] = fir.call @fir.exp.contract.f32.f32(%[[A]]) {{.*}}: (f32) -> f32
 ! CHECK:  fir.store %[[RES]] to %[[BREF]] : !fir.ref<f32>
   b = exp(a)
 end subroutine
@@ -20,7 +20,7 @@ end subroutine
 subroutine exp_testd(a, b)
   real(kind=8) :: a, b
 ! CHECK:  %[[A:.*]] = fir.load %[[AREF:.*]] : !fir.ref<f64>
-! CHECK:  %[[RES:.*]] = fir.call @fir.exp.f64.f64(%[[A]]) {{.*}}: (f64) -> f64
+! CHECK:  %[[RES:.*]] = fir.call @fir.exp.contract.f64.f64(%[[A]]) {{.*}}: (f64) -> f64
 ! CHECK:  fir.store %[[RES]] to %[[BREF]] : !fir.ref<f64>
   b = exp(a)
 end subroutine
@@ -30,7 +30,7 @@ end subroutine
 subroutine exp_testc(a, b)
   complex :: a, b
 ! CHECK:  %[[A:.*]] = fir.load %[[AREF:.*]] : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[RES:.*]] = fir.call @fir.exp.z4.z4(%[[A]]) {{.*}}: (!fir.complex<4>) -> !fir.complex<4>
+! CHECK:  %[[RES:.*]] = fir.call @fir.exp.contract.z4.z4(%[[A]]) {{.*}}: (!fir.complex<4>) -> !fir.complex<4>
 ! CHECK:  fir.store %[[RES]] to %[[BREF]] : !fir.ref<!fir.complex<4>>
   b = exp(a)
 end subroutine
@@ -40,33 +40,33 @@ end subroutine
 subroutine exp_testcd(a, b)
   complex(kind=8) :: a, b
 ! CHECK:  %[[A:.*]] = fir.load %[[AREF:.*]] : !fir.ref<!fir.complex<8>>
-! CHECK:  %[[RES:.*]] = fir.call @fir.exp.z8.z8(%[[A]]) {{.*}}: (!fir.complex<8>) -> !fir.complex<8>
+! CHECK:  %[[RES:.*]] = fir.call @fir.exp.contract.z8.z8(%[[A]]) {{.*}}: (!fir.complex<8>) -> !fir.complex<8>
 ! CHECK:  fir.store %[[RES]] to %[[BREF]] : !fir.ref<!fir.complex<8>>
   b = exp(a)
 end subroutine
 
-! CHECK-LABEL: private @fir.exp.f32.f32
+! CHECK-LABEL: private @fir.exp.contract.f32.f32
 ! CHECK-SAME: (%[[ARG32_OUTLINE:.*]]: f32) -> f32
-! CHECK: %[[RESULT32_OUTLINE:.*]] = math.exp %[[ARG32_OUTLINE]] : f32
+! CHECK: %[[RESULT32_OUTLINE:.*]] = math.exp %[[ARG32_OUTLINE]] fastmath<contract> : f32
 ! CHECK: return %[[RESULT32_OUTLINE]] : f32
 
-! CHECK-LABEL: private @fir.exp.f64.f64
+! CHECK-LABEL: private @fir.exp.contract.f64.f64
 ! CHECK-SAME: (%[[ARG64_OUTLINE:.*]]: f64) -> f64
-! CHECK: %[[RESULT64_OUTLINE:.*]] = math.exp %[[ARG64_OUTLINE]] : f64
+! CHECK: %[[RESULT64_OUTLINE:.*]] = math.exp %[[ARG64_OUTLINE]] fastmath<contract> : f64
 ! CHECK: return %[[RESULT64_OUTLINE]] : f64
 
-! CMPLX-LABEL: private @fir.exp.z4.z4
+! CMPLX-LABEL: private @fir.exp.contract.z4.z4
 ! CMPLX-SAME: (%[[ARG32_OUTLINE:.*]]: !fir.complex<4>) -> !fir.complex<4>
 ! CMPLX-FAST: %[[C:.*]] = fir.convert %[[ARG32_OUTLINE]] : (!fir.complex<4>) -> complex<f32>
 ! CMPLX-FAST: %[[E:.*]] = complex.exp %[[C]] : complex<f32>
 ! CMPLX-FAST: %[[RESULT32_OUTLINE:.*]] = fir.convert %[[E]] : (complex<f32>) -> !fir.complex<4>
-! CMPLX-PRECISE: %[[RESULT32_OUTLINE:.*]] = fir.call @cexpf(%[[ARG32_OUTLINE]]) : (!fir.complex<4>) -> !fir.complex<4>
+! CMPLX-PRECISE: %[[RESULT32_OUTLINE:.*]] = fir.call @cexpf(%[[ARG32_OUTLINE]]) fastmath<contract> : (!fir.complex<4>) -> !fir.complex<4>
 ! CMPLX: return %[[RESULT32_OUTLINE]] : !fir.complex<4>
 
-! CMPLX-LABEL: private @fir.exp.z8.z8
+! CMPLX-LABEL: private @fir.exp.contract.z8.z8
 ! CMPLX-SAME: (%[[ARG64_OUTLINE:.*]]: !fir.complex<8>) -> !fir.complex<8>
 ! CMPLX-FAST: %[[C:.*]] = fir.convert %[[ARG64_OUTLINE]] : (!fir.complex<8>) -> complex<f64>
 ! CMPLX-FAST: %[[E:.*]] = complex.exp %[[C]] : complex<f64>
 ! CMPLX-FAST: %[[RESULT64_OUTLINE:.*]] = fir.convert %[[E]] : (complex<f64>) -> !fir.complex<8>
-! CMPLX-PRECISE: %[[RESULT64_OUTLINE:.*]] = fir.call @cexp(%[[ARG64_OUTLINE]]) : (!fir.complex<8>) -> !fir.complex<8>
+! CMPLX-PRECISE: %[[RESULT64_OUTLINE:.*]] = fir.call @cexp(%[[ARG64_OUTLINE]]) fastmath<contract> : (!fir.complex<8>) -> !fir.complex<8>
 ! CMPLX: return %[[RESULT64_OUTLINE]] : !fir.complex<8>

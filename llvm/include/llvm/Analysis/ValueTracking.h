@@ -416,6 +416,23 @@ struct KnownFPClass {
       knownNot(fcSNan);
   }
 
+  /// Propagate knowledge from a source value that could be a denormal or
+  /// zero. We have to be conservative since output flushing is not guaranteed,
+  /// so known-never-zero may not hold.
+  ///
+  /// This assumes a copy-like operation and will replace any currently known
+  /// information.
+  void propagateDenormal(const KnownFPClass &Src, const Function &F, Type *Ty);
+
+  /// Report known classes if \p Src is evaluated through a potentially
+  /// canonicalizing operation. We can assume signaling nans will not be
+  /// introduced, but cannot assume a denormal will be flushed under FTZ/DAZ.
+  ///
+  /// This assumes a copy-like operation and will replace any currently known
+  /// information.
+  void propagateCanonicalizingSrc(const KnownFPClass &Src, const Function &F,
+                                  Type *Ty);
+
   void resetAll() { *this = KnownFPClass(); }
 };
 
