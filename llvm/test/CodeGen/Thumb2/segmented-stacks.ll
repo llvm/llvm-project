@@ -75,8 +75,9 @@ define void @test_large() #0 {
 ; THUMB-LABEL:   test_large:
 
 ; THUMB:         push    {r4, r5}
-; THUMB-NEXT:    mov     r5, sp
 ; THUMB-NEXT:    movw    r4, #40192
+; THUMB-NEXT:    mov     r5, sp
+; THUMB-NEXT:    movt    r4, #0
 ; THUMB-NEXT:    sub     r5, r5, r4
 ; THUMB-NEXT:    mrc     p15, #0, r4, c13, c0, #3
 ; THUMB-NEXT:    ldr.w   r4, [r4, #252]
@@ -84,6 +85,7 @@ define void @test_large() #0 {
 ; THUMB-NEXT:    bls     .LBB1_2
 
 ; THUMB:         movw    r4, #40192
+; THUMB-NEXT:    movt    r4, #0
 ; THUMB-NEXT:    mov     r5, #0
 ; THUMB-NEXT:    push    {lr}
 ; THUMB-NEXT:    bl      __morestack
@@ -127,8 +129,9 @@ define fastcc void @test_fastcc_large() #0 {
 ; THUMB-LABEL:   test_fastcc_large:
 
 ; THUMB:         push    {r4, r5}
-; THUMB-NEXT:    mov     r5, sp
 ; THUMB-NEXT:    movw    r4, #40192
+; THUMB-NEXT:    mov     r5, sp
+; THUMB-NEXT:    movt    r4, #0
 ; THUMB-NEXT:    sub     r5, r5, r4
 ; THUMB-NEXT:    mrc     p15, #0, r4, c13, c0, #3
 ; THUMB-NEXT:    ldr.w   r4, [r4, #252]
@@ -136,6 +139,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; THUMB-NEXT:    bls     .LBB2_2
 
 ; THUMB:         movw    r4, #40192
+; THUMB-NEXT:    movt    r4, #0
 ; THUMB-NEXT:    mov     r5, #0
 ; THUMB-NEXT:    push    {lr}
 ; THUMB-NEXT:    bl      __morestack
