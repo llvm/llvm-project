@@ -286,69 +286,6 @@ Value *SCEVExpander::InsertBinop(Instruction::BinaryOps Opcode,
   return BO;
 }
 
-/// SimplifyAddOperands - Sort and simplify a list of add operands. NumAddRecs
-/// is the number of SCEVAddRecExprs present, which are kept at the end of
-/// the list.
-///
-static void SimplifyAddOperands(SmallVectorImpl<const SCEV *> &Ops,
-                                Type *Ty,
-                                ScalarEvolution &SE) {
-  unsigned NumAddRecs = 0;
-  for (unsigned i = Ops.size(); i > 0 && isa<SCEVAddRecExpr>(Ops[i-1]); --i)
-    ++NumAddRecs;
-  // Group Ops into non-addrecs and addrecs.
-  SmallVector<const SCEV *, 8> NoAddRecs(Ops.begin(), Ops.end() - NumAddRecs);
-  SmallVector<const SCEV *, 8> AddRecs(Ops.end() - NumAddRecs, Ops.end());
-  // Let ScalarEvolution sort and simplify the non-addrecs list.
-  const SCEV *Sum = NoAddRecs.empty() ?
-                    SE.getConstant(Ty, 0) :
-                    SE.getAddExpr(NoAddRecs);
-  // If it returned an add, use the operands. Otherwise it simplified
-  // the sum into a single value, so just use that.
-  Ops.clear();
-  if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Sum))
-    append_range(Ops, Add->operands());
-  else if (!Sum->isZero())
-    Ops.push_back(Sum);
-  // Then append the addrecs.
-  Ops.append(AddRecs.begin(), AddRecs.end());
-}
-
-/// SplitAddRecs - Flatten a list of add operands, moving addrec start values
-/// out to the top level. For example, convert {a + b,+,c} to a, b, {0,+,d}.
-/// This helps expose more opportunities for folding parts of the expressions
-/// into GEP indices.
-///
-static void SplitAddRecs(SmallVectorImpl<const SCEV *> &Ops,
-                         Type *Ty,
-                         ScalarEvolution &SE) {
-  // Find the addrecs.
-  SmallVector<const SCEV *, 8> AddRecs;
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    while (const SCEVAddRecExpr *A = dyn_cast<SCEVAddRecExpr>(Ops[i])) {
-      const SCEV *Start = A->getStart();
-      if (Start->isZero()) break;
-      const SCEV *Zero = SE.getConstant(Ty, 0);
-      AddRecs.push_back(SE.getAddRecExpr(Zero,
-                                         A->getStepRecurrence(SE),
-                                         A->getLoop(),
-                                         A->getNoWrapFlags(SCEV::FlagNW)));
-      if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(Start)) {
-        Ops[i] = Zero;
-        append_range(Ops, Add->operands());
-        e += Add->getNumOperands();
-      } else {
-        Ops[i] = Start;
-      }
-    }
-  if (!AddRecs.empty()) {
-    // Add the addrecs onto the end of the list.
-    Ops.append(AddRecs.begin(), AddRecs.end());
-    // Resort the operand list, moving any constants to the front.
-    SimplifyAddOperands(Ops, Ty, SE);
-  }
-}
-
 /// expandAddToGEP - Expand an addition expression with a pointer type into
 /// a GEP instead of using ptrtoint+arithmetic+inttoptr. This helps
 /// BasicAliasAnalysis and other passes analyze the result. See the rules
@@ -376,20 +313,11 @@ static void SplitAddRecs(SmallVectorImpl<const SCEV *> &Ops,
 /// loop-invariant portions of expressions, after considering what
 /// can be folded using target addressing modes.
 ///
-Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
-                                    const SCEV *const *op_end, Type *Ty,
-                                    Value *V) {
-  SmallVector<const SCEV *, 8> Ops(op_begin, op_end);
-
-  // Split AddRecs up into parts as either of the parts may be usable
-  // without the other.
-  SplitAddRecs(Ops, Ty, SE);
-
+Value *SCEVExpander::expandAddToGEP(const SCEV *Offset, Type *Ty, Value *V) {
   assert(!isa<Instruction>(V) ||
          SE.DT.dominates(cast<Instruction>(V), &*Builder.GetInsertPoint()));
 
-  // Expand the operands for a plain byte offset.
-  Value *Idx = expandCodeForImpl(SE.getAddExpr(Ops), Ty);
+  Value *Idx = expandCodeForImpl(Offset, Ty);
 
   // Fold a GEP with constant operands.
   if (Constant *CLHS = dyn_cast<Constant>(V))
@@ -432,11 +360,6 @@ Value *SCEVExpander::expandAddToGEP(const SCEV *const *op_begin,
 
   // Emit a GEP.
   return Builder.CreateGEP(Builder.getInt8Ty(), V, Idx, "scevgep");
-}
-
-Value *SCEVExpander::expandAddToGEP(const SCEV *Op, Type *Ty, Value *V) {
-  const SCEV *const Ops[1] = {Op};
-  return expandAddToGEP(Ops, Ops + 1, Ty, V);
 }
 
 /// PickMostRelevantLoop - Given two loops pick the one that's most relevant for
@@ -575,7 +498,7 @@ Value *SCEVExpander::visitAddExpr(const SCEVAddExpr *S) {
             X = SE.getSCEV(U->getValue());
         NewOps.push_back(X);
       }
-      Sum = expandAddToGEP(NewOps.begin(), NewOps.end(), Ty, Sum);
+      Sum = expandAddToGEP(SE.getAddExpr(NewOps), Ty, Sum);
     } else if (Op->isNonConstantNegative()) {
       // Instead of doing a negate and add, just do a subtract.
       Value *W = expandCodeForImpl(SE.getNegativeSCEV(Op), Ty);
