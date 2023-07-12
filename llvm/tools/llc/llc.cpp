@@ -107,10 +107,6 @@ static cl::opt<std::string>
                              "regardless of binutils support"));
 
 static cl::opt<bool>
-NoIntegratedAssembler("no-integrated-as", cl::Hidden,
-                      cl::desc("Disable integrated assembler"));
-
-static cl::opt<bool>
     PreserveComments("preserve-as-comments", cl::Hidden,
                      cl::desc("Preserve Comments in outputted assembly"),
                      cl::init(true));
@@ -517,7 +513,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     Options.BinutilsVersion =
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
-    Options.DisableIntegratedAS = NoIntegratedAssembler;
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;
