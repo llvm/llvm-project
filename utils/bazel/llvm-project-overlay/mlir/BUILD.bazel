@@ -4006,6 +4006,7 @@ cc_library(
     deps = [
         ":AffineDialect",
         ":ArithDialect",
+        ":ArithTransforms",
         ":ArithUtils",
         ":BufferizationDialect",
         ":BufferizationTransforms",
@@ -4840,6 +4841,7 @@ cc_library(
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":MemRefDialect",
         ":NVGPUDialect",
         ":NVVMDialect",
         ":Pass",
