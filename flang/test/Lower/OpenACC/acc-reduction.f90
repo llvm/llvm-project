@@ -2,6 +2,19 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.reduction.recipe @reduction_lor_l32 : !fir.logical<4> reduction_operator <lor> init {
+! CHECK: ^bb0(%{{.*}}: !fir.logical<4>):
+! CHECK:   %[[CST:.*]] = arith.constant false
+! CHECK:   acc.yield %[[CST]] : i1
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.logical<4>, %[[ARG1:.*]]: !fir.logical<4>):
+! CHECK:   %[[V1:.*]] = fir.convert %[[ARG0]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[V2:.*]] = fir.convert %[[ARG1]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[AND:.*]] = arith.ori %[[V1]], %[[V2]] : i1
+! CHECK:   %[[CONV:.*]] = fir.convert %[[AND]] : (i1) -> !fir.logical<4>
+! CHECK:   acc.yield %[[CONV]] : !fir.logical<4>
+! CHECK: }
+
 ! CHECK-LABEL: acc.reduction.recipe @reduction_land_l32 : !fir.logical<4> reduction_operator <land> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.logical<4>):
 ! CHECK:   %[[CST:.*]] = arith.constant true
@@ -660,3 +673,13 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_and()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%0 : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
 ! CHECK: acc.parallel reduction(@reduction_land_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+
+subroutine acc_reduction_or()
+  logical :: l
+  !$acc parallel reduction(.or.:l)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_or()
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: acc.parallel reduction(@reduction_lor_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
