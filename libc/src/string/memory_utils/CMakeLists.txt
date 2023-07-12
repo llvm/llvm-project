@@ -18,6 +18,7 @@ add_header_library(
     op_generic.h
     op_x86.h
     riscv/bcmp_implementations.h
+    riscv/memcpy_implementations.h
     utils.h
     x86_64/bcmp_implementations.h
     x86_64/memcmp_implementations.h
