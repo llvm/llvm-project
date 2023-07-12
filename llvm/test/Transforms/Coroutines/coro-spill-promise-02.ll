@@ -1,5 +1,5 @@
 ; Check that we would take care of the value written to promise before @llvm.coro.begin.
-; RUN: opt < %s -opaque-pointers -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
+; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
 %"class.task::promise_type" = type { [64 x i8] }
 
