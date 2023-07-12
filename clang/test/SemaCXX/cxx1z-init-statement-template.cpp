@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -std=c++1z -verify -emit-llvm-only %s
 // expected-no-diagnostics
 
-// rdar://problem/33888545
 template <unsigned int BUFFER_SIZE> class Buffer {};
 
 class A {

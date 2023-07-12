@@ -11,7 +11,7 @@
 // Decrement iterator prior to begin.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 #include <vector>
 #include <cassert>

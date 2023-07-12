@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
 
-// rdar://problem/9158302
 // This should not use a memmove_collectable in non-GC mode.
 namespace test0 {
   struct A {
@@ -19,8 +18,6 @@ namespace test0 {
   }
 }
 
-
-// rdar://9780211
 @protocol bork
 @end
 

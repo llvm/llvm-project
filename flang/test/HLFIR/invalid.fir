@@ -947,3 +947,24 @@ func.func @bad_elsewhere_3(%mask: !fir.ref<!fir.array<10x!fir.logical<4>>>, %x: 
   }
   return
 }
+
+// -----
+func.func @bad_get_length_1(%arg0: !hlfir.expr<i32>) {
+  // expected-error@+1 {{'hlfir.get_length' op operand #0 must be any character scalar or array expression type, but got '!hlfir.expr<i32>'}}
+  %1 = hlfir.get_length %arg0 : (!hlfir.expr<i32>) -> index
+  return
+}
+
+// -----
+func.func @bad_get_length_2(%arg0: !hlfir.expr<?xi32>) {
+  // expected-error@+1 {{'hlfir.get_length' op operand #0 must be any character scalar or array expression type, but got '!hlfir.expr<?xi32>'}}
+  %1 = hlfir.get_length %arg0 : (!hlfir.expr<?xi32>) -> index
+  return
+}
+
+// -----
+func.func @bad_get_length_3(%arg0: !hlfir.expr<!fir.boxchar<1>>) {
+  // expected-error@+1 {{'hlfir.get_length' op operand #0 must be any character scalar or array expression type, but got '!hlfir.expr<!fir.boxchar<1>>'}}
+  %1 = hlfir.get_length %arg0 : (!hlfir.expr<!fir.boxchar<1>>) -> index
+  return
+}

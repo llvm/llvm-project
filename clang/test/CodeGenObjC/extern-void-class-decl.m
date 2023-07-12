@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -emit-llvm -o - | FileCheck %s
 
-// rdar://45077269
-
 extern void OBJC_CLASS_$_f;
 Class c = (Class)&OBJC_CLASS_$_f;
 

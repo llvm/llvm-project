@@ -140,7 +140,6 @@ export namespace std {
   using std::hypotl;
 
   // [c.math.hypot3], three-dimensional hypotenuse
-  using std::hypot;
 
   using std::pow;
   using std::powf;

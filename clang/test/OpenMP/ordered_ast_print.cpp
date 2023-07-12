@@ -55,6 +55,8 @@ T tmain (T argc) {
 #if _OPENMP >= 202111
   #pragma omp ordered doacross(source:)
   #pragma omp ordered doacross(sink:i+N)
+  #pragma omp ordered doacross(sink: omp_cur_iteration - 1)
+  #pragma omp ordered doacross(source: omp_cur_iteration)
 #else
   #pragma omp ordered depend(source)
   #pragma omp ordered depend(sink:i+N)
@@ -100,6 +102,8 @@ T tmain (T argc) {
 #if _OPENMP >= 202111
 // OMP52: #pragma omp ordered doacross(source:)
 // OMP52-NEXT: #pragma omp ordered doacross(sink: i + N)
+// OMP52-NEXT: #pragma omp ordered doacross(sink: omp_cur_iteration - 1)
+// OMP52-NEXT: #pragma omp ordered doacross(source: omp_cur_iteration)
 #else
 // OMP51: #pragma omp ordered depend(source)
 // OMP51-NEXT: #pragma omp ordered depend(sink : i + N)
@@ -142,6 +146,8 @@ T tmain (T argc) {
 #if _OPENMP >= 202111
 // OMP52: #pragma omp ordered doacross(source:)
 // OMP52-NEXT: #pragma omp ordered doacross(sink: i + 3)
+// OMP52-NEXT: #pragma omp ordered doacross(sink: omp_cur_iteration - 1)
+// OMP52-NEXT: #pragma omp ordered doacross(source: omp_cur_iteration)
 #else
 // OMP51: #pragma omp ordered depend(source)
 // OMP51-NEXT: #pragma omp ordered depend(sink : i + 3)
@@ -189,6 +195,8 @@ int main (int argc, char **argv) {
 #if _OPENMP >= 202111
   #pragma omp ordered doacross(source:)
   #pragma omp ordered doacross(sink: i - 5)
+  #pragma omp ordered doacross(sink: omp_cur_iteration - 1)
+  #pragma omp ordered doacross(source: omp_cur_iteration)
 #else
   #pragma omp ordered depend(source)
   #pragma omp ordered depend(sink: i - 5)
@@ -230,6 +238,8 @@ int main (int argc, char **argv) {
 #if _OPENMP >= 202111
 // OMP52: #pragma omp ordered doacross(source:)
 // OMP52-NEXT: #pragma omp ordered doacross(sink: i - 5)
+// OMP52-NEXT: #pragma omp ordered doacross(sink: omp_cur_iteration - 1)
+// OMP52-NEXT: #pragma omp ordered doacross(source: omp_cur_iteration)
 #else
 // OMP51: #pragma omp ordered depend(source)
 // OMP51-NEXT: #pragma omp ordered depend(sink : i - 5)

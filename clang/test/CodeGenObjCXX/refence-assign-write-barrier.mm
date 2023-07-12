@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fobjc-gc -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
-// rdar://8681766
 
 @interface NSArray 
 - (NSArray*) retain;

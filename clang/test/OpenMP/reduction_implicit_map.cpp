@@ -7,7 +7,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-cuda-mode -x c++ \
 // RUN:  -triple nvptx64-unknown-unknown -DCUA \
 // RUN:  -fopenmp-targets=nvptx64-nvidia-cuda -DCUDA -emit-llvm %s \
-// RUN:  -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc \
+// RUN:  -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc \
 // RUN:  -o - | FileCheck %s --check-prefix CHECK
 
 // RUN: %clang_cc1 -verify -fopenmp -x c++ \

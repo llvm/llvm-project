@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/signal.h"
 #include "src/errno/libc_errno.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigaddset.h"
@@ -15,6 +14,8 @@
 
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+
+#include <signal.h>
 
 class LlvmLibcSignalTest : public __llvm_libc::testing::Test {
   sigset_t oldSet;

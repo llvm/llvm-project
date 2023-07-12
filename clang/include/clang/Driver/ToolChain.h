@@ -412,7 +412,7 @@ public:
 
   /// IsIntegratedAssemblerDefault - Does this tool chain enable -integrated-as
   /// by default.
-  virtual bool IsIntegratedAssemblerDefault() const { return false; }
+  virtual bool IsIntegratedAssemblerDefault() const { return true; }
 
   /// IsIntegratedBackendDefault - Does this tool chain enable
   /// -fintegrated-objemitter by default.

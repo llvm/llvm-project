@@ -47,7 +47,11 @@ def testGetDenseElementsSplatInt():
         print(attr)
         # CHECK: is_splat: True
         print("is_splat:", attr.is_splat)
-        assert attr.get_splat_value() == element
+
+        # CHECK: splat_value: IntegerAttr(555 : i32)
+        splat_value = attr.get_splat_value()
+        print("splat_value:", repr(splat_value))
+        assert splat_value == element
 
 
 # CHECK-LABEL: TEST: testGetDenseElementsSplatFloat

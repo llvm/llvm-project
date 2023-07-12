@@ -663,6 +663,7 @@ bool AArch64MIPeepholeOpt::visitINSvi64lane(MachineInstr &MI) {
   // Let's remove MIs for high 64-bits.
   Register OldDef = MI.getOperand(0).getReg();
   Register NewDef = MI.getOperand(1).getReg();
+  MRI->constrainRegClass(NewDef, MRI->getRegClass(OldDef));
   MRI->replaceRegWith(OldDef, NewDef);
   MI.eraseFromParent();
 

@@ -1,7 +1,6 @@
 // FIXME: Check IR rather than asm, then triple is not needed.
 // RUN: %clang --target=%itanium_abi_triple -g -S %s -o - | FileCheck %s
 // Test to check presence of debug info for byval parameter.
-// Radar 8350436.
 class DAG {
 public:
   int i;

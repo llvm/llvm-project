@@ -12,7 +12,7 @@
 //   iterator insert(const_iterator p, InputIterator first, InputIterator last);
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 #include <string>
 

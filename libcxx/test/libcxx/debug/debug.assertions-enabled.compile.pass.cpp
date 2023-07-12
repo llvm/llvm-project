@@ -8,7 +8,7 @@
 
 // This test ensures that assertions are enabled by default when the debug mode is enabled.
 
-// REQUIRES: libcpp-has-debug-mode
+// REQUIRES: libcpp-has-legacy-debug-mode
 
 #include <version>
 

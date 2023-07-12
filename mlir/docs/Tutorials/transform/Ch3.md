@@ -2,7 +2,7 @@
 
 ## Type Constraints and ApplyEach Trait
 
-A transform operation that applies to each payload operation individually and requires it to be of a specific kind is a repeated pattern. One can use Transform dialect types to specify the preconditions of the type. Specifically, we can change the expected operand type from the wide `TransformHandleTypeInterface` to the more narrow `Transform_ConcreteOp&lt;"func.call">`. Furthermore, we use the `TransformEachOpTrait` trait to provide the skeleton implementation of the `apply` method that performs verification, iteration over payloads and result concatenation. The improved ODS op definition is as follows.
+A transform operation that applies to each payload operation individually and requires it to be of a specific kind is a repeated pattern. One can use Transform dialect types to specify the preconditions of the type. Specifically, we can change the expected operand type from the wide `TransformHandleTypeInterface` to the more narrow `Transform_ConcreteOp<"func.call">`. Furthermore, we use the `TransformEachOpTrait` trait to provide the skeleton implementation of the `apply` method that performs verification, iteration over payloads and result concatenation. The improved ODS op definition is as follows.
 
 ```tablegen
 // In MyExtension.td.

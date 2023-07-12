@@ -3018,14 +3018,12 @@ TEST(TransferTest, AssignFromCompositeBoolExpression) {
           ASSERT_THAT(BazDecl, NotNull());
 
           const auto *BazVal =
-              dyn_cast_or_null<ConjunctionValue>(Env.getValue(*BazDecl));
+              dyn_cast_or_null<BoolValue>(Env.getValue(*BazDecl));
           ASSERT_THAT(BazVal, NotNull());
-          EXPECT_EQ(&BazVal->getLeftSubValue(), FooVal);
-
-          const auto *BazRightSubValVal =
-              cast<DisjunctionValue>(&BazVal->getRightSubValue());
-          EXPECT_EQ(&BazRightSubValVal->getLeftSubValue(), BarVal);
-          EXPECT_EQ(&BazRightSubValVal->getRightSubValue(), QuxVal);
+          auto &A = Env.arena();
+          EXPECT_EQ(&BazVal->formula(),
+                    &A.makeAnd(FooVal->formula(),
+                               A.makeOr(BarVal->formula(), QuxVal->formula())));
         });
   }
 
@@ -3068,15 +3066,12 @@ TEST(TransferTest, AssignFromCompositeBoolExpression) {
           ASSERT_THAT(BazDecl, NotNull());
 
           const auto *BazVal =
-              dyn_cast_or_null<DisjunctionValue>(Env.getValue(*BazDecl));
+              dyn_cast_or_null<BoolValue>(Env.getValue(*BazDecl));
           ASSERT_THAT(BazVal, NotNull());
-
-          const auto *BazLeftSubValVal =
-              cast<ConjunctionValue>(&BazVal->getLeftSubValue());
-          EXPECT_EQ(&BazLeftSubValVal->getLeftSubValue(), FooVal);
-          EXPECT_EQ(&BazLeftSubValVal->getRightSubValue(), QuxVal);
-
-          EXPECT_EQ(&BazVal->getRightSubValue(), BarVal);
+          auto &A = Env.arena();
+          EXPECT_EQ(&BazVal->formula(),
+                    &A.makeOr(A.makeAnd(FooVal->formula(), QuxVal->formula()),
+                              BarVal->formula()));
         });
   }
 
@@ -3122,17 +3117,14 @@ TEST(TransferTest, AssignFromCompositeBoolExpression) {
           ASSERT_THAT(FooDecl, NotNull());
 
           const auto *FooVal =
-              dyn_cast_or_null<ConjunctionValue>(Env.getValue(*FooDecl));
+              dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl));
           ASSERT_THAT(FooVal, NotNull());
-
-          const auto &FooLeftSubVal =
-              cast<ConjunctionValue>(FooVal->getLeftSubValue());
-          const auto &FooLeftLeftSubVal =
-              cast<ConjunctionValue>(FooLeftSubVal.getLeftSubValue());
-          EXPECT_EQ(&FooLeftLeftSubVal.getLeftSubValue(), AVal);
-          EXPECT_EQ(&FooLeftLeftSubVal.getRightSubValue(), BVal);
-          EXPECT_EQ(&FooLeftSubVal.getRightSubValue(), CVal);
-          EXPECT_EQ(&FooVal->getRightSubValue(), DVal);
+          auto &A = Env.arena();
+          EXPECT_EQ(
+              &FooVal->formula(),
+              &A.makeAnd(A.makeAnd(A.makeAnd(AVal->formula(), BVal->formula()),
+                                   CVal->formula()),
+                         DVal->formula()));
         });
   }
 }
@@ -3163,10 +3155,10 @@ TEST(TransferTest, AssignFromBoolNegation) {
         ASSERT_THAT(BarDecl, NotNull());
 
         const auto *BarVal =
-            dyn_cast_or_null<NegationValue>(Env.getValue(*BarDecl));
+            dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl));
         ASSERT_THAT(BarVal, NotNull());
-
-        EXPECT_EQ(&BarVal->getSubVal(), FooVal);
+        auto &A = Env.arena();
+        EXPECT_EQ(&BarVal->formula(), &A.makeNot(FooVal->formula()));
       });
 }
 

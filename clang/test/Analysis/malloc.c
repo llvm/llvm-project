@@ -1230,7 +1230,6 @@ int my_main_warn(FILE *f) {
     return 0;// expected-warning {{leak}}
 }
 
-// <rdar://problem/10978247>.
 // some people use stack allocated memory as an optimization to avoid
 // a heap allocation for small work sizes.  This tests the analyzer's
 // understanding that the malloc'ed memory is not the same as stackBuffer.
@@ -1263,9 +1262,9 @@ void radar10978247_positive(int myValueSize) {
   else
     return; // expected-warning {{leak}}
 }
-// <rdar://problem/11269741> Previously this triggered a false positive
-// because malloc() is known to return uninitialized memory and the binding
-// of 'o' to 'p->n' was not getting propertly handled.  Now we report a leak.
+// Previously this triggered a false positive because malloc() is known to
+// return uninitialized memory and the binding of 'o' to 'p->n' was not getting
+// propertly handled. Now we report a leak.
 struct rdar11269741_a_t {
   struct rdar11269741_b_t {
     int m;

@@ -3,7 +3,6 @@
 
 // Block invocations should be presented when completing properties in
 // standalone statements.
-// rdar://28846196
 
 typedef int Foo;
 typedef void (^FooBlock)(Foo *someParameter);
@@ -36,9 +35,9 @@ typedef int (^BarBlock)(int *);
   self.getObject(0).foo = 2;
 }
 
-// RUN: c-index-test -code-completion-at=%s:34:8 %s | FileCheck -check-prefix=CHECK-CC1 %s
-// RUN: c-index-test -code-completion-at=%s:35:33 %s | FileCheck -check-prefix=CHECK-CC1 %s
-// RUN: c-index-test -code-completion-at=%s:36:21 %s | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: c-index-test -code-completion-at=%s:33:8 %s | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: c-index-test -code-completion-at=%s:34:33 %s | FileCheck -check-prefix=CHECK-CC1 %s
+// RUN: c-index-test -code-completion-at=%s:35:21 %s | FileCheck -check-prefix=CHECK-CC1 %s
 //CHECK-CC1: ObjCPropertyDecl:{ResultType int}{TypedText barBlock}{LeftParen (}{Placeholder int *}{RightParen )} (35)
 //CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText block}{LeftParen (}{RightParen )} (37)
 //CHECK-CC1-NEXT: ObjCPropertyDecl:{ResultType void (^)()}{TypedText block}{Equal  = }{Placeholder ^(void)} (40)
@@ -52,8 +51,6 @@ typedef int (^BarBlock)(int *);
 
 @end
 
-// rdar://25224416
-
 @interface NoQualifierParens
 
 @property(copy) void (^blockProperty)(void);
@@ -65,7 +62,7 @@ void noQualifierParens(NoQualifierParens *f) {
   [f setBlockProperty: ^{}];
 }
 
-// RUN: c-index-test -code-completion-at=%s:65:6 %s | FileCheck -check-prefix=CHECK-CC2 %s
+// RUN: c-index-test -code-completion-at=%s:62:6 %s | FileCheck -check-prefix=CHECK-CC2 %s
 //CHECK-CC2: ObjCInstanceMethodDecl:{ResultType void (^)(void)}{TypedText blockProperty} (35)
 //CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType BarBlock}{TypedText blockProperty2} (35)
 //CHECK-CC2-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlockProperty2:}{Placeholder ^int(int *)blockProperty2} (35)
@@ -82,7 +79,7 @@ void classBlockProperties() {
   ClassProperties.explicit;
 }
 
-// RUN: c-index-test -code-completion-at=%s:82:19 %s | FileCheck -check-prefix=CHECK-CC3 %s
+// RUN: c-index-test -code-completion-at=%s:79:19 %s | FileCheck -check-prefix=CHECK-CC3 %s
 //CHECK-CC3: ObjCPropertyDecl:{ResultType void}{TypedText explicit}{LeftParen (}{RightParen )} (35)
 //CHECK-CC3-NEXT: ObjCPropertyDecl:{ResultType void (^)()}{TypedText explicit}{Equal  = }{Placeholder ^(void)} (38)
 //CHECK-CC3-NEXT: ObjCPropertyDecl:{ResultType void}{TypedText explicitReadonly}{LeftParen (}{RightParen )} (35)
@@ -90,5 +87,5 @@ void classBlockProperties() {
 void implicitSetterBlockPlaceholder(Test* test) {
   [test setBlock: ^{}];
 }
-// RUN: c-index-test -code-completion-at=%s:91:9 %s | FileCheck -check-prefix=CHECK-CC4 %s
+// RUN: c-index-test -code-completion-at=%s:88:9 %s | FileCheck -check-prefix=CHECK-CC4 %s
 // CHECK-CC4: ObjCInstanceMethodDecl:{ResultType void}{TypedText setBlocker:}{Placeholder ^Foo(int x, Foo y, FooBlock foo)blocker} (37)

@@ -15,13 +15,11 @@
 #endif
 
 #include <__algorithm/ranges_copy.h>
-#include <__availability>
 #include <__chrono/statically_widen.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/buffer.h>
 #include <__format/concepts.h>
-#include <__format/format_args.h>
 #include <__format/format_context.h>
 #include <__format/format_error.h>
 #include <__format/formatter.h>

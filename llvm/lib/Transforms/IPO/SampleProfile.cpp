@@ -1073,8 +1073,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
     DenseSet<GlobalValue::GUID> &InlinedGUIDs,
     const StringMap<Function *> &SymbolMap, uint64_t Threshold) {
 
-  // If ExternalInlineAdvisor wants to inline an external function
-  // make sure it's imported
+  // If ExternalInlineAdvisor(ReplayInlineAdvisor) wants to inline an external
+  // function make sure it's imported
   if (CB && getExternalInlineAdvisorShouldInline(*CB)) {
     // Samples may not exist for replayed function, if so
     // just add the direct GUID and move on
@@ -1087,7 +1087,13 @@ void SampleProfileLoader::findExternalInlineCandidate(
     Threshold = 0;
   }
 
-  assert(Samples && "expect non-null caller profile");
+  // In some rare cases, call instruction could be changed after being pushed
+  // into inline candidate queue, this is because earlier inlining may expose
+  // constant propagation which can change indirect call to direct call. When
+  // this happens, we may fail to find matching function samples for the
+  // candidate later, even if a match was found when the candidate was enqueued.
+  if (!Samples)
+    return;
 
   // For AutoFDO profile, retrieve candidate profiles by walking over
   // the nested inlinee profiles.

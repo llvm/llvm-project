@@ -129,8 +129,6 @@ export namespace std {
   using std::make_unique;
   using std::make_unique_for_overwrite;
 
-  using std::swap;
-
   using std::operator<;
   using std::operator>;
   using std::operator<=;

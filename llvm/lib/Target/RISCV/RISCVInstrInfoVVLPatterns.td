@@ -1077,21 +1077,6 @@ multiclass VPatWConvertI2FPVL_V<SDPatternOperator vop,
   }
 }
 
-multiclass VPatWConvertI2FP_RM_VL_V<SDNode vop, string instruction_name> {
-  foreach vtiToWti = AllWidenableIntToFloatVectors in {
-    defvar ivti = vtiToWti.Vti;
-    defvar fwti = vtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<ivti>.Predicates,
-                                 GetVTypePredicates<fwti>.Predicates) in
-    def : Pat<(fwti.Vector (vop (ivti.Vector ivti.RegClass:$rs1),
-                                (ivti.Mask V0), (XLenVT timm:$frm),
-                                VLOpFrag)),
-              (!cast<Instruction>(instruction_name#"_"#ivti.LMul.MX#"_MASK")
-                  (fwti.Vector (IMPLICIT_DEF)), ivti.RegClass:$rs1,
-                  (ivti.Mask V0), timm:$frm, GPR:$vl, ivti.Log2SEW, TA_MA)>;
-  }
-}
-
 // Narrowing converting
 
 multiclass VPatNConvertFP2IVL_W<SDPatternOperator vop,
@@ -1581,6 +1566,33 @@ defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwaddu_vl, riscv_vwaddu_w_vl, "PseudoVWAD
 defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwsub_vl,  riscv_vwsub_w_vl,  "PseudoVWSUB">;
 defm : VPatBinaryWVL_VV_VX_WV_WX<riscv_vwsubu_vl, riscv_vwsubu_w_vl, "PseudoVWSUBU">;
 
+// shl_vl (ext_vl v, splat 1) is a special case of widening add.
+foreach vtiToWti = AllWidenableIntVectors in {
+  defvar vti = vtiToWti.Vti;
+  defvar wti = vtiToWti.Wti;
+  let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                               GetVTypePredicates<wti>.Predicates) in {
+    def : Pat<(riscv_shl_vl (wti.Vector (riscv_sext_vl_oneuse
+                              (vti.Vector vti.RegClass:$rs1),
+                              (vti.Mask V0), VLOpFrag)),
+                            (wti.Vector (riscv_vmv_v_x_vl
+                              (wti.Vector undef), 1, VLOpFrag)),
+                              wti.RegClass:$merge, (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWADD_VV_"#vti.LMul.MX#"_MASK")
+               wti.RegClass:$merge, vti.RegClass:$rs1, vti.RegClass:$rs1,
+               (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    def : Pat<(riscv_shl_vl (wti.Vector (riscv_zext_vl_oneuse
+                              (vti.Vector vti.RegClass:$rs1),
+                              (vti.Mask V0), VLOpFrag)),
+                            (wti.Vector (riscv_vmv_v_x_vl
+                              (wti.Vector undef), 1, VLOpFrag)),
+                              wti.RegClass:$merge, (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWADDU_VV_"#vti.LMul.MX#"_MASK")
+               wti.RegClass:$merge, vti.RegClass:$rs1, vti.RegClass:$rs1,
+               (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
+
 // 11.3. Vector Integer Extension
 defm : VPatExtendVL_V<riscv_zext_vl, "PseudoVZEXT", "VF2",
                       AllFractionableVF2IntVectors>;
@@ -2053,9 +2065,6 @@ defm : VPatWConvertFP2IVL_V<any_riscv_vfcvt_rtz_x_f_vl, "PseudoVFWCVT_RTZ_X_F_V"
 
 defm : VPatWConvertI2FPVL_V<any_riscv_uint_to_fp_vl, "PseudoVFWCVT_F_XU_V">;
 defm : VPatWConvertI2FPVL_V<any_riscv_sint_to_fp_vl, "PseudoVFWCVT_F_X_V">;
-
-defm : VPatWConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_xu_vl, "PseudoVFWCVT_RM_F_XU_V">;
-defm : VPatWConvertI2FP_RM_VL_V<riscv_vfcvt_rm_f_x_vl, "PseudoVFWCVT_RM_F_X_V">;
 
 foreach fvtiToFWti = AllWidenableFloatVectors in {
   defvar fvti = fvtiToFWti.Vti;

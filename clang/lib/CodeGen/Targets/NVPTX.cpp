@@ -149,7 +149,8 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
     return ABIArgInfo::getIgnore();
 
   if (getContext().getLangOpts().OpenMP &&
-      getContext().getLangOpts().OpenMPIsDevice && isUnsupportedType(RetTy))
+      getContext().getLangOpts().OpenMPIsTargetDevice &&
+      isUnsupportedType(RetTy))
     return coerceToIntArrayWithLimit(RetTy, 64);
 
   // note: this is different from default ABI

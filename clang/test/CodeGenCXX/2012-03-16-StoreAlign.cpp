@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-apple-darwin %s | FileCheck %s
-// <rdar://problem/11043589>
 
 struct Length {
   Length(double v) {

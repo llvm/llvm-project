@@ -9,6 +9,7 @@
 #include "SubprocessMemory.h"
 #include "Error.h"
 #include "llvm/Support/Error.h"
+#include <cerrno>
 
 #if defined(__linux__) && !defined(__ANDROID__)
 #include <fcntl.h>

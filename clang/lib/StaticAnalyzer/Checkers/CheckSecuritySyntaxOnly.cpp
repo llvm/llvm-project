@@ -219,7 +219,6 @@ void WalkAST::VisitForStmt(ForStmt *FS) {
 
 //===----------------------------------------------------------------------===//
 // Check: floating point variable used as loop counter.
-// Originally: <rdar://problem/6336718>
 // Implements: CERT security coding advisory FLP-30.
 //===----------------------------------------------------------------------===//
 
@@ -468,7 +467,6 @@ void WalkAST::checkCall_bzero(const CallExpr *CE, const FunctionDecl *FD) {
 
 //===----------------------------------------------------------------------===//
 // Check: Any use of 'gets' is insecure.
-// Originally: <rdar://problem/6335715>
 // Implements (part of): 300-BSI (buildsecurityin.us-cert.gov)
 // CWE-242: Use of Inherently Dangerous Function
 //===----------------------------------------------------------------------===//
@@ -848,7 +846,6 @@ bool WalkAST::checkCall_strCommon(const CallExpr *CE, const FunctionDecl *FD) {
 
 //===----------------------------------------------------------------------===//
 // Check: Linear congruent random number generators should not be used
-// Originally: <rdar://problem/63371000>
 // CWE-338: Use of cryptographically weak prng
 //===----------------------------------------------------------------------===//
 
@@ -892,7 +889,6 @@ void WalkAST::checkCall_rand(const CallExpr *CE, const FunctionDecl *FD) {
 
 //===----------------------------------------------------------------------===//
 // Check: 'random' should not be used
-// Originally: <rdar://problem/63371000>
 //===----------------------------------------------------------------------===//
 
 void WalkAST::checkCall_random(const CallExpr *CE, const FunctionDecl *FD) {
@@ -991,7 +987,6 @@ void WalkAST::checkMsg_decodeValueOfObjCType(const ObjCMessageExpr *ME) {
 
 //===----------------------------------------------------------------------===//
 // Check: Should check whether privileges are dropped successfully.
-// Originally: <rdar://problem/6337132>
 //===----------------------------------------------------------------------===//
 
 void WalkAST::checkUncheckedReturnValue(CallExpr *CE) {

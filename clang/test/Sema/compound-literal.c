@@ -37,7 +37,7 @@ void IncompleteFunc(unsigned x) {
 // PR6080
 int array[(sizeof(int[3]) == sizeof( (int[]) {0,1,2} )) ? 1 : -1];
 
-// rdar://28949016 - Constant restriction should not apply to compound literals in blocks
+// Constant restriction should not apply to compound literals in blocks
 int (^block)(int) = ^(int i) {
   int *array = (int[]) {i, i + 2, i + 4};
   return array[i];

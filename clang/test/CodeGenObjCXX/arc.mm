@@ -11,7 +11,6 @@ NSArray *nsarray() { return 0; }
 
 void use(id);
 
-// rdar://problem/9315552
 // The analogous ObjC testcase test46 in arr.m.
 void test0(__weak id *wp, __weak volatile id *wvp) {
   extern id test0_helper(void);
@@ -38,7 +37,6 @@ void test0(__weak id *wp, __weak volatile id *wvp) {
   id y = *wvp = test0_helper();
 }
 
-// rdar://problem/9320648
 struct Test1_helper { Test1_helper(); };
 @interface Test1 @end
 @implementation Test1 { Test1_helper x; } @end
@@ -190,7 +188,6 @@ void test35b(Test35_Helper x0, Test35_Helper *x0p) {
   // CHECK-NEXT: ret void
 }
 
-// rdar://problem/9603128
 // CHECK-LABEL: define{{.*}} ptr @_Z6test36P11objc_object(
 id test36(id z) {
   // CHECK: llvm.objc.retain
@@ -200,7 +197,6 @@ id test36(id z) {
   return z;
 }
 
-// Template instantiation side of rdar://problem/9817306
 @interface Test37
 + alloc;
 - init;
@@ -269,7 +265,6 @@ template <class T> class Test38 {
 // CHECK-LABEL: define weak_odr void @_ZN6Test38IiE4testEi(
 template class Test38<int>;
 
-// rdar://problem/11964832
 class Test39_base1 {
   virtual void foo();
 };
@@ -285,7 +280,6 @@ id Test39::bar() { return 0; }
 // CHECK:      call noundef ptr @_ZN6Test393barEv(
 // CHECK-NEXT: ret ptr
 
-// rdar://13617051
 // Just a basic correctness check that IR-gen still works after instantiating
 // a non-dependent message send that requires writeback.
 @interface Test40

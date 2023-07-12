@@ -96,8 +96,12 @@ struct Test {
       }
 
       std::vector<int> out(std::size(a) + std::size(b));
-      std::merge(
-          Iter1(a.data()), Iter1(a.data() + a.size()), Iter2(b.data()), Iter2(b.data() + b.size()), std::begin(out));
+      std::merge(policy,
+                 Iter1(a.data()),
+                 Iter1(a.data() + a.size()),
+                 Iter2(b.data()),
+                 Iter2(b.data() + b.size()),
+                 std::begin(out));
       std::vector<int> expected(200);
       std::iota(expected.begin(), expected.end(), 0);
       assert(std::equal(out.begin(), out.end(), expected.begin()));

@@ -33,21 +33,15 @@ def fold_global_offset : GICombineRule<
   (apply [{ applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
 >;
 
-def AArch64PreLegalizerCombinerHelper: GICombinerHelper<
-  "AArch64GenPreLegalizerCombinerHelper", [all_combines,
-                                           fconstant_to_constant,
-                                           icmp_redundant_trunc,
-                                           fold_global_offset]> {
-  let DisableRuleOption = "aarch64prelegalizercombiner-disable-rule";
-  let StateClass = "AArch64PreLegalizerCombinerHelperState";
-  let AdditionalArguments = [];
+def AArch64PreLegalizerCombiner: GICombinerHelper<
+  "AArch64PreLegalizerCombinerImpl", [all_combines,
+                                      fconstant_to_constant,
+                                      icmp_redundant_trunc,
+                                      fold_global_offset]> {
 }
 
-def AArch64O0PreLegalizerCombinerHelper: GICombinerHelper<
-  "AArch64GenO0PreLegalizerCombinerHelper", [optnone_combines]> {
-  let DisableRuleOption = "aarch64O0prelegalizercombiner-disable-rule";
-  let StateClass = "AArch64O0PreLegalizerCombinerHelperState";
-  let AdditionalArguments = [];
+def AArch64O0PreLegalizerCombiner: GICombinerHelper<
+  "AArch64O0PreLegalizerCombinerImpl", [optnone_combines]> {
 }
 
 // Matchdata for combines which replace a G_SHUFFLE_VECTOR with a
@@ -213,18 +207,17 @@ def vector_sext_inreg_to_shift : GICombineRule<
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
-def AArch64PostLegalizerLoweringHelper
-    : GICombinerHelper<"AArch64GenPostLegalizerLoweringHelper",
+def AArch64PostLegalizerLowering
+    : GICombinerHelper<"AArch64PostLegalizerLoweringImpl",
                        [shuffle_vector_lowering, vashr_vlshr_imm,
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift]> {
-  let DisableRuleOption = "aarch64postlegalizerlowering-disable-rule";
 }
 
 // Post-legalization combines which are primarily optimizations.
-def AArch64PostLegalizerCombinerHelper
-    : GICombinerHelper<"AArch64GenPostLegalizerCombinerHelper",
+def AArch64PostLegalizerCombiner
+    : GICombinerHelper<"AArch64PostLegalizerCombinerImpl",
                        [copy_prop, combines_for_extload,
                         sext_trunc_sextload, mutate_anyext_to_zext,
                         hoist_logic_op_with_same_opcode_hands,
@@ -238,5 +231,4 @@ def AArch64PostLegalizerCombinerHelper
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
                         select_to_minmax]> {
-  let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }

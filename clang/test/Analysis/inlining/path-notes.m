@@ -162,7 +162,6 @@ id testCreateArrayLiteral(id myNil) {
                                  //expected-note@-1 {{Array element cannot be nil}}
 }
 
-// <rdar://problem/14611722>
 id testAutoreleaseTakesEffectInDispatch(void) {
   static dispatch_once_t token = 0;
   dispatch_once(&token, ^{});

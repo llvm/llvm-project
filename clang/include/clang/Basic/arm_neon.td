@@ -2086,3 +2086,9 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "bf16" in {
         "csilUcUsUiUlhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQdQPcQPsQPlQPk", "bQb">;
   }
 }
+
+// v8.9a/v9.4a LRCPC3 intrinsics
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "rcpc3" in {
+  def VLDAP1_LANE : WInst<"vldap1_lane", ".(c*!).I", "QUlQlUlldQdPlQPl">;
+  def VSTL1_LANE  : WInst<"vstl1_lane", "v*(.!)I", "QUlQlUlldQdPlQPl">;
+}

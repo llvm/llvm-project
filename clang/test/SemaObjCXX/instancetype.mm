@@ -188,7 +188,6 @@ void test_instancetype_inherited() {
 
 @end
 
-// rdar://12493140
 @protocol P4
 - (instancetype) foo; // expected-note {{current method is explicitly declared 'instancetype' and is expected to return an instance of its class type}}
 @end

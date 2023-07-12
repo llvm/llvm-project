@@ -992,6 +992,17 @@ enum Offset_COV5 : unsigned {
 };
 
 } // namespace ImplicitArg
+
+namespace VirtRegFlag {
+// Virtual register flags used for various target specific handlings during
+// codegen.
+enum Register_Flag : uint8_t {
+  // Register operand in a whole-wave mode operation.
+  WWM_REG = 1 << 0,
+};
+
+} // namespace VirtRegFlag
+
 } // namespace AMDGPU
 
 namespace AMDGPU {

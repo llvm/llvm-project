@@ -2123,16 +2123,18 @@ void SelectionDAGLegalize::ExpandFrexpLibCall(
   RTLIB::Libcall LC = RTLIB::getFREXP(VT);
   auto [Call, Chain] = ExpandLibCall(LC, Node, std::move(Args), false);
 
-  Results.push_back(Call);
-
   // FIXME: Get type of int for libcall declaration and cast
 
   int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
   auto PtrInfo =
       MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
 
-  SDValue LoadExp =
-      DAG.getLoad(ExpVT, dl, Chain, StackSlot, PtrInfo);
+  SDValue LoadExp = DAG.getLoad(ExpVT, dl, Chain, StackSlot, PtrInfo);
+  SDValue OutputChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                                    LoadExp.getValue(1), DAG.getRoot());
+  DAG.setRoot(OutputChain);
+
+  Results.push_back(Call);
   Results.push_back(LoadExp);
 }
 

@@ -149,5 +149,10 @@ for header in public_headers:
 #define min NASTY_MACRO
 #define max NASTY_MACRO
 
+// Test to make sure curses has no conflicting macros with the standard library
+#define move NASTY_MACRO
+#define erase NASTY_MACRO
+#define refresh NASTY_MACRO
+
 #include <{header}>
 """)

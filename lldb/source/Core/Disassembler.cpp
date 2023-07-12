@@ -687,7 +687,7 @@ bool Instruction::HasDelaySlot() {
   return false;
 }
 
-OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
+OptionValueSP Instruction::ReadArray(FILE *in_file, Stream &out_stream,
                                      OptionValue::Type data_type) {
   bool done = false;
   char buffer[1024];
@@ -697,7 +697,7 @@ OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
   int idx = 0;
   while (!done) {
     if (!fgets(buffer, 1023, in_file)) {
-      out_stream->Printf(
+      out_stream.Printf(
           "Instruction::ReadArray:  Error reading file (fgets).\n");
       option_value_sp.reset();
       return option_value_sp;
@@ -746,7 +746,7 @@ OptionValueSP Instruction::ReadArray(FILE *in_file, Stream *out_stream,
   return option_value_sp;
 }
 
-OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
+OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream &out_stream) {
   bool done = false;
   char buffer[1024];
 
@@ -757,7 +757,7 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
   while (!done) {
     // Read the next line in the file
     if (!fgets(buffer, 1023, in_file)) {
-      out_stream->Printf(
+      out_stream.Printf(
           "Instruction::ReadDictionary: Error reading file (fgets).\n");
       option_value_sp.reset();
       return option_value_sp;
@@ -792,8 +792,8 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
         key = matches[1].str();
         value = matches[2].str();
       } else {
-        out_stream->Printf("Instruction::ReadDictionary: Failure executing "
-                           "regular expression.\n");
+        out_stream.Printf("Instruction::ReadDictionary: Failure executing "
+                          "regular expression.\n");
         option_value_sp.reset();
         return option_value_sp;
       }
@@ -848,32 +848,29 @@ OptionValueSP Instruction::ReadDictionary(FILE *in_file, Stream *out_stream) {
   return option_value_sp;
 }
 
-bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
-  if (!out_stream)
-    return false;
-
+bool Instruction::TestEmulation(Stream &out_stream, const char *file_name) {
   if (!file_name) {
-    out_stream->Printf("Instruction::TestEmulation:  Missing file_name.");
+    out_stream.Printf("Instruction::TestEmulation:  Missing file_name.");
     return false;
   }
   FILE *test_file = FileSystem::Instance().Fopen(file_name, "r");
   if (!test_file) {
-    out_stream->Printf(
+    out_stream.Printf(
         "Instruction::TestEmulation: Attempt to open test file failed.");
     return false;
   }
 
   char buffer[256];
   if (!fgets(buffer, 255, test_file)) {
-    out_stream->Printf(
+    out_stream.Printf(
         "Instruction::TestEmulation: Error reading first line of test file.\n");
     fclose(test_file);
     return false;
   }
 
   if (strncmp(buffer, "InstructionEmulationState={", 27) != 0) {
-    out_stream->Printf("Instructin::TestEmulation: Test file does not contain "
-                       "emulation state dictionary\n");
+    out_stream.Printf("Instructin::TestEmulation: Test file does not contain "
+                      "emulation state dictionary\n");
     fclose(test_file);
     return false;
   }
@@ -883,7 +880,7 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
 
   OptionValueSP data_dictionary_sp(ReadDictionary(test_file, out_stream));
   if (!data_dictionary_sp) {
-    out_stream->Printf(
+    out_stream.Printf(
         "Instruction::TestEmulation:  Error reading Dictionary Object.\n");
     fclose(test_file);
     return false;
@@ -899,8 +896,8 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
   OptionValueSP value_sp = data_dictionary->GetValueForKey(description_key);
 
   if (!value_sp) {
-    out_stream->Printf("Instruction::TestEmulation:  Test file does not "
-                       "contain description string.\n");
+    out_stream.Printf("Instruction::TestEmulation:  Test file does not "
+                      "contain description string.\n");
     return false;
   }
 
@@ -908,7 +905,7 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
 
   value_sp = data_dictionary->GetValueForKey(triple_key);
   if (!value_sp) {
-    out_stream->Printf(
+    out_stream.Printf(
         "Instruction::TestEmulation: Test file does not contain triple.\n");
     return false;
   }
@@ -925,9 +922,9 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
         insn_emulator_up->TestEmulation(out_stream, arch, data_dictionary);
 
   if (success)
-    out_stream->Printf("Emulation test succeeded.");
+    out_stream.Printf("Emulation test succeeded.");
   else
-    out_stream->Printf("Emulation test failed.");
+    out_stream.Printf("Emulation test failed.");
 
   return success;
 }

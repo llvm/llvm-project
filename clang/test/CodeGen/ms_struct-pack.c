@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm-only  -triple i386-apple-darwin9 -fdump-record-layouts %s | FileCheck %s
-// rdar://8823265
 
 #pragma pack(1)
 struct _one_ms {
@@ -123,7 +122,6 @@ typedef struct _eight_ms eight_ms;
 
 static int a8[(sizeof(eight_ms) == 48) - 1];
 
-// rdar://15926990
 #pragma pack(2)
 struct test0 {
   unsigned long a : 8;

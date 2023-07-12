@@ -3,12 +3,12 @@
 // REQUIRES: clang-target-64-bits
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1030 \
-// RUN:   -fopenmp -nogpulib -fopenmp-is-device -verify %s
+// RUN:   -fopenmp -nogpulib -fopenmp-is-target-device -verify %s
 // expected-no-diagnostics
 
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx1030 \
 // RUN:   -fopenmp -nogpulib -target-feature -image-insts \
-// RUN:   -fopenmp-is-device -emit-llvm -S -o - %s 2>&1 | FileCheck %s
+// RUN:   -fopenmp-is-target-device -emit-llvm -S -o - %s 2>&1 | FileCheck %s
 // CHECK: warning: feature flag '-image-insts' is ignored since the feature is read only
 
 #pragma omp begin declare variant match(device = {arch(amdgcn)})

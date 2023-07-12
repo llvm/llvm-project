@@ -18,6 +18,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
 
 // This backend implementation is for testing purposes only and not meant for production use. This will be replaced
@@ -69,5 +72,7 @@ _LIBCPP_HIDE_FROM_ABI void __parallel_merge(
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && && _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKENDS_THREAD_H
