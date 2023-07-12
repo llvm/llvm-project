@@ -171,30 +171,35 @@ enum class Action : uint32_t {
 /// where we need to store an undefined or indeterminate `DimLevelType`.
 /// It should not be used externally, since it does not indicate an
 /// actual/representable format.
+///
+// TODO: We should generalize TwoOutOfFour to N out of M and use property to
+// encode the value of N and M.
 enum class DimLevelType : uint8_t {
-  Undef = 0,                 // 0b0000_00
-  Dense = 4,                 // 0b0001_00
-  Compressed = 8,            // 0b0010_00
-  CompressedNu = 9,          // 0b0010_01
-  CompressedNo = 10,         // 0b0010_10
-  CompressedNuNo = 11,       // 0b0010_11
-  Singleton = 16,            // 0b0100_00
-  SingletonNu = 17,          // 0b0100_01
-  SingletonNo = 18,          // 0b0100_10
-  SingletonNuNo = 19,        // 0b0100_11
-  CompressedWithHi = 32,     // 0b1000_00
-  CompressedWithHiNu = 33,   // 0b1000_01
-  CompressedWithHiNo = 34,   // 0b1000_10
-  CompressedWithHiNuNo = 35, // 0b1000_11
+  Undef = 0,                 // 0b00000_00
+  Dense = 4,                 // 0b00001_00
+  Compressed = 8,            // 0b00010_00
+  CompressedNu = 9,          // 0b00010_01
+  CompressedNo = 10,         // 0b00010_10
+  CompressedNuNo = 11,       // 0b00010_11
+  Singleton = 16,            // 0b00100_00
+  SingletonNu = 17,          // 0b00100_01
+  SingletonNo = 18,          // 0b00100_10
+  SingletonNuNo = 19,        // 0b00100_11
+  CompressedWithHi = 32,     // 0b01000_00
+  CompressedWithHiNu = 33,   // 0b01000_01
+  CompressedWithHiNo = 34,   // 0b01000_10
+  CompressedWithHiNuNo = 35, // 0b01000_11
+  TwoOutOfFour = 64,         // 0b10000_00
 };
 
 /// This enum defines all the storage formats supported by the sparse compiler,
 /// without the level properties.
 enum class LevelFormat : uint8_t {
-  Dense = 4,             // 0b0001_00
-  Compressed = 8,        // 0b0010_00
-  Singleton = 16,        // 0b0100_00
-  CompressedWithHi = 32, // 0b1000_00
+  Dense = 4,             // 0b00001_00
+  Compressed = 8,        // 0b00010_00
+  Singleton = 16,        // 0b00100_00
+  CompressedWithHi = 32, // 0b01000_00
+  TwoOutOfFour = 64,     // 0b10000_00
 };
 
 /// Returns string representation of the given dimension level type.
@@ -229,6 +234,8 @@ constexpr const char *toMLIRString(DimLevelType dlt) {
     return "compressed-hi-no";
   case DimLevelType::CompressedWithHiNuNo:
     return "compressed-hi-nu-no";
+  case DimLevelType::TwoOutOfFour:
+    return "compressed24";
   }
   return "";
 }
@@ -239,7 +246,7 @@ constexpr bool isValidDLT(DimLevelType dlt) {
   const uint8_t propertyBits = static_cast<uint8_t>(dlt) & 3;
   // If undefined or dense, then must be unique and ordered.
   // Otherwise, the format must be one of the known ones.
-  return (formatBits <= 1)
+  return (formatBits <= 1 || formatBits == 16)
              ? (propertyBits == 0)
              : (formatBits == 2 || formatBits == 4 || formatBits == 8);
 }
@@ -252,6 +259,11 @@ constexpr bool isUndefDLT(DimLevelType dlt) {
 /// Check if the `DimLevelType` is dense.
 constexpr bool isDenseDLT(DimLevelType dlt) {
   return dlt == DimLevelType::Dense;
+}
+
+/// Check if the `DimLevelType` is 2:4
+constexpr bool isTwoOutOfFourDLT(DimLevelType dlt) {
+  return dlt == DimLevelType::TwoOutOfFour;
 }
 
 // We use the idiom `(dlt & ~3) == format` in order to only return true
@@ -325,6 +337,11 @@ static_assert(
      buildLevelType(LevelFormat::Dense, true, false) == std::nullopt &&
      buildLevelType(LevelFormat::Dense, false, false) == std::nullopt &&
      *buildLevelType(LevelFormat::Dense, true, true) == DimLevelType::Dense &&
+     buildLevelType(LevelFormat::TwoOutOfFour, false, true) == std::nullopt &&
+     buildLevelType(LevelFormat::TwoOutOfFour, true, false) == std::nullopt &&
+     buildLevelType(LevelFormat::TwoOutOfFour, false, false) == std::nullopt &&
+     *buildLevelType(LevelFormat::TwoOutOfFour, true, true) ==
+         DimLevelType::TwoOutOfFour &&
      *buildLevelType(LevelFormat::Compressed, true, true) ==
          DimLevelType::Compressed &&
      *buildLevelType(LevelFormat::Compressed, true, false) ==
@@ -357,7 +374,8 @@ static_assert((isValidDLT(DimLevelType::Undef) &&
                isValidDLT(DimLevelType::CompressedWithHi) &&
                isValidDLT(DimLevelType::CompressedWithHiNu) &&
                isValidDLT(DimLevelType::CompressedWithHiNo) &&
-               isValidDLT(DimLevelType::CompressedWithHiNuNo)),
+               isValidDLT(DimLevelType::CompressedWithHiNuNo) &&
+               isValidDLT(DimLevelType::TwoOutOfFour)),
               "isValidDLT definition is broken");
 
 static_assert((!isCompressedDLT(DimLevelType::Dense) &&
@@ -394,6 +412,7 @@ static_assert((!isSingletonDLT(DimLevelType::Dense) &&
               "isSingletonDLT definition is broken");
 
 static_assert((isOrderedDLT(DimLevelType::Dense) &&
+               isOrderedDLT(DimLevelType::TwoOutOfFour) &&
                isOrderedDLT(DimLevelType::Compressed) &&
                isOrderedDLT(DimLevelType::CompressedNu) &&
                !isOrderedDLT(DimLevelType::CompressedNo) &&
@@ -409,6 +428,7 @@ static_assert((isOrderedDLT(DimLevelType::Dense) &&
               "isOrderedDLT definition is broken");
 
 static_assert((isUniqueDLT(DimLevelType::Dense) &&
+               isUniqueDLT(DimLevelType::TwoOutOfFour) &&
                isUniqueDLT(DimLevelType::Compressed) &&
                !isUniqueDLT(DimLevelType::CompressedNu) &&
                isUniqueDLT(DimLevelType::CompressedNo) &&
