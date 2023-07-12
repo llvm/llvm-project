@@ -1,4 +1,4 @@
-// REQUIRES: linux
+// REQUIRES: crt
 
 // RUN: %clangxx -g -fno-exceptions -DCRT_SHARED -c %s -fPIC -o %tshared.o
 // RUN: %clangxx -g -fno-exceptions -c %s -fPIC -o %t.o
