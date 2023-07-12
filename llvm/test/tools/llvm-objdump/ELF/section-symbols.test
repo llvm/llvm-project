@@ -20,8 +20,8 @@
 # CHECK-NEXT: 00000004 R_X86_64_NONE            {{$}}
 
 ## Test that we consume an error in ELFObjectFile<ELFT>::getSectionName when disassembling. 
-# RUN: llvm-objdump -d --syms %t1 2>&1 | \
-# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=CHECK-DISAS
+# RUN: %if x86-registered-target %{ llvm-objdump -d --syms %t1 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t1 --check-prefix=CHECK-DISAS %}
 # CHECK-DISAS: warning: '[[FILE]]': invalid section index: 67
 
 --- !ELF
