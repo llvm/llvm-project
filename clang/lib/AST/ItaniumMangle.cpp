@@ -35,6 +35,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
 
 using namespace clang;
@@ -3823,40 +3824,42 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
   assert(EltType->isBuiltinType() &&
          "expected builtin type for fixed-length RVV vector!");
 
-  StringRef TypeName;
+  SmallString<20> TypeNameStr;
+  llvm::raw_svector_ostream TypeNameOS(TypeNameStr);
+  TypeNameOS << "__rvv_";
   switch (cast<BuiltinType>(EltType)->getKind()) {
   case BuiltinType::SChar:
-    TypeName = "__rvv_int8m1_t";
+    TypeNameOS << "int8";
     break;
   case BuiltinType::UChar:
-    TypeName = "__rvv_uint8m1_t";
+    TypeNameOS << "uint8";
     break;
   case BuiltinType::Short:
-    TypeName = "__rvv_int16m1_t";
+    TypeNameOS << "int16";
     break;
   case BuiltinType::UShort:
-    TypeName = "__rvv_uint16m1_t";
+    TypeNameOS << "uint16";
     break;
   case BuiltinType::Int:
-    TypeName = "__rvv_int32m1_t";
+    TypeNameOS << "int32";
     break;
   case BuiltinType::UInt:
-    TypeName = "__rvv_uint32m1_t";
+    TypeNameOS << "uint32";
     break;
   case BuiltinType::Long:
-    TypeName = "__rvv_int64m1_t";
+    TypeNameOS << "int64";
     break;
   case BuiltinType::ULong:
-    TypeName = "__rvv_uint64m1_t";
+    TypeNameOS << "uint64";
     break;
   case BuiltinType::Half:
-    TypeName = "__rvv_float16m1_t";
+    TypeNameOS << "float16";
     break;
   case BuiltinType::Float:
-    TypeName = "__rvv_float32m1_t";
+    TypeNameOS << "float32";
     break;
   case BuiltinType::Double:
-    TypeName = "__rvv_float64m1_t";
+    TypeNameOS << "float64";
     break;
   default:
     llvm_unreachable("unexpected element type for fixed-length RVV vector!");
@@ -3864,7 +3867,19 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
 
   unsigned VecSizeInBits = getASTContext().getTypeInfo(T).Width;
 
-  Out << "9__RVV_VLSI" << 'u' << TypeName.size() << TypeName << "Lj"
+  // Apend the LMUL suffix.
+  auto VScale = getASTContext().getTargetInfo().getVScaleRange(
+      getASTContext().getLangOpts());
+  unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
+  TypeNameOS << 'm';
+  if (VecSizeInBits >= VLen)
+    TypeNameOS << (VecSizeInBits / VLen);
+  else
+    TypeNameOS << 'f' << (VLen / VecSizeInBits);
+
+  TypeNameOS << "_t";
+
+  Out << "9__RVV_VLSI" << 'u' << TypeNameStr.size() << TypeNameStr << "Lj"
       << VecSizeInBits << "EE";
 }
 

@@ -12,6 +12,7 @@
 
 #include "llvm/Object/OffloadBinary.h"
 
+#include "OmptCallback.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
@@ -42,7 +43,7 @@ PluginManager *PM;
 static char *ProfileTraceFile = nullptr;
 
 #ifdef OMPT_SUPPORT
-extern void InitOmptLibomp();
+extern void ompt::connectLibrary();
 #endif
 
 __attribute__((constructor(101))) void init() {
@@ -67,10 +68,10 @@ __attribute__((constructor(101))) void init() {
   if (ProfileTraceFile)
     timeTraceProfilerInitialize(500 /* us */, "libomptarget");
 
-  #ifdef OMPT_SUPPORT
-    // Initialize OMPT first
-    InitOmptLibomp();
-  #endif
+#ifdef OMPT_SUPPORT
+  // Initialize OMPT first
+  ompt::connectLibrary();
+#endif
 
   PM->RTLs.loadRTLs();
   PM->registerDelayedLibraries();

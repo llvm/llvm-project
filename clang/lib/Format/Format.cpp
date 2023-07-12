@@ -503,6 +503,16 @@ struct ScalarEnumerationTraits<FormatStyle::ReferenceAlignmentStyle> {
 };
 
 template <>
+struct ScalarEnumerationTraits<FormatStyle::RemoveParenthesesStyle> {
+  static void enumeration(IO &IO, FormatStyle::RemoveParenthesesStyle &Value) {
+    IO.enumCase(Value, "Leave", FormatStyle::RPS_Leave);
+    IO.enumCase(Value, "MultipleParentheses",
+                FormatStyle::RPS_MultipleParentheses);
+    IO.enumCase(Value, "ReturnStatement", FormatStyle::RPS_ReturnStatement);
+  }
+};
+
+template <>
 struct ScalarEnumerationTraits<FormatStyle::RequiresClausePositionStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::RequiresClausePositionStyle &Value) {
@@ -989,6 +999,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ReferenceAlignment", Style.ReferenceAlignment);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
     IO.mapOptional("RemoveBracesLLVM", Style.RemoveBracesLLVM);
+    IO.mapOptional("RemoveParentheses", Style.RemoveParentheses);
     IO.mapOptional("RemoveSemicolon", Style.RemoveSemicolon);
     IO.mapOptional("RequiresClausePosition", Style.RequiresClausePosition);
     IO.mapOptional("RequiresExpressionIndentation",
@@ -1429,6 +1440,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ReferenceAlignment = FormatStyle::RAS_Pointer;
   LLVMStyle.ReflowComments = true;
   LLVMStyle.RemoveBracesLLVM = false;
+  LLVMStyle.RemoveParentheses = FormatStyle::RPS_Leave;
   LLVMStyle.RemoveSemicolon = false;
   LLVMStyle.RequiresClausePosition = FormatStyle::RCPS_OwnLine;
   LLVMStyle.RequiresExpressionIndentation = FormatStyle::REI_OuterScope;
@@ -1981,6 +1993,50 @@ FormatStyle::GetLanguageStyle(FormatStyle::LanguageKind Language) const {
 }
 
 namespace {
+
+class ParensRemover : public TokenAnalyzer {
+public:
+  ParensRemover(const Environment &Env, const FormatStyle &Style)
+      : TokenAnalyzer(Env, Style) {}
+
+  std::pair<tooling::Replacements, unsigned>
+  analyze(TokenAnnotator &Annotator,
+          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+          FormatTokenLexer &Tokens) override {
+    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+    tooling::Replacements Result;
+    removeParens(AnnotatedLines, Result);
+    return {Result, 0};
+  }
+
+private:
+  void removeParens(SmallVectorImpl<AnnotatedLine *> &Lines,
+                    tooling::Replacements &Result) {
+    const auto &SourceMgr = Env.getSourceManager();
+    for (auto *Line : Lines) {
+      removeParens(Line->Children, Result);
+      if (!Line->Affected)
+        continue;
+      for (const auto *Token = Line->First; Token && !Token->Finalized;
+           Token = Token->Next) {
+        if (!Token->Optional || !Token->isOneOf(tok::l_paren, tok::r_paren))
+          continue;
+        auto *Next = Token->Next;
+        assert(Next && Next->isNot(tok::eof));
+        SourceLocation Start;
+        if (Next->NewlinesBefore == 0) {
+          Start = Token->Tok.getLocation();
+          Next->WhitespaceRange = Token->WhitespaceRange;
+        } else {
+          Start = Token->WhitespaceRange.getBegin();
+        }
+        const auto &Range =
+            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
+        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, " ")));
+      }
+    }
+  }
+};
 
 class BracesInserter : public TokenAnalyzer {
 public:
@@ -3428,6 +3484,7 @@ reformat(const FormatStyle &Style, StringRef Code,
   expandPresetsSpaceBeforeParens(Expanded);
   Expanded.InsertBraces = false;
   Expanded.RemoveBracesLLVM = false;
+  Expanded.RemoveParentheses = FormatStyle::RPS_Leave;
   Expanded.RemoveSemicolon = false;
   switch (Expanded.RequiresClausePosition) {
   case FormatStyle::RCPS_SingleLine:
@@ -3482,6 +3539,14 @@ reformat(const FormatStyle &Style, StringRef Code,
   if (Style.isCpp()) {
     if (Style.QualifierAlignment != FormatStyle::QAS_Leave)
       addQualifierAlignmentFixerPasses(Expanded, Passes);
+
+    if (Style.RemoveParentheses != FormatStyle::RPS_Leave) {
+      FormatStyle S = Expanded;
+      S.RemoveParentheses = Style.RemoveParentheses;
+      Passes.emplace_back([&, S = std::move(S)](const Environment &Env) {
+        return ParensRemover(Env, S).process(/*SkipAnnotation=*/true);
+      });
+    }
 
     if (Style.InsertBraces) {
       FormatStyle S = Expanded;

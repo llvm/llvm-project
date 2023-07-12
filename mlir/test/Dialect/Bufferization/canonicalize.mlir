@@ -209,6 +209,19 @@ func.func @clone_multiple_dealloc_of_clone(%arg0: memref<?xf32>) -> memref<?xf32
 
 // -----
 
+// Verify SimplifyClones skips clones followed by realloc.
+// CHECK-LABEL: @clone_and_realloc
+func.func @clone_and_realloc(%arg0: memref<?xf32>) {
+  %0 = bufferization.clone %arg0 : memref<?xf32> to memref<32xf32>
+  "use"(%0) : (memref<32xf32>) -> ()
+  %1 = memref.realloc %0 : memref<32xf32> to memref<64xf32>
+  memref.dealloc %1 : memref<64xf32>
+  return
+}
+// CHECK-SAME: %[[ARG:.*]]: memref<?xf32>
+// CHECK-NOT: %cast = memref.cast %[[ARG]]
+
+// -----
 
 // CHECK-LABEL: func @tensor_cast_to_memref
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<4x6x16x32xi8>

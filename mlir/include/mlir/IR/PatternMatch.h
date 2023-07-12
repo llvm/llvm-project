@@ -444,7 +444,7 @@ public:
   /// struct can be used as a base to create listener chains, so that multiple
   /// listeners can be notified of IR changes.
   struct ForwardingListener : public RewriterBase::Listener {
-    ForwardingListener(Listener *listener) : listener(listener) {}
+    ForwardingListener(OpBuilder::Listener *listener) : listener(listener) {}
 
     void notifyOperationInserted(Operation *op) override {
       listener->notifyOperationInserted(op);
@@ -453,26 +453,32 @@ public:
       listener->notifyBlockCreated(block);
     }
     void notifyOperationModified(Operation *op) override {
-      listener->notifyOperationModified(op);
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyOperationModified(op);
     }
     void notifyOperationReplaced(Operation *op, Operation *newOp) override {
-      listener->notifyOperationReplaced(op, newOp);
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyOperationReplaced(op, newOp);
     }
     void notifyOperationReplaced(Operation *op,
                                  ValueRange replacement) override {
-      listener->notifyOperationReplaced(op, replacement);
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyOperationReplaced(op, replacement);
     }
     void notifyOperationRemoved(Operation *op) override {
-      listener->notifyOperationRemoved(op);
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        rewriteListener->notifyOperationRemoved(op);
     }
     LogicalResult notifyMatchFailure(
         Location loc,
         function_ref<void(Diagnostic &)> reasonCallback) override {
-      return listener->notifyMatchFailure(loc, reasonCallback);
+      if (auto *rewriteListener = dyn_cast<RewriterBase::Listener>(listener))
+        return rewriteListener->notifyMatchFailure(loc, reasonCallback);
+      return failure();
     }
 
   private:
-    Listener *listener;
+    OpBuilder::Listener *listener;
   };
 
   /// Move the blocks that belong to "region" before the given position in

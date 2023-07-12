@@ -19,8 +19,14 @@ using namespace clang;
 using namespace dataflow;
 
 TEST(ValueTest, EquivalenceReflexive) {
-  StructValue V;
+  IntegerValue V;
   EXPECT_TRUE(areEquivalentValues(V, V));
+}
+
+TEST(ValueTest, DifferentIntegerValuesNotEquivalent) {
+  IntegerValue V1;
+  IntegerValue V2;
+  EXPECT_FALSE(areEquivalentValues(V1, V2));
 }
 
 TEST(ValueTest, AliasedReferencesEquivalent) {

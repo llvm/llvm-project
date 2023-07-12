@@ -237,12 +237,11 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi(ptr addrspace(1) %out, 
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_load_dword s2, s[2:3], 0x0
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
+; CI-NEXT:    v_mov_b32_e32 v2, s4
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
-; CI-NEXT:    s_lshr_b32 s1, s4, 16
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_and_b32 s0, s2, 0xffff0000
-; CI-NEXT:    s_or_b32 s0, s1, s0
-; CI-NEXT:    v_mov_b32_e32 v2, s0
+; CI-NEXT:    s_lshr_b32 s0, s2, 16
+; CI-NEXT:    v_alignbit_b32 v2, s0, v2, 16
 ; CI-NEXT:    flat_store_dword v[0:1], v2
 ; CI-NEXT:    s_endpgm
 ;
@@ -311,13 +310,13 @@ define amdgpu_kernel void @s_insertelement_v2i16_0_reghi_multi_use_1(ptr addrspa
 ; CI-NEXT:    s_load_dword s4, s[4:5], 0x4
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    s_load_dword s2, s[2:3], 0x0
-; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
+; CI-NEXT:    v_mov_b32_e32 v2, s4
+; CI-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-NEXT:    s_lshr_b32 s0, s4, 16
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_and_b32 s1, s2, 0xffff0000
-; CI-NEXT:    s_or_b32 s1, s0, s1
-; CI-NEXT:    v_mov_b32_e32 v2, s1
+; CI-NEXT:    s_lshr_b32 s1, s2, 16
+; CI-NEXT:    v_alignbit_b32 v2, s1, v2, 16
 ; CI-NEXT:    flat_store_dword v[0:1], v2
 ; CI-NEXT:    ;;#ASMSTART
 ; CI-NEXT:    ; use s0
@@ -774,11 +773,10 @@ define amdgpu_kernel void @v_insertelement_v2i16_0_reghi(ptr addrspace(1) %out, 
 ; CI-NEXT:    flat_load_dword v3, v[0:1]
 ; CI-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, s0, v2
-; CI-NEXT:    s_lshr_b32 s0, s4, 16
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; CI-NEXT:    s_waitcnt vmcnt(0)
-; CI-NEXT:    v_and_b32_e32 v2, 0xffff0000, v3
-; CI-NEXT:    v_or_b32_e32 v2, s0, v2
+; CI-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
+; CI-NEXT:    v_alignbit_b32 v2, v2, s4, 16
 ; CI-NEXT:    flat_store_dword v[0:1], v2
 ; CI-NEXT:    s_endpgm
 ;

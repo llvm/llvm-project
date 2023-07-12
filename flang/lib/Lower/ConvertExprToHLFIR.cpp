@@ -1748,7 +1748,6 @@ private:
           attrs &&
           bitEnumContainsAny(attrs.getFlags(),
                              fir::FortranVariableFlagsEnum::allocatable);
-      hlfir::Entity rhs = gen(expr);
       // If the component is allocatable, then we have to check
       // whether the RHS value is allocatable or not.
       // If it is not allocatable, then AssignOp can be used directly.
@@ -1756,6 +1755,15 @@ private:
       // will cause illegal dereference. When an unallocated allocatable
       // value is used to construct an allocatable component, the component
       // must just stay unallocated.
+
+      // If the component is allocatable and RHS is NULL() expression, then
+      // we can just skip it: the LHS must remain unallocated with its
+      // defined rank.
+      if (allowRealloc &&
+          Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(expr))
+        continue;
+
+      hlfir::Entity rhs = gen(expr);
       if (!allowRealloc || !rhs.isMutableBox()) {
         rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
         builder.create<hlfir::AssignOp>(loc, rhs, lhs, allowRealloc,

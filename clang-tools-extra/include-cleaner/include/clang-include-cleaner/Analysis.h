@@ -79,7 +79,8 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
 /// Removes unused includes and inserts missing ones in the main file.
 /// Returns the modified main-file code.
 /// The FormatStyle must be C++ or ObjC (to support include ordering).
-std::string fixIncludes(const AnalysisResults &Results, llvm::StringRef Code,
+std::string fixIncludes(const AnalysisResults &Results,
+                        llvm::StringRef FileName, llvm::StringRef Code,
                         const format::FormatStyle &IncludeStyle);
 
 /// Gets all the providers for a symbol by traversing each location.

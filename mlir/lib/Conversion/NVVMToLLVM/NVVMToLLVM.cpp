@@ -112,7 +112,8 @@ public:
                                 : LLVM::LLVMVoidType::get(op->getContext());
 
     // Remove the last comma from the constraints string.
-    if (asmConstraints[asmConstraints.size() - 1] == ',')
+    if (!asmConstraints.empty() &&
+        asmConstraints[asmConstraints.size() - 1] == ',')
       asmConstraints.pop_back();
 
     return rewriter.create<LLVM::InlineAsmOp>(

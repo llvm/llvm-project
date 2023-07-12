@@ -47,6 +47,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 
 #define DEBUG_TYPE "flang-lower-intrinsic"
@@ -1624,6 +1625,7 @@ mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     // its calls will be.
     auto localBuilder =
         std::make_unique<fir::FirOpBuilder>(function, builder.getKindMap());
+    localBuilder->setFastMathFlags(builder.getFastMathFlags());
     localBuilder->setInsertionPointToStart(&function.front());
     // Location of code inside wrapper of the wrapper is independent from
     // the location of the intrinsic call.
@@ -1689,7 +1691,13 @@ IntrinsicLibrary::outlineInWrapper(GeneratorType generator,
   }
 
   mlir::FunctionType funcType = getFunctionType(resultType, args, builder);
-  mlir::func::FuncOp wrapper = getWrapper(generator, name, funcType);
+  std::string funcName{name};
+  llvm::raw_string_ostream nameOS{funcName};
+  if (std::string fmfString{builder.getFastMathFlagsString()};
+      !fmfString.empty()) {
+    nameOS << '.' << fmfString;
+  }
+  mlir::func::FuncOp wrapper = getWrapper(generator, funcName, funcType);
   return builder.create<fir::CallOp>(loc, wrapper, args).getResult(0);
 }
 

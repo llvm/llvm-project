@@ -21,6 +21,7 @@
 #include "llvm/Support/Path.h"
 #include <cstring>
 #include <optional>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -53,8 +54,9 @@ public:
       auto &Inc = Out->MainFileIncludes.back();
       Inc.Written =
           (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str();
-      Inc.Resolved =
-          std::string(File ? File->getFileEntry().tryGetRealPathName() : "");
+      Inc.Resolved = std::string(
+          File ? getCanonicalPath(*File, SM.getFileManager()).value_or("")
+               : "");
       Inc.HashOffset = SM.getFileOffset(HashLoc);
       Inc.HashLine =
           SM.getLineNumber(SM.getFileID(HashLoc), Inc.HashOffset) - 1;

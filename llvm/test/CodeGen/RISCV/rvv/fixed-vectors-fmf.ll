@@ -9,7 +9,8 @@ define <2 x double> @foo(<2 x double> %x, <2 x double> %y) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vr = COPY $v9
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v8
-  ; CHECK-NEXT:   [[PseudoVFADD_VV_M1_:%[0-9]+]]:vr = nnan ninf nsz arcp contract afn reassoc nofpexcept PseudoVFADD_VV_M1 [[COPY1]], [[COPY]], 2, 6 /* e64 */, implicit $frm
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vr = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[PseudoVFADD_VV_M1_:%[0-9]+]]:vr = nnan ninf nsz arcp contract afn reassoc nofpexcept PseudoVFADD_VV_M1 [[DEF]], [[COPY1]], [[COPY]], 2, 6 /* e64 */, 1 /* ta, mu */, implicit $frm
   ; CHECK-NEXT:   $v8 = COPY [[PseudoVFADD_VV_M1_]]
   ; CHECK-NEXT:   PseudoRET implicit $v8
   %1 = fadd fast <2 x double> %x, %y

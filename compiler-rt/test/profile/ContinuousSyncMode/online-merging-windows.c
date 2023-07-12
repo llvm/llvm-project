@@ -1,4 +1,4 @@
-// REQUIRES: windows
+// REQUIRES: target={{.*windows-msvc.*}}
 
 // Test the online merging mode (%m) along with continuous mode (%c).
 //

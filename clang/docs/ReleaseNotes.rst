@@ -205,6 +205,9 @@ C2x Feature Support
 
     bool b = nullptr; // Was incorrectly rejected by Clang, is now accepted.
 
+- Implemented `WG14 N3124 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3124.pdf>_`,
+  which allows any universal character name to appear in character and string literals.
+
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -582,6 +585,12 @@ Bug Fixes in This Version
   (`#50243 <https://github.com/llvm/llvm-project/issues/50243>`_),
   (`#48636 <https://github.com/llvm/llvm-project/issues/48636>`_),
   (`#50320 <https://github.com/llvm/llvm-project/issues/50320>`_).
+- Correcly diagnose jumps into statement expressions.
+  This ensures the behavior of Clang is consistent with GCC.
+  (`#63682 <https://github.com/llvm/llvm-project/issues/63682>`_)
+  (`#38717 <https://github.com/llvm/llvm-project/issues/38717>_`).
+- Fix an assertion when using ``\u0024`` (``$``) as an identifier, by disallowing
+  that construct (`#62133 <https://github.com/llvm/llvm-project/issues/38717>_`).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -818,6 +827,7 @@ clang-format
 - Add ``BracedInitializerIndentWidth`` which can be used to configure
   the indentation level of the contents of braced init lists.
 - Add ``KeepEmptyLinesAtEOF`` to keep empty lines at end of file.
+- Add ``RemoveParentheses`` to remove redundant parentheses.
 
 libclang
 --------

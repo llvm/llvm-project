@@ -82,6 +82,7 @@ cc_library(
             "lib/Analysis/*.cpp",
             "lib/Analysis/*.h",
             "lib/Analysis/DataFlow/*.cpp",
+            "lib/Analysis/DataFlow/*.h",
         ],
     ),
     includes = ["lib/Dialect/Test"],
@@ -708,6 +709,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
+        "//mlir:VectorTransforms",
     ],
 )
 

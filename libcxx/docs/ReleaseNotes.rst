@@ -100,6 +100,9 @@ Deprecations and Removals
 - ``<string>``, ``<string_view>``, and ``<mutex>`` no longer include ``<functional>``
   in any C++ version (it was previously included in C++20 and earlier).
 
+- ``<atomic>``, ``<barrier>``, ``<latch>``, ``<numeric>``, ``<semaphore>`` and ``<shared_mutex>`` no longer include ``<iosfwd>``
+  (it was previously included in all Standard versions).
+
 - The headers ``<experimental/algorithm>`` and ``<experimental/functional>`` have been removed, since all the contents
   have been implemented in namespace ``std`` for at least two releases.
 

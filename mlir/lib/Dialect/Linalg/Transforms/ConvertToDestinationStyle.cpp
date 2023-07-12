@@ -53,6 +53,42 @@ static Value createInserts(RewriterBase &rewriter, Location loc, int dim,
   return destination;
 }
 
+/// Create a memcpy from the given source tensor to the given destination
+/// memref. The copy op type can be specified in the `options`.
+static void createMemcpy(OpBuilder &b, Location loc, Value tensorSource,
+                         Value memrefDest,
+                         const linalg::BufferizeToAllocationOptions &options) {
+  auto tensorType = dyn_cast<RankedTensorType>(tensorSource.getType());
+  assert(tensorType && "expected ranked tensor");
+  assert(memrefDest.getType().isa<MemRefType>() && "expected ranked memref");
+
+  switch (options.memcpyOp) {
+  case linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefTensorStore:
+    // Note: This is the preferred way of memcpy'ing because no layout map
+    // and/or memory space must be specified for the source.
+    b.create<memref::TensorStoreOp>(loc, tensorSource, memrefDest);
+    break;
+  case linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefCopy: {
+    // TODO: Support custom memory space on source.
+    // We do not know the layout map of the source yet, so use a fully dynamic
+    // layout for best compatibility.
+    Value toMemref = b.create<bufferization::ToMemrefOp>(
+        loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
+        tensorSource, /*readOnly=*/true);
+    b.create<memref::CopyOp>(loc, toMemref, memrefDest);
+  } break;
+  case linalg::BufferizeToAllocationOptions::MemcpyOp::LinalgCopy: {
+    // TODO: Support custom memory space on source.
+    // We do not know the layout map of the source yet, so use a fully dynamic
+    // layout for best compatibility.
+    Value toMemref = b.create<bufferization::ToMemrefOp>(
+        loc, bufferization::getMemRefTypeWithFullyDynamicLayout(tensorType),
+        tensorSource, /*readOnly=*/true);
+    b.create<linalg::CopyOp>(loc, toMemref, memrefDest);
+  } break;
+  };
+}
+
 static Operation *movePaddingToFillOrGenericOp(RewriterBase &rewriter,
                                                Location loc, PadOp padOp,
                                                Value dest) {
@@ -169,9 +205,9 @@ static Value createAllocationForTensor(RewriterBase &rewriter, Location loc,
   return alloc;
 }
 
-Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
-                                    Attribute memorySpace,
-                                    Operation *insertionPoint) {
+Value linalg::bufferizeToAllocation(
+    RewriterBase &rewriter, const linalg::BufferizeToAllocationOptions &options,
+    PadOp padOp, Attribute memorySpace, Operation *insertionPoint) {
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(insertionPoint ? insertionPoint : padOp);
   Location loc = padOp.getLoc();
@@ -195,7 +231,7 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
                                     rewriter.getIndexAttr(1));
   Value subview = rewriter.create<memref::SubViewOp>(
       loc, alloc, /*offsets=*/padOp.getMixedLowPad(), sizes, strides);
-  rewriter.create<memref::TensorStoreOp>(loc, padOp.getSource(), subview);
+  createMemcpy(rewriter, loc, padOp.getSource(), subview, options);
 
   // Create bufferization.to_tensor with "restrict" and "writable". The returned
   // tensor is a new buffer allocation, so it does not alias with any buffer.
@@ -205,27 +241,26 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, PadOp padOp,
   return alloc;
 }
 
-Value linalg::bufferizeToAllocation(RewriterBase &rewriter,
-                                    vector::MaskOp maskOp,
-                                    Attribute memorySpace,
-                                    Operation *insertionPoint) {
+Value linalg::bufferizeToAllocation(
+    RewriterBase &rewriter, const linalg::BufferizeToAllocationOptions &options,
+    vector::MaskOp maskOp, Attribute memorySpace, Operation *insertionPoint) {
   assert(llvm::range_size(maskOp.getMaskBlock()->without_terminator()) == 1 &&
          "expected single masked op");
   OpBuilder::InsertionGuard g(rewriter);
-  bufferization::BufferizationOptions options;
+  bufferization::BufferizationOptions bufferizationOptions;
   Operation *yieldOp = maskOp.getMaskRegion().front().getTerminator();
   assert(isa<vector::YieldOp>(yieldOp) && "expected yield op terminator");
 
   // Bufferize maskable op. By default, place the buffer allocation right before
   // the mask op.
   Value alloc = bufferizeToAllocation(
-      rewriter, maskOp.getMaskableOp(), memorySpace,
+      rewriter, options, maskOp.getMaskableOp(), memorySpace,
       /*insertionPoint=*/insertionPoint ? insertionPoint : maskOp);
 
   // Bufferize terminator.
   rewriter.setInsertionPoint(yieldOp);
   if (failed(cast<bufferization::BufferizableOpInterface>(yieldOp).bufferize(
-          rewriter, options)))
+          rewriter, bufferizationOptions)))
     return nullptr;
 
   // Erase dead to_tensor ops inside of the mask op. This is necessary because
@@ -247,7 +282,7 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter,
         resultUses.push_back(&use);
   rewriter.setInsertionPoint(maskOp);
   if (failed(cast<bufferization::BufferizableOpInterface>(maskOp.getOperation())
-                 .bufferize(rewriter, options)))
+                 .bufferize(rewriter, bufferizationOptions)))
     return nullptr;
 
   // Set "restrict" attribute, indicating that no other tensor aliases with
@@ -392,23 +427,23 @@ mlir::linalg::rewriteInDestinationPassingStyle(RewriterBase &rewriter,
   return insertSliceOp.getOperation();
 }
 
-Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Operation *op,
-                                    Attribute memorySpace,
-                                    Operation *insertionPoint) {
+Value linalg::bufferizeToAllocation(
+    RewriterBase &rewriter, const linalg::BufferizeToAllocationOptions &options,
+    Operation *op, Attribute memorySpace, Operation *insertionPoint) {
   using namespace bufferization;
 
   // Call specialized overload for certain ops.
   if (auto padOp = dyn_cast<tensor::PadOp>(op))
-    return bufferizeToAllocation(rewriter, padOp, memorySpace);
+    return bufferizeToAllocation(rewriter, options, padOp, memorySpace);
   if (auto maskOp = dyn_cast<vector::MaskOp>(op))
-    return bufferizeToAllocation(rewriter, maskOp, memorySpace);
+    return bufferizeToAllocation(rewriter, options, maskOp, memorySpace);
 
   // Only bufferizable ops are supported.
   auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);
   if (!bufferizableOp)
     return nullptr;
-  BufferizationOptions options;
-  AnalysisState state(options);
+  BufferizationOptions bufferizationOptions;
+  AnalysisState state(bufferizationOptions);
 
   // Gather tensor results.
   SmallVector<OpResult> tensorResults;
@@ -462,8 +497,7 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Operation *op,
     if (!state.findDefinitions(operand->get()).empty()) {
       // Initialize buffer with a copy of the operand data. Not needed if the
       // tensor is uninitialized.
-      rewriter.create<memref::TensorStoreOp>(op->getLoc(), operand->get(),
-                                             alloc);
+      createMemcpy(rewriter, op->getLoc(), operand->get(), alloc, options);
     }
     rewriter.updateRootInPlace(op, [&]() {
       operand->set(rewriter.create<ToTensorOp>(op->getLoc(), alloc));
@@ -472,7 +506,7 @@ Value linalg::bufferizeToAllocation(RewriterBase &rewriter, Operation *op,
 
   // Bufferize the op.
   rewriter.setInsertionPoint(op);
-  if (failed(bufferizableOp.bufferize(rewriter, options)))
+  if (failed(bufferizableOp.bufferize(rewriter, bufferizationOptions)))
     return nullptr;
 
   // Set "restrict" attribute, indicating that no other tensor aliases with
