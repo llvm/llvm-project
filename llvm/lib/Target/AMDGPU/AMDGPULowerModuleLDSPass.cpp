@@ -1189,8 +1189,9 @@ public:
 
       // The order must be consistent between lookup table and accesses to
       // lookup table
-      auto TableLookupVariablesOrdered = sortByName(std::vector(
-          TableLookupVariables.begin(), TableLookupVariables.end()));
+      auto TableLookupVariablesOrdered =
+          sortByName(std::vector<GlobalVariable *>(TableLookupVariables.begin(),
+                                                   TableLookupVariables.end()));
 
       GlobalVariable *LookupTable = buildLookupTable(
           M, TableLookupVariablesOrdered, OrderedKernels, KernelToReplacement);
@@ -1337,8 +1338,8 @@ private:
       // The order of fields in this struct depends on the order of
       // varables in the argument which varies when changing how they
       // are identified, leading to spurious test breakage.
-      auto Sorted = sortByName(
-          std::vector(LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
+      auto Sorted = sortByName(std::vector<GlobalVariable *>(
+          LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
 
       for (GlobalVariable *GV : Sorted) {
         OptimizedStructLayoutField F(GV,
@@ -1427,7 +1428,7 @@ private:
     // A hack... we need to insert the aliasing info in a predictable order for
     // lit tests. Would like to have them in a stable order already, ideally the
     // same order they get allocated, which might mean an ordered set container
-    std::vector<GlobalVariable *> LDSVarsToTransform = sortByName(std::vector(
+    auto LDSVarsToTransform = sortByName(std::vector<GlobalVariable *>(
         LDSVarsToTransformArg.begin(), LDSVarsToTransformArg.end()));
 
     // Create alias.scope and their lists. Each field in the new structure
