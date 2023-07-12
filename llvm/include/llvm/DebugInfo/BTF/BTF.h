@@ -245,6 +245,8 @@ struct BPFLineInfo {
   uint32_t LineOff;     ///< Line index in the .BTF string table
   uint32_t LineCol;     ///< Line num: line_col >> 10,
                         ///  col num: line_col & 0x3ff
+  uint32_t getLine() const { return LineCol >> 10; }
+  uint32_t getCol() const { return LineCol & 0x3ff; }
 };
 
 /// Specifying line info's in one section.
