@@ -612,7 +612,7 @@ bool AArch64MIPeepholeOpt::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
 // register.
 static bool is64bitDefwithZeroHigh64bit(MachineInstr *MI,
                                         MachineRegisterInfo *MRI) {
-  if (!MI->getOperand(0).isDef() || !MI->getOperand(0).isReg())
+  if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
     return false;
   const TargetRegisterClass *RC = MRI->getRegClass(MI->getOperand(0).getReg());
   if (RC != &AArch64::FPR64RegClass)
