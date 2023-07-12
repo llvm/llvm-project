@@ -477,21 +477,6 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     return;
   }
 
-  case Stmt::StmtExprClass: {
-    // [GNU]
-    // Jumping into a statement expression with goto or using
-    // a switch statement outside the statement expression with
-    // a case or default label inside the statement expression is not permitted.
-    // Jumping out of a statement expression is permitted.
-    StmtExpr *SE = cast<StmtExpr>(S);
-    unsigned NewParentScope = Scopes.size();
-    Scopes.push_back(GotoScope(ParentScope,
-                               diag::note_enters_statement_expression,
-                               /*OutDiag=*/0, SE->getBeginLoc()));
-    BuildScopeInformation(SE->getSubStmt(), NewParentScope);
-    return;
-  }
-
   case Stmt::ObjCAtTryStmtClass: {
     // Disallow jumps into any part of an @try statement by pushing a scope and
     // walking all sub-stmts in that scope.
