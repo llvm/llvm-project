@@ -553,6 +553,7 @@ libcxx/src/mutex.cpp
 libcxx/src/mutex_destructor.cpp
 libcxx/src/new.cpp
 libcxx/src/optional.cpp
+libcxx/src/pstl/libdispatch.cpp
 libcxx/src/random.cpp
 libcxx/src/random_shuffle.cpp
 libcxx/src/regex.cpp
