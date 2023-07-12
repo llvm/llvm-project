@@ -2432,22 +2432,50 @@ bool UnwrappedLineParser::parseBracedList(bool ContinueOnSemicolons,
 /// \brief Parses a pair of parentheses (and everything between them).
 /// \param AmpAmpTokenType If different than TT_Unknown sets this type for all
 /// double ampersands. This applies for all nested scopes as well.
-void UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
+///
+/// Returns whether there is a `=` token between the parentheses.
+bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
   assert(FormatTok->is(tok::l_paren) && "'(' expected.");
+  auto *LeftParen = FormatTok;
+  bool SeenEqual = false;
+  const bool MightBeStmtExpr = Tokens->peekNextToken()->is(tok::l_brace);
   nextToken();
   do {
     switch (FormatTok->Tok.getKind()) {
     case tok::l_paren:
-      parseParens(AmpAmpTokenType);
+      if (parseParens(AmpAmpTokenType))
+        SeenEqual = true;
       if (Style.Language == FormatStyle::LK_Java && FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;
     case tok::r_paren:
+      if (!MightBeStmtExpr &&
+          Style.RemoveParentheses > FormatStyle::RPS_Leave) {
+        const auto *Prev = LeftParen->Previous;
+        const auto *Next = Tokens->peekNextToken();
+        const bool DoubleParens =
+            Prev && Prev->is(tok::l_paren) && Next && Next->is(tok::r_paren);
+        const auto *PrevPrev = Prev ? Prev->getPreviousNonComment() : nullptr;
+        const bool Blacklisted =
+            PrevPrev &&
+            (PrevPrev->is(tok::kw___attribute) ||
+             (SeenEqual &&
+              (PrevPrev->isOneOf(tok::kw_if, tok::kw_while) ||
+               PrevPrev->endsSequence(tok::kw_constexpr, tok::kw_if))));
+        const bool ReturnParens =
+            Style.RemoveParentheses == FormatStyle::RPS_ReturnStatement &&
+            Prev && Prev->isOneOf(tok::kw_return, tok::kw_co_return) && Next &&
+            Next->is(tok::semi);
+        if ((DoubleParens && !Blacklisted) || ReturnParens) {
+          LeftParen->Optional = true;
+          FormatTok->Optional = true;
+        }
+      }
       nextToken();
-      return;
+      return SeenEqual;
     case tok::r_brace:
       // A "}" inside parenthesis is an error if there wasn't a matching "{".
-      return;
+      return SeenEqual;
     case tok::l_square:
       tryToParseLambda();
       break;
@@ -2463,6 +2491,7 @@ void UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
       }
       break;
     case tok::equal:
+      SeenEqual = true;
       if (Style.isCSharp() && FormatTok->is(TT_FatArrow))
         tryToParseChildBlock();
       else
@@ -2499,6 +2528,7 @@ void UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
       break;
     }
   } while (!eof());
+  return SeenEqual;
 }
 
 void UnwrappedLineParser::parseSquare(bool LambdaIntroducer) {
