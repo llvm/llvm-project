@@ -473,6 +473,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   CurrentFnSym->print(O, MAI);
 
   emitFunctionParamList(F, O);
+  O << "\n";
 
   if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
@@ -623,6 +624,7 @@ void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
   getSymbol(F)->print(O, MAI);
   O << "\n";
   emitFunctionParamList(F, O);
+  O << "\n";
   if (shouldEmitPTXNoReturn(F, TM))
     O << ".noreturn";
   O << ";\n";
@@ -790,10 +792,12 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
 }
 
 bool NVPTXAsmPrinter::doInitialization(Module &M) {
-  if (M.alias_size()) {
-    report_fatal_error("Module has aliases, which NVPTX does not support.");
-    return true; // error
-  }
+  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+  const NVPTXSubtarget &STI =
+      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  if (M.alias_size() && (STI.getPTXVersion() < 63 || STI.getSmVersion() < 30))
+    report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
+
   if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_ctors")) &&
       !LowerCtorDtor) {
     report_fatal_error(
@@ -848,6 +852,32 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
   OS2 << '\n';
 
   OutStreamer->emitRawText(OS2.str());
+}
+
+void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+
+  MCSymbol *Name = getSymbol(&GA);
+  const Function *F = dyn_cast<Function>(GA.getAliasee());
+  if (!F || isKernelFunction(*F))
+    report_fatal_error("NVPTX aliasee must be a non-kernel function");
+
+  if (GA.hasLinkOnceLinkage() || GA.hasWeakLinkage() ||
+      GA.hasAvailableExternallyLinkage() || GA.hasCommonLinkage())
+    report_fatal_error("NVPTX aliasee must not be '.weak'");
+
+  OS << "\n";
+  emitLinkageDirective(F, OS);
+  OS << ".func ";
+  printReturnValStr(F, OS);
+  OS << Name->getName();
+  emitFunctionParamList(F, OS);
+  OS << ";\n";
+
+  OS << ".alias " << Name->getName() << ", " << F->getName() << ";\n";
+
+  OutStreamer->emitRawText(OS.str());
 }
 
 void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
@@ -905,6 +935,16 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
     emitGlobals(M);
     GlobalsEmitted = true;
   }
+
+  // If we have any aliases we emit them at the end.
+  SmallVector<GlobalAlias *> AliasesToRemove;
+  for (GlobalAlias &Alias : M.aliases()) {
+    emitGlobalAlias(M, Alias);
+    AliasesToRemove.push_back(&Alias);
+  }
+
+  for (GlobalAlias *A : AliasesToRemove)
+    A->eraseFromParent();
 
   // call doFinalization
   bool ret = AsmPrinter::doFinalization(M);
@@ -1465,7 +1505,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   bool hasImageHandles = STI.hasImageHandles();
 
   if (F->arg_empty() && !F->isVarArg()) {
-    O << "()\n";
+    O << "()";
     return;
   }
 
@@ -1659,7 +1699,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     O << TLI->getParamName(F, /* vararg */ -1) << "[]";
   }
 
-  O << "\n)\n";
+  O << "\n)";
 }
 
 void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(
