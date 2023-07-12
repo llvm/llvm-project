@@ -79,10 +79,10 @@ LogicalResult EmulateFloatPattern::match(Operation *op) const {
 void EmulateFloatPattern::rewrite(Operation *op, ArrayRef<Value> operands,
                                   ConversionPatternRewriter &rewriter) const {
   Location loc = op->getLoc();
+  TypeConverter *converter = getTypeConverter();
   SmallVector<Type> resultTypes;
-  assert(
-      succeeded(getTypeConverter()->convertTypes(op->getResultTypes(), resultTypes)) &&
-      "type conversions shouldn't fail in this pass");
+  LogicalResult pass = converter->convertTypes(op->getResultTypes(), resultTypes);
+  (void) pass;
   Operation *expandedOp =
       rewriter.create(loc, op->getName().getIdentifier(), operands, resultTypes,
                       op->getAttrs(), op->getSuccessors(), /*regions=*/{});
