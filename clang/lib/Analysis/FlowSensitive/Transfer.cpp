@@ -717,14 +717,15 @@ public:
     if (Type->isStructureOrClassType()) {
       std::vector<FieldDecl *> Fields =
           getFieldsForInitListExpr(Type->getAsRecordDecl());
-      for (auto It : llvm::zip(Fields, S->inits())) {
-        const FieldDecl *Field = std::get<0>(It);
+      for (auto [Field, Init] : llvm::zip(Fields, S->inits())) {
         assert(Field != nullptr);
-
-        const Expr *Init = std::get<1>(It);
         assert(Init != nullptr);
 
-        if (Value *InitVal = Env.getValue(*Init, SkipPast::None))
+        if (Field->getType()->isReferenceType()) {
+          if (StorageLocation *Loc = Env.getStorageLocationStrict(*Init))
+            cast<StructValue>(Val)->setChild(*Field,
+                                             Env.create<ReferenceValue>(*Loc));
+        } else if (Value *InitVal = Env.getValue(*Init, SkipPast::None))
           cast<StructValue>(Val)->setChild(*Field, *InitVal);
       }
     }
