@@ -754,6 +754,18 @@ static mlir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
   return builder.create<fir::ConvertOp>(loc, value1.getType(), add);
 }
 
+static mlir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::arith::CmpIPredicate pred,
+                                         mlir::Value value1,
+                                         mlir::Value value2) {
+  mlir::Type i1 = builder.getI1Type();
+  mlir::Value v1 = builder.create<fir::ConvertOp>(loc, i1, value1);
+  mlir::Value v2 = builder.create<fir::ConvertOp>(loc, i1, value2);
+  mlir::Value add = builder.create<mlir::arith::CmpIOp>(loc, pred, v1, v2);
+  return builder.create<fir::ConvertOp>(loc, value1.getType(), add);
+}
+
 static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
                                mlir::acc::ReductionOperator op, mlir::Type ty,
                                mlir::Value value1, mlir::Value value2) {
@@ -830,6 +842,10 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
 
   if (op == mlir::acc::ReductionOperator::AccLor)
     return genLogicalCombiner<mlir::arith::OrIOp>(builder, loc, value1, value2);
+
+  if (op == mlir::acc::ReductionOperator::AccEqv)
+    return genComparisonCombiner(builder, loc, mlir::arith::CmpIPredicate::eq,
+                                 value1, value2);
 
   TODO(loc, "reduction operator");
 }
