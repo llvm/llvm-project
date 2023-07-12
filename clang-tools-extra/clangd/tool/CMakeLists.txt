@@ -44,7 +44,23 @@ target_link_libraries(clangdMain
   ${CLANGD_XPC_LIBS}
   )
 
+clang_target_link_libraries(clangd
+  PRIVATE
+  clangAST
+  clangBasic
+  clangFormat
+  clangFrontend
+  clangLex
+  clangSema
+  clangTooling
+  clangToolingCore
+  clangToolingRefactoring
+  clangToolingSyntax
+  )
+
 target_link_libraries(clangd
   PRIVATE
   clangdMain
+  clangDaemon
+  clangdSupport
   )
