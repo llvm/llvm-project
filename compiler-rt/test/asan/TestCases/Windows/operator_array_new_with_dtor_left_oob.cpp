@@ -6,7 +6,11 @@ struct C {
   ~C() {}
 };
 
+#ifdef _MSC_VER
+__declspec(noinline) int hide(int x) { return x; }
+#else
 int __attribute__((noinline, optnone)) hide(int x) { return x; }
+#endif
 
 int main() {
   C *buffer = new C[42];

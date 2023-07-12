@@ -38,9 +38,40 @@ if (NOT WIN32 AND NOT APPLE)
     )
 endif()
 
-set(ASAN_CXX_SOURCES
-  asan_new_delete.cpp
-  )
+if (WIN32)
+  set(ASAN_CXX_SOURCES asan_win_new_delete.cpp)
+else()
+  set(ASAN_CXX_SOURCES asan_new_delete.cpp)
+endif()
+
+if (APPLE)
+  set(ASAN_SOURCES ASAN_CXX_SOURCES)
+endif()
+
+if (WIN32)
+  set(ASAN_STATIC_IMPLIB_SOURCES
+    asan_win_delete_array_thunk.cpp
+    asan_win_delete_array_align_thunk.cpp
+    asan_win_delete_array_align_nothrow_thunk.cpp
+    asan_win_delete_array_nothrow_thunk.cpp
+    asan_win_delete_array_size_thunk.cpp
+    asan_win_delete_array_size_align_thunk.cpp
+    asan_win_delete_scalar_thunk.cpp
+    asan_win_delete_scalar_align_thunk.cpp
+    asan_win_delete_scalar_align_nothrow_thunk.cpp
+    asan_win_delete_scalar_nothrow_thunk.cpp
+    asan_win_delete_scalar_size_thunk.cpp
+    asan_win_delete_scalar_size_align_thunk.cpp
+    asan_win_new_array_thunk.cpp
+    asan_win_new_array_align_thunk.cpp
+    asan_win_new_array_align_nothrow_thunk.cpp
+    asan_win_new_array_nothrow_thunk.cpp
+    asan_win_new_scalar_thunk.cpp
+    asan_win_new_scalar_align_thunk.cpp
+    asan_win_new_scalar_align_nothrow_thunk.cpp
+    asan_win_new_scalar_nothrow_thunk.cpp
+    )
+endif()
 
 set(ASAN_STATIC_SOURCES
   asan_rtl_static.cpp
@@ -82,6 +113,13 @@ SET(ASAN_HEADERS
   asan_suppressions.h
   asan_thread.h
   )
+
+if (WIN32)
+  list(APPEND ASAN_HEADERS
+    asan_win_new_delete_thunk_common.h
+    asan_win_thunk_common.h
+    )
+endif()
 
 include_directories(..)
 
@@ -138,6 +176,15 @@ add_compiler_rt_object_libraries(RTAsan_dynamic
   ADDITIONAL_HEADERS ${ASAN_HEADERS}
   CFLAGS ${ASAN_DYNAMIC_CFLAGS}
   DEFS ${ASAN_DYNAMIC_DEFINITIONS})
+
+if (WIN32)
+  add_compiler_rt_object_libraries(RTAsan_static_implib
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    SOURCES ${ASAN_STATIC_IMPLIB_SOURCES}
+    ADDITIONAL_HEADERS ${ASAN_HEADERS}
+    CFLAGS ${ASAN_CFLAGS} ${NO_DEFAULT_LIBS_OPTION}
+    DEFS ${ASAN_COMMON_DEFINITIONS})
+endif()
 
 if(NOT APPLE)
   add_compiler_rt_object_libraries(RTAsan
