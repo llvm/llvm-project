@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 %std_cxx11-14 %s -O0 -triple=x86_64-apple-darwin -target-feature +avx2 -fmax-type-align=16 -emit-llvm -o - -Werror | FileCheck %s --check-prefixes=CHECK,PRE17
 // RUN: %clang_cc1 %std_cxx17- %s -O0 -triple=x86_64-apple-darwin -target-feature +avx2 -fmax-type-align=16 -emit-llvm -o - -Werror | FileCheck %s --check-prefixes=CHECK,CXX17
-// rdar://16254558
 
 typedef float AVX2Float __attribute__((__vector_size__(32)));
 

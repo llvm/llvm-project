@@ -95,6 +95,31 @@ def Atan2Op : ComplexArithmeticOp<"atan2"> {
   }];
 }
 
+
+//===----------------------------------------------------------------------===//
+// Bitcast
+//===----------------------------------------------------------------------===//
+
+def BitcastOp : Complex_Op<"bitcast", [Pure]> {
+
+  let summary = "computes bitcast between complex and equal arith types";
+  let description = [{
+
+    Example:
+
+    ```mlir
+         %a = complex.bitcast %b : complex<f32> -> i64
+    ```
+  }];
+  let assemblyFormat = "$operand attr-dict `:` type($operand) `to` type($result)";
+  let arguments = (ins AnyType:$operand);
+  let results = (outs AnyType:$result);
+
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//

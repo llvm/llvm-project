@@ -82,6 +82,128 @@ class NVVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
+// Basic PTX Builder Interface
+//===----------------------------------------------------------------------===//
+
+// https://docs.nvidia.com/cuda/inline-ptx-assembly/index.html#parameters
+def Read : I32EnumAttrCase<"Read", 0, "read">;
+def Write : I32EnumAttrCase<"Write", 2, "write">;
+def ReadWrite : I32EnumAttrCase<"ReadWrite", 1, "readwrite">;
+
+def PTXRegisterMod : I32EnumAttr<"PTXRegisterMod", 
+  "Register read/write modifier to build cosntraint string for PTX inline",
+  [Read, Write, ReadWrite]> {
+  let cppNamespace = "::mlir::NVVM";
+}
+
+
+def BasicPtxBuilderOpInterface : OpInterface<"BasicPtxBuilderInterface"> {
+  let description = [{
+    Interface to generate inline assembly with PTX for basic operations. 
+
+    Interface is used in `convert-nvvm-to-llvm` pass that lowers Ops supports this interface to inline assembly Op. Interface has several methods and they are used for this lowering. 
+
+    `getPtx` method returns PTX code. 
+
+    `hasSideEffect` is used to set whether the op has any side effect on the memory.
+
+    `hasIntrinsic` returns whether the operation has intrinsic support in LLVM. This is useful for the Ops that don't have intrinsic support for each case.
+
+    `getAsmValues` returns arguments to pass PTX code. The order of arguments is started from the results and they are used as write, followed by the operands and attributes.
+
+    Example:
+    
+    If we have following Op definition that returns PTX code by `getPtx`. 
+    
+    ```tablegen
+    def NVVM_MBarrierArriveExpectTxOp : NVVM_Op<\"mbarrier.arrive.expect_tx\",
+                        [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+      Results<(outs LLVM_Type:$res)>, Arguments<(ins LLVM_i64ptr_any:$addr, I32:$txcount)> {
+      ...
+      let extraClassDefinition = [{
+        const char* $cppClass::getPtx() { return \"mbarrier.arrive.expect_tx.b64 %0, [%1], %2;\"; }
+      }\];
+    }
+    ```
+
+    The NVVM Op will look like below:
+    ```mlir
+      %0 = nvvm.mbarrier.arrive.expect_tx %barrier, %txcount : !llvm.ptr, i32 -> i32
+    ```
+
+    The `convert-nvvm-to-llvm` Pass returns the PTX code below. The order of 
+    arguments are kept the same. The read/write modifiers are set based on the
+    input and result types.
+    ```mlir
+      %0 = llvm.inline_asm has_side_effects asm_dialect = att "mbarrier.arrive.expect_tx.b64 %0, [%1], %2;", "=r,l,r" %arg0, %arg1 : (!llvm.ptr, i32) -> i32
+    ```
+
+  }];
+  let methods = [
+    InterfaceMethod<
+        /*desc=*/[{
+          Returns whether the operation has intrinsic support in LLVM.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"hasIntrinsic",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return false;"
+      >,
+    InterfaceMethod<
+        /*desc=*/[{ Return whether the operation has memory side effects. }],
+        /*retType=*/"bool",
+        /*methodName=*/"hasSideEffect",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/"return true;"
+      >,
+    InterfaceMethod<
+        /*desc=*/[{ Returns PTX code. }],
+        /*retType=*/"const char*",
+        /*methodName=*/"getPtx"
+      >,
+    InterfaceMethod<
+        /*desc=*/[{Generate constant value.}],
+        /*retType=*/"::mlir::Value",
+        /*methodName=*/"makeConstantI32",
+        /*args=*/(ins "::mlir::RewriterBase &":$rewriter, "unsigned" : $val),
+        /*methodBody=*/"",
+        /*defaultImpl=*/ [{
+            mlir::Operation* op = $_op;
+            return rewriter.create<LLVM::ConstantOp>(
+              op->getLoc(), rewriter.getIntegerType(32), val);
+        }]
+     >,
+     InterfaceMethod<
+         /*desc=*/[{ 
+            Returns arguments to pass PTX code.
+            The order of arguments is started from the results and they are 
+            used as write, followed by the operands and attributes.
+          }],
+         /*retType=*/"void",
+         /*methodName=*/"getAsmValues",
+         /*args=*/(ins "::mlir::RewriterBase &":$rewriter, 
+         "llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>&" : $asmValues),
+         /*methodBody=*/"",
+         /*defaultImpl=*/ [{         
+           mlir::Operation* op = $_op;
+           for (auto val : op->getResults()) 
+            asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Write});
+           for (auto val : op->getOperands()) 
+            asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
+           for (auto attr : op->getAttrs()) {
+            if (auto intAttr = dyn_cast<mlir::IntegerAttr>(attr.getValue())) {
+             Value val = makeConstantI32(rewriter, intAttr.getInt());
+             asmValues.push_back({val ,mlir::NVVM::PTXRegisterMod::Read});
+             }
+           }
+         }]
+       >
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM intrinsic operations
 //===----------------------------------------------------------------------===//
 
@@ -249,6 +371,58 @@ def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.
   let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
 }
 
+def NVVM_MBarrierArriveExpectTxOp : NVVM_Op<"mbarrier.arrive.expect_tx",
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_i64ptr_any:$addr, I32:$txcount)> {
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) `->` type($res)";
+  let extraClassDefinition = [{
+    const char* $cppClass::getPtx() { return "mbarrier.arrive.expect_tx.b64 %0, [%1], %2;"; }
+  }];
+}
+
+def NVVM_MBarrierArriveExpectTxSharedOp : NVVM_Op<"mbarrier.arrive.expect_tx.shared", 
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_i64ptr_shared:$addr, I32:$txcount)> {    
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) `->` type($res)";
+  let extraClassDefinition = [{
+    const char* $cppClass::getPtx() { return "mbarrier.arrive.expect_tx.shared.b64 %0, [%1], %2;"; }
+  }];
+}
+
+def NVVM_MBarrierTryWaitParityOp : NVVM_Op<"mbarrier.try_wait.parity", 
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_i64ptr_any:$addr, LLVM_Type:$token)> {
+  let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
+  let extraClassDefinition = [{
+    const char* $cppClass::getPtx() {
+      return "{\n\t"
+              ".reg .pred P1; \n\t"
+              "mbarrier.try_wait.parity.b64 P1, [%1], %2; \n\t"
+              "selp.b32 %0, 1, 0, P1; \n\t"
+              "}"; 
+    }
+  }];
+}
+
+def NVVM_MBarrierTryWaitParitySharedOp : NVVM_Op<"mbarrier.try_wait.parity.shared", 
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+  Results<(outs LLVM_Type:$res)>,
+  Arguments<(ins LLVM_i64ptr_shared:$addr, LLVM_Type:$token)> {  
+  let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
+  let extraClassDefinition = [{
+    const char* $cppClass::getPtx() {
+      return "{\n\t"
+              ".reg .pred P1; \n\t"
+              "mbarrier.try_wait.parity.shared.b64 P1, [%1], %2; \n\t"
+              "selp.b32 %0, 1, 0, P1; \n\t"
+              "}"; 
+    }
+  }];
+}
+
 def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
   Results<(outs LLVM_Type:$res)>,
   Arguments<(ins LLVM_i64ptr_any:$addr, LLVM_Type:$token)> {
@@ -332,12 +506,30 @@ def NVVM_SyncWarpOp :
   let assemblyFormat = "$mask attr-dict `:` type($mask)";
 }
 
+// https://docs.nvidia.com/cuda/parallel-thread-execution/#id62
+def LoadCacheModifierCA : I32EnumAttrCase<"CA", 0, "ca">;
+def LoadCacheModifierCG : I32EnumAttrCase<"CG", 1, "cg">;
+def LoadCacheModifierCS : I32EnumAttrCase<"CS", 2, "cs">;
+def LoadCacheModifierLU : I32EnumAttrCase<"LU", 3, "lu">;
+def LoadCacheModifierCV : I32EnumAttrCase<"CV", 4, "cv">;
 
-def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
+/// Enum attribute of the different kinds.
+def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind", 
+                                "NVVM load cache modifier kind",
+  [LoadCacheModifierCA, LoadCacheModifierCG, LoadCacheModifierCS, 
+    LoadCacheModifierLU, LoadCacheModifierCV]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def LoadCacheModifierAttr : EnumAttr<NVVM_Dialect, LoadCacheModifierKind, "load_cache_modifier">;
+
+def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global", [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
   Arguments<(ins LLVM_i8Ptr_shared:$dst,
                  LLVM_i8Ptr_global:$src,
                  I32Attr:$size,
-                 OptionalAttr<UnitAttr>:$bypass_l1)> {
+                 LoadCacheModifierAttr:$modifier,
+                 Optional<LLVM_Type>:$cpSize)> {
   string llvmBuilder = [{
       llvm::Intrinsic::ID id;
       switch ($size) {
@@ -348,18 +540,40 @@ def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
           id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_8;
           break;
         case 16:
-          if(static_cast<bool>($bypass_l1))
+          if($modifier == NVVM::LoadCacheModifierKind::CG)
             id = llvm::Intrinsic::nvvm_cp_async_cg_shared_global_16;
-          else
+          else if($modifier == NVVM::LoadCacheModifierKind::CA)
             id = llvm::Intrinsic::nvvm_cp_async_ca_shared_global_16;
+          else 
+            llvm_unreachable("unsupported cache modifier");
           break;
         default:
           llvm_unreachable("unsupported async copy size");
       }
       createIntrinsicCall(builder, id, {$dst, $src});
   }];
-  let assemblyFormat = "$dst `,` $src `,` $size attr-dict `:` type(operands)";
+  let assemblyFormat = "$dst `,` $src `,` $size `,` `cache` `=` $modifier (`,` $cpSize^)? attr-dict `:` type(operands)";
   let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    bool hasIntrinsic() { if(getCpSize()) return false; return true; }
+
+    void getAsmValues(RewriterBase &rewriter, 
+        llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues) {
+      asmValues.push_back({getDst(), PTXRegisterMod::Read});
+      asmValues.push_back({getSrc(), PTXRegisterMod::Read});
+      asmValues.push_back({makeConstantI32(rewriter, getSize()), PTXRegisterMod::Read});
+      asmValues.push_back({getCpSize(), PTXRegisterMod::Read});
+    }        
+  }];
+  let extraClassDefinition = [{        
+    const char* $cppClass::getPtx() { 
+      if(getModifier() == NVVM::LoadCacheModifierKind::CG)
+        return "cp.async.cg.shared.global [%0], [%1], %2, %3;\n"; 
+      if(getModifier() == NVVM::LoadCacheModifierKind::CA)
+        return "cp.async.ca.shared.global [%0], [%1], %2, %3;\n";        
+      llvm_unreachable("unsupported cache modifier");      
+    }
+  }];
 }
 
 def NVVM_CpAsyncCommitGroupOp : NVVM_Op<"cp.async.commit.group"> {

@@ -1,0 +1,40 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-types-dwarf5-main.s -o %tmain.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-types-dwarf5-helper.s -o %thelper.o
+# RUN: %clang %cflags %tmain.o %thelper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-types %t.bolt | FileCheck --check-prefix=POSTCHECKTU %s
+
+# Check BOLT handles DWARF4 with fdebug-types, and DWARF5 without.
+
+# POSTCHECK: version = 0x0004
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_TAG_subprogram
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x007c => {0x0000007c} "int")
+# POSTCHECK: DW_TAG_formal_parameter
+# POSTCHECK: DW_TAG_structure_type
+# POSTCHECK: DW_AT_signature [DW_FORM_ref_sig8]  (0x675d23e4f33235f2)
+# POSTCHECK: version = 0x0005
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_TAG_subprogram
+# POSTCHECK: DW_AT_type [DW_FORM_ref4] (cu + 0x0031 => {0x000000d8} "int")
+# POSTCHECK: DW_TAG_base_type
+
+# POSTCHECKTU: version = 0x0004
+# POSTCHECKTU: DW_TAG_type_unit [1]
+# POSTCHECKTU: DW_TAG_structure_type [2]
+# POSTCHECKTU: DW_TAG_member [3]
+# POSTCHECKTU: DW_TAG_member [3]
+# POSTCHECKTU: DW_AT_type [DW_FORM_ref4] (cu + 0x004c => {0x0000004c} "char *")
+# POSTCHECKTU: DW_TAG_pointer_type [4]
+# POSTCHECKTU-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0051 => {0x00000051} "char")
+# POSTCHECKTU: DW_TAG_base_type [5]
+# POSTCHECKTU: version = 0x0004
+# POSTCHECKTU: DW_TAG_type_unit [1]
+# POSTCHECKTU: DW_TAG_structure_type [2]
+# POSTCHECKTU: DW_TAG_member [3]
+# POSTCHECKTU: DW_AT_type [DW_FORM_ref4] (cu + 0x0040 => {0x00000099} "char *")
+# POSTCHECKTU: DW_TAG_pointer_type [4]
+# POSTCHECKTU-NEXT: DW_AT_type [DW_FORM_ref4] (cu + 0x0045 => {0x0000009e} "char")

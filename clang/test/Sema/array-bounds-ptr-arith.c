@@ -26,9 +26,8 @@ void pr11594(struct S *s) {
   int *p = a - s->n;
 }
 
-// Test case reduced from <rdar://problem/11387038>.  This resulted in
-// an assertion failure because of the typedef instead of an explicit
-// constant array type.
+// This resulted in an assertion failure because of the typedef instead of an
+// explicit constant array type.
 struct RDar11387038 {};
 typedef struct RDar11387038 RDar11387038Array[1];
 struct RDar11387038_Table {

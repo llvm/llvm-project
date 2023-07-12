@@ -15,7 +15,7 @@
 //
 long xperm8(long rs1, long rs2)
 {
-  return __builtin_riscv_xperm8(rs1, rs2);
+  return __builtin_riscv_xperm8_64(rs1, rs2);
 }
 
 // RV64ZBKX-LABEL: @xperm4(
@@ -31,5 +31,5 @@ long xperm8(long rs1, long rs2)
 //
 long xperm4(long rs1, long rs2)
 {
-  return __builtin_riscv_xperm4(rs1, rs2);
+  return __builtin_riscv_xperm4_64(rs1, rs2);
 }

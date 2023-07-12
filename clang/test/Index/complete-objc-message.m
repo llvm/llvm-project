@@ -347,7 +347,6 @@ void test_Nullability(Nullability *n, A* a) {
 // RUN: c-index-test -code-completion-at=%s:197:6 %s | FileCheck -check-prefix=CHECK-NULLABLE %s
 // CHECK-NULLABLE: ObjCInstanceMethodDecl:{ResultType A * _Nonnull}{TypedText method:}{Placeholder (nullable A *)}
 
-// rdar://28012953
 // Code completion results should include instance methods from RootProtocol and
 // RootClass when completing a method invocation for a RootClass object because
 // RootClasses metaclass subclasses from RootClass (i.e. RootClass is actually
@@ -389,7 +388,7 @@ void completeAllTheRootThings() {
   [RootClass classMethod];
 }
 
-// RUN: c-index-test -code-completion-at=%s:389:14 %s | FileCheck -check-prefix=CHECK-ROOT %s
+// RUN: c-index-test -code-completion-at=%s:388:14 %s | FileCheck -check-prefix=CHECK-ROOT %s
 // CHECK-ROOT: ObjCInstanceMethodDecl:{ResultType void}{TypedText categoryInstanceMethod} (35)
 // CHECK-ROOT-NEXT: ObjCInstanceMethodDecl:{ResultType void}{TypedText categoryProtocolInstanceMethod} (37)
 // CHECK-ROOT-NEXT: ObjCClassMethodDecl:{ResultType void}{TypedText classMethod} (35)

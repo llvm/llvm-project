@@ -397,17 +397,23 @@ void Input::reportWarning(const SMRange &range, const Twine &message) {
 
 std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
   SmallString<128> StringStorage;
-  if (ScalarNode *SN = dyn_cast<ScalarNode>(N)) {
+  switch (N->getType()) {
+  case Node::NK_Scalar: {
+    ScalarNode *SN = dyn_cast<ScalarNode>(N);
     StringRef KeyStr = SN->getValue(StringStorage);
     if (!StringStorage.empty()) {
       // Copy string to permanent storage
       KeyStr = StringStorage.str().copy(StringAllocator);
     }
     return std::make_unique<ScalarHNode>(N, KeyStr);
-  } else if (BlockScalarNode *BSN = dyn_cast<BlockScalarNode>(N)) {
+  }
+  case Node::NK_BlockScalar: {
+    BlockScalarNode *BSN = dyn_cast<BlockScalarNode>(N);
     StringRef ValueCopy = BSN->getValue().copy(StringAllocator);
     return std::make_unique<ScalarHNode>(N, ValueCopy);
-  } else if (SequenceNode *SQ = dyn_cast<SequenceNode>(N)) {
+  }
+  case Node::NK_Sequence: {
+    SequenceNode *SQ = dyn_cast<SequenceNode>(N);
     auto SQHNode = std::make_unique<SequenceHNode>(N);
     for (Node &SN : *SQ) {
       auto Entry = createHNodes(&SN);
@@ -416,7 +422,9 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
       SQHNode->Entries.push_back(std::move(Entry));
     }
     return std::move(SQHNode);
-  } else if (MappingNode *Map = dyn_cast<MappingNode>(N)) {
+  }
+  case Node::NK_Mapping: {
+    MappingNode *Map = dyn_cast<MappingNode>(N);
     auto mapHNode = std::make_unique<MapHNode>(N);
     for (KeyValueNode &KVN : *Map) {
       Node *KeyNode = KVN.getKey();
@@ -447,9 +455,10 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
           std::make_pair(std::move(ValueHNode), KeyNode->getSourceRange());
     }
     return std::move(mapHNode);
-  } else if (isa<NullNode>(N)) {
+  }
+  case Node::NK_Null:
     return std::make_unique<EmptyHNode>(N);
-  } else {
+  default:
     setError(N, "unknown node kind");
     return nullptr;
   }

@@ -79,11 +79,11 @@ public:
   ~ScopedContext() { CUDA_REPORT_IF_ERROR(cuCtxPopCurrent(nullptr)); }
 };
 
+#ifdef MLIR_ENABLE_CUDA_CUSPARSE
 // Note that (1) Nvidia confirms the safety to share handle across multiple
 // instances, and streams. (2) Clients are responsible to call the @mgpu
 // environment initialization/destruction in a thread-safe manner, e.g.,
 // at the beginning of the program before multi-threads are created.
-#ifdef MLIR_ENABLE_CUDA_CUSPARSE
 static cusparseHandle_t cusparse_env = nullptr;
 
 #ifdef MLIR_ENABLE_CUDA_CUSPARSELT
@@ -291,7 +291,6 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuCreateSparseEnv() {
   ScopedContext scopedContext;
   assert(!cusparse_env && "client called mgpuCreateSparseEnv() twice");
   CUSPARSE_REPORT_IF_ERROR(cusparseCreate(&cusparse_env));
-  return;
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuDestroySparseEnv() {

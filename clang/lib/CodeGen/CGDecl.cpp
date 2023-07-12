@@ -1599,7 +1599,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     // OpenMP we have to use a call to __kmpc_alloc_shared(). The matching
     // deallocation call to __kmpc_free_shared() is emitted later.
     bool VarAllocated = false;
-    if (getLangOpts().OpenMPIsDevice) {
+    if (getLangOpts().OpenMPIsTargetDevice) {
       auto &RT = CGM.getOpenMPRuntime();
       if (RT.isDelayedVariableLengthDecl(*this, &D)) {
         // Emit call to __kmpc_alloc_shared() instead of the alloca.

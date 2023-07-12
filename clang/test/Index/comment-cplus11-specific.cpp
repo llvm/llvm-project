@@ -2,7 +2,6 @@
 // RUN: mkdir %t
 // RUN: c-index-test -test-load-source all -comments-xml-schema=%S/../../bindings/xml/comment-xml-schema.rng std=c++11 %s > %t/out
 // RUN: FileCheck %s < %t/out
-// rdar://13752382
 
 namespace inner {
   //! This documentation should be inherited.

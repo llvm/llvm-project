@@ -35,8 +35,6 @@ int test2(int i)
 union u0;    // expected-note {{previous use is here}}
 enum u0 { U0A }; // expected-error {{use of 'u0' with tag type that does not match previous declaration}}
 
-
-// rdar://6095136
 extern enum some_undefined_enum ve2; // expected-warning {{ISO C forbids forward references to 'enum' types}}
 
 void test4(void) {
@@ -53,7 +51,6 @@ void test4(void) {
 // PR2416
 enum someenum {};  // expected-error {{use of empty enum}}
 
-// <rdar://problem/6093889>
 enum e0 { // expected-note {{previous definition is here}}
   E0 = sizeof(enum e0 { E1 }), // expected-error {{nested redefinition}}
 };
@@ -67,7 +64,6 @@ void foo(void) {
   enum xpto; // expected-warning{{ISO C forbids forward references to 'enum' types}}
 }
 
-// <rdar://problem/6503878>
 typedef enum { X = 0 }; // expected-warning{{typedef requires a name}}
 
 
@@ -107,7 +103,6 @@ void PR7911F(void) {
 char test5[__has_feature(enumerator_attributes) ? 1 : -1];
 
 // PR8694
-// rdar://8707031
 void PR8694(int* e) // expected-note {{passing argument to parameter 'e' here}}
 {
 }

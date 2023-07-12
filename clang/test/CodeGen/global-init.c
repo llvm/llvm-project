@@ -53,6 +53,5 @@ char yuv_types[4][6]= {"4:0:0","4:2:0","4:2:2","4:4:4"};
 // NOTE: tentative definitions are processed at the end of the translation unit.
 
 // This shouldn't be emitted as common because it has an explicit section.
-// rdar://7119244
 // CHECK: @b ={{.*}} global i32 0, section "foo"
 int b __attribute__((section("foo")));

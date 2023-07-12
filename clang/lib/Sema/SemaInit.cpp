@@ -143,6 +143,9 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     if (IsWideCharCompatible(ElemTy, Context))
       return SIF_IncompatWideStringIntoWideChar;
     return SIF_Other;
+  case StringLiteral::Unevaluated:
+    assert(false && "Unevaluated string literal in initialization");
+    break;
   }
 
   llvm_unreachable("missed a StringLiteral kind?");
@@ -8279,7 +8282,7 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
 
       case IndirectLocalPathEntry::DefaultInit: {
         auto *FD = cast<FieldDecl>(Elem.D);
-        Diag(FD->getLocation(), diag::note_init_with_default_member_initalizer)
+        Diag(FD->getLocation(), diag::note_init_with_default_member_initializer)
             << FD << nextPathEntryRange(Path, I + 1, L);
         break;
       }

@@ -38,7 +38,7 @@ int test4(volatile int *addr) {
   return (int)oldval;
 }
 
-// <rdar://problem/10919182> - This should have both inputs be of type x86_mmx.
+// This should have both inputs be of type x86_mmx.
 // CHECK: @test5
 typedef long long __m64 __attribute__((__vector_size__(8)));
 __m64 test5(__m64 __A, __m64 __B) {

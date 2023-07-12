@@ -8,6 +8,8 @@
 // RUN:   "`ls fdr-logging-1thr-* | head -n1`" | FileCheck %s
 // RUN: rm fdr-logging-1thr-*
 
+// UNSUPPORTED: target=arm{{.*}}
+
 #include "xray/xray_log_interface.h"
 #include <cassert>
 

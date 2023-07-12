@@ -9,7 +9,6 @@ T _i;
         T get() {return _i;};
 };
 
-// rdar: // 7495203
 class A {
     public:
 	A() : field(10), d1(3.14) {}
@@ -25,7 +24,7 @@ class A {
 void A::F()
     {
 	__block A &tlc = *this;
-	// crashed in code gen (radar 7495203)
+	// crashed in code gen
         ^{ tlc.S(); }();
     }
 

@@ -1,6 +1,7 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestIR
   TestBuiltinAttributeInterfaces.cpp
+  TestBuiltinDistinctAttributes.cpp
   TestClone.cpp
   TestDiagnostics.cpp
   TestDominance.cpp

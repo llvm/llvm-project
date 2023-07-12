@@ -276,6 +276,13 @@ def ext_ms_reserved_user_defined_literal : ExtWarn<
   "identifier">, InGroup<ReservedUserDefinedLiteral>;
 def err_unsupported_string_concat : Error<
   "unsupported non-standard concatenation of string literals">;
+
+def err_unevaluated_string_prefix : Error<
+  "an unevaluated string literal cannot have an encoding prefix">;
+def err_unevaluated_string_udl : Error<
+  "an unevaluated string literal cannot be a user-defined literal">;
+def err_unevaluated_string_invalid_escape_sequence : Error<
+  "invalid escape sequence '%0' in an unevaluated string literal">;
 def err_string_concat_mixed_suffix : Error<
   "differing user-defined suffixes ('%0' and '%1') in string literal "
   "concatenation">;

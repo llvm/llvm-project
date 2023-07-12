@@ -7,7 +7,6 @@
 // RUN: cp %s %t
 // RUN: %clang_cc1 -Wmissing-method-return-type -fixit -x objective-c++ -Wno-objc-root-class %t
 // RUN: %clang_cc1 -fsyntax-only -pedantic -Wmissing-method-return-type -Werror -x objective-c++ -Wno-objc-root-class %t
-// rdar://9615045
 
 @interface I
 -  initWithFoo:(id)foo; // expected-warning {{method has no return type specified; defaults to 'id' [-Wmissing-method-return-type]}}

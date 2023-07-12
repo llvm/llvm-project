@@ -97,7 +97,6 @@ void f17(float a, float b, float c, float d, float e, float f, float g, float h,
 
 // Check for valid coercion.  The struct should be passed/returned as i32, not
 // as i64 for better code quality.
-// rdar://8135035
 // CHECK-LABEL: define{{.*}} void @f18(i32 noundef %a, i32 %f18_arg1.coerce)
 struct f18_s0 { int f0; };
 void f18(int a, struct f18_s0 f18_arg1) { while (1) {} }
@@ -122,7 +121,6 @@ struct StringRef {
   const char *Ptr;
 };
 
-// rdar://7375902
 // CHECK-LABEL: define{{.*}} ptr @f21(i64 %S.coerce0, ptr %S.coerce1)
 const char *f21(struct StringRef S) { return S.x+S.Ptr; }
 
@@ -155,7 +153,6 @@ struct f23S f24(struct f23S *X, struct f24s *P2) {
   // CHECK: define{{.*}} { i64, i32 } @f24(ptr noundef %X, ptr noundef %P2)
 }
 
-// rdar://8248065
 typedef float v4f32 __attribute__((__vector_size__(16)));
 v4f32 f25(v4f32 X) {
   // CHECK-LABEL: define{{.*}} <4 x float> @f25(<4 x float> noundef %X)
@@ -210,7 +207,6 @@ struct v8f32wrapper_wrapper f27b(struct v8f32wrapper_wrapper X) {
   return X;
 }
 
-// rdar://5711709
 struct f28c {
   double x;
   int y;
@@ -230,14 +226,12 @@ void f29a(struct f29a A) {
   // CHECK-LABEL: define{{.*}} void @f29a(double %A.coerce0, i32 %A.coerce1)
 }
 
-// rdar://8249586
 struct S0 { char f0[8]; char f2; char f3; char f4; };
 void f30(struct S0 p_4) {
   // CHECK-LABEL: define{{.*}} void @f30(i64 %p_4.coerce0, i24 %p_4.coerce1)
 }
 
 // Pass the third element as a float when followed by tail padding.
-// rdar://8251384
 struct f31foo { float a, b, c; };
 float f31(struct f31foo X) {
   // CHECK-LABEL: define{{.*}} float @f31(<2 x float> %X.coerce0, float %X.coerce1)
@@ -245,13 +239,10 @@ float f31(struct f31foo X) {
 }
 
 _Complex float f32(_Complex float A, _Complex float B) {
-  // rdar://6379669
   // CHECK-LABEL: define{{.*}} <2 x float> @f32(<2 x float> noundef %A.coerce, <2 x float> noundef %B.coerce)
   return A+B;
 }
 
-
-// rdar://8357396
 struct f33s { long x; float c,d; };
 
 void f33(va_list X) {
@@ -260,17 +251,13 @@ void f33(va_list X) {
 
 typedef unsigned long long v1i64 __attribute__((__vector_size__(8)));
 
-// rdar://8359248
 // CHECK-LABEL: define{{.*}} double @f34(double noundef %arg.coerce)
 v1i64 f34(v1i64 arg) { return arg; }
 
-
-// rdar://8358475
 // CHECK-LABEL: define{{.*}} double @f35(double noundef %arg.coerce)
 typedef unsigned long v1i64_2 __attribute__((__vector_size__(8)));
 v1i64_2 f35(v1i64_2 arg) { return arg+arg; }
 
-// rdar://9122143
 // CHECK: declare void @func(ptr noundef byval(%struct._str) align 16)
 typedef struct _str {
   union {
@@ -380,7 +367,6 @@ struct s47 { unsigned a; };
 void f47(int,int,int,int,int,int,struct s47);
 void test47(int a, struct s47 b) { f47(a, a, a, a, a, a, b); }
 
-// rdar://12723368
 // In the following example, there are holes in T4 at the 3rd byte and the 4th
 // byte, however, T2 does not have those holes. T4 is chosen to be the
 // representing type for union T1, but we can't use load or store of T4 since

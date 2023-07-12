@@ -29,10 +29,12 @@ namespace {
   protected:
     llvm::FoldingSetNodeID &ID;
     bool Canonical;
+    bool ProfileLambdaExpr;
 
   public:
-    StmtProfiler(llvm::FoldingSetNodeID &ID, bool Canonical)
-        : ID(ID), Canonical(Canonical) {}
+    StmtProfiler(llvm::FoldingSetNodeID &ID, bool Canonical,
+                 bool ProfileLambdaExpr)
+        : ID(ID), Canonical(Canonical), ProfileLambdaExpr(ProfileLambdaExpr) {}
 
     virtual ~StmtProfiler() {}
 
@@ -83,8 +85,10 @@ namespace {
 
   public:
     StmtProfilerWithPointers(llvm::FoldingSetNodeID &ID,
-                             const ASTContext &Context, bool Canonical)
-        : StmtProfiler(ID, Canonical), Context(Context) {}
+                             const ASTContext &Context, bool Canonical,
+                             bool ProfileLambdaExpr)
+        : StmtProfiler(ID, Canonical, ProfileLambdaExpr), Context(Context) {}
+
   private:
     void HandleStmtClass(Stmt::StmtClass SC) override {
       ID.AddInteger(SC);
@@ -181,7 +185,8 @@ namespace {
     ODRHash &Hash;
   public:
     StmtProfilerWithoutPointers(llvm::FoldingSetNodeID &ID, ODRHash &Hash)
-        : StmtProfiler(ID, false), Hash(Hash) {}
+        : StmtProfiler(ID, /*Canonical=*/false, /*ProfileLambdaExpr=*/false),
+          Hash(Hash) {}
 
   private:
     void HandleStmtClass(Stmt::StmtClass SC) override {
@@ -2030,14 +2035,27 @@ StmtProfiler::VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *S) {
 
 void
 StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
-  // Do not recursively visit the children of this expression. Profiling the
-  // body would result in unnecessary work, and is not safe to do during
-  // deserialization.
-  VisitStmtNoChildren(S);
+  if (!ProfileLambdaExpr) {
+    // Do not recursively visit the children of this expression. Profiling the
+    // body would result in unnecessary work, and is not safe to do during
+    // deserialization.
+    VisitStmtNoChildren(S);
 
-  // C++20 [temp.over.link]p5:
-  //   Two lambda-expressions are never considered equivalent.
-  VisitDecl(S->getLambdaClass());
+    // C++20 [temp.over.link]p5:
+    //   Two lambda-expressions are never considered equivalent.
+    VisitDecl(S->getLambdaClass());
+
+    return;
+  }
+
+  CXXRecordDecl *Lambda = S->getLambdaClass();
+  ID.AddInteger(Lambda->getODRHash());
+
+  for (const auto &Capture : Lambda->captures()) {
+    ID.AddInteger(Capture.getCaptureKind());
+    if (Capture.capturesVariable())
+      VisitDecl(Capture.getCapturedVar());
+  }
 }
 
 void
@@ -2391,8 +2409,8 @@ void StmtProfiler::VisitTemplateArgument(const TemplateArgument &Arg) {
 }
 
 void Stmt::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-                   bool Canonical) const {
-  StmtProfilerWithPointers Profiler(ID, Context, Canonical);
+                   bool Canonical, bool ProfileLambdaExpr) const {
+  StmtProfilerWithPointers Profiler(ID, Context, Canonical, ProfileLambdaExpr);
   Profiler.Visit(this);
 }
 

@@ -229,9 +229,10 @@ public:
         reshape.getLoc(),
         RankedTensorType::get(intermediateShape,
                               reshape.getType().getElementType()),
-        adaptor.getInput1());
-    Value expand =
-        rewriter.create<tosa::ReshapeOp>(reshape.getLoc(), resultTy, collapse);
+        adaptor.getInput1(), rewriter.getDenseI64ArrayAttr(intermediateShape));
+    Value expand = rewriter.create<tosa::ReshapeOp>(
+        reshape.getLoc(), resultTy, collapse,
+        rewriter.getDenseI64ArrayAttr(resultTy.getShape()));
     rewriter.replaceOp(reshape, expand);
 
     return success();

@@ -1501,6 +1501,26 @@ void hlfir::CharExtremumOp::build(mlir::OpBuilder &builder,
   build(builder, result, resultType, predicate, strings);
 }
 
+//===----------------------------------------------------------------------===//
+// GetLength
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult
+hlfir::GetLengthOp::canonicalize(GetLengthOp getLength,
+                                 mlir::PatternRewriter &rewriter) {
+  mlir::Location loc = getLength.getLoc();
+  auto exprTy = mlir::cast<hlfir::ExprType>(getLength.getExpr().getType());
+  auto charTy = mlir::cast<fir::CharacterType>(exprTy.getElementType());
+  if (!charTy.hasConstantLen())
+    return mlir::failure();
+
+  mlir::Type indexTy = rewriter.getIndexType();
+  auto cstLen = rewriter.create<mlir::arith::ConstantOp>(
+      loc, indexTy, mlir::IntegerAttr::get(indexTy, charTy.getLen()));
+  rewriter.replaceOp(getLength, cstLen);
+  return mlir::success();
+}
+
 #include "flang/Optimizer/HLFIR/HLFIROpInterfaces.cpp.inc"
 #define GET_OP_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIREnums.cpp.inc"

@@ -68,10 +68,13 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
 LogicalResult CpAsyncOp::verify() {
+  if (getModifier() != LoadCacheModifierKind::CG &&
+      getModifier() != LoadCacheModifierKind::CA)
+    return emitError("Only CG and CA cache modifiers are supported.");
   if (getSize() != 4 && getSize() != 8 && getSize() != 16)
     return emitError("expected byte size to be either 4, 8 or 16.");
-  if (getBypassL1() && getSize() != 16)
-    return emitError("bypass l1 is only support for 16 bytes copy.");
+  if (getModifier() == LoadCacheModifierKind::CG && getSize() != 16)
+    return emitError("CG cache modifier is only support for 16 bytes copy.");
   return success();
 }
 

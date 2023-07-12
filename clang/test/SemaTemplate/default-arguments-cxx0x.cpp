@@ -61,7 +61,6 @@ namespace PR16975 {
   baz data{0};
 }
 
-// rdar://23810407
 // An IRGen failure due to a symbol collision due to a default argument
 // being instantiated twice.  Credit goes to Richard Smith for this
 // reduction to a -fsyntax-only failure.
@@ -80,7 +79,6 @@ namespace rdar23810407 {
   }
 }
 
-// rdar://problem/24480205
 namespace PR13986 {
   constexpr unsigned Dynamic = 0;
   template <unsigned> class A { template <unsigned = Dynamic> void m_fn1(); };
@@ -90,7 +88,6 @@ namespace PR13986 {
   };
 }
 
-// rdar://problem/34167492
 // Template B is instantiated during checking if defaulted A copy constructor
 // is constexpr. For this we check if S<int> copy constructor is constexpr. And
 // for this we check S constructor template with default argument that mentions

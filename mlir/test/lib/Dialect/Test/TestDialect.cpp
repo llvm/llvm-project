@@ -1229,8 +1229,8 @@ void PrettyPrintedRegionOp::print(OpAsmPrinter &p) {
   // Assuming that region has a single non-terminator inner-op, if the inner-op
   // meets some criteria (which in this case is a simple one  based on the name
   // of inner-op), then we can print the entire region in a succinct way.
-  // Here we assume that the prototype of "test.special.op" can be trivially derived
-  // while parsing it back.
+  // Here we assume that the prototype of "test.special.op" can be trivially
+  // derived while parsing it back.
   if (innerOp.getName().getStringRef().equals("test.special.op")) {
     p << " start test.special.op end";
   } else {
@@ -1788,7 +1788,9 @@ LogicalResult TestVerifiersOp::verify() {
   if (definingOp && failed(mlir::verify(definingOp)))
     return emitOpError("operand hasn't been verified");
 
-  emitRemark("success run of verifier");
+  // Avoid using `emitRemark(msg)` since that will trigger an infinite verifier
+  // loop.
+  mlir::emitRemark(getLoc(), "success run of verifier");
 
   return success();
 }
@@ -1802,7 +1804,9 @@ LogicalResult TestVerifiersOp::verifyRegions() {
       if (failed(mlir::verify(&op)))
         return emitOpError("nested op hasn't been verified");
 
-  emitRemark("success run of region verifier");
+  // Avoid using `emitRemark(msg)` since that will trigger an infinite verifier
+  // loop.
+  mlir::emitRemark(getLoc(), "success run of region verifier");
 
   return success();
 }

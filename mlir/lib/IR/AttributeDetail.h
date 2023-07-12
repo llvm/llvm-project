@@ -14,11 +14,13 @@
 #define ATTRIBUTEDETAIL_H_
 
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/StorageUniquer.h"
+#include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -349,6 +351,70 @@ struct StringAttrStorage : public AttributeStorage {
   Dialect *referencedDialect;
 };
 
+//===----------------------------------------------------------------------===//
+// DistinctAttr
+//===----------------------------------------------------------------------===//
+
+/// An attribute to store a distinct reference to another attribute.
+struct DistinctAttrStorage : public AttributeStorage {
+  using KeyTy = Attribute;
+
+  DistinctAttrStorage(Attribute referencedAttr)
+      : referencedAttr(referencedAttr) {}
+
+  /// Returns the referenced attribute as key.
+  KeyTy getAsKey() const { return KeyTy(referencedAttr); }
+
+  /// The referenced attribute.
+  Attribute referencedAttr;
+};
+
+/// A specialized attribute uniquer for distinct attributes that always
+/// allocates since the distinct attribute instances use the address of their
+/// storage as unique identifier.
+class DistinctAttributeUniquer {
+public:
+  /// Creates a distinct attribute storage. Allocates every time since the
+  /// address of the storage serves as unique identifier.
+  template <typename T, typename... Args>
+  static T get(MLIRContext *context, Args &&...args) {
+    static_assert(std::is_same_v<typename T::ImplType, DistinctAttrStorage>,
+                  "expects a distinct attribute storage");
+    DistinctAttrStorage *storage = DistinctAttributeUniquer::allocateStorage(
+        context, std::forward<Args>(args)...);
+    storage->initializeAbstractAttribute(
+        AbstractAttribute::lookup(DistinctAttr::getTypeID(), context));
+    return storage;
+  }
+
+private:
+  /// Allocates a distinct attribute storage.
+  static DistinctAttrStorage *allocateStorage(MLIRContext *context,
+                                              Attribute referencedAttr);
+};
+
+/// An allocator for distinct attribute storage instances. It uses thread local
+/// bump pointer allocators stored in a thread local cache to ensure the storage
+/// is freed after the destruction of the distinct attribute allocator.
+class DistinctAttributeAllocator {
+public:
+  DistinctAttributeAllocator() = default;
+
+  DistinctAttributeAllocator(DistinctAttributeAllocator &&) = delete;
+  DistinctAttributeAllocator(const DistinctAttributeAllocator &) = delete;
+  DistinctAttributeAllocator &
+  operator=(const DistinctAttributeAllocator &) = delete;
+
+  /// Allocates a distinct attribute storage using a thread local bump pointer
+  /// allocator to enable synchronization free parallel allocations.
+  DistinctAttrStorage *allocate(Attribute referencedAttr) {
+    return new (allocatorCache.get().Allocate<DistinctAttrStorage>())
+        DistinctAttrStorage(referencedAttr);
+  }
+
+private:
+  ThreadLocalCache<llvm::BumpPtrAllocator> allocatorCache;
+};
 } // namespace detail
 } // namespace mlir
 

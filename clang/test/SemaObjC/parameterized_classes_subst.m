@@ -435,7 +435,6 @@ void test_ternary_operator(NSArray<NSString *> *stringArray,
 // --------------------------------------------------------------------------
 typedef NSArray<NSObject> ArrayOfNSObjectWarning; // expected-warning{{parameterized class 'NSArray' already conforms to the protocols listed; did you forget a '*'?}}
 
-// rdar://25060179
 @interface MyMutableDictionary<KeyType, ObjectType> : NSObject
 - (void)setObject:(ObjectType)obj forKeyedSubscript:(KeyType <NSCopying>)key; // expected-note{{passing argument to parameter 'obj' here}} \
     // expected-note{{passing argument to parameter 'key' here}}
@@ -471,7 +470,7 @@ void bar(MyMutableDictionary<NSString *, NSString *> *stringsByString,
 // --------------------------------------------------------------------------
 // Use a type parameter as a type argument.
 // --------------------------------------------------------------------------
-// Type bounds in a category/extension are omitted. rdar://problem/54329242
+// Type bounds in a category/extension are omitted.
 @interface ParameterizedContainer<T : id<NSCopying>>
 - (ParameterizedContainer<T> *)inInterface;
 @end

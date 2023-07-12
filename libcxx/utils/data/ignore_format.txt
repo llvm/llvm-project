@@ -215,6 +215,7 @@ libcxx/include/__format/formatter_pointer.h
 libcxx/include/__format/formatter_string.h
 libcxx/include/__format/parser_std_format_spec.h
 libcxx/include/__format/unicode.h
+libcxx/include/__format/write_escaped.h
 libcxx/include/forward_list
 libcxx/include/fstream
 libcxx/include/__functional/binary_function.h

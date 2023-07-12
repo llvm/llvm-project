@@ -119,7 +119,7 @@ public:
   explicit CGOpenMPRuntimeGPU(CodeGenModule &CGM);
   void clear() override;
 
-  bool isTargetCodegen() const override { return true; };
+  bool isGPU() const override { return true; };
 
   /// Declare generalized virtual functions which need to be defined
   /// by all specializations of OpenMPGPURuntime Targets like AMDGCN

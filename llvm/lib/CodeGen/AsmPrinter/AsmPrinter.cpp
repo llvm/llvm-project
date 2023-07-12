@@ -486,6 +486,11 @@ bool AsmPrinter::doInitialization(Module &M) {
     }
   }
 
+  // On AIX, emit bytes for llvm.commandline metadata after .file so that the
+  // C_INFO symbol is preserved if any csect is kept by the linker.
+  if (TM.getTargetTriple().isOSBinFormatXCOFF())
+    emitModuleCommandLines(M);
+
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "AsmPrinter didn't require GCModuleInfo?");
   for (const auto &I : *MI)
@@ -725,8 +730,8 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     if (T.getArch() != Triple::aarch64 || !T.isAndroid())
       OutContext.reportError(SMLoc(),
-                             "Tagged symbols (-fsanitize=memtag-globals) are "
-                             "only supported on aarch64 + Android.");
+                             "tagged symbols (-fsanitize=memtag-globals) are "
+                             "only supported on AArch64 Android");
     OutStreamer->emitSymbolAttribute(EmittedSym, MAI->getMemtagAttr());
   }
 
@@ -2330,7 +2335,9 @@ bool AsmPrinter::doFinalization(Module &M) {
   emitModuleIdents(M);
 
   // Emit bytes for llvm.commandline metadata.
-  emitModuleCommandLines(M);
+  // The command line metadata is emitted earlier on XCOFF.
+  if (!TM.getTargetTriple().isOSBinFormatXCOFF())
+    emitModuleCommandLines(M);
 
   // Emit .note.GNU-split-stack and .note.GNU-no-split-stack sections if
   // split-stack is used.

@@ -12,7 +12,6 @@
 
 MyObject *x;
 
-// rdar://10444476
 void test0(void) {
   id obj = [NSObject new];
   [x isEqual : obj];
@@ -29,7 +28,6 @@ void test0(void) {
 // CHECK:       phi i8 [ [[CALL]], {{%.*}} ], [ 0, {{%.*}} ]
 
 // Ensure that we build PHIs correctly in the presence of cleanups.
-// rdar://12046763
 void test1(void) {
   id obj = [NSObject new];
   __weak id weakObj = obj;

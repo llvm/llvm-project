@@ -1352,6 +1352,29 @@ void AddressSanitizer::getInterestingMemoryOperands(
       Interesting.emplace_back(I, OpOffset, IsWrite, Ty, Alignment, Mask);
       break;
     }
+    case Intrinsic::masked_expandload:
+    case Intrinsic::masked_compressstore: {
+      bool IsWrite = CI->getIntrinsicID() == Intrinsic::masked_compressstore;
+      unsigned OpOffset = IsWrite ? 1 : 0;
+      if (IsWrite ? !ClInstrumentWrites : !ClInstrumentReads)
+        return;
+      auto BasePtr = CI->getOperand(OpOffset);
+      if (ignoreAccess(I, BasePtr))
+        return;
+      MaybeAlign Alignment = BasePtr->getPointerAlignment(*DL);
+      Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
+
+      IRBuilder IB(I);
+      Value *Mask = CI->getOperand(1 + OpOffset);
+      // Use the popcount of Mask as the effective vector length.
+      Type *ExtTy = VectorType::get(IntptrTy, cast<VectorType>(Ty));
+      Value *ExtMask = IB.CreateZExt(Mask, ExtTy);
+      Value *EVL = IB.CreateAddReduce(ExtMask);
+      Value *TrueMask = ConstantInt::get(Mask->getType(), 1);
+      Interesting.emplace_back(I, OpOffset, IsWrite, Ty, Alignment, TrueMask,
+                               EVL);
+      break;
+    }
     case Intrinsic::vp_load:
     case Intrinsic::vp_store:
     case Intrinsic::experimental_vp_strided_load:

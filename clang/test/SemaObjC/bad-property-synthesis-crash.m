@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
-// rdar://10177744
 
 @interface Foo
 @property (nonatomic, retain) NSString* what; // expected-error {{unknown type name 'NSString'}} \

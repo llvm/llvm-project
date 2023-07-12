@@ -158,7 +158,8 @@
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp-host-ir-file-path <value> 
 ! HELP-FC1-NEXT:                        Path to the IR file produced by the frontend for the host.
-! HELP-FC1-NEXT: -fopenmp-is-device     Generate code only for an OpenMP target device.
+! HELP-FC1-NEXT: -fopenmp-is-target-device
+! HELP-FC1-NEXT:                        Generate code only for an OpenMP target device.
 ! HELP-FC1-NEXT: -fopenmp-target-debug  Enable debugging in the OpenMP offloading device RTL
 ! HELP-FC1-NEXT: -fopenmp-version=<value>
 ! HELP-FC1-NEXT:                        Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang

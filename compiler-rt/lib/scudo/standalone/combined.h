@@ -1178,9 +1178,16 @@ private:
       if (LIKELY(ClassId)) {
         bool UnlockRequired;
         auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-        TSD->getCache().deallocate(ClassId, BlockBegin);
+        const bool CacheDrained =
+            TSD->getCache().deallocate(ClassId, BlockBegin);
         if (UnlockRequired)
           TSD->unlock();
+        // When we have drained some blocks back to the Primary from TSD, that
+        // implies that we may have the chance to release some pages as well.
+        // Note that in order not to block other thread's accessing the TSD,
+        // release the TSD first then try the page release.
+        if (CacheDrained)
+          Primary.tryReleaseToOS(ClassId, ReleaseToOS::Normal);
       } else {
         if (UNLIKELY(useMemoryTagging<Config>(Options)))
           storeTags(reinterpret_cast<uptr>(BlockBegin),

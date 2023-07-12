@@ -347,7 +347,6 @@ public:
         continue;
       }
 
-      SmallVector<User *, 16> Stack(GV.users());
       for (User *V : GV.users()) {
         if (auto *I = dyn_cast<Instruction>(V)) {
           Function *F = I->getFunction();

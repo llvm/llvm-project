@@ -356,21 +356,18 @@ define i16 @v16i32(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 x i32> %d) {
 ;
 ; AVX2-LABEL: v16i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vpcmpgtd %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; AVX2-NEXT:    vpcmpgtd %ymm6, %ymm4, %ymm4
-; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm6
-; AVX2-NEXT:    vpand %xmm6, %xmm2, %xmm2
-; AVX2-NEXT:    vpcmpgtd %ymm7, %ymm5, %ymm5
-; AVX2-NEXT:    vextracti128 $1, %ymm5, %xmm6
-; AVX2-NEXT:    vpand %xmm6, %xmm3, %xmm3
-; AVX2-NEXT:    vpand %xmm5, %xmm1, %xmm1
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vpand %xmm4, %xmm0, %xmm0
-; AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpgtd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpcmpgtd %ymm7, %ymm5, %ymm2
+; AVX2-NEXT:    vpcmpgtd %ymm6, %ymm4, %ymm3
+; AVX2-NEXT:    vpackssdw %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; AVX2-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    vzeroupper
@@ -450,21 +447,18 @@ define i16 @v16f32(<16 x float> %a, <16 x float> %b, <16 x float> %c, <16 x floa
 ;
 ; AVX2-LABEL: v16f32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
-; AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX2-NEXT:    vcmpltps %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX2-NEXT:    vcmpltps %ymm4, %ymm6, %ymm4
-; AVX2-NEXT:    vextractf128 $1, %ymm4, %xmm6
-; AVX2-NEXT:    vandps %xmm6, %xmm2, %xmm2
-; AVX2-NEXT:    vcmpltps %ymm5, %ymm7, %ymm5
-; AVX2-NEXT:    vextractf128 $1, %ymm5, %xmm6
-; AVX2-NEXT:    vandps %xmm6, %xmm3, %xmm3
-; AVX2-NEXT:    vandps %xmm5, %xmm1, %xmm1
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
-; AVX2-NEXT:    vandps %xmm4, %xmm0, %xmm0
-; AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vcmpltps %ymm5, %ymm7, %ymm2
+; AVX2-NEXT:    vcmpltps %ymm4, %ymm6, %ymm3
+; AVX2-NEXT:    vpackssdw %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; AVX2-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
 ; AVX2-NEXT:    vpmovmskb %xmm0, %eax
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    vzeroupper

@@ -59,8 +59,7 @@ static_assert(pointerAssign2() == 12, "");
 constexpr int unInitLocal() {
   int a;
   return a; // ref-note {{read of uninitialized object}} \
-            // expected-note {{read of object outside its lifetime}}
-            // FIXME: ^^^ Wrong diagnostic.
+            // expected-note {{read of uninitialized object}}
 }
 static_assert(unInitLocal() == 0, ""); // ref-error {{not an integral constant expression}} \
                                        // ref-note {{in call to 'unInitLocal()'}} \
@@ -76,7 +75,7 @@ static_assert(initializedLocal() == 20);
 
 constexpr int initializedLocal2() {
   int a[2];
-  return *a; // expected-note {{read of object outside its lifetime}} \
+  return *a; // expected-note {{read of uninitialized object is not allowed in a constant expression}} \
              // ref-note {{read of uninitialized object is not allowed in a constant expression}}
 }
 static_assert(initializedLocal2() == 20); // expected-error {{not an integral constant expression}} \
@@ -89,7 +88,7 @@ struct Int { int a; };
 constexpr int initializedLocal3() {
   Int i;
   return i.a; // ref-note {{read of uninitialized object is not allowed in a constant expression}} \
-              // expected-note {{read of object outside its lifetime}}
+              // expected-note {{read of uninitialized object}}
 }
 static_assert(initializedLocal3() == 20); // expected-error {{not an integral constant expression}} \
                                           // expected-note {{in call to}} \
@@ -315,7 +314,7 @@ namespace BaseInit {
 
   static_assert(Final{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
-                                            // expected-note {{read of object outside its lifetime}} \
+                                            // expected-note {{read of uninitialized object}} \
                                             // ref-error {{not an integral constant expression}} \
                                             // ref-note {{read of uninitialized object}}
 
@@ -337,7 +336,7 @@ namespace BaseInit {
   static_assert(Final2{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final2{1, 2, 3}.b == 2, ""); // OK
   static_assert(Final2{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
-                                             // expected-note {{read of object outside its lifetime}} \
+                                             // expected-note {{read of uninitialized object}} \
                                              // ref-error {{not an integral constant expression}} \
                                              // ref-note {{read of uninitialized object}}
 
@@ -356,7 +355,7 @@ namespace BaseInit {
   static_assert(Final3{1, 2, 3}.c == 3, ""); // OK
   static_assert(Final3{1, 2, 3}.b == 2, ""); // OK
   static_assert(Final3{1, 2, 3}.a == 0, ""); // expected-error {{not an integral constant expression}} \
-                                             // expected-note {{read of object outside its lifetime}} \
+                                             // expected-note {{read of uninitialized object}} \
                                              // ref-error {{not an integral constant expression}} \
                                              // ref-note {{read of uninitialized object}}
 };

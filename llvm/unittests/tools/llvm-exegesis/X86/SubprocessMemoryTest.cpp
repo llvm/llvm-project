@@ -21,7 +21,7 @@
 namespace llvm {
 namespace exegesis {
 
-#ifdef __linux__
+#if defined(__linux__) && !defined(__ANDROID__)
 
 class SubprocessMemoryTest : public X86TestBase {
 protected:
@@ -126,7 +126,7 @@ TEST_F(SubprocessMemoryTest, DefinitionEndTruncation) {
   checkSharedMemoryDefinition("/3memdef0", 4096, Test1Expected);
 }
 
-#endif // __linux__
+#endif // defined(__linux__) && !defined(__ANDROID__)
 
 } // namespace exegesis
 } // namespace llvm

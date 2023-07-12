@@ -4697,24 +4697,24 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCV::BI__builtin_riscv_aes64ks1i_64:
     return SemaBuiltinConstantArgRange(TheCall, 1, 0, 10);
   // Check if value range for vxrm is in [0, 3]
-  case RISCVVector::BI__builtin_rvv_vaaddu_vv_ta:
-  case RISCVVector::BI__builtin_rvv_vaaddu_vx_ta:
-  case RISCVVector::BI__builtin_rvv_vaadd_vv_ta:
-  case RISCVVector::BI__builtin_rvv_vaadd_vx_ta:
-  case RISCVVector::BI__builtin_rvv_vasubu_vv_ta:
-  case RISCVVector::BI__builtin_rvv_vasubu_vx_ta:
-  case RISCVVector::BI__builtin_rvv_vasub_vv_ta:
-  case RISCVVector::BI__builtin_rvv_vasub_vx_ta:
-  case RISCVVector::BI__builtin_rvv_vsmul_vv_ta:
-  case RISCVVector::BI__builtin_rvv_vsmul_vx_ta:
-  case RISCVVector::BI__builtin_rvv_vssra_vv_ta:
-  case RISCVVector::BI__builtin_rvv_vssra_vx_ta:
-  case RISCVVector::BI__builtin_rvv_vssrl_vv_ta:
-  case RISCVVector::BI__builtin_rvv_vssrl_vx_ta:
-  case RISCVVector::BI__builtin_rvv_vnclip_wv_ta:
-  case RISCVVector::BI__builtin_rvv_vnclip_wx_ta:
-  case RISCVVector::BI__builtin_rvv_vnclipu_wv_ta:
-  case RISCVVector::BI__builtin_rvv_vnclipu_wx_ta:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vv:
+  case RISCVVector::BI__builtin_rvv_vaaddu_vx:
+  case RISCVVector::BI__builtin_rvv_vaadd_vv:
+  case RISCVVector::BI__builtin_rvv_vaadd_vx:
+  case RISCVVector::BI__builtin_rvv_vasubu_vv:
+  case RISCVVector::BI__builtin_rvv_vasubu_vx:
+  case RISCVVector::BI__builtin_rvv_vasub_vv:
+  case RISCVVector::BI__builtin_rvv_vasub_vx:
+  case RISCVVector::BI__builtin_rvv_vsmul_vv:
+  case RISCVVector::BI__builtin_rvv_vsmul_vx:
+  case RISCVVector::BI__builtin_rvv_vssra_vv:
+  case RISCVVector::BI__builtin_rvv_vssra_vx:
+  case RISCVVector::BI__builtin_rvv_vssrl_vv:
+  case RISCVVector::BI__builtin_rvv_vssrl_vx:
+  case RISCVVector::BI__builtin_rvv_vnclip_wv:
+  case RISCVVector::BI__builtin_rvv_vnclip_wx:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wv:
+  case RISCVVector::BI__builtin_rvv_vnclipu_wx:
     return SemaBuiltinConstantArgRange(TheCall, 2, 0, 3);
   case RISCVVector::BI__builtin_rvv_vaaddu_vv_tu:
   case RISCVVector::BI__builtin_rvv_vaaddu_vx_tu:

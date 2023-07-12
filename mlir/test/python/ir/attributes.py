@@ -441,11 +441,11 @@ def testDictAttr():
 
         assert len(a) == 2
 
-        # CHECK: 42 : i32
-        print(a["integerattr"])
+        # CHECK: integerattr: IntegerAttr(42 : i32)
+        print("integerattr:", repr(a["integerattr"]))
 
-        # CHECK: "string"
-        print(a["stringattr"])
+        # CHECK: stringattr: StringAttr("string")
+        print("stringattr:", repr(a["stringattr"]))
 
         # CHECK: True
         print("stringattr" in a)
@@ -488,14 +488,14 @@ def testTypeAttr():
 @run
 def testArrayAttr():
     with Context():
-        raw = Attribute.parse("[42, true, vector<4xf32>]")
-    # CHECK: attr: [42, true, vector<4xf32>]
-    print("raw attr:", raw)
-    # CHECK: - 42
-    # CHECK: - true
-    # CHECK: - vector<4xf32>
-    for attr in ArrayAttr(raw):
-        print("- ", attr)
+        arr = Attribute.parse("[42, true, vector<4xf32>]")
+    # CHECK: arr: [42, true, vector<4xf32>]
+    print("arr:", arr)
+    # CHECK: - IntegerAttr(42 : i64)
+    # CHECK: - BoolAttr(true)
+    # CHECK: - TypeAttr(vector<4xf32>)
+    for attr in arr:
+        print("- ", repr(attr))
 
     with Context():
         intAttr = Attribute.parse("42")
@@ -504,18 +504,18 @@ def testArrayAttr():
         raw = ArrayAttr.get([vecAttr, boolAttr, intAttr])
     # CHECK: attr: [vector<4xf32>, true, 42]
     print("raw attr:", raw)
-    # CHECK: - vector<4xf32>
-    # CHECK: - true
-    # CHECK: - 42
-    arr = ArrayAttr(raw)
+    # CHECK: - TypeAttr(vector<4xf32>)
+    # CHECK: - BoolAttr(true
+    # CHECK: - IntegerAttr(42 : i64)
+    arr = raw
     for attr in arr:
-        print("- ", attr)
-    # CHECK: attr[0]: vector<4xf32>
-    print("attr[0]:", arr[0])
-    # CHECK: attr[1]: true
-    print("attr[1]:", arr[1])
-    # CHECK: attr[2]: 42
-    print("attr[2]:", arr[2])
+        print("- ", repr(attr))
+    # CHECK: attr[0]: TypeAttr(vector<4xf32>)
+    print("attr[0]:", repr(arr[0]))
+    # CHECK: attr[1]: BoolAttr(true)
+    print("attr[1]:", repr(arr[1]))
+    # CHECK: attr[2]: IntegerAttr(42 : i64)
+    print("attr[2]:", repr(arr[2]))
     try:
         print("attr[3]:", arr[3])
     except IndexError as e:

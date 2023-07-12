@@ -468,10 +468,6 @@ static void emitAttributeAccessors(const Operator &op,
       continue;
     }
 
-    // Other kinds of attributes need a mapping to a Python type.
-    if (!attributeClasses.count(namedAttr.attr.getStorageType().trim()))
-      continue;
-
     StringRef pythonType =
         attributeClasses.lookup(namedAttr.attr.getStorageType());
     if (namedAttr.attr.isOptional()) {

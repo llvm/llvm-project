@@ -234,12 +234,24 @@ public:
            VK == LoongArchMCExpr::VK_LoongArch_None;
   }
 
+  bool isUImm1() const { return isUImm<1>(); }
   bool isUImm2() const { return isUImm<2>(); }
   bool isUImm2plus1() const { return isUImm<2, 1>(); }
   bool isUImm3() const { return isUImm<3>(); }
+  bool isUImm4() const { return isUImm<4>(); }
+  bool isSImm5() const { return isSImm<5>(); }
   bool isUImm5() const { return isUImm<5>(); }
   bool isUImm6() const { return isUImm<6>(); }
+  bool isUImm7() const { return isUImm<7>(); }
+  bool isSImm8() const { return isSImm<8>(); }
+  bool isSImm8lsl1() const { return isSImm<8, 1>(); }
+  bool isSImm8lsl2() const { return isSImm<8, 2>(); }
+  bool isSImm8lsl3() const { return isSImm<8, 3>(); }
   bool isUImm8() const { return isUImm<8>(); }
+  bool isSImm9lsl3() const { return isSImm<9, 3>(); }
+  bool isSImm10() const { return isSImm<10>(); }
+  bool isSImm10lsl2() const { return isSImm<10, 2>(); }
+  bool isSImm11lsl1() const { return isSImm<11, 1>(); }
   bool isSImm12() const { return isSImm<12>(); }
 
   bool isSImm12addlike() const {
@@ -303,6 +315,7 @@ public:
                      IsValidKind;
   }
 
+  bool isSImm13() const { return isSImm<13>(); }
   bool isUImm14() const { return isUImm<14>(); }
   bool isUImm15() const { return isUImm<15>(); }
 
@@ -1298,6 +1311,9 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                  "$rd must be different from both $rk and $rj");
   case Match_RequiresLAORdDifferRj:
     return Error(Operands[1]->getStartLoc(), "$rd must be different from $rj");
+  case Match_InvalidUImm1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 1) - 1);
   case Match_InvalidUImm2:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 2) - 1);
@@ -1307,12 +1323,18 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidUImm3:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 3) - 1);
+  case Match_InvalidUImm4:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 4) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 5) - 1);
   case Match_InvalidUImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 6) - 1);
+  case Match_InvalidUImm7:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 7) - 1);
   case Match_InvalidUImm8:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 8) - 1);
@@ -1328,6 +1350,39 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidUImm15:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 15) - 1);
+  case Match_InvalidSImm5:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 4),
+                                      /*Upper=*/(1 << 4) - 1);
+  case Match_InvalidSImm8:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 7),
+                                      /*Upper=*/(1 << 7) - 1);
+  case Match_InvalidSImm8lsl1:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 8), /*Upper=*/(1 << 8) - 2,
+        "immediate must be a multiple of 2 in the range");
+  case Match_InvalidSImm8lsl2:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 9), /*Upper=*/(1 << 9) - 4,
+        "immediate must be a multiple of 4 in the range");
+  case Match_InvalidSImm10:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 9),
+                                      /*Upper=*/(1 << 9) - 1);
+  case Match_InvalidSImm8lsl3:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 10), /*Upper=*/(1 << 10) - 8,
+        "immediate must be a multiple of 8 in the range");
+  case Match_InvalidSImm9lsl3:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 11), /*Upper=*/(1 << 11) - 8,
+        "immediate must be a multiple of 8 in the range");
+  case Match_InvalidSImm10lsl2:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 11), /*Upper=*/(1 << 11) - 4,
+        "immediate must be a multiple of 4 in the range");
+  case Match_InvalidSImm11lsl1:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 11), /*Upper=*/(1 << 11) - 2,
+        "immediate must be a multiple of 2 in the range");
   case Match_InvalidSImm12:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 11),
                                       /*Upper=*/(1 << 11) - 1);
@@ -1343,6 +1398,9 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         /*Upper=*/(1 << 11) - 1,
         "operand must be a symbol with modifier (e.g. %pc64_hi12) or an "
         "integer in the range");
+  case Match_InvalidSImm13:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 12),
+                                      /*Upper=*/(1 << 12) - 1);
   case Match_InvalidSImm14lsl2:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, /*Lower=*/-(1 << 15), /*Upper=*/(1 << 15) - 4,

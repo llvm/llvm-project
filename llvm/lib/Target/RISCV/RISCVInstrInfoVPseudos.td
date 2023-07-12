@@ -2870,23 +2870,29 @@ multiclass VPseudoVMRG_VM_XM_IM {
 
     def "_VVM"  # "_" # m.MX :
       VPseudoBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                           m.vrclass, m.vrclass, m, 1, "">;
+                           m.vrclass, m.vrclass, m, 1, "">,
+      Sched<[WriteVIMergeV_MX, ReadVIMergeV_MX, ReadVIMergeV_MX, ReadVMask]>;
     def "_VXM" # "_" # m.MX :
       VPseudoBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                           m.vrclass, GPR, m, 1, "">;
+                           m.vrclass, GPR, m, 1, "">,
+      Sched<[WriteVIMergeX_MX, ReadVIMergeV_MX, ReadVIMergeX_MX, ReadVMask]>;
     def "_VIM" # "_" # m.MX :
       VPseudoBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                           m.vrclass, simm5, m, 1, "">;
+                           m.vrclass, simm5, m, 1, "">,
+      Sched<[WriteVIMergeI_MX, ReadVIMergeV_MX, ReadVMask]>;
     // Tied versions to allow codegen control over the tail elements
     def "_VVM" # "_" # m.MX # "_TU" :
       VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, m.vrclass, m, 1, "">;
+                               m.vrclass, m.vrclass, m, 1, "">,
+      Sched<[WriteVIMergeV_MX, ReadVIMergeV_MX, ReadVIMergeV_MX, ReadVMask]>;
     def "_VXM" # "_" # m.MX # "_TU":
       VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, GPR, m, 1, "">;
+                               m.vrclass, GPR, m, 1, "">,
+      Sched<[WriteVIMergeX_MX, ReadVIMergeV_MX, ReadVIMergeX_MX, ReadVMask]>;
     def "_VIM" # "_" # m.MX # "_TU":
       VPseudoTiedBinaryCarryIn<GetVRegNoV0<m.vrclass>.R,
-                               m.vrclass, simm5, m, 1, "">;
+                               m.vrclass, simm5, m, 1, "">,
+      Sched<[WriteVIMergeI_MX, ReadVIMergeV_MX, ReadVMask]>;
   }
 }
 
@@ -3542,18 +3548,6 @@ multiclass VPseudoVWCVTF_V {
     defvar ReadVFWCvtIToFV_MX = !cast<SchedRead>("ReadVFWCvtIToFV_" # mx);
 
     defm _V : VPseudoConversion<m.wvrclass, m.vrclass, m, constraint>,
-              Sched<[WriteVFWCvtIToFV_MX, ReadVFWCvtIToFV_MX, ReadVMask]>;
-  }
-}
-
-multiclass VPseudoVWCVTF_RM_V {
-  defvar constraint = "@earlyclobber $rd";
-  foreach m = MxListW in {
-    defvar mx = m.MX;
-    defvar WriteVFWCvtIToFV_MX = !cast<SchedWrite>("WriteVFWCvtIToFV_" # mx);
-    defvar ReadVFWCvtIToFV_MX = !cast<SchedRead>("ReadVFWCvtIToFV_" # mx);
-
-    defm _V : VPseudoConversionRM<m.wvrclass, m.vrclass, m, constraint>,
               Sched<[WriteVFWCvtIToFV_MX, ReadVFWCvtIToFV_MX, ReadVMask]>;
   }
 }
@@ -5920,12 +5914,8 @@ defm PseudoVFWCVT_RM_X_F   : VPseudoVWCVTI_RM_V;
 defm PseudoVFWCVT_RTZ_XU_F : VPseudoVWCVTI_V;
 defm PseudoVFWCVT_RTZ_X_F  : VPseudoVWCVTI_V;
 
-let Uses = [FRM] in {
 defm PseudoVFWCVT_F_XU     : VPseudoVWCVTF_V;
 defm PseudoVFWCVT_F_X      : VPseudoVWCVTF_V;
-}
-defm PseudoVFWCVT_RM_F_XU  : VPseudoVWCVTF_RM_V;
-defm PseudoVFWCVT_RM_F_X   : VPseudoVWCVTF_RM_V;
 
 defm PseudoVFWCVT_F_F      : VPseudoVWCVTD_V;
 } // mayRaiseFPException = true

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-objc-root-class -verify %s
-// rdar://18013929
 
 @protocol P
 - (void)meth;

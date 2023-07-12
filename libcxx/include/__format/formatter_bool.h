@@ -11,16 +11,15 @@
 #define _LIBCPP___FORMAT_FORMATTER_BOOL_H
 
 #include <__algorithm/copy.h>
+#include <__assert>
 #include <__availability>
 #include <__config>
 #include <__format/concepts.h>
-#include <__format/format_error.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
 #include <__format/parser_std_format_spec.h>
 #include <__utility/unreachable.h>
-#include <string_view>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #  include <locale>

@@ -72,6 +72,7 @@
 // CHECK-NOT: __riscv_zfbfmin {{.*$}}
 // CHECK-NOT: __riscv_zvfbfmin {{.*$}}
 // CHECK-NOT: __riscv_zvfbfwma {{.*$}}
+// CHECK-NOT: __riscv_zacas {{.*$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32i -x c -E -dM %s \
 // RUN: -o - | FileCheck %s
@@ -771,3 +772,11 @@
 // RUN: | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKSG %s
 // CHECK-COMBINE-INTO-ZVKSG: __riscv_zvks 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKSG: __riscv_zvksg 1000000{{$}}
+
+// RUN: %clang -target riscv32 -menable-experimental-extensions \
+// RUN: -march=rv32i_zacas1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZACAS-EXT %s
+// RUN: %clang -target riscv64 -menable-experimental-extensions \
+// RUN: -march=rv64i_zacas1p0 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZACAS-EXT %s
+// CHECK-ZACAS-EXT: __riscv_zacas 1000000{{$}}

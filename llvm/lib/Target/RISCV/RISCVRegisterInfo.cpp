@@ -149,7 +149,7 @@ bool RISCVRegisterInfo::hasReservedSpillSlot(const MachineFunction &MF,
                                              Register Reg,
                                              int &FrameIdx) const {
   const auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  if (!RVFI->useSaveRestoreLibCalls(MF))
+  if (!RVFI->useSaveRestoreLibCalls(MF) && !RVFI->isPushable(MF))
     return false;
 
   const auto *FII =

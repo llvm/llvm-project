@@ -135,8 +135,6 @@ namespace PR8182 {
 // Don't blow out the stack trying to call an illegal constructor
 // instantiation.  We intentionally allow implicit instantiations to
 // exist, so make sure they're unusable.
-//
-// rdar://19199836
 namespace self_by_value {
   template <class T, class U> struct A {
     A() {}

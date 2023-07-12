@@ -89,7 +89,7 @@ void SubtargetFeatureInfo::emitComputeAvailableFeatures(
     StringRef TargetName, StringRef ClassName, StringRef FuncName,
     SubtargetFeatureInfoMap &SubtargetFeatures, raw_ostream &OS,
     StringRef ExtraParams) {
-  OS << "PredicateBitset " << TargetName << ClassName << "::\n"
+  OS << "PredicateBitset " << ClassName << "::\n"
      << FuncName << "(const " << TargetName << "Subtarget *Subtarget";
   if (!ExtraParams.empty())
     OS << ", " << ExtraParams;

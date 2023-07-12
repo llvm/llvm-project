@@ -144,7 +144,7 @@ void print(llvm::raw_ostream &OS, const Pointer &P, ASTContext &Ctx,
   }
 }
 
-void InterpFrame::describe(llvm::raw_ostream &OS) {
+void InterpFrame::describe(llvm::raw_ostream &OS) const {
   const FunctionDecl *F = getCallee();
   if (const auto *M = dyn_cast<CXXMethodDecl>(F);
       M && M->isInstance() && !isa<CXXConstructorDecl>(F)) {

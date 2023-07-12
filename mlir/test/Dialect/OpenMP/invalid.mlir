@@ -1103,6 +1103,58 @@ func.func @omp_atomic_capture(%x: memref<i32>, %v: memref<i32>, %expr: i32) {
 
 // -----
 
+func.func @omp_teams_parent() {
+  omp.parallel {
+    // expected-error @below {{expected to be nested inside of omp.target or not nested in any OpenMP dialect operations}}
+    omp.teams {
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_allocate(%data_var : memref<i32>) {
+  omp.target {
+    // expected-error @below {{expected equal sizes for allocate and allocator variables}}
+    "omp.teams" (%data_var) ({
+      omp.terminator
+    }) {operand_segment_sizes = array<i32: 0,0,0,0,1,0,0>} : (memref<i32>) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_num_teams1(%lb : i32) {
+  omp.target {
+    // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
+    "omp.teams" (%lb) ({
+      omp.terminator
+    }) {operand_segment_sizes = array<i32: 1,0,0,0,0,0,0>} : (i32) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_num_teams2(%lb : i32, %ub : i16) {
+  omp.target {
+    // expected-error @below {{expected num_teams upper bound and lower bound to be the same type}}
+    omp.teams num_teams(%lb : i32 to %ub : i16) {
+      omp.terminator
+    }
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @omp_sections(%data_var : memref<i32>) -> () {
   // expected-error @below {{expected equal sizes for allocate and allocator variables}}
   "omp.sections" (%data_var) ({

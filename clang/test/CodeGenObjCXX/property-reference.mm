@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - | FileCheck %s
-// rdar://9208606
 
 struct MyStruct {
   int x;
@@ -50,7 +49,6 @@ namespace test1 {
 // CHECK:      call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN5test11AaSERKS0_(
 // CHECK-NEXT: ret void
 
-// rdar://problem/10497174
 @interface Test2
 @property int prop;
 @end

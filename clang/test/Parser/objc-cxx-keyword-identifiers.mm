@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wno-objc-root-class -Wno-incomplete-implementation -triple x86_64-apple-macosx10.10.0 -verify %s
 
-// rdar://20626062
-
 struct S {
   int throw; // expected-error {{expected member name or ';' after declaration specifiers; 'throw' is a keyword in Objective-C++}}
 };

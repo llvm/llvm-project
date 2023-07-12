@@ -688,7 +688,7 @@ public:
           SizeEmitter);
 
   /// Returns true if the current target is a GPU.
-  virtual bool isTargetCodegen() const { return false; }
+  virtual bool isGPU() const { return false; }
 
   /// Check if the variable length declaration is delayed:
   virtual bool isDelayedVariableLengthDecl(CodeGenFunction &CGF,
@@ -2310,10 +2310,12 @@ public:
 template <> class OMPDoacrossKind<OMPDoacrossClause> {
 public:
   bool isSource(const OMPDoacrossClause *C) {
-    return (C->getDependenceType() == OMPC_DOACROSS_source);
+    return C->getDependenceType() == OMPC_DOACROSS_source ||
+           C->getDependenceType() == OMPC_DOACROSS_source_omp_cur_iteration;
   }
   bool isSink(const OMPDoacrossClause *C) {
-    return (C->getDependenceType() == OMPC_DOACROSS_sink);
+    return C->getDependenceType() == OMPC_DOACROSS_sink ||
+           C->getDependenceType() == OMPC_DOACROSS_sink_omp_cur_iteration;
   }
 };
 } // namespace

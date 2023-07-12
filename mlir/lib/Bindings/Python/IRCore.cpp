@@ -1908,19 +1908,17 @@ void PySymbolTable::dunderDel(const std::string &name) {
   erase(py::cast<PyOperationBase &>(operation));
 }
 
-PyAttribute PySymbolTable::insert(PyOperationBase &symbol) {
+MlirAttribute PySymbolTable::insert(PyOperationBase &symbol) {
   operation->checkValid();
   symbol.getOperation().checkValid();
   MlirAttribute symbolAttr = mlirOperationGetAttributeByName(
       symbol.getOperation().get(), mlirSymbolTableGetSymbolAttributeName());
   if (mlirAttributeIsNull(symbolAttr))
     throw py::value_error("Expected operation to have a symbol name.");
-  return PyAttribute(
-      symbol.getOperation().getContext(),
-      mlirSymbolTableInsert(symbolTable, symbol.getOperation().get()));
+  return mlirSymbolTableInsert(symbolTable, symbol.getOperation().get());
 }
 
-PyAttribute PySymbolTable::getSymbolName(PyOperationBase &symbol) {
+MlirAttribute PySymbolTable::getSymbolName(PyOperationBase &symbol) {
   // Op must already be a symbol.
   PyOperation &operation = symbol.getOperation();
   operation.checkValid();
@@ -1929,7 +1927,7 @@ PyAttribute PySymbolTable::getSymbolName(PyOperationBase &symbol) {
       mlirOperationGetAttributeByName(operation.get(), attrName);
   if (mlirAttributeIsNull(existingNameAttr))
     throw py::value_error("Expected operation to have a symbol name.");
-  return PyAttribute(symbol.getOperation().getContext(), existingNameAttr);
+  return existingNameAttr;
 }
 
 void PySymbolTable::setSymbolName(PyOperationBase &symbol,
@@ -1947,7 +1945,7 @@ void PySymbolTable::setSymbolName(PyOperationBase &symbol,
   mlirOperationSetAttributeByName(operation.get(), attrName, newNameAttr);
 }
 
-PyAttribute PySymbolTable::getVisibility(PyOperationBase &symbol) {
+MlirAttribute PySymbolTable::getVisibility(PyOperationBase &symbol) {
   PyOperation &operation = symbol.getOperation();
   operation.checkValid();
   MlirStringRef attrName = mlirSymbolTableGetVisibilityAttributeName();
@@ -1955,7 +1953,7 @@ PyAttribute PySymbolTable::getVisibility(PyOperationBase &symbol) {
       mlirOperationGetAttributeByName(operation.get(), attrName);
   if (mlirAttributeIsNull(existingVisAttr))
     throw py::value_error("Expected operation to have a symbol visibility.");
-  return PyAttribute(symbol.getOperation().getContext(), existingVisAttr);
+  return existingVisAttr;
 }
 
 void PySymbolTable::setVisibility(PyOperationBase &symbol,
@@ -2287,13 +2285,13 @@ public:
   PyOpAttributeMap(PyOperationRef operation)
       : operation(std::move(operation)) {}
 
-  PyAttribute dunderGetItemNamed(const std::string &name) {
+  MlirAttribute dunderGetItemNamed(const std::string &name) {
     MlirAttribute attr = mlirOperationGetAttributeByName(operation->get(),
                                                          toMlirStringRef(name));
     if (mlirAttributeIsNull(attr)) {
       throw py::key_error("attempt to access a non-existent attribute");
     }
-    return PyAttribute(operation->getContext(), attr);
+    return attr;
   }
 
   PyNamedAttribute dunderGetItemIndexed(intptr_t index) {
