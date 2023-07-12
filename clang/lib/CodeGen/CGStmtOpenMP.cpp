@@ -1624,6 +1624,7 @@ void CodeGenFunction::EmitOMPReductionClauseFinal(
     }
     bool WithNowait = D.getSingleClause<OMPNowaitClause>() ||
                       isOpenMPParallelDirective(D.getDirectiveKind()) ||
+                      CGM.TeamsLoopCanBeParallelFor(D) ||
                       ReductionKind == OMPD_simd;
     bool SimpleReduction = ReductionKind == OMPD_simd;
     // Emit nowait reduction if nowait clause is present or directive is a
@@ -8269,77 +8270,10 @@ static void emitTargetTeamsGenericLoopRegionAsDistribute(
                                    [](CodeGenFunction &) { return nullptr; });
 }
 
-namespace {
-/// A 'teams loop' with a nested 'loop bind(parallel)', OpenMP API call,
-/// or generic function call in the associated loop-nest cannot be a
-/// 'parllel for'.
-class TeamsLoopChecker final : public ConstStmtVisitor<TeamsLoopChecker> {
-public:
-  TeamsLoopChecker() : TeamsLoopCanBeParallelFor{true} {}
-  bool teamsLoopCanBeParallelFor() const {
-    return TeamsLoopCanBeParallelFor;
-  }
-  // Is there a nested OpenMP loop bind(parallel)
-  void VisitOMPExecutableDirective(const OMPExecutableDirective *D) {
-    if (D->getDirectiveKind() == llvm::omp::Directive::OMPD_loop) {
-      if (const auto *C = D->getSingleClause<OMPBindClause>())
-        if (C->getBindKind() == OMPC_BIND_parallel) {
-          TeamsLoopCanBeParallelFor = false;
-          // No need to continue visiting any more
-          return;
-        }
-    }
-    for (const Stmt *Child : D->children())
-      if (Child)
-        Visit(Child);
-  }
-
-  void VisitCallExpr(const CallExpr *C) {
-    // For now, can't be parallel if OpenMP API or regular function call.
-    if (C) {
-      TeamsLoopCanBeParallelFor = false;
-      // No need to continue visiting any more
-      return;
-    }
-    for (const Stmt *Child : C->children())
-      if (Child)
-        Visit(Child);
-  }
-
-  void VisitCapturedStmt(const CapturedStmt *S) {
-    if (!S)
-      return;
-    Visit(S->getCapturedDecl()->getBody());
-  }
-
-  void VisitStmt(const Stmt *S) {
-    if (!S)
-      return;
-    for (const Stmt *Child : S->children())
-      if (Child)
-        Visit(Child);
-  }
-
-private:
-  bool TeamsLoopCanBeParallelFor;
-};
-} // namespace
-
-/// Determine if 'teams loop' can be emitted using 'parallel for'.
-bool TeamsLoopCanBeParallelFor(const OMPExecutableDirective &D) {
-  assert(D.getDirectiveKind() == llvm::omp::Directive::OMPD_target_teams_loop
-      && "Expected 'target teams loop' directive");
-  assert(D.hasAssociatedStmt() &&
-      "Loop directive must have associated statement.");
-  TeamsLoopChecker Checker;
-  Checker.Visit(D.getAssociatedStmt());
-  return Checker.teamsLoopCanBeParallelFor();
-}
-
 void CodeGenFunction::EmitOMPTargetTeamsGenericLoopDirective(
     const OMPTargetTeamsGenericLoopDirective &S) {
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
-    if (TeamsLoopCanBeParallelFor(S))
+    if (CGF.CGM.TeamsLoopCanBeParallelFor(S))
       emitTargetTeamsGenericLoopRegionAsParallel(CGF, Action, S);
     else
       emitTargetTeamsGenericLoopRegionAsDistribute(CGF, Action, S);
@@ -8352,7 +8286,7 @@ void CodeGenFunction::EmitOMPTargetTeamsGenericLoopDeviceFunction(
     const OMPTargetTeamsGenericLoopDirective &S) {
   // Emit SPMD target parallel loop region as a standalone region.
   auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
-    if (TeamsLoopCanBeParallelFor(S))
+    if (CGF.CGM.TeamsLoopCanBeParallelFor(S))
       emitTargetTeamsGenericLoopRegionAsParallel(CGF, Action, S);
     else
       emitTargetTeamsGenericLoopRegionAsDistribute(CGF, Action, S);

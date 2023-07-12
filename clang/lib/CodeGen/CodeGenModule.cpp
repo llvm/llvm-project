@@ -7456,6 +7456,86 @@ void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
 }
 
 namespace {
+/// A 'teams loop' with a nested 'loop bind(parallel)', OpenMP API call,
+/// or generic function call in the associated loop-nest cannot be a
+/// 'parllel for'.
+class TeamsLoopChecker final : public ConstStmtVisitor<TeamsLoopChecker> {
+public:
+  TeamsLoopChecker(CodeGenModule &CGM)
+      : CGM(CGM), TeamsLoopCanBeParallelFor{true} {}
+  bool teamsLoopCanBeParallelFor() const {
+    return TeamsLoopCanBeParallelFor;
+  }
+  // Is there a nested OpenMP loop bind(parallel)
+  void VisitOMPExecutableDirective(const OMPExecutableDirective *D) {
+    if (D->getDirectiveKind() == llvm::omp::Directive::OMPD_loop) {
+      if (const auto *C = D->getSingleClause<OMPBindClause>())
+        if (C->getBindKind() == OMPC_BIND_parallel) {
+          TeamsLoopCanBeParallelFor = false;
+          // No need to continue visiting any more
+          return;
+        }
+    }
+    for (const Stmt *Child : D->children())
+      if (Child)
+        Visit(Child);
+  }
+
+  void VisitCallExpr(const CallExpr *C) {
+    // For now, can't be parallel if
+    //  - calling an OpenMP API; or
+    //  - a regular function call, unless no-nested-parallelism has been set.
+    if (C) {
+      auto *FD = dyn_cast_or_null<FunctionDecl>(C->getCalleeDecl());
+      if (FD) {
+        std::string Name = FD->getNameInfo().getAsString();
+        if (Name.find("omp_") == 0) {
+          TeamsLoopCanBeParallelFor = false;
+          // No need to continue visiting any more
+          return;
+        }
+      }
+      TeamsLoopCanBeParallelFor = CGM.getLangOpts().OpenMPNoNestedParallelism;
+      // No need to continue visiting any more
+      return;
+    }
+    for (const Stmt *Child : C->children())
+      if (Child)
+        Visit(Child);
+  }
+
+  void VisitCapturedStmt(const CapturedStmt *S) {
+    if (!S)
+      return;
+    Visit(S->getCapturedDecl()->getBody());
+  }
+
+  void VisitStmt(const Stmt *S) {
+    if (!S)
+      return;
+    for (const Stmt *Child : S->children())
+      if (Child)
+        Visit(Child);
+  }
+
+private:
+  CodeGenModule &CGM;
+  bool TeamsLoopCanBeParallelFor;
+};
+} // namespace
+
+/// Determine if 'teams loop' can be emitted using 'parallel for'.
+bool CodeGenModule::TeamsLoopCanBeParallelFor(const OMPExecutableDirective &D) {
+  if (D.getDirectiveKind() != llvm::omp::Directive::OMPD_target_teams_loop)
+    return false;
+  assert(D.hasAssociatedStmt() &&
+      "Loop directive must have associated statement.");
+  TeamsLoopChecker Checker(*this);
+  Checker.Visit(D.getAssociatedStmt());
+  return Checker.teamsLoopCanBeParallelFor();
+}
+
+namespace {
 class NoLoopChecker final : public ConstStmtVisitor<NoLoopChecker> {
 public:
   NoLoopChecker()
