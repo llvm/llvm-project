@@ -26,11 +26,11 @@
 # CHECK-NEXT: DW_LNS_copy
 # CHECK-NEXT:                           is_stmt
 # CHECK-NEXT: DW_LNS_advance_line
-# CHECK-NEXT: DW_LNS_fixed_advance_pc (0x0004)
+# CHECK-NEXT: DW_LNS_fixed_advance_pc (addr += 0x0004, op-index = 0)
 # CHECK-NEXT: DW_LNS_copy
 # CHECK-NEXT:                           is_stmt
 # CHECK-NEXT: DW_LNS_advance_line
-# CHECK-NEXT: DW_LNS_fixed_advance_pc (0x0004)
+# CHECK-NEXT: DW_LNS_fixed_advance_pc (addr += 0x0004, op-index = 0)
 # CHECK-NEXT: DW_LNS_copy
 
 # CHECK:      0x00000000: range list header: length = 0x0000001d, format = DWARF32, version = 0x0005
