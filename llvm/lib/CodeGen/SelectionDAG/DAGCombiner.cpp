@@ -17034,6 +17034,10 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     const bool NIsTrunc = N->getConstantOperandVal(1) == 1;
     const bool N0IsTrunc = N0.getConstantOperandVal(1) == 1;
 
+    // Avoid folding legal fp_rounds into non-legal ones.
+    if (!hasOperation(ISD::FP_ROUND, VT))
+      return SDValue();
+
     // Skip this folding if it results in an fp_round from f80 to f16.
     //
     // f80 to f16 always generates an expensive (and as yet, unimplemented)

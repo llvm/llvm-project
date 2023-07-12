@@ -949,28 +949,44 @@ getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool IsZero,
 }
 
 /// Try to lower a vector G_FCMP \p MI into an AArch64-specific pseudo.
-bool lowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
-                     MachineIRBuilder &MIB) {
+bool matchLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &MIB) {
   assert(MI.getOpcode() == TargetOpcode::G_FCMP);
   const auto &ST = MI.getMF()->getSubtarget<AArch64Subtarget>();
+
   Register Dst = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(Dst);
   if (!DstTy.isVector() || !ST.hasNEON())
     return false;
-  const auto Pred =
-      static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
   Register LHS = MI.getOperand(2).getReg();
   unsigned EltSize = MRI.getType(LHS).getScalarSizeInBits();
   if (EltSize == 16 && !ST.hasFullFP16())
     return false;
   if (EltSize != 16 && EltSize != 32 && EltSize != 64)
     return false;
-  Register RHS = MI.getOperand(3).getReg();
+
+  return true;
+}
+
+/// Try to lower a vector G_FCMP \p MI into an AArch64-specific pseudo.
+void applyLowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &MIB) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCMP);
+  const auto &ST = MI.getMF()->getSubtarget<AArch64Subtarget>();
+
+  const auto &CmpMI = cast<GFCmp>(MI);
+
+  Register Dst = CmpMI.getReg(0);
+  CmpInst::Predicate Pred = CmpMI.getCond();
+  Register LHS = CmpMI.getLHSReg();
+  Register RHS = CmpMI.getRHSReg();
+
+  LLT DstTy = MRI.getType(Dst);
+
   auto Splat = getAArch64VectorSplat(*MRI.getVRegDef(RHS), MRI);
 
   // Compares against 0 have special target-specific pseudos.
   bool IsZero = Splat && Splat->isCst() && Splat->getCst() == 0;
-
 
   bool Invert = false;
   AArch64CC::CondCode CC, CC2 = AArch64CC::AL;
@@ -984,10 +1000,12 @@ bool lowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
   } else
     changeVectorFCMPPredToAArch64CC(Pred, CC, CC2, Invert);
 
-  bool NoNans = ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
-
   // Instead of having an apply function, just build here to simplify things.
   MIB.setInstrAndDebugLoc(MI);
+
+  const bool NoNans =
+      ST.getTargetLowering()->getTargetMachine().Options.NoNaNsFPMath;
+
   auto Cmp = getVectorFCMP(CC, LHS, RHS, IsZero, NoNans, MRI);
   Register CmpRes;
   if (CC2 == AArch64CC::AL)
@@ -1002,7 +1020,6 @@ bool lowerVectorFCMP(MachineInstr &MI, MachineRegisterInfo &MRI,
     CmpRes = MIB.buildNot(DstTy, CmpRes).getReg(0);
   MRI.replaceRegWith(Dst, CmpRes);
   MI.eraseFromParent();
-  return true;
 }
 
 bool matchFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
