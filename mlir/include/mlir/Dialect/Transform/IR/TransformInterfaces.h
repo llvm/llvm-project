@@ -438,7 +438,7 @@ private:
       }
     }
 #endif // NDEBUG
-    return *it->second.get();
+    return *it->second;
   }
 
   /// Returns the mappings frame for the region in which the operation resides.
@@ -465,7 +465,7 @@ private:
       }
     }
 #endif // NDEBUG
-    return *it->second.get();
+    return *it->second;
   }
 
   /// Updates the state to include the associations between op results and the
