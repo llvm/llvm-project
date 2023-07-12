@@ -161,6 +161,10 @@ public:
         values.push_back(zero);
       return getConstArray(mlir::ArrayAttr::get(getContext(), values), arrTy);
     }
+    if (auto ptrTy = ty.dyn_cast<mlir::cir::PointerType>())
+      return getNullPtrAttr(ptrTy);
+    if (auto structTy = ty.dyn_cast<mlir::cir::StructType>())
+      return getZeroAttr(structTy);
     llvm_unreachable("Zero initializer for given type is NYI");
   }
 
