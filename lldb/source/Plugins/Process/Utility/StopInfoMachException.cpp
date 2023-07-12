@@ -744,6 +744,7 @@ StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
               }
             }
           }
+          thread.GetProcess()->DumpPluginHistory(s);
           llvm::report_fatal_error(s.GetData());
           lldbassert(
               false &&
