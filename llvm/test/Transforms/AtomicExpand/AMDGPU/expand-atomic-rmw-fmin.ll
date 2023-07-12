@@ -268,7 +268,7 @@ define double @test_atomicrmw_fmin_f64_global_strictfp(ptr addrspace(1) %ptr, do
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
 ; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GCN-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.minnum.f64(double [[LOADED]], double [[VALUE:%.*]], metadata !"fpexcept.strict") #[[ATTR4:[0-9]+]]
+; GCN-NEXT:    [[TMP2:%.*]] = call double @llvm.minnum.f64(double [[LOADED]], double [[VALUE:%.*]])
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[TMP2]] to i64
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
 ; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
