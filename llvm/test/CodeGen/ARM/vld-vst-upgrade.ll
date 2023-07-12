@@ -1,5 +1,4 @@
 ; RUN: llc -mtriple=arm-eabi -mattr=+neon < %s | FileCheck %s
-; RUN: llc -mtriple=arm-eabi -mattr=+neon -opaque-pointers < %s | FileCheck %s
 
 %struct.__neon_int32x2x2_t = type { <2 x i32>, <2 x i32> }
 %struct.__neon_int32x2x3_t = type { <2 x i32>, <2 x i32>, <2 x i32> }
