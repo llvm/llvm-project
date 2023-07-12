@@ -165,8 +165,8 @@ def build_vector_lowering : GICombineGroup<[build_vector_to_dup]>;
 def lower_vector_fcmp : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_FCMP):$root,
-    [{ return lowerVectorFCMP(*${root}, MRI, B); }]),
-  (apply [{}])>;
+    [{ return matchLowerVectorFCMP(*${root}, MRI, B); }]),
+  (apply [{ applyLowerVectorFCMP(*${root}, MRI, B); }])>;
 
 def form_truncstore_matchdata : GIDefMatchData<"Register">;
 def form_truncstore : GICombineRule<

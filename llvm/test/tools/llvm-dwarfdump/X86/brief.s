@@ -16,11 +16,11 @@
 # CHECK-NOT: debug_str
 # CHECK-NOT: DW_AT_type {{.*}} =>
 
-# CHECK: Address            Line   Column File   ISA Discriminator Flags
-# CHECK-NEXT:------------------ ------ ------ ------ --- ------------- -------------
-# CHECK-NEXT:0x0000000000000000      1      0      1   0             0  is_stmt
-# CHECK-NEXT:0x0000000000000006      1     12      1   0             0  is_stmt prologue_end
-# CHECK-NEXT:0x0000000000000008      1     12      1   0             0  is_stmt end_sequence
+# CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+# CHECK-NEXT:------------------ ------ ------ ------ --- ------------- ------- -------------
+# CHECK-NEXT:0x0000000000000000      1      0      1   0             0       0  is_stmt
+# CHECK-NEXT:0x0000000000000006      1     12      1   0             0       0  is_stmt prologue_end
+# CHECK-NEXT:0x0000000000000008      1     12      1   0             0       0  is_stmt end_sequence
 
 # CHECK-NOT: {{.*}} contents:
 
