@@ -15,6 +15,7 @@
 #include <__config>
 #include <__fwd/array.h>
 #include <__fwd/get.h>
+#include <__fwd/pair.h>
 #include <__fwd/subrange.h>
 #include <__fwd/tuple.h>
 #include <__tuple/pair_like.h>

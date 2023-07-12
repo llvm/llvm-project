@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
-
 #include <__type_traits/is_equality_comparable.h>
 
 enum Enum : int {};
