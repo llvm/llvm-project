@@ -466,7 +466,7 @@ public:
   virtual ~GIMatchTableExecutor() = default;
 
   CodeGenCoverage *CoverageInfo = nullptr;
-  GISelKnownBits *KnownBits = nullptr;
+  GISelKnownBits *KB = nullptr;
   MachineFunction *MF = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
@@ -478,12 +478,12 @@ public:
   }
 
   /// Setup per-MF executor state.
-  virtual void setupMF(MachineFunction &mf, GISelKnownBits *KB,
+  virtual void setupMF(MachineFunction &mf, GISelKnownBits *kb,
                        CodeGenCoverage *covinfo = nullptr,
                        ProfileSummaryInfo *psi = nullptr,
                        BlockFrequencyInfo *bfi = nullptr) {
     CoverageInfo = covinfo;
-    KnownBits = KB;
+    KB = kb;
     MF = &mf;
     PSI = psi;
     BFI = bfi;

@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -1341,34 +1340,17 @@ void PEI::replaceFrameIndices(MachineFunction &MF) {
   FrameIndexEliminationScavenging = (RS && !FrameIndexVirtualScavenging) ||
     TRI->requiresFrameIndexReplacementScavenging(MF);
 
-  // Store SPAdj at exit of a basic block.
-  SmallVector<int, 8> SPState;
-  SPState.resize(MF.getNumBlockIDs());
-  df_iterator_default_set<MachineBasicBlock*> Reachable;
+  for (auto &MBB : MF) {
+    int SPAdj = MBB.getSPAdjustment();
+    replaceFrameIndices(&MBB, MF, SPAdj);
 
-  // Iterate over the reachable blocks in DFS order.
-  for (auto DFI = df_ext_begin(&MF, Reachable), DFE = df_ext_end(&MF, Reachable);
-       DFI != DFE; ++DFI) {
-    int SPAdj = 0;
-    // Check the exit state of the DFS stack predecessor.
-    if (DFI.getPathLength() >= 2) {
-      MachineBasicBlock *StackPred = DFI.getPath(DFI.getPathLength() - 2);
-      assert(Reachable.count(StackPred) &&
-             "DFS stack predecessor is already visited.\n");
-      SPAdj = SPState[StackPred->getNumber()];
+    // If call frame pseudo ops have already been simplified then we can no
+    // longer track the SP adjustment (but that's OK because in that case, frame
+    // index elimination does not care about the SP adjustment).
+    if (!TFI.canSimplifyCallFramePseudos(MF)) {
+      for (auto *Succ : MBB.successors())
+        assert(Succ->getSPAdjustment() == SPAdj);
     }
-    MachineBasicBlock *BB = *DFI;
-    replaceFrameIndices(BB, MF, SPAdj);
-    SPState[BB->getNumber()] = SPAdj;
-  }
-
-  // Handle the unreachable blocks.
-  for (auto &BB : MF) {
-    if (Reachable.count(&BB))
-      // Already handled in DFS traversal.
-      continue;
-    int SPAdj = 0;
-    replaceFrameIndices(&BB, MF, SPAdj);
   }
 }
 
