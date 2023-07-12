@@ -134,6 +134,8 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(allOf);
   REGISTER_MATCHER(anyOf);
   REGISTER_MATCHER(anything);
+  REGISTER_MATCHER(arrayInitIndexExpr);
+  REGISTER_MATCHER(arrayInitLoopExpr);
   REGISTER_MATCHER(argumentCountIs);
   REGISTER_MATCHER(argumentCountAtLeast);
   REGISTER_MATCHER(arraySubscriptExpr);

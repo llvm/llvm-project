@@ -1257,6 +1257,43 @@ addrLabelExpr()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('arrayInitIndexExpr0')"><a name="arrayInitIndexExpr0Anchor">arrayInitIndexExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArrayInitIndexExpr.html">ArrayInitIndexExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="arrayInitIndexExpr0"><pre>The arrayInitIndexExpr consists of two subexpressions: a common expression
+(the source array) that is evaluated once up-front, and a per-element initializer
+that runs once for each array element. Within the per-element initializer,
+the current index may be obtained via an ArrayInitIndexExpr.
+
+Given
+  void testStructBinding() {
+    int a[2] = {1, 2};
+    auto [x, y] = a;
+  }
+arrayInitIndexExpr() matches the array index that implicitly iterates
+over the array `a` to copy each element to the anonymous array
+that backs the structured binding `[x, y]` elements of which are
+referred to by their aliases `x` and `y`.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('arrayInitLoopExpr0')"><a name="arrayInitLoopExpr0Anchor">arrayInitLoopExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArrayInitLoopExpr.html">ArrayInitLoopExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="arrayInitLoopExpr0"><pre>Matches a loop initializing the elements of an array in a number of contexts:
+ * in the implicit copy/move constructor for a class with an array member
+ * when a lambda-expression captures an array by value
+ * when a decomposition declaration decomposes an array
+
+Given
+  void testLambdaCapture() {
+    int a[10];
+    auto Lam1 = [a]() {
+      return;
+    };
+  }
+arrayInitLoopExpr() matches the implicit loop that initializes each element of
+the implicit array field inside the lambda object, that represents the array `a`
+captured by value.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('arraySubscriptExpr0')"><a name="arraySubscriptExpr0Anchor">arraySubscriptExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="arraySubscriptExpr0"><pre>Matches array subscript expressions.
 
