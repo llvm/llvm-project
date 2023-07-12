@@ -884,8 +884,8 @@ steps:
       timeout_in_minutes: 120
 
     # Test back-deployment to older Apple platforms
-    - label: "Apple back-deployment macosx10.9"
-      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.9"
+    - label: "Apple back-deployment macosx10.13"
+      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.13"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
