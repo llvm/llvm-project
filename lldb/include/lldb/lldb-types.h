@@ -71,8 +71,6 @@ typedef int pipe_t;                     // Host pipe type
 
 typedef void (*LogOutputCallback)(const char *, void *baton);
 typedef bool (*CommandOverrideCallback)(void *baton, const char **argv);
-typedef bool (*CommandOverrideCallbackWithResult)(
-    void *baton, const char **argv, lldb_private::CommandReturnObject &result);
 typedef bool (*ExpressionCancelCallback)(ExpressionEvaluationPhase phase,
                                          void *baton);
 
