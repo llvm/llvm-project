@@ -451,6 +451,28 @@ ValueT &getValueForDecl(ASTContext &ASTCtx, const Environment &Env,
   return *cast<ValueT>(Env.getValue(*VD));
 }
 
+/// Returns the value of a `Field` on the record referenced by `Loc.`
+/// Returns null if `Loc` is null.
+inline Value *getFieldValue(const AggregateStorageLocation *Loc,
+                            const ValueDecl &Field, const Environment &Env) {
+  if (Loc == nullptr)
+    return nullptr;
+  return Env.getValue(Loc->getChild(Field));
+}
+
+/// Returns the value of a `Field` on a `Struct.
+/// Returns null if `Struct` is null.
+///
+/// Note: This function currently does not use the `Env` parameter, but it will
+/// soon be needed to look up the `Value` when `setChild()` changes to return a
+/// `StorageLocation *`.
+inline Value *getFieldValue(const StructValue *Struct, const ValueDecl &Field,
+                            const Environment &Env) {
+  if (Struct == nullptr)
+    return nullptr;
+  return Struct->getChild(Field);
+}
+
 /// Creates and owns constraints which are boolean values.
 class ConstraintContext {
   unsigned NextAtom = 0;
