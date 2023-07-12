@@ -521,7 +521,9 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
 
     if (set_events == 0) {
       if (err_str && err_len > 0)
-        snprintf(err_str, err_len, "operation timed out");
+        snprintf(err_str, err_len,
+                 "attached to process, but could not pause execution; attach "
+                 "failed");
       pid = INVALID_NUB_PROCESS;
     } else {
       if (set_events & (eEventProcessRunningStateChanged |
