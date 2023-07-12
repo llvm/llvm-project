@@ -307,6 +307,16 @@ SerializedDiagnosticReader::readDiagnosticBlock(llvm::BitstreamCursor &Stream) {
                Location(Record[4], Record[5], Record[6], Record[7]), Blob)))
         return EC;
       continue;
+    case RECORD_SOURCE_FILE_CONTENTS:
+      if (Record.size() != 10 || Record[9] != Blob.size())
+        return SDError::MalformedDiagnosticRecord;
+      if ((EC = visitSourceFileContentsRecord(
+               Record[0],
+               Location(Record[1], Record[2], Record[3], Record[4]),
+               Location(Record[5], Record[6], Record[7], Record[8]),
+               Blob)))
+        return EC;
+      continue;
     case RECORD_SOURCE_RANGE:
       // A source range is two locations (4 each).
       if (Record.size() != 8)

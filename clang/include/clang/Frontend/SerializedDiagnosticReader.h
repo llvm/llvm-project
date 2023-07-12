@@ -112,6 +112,16 @@ protected:
     return {};
   }
 
+  /// Visit file contents. This associates the file's \c ID with the
+  /// contents of
+  virtual std::error_code visitSourceFileContentsRecord(
+      unsigned ID,
+      const Location &OriginalStartLoc,
+      const Location &OriginalEndLoc,
+      StringRef Contents) {
+    return {};
+  }
+
   /// Visit a fixit hint.
   virtual std::error_code
   visitFixitRecord(const Location &Start, const Location &End, StringRef Text) {

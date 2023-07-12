@@ -519,6 +519,8 @@ LLVM_16 {
     clang_CXXMethod_isCopyAssignmentOperator;
     clang_CXXMethod_isMoveAssignmentOperator;
     clang_createAPISet;
+    clang_getDiagnosticFileContents;
+    clang_getDiagnosticFileOriginalSourceRange;
     clang_disposeAPISet;
     clang_getSymbolGraphForCursor;
     clang_getSymbolGraphForUSR;

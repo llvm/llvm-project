@@ -34,6 +34,11 @@ CXDiagnosticSetImpl::appendDiagnostic(std::unique_ptr<CXDiagnosticImpl> D) {
   Diagnostics.push_back(std::move(D));
 }
 
+void CXDiagnosticSetImpl::recordSourceFileContents(
+    CXFile file, StringRef contents, CXSourceRange originalSourceRange) {
+  FileContents[file] = CXSourceFileContents{contents, originalSourceRange};
+}
+
 CXDiagnosticImpl::~CXDiagnosticImpl() {}
 
 namespace {
@@ -477,6 +482,30 @@ CXDiagnosticSet clang_getChildDiagnostics(CXDiagnostic Diag) {
     return ChildDiags.empty() ? nullptr : (CXDiagnosticSet) &ChildDiags;
   }
   return nullptr;
+}
+
+const char *clang_getDiagnosticFileContents(
+    CXDiagnosticSet diags, CXFile file, size_t *outFileSize) {
+  if (CXDiagnosticSetImpl *D = static_cast<CXDiagnosticSetImpl *>(diags)) {
+    CXSourceRange originalSourceRange;
+    if (auto contents = D->getSourceFileContents(file, originalSourceRange)) {
+      if (outFileSize)
+        *outFileSize = contents->size();
+      return contents->data();
+    }
+  }
+  return nullptr;
+}
+
+CXSourceRange clang_getDiagnosticFileOriginalSourceRange(
+    CXDiagnosticSet diags, CXFile file) {
+  if (CXDiagnosticSetImpl *D = static_cast<CXDiagnosticSetImpl *>(diags)) {
+    CXSourceRange originalSourceRange;
+    if (auto contents = D->getSourceFileContents(file, originalSourceRange)) {
+      return originalSourceRange;
+    }
+  }
+  return clang_getNullRange();
 }
 
 unsigned clang_getNumDiagnosticsInSet(CXDiagnosticSet Diags) {
