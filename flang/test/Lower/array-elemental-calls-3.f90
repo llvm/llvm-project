@@ -50,7 +50,7 @@ subroutine check_not_assert()
   y = elem_func_r(cos(x) + u)
 
   ! Array constructors as elemental function arguments.
-  y = atan2( (/ (real(i, 4), i = 1, 2) /),
+  y = atan2( (/ (real(i, 4), i = 1, 2) /), &
              real( (/ (i, i = j, k, l) /), 4) )
 end subroutine
 
