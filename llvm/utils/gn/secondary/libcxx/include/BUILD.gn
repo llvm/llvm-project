@@ -36,6 +36,7 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_HAS_NO_WIDE_CHARACTERS=",
       "_LIBCPP_ABI_DEFINES=",
       "_LIBCPP_ENABLE_ASSERTIONS_DEFAULT=",
+      "_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH=",
       "_LIBCPP_PSTL_CPU_BACKEND_SERIAL=1",
       "_LIBCPP_PSTL_CPU_BACKEND_THREAD=",
     ]
@@ -147,6 +148,7 @@ if (current_toolchain == default_toolchain) {
       "__algorithm/pstl_backends/cpu_backends/fill.h",
       "__algorithm/pstl_backends/cpu_backends/find_if.h",
       "__algorithm/pstl_backends/cpu_backends/for_each.h",
+      "__algorithm/pstl_backends/cpu_backends/libdispatch.h",
       "__algorithm/pstl_backends/cpu_backends/merge.h",
       "__algorithm/pstl_backends/cpu_backends/serial.h",
       "__algorithm/pstl_backends/cpu_backends/stable_sort.h",

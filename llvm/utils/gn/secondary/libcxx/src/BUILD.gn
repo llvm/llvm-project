@@ -213,6 +213,11 @@ if (libcxx_enable_filesystem) {
   }
 }
 
+# FIXME: Put this behind an arg, or enable it by default on macOS.
+if (false) {
+  cxx_sources += [ "pstl/libdispatch.cpp" ]
+}
+
 if (libcxx_enable_shared) {
   shared_library("cxx_shared") {
     output_dir = runtimes_dir
