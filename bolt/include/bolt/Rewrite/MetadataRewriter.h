@@ -49,6 +49,9 @@ public:
   /// contents of the section. Functions are in pre-cfg state.
   virtual Error preCFGInitializer() { return Error::success(); }
 
+  /// Run the rewriter once the functions are in CFG state.
+  virtual Error postCFGInitializer() { return Error::success(); }
+
   /// Finalize section contents based on the new context after the new code is
   /// emitted.
   virtual Error postEmitFinalizer() { return Error::success(); }
