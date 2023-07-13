@@ -3,6 +3,8 @@
 !RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-fir -fopenmp -fopenmp-is-device %s -o - | FileCheck %s
 !RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-fir -fopenmp -fopenmp-is-device %s -o - | FileCheck %s
 
+!CHECK: func.func @_QPtarget_function
+
 !CHECK:  func.func @_QPwrite_index_omp_outline_0(%[[ARG0:.*]]: !fir.ref<i32>) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>, omp.outline_parent_name = "_QPwrite_index"} {
 !CHECK-NEXT: omp.target  {{.*}} {
 !CHECK: %[[CONSTANT_VALUE_10:.*]] = arith.constant 10 : i32
@@ -33,3 +35,7 @@ SUBROUTINE WRITE_INDEX(INT_ARRAY)
                 INT_ARRAY(INDEX_) = INDEX_
         end do
 end subroutine WRITE_INDEX
+
+SUBROUTINE TARGET_FUNCTION()
+!$omp declare target
+END
