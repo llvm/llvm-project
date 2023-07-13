@@ -56734,9 +56734,11 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with
   // one use and a constant, invert the immediate, saving one register.
+  // However, ignore cases where C1 is 0, as those will become a NEG.
   // sub(C1, xor(X, C2)) -> add(xor(X, ~C2), C1+1)
   if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
-      IsNonOpaqueConstant(Op1.getOperand(1)) && Op1->hasOneUse()) {
+      !isNullConstant(Op0) && IsNonOpaqueConstant(Op1.getOperand(1)) &&
+      Op1->hasOneUse()) {
     SDLoc DL(N);
     EVT VT = Op0.getValueType();
     SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),
