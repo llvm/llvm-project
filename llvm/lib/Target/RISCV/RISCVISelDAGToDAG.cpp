@@ -3329,17 +3329,19 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
          "Expected instructions with mask have a tied dest.");
 #endif
 
+  SDValue SEW = True.getOperand(TrueVLIndex + 1);
+
   uint64_t Policy = isImplicitDef(N->getOperand(0)) ?
     RISCVII::TAIL_AGNOSTIC : /*TUMU*/ 0;
   SDValue PolicyOp =
     CurDAG->getTargetConstant(Policy, DL, Subtarget->getXLenVT());
 
+
   SmallVector<SDValue, 8> Ops;
   if (IsMasked) {
     Ops.push_back(False);
     Ops.append(True->op_begin() + 1, True->op_begin() + TrueVLIndex);
-    Ops.append({VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
-    Ops.push_back(PolicyOp);
+    Ops.append({VL, SEW, PolicyOp});
     Ops.append(True->op_begin() + TrueVLIndex + 3, True->op_end());
   } else {
     Ops.push_back(False);
@@ -3351,12 +3353,11 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
       SDValue RoundMode = True->getOperand(TrueVLIndex - 1);
       Ops.append(True->op_begin() + HasTiedDest,
                  True->op_begin() + TrueVLIndex - 1);
-      Ops.append(
-          {Mask, RoundMode, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
+      Ops.append({Mask, RoundMode, VL, SEW});
     } else {
       Ops.append(True->op_begin() + HasTiedDest,
                  True->op_begin() + TrueVLIndex);
-      Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
+      Ops.append({Mask, VL, SEW});
     }
     Ops.push_back(PolicyOp);
 
