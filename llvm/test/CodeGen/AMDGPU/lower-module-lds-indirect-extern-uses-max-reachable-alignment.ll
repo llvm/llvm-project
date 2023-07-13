@@ -131,7 +131,7 @@ define amdgpu_kernel void @expect_align2() {
 }
 
 define amdgpu_kernel void @expect_align4() {
-; CHECK-LABEL: @expect_align4() !llvm.amdgcn.lds.kernel.id !4 {
+; CHECK-LABEL: @expect_align4() #2 !llvm.amdgcn.lds.kernel.id !4 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.expect_align4.dynlds) ]
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    call void @use_shared4()
@@ -158,7 +158,7 @@ define amdgpu_kernel void @expect_align8() {
 
 ; Note: use_shared4 uses module.lds so this will allocate at offset 4
 define amdgpu_kernel void @expect_max_of_2_and_4() {
-; CHECK-LABEL: @expect_max_of_2_and_4() !llvm.amdgcn.lds.kernel.id !6 {
+; CHECK-LABEL: @expect_max_of_2_and_4() #2 !llvm.amdgcn.lds.kernel.id !6 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.expect_max_of_2_and_4.dynlds) ]
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    call void @use_shared2()
@@ -174,15 +174,16 @@ define amdgpu_kernel void @expect_max_of_2_and_4() {
 attributes #0 = { noinline }
 
 ; Function Attrs: nocallback nofree nosync nounwind willreturn memory(none)
-; CHECK: declare void @llvm.donothing() #2
+; CHECK: declare void @llvm.donothing() #3
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-; CHECK: declare i32 @llvm.amdgcn.lds.kernel.id() #3
+; CHECK: declare i32 @llvm.amdgcn.lds.kernel.id() #4
 
 ; CHECK: attributes #0 = { "amdgpu-elide-module-lds" }
 ; CHECK: attributes #1 = { noinline }
-; CHECK: attributes #2 = { nocallback nofree nosync nounwind willreturn memory(none) }
-; CHECK: attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #2 = { "amdgpu-lds-size"="4" }
+; CHECK: attributes #3 = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes #4 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 ; CHECK: !0 = !{i64 0, i64 1}
 ; CHECK: !1 = !{i64 4, i64 5}
