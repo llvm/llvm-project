@@ -565,6 +565,84 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
   return wrapInStructAndGetPointer(arrayType, storageClass);
 }
 
+//===----------------------------------------------------------------------===//
+// Type casting materialization
+//===----------------------------------------------------------------------===//
+
+/// Converts the given `inputs` to the original source `type` considering the
+/// `targetEnv`'s capabilities.
+///
+/// This function is meant to be used for source materialization in type
+/// converters. When the type converter needs to materialize a cast op back
+/// to some original source type, we need to check whether the original source
+/// type is supported in the target environment. If so, we can insert legal
+/// SPIR-V cast ops accordingly.
+///
+/// Note that in SPIR-V the capabilities for storage and compute are separate.
+/// This function is meant to handle the **compute** side; so it does not
+/// involve storage classes in its logic. The storage side is expected to be
+/// handled by MemRef conversion logic.
+std::optional<Value> castToSourceType(const spirv::TargetEnv &targetEnv,
+                                      OpBuilder &builder, Type type,
+                                      ValueRange inputs, Location loc) {
+  // We can only cast one value in SPIR-V.
+  if (inputs.size() != 1) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+  Value input = inputs.front();
+
+  // Only support integer types for now. Floating point types to be implemented.
+  if (!isa<IntegerType>(type)) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+  auto inputType = cast<IntegerType>(input.getType());
+
+  auto scalarType = dyn_cast<spirv::ScalarType>(type);
+  if (!scalarType) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+
+  // Only support source type with a smaller bitwidth. This would mean we are
+  // truncating to go back so we don't need to worry about the signedness.
+  // For extension, we cannot have enough signal here to decide which op to use.
+  if (inputType.getIntOrFloatBitWidth() < scalarType.getIntOrFloatBitWidth()) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+
+  // Boolean values would need to use different ops than normal integer values.
+  if (type.isInteger(1)) {
+    Value one = spirv::ConstantOp::getOne(inputType, loc, builder);
+    return builder.create<spirv::IEqualOp>(loc, input, one);
+  }
+
+  // Check that the source integer type is supported by the environment.
+  SmallVector<ArrayRef<spirv::Extension>, 1> exts;
+  SmallVector<ArrayRef<spirv::Capability>, 2> caps;
+  scalarType.getExtensions(exts);
+  scalarType.getCapabilities(caps);
+  if (failed(checkCapabilityRequirements(type, targetEnv, caps)) ||
+      failed(checkExtensionRequirements(type, targetEnv, exts))) {
+    auto castOp = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return castOp.getResult(0);
+  }
+
+  // We've already made sure this is truncating previously, so we don't need to
+  // care about signedness here. Still try to use a corresponding op for better
+  // consistency though.
+  if (type.isSignedInteger()) {
+    return builder.create<spirv::SConvertOp>(loc, type, input);
+  }
+  return builder.create<spirv::UConvertOp>(loc, type, input);
+}
+
+//===----------------------------------------------------------------------===//
+// SPIRVTypeConverter
+//===----------------------------------------------------------------------===//
+
 SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
                                        const SPIRVConversionOptions &options)
     : targetEnv(targetAttr), options(options) {
@@ -610,6 +688,17 @@ SPIRVTypeConverter::SPIRVTypeConverter(spirv::TargetEnvAttr targetAttr,
 
   addConversion([this](MemRefType memRefType) {
     return convertMemrefType(this->targetEnv, this->options, memRefType);
+  });
+
+  // Register some last line of defense casting logic.
+  addSourceMaterialization(
+      [this](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
+        return castToSourceType(this->targetEnv, builder, type, inputs, loc);
+      });
+  addTargetMaterialization([](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) {
+    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+    return std::optional<Value>(cast.getResult(0));
   });
 }
 

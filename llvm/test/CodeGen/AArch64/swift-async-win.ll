@@ -34,12 +34,11 @@ entryresume.0:
 ; NOTE: we do not see the canonical windows frame setup due to the `nounwind`
 ; attribtue on the function.
 
-; CHECK: sub sp, sp, #64
-; CHECK: stp x30, x29, [sp, #16]
-; CHECK: add x29, sp, #16
-; CHECK: stp x22, x21, [sp, #32]
+; CHECK: sub sp, sp, #48
+; CHECK: stp x30, x29, [sp, #24]
+; CHECK: add x29, sp, #24
+; CHECK: str x19, [sp, #40]
 ; CHECK: sub x8, x29, #8
-; CHECK: stp x20, x19, [sp, #48]
 ; CHECK: ldr x9, [x0]
 ; CHECK: str x9, [x8]
 

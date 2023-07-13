@@ -351,10 +351,12 @@ static bool allOtherUsesAreSafeForAssociate(mlir::Value value,
                                             mlir::Operation *endAssociate) {
   for (mlir::Operation *useOp : value.getUsers())
     if (!mlir::isa<hlfir::DestroyOp>(useOp) && useOp != currentUse) {
-      // hlfir.shape_of will not disrupt cleanup so it is safe for
-      // hlfir.associate. hlfir.shape_of might read the box dimensions and so it
-      // needs to come before the hflir.end_associate (which may deallocate).
-      if (mlir::isa<hlfir::ShapeOfOp>(useOp)) {
+      // hlfir.shape_of and hlfir.get_length will not disrupt cleanup so it is
+      // safe for hlfir.associate. These operations might read from the box and
+      // so they need to come before the hflir.end_associate (which may
+      // deallocate).
+      if (mlir::isa<hlfir::ShapeOfOp>(useOp) ||
+          mlir::isa<hlfir::GetLengthOp>(useOp)) {
         if (!endAssociate)
           continue;
         // not known to occur in practice:

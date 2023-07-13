@@ -29,7 +29,7 @@ namespace {
 class StackAddrEscapeChecker
     : public Checker<check::PreCall, check::PreStmt<ReturnStmt>,
                      check::EndFunction> {
-  mutable IdentifierInfo *dispatch_semaphore_tII;
+  mutable IdentifierInfo *dispatch_semaphore_tII = nullptr;
   mutable std::unique_ptr<BuiltinBug> BT_stackleak;
   mutable std::unique_ptr<BuiltinBug> BT_returnstack;
   mutable std::unique_ptr<BuiltinBug> BT_capturedstackasync;

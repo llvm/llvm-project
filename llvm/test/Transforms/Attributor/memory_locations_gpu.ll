@@ -29,7 +29,7 @@ define i32 @test_const_as_global2() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test_const_as_global2
 ; CHECK-SAME: () #[[ATTR1]] {
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr addrspacecast (ptr addrspace(4) @G to ptr), align 4
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr addrspace(4) @G, align 4
 ; CHECK-NEXT:    ret i32 [[L2]]
 ;
   %l2 = load i32, ptr addrspacecast (ptr addrspace(4) @G to ptr)
@@ -41,8 +41,7 @@ define i32 @test_const_as_call1() {
 ; CHECK-LABEL: define {{[^@]+}}@test_const_as_call1
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[P1:%.*]] = call ptr addrspace(4) @ptr_to_const()
-; CHECK-NEXT:    [[C1:%.*]] = addrspacecast ptr addrspace(4) [[P1]] to ptr
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[C1]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr addrspace(4) [[P1]], align 4
 ; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %p1 = call ptr addrspace(4) @ptr_to_const()
@@ -56,8 +55,7 @@ define i32 @test_const_as_call2() {
 ; CHECK-LABEL: define {{[^@]+}}@test_const_as_call2
 ; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[P2:%.*]] = call ptr @ptr()
-; CHECK-NEXT:    [[C2:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(4)
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr addrspace(4) [[C2]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
 ; CHECK-NEXT:    ret i32 [[L2]]
 ;
   %p2 = call ptr @ptr()
@@ -72,8 +70,7 @@ define i32 @test_shared_as_call1() {
 ; CHECK-LABEL: define {{[^@]+}}@test_shared_as_call1
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    [[P1:%.*]] = call ptr addrspace(3) @ptr_to_shared()
-; CHECK-NEXT:    [[C1:%.*]] = addrspacecast ptr addrspace(3) [[P1]] to ptr
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[C1]], align 4
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr addrspace(3) [[P1]], align 4
 ; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %p1 = call ptr addrspace(3) @ptr_to_shared()
@@ -87,8 +84,7 @@ define i32 @test_shared_as_call2() {
 ; CHECK-LABEL: define {{[^@]+}}@test_shared_as_call2
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:    [[P2:%.*]] = call ptr @ptr()
-; CHECK-NEXT:    [[C2:%.*]] = addrspacecast ptr [[P2]] to ptr addrspace(3)
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr addrspace(3) [[C2]], align 4
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
 ; CHECK-NEXT:    ret i32 [[L2]]
 ;
   %p2 = call ptr @ptr()

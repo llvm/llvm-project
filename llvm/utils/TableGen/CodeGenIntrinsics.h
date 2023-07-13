@@ -103,6 +103,9 @@ struct CodeGenIntrinsic {
   // True if the intrinsic is marked as speculatable.
   bool isSpeculatable;
 
+  // True if the intrinsic is marked as strictfp.
+  bool isStrictFP;
+
   enum ArgAttrKind {
     NoCapture,
     NoAlias,

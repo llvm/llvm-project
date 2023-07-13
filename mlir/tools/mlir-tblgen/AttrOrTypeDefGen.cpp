@@ -214,14 +214,42 @@ void DefGen::createParentWithTraits() {
   defCls.addParent(std::move(defParent));
 }
 
+/// Include declarations specified on NativeTrait
+static std::string formatExtraDeclarations(const AttrOrTypeDef &def) {
+  SmallVector<StringRef> extraDeclarations;
+  // Include extra class declarations from NativeTrait
+  for (const auto &trait : def.getTraits()) {
+    if (auto *attrOrTypeTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
+      StringRef value = attrOrTypeTrait->getExtraConcreteClassDeclaration();
+      if (value.empty())
+        continue;
+      extraDeclarations.push_back(value);
+    }
+  }
+  if (std::optional<StringRef> extraDecl = def.getExtraDecls()) {
+    extraDeclarations.push_back(*extraDecl);
+  }
+  return llvm::join(extraDeclarations, "\n");
+}
+
 /// Extra class definitions have a `$cppClass` substitution that is to be
 /// replaced by the C++ class name.
 static std::string formatExtraDefinitions(const AttrOrTypeDef &def) {
-  if (std::optional<StringRef> extraDef = def.getExtraDefs()) {
-    FmtContext ctx = FmtContext().addSubst("cppClass", def.getCppClassName());
-    return tgfmt(*extraDef, &ctx).str();
+  SmallVector<StringRef> extraDefinitions;
+  // Include extra class definitions from NativeTrait
+  for (const auto &trait : def.getTraits()) {
+    if (auto *attrOrTypeTrait = dyn_cast<tblgen::NativeTrait>(&trait)) {
+      StringRef value = attrOrTypeTrait->getExtraConcreteClassDefinition();
+      if (value.empty())
+        continue;
+      extraDefinitions.push_back(value);
+    }
   }
-  return "";
+  if (std::optional<StringRef> extraDef = def.getExtraDefs()) {
+    extraDefinitions.push_back(*extraDef);
+  }
+  FmtContext ctx = FmtContext().addSubst("cppClass", def.getCppClassName());
+  return tgfmt(llvm::join(extraDefinitions, "\n"), &ctx).str();
 }
 
 void DefGen::emitTopLevelDeclarations() {
@@ -230,9 +258,9 @@ void DefGen::emitTopLevelDeclarations() {
   defCls.declare<UsingDeclaration>("Base::Base");
 
   // Emit the extra declarations first in case there's a definition in there.
-  std::optional<StringRef> extraDecl = def.getExtraDecls();
+  std::string extraDecl = formatExtraDeclarations(def);
   std::string extraDef = formatExtraDefinitions(def);
-  defCls.declare<ExtraClassDeclaration>(extraDecl ? *extraDecl : "",
+  defCls.declare<ExtraClassDeclaration>(std::move(extraDecl),
                                         std::move(extraDef));
 }
 

@@ -20,6 +20,23 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld1_x2_i8(target("aarch64.svc
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld1_x2_i8_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x2_i8_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1b { z0.b, z1.b }, pn8/z, [x0, x1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i8, ptr %ptr, i64 %index
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
 define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ld1_x2_i16(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ld1_x2_i16:
 ; CHECK:       // %bb.0:
@@ -33,6 +50,23 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ld1_x2_i16(target("aarch64.sv
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+}
+
+define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ld1_x2_i16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x2_i16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1h { z0.h, z1.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i16, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x2.nxv8i16(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
@@ -52,6 +86,23 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32> } @ld1_x2_i32(target("aarch64.sv
   ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
+define { <vscale x 4 x i32>, <vscale x 4 x i32> } @ld1_x2_i32_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x2_i32_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1w { z0.s, z1.s }, pn8/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i32, ptr %ptr, i64 %index
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x2.nxv4i32(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
+}
+
 define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ld1_x2_i64(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ld1_x2_i64:
 ; CHECK:       // %bb.0:
@@ -65,6 +116,23 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ld1_x2_i64(target("aarch64.sv
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x2.nxv2i64(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
+}
+
+define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ld1_x2_i64_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x2_i64_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1d { z0.d, z1.d }, pn8/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i64, ptr %ptr, i64 %index
+  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x2.nxv2i64(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
@@ -84,6 +152,23 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @ld1_x2_f16(target("aarch64.
   ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
+define { <vscale x 8 x half>, <vscale x 8 x half> } @ld1_x2_f16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x2_f16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1h { z0.h, z1.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr half, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld1.pn.x2.nxv8f16(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
+}
+
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld1_x2_bf16(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ld1_x2_bf16:
 ; CHECK:       // %bb.0:
@@ -97,6 +182,23 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld1_x2_bf16(target("aar
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld1.pn.x2.nxv8bf16(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
+}
+
+define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld1_x2_bf16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x2_bf16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1h { z0.h, z1.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr bfloat, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld1.pn.x2.nxv8bf16(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
 
@@ -116,6 +218,23 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @ld1_x2_f32(target("aarch6
   ret { <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
+define { <vscale x 4 x float>, <vscale x 4 x float> } @ld1_x2_f32_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x2_f32_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1w { z0.s, z1.s }, pn8/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr float, ptr %ptr, i64 %index
+  %res = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x2.nxv4f32(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 4 x float>, <vscale x 4 x float> } %res
+}
+
 define { <vscale x 2 x double>, <vscale x 2 x double> } @ld1_x2_f64(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ld1_x2_f64:
 ; CHECK:       // %bb.0:
@@ -129,6 +248,23 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @ld1_x2_f64(target("aarc
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x2.nxv2f64(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 2 x double>, <vscale x 2 x double> } %res
+}
+
+define { <vscale x 2 x double>, <vscale x 2 x double> } @ld1_x2_f64_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x2_f64_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1d { z0.d, z1.d }, pn8/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr double, ptr %ptr, i64 %index
+  %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x2.nxv2f64(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
@@ -154,6 +290,29 @@ define <vscale x 16 x i8> @ld1_x2_i8_z0_taken(target("aarch64.svcount") %pn, ptr
   ret <vscale x 16 x i8>  %res
 }
 
+; Test to ensure we load into the correct registers for the instruction
+define <vscale x 16 x i8> @ld1_x2_i8_z0_taken_scalar(target("aarch64.svcount") %pn, ptr %ptr, <vscale x 16 x i8> %val, i64 %index) {
+; CHECK-LABEL: ld1_x2_i8_z0_taken_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1b { z2.b, z3.b }, pn8/z, [x0, x1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    add z0.b, z0.b, z2.b
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i8, ptr %ptr, i64 %index
+  %ld1 = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x2.nxv16i8(target("aarch64.svcount") %pn, ptr %base);
+  %ld1_0 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %ld1, 0
+  %res = add <vscale x 16 x i8> %val, %ld1_0
+  ret <vscale x 16 x i8>  %res
+}
+
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld1_x4_i8(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ld1_x4_i8:
 ; CHECK:       // %bb.0:
@@ -167,6 +326,23 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld1_x4_i8_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x4_i8_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1b { z0.b - z3.b }, pn8/z, [x0, x1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i8, ptr %ptr, i64 %index
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld1.pn.x4.nxv16i8(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -186,6 +362,23 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
   ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
+define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld1_x4_i16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x4_i16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1h { z0.h - z3.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i16, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+}
+
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld1_x4_i32(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ld1_x4_i32:
 ; CHECK:       // %bb.0:
@@ -199,6 +392,23 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x4.nxv4i32(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
+}
+
+define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld1_x4_i32_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x4_i32_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1w { z0.s - z3.s }, pn8/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i32, ptr %ptr, i64 %index
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld1.pn.x4.nxv4i32(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
@@ -218,6 +428,23 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
   ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
+define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ld1_x4_i64_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x4_i64_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1d { z0.d - z3.d }, pn8/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i64, ptr %ptr, i64 %index
+  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld1.pn.x4.nxv2i64(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
+}
+
 define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld1_x4_f16(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ld1_x4_f16:
 ; CHECK:       // %bb.0:
@@ -231,6 +458,23 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld1.pn.x4.nxv8f16(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
+}
+
+define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld1_x4_f16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x4_f16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1h { z0.h - z3.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr half, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld1.pn.x4.nxv8f16(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
@@ -250,6 +494,23 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
 
+define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld1_x4_bf16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x4_bf16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1h { z0.h - z3.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr bfloat, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld1.pn.x4.nxv8bf16(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
+}
+
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld1_x4_f32(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ld1_x4_f32:
 ; CHECK:       // %bb.0:
@@ -266,6 +527,23 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
+define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld1_x4_f32_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x4_f32_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1w { z0.s - z3.s }, pn8/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr float, ptr %ptr, i64 %index
+  %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
+}
+
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ld1_x4_f64(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ld1_x4_f64:
 ; CHECK:       // %bb.0:
@@ -279,6 +557,23 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x4.nxv2f64(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
+}
+
+define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ld1_x4_f64_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ld1_x4_f64_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1d { z0.d - z3.d }, pn8/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr double, ptr %ptr, i64 %index
+  %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x4.nxv2f64(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
@@ -304,6 +599,28 @@ define <vscale x 8 x i16> @ld1_x4_i16_z0_taken(target("aarch64.svcount") %pn, pt
   ret <vscale x 8 x i16>  %res
 }
 
+; Test to ensure we load into the correct registers for the instruction
+define <vscale x 8 x i16> @ld1_x4_i16_z0_taken_scalar(target("aarch64.svcount") %pn, ptr %ptr, <vscale x 8 x i16> %val, i64 %index) {
+; CHECK-LABEL: ld1_x4_i16_z0_taken_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ld1h { z4.h - z7.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    add z0.h, z0.h, z4.h
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i16, ptr %ptr, i64 %index
+  %ld1 = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld1.pn.x4.nxv8i16(target("aarch64.svcount") %pn, ptr %base);
+  %ld1_0 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %ld1, 0
+  %res = add <vscale x 8 x i16> %val, %ld1_0
+  ret <vscale x 8 x i16>  %res
+}
 
 ; == Non-temporal Multi-Vector Consecutive Loads ==
 
@@ -323,6 +640,23 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ldnt1_x2_i8(target("aarch64.s
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
+define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ldnt1_x2_i8_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x2_i8_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1b { z0.b, z1.b }, pn8/z, [x0, x1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i8, ptr %ptr, i64 %index
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv16i8(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
 define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ldnt1_x2_i16(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ldnt1_x2_i16:
 ; CHECK:       // %bb.0:
@@ -336,6 +670,23 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ldnt1_x2_i16(target("aarch64.
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+}
+
+define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ldnt1_x2_i16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x2_i16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1h { z0.h, z1.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i16, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8i16(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
@@ -355,6 +706,23 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32> } @ldnt1_x2_i32(target("aarch64.
   ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
+define { <vscale x 4 x i32>, <vscale x 4 x i32> } @ldnt1_x2_i32_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x2_i32_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1w { z0.s, z1.s }, pn8/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i32, ptr %ptr, i64 %index
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
+}
+
 define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ldnt1_x2_i64(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ldnt1_x2_i64:
 ; CHECK:       // %bb.0:
@@ -368,6 +736,23 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ldnt1_x2_i64(target("aarch64.
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
+}
+
+define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ldnt1_x2_i64_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x2_i64_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1d { z0.d, z1.d }, pn8/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i64, ptr %ptr, i64 %index
+  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2i64(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
@@ -387,6 +772,23 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @ldnt1_x2_f16(target("aarch6
   ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
+define { <vscale x 8 x half>, <vscale x 8 x half> } @ldnt1_x2_f16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x2_f16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1h { z0.h, z1.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i16, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8f16(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
+}
+
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ldnt1_x2_bf16(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ldnt1_x2_bf16:
 ; CHECK:       // %bb.0:
@@ -400,6 +802,23 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ldnt1_x2_bf16(target("a
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8bf16(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
+}
+
+define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ldnt1_x2_bf16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x2_bf16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1h { z0.h, z1.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr bfloat, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv8bf16(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
 
@@ -419,6 +838,23 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @ldnt1_x2_f32(target("aarc
   ret { <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
+define { <vscale x 4 x float>, <vscale x 4 x float> } @ldnt1_x2_f32_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x2_f32_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1w { z0.s, z1.s }, pn8/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr float, ptr %ptr, i64 %index
+  %res = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4f32(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 4 x float>, <vscale x 4 x float> } %res
+}
+
 define { <vscale x 2 x double>, <vscale x 2 x double> } @ldnt1_x2_f64(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ldnt1_x2_f64:
 ; CHECK:       // %bb.0:
@@ -432,6 +868,23 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @ldnt1_x2_f64(target("aa
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2f64(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 2 x double>, <vscale x 2 x double> } %res
+}
+
+define { <vscale x 2 x double>, <vscale x 2 x double> } @ldnt1_x2_f64_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x2_f64_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1d { z0.d, z1.d }, pn8/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr double, ptr %ptr, i64 %index
+  %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv2f64(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
@@ -457,6 +910,29 @@ define <vscale x 4 x i32> @ldnt1_x2_i32_z0_taken(target("aarch64.svcount") %pn, 
   ret <vscale x 4 x i32>  %res
 }
 
+; Test to ensure we load into the correct registers for the instruction
+define <vscale x 4 x i32> @ldnt1_x2_i32_z0_taken_scalar(target("aarch64.svcount") %pn, ptr %ptr, <vscale x 4 x i32> %val, i64 %index) {
+; CHECK-LABEL: ldnt1_x2_i32_z0_taken_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1w { z2.s, z3.s }, pn8/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    add z0.s, z0.s, z2.s
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i32, ptr %ptr, i64 %index
+  %ld1 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x2.nxv4i32(target("aarch64.svcount") %pn, ptr %base);
+  %ld1_0 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %ld1, 0
+  %res = add <vscale x 4 x i32> %val, %ld1_0
+  ret <vscale x 4 x i32>  %res
+}
+
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ldnt1_x4_i8(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ldnt1_x4_i8:
 ; CHECK:       // %bb.0:
@@ -470,6 +946,23 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
+}
+
+define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ldnt1_x4_i8_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x4_i8_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1b { z0.b - z3.b }, pn8/z, [x0, x1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i8, ptr %ptr, i64 %index
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv16i8(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -489,6 +982,23 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
   ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
+define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ldnt1_x4_i16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x4_i16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1h { z0.h - z3.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i16, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8i16(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
+}
+
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ldnt1_x4_i32(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ldnt1_x4_i32:
 ; CHECK:       // %bb.0:
@@ -502,6 +1012,23 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
+}
+
+define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ldnt1_x4_i32_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x4_i32_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1w { z0.s - z3.s }, pn8/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i32, ptr %ptr, i64 %index
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4i32(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
@@ -521,6 +1048,23 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
   ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
+define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ldnt1_x4_i64_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x4_i64_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1d { z0.d - z3.d }, pn8/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i64, ptr %ptr, i64 %index
+  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
+}
+
 define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ldnt1_x4_f16(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ldnt1_x4_f16:
 ; CHECK:       // %bb.0:
@@ -534,6 +1078,23 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8f16(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
+}
+
+define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ldnt1_x4_f16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x4_f16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1h { z0.h - z3.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr half, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8f16(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
@@ -553,6 +1114,23 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
 
+define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ldnt1_x4_bf16_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x4_bf16_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1h { z0.h - z3.h }, pn8/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr bfloat, ptr %ptr, i64 %index
+  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv8bf16(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
+}
+
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ldnt1_x4_f32(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ldnt1_x4_f32:
 ; CHECK:       // %bb.0:
@@ -569,6 +1147,23 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
+define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ldnt1_x4_f32_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x4_f32_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1w { z0.s - z3.s }, pn8/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr float, ptr %ptr, i64 %index
+  %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv4f32(target("aarch64.svcount") %pn, ptr %base);
+  ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
+}
+
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ldnt1_x4_f64(target("aarch64.svcount") %pn, ptr %ptr) nounwind {
 ; CHECK-LABEL: ldnt1_x4_f64:
 ; CHECK:       // %bb.0:
@@ -582,6 +1177,23 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2f64(target("aarch64.svcount") %pn, ptr %ptr);
+  ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
+}
+
+define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ldnt1_x4_f64_scalar(target("aarch64.svcount") %pn, ptr %ptr, i64 %index) nounwind {
+; CHECK-LABEL: ldnt1_x4_f64_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1d { z0.d - z3.d }, pn8/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr double, ptr %ptr, i64 %index
+  %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2f64(target("aarch64.svcount") %pn, ptr %base);
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
@@ -602,6 +1214,29 @@ define <vscale x 2 x i64> @ldnt1_x4_i64_z0_taken(target("aarch64.svcount") %pn, 
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %ld1 = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") %pn, ptr %ptr);
+  %ld1_0 = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %ld1, 0
+  %res = add <vscale x 2 x i64> %val, %ld1_0
+  ret <vscale x 2 x i64>  %res
+}
+
+; Test to ensure we load into the correct registers for the instruction
+define <vscale x 2 x i64> @ldnt1_x4_i64_z0_taken_scalar(target("aarch64.svcount") %pn, ptr %ptr, <vscale x 2 x i64> %val, i64 %index) {
+; CHECK-LABEL: ldnt1_x4_i64_z0_taken_scalar:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-1
+; CHECK-NEXT:    str p8, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 8 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    mov p8.b, p0.b
+; CHECK-NEXT:    ldnt1d { z4.d - z7.d }, pn8/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ldr p8, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    add z0.d, z0.d, z4.d
+; CHECK-NEXT:    addvl sp, sp, #1
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %base = getelementptr i64, ptr %ptr, i64 %index
+  %ld1 = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ldnt1.pn.x4.nxv2i64(target("aarch64.svcount") %pn, ptr %base);
   %ld1_0 = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %ld1, 0
   %res = add <vscale x 2 x i64> %val, %ld1_0
   ret <vscale x 2 x i64>  %res

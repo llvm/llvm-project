@@ -225,6 +225,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         DstMF->CreateMachineBasicBlock(SrcMBB.getBasicBlock());
     Src2DstMBB[&SrcMBB] = DstMBB;
 
+    DstMBB->setSPAdjustment(SrcMBB.getSPAdjustment());
+
     if (SrcMBB.isIRBlockAddressTaken())
       DstMBB->setAddressTakenIRBlock(SrcMBB.getAddressTakenIRBlock());
     if (SrcMBB.isMachineBlockAddressTaken())

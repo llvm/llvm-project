@@ -3285,11 +3285,13 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   if ((!isRV64() && IsAMOCAS_D) || IsAMOCAS_Q) {
     unsigned Rd = Inst.getOperand(0).getReg();
     unsigned Rs2 = Inst.getOperand(2).getReg();
-    if (Rd % 2 != 0) {
+    assert(Rd >= RISCV::X0 && Rd <= RISCV::X31);
+    if ((Rd - RISCV::X0) % 2 != 0) {
       SMLoc Loc = Operands[1]->getStartLoc();
       return Error(Loc, "The destination register must be even.");
     }
-    if (Rs2 % 2 != 0) {
+    assert(Rs2 >= RISCV::X0 && Rs2 <= RISCV::X31);
+    if ((Rs2 - RISCV::X0) % 2 != 0) {
       SMLoc Loc = Operands[2]->getStartLoc();
       return Error(Loc, "The source register must be even.");
     }

@@ -297,7 +297,8 @@ func.func @load_i8(%arg0: memref<i8, #spirv.storage_class<StorageBuffer>>) -> i8
   //     CHECK: %[[T1:.+]] = spirv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
   //     CHECK: %[[T2:.+]] = spirv.Constant 24 : i32
   //     CHECK: %[[T3:.+]] = spirv.ShiftLeftLogical %[[T1]], %[[T2]] : i32, i32
-  //     CHECK: spirv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
+  //     CHECK: %[[SR:.+]] = spirv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
+  //     CHECK: builtin.unrealized_conversion_cast %[[SR]]
   %0 = memref.load %arg0[] : memref<i8, #spirv.storage_class<StorageBuffer>>
   return %0 : i8
 }
@@ -321,7 +322,8 @@ func.func @load_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, 
   //     CHECK: %[[MASK:.+]] = spirv.Constant 65535 : i32
   //     CHECK: %[[T1:.+]] = spirv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
   //     CHECK: %[[T3:.+]] = spirv.ShiftLeftLogical %[[T1]], %[[SIXTEEN]] : i32, i32
-  //     CHECK: spirv.ShiftRightArithmetic %[[T3]], %[[SIXTEEN]] : i32, i32
+  //     CHECK: %[[SR:.+]] = spirv.ShiftRightArithmetic %[[T3]], %[[SIXTEEN]] : i32, i32
+  //     CHECK: builtin.unrealized_conversion_cast %[[SR]]
   %0 = memref.load %arg0[%index] : memref<10xi16, #spirv.storage_class<StorageBuffer>>
   return %0: i16
 }
@@ -448,7 +450,8 @@ func.func @load_i4(%arg0: memref<?xi4, #spirv.storage_class<StorageBuffer>>, %i:
   // CHECK: %[[AND:.+]] = spirv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
   // CHECK: %[[C28:.+]] = spirv.Constant 28 : i32
   // CHECK: %[[SL:.+]] = spirv.ShiftLeftLogical %[[AND]], %[[C28]] : i32, i32
-  // CHECK: spirv.ShiftRightArithmetic %[[SL]], %[[C28]] : i32, i32
+  // CHECK: %[[SR:.+]] = spirv.ShiftRightArithmetic %[[SL]], %[[C28]] : i32, i32
+  // CHECK: builtin.unrealized_conversion_cast %[[SR]]
   %0 = memref.load %arg0[%i] : memref<?xi4, #spirv.storage_class<StorageBuffer>>
   return %0 : i4
 }
@@ -476,6 +479,44 @@ func.func @store_i4(%arg0: memref<?xi4, #spirv.storage_class<StorageBuffer>>, %v
   // CHECK: spirv.AtomicOr "Device" "AcquireRelease" %[[PTR]], %[[STORE_VAL]]
   memref.store %value, %arg0[%i] : memref<?xi4, #spirv.storage_class<StorageBuffer>>
   return
+}
+
+} // end module
+
+// -----
+
+// Check that casts are properly inserted if the corresponding **compute**
+// capability is allowed.
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader, Int8, Int16], [
+      SPV_KHR_8bit_storage, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class
+      ]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @load_i1
+func.func @load_i1(%arg0: memref<i1, #spirv.storage_class<StorageBuffer>>) -> i1 {
+  //     CHECK: %[[ONE:.+]] = spirv.Constant 1 : i32
+  //     CHECK: %[[RES:.+]]  = spirv.IEqual %{{.+}}, %[[ONE]] : i32
+  //     CHECK: return %[[RES]]
+  %0 = memref.load %arg0[] : memref<i1, #spirv.storage_class<StorageBuffer>>
+  return %0 : i1
+}
+
+// CHECK-LABEL: @load_i8
+func.func @load_i8(%arg0: memref<i8, #spirv.storage_class<StorageBuffer>>) -> i8 {
+  //     CHECK: %[[RES:.+]] = spirv.UConvert %{{.+}} : i32 to i8
+  //     CHECK: return %[[RES]]
+  %0 = memref.load %arg0[] : memref<i8, #spirv.storage_class<StorageBuffer>>
+  return %0 : i8
+}
+
+// CHECK-LABEL: @load_i16
+func.func @load_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, %index : index) -> i16 {
+  //     CHECK: %[[RES:.+]] = spirv.UConvert %{{.+}} : i32 to i16
+  //     CHECK: return %[[RES]]
+  %0 = memref.load %arg0[%index] : memref<10xi16, #spirv.storage_class<StorageBuffer>>
+  return %0: i16
 }
 
 } // end module

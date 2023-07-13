@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <regex>
 #include <string>
 
 #define DEBUG_TYPE "nvvm-to-llvm"
@@ -53,7 +54,7 @@ namespace {
 class PtxBuilder {
   Operation *op;
   PatternRewriter &rewriter;
-  const char *asmStr;
+  std::string asmStr;
   SmallVector<Value> asmVals;
   std::string asmConstraints;
   bool sideEffects;
@@ -85,9 +86,10 @@ class PtxBuilder {
   }
 
 public:
-  PtxBuilder(Operation *op, PatternRewriter &rewriter, const char *ptxAsm,
+  PtxBuilder(Operation *op, PatternRewriter &rewriter, std::string ptxAsm,
              bool sideEffects = false)
-      : op(op), rewriter(rewriter), asmStr(ptxAsm), sideEffects(sideEffects) {}
+      : op(op), rewriter(rewriter), asmStr(std::move(ptxAsm)),
+        sideEffects(sideEffects) {}
 
   void insertValue(Value v, PTXRegisterMod itype = PTXRegisterMod::Read) {
     llvm::raw_string_ostream ss(asmConstraints);
@@ -116,10 +118,13 @@ public:
         asmConstraints[asmConstraints.size() - 1] == ',')
       asmConstraints.pop_back();
 
+    // asm keywords expects %, but inline assembly uses $. Replace all % with $
+    std::replace(asmStr.begin(), asmStr.end(), '%', '$');
+
     return rewriter.create<LLVM::InlineAsmOp>(
         op->getLoc(), resultType,
         /*operands=*/asmVals,
-        /*asm_string=*/asmStr,
+        /*asm_string=*/llvm::StringRef(asmStr),
         /*constraints=*/asmConstraints.data(),
         /*has_side_effects=*/sideEffects,
         /*is_align_stack=*/false,

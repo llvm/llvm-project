@@ -570,6 +570,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "bb_id " << *getBBID();
       hasAttributes = true;
     }
+    if (SPAdjustment != 0) {
+      os << (hasAttributes ? ", " : " (");
+      os << "sp-adjustment " << SPAdjustment;
+      hasAttributes = true;
+    }
   }
 
   if (hasAttributes)
