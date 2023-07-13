@@ -155,6 +155,13 @@ public:
   };
 
 private:
+  enum Flags : uint32_t {
+    eFlagCompress = (1u << 0),
+    eFlagNewFuncInfo = (1u << 1),
+    eFlagIdxSorted = (1u << 2),
+    eFlagDynStr = (1u << 3),
+  };
+
   enum IntEncoding : uint32_t {
     eSigned = 0x1,
     eChar = 0x2,
@@ -270,6 +277,13 @@ private:
                                       uint32_t fields, uint32_t struct_size);
 
   DataExtractor m_data;
+
+  /// The start offset of the CTF body into m_data. If the body is uncompressed,
+  /// m_data contains the header and the body and the body starts after the
+  /// header. If the body is compressed, m_data only contains the body and the
+  /// offset is zero.
+  lldb::offset_t m_body_offset = 0;
+
   TypeSystemClang *m_ast;
   lldb::CompUnitSP m_comp_unit_sp;
 
