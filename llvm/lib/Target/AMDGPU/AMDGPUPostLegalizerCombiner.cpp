@@ -430,9 +430,9 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
     MachineInstr &MI, unsigned &NewOpcode) const {
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
-  struct KnownBits Op0KnownBits = KB->getKnownBits(Src0);
+  KnownBits Op0KnownBits = KB->getKnownBits(Src0);
   unsigned Op0LeadingZeros = Op0KnownBits.countMinLeadingZeros();
-  struct KnownBits Op1KnownBits = KB->getKnownBits(Src1);
+  KnownBits Op1KnownBits = KB->getKnownBits(Src1);
   unsigned Op1LeadingZeros = Op1KnownBits.countMinLeadingZeros();
   if (Op0LeadingZeros >= 32 && Op1LeadingZeros >= 32) {
     NewOpcode = AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO;
