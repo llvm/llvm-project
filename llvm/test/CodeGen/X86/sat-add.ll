@@ -1008,10 +1008,9 @@ define <4 x i32> @unsigned_sat_variable_v4i32_using_min(<4 x i32> %x, <4 x i32> 
 ; SSE2-NEXT:    pxor %xmm1, %xmm4
 ; SSE2-NEXT:    pcmpgtd %xmm3, %xmm4
 ; SSE2-NEXT:    pand %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm4
 ; SSE2-NEXT:    pxor %xmm2, %xmm4
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -1152,10 +1151,9 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_min(<2 x i64> %x, <2 x i64> 
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
 ; SSE2-NEXT:    por %xmm3, %xmm4
 ; SSE2-NEXT:    pand %xmm4, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm4
 ; SSE2-NEXT:    pxor %xmm2, %xmm4
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
-; SSE2-NEXT:    pandn %xmm4, %xmm2
-; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm4, %xmm0
 ; SSE2-NEXT:    paddq %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
