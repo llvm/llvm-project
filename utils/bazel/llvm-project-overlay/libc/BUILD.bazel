@@ -2023,6 +2023,7 @@ libc_support_library(
         "src/string/memory_utils/memmove_implementations.h",
         "src/string/memory_utils/memset_implementations.h",
         "src/string/memory_utils/riscv/bcmp_implementations.h",
+        "src/string/memory_utils/riscv/memcmp_implementations.h",
         "src/string/memory_utils/riscv/memcpy_implementations.h",
         "src/string/memory_utils/riscv/memset_implementations.h",
         "src/string/memory_utils/strcmp_implementations.h",
