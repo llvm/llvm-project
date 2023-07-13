@@ -1,4 +1,29 @@
-// RUN: mlir-opt -allow-unregistered-dialect -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect --split-input-file --verify-diagnostics %s | FileCheck %s
+
+//===----------------------------------------------------------------------===//
+// CooperativeMatrix (KHR)
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @cooperative_matrix_length
+spirv.func @cooperative_matrix_length() -> i32 "None" {
+  // CHECK: {{%.*}} = spirv.KHR.CooperativeMatrixLength : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
+  %0 = spirv.KHR.CooperativeMatrixLength : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
+  spirv.ReturnValue %0 : i32
+}
+
+// -----
+
+spirv.func @cooperative_matrix_length_wrong_matrix() -> i32 "None" {
+  // expected-error @+1 {{'spirv.KHR.CooperativeMatrixLength' op type attribute must be a '!spirv.coopmatrix'}}
+  %0 = spirv.KHR.CooperativeMatrixLength : !spirv.NV.coopmatrix<8x16xi32, Subgroup>
+  spirv.ReturnValue %0 : i32
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// NV.CooperativeMatrix
+//===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: @cooperative_matrix_load
 spirv.func @cooperative_matrix_load(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32, %b : i1) "None" {
@@ -7,7 +32,6 @@ spirv.func @cooperative_matrix_load(%ptr : !spirv.ptr<i32, StorageBuffer>, %stri
   spirv.Return
 }
 
-// -----
 // CHECK-LABEL: @cooperative_matrix_load_memaccess
 spirv.func @cooperative_matrix_load_memaccess(%ptr : !spirv.ptr<i32, StorageBuffer>, %stride : i32, %b : i1) "None" {
   // CHECK: {{%.*}} = spirv.NV.CooperativeMatrixLoad {{%.*}}, {{%.*}}, {{%.*}} ["Volatile"] : !spirv.ptr<i32, StorageBuffer> as !spirv.NV.coopmatrix<8x16xi32, Subgroup>
@@ -163,4 +187,12 @@ spirv.func @cooperative_matrix_load_memaccess(%ptr : !spirv.ptr<i32, Function>, 
   // expected-error @+1 {{Pointer storage class must be Workgroup, StorageBuffer or PhysicalStorageBufferEXT}}
   %0 = spirv.NV.CooperativeMatrixLoad %ptr, %stride, %b : !spirv.ptr<i32, Function> as !spirv.NV.coopmatrix<8x16xi32, Subgroup>
   spirv.Return
+}
+
+// -----
+
+spirv.func @cooperative_matrix_length_wrong_matrix() -> i32 "None" {
+  // expected-error @+1 {{'spirv.NV.CooperativeMatrixLength' op type attribute must be a '!spirv.NV.coopmatrix'}}
+  %0 = spirv.NV.CooperativeMatrixLength : !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>
+  spirv.ReturnValue %0 : i32
 }

@@ -34,7 +34,8 @@ namespace ir_detail {
   DO(DimLevelType::CompressedWithHi)                                           \
   DO(DimLevelType::CompressedWithHiNu)                                         \
   DO(DimLevelType::CompressedWithHiNo)                                         \
-  DO(DimLevelType::CompressedWithHiNuNo)
+  DO(DimLevelType::CompressedWithHiNuNo)                                       \
+  DO(DimLevelType::TwoOutOfFour)
 #define LEVELTYPE_INITLIST_ELEMENT(lvlType)                                    \
   std::make_pair(StringRef(toMLIRString(lvlType)), lvlType),
 #define LEVELTYPE_INITLIST                                                     \

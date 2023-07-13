@@ -1217,6 +1217,10 @@ ObjectFile::createXCOFFObjectFile(MemoryBufferRef MemBufRef,
   return XCOFFObjectFile::create(FileType, MemBufRef);
 }
 
+std::optional<StringRef> XCOFFObjectFile::tryGetCPUName() const {
+  return StringRef("future");
+}
+
 bool XCOFFSymbolRef::isFunction() const {
   if (!isCsectSymbol())
     return false;

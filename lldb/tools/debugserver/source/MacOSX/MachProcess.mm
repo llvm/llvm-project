@@ -2821,16 +2821,21 @@ pid_t MachProcess::AttachForDebug(
           "attach to pid %d",
           getpid(), pid);
 
-      struct kinfo_proc kinfo;
-      int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-      size_t len = sizeof(struct kinfo_proc);
-      if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) == 0 && len > 0) {
-        if (kinfo.kp_proc.p_flag & P_TRACED) {
-          ::snprintf(err_str, err_len, "%s - process %d is already being debugged", err.AsString(), pid);
+      if (ProcessIsBeingDebugged(pid)) {
+        nub_process_t ppid = GetParentProcessID(pid);
+        if (ppid == getpid()) {
+          snprintf(err_str, err_len,
+                   "%s - Failed to attach to pid %d, AttachForDebug() "
+                   "unable to ptrace(PT_ATTACHEXC)",
+                   err.AsString(), m_pid);
+        } else {
+          snprintf(err_str, err_len,
+                   "%s - process %d is already being debugged by pid %d",
+                   err.AsString(), pid, ppid);
           DNBLogError(
               "[LaunchAttach] (%d) MachProcess::AttachForDebug pid %d is "
-              "already being debugged",
-              getpid(), pid);
+              "already being debugged by pid %d",
+              getpid(), pid, ppid);
         }
       }
     }
@@ -2877,6 +2882,26 @@ std::string MachProcess::GetMacCatalystVersionString() {
       return version_str;
   }
   return {};
+}
+
+nub_process_t MachProcess::GetParentProcessID(nub_process_t child_pid) {
+  struct proc_bsdshortinfo proc;
+  if (proc_pidinfo(child_pid, PROC_PIDT_SHORTBSDINFO, 0, &proc,
+                   PROC_PIDT_SHORTBSDINFO_SIZE) == sizeof(proc)) {
+    return proc.pbsi_ppid;
+  }
+  return INVALID_NUB_PROCESS;
+}
+
+bool MachProcess::ProcessIsBeingDebugged(nub_process_t pid) {
+  struct kinfo_proc kinfo;
+  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
+  size_t len = sizeof(struct kinfo_proc);
+  if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) == 0 &&
+      (kinfo.kp_proc.p_flag & P_TRACED))
+    return true;
+  else
+    return false;
 }
 
 #if defined(WITH_SPRINGBOARD) || defined(WITH_BKS) || defined(WITH_FBS)
@@ -3401,7 +3426,13 @@ pid_t MachProcess::LaunchForDebug(
                                       "%d (err = %i, errno = %i (%s))",
                          m_pid, err, ptrace_err.Status(),
                          ptrace_err.AsString());
-        launch_err.SetError(NUB_GENERIC_ERROR, DNBError::Generic);
+        char err_msg[PATH_MAX];
+
+        snprintf(err_msg, sizeof(err_msg),
+                 "Failed to attach to pid %d, LaunchForDebug() unable to "
+                 "ptrace(PT_ATTACHEXC)",
+                 m_pid);
+        launch_err.SetErrorString(err_msg);
       }
     } else {
       launch_err.Clear();
@@ -3777,6 +3808,10 @@ pid_t MachProcess::SBLaunchForDebug(const char *path, char const *argv[],
       m_flags |= eMachProcessFlagsAttached;
       DNBLogThreadedIf(LOG_PROCESS, "successfully attached to pid %d", m_pid);
     } else {
+      launch_err.SetErrorString(
+          "Failed to attach to pid %d, SBLaunchForDebug() unable to "
+          "ptrace(PT_ATTACHEXC)",
+          m_pid);
       SetState(eStateExited);
       DNBLogThreadedIf(LOG_PROCESS, "error: failed to attach to pid %d", m_pid);
     }
@@ -3996,6 +4031,10 @@ pid_t MachProcess::BoardServiceLaunchForDebug(
       m_flags |= eMachProcessFlagsAttached;
       DNBLog("[LaunchAttach] successfully attached to pid %d", m_pid);
     } else {
+      launch_err.SetErrorString(
+          "Failed to attach to pid %d, BoardServiceLaunchForDebug() unable to "
+          "ptrace(PT_ATTACHEXC)",
+          m_pid);
       SetState(eStateExited);
       DNBLog("[LaunchAttach] END (%d) error: failed to attach to pid %d",
              getpid(), m_pid);

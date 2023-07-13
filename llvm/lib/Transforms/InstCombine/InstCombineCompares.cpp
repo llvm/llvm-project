@@ -5260,10 +5260,19 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
     bool IsZext0 = isa<ZExtOperator>(ICmp.getOperand(0));
     bool IsZext1 = isa<ZExtOperator>(ICmp.getOperand(1));
 
-    // If we have mismatched casts, treat the zext of a non-negative source as
-    // a sext to simulate matching casts. Otherwise, we are done.
-    // TODO: Can we handle some predicates (equality) without non-negative?
     if (IsZext0 != IsZext1) {
+        // If X and Y and both i1
+        // (icmp eq/ne (zext X) (sext Y))
+        //      eq -> (icmp eq (or X, Y), 0)
+        //      ne -> (icmp ne (or X, Y), 0)
+      if (ICmp.isEquality() && X->getType()->isIntOrIntVectorTy(1) &&
+          Y->getType()->isIntOrIntVectorTy(1))
+        return new ICmpInst(ICmp.getPredicate(), Builder.CreateOr(X, Y),
+                            Constant::getNullValue(X->getType()));
+
+      // If we have mismatched casts, treat the zext of a non-negative source as
+      // a sext to simulate matching casts. Otherwise, we are done.
+      // TODO: Can we handle some predicates (equality) without non-negative?
       if ((IsZext0 && isKnownNonNegative(X, DL, 0, &AC, &ICmp, &DT)) ||
           (IsZext1 && isKnownNonNegative(Y, DL, 0, &AC, &ICmp, &DT)))
         IsSignedExt = true;
