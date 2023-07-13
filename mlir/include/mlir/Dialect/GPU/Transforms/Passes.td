@@ -37,4 +37,22 @@ def GpuMapParallelLoopsPass
   let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
+def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
+  let summary = "Decomposes memref index computation into explicit ops.";
+  let description = [{
+    This pass decomposes memref index computation into explicit computations on
+    sizes/strides, obtained from `memref.extract_memref_metadata` which it tries
+    to place outside of `gpu.launch` body. Memrefs are then reconstructed using
+    `memref.reinterpret_cast`.
+    This is needed for as some targets (SPIR-V) lower memrefs to bare pointers
+    and sizes/strides for dynamically-sized memrefs are not available inside
+    `gpu.launch`.
+  }];
+  let constructor = "mlir::createGpuDecomposeMemrefsPass()";
+  let dependentDialects = [
+    "mlir::gpu::GPUDialect", "mlir::memref::MemRefDialect",
+    "mlir::affine::AffineDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_GPU_PASSES
