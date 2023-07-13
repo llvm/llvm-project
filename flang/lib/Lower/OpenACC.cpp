@@ -715,10 +715,11 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
   } else if (auto cmplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(ty)) {
     mlir::Type floatTy =
         Fortran::lower::convertReal(builder.getContext(), cmplxTy.getFKind());
-    mlir::Value init = builder.createRealConstant(
+    mlir::Value realInit = builder.createRealConstant(
         loc, floatTy, getReductionInitValue<int64_t>(op, cmplxTy));
-    return fir::factory::Complex{builder, loc}.createComplex(cmplxTy.getFKind(),
-                                                             init, init);
+    mlir::Value imagInit = builder.createRealConstant(loc, floatTy, 0.0);
+    return fir::factory::Complex{builder, loc}.createComplex(
+        cmplxTy.getFKind(), realInit, imagInit);
   }
   if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
@@ -820,6 +821,8 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
       return builder.create<mlir::arith::MulIOp>(loc, value1, value2);
     if (mlir::isa<mlir::FloatType>(ty))
       return builder.create<mlir::arith::MulFOp>(loc, value1, value2);
+    if (mlir::isa<fir::ComplexType>(ty))
+      return builder.create<fir::MulcOp>(loc, value1, value2);
     TODO(loc, "reduction mul type");
   }
 
