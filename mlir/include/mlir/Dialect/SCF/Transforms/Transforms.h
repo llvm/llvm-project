@@ -154,9 +154,12 @@ struct PipeliningOption {
   /// lambda to generate the predicated version of operations.
   bool peelEpilogue = true;
 
-  // Lamdba to predicate operations when the prologue or epilogue are not
+  // Callback to predicate operations when the prologue or epilogue are not
   // peeled. This takes the original operation, an i1 predicate value and the
-  // pattern rewriter.
+  // pattern rewriter. It is expected to replace the given operation with
+  // the predicated equivalent and return it, or return nullptr if the
+  // predication is impossible. In the latter case, pipelining will fail and
+  // may leave IR in a partially transformed state.
   using PredicateOpFn =
       std::function<Operation *(RewriterBase &, Operation *, Value)>;
   PredicateOpFn predicateFn = nullptr;

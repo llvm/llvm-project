@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -15,8 +16,10 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -27,7 +30,6 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -38,6 +40,281 @@ using namespace mlir::transform;
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+
+//===----------------------------------------------------------------------===//
+// PipelineSharedMemoryCopiesOp
+//===----------------------------------------------------------------------===//
+
+/// Returns true if the given type has the default memory space.
+static bool hasDefaultMemorySpace(BaseMemRefType type) {
+  return !type.getMemorySpace() || type.getMemorySpaceAsInt() == 0;
+}
+
+/// Returns true if the given type has the shared (workgroup) memory space.
+static bool hasSharedMemorySpace(BaseMemRefType type) {
+  auto space =
+      dyn_cast_if_present<gpu::AddressSpaceAttr>(type.getMemorySpace());
+  return space &&
+         space.getValue() == gpu::GPUDialect::getWorkgroupAddressSpace();
+}
+
+/// Returns the value produced by a load from the default memory space. Returns
+/// null if the operation is not such a load.
+static Value getValueLoadedFromGlobal(Operation *op) {
+  // TODO: consider an interface or leveraging the memory effects interface.
+  auto load = dyn_cast<vector::TransferReadOp>(op);
+  if (!load)
+    return nullptr;
+
+  auto loadType = dyn_cast<MemRefType>(load.getSource().getType());
+  if (!loadType || !hasDefaultMemorySpace(loadType))
+    return nullptr;
+  return load;
+}
+
+/// Returns true if the operation is storing the given value into shared memory.
+static bool isStoreToShared(Operation *op, Value v) {
+  // TOD: consider an interface or leveraging the memory effects interface.
+  auto store = dyn_cast<vector::TransferWriteOp>(op);
+  if (!store || store.getVector() != v)
+    return false;
+
+  auto storeType = dyn_cast<MemRefType>(store.getSource().getType());
+  return storeType || hasSharedMemorySpace(storeType);
+}
+
+/// Returns true if the operation is a load from the default memory space the
+/// result of which is only stored into the shared memory space.
+static bool isLoadFromGlobalStoredToShared(Operation *op) {
+  Value loaded = getValueLoadedFromGlobal(op);
+  if (!loaded || !loaded.hasOneUse())
+    return false;
+
+  return isStoreToShared(*loaded.getUsers().begin(), loaded);
+}
+
+/// Populate `ops` with the set of operations that belong to the stage 0 of the
+/// pipelined version of the given loop when pipelining copies to shared memory.
+/// Specifically, this collects:
+///
+///   1. all loads from global memory, both sync and async;
+///   2. the barriers for async loads.
+///
+/// In particular, barriers are omitted if they do not dominate at least one
+/// async load for which there is not yet a barrier.
+static LogicalResult
+collectStage0PipeliningOps(scf::ForOp forOp,
+                           llvm::SmallPtrSet<Operation *, 16> &ops) {
+
+  llvm::SmallPtrSet<Operation *, 4> barriers;
+  for (Operation &op : *forOp.getBody()) {
+    // Bail on nested ops for now.
+    if (op.getNumRegions() > 0)
+      return failure();
+
+    if (isa<gpu::BarrierOp>(op)) {
+      barriers.insert(&op);
+      continue;
+    }
+
+    if (isa<nvgpu::DeviceAsyncCopyOp, nvgpu::DeviceAsyncCreateGroupOp>(op)) {
+      ops.insert(&op);
+      ops.insert(std::make_move_iterator(barriers.begin()),
+                 std::make_move_iterator(barriers.end()));
+      assert(barriers.empty() &&
+             "expected to have moved the barriers into another set");
+      continue;
+    }
+
+    if (isLoadFromGlobalStoredToShared(&op)) {
+      ops.insert(&op);
+      continue;
+    }
+  }
+
+  return success();
+}
+
+/// Hook for the loop pipeliner that sets the "num groups in flight" attribute
+/// of async wait operations corresponding to pipelined shared memory copies.
+// TODO: this currently assumes that there are no groups that could be in flight
+// in the existing code.
+static void
+setAsyncWaitGroupsInFlight(OpBuilder &builder, Operation *op,
+                           scf::PipeliningOption::PipelinerPart part,
+                           unsigned iteration, unsigned depth) {
+  // Based on the order of copies within the loop we need to set the number
+  // of copies in flight, unless it is already set.
+  auto waitOp = dyn_cast<nvgpu::DeviceAsyncWaitOp>(op);
+  if (!waitOp || waitOp.getNumGroups())
+    return;
+
+  int numGroupInFlight = 0;
+  if (part == scf::PipeliningOption::PipelinerPart::Kernel ||
+      part == scf::PipeliningOption::PipelinerPart::Prologue) {
+    numGroupInFlight = depth - 1;
+  } else {
+    // By construction there should be no wait op in the prologue as all the
+    // wait should be in the last stage.
+    assert(part == scf::PipeliningOption::PipelinerPart::Epilogue);
+    // Based on the schedule we pick we know how many groups are in flight for
+    // each iteration of the epilogue.
+    numGroupInFlight = depth - 1 - iteration;
+  }
+  waitOp.setNumGroups(numGroupInFlight);
+}
+
+/// Hook for the loop pipeliner that populates `ops` with the stage information
+/// as follows:
+///
+///   - operations in `stage0Ops` (typically loads from global memory and
+///     related barriers) are at stage 0;
+///   - operations in the backward slice of any stage0Ops are all at stage 0;
+///   - other operations are at stage `depth`;
+///   - the internal order of the pipelined loop has ops at stage `depth` first,
+///   then those at stage 0, with relative order within each group preserved.
+///
+static void getPipelineStages(
+    scf::ForOp forOp,
+    std::vector<std::pair<Operation *, unsigned>> &opsWithPipelineStages,
+    unsigned depth, llvm::SmallPtrSetImpl<Operation *> &stage0Ops) {
+  SetVector<Operation *> dependencies;
+  BackwardSliceOptions options([&](Operation *visited) {
+    return visited->getBlock() == forOp.getBody();
+  });
+  options.inclusive = true;
+  for (Operation &op : forOp.getBody()->getOperations()) {
+    if (stage0Ops.contains(&op))
+      getBackwardSlice(&op, &dependencies, options);
+  }
+
+  for (Operation &op : forOp.getBody()->getOperations()) {
+    if (!dependencies.contains(&op) && !isa<scf::YieldOp>(op))
+      opsWithPipelineStages.emplace_back(&op, depth);
+  }
+  for (Operation &op : forOp.getBody()->getOperations()) {
+    if (dependencies.contains(&op))
+      opsWithPipelineStages.emplace_back(&op, 0);
+  }
+}
+
+/// Hook for the loop pipeliner. Replaces op with a predicated version and
+/// returns the resulting operation. Returns the original op if the predication
+/// isn't necessary for the given op. Returns null if predication is needed but
+/// not supported.
+static Operation *replaceOpWithPredicatedOp(RewriterBase &rewriter,
+                                            Operation *op, Value predicate) {
+  // Some operations may be fine to execute "speculatively" more times than the
+  // original number of iterations, in particular side-effect free operations
+  // and barriers, even if they cannot be predicated.
+  if (isMemoryEffectFree(op) ||
+      isa<gpu::BarrierOp, nvgpu::DeviceAsyncCreateGroupOp,
+          nvgpu::DeviceAsyncWaitOp>(op)) {
+    return op;
+  }
+
+  // Otherwise, only async copies can currently be predicated.
+  auto asyncCopyOp = dyn_cast<nvgpu::DeviceAsyncCopyOp>(op);
+  if (!asyncCopyOp)
+    return nullptr;
+
+  // Create srcElement Value based on `predicate`. The next lines generate
+  // the following code:
+  //
+  //   srcElement = (pred) ?  prevSrcElements : 0;
+  //
+  Location loc = asyncCopyOp->getLoc();
+  Value dstElements =
+      rewriter.create<arith::ConstantOp>(loc, asyncCopyOp.getDstElementsAttr());
+  Value originalSrcElement =
+      asyncCopyOp.getSrcElements() ? asyncCopyOp.getSrcElements() : dstElements;
+  Value c0Index = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  auto srcElements = rewriter.create<arith::SelectOp>(
+      loc, predicate, originalSrcElement, c0Index);
+  auto asyncCopyZeroFillOp = rewriter.create<nvgpu::DeviceAsyncCopyOp>(
+      loc, nvgpu::DeviceAsyncTokenType::get(asyncCopyOp.getContext()),
+      asyncCopyOp.getDst(), asyncCopyOp.getDstIndices(), asyncCopyOp.getSrc(),
+      asyncCopyOp.getSrcIndices(), asyncCopyOp.getDstElements(), srcElements,
+      UnitAttr());
+  rewriter.replaceOp(asyncCopyOp, asyncCopyZeroFillOp);
+  return asyncCopyZeroFillOp;
+}
+
+/// Applies loop pipelining with the given depth to the given loop so that
+/// copies into the shared memory are pipelined. Doesn't affect other loops.
+/// Returns a pair containing the error state and the pipelined op, the latter
+/// being null in case of any failure. The error state contains a definite error
+/// if the IR has been modified and a silenceable error otherwise.
+static std::tuple<DiagnosedSilenceableFailure, scf::ForOp>
+pipelineForSharedCopies(RewriterBase &rewriter, scf::ForOp forOp, int64_t depth,
+                        bool epiloguePeeling) {
+  llvm::SmallPtrSet<Operation *, 16> stage0Ops;
+  if (failed(collectStage0PipeliningOps(forOp, stage0Ops))) {
+    return std::make_tuple(
+        emitSilenceableFailure(forOp, "cannot find stage 0 ops for pipelining"),
+        scf::ForOp());
+  }
+  if (stage0Ops.empty()) {
+    return std::make_tuple(
+        emitSilenceableFailure(forOp, "no shared memory copy"), scf::ForOp());
+  }
+
+  scf::PipeliningOption options;
+  unsigned maxDepth = depth;
+  auto setAnnotation = [&](Operation *op,
+                           scf::PipeliningOption::PipelinerPart part,
+                           unsigned iteration) {
+    return setAsyncWaitGroupsInFlight(rewriter, op, part, iteration, maxDepth);
+  };
+  options.getScheduleFn =
+      [&](scf::ForOp schedulingFor,
+          std::vector<std::pair<Operation *, unsigned>> &ops) {
+        if (schedulingFor != forOp)
+          return;
+        return getPipelineStages(forOp, ops, maxDepth, stage0Ops);
+      };
+  options.annotateFn = setAnnotation;
+  if (!epiloguePeeling) {
+    options.peelEpilogue = false;
+    options.predicateFn = replaceOpWithPredicatedOp;
+  }
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(forOp);
+  bool modifiedIR;
+  FailureOr<scf::ForOp> maybePipelined =
+      pipelineForLoop(rewriter, forOp, options, &modifiedIR);
+  if (succeeded(maybePipelined)) {
+    return std::make_tuple(DiagnosedSilenceableFailure::success(),
+                           *maybePipelined);
+  }
+  return std::make_tuple(
+      modifiedIR
+          ? DiagnosedSilenceableFailure::definiteFailure()
+          : emitSilenceableFailure(forOp, "pipelining preconditions failed"),
+      scf::ForOp());
+}
+
+DiagnosedSilenceableFailure PipelineSharedMemoryCopiesOp::applyToOne(
+    TransformRewriter &rewriter, scf::ForOp forOp,
+    ApplyToEachResultList &results, TransformState &state) {
+  auto [diag, pipelined] = pipelineForSharedCopies(
+      rewriter, forOp, static_cast<int64_t>(getDepth()), getPeelEpilogue());
+  if (diag.succeeded()) {
+    results.push_back(pipelined);
+    return DiagnosedSilenceableFailure::success();
+  }
+  if (diag.isDefiniteFailure()) {
+    auto diag = emitDefiniteFailure("irreversible pipelining failure");
+    if (!getPeelEpilogue()) {
+      diag.attachNote(forOp->getLoc()) << "couldn't predicate?";
+      diag.attachNote(getLoc()) << "try setting " << getPeelEpilogueAttrName();
+    }
+    return diag;
+  }
+
+  return std::move(diag);
+}
 
 //===----------------------------------------------------------------------===//
 // RewriteMatmulAsMmaSyncOp
