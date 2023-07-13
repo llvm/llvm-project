@@ -221,10 +221,10 @@ __DEVICE__
 float exp10f(float __x) { return __ocml_exp10_f32(__x); }
 
 __DEVICE__
-float exp2f(float __x) { return __ocml_exp2_f32(__x); }
+float exp2f(float __x) { return __builtin_exp2f(__x); }
 
 __DEVICE__
-float expf(float __x) { return __ocml_exp_f32(__x); }
+float expf(float __x) { return __builtin_expf(__x); }
 
 __DEVICE__
 float expm1f(float __x) { return __ocml_expm1_f32(__x); }
@@ -315,19 +315,19 @@ __DEVICE__
 long long int llroundf(float __x) { return __builtin_roundf(__x); }
 
 __DEVICE__
-float log10f(float __x) { return __ocml_log10_f32(__x); }
+float log10f(float __x) { return __builtin_log10f(__x); }
 
 __DEVICE__
 float log1pf(float __x) { return __ocml_log1p_f32(__x); }
 
 __DEVICE__
-float log2f(float __x) { return __ocml_log2_f32(__x); }
+float log2f(float __x) { return __builtin_log2f(__x); }
 
 __DEVICE__
 float logbf(float __x) { return __ocml_logb_f32(__x); }
 
 __DEVICE__
-float logf(float __x) { return __ocml_log_f32(__x); }
+float logf(float __x) { return __builtin_logf(__x); }
 
 __DEVICE__
 long int lrintf(float __x) { return __ocml_rint_f32(__x); }
