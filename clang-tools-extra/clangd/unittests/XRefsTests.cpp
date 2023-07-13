@@ -2299,7 +2299,7 @@ TEST(FindReferences, ExplicitSymbols) {
 
 TEST(FindReferences, UsedSymbolsFromInclude) {
   const char *Tests[] = {
-      R"cpp([[#include ^"bar.h"]]
+      R"cpp(   [[#include   ^"bar.h"]]
         #include <vector>
         int fstBar = [[bar1]]();
         int sndBar = [[bar2]]();

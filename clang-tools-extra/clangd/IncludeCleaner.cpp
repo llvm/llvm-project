@@ -60,20 +60,6 @@ void setIncludeCleanerAnalyzesStdlib(bool B) { AnalyzeStdlib = B; }
 
 namespace {
 
-// Returns the range starting at '#' and ending at EOL. Escaped newlines are not
-// handled.
-clangd::Range getDiagnosticRange(llvm::StringRef Code, unsigned HashOffset) {
-  clangd::Range Result;
-  Result.end = Result.start = offsetToPosition(Code, HashOffset);
-
-  // Span the warning until the EOL or EOF.
-  Result.end.character +=
-      lspLength(Code.drop_front(HashOffset).take_until([](char C) {
-        return C == '\n' || C == '\r';
-      }));
-  return Result;
-}
-
 bool isIgnored(llvm::StringRef HeaderPath, HeaderFilter IgnoreHeaders) {
   // Convert the path to Unix slashes and try to match against the filter.
   llvm::SmallString<64> NormalizedPath(HeaderPath);
@@ -224,7 +210,7 @@ std::vector<Diag> generateUnusedIncludeDiagnostics(
     D.InsideMainFile = true;
     D.Severity = DiagnosticsEngine::Warning;
     D.Tags.push_back(Unnecessary);
-    D.Range = getDiagnosticRange(Code, Inc->HashOffset);
+    D.Range = rangeTillEOL(Code, Inc->HashOffset);
     // FIXME(kirillbobyrev): Removing inclusion might break the code if the
     // used headers are only reachable transitively through this one. Suggest
     // including them directly instead.
