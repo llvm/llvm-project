@@ -14,6 +14,7 @@
 #include "CXFile.h"
 #include "CXString.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/SerializedDiagnosticReader.h"
@@ -383,10 +384,10 @@ std::error_code DiagLoader::visitSourceFileContentsRecord(
           OriginalStartLoc, OriginalEndLoc, OriginalSourceRange))
     return EC;
 
-  auto file = const_cast<FileEntry *>(TopDiags->Files[ID]);
-  if (!file)
+  auto fileItr = TopDiags->Files.find(ID);
+  if (fileItr == TopDiags->Files.end())
     return reportInvalidFile("Source file contents for unknown file ID");
-
+  FileEntry *file = const_cast<FileEntry*>(&fileItr->second.getFileEntry());
   StringRef CopiedContents(TopDiags->copyString(Contents),
                            Contents.size());
 
