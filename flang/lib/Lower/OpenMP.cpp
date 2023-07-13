@@ -48,19 +48,14 @@ int64_t Fortran::lower::getCollapseValue(
   return 1;
 }
 
-static const Fortran::parser::Name *
-getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
-  const auto *dataRef = std::get_if<Fortran::parser::DataRef>(&designator.u);
-  return dataRef ? std::get_if<Fortran::parser::Name>(&dataRef->u) : nullptr;
-}
-
 static Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
   Fortran::semantics::Symbol *sym = nullptr;
   std::visit(Fortran::common::visitors{
                  [&](const Fortran::parser::Designator &designator) {
                    if (const Fortran::parser::Name *name =
-                           getDesignatorNameIfDataRef(designator)) {
+                           Fortran::semantics::getDesignatorNameIfDataRef(
+                               designator)) {
                      sym = name->symbol;
                    }
                  },
@@ -2181,7 +2176,9 @@ static bool checkForSingleVariableOnRHS(
       std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
           &expr.u);
   const Fortran::parser::Name *name =
-      designator ? getDesignatorNameIfDataRef(designator->value()) : nullptr;
+      designator
+          ? Fortran::semantics::getDesignatorNameIfDataRef(designator->value())
+          : nullptr;
   return name != nullptr;
 }
 
@@ -2328,7 +2325,8 @@ static void genOmpAtomicUpdateStatement(
           &assignmentStmtVariable.u);
   assert(varDesignator && "Variable designator for atomic update assignment "
                           "statement does not exist");
-  const auto *name = getDesignatorNameIfDataRef(varDesignator->value());
+  const auto *name =
+      Fortran::semantics::getDesignatorNameIfDataRef(varDesignator->value());
   if (!name)
     TODO(converter.getCurrentLocation(),
          "Array references as atomic update variable");
@@ -2735,7 +2733,8 @@ void handleDeclareTarget(Fortran::lower::AbstractConverter &converter,
           Fortran::common::visitors{
               [&](const Fortran::parser::Designator &designator) {
                 if (const Fortran::parser::Name *name =
-                        getDesignatorNameIfDataRef(designator)) {
+                        Fortran::semantics::getDesignatorNameIfDataRef(
+                            designator)) {
                   symbolAndClause.push_back(
                       std::make_pair(clause, *name->symbol));
                 }
