@@ -11,6 +11,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamBuffer.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -34,6 +35,10 @@
 
 #include <memory>
 #include <optional>
+
+#if LLVM_ENABLE_ZLIB
+#include <zlib.h>
+#endif
 
 using namespace llvm;
 using namespace lldb;
@@ -129,24 +134,79 @@ bool SymbolFileCTF::ParseHeader() {
   LLDB_LOG(log, "Parsed valid CTF preamble: version {0}, flags {1:x}",
            ctf_header.preamble.version, ctf_header.preamble.flags);
 
-  const lldb::offset_t header_offset = offset;
+  m_body_offset = offset;
+
+  if (ctf_header.preamble.flags & eFlagCompress) {
+    // The body has been compressed with zlib deflate. Header offsets point into
+    // the decompressed data.
+#if LLVM_ENABLE_ZLIB
+    const std::size_t decompressed_size = ctf_header.stroff + ctf_header.strlen;
+    DataBufferSP decompressed_data =
+        std::make_shared<DataBufferHeap>(decompressed_size, 0x0);
+
+    z_stream zstr;
+    memset(&zstr, 0, sizeof(zstr));
+    zstr.next_in = (Bytef *)const_cast<uint8_t *>(m_data.GetDataStart() +
+                                                  sizeof(ctf_header_t));
+    zstr.avail_in = m_data.BytesLeft(offset);
+    zstr.next_out =
+        (Bytef *)const_cast<uint8_t *>(decompressed_data->GetBytes());
+    zstr.avail_out = decompressed_size;
+
+    int rc = inflateInit(&zstr);
+    if (rc != Z_OK) {
+      LLDB_LOG(log, "CTF parsing failed: inflate initialization error: {0}",
+               zError(rc));
+      return false;
+    }
+
+    rc = inflate(&zstr, Z_FINISH);
+    if (rc != Z_STREAM_END) {
+      LLDB_LOG(log, "CTF parsing failed: inflate error: {0}", zError(rc));
+      return false;
+    }
+
+    rc = inflateEnd(&zstr);
+    if (rc != Z_OK) {
+      LLDB_LOG(log, "CTF parsing failed: inflate end error: {0}", zError(rc));
+      return false;
+    }
+
+    if (zstr.total_out != decompressed_size) {
+      LLDB_LOG(log,
+               "CTF parsing failed: decompressed size ({0}) doesn't match "
+               "expected size ([1})",
+               zstr.total_out, decompressed_size);
+      return false;
+    }
+
+    m_data = DataExtractor(decompressed_data, m_data.GetByteOrder(),
+                           m_data.GetAddressByteSize());
+    m_body_offset = 0;
+#else
+    LLDB_LOG(
+        log,
+        "CTF parsing failed: data is compressed but no zlib inflate support");
+    return false;
+#endif
+  }
 
   // Validate the header.
-  if (!m_data.ValidOffset(header_offset + ctf_header.lbloff)) {
+  if (!m_data.ValidOffset(m_body_offset + ctf_header.lbloff)) {
     LLDB_LOG(log,
              "CTF parsing failed: invalid label section offset in header: {0}",
              ctf_header.lbloff);
     return false;
   }
 
-  if (!m_data.ValidOffset(header_offset + ctf_header.objtoff)) {
+  if (!m_data.ValidOffset(m_body_offset + ctf_header.objtoff)) {
     LLDB_LOG(log,
              "CTF parsing failed: invalid object section offset in header: {0}",
              ctf_header.objtoff);
     return false;
   }
 
-  if (!m_data.ValidOffset(header_offset + ctf_header.funcoff)) {
+  if (!m_data.ValidOffset(m_body_offset + ctf_header.funcoff)) {
     LLDB_LOG(
         log,
         "CTF parsing failed: invalid function section offset in header: {0}",
@@ -154,14 +214,14 @@ bool SymbolFileCTF::ParseHeader() {
     return false;
   }
 
-  if (!m_data.ValidOffset(header_offset + ctf_header.typeoff)) {
+  if (!m_data.ValidOffset(m_body_offset + ctf_header.typeoff)) {
     LLDB_LOG(log,
              "CTF parsing failed: invalid type section offset in header: {0}",
              ctf_header.typeoff);
     return false;
   }
 
-  if (!m_data.ValidOffset(header_offset + ctf_header.stroff)) {
+  if (!m_data.ValidOffset(m_body_offset + ctf_header.stroff)) {
     LLDB_LOG(log,
              "CTF parsing failed: invalid string section offset in header: {0}",
              ctf_header.stroff);
@@ -169,7 +229,7 @@ bool SymbolFileCTF::ParseHeader() {
   }
 
   const lldb::offset_t str_end_offset =
-      header_offset + ctf_header.stroff + ctf_header.strlen;
+      m_body_offset + ctf_header.stroff + ctf_header.strlen;
   if (!m_data.ValidOffset(str_end_offset - 1)) {
     LLDB_LOG(log,
              "CTF parsing failed: invalid string section length in header: {0}",
@@ -177,7 +237,7 @@ bool SymbolFileCTF::ParseHeader() {
     return false;
   }
 
-  if (header_offset + ctf_header.stroff + ctf_header.parlabel >
+  if (m_body_offset + ctf_header.stroff + ctf_header.parlabel >
       str_end_offset) {
     LLDB_LOG(log,
              "CTF parsing failed: invalid parent label offset: {0} exceeds end "
@@ -186,7 +246,7 @@ bool SymbolFileCTF::ParseHeader() {
     return false;
   }
 
-  if (header_offset + ctf_header.stroff + ctf_header.parname > str_end_offset) {
+  if (m_body_offset + ctf_header.stroff + ctf_header.parname > str_end_offset) {
     LLDB_LOG(log,
              "CTF parsing failed: invalid parent name offset: {0} exceeds end "
              "of string section ({1})",
@@ -222,7 +282,7 @@ void SymbolFileCTF::InitializeObject() {
 }
 
 llvm::StringRef SymbolFileCTF::ReadString(lldb::offset_t str_offset) const {
-  lldb::offset_t offset = sizeof(ctf_header_t) + m_header->stroff + str_offset;
+  lldb::offset_t offset = m_body_offset + m_header->stroff + str_offset;
   if (!m_data.ValidOffset(offset))
     return "(invalid)";
   const char *str = m_data.GetCStr(&offset);
@@ -539,9 +599,8 @@ size_t SymbolFileCTF::ParseTypes(CompileUnit &cu) {
   Log *log = GetLog(LLDBLog::Symbols);
   LLDB_LOG(log, "Parsing CTF types");
 
-  lldb::offset_t type_offset = sizeof(ctf_header_t) + m_header->typeoff;
-  const lldb::offset_t type_offset_end =
-      sizeof(ctf_header_t) + m_header->stroff;
+  lldb::offset_t type_offset = m_body_offset + m_header->typeoff;
+  const lldb::offset_t type_offset_end = m_body_offset + m_header->stroff;
 
   lldb::user_id_t type_uid = 1;
   while (type_offset < type_offset_end) {
@@ -597,9 +656,8 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
   Log *log = GetLog(LLDBLog::Symbols);
   LLDB_LOG(log, "Parsing CTF functions");
 
-  lldb::offset_t function_offset = sizeof(ctf_header_t) + m_header->funcoff;
-  const lldb::offset_t function_offset_end =
-      sizeof(ctf_header_t) + m_header->typeoff;
+  lldb::offset_t function_offset = m_body_offset + m_header->funcoff;
+  const lldb::offset_t function_offset_end = m_body_offset + m_header->typeoff;
 
   uint32_t symbol_idx = 0;
   Declaration decl;
@@ -713,9 +771,8 @@ size_t SymbolFileCTF::ParseObjects(CompileUnit &comp_unit) {
   Log *log = GetLog(LLDBLog::Symbols);
   LLDB_LOG(log, "Parsing CTF objects");
 
-  lldb::offset_t object_offset = sizeof(ctf_header_t) + m_header->objtoff;
-  const lldb::offset_t object_offset_end =
-      sizeof(ctf_header_t) + m_header->funcoff;
+  lldb::offset_t object_offset = m_body_offset + m_header->objtoff;
+  const lldb::offset_t object_offset_end = m_body_offset + m_header->funcoff;
 
   uint32_t symbol_idx = 0;
   Declaration decl;
