@@ -319,7 +319,9 @@ set(LIBCXX_EXPERIMENTAL_SOURCES
   )
 
 if (LIBCXX_PSTL_CPU_BACKEND STREQUAL "libdispatch")
-  list(APPEND LIBCXX_EXPERIMENTAL_SOURCES pstl/libdispatch.cpp)
+  list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
+    pstl/libdispatch.cpp
+    )
 endif()
 
 add_library(cxx_experimental STATIC ${LIBCXX_EXPERIMENTAL_SOURCES})
