@@ -3346,38 +3346,22 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
 
 
   SmallVector<SDValue, 8> Ops;
-  if (IsMasked) {
-    Ops.push_back(False);
-    if (RISCVII::hasRoundModeOp(TrueTSFlags)) {
-      // For masked "VOp" with rounding mode operand, that is interfaces like
-      // (..., vm, rm, vl, policy).
-      // Check the rounding mode pseudo nodes under RISCVInstrInfoVPseudos.td
-      SDValue RoundMode = True->getOperand(TrueVLIndex - 1);
-      Ops.append(True->op_begin() + HasTiedDest,
-                 True->op_begin() + TrueVLIndex - 2);
-      Ops.append({Mask, RoundMode});
-    } else {
-      Ops.append(True->op_begin() + HasTiedDest,
-                 True->op_begin() + TrueVLIndex - 1);
-      Ops.push_back(Mask);
-    }
-  } else {
-    Ops.push_back(False);
-    if (RISCVII::hasRoundModeOp(TrueTSFlags)) {
-      // For unmasked "VOp" with rounding mode operand, that is interfaces like
-      // (..., rm, vl) or (..., rm, vl, policy).
-      // Its masked version is (..., vm, rm, vl, policy).
-      // Check the rounding mode pseudo nodes under RISCVInstrInfoVPseudos.td
-      SDValue RoundMode = True->getOperand(TrueVLIndex - 1);
-      Ops.append(True->op_begin() + HasTiedDest,
-                 True->op_begin() + TrueVLIndex - 1);
-      Ops.append({Mask, RoundMode});
-    } else {
-      Ops.append(True->op_begin() + HasTiedDest,
-                 True->op_begin() + TrueVLIndex);
-      Ops.push_back(Mask);
-    }
-  }
+  Ops.push_back(False);
+
+  const bool HasRoundingMode = RISCVII::hasRoundModeOp(TrueTSFlags);
+  const unsigned NormalOpsEnd = TrueVLIndex - IsMasked - HasRoundingMode;
+  assert(!IsMasked || NormalOpsEnd == Info->MaskOpIdx);
+  Ops.append(True->op_begin() + HasTiedDest, True->op_begin() + NormalOpsEnd);
+
+  Ops.push_back(Mask);
+
+  // For unmasked "VOp" with rounding mode operand, that is interfaces like
+  // (..., rm, vl) or (..., rm, vl, policy).
+  // Its masked version is (..., vm, rm, vl, policy).
+  // Check the rounding mode pseudo nodes under RISCVInstrInfoVPseudos.td
+  if (HasRoundingMode)
+    Ops.push_back(True->getOperand(TrueVLIndex - 1));
+
   Ops.append({VL, SEW, PolicyOp});
 
   // Result node should have chain operand of True.
