@@ -387,7 +387,6 @@ private:
   std::vector<int64_t> IntrinsicTypes;
   unsigned NF = 1;
   Policy PolicyAttrs;
-  bool HasFRMRoundModeOp;
 
 public:
   RVVIntrinsic(llvm::StringRef Name, llvm::StringRef Suffix,
