@@ -51,18 +51,6 @@ class SiFive7GetCyclesNarrowing<string mx> {
   );
 }
 
-class SiFive7GetCyclesOutputLMUL<string mx> {
-  int c = !cond(
-    !eq(mx, "M1") : 1,
-    !eq(mx, "M2") : 2,
-    !eq(mx, "M4") : 4,
-    !eq(mx, "M8") : 8,
-    !eq(mx, "MF2") : 1,
-    !eq(mx, "MF4") : 1,
-    !eq(mx, "MF8") : 1
-  );
-}
-
 class SiFive7GetCyclesVMask<string mx> {
   int c = !cond(
     !eq(mx, "M1") : 1,
@@ -618,7 +606,7 @@ foreach mx = SchedMxList in {
   }
 }
 foreach mx = SchedMxList in {
-  defvar Cycles = SiFive7GetCyclesOutputLMUL<mx>.c;
+  defvar Cycles = SiFive7GetCyclesDefault<mx>.c;
   defvar IsWorstCase = SiFive7IsWorstCaseMX<mx, SchedMxList>.c;
   let Latency = 4, ResourceCycles = [Cycles] in {
     defm "" : LMULWriteResMX<"WriteVExtV",      [SiFive7VA], mx, IsWorstCase>;
