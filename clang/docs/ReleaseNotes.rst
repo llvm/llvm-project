@@ -142,6 +142,22 @@ Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - Implemented `DR2397 <https://wg21.link/CWG2397>`_ which allows ``auto`` specifier for pointers
   and reference to arrays.
+- Implemented `CWG2521 <https://wg21.link/CWG2521>`_ which reserves using ``__`` in user-defined
+  literal suffixes and deprecates literal operator function declarations using an identifier.
+  Taught ``-Wuser-defined-literals`` for the former, on by default, and added
+  ``-Wdeprecated-literal-operator`` for the latter, off by default for now.
+
+  .. code-block:: c++
+
+    // What follows is warned by -Wuser-defined-literals
+    // albeit "ill-formed, no diagnostic required".
+    // Its behavior is undefined, [reserved.names.general]p2.
+    string operator ""__i18n(const char*, std::size_t);
+
+    // Assume this declaration is not in the global namespace.
+    // -Wdeprecated-literal-operator diagnoses the extra space.
+    string operator "" _i18n(const char*, std::size_t);
+    //                ^ an extra space
 
 C Language Changes
 ------------------
