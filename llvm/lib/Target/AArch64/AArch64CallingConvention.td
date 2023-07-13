@@ -416,6 +416,12 @@ def CSR_Win_AArch64_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
                                                D8, D9, D10, D11,
                                                D12, D13, D14, D15)>;
 
+def CSR_Win_AArch64_AAPCS_SwiftError
+    : CalleeSavedRegs<(sub CSR_Win_AArch64_AAPCS, X21)>;
+
+def CSR_Win_AArch64_AAPCS_SwiftTail
+    : CalleeSavedRegs<(sub CSR_Win_AArch64_AAPCS, X20, X22)>;
+
 // The Control Flow Guard check call uses a custom calling convention that also
 // preserves X0-X8 and Q0-Q7.
 def CSR_Win_AArch64_CFGuard_Check : CalleeSavedRegs<(add CSR_Win_AArch64_AAPCS,

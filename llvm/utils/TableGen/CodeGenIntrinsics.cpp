@@ -74,6 +74,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   isConvergent = false;
   isSpeculatable = false;
   hasSideEffects = false;
+  isStrictFP = false;
 
   if (DefName.size() <= 4 || DefName.substr(0, 4) != "int_")
     PrintFatalError(DefLoc,
@@ -203,6 +204,8 @@ void CodeGenIntrinsic::setProperty(Record *R) {
     isSpeculatable = true;
   else if (R->getName() == "IntrHasSideEffects")
     hasSideEffects = true;
+  else if (R->getName() == "IntrStrictFP")
+    isStrictFP = true;
   else if (R->isSubClassOf("NoCapture")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, NoCapture);

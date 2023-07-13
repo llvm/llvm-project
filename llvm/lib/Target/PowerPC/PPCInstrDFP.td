@@ -89,6 +89,30 @@ defm DRINTNQ: Z23Form_FRTB5_R1_RMC2r<63, 227, (outs fpairrc:$FRT),
                                      (ins u1imm:$R, fpairrc:$FRB, u2imm:$RMC),
                                      "drintnq", "$R, $FRT, $FRB, $RMC", []>;
 
+// 5.6.5 DFP Conversion Instructions
+defm DCTDP: XForm_26r<59, 258, (outs f8rc:$RST), (ins f8rc:$RB),
+                      "dctdp", "$RST, $RB", IIC_FPGeneral, []>;
+defm DCTQPQ: XForm_26r<63, 258, (outs fpairrc:$RST), (ins f8rc:$RB),
+                       "dctqpq", "$RST, $RB", IIC_FPGeneral, []>;
+defm DRSP: XForm_26r<59, 770, (outs f8rc:$RST), (ins f8rc:$RB),
+                     "drsp", "$RST, $RB", IIC_FPGeneral, []>;
+defm DRDPQ: XForm_26r<63, 770, (outs fpairrc:$RST), (ins fpairrc:$RB),
+                      "drdpq", "$RST, $RB", IIC_FPGeneral, []>;
+defm DCFFIX: XForm_26r<59, 802, (outs f8rc:$RST), (ins f8rc:$RB),
+                       "dcffix", "$RST, $RB", IIC_FPGeneral, []>;
+defm DCFFIXQ: XForm_26r<63, 802, (outs fpairrc:$RST), (ins f8rc:$RB),
+                        "dcffixq", "$RST, $RB", IIC_FPGeneral, []>;
+defm DCTFIX: XForm_26r<59, 290, (outs f8rc:$RST), (ins f8rc:$RB),
+                       "dctfix", "$RST, $RB", IIC_FPGeneral, []>;
+defm DCTFIXQ: XForm_26r<63, 290, (outs f8rc:$RST), (ins fpairrc:$RB),
+                        "dctfixq", "$RST, $RB", IIC_FPGeneral, []>;
+let Predicates = [HasP10Vector] in {
+  def DCFFIXQQ: XForm_26<63, 994, (outs fpairrc:$RST), (ins vrrc:$RB),
+                         "dcffixqq $RST, $RB", IIC_FPGeneral, []>;
+let RA = 1 in
+  def DCTFIXQQ: XForm_base_r3xo<63, 994, (outs vrrc:$RST), (ins fpairrc:$RB),
+                                "dctfixqq $RST, $RB", IIC_FPGeneral, []>;
+} // HasP10Vector
+
 } // mayRaiseFPException
 } // hasNoSchedulingInfo
-

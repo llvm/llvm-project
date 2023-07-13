@@ -338,6 +338,30 @@ func.func @test_multiple_associations(%arg0: !hlfir.expr<1x2xi32>) {
 // CHECK:           return
 // CHECK:         }
 
+// test that we support a hlfir.associate operation where the expr is also used in a hlfir.get_length op
+func.func @test_get_length(%arg0: !fir.ref<!fir.char<1,2>>) {
+  %0 = hlfir.as_expr %arg0 : (!fir.ref<!fir.char<1,2>>) -> !hlfir.expr<!fir.char<1,2>>
+  %1 = hlfir.get_length %0 : (!hlfir.expr<!fir.char<1,2>>)  -> index
+  %c2 = arith.constant 2 : index
+  %2:3 = hlfir.associate %0 typeparams %c2 {uniq_name = "adapt.valuebyref"} : (!hlfir.expr<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>, i1)
+  // ...
+  hlfir.end_associate %2#1, %2#2 : !fir.ref<!fir.char<1,2>>, i1
+  return
+}
+// CHECK-LABEL:   func.func @test_get_length(
+// CHECK-SAME:                               %[[VAL_0:.*]]: !fir.ref<!fir.char<1,2>>) {
+// CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.char<1,2> {bindc_name = ".tmp"}
+// CHECK:           %[[VAL_2:.*]] = arith.constant 2 : index
+// CHECK:           %[[VAL_3:.*]] = arith.constant false
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_1]] typeparams %[[VAL_2]] {uniq_name = ".tmp"} : (!fir.ref<!fir.char<1,2>>, index) -> (!fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>)
+// CHECK:           hlfir.assign %[[VAL_0]] to %[[VAL_4]]#0 temporary_lhs : !fir.ref<!fir.char<1,2>>, !fir.ref<!fir.char<1,2>>
+// CHECK:           %[[VAL_5:.*]] = fir.undefined tuple<!fir.ref<!fir.char<1,2>>, i1>
+// CHECK:           %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_3]], [1 : index] : (tuple<!fir.ref<!fir.char<1,2>>, i1>, i1) -> tuple<!fir.ref<!fir.char<1,2>>, i1>
+// CHECK:           %[[VAL_7:.*]] = fir.insert_value %[[VAL_6]], %[[VAL_4]]#0, [0 : index] : (tuple<!fir.ref<!fir.char<1,2>>, i1>, !fir.ref<!fir.char<1,2>>) -> tuple<!fir.ref<!fir.char<1,2>>, i1>
+// CHECK:           %[[VAL_8:.*]] = arith.constant 2 : index
+// CHECK:           return
+// CHECK:         }
+
 func.func private @take_i4(!fir.ref<i32>)
 func.func private @take_r4(!fir.ref<f32>)
 func.func private @take_l4(!fir.ref<!fir.logical<4>>)

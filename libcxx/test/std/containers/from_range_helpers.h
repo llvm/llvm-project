@@ -57,52 +57,6 @@ struct std::hash<KeyValue> {
 };
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
-template <int N>
-struct ThrowingCopy {
-  static bool throwing_enabled;
-  static int created_by_copying;
-  static int destroyed;
-  int x = 0; // Allows distinguishing between different instances.
-
-  ThrowingCopy() = default;
-  ThrowingCopy(int value) : x(value) {}
-  ~ThrowingCopy() {
-    ++destroyed;
-  }
-
-  ThrowingCopy(const ThrowingCopy& other) : x(other.x) {
-    ++created_by_copying;
-    if (throwing_enabled && created_by_copying == N) {
-      throw -1;
-    }
-  }
-
-  // Defined to silence GCC warnings. For test purposes, only copy construction is considered `created_by_copying`.
-  ThrowingCopy& operator=(const ThrowingCopy& other) {
-    x = other.x;
-    return *this;
-  }
-
-  friend auto operator<=>(const ThrowingCopy&, const ThrowingCopy&) = default;
-
-  static void reset() {
-    created_by_copying = destroyed = 0;
-  }
-};
-
-template <int N>
-struct std::hash<ThrowingCopy<N>> {
-  std::size_t operator()(const ThrowingCopy<N>& value) const {
-    return value.x;
-  }
-};
-
-template <int N>
-bool ThrowingCopy<N>::throwing_enabled = true;
-template <int N>
-int ThrowingCopy<N>::created_by_copying = 0;
-template <int N>
-int ThrowingCopy<N>::destroyed = 0;
 
 template <class T>
 struct ThrowingAllocator {

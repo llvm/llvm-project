@@ -2129,19 +2129,46 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
                      // of the library
     bool did_create_module = false;
     FileSpecList search_paths = GetExecutableSearchPaths();
-    // If there are image search path entries, try to use them first to acquire
-    // a suitable image.
-    if (m_image_search_paths.GetSize()) {
-      ModuleSpec transformed_spec(module_spec);
-      ConstString transformed_dir;
-      if (m_image_search_paths.RemapPath(
-              module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
-        transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
-        transformed_spec.GetFileSpec().SetFilename(
-              module_spec.GetFileSpec().GetFilename());
-        error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                            &search_paths, &old_modules,
-                                            &did_create_module);
+    FileSpec symbol_file_spec;
+
+    // Call locate module callback if set. This allows users to implement their
+    // own module cache system. For example, to leverage build system artifacts,
+    // to bypass pulling files from remote platform, or to search symbol files
+    // from symbol servers.
+    CallLocateModuleCallbackIfSet(module_spec, module_sp, symbol_file_spec,
+                                  did_create_module);
+
+    // The result of this CallLocateModuleCallbackIfSet is one of the following.
+    // 1. module_sp:loaded, symbol_file_spec:set
+    //      The callback found a module file and a symbol file for the
+    //      module_spec. We will call module_sp->SetSymbolFileFileSpec with
+    //      the symbol_file_spec later.
+    // 2. module_sp:loaded, symbol_file_spec:empty
+    //      The callback only found a module file for the module_spec.
+    // 3. module_sp:empty, symbol_file_spec:set
+    //      The callback only found a symbol file for the module. We continue
+    //      to find a module file for this module_spec and we will call
+    //      module_sp->SetSymbolFileFileSpec with the symbol_file_spec later.
+    // 4. module_sp:empty, symbol_file_spec:empty
+    //      The callback is not set. Or the callback did not find any module
+    //      files nor any symbol files. Or the callback failed, or something
+    //      went wrong. We continue to find a module file for this module_spec.
+
+    if (!module_sp) {
+      // If there are image search path entries, try to use them to acquire a
+      // suitable image.
+      if (m_image_search_paths.GetSize()) {
+        ModuleSpec transformed_spec(module_spec);
+        ConstString transformed_dir;
+        if (m_image_search_paths.RemapPath(
+                module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
+          transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
+          transformed_spec.GetFileSpec().SetFilename(
+                module_spec.GetFileSpec().GetFilename());
+          error = ModuleList::GetSharedModule(transformed_spec, module_sp,
+                                              &search_paths, &old_modules,
+                                              &did_create_module);
+        }
       }
     }
 
@@ -2232,6 +2259,11 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
           });
         }
 
+        // If the locate module callback had found a symbol file, set it to the
+        // module_sp before preloading symbols.
+        if (symbol_file_spec)
+          module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+
         // Preload symbols outside of any lock, so hopefully we can do this for
         // each library in parallel.
         if (GetPreloadSymbols())
@@ -2304,6 +2336,113 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
   if (error_ptr)
     *error_ptr = error;
   return module_sp;
+}
+
+void Target::CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
+                                           lldb::ModuleSP &module_sp,
+                                           FileSpec &symbol_file_spec,
+                                           bool &did_create_module) {
+  if (!m_platform_sp)
+    return;
+
+  Platform::LocateModuleCallback locate_module_callback =
+      m_platform_sp->GetLocateModuleCallback();
+  if (!locate_module_callback)
+    return;
+
+  FileSpec module_file_spec;
+  Status error =
+      locate_module_callback(module_spec, module_file_spec, symbol_file_spec);
+
+  // Locate module callback is set and called. Check the error.
+  Log *log = GetLog(LLDBLog::Target);
+  if (error.Fail()) {
+    LLDB_LOGF(log, "%s: locate module callback failed: %s",
+              LLVM_PRETTY_FUNCTION, error.AsCString());
+    return;
+  }
+
+  // The locate module callback was succeeded. It should returned
+  // 1. a combination of a module file and a symbol file.
+  // 2. or only a module file.
+  // 3. or only a symbol file. For example, a breakpad symbol text file.
+  //
+  // Check the module_file_spec and symbol_file_spec values.
+  // 1. module:empty  symbol:empty  -> Invalid
+  // 2. module:exists symbol:exists -> Success
+  // 3. module:exists symbol:empty  -> Success
+  // 4. module:empty  symbol:exists -> Success
+  if (!module_file_spec && !symbol_file_spec) {
+    // This is '1. module:empty symbol:empty -> Invalid'.
+    LLDB_LOGF(log,
+              "%s: locate module callback did not set both "
+              "module_file_spec and symbol_file_spec",
+              LLVM_PRETTY_FUNCTION);
+    return;
+  }
+
+  // The module file should exist.
+  if (module_file_spec && !FileSystem::Instance().Exists(module_file_spec)) {
+    LLDB_LOGF(log,
+              "%s: locate module callback set a non-existent file to "
+              "module_file_spec: %s",
+              LLVM_PRETTY_FUNCTION, module_file_spec.GetPath().c_str());
+    // Clear symbol_file_spec for the error.
+    symbol_file_spec.Clear();
+    return;
+  }
+
+  // The symbol file should exist.
+  if (symbol_file_spec && !FileSystem::Instance().Exists(symbol_file_spec)) {
+    LLDB_LOGF(log,
+              "%s: locate module callback set a non-existent file to "
+              "symbol_file_spec: %s",
+              LLVM_PRETTY_FUNCTION, symbol_file_spec.GetPath().c_str());
+    // Clear symbol_file_spec for the error.
+    symbol_file_spec.Clear();
+    return;
+  }
+
+  if (!module_file_spec && symbol_file_spec) {
+    // This is '4. module:empty symbol:exists -> Success'.
+    // The locate module callback returned only a symbol file. For example,
+    // a breakpad symbol text file. GetOrCreateModule will use this returned
+    // symbol_file_spec.
+    LLDB_LOGF(log, "%s: locate module callback succeeded: symbol=%s",
+              LLVM_PRETTY_FUNCTION, symbol_file_spec.GetPath().c_str());
+    return;
+  }
+
+  // The locate module callback returned
+  // - '2. module:exists symbol:exists -> Success'
+  //   - a combination of a module file and a symbol file.
+  // - Or '3. module:exists symbol:empty -> Success'
+  //   - only a module file.
+  // Load the module file.
+  auto cached_module_spec(module_spec);
+  cached_module_spec.GetUUID().Clear(); // Clear UUID since it may contain md5
+                                        // content hash instead of real UUID.
+  cached_module_spec.GetFileSpec() = module_file_spec;
+  cached_module_spec.GetPlatformFileSpec() = module_spec.GetFileSpec();
+  cached_module_spec.SetObjectOffset(0);
+
+  error = ModuleList::GetSharedModule(cached_module_spec, module_sp, nullptr,
+                                      nullptr, &did_create_module, false);
+  if (error.Success() && module_sp) {
+    // Succeeded to load the module file.
+    LLDB_LOGF(log, "%s: locate module callback succeeded: module=%s symbol=%s",
+              LLVM_PRETTY_FUNCTION, module_file_spec.GetPath().c_str(),
+              symbol_file_spec.GetPath().c_str());
+  } else {
+    LLDB_LOGF(log,
+              "%s: locate module callback succeeded but failed to load: "
+              "module=%s symbol=%s",
+              LLVM_PRETTY_FUNCTION, module_file_spec.GetPath().c_str(),
+              symbol_file_spec.GetPath().c_str());
+    // Clear module_sp and symbol_file_spec for the error.
+    module_sp.reset();
+    symbol_file_spec.Clear();
+  }
 }
 
 TargetSP Target::CalculateTarget() { return shared_from_this(); }

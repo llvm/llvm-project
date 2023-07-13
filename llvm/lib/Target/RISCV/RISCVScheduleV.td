@@ -404,6 +404,7 @@ defm "" : LMULSchedWritesFW<"WriteVFNCvtFToFV">;
 // LMUL from VS2.
 // 14.1. Vector Single-Width Integer Reduction Instructions
 defm "" : LMULSEWSchedWrites<"WriteVIRedV_From">;
+defm "" : LMULSEWSchedWrites<"WriteVIRedMinMaxV_From">;
 // 14.2. Vector Widening Integer Reduction Instructions
 defm "" : LMULSEWSchedWritesWRed<"WriteVIWRedV_From">;
 // 14.3. Vector Single-Width Floating-Point Reduction Instructions
@@ -846,6 +847,7 @@ defm "" : LMULWriteResFW<"WriteVFNCvtFToFV", []>;
 
 // 14. Vector Reduction Operations
 defm "" : LMULSEWWriteRes<"WriteVIRedV_From", []>;
+defm "" : LMULSEWWriteRes<"WriteVIRedMinMaxV_From", []>;
 defm "" : LMULSEWWriteResWRed<"WriteVIWRedV_From", []>;
 defm "" : LMULSEWWriteResF<"WriteVFRedV_From", []>;
 defm "" : LMULSEWWriteResF<"WriteVFRedOV_From", []>;

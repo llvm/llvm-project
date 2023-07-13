@@ -3491,6 +3491,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "DwpOptionsTableGen",
+    strip_include_prefix = "tools/llvm-dwp",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-dwp/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-dwp/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-dwp",
     srcs = glob([
@@ -3502,7 +3514,9 @@ cc_binary(
     deps = [
         ":AllTargetsCodeGens",
         ":DWP",
+        ":DwpOptionsTableGen",
         ":MC",
+        ":Option",
         ":Support",
     ],
 )

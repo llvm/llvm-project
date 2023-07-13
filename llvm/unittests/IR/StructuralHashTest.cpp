@@ -12,6 +12,8 @@
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
+#include <memory>
+
 using namespace llvm;
 
 namespace {
@@ -121,4 +123,21 @@ TEST(StructuralHashTest, InstructionType) {
   EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
 }
 
+TEST(StructuralHashTest, IgnoredMetadata) {
+  LLVMContext Ctx;
+  std::unique_ptr<Module> M1 = parseIR(Ctx, "@a = global i32 1\n");
+  // clang-format off
+  std::unique_ptr<Module> M2 = parseIR(
+      Ctx, R"(
+        @a = global i32 1
+        @llvm.embedded.object = private constant [4 x i8] c"BC\C0\00", section ".llvm.lto", align 1, !exclude !0
+        @llvm.compiler.used = appending global [1 x ptr] [ptr @llvm.embedded.object], section "llvm.metadata"
+
+        !llvm.embedded.objects = !{!1}
+
+        !0 = !{}
+        !1 = !{ptr @llvm.embedded.object, !".llvm.lto"}
+        )");
+  EXPECT_EQ(StructuralHash(*M1), StructuralHash(*M2));
+}
 } // end anonymous namespace

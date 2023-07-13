@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/BTF/BTFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
@@ -615,6 +616,13 @@ LLVMSymbolizer::getOrCreateModuleInfo(const std::string &ModuleName) {
   return ModuleOrErr;
 }
 
+// For BPF programs .BTF.ext section contains line numbers information,
+// use it if regular DWARF is not available (e.g. for stripped binary).
+static bool useBTFContext(const ObjectFile &Obj) {
+  return Obj.makeTriple().isBPF() && !Obj.hasDebugInfo() &&
+         BTFParser::hasBTFSections(Obj);
+}
+
 Expected<SymbolizableModule *>
 LLVMSymbolizer::getOrCreateModuleInfo(const ObjectFile &Obj) {
   StringRef ObjName = Obj.getFileName();
@@ -622,7 +630,11 @@ LLVMSymbolizer::getOrCreateModuleInfo(const ObjectFile &Obj) {
   if (I != Modules.end())
     return I->second.get();
 
-  std::unique_ptr<DIContext> Context = DWARFContext::create(Obj);
+  std::unique_ptr<DIContext> Context;
+  if (useBTFContext(Obj))
+    Context = BTFContext::create(Obj);
+  else
+    Context = DWARFContext::create(Obj);
   // FIXME: handle COFF object with PDB info to use PDBContext
   return createModuleInfo(&Obj, std::move(Context), ObjName);
 }

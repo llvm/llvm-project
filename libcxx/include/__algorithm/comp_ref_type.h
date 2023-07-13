@@ -65,8 +65,7 @@ struct __debug_less
 
 // Pass the comparator by lvalue reference. Or in debug mode, using a
 // debugging wrapper that stores a reference.
-// TODO(varconst): update to be used in the new debug mode (or delete entirely).
-#ifdef _LIBCPP_ENABLE_DEBUG_MODE
+#if _LIBCPP_ENABLE_DEBUG_MODE
 template <class _Comp>
 using __comp_ref_type = __debug_less<_Comp>;
 #else
