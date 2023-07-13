@@ -846,7 +846,7 @@ LogicalResult PassManager::emitKokkos(Operation *op, const char* cxxSourceFile, 
   return result;
 }
 
-LogicalResult PassManager::emitKokkosSparse(Operation *op, const char* cxxSourceFile, const char* pySourceFile) {
+LogicalResult PassManager::emitKokkosSparse(Operation *op, const char* cxxSourceFile, const char* pySourceFile, bool useHierarchical) {
   MLIRContext *context = getContext();
   assert(op->getName() == getOpName(*context) &&
          "operation has a different name than the PassManager or is from a "
@@ -863,7 +863,7 @@ LogicalResult PassManager::emitKokkosSparse(Operation *op, const char* cxxSource
   std::error_code ec;
   llvm::raw_fd_ostream cxxFileHandle(StringRef(cxxSourceFile), ec);
   llvm::raw_fd_ostream pyFileHandle(StringRef(pySourceFile), ec);
-  LogicalResult result = emitc::translateToKokkosCpp(op, cxxFileHandle, pyFileHandle, /* enableSparseSupport */ true);
+  LogicalResult result = emitc::translateToKokkosCpp(op, cxxFileHandle, pyFileHandle, /* enableSparseSupport */ true, useHierarchical);
   pyFileHandle.close();
   cxxFileHandle.close();
   return result;
