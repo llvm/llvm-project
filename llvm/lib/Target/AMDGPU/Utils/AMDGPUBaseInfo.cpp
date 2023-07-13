@@ -509,6 +509,16 @@ bool getMAIIsGFX940XDL(unsigned Opc) {
   return Info ? Info->is_gfx940_xdl : false;
 }
 
+unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
+  if (ST.hasFeature(AMDGPU::FeatureGFX12_10Insts))
+    return SIEncodingFamily::GFX12_10;
+  if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
+    return SIEncodingFamily::GFX12;
+  if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
+    return SIEncodingFamily::GFX11;
+  llvm_unreachable("Subtarget generation does not support VOPD!");
+}
+
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   bool IsConvertibleToBitOp  = VOPD3 ? getBitOp2(Opc) : 0;
   Opc = IsConvertibleToBitOp ? AMDGPU::V_BITOP3_B32_e64 : Opc;

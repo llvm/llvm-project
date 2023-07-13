@@ -8703,25 +8703,7 @@ bool SIInstrInfo::allowNegativeFlatOffset(uint64_t FlatVariant) const {
   return FlatVariant != SIInstrFlags::FLAT || AMDGPU::isGFX12Plus(ST);
 }
 
-// This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
-// and the columns of the getMCOpcodeGen table.
-enum SIEncodingFamily {
-  SI = 0,
-  VI = 1,
-  SDWA = 2,
-  SDWA9 = 3,
-  GFX80 = 4,
-  GFX9 = 5,
-  GFX10 = 6,
-  SDWA10 = 7,
-  GFX90A = 8,
-  GFX940 = 9,
-  GFX11 = 10,
-  GFX12 = 11,
-  GFX12_10 = 12,
-};
-
-static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
+static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   switch (ST.getGeneration()) {
   default:
     break;
@@ -8739,19 +8721,6 @@ static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
     return SIEncodingFamily::GFX12;
   }
   llvm_unreachable("Unknown subtarget generation!");
-}
-
-unsigned llvm::AMDGPU::getVOPDEncodingFamily(const GCNSubtarget &ST) {
-  switch (ST.getGeneration()) {
-  default:
-    break;
-  case AMDGPUSubtarget::GFX11:
-    return SIEncodingFamily::GFX11;
-  case AMDGPUSubtarget::GFX12:
-    return ST.hasGFX12_10Insts() ? SIEncodingFamily::GFX12_10
-                                 : SIEncodingFamily::GFX12;
-  }
-  llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
 bool SIInstrInfo::isAsmOnlyOpcode(int MCOp) const {
@@ -8775,7 +8744,7 @@ bool SIInstrInfo::isAsmOnlyOpcode(int MCOp) const {
 }
 
 int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
-  SIEncodingFamily Gen = subtargetEncodingFamily(ST);
+  unsigned Gen = subtargetEncodingFamily(ST);
 
   if ((get(Opcode).TSFlags & SIInstrFlags::renamedInGFX9) != 0 &&
     ST.getGeneration() == AMDGPUSubtarget::GFX9)

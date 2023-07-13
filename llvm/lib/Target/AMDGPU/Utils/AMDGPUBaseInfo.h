@@ -522,6 +522,11 @@ struct CanBeVOPD {
   bool Y;
 };
 
+/// \returns SIEncodingFamily used for VOPD encoding on a \p ST. This is a
+/// helper to check if a VOPD opcode is supported by the \p ST.
+LLVM_READONLY
+unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST);
+
 LLVM_READONLY
 CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3);
 
