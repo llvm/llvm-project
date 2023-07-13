@@ -30,12 +30,6 @@
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
-static const Fortran::parser::Name *
-getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
-  const auto *dataRef = std::get_if<Fortran::parser::DataRef>(&designator.u);
-  return dataRef ? std::get_if<Fortran::parser::Name>(&dataRef->u) : nullptr;
-}
-
 /// Generate the acc.bounds operation from the descriptor information.
 static llvm::SmallVector<mlir::Value>
 genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -1354,7 +1348,9 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
             const auto &accObject = accClauseList->v.front();
             if (const auto *designator =
                     std::get_if<Fortran::parser::Designator>(&accObject.u)) {
-              if (const auto *name = getDesignatorNameIfDataRef(*designator)) {
+              if (const auto *name =
+                      Fortran::semantics::getDesignatorNameIfDataRef(
+                          *designator)) {
                 auto cond = converter.getSymbolAddress(*name->symbol);
                 selfCond = builder.createConvert(clauseLocation,
                                                  builder.getI1Type(), cond);
