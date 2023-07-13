@@ -23,7 +23,7 @@ entry:
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Symbol {
 ; CHECK-NEXT:     Index: [[#Index:]]
-; CHECK-NEXT:     Name: .text
+; CHECK-NEXT:     Name:
 ; CHECK-NEXT:     Value (RelocatableAddress): 0x0
 ; CHECK-NEXT:     Section: .text
 ; CHECK-NEXT:     Type: 0x0

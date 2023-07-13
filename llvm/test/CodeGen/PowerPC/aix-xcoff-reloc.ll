@@ -211,7 +211,7 @@ declare i32 @bar(i32)
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: [[#INDX+4]]
-; SYM-NEXT:     Name: .text
+; SYM-NEXT:     Name:
 ; SYM-NEXT:     Value (RelocatableAddress): 0x0
 ; SYM-NEXT:     Section: .text
 ; SYM-NEXT:     Type: 0x0
