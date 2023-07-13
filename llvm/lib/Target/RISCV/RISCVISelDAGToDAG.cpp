@@ -3341,8 +3341,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   if (IsMasked) {
     Ops.push_back(False);
     Ops.append(True->op_begin() + 1, True->op_begin() + TrueVLIndex);
-    Ops.append({VL, SEW, PolicyOp});
-    Ops.append(True->op_begin() + TrueVLIndex + 3, True->op_end());
   } else {
     Ops.push_back(False);
     if (RISCVII::hasRoundModeOp(TrueTSFlags)) {
@@ -3359,15 +3357,20 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
                  True->op_begin() + TrueVLIndex);
       Ops.push_back(Mask);
     }
-    Ops.append({VL, SEW, PolicyOp});
-
-    // Result node should have chain operand of True.
-    if (HasChainOp)
-      Ops.push_back(True.getOperand(TrueChainOpIdx));
-
-    // Add the glue for the CopyToReg of mask->v0.
-    Ops.push_back(Glue);
   }
+  Ops.append({VL, SEW, PolicyOp});
+
+  // Result node should have chain operand of True.
+  if (HasChainOp)
+    Ops.push_back(True.getOperand(TrueChainOpIdx));
+
+  // Add the glue for the CopyToReg of mask->v0.
+  if (IsMasked) {
+    // Matches the Merge operand above
+    assert(True->getGluedNode());
+    Glue = True->getOperand(True->getNumOperands() - 1);
+  }
+  Ops.push_back(Glue);
 
   SDNode *Result =
       CurDAG->getMachineNode(MaskedOpc, DL, True->getVTList(), Ops);
