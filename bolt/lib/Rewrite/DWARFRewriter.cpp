@@ -1225,9 +1225,10 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
     convertToRangesPatchDebugInfo(Unit, DIEBldr, Die, DebugRangesOffset,
                                   LowPCAttrInfo, HighPCAttrInfo, LowPCToUse,
                                   RangesBase);
-  } else {
+  } else if (!(Unit.isDWOUnit() &&
+               Die.getTag() == dwarf::DW_TAG_compile_unit)) {
     if (opts::Verbosity >= 1)
-      errs() << "BOLT-ERROR: cannot update ranges for DIE in Unit offset 0x"
+      errs() << "BOLT-WARNING: cannot update ranges for DIE in Unit offset 0x"
              << Unit.getOffset() << '\n';
   }
 }
