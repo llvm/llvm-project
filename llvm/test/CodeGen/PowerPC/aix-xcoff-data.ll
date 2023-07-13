@@ -45,7 +45,7 @@
 
 ; CHECK-NOT: .toc
 
-; CHECK:      .csect .text[PR],5
+; CHECK:      .csect [PR],5
 ; CHECK-NEXT:  .file
 
 ; CHECK:      .csect .data[RW],5
@@ -218,7 +218,7 @@
 ; SYMS-NEXT:   }
 ; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: [[#INDX:]]
-; SYMS-NEXT:     Name: .text
+; SYMS-NEXT:     Name:
 ; SYMS-NEXT:     Value (RelocatableAddress): 0x0
 ; SYMS-NEXT:     Section: .text
 ; SYMS-NEXT:     Type: 0x0

@@ -201,7 +201,7 @@ entry:
 ; SYM-NEXT:   }
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 3
-; SYM-NEXT:     Name: .text
+; SYM-NEXT:     Name:
 ; SYM-NEXT:     Value (RelocatableAddress): 0x0
 ; SYM-NEXT:     Section: .text
 ; SYM-NEXT:     Type: 0x0
