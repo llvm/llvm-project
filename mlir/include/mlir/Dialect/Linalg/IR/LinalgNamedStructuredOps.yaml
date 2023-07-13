@@ -9,6 +9,8 @@ metadata: !LinalgOpMetadata
 
     Numeric casting is performed on the input operand, promoting it to the same
     data type as the accumulator/output.
+  defines:
+  - hasCanonicalizer
 structured_op: !LinalgStructuredOpConfig
   args:
   - !LinalgOperandDefConfig

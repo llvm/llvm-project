@@ -3826,13 +3826,10 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
 
   EVT ArgVT = Ins[i].ArgVT;
 
-  // If this is a vector that has been split into multiple parts, and the
-  // scalar size of the parts don't match the vector element size, then we can't
-  // elide the copy. The parts will have padding between them instead of being
-  // packed like a vector.
-  bool ScalarizedAndExtendedVector =
-      ArgVT.isVector() && !VA.getLocVT().isVector() &&
-      VA.getLocVT().getSizeInBits() != ArgVT.getScalarSizeInBits();
+  // If this is a vector that has been split into multiple parts, don't elide
+  // the copy. The layout on the stack may not match the packed in-memory
+  // layout.
+  bool ScalarizedVector = ArgVT.isVector() && !VA.getLocVT().isVector();
 
   // This is an argument in memory. We might be able to perform copy elision.
   // If the argument is passed directly in memory without any extension, then we
@@ -3840,7 +3837,7 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
   // indirectly by pointer.
   if (Flags.isCopyElisionCandidate() &&
       VA.getLocInfo() != CCValAssign::Indirect && !ExtendedInMem &&
-      !ScalarizedAndExtendedVector) {
+      !ScalarizedVector) {
     SDValue PartAddr;
     if (Ins[i].PartOffset == 0) {
       // If this is a one-part value or the first part of a multi-part value,
@@ -40872,24 +40869,6 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
                              getV4X86ShuffleImm8ForMask(PostMask, DL, DAG));
         }
       }
-      // permute(pack(x,y)) -> pack(shuffle(x,y),undef)
-      if (!isHoriz && Ops.size() == 1 && NumLanes == 1 &&
-          isUndefInRange(ScaledMask, 2, 2)) {
-        int M0 = ScaledMask[0];
-        int M1 = ScaledMask[1];
-        if (isInRange(M0, 0, 4) && isInRange(M1, 0, 4)) {
-          // Use SHUFPD for the permute so this will work on SSE2 targets,
-          // shuffle combining and domain handling will simplify this later on.
-          unsigned SHUFPDMask = (M0 & 1) | ((M1 & 1) << 1);
-          SDValue LHS = DAG.getBitcast(MVT::v2f64, BC[0].getOperand(M0 >= 2));
-          SDValue RHS = DAG.getBitcast(MVT::v2f64, BC[0].getOperand(M1 >= 2));
-          SDValue Res =
-              DAG.getNode(X86ISD::SHUFP, DL, MVT::v2f64, LHS, RHS,
-                          DAG.getTargetConstant(SHUFPDMask, DL, MVT::i8));
-          return DAG.getNode(Opcode0, DL, VT0, DAG.getBitcast(SrcVT, Res),
-                             DAG.getUNDEF(SrcVT));
-        }
-      }
     }
   }
 
@@ -56584,9 +56563,11 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with
   // one use and a constant, invert the immediate, saving one register.
+  // However, ignore cases where C1 is 0, as those will become a NEG.
   // sub(C1, xor(X, C2)) -> add(xor(X, ~C2), C1+1)
   if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
-      IsNonOpaqueConstant(Op1.getOperand(1)) && Op1->hasOneUse()) {
+      !isNullConstant(Op0) && IsNonOpaqueConstant(Op1.getOperand(1)) &&
+      Op1->hasOneUse()) {
     SDLoc DL(N);
     EVT VT = Op0.getValueType();
     SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),

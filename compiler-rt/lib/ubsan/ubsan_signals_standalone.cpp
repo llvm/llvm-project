@@ -34,7 +34,12 @@ void InitializeDeadlySignals() {}
 
 #else
 
+namespace __ubsan {
+void InitializeDeadlySignals();
+} // namespace __ubsan
+
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
+#define SIGNAL_INTERCEPTOR_ENTER() __ubsan::InitializeDeadlySignals()
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
 // TODO(yln): Temporary workaround. Will be removed.

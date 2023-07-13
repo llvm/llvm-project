@@ -4,9 +4,8 @@
 define <4 x i16> @addls_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-LABEL: addls_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    saddl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i16>
@@ -20,8 +19,9 @@ entry:
 define <4 x i16> @addws_v8i8_0(<4 x i16> %s0, <8 x i8> %s1) {
 ; CHECK-LABEL: addws_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    saddw v0.8h, v0.8h, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = sext <8 x i8> %s1 to <8 x i16>
@@ -33,9 +33,8 @@ entry:
 define <4 x i16> @addlu_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-LABEL: addlu_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <8 x i8> %s0 to <8 x i16>
@@ -49,8 +48,9 @@ entry:
 define <4 x i16> @addwu_v8i8_0(<4 x i16> %s0, <8 x i8> %s1) {
 ; CHECK-LABEL: addwu_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    uaddw v0.8h, v0.8h, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = zext <8 x i8> %s1 to <8 x i16>
@@ -62,9 +62,8 @@ entry:
 define <4 x i16> @subls_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-LABEL: subls_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NEXT:    sub v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ssubl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i16>
@@ -78,8 +77,9 @@ entry:
 define <4 x i16> @subws_v8i8_0(<4 x i16> %s0, <8 x i8> %s1) {
 ; CHECK-LABEL: subws_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NEXT:    sub v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ssubw v0.8h, v0.8h, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = sext <8 x i8> %s1 to <8 x i16>
@@ -91,9 +91,8 @@ entry:
 define <4 x i16> @sublu_v8i8_0(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-LABEL: sublu_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    sub v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    usubl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <8 x i8> %s0 to <8 x i16>
@@ -107,8 +106,9 @@ entry:
 define <4 x i16> @subwu_v8i8_0(<4 x i16> %s0, <8 x i8> %s1) {
 ; CHECK-LABEL: subwu_v8i8_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    sub v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    usubw v0.8h, v0.8h, v1.8b
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = zext <8 x i8> %s1 to <8 x i16>
@@ -178,9 +178,8 @@ entry:
 define <2 x i32> @addls_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-LABEL: addls_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    saddl v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = sext <4 x i16> %s0 to <4 x i32>
@@ -194,8 +193,9 @@ entry:
 define <2 x i32> @addws_v4i16_0(<2 x i32> %s0, <4 x i16> %s1) {
 ; CHECK-LABEL: addws_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    saddw v0.4s, v0.4s, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = sext <4 x i16> %s1 to <4 x i32>
@@ -207,9 +207,8 @@ entry:
 define <2 x i32> @addlu_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-LABEL: addlu_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    uaddl v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <4 x i16> %s0 to <4 x i32>
@@ -223,8 +222,9 @@ entry:
 define <2 x i32> @addwu_v4i16_0(<2 x i32> %s0, <4 x i16> %s1) {
 ; CHECK-LABEL: addwu_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = zext <4 x i16> %s1 to <4 x i32>
@@ -236,9 +236,8 @@ entry:
 define <2 x i32> @subls_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-LABEL: subls_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    sub v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    ssubl v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = sext <4 x i16> %s0 to <4 x i32>
@@ -252,8 +251,9 @@ entry:
 define <2 x i32> @subws_v4i16_0(<2 x i32> %s0, <4 x i16> %s1) {
 ; CHECK-LABEL: subws_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    sub v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ssubw v0.4s, v0.4s, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = sext <4 x i16> %s1 to <4 x i32>
@@ -265,9 +265,8 @@ entry:
 define <2 x i32> @sublu_v4i16_0(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-LABEL: sublu_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    sub v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    usubl v0.4s, v0.4h, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <4 x i16> %s0 to <4 x i32>
@@ -281,8 +280,9 @@ entry:
 define <2 x i32> @subwu_v4i16_0(<2 x i32> %s0, <4 x i16> %s1) {
 ; CHECK-LABEL: subwu_v4i16_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    sub v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    usubw v0.4s, v0.4s, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = zext <4 x i16> %s1 to <4 x i32>
@@ -352,9 +352,8 @@ entry:
 define <1 x i64> @addls_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-LABEL: addls_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    saddl v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = sext <2 x i32> %s0 to <2 x i64>
@@ -368,8 +367,9 @@ entry:
 define <1 x i64> @addws_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
 ; CHECK-LABEL: addws_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    saddw v0.2d, v0.2d, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = sext <2 x i32> %s1 to <2 x i64>
@@ -381,9 +381,8 @@ entry:
 define <1 x i64> @addlu_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-LABEL: addlu_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    uaddl v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <2 x i32> %s0 to <2 x i64>
@@ -397,8 +396,9 @@ entry:
 define <1 x i64> @addwu_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
 ; CHECK-LABEL: addwu_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    add d0, d0, d1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    uaddw v0.2d, v0.2d, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = zext <2 x i32> %s1 to <2 x i64>
@@ -410,9 +410,8 @@ entry:
 define <1 x i64> @subls_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-LABEL: subls_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    sub d0, d0, d1
+; CHECK-NEXT:    ssubl v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = sext <2 x i32> %s0 to <2 x i64>
@@ -426,8 +425,9 @@ entry:
 define <1 x i64> @subws_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
 ; CHECK-LABEL: subws_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
-; CHECK-NEXT:    sub d0, d0, d1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    ssubw v0.2d, v0.2d, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = sext <2 x i32> %s1 to <2 x i64>
@@ -439,9 +439,8 @@ entry:
 define <1 x i64> @sublu_v2i32_0(<2 x i32> %s0, <2 x i32> %s1) {
 ; CHECK-LABEL: sublu_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    sub d0, d0, d1
+; CHECK-NEXT:    usubl v0.2d, v0.2s, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s0s = zext <2 x i32> %s0 to <2 x i64>
@@ -455,8 +454,9 @@ entry:
 define <1 x i64> @subwu_v2i32_0(<1 x i64> %s0, <2 x i32> %s1) {
 ; CHECK-LABEL: subwu_v2i32_0:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-NEXT:    sub d0, d0, d1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    usubw v0.2d, v0.2d, v1.2s
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %s1s = zext <2 x i32> %s1 to <2 x i64>
