@@ -53,6 +53,9 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkAwait(AwaitOp awaitOp);
   void checkReturn(ReturnOp retOp);
 
+  void classifyTypeCategories(mlir::Value addr, mlir::Type t,
+                              mlir::Location loc);
+
   // FIXME: classify tasks and lambdas prior to check ptr deref
   // and pass down an enum.
   void checkPointerDeref(mlir::Value addr, mlir::Location loc,
@@ -867,8 +870,8 @@ static bool containsPointerElts(mlir::cir::StructType s) {
   });
 }
 
-static bool isAggregateType(AllocaOp allocaOp) {
-  auto t = allocaOp.getAllocaType().dyn_cast<mlir::cir::StructType>();
+static bool isAggregateType(mlir::Type agg) {
+  auto t = agg.dyn_cast<mlir::cir::StructType>();
   if (!t)
     return false;
   // FIXME: For now we handle this in a more naive way: any pointer
@@ -882,7 +885,7 @@ static bool isAggregateType(AllocaOp allocaOp) {
   return containsPointerElts(t);
 }
 
-static bool isPointerType(AllocaOp allocaOp) {
+static bool isPointerType(mlir::Type t) {
   // From 2.1:
   //
   // A Pointer is not an Owner and provides indirect access to an object it does
@@ -914,14 +917,14 @@ static bool isPointerType(AllocaOp allocaOp) {
   // library headers, the following well- known standard types are treated as-if
   // annotated as Pointers, in addition to raw pointers and references: ref-
   // erence_wrapper, and vector<bool>::reference.
-  if (allocaOp.isPointerType())
+  if (t.isa<mlir::cir::PointerType>())
     return true;
-  return isStructAndHasAttr<clang::PointerAttr>(allocaOp.getAllocaType());
+  return isStructAndHasAttr<clang::PointerAttr>(t);
 }
 
-void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
-  auto addr = allocaOp.getAddr();
-  assert(!getPmap().count(addr) && "only one alloca for any given address");
+void LifetimeCheckPass::classifyTypeCategories(mlir::Value addr, mlir::Type t,
+                                               mlir::Location loc) {
+  assert(!getPmap().count(addr) && "only one map entry for a given address");
   getPmap()[addr] = {};
 
   enum TypeCategory {
@@ -935,11 +938,11 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
   };
 
   auto localStyle = [&]() {
-    if (isPointerType(allocaOp))
+    if (isPointerType(t))
       return TypeCategory::Pointer;
-    if (isOwnerType(allocaOp.getAllocaType()))
+    if (isOwnerType(t))
       return TypeCategory::Owner;
-    if (isAggregateType(allocaOp))
+    if (isAggregateType(t))
       return TypeCategory::Aggregate;
     return TypeCategory::Value;
   }();
@@ -949,7 +952,7 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
     // 2.4.2 - When a non-parameter non-member Pointer p is declared, add
     // (p, {invalid}) to pmap.
     ptrs.insert(addr);
-    markPsetInvalid(addr, InvalidStyle::NotInitialized, allocaOp.getLoc());
+    markPsetInvalid(addr, InvalidStyle::NotInitialized, loc);
     break;
   case TypeCategory::Owner:
     // 2.4.2 - When a local Owner x is declared, add (x, {x__1'}) to pmap.
@@ -963,8 +966,7 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
 
     // Explode all pointer members.
     SmallVector<unsigned, 4> fields;
-    auto members =
-        allocaOp.getAllocaType().cast<mlir::cir::StructType>().getMembers();
+    auto members = t.cast<mlir::cir::StructType>().getMembers();
 
     unsigned fieldIdx = 0;
     std::for_each(members.begin(), members.end(), [&](mlir::Type t) {
@@ -990,6 +992,11 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
   default:
     llvm_unreachable("NYI");
   }
+}
+
+void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
+  classifyTypeCategories(allocaOp.getAddr(), allocaOp.getAllocaType(),
+                         allocaOp.getLoc());
 }
 
 void LifetimeCheckPass::checkCoroTaskStore(StoreOp storeOp) {
