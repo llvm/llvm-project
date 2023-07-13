@@ -1078,11 +1078,33 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
       return failure();
   }
 
+  int rank = inductionVars.size();
+  const bool useTeamPolicy = (rank == 1 && parallelLvl == 0) ? true : false;
+  const bool usedInsideTeamPolicy = (rank == 1 && parallelLvl > 0) ? true : false;
+
+  if (useTeamPolicy)
+  {
+    emitter << "typedef Kokkos::TeamPolicy<exec_space>::member_type member_type;\n";
+    emitter << "int league_size = (";
+    if(failed(emitter.emitValue(upperBounds[0])))
+      return failure();
+    emitter << " - ";
+    if(failed(emitter.emitValue(lowerBounds[0])))
+      return failure();
+    emitter << " + ";
+    if(failed(emitter.emitValue(step[0])))
+      return failure();
+    emitter << " - 1) / ";
+    if(failed(emitter.emitValue(step[0])))
+      return failure();
+    emitter << ";\n";
+    emitter << "Kokkos::TeamPolicy<exec_space> policy (league_size, Kokkos::AUTO(), Kokkos::AUTO() );\n";
+  }
+
   //TODO: handle common simplifying cases:
   //  - if step for a dimension is the constant 1, don't need to shift/scale the induction variable.
   //  - if iter range for a dimension is a single value, remove it and simply declare
   //    that induction variable as a constant (lowerBound).
-  int rank = inductionVars.size();
   emitter << "Kokkos::parallel_";
   if(isReduction)
     emitter << "reduce";
@@ -1094,9 +1116,16 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
   //To express an iteration space with arbitrary (step, lower, upper) correctly:
   //  iterate from [0, (upper - lower + step - 1) / step)
   //  and then take lower + i * step to get the value of the induction variable's value
-  if(rank == 1)
+  if(useTeamPolicy)
   {
-    emitter << "(Kokkos::RangePolicy<exec_space>(0, (";
+    emitter << "(policy, ";
+  }
+  else if(rank == 1)
+  {
+    if (parallelLvl == 1)
+      emitter << "(Kokkos::TeamThreadRange(member, (";
+    if (parallelLvl == 2)
+      emitter << "(Kokkos::ThreadVectorRange(member, (";
     if(failed(emitter.emitValue(upperBounds[0])))
       return failure();
     emitter << " - ";
@@ -1140,17 +1169,28 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
     }
     emitter << "}),\n";
   }
-  emitter << "KOKKOS_LAMBDA(";
-  for(int i = 0; i < rank; i++)
-  {
-    if(i > 0)
-      emitter << ", ";
-    //note: the MDRangePolicy only iterates with unit step in each dimension. This variable needs to be
-    //shifted and scaled to match the actual range.
-    emitter << "int64_t unit_" << emitter.getOrCreateName(inductionVars[i]);
+  if (!usedInsideTeamPolicy)
+    emitter << "KOKKOS_LAMBDA(";
+  else
+    emitter << "[&](const ";
+  if (useTeamPolicy) {
+   emitter << "member_type member";
+  }
+  else {
+    for(int i = 0; i < rank; i++)
+    {
+      if(i > 0)
+        emitter << ", ";
+      //note: the MDRangePolicy only iterates with unit step in each dimension. This variable needs to be
+      //shifted and scaled to match the actual range.
+      emitter << "int64_t ";
+      if (usedInsideTeamPolicy)
+        emitter << "&";
+      emitter << "unit_" << emitter.getOrCreateName(inductionVars[i]);
+    }
   }
   if(isReduction)
-  { 
+  {
     //Loop over the parallel body to get information about the reduction types
     Region& body = op.getRegion();
 
@@ -1170,6 +1210,14 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
   }
   emitter << ")\n{\n";
   emitter.ostream().indent();
+
+  if (useTeamPolicy) {
+    for(int i = 0; i < rank; i++)
+    {
+      emitter << "int64_t unit_" << emitter.getOrCreateName(inductionVars[i]) << " = member.league_rank ();\n";;
+    }
+  }
+
   // Declare the actual induction variables, with the correct bounds and step
   for(int i = 0; i < rank; i++)
   {
