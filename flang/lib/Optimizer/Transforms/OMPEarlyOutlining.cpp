@@ -82,7 +82,8 @@ class OMPEarlyOutliningPass
     return newFunc;
   }
 
-  void outlineTargetOps(mlir::OpBuilder &builder,
+  // Returns true if a target region was found int the function.
+  bool outlineTargetOps(mlir::OpBuilder &builder,
                         mlir::func::FuncOp &functionOp,
                         mlir::ModuleOp &moduleOp,
                         llvm::SmallVectorImpl<mlir::func::FuncOp> &newFuncs) {
@@ -93,6 +94,7 @@ class OMPEarlyOutliningPass
       newFuncs.push_back(outlinedFunc);
       count++;
     }
+    return count > 0;
   }
 
   void runOnOperation() override {
@@ -103,8 +105,9 @@ class OMPEarlyOutliningPass
 
     for (auto functionOp :
          llvm::make_early_inc_range(moduleOp.getOps<mlir::func::FuncOp>())) {
-      outlineTargetOps(builder, functionOp, moduleOp, newFuncs);
-      functionOp.erase();
+      bool outlined = outlineTargetOps(builder, functionOp, moduleOp, newFuncs);
+      if (outlined)
+        functionOp.erase();
     }
 
     for (auto newFunc : newFuncs)
