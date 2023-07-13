@@ -1798,50 +1798,92 @@ vector.ph:
 }
 
 define <16 x i16> @psubus_16i32_max(<16 x i16> %x, <16 x i32> %y) nounwind {
-; SSE2OR3-LABEL: psubus_16i32_max:
-; SSE2OR3:       # %bb.0: # %vector.ph
-; SSE2OR3-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2OR3-NEXT:    movdqa %xmm5, %xmm8
-; SSE2OR3-NEXT:    pxor %xmm7, %xmm8
-; SSE2OR3-NEXT:    movdqa {{.*#+}} xmm6 = [2147549183,2147549183,2147549183,2147549183]
-; SSE2OR3-NEXT:    movdqa %xmm6, %xmm9
-; SSE2OR3-NEXT:    pcmpgtd %xmm8, %xmm9
-; SSE2OR3-NEXT:    pcmpeqd %xmm8, %xmm8
-; SSE2OR3-NEXT:    pand %xmm9, %xmm5
-; SSE2OR3-NEXT:    pxor %xmm8, %xmm9
-; SSE2OR3-NEXT:    por %xmm5, %xmm9
-; SSE2OR3-NEXT:    pslld $16, %xmm9
-; SSE2OR3-NEXT:    psrad $16, %xmm9
-; SSE2OR3-NEXT:    movdqa %xmm4, %xmm10
-; SSE2OR3-NEXT:    pxor %xmm7, %xmm10
-; SSE2OR3-NEXT:    movdqa %xmm6, %xmm5
-; SSE2OR3-NEXT:    pcmpgtd %xmm10, %xmm5
-; SSE2OR3-NEXT:    pand %xmm5, %xmm4
-; SSE2OR3-NEXT:    pxor %xmm8, %xmm5
-; SSE2OR3-NEXT:    por %xmm4, %xmm5
-; SSE2OR3-NEXT:    pslld $16, %xmm5
-; SSE2OR3-NEXT:    psrad $16, %xmm5
-; SSE2OR3-NEXT:    packssdw %xmm9, %xmm5
-; SSE2OR3-NEXT:    movdqa %xmm3, %xmm4
-; SSE2OR3-NEXT:    pxor %xmm7, %xmm4
-; SSE2OR3-NEXT:    movdqa %xmm6, %xmm9
-; SSE2OR3-NEXT:    pcmpgtd %xmm4, %xmm9
-; SSE2OR3-NEXT:    pand %xmm9, %xmm3
-; SSE2OR3-NEXT:    pxor %xmm8, %xmm9
-; SSE2OR3-NEXT:    por %xmm3, %xmm9
-; SSE2OR3-NEXT:    pslld $16, %xmm9
-; SSE2OR3-NEXT:    psrad $16, %xmm9
-; SSE2OR3-NEXT:    pxor %xmm2, %xmm7
-; SSE2OR3-NEXT:    pcmpgtd %xmm7, %xmm6
-; SSE2OR3-NEXT:    pxor %xmm6, %xmm8
-; SSE2OR3-NEXT:    pand %xmm2, %xmm6
-; SSE2OR3-NEXT:    por %xmm8, %xmm6
-; SSE2OR3-NEXT:    pslld $16, %xmm6
-; SSE2OR3-NEXT:    psrad $16, %xmm6
-; SSE2OR3-NEXT:    packssdw %xmm9, %xmm6
-; SSE2OR3-NEXT:    psubusw %xmm6, %xmm0
-; SSE2OR3-NEXT:    psubusw %xmm5, %xmm1
-; SSE2OR3-NEXT:    retq
+; SSE2-LABEL: psubus_16i32_max:
+; SSE2:       # %bb.0: # %vector.ph
+; SSE2-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa %xmm3, %xmm8
+; SSE2-NEXT:    pxor %xmm7, %xmm8
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [2147549183,2147549183,2147549183,2147549183]
+; SSE2-NEXT:    movdqa %xmm6, %xmm9
+; SSE2-NEXT:    pcmpgtd %xmm8, %xmm9
+; SSE2-NEXT:    pcmpeqd %xmm8, %xmm8
+; SSE2-NEXT:    pand %xmm9, %xmm3
+; SSE2-NEXT:    pxor %xmm8, %xmm9
+; SSE2-NEXT:    por %xmm3, %xmm9
+; SSE2-NEXT:    pslld $16, %xmm9
+; SSE2-NEXT:    psrad $16, %xmm9
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pxor %xmm7, %xmm3
+; SSE2-NEXT:    movdqa %xmm6, %xmm10
+; SSE2-NEXT:    pcmpgtd %xmm3, %xmm10
+; SSE2-NEXT:    pand %xmm10, %xmm2
+; SSE2-NEXT:    pxor %xmm8, %xmm10
+; SSE2-NEXT:    por %xmm2, %xmm10
+; SSE2-NEXT:    pslld $16, %xmm10
+; SSE2-NEXT:    psrad $16, %xmm10
+; SSE2-NEXT:    packssdw %xmm9, %xmm10
+; SSE2-NEXT:    psubusw %xmm10, %xmm0
+; SSE2-NEXT:    movdqa %xmm5, %xmm2
+; SSE2-NEXT:    pxor %xmm7, %xmm2
+; SSE2-NEXT:    movdqa %xmm6, %xmm3
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm3
+; SSE2-NEXT:    pand %xmm3, %xmm5
+; SSE2-NEXT:    pxor %xmm8, %xmm3
+; SSE2-NEXT:    por %xmm5, %xmm3
+; SSE2-NEXT:    pslld $16, %xmm3
+; SSE2-NEXT:    psrad $16, %xmm3
+; SSE2-NEXT:    pxor %xmm4, %xmm7
+; SSE2-NEXT:    pcmpgtd %xmm7, %xmm6
+; SSE2-NEXT:    pxor %xmm6, %xmm8
+; SSE2-NEXT:    pand %xmm4, %xmm6
+; SSE2-NEXT:    por %xmm8, %xmm6
+; SSE2-NEXT:    pslld $16, %xmm6
+; SSE2-NEXT:    psrad $16, %xmm6
+; SSE2-NEXT:    packssdw %xmm3, %xmm6
+; SSE2-NEXT:    psubusw %xmm6, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: psubus_16i32_max:
+; SSSE3:       # %bb.0: # %vector.ph
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm7 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    movdqa %xmm3, %xmm8
+; SSSE3-NEXT:    pxor %xmm7, %xmm8
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm6 = [2147549183,2147549183,2147549183,2147549183]
+; SSSE3-NEXT:    movdqa %xmm6, %xmm9
+; SSSE3-NEXT:    pcmpgtd %xmm8, %xmm9
+; SSSE3-NEXT:    pcmpeqd %xmm8, %xmm8
+; SSSE3-NEXT:    pand %xmm9, %xmm3
+; SSSE3-NEXT:    pxor %xmm8, %xmm9
+; SSSE3-NEXT:    por %xmm3, %xmm9
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; SSSE3-NEXT:    pshufb %xmm3, %xmm9
+; SSSE3-NEXT:    movdqa %xmm2, %xmm10
+; SSSE3-NEXT:    pxor %xmm7, %xmm10
+; SSSE3-NEXT:    movdqa %xmm6, %xmm11
+; SSSE3-NEXT:    pcmpgtd %xmm10, %xmm11
+; SSSE3-NEXT:    pand %xmm11, %xmm2
+; SSSE3-NEXT:    pxor %xmm8, %xmm11
+; SSSE3-NEXT:    por %xmm2, %xmm11
+; SSSE3-NEXT:    pshufb %xmm3, %xmm11
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm11 = xmm11[0],xmm9[0]
+; SSSE3-NEXT:    psubusw %xmm11, %xmm0
+; SSSE3-NEXT:    movdqa %xmm5, %xmm2
+; SSSE3-NEXT:    pxor %xmm7, %xmm2
+; SSSE3-NEXT:    movdqa %xmm6, %xmm9
+; SSSE3-NEXT:    pcmpgtd %xmm2, %xmm9
+; SSSE3-NEXT:    pand %xmm9, %xmm5
+; SSSE3-NEXT:    pxor %xmm8, %xmm9
+; SSSE3-NEXT:    por %xmm5, %xmm9
+; SSSE3-NEXT:    pshufb %xmm3, %xmm9
+; SSSE3-NEXT:    pxor %xmm4, %xmm7
+; SSSE3-NEXT:    pcmpgtd %xmm7, %xmm6
+; SSSE3-NEXT:    pxor %xmm6, %xmm8
+; SSSE3-NEXT:    pand %xmm4, %xmm6
+; SSSE3-NEXT:    por %xmm8, %xmm6
+; SSSE3-NEXT:    pshufb %xmm3, %xmm6
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm6 = xmm6[0],xmm9[0]
+; SSSE3-NEXT:    psubusw %xmm6, %xmm1
+; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: psubus_16i32_max:
 ; SSE41:       # %bb.0: # %vector.ph
