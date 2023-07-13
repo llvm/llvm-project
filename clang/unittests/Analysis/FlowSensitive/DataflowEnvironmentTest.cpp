@@ -25,9 +25,7 @@ namespace {
 using namespace clang;
 using namespace dataflow;
 using ::clang::dataflow::test::getFieldValue;
-using ::testing::ElementsAre;
 using ::testing::NotNull;
-using ::testing::Pair;
 
 class EnvironmentTest : public ::testing::Test {
 protected:
@@ -38,17 +36,18 @@ protected:
 
 TEST_F(EnvironmentTest, FlowCondition) {
   Environment Env(DAContext);
+  auto &A = Env.arena();
 
-  EXPECT_TRUE(Env.flowConditionImplies(Env.getBoolLiteralValue(true)));
-  EXPECT_FALSE(Env.flowConditionImplies(Env.getBoolLiteralValue(false)));
+  EXPECT_TRUE(Env.flowConditionImplies(A.makeLiteral(true)));
+  EXPECT_FALSE(Env.flowConditionImplies(A.makeLiteral(false)));
 
-  auto &X = Env.makeAtomicBoolValue();
+  auto &X = A.makeAtomRef(A.makeAtom());
   EXPECT_FALSE(Env.flowConditionImplies(X));
 
   Env.addToFlowCondition(X);
   EXPECT_TRUE(Env.flowConditionImplies(X));
 
-  auto &NotX = Env.makeNot(X);
+  auto &NotX = A.makeNot(X);
   EXPECT_FALSE(Env.flowConditionImplies(NotX));
 }
 

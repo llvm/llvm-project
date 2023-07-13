@@ -66,6 +66,10 @@ void runDataflow(
               Std, TargetFun);
 }
 
+const Formula &getFormula(const ValueDecl &D, const Environment &Env) {
+  return cast<BoolValue>(Env.getValue(D))->formula();
+}
+
 TEST(TransferTest, IntVarDeclNotTrackedWhenTransferDisabled) {
   std::string Code = R"(
     void target() {
@@ -3578,10 +3582,10 @@ TEST(TransferTest, BooleanEquality) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &BarValThen = *cast<BoolValue>(EnvThen.getValue(*BarDecl));
+        auto &BarValThen = getFormula(*BarDecl, EnvThen);
         EXPECT_TRUE(EnvThen.flowConditionImplies(BarValThen));
 
-        auto &BarValElse = *cast<BoolValue>(EnvElse.getValue(*BarDecl));
+        auto &BarValElse = getFormula(*BarDecl, EnvElse);
         EXPECT_FALSE(EnvElse.flowConditionImplies(BarValElse));
       });
 }
@@ -3612,10 +3616,10 @@ TEST(TransferTest, BooleanInequality) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &BarValThen = *cast<BoolValue>(EnvThen.getValue(*BarDecl));
+        auto &BarValThen = getFormula(*BarDecl, EnvThen);
         EXPECT_FALSE(EnvThen.flowConditionImplies(BarValThen));
 
-        auto &BarValElse = *cast<BoolValue>(EnvElse.getValue(*BarDecl));
+        auto &BarValElse = getFormula(*BarDecl, EnvElse);
         EXPECT_TRUE(EnvElse.flowConditionImplies(BarValElse));
       });
 }
@@ -3633,7 +3637,8 @@ TEST(TransferTest, IntegerLiteralEquality) {
          ASTContext &ASTCtx) {
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
 
-        auto &Equal = getValueForDecl<BoolValue>(ASTCtx, Env, "equal");
+        auto &Equal =
+            getValueForDecl<BoolValue>(ASTCtx, Env, "equal").formula();
         EXPECT_TRUE(Env.flowConditionImplies(Equal));
       });
 }
@@ -3669,20 +3674,20 @@ TEST(TransferTest, CorrelatedBranches) {
           const Environment &Env = getEnvironmentAtAnnotation(Results, "p0");
           const ValueDecl *BDecl = findValueDecl(ASTCtx, "B");
           ASSERT_THAT(BDecl, NotNull());
-          auto &BVal = *cast<BoolValue>(Env.getValue(*BDecl));
+          auto &BVal = getFormula(*BDecl, Env);
 
-          EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BVal)));
+          EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BVal)));
         }
 
         {
           const Environment &Env = getEnvironmentAtAnnotation(Results, "p1");
-          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl));
+          auto &CVal = getFormula(*CDecl, Env);
           EXPECT_TRUE(Env.flowConditionImplies(CVal));
         }
 
         {
           const Environment &Env = getEnvironmentAtAnnotation(Results, "p2");
-          auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl));
+          auto &CVal = getFormula(*CDecl, Env);
           EXPECT_TRUE(Env.flowConditionImplies(CVal));
         }
       });
@@ -3714,8 +3719,8 @@ TEST(TransferTest, LoopWithAssignmentConverges) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
-        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
+        auto &BarVal = getFormula(*BarDecl, Env);
+        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BarVal)));
       });
 }
 
@@ -3746,13 +3751,14 @@ TEST(TransferTest, LoopWithStagedAssignments) {
         const ValueDecl *ErrDecl = findValueDecl(ASTCtx, "Err");
         ASSERT_THAT(ErrDecl, NotNull());
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
-        auto &ErrVal = *cast<BoolValue>(Env.getValue(*ErrDecl));
+        auto &BarVal = getFormula(*BarDecl, Env);
+        auto &ErrVal = getFormula(*ErrDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(BarVal));
         // An unsound analysis, for example only evaluating the loop once, can
         // conclude that `Err` is false. So, we test that this conclusion is not
         // reached.
-        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(ErrVal)));
+        EXPECT_FALSE(
+            Env.flowConditionImplies(Env.arena().makeNot(ErrVal)));
       });
 }
 
@@ -3781,8 +3787,8 @@ TEST(TransferTest, LoopWithReferenceAssignmentConverges) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
-        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
+        auto &BarVal = getFormula(*BarDecl, Env);
+        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BarVal)));
       });
 }
 
@@ -4256,11 +4262,12 @@ TEST(TransferTest, IfStmtBranchExtendsFlowCondition) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        BoolValue &ThenFooVal = *cast<BoolValue>(ThenEnv.getValue(*FooDecl));
+        auto &ThenFooVal= getFormula(*FooDecl, ThenEnv);
         EXPECT_TRUE(ThenEnv.flowConditionImplies(ThenFooVal));
 
-        BoolValue &ElseFooVal = *cast<BoolValue>(ElseEnv.getValue(*FooDecl));
-        EXPECT_TRUE(ElseEnv.flowConditionImplies(ElseEnv.makeNot(ElseFooVal)));
+        auto &ElseFooVal = getFormula(*FooDecl, ElseEnv);
+        EXPECT_TRUE(
+            ElseEnv.flowConditionImplies(ElseEnv.arena().makeNot(ElseFooVal)));
       });
 }
 
@@ -4289,14 +4296,12 @@ TEST(TransferTest, WhileStmtBranchExtendsFlowCondition) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        BoolValue &LoopBodyFooVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl));
+        auto &LoopBodyFooVal = getFormula(*FooDecl, LoopBodyEnv);
         EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
 
-        BoolValue &AfterLoopFooVal =
-            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl));
+        auto &AfterLoopFooVal = getFormula(*FooDecl, AfterLoopEnv);
         EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
-            AfterLoopEnv.makeNot(AfterLoopFooVal)));
+            AfterLoopEnv.arena().makeNot(AfterLoopFooVal)));
       });
 }
 
@@ -4323,6 +4328,7 @@ TEST(TransferTest, DoWhileStmtBranchExtendsFlowCondition) {
             getEnvironmentAtAnnotation(Results, "loop_body");
         const Environment &AfterLoopEnv =
             getEnvironmentAtAnnotation(Results, "after_loop");
+        auto &A = AfterLoopEnv.arena();
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
@@ -4330,21 +4336,17 @@ TEST(TransferTest, DoWhileStmtBranchExtendsFlowCondition) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        BoolValue &LoopBodyFooVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl));
-        BoolValue &LoopBodyBarVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*BarDecl));
+        auto &LoopBodyFooVal= getFormula(*FooDecl, LoopBodyEnv);
+        auto &LoopBodyBarVal = getFormula(*BarDecl, LoopBodyEnv);
         EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(
-            LoopBodyEnv.makeOr(LoopBodyBarVal, LoopBodyFooVal)));
+            A.makeOr(LoopBodyBarVal, LoopBodyFooVal)));
 
-        BoolValue &AfterLoopFooVal =
-            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl));
-        BoolValue &AfterLoopBarVal =
-            *cast<BoolValue>(AfterLoopEnv.getValue(*BarDecl));
-        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
-            AfterLoopEnv.makeNot(AfterLoopFooVal)));
-        EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
-            AfterLoopEnv.makeNot(AfterLoopBarVal)));
+        auto &AfterLoopFooVal = getFormula(*FooDecl, AfterLoopEnv);
+        auto &AfterLoopBarVal = getFormula(*BarDecl, AfterLoopEnv);
+        EXPECT_TRUE(
+            AfterLoopEnv.flowConditionImplies(A.makeNot(AfterLoopFooVal)));
+        EXPECT_TRUE(
+            AfterLoopEnv.flowConditionImplies(A.makeNot(AfterLoopBarVal)));
       });
 }
 
@@ -4373,14 +4375,12 @@ TEST(TransferTest, ForStmtBranchExtendsFlowCondition) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        BoolValue &LoopBodyFooVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl));
+        auto &LoopBodyFooVal= getFormula(*FooDecl, LoopBodyEnv);
         EXPECT_TRUE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
 
-        BoolValue &AfterLoopFooVal =
-            *cast<BoolValue>(AfterLoopEnv.getValue(*FooDecl));
+        auto &AfterLoopFooVal = getFormula(*FooDecl, AfterLoopEnv);
         EXPECT_TRUE(AfterLoopEnv.flowConditionImplies(
-            AfterLoopEnv.makeNot(AfterLoopFooVal)));
+            AfterLoopEnv.arena().makeNot(AfterLoopFooVal)));
       });
 }
 
@@ -4404,8 +4404,7 @@ TEST(TransferTest, ForStmtBranchWithoutConditionDoesNotExtendFlowCondition) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        BoolValue &LoopBodyFooVal =
-            *cast<BoolValue>(LoopBodyEnv.getValue(*FooDecl));
+        auto &LoopBodyFooVal= getFormula(*FooDecl, LoopBodyEnv);
         EXPECT_FALSE(LoopBodyEnv.flowConditionImplies(LoopBodyFooVal));
       });
 }
@@ -4431,9 +4430,9 @@ TEST(TransferTest, ContextSensitiveOptionDisabled) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{/*.ContextSensitiveOpts=*/std::nullopt}});
 }
@@ -4570,9 +4569,9 @@ TEST(TransferTest, ContextSensitiveDepthZero) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/0}}});
 }
@@ -4598,7 +4597,7 @@ TEST(TransferTest, ContextSensitiveSetTrue) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4625,8 +4624,8 @@ TEST(TransferTest, ContextSensitiveSetFalse) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
-        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+        auto &FooVal = getFormula(*FooDecl, Env);
+        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -4650,6 +4649,7 @@ TEST(TransferTest, ContextSensitiveSetBothTrueAndFalse) {
          ASTContext &ASTCtx) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &A = Env.arena();
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
@@ -4657,13 +4657,13 @@ TEST(TransferTest, ContextSensitiveSetBothTrueAndFalse) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+        EXPECT_FALSE(Env.flowConditionImplies(A.makeNot(FooVal)));
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
+        auto &BarVal = getFormula(*BarDecl, Env);
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
-        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
+        EXPECT_TRUE(Env.flowConditionImplies(A.makeNot(BarVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -4690,9 +4690,9 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthOne) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/1}}});
 }
@@ -4719,7 +4719,7 @@ TEST(TransferTest, ContextSensitiveSetTwoLayersDepthTwo) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
@@ -4748,9 +4748,9 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthTwo) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/2}}});
 }
@@ -4778,7 +4778,7 @@ TEST(TransferTest, ContextSensitiveSetThreeLayersDepthThree) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/3}}});
@@ -4820,10 +4820,10 @@ TEST(TransferTest, ContextSensitiveMutualRecursion) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         // ... but it also can't prove anything here.
         EXPECT_FALSE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{/*.Depth=*/4}}});
 }
@@ -4855,13 +4855,13 @@ TEST(TransferTest, ContextSensitiveSetMultipleLines) {
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
+        auto &BarVal = getFormula(*BarDecl, Env);
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
-        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
+        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BarVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -4897,13 +4897,13 @@ TEST(TransferTest, ContextSensitiveSetMultipleBlocks) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        auto &BarVal = *cast<BoolValue>(Env.getValue(*BarDecl));
+        auto &BarVal = getFormula(*BarDecl, Env);
         EXPECT_FALSE(Env.flowConditionImplies(BarVal));
-        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(BarVal)));
+        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(BarVal)));
 
-        auto &BazVal = *cast<BoolValue>(Env.getValue(*BazDecl));
+        auto &BazVal = getFormula(*BazDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(BazVal));
-        EXPECT_FALSE(Env.flowConditionImplies(Env.makeNot(BazVal)));
+        EXPECT_FALSE(Env.flowConditionImplies(Env.arena().makeNot(BazVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -4946,7 +4946,7 @@ TEST(TransferTest, ContextSensitiveReturnTrue) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -4971,8 +4971,8 @@ TEST(TransferTest, ContextSensitiveReturnFalse) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
-        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(FooVal)));
+        auto &FooVal = getFormula(*FooDecl, Env);
+        EXPECT_TRUE(Env.flowConditionImplies(Env.arena().makeNot(FooVal)));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
 }
@@ -4999,7 +4999,7 @@ TEST(TransferTest, ContextSensitiveReturnArg) {
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
 
-        auto &BazVal = *cast<BoolValue>(Env.getValue(*BazDecl));
+        auto &BazVal = getFormula(*BazDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(BazVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5047,7 +5047,7 @@ TEST(TransferTest, ContextSensitiveMethodLiteral) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5079,7 +5079,7 @@ TEST(TransferTest, ContextSensitiveMethodGetter) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5111,7 +5111,7 @@ TEST(TransferTest, ContextSensitiveMethodSetter) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5145,7 +5145,7 @@ TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5180,7 +5180,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersVoid) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5214,7 +5214,7 @@ TEST(TransferTest, ContextSensitiveMethodTwoLayersReturn) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5245,7 +5245,7 @@ TEST(TransferTest, ContextSensitiveConstructorBody) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5276,7 +5276,7 @@ TEST(TransferTest, ContextSensitiveConstructorInitializer) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5307,7 +5307,7 @@ TEST(TransferTest, ContextSensitiveConstructorDefault) {
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        auto &FooVal = *cast<BoolValue>(Env.getValue(*FooDecl));
+        auto &FooVal = getFormula(*FooDecl, Env);
         EXPECT_TRUE(Env.flowConditionImplies(FooVal));
       },
       {BuiltinOptions{ContextSensitiveOptions{}}});
@@ -5352,7 +5352,7 @@ TEST(TransferTest, ChainedLogicalOps) {
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
          ASTContext &ASTCtx) {
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
-        auto &B = getValueForDecl<BoolValue>(ASTCtx, Env, "b");
+        auto &B = getValueForDecl<BoolValue>(ASTCtx, Env, "b").formula();
         EXPECT_TRUE(Env.flowConditionImplies(B));
       });
 }
@@ -5395,30 +5395,32 @@ TEST(TransferTest, NoReturnFunctionInsideShortCircuitedBooleanOp) {
          ASTContext &ASTCtx) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
         const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+        auto &A = Env.arena();
 
         // Check that [[p]] is reachable with a non-false flow condition.
-        EXPECT_FALSE(Env.flowConditionImplies(Env.getBoolLiteralValue(false)));
+        EXPECT_FALSE(Env.flowConditionImplies(A.makeLiteral(false)));
 
-        auto &B1 = getValueForDecl<BoolValue>(ASTCtx, Env, "b1");
-        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(B1)));
+        auto &B1 = getValueForDecl<BoolValue>(ASTCtx, Env, "b1").formula();
+        EXPECT_TRUE(Env.flowConditionImplies(A.makeNot(B1)));
 
         auto &NoreturnOnRhsOfAnd =
-            getValueForDecl<BoolValue>(ASTCtx, Env, "NoreturnOnRhsOfAnd");
-        EXPECT_TRUE(Env.flowConditionImplies(Env.makeNot(NoreturnOnRhsOfAnd)));
+            getValueForDecl<BoolValue>(ASTCtx, Env, "NoreturnOnRhsOfAnd").formula();
+        EXPECT_TRUE(Env.flowConditionImplies(A.makeNot(NoreturnOnRhsOfAnd)));
 
-        auto &B2 = getValueForDecl<BoolValue>(ASTCtx, Env, "b2");
+        auto &B2 = getValueForDecl<BoolValue>(ASTCtx, Env, "b2").formula();
         EXPECT_TRUE(Env.flowConditionImplies(B2));
 
         auto &NoreturnOnRhsOfOr =
-            getValueForDecl<BoolValue>(ASTCtx, Env, "NoreturnOnRhsOfOr");
+            getValueForDecl<BoolValue>(ASTCtx, Env, "NoreturnOnRhsOfOr")
+                .formula();
         EXPECT_TRUE(Env.flowConditionImplies(NoreturnOnRhsOfOr));
 
         auto &NoreturnOnLhsMakesAndUnreachable = getValueForDecl<BoolValue>(
-            ASTCtx, Env, "NoreturnOnLhsMakesAndUnreachable");
+            ASTCtx, Env, "NoreturnOnLhsMakesAndUnreachable").formula();
         EXPECT_TRUE(Env.flowConditionImplies(NoreturnOnLhsMakesAndUnreachable));
 
         auto &NoreturnOnLhsMakesOrUnreachable = getValueForDecl<BoolValue>(
-            ASTCtx, Env, "NoreturnOnLhsMakesOrUnreachable");
+            ASTCtx, Env, "NoreturnOnLhsMakesOrUnreachable").formula();
         EXPECT_TRUE(Env.flowConditionImplies(NoreturnOnLhsMakesOrUnreachable));
       });
 }
@@ -5587,7 +5589,7 @@ TEST(TransferTest, AnonymousStruct) {
             S->getChild(*cast<ValueDecl>(IndirectField->chain().front())));
 
         auto *B = cast<BoolValue>(getFieldValue(&AnonStruct, *BDecl, Env));
-        ASSERT_TRUE(Env.flowConditionImplies(*B));
+        ASSERT_TRUE(Env.flowConditionImplies(B->formula()));
       });
 }
 
@@ -5618,7 +5620,7 @@ TEST(TransferTest, AnonymousStructWithInitializer) {
             *cast<ValueDecl>(IndirectField->chain().front())));
 
         auto *B = cast<BoolValue>(getFieldValue(&AnonStruct, *BDecl, Env));
-        ASSERT_TRUE(Env.flowConditionImplies(*B));
+        ASSERT_TRUE(Env.flowConditionImplies(B->formula()));
       });
 }
 
