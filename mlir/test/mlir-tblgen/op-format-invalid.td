@@ -478,6 +478,11 @@ def VariableInvalidN : TestFormat_Op<[{
   let regions = (region AnyRegion:$region);
 }
 
+// CHECK: error: property 'prop' is already bound
+def VariableInvalidO : TestFormat_Op<[{
+  custom<Test>($prop, $prop) attr-dict
+}]>, Arguments<(ins IntProperty<"int64_t">:$prop)>;
+
 //===----------------------------------------------------------------------===//
 // Coverage Checks
 //===----------------------------------------------------------------------===//

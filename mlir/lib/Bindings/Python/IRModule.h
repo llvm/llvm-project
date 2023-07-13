@@ -763,6 +763,9 @@ public:
 
   void checkValid() { return parentOperation->checkValid(); }
 
+  /// Gets a capsule wrapping the void* within the MlirBlock.
+  pybind11::object getCapsule();
+
 private:
   PyOperationRef parentOperation;
   MlirBlock block;

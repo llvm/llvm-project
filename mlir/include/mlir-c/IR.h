@@ -533,6 +533,11 @@ MLIR_CAPI_EXPORTED MlirValue mlirOperationGetOperand(MlirOperation op,
 MLIR_CAPI_EXPORTED void mlirOperationSetOperand(MlirOperation op, intptr_t pos,
                                                 MlirValue newValue);
 
+/// Replaces the operands of the operation.
+MLIR_CAPI_EXPORTED void mlirOperationSetOperands(MlirOperation op,
+                                                 intptr_t nOperands,
+                                                 MlirValue const *operands);
+
 /// Returns the number of results of the operation.
 MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumResults(MlirOperation op);
 
@@ -664,6 +669,10 @@ MLIR_CAPI_EXPORTED MlirRegion mlirOperationGetFirstRegion(MlirOperation op);
 /// operation.
 MLIR_CAPI_EXPORTED MlirRegion mlirRegionGetNextInOperation(MlirRegion region);
 
+/// Moves the entire content of the source region to the target region.
+MLIR_CAPI_EXPORTED void mlirRegionTakeBody(MlirRegion target,
+                                           MlirRegion source);
+
 //===----------------------------------------------------------------------===//
 // Block API.
 //===----------------------------------------------------------------------===//
@@ -736,6 +745,13 @@ MLIR_CAPI_EXPORTED intptr_t mlirBlockGetNumArguments(MlirBlock block);
 MLIR_CAPI_EXPORTED MlirValue mlirBlockAddArgument(MlirBlock block,
                                                   MlirType type,
                                                   MlirLocation loc);
+
+/// Inserts an argument of the specified type at a specified index to the block.
+/// Returns the newly added argument.
+MLIR_CAPI_EXPORTED MlirValue mlirBlockInsertArgument(MlirBlock block,
+                                                     intptr_t pos,
+                                                     MlirType type,
+                                                     MlirLocation loc);
 
 /// Returns `pos`-th argument of the block.
 MLIR_CAPI_EXPORTED MlirValue mlirBlockGetArgument(MlirBlock block,

@@ -38,14 +38,14 @@ define <vscale x 2 x float> @vpmerge_vfadd(<vscale x 2 x float> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vfadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x float> @llvm.riscv.vfadd.mask.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 %vl, i64 1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfadd.mask.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 7, i64 %vl, i64 1)
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %mask, i64 %vl)
 
   ret <vscale x 2 x float> %b
 }
-declare <vscale x 2 x float> @llvm.riscv.vfadd.mask.nxv2f32.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x i1>, i64, i64)
+declare <vscale x 2 x float> @llvm.riscv.vfadd.mask.nxv2f32.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x i1>, i64, i64, i64)
 
 define <vscale x 2 x float> @vpmerge_vfsub(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: vpmerge_vfsub:
@@ -53,13 +53,13 @@ define <vscale x 2 x float> @vpmerge_vfsub(<vscale x 2 x float> %passthru, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vfsub.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
-  %a = call <vscale x 2 x float> @llvm.riscv.vfsub.mask.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 %vl, i64 1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfsub.mask.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 7, i64 %vl, i64 1)
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
   %mask = shufflevector <vscale x 2 x i1> %splat, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %mask, i64 %vl)
   ret <vscale x 2 x float> %b
 }
-declare <vscale x 2 x float> @llvm.riscv.vfsub.mask.nxv2f32.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x i1>, i64, i64)
+declare <vscale x 2 x float> @llvm.riscv.vfsub.mask.nxv2f32.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x i1>, i64, i64, i64)
 
 define <vscale x 2 x i32> @vpmerge_vwadd(<vscale x 2 x i32> %passthru, <vscale x 2 x i16> %x, <vscale x 2 x i16> %y, <vscale x 2 x i1> %m, i64 %vl) {
 ; CHECK-LABEL: vpmerge_vwadd:

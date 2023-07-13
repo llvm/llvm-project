@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVISelDAGToDAG.h"
+#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCVISelLowering.h"
@@ -3336,8 +3337,21 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
     Ops.append(True->op_begin() + TrueVLIndex + 3, True->op_end());
   } else {
     Ops.push_back(False);
-    Ops.append(True->op_begin() + HasTiedDest, True->op_begin() + TrueVLIndex);
-    Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
+    if (RISCVII::hasRoundModeOp(TrueTSFlags)) {
+      // For unmasked "VOp" with rounding mode operand, that is interfaces like
+      // (..., rm, vl) or (..., rm, vl, policy).
+      // Its masked version is (..., vm, rm, vl, policy).
+      // Check the rounding mode pseudo nodes under RISCVInstrInfoVPseudos.td
+      SDValue RoundMode = True->getOperand(TrueVLIndex - 1);
+      Ops.append(True->op_begin() + HasTiedDest,
+                 True->op_begin() + TrueVLIndex - 1);
+      Ops.append(
+          {Mask, RoundMode, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
+    } else {
+      Ops.append(True->op_begin() + HasTiedDest,
+                 True->op_begin() + TrueVLIndex);
+      Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
+    }
     Ops.push_back(PolicyOp);
 
     // Result node should have chain operand of True.

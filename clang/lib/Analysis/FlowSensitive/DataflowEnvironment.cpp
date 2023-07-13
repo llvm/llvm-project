@@ -894,15 +894,9 @@ const StorageLocation &Environment::skip(const StorageLocation &Loc,
 void Environment::addToFlowCondition(const Formula &Val) {
   DACtx->addFlowConditionConstraint(FlowConditionToken, Val);
 }
-void Environment::addToFlowCondition(BoolValue &Val) {
-  addToFlowCondition(Val.formula());
-}
 
 bool Environment::flowConditionImplies(const Formula &Val) const {
   return DACtx->flowConditionImplies(FlowConditionToken, Val);
-}
-bool Environment::flowConditionImplies(BoolValue &Val) const {
-  return flowConditionImplies(Val.formula());
 }
 
 void Environment::dump(raw_ostream &OS) const {

@@ -3507,8 +3507,8 @@ LSRInstance::CollectLoopInvariantFixupsAndFormulae() {
       if (const Instruction *Inst = dyn_cast<Instruction>(V)) {
         // Look for instructions defined outside the loop.
         if (L->contains(Inst)) continue;
-      } else if (isa<UndefValue>(V))
-        // Undef doesn't have a live range, so it doesn't matter.
+      } else if (isa<Constant>(V))
+        // Constants can be re-materialized.
         continue;
       for (const Use &U : V->uses()) {
         const Instruction *UserInst = dyn_cast<Instruction>(U.getUser());

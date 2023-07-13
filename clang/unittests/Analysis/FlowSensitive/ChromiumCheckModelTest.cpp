@@ -160,7 +160,7 @@ TEST(ChromiumCheckModelTest, CheckSuccessImpliesConditionHolds) {
 
         auto *FooVal = cast<BoolValue>(Env.getValue(*FooDecl));
 
-        EXPECT_TRUE(Env.flowConditionImplies(*FooVal));
+        EXPECT_TRUE(Env.flowConditionImplies(FooVal->formula()));
       };
 
   std::string Code = R"(
@@ -191,7 +191,7 @@ TEST(ChromiumCheckModelTest, UnrelatedCheckIgnored) {
 
         auto *FooVal = cast<BoolValue>(Env.getValue(*FooDecl));
 
-        EXPECT_FALSE(Env.flowConditionImplies(*FooVal));
+        EXPECT_FALSE(Env.flowConditionImplies(FooVal->formula()));
       };
 
   std::string Code = R"(
