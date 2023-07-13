@@ -20,3 +20,9 @@
 // CHECK:         distinct.attr = #[[DISTINCT2]]
 // CHECK-GENERIC: distinct.attr = distinct[2]<42 : i32>
 "test.op"() {distinct.attr = distinct[42]<42 : i32>} : () -> ()
+
+// CHECK: distinct.attr = distinct[3]<>
+"test.op"() {distinct.attr = distinct[3]<>} : () -> ()
+
+// CHECK: distinct.attr = distinct[4]<>
+"test.op"() {distinct.attr = distinct[4]<unit>} : () -> ()

@@ -2141,7 +2141,9 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
     return;
   } else if (auto distinctAttr = llvm::dyn_cast<DistinctAttr>(attr)) {
     os << "distinct[" << state.getDistinctState().getId(distinctAttr) << "]<";
-    printAttribute(distinctAttr.getReferencedAttr());
+    if (!llvm::isa<UnitAttr>(distinctAttr.getReferencedAttr())) {
+      printAttribute(distinctAttr.getReferencedAttr());
+    }
     os << '>';
     return;
   } else if (auto dictAttr = llvm::dyn_cast<DictionaryAttr>(attr)) {
