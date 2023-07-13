@@ -172,7 +172,7 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   }];
   let constructor = "::fir::createExternalNameConversionPass()";
   let options = [
-    Option<"appendUnderscore", "append-underscore",
+    Option<"appendUnderscoreOpt", "append-underscore",
            "bool", /*default=*/"true",
            "Append trailing underscore to external names.">
   ];
