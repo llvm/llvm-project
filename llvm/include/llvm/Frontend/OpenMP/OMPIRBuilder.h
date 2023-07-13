@@ -2088,6 +2088,12 @@ public:
   /// duplicating the body code.
   enum BodyGenTy { Priv, DupNoPriv, NoPriv };
 
+  /// Callback type for creating the map infos for the kernel parameters.
+  /// \param CodeGenIP is the insertion point where code should be generated,
+  ///        if any.
+  using GenMapInfoCallbackTy =
+      function_ref<MapInfosTy &(InsertPointTy CodeGenIP)>;
+
   /// Generator for '#omp target data'
   ///
   /// \param Loc The location where the target data construct was encountered.
@@ -2108,8 +2114,7 @@ public:
   OpenMPIRBuilder::InsertPointTy createTargetData(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, Value *DeviceID, Value *IfCond,
-      TargetDataInfo &Info,
-      function_ref<MapInfosTy &(InsertPointTy CodeGenIP)> GenMapInfoCB,
+      TargetDataInfo &Info, GenMapInfoCallbackTy GenMapInfoCB,
       omp::RuntimeFunction *MapperFunc = nullptr,
       function_ref<InsertPointTy(InsertPointTy CodeGenIP,
                                  BodyGenTy BodyGenType)>
@@ -2133,10 +2138,12 @@ public:
   /// as arguments to the outlined function.
   /// \param BodyGenCB Callback that will generate the region code.
   InsertPointTy createTarget(const LocationDescription &Loc,
+                             OpenMPIRBuilder::InsertPointTy AllocaIP,
                              OpenMPIRBuilder::InsertPointTy CodeGenIP,
                              TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
                              int32_t NumThreads,
                              SmallVectorImpl<Value *> &Inputs,
+                             GenMapInfoCallbackTy GenMapInfoCB,
                              TargetBodyGenCallbackTy BodyGenCB);
 
   /// Declarations for LLVM-IR types (simple, array, function and structure) are
