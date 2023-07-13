@@ -497,6 +497,12 @@ void mlirOperationSetOperand(MlirOperation op, intptr_t pos,
   unwrap(op)->setOperand(static_cast<unsigned>(pos), unwrap(newValue));
 }
 
+void mlirOperationSetOperands(MlirOperation op, intptr_t nOperands,
+                              MlirValue const *operands) {
+  SmallVector<Value> ops;
+  unwrap(op)->setOperands(unwrapList(nOperands, operands, ops));
+}
+
 intptr_t mlirOperationGetNumResults(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumResults());
 }
@@ -632,6 +638,10 @@ void mlirRegionDestroy(MlirRegion region) {
   delete static_cast<Region *>(region.ptr);
 }
 
+void mlirRegionTakeBody(MlirRegion target, MlirRegion source) {
+  unwrap(target)->takeBody(*unwrap(source));
+}
+
 //===----------------------------------------------------------------------===//
 // Block API.
 //===----------------------------------------------------------------------===//
@@ -728,6 +738,11 @@ intptr_t mlirBlockGetNumArguments(MlirBlock block) {
 MlirValue mlirBlockAddArgument(MlirBlock block, MlirType type,
                                MlirLocation loc) {
   return wrap(unwrap(block)->addArgument(unwrap(type), unwrap(loc)));
+}
+
+MlirValue mlirBlockInsertArgument(MlirBlock block, intptr_t pos, MlirType type,
+                                  MlirLocation loc) {
+  return wrap(unwrap(block)->insertArgument(pos, unwrap(type), unwrap(loc)));
 }
 
 MlirValue mlirBlockGetArgument(MlirBlock block, intptr_t pos) {
