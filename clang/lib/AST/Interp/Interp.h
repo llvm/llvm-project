@@ -1806,6 +1806,12 @@ template <typename T> inline T ReadArg(InterpState &S, CodePtr &OpPC) {
   }
 }
 
+template <> inline Floating ReadArg<Floating>(InterpState &S, CodePtr &OpPC) {
+  Floating F = Floating::deserialize(*OpPC);
+  OpPC += align(F.bytesToSerialize());
+  return F;
+}
+
 } // namespace interp
 } // namespace clang
 
