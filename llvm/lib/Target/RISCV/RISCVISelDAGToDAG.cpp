@@ -3318,6 +3318,14 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
         !True->getFlags().hasNoFPExcept())
       return false;
 
+  // From the preconditions we checked above, we know the mask and thus glue
+  // for the result node will be taken from True.
+  if (IsMasked) {
+    Mask = True->getOperand(Info->MaskOpIdx);
+    Glue = True->getOperand(True->getNumOperands() - 1);
+    assert(Glue.getValueType() == MVT::Glue);
+  }
+
   SDLoc DL(N);
   unsigned MaskedOpc = Info->MaskedPseudo;
 #ifndef NDEBUG
@@ -3340,7 +3348,19 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   SmallVector<SDValue, 8> Ops;
   if (IsMasked) {
     Ops.push_back(False);
-    Ops.append(True->op_begin() + 1, True->op_begin() + TrueVLIndex);
+    if (RISCVII::hasRoundModeOp(TrueTSFlags)) {
+      // For masked "VOp" with rounding mode operand, that is interfaces like
+      // (..., vm, rm, vl, policy).
+      // Check the rounding mode pseudo nodes under RISCVInstrInfoVPseudos.td
+      SDValue RoundMode = True->getOperand(TrueVLIndex - 1);
+      Ops.append(True->op_begin() + HasTiedDest,
+                 True->op_begin() + TrueVLIndex - 2);
+      Ops.append({Mask, RoundMode});
+    } else {
+      Ops.append(True->op_begin() + HasTiedDest,
+                 True->op_begin() + TrueVLIndex - 1);
+      Ops.push_back(Mask);
+    }
   } else {
     Ops.push_back(False);
     if (RISCVII::hasRoundModeOp(TrueTSFlags)) {
@@ -3365,11 +3385,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
     Ops.push_back(True.getOperand(TrueChainOpIdx));
 
   // Add the glue for the CopyToReg of mask->v0.
-  if (IsMasked) {
-    // Matches the Merge operand above
-    assert(True->getGluedNode());
-    Glue = True->getOperand(True->getNumOperands() - 1);
-  }
   Ops.push_back(Glue);
 
   SDNode *Result =
