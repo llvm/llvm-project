@@ -16,8 +16,8 @@ declare void @use2(i1)
 
 define i32 @select_clz_to_ctz(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz(
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 true), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[SUB1:%.*]] = call i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 true), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[SUB1]]
 ;
   %sub = sub i32 0, %a
   %and = and i32 %sub, %a
@@ -74,8 +74,7 @@ define i32 @select_clz_to_ctz_extra_use(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_extra_use(
 ; CHECK-NEXT:    [[SUB1:%.*]] = call i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 true), !range [[RNG0]]
 ; CHECK-NEXT:    call void @use(i32 [[SUB1]])
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 [[SUB1]]
 ;
   %sub = sub i32 0, %a
   %and = and i32 %sub, %a
@@ -89,8 +88,8 @@ define i32 @select_clz_to_ctz_extra_use(i32 %a) {
 
 define i32 @select_clz_to_ctz_and_commuted(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_and_commuted(
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[SUB1:%.*]] = call i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    ret i32 [[SUB1]]
 ;
   %sub = sub i32 0, %a
   %and = and i32 %a, %sub
@@ -105,8 +104,8 @@ define i32 @select_clz_to_ctz_icmp_ne(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_icmp_ne(
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[A:%.*]], 0
 ; CHECK-NEXT:    call void @use2(i1 [[TOBOOL]])
-; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    [[SUB1:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    ret i32 [[SUB1]]
 ;
   %sub = sub i32 0, %a
   %and = and i32 %sub, %a
@@ -120,8 +119,8 @@ define i32 @select_clz_to_ctz_icmp_ne(i32 %a) {
 
 define i64 @select_clz_to_ctz_i64(i64 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_i64(
-; CHECK-NEXT:    [[COND:%.*]] = call i64 @llvm.cttz.i64(i64 [[A:%.*]], i1 true), !range [[RNG1:![0-9]+]]
-; CHECK-NEXT:    ret i64 [[COND]]
+; CHECK-NEXT:    [[SUB1:%.*]] = call i64 @llvm.cttz.i64(i64 [[A:%.*]], i1 true), !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    ret i64 [[SUB1]]
 ;
   %sub = sub i64 0, %a
   %and = and i64 %sub, %a
@@ -139,10 +138,8 @@ define i32 @select_clz_to_ctz_wrong_sub(i32 %a) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 1, [[A:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[A]]
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[AND]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A]], 0
 ; CHECK-NEXT:    [[SUB1:%.*]] = xor i32 [[LZ]], 31
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[LZ]], i32 [[SUB1]]
-; CHECK-NEXT:    ret i32 [[COND]]
+; CHECK-NEXT:    ret i32 [[SUB1]]
 ;
   %sub = sub i32 1, %a
   %and = and i32 %sub, %a
@@ -159,10 +156,8 @@ define i64 @select_clz_to_ctz_i64_wrong_xor(i64 %a) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[A:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[SUB]], [[A]]
 ; CHECK-NEXT:    [[LZ:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[AND]], i1 true), !range [[RNG1]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[A]], 0
 ; CHECK-NEXT:    [[SUB11:%.*]] = or i64 [[LZ]], 64
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i64 [[LZ]], i64 [[SUB11]]
-; CHECK-NEXT:    ret i64 [[COND]]
+; CHECK-NEXT:    ret i64 [[SUB11]]
 ;
   %sub = sub i64 0, %a
   %and = and i64 %sub, %a
@@ -175,12 +170,9 @@ define i64 @select_clz_to_ctz_i64_wrong_xor(i64 %a) {
 
 define i64 @select_clz_to_ctz_i64_wrong_icmp_cst(i64 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_i64_wrong_icmp_cst(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[A:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[SUB]], [[A]]
-; CHECK-NEXT:    [[LZ:%.*]] = tail call i64 @llvm.ctlz.i64(i64 [[AND]], i1 true), !range [[RNG1]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[A]], 1
-; CHECK-NEXT:    [[SUB1:%.*]] = xor i64 [[LZ]], 63
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i64 [[LZ]], i64 [[SUB1]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i64 [[A:%.*]], 1
+; CHECK-NEXT:    [[SUB1:%.*]] = call i64 @llvm.cttz.i64(i64 [[A]], i1 true), !range [[RNG1]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i64 63, i64 [[SUB1]]
 ; CHECK-NEXT:    ret i64 [[COND]]
 ;
   %sub = sub i64 0, %a
@@ -255,8 +247,8 @@ define i4 @PR45762(i3 %x4) {
 ; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
 ; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
 ; CHECK-NEXT:    [[OR_69_NOT:%.*]] = icmp eq i3 [[X4]], 0
-; CHECK-NEXT:    [[UMUL_231:%.*]] = select i1 [[OR_69_NOT]], i4 0, i4 [[T7]]
-; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_231]]
+; CHECK-NEXT:    [[UMUL_231:%.*]] = shl i4 [[ONE_HOT_16]], [[T7]]
+; CHECK-NEXT:    [[SEL_71:%.*]] = select i1 [[OR_69_NOT]], i4 -8, i4 [[UMUL_231]]
 ; CHECK-NEXT:    ret i4 [[SEL_71]]
 ;
   %t4 = call i3 @llvm.cttz.i3(i3 %x4, i1 false)
@@ -284,8 +276,8 @@ define i4 @PR45762_logical(i3 %x4) {
 ; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
 ; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
 ; CHECK-NEXT:    [[OR_69_NOT:%.*]] = icmp eq i3 [[X4]], 0
-; CHECK-NEXT:    [[UMUL_231:%.*]] = select i1 [[OR_69_NOT]], i4 0, i4 [[T7]]
-; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_231]]
+; CHECK-NEXT:    [[UMUL_231:%.*]] = shl i4 [[ONE_HOT_16]], [[T7]]
+; CHECK-NEXT:    [[SEL_71:%.*]] = select i1 [[OR_69_NOT]], i4 -8, i4 [[UMUL_231]]
 ; CHECK-NEXT:    ret i4 [[SEL_71]]
 ;
   %t4 = call i3 @llvm.cttz.i3(i3 %x4, i1 false)
