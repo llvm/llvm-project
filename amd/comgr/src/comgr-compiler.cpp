@@ -1579,6 +1579,8 @@ amd_comgr_status_t AMDGPUCompiler::assembleToRelocatable() {
   }
 
   Args.push_back("-c");
+  Args.push_back("-x");
+  Args.push_back("assembler");
 
   return processFiles(AMD_COMGR_DATA_KIND_RELOCATABLE, ".o");
 }

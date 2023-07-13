@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     checkError(Status, "amd_comgr_create_data");
     Status = amd_comgr_set_data(DataIn1, Size1, Buf1);
     checkError(Status, "amd_comgr_set_data");
-    Status = amd_comgr_set_data_name(DataIn1, "source1.s");
+    Status = amd_comgr_set_data_name(DataIn1, "source1_no_extension");
     checkError(Status, "amd_comgr_set_data_name");
     Status = amd_comgr_data_set_add(DataSetIn, DataIn1);
     checkError(Status, "amd_cogmr_data_set_add");
