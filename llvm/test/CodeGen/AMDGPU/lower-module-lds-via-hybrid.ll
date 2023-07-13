@@ -284,12 +284,11 @@ define amdgpu_kernel void @k123() {
 !2 = !{i32 1}
 
 
-; OPT: attributes #0 = { "amdgpu-elide-module-lds" "amdgpu-lds-size"="8" }
-; OPT: attributes #1 = { "amdgpu-lds-size"="8" }
-; OPT: attributes #2 = { "amdgpu-elide-module-lds" "amdgpu-lds-size"="12" }
-; OPT: attributes #3 = { "amdgpu-lds-size"="20" }
-; OPT: attributes #4 = { nocallback nofree nosync nounwind willreturn memory(none) }
-; OPT: attributes #5 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; OPT: attributes #0 = { "amdgpu-lds-size"="8" }
+; OPT: attributes #1 = { "amdgpu-lds-size"="12" }
+; OPT: attributes #2 = { "amdgpu-lds-size"="20" }
+; OPT: attributes #3 = { nocallback nofree nosync nounwind willreturn memory(none) }
+; OPT: attributes #4 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 ; OPT: !0 = !{i64 0, i64 1}
 ; OPT: !1 = !{i64 4, i64 5}

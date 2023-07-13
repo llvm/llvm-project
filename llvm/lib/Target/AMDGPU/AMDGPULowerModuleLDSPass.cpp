@@ -73,8 +73,6 @@
 // The "module" lowering implemented here finds LDS variables which are used by
 // non-kernel functions and creates a new struct with a field for each of those
 // LDS variables. Variables that are only used from kernels are excluded.
-// Kernels that do not use this struct are annoteated with the attribute
-// amdgpu-elide-module-lds which allows the back end to elide the allocation.
 //
 // The "table" lowering implemented here has three components.
 // First kernels are assigned a unique integer identifier which is available in
@@ -906,9 +904,6 @@ public:
             });
 
         markUsedByKernel(Builder, &Func, ModuleScopeReplacement.SGV);
-
-      } else {
-        markElideModuleLDS(Func);
       }
     }
 
@@ -1106,16 +1101,6 @@ public:
     return KernelToCreatedDynamicLDS;
   }
 
-  // This attribute is no longer used by the backend. TODO: Delete it in favour
-  // of pass-local state and update the tests to remove the string.
-  static bool canElideModuleLDS(const Function &F) {
-    return F.hasFnAttribute("amdgpu-elide-module-lds");
-  }
-
-  static void markElideModuleLDS(Function &F) {
-    F.addFnAttr("amdgpu-elide-module-lds");
-  }
-
   bool runOnModule(Module &M) override {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
@@ -1232,7 +1217,8 @@ public:
         //}
 
         const bool AllocateModuleScopeStruct =
-            MaybeModuleScopeStruct && !canElideModuleLDS(Func);
+            MaybeModuleScopeStruct &&
+            KernelsThatAllocateModuleLDS.contains(&Func);
 
         auto Replacement = KernelToReplacement.find(&Func);
         const bool AllocateKernelScopeStruct =
