@@ -20,6 +20,7 @@
 #include "mlir/IR/TypeSupport.h"
 #include "mlir/IR/Types.h"
 
+#include <cstdint>
 #include <tuple>
 
 namespace mlir {
@@ -27,6 +28,7 @@ namespace spirv {
 
 namespace detail {
 struct ArrayTypeStorage;
+struct CooperativeMatrixTypeStorage;
 struct CooperativeMatrixNVTypeStorage;
 struct ImageTypeStorage;
 struct JointMatrixTypeStorage;
@@ -397,6 +399,33 @@ public:
 
 llvm::hash_code
 hash_value(const StructType::MemberDecorationInfo &memberDecorationInfo);
+
+// SPIR-V KHR cooperative matrix type
+class CooperativeMatrixType
+    : public Type::TypeBase<CooperativeMatrixType, CompositeType,
+                            detail::CooperativeMatrixTypeStorage> {
+public:
+  using Base::Base;
+
+  static CooperativeMatrixType get(Type elementType, uint32_t rows,
+                                   uint32_t columns, Scope scope,
+                                   CooperativeMatrixUseKHR use);
+  Type getElementType() const;
+
+  /// Returns the scope of the matrix.
+  Scope getScope() const;
+  /// Returns the number of rows of the matrix.
+  uint32_t getRows() const;
+  /// Returns the number of columns of the matrix.
+  uint32_t getColumns() const;
+  /// Returns the use parameter of the cooperative matrix.
+  CooperativeMatrixUseKHR getUse() const;
+
+  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                     std::optional<StorageClass> storage = std::nullopt);
+  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
+                       std::optional<StorageClass> storage = std::nullopt);
+};
 
 // SPIR-V NV cooperative matrix type
 class CooperativeMatrixNVType
