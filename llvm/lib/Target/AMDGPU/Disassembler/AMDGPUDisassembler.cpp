@@ -865,8 +865,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   assert(VDataIdx != -1);
   if (BaseOpcode->BVH) {
     // Add A16 operand for intersect_ray instructions
-    if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::a16))
-      addOperand(MI, MCOperand::createImm(1));
+    addOperand(MI, MCOperand::createImm(BaseOpcode->A16));
     return MCDisassembler::Success;
   }
 

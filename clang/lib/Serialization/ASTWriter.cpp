@@ -866,7 +866,6 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(CUDA_PRAGMA_FORCE_HOST_DEVICE_DEPTH);
   RECORD(PP_CONDITIONAL_STACK);
   RECORD(DECLS_TO_CHECK_FOR_DEFERRED_DIAGS);
-  RECORD(PP_INCLUDED_FILES);
   RECORD(PP_ASSUME_NONNULL_LOC);
 
   // SourceManager Block.
@@ -1763,6 +1762,7 @@ namespace {
 
     struct data_type {
       const HeaderFileInfo &HFI;
+      bool AlreadyIncluded;
       ArrayRef<ModuleMap::KnownHeader> KnownHeaders;
       UnresolvedModule Unresolved;
     };
@@ -1808,7 +1808,8 @@ namespace {
       endian::Writer LE(Out, little);
       uint64_t Start = Out.tell(); (void)Start;
 
-      unsigned char Flags = (Data.HFI.isImport << 5)
+      unsigned char Flags = (Data.AlreadyIncluded << 6)
+                          | (Data.HFI.isImport << 5)
                           | (Data.HFI.isPragmaOnce << 4)
                           | (Data.HFI.DirInfo << 1)
                           | Data.HFI.IndexHeaderMapHeader;
@@ -1909,7 +1910,7 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
         HeaderFileInfoTrait::key_type Key = {
             FilenameDup, *U.Size, IncludeTimestamps ? *U.ModTime : 0};
         HeaderFileInfoTrait::data_type Data = {
-            Empty, {}, {M, ModuleMap::headerKindToRole(U.Kind)}};
+            Empty, false, {}, {M, ModuleMap::headerKindToRole(U.Kind)}};
         // FIXME: Deal with cases where there are multiple unresolved header
         // directives in different submodules for the same header.
         Generator.insert(Key, Data, GeneratorTrait);
@@ -1952,11 +1953,13 @@ void ASTWriter::WriteHeaderSearch(const HeaderSearch &HS) {
       SavedStrings.push_back(Filename.data());
     }
 
+    bool Included = PP->alreadyIncluded(File);
+
     HeaderFileInfoTrait::key_type Key = {
       Filename, File->getSize(), getTimestampForOutput(File)
     };
     HeaderFileInfoTrait::data_type Data = {
-      *HFI, HS.getModuleMap().findResolvedModulesForHeader(File), {}
+      *HFI, Included, HS.getModuleMap().findResolvedModulesForHeader(File), {}
     };
     Generator.insert(Key, Data, GeneratorTrait);
     ++NumHeaderSearchEntries;
@@ -2262,29 +2265,6 @@ static bool shouldIgnoreMacro(MacroDirective *MD, bool IsModule,
   return false;
 }
 
-void ASTWriter::writeIncludedFiles(raw_ostream &Out, const Preprocessor &PP) {
-  using namespace llvm::support;
-
-  const Preprocessor::IncludedFilesSet &IncludedFiles = PP.getIncludedFiles();
-
-  std::vector<uint32_t> IncludedInputFileIDs;
-  IncludedInputFileIDs.reserve(IncludedFiles.size());
-
-  for (const FileEntry *File : IncludedFiles) {
-    auto InputFileIt = InputFileIDs.find(File);
-    if (InputFileIt == InputFileIDs.end())
-      continue;
-    IncludedInputFileIDs.push_back(InputFileIt->second);
-  }
-
-  llvm::sort(IncludedInputFileIDs);
-
-  endian::Writer LE(Out, little);
-  LE.write<uint32_t>(IncludedInputFileIDs.size());
-  for (uint32_t ID : IncludedInputFileIDs)
-    LE.write<uint32_t>(ID);
-}
-
 /// Writes the block containing the serialized form of the
 /// preprocessor.
 void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
@@ -2532,20 +2512,6 @@ void ASTWriter::WritePreprocessor(const Preprocessor &PP, bool IsModule) {
                                        FirstMacroID - NUM_PREDEF_MACRO_IDS,
                                        MacroOffsetsBase - ASTBlockStartOffset};
     Stream.EmitRecordWithBlob(MacroOffsetAbbrev, Record, bytes(MacroOffsets));
-  }
-
-  {
-    auto Abbrev = std::make_shared<BitCodeAbbrev>();
-    Abbrev->Add(BitCodeAbbrevOp(PP_INCLUDED_FILES));
-    Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
-    unsigned IncludedFilesAbbrev = Stream.EmitAbbrev(std::move(Abbrev));
-
-    SmallString<2048> Buffer;
-    raw_svector_ostream Out(Buffer);
-    writeIncludedFiles(Out, PP);
-    RecordData::value_type Record[] = {PP_INCLUDED_FILES};
-    Stream.EmitRecordWithBlob(IncludedFilesAbbrev, Record, Buffer.data(),
-                              Buffer.size());
   }
 }
 

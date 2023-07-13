@@ -145,6 +145,8 @@ const char *Section::GetTypeAsCString() const {
     return "absolute";
   case eSectionTypeDWARFGNUDebugAltLink:
     return "dwarf-gnu-debugaltlink";
+  case eSectionTypeCTF:
+    return "ctf";
   case eSectionTypeOther:
     return "regular";
   }
@@ -452,6 +454,7 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeDWARFAppleNamespaces:
   case eSectionTypeDWARFAppleObjC:
   case eSectionTypeDWARFGNUDebugAltLink:
+  case eSectionTypeCTF:
     return true;
   }
   return false;

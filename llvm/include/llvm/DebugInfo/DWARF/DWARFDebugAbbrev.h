@@ -73,7 +73,7 @@ public:
   void parse() const;
 
   DWARFAbbreviationDeclarationSetMap::const_iterator begin() const {
-    parse();
+    assert(!Data && "Must call parse before iterating over DWARFDebugAbbrev");
     return AbbrDeclSets.begin();
   }
 

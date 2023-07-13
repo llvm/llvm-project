@@ -24,6 +24,9 @@ module types
      integer :: c1
      real, allocatable :: c2(:)
   end type t7
+  type t8
+     character(11), allocatable :: c
+  end type t8
 end module types
 
 subroutine test1(x)
@@ -50,9 +53,7 @@ end subroutine test1
 ! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranAInitialize(%[[VAL_12]], %[[VAL_13]], %[[VAL_11]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_16:.*]] = hlfir.designate %[[VAL_8]]#0{"c"}   typeparams %[[VAL_15]] : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, index) -> !fir.ref<!fir.char<1,4>>
-! CHECK:           %[[VAL_17:.*]] = arith.constant 4 : i64
-! CHECK:           %[[VAL_18:.*]] = hlfir.set_length %[[VAL_7]]#0 len %[[VAL_17]] : (!fir.ref<!fir.char<1,4>>, i64) -> !hlfir.expr<!fir.char<1,4>>
-! CHECK:           hlfir.assign %[[VAL_18]] to %[[VAL_16]] temporary_lhs : !hlfir.expr<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>
+! CHECK:           hlfir.assign %[[VAL_7]]#0 to %[[VAL_16]] temporary_lhs : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>
 ! CHECK:           hlfir.assign %[[VAL_8]]#0 to %[[VAL_3]]#0 : !fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
 ! CHECK:           return
 ! CHECK:         }
@@ -150,27 +151,19 @@ end subroutine test4
 ! CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAInitialize(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK:           %[[VAL_19:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_20:.*]] = hlfir.designate %[[VAL_12]]#0{"c"}   typeparams %[[VAL_19]] {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>, index) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>>
-! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>>
-! CHECK:           %[[VAL_22:.*]] = arith.constant 2 : i64
-! CHECK:           %[[VAL_23:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_24:.*]]:3 = fir.box_dims %[[VAL_21]], %[[VAL_23]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_25:.*]] = fir.shape %[[VAL_24]]#1 : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_26:.*]] = hlfir.elemental %[[VAL_25]] typeparams %[[VAL_22]] unordered : (!fir.shape<1>, i64) -> !hlfir.expr<?x!fir.char<1,?>> {
-! CHECK:           ^bb0(%[[VAL_27:.*]]: index):
-! CHECK:             %[[VAL_28:.*]] = arith.constant 0 : index
-! CHECK:             %[[VAL_29:.*]]:3 = fir.box_dims %[[VAL_21]], %[[VAL_28]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>, index) -> (index, index, index)
-! CHECK:             %[[VAL_30:.*]] = arith.constant 1 : index
-! CHECK:             %[[VAL_31:.*]] = arith.subi %[[VAL_29]]#0, %[[VAL_30]] : index
-! CHECK:             %[[VAL_32:.*]] = arith.addi %[[VAL_27]], %[[VAL_31]] : index
-! CHECK:             %[[VAL_33:.*]] = hlfir.designate %[[VAL_21]] (%[[VAL_32]])  typeparams %[[VAL_10]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>, index, index) -> !fir.ref<!fir.char<1,2>>
-! CHECK:             %[[VAL_34:.*]] = hlfir.set_length %[[VAL_33]] len %[[VAL_22]] : (!fir.ref<!fir.char<1,2>>, i64) -> !hlfir.expr<!fir.char<1,2>>
-! CHECK:             hlfir.yield_element %[[VAL_34]] : !hlfir.expr<!fir.char<1,2>>
+! CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_11]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>>
+! CHECK:           %[[VAL_22:.*]] = fir.box_addr %[[VAL_21]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,2>>>
+! CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (!fir.heap<!fir.array<?x!fir.char<1,2>>>) -> i64
+! CHECK:           %[[VAL_24:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_25:.*]] = arith.cmpi ne, %[[VAL_23]], %[[VAL_24]] : i64
+! CHECK:           fir.if %[[VAL_25]] {
+! CHECK:             %[[VAL_26:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>>
+! CHECK:             hlfir.assign %[[VAL_26]] to %[[VAL_20]] realloc keep_lhs_len temporary_lhs : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>>
 ! CHECK:           }
-! CHECK:           hlfir.assign %[[VAL_35:.*]] to %[[VAL_20]] realloc temporary_lhs : !hlfir.expr<?x!fir.char<1,?>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>>
 ! CHECK:           hlfir.assign %[[VAL_12]]#0 to %[[VAL_3]]#0 : !fir.ref<!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>, !fir.ref<!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>
-! CHECK:           hlfir.destroy %[[VAL_35]] : !hlfir.expr<?x!fir.char<1,?>>
 ! CHECK:           return
 ! CHECK:         }
+
 
 subroutine test5(x)
   use types
@@ -291,16 +284,14 @@ end subroutine test6
 ! CHECK:           %[[VAL_64:.*]] = fir.call @_FortranAInitialize(%[[VAL_62]], %[[VAL_63]], %[[VAL_61]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK:           %[[VAL_65:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_66:.*]] = hlfir.designate %[[VAL_58]]#0{"c"}   typeparams %[[VAL_65]] : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, index) -> !fir.ref<!fir.char<1,4>>
-! CHECK:           %[[VAL_67:.*]] = arith.constant 4 : i64
-! CHECK:           %[[VAL_68:.*]] = hlfir.set_length %[[VAL_10]]#0 len %[[VAL_67]] : (!fir.ref<!fir.char<1,4>>, i64) -> !hlfir.expr<!fir.char<1,4>>
-! CHECK:           hlfir.assign %[[VAL_68]] to %[[VAL_66]] temporary_lhs : !hlfir.expr<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>
-! CHECK:           %[[VAL_69:.*]] = fir.convert %[[VAL_58]]#1 : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> !fir.llvm_ptr<i8>
-! CHECK:           %[[VAL_70:.*]] = fir.call @_FortranAPushArrayConstructorSimpleScalar(%[[VAL_51]], %[[VAL_69]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>) -> none
-! CHECK:           %[[VAL_71:.*]] = arith.constant true
-! CHECK:           %[[VAL_72:.*]] = hlfir.as_expr %[[VAL_48]]#0 move %[[VAL_71]] : (!fir.heap<!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>>, i1) -> !hlfir.expr<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
-! CHECK:           hlfir.assign %[[VAL_72]] to %[[VAL_44]] temporary_lhs : !hlfir.expr<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>>
+! CHECK:           hlfir.assign %[[VAL_10]]#0 to %[[VAL_66]] temporary_lhs : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>
+! CHECK:           %[[VAL_67:.*]] = fir.convert %[[VAL_58]]#1 : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> !fir.llvm_ptr<i8>
+! CHECK:           %[[VAL_68:.*]] = fir.call @_FortranAPushArrayConstructorSimpleScalar(%[[VAL_51]], %[[VAL_67]]) fastmath<contract> : (!fir.llvm_ptr<i8>, !fir.llvm_ptr<i8>) -> none
+! CHECK:           %[[VAL_69:.*]] = arith.constant true
+! CHECK:           %[[VAL_70:.*]] = hlfir.as_expr %[[VAL_48]]#0 move %[[VAL_69]] : (!fir.heap<!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>>, i1) -> !hlfir.expr<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
+! CHECK:           hlfir.assign %[[VAL_70]] to %[[VAL_44]] temporary_lhs : !hlfir.expr<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>>
 ! CHECK:           hlfir.assign %[[VAL_20]]#0 to %[[VAL_12]]#0 : !fir.ref<!fir.type<_QMtypesTt6{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}>>, !fir.ref<!fir.type<_QMtypesTt6{t5m:!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt4{c:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,2>>>>}>>>>,t6m:!fir.array<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>}>>
-! CHECK:           hlfir.destroy %[[VAL_72]] : !hlfir.expr<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
+! CHECK:           hlfir.destroy %[[VAL_70]] : !hlfir.expr<1x!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
 ! CHECK:           return
 ! CHECK:         }
 
@@ -338,5 +329,122 @@ end subroutine test7
 ! CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
 ! CHECK:           hlfir.assign %[[VAL_19]] to %[[VAL_18]] temporary_lhs : i32, !fir.ref<i32>
 ! CHECK:           hlfir.assign %[[VAL_11]]#0 to %[[VAL_4]]#0 : !fir.ref<!fir.type<_QMtypesTt7{c1:i32,c2:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.ref<!fir.type<_QMtypesTt7{c1:i32,c2:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
+! CHECK:           return
+! CHECK:         }
+
+! Test character allocatable component initialization
+! from character allocatable of different size.
+subroutine test8
+  use types
+  character(12), allocatable :: x
+  type(t8) res
+  res = t8(x)
+end subroutine test8
+! CHECK-LABEL:   func.func @_QPtest8() {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}> {bindc_name = "res", uniq_name = "_QFtest8Eres"}
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest8Eres"} : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>)
+! CHECK:           %[[VAL_3:.*]] = fir.embox %[[VAL_2]]#1 : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>
+! CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+! CHECK:           %[[VAL_5:.*]] = arith.constant {{[0-9]*}} : i32
+! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_3]] : (!fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<none>
+! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_8:.*]] = fir.call @_FortranAInitialize(%[[VAL_6]], %[[VAL_7]], %[[VAL_5]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,12>>> {bindc_name = "x", uniq_name = "_QFtest8Ex"}
+! CHECK:           %[[VAL_10:.*]] = arith.constant 12 : index
+! CHECK:           %[[VAL_11:.*]] = fir.zero_bits !fir.heap<!fir.char<1,12>>
+! CHECK:           %[[VAL_12:.*]] = fir.embox %[[VAL_11]] : (!fir.heap<!fir.char<1,12>>) -> !fir.box<!fir.heap<!fir.char<1,12>>>
+! CHECK:           fir.store %[[VAL_12]] to %[[VAL_9]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_9]] typeparams %[[VAL_10]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest8Ex"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>, index) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>)
+! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>)
+! CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_14]]#0 : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>
+! CHECK:           %[[VAL_16:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+! CHECK:           %[[VAL_17:.*]] = arith.constant {{[0-9]*}} : i32
+! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_15]] : (!fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<none>
+! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_20:.*]] = fir.call @_FortranAInitialize(%[[VAL_18]], %[[VAL_19]], %[[VAL_17]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:           %[[VAL_21:.*]] = arith.constant 11 : index
+! CHECK:           %[[VAL_22:.*]] = hlfir.designate %[[VAL_14]]#0{"c"}   typeparams %[[VAL_21]] {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, index) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>
+! CHECK:           %[[VAL_23:.*]] = fir.load %[[VAL_13]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>
+! CHECK:           %[[VAL_24:.*]] = fir.box_addr %[[VAL_23]] : (!fir.box<!fir.heap<!fir.char<1,12>>>) -> !fir.heap<!fir.char<1,12>>
+! CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (!fir.heap<!fir.char<1,12>>) -> i64
+! CHECK:           %[[VAL_26:.*]] = arith.constant 0 : i64
+! CHECK:           %[[VAL_27:.*]] = arith.cmpi ne, %[[VAL_25]], %[[VAL_26]] : i64
+! CHECK:           fir.if %[[VAL_27]] {
+! CHECK:             %[[VAL_28:.*]] = fir.load %[[VAL_13]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>
+! CHECK:             %[[VAL_29:.*]] = fir.box_addr %[[VAL_28]] : (!fir.box<!fir.heap<!fir.char<1,12>>>) -> !fir.heap<!fir.char<1,12>>
+! CHECK:             hlfir.assign %[[VAL_29]] to %[[VAL_22]] realloc keep_lhs_len temporary_lhs : !fir.heap<!fir.char<1,12>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>
+! CHECK:           }
+! CHECK:           hlfir.assign %[[VAL_14]]#0 to %[[VAL_2]]#0 : !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>
+! CHECK:           return
+! CHECK:         }
+
+! Test character allocatable component initialization
+! from character non-allocatable of different size.
+subroutine test9
+  use types
+  character(12) :: x
+  type(t8) res
+  res = t8(x)
+end subroutine test9
+! CHECK-LABEL:   func.func @_QPtest9() {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}> {bindc_name = "res", uniq_name = "_QFtest9Eres"}
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest9Eres"} : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>)
+! CHECK:           %[[VAL_3:.*]] = fir.embox %[[VAL_2]]#1 : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>
+! CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+! CHECK:           %[[VAL_5:.*]] = arith.constant {{[0-9]*}} : i32
+! CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_3]] : (!fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<none>
+! CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_8:.*]] = fir.call @_FortranAInitialize(%[[VAL_6]], %[[VAL_7]], %[[VAL_5]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:           %[[VAL_9:.*]] = arith.constant 12 : index
+! CHECK:           %[[VAL_10:.*]] = fir.alloca !fir.char<1,12> {bindc_name = "x", uniq_name = "_QFtest9Ex"}
+! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_10]] typeparams %[[VAL_9]] {uniq_name = "_QFtest9Ex"} : (!fir.ref<!fir.char<1,12>>, index) -> (!fir.ref<!fir.char<1,12>>, !fir.ref<!fir.char<1,12>>)
+! CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>)
+! CHECK:           %[[VAL_13:.*]] = fir.embox %[[VAL_12]]#0 : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>
+! CHECK:           %[[VAL_14:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+! CHECK:           %[[VAL_15:.*]] = arith.constant {{[0-9]*}} : i32
+! CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_13]] : (!fir.box<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>) -> !fir.box<none>
+! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_14]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_18:.*]] = fir.call @_FortranAInitialize(%[[VAL_16]], %[[VAL_17]], %[[VAL_15]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:           %[[VAL_19:.*]] = arith.constant 11 : index
+! CHECK:           %[[VAL_20:.*]] = hlfir.designate %[[VAL_12]]#0{"c"}   typeparams %[[VAL_19]] {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, index) -> !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>
+! CHECK:           hlfir.assign %[[VAL_11]]#0 to %[[VAL_20]] realloc keep_lhs_len temporary_lhs : !fir.ref<!fir.char<1,12>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,11>>>>
+! CHECK:           hlfir.assign %[[VAL_12]]#0 to %[[VAL_2]]#0 : !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>, !fir.ref<!fir.type<_QMtypesTt8{c:!fir.box<!fir.heap<!fir.char<1,11>>>}>>
+! CHECK:           return
+! CHECK:         }
+
+
+! Test character non-allocatable component initialization
+! from character allocatable of different size.
+subroutine test10
+  use types
+  character(12), allocatable :: x
+  type(t1) res
+  res = t1(x)
+end subroutine test10
+! CHECK-LABEL:   func.func @_QPtest10() {
+! CHECK:           %[[VAL_0:.*]] = fir.alloca !fir.type<_QMtypesTt1{c:!fir.char<1,4>}>
+! CHECK:           %[[VAL_1:.*]] = fir.alloca !fir.type<_QMtypesTt1{c:!fir.char<1,4>}> {bindc_name = "res", uniq_name = "_QFtest10Eres"}
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFtest10Eres"} : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>)
+! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,12>>> {bindc_name = "x", uniq_name = "_QFtest10Ex"}
+! CHECK:           %[[VAL_4:.*]] = arith.constant 12 : index
+! CHECK:           %[[VAL_5:.*]] = fir.zero_bits !fir.heap<!fir.char<1,12>>
+! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_5]] : (!fir.heap<!fir.char<1,12>>) -> !fir.box<!fir.heap<!fir.char<1,12>>>
+! CHECK:           fir.store %[[VAL_6]] to %[[VAL_3]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>
+! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]] typeparams %[[VAL_4]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest10Ex"} : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>, index) -> (!fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>, !fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "ctor.temp"} : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>)
+! CHECK:           %[[VAL_9:.*]] = fir.embox %[[VAL_8]]#0 : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> !fir.box<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
+! CHECK:           %[[VAL_10:.*]] = fir.address_of(@_QQcl.{{.*}}) : !fir.ref<!fir.char<1,{{[0-9]*}}>>
+! CHECK:           %[[VAL_11:.*]] = arith.constant {{[0-9]*}} : i32
+! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>) -> !fir.box<none>
+! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,{{[0-9]*}}>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranAInitialize(%[[VAL_12]], %[[VAL_13]], %[[VAL_11]]) fastmath<contract> : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:           %[[VAL_15:.*]] = arith.constant 4 : index
+! CHECK:           %[[VAL_16:.*]] = hlfir.designate %[[VAL_8]]#0{"c"}   typeparams %[[VAL_15]] : (!fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, index) -> !fir.ref<!fir.char<1,4>>
+! CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.char<1,12>>>>
+! CHECK:           %[[VAL_18:.*]] = fir.box_addr %[[VAL_17]] : (!fir.box<!fir.heap<!fir.char<1,12>>>) -> !fir.heap<!fir.char<1,12>>
+! CHECK:           hlfir.assign %[[VAL_18]] to %[[VAL_16]] temporary_lhs : !fir.heap<!fir.char<1,12>>, !fir.ref<!fir.char<1,4>>
+! CHECK:           hlfir.assign %[[VAL_8]]#0 to %[[VAL_2]]#0 : !fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>, !fir.ref<!fir.type<_QMtypesTt1{c:!fir.char<1,4>}>>
 ! CHECK:           return
 ! CHECK:         }

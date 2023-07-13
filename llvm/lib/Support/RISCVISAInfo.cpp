@@ -94,6 +94,7 @@ static const RISCVSupportedExtension SupportedExtensions[] = {
     {"zca", RISCVExtensionVersion{1, 0}},
     {"zcb", RISCVExtensionVersion{1, 0}},
     {"zcd", RISCVExtensionVersion{1, 0}},
+    {"zce", RISCVExtensionVersion{1, 0}},
     {"zcf", RISCVExtensionVersion{1, 0}},
     {"zcmp", RISCVExtensionVersion{1, 0}},
     {"zcmt", RISCVExtensionVersion{1, 0}},
@@ -934,6 +935,10 @@ Error RISCVISAInfo::checkDependency() {
         "' extension is incompatible with '" + (HasC ? "c" : "zcd") +
         "' extension when 'd' extension is enabled");
 
+  if (XLen != 32 && Exts.count("zcf"))
+    return createStringError(errc::invalid_argument,
+                             "'zcf' is only supported for 'rv32'");
+
   // Additional dependency checks.
   // TODO: The 'q' extension requires rv64.
   // TODO: It is illegal to specify 'e' extensions with 'f' and 'd'.
@@ -948,6 +953,9 @@ static const char *ImpliedExtsXTHeadVdot[] = {"v"};
 static const char *ImpliedExtsXsfvcp[] = {"zve32x"};
 static const char *ImpliedExtsZacas[] = {"a"};
 static const char *ImpliedExtsZcb[] = {"zca"};
+static const char *ImpliedExtsZcd[] = {"zca"};
+static const char *ImpliedExtsZce[] = {"zcb", "zcmp", "zcmt"};
+static const char *ImpliedExtsZcf[] = {"zca"};
 static const char *ImpliedExtsZcmp[] = {"zca"};
 static const char *ImpliedExtsZcmt[] = {"zca"};
 static const char *ImpliedExtsZdinx[] = {"zfinx"};
@@ -1011,6 +1019,9 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"xtheadvdot"}, {ImpliedExtsXTHeadVdot}},
     {{"zacas"}, {ImpliedExtsZacas}},
     {{"zcb"}, {ImpliedExtsZcb}},
+    {{"zcd"}, {ImpliedExtsZcd}},
+    {{"zce"}, {ImpliedExtsZce}},
+    {{"zcf"}, {ImpliedExtsZcf}},
     {{"zcmp"}, {ImpliedExtsZcmp}},
     {{"zcmt"}, {ImpliedExtsZcmt}},
     {{"zdinx"}, {ImpliedExtsZdinx}},
@@ -1087,6 +1098,13 @@ void RISCVISAInfo::updateImplication() {
         WorkList.insert(ImpliedExt);
       }
     }
+  }
+
+  // Add Zcf if Zce and F are enabled on RV32.
+  if (XLen == 32 && Exts.count("zce") && Exts.count("f") &&
+      !Exts.count("zcf")) {
+    auto Version = findDefaultVersion("zcf");
+    addExtension("zcf", Version->Major, Version->Minor);
   }
 }
 
