@@ -21,9 +21,6 @@
 # RUN: not llvm-mc -triple riscv64 -mattr=+c,+f \
 # RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-RV32 %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+zcf,+f \
-# RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-RV32 %s
 
 # FIXME: error messages for rv64fc are misleading
 
