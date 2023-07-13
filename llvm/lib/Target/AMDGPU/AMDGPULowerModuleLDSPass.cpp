@@ -354,6 +354,11 @@ public:
         continue;
       }
 
+      if (GV.isAbsoluteSymbolRef()) {
+        report_fatal_error(
+            "LDS variables with absolute addresses are unimplemented.");
+      }
+
       for (User *V : GV.users()) {
         if (auto *I = dyn_cast<Instruction>(V)) {
           Function *F = I->getFunction();
