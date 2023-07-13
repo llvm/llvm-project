@@ -158,13 +158,14 @@ public:
   ExternalNameConversionPass(bool appendUnderscoring)
       : appendUnderscores(appendUnderscoring) {}
 
-  ExternalNameConversionPass() { appendUnderscores = appendUnderscore; }
+  ExternalNameConversionPass() { usePassOpt = true; }
 
   mlir::ModuleOp getModule() { return getOperation(); }
   void runOnOperation() override;
 
 private:
   bool appendUnderscores;
+  bool usePassOpt;
 };
 } // namespace
 
@@ -172,9 +173,11 @@ void ExternalNameConversionPass::runOnOperation() {
   auto op = getOperation();
   auto *context = &getContext();
 
+  appendUnderscores = (usePassOpt) ? appendUnderscoreOpt : appendUnderscores;
+
   mlir::RewritePatternSet patterns(context);
   patterns.insert<MangleNameOnFuncOp, MangleNameForCommonBlock,
-                  MangleNameOnAddrOfOp>(context, appendUnderscore);
+                  MangleNameOnAddrOfOp>(context, appendUnderscores);
 
   ConversionTarget target(*context);
   target.addLegalDialect<fir::FIROpsDialect, LLVM::LLVMDialect,
