@@ -587,6 +587,8 @@ Bug Fixes in This Version
   (`#50320 <https://github.com/llvm/llvm-project/issues/50320>`_).
 - Fix an assertion when using ``\u0024`` (``$``) as an identifier, by disallowing
   that construct (`#62133 <https://github.com/llvm/llvm-project/issues/38717>_`).
+- Fix crash caused by PseudoObjectExprBitfields: NumSubExprs overflow.
+  (`#63169 <https://github.com/llvm/llvm-project/issues/63169>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

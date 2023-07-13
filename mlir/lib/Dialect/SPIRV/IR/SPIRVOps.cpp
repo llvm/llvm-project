@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
 #include <numeric>
@@ -429,36 +430,38 @@ static LogicalResult verifyCastOp(Operation *op,
   Type operandType = op->getOperand(0).getType();
   Type resultType = op->getResult(0).getType();
 
-  // ODS checks that result type and operand type have the same shape.
-  if (auto vectorType = llvm::dyn_cast<VectorType>(operandType)) {
-    operandType = vectorType.getElementType();
-    resultType = llvm::cast<VectorType>(resultType).getElementType();
-  }
+  // ODS checks that result type and operand type have the same shape. Check
+  // that composite types match and extract the element types, if any.
+  using TypePair = std::pair<Type, Type>;
+  auto [operandElemTy, resultElemTy] =
+      TypeSwitch<Type, TypePair>(operandType)
+          .Case<VectorType, spirv::CooperativeMatrixType,
+                spirv::CooperativeMatrixNVType, spirv::JointMatrixINTELType>(
+              [resultType](auto concreteOperandTy) -> TypePair {
+                if (auto concreteResultTy =
+                        dyn_cast<decltype(concreteOperandTy)>(resultType)) {
+                  return {concreteOperandTy.getElementType(),
+                          concreteResultTy.getElementType()};
+                }
+                return {};
+              })
+          .Default([resultType](Type operandType) -> TypePair {
+            return {operandType, resultType};
+          });
 
-  if (auto coopMatrixType =
-          llvm::dyn_cast<spirv::CooperativeMatrixNVType>(operandType)) {
-    operandType = coopMatrixType.getElementType();
-    resultType =
-        llvm::cast<spirv::CooperativeMatrixNVType>(resultType).getElementType();
-  }
+  if (!operandElemTy || !resultElemTy)
+    return op->emitOpError("incompatible operand and result types");
 
-  if (auto jointMatrixType =
-          llvm::dyn_cast<spirv::JointMatrixINTELType>(operandType)) {
-    operandType = jointMatrixType.getElementType();
-    resultType =
-        llvm::cast<spirv::JointMatrixINTELType>(resultType).getElementType();
-  }
-
-  auto operandTypeBitWidth = operandType.getIntOrFloatBitWidth();
-  auto resultTypeBitWidth = resultType.getIntOrFloatBitWidth();
-  auto isSameBitWidth = operandTypeBitWidth == resultTypeBitWidth;
+  unsigned operandTypeBitWidth = operandElemTy.getIntOrFloatBitWidth();
+  unsigned resultTypeBitWidth = resultElemTy.getIntOrFloatBitWidth();
+  bool isSameBitWidth = operandTypeBitWidth == resultTypeBitWidth;
 
   if (requireSameBitWidth) {
     if (!isSameBitWidth) {
       return op->emitOpError(
                  "expected the same bit widths for operand type and result "
                  "type, but provided ")
-             << operandType << " and " << resultType;
+             << operandElemTy << " and " << resultElemTy;
     }
     return success();
   }
@@ -467,7 +470,7 @@ static LogicalResult verifyCastOp(Operation *op,
     return op->emitOpError(
                "expected the different bit widths for operand type and result "
                "type, but provided ")
-           << operandType << " and " << resultType;
+           << operandElemTy << " and " << resultElemTy;
   }
   return success();
 }
@@ -4019,6 +4022,34 @@ LogicalResult spirv::VectorShuffleOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.KHR.CooperativeMatrixLength
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::KHRCooperativeMatrixLengthOp::verify() {
+  if (!isa<spirv::CooperativeMatrixType>(getCooperativeMatrixType())) {
+    return emitOpError(
+               "type attribute must be a '!spirv.coopmatrix' type, found ")
+           << getCooperativeMatrixType() << " instead";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.NV.CooperativeMatrixLength
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::NVCooperativeMatrixLengthOp::verify() {
+  if (!isa<spirv::CooperativeMatrixNVType>(getCooperativeMatrixType())) {
+    return emitOpError(
+               "type attribute must be a '!spirv.NV.coopmatrix' type, found ")
+           << getCooperativeMatrixType() << " instead";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.NV.CooperativeMatrixLoad
 //===----------------------------------------------------------------------===//
 
@@ -4053,8 +4084,8 @@ void spirv::NVCooperativeMatrixLoadOp::print(OpAsmPrinter &printer) {
   printer << " : " << getPointer().getType() << " as " << getType();
 }
 
-static LogicalResult verifyPointerAndCoopMatrixType(Operation *op, Type pointer,
-                                                    Type coopMatrix) {
+static LogicalResult
+verifyPointerAndCoopMatrixNVType(Operation *op, Type pointer, Type coopMatrix) {
   Type pointeeType = llvm::cast<spirv::PointerType>(pointer).getPointeeType();
   if (!llvm::isa<spirv::ScalarType>(pointeeType) &&
       !llvm::isa<VectorType>(pointeeType))
@@ -4074,8 +4105,8 @@ static LogicalResult verifyPointerAndCoopMatrixType(Operation *op, Type pointer,
 }
 
 LogicalResult spirv::NVCooperativeMatrixLoadOp::verify() {
-  return verifyPointerAndCoopMatrixType(*this, getPointer().getType(),
-                                        getResult().getType());
+  return verifyPointerAndCoopMatrixNVType(*this, getPointer().getType(),
+                                          getResult().getType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -4114,8 +4145,8 @@ void spirv::NVCooperativeMatrixStoreOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult spirv::NVCooperativeMatrixStoreOp::verify() {
-  return verifyPointerAndCoopMatrixType(*this, getPointer().getType(),
-                                        getObject().getType());
+  return verifyPointerAndCoopMatrixNVType(*this, getPointer().getType(),
+                                          getObject().getType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -4123,7 +4154,7 @@ LogicalResult spirv::NVCooperativeMatrixStoreOp::verify() {
 //===----------------------------------------------------------------------===//
 
 static LogicalResult
-verifyCoopMatrixMulAdd(spirv::NVCooperativeMatrixMulAddOp op) {
+verifyCoopMatrixMulAddNV(spirv::NVCooperativeMatrixMulAddOp op) {
   if (op.getC().getType() != op.getResult().getType())
     return op.emitOpError("result and third operand must have the same type");
   auto typeA = llvm::cast<spirv::CooperativeMatrixNVType>(op.getA().getType());
@@ -4156,8 +4187,12 @@ verifyCoopMatrixMulAdd(spirv::NVCooperativeMatrixMulAddOp op) {
 }
 
 LogicalResult spirv::NVCooperativeMatrixMulAddOp::verify() {
-  return verifyCoopMatrixMulAdd(*this);
+  return verifyCoopMatrixMulAddNV(*this);
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.JointMatrixLoad
+//===----------------------------------------------------------------------===//
 
 static LogicalResult
 verifyPointerAndJointMatrixType(Operation *op, Type pointer, Type jointMatrix) {
@@ -4178,10 +4213,6 @@ verifyPointerAndJointMatrixType(Operation *op, Type pointer, Type jointMatrix) {
            << stringifyStorageClass(storage);
   return success();
 }
-
-//===----------------------------------------------------------------------===//
-// spirv.INTEL.JointMatrixLoad
-//===----------------------------------------------------------------------===//
 
 LogicalResult spirv::INTELJointMatrixLoadOp::verify() {
   return verifyPointerAndJointMatrixType(*this, getPointer().getType(),
