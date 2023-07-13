@@ -402,12 +402,6 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
   if (!ExprType || ExprType->isVoidType())
     return false;
 
-  // Must know the type of the result in order to spell it, or instead use
-  // `auto` in C++.
-  if (!N->getDeclContext().getParentASTContext().getLangOpts().CPlusPlus11 &&
-      !ExprType)
-    return false;
-
   // A plain reference to a name (e.g. variable) isn't  worth extracting.
   // FIXME: really? What if it's e.g. `std::is_same<void, void>::value`?
   if (llvm::isa<DeclRefExpr>(E))
