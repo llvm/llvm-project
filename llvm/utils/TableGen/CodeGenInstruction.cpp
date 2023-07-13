@@ -175,7 +175,7 @@ CGIOperandList::CGIOperandList(Record *R) : TheDef(R) {
         }
 
         OpInfo.SubOpNames[j] = SubArgName;
-        SubOpAliases[SubArgName] = std::make_pair(MIOperandNo, j);
+        SubOpAliases[SubArgName] = std::make_pair(i, j);
       }
     } else if (!EncoderMethod.empty()) {
       // If we have no explicit sub-op dag, but have an top-level encoder
