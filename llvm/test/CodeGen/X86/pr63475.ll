@@ -58,7 +58,6 @@ define void @callee(ptr %p0, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, <7 x i
 ; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
@@ -84,8 +83,6 @@ start:
   call void @use(i32 %extract5)
   %extract6 = extractelement <7 x i32> %arg, i64 6
   call void @use(i32 %extract6)
-  %extract7 = extractelement <7 x i32> %arg, i64 7
-  call void @use(i32 %extract7)
   ret void
 }
 
