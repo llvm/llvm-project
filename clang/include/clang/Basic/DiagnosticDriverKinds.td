@@ -575,16 +575,12 @@ def err_drv_unsupported_fpatchable_function_entry_argument : Error<
   "the second argument of '-fpatchable-function-entry' must be smaller than the first argument">;
 
 def warn_drv_unable_to_find_directory_expected : Warning<
-  "unable to find %0 directory, expected to be in '%1'">,
-  InGroup<InvalidOrNonExistentDirectory>, DefaultIgnore;
+  "unable to find %0 directory, expected to be in '%1' found via %2">,
+  InGroup<InvalidOrNonExistentDirectory>;
 
 def warn_drv_ps_force_pic : Warning<
   "option '%0' was ignored by the %1 toolchain, using '-fPIC'">,
   InGroup<OptionIgnored>;
-
-def warn_drv_ps_sdk_dir : Warning<
-  "environment variable '%0' is set, but points to invalid or nonexistent directory '%1'">,
-  InGroup<InvalidOrNonExistentDirectory>;
 
 def err_drv_defsym_invalid_format : Error<"defsym must be of the form: sym=value: %0">;
 def err_drv_defsym_invalid_symval : Error<"value is not an integer: %0">;
