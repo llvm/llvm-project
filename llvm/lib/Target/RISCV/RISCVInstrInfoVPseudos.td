@@ -6567,8 +6567,7 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true,
-    hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasPostISelHook = 1 in {
 defm PseudoVFADD  : VPseudoVALU_VV_VF_RM;
 defm PseudoVFSUB  : VPseudoVALU_VV_VF_RM;
 defm PseudoVFRSUB : VPseudoVALU_VF_RM;
@@ -6577,8 +6576,7 @@ defm PseudoVFRSUB : VPseudoVALU_VF_RM;
 //===----------------------------------------------------------------------===//
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0,
-    hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
 defm PseudoVFWADD : VPseudoVFWALU_VV_VF_RM;
 defm PseudoVFWSUB : VPseudoVFWALU_VV_VF_RM;
 defm PseudoVFWADD : VPseudoVFWALU_WV_WF_RM;
@@ -6588,8 +6586,7 @@ defm PseudoVFWSUB : VPseudoVFWALU_WV_WF_RM;
 //===----------------------------------------------------------------------===//
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0,
-    hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
 defm PseudoVFMUL  : VPseudoVFMUL_VV_VF_RM;
 defm PseudoVFDIV  : VPseudoVFDIV_VV_VF_RM;
 defm PseudoVFRDIV : VPseudoVFRDIV_VF_RM;
@@ -6605,8 +6602,7 @@ defm PseudoVFWMUL : VPseudoVWMUL_VV_VF_RM;
 //===----------------------------------------------------------------------===//
 // 13.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0,
-    hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
 defm PseudoVFMACC  : VPseudoVMAC_VV_VF_AAXA_RM;
 defm PseudoVFNMACC : VPseudoVMAC_VV_VF_AAXA_RM;
 defm PseudoVFMSAC  : VPseudoVMAC_VV_VF_AAXA_RM;
@@ -6620,8 +6616,7 @@ defm PseudoVFNMSUB : VPseudoVMAC_VV_VF_AAXA_RM;
 //===----------------------------------------------------------------------===//
 // 13.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
 //===----------------------------------------------------------------------===//
-let mayRaiseFPException = true, hasSideEffects = 0,
-    hasPostISelHook = 1 in {
+let mayRaiseFPException = true, hasSideEffects = 0, hasPostISelHook = 1 in {
 defm PseudoVFWMACC  : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWNMACC : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWMSAC  : VPseudoVWMAC_VV_VF_RM;
