@@ -29,6 +29,24 @@ enum SIRCFlags : uint8_t {
   RegKindMask = (HasVGPR | HasAGPR | HasSGPR)
 }; // enum SIRCFlagsr
 
+namespace SIEncodingFamily {
+// This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
+// and the columns of the getMCOpcodeGen table.
+enum {
+  SI = 0,
+  VI = 1,
+  SDWA = 2,
+  SDWA9 = 3,
+  GFX80 = 4,
+  GFX9 = 5,
+  GFX10 = 6,
+  SDWA10 = 7,
+  GFX90A = 8,
+  GFX940 = 9,
+  GFX11 = 10,
+};
+}
+
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.
 enum : uint64_t {
