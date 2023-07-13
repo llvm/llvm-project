@@ -1757,7 +1757,7 @@ foreach vti = AllIntegerVectors in {
                                             vti.RegClass:$rs1,
                                             vti.RegClass:$rs2,
                                             VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs2, vti.RegClass:$rs1, (vti.Mask V0),
                    GPR:$vl, vti.Log2SEW)>;
@@ -1766,7 +1766,7 @@ foreach vti = AllIntegerVectors in {
                                             (SplatPat XLenVT:$rs1),
                                             vti.RegClass:$rs2,
                                             VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs2, GPR:$rs1, (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
 
@@ -1774,7 +1774,7 @@ foreach vti = AllIntegerVectors in {
                                             (SplatPat_simm5 simm5:$rs1),
                                             vti.RegClass:$rs2,
                                             VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs2, simm5:$rs1, (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
 
@@ -1782,7 +1782,7 @@ foreach vti = AllIntegerVectors in {
                                              vti.RegClass:$rs1,
                                              vti.RegClass:$rs2,
                                              VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VVM_"#vti.LMul.MX)
                    vti.RegClass:$rs2, vti.RegClass:$rs2, vti.RegClass:$rs1,
                    (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
 
@@ -1790,7 +1790,7 @@ foreach vti = AllIntegerVectors in {
                                              (SplatPat XLenVT:$rs1),
                                              vti.RegClass:$rs2,
                                              VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VXM_"#vti.LMul.MX)
                    vti.RegClass:$rs2, vti.RegClass:$rs2, GPR:$rs1,
                    (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
 
@@ -1798,7 +1798,7 @@ foreach vti = AllIntegerVectors in {
                                              (SplatPat_simm5 simm5:$rs1),
                                              vti.RegClass:$rs2,
                                              VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#vti.LMul.MX)
                    vti.RegClass:$rs2, vti.RegClass:$rs2, simm5:$rs1,
                    (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
   }
@@ -1969,7 +1969,7 @@ foreach fvti = AllFloatVectors in {
                                              fvti.RegClass:$rs1,
                                              fvti.RegClass:$rs2,
                                              VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask V0),
                    GPR:$vl, fvti.Log2SEW)>;
@@ -1978,7 +1978,7 @@ foreach fvti = AllFloatVectors in {
                                              (SplatFPOp fvti.ScalarRegClass:$rs1),
                                              fvti.RegClass:$rs2,
                                              VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
@@ -1988,7 +1988,7 @@ foreach fvti = AllFloatVectors in {
                                              (SplatFPOp (SelectFPImm (XLenVT GPR:$imm))),
                                              fvti.RegClass:$rs2,
                                              VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2,
                    GPR:$imm,
@@ -1998,7 +1998,7 @@ foreach fvti = AllFloatVectors in {
                                              (SplatFPOp (fvti.Scalar fpimm0)),
                                              fvti.RegClass:$rs2,
                                              VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
                    (fvti.Vector (IMPLICIT_DEF)),
                    fvti.RegClass:$rs2, 0, (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
 
@@ -2006,7 +2006,7 @@ foreach fvti = AllFloatVectors in {
                                               fvti.RegClass:$rs1,
                                               fvti.RegClass:$rs2,
                                               VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VVM_"#fvti.LMul.MX)
                    fvti.RegClass:$rs2, fvti.RegClass:$rs2, fvti.RegClass:$rs1, (fvti.Mask V0),
                    GPR:$vl, fvti.Log2SEW)>;
 
@@ -2014,7 +2014,7 @@ foreach fvti = AllFloatVectors in {
                                               (SplatFPOp fvti.ScalarRegClass:$rs1),
                                               fvti.RegClass:$rs2,
                                               VLOpFrag)),
-              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVFMERGE_V"#fvti.ScalarSuffix#"M_"#fvti.LMul.MX)
                    fvti.RegClass:$rs2, fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask V0), GPR:$vl, fvti.Log2SEW)>;
@@ -2023,7 +2023,7 @@ foreach fvti = AllFloatVectors in {
                                               (SplatFPOp (fvti.Scalar fpimm0)),
                                               fvti.RegClass:$rs2,
                                               VLOpFrag)),
-              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX#"_TU")
+              (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
                    fvti.RegClass:$rs2, fvti.RegClass:$rs2, 0, (fvti.Mask V0),
                    GPR:$vl, fvti.Log2SEW)>;
 

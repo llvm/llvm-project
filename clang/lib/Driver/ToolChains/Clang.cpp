@@ -4776,10 +4776,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Select the appropriate action.
   RewriteKind rewriteKind = RK_None;
 
-  bool UnifiedLTO =  Triple.isPS();;
+  bool UnifiedLTO = false;
   if (IsUsingLTO) {
     UnifiedLTO = Args.hasFlag(options::OPT_funified_lto,
-                              options::OPT_fno_unified_lto, false);
+                              options::OPT_fno_unified_lto, Triple.isPS());
     if (UnifiedLTO)
       CmdArgs.push_back("-funified-lto");
   }
@@ -4930,7 +4930,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             Twine("-flto=") + (LTOMode == LTOK_Thin ? "thin" : "full")));
         // PS4 uses the legacy LTO API, which does not support some of the
         // features enabled by -flto-unit.
-        if ((RawTriple.getOS() != llvm::Triple::PS4) ||
+        if (!RawTriple.isPS4() ||
             (D.getLTOMode() == LTOK_Full) || !UnifiedLTO)
           CmdArgs.push_back("-flto-unit");
       }

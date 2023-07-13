@@ -1,4 +1,4 @@
-// REQUIRES: linux
+// REQUIRES: crt
 
 // RUN: %clang -fno-use-init-array -g -c %s -o %t.o
 // RUN: %clang -o %t -no-pie -nostdlib %crt1 %crti %crtbegin %t.o -lc %libgcc %crtend %crtn
