@@ -1,5 +1,4 @@
 ; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llvm-as %s -opaque-pointers -o /dev/null 2>&1 | FileCheck %s
 
 ; Each musttail call should fail to validate.
 

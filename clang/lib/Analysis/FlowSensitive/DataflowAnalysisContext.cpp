@@ -114,7 +114,7 @@ Atom DataflowAnalysisContext::forkFlowCondition(Atom Token) {
   return ForkToken;
 }
 
-Atom 
+Atom
 DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
                                             Atom SecondToken) {
   Atom Token = arena().makeFlowConditionToken();

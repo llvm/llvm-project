@@ -135,6 +135,7 @@ struct MIToken {
     kw_unknown_address,
     kw_ir_block_address_taken,
     kw_machine_block_address_taken,
+    kw_sp_adjustment,
 
     // Metadata types.
     kw_distinct,

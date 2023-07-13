@@ -3627,55 +3627,6 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   return Intrinsic::not_intrinsic;
 }
 
-/// Return true if we can prove that the specified FP value is never equal to
-/// -0.0.
-/// NOTE: Do not check 'nsz' here because that fast-math-flag does not guarantee
-///       that a value is not -0.0. It only guarantees that -0.0 may be treated
-///       the same as +0.0 in floating-point ops.
-bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
-                                unsigned Depth) {
-  if (auto *CFP = dyn_cast<ConstantFP>(V))
-    return !CFP->getValueAPF().isNegZero();
-
-  if (Depth == MaxAnalysisRecursionDepth)
-    return false;
-
-  auto *Op = dyn_cast<Operator>(V);
-  if (!Op)
-    return false;
-
-  // (fadd x, 0.0) is guaranteed to return +0.0, not -0.0.
-  if (match(Op, m_FAdd(m_Value(), m_PosZeroFP())))
-    return true;
-
-  // sitofp and uitofp turn into +0.0 for zero.
-  if (isa<SIToFPInst>(Op) || isa<UIToFPInst>(Op))
-    return true;
-
-  if (auto *Call = dyn_cast<CallInst>(Op)) {
-    Intrinsic::ID IID = getIntrinsicForCallSite(*Call, TLI);
-    switch (IID) {
-    default:
-      break;
-    case Intrinsic::sqrt:
-    case Intrinsic::experimental_constrained_sqrt:
-      // sqrt(-0.0) = -0.0, no other negative results are possible.
-      // FIXME: Account for denormal-fp-math=preserve-sign denormal inputs
-    case Intrinsic::canonicalize:
-      return CannotBeNegativeZero(Call->getArgOperand(0), TLI, Depth + 1);
-    // fabs(x) != -0.0
-    case Intrinsic::fabs:
-      return true;
-    // sitofp and uitofp turn into +0.0 for zero.
-    case Intrinsic::experimental_constrained_sitofp:
-    case Intrinsic::experimental_constrained_uitofp:
-      return true;
-    }
-  }
-
-  return false;
-}
-
 /// If \p SignBitOnly is true, test for a known 0 sign bit rather than a
 /// standard ordered compare. e.g. make -0.0 olt 0.0 be true because of the sign
 /// bit despite comparing equal.
@@ -3828,8 +3779,9 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
       // sqrt(x) is always >= -0 or NaN.  Moreover, sqrt(x) == -0 iff x == -0.
       if (!SignBitOnly)
         return true;
-      return CI->hasNoNaNs() && (CI->hasNoSignedZeros() ||
-                                 CannotBeNegativeZero(CI->getOperand(0), TLI));
+      return CI->hasNoNaNs() &&
+             (CI->hasNoSignedZeros() ||
+              cannotBeNegativeZero(CI->getOperand(0), DL, TLI));
 
     case Intrinsic::powi:
       if (ConstantInt *Exponent = dyn_cast<ConstantInt>(I->getOperand(1))) {
@@ -4262,8 +4214,7 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
   // Infinity needs a range check.
 }
 
-// TODO: Merge implementations of CannotBeNegativeZero,
-// cannotBeOrderedLessThanZero into here.
+// TODO: Merge implementation of cannotBeOrderedLessThanZero into here.
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          unsigned Depth, const SimplifyQuery &Q) {
@@ -4355,11 +4306,51 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::Select: {
+    Value *Cond = Op->getOperand(0);
+    Value *LHS = Op->getOperand(1);
+    Value *RHS = Op->getOperand(2);
+
+    FPClassTest FilterLHS = fcAllFlags;
+    FPClassTest FilterRHS = fcAllFlags;
+
+    Value *TestedValue = nullptr;
+    FPClassTest TestedMask = fcNone;
+    uint64_t ClassVal = 0;
+    const Function *F = cast<Instruction>(Op)->getFunction();
+    CmpInst::Predicate Pred;
+    Value *CmpLHS, *CmpRHS;
+    if (F && match(Cond, m_FCmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS)))) {
+      // If the select filters out a value based on the class, it no longer
+      // participates in the class of the result
+
+      // TODO: In some degenerate cases we can infer something if we try again
+      // without looking through sign operations.
+      bool LookThroughFAbsFNeg = CmpLHS != LHS && CmpLHS != RHS;
+      std::tie(TestedValue, TestedMask) =
+          fcmpToClassTest(Pred, *F, CmpLHS, CmpRHS, LookThroughFAbsFNeg);
+    } else if (match(Cond,
+                     m_Intrinsic<Intrinsic::is_fpclass>(
+                         m_Value(TestedValue), m_ConstantInt(ClassVal)))) {
+      TestedMask = static_cast<FPClassTest>(ClassVal);
+    }
+
+    if (TestedValue == LHS) {
+      // match !isnan(x) ? x : y
+      FilterLHS = TestedMask;
+    } else if (TestedValue == RHS) {
+      // match !isnan(x) ? y : x
+      FilterRHS = ~TestedMask;
+    }
+
     KnownFPClass Known2;
-    computeKnownFPClass(Op->getOperand(1), DemandedElts, InterestedClasses,
-                        Known, Depth + 1, Q);
-    computeKnownFPClass(Op->getOperand(2), DemandedElts, InterestedClasses,
+    computeKnownFPClass(LHS, DemandedElts, InterestedClasses & FilterLHS, Known,
+                        Depth + 1, Q);
+    Known.KnownFPClasses &= FilterLHS;
+
+    computeKnownFPClass(RHS, DemandedElts, InterestedClasses & FilterRHS,
                         Known2, Depth + 1, Q);
+    Known2.KnownFPClasses &= FilterRHS;
+
     Known |= Known2;
     break;
   }

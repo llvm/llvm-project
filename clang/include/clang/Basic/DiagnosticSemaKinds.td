@@ -6196,8 +6196,6 @@ def note_enters_block_captures_non_trivial_c_struct : Note<
   "to destroy">;
 def note_enters_compound_literal_scope : Note<
   "jump enters lifetime of a compound literal that is non-trivial to destruct">;
-def note_enters_statement_expression : Note<
-  "jump enters a statement expression">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;

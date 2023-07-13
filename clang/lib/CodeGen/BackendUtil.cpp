@@ -284,6 +284,10 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
     TLII->addVectorizableFunctionsFromVecLib(
         TargetLibraryInfoImpl::DarwinLibSystemM, TargetTriple);
     break;
+  case CodeGenOptions::ArmPL:
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::ArmPL,
+                                             TargetTriple);
+    break;
   default:
     break;
   }

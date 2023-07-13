@@ -2,6 +2,71 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.reduction.recipe @reduction_add_z32 : !fir.complex<4> reduction_operator <add> init {
+! CHECK: ^bb0(%{{.*}}: !fir.complex<4>):
+! CHECK:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK:   %[[UNDEF:.*]] = fir.undefined !fir.complex<4>
+! CHECK:   %[[UNDEF1:.*]] = fir.insert_value %[[UNDEF]], %[[CST]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:   %[[UNDEF2:.*]] = fir.insert_value %[[UNDEF1]], %[[CST]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:   acc.yield %[[UNDEF2]] : !fir.complex<4>
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.complex<4>, %[[ARG1:.*]]: !fir.complex<4>):
+! CHECK:   %[[COMBINED:.*]] = fir.addc %[[ARG0]], %[[ARG1]] : !fir.complex<4> 
+! CHECK:   acc.yield %[[COMBINED]] : !fir.complex<4>
+! CHECK: }
+
+! CHECK-LABEL: acc.reduction.recipe @reduction_neqv_l32 : !fir.logical<4> reduction_operator <neqv> init {
+! CHECK: ^bb0(%{{.*}}: !fir.logical<4>):
+! CHECK:   %[[CST:.*]] = arith.constant false
+! CHECK:   acc.yield %[[CST]] : i1
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.logical<4>, %[[ARG1:.*]]: !fir.logical<4>):
+! CHECK:   %[[V1:.*]] = fir.convert %[[ARG0]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[V2:.*]] = fir.convert %[[ARG1]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[NEQV:.*]] = arith.cmpi ne, %[[V1]], %[[V2]] : i1
+! CHECK:   %[[CONV:.*]] = fir.convert %[[NEQV]] : (i1) -> !fir.logical<4>
+! CHECK:   acc.yield %[[CONV]] : !fir.logical<4>
+! CHECK: }
+
+! CHECK-LABEL: acc.reduction.recipe @reduction_eqv_l32 : !fir.logical<4> reduction_operator <eqv> init {
+! CHECK: ^bb0(%{{.*}}: !fir.logical<4>):
+! CHECK:   %[[CST:.*]] = arith.constant true
+! CHECK:   acc.yield %[[CST]] : i1
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.logical<4>, %[[ARG1:.*]]: !fir.logical<4>):
+! CHECK:   %[[V1:.*]] = fir.convert %[[ARG0]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[V2:.*]] = fir.convert %[[ARG1]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[EQV:.*]] = arith.cmpi eq, %[[V1]], %[[V2]] : i1
+! CHECK:   %[[CONV:.*]] = fir.convert %[[EQV]] : (i1) -> !fir.logical<4>
+! CHECK:   acc.yield %[[CONV]] : !fir.logical<4>
+! CHECK: }
+
+! CHECK-LABEL: acc.reduction.recipe @reduction_lor_l32 : !fir.logical<4> reduction_operator <lor> init {
+! CHECK: ^bb0(%{{.*}}: !fir.logical<4>):
+! CHECK:   %[[CST:.*]] = arith.constant false
+! CHECK:   acc.yield %[[CST]] : i1
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.logical<4>, %[[ARG1:.*]]: !fir.logical<4>):
+! CHECK:   %[[V1:.*]] = fir.convert %[[ARG0]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[V2:.*]] = fir.convert %[[ARG1]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[AND:.*]] = arith.ori %[[V1]], %[[V2]] : i1
+! CHECK:   %[[CONV:.*]] = fir.convert %[[AND]] : (i1) -> !fir.logical<4>
+! CHECK:   acc.yield %[[CONV]] : !fir.logical<4>
+! CHECK: }
+
+! CHECK-LABEL: acc.reduction.recipe @reduction_land_l32 : !fir.logical<4> reduction_operator <land> init {
+! CHECK: ^bb0(%{{.*}}: !fir.logical<4>):
+! CHECK:   %[[CST:.*]] = arith.constant true
+! CHECK:   acc.yield %[[CST]] : i1
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.logical<4>, %[[ARG1:.*]]: !fir.logical<4>):
+! CHECK:   %[[V1:.*]] = fir.convert %[[ARG0]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[V2:.*]] = fir.convert %[[ARG1]] : (!fir.logical<4>) -> i1
+! CHECK:   %[[AND:.*]] = arith.andi %[[V1]], %[[V2]] : i1
+! CHECK:   %[[CONV:.*]] = fir.convert %[[AND]] : (i1) -> !fir.logical<4>
+! CHECK:   acc.yield %[[CONV]] : !fir.logical<4>
+! CHECK: }
+
 ! CHECK-LABEL: acc.reduction.recipe @reduction_xor_i32 : i32 reduction_operator <xor> init {
 ! CHECK: ^bb0(%{{.*}}: i32):
 ! CHECK:   %[[CST:.*]] = arith.constant 0 : i32
@@ -637,3 +702,53 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_ieor()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<i32>) -> !fir.ref<i32> {name = "i"}
 ! CHECK: acc.parallel reduction(@reduction_xor_i32 -> %[[RED]] : !fir.ref<i32>)
+
+subroutine acc_reduction_and()
+  logical :: l
+  !$acc parallel reduction(.and.:l)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_and()
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%0 : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: acc.parallel reduction(@reduction_land_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+
+subroutine acc_reduction_or()
+  logical :: l
+  !$acc parallel reduction(.or.:l)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_or()
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: acc.parallel reduction(@reduction_lor_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+
+subroutine acc_reduction_eqv()
+  logical :: l
+  !$acc parallel reduction(.eqv.:l)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_eqv()
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: acc.parallel reduction(@reduction_eqv_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+
+subroutine acc_reduction_neqv()
+  logical :: l
+  !$acc parallel reduction(.neqv.:l)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_neqv()
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>> {name = "l"}
+! CHECK: acc.parallel reduction(@reduction_neqv_l32 -> %[[RED]] : !fir.ref<!fir.logical<4>>)
+
+subroutine acc_reduction_add_cmplx()
+  complex :: c
+  !$acc parallel reduction(+:c)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_cmplx()
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>> {name = "c"}
+! CHECK: acc.parallel reduction(@reduction_add_z32 -> %[[RED]] : !fir.ref<!fir.complex<4>>)

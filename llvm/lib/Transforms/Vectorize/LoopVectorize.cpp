@@ -2458,7 +2458,7 @@ static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
     return CreateAdd(StartValue, Offset);
   }
   case InductionDescriptor::IK_PtrInduction: {
-    return B.CreateGEP(ID.getElementType(), StartValue, CreateMul(Index, Step));
+    return B.CreateGEP(B.getInt8Ty(), StartValue, CreateMul(Index, Step));
   }
   case InductionDescriptor::IK_FpInduction: {
     assert(!isa<VectorType>(Index->getType()) &&
@@ -9473,7 +9473,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   Value *NumUnrolledElems =
       State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, State.UF));
   Value *InductionGEP = GetElementPtrInst::Create(
-      IndDesc.getElementType(), NewPointerPhi,
+      State.Builder.getInt8Ty(), NewPointerPhi,
       State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
       InductionLoc);
   // Add induction update using an incorrect block temporarily. The phi node
@@ -9499,7 +9499,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
     assert(ScalarStepValue == State.get(getOperand(1), VPIteration(Part, 0)) &&
            "scalar step must be the same across all parts");
     Value *GEP = State.Builder.CreateGEP(
-        IndDesc.getElementType(), NewPointerPhi,
+        State.Builder.getInt8Ty(), NewPointerPhi,
         State.Builder.CreateMul(
             StartOffset,
             State.Builder.CreateVectorSplat(State.VF, ScalarStepValue),

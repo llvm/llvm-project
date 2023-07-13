@@ -73,6 +73,46 @@ static constexpr IntrinsicHandler ppcHandlers[]{
          &PI::genVecAddAndMulSubXor<VecOp::Mul>),
      {{{"arg1", asValue}, {"arg2", asValue}}},
      /*isElemental=*/true},
+    {"__ppc_vec_sl",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecShift<VecOp::Sl>),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_sld",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecShift<VecOp::Sld>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_sldw",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecShift<VecOp::Sldw>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_sll",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecShift<VecOp::Sll>),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_slo",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecShift<VecOp::Slo>),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_sr",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecShift<VecOp::Sr>),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_srl",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecShift<VecOp::Srl>),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_sro",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecShift<VecOp::Sro>),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
     {"__ppc_vec_sub",
      static_cast<IntrinsicLibrary::ExtendedGenerator>(
          &PI::genVecAddAndMulSubXor<VecOp::Sub>),
@@ -639,6 +679,136 @@ PPCIntrinsicLibrary::genVecCmp(mlir::Type resultType,
     llvm_unreachable("invalid vector type");
 
   return res;
+}
+
+// VEC_SL, VEC_SLD, VEC_SLDW, VEC_SLL, VEC_SLO, VEC_SR, VEC_SRL, VEC_SRO
+template <VecOp vop>
+fir::ExtendedValue
+PPCIntrinsicLibrary::genVecShift(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  auto context{builder.getContext()};
+  auto argBases{getBasesForArgs(args)};
+  auto argTypes{getTypesForArgs(argBases)};
+
+  llvm::SmallVector<VecTypeInfo, 2> vecTyInfoArgs;
+  vecTyInfoArgs.push_back(getVecTypeFromFir(argBases[0]));
+  vecTyInfoArgs.push_back(getVecTypeFromFir(argBases[1]));
+
+  // Convert the first two arguments to MLIR vectors
+  llvm::SmallVector<mlir::Type, 2> mlirTyArgs;
+  mlirTyArgs.push_back(vecTyInfoArgs[0].toMlirVectorType(context));
+  mlirTyArgs.push_back(vecTyInfoArgs[1].toMlirVectorType(context));
+
+  llvm::SmallVector<mlir::Value, 2> mlirVecArgs;
+  mlirVecArgs.push_back(builder.createConvert(loc, mlirTyArgs[0], argBases[0]));
+  mlirVecArgs.push_back(builder.createConvert(loc, mlirTyArgs[1], argBases[1]));
+
+  mlir::Value shftRes{nullptr};
+
+  if (vop == VecOp::Sl || vop == VecOp::Sr) {
+    assert(args.size() == 2);
+    // Construct the mask
+    auto width{
+        mlir::dyn_cast<mlir::IntegerType>(vecTyInfoArgs[1].eleTy).getWidth()};
+    auto vecVal{builder.createIntegerConstant(
+        loc, getConvertedElementType(context, vecTyInfoArgs[0].eleTy), width)};
+    auto mask{
+        builder.create<mlir::vector::BroadcastOp>(loc, mlirTyArgs[1], vecVal)};
+    auto shft{builder.create<mlir::arith::RemUIOp>(loc, mlirVecArgs[1], mask)};
+
+    mlir::Value res{nullptr};
+    if (vop == VecOp::Sr)
+      res = builder.create<mlir::arith::ShRUIOp>(loc, mlirVecArgs[0], shft);
+    else if (vop == VecOp::Sl)
+      res = builder.create<mlir::arith::ShLIOp>(loc, mlirVecArgs[0], shft);
+
+    shftRes = builder.createConvert(loc, argTypes[0], res);
+  } else if (vop == VecOp::Sll || vop == VecOp::Slo || vop == VecOp::Srl ||
+             vop == VecOp::Sro) {
+    assert(args.size() == 2);
+
+    // Bitcast to vector<4xi32>
+    auto bcVecTy{mlir::VectorType::get(4, builder.getIntegerType(32))};
+    if (mlirTyArgs[0] != bcVecTy)
+      mlirVecArgs[0] =
+          builder.create<mlir::vector::BitCastOp>(loc, bcVecTy, mlirVecArgs[0]);
+    if (mlirTyArgs[1] != bcVecTy)
+      mlirVecArgs[1] =
+          builder.create<mlir::vector::BitCastOp>(loc, bcVecTy, mlirVecArgs[1]);
+
+    llvm::StringRef funcName;
+    switch (vop) {
+    case VecOp::Srl:
+      funcName = "llvm.ppc.altivec.vsr";
+      break;
+    case VecOp::Sro:
+      funcName = "llvm.ppc.altivec.vsro";
+      break;
+    case VecOp::Sll:
+      funcName = "llvm.ppc.altivec.vsl";
+      break;
+    case VecOp::Slo:
+      funcName = "llvm.ppc.altivec.vslo";
+      break;
+    default:
+      llvm_unreachable("unknown vector shift operation");
+    }
+    auto funcTy{genFuncType<Ty::IntegerVector<4>, Ty::IntegerVector<4>,
+                            Ty::IntegerVector<4>>(context, builder)};
+    mlir::func::FuncOp funcOp{builder.addNamedFunction(loc, funcName, funcTy)};
+    auto callOp{builder.create<fir::CallOp>(loc, funcOp, mlirVecArgs)};
+
+    // If the result vector type is different from the original type, need
+    // to convert to mlir vector, bitcast and then convert back to fir vector.
+    if (callOp.getResult(0).getType() != argTypes[0]) {
+      auto res = builder.createConvert(loc, bcVecTy, callOp.getResult(0));
+      res = builder.create<mlir::vector::BitCastOp>(loc, mlirTyArgs[0], res);
+      shftRes = builder.createConvert(loc, argTypes[0], res);
+    } else {
+      shftRes = callOp.getResult(0);
+    }
+  } else if (vop == VecOp::Sld || vop == VecOp::Sldw) {
+    assert(args.size() == 3);
+    auto constIntOp =
+        mlir::dyn_cast<mlir::arith::ConstantOp>(argBases[2].getDefiningOp())
+            .getValue()
+            .dyn_cast_or_null<mlir::IntegerAttr>();
+    assert(constIntOp && "expected integer constant argument");
+
+    // Bitcast to vector<16xi8>
+    auto vi8Ty{mlir::VectorType::get(16, builder.getIntegerType(8))};
+    if (mlirTyArgs[0] != vi8Ty) {
+      mlirVecArgs[0] =
+          builder.create<mlir::LLVM::BitcastOp>(loc, vi8Ty, mlirVecArgs[0])
+              .getResult();
+      mlirVecArgs[1] =
+          builder.create<mlir::LLVM::BitcastOp>(loc, vi8Ty, mlirVecArgs[1])
+              .getResult();
+    }
+
+    // Construct the mask for shuffling
+    auto shiftVal{constIntOp.getInt()};
+    if (vop == VecOp::Sldw)
+      shiftVal = shiftVal << 2;
+    shiftVal &= 0xF;
+    llvm::SmallVector<int64_t, 16> mask;
+    for (int i = 16; i < 32; ++i)
+      mask.push_back(i - shiftVal);
+
+    // Shuffle with mask
+    shftRes = builder.create<mlir::vector::ShuffleOp>(loc, mlirVecArgs[1],
+                                                      mlirVecArgs[0], mask);
+
+    // Bitcast to the original type
+    if (shftRes.getType() != mlirTyArgs[0])
+      shftRes =
+          builder.create<mlir::LLVM::BitcastOp>(loc, mlirTyArgs[0], shftRes);
+
+    return builder.createConvert(loc, resultType, shftRes);
+  } else
+    llvm_unreachable("Invalid vector operation for generator");
+
+  return shftRes;
 }
 
 } // namespace fir

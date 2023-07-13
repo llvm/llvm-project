@@ -692,6 +692,10 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 
   if (IsOSAIX) {
+    if (!ToolChain.useIntegratedAs())
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "-no-integrated-as=1"));
+
     // On AIX, clang assumes strict-dwarf is true if any debug option is
     // specified, unless it is told explicitly not to assume so.
     Arg *A = Args.getLastArg(options::OPT_g_Group);

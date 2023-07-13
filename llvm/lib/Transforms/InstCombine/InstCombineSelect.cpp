@@ -98,7 +98,8 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   // +0.0 compares equal to -0.0, and so it does not behave as required for this
   // transform. Bail out if we can not exclude that possibility.
   if (isa<FPMathOperator>(BO))
-    if (!BO->hasNoSignedZeros() && !CannotBeNegativeZero(Y, &TLI))
+    if (!BO->hasNoSignedZeros() &&
+        !cannotBeNegativeZero(Y, IC.getDataLayout(), &TLI))
       return nullptr;
 
   // BO = binop Y, X
@@ -607,6 +608,44 @@ static Instruction *foldSelectICmpAndAnd(Type *SelType, const ICmpInst *Cmp,
   Value *MaskedX = Builder.CreateAnd(X, FullMask);
   Value *ICmpNeZero = Builder.CreateIsNotNull(MaskedX);
   return new ZExtInst(ICmpNeZero, SelType);
+}
+
+/// We want to turn:
+///   (select (icmp eq (and X, C1), 0), 0, (shl [nsw/nuw] X, C2));
+///   iff C1 is a mask and the number of its leading zeros is equal to C2
+/// into:
+///   shl X, C2
+static Value *foldSelectICmpAndZeroShl(const ICmpInst *Cmp, Value *TVal,
+                                       Value *FVal,
+                                       InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate Pred;
+  Value *AndVal;
+  if (!match(Cmp, m_ICmp(Pred, m_Value(AndVal), m_Zero())))
+    return nullptr;
+
+  if (Pred == ICmpInst::ICMP_NE) {
+    Pred = ICmpInst::ICMP_EQ;
+    std::swap(TVal, FVal);
+  }
+
+  Value *X;
+  const APInt *C2, *C1;
+  if (Pred != ICmpInst::ICMP_EQ ||
+      !match(AndVal, m_And(m_Value(X), m_APInt(C1))) ||
+      !match(TVal, m_Zero()) || !match(FVal, m_Shl(m_Specific(X), m_APInt(C2))))
+    return nullptr;
+
+  if (!C1->isMask() ||
+      C1->countLeadingZeros() != static_cast<unsigned>(C2->getZExtValue()))
+    return nullptr;
+
+  auto *FI = dyn_cast<Instruction>(FVal);
+  if (!FI)
+    return nullptr;
+
+  FI->setHasNoSignedWrap(false);
+  FI->setHasNoUnsignedWrap(false);
+  return FVal;
 }
 
 /// We want to turn:
@@ -1742,6 +1781,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Instruction *V =
           foldSelectICmpAndAnd(SI.getType(), ICI, TrueVal, FalseVal, Builder))
     return V;
+
+  if (Value *V = foldSelectICmpAndZeroShl(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
 
   if (Instruction *V = foldSelectCtlzToCttz(ICI, TrueVal, FalseVal, Builder))
     return V;

@@ -169,7 +169,8 @@ struct __select_backend<std::execution::unsequenced_policy> {
 };
 #  endif
 
-#  if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL) || defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD)
+#  if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL) || defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD) ||                          \
+      defined(_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH)
 template <>
 struct __select_backend<std::execution::parallel_policy> {
   using type = __cpu_backend_tag;

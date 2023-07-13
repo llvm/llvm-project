@@ -500,6 +500,10 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ThreadedCombined) {
         if (P)
           V.push_back(std::make_pair(P, Size));
       }
+
+      // Try to interleave pushBlocks(), popBatch() and releaseToOS().
+      Allocator->releaseToOS(scudo::ReleaseToOS::Force);
+
       while (!V.empty()) {
         auto Pair = V.back();
         Allocator->deallocate(Pair.first, Origin, Pair.second);

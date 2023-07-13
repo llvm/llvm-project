@@ -129,6 +129,7 @@ def NoP9Vector : Predicate<"!Subtarget->hasP9Vector()">;
 def HasP9Vector : Predicate<"Subtarget->hasP9Vector()">;
 def NoP9Altivec : Predicate<"!Subtarget->hasP9Altivec()">;
 def NoP10Vector: Predicate<"!Subtarget->hasP10Vector()">;
+def HasP10Vector: Predicate<"Subtarget->hasP10Vector()">;
 
 def PPCldsplatAlign16 : PatFrag<(ops node:$ptr), (PPCldsplat node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getAlign() >= Align(16) &&

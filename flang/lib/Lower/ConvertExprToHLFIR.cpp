@@ -775,11 +775,6 @@ private:
       llvm::ArrayRef<mlir::Value> resultExtents) {
     fir::FirOpBuilder &builder = getBuilder();
     mlir::Value shape = builder.genShape(loc, resultExtents);
-    // For polymorphic entities, it will be needed to add a mold on the
-    // hlfir.elemental_addr/hlfir.elemental so that we are able to create
-    // temporary storage for it.
-    if (partInfo.base && partInfo.base->isPolymorphic())
-      TODO(loc, "vector subscripted polymorphic entity in HLFIR");
     // The type parameters to be added on the hlfir.elemental_addr are the ones
     // of the whole designator (not the ones of the vector subscripted part).
     // These are not yet known and will be added when finalizing the designator
@@ -827,6 +822,15 @@ private:
                              hlfir::EntityWithAttributes elementAddr) {
     fir::FirOpBuilder &builder = getBuilder();
     builder.setInsertionPointToEnd(&elementalAddrOp.getBody().front());
+    // For polymorphic entities, it will be needed to add a mold on the
+    // hlfir.elemental so that we are able to create temporary storage
+    // for it using the dynamic type. It seems that a reference to the mold
+    // entity can be created by evaluating the hlfir.elemental_addr
+    // for a single index. The evaluation should be legal as long as
+    // the hlfir.elemental_addr has no side effects, otherwise,
+    // it is not clear how to get the mold reference.
+    if (elementAddr.isPolymorphic())
+      TODO(loc, "vector subscripted polymorphic entity in HLFIR");
     builder.create<hlfir::YieldOp>(loc, elementAddr);
     builder.setInsertionPointAfter(elementalAddrOp);
   }

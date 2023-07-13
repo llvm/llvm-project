@@ -244,7 +244,7 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
 
 bool LTOCodeGenerator::useAIXSystemAssembler() {
   const auto &Triple = TargetMach->getTargetTriple();
-  return Triple.isOSAIX();
+  return Triple.isOSAIX() && Config.Options.DisableIntegratedAS;
 }
 
 bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
