@@ -544,15 +544,11 @@ public:
 
   /// Record a fact that must be true if this point in the program is reached.
   void addToFlowCondition(const Formula &);
-  /// Deprecated: Use Formula version instead.
-  void addToFlowCondition(BoolValue &Val);
 
   /// Returns true if the formula is always true when this point is reached.
   /// Returns false if the formula may be false, or if the flow condition isn't
   /// sufficiently precise to prove that it is true.
   bool flowConditionImplies(const Formula &) const;
-  /// Deprecated: Use Formula version instead.
-  bool flowConditionImplies(BoolValue &Val) const;
 
   /// Returns the `DeclContext` of the block being analysed, if any. Otherwise,
   /// returns null.
