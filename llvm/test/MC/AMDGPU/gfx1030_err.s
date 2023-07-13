@@ -207,3 +207,9 @@ s_waitcnt_depctr depctr_hold_cnt(0) depctr_hold_cnt(0)
 
 s_waitcnt_depctr depctr_sa_sdst(0) depctr_sa_sdst(0)
 // GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: duplicate counter name depctr_sa_sdst
+
+image_bvh_intersect_ray v[4:7], v[9:16], s[4:7] noa16
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: image address size does not match a16
+
+image_bvh_intersect_ray v[39:42], [v50, v46, v23, v17, v16, v15, v21, v20], s[12:15] noa16
+// GFX10: :[[@LINE-1]]:{{[0-9]+}}: error: image address size does not match a16
