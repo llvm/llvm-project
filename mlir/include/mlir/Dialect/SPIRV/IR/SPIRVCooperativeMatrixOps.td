@@ -7,11 +7,61 @@
 //===----------------------------------------------------------------------===//
 //
 // This is the op definition spec of cooperative matrix multiply extension ops.
+// We support both cooperative matrix extensions:
+//  - SPV_NV_cooperative_matrix
+//  - SPV_KHR_cooperative_matrix
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_DIALECT_SPIRV_IR_COOPERATIVE_MATRIX_OPS
 #define MLIR_DIALECT_SPIRV_IR_COOPERATIVE_MATRIX_OPS
+
+//===----------------------------------------------------------------------===//
+// SPV_KHR_cooperative_matrix extension ops.
+//===----------------------------------------------------------------------===//
+
+// -----
+
+def SPIRV_KHRCooperativeMatrixLengthOp :
+      SPIRV_KhrVendorOp<"CooperativeMatrixLength", [Pure]> {
+  let summary = "Queries the number of cooperative matrix components";
+
+  let description = [{
+    Number of components of a cooperative matrix type accessible to each
+    invocation when treated as a composite.
+
+    The type attribute must be a cooperative matrix type.
+
+    ``` {.ebnf}
+    cooperative-matrix-length-op ::= ssa-id `=` `spirv.KHR.CooperativeMatrixLength
+                                    ` : ` cooperative-matrix-type
+    ```
+
+    #### Example:
+
+    ```
+    %0 = spirv.KHR.CooperativeMatrixLength :
+           !spirv.coopmatrix<8x16xi32, Subgroup, MatrixA>
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict `:` $cooperative_matrix_type";
+
+  let availability = [
+    MinVersion<SPIRV_V_1_6>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_KHR_cooperative_matrix]>,
+    Capability<[SPIRV_C_CooperativeMatrixKHR]>
+  ];
+
+  let arguments = (ins
+    TypeAttr:$cooperative_matrix_type
+  );
+
+  let results = (outs
+    SPIRV_Int32:$result
+  );
+}
 
 //===----------------------------------------------------------------------===//
 // SPV_NV_cooperative_matrix extension ops.
@@ -59,7 +109,6 @@ def SPIRV_NVCooperativeMatrixLengthOp : SPIRV_NvVendorOp<"CooperativeMatrixLengt
   let results = (outs
     SPIRV_Int32:$result
   );
-  let hasVerifier = 0;
 }
 
 // -----

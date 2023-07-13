@@ -130,6 +130,19 @@ func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 func.func private @sparse_slice(tensor<?x?xf64, #CSR_SLICE>)
 
 
+// -----
+
+// TODO: It is probably better to use [dense, dense, 2:4] (see NV_24 defined using new syntax
+// below) to encode a 2D matrix, but it would require dim2lvl mapping which is not ready yet.
+// So we take the simple path for now.
+#NV_24= #sparse_tensor.encoding<{
+  lvlTypes = [ "dense", "compressed24" ],
+}>
+
+// CHECK-LABEL: func private @sparse_2_out_of_4(
+// CHECK-SAME: tensor<?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "compressed24" ] }>>
+func.func private @sparse_2_out_of_4(tensor<?x?xf64, #NV_24>)
+
 ///////////////////////////////////////////////////////////////////////////////
 // Migration plan for new STEA surface syntax,
 // use the NEW_SYNTAX on selected examples
@@ -202,5 +215,23 @@ func.func private @foo(%arg0: tensor<?x?x?x?xf64, #BCSR_implicit>) {
 // CHECK-LABEL: func private @foo(
 // CHECK-SAME: tensor<?x?x?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "dense", "dense" ] }>>
 func.func private @foo(%arg0: tensor<?x?x?x?xf64, #BCSR_explicit>) {
+  return
+}
+
+// -----
+
+#NV_24 = #sparse_tensor.encoding<{
+  NEW_SYNTAX =
+  ( i, j ) ->
+  ( i            : dense,
+    j floordiv 4 : dense,
+    j mod 4      : compressed24
+  )
+}>
+
+//
+// CHECK-LABEL: func private @foo_2_out_of_4(
+// CHECK-SAME: tensor<?x?x?xf64, #sparse_tensor.encoding<{ lvlTypes = [ "dense", "dense", "compressed24" ] }>>
+func.func private @foo_2_out_of_4(%arg0: tensor<?x?x?xf64, #NV_24>) {
   return
 }

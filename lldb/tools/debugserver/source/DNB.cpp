@@ -521,7 +521,9 @@ nub_process_t DNBProcessAttach(nub_process_t attach_pid,
 
     if (set_events == 0) {
       if (err_str && err_len > 0)
-        snprintf(err_str, err_len, "operation timed out");
+        snprintf(err_str, err_len,
+                 "attached to process, but could not pause execution; attach "
+                 "failed");
       pid = INVALID_NUB_PROCESS;
     } else {
       if (set_events & (eEventProcessRunningStateChanged |
@@ -1847,4 +1849,12 @@ bool DNBGetAddressingBits(uint32_t &addressing_bits) {
   addressing_bits = g_addressing_bits;
 
   return addressing_bits > 0;
+}
+
+nub_process_t DNBGetParentProcessID(nub_process_t child_pid) {
+  return MachProcess::GetParentProcessID(child_pid);
+}
+
+bool DNBProcessIsBeingDebugged(nub_process_t pid) {
+  return MachProcess::ProcessIsBeingDebugged(pid);
 }
