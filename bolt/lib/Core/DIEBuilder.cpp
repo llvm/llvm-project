@@ -290,6 +290,10 @@ DIE *DIEBuilder::constructDIEFast(DWARFDie &DDie, DWARFUnit &U,
   DIEInfo &DieInfo = getDIEInfo(UnitId, *Idx);
 
   uint64_t Offset = DDie.getOffset();
+  // Just for making debugging easier.
+  // DIE dump is not very useful.
+  // It's nice to know original offset from which this DIE was constructed.
+  DieInfo.Die->setOffset(Offset);
   uint64_t NextOffset = Offset;
   DWARFDataExtractor Data = U.getDebugInfoExtractor();
   DWARFDebugInfoEntry DDIEntry;
