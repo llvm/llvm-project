@@ -47,8 +47,10 @@ std::optional<vector::CombiningKind> getCombinerOpKind(Operation *combinerOp);
 //===----------------------------------------------------------------------===//
 
 struct BufferizeToAllocationOptions {
-  enum class MemcpyOp { MemrefTensorStore = 0, MemrefCopy = 1, LinalgCopy = 2 };
+  enum class AllocOp { MemrefAlloc = 0, MemrefAlloca = 1 };
+  AllocOp allocOp = AllocOp::MemrefAlloc;
 
+  enum class MemcpyOp { MemrefTensorStore = 0, MemrefCopy = 1, LinalgCopy = 2 };
   MemcpyOp memcpyOp = MemcpyOp::MemrefTensorStore;
 };
 
