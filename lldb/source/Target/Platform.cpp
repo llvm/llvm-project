@@ -1971,6 +1971,14 @@ Args Platform::GetExtraStartupCommands() {
   return {};
 }
 
+void Platform::SetLocateModuleCallback(LocateModuleCallback callback) {
+  m_locate_module_callback = callback;
+}
+
+Platform::LocateModuleCallback Platform::GetLocateModuleCallback() const {
+  return m_locate_module_callback;
+}
+
 PlatformSP PlatformList::GetOrCreate(llvm::StringRef name) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   for (const PlatformSP &platform_sp : m_platforms) {
