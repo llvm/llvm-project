@@ -7,21 +7,18 @@
 ; <rdar://problem/12702735> [ARM64][coalescer] need better register
 ; coalescing for simple unit tests.
 
-; FIXME: This regressed after enabling opaque pointers.
 define i32 @test_inttoptr() nounwind {
 ; CHECK-LABEL: test_inttoptr:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    mov x8, #0 // =0x0
-; CHECK-NEXT:    mov w9, #1288 // =0x508
-; CHECK-NEXT:    mov x10, #4294967296 // =0x100000000
-; CHECK-NEXT:    mov x11, #6442450944 // =0x180000000
+; CHECK-NEXT:    mov w8, #1288 // =0x508
+; CHECK-NEXT:    mov x9, #4294967296 // =0x100000000
+; CHECK-NEXT:    mov x10, #6442450944 // =0x180000000
 ; CHECK-NEXT:  .LBB0_1: // %while.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x12, [x8, x10]
-; CHECK-NEXT:    str x12, [x8, x11]
-; CHECK-NEXT:    add x8, x8, #8
-; CHECK-NEXT:    subs x9, x9, #8
+; CHECK-NEXT:    ldr x11, [x9], #8
+; CHECK-NEXT:    str x11, [x10], #8
+; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    b.pl .LBB0_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    mov x8, #6442450944 // =0x180000000
@@ -55,18 +52,16 @@ while.end:                                        ; preds = %while.body
 define ptr @test_globals() nounwind {
 ; CHECK-LABEL: test_globals:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #0 // =0x0
-; CHECK-NEXT:    mov w9, #1288 // =0x508
-; CHECK-NEXT:    adrp x10, g2
-; CHECK-NEXT:    add x10, x10, :lo12:g2
-; CHECK-NEXT:    adrp x11, g1
-; CHECK-NEXT:    add x11, x11, :lo12:g1
+; CHECK-NEXT:    mov w8, #1288 // =0x508
+; CHECK-NEXT:    adrp x9, g2
+; CHECK-NEXT:    add x9, x9, :lo12:g2
+; CHECK-NEXT:    adrp x10, g1
+; CHECK-NEXT:    add x10, x10, :lo12:g1
 ; CHECK-NEXT:  .LBB1_1: // %while.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x12, [x10, x8]
-; CHECK-NEXT:    str x12, [x11, x8]
-; CHECK-NEXT:    add x8, x8, #8
-; CHECK-NEXT:    subs x9, x9, #8
+; CHECK-NEXT:    ldr x11, [x9], #8
+; CHECK-NEXT:    str x11, [x10], #8
+; CHECK-NEXT:    subs x8, x8, #8
 ; CHECK-NEXT:    b.pl .LBB1_1
 ; CHECK-NEXT:  // %bb.2: // %while.end
 ; CHECK-NEXT:    adrp x0, g1
