@@ -528,8 +528,6 @@ mgpuCreateCuSparseLtDnMat(void *dh, intptr_t rows, intptr_t cols, void *values,
                           int32_t dtp, CUstream /*stream*/) {
   assert(cusparseLt_initiated && "client did not call mgpuCreateSparseLtEnv()");
   auto dnmat_handle = reinterpret_cast<cusparseLtDnMatHandleAndData *>(dh);
-  // CusparseLt expects the descriptors to be zero-initialized.
-  memset(dnmat_handle, 0, sizeof(cusparseLtDnMatHandleAndData));
   dnmat_handle->values = values;
   auto dTp = static_cast<cudaDataType_t>(dtp);
   // Assume row-major when deciding lda.
@@ -550,8 +548,6 @@ mgpuCusparseLtCreate2To4SpMat(void *sh, intptr_t rows, intptr_t cols,
                               void *values, int32_t dtp, CUstream /*stream*/) {
   assert(cusparseLt_initiated && "client did not call mgpuCreateSparseLtEnv()");
   auto spmat_handle = reinterpret_cast<cusparseLtSpMatHandleAndData *>(sh);
-  // CusparseLt expects the descriptors to be zero-initialized.
-  memset(spmat_handle, 0, sizeof(cusparseLtSpMatHandleAndData));
   spmat_handle->values = values;
   auto dTp = static_cast<cudaDataType_t>(dtp);
   // Assume row-major when deciding lda.
