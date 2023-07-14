@@ -24,13 +24,13 @@ cir.func @s0() {
 // CHECK-NEXT: case (default)  {
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: },
-// CHECK-NEXT: case (equal, #cir.int<3> : !s32i)  {
+// CHECK-NEXT: case (equal, 3)  {
 // CHECK-NEXT:   cir.yield fallthrough
 // CHECK-NEXT: },
-// CHECK-NEXT: case (anyof, [#cir.int<6>, #cir.int<7>, #cir.int<8>] : !s32i) {
+// CHECK-NEXT: case (anyof, [6, 7, 8] : !s32i) {
 // CHECK-NEXT:   cir.yield break
 // CHECK-NEXT: },
-// CHECK-NEXT: case (equal, #cir.int<5> : !s32i)  {
+// CHECK-NEXT: case (equal, 5)  {
 // CHECK-NEXT:   cir.yield
 // CHECK-NEXT: }
 // CHECK-NEXT: ]

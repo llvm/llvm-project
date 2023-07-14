@@ -102,14 +102,14 @@ module  {
   }
 
 // CHECK: cir.switch (%4 : !s32i) [
-// CHECK-NEXT:   case (equal, #cir.int<0> : !s32i)  {
+// CHECK-NEXT:   case (equal, 0)  {
 // CHECK-NEXT:     %5 = cir.load %2 : cir.ptr <!s32i>, !s32i
 // CHECK-NEXT:     %6 = cir.const(#cir.int<1> : !s32i) : !s32i
 // CHECK-NEXT:     %7 = cir.binop(add, %5, %6) : !s32i
 // CHECK-NEXT:     cir.store %7, %2 : !s32i, cir.ptr <!s32i>
 // CHECK-NEXT:     cir.return
 // CHECK-NEXT:   },
-// CHECK-NEXT:   case (equal, #cir.int<1> : !s32i)  {
+// CHECK-NEXT:   case (equal, 1)  {
 // CHECK-NEXT:     cir.scope {
 // CHECK-NEXT:       cir.scope {
 // CHECK-NEXT:         %5 = cir.load %1 : cir.ptr <!s32i>, !s32i
@@ -123,7 +123,7 @@ module  {
 // CHECK-NEXT:     }
 // CHECK-NEXT:     cir.yield fallthrough
 // CHECK-NEXT:   },
-// CHECK-NEXT:   case (equal, #cir.int<2> : !s32i)  {
+// CHECK-NEXT:   case (equal, 2)  {
 // CHECK-NEXT:     cir.scope {
 // CHECK-NEXT:       %5 = cir.alloca !s32i, cir.ptr <!s32i>, ["yolo", init] {alignment = 4 : i64}
 // CHECK-NEXT:       %6 = cir.load %2 : cir.ptr <!s32i>, !s32i
