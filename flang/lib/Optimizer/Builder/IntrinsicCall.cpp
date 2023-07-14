@@ -733,8 +733,9 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::FunctionType mathLibFuncType,
                              llvm::ArrayRef<mlir::Value> args) {
   mlir::Value result;
-  if (disableMlirComplex ||
-      (mathRuntimeVersion == preciseVersion && !mathLibFuncName.empty())) {
+  bool hasApproxFunc = mlir::arith::bitEnumContainsAny(
+      builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
+  if ((disableMlirComplex || !hasApproxFunc) && !mathLibFuncName.empty()) {
     result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
     LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
     return result;
@@ -1204,8 +1205,9 @@ searchMathOperation(fir::FirOpBuilder &builder, llvm::StringRef name,
   for (auto iter = range.first; iter != range.second && iter; ++iter) {
     const auto &impl = *iter;
     auto implType = impl.typeGenerator(builder.getContext(), builder);
-    if (funcType == implType)
+    if (funcType == implType) {
       return &impl; // exact match
+    }
 
     FunctionDistance distance(funcType, implType);
     if (distance.isSmallerThan(bestMatchDistance)) {

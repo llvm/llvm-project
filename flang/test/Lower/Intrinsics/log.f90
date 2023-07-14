@@ -1,9 +1,10 @@
-! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-FAST"
+! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
 ! RUN: bbc -emit-fir --math-runtime=precise -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
 ! RUN: bbc -emit-fir --disable-mlir-complex -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-FAST"
+! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
 ! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
 ! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics -mllvm --disable-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
+! RUN: %flang_fc1 -fapprox-func -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
 
 ! CHECK-LABEL: log_testr
 ! CHECK-SAME: (%[[AREF:.*]]: !fir.ref<f32> {{.*}}, %[[BREF:.*]]: !fir.ref<f32> {{.*}})
@@ -75,7 +76,8 @@ end subroutine
 ! CHECK: %[[RESULT64_OUTLINE:.*]] = math.log %[[ARG64_OUTLINE]] fastmath<contract> : f64
 ! CHECK: return %[[RESULT64_OUTLINE]] : f64
 
-! CMPLX-LABEL: private @fir.log.contract.z4.z4
+! CMPLX-FAST-LABEL: private @fir.log.contract_afn.z4.z4
+! CMPLX-PRECISE-LABEL: private @fir.log.contract.z4.z4
 ! CMPLX-SAME: (%[[ARG32_OUTLINE:.*]]: !fir.complex<4>) -> !fir.complex<4>
 ! CMPLX-FAST: %[[C:.*]] = fir.convert %[[ARG32_OUTLINE]] : (!fir.complex<4>) -> complex<f32>
 ! CMPLX-FAST: %[[E:.*]] = complex.log %[[C]] : complex<f32>
@@ -83,7 +85,8 @@ end subroutine
 ! CMPLX-PRECISE: %[[RESULT32_OUTLINE:.*]] = fir.call @clogf(%[[ARG32_OUTLINE]]) fastmath<contract> : (!fir.complex<4>) -> !fir.complex<4>
 ! CMPLX: return %[[RESULT32_OUTLINE]] : !fir.complex<4>
 
-! CMPLX-LABEL: private @fir.log.contract.z8.z8
+! CMPLX-FAST-LABEL: private @fir.log.contract_afn.z8.z8
+! CMPLX-PRECISE-LABEL: private @fir.log.contract.z8.z8
 ! CMPLX-SAME: (%[[ARG64_OUTLINE:.*]]: !fir.complex<8>) -> !fir.complex<8>
 ! CMPLX-FAST: %[[C:.*]] = fir.convert %[[ARG64_OUTLINE]] : (!fir.complex<8>) -> complex<f64>
 ! CMPLX-FAST: %[[E:.*]] = complex.log %[[C]] : complex<f64>
