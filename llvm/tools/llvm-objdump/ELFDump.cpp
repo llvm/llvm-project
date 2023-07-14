@@ -29,6 +29,7 @@ template <typename ELFT> class ELFDumper : public Dumper {
 public:
   ELFDumper(const ELFObjectFile<ELFT> &O) : Dumper(O), Obj(O) {}
   void printPrivateHeaders(bool MachOOnlyFirst) override;
+  void printDynamicRelocations() override;
 
 private:
   const ELFObjectFile<ELFT> &Obj;
@@ -309,6 +310,39 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
            << ((Phdr.p_flags & ELF::PF_W) ? "w" : "-")
            << ((Phdr.p_flags & ELF::PF_X) ? "x" : "-") << "\n";
   }
+}
+
+template <typename ELFT> void ELFDumper<ELFT>::printDynamicRelocations() {
+  if (!any_of(Obj.sections(), [](const ELFSectionRef Sec) {
+        return Sec.getType() == ELF::SHT_DYNAMIC;
+      })) {
+    reportError(Obj.getFileName(), "not a dynamic object");
+    return;
+  }
+
+  std::vector<SectionRef> DynRelSec =
+      cast<ObjectFile>(Obj).dynamic_relocation_sections();
+  if (DynRelSec.empty())
+    return;
+
+  outs() << "\nDYNAMIC RELOCATION RECORDS\n";
+  const uint32_t OffsetPadding = (Obj.getBytesInAddress() > 4 ? 16 : 8);
+  const uint32_t TypePadding = 24;
+  outs() << left_justify("OFFSET", OffsetPadding) << ' '
+         << left_justify("TYPE", TypePadding) << " VALUE\n";
+
+  StringRef Fmt = Obj.getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
+  for (const SectionRef &Section : DynRelSec)
+    for (const RelocationRef &Reloc : Section.relocations()) {
+      uint64_t Address = Reloc.getOffset();
+      SmallString<32> RelocName;
+      SmallString<32> ValueStr;
+      Reloc.getTypeName(RelocName);
+      if (Error E = getELFRelocationValueString(&Obj, Reloc, ValueStr))
+        reportError(std::move(E), Obj.getFileName());
+      outs() << format(Fmt.data(), Address) << ' '
+             << left_justify(RelocName, TypePadding) << ' ' << ValueStr << '\n';
+    }
 }
 
 template <class ELFT>
