@@ -211,10 +211,8 @@ Value *RandomIRBuilder::newSource(BasicBlock &BB, ArrayRef<Instruction *> Insts,
       IP = ++I->getIterator();
       assert(IP != BB.end() && "guaranteed by the findPointer");
     }
-    // For opaque pointers, pick the type independently.
-    Type *AccessTy = Ptr->getType()->isOpaquePointerTy()
-                         ? RS.getSelection()->getType()
-                         : Ptr->getType()->getNonOpaquePointerElementType();
+    // Pick the type independently.
+    Type *AccessTy = RS.getSelection()->getType();
     auto *NewLoad = new LoadInst(AccessTy, Ptr, "L", &*IP);
 
     // Only sample this load if it really matches the descriptor
