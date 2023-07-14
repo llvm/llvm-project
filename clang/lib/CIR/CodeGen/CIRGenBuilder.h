@@ -229,6 +229,33 @@ public:
   }
   bool isInt(mlir::Type i) { return i.isa<mlir::cir::IntType>(); }
 
+  mlir::FloatType getLongDouble80BitsTy() const {
+    return typeCache.LongDouble80BitsTy;
+  }
+
+  /// Get the proper floating point type for the given semantics.
+  mlir::FloatType getFloatTyForFormat(const llvm::fltSemantics &format,
+                                      bool useNativeHalf) const {
+    if (&format == &llvm::APFloat::IEEEhalf()) {
+      llvm_unreachable("IEEEhalf float format is NYI");
+    }
+
+    if (&format == &llvm::APFloat::BFloat())
+      llvm_unreachable("BFloat float format is NYI");
+    if (&format == &llvm::APFloat::IEEEsingle())
+      llvm_unreachable("IEEEsingle float format is NYI");
+    if (&format == &llvm::APFloat::IEEEdouble())
+      llvm_unreachable("IEEEdouble float format is NYI");
+    if (&format == &llvm::APFloat::IEEEquad())
+      llvm_unreachable("IEEEquad float format is NYI");
+    if (&format == &llvm::APFloat::PPCDoubleDouble())
+      llvm_unreachable("PPCDoubleDouble float format is NYI");
+    if (&format == &llvm::APFloat::x87DoubleExtended())
+      return getLongDouble80BitsTy();
+
+    llvm_unreachable("Unknown float format!");
+  }
+
   mlir::cir::BoolType getBoolTy() {
     return ::mlir::cir::BoolType::get(getContext());
   }

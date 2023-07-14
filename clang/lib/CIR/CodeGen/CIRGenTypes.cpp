@@ -461,6 +461,9 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
       ResultType = CGM.DoubleTy;
       break;
     case BuiltinType::LongDouble:
+      ResultType = Builder.getFloatTyForFormat(Context.getFloatTypeSemantics(T),
+                                               /*useNativeHalf=*/false);
+      break;
     case BuiltinType::Float128:
     case BuiltinType::Ibm128:
       // FIXME: look at Context.getFloatTypeSemantics(T) and getTypeForFormat

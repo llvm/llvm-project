@@ -14,6 +14,7 @@ unsigned short t5(unsigned short i) { return i; }
 
 float t6(float i) { return i; }
 double t7(double i) { return i; }
+long double t10(long double i) { return i; }
 
 void t8(void) {}
 
@@ -29,6 +30,7 @@ bool t9(bool b) { return b; }
 // CHECK: cir.func @t5(%arg0: !u16i loc({{.*}})) -> !u16i
 // CHECK: cir.func @t6(%arg0: f32 loc({{.*}})) -> f32
 // CHECK: cir.func @t7(%arg0: f64 loc({{.*}})) -> f64
+// CHECK: cir.func @t10(%arg0: f80 loc({{.*}})) -> f80
 // CHECK: cir.func @t8()
 
 // CHECK-CPP: cir.func @_Z2t0i(%arg0: !s32i loc({{.*}})) -> !s32i
@@ -39,5 +41,6 @@ bool t9(bool b) { return b; }
 // CHECK-CPP: cir.func @_Z2t5t(%arg0: !u16i loc({{.*}})) -> !u16i
 // CHECK-CPP: cir.func @_Z2t6f(%arg0: f32 loc({{.*}})) -> f32
 // CHECK-CPP: cir.func @_Z2t7d(%arg0: f64 loc({{.*}})) -> f64
+// CHECK-CPP: cir.func @{{.+}}t10{{.+}}(%arg0: f80 loc({{.*}})) -> f80
 // CHECK-CPP: cir.func @_Z2t8v()
 // CHECK-CPP: cir.func @_Z2t9b(%arg0: !cir.bool loc({{.*}})) -> !cir.bool
