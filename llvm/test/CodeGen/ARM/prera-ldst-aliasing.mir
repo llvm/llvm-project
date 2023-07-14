@@ -30,10 +30,8 @@ body:             |
     t2STRi12 killed %2, %0, 0, 14, $noreg :: (store (s32) into %ir.x)
     %3 : gpr = t2LDRi12 %1, 4, 14, $noreg :: (load (s32) from %ir.arrayidx2)
     t2STRi12 killed %3, %0, 4, 14, $noreg :: (store (s32) into %ir.arrayidx3)
-    ; CHECK: t2LDRi12
-    ; CHECK-NEXT: t2LDRi12
-    ; CHECK-NEXT: t2STRi12
-    ; CHECK-NEXT: t2STRi12
+    ; CHECK: t2LDRDi8
+    ; CHECK-NEXT: t2STRDi8
     tBX_RET 14, $noreg
 
 ...

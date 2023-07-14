@@ -49,7 +49,9 @@ class LocateModuleCallbackTestCase(TestBase):
 
         self.assertEqual(MODULE_TRIPLE, module_spec.GetTriple())
 
-        self.assertEqual(MODULE_PLATFORM_PATH, module_spec.GetFileSpec().fullpath)
+        self.assertEqual(
+            MODULE_PLATFORM_PATH, Path(module_spec.GetFileSpec().fullpath).as_posix()
+        )
 
     def check_module(self, module: lldb.SBModule, symbol_file: str, symbol_kind: str):
         self.assertTrue(module.IsValid())
@@ -61,16 +63,20 @@ class LocateModuleCallbackTestCase(TestBase):
 
         self.assertEqual(MODULE_RESOLVED_TRIPLE, module.GetTriple())
 
-        self.assertEqual(MODULE_PLATFORM_PATH, module.GetPlatformFileSpec().fullpath)
-
         self.assertEqual(
-            str(self.input_dir / MODULE_FILE),
-            module.GetFileSpec().fullpath,
+            MODULE_PLATFORM_PATH, Path(module.GetPlatformFileSpec().fullpath).as_posix()
         )
 
-        self.assertEqual(
-            str(self.input_dir / symbol_file),
-            module.GetSymbolFileSpec().fullpath,
+        self.assertTrue(
+            (self.input_dir / MODULE_FILE)
+            .resolve()
+            .samefile(Path(module.GetFileSpec().fullpath).resolve())
+        )
+
+        self.assertTrue(
+            (self.input_dir / symbol_file)
+            .resolve()
+            .samefile(Path(module.GetSymbolFileSpec().fullpath).resolve())
         )
 
         sc_list = module.FindFunctions(MODULE_FUNCTION, lldb.eSymbolTypeCode)

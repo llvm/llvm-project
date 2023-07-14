@@ -256,6 +256,22 @@ void Dumper::reportUniqueWarning(const Twine &Msg) {
     reportWarning(Msg, O.getFileName());
 }
 
+static Expected<std::unique_ptr<Dumper>> createDumper(const ObjectFile &Obj) {
+  if (const auto *O = dyn_cast<COFFObjectFile>(&Obj))
+    return createCOFFDumper(*O);
+  if (const auto *O = dyn_cast<ELFObjectFileBase>(&Obj))
+    return createELFDumper(*O);
+  if (const auto *O = dyn_cast<MachOObjectFile>(&Obj))
+    return createMachODumper(*O);
+  if (const auto *O = dyn_cast<WasmObjectFile>(&Obj))
+    return createWasmDumper(*O);
+  if (const auto *O = dyn_cast<XCOFFObjectFile>(&Obj))
+    return createXCOFFDumper(*O);
+
+  return createStringError(errc::invalid_argument,
+                           "unsupported object file format");
+}
+
 namespace {
 struct FilterResult {
   // True if the section should not be skipped.
@@ -2227,43 +2243,6 @@ void Dumper::printRelocations() {
   }
 }
 
-void objdump::printDynamicRelocations(const ObjectFile *Obj) {
-  // For the moment, this option is for ELF only
-  if (!Obj->isELF())
-    return;
-
-  const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj);
-  if (!Elf || !any_of(Elf->sections(), [](const ELFSectionRef Sec) {
-        return Sec.getType() == ELF::SHT_DYNAMIC;
-      })) {
-    reportError(Obj->getFileName(), "not a dynamic object");
-    return;
-  }
-
-  std::vector<SectionRef> DynRelSec = Obj->dynamic_relocation_sections();
-  if (DynRelSec.empty())
-    return;
-
-  outs() << "\nDYNAMIC RELOCATION RECORDS\n";
-  const uint32_t OffsetPadding = (Obj->getBytesInAddress() > 4 ? 16 : 8);
-  const uint32_t TypePadding = 24;
-  outs() << left_justify("OFFSET", OffsetPadding) << ' '
-         << left_justify("TYPE", TypePadding) << " VALUE\n";
-
-  StringRef Fmt = Obj->getBytesInAddress() > 4 ? "%016" PRIx64 : "%08" PRIx64;
-  for (const SectionRef &Section : DynRelSec)
-    for (const RelocationRef &Reloc : Section.relocations()) {
-      uint64_t Address = Reloc.getOffset();
-      SmallString<32> RelocName;
-      SmallString<32> ValueStr;
-      Reloc.getTypeName(RelocName);
-      if (Error E = getRelocationValueString(Reloc, ValueStr))
-        reportError(std::move(E), Obj->getFileName());
-      outs() << format(Fmt.data(), Address) << ' '
-             << left_justify(RelocName, TypePadding) << ' ' << ValueStr << '\n';
-    }
-}
-
 // Returns true if we need to show LMA column when dumping section headers. We
 // show it only when the platform is ELF and either we have at least one section
 // whose VMA and LMA are different and/or when --show-lma flag is used.
@@ -2697,24 +2676,8 @@ static void printFaultMaps(const ObjectFile *Obj) {
   outs() << FMP;
 }
 
-static void printPrivateFileHeaders(const ObjectFile *O, bool OnlyFirst) {
-  if (O->isELF()) {
-    printELFFileHeader(O);
-    printELFDynamicSection(O);
-    printELFSymbolVersionInfo(O);
-    return;
-  }
-  if (O->isCOFF())
-    return printCOFFFileHeader(cast<object::COFFObjectFile>(*O));
-  if (O->isWasm())
-    return printWasmFileHeader(O);
-  if (O->isMachO()) {
-    printMachOFileHeader(O);
-    if (!OnlyFirst)
-      printMachOLoadCommands(O);
-    return;
-  }
-  reportError(O->getFileName(), "Invalid/Unsupported object file format");
+void Dumper::printPrivateHeaders(bool) {
+  reportError(O.getFileName(), "Invalid/Unsupported object file format");
 }
 
 static void printFileHeaders(const ObjectFile *O) {
@@ -2817,7 +2780,13 @@ static void checkForInvalidStartStopAddress(ObjectFile *Obj,
 
 static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
                        const Archive::Child *C = nullptr) {
-  Dumper D(*O);
+  Expected<std::unique_ptr<Dumper>> DumperOrErr = createDumper(*O);
+  if (!DumperOrErr) {
+    reportError(DumperOrErr.takeError(), O->getFileName(),
+                A ? A->getFileName() : "");
+    return;
+  }
+  Dumper &D = **DumperOrErr;
 
   // Avoid other output when using a raw option.
   if (!RawClangAST) {
@@ -2842,7 +2811,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (FileHeaders)
     printFileHeaders(O);
   if (PrivateHeaders || FirstPrivateHeader)
-    printPrivateFileHeaders(O, FirstPrivateHeader);
+    D.printPrivateHeaders(FirstPrivateHeader);
   if (SectionHeaders)
     printSectionHeaders(*O);
   if (SymbolTable)
@@ -2860,7 +2829,7 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
   if (Relocations && !Disassemble)
     D.printRelocations();
   if (DynamicRelocations)
-    printDynamicRelocations(O);
+    D.printDynamicRelocations();
   if (SectionContents)
     printSectionContents(O);
   if (Disassemble)

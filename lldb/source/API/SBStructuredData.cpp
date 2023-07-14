@@ -16,6 +16,7 @@
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
@@ -138,9 +139,9 @@ bool SBStructuredData::GetKeys(lldb::SBStringList &keys) const {
   StructuredData::Array *key_arr = array_sp->GetAsArray();
   assert(key_arr);
 
-  key_arr->ForEach([&keys] (StructuredData::Object *object) -> bool {
+  key_arr->ForEach([&keys](StructuredData::Object *object) -> bool {
     llvm::StringRef key = object->GetStringValue("");
-    keys.AppendString(key.str().c_str());
+    keys->AppendString(key);
     return true;
   });
   return true;

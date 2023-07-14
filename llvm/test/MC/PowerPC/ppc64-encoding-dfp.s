@@ -176,3 +176,105 @@
 # CHECK-LE: dctfixqq 8, 10                  # encoding: [0xc4,0x57,0x01,0xfd]
 # CHECK-BE: dctfixqq 8, 10                  # encoding: [0xfd,0x01,0x57,0xc4]
             dctfixqq 8, 10
+# CHECK-BE: ddedpd 0, 8, 10                # encoding: [0xed,0x00,0x52,0x84]
+# CHECK-LE: ddedpd 0, 8, 10                # encoding: [0x84,0x52,0x00,0xed]
+            ddedpd 0, 8, 10
+# CHECK-BE: ddedpd. 0, 8, 10               # encoding: [0xed,0x00,0x52,0x85]
+# CHECK-LE: ddedpd. 0, 8, 10               # encoding: [0x85,0x52,0x00,0xed]
+            ddedpd. 0, 8, 10
+# CHECK-BE: ddedpdq 1, 8, 10               # encoding: [0xfd,0x08,0x52,0x84]
+# CHECK-LE: ddedpdq 1, 8, 10               # encoding: [0x84,0x52,0x08,0xfd]
+            ddedpdq 1, 8, 10
+# CHECK-BE: ddedpdq. 1, 8, 10              # encoding: [0xfd,0x08,0x52,0x85]
+# CHECK-LE: ddedpdq. 1, 8, 10              # encoding: [0x85,0x52,0x08,0xfd]
+            ddedpdq. 1, 8, 10
+# CHECK-BE: denbcd 1, 12, 16               # encoding: [0xed,0x90,0x86,0x84]
+# CHECK-LE: denbcd 1, 12, 16               # encoding: [0x84,0x86,0x90,0xed]
+            denbcd 1, 12, 16
+# CHECK-BE: denbcd. 0, 12, 16              # encoding: [0xed,0x80,0x86,0x85]
+# CHECK-LE: denbcd. 0, 12, 16              # encoding: [0x85,0x86,0x80,0xed]
+            denbcd. 0, 12, 16
+# CHECK-BE: denbcdq 1, 12, 16              # encoding: [0xfd,0x90,0x86,0x84]
+# CHECK-LE: denbcdq 1, 12, 16              # encoding: [0x84,0x86,0x90,0xfd]
+            denbcdq 1, 12, 16
+# CHECK-BE: denbcdq. 0, 12, 16             # encoding: [0xfd,0x80,0x86,0x85]
+# CHECK-LE: denbcdq. 0, 12, 16             # encoding: [0x85,0x86,0x80,0xfd]
+            denbcdq. 0, 12, 16
+# CHECK-BE: dxex 8, 20                     # encoding: [0xed,0x00,0xa2,0xc4]
+# CHECK-LE: dxex 8, 20                     # encoding: [0xc4,0xa2,0x00,0xed]
+            dxex 8, 20
+# CHECK-BE: dxex. 8, 20                    # encoding: [0xed,0x00,0xa2,0xc5]
+# CHECK-LE: dxex. 8, 20                    # encoding: [0xc5,0xa2,0x00,0xed]
+            dxex. 8, 20
+# CHECK-BE: dxexq 8, 20                    # encoding: [0xfd,0x00,0xa2,0xc4]
+# CHECK-LE: dxexq 8, 20                    # encoding: [0xc4,0xa2,0x00,0xfd]
+            dxexq 8, 20
+# CHECK-BE: dxexq. 8, 20                   # encoding: [0xfd,0x00,0xa2,0xc5]
+# CHECK-LE: dxexq. 8, 20                   # encoding: [0xc5,0xa2,0x00,0xfd]
+            dxexq. 8, 20
+# CHECK-BE: diex 8, 12, 18                 # encoding: [0xed,0x0c,0x96,0xc4]
+# CHECK-LE: diex 8, 12, 18                 # encoding: [0xc4,0x96,0x0c,0xed]
+            diex 8, 12, 18
+# CHECK-BE: diex. 8, 12, 18                # encoding: [0xed,0x0c,0x96,0xc5]
+# CHECK-LE: diex. 8, 12, 18                # encoding: [0xc5,0x96,0x0c,0xed]
+            diex. 8, 12, 18
+# CHECK-BE: diexq 8, 12, 18                # encoding: [0xfd,0x0c,0x96,0xc4]
+# CHECK-LE: diexq 8, 12, 18                # encoding: [0xc4,0x96,0x0c,0xfd]
+            diexq 8, 12, 18
+# CHECK-BE: diexq. 8, 12, 18               # encoding: [0xfd,0x0c,0x96,0xc5]
+# CHECK-LE: diexq. 8, 12, 18               # encoding: [0xc5,0x96,0x0c,0xfd]
+            diexq. 8, 12, 18
+# CHECK-BE: dscli 22, 4, 63                # encoding: [0xee,0xc4,0xfc,0x84]
+# CHECK-LE: dscli 22, 4, 63                # encoding: [0x84,0xfc,0xc4,0xee]
+            dscli 22, 4, 63
+# CHECK-BE: dscli. 22, 4, 63               # encoding: [0xee,0xc4,0xfc,0x85]
+# CHECK-LE: dscli. 22, 4, 63               # encoding: [0x85,0xfc,0xc4,0xee]
+            dscli. 22, 4, 63
+# CHECK-BE: dscliq 22, 4, 63               # encoding: [0xfe,0xc4,0xfc,0x84]
+# CHECK-LE: dscliq 22, 4, 63               # encoding: [0x84,0xfc,0xc4,0xfe]
+            dscliq 22, 4, 63
+# CHECK-BE: dscliq. 22, 4, 63              # encoding: [0xfe,0xc4,0xfc,0x85]
+# CHECK-LE: dscliq. 22, 4, 63              # encoding: [0x85,0xfc,0xc4,0xfe]
+            dscliq. 22, 4, 63
+# CHECK-BE: dscri 16, 10, 50               # encoding: [0xee,0x0a,0xc8,0xc4]
+# CHECK-LE: dscri 16, 10, 50               # encoding: [0xc4,0xc8,0x0a,0xee]
+            dscri 16, 10, 50
+# CHECK-BE: dscri. 16, 10, 50              # encoding: [0xee,0x0a,0xc8,0xc5]
+# CHECK-LE: dscri. 16, 10, 50              # encoding: [0xc5,0xc8,0x0a,0xee]
+            dscri. 16, 10, 50
+# CHECK-BE: dscriq 16, 10, 50              # encoding: [0xfe,0x0a,0xc8,0xc4]
+# CHECK-LE: dscriq 16, 10, 50              # encoding: [0xc4,0xc8,0x0a,0xfe]
+            dscriq 16, 10, 50
+# CHECK-BE: dscriq. 16, 10, 50             # encoding: [0xfe,0x0a,0xc8,0xc5]
+# CHECK-LE: dscriq. 16, 10, 50             # encoding: [0xc5,0xc8,0x0a,0xfe]
+            dscriq. 16, 10, 50
+# CHECK-BE: dtstdc 2, 6, 4                 # encoding: [0xed,0x06,0x11,0x84]
+# CHECK-LE: dtstdc 2, 6, 4                 # encoding: [0x84,0x11,0x06,0xed]
+            dtstdc 2, 6, 4
+# CHECK-BE: dtstdcq 2, 6, 4                # encoding: [0xfd,0x06,0x11,0x84]
+# CHECK-LE: dtstdcq 2, 6, 4                # encoding: [0x84,0x11,0x06,0xfd]
+            dtstdcq 2, 6, 4
+# CHECK-BE: dtstdg 2, 6, 4                 # encoding: [0xed,0x06,0x11,0xc4]
+# CHECK-LE: dtstdg 2, 6, 4                 # encoding: [0xc4,0x11,0x06,0xed]
+            dtstdg 2, 6, 4
+# CHECK-BE: dtstdgq 2, 6, 4                # encoding: [0xfd,0x06,0x11,0xc4]
+# CHECK-LE: dtstdgq 2, 6, 4                # encoding: [0xc4,0x11,0x06,0xfd]
+            dtstdgq 2, 6, 4
+# CHECK-BE: dtstex 2, 6, 4                 # encoding: [0xed,0x06,0x21,0x44]
+# CHECK-LE: dtstex 2, 6, 4                 # encoding: [0x44,0x21,0x06,0xed]
+            dtstex 2, 6, 4
+# CHECK-BE: dtstexq 2, 6, 4                # encoding: [0xfd,0x06,0x21,0x44]
+# CHECK-LE: dtstexq 2, 6, 4                # encoding: [0x44,0x21,0x06,0xfd]
+            dtstexq 2, 6, 4
+# CHECK-BE: dtstsf 2, 6, 4                 # encoding: [0xed,0x06,0x25,0x44]
+# CHECK-LE: dtstsf 2, 6, 4                 # encoding: [0x44,0x25,0x06,0xed]
+            dtstsf 2, 6, 4
+# CHECK-BE: dtstsfq 2, 6, 4                # encoding: [0xfd,0x06,0x25,0x44]
+# CHECK-LE: dtstsfq 2, 6, 4                # encoding: [0x44,0x25,0x06,0xfd]
+            dtstsfq 2, 6, 4
+# CHECK-BE: dtstsfi 2, 6, 4                # encoding: [0xed,0x06,0x25,0x46]
+# CHECK-LE: dtstsfi 2, 6, 4                # encoding: [0x46,0x25,0x06,0xed]
+            dtstsfi 2, 6, 4
+# CHECK-BE: dtstsfiq 2, 6, 4               # encoding: [0xfd,0x06,0x25,0x46]
+# CHECK-LE: dtstsfiq 2, 6, 4               # encoding: [0x46,0x25,0x06,0xfd]
+            dtstsfiq 2, 6, 4

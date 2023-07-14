@@ -1090,6 +1090,143 @@ define <2 x i32> @vec_select_no_equivalence(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %s
 }
 
+define i8 @select_eq_xor_recursive(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[INV:%.*]] = xor i8 [[XOR]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -1, i8 [[INV]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %xor = xor i8 %a, %b
+  %inv = xor i8 %xor, -1
+  %cmp = icmp eq i8 %a, %b
+  %sel = select i1 %cmp, i8 -1, i8 %inv
+  ret i8 %sel
+}
+
+define i8 @select_eq_xor_recursive2(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive2(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[INV:%.*]] = xor i8 [[XOR]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[INV]], 10
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 9, i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %xor = xor i8 %a, %b
+  %inv = xor i8 %xor, -1
+  %add = add i8 %inv, 10
+  %cmp = icmp eq i8 %a, %b
+  %sel = select i1 %cmp, i8 9, i8 %add
+  ret i8 %sel
+}
+
+define i8 @select_eq_xor_recursive3(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive3(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[INV:%.*]] = xor i8 [[XOR]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[INV]], 10
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], 3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 9, i8 [[MUL]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %xor = xor i8 %a, %b
+  %inv = xor i8 %xor, -1
+  %add = add i8 %inv, 10
+  %mul = mul i8 %add, 3
+  %cmp = icmp eq i8 %a, %b
+  %sel = select i1 %cmp, i8 9, i8 %mul
+  ret i8 %sel
+}
+
+; Cannot drop select, because this would propagate poison from %a.
+define i8 @select_eq_xor_recursive_propagates_poison(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive_propagates_poison(
+; CHECK-NEXT:    [[XOR1:%.*]] = add i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[A]], [[XOR1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[B]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[XOR2]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %xor1 = add i8 %a, %b
+  %xor2 = xor i8 %a, %xor1
+  %cmp = icmp eq i8 %b, 0
+  %sel = select i1 %cmp, i8 0, i8 %xor2
+  ret i8 %sel
+}
+
+define i8 @select_eq_and_recursive(i8 %a) {
+; CHECK-LABEL: @select_eq_and_recursive(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[A]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 1, i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %neg = sub i8 0, %a
+  %and = and i8 %neg, %a
+  %add = add i8 %and, 1
+  %cmp = icmp eq i8 %a, 0
+  %sel = select i1 %cmp, i8 1, i8 %add
+  ret i8 %sel
+}
+
+; Cannot drop select, because this would propagate poison from %b.
+define i8 @select_eq_and_recursive_propagates_poison(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_and_recursive_propagates_poison(
+; CHECK-NEXT:    [[NEG:%.*]] = sub i8 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[A]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 1, i8 [[ADD]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %neg = sub i8 %b, %a
+  %and = and i8 %neg, %a
+  %add = add i8 %and, 1
+  %cmp = icmp eq i8 %a, 0
+  %sel = select i1 %cmp, i8 1, i8 %add
+  ret i8 %sel
+}
+
+define i8 @select_eq_xor_recursive_allow_refinement(i8 %a, i8 %b) {
+; CHECK-LABEL: @select_eq_xor_recursive_allow_refinement(
+; CHECK-NEXT:    [[XOR1:%.*]] = add i8 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[A]], [[XOR1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[B]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[XOR2]], i8 0
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %xor1 = add i8 %a, %b
+  %xor2 = xor i8 %a, %xor1
+  %cmp = icmp eq i8 %b, 0
+  %sel = select i1 %cmp, i8 %xor2, i8 0
+  ret i8 %sel
+}
+
+; Vector to scalar options should be treated as lane-crossing.
+define <2 x i8> @select_eq_vector_insert_extract(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @select_eq_vector_insert_extract(
+; CHECK-NEXT:    [[EXTRACT0:%.*]] = extractelement <2 x i8> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[EXTRACT1:%.*]] = extractelement <2 x i8> [[A]], i64 1
+; CHECK-NEXT:    [[INSERT0:%.*]] = insertelement <2 x i8> poison, i8 [[EXTRACT1]], i64 0
+; CHECK-NEXT:    [[INSERT1:%.*]] = insertelement <2 x i8> [[INSERT0]], i8 [[EXTRACT0]], i64 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[A]], zeroinitializer
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[CMP]], <2 x i8> [[INSERT1]], <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %extract0 = extractelement <2 x i8> %a, i64 0
+  %extract1 = extractelement <2 x i8> %a, i64 1
+  %insert0 = insertelement <2 x i8> poison, i8 %extract1, i64 0
+  %insert1 = insertelement <2 x i8> %insert0, i8 %extract0, i64 1
+  %cmp = icmp eq <2 x i8> %a, zeroinitializer
+  %sel = select <2 x i1> %cmp, <2 x i8> %insert1, <2 x i8> zeroinitializer
+  ret <2 x i8> %sel
+}
+
 define i32 @poison(i32 %x, i32 %y) {
 ; CHECK-LABEL: @poison(
 ; CHECK-NEXT:    ret i32 [[X:%.*]]

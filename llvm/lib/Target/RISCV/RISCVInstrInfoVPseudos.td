@@ -498,6 +498,8 @@ defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
 class RISCVVPseudo {
   Pseudo Pseudo = !cast<Pseudo>(NAME); // Used as a key.
   Instruction BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
+  // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
+  bits<8> SEW = 0;
 }
 
 // The actual table.
@@ -513,8 +515,8 @@ def RISCVVPseudosTable : GenericTable {
 def RISCVVInversePseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
   let CppTypeName = "PseudoInfo";
-  let Fields = [ "Pseudo", "BaseInstr", "VLMul" ];
-  let PrimaryKey = [ "BaseInstr", "VLMul" ];
+  let Fields = [ "Pseudo", "BaseInstr", "VLMul", "SEW"];
+  let PrimaryKey = [ "BaseInstr", "VLMul", "SEW"];
   let PrimaryKeyName = "getBaseInfo";
   let PrimaryKeyEarlyOut = true;
 }
@@ -712,10 +714,11 @@ class GetVRegNoV0<VReg VRegClass> {
                  true : VRegClass);
 }
 
-class VPseudo<Instruction instr, LMULInfo m, dag outs, dag ins> :
+class VPseudo<Instruction instr, LMULInfo m, dag outs, dag ins, int sew = 0> :
       Pseudo<outs, ins, []>, RISCVVPseudo {
   let BaseInstr = instr;
   let VLMul = m.value;
+  let SEW = sew;
 }
 
 class GetVTypePredicates<VTypeInfo vti> {
@@ -1705,7 +1708,7 @@ multiclass VPseudoUSLoad {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
       defvar vreg = lmul.vrclass;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         def "E" # eew # "_V_" # LInfo :
           VPseudoUSLoadNoMask<vreg, eew>,
           VLESched<LInfo>;
@@ -1723,7 +1726,7 @@ multiclass VPseudoFFLoad {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
       defvar vreg = lmul.vrclass;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         def "E" # eew # "FF_V_" # LInfo:
           VPseudoUSLoadFFNoMask<vreg, eew>,
           VLFSched<LInfo>;
@@ -1752,7 +1755,7 @@ multiclass VPseudoSLoad {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
       defvar vreg = lmul.vrclass;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         def "E" # eew # "_V_" # LInfo : VPseudoSLoadNoMask<vreg, eew>,
                                         VLSSched<eew, LInfo>;
         def "E" # eew # "_V_" # LInfo # "_MASK" :
@@ -1800,7 +1803,7 @@ multiclass VPseudoUSStore {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
       defvar vreg = lmul.vrclass;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         def "E" # eew # "_V_" # LInfo : VPseudoUSStoreNoMask<vreg, eew>,
                                         VSESched<LInfo>;
         def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoUSStoreMask<vreg, eew>,
@@ -1826,7 +1829,7 @@ multiclass VPseudoSStore {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
       defvar vreg = lmul.vrclass;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         def "E" # eew # "_V_" # LInfo : VPseudoSStoreNoMask<vreg, eew>,
                                         VSSSched<eew, LInfo>;
         def "E" # eew # "_V_" # LInfo # "_MASK" : VPseudoSStoreMask<vreg, eew>,
@@ -1963,6 +1966,7 @@ multiclass VPseudoVCPR_V {
         defvar WriteVCompressV_MX_E = !cast<SchedWrite>("WriteVCompressV" # suffix);
         defvar ReadVCompressV_MX_E = !cast<SchedRead>("ReadVCompressV" # suffix);
 
+        let SEW = e in
         def _VM # suffix : VPseudoUnaryAnyMask<m.vrclass, m.vrclass>,
                            Sched<[WriteVCompressV_MX_E, ReadVCompressV_MX_E, ReadVCompressV_MX_E]>;
       }
@@ -1975,7 +1979,7 @@ multiclass VPseudoBinary<VReg RetClass,
                          LMULInfo MInfo,
                          string Constraint = "",
                          int sew = 0> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
                                        Constraint>;
@@ -1992,7 +1996,7 @@ multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                      string Constraint = "",
                                      int sew = 0,
                                      int UsesVXRM = 1> {
-  let VLMul = MInfo.value in {
+  let VLMul = MInfo.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     def suffix : VPseudoBinaryNoMaskRoundingMode<RetClass, Op1Class, Op2Class,
                                                  Constraint, UsesVXRM>;
@@ -2028,7 +2032,7 @@ multiclass VPseudoBinaryEmul<VReg RetClass,
                              LMULInfo emul,
                              string Constraint = "",
                              int sew = 0> {
-  let VLMul = lmul.value in {
+  let VLMul = lmul.value, SEW=sew in {
     defvar suffix = !if(sew, "_" # lmul.MX # "_E" # sew, "_" # lmul.MX);
     def suffix # "_" # emul.MX : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
                                                        Constraint>;
@@ -2408,13 +2412,15 @@ multiclass VPseudoVSQR_V_RM {
         defvar WriteVFSqrtV_MX_E = !cast<SchedWrite>("WriteVFSqrtV" # suffix);
         defvar ReadVFSqrtV_MX_E = !cast<SchedRead>("ReadVFSqrtV" # suffix);
 
-        def "_V" # suffix : VPseudoUnaryNoMaskRoundingMode<m.vrclass, m.vrclass>,
-                            Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
-                                   ReadVMask]>;
-        def "_V" # suffix # "_MASK" : VPseudoUnaryMaskRoundingMode<m.vrclass, m.vrclass>,
-                                      RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
-                                      Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
-                                             ReadVMask]>;
+        let SEW = e in {
+          def "_V" # suffix : VPseudoUnaryNoMaskRoundingMode<m.vrclass, m.vrclass>,
+                              Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
+                                     ReadVMask]>;
+          def "_V" # suffix # "_MASK" : VPseudoUnaryMaskRoundingMode<m.vrclass, m.vrclass>,
+                                        RISCVMaskedPseudo</*MaskOpIdx*/ 2>,
+                                        Sched<[WriteVFSqrtV_MX_E, ReadVFSqrtV_MX_E,
+                                               ReadVMask]>;
+        }
       }
   }
 }
@@ -3956,7 +3962,7 @@ multiclass VPseudoUSSegLoad {
   foreach eew = EEWList in {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         foreach nf = NFSet<lmul>.L in {
           defvar vreg = SegRegClass<lmul, nf>.RC;
           def nf # "E" # eew # "_V_" # LInfo :
@@ -3973,7 +3979,7 @@ multiclass VPseudoUSSegLoadFF {
   foreach eew = EEWList in {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         foreach nf = NFSet<lmul>.L in {
           defvar vreg = SegRegClass<lmul, nf>.RC;
           def nf # "E" # eew # "FF_V_" # LInfo :
@@ -3990,7 +3996,7 @@ multiclass VPseudoSSegLoad {
   foreach eew = EEWList in {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         foreach nf = NFSet<lmul>.L in {
           defvar vreg = SegRegClass<lmul, nf>.RC;
           def nf # "E" # eew # "_V_" # LInfo : VPseudoSSegLoadNoMask<vreg, eew, nf>,
@@ -4040,7 +4046,7 @@ multiclass VPseudoUSSegStore {
   foreach eew = EEWList in {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         foreach nf = NFSet<lmul>.L in {
           defvar vreg = SegRegClass<lmul, nf>.RC;
           def nf # "E" # eew # "_V_" # LInfo : VPseudoUSSegStoreNoMask<vreg, eew, nf>,
@@ -4057,7 +4063,7 @@ multiclass VPseudoSSegStore {
   foreach eew = EEWList in {
     foreach lmul = MxSet<eew>.m in {
       defvar LInfo = lmul.MX;
-      let VLMul = lmul.value in {
+      let VLMul = lmul.value, SEW=eew in {
         foreach nf = NFSet<lmul>.L in {
           defvar vreg = SegRegClass<lmul, nf>.RC;
           def nf # "E" # eew # "_V_" # LInfo : VPseudoSSegStoreNoMask<vreg, eew, nf>,
