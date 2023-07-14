@@ -294,7 +294,6 @@ def IIT_V1 : IIT_Vec<1, 28>;
 def IIT_VARARG : IIT_VT<isVoid, 29>;
 def IIT_HALF_VEC_ARG : IIT_Base<30>;
 def IIT_SAME_VEC_WIDTH_ARG : IIT_Base<31>;
-def IIT_PTR_TO_ARG : IIT_Base<32>;
 def IIT_PTR_TO_ELT : IIT_Base<33>;
 def IIT_VEC_OF_ANYPTRS_TO_ELT : IIT_Base<34>;
 def IIT_I128 : IIT_Int<128, 35>;
@@ -449,7 +448,6 @@ class LLVMScalarOrSameVectorWidth<int idx, LLVMType elty>
   ], elty.Sig);
 }
 
-class LLVMPointerTo<int num> : LLVMMatchType<num, IIT_PTR_TO_ARG>;
 class LLVMPointerToElt<int num> : LLVMMatchType<num, IIT_PTR_TO_ELT>;
 class LLVMAnyPointerToElt<int num>
   : LLVMMatchTypeNextArg<num, IIT_ANYPTR_TO_ELT>;

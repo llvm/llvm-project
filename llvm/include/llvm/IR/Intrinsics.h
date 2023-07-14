@@ -128,7 +128,6 @@ namespace Intrinsic {
       TruncArgument,
       HalfVecArgument,
       SameVecWidthArgument,
-      PtrToArgument,
       PtrToElt,
       VecOfAnyPtrsToElt,
       VecElementArgument,
@@ -160,7 +159,7 @@ namespace Intrinsic {
     unsigned getArgumentNumber() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument || Kind == PtrToArgument ||
+             Kind == SameVecWidthArgument ||
              Kind == PtrToElt || Kind == VecElementArgument ||
              Kind == Subdivide2Argument || Kind == Subdivide4Argument ||
              Kind == VecOfBitcastsToInt);
@@ -169,7 +168,7 @@ namespace Intrinsic {
     ArgKind getArgumentKind() const {
       assert(Kind == Argument || Kind == ExtendArgument ||
              Kind == TruncArgument || Kind == HalfVecArgument ||
-             Kind == SameVecWidthArgument || Kind == PtrToArgument ||
+             Kind == SameVecWidthArgument ||
              Kind == VecElementArgument || Kind == Subdivide2Argument ||
              Kind == Subdivide4Argument || Kind == VecOfBitcastsToInt);
       return (ArgKind)(Argument_Info & 7);
