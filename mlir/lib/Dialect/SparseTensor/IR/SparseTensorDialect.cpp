@@ -409,6 +409,7 @@ SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
 }
 
 const static DimLevelType validDLTs[] = {DimLevelType::Dense,
+                                         DimLevelType::TwoOutOfFour,
                                          DimLevelType::Compressed,
                                          DimLevelType::CompressedNu,
                                          DimLevelType::CompressedNo,
