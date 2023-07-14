@@ -24,3 +24,12 @@ test.with_wrapped_properties <{prop = "content for properties"}>
 // GENERIC: "test.using_property_in_custom"()
 // GENERIC-SAME: prop = array<i64: 1, 4, 20>
 test.using_property_in_custom [1, 4, 20]
+
+// CHECK: test.using_property_ref_in_custom
+// CHECK-SAME: 1 + 4 = 5
+// GENERIC: "test.using_property_ref_in_custom"()
+// GENERIC-SAME: <{
+// GENERIC-SAME: first = 1
+// GENERIC-SAME: second = 4
+// GENERIC-SAME: }>
+test.using_property_ref_in_custom 1 + 4 = 5
