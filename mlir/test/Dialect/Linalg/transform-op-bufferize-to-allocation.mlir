@@ -50,6 +50,7 @@ transform.sequence failures(propagate) {
 // CHECK-LABEL: func @tensor_pad_constant_with_custom_copy(
 //   CHECK-NOT:   memref.tensor_store
 //   CHECK-NOT:   memref.copy
+//       CHECK:   memref.alloca
 //       CHECK:   linalg.copy
 func.func @tensor_pad_constant_with_custom_copy(
     %t: tensor<?x10xindex>, %l2: index, %h1: index, %h2: index)
@@ -66,7 +67,7 @@ func.func @tensor_pad_constant_with_custom_copy(
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["tensor.pad"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 3, memcpy_op = "linalg.copy"}: !transform.any_op
+  %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 3, alloc_op = "memref.alloca", memcpy_op = "linalg.copy"}: !transform.any_op
 
   // Ensure that one linalg.fill was generated.
   %fill_op = transform.select "linalg.fill" in %new : (!transform.any_op) -> !transform.any_op
@@ -77,6 +78,11 @@ transform.sequence failures(propagate) {
   %linalg_copy = transform.select "linalg.copy" in %new : (!transform.any_op) -> !transform.any_op
   // expected-remark @below{{1}}
   test_print_number_of_associated_payload_ir_ops %linalg_copy : !transform.any_op
+
+  // Ensure that one memref.alloca was generated.
+  %alloca = transform.select "memref.alloca" in %new : (!transform.any_op) -> !transform.any_op
+  // expected-remark @below{{1}}
+  test_print_number_of_associated_payload_ir_ops %alloca : !transform.any_op
 
   // Make sure that One-Shot Bufferize can bufferize the rest.
   %4 = transform.bufferization.one_shot_bufferize %arg1 : (!transform.any_op) -> !transform.any_op
