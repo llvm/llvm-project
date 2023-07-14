@@ -1419,11 +1419,6 @@ namespace AMDGPU {
   LLVM_READONLY
   int getVCMPXOpFromVCMP(uint16_t Opcode);
 
-  /// \returns SIEncodingFamily used for VOPD encoding on a \p ST. This is a
-  /// helper to check if a VOPD opcode is supported by the \p ST.
-  LLVM_READONLY
-  unsigned getVOPDEncodingFamily(const GCNSubtarget &ST);
-
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);
   const uint64_t RSRC_INDEX_STRIDE_SHIFT = (32 + 21);
