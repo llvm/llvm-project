@@ -721,7 +721,7 @@ void JumpScopeChecker::VerifyIndirectOrAsmJumps(bool IsAsmGoto) {
   // If there aren't any address-of-label expressions in this function,
   // complain about the first indirect goto.
   if (JumpTargets.empty()) {
-    assert(!IsAsmGoto &&"only indirect goto can get here");
+    assert(!IsAsmGoto && "only indirect goto can get here");
     S.Diag(GotoJumps[0]->getBeginLoc(),
            diag::err_indirect_goto_without_addrlabel);
     return;
@@ -729,40 +729,32 @@ void JumpScopeChecker::VerifyIndirectOrAsmJumps(bool IsAsmGoto) {
   // Collect a single representative of every scope containing an
   // indirect or asm goto.  For most code bases, this substantially cuts
   // down on the number of jump sites we'll have to consider later.
-  typedef std::pair<unsigned, Stmt*> JumpScope;
+  using JumpScope = std::pair<unsigned, Stmt *>;
   SmallVector<JumpScope, 32> JumpScopes;
   {
     llvm::DenseMap<unsigned, Stmt*> JumpScopesMap;
-    for (SmallVectorImpl<Stmt *>::iterator I = GotoJumps.begin(),
-                                           E = GotoJumps.end();
-         I != E; ++I) {
-      Stmt *IG = *I;
+    for (Stmt *IG : GotoJumps) {
       if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(IG)))
         continue;
       unsigned IGScope = LabelAndGotoScopes[IG];
-      Stmt *&Entry = JumpScopesMap[IGScope];
-      if (!Entry) Entry = IG;
+      if (!JumpScopesMap.contains(IGScope))
+        JumpScopesMap[IGScope] = IG;
     }
     JumpScopes.reserve(JumpScopesMap.size());
-    for (llvm::DenseMap<unsigned, Stmt *>::iterator I = JumpScopesMap.begin(),
-                                                    E = JumpScopesMap.end();
-         I != E; ++I)
-      JumpScopes.push_back(*I);
+    for (auto &Pair : JumpScopesMap)
+      JumpScopes.emplace_back(Pair);
   }
 
   // Collect a single representative of every scope containing a
   // label whose address was taken somewhere in the function.
   // For most code bases, there will be only one such scope.
   llvm::DenseMap<unsigned, LabelDecl*> TargetScopes;
-  for (SmallVectorImpl<LabelDecl *>::iterator I = JumpTargets.begin(),
-                                              E = JumpTargets.end();
-       I != E; ++I) {
-    LabelDecl *TheLabel = *I;
+  for (LabelDecl *TheLabel : JumpTargets) {
     if (CHECK_PERMISSIVE(!LabelAndGotoScopes.count(TheLabel->getStmt())))
       continue;
     unsigned LabelScope = LabelAndGotoScopes[TheLabel->getStmt()];
-    LabelDecl *&Target = TargetScopes[LabelScope];
-    if (!Target) Target = TheLabel;
+    if (!TargetScopes.contains(LabelScope))
+      TargetScopes[LabelScope] = TheLabel;
   }
 
   // For each target scope, make sure it's trivially reachable from
@@ -774,11 +766,7 @@ void JumpScopeChecker::VerifyIndirectOrAsmJumps(bool IsAsmGoto) {
   // entered, then verify that every jump scope can be trivially
   // exitted to reach a scope in S.
   llvm::BitVector Reachable(Scopes.size(), false);
-  for (llvm::DenseMap<unsigned,LabelDecl*>::iterator
-         TI = TargetScopes.begin(), TE = TargetScopes.end(); TI != TE; ++TI) {
-    unsigned TargetScope = TI->first;
-    LabelDecl *TargetLabel = TI->second;
-
+  for (auto [TargetScope, TargetLabel] : TargetScopes) {
     Reachable.reset();
 
     // Mark all the enclosing scopes from which you can safely jump
@@ -799,10 +787,8 @@ void JumpScopeChecker::VerifyIndirectOrAsmJumps(bool IsAsmGoto) {
 
     // Walk through all the jump sites, checking that they can trivially
     // reach this label scope.
-    for (SmallVectorImpl<JumpScope>::iterator
-           I = JumpScopes.begin(), E = JumpScopes.end(); I != E; ++I) {
-      unsigned Scope = I->first;
-
+    for (auto [JumpScope, JumpStmt] : JumpScopes) {
+      unsigned Scope = JumpScope;
       // Walk out the "scope chain" for this scope, looking for a scope
       // we've marked reachable.  For well-formed code this amortizes
       // to O(JumpScopes.size() / Scopes.size()):  we only iterate
@@ -813,7 +799,7 @@ void JumpScopeChecker::VerifyIndirectOrAsmJumps(bool IsAsmGoto) {
         if (Reachable.test(Scope)) {
           // If we find something reachable, mark all the scopes we just
           // walked through as reachable.
-          for (unsigned S = I->first; S != Scope; S = Scopes[S].ParentScope)
+          for (unsigned S = JumpScope; S != Scope; S = Scopes[S].ParentScope)
             Reachable.set(S);
           IsReachable = true;
           break;
@@ -832,7 +818,7 @@ void JumpScopeChecker::VerifyIndirectOrAsmJumps(bool IsAsmGoto) {
       // Only diagnose if we didn't find something.
       if (IsReachable) continue;
 
-      DiagnoseIndirectOrAsmJump(I->second, I->first, TargetLabel, TargetScope);
+      DiagnoseIndirectOrAsmJump(JumpStmt, JumpScope, TargetLabel, TargetScope);
     }
   }
 }

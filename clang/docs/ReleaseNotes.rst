@@ -695,6 +695,9 @@ Bug Fixes to C++ Support
 - Fix handling of using-declarations in the init statements of for
   loop declarations.
   (`#63627 <https://github.com/llvm/llvm-project/issues/63627>`_)
+- Fix crash when emitting diagnostic for out of order designated initializers
+  in C++.
+  (`#63605 <https://github.com/llvm/llvm-project/issues/63605>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
