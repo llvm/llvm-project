@@ -308,7 +308,7 @@ define <vscale x 2 x i32> @vpmerge_vflcass(<vscale x 2 x i32> %passthru, <vscale
 }
 
 ; Test riscv.vfsqrt
-declare <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, i64)
+declare <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, i64, i64)
 define <vscale x 2 x float> @vpmerge_vfsqrt(<vscale x 2 x float> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vfsqrt:
 ; CHECK:       # %bb.0:
@@ -316,13 +316,13 @@ define <vscale x 2 x float> @vpmerge_vfsqrt(<vscale x 2 x float> %passthru, <vsc
 ; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
-  %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 7, i64 %1)
   %b = call <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
   ret <vscale x 2 x float> %b
 }
 
 ; Test reciprocal operation by riscv.vfrec7
-declare <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, i64)
+declare <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, i64, i64)
 define <vscale x 2 x float> @vpmerge_vfrec7(<vscale x 2 x float> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vfrec7:
 ; CHECK:       # %bb.0:
@@ -330,7 +330,7 @@ define <vscale x 2 x float> @vpmerge_vfrec7(<vscale x 2 x float> %passthru, <vsc
 ; CHECK-NEXT:    vfrec7.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
-  %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 7, i64 %1)
   %b = call <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
   ret <vscale x 2 x float> %b
 }
@@ -728,7 +728,7 @@ define <vscale x 2 x float> @vpselect_vfsqrt(<vscale x 2 x float> %passthru, <vs
 ; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
-  %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 7, i64 %1)
   %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
   ret <vscale x 2 x float> %b
 }
@@ -741,7 +741,7 @@ define <vscale x 2 x float> @vpselect_vfrec7(<vscale x 2 x float> %passthru, <vs
 ; CHECK-NEXT:    vfrec7.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
-  %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 7, i64 %1)
   %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
   ret <vscale x 2 x float> %b
 }
