@@ -207,7 +207,6 @@ class MIMG <dag outs, string dns = "">
   : MIMG_Base <outs, dns> {
 
   let hasPostISelHook = 1;
-  let AsmMatchConverter = "cvtMIMG";
 
   Instruction Opcode = !cast<Instruction>(NAME);
   MIMGBaseOpcode BaseOpcode;
@@ -693,7 +692,6 @@ class MIMG_Atomic_gfx6789_base <bits<8> op, string asm, RegisterClass data_rc,
                                 RegisterClass addr_rc, string dns="">
   : MIMG_gfx6789 <op, (outs data_rc:$vdst), dns> {
   let Constraints = "$vdst = $vdata";
-  let AsmMatchConverter = "cvtMIMGAtomic";
 
   let InOperandList = (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
                            DMask:$dmask, UNorm:$unorm, CPol:$cpol,
@@ -705,7 +703,6 @@ class MIMG_Atomic_gfx90a_base <bits<8> op, string asm, RegisterClass data_rc,
                                RegisterClass addr_rc, string dns="">
   : MIMG_gfx90a <op, (outs getLdStRegisterOperand<data_rc>.ret:$vdst), dns> {
   let Constraints = "$vdst = $vdata";
-  let AsmMatchConverter = "cvtMIMGAtomic";
 
   let InOperandList = (ins getLdStRegisterOperand<data_rc>.ret:$vdata,
                            addr_rc:$vaddr, SReg_256:$srsrc,
@@ -741,7 +738,6 @@ class MIMG_Atomic_gfx10<mimgopc op, string opcode,
   : MIMG_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst),
                !if(enableDisasm, "AMDGPU", "")> {
   let Constraints = "$vdst = $vdata";
-  let AsmMatchConverter = "cvtMIMGAtomic";
 
   let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256:$srsrc,
                            DMask:$dmask, Dim:$dim, UNorm:$unorm, CPol:$cpol,
@@ -755,7 +751,6 @@ class MIMG_Atomic_nsa_gfx10<mimgopc op, string opcode,
   : MIMG_nsa_gfx10<!cast<int>(op.GFX10M), (outs DataRC:$vdst), num_addrs,
                    !if(enableDisasm, "AMDGPU", "")> {
   let Constraints = "$vdst = $vdata";
-  let AsmMatchConverter = "cvtMIMGAtomic";
 
   let InOperandList = !con((ins DataRC:$vdata),
                            AddrIns,
@@ -771,7 +766,6 @@ class MIMG_Atomic_gfx11<mimgopc op, string opcode,
   : MIMG_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst),
                !if(enableDisasm, "AMDGPU", "")> {
   let Constraints = "$vdst = $vdata";
-  let AsmMatchConverter = "cvtMIMGAtomic";
 
   let InOperandList = (ins DataRC:$vdata, AddrRC:$vaddr0, SReg_256:$srsrc,
                            DMask:$dmask, Dim:$dim, UNorm:$unorm, CPol:$cpol,
@@ -785,7 +779,6 @@ class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
   : MIMG_nsa_gfx11<!cast<int>(op.GFX11), (outs DataRC:$vdst), num_addrs,
                    !if(enableDisasm, "AMDGPU", "")> {
   let Constraints = "$vdst = $vdata";
-  let AsmMatchConverter = "cvtMIMGAtomic";
 
   let InOperandList = !con((ins DataRC:$vdata),
                            AddrIns,
@@ -1228,8 +1221,7 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16> {
     let BVH = 1;
     let A16 = IsA16;
   }
-  let AsmMatchConverter = "",
-      dmask = 0xf,
+  let dmask = 0xf,
       unorm = 1,
       d16 = 0,
       cpol = 0,

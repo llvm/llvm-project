@@ -1738,10 +1738,6 @@ public:
 
   void cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands);
   void cvtVINTERP(MCInst &Inst, const OperandVector &Operands);
-
-  void cvtMIMG(MCInst &Inst, const OperandVector &Operands,
-               bool IsAtomic = false);
-  void cvtMIMGAtomic(MCInst &Inst, const OperandVector &Operands);
   void cvtSMEMAtomic(MCInst &Inst, const OperandVector &Operands);
 
   bool parseDimId(unsigned &Encoding);
@@ -7654,59 +7650,8 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
 }
 
 //===----------------------------------------------------------------------===//
-// mimg
+// SMEM
 //===----------------------------------------------------------------------===//
-
-void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands,
-                              bool IsAtomic) {
-  unsigned I = 1;
-  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
-  for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
-    ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
-  }
-
-  if (IsAtomic) {
-    // Add src, same as dst
-    assert(Desc.getNumDefs() == 1);
-    ((AMDGPUOperand &)*Operands[I - 1]).addRegOperands(Inst, 1);
-  }
-
-  OptionalImmIndexMap OptionalIdx;
-
-  for (unsigned E = Operands.size(); I != E; ++I) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
-
-    // Add the register arguments
-    if (Op.isReg()) {
-      Op.addRegOperands(Inst, 1);
-    } else if (Op.isImmModifier()) {
-      OptionalIdx[Op.getImmTy()] = I;
-    } else if (!Op.isToken()) {
-      llvm_unreachable("unexpected operand type");
-    }
-  }
-
-  bool IsGFX10Plus = isGFX10Plus();
-
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDMask);
-  if (IsGFX10Plus)
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDim, -1);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyUNorm);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyR128A16);
-  if (IsGFX10Plus)
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyA16);
-  if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::tfe))
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyLWE);
-  if (!IsGFX10Plus)
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDA);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyD16);
-}
-
-void AMDGPUAsmParser::cvtMIMGAtomic(MCInst &Inst, const OperandVector &Operands) {
-  cvtMIMG(Inst, Operands, true);
-}
 
 void AMDGPUAsmParser::cvtSMEMAtomic(MCInst &Inst, const OperandVector &Operands) {
   OptionalImmIndexMap OptionalIdx;
