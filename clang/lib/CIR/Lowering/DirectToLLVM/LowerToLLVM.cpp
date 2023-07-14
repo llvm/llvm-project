@@ -29,6 +29,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -36,6 +37,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
@@ -846,6 +848,113 @@ public:
   }
 };
 
+class CIRSwitchOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::SwitchOp> {
+public:
+  using OpConversionPattern<mlir::cir::SwitchOp>::OpConversionPattern;
+
+  inline void rewriteYieldOp(mlir::ConversionPatternRewriter &rewriter,
+                             mlir::cir::YieldOp yieldOp,
+                             mlir::Block *destination) const {
+    rewriter.setInsertionPoint(yieldOp);
+    rewriter.replaceOpWithNewOp<mlir::cir::BrOp>(yieldOp, yieldOp.getOperands(),
+                                                 destination);
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::SwitchOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    // Empty switch statement: just erase it.
+    if (!op.getCases().has_value() || op.getCases()->empty()) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
+
+    // Create exit block.
+    rewriter.setInsertionPointAfter(op);
+    auto *exitBlock =
+        rewriter.splitBlock(rewriter.getBlock(), rewriter.getInsertionPoint());
+
+    // Allocate required data structures (disconsider default case in vectors).
+    llvm::SmallVector<mlir::APInt, 8> caseValues;
+    llvm::SmallVector<mlir::Block *, 8> caseDestinations;
+    llvm::SmallVector<mlir::ValueRange, 8> caseOperands;
+
+    // Initialize default case as optional.
+    mlir::Block *defaultDestination = exitBlock;
+    mlir::ValueRange defaultOperands = exitBlock->getArguments();
+
+    // Track fallthrough between cases.
+    mlir::cir::YieldOp fallthroughYieldOp = nullptr;
+
+    // Digest the case statements values and bodies.
+    for (size_t i = 0; i < op.getCases()->size(); ++i) {
+      auto &region = op.getRegion(i);
+      auto caseAttr = op.getCases()->getValue()[i].cast<mlir::cir::CaseAttr>();
+
+      // Found default case: save destination and operands.
+      if (caseAttr.getKind().getValue() == mlir::cir::CaseOpKind::Default) {
+        defaultDestination = &region.front();
+        defaultOperands = region.getArguments();
+      } else {
+        // AnyOf cases kind can have multiple values, hence the loop below.
+        for (auto &value : caseAttr.getValue()) {
+          caseValues.push_back(value.cast<mlir::cir::IntAttr>().getValue());
+          caseOperands.push_back(region.getArguments());
+          caseDestinations.push_back(&region.front());
+        }
+      }
+
+      // Previous case is a fallthrough: branch it to this case.
+      if (fallthroughYieldOp) {
+        rewriteYieldOp(rewriter, fallthroughYieldOp, &region.front());
+        fallthroughYieldOp = nullptr;
+      }
+
+      // TODO(cir): Handle multi-block case statements.
+      if (region.getBlocks().size() != 1)
+        return op->emitError("multi-block case statement is NYI");
+
+      // Handle switch-case yields.
+      auto *terminator = region.front().getTerminator();
+      if (auto yieldOp = dyn_cast<mlir::cir::YieldOp>(terminator)) {
+        // TODO(cir): Ensure every yield instead of dealing with optional
+        // values.
+        assert(yieldOp.getKind().has_value() && "switch yield has no kind");
+
+        switch (yieldOp.getKind().value()) {
+        // Fallthrough to next case: track it for the next case to handle.
+        case mlir::cir::YieldOpKind::Fallthrough:
+          fallthroughYieldOp = yieldOp;
+          break;
+        // Break out of switch: branch to exit block.
+        case mlir::cir::YieldOpKind::Break:
+          rewriteYieldOp(rewriter, yieldOp, exitBlock);
+          break;
+        default:
+          return op->emitError("invalid yield kind in case statement");
+        }
+      }
+
+      // Extract region contents before erasing the switch op.
+      rewriter.inlineRegionBefore(region, exitBlock);
+    }
+
+    // Last case is a fallthrough: branch it to exit.
+    if (fallthroughYieldOp) {
+      rewriteYieldOp(rewriter, fallthroughYieldOp, exitBlock);
+      fallthroughYieldOp = nullptr;
+    }
+
+    // Set switch op to branch to the newly created blocks.
+    rewriter.setInsertionPoint(op);
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SwitchOp>(
+        op, adaptor.getCondition(), defaultDestination, defaultOperands,
+        caseValues, caseDestinations, caseOperands);
+    return mlir::success();
+  }
+};
+
 class CIRGlobalOpLowering
     : public mlir::OpConversionPattern<mlir::cir::GlobalOp> {
 public:
@@ -1322,8 +1431,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRIfLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
                CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering,
                CIRVAArgLowering, CIRBrOpLowering, CIRTernaryOpLowering,
-               CIRStructElementAddrOpLowering>(converter,
-                                               patterns.getContext());
+               CIRStructElementAddrOpLowering, CIRSwitchOpLowering>(
+      converter, patterns.getContext());
 }
 
 namespace {

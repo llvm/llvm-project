@@ -1,0 +1,108 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module {
+  cir.func @shouldLowerSwitchWithDefault(%arg0: !s8i) {
+    cir.switch (%arg0 : !s8i) [
+    // CHECK: llvm.switch %arg0 : i8, ^bb[[#DEFAULT:]] [
+    // CHECK:   1: ^bb[[#CASE1:]]
+    // CHECK: ]
+    case (equal, 1) {
+      cir.yield break
+    },
+    // CHECK: ^bb[[#CASE1]]:
+    // CHECK:   llvm.br ^bb[[#EXIT:]]
+    case (default) {
+      cir.yield break
+    }
+    // CHECK: ^bb[[#DEFAULT]]:
+    // CHECK:   llvm.br ^bb[[#EXIT]]
+    ]
+    // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldLowerSwitchWithoutDefault(%arg0: !s32i) {
+    cir.switch (%arg0 : !s32i) [
+    // Default block is the exit block:
+    // CHECK: llvm.switch %arg0 : i32, ^bb[[#EXIT:]] [
+    // CHECK:   1: ^bb[[#CASE1:]]
+    // CHECK: ]
+    case (equal, 1) {
+      cir.yield break
+    }
+    // CHECK: ^bb[[#CASE1]]:
+    // CHECK:   llvm.br ^bb[[#EXIT]]
+    ]
+    // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldLowerSwitchWithImplicitFallthrough(%arg0: !s64i) {
+    cir.switch (%arg0 : !s64i) [
+    // CHECK: llvm.switch %arg0 : i64, ^bb[[#EXIT:]] [
+    // CHECK:   1: ^bb[[#CASE1N2:]],
+    // CHECK:   2: ^bb[[#CASE1N2]]
+    // CHECK: ]
+    case (anyof, [1, 2] : !s64i) { // case 1 and 2 use same region
+      cir.yield break
+    }
+    // CHECK: ^bb[[#CASE1N2]]:
+    // CHECK:   llvm.br ^bb[[#EXIT]]
+    ]
+    // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldLowerSwitchWithExplicitFallthrough(%arg0: !s64i) {
+      cir.switch (%arg0 : !s64i) [
+      // CHECK: llvm.switch %arg0 : i64, ^bb[[#EXIT:]] [
+      // CHECK:   1: ^bb[[#CASE1:]],
+      // CHECK:   2: ^bb[[#CASE2:]]
+      // CHECK: ]
+      case (equal, 1 : !s64i) { // case 1 has its own region
+        cir.yield fallthrough // fallthrough to case 2
+      },
+      // CHECK: ^bb[[#CASE1]]:
+      // CHECK:   llvm.br ^bb[[#CASE2]]
+      case (equal, 2 : !s64i) {
+        cir.yield break
+      }
+      // CHECK: ^bb[[#CASE2]]:
+      // CHECK:   llvm.br ^bb[[#EXIT]]
+      ]
+      // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldLowerSwitchWithFallthroughToExit(%arg0: !s64i) {
+      cir.switch (%arg0 : !s64i) [
+      // CHECK: llvm.switch %arg0 : i64, ^bb[[#EXIT:]] [
+      // CHECK:   1: ^bb[[#CASE1:]]
+      // CHECK: ]
+      case (equal, 1 : !s64i) {
+        cir.yield fallthrough // fallthrough to exit
+      }
+      // CHECK: ^bb[[#CASE1]]:
+      // CHECK:   llvm.br ^bb[[#EXIT]]
+      ]
+      // CHECK: ^bb[[#EXIT]]:
+    cir.return
+  }
+
+
+  cir.func @shouldDropEmptySwitch(%arg0: !s64i) {
+    cir.switch (%arg0 : !s64i) [
+    ]
+    // CHECK-NOT: llvm.switch
+    cir.return
+  }
+}

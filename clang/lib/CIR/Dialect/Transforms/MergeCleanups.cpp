@@ -183,6 +183,14 @@ template <>
 mlir::LogicalResult SimplifyRetYieldBlocks<cir::SwitchOp>::replaceScopeLikeOp(
     PatternRewriter &rewriter, cir::SwitchOp switchOp) const {
   auto regionChanged = mlir::failure();
+
+  // Empty switch statement: just remove it.
+  if (!switchOp.getCases().has_value() || switchOp.getCases()->empty()) {
+    rewriter.eraseOp(switchOp);
+    return mlir::success();
+  }
+
+  // Non-empty switch statement: clean it up.
   for (auto &r : switchOp.getRegions()) {
     if (checkAndRewriteRegion(r, rewriter).succeeded())
       regionChanged = mlir::success();
