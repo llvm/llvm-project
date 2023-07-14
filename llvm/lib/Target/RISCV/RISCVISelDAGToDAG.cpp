@@ -3209,6 +3209,10 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   SDValue True = N->getOperand(2);
   SDValue Mask = N->getOperand(3);
   SDValue VL = N->getOperand(4);
+  // We always have a glue node for the mask at v0
+  assert(cast<RegisterSDNode>(Mask)->getReg() == RISCV::V0);
+  SDValue Glue = N->getOperand(N->getNumOperands() - 1);
+  assert(Glue.getValueType() == MVT::Glue);
 
   // We require that either merge and false are the same, or that merge
   // is undefined.
@@ -3289,8 +3293,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
     LoopWorklist.push_back(False.getNode());
     LoopWorklist.push_back(Mask.getNode());
     LoopWorklist.push_back(VL.getNode());
-    if (SDNode *Glued = N->getGluedNode())
-      LoopWorklist.push_back(Glued);
+    LoopWorklist.push_back(Glue.getNode());
     if (SDNode::hasPredecessorHelper(True.getNode(), Visited, LoopWorklist))
       return false;
   }
@@ -3315,6 +3318,14 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
         !True->getFlags().hasNoFPExcept())
       return false;
 
+  // From the preconditions we checked above, we know the mask and thus glue
+  // for the result node will be taken from True.
+  if (IsMasked) {
+    Mask = True->getOperand(Info->MaskOpIdx);
+    Glue = True->getOperand(True->getNumOperands() - 1);
+    assert(Glue.getValueType() == MVT::Glue);
+  }
+
   SDLoc DL(N);
   unsigned MaskedOpc = Info->MaskedPseudo;
 #ifndef NDEBUG
@@ -3326,44 +3337,39 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
          "Expected instructions with mask have a tied dest.");
 #endif
 
+  SDValue SEW = True.getOperand(TrueVLIndex + 1);
+
   uint64_t Policy = isImplicitDef(N->getOperand(0)) ?
     RISCVII::TAIL_AGNOSTIC : /*TUMU*/ 0;
   SDValue PolicyOp =
     CurDAG->getTargetConstant(Policy, DL, Subtarget->getXLenVT());
 
+
   SmallVector<SDValue, 8> Ops;
-  if (IsMasked) {
-    Ops.push_back(False);
-    Ops.append(True->op_begin() + 1, True->op_begin() + TrueVLIndex);
-    Ops.append({VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
-    Ops.push_back(PolicyOp);
-    Ops.append(True->op_begin() + TrueVLIndex + 3, True->op_end());
-  } else {
-    Ops.push_back(False);
-    if (RISCVII::hasRoundModeOp(TrueTSFlags)) {
-      // For unmasked "VOp" with rounding mode operand, that is interfaces like
-      // (..., rm, vl) or (..., rm, vl, policy).
-      // Its masked version is (..., vm, rm, vl, policy).
-      // Check the rounding mode pseudo nodes under RISCVInstrInfoVPseudos.td
-      SDValue RoundMode = True->getOperand(TrueVLIndex - 1);
-      Ops.append(True->op_begin() + HasTiedDest,
-                 True->op_begin() + TrueVLIndex - 1);
-      Ops.append(
-          {Mask, RoundMode, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
-    } else {
-      Ops.append(True->op_begin() + HasTiedDest,
-                 True->op_begin() + TrueVLIndex);
-      Ops.append({Mask, VL, /* SEW */ True.getOperand(TrueVLIndex + 1)});
-    }
-    Ops.push_back(PolicyOp);
+  Ops.push_back(False);
 
-    // Result node should have chain operand of True.
-    if (HasChainOp)
-      Ops.push_back(True.getOperand(TrueChainOpIdx));
+  const bool HasRoundingMode = RISCVII::hasRoundModeOp(TrueTSFlags);
+  const unsigned NormalOpsEnd = TrueVLIndex - IsMasked - HasRoundingMode;
+  assert(!IsMasked || NormalOpsEnd == Info->MaskOpIdx);
+  Ops.append(True->op_begin() + HasTiedDest, True->op_begin() + NormalOpsEnd);
 
-    if (N->getGluedNode())
-      Ops.push_back(N->getOperand(N->getNumOperands() - 1));
-  }
+  Ops.push_back(Mask);
+
+  // For unmasked "VOp" with rounding mode operand, that is interfaces like
+  // (..., rm, vl) or (..., rm, vl, policy).
+  // Its masked version is (..., vm, rm, vl, policy).
+  // Check the rounding mode pseudo nodes under RISCVInstrInfoVPseudos.td
+  if (HasRoundingMode)
+    Ops.push_back(True->getOperand(TrueVLIndex - 1));
+
+  Ops.append({VL, SEW, PolicyOp});
+
+  // Result node should have chain operand of True.
+  if (HasChainOp)
+    Ops.push_back(True.getOperand(TrueChainOpIdx));
+
+  // Add the glue for the CopyToReg of mask->v0.
+  Ops.push_back(Glue);
 
   SDNode *Result =
       CurDAG->getMachineNode(MaskedOpc, DL, True->getVTList(), Ops);

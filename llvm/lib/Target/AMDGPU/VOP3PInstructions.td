@@ -226,6 +226,26 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                                    DSTCLAMP.ENABLE,
                                    (i32 (IMPLICIT_DEF)))))
   >;
+
+  def : GCNPat <
+    (f16 (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
+                        (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers))))),
+    (mixlo_inst $src0_modifiers, $src0,
+                $src1_modifiers, $src1,
+                (i32 0), (i32 0),
+                DSTCLAMP.NONE,
+                (i32 (IMPLICIT_DEF)))
+  >;
+
+  def : GCNPat <
+    (build_vector f16:$elt0, (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
+                                            (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers))))),
+    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       (i32 0), (i32 0),
+                       DSTCLAMP.NONE,
+                       VGPR_32:$elt0))
+  >;
 }
 
 let SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals] in {

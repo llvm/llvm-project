@@ -30,12 +30,6 @@
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
-static const Fortran::parser::Name *
-getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
-  const auto *dataRef = std::get_if<Fortran::parser::DataRef>(&designator.u);
-  return dataRef ? std::get_if<Fortran::parser::Name>(&dataRef->u) : nullptr;
-}
-
 /// Generate the acc.bounds operation from the descriptor information.
 static llvm::SmallVector<mlir::Value>
 genBoundsOpsFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -721,10 +715,11 @@ static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
   } else if (auto cmplxTy = mlir::dyn_cast_or_null<fir::ComplexType>(ty)) {
     mlir::Type floatTy =
         Fortran::lower::convertReal(builder.getContext(), cmplxTy.getFKind());
-    mlir::Value init = builder.createRealConstant(
+    mlir::Value realInit = builder.createRealConstant(
         loc, floatTy, getReductionInitValue<int64_t>(op, cmplxTy));
-    return fir::factory::Complex{builder, loc}.createComplex(cmplxTy.getFKind(),
-                                                             init, init);
+    mlir::Value imagInit = builder.createRealConstant(loc, floatTy, 0.0);
+    return fir::factory::Complex{builder, loc}.createComplex(
+        cmplxTy.getFKind(), realInit, imagInit);
   }
   if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
@@ -826,6 +821,8 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
       return builder.create<mlir::arith::MulIOp>(loc, value1, value2);
     if (mlir::isa<mlir::FloatType>(ty))
       return builder.create<mlir::arith::MulFOp>(loc, value1, value2);
+    if (mlir::isa<fir::ComplexType>(ty))
+      return builder.create<fir::MulcOp>(loc, value1, value2);
     TODO(loc, "reduction mul type");
   }
 
@@ -1354,7 +1351,9 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
             const auto &accObject = accClauseList->v.front();
             if (const auto *designator =
                     std::get_if<Fortran::parser::Designator>(&accObject.u)) {
-              if (const auto *name = getDesignatorNameIfDataRef(*designator)) {
+              if (const auto *name =
+                      Fortran::semantics::getDesignatorNameIfDataRef(
+                          *designator)) {
                 auto cond = converter.getSymbolAddress(*name->symbol);
                 selfCond = builder.createConvert(clauseLocation,
                                                  builder.getI1Type(), cond);

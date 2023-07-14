@@ -355,6 +355,7 @@ struct MIMGBaseOpcodeInfo {
   bool HasD16;
   bool MSAA;
   bool BVH;
+  bool A16;
 };
 
 LLVM_READONLY

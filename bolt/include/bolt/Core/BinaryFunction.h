@@ -339,6 +339,9 @@ private:
   bool HasPseudoProbe{BC.getUniqueSectionByName(".pseudo_probe_desc") &&
                       BC.getUniqueSectionByName(".pseudo_probe")};
 
+  /// True if the function uses ORC format for stack unwinding.
+  bool HasORC{false};
+
   /// True if the original entry point was patched.
   bool IsPatched{false};
 
@@ -1340,6 +1343,9 @@ public:
   /// Return true if the function has Pseudo Probe
   bool hasPseudoProbe() const { return HasPseudoProbe; }
 
+  /// Return true if the function uses ORC format for stack unwinding.
+  bool hasORC() const { return HasORC; }
+
   /// Return true if the original entry point was patched.
   bool isPatched() const { return IsPatched; }
 
@@ -1703,6 +1709,9 @@ public:
   void setHasFunctionsFoldedInto() { HasFunctionsFoldedInto = true; }
 
   void setHasSDTMarker(bool V) { HasSDTMarker = V; }
+
+  /// Mark the function as using ORC format for stack unwinding.
+  void setHasORC(bool V) { HasORC = V; }
 
   BinaryFunction &setPersonalityFunction(uint64_t Addr) {
     assert(!PersonalityFunction && "can't set personality function twice");
