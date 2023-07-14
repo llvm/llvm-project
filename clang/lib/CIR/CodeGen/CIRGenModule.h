@@ -217,6 +217,9 @@ public:
   getAddrOfGlobalVar(const VarDecl *D, mlir::Type Ty = {},
                      ForDefinition_t IsForDefinition = NotForDefinition);
 
+  /// Get a reference to the target of VD.
+  mlir::Operation* getWeakRefReference(const ValueDecl *VD);
+
   CharUnits
   computeNonVirtualBaseClassOffset(const CXXRecordDecl *DerivedClass,
                                    CastExpr::path_const_iterator Start,

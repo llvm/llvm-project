@@ -52,6 +52,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -334,8 +335,6 @@ bool CIRGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
 void CIRGenModule::buildGlobal(GlobalDecl GD) {
   const auto *Global = cast<ValueDecl>(GD.getDecl());
 
-  assert(!Global->hasAttr<WeakRefAttr>() && "NYI");
-  assert(!Global->hasAttr<AliasAttr>() && "NYI");
   assert(!Global->hasAttr<IFuncAttr>() && "NYI");
   assert(!Global->hasAttr<CPUDispatchAttr>() && "NYI");
   assert(!langOpts.CUDA && "NYI");
@@ -691,6 +690,31 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *D, mlir::Type Ty,
       mlir::cir::PointerType::get(builder.getContext(), g.getSymType());
   return builder.create<mlir::cir::GetGlobalOp>(getLoc(D->getSourceRange()),
                                                 ptrTy, g.getSymName());
+}
+
+mlir::Operation* CIRGenModule::getWeakRefReference(const ValueDecl *VD) {
+  const AliasAttr *AA = VD->getAttr<AliasAttr>();
+  assert(AA && "No alias?");
+
+  // See if there is already something with the target's name in the module.
+  mlir::Operation *Entry = getGlobalValue(AA->getAliasee());
+  if (Entry) {
+    assert((isa<mlir::cir::GlobalOp>(Entry) || isa<mlir::cir::FuncOp>(Entry)) &&
+           "weak ref should be against a global variable or function");
+    return Entry;
+  }
+
+  mlir::Type DeclTy = getTypes().convertTypeForMem(VD->getType());
+  if (DeclTy.isa<mlir::cir::FuncType>()) {
+    auto F = GetOrCreateCIRFunction(AA->getAliasee(), DeclTy,
+                                          GlobalDecl(cast<FunctionDecl>(VD)),
+                                          /*ForVtable=*/false);
+    F.setLinkage(mlir::cir::GlobalLinkageKind::ExternalWeakLinkage);
+    WeakRefReferences.insert(F);
+    return F;
+  }
+
+  llvm_unreachable("GlobalOp NYI");
 }
 
 /// TODO(cir): looks like part of this code can be part of a common AST
