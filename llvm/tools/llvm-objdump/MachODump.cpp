@@ -191,7 +191,20 @@ struct SymbolSorter {
     return AAddr < BAddr;
   }
 };
+
+class MachODumper : public Dumper {
+  const object::MachOObjectFile &Obj;
+
+public:
+  MachODumper(const object::MachOObjectFile &O) : Dumper(O), Obj(O) {}
+  void printPrivateHeaders(bool OnlyFirst) override;
+};
 } // namespace
+
+std::unique_ptr<Dumper>
+objdump::createMachODumper(const object::MachOObjectFile &Obj) {
+  return std::make_unique<MachODumper>(Obj);
+}
 
 // Types for the storted data in code table that is built before disassembly
 // and the predicate function to sort them.
@@ -2142,7 +2155,8 @@ static void printObjcMetaData(MachOObjectFile *O, bool verbose);
 static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
                          StringRef ArchiveMemberName = StringRef(),
                          StringRef ArchitectureName = StringRef()) {
-  Dumper D(*MachOOF);
+  std::unique_ptr<Dumper> D = createMachODumper(*MachOOF);
+
   // If we are doing some processing here on the Mach-O file print the header
   // info.  And don't print it otherwise like in the case of printing the
   // UniversalHeaders or ArchiveHeaders.
@@ -2228,7 +2242,7 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   if (DylibId)
     PrintDylibs(MachOOF, true);
   if (SymbolTable)
-    D.printSymbolTable(ArchiveName, ArchitectureName);
+    D->printSymbolTable(ArchiveName, ArchitectureName);
   if (UnwindInfo)
     printMachOUnwindInfo(MachOOF);
   if (PrivateHeaders) {
@@ -10538,6 +10552,12 @@ static void PrintMachHeader(const MachOObjectFile *Obj, bool verbose) {
 void objdump::printMachOFileHeader(const object::ObjectFile *Obj) {
   const MachOObjectFile *file = cast<const MachOObjectFile>(Obj);
   PrintMachHeader(file, Verbose);
+}
+
+void MachODumper::printPrivateHeaders(bool OnlyFirst) {
+  printMachOFileHeader(&Obj);
+  if (!OnlyFirst)
+    printMachOLoadCommands(&Obj);
 }
 
 void objdump::printMachOLoadCommands(const object::ObjectFile *Obj) {
