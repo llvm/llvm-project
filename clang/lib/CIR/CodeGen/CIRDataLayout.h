@@ -12,6 +12,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRDATALAYOUT_H
 #define LLVM_CLANG_LIB_CIR_CIRDATALAYOUT_H
 
+#include "UnimplementedFeatureGuarding.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"

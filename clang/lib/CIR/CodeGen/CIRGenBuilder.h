@@ -23,6 +23,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Types.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -358,6 +359,19 @@ public:
   // Operation creation helpers
   // --------------------------
   //
+  mlir::Value createNeg(mlir::Value value) {
+
+    if (auto intTy = value.getType().dyn_cast<mlir::cir::IntType>()) {
+      // Source is a unsigned integer: first cast it to signed.
+      if (intTy.isUnsigned())
+        value = createIntCast(value, getSIntNTy(intTy.getWidth()));
+      return create<mlir::cir::UnaryOp>(value.getLoc(), value.getType(),
+                                        mlir::cir::UnaryOpKind::Minus, value);
+    }
+
+    llvm_unreachable("negation for the given type is NYI");
+  }
+
   mlir::Value createFPExt(mlir::Value v, mlir::Type destType) {
     if (getIsFPConstrained())
       llvm_unreachable("constrainedfp NYI");

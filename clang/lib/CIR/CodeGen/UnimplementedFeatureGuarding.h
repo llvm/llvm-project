@@ -51,6 +51,7 @@ struct UnimplementedFeature {
   static bool reportGlobalToASan() { return false; }
   static bool emitAsanPrologueOrEpilogue() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
+  static bool pointerOverflowSanitizer() { return false; }
 
   // ObjC
   static bool setObjCGCLValueClass() { return false; }
@@ -70,6 +71,9 @@ struct UnimplementedFeature {
   static bool variablyModifiedTypeEmission() { return false; }
   static bool buildLValueAlignmentAssumption() { return false; }
   static bool buildDerivedToBaseCastForDevirt() { return false; }
+
+  // Data layout
+  static bool dataLayoutGetIndexTypeSizeInBits() { return false; }
 
   // Clang early optimizations or things defered to LLVM lowering.
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }

@@ -107,6 +107,10 @@ TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
   }
 }
 
+mlir::Type CIRGenFunction::convertTypeForMem(QualType T) {
+  return CGM.getTypes().convertTypeForMem(T);
+}
+
 mlir::Type CIRGenFunction::convertType(QualType T) {
   return CGM.getTypes().ConvertType(T);
 }
