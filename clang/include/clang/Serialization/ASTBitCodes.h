@@ -707,8 +707,7 @@ enum ASTRecordTypes {
   /// Record code for \#pragma float_control options.
   FLOAT_CONTROL_PRAGMA_OPTIONS = 65,
 
-  /// Record code for included files.
-  PP_INCLUDED_FILES = 66,
+  /// ID 66 used to be the list of included files.
 
   /// Record code for an unterminated \#pragma clang assume_nonnull begin
   /// recorded in a preamble.

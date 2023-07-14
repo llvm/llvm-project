@@ -1408,7 +1408,6 @@ private:
   void ParseLineTable(ModuleFile &F, const RecordData &Record);
   llvm::Error ReadSourceManagerBlock(ModuleFile &F);
   SourceLocation getImportLocation(ModuleFile *F);
-  void readIncludedFiles(ModuleFile &F, StringRef Blob, Preprocessor &PP);
   ASTReadResult ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
                                        const ModuleFile *ImportedBy,
                                        unsigned ClientLoadCapabilities);
