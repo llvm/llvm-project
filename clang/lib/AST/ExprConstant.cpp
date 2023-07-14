@@ -15327,6 +15327,17 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
     return true;
   }
 
+  if (const auto *CE = dyn_cast<ConstantExpr>(Exp)) {
+    if (CE->hasAPValueResult()) {
+      Result.Val = CE->getAPValueResult();
+      IsConst = true;
+      return true;
+    }
+
+    // The SubExpr is usually just an IntegerLiteral.
+    return FastEvaluateAsRValue(CE->getSubExpr(), Result, Ctx, IsConst);
+  }
+
   // This case should be rare, but we need to check it before we check on
   // the type below.
   if (Exp->getType().isNull()) {
