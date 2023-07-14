@@ -118,6 +118,9 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Read ORC unwind information and annotate instructions.
   Error readORCTables();
 
+  /// Update ORC for functions once CFG is constructed.
+  Error processORCPostCFG();
+
   /// Update ORC data in the binary.
   Error rewriteORCTables();
 
@@ -134,6 +137,13 @@ public:
       return E;
 
     if (Error E = readORCTables())
+      return E;
+
+    return Error::success();
+  }
+
+  Error postCFGInitializer() override {
+    if (Error E = processORCPostCFG())
       return E;
 
     return Error::success();
@@ -512,6 +522,41 @@ Error LinuxKernelRewriter::readORCTables() {
     BC.MIB->addAnnotation(*Inst, "ORC", Entry.ORC);
 
     BF->setHasORC(true);
+  }
+
+  return Error::success();
+}
+
+Error LinuxKernelRewriter::processORCPostCFG() {
+  // Propagate ORC to the rest of the function. We can annotate every
+  // instruction in every function, but to minimize the overhead, we annotate
+  // the first instruction in every basic block to reflect the state at the
+  // entry. This way, the ORC state can be calculated based on annotations
+  // regardless of the basic block layout. Note that if we insert/delete
+  // instructions, we must take care to attach ORC info to the new/deleted ones.
+  for (BinaryFunction &BF : llvm::make_second_range(BC.getBinaryFunctions())) {
+    if (!BF.hasORC())
+      continue;
+
+    std::optional<ORCState> CurrentState;
+    for (BinaryBasicBlock &BB : BF) {
+      for (MCInst &Inst : BB) {
+        ErrorOr<ORCState> State =
+            BC.MIB->tryGetAnnotationAs<ORCState>(Inst, "ORC");
+
+        if (State) {
+          CurrentState = *State;
+          continue;
+        }
+
+        if (!CurrentState)
+          continue;
+
+        // While printing ORC, attach info to every instruction for convenience.
+        if (opts::PrintORC || &Inst == &BB.front())
+          BC.MIB->addAnnotation(Inst, "ORC", *CurrentState);
+      }
+    }
   }
 
   return Error::success();
