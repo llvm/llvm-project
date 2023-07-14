@@ -73,6 +73,12 @@ def NullAttr : CIR_Attr<"Null", "null", [TypedAttrInterface]> {
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
 
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type), [{
+      return $_get(type.getContext(), type);
+    }]>
+  ];
+
   let assemblyFormat = [{}];
 }
 

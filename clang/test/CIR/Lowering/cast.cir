@@ -42,6 +42,8 @@ module {
     %8 = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>, ["e", init] {alignment = 8 : i64}
     cir.store %arg0, %0 : !u32i, cir.ptr <!u32i>
     cir.store %arg1, %1 : !s32i, cir.ptr <!s32i>
+    
+    // Integer casts.
     %9 = cir.load %0 : cir.ptr <!u32i>, !u32i
     %10 = cir.cast(integral, %9 : !u32i), !s8i
     // MLIR: %{{[0-9]+}} = llvm.trunc %{{[0-9]+}} : i32 to i8
@@ -61,17 +63,22 @@ module {
     // Should not produce a cast.
     %32 = cir.cast(integral, %arg0 : !u32i), !s32i
     // Should not produce a cast.
-    cir.store %16, %6 : !s64i, cir.ptr <!s64i>
-    %17 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
-    // MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
-    cir.store %17, %8 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
     %21 = cir.load %20 : cir.ptr <!s16i>, !s16i
     %22 = cir.cast(integral, %21 : !s16i), !u64i
     // MLIR: %[[TMP:[0-9]+]] = llvm.sext %{{[0-9]+}} : i16 to i64
+
+    // Pointer casts.
+    cir.store %16, %6 : !s64i, cir.ptr <!s64i>
+    %17 = cir.cast(array_to_ptrdecay, %7 : !cir.ptr<!cir.array<!s32i x 3>>), !cir.ptr<!s32i>
+    cir.store %17, %8 : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+    // MLIR: %{{[0-9]+}} = llvm.getelementptr %{{[0-9]+}}[0] : (!llvm.ptr) -> !llvm.ptr
     %23 = cir.cast(int_to_ptr, %22 : !u64i), !cir.ptr<!u8i>
     // MLIR: %[[TMP2:[0-9]+]] = llvm.inttoptr %[[TMP]] : i64 to !llvm.ptr
     %24 = cir.cast(ptr_to_int, %23 : !cir.ptr<!u8i>), !s32i
     // MLIR: %{{[0-9]+}} = llvm.ptrtoint %[[TMP2]] : !llvm.ptr to i32
+    %29 = cir.cast(ptr_to_bool, %23 : !cir.ptr<!u8i>), !cir.bool
+
+    // Floating point casts.
     %25 = cir.cast(int_to_float, %arg1 : !s32i), f32
     // MLIR: %{{.+}} = llvm.sitofp %{{.+}} : i32 to f32
     %26 = cir.cast(int_to_float, %arg0 : !u32i), f32
@@ -81,6 +88,7 @@ module {
     %28 = cir.cast(float_to_int, %arg2 : f32), !u32i
     // MLIR: %{{.+}} = llvm.fptoui %{{.+}} : f32 to i32
     %18 = cir.const(#cir.int<0> : !s32i) : !s32i
+
     cir.store %18, %2 : !s32i, cir.ptr <!s32i>
     %19 = cir.load %2 : cir.ptr <!s32i>, !s32i
     cir.return %19 : !s32i
