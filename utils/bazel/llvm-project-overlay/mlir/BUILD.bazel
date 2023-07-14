@@ -4015,6 +4015,7 @@ cc_library(
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":SCFDialect",
         ":SideEffectInterfaces",
@@ -6892,6 +6893,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":Support",
         ":Transforms",
@@ -11052,14 +11054,12 @@ cc_library(
         [
             "lib/Dialect/MemRef/IR/*.cpp",
             "lib/Dialect/MemRef/IR/*.h",
-            "lib/Dialect/MemRef/Utils/*.cpp",
         ],
     ),
     hdrs = [
         "include/mlir/Dialect/MemRef/IR/MemRef.h",
         "include/mlir/Dialect/MemRef/IR/MemRefMemorySlot.h",
         "include/mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h",
-        "include/mlir/Dialect/MemRef/Utils/MemRefUtils.h",
     ],
     includes = ["include"],
     deps = [
@@ -11081,6 +11081,24 @@ cc_library(
         ":ViewLikeInterface",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "MemRefUtils",
+    srcs = glob(
+        [
+            "lib/Dialect/MemRef/Utils/*.cpp",
+        ],
+    ),
+    hdrs = [
+        "include/mlir/Dialect/MemRef/Utils/MemRefUtils.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":AffineDialect",
+        ":ArithUtils",
+        ":MemRefDialect",
     ],
 )
 
@@ -11128,6 +11146,7 @@ cc_library(
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemRefPassIncGen",
+        ":MemRefUtils",
         ":NVGPUDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
@@ -11562,6 +11581,7 @@ cc_library(
         ":IR",
         ":LoopLikeInterface",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":SideEffectInterfaces",
         ":TensorDialect",

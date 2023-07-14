@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Arith/Transforms/NarrowTypeEmulationConverter.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -20,107 +21,6 @@
 #include <cassert>
 
 using namespace mlir;
-
-//===----------------------------------------------------------------------===//
-// Utility functions
-//===----------------------------------------------------------------------===//
-
-/// The emulation only works on 1D memref types.
-/// To make this work on N-D memref, we need to linearize the offset.
-///
-/// For example, to emulate i4 to i8, the following op:
-///
-/// %0 = memref.load %arg0[%v0, %v1] :
-///                  memref<?x?xi4, strided<[?, ?], offset: ?>>
-///
-/// can be replaced with
-///
-/// %b, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %0
-///
-/// %linearized_offset = %v0 * %stride#0 + %v1 * %stride#1
-/// %linearized_size = %size0 * %size1
-/// %scaled_linear_offset = %linearized_offset / 8 * 4
-/// %scaled_base_offset = %offset / 8 * 4
-///
-/// %linearized = memref.reinterpret_cast %b, offset = [%scaled_base_offset],
-///                      sizes = [%linearized_size], strides = [%stride#1]
-///
-/// %new_load = vector.load %linearized[%scaled_linear_offset] :
-///                         memref<?xi8, strided<[?], offset: ?>>
-
-static Value
-linearizeVectorLoad(Location loc, MemRefType sourceType, int srcBits,
-                    int dstBits, SmallVector<Value> indices,
-                    memref::ExtractStridedMetadataOp stridedMetadata,
-                    int numElements, OpBuilder &builder) {
-  auto srcElementType = sourceType.getElementType();
-  unsigned sourceRank = indices.size();
-
-  Value baseBuffer = stridedMetadata.getBaseBuffer();
-  SmallVector<Value> baseSizes = stridedMetadata.getSizes();
-  SmallVector<Value> baseStrides = stridedMetadata.getStrides();
-  Value baseOffset = stridedMetadata.getOffset();
-  assert(indices.size() == baseStrides.size());
-
-  // Create the affine symbols and values for linearization.
-  SmallVector<AffineExpr> symbols(2 * sourceRank + 2);
-  bindSymbolsList(builder.getContext(), MutableArrayRef{symbols});
-  symbols[0] = builder.getAffineSymbolExpr(0);
-  AffineExpr addMulMap = symbols.front();
-  AffineExpr mulMap = symbols.front();
-
-  SmallVector<OpFoldResult> offsetValues(2 * sourceRank + 2);
-  offsetValues[0] = builder.getIndexAttr(0);
-  SmallVector<OpFoldResult> sizeValues(sourceRank + 1);
-  sizeValues[0] = builder.getIndexAttr(1);
-
-  for (unsigned i = 0; i < sourceRank; ++i) {
-    unsigned offsetIdx = 2 * i + 1;
-    addMulMap = addMulMap + symbols[offsetIdx] * symbols[offsetIdx + 1];
-    offsetValues[offsetIdx] = indices[i];
-    offsetValues[offsetIdx + 1] = baseStrides[i];
-
-    unsigned sizeIdx = i + 1;
-    mulMap = mulMap * symbols[sizeIdx];
-    sizeValues[sizeIdx] = baseSizes[i];
-  }
-
-  // Adjust linearizedOffset by the scale factor (dstBits / srcBits).
-  OpFoldResult scaler = builder.getIndexAttr(dstBits / srcBits);
-  AffineExpr scaledAddMulMap = addMulMap.floorDiv(symbols.back());
-  offsetValues.back() = scaler;
-
-  OpFoldResult linearizedOffset = affine::makeComposedFoldedAffineApply(
-      builder, loc, scaledAddMulMap, offsetValues);
-  OpFoldResult linearizedSize =
-      affine::makeComposedFoldedAffineApply(builder, loc, mulMap, sizeValues);
-
-  // Adjust baseOffset by the scale factor (dstBits / srcBits).
-  AffineExpr s0, s1;
-  bindSymbols(builder.getContext(), s0, s1);
-  OpFoldResult adjustBaseOffset = affine::makeComposedFoldedAffineApply(
-      builder, loc, s0.floorDiv(s1), {baseOffset, scaler});
-
-  // Flatten n-D MemRef to 1-D MemRef.
-  auto layoutAttr = StridedLayoutAttr::get(sourceType.getContext(),
-                                           ShapedType::kDynamic, {1});
-  int64_t staticShape = sourceType.hasStaticShape()
-                            ? sourceType.getNumElements()
-                            : ShapedType::kDynamic;
-  auto flattenMemrefType = MemRefType::get(
-      staticShape, srcElementType, layoutAttr, sourceType.getMemorySpace());
-
-  auto reinterpret = builder.create<memref::ReinterpretCastOp>(
-      loc, flattenMemrefType, baseBuffer,
-      getValueOrCreateConstantIndexOp(builder, loc, adjustBaseOffset),
-      getValueOrCreateConstantIndexOp(builder, loc, linearizedSize),
-      baseStrides.back());
-
-  return builder.create<vector::LoadOp>(
-      loc, VectorType::get(numElements, srcElementType),
-      reinterpret.getResult(),
-      getValueOrCreateConstantIndexOp(builder, loc, linearizedOffset));
-}
 
 namespace {
 
@@ -172,10 +72,16 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
     auto stridedMetadata = rewriter.create<memref::ExtractStridedMetadataOp>(
         loc, adaptor.getBase());
 
-    auto numElements = int(std::ceil(double(origElements) / scale));
-    auto newLoad = linearizeVectorLoad(loc, sourceType, srcBits, dstBits,
-                                       adaptor.getIndices(), stridedMetadata,
-                                       numElements, rewriter);
+    auto [reinterpret, linearizedOffset] = memref::getLinearizeMemRefAndOffset(
+        loc, sourceType, srcBits, dstBits, adaptor.getIndices(),
+        stridedMetadata, rewriter);
+
+    auto srcElementType = sourceType.getElementType();
+    auto numElements =
+        static_cast<int>(std::ceil(static_cast<double>(origElements) / scale));
+    auto newLoad = rewriter.create<vector::LoadOp>(
+        loc, VectorType::get(numElements, srcElementType), reinterpret,
+        linearizedOffset);
 
     numElements *= scale;
     auto castType = VectorType::get(numElements, oldElementType);
