@@ -1205,7 +1205,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
 
     // If we are at this point we are in the CU/Skeleton CU, and
     // DW_AT_GNU_ranges_base or DW_AT_rnglists_base doesn't exist.
-    if (Unit.getVersion() < 4)
+    if (Unit.getVersion() <= 4)
       DIEBldr.addValue(&Die, dwarf::DW_AT_GNU_ranges_base, dwarf::DW_FORM_data4,
                        DIEInteger(*RangesBase));
     else if (Unit.getVersion() == 5)
