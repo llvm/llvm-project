@@ -44,6 +44,20 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
   return result.second.name;
 }
 
+/// Update the early outlining parent name
+void updateEarlyOutliningParentName(mlir::func::FuncOp funcOp,
+                                    bool appendUnderscore) {
+  if (auto earlyOutlineOp = llvm::dyn_cast<mlir::omp::EarlyOutliningInterface>(
+          funcOp.getOperation())) {
+    auto oldName = earlyOutlineOp.getParentName();
+    if (oldName != "") {
+      auto dName = fir::NameUniquer::deconstruct(oldName);
+      std::string newName = mangleExternalName(dName, appendUnderscore);
+      earlyOutlineOp.setParentName(newName);
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns
 //===----------------------------------------------------------------------===//
@@ -76,6 +90,7 @@ public:
       mlir::SymbolTable::setSymbolName(op, newSymbol);
     }
 
+    updateEarlyOutliningParentName(op, appendUnderscore);
     rewriter.finalizeRootUpdate(op);
     return ret;
   }
