@@ -11,7 +11,9 @@
 #include <filesystem>
 #include <time.h>
 
-#include "time_utils.h"
+#if defined(_LIBCPP_WIN32API)
+#  include "time_utils.h"
+#endif
 
 #if defined(_LIBCPP_WIN32API)
 # define WIN32_LEAN_AND_MEAN
