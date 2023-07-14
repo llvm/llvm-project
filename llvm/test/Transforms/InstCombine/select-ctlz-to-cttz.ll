@@ -44,12 +44,7 @@ define i32 @select_clz_to_ctz_preserve_flag(i32 %a) {
 
 define i32 @select_clz_to_ctz_constant_for_zero(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_constant_for_zero(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[A]]
-; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[AND]], i1 false), !range [[RNG0]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A]], 0
-; CHECK-NEXT:    [[SUB1:%.*]] = xor i32 [[LZ]], 31
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 32, i32 [[SUB1]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 false), !range [[RNG0]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %sub = sub i32 0, %a
