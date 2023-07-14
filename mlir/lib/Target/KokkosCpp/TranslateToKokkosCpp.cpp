@@ -155,6 +155,14 @@ struct KokkosParallelEnv{
     return useTeamVectorRange_;
   }
 
+  bool useSerialLoop() {
+    if (insideThreadVectorRange_ || insideTeamVectorRange_)
+      return true;
+    if (!insideTeamRange_ && parallelLvl_>0)
+      return true;
+    return false;
+  }
+
   void computeInternalParallelDepth(scf::ParallelOp op) {
     parallelDepth_ = getInternalParallelDepth(op);
   }
@@ -1162,7 +1170,95 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp 
   return success();
 }
 
+static LogicalResult printSeralOperation(KokkosCppEmitter &emitter, scf::ParallelOp op, KokkosParallelEnv &kokkosParallelEnv) {
+  emitter << "// the scf.parallel is serialized as no more parallel level is available\n";
+  OperandRange lowerBounds = op.getLowerBound();
+  OperandRange upperBounds = op.getUpperBound();
+  OperandRange step = op.getStep();
+  //OperandRange initVals = op.getInitVals();
+  ValueRange inductionVars = op.getInductionVars();
+  //Note: results mean there is a reduction
+  ResultRange results = op.getResults();
+  bool isReduction = results.size() > size_t(0);
+
+  if(results.size() > size_t(1))
+    return op.emitError("Multiple reduction is not yet implemented");
+
+  for (OpResult result : results) {
+    if (failed(emitter.emitVariableDeclaration(result, true)))
+      return failure();
+  }
+
+  if(isReduction)
+  {
+    for (auto reduce : op.getOps<scf::ReduceOp>())
+    {
+      if (failed(emitter.emitType(reduce.getLoc(), reduce.getOperand().getType(), true)))
+        return failure();
+
+      emitter << " " << emitter.getOrCreateName(reduce.getRegion().getOps().begin()->getResult(0)) << " = ";
+      if (failed(emitter.emitType(reduce.getLoc(), reduce.getOperand().getType(), true)))
+        return failure();
+      emitter <<"(0);\n";
+    }
+  }
+  int rank = inductionVars.size();
+
+  if(rank == 0)
+    return op.emitError("Rank-0 (single element) parallel iteration space not supported in printSeralOperation");
+
+  for(int i = 0; i < rank; i++)
+  {
+    emitter << "for (";
+    emitter << "int64_t " << emitter.getOrCreateName(inductionVars[i]);
+    emitter << " = ";
+    if(failed(emitter.emitValue(lowerBounds[0])))
+      return failure();
+    emitter << "; ";
+    emitter << emitter.getOrCreateName(inductionVars[i]);
+    emitter << " < ";
+    if(failed(emitter.emitValue(upperBounds[0])))
+      return failure();
+    emitter << "; ";
+    emitter << emitter.getOrCreateName(inductionVars[i]);
+    emitter << " += ";
+    if(failed(emitter.emitValue(step[i])))
+      return failure();
+    emitter << ") {\n";
+    emitter.ostream().indent();
+  }
+
+  //Now add the parallel body
+  Region& body = op.getRegion();
+  for (auto& op : body.getOps())
+  {
+    if (failed(emitter.emitOperation(op, true, kokkosParallelEnv)))
+      return failure();
+  }
+
+  for(int i = 0; i < rank; i++)
+  {
+    emitter.ostream().unindent();
+    emitter << "}\n";
+  }
+
+  if(isReduction)
+  {
+    for (OpResult result : results) {
+      for (auto reduce : op.getOps<scf::ReduceOp>())
+      {
+        emitter << emitter.getOrCreateName(result) << " = " << emitter.getOrCreateName(reduce.getRegion().getOps().begin()->getResult(0)) << ";\n";
+      }
+    }
+  }
+
+  return success();
+}
+
 static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp op, KokkosParallelEnv &kokkosParallelEnv) {
+  if (kokkosParallelEnv.useSerialLoop())
+    return printSeralOperation(emitter, op, kokkosParallelEnv);
+
   OperandRange lowerBounds = op.getLowerBound();
   OperandRange upperBounds = op.getUpperBound();
   OperandRange step = op.getStep();
