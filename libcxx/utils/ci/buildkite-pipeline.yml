@@ -821,7 +821,7 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-  - group: ":apple: Apple"
+  - group: ":mac: Apple"
     steps:
     - label: "MacOS x86_64"
       command: "libcxx/utils/ci/run-buildbot generic-cxx20"
@@ -1067,7 +1067,7 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-  - group: "FreeBSD"
+  - group: ":freebsd: FreeBSD"
     steps:
     - label: "FreeBSD 13 amd64"
       command: "libcxx/utils/ci/run-buildbot generic-cxx23"
