@@ -67,7 +67,7 @@ public:
   DefGen(const AttrOrTypeDef &def);
 
   void emitDecl(raw_ostream &os) const {
-    if (storageCls) {
+    if (storageCls && def.genStorageClass()) {
       NamespaceEmitter ns(os, def.getStorageNamespace());
       os << "struct " << def.getStorageClassName() << ";\n";
     }
