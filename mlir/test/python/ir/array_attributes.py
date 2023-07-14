@@ -30,6 +30,24 @@ def testGetDenseElementsUnsupported():
             # CHECK: unimplemented array format conversion from format:
             print(e)
 
+# CHECK-LABEL: TEST: testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided
+@run
+def testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided():
+    with Context():
+        array = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)
+        # datetime64 specifically isn't important: it's just a 64-bit type that
+        # doesn't have a format under the Python buffer protocol. A more
+        # realistic example would be a NumPy extension type like the bfloat16
+        # type from the ml_dtypes package, which isn't a dependency of this
+        # test.
+        attr = DenseElementsAttr.get(array.view(np.datetime64),
+                                     type=IntegerType.get_signless(64))
+        # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi64>
+        print(attr)
+        # CHECK: {{\[}}[1 2 3]
+        # CHECK: {{\[}}4 5 6]]
+        print(np.array(attr))
+
 
 ################################################################################
 # Splats.
