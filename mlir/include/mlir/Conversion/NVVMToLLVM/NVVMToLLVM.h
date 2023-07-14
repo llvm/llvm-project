@@ -19,6 +19,8 @@ class Pass;
 #define GEN_PASS_DECL_CONVERTNVVMTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 
+void populateNVVMToLLVMConversionPatterns(RewritePatternSet &patterns);
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_NVVMTOLLVM_NVVMTOLLVMPASS_H_
