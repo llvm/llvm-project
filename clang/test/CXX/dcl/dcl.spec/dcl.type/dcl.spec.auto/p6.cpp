@@ -81,7 +81,9 @@ namespace PR48617 {
   template <typename...> concept C = true;
   template <typename...> class A {};
 
-  template <typename... Ts> C<Ts...> auto e(A<Ts...>) { return 0; } // expected-note 2{{failed template argument deduction}}
+  template <typename... Ts> C<Ts...> auto e(A<Ts...>) { return 0; }
+  // expected-note@-1 {{could not match 'C auto (A<>)' against 'auto (A<>)'}}
+  // expected-note@-2 {{could not match 'C<int> auto (A<int>)' against 'auto (A<int>)'}}
   template auto e<>(A<>); // expected-error {{does not refer to a function template}}
   template auto e<int>(A<int>); // expected-error {{does not refer to a function template}}
 
