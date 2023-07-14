@@ -40997,12 +40997,30 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
           LHS = DAG.getBitcast(SrcVT, LHS);
           RHS = DAG.getBitcast(SrcVT, RHS ? RHS : LHS);
           SDValue Res = DAG.getNode(Opcode0, DL, VT0, LHS, RHS);
-          // Use SHUFPS for the permute so this will work on SSE3 targets,
+          // Use SHUFPS for the permute so this will work on SSE2 targets,
           // shuffle combining and domain handling will simplify this later on.
           MVT ShuffleVT = MVT::getVectorVT(MVT::f32, RootSizeInBits / 32);
           Res = DAG.getBitcast(ShuffleVT, Res);
           return DAG.getNode(X86ISD::SHUFP, DL, ShuffleVT, Res, Res,
                              getV4X86ShuffleImm8ForMask(PostMask, DL, DAG));
+        }
+      }
+      // permute(pack(x,y)) -> pack(shuffle(x,y),undef)
+      if (!isHoriz && Ops.size() == 1 && NumLanes == 1 &&
+          isUndefInRange(ScaledMask, 2, 2)) {
+        int M0 = ScaledMask[0];
+        int M1 = ScaledMask[1];
+        if (isInRange(M0, 0, 4) && isInRange(M1, 0, 4)) {
+          // Use SHUFPD for the permute so this will work on SSE2 targets,
+          // shuffle combining and domain handling will simplify this later on.
+          unsigned SHUFPDMask = (M0 & 1) | ((M1 & 1) << 1);
+          SDValue LHS = DAG.getBitcast(MVT::v2f64, BC[0].getOperand(M0 >= 2));
+          SDValue RHS = DAG.getBitcast(MVT::v2f64, BC[0].getOperand(M1 >= 2));
+          SDValue Res =
+              DAG.getNode(X86ISD::SHUFP, DL, MVT::v2f64, LHS, RHS,
+                          DAG.getTargetConstant(SHUFPDMask, DL, MVT::i8));
+          return DAG.getNode(Opcode0, DL, VT0, DAG.getBitcast(SrcVT, Res),
+                             DAG.getUNDEF(SrcVT));
         }
       }
     }
