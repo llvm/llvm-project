@@ -433,3 +433,21 @@ Clang compiler and runtime libraries from the same build. Nevertheless, in order
 to better support third-party libraries and toolchains that depend on existing
 libomptarget entry points, contributors are discouraged from making
 modifications to them.
+
+Q: Can I use libc functions on the GPU?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+LLVM provides basic ``libc`` functionality through the LLVM C Library. For 
+building instructions, refer to the associated `LLVM libc documentation 
+<https://libc.llvm.org/gpu/using.html#building-the-gpu-library>`_. Once built, 
+this provides a static library called ``libcgpu.a``. See the documentation for a 
+list of `supported functions <https://libc.llvm.org/gpu/support.html>`_ as well. 
+To utilize these functions, simply link this library as any other when building 
+with OpenMP.
+
+.. code-block:: shell
+
+   clang++ openmp.cpp -fopenmp --offload-arch=gfx90a -lcgpu
+
+For more information on how this is implemented in LLVM/OpenMP's offloading 
+runtime, refer to the `runtime documentation <libomptarget_libc>`_.
