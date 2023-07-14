@@ -562,4 +562,92 @@ def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+//===----------------------------------------------------------------------===//
+// AliasScopeDomainAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
+                                          "alias_scope_domain"> {
+  let parameters = (ins
+    "DistinctAttr":$id,
+    OptionalParameter<"StringAttr">:$description
+  );
+
+  let builders = [
+    AttrBuilder<(ins CArg<"StringAttr", "{}">:$description), [{
+      return $_get($_ctxt, DistinctAttr::create(UnitAttr::get($_ctxt)), description);
+    }]>
+  ];
+
+  let summary = "LLVM dialect alias scope domain metadata";
+
+  let description = [{
+    Defines a domain that may be associated with an alias scope.
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// AliasScopeAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
+  let parameters = (ins
+    "DistinctAttr":$id,
+    "AliasScopeDomainAttr":$domain,
+    OptionalParameter<"StringAttr">:$description
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "AliasScopeDomainAttr":$domain,
+      CArg<"StringAttr", "{}">:$description
+    ), [{
+      MLIRContext *ctx = domain.getContext();
+      return $_get(ctx, DistinctAttr::create(UnitAttr::get(ctx)), domain, description);
+    }]>
+  ];
+
+  let description = [{
+    Defines an alias scope that can be attached to a memory-accessing operation.
+    Such scopes can be used in combination with `noalias` metadata to indicate
+    that sets of memory-affecting operations in one scope do not alias with
+    memory-affecting operations in another scope.
+
+    Example:
+    ```mlir
+    #domain = #llvm.alias_scope_domain<id = distinct[1]<>, description = "Optional domain description">
+    #scope1 = #llvm.alias_scope<id = distinct[2]<>, domain = #domain>
+    #scope2 = #llvm.alias_scope<id = distinct[3]<>, domain = #domain, description = "Optional scope description">
+    llvm.func @foo(%ptr1 : !llvm.ptr<i32>) {
+        %c0 = llvm.mlir.constant(0 : i32) : i32
+        %c4 = llvm.mlir.constant(4 : i32) : i32
+        %1 = llvm.ptrtoint %ptr1 : !llvm.ptr<i32> to i32
+        %2 = llvm.add %1, %c1 : i32
+        %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr<i32>
+        llvm.store %c0, %ptr1 { alias_scopes = [#scope1], llvm.noalias = [#scope2] } : !llvm.ptr<i32>
+        llvm.store %c4, %ptr2 { alias_scopes = [#scope2], llvm.noalias = [#scope1] } : !llvm.ptr<i32>
+        llvm.return
+    }
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
+  }];
+
+  let summary = "LLVM dialect alias scope";
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LLVM_AliasScopeArrayAttr
+    : TypedArrayAttrBase<LLVM_AliasScopeAttr,
+                         LLVM_AliasScopeAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
 #endif // LLVMIR_ATTRDEFS

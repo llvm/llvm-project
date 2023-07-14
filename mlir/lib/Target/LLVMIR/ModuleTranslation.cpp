@@ -22,6 +22,7 @@
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "mlir/IR/AttrTypeSubElements.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -1093,60 +1094,56 @@ void ModuleTranslation::setAccessGroupsMetadata(AccessGroupOpInterface op,
 }
 
 LogicalResult ModuleTranslation::createAliasScopeMetadata() {
-  mlirModule->walk([&](LLVM::MetadataOp metadatas) {
-    // Create the domains first, so they can be reference below in the scopes.
-    DenseMap<Operation *, llvm::MDNode *> aliasScopeDomainMetadataMapping;
-    metadatas.walk([&](LLVM::AliasScopeDomainMetadataOp op) {
-      llvm::LLVMContext &ctx = llvmModule->getContext();
-      llvm::SmallVector<llvm::Metadata *, 2> operands;
-      operands.push_back({}); // Placeholder for self-reference
-      if (std::optional<StringRef> description = op.getDescription())
-        operands.push_back(llvm::MDString::get(ctx, *description));
-      llvm::MDNode *domain = llvm::MDNode::get(ctx, operands);
-      domain->replaceOperandWith(0, domain); // Self-reference for uniqueness
-      aliasScopeDomainMetadataMapping.insert({op, domain});
-    });
+  DenseMap<Attribute, llvm::MDNode *> aliasScopeDomainMetadataMapping;
 
-    // Now create the scopes, referencing the domains created above.
-    metadatas.walk([&](LLVM::AliasScopeMetadataOp op) {
-      llvm::LLVMContext &ctx = llvmModule->getContext();
-      assert(isa<LLVM::MetadataOp>(op->getParentOp()));
-      auto metadataOp = dyn_cast<LLVM::MetadataOp>(op->getParentOp());
-      Operation *domainOp =
-          SymbolTable::lookupNearestSymbolFrom(metadataOp, op.getDomainAttr());
-      llvm::MDNode *domain = aliasScopeDomainMetadataMapping.lookup(domainOp);
-      assert(domain && "Scope's domain should already be valid");
-      llvm::SmallVector<llvm::Metadata *, 3> operands;
-      operands.push_back({}); // Placeholder for self-reference
-      operands.push_back(domain);
-      if (std::optional<StringRef> description = op.getDescription())
-        operands.push_back(llvm::MDString::get(ctx, *description));
-      llvm::MDNode *scope = llvm::MDNode::get(ctx, operands);
-      scope->replaceOperandWith(0, scope); // Self-reference for uniqueness
-      aliasScopeMetadataMapping.insert({op, scope});
-    });
+  AttrTypeWalker walker;
+  walker.addWalk([&](LLVM::AliasScopeDomainAttr op) {
+    llvm::LLVMContext &ctx = llvmModule->getContext();
+    llvm::SmallVector<llvm::Metadata *, 2> operands;
+    operands.push_back({}); // Placeholder for self-reference
+    if (StringAttr description = op.getDescription())
+      operands.push_back(llvm::MDString::get(ctx, description));
+    llvm::MDNode *domain = llvm::MDNode::get(ctx, operands);
+    domain->replaceOperandWith(0, domain); // Self-reference for uniqueness
+    aliasScopeDomainMetadataMapping.insert({op, domain});
   });
+
+  walker.addWalk([&](LLVM::AliasScopeAttr op) {
+    llvm::LLVMContext &ctx = llvmModule->getContext();
+    llvm::MDNode *domain =
+        aliasScopeDomainMetadataMapping.lookup(op.getDomain());
+    assert(domain && "Scope's domain should already be valid");
+    llvm::SmallVector<llvm::Metadata *, 3> operands;
+    operands.push_back({}); // Placeholder for self-reference
+    operands.push_back(domain);
+    if (StringAttr description = op.getDescription())
+      operands.push_back(llvm::MDString::get(ctx, description));
+    llvm::MDNode *scope = llvm::MDNode::get(ctx, operands);
+    scope->replaceOperandWith(0, scope); // Self-reference for uniqueness
+    aliasScopeMetadataMapping.insert({op, scope});
+  });
+
+  mlirModule->walk([&](AliasAnalysisOpInterface op) {
+    if (auto aliasScopes = op.getAliasScopesOrNull())
+      walker.walk(aliasScopes);
+    if (auto noAliasScopes = op.getNoAliasScopesOrNull())
+      walker.walk(noAliasScopes);
+  });
+
   return success();
 }
 
 llvm::MDNode *
-ModuleTranslation::getAliasScope(Operation *op,
-                                 SymbolRefAttr aliasScopeRef) const {
-  StringAttr metadataName = aliasScopeRef.getRootReference();
-  StringAttr scopeName = aliasScopeRef.getLeafReference();
-  auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-      op->getParentOp(), metadataName);
-  Operation *aliasScopeOp =
-      SymbolTable::lookupNearestSymbolFrom(metadataOp, scopeName);
-  return aliasScopeMetadataMapping.lookup(aliasScopeOp);
+ModuleTranslation::getAliasScope(AliasScopeAttr aliasScopeAttr) const {
+  return aliasScopeMetadataMapping.lookup(aliasScopeAttr);
 }
 
 llvm::MDNode *ModuleTranslation::getAliasScopes(
-    Operation *op, ArrayRef<SymbolRefAttr> aliasScopeRefs) const {
+    ArrayRef<AliasScopeAttr> aliasScopeAttrs) const {
   SmallVector<llvm::Metadata *> nodes;
-  nodes.reserve(aliasScopeRefs.size());
-  for (SymbolRefAttr aliasScopeRef : aliasScopeRefs)
-    nodes.push_back(getAliasScope(op, aliasScopeRef));
+  nodes.reserve(aliasScopeAttrs.size());
+  for (AliasScopeAttr aliasScopeRef : aliasScopeAttrs)
+    nodes.push_back(getAliasScope(aliasScopeRef));
   return llvm::MDNode::get(getLLVMContext(), nodes);
 }
 
@@ -1156,7 +1153,7 @@ void ModuleTranslation::setAliasScopeMetadata(AliasAnalysisOpInterface op,
     if (!aliasScopeRefs || aliasScopeRefs.empty())
       return;
     llvm::MDNode *node = getAliasScopes(
-        op, llvm::to_vector(aliasScopeRefs.getAsRange<SymbolRefAttr>()));
+        llvm::to_vector(aliasScopeRefs.getAsRange<AliasScopeAttr>()));
     inst->setMetadata(kind, node);
   };
 

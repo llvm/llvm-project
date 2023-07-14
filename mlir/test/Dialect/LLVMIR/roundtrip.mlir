@@ -566,14 +566,12 @@ llvm.func @stackrestore(%arg0: !llvm.ptr)  {
   llvm.return
 }
 
+#alias_scope_domain = #llvm.alias_scope_domain<id = distinct[0]<>, description = "The domain">
+#alias_scope = #llvm.alias_scope<id = distinct[0]<>, domain = #alias_scope_domain, description = "The domain">
+
 // CHECK-LABEL: @experimental_noalias_scope_decl
 llvm.func @experimental_noalias_scope_decl() {
-  // CHECK: llvm.intr.experimental.noalias.scope.decl @metadata::@scope
-  llvm.intr.experimental.noalias.scope.decl @metadata::@scope
+  // CHECK: llvm.intr.experimental.noalias.scope.decl #{{.*}}
+  llvm.intr.experimental.noalias.scope.decl #alias_scope
   llvm.return
-}
-
-llvm.metadata @metadata {
-  llvm.alias_scope_domain @domain {description = "The domain"}
-  llvm.alias_scope @scope {domain = @domain, description = "The first scope"}
 }
