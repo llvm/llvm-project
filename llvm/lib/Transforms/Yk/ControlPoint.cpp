@@ -50,6 +50,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -104,12 +105,14 @@ public:
 
   bool runOnModule(Module &M) override {
     LLVMContext &Context = M.getContext();
-
     // Locate the "dummy" control point provided by the user.
     CallInst *OldCtrlPointCall = findControlPointCall(M);
     if (OldCtrlPointCall == nullptr) {
-      Context.emitError(
-          "ykllvm couldn't find the call to `yk_mt_control_point()`");
+      // This program doesn't have a control point. We can't do any
+      // transformations on it, but we do still want to compile it.
+      Context.diagnose(DiagnosticInfoInlineAsm(
+          "ykllvm couldn't find the call to `yk_mt_control_point()`",
+          DS_Warning));
       return false;
     }
 
