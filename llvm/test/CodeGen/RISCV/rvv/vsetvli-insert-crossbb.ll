@@ -12,7 +12,7 @@ declare <vscale x 2 x float> @llvm.riscv.vfadd.nxv2f32.nxv2f32(<vscale x 2 x flo
 
 declare <vscale x 1 x double> @llvm.riscv.vfsub.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
 
-declare <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64)
+declare <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, i64, i64)
 
 declare <vscale x 1 x double> @llvm.riscv.vfmv.v.f.nxv1f64.f64(<vscale x 1 x double>, double, i64)
 declare <vscale x 2 x float> @llvm.riscv.vfmv.v.f.nxv2f32.f32( <vscale x 2 x float>, float, i64)
@@ -79,7 +79,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %c.0 = phi <vscale x 1 x double> [ %1, %if.then ], [ %2, %if.else ]
-  %3 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %a, i64 %0)
+  %3 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %a, i64 7, i64 %0)
   ret <vscale x 1 x double> %3
 }
 
@@ -116,7 +116,7 @@ if.else:                                          ; preds = %entry
 if.end:                                           ; preds = %if.else, %if.then
   %vl.0 = phi i64 [ %0, %if.then], [ %2, %if.else ]
   %c.0 = phi <vscale x 1 x double> [ %1, %if.then ], [ %3, %if.else ]
-  %4 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %a, i64 %vl.0)
+  %4 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %a, i64 7, i64 %vl.0)
   ret <vscale x 1 x double> %4
 }
 
@@ -172,7 +172,7 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %8 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %l, <vscale x 1 x double> %r, i64 %avl)
+  %8 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %l, <vscale x 1 x double> %r, i64 7, i64 %avl)
   ret <vscale x 1 x double> %8
 }
 
@@ -218,11 +218,11 @@ if.end:                                           ; preds = %if.else, %if.then
   br i1 %tobool3, label %if.else5, label %if.then4
 
 if.then4:                                         ; preds = %if.end
-  %3 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %a, i64 %0)
+  %3 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %a, i64 7, i64 %0)
   br label %if.end6
 
 if.else5:                                         ; preds = %if.end
-  %4 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %c.0, i64 %0)
+  %4 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %a, <vscale x 1 x double> %c.0, i64 7, i64 %0)
   br label %if.end6
 
 if.end6:                                          ; preds = %if.else5, %if.then4
@@ -314,7 +314,7 @@ if.else5:                                         ; preds = %if.end
   br label %if.end10
 
 if.end10:                                         ; preds = %if.else5, %if.then4
-  %13 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %c.0, i64 %0)
+  %13 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %c.0, i64 7, i64 %0)
   ret <vscale x 1 x double> %13
 }
 
@@ -436,7 +436,7 @@ if.else:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   %c.0 = phi <vscale x 1 x double> [ %1, %if.then ], [ %2, %if.else ]
-  %3 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %a, i64 %0)
+  %3 = tail call <vscale x 1 x double> @llvm.riscv.vfmul.nxv1f64.nxv1f64(<vscale x 1 x double> undef, <vscale x 1 x double> %c.0, <vscale x 1 x double> %a, i64 7, i64 %0)
   ret <vscale x 1 x double> %3
 }
 

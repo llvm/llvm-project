@@ -1945,6 +1945,11 @@ let ManualCodegen = [{
     // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
     defm vfwadd : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
     defm vfwsub : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
+
+    // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+    defm vfmul  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfdiv  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfrdiv : RVVFloatingBinVFBuiltinSetRoundingMode;
   }
   // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
   defm vfadd  : RVVFloatingBinBuiltinSet;
@@ -1955,6 +1960,11 @@ let ManualCodegen = [{
   // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
   defm vfwadd : RVVFloatingWidenOp0BinBuiltinSet;
   defm vfwsub : RVVFloatingWidenOp0BinBuiltinSet;
+
+  // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+  defm vfmul  : RVVFloatingBinBuiltinSet;
+  defm vfdiv  : RVVFloatingBinBuiltinSet;
+  defm vfrdiv : RVVFloatingBinVFBuiltinSet;
 }
 
 let ManualCodegen = [{
@@ -2007,23 +2017,25 @@ let ManualCodegen = [{
     // Widening FP add/subtract, 2*SEW = SEW +/- SEW
     defm vfwadd : RVVFloatingWidenBinBuiltinSetRoundingMode;
     defm vfwsub : RVVFloatingWidenBinBuiltinSetRoundingMode;
+
+    // 14.5. Vector Widening Floating-Point Multiply
+    let Log2LMUL = [-2, -1, 0, 1, 2] in {
+      defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
+                                          [["vv", "w", "wvvu"],
+                                            ["vf", "w", "wveu"]]>;
+    }
   }
   // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
   // Widening FP add/subtract, 2*SEW = SEW +/- SEW
   defm vfwadd : RVVFloatingWidenBinBuiltinSet;
   defm vfwsub : RVVFloatingWidenBinBuiltinSet;
-}
 
-// 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm vfmul  : RVVFloatingBinBuiltinSet;
-defm vfdiv  : RVVFloatingBinBuiltinSet;
-defm vfrdiv : RVVFloatingBinVFBuiltinSet;
-
-// 14.5. Vector Widening Floating-Point Multiply
-let Log2LMUL = [-2, -1, 0, 1, 2] in {
-  defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
-                                       [["vv", "w", "wvv"],
-                                        ["vf", "w", "wve"]]>;
+  // 14.5. Vector Widening Floating-Point Multiply
+  let Log2LMUL = [-2, -1, 0, 1, 2] in {
+    defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
+                                        [["vv", "w", "wvv"],
+                                          ["vf", "w", "wve"]]>;
+  }
 }
 }
 
