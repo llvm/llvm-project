@@ -816,6 +816,9 @@ public:
   /// the first instruction, which might be PHI.
   /// Returns end() is there's no non-PHI instruction.
   iterator getFirstNonPHI();
+  const_iterator getFirstNonPHI() const {
+    return const_cast<MachineBasicBlock *>(this)->getFirstNonPHI();
+  }
 
   /// Return the first instruction in MBB after I that is not a PHI or a label.
   /// This is the correct point to insert lowered copies at the beginning of a
