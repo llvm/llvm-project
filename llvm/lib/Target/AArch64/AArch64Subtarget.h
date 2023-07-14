@@ -402,10 +402,10 @@ public:
 
   bool useSVEForFixedLengthVectors() const {
     if (!isNeonAvailable())
-      return hasSVE();
+      return hasSVEorSME();
 
     // Prefer NEON unless larger SVE registers are available.
-    return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
+    return hasSVEorSME() && getMinSVEVectorSizeInBits() >= 256;
   }
 
   bool useSVEForFixedLengthVectors(EVT VT) const {
