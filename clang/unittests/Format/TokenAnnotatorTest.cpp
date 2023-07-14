@@ -272,6 +272,19 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   Tokens = annotate("template <enable_if_t<foo && !bar>* = nullptr> void f();");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_BinaryOperator);
+
+  FormatStyle Style = getLLVMStyle();
+  Style.TypeNames.push_back("MYI");
+  Tokens = annotate("if (MYI *p{nullptr})", Style);
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_TypeName);
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
+
+  Style.TypeNames.push_back("Class");
+  Tokens = annotate("if (Class *obj {getObj()})", Style);
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_TypeName);
+  EXPECT_TOKEN(Tokens[3], tok::star, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
