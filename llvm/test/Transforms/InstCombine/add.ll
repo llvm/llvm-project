@@ -3021,10 +3021,7 @@ define <2 x i32> @dec_zext_add_nonzero_vec_poison2(<2 x i8> %x) {
 
 define i32 @add_zext_sext_i1(i1 %a) {
 ; CHECK-LABEL: @add_zext_sext_i1(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[A:%.*]] to i32
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[A]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK-NEXT:    ret i32 0
 ;
   %zext = zext i1 %a to i32
   %sext = sext i1 %a to i32
@@ -3034,10 +3031,7 @@ define i32 @add_zext_sext_i1(i1 %a) {
 
 define i32 @add_sext_zext_i1(i1 %a) {
 ; CHECK-LABEL: @add_sext_zext_i1(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[A:%.*]] to i32
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[A]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[SEXT]], [[ZEXT]]
-; CHECK-NEXT:    ret i32 [[ADD]]
+; CHECK-NEXT:    ret i32 0
 ;
   %zext = zext i1 %a to i32
   %sext = sext i1 %a to i32
@@ -3047,10 +3041,7 @@ define i32 @add_sext_zext_i1(i1 %a) {
 
 define <2 x i32> @add_zext_sext_i1_vec(<2 x i1> %a) {
 ; CHECK-LABEL: @add_zext_sext_i1_vec(
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i1> [[A:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[A]] to <2 x i32>
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i32> [[ZEXT]], [[SEXT]]
-; CHECK-NEXT:    ret <2 x i32> [[ADD]]
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
 ;
   %zext = zext <2 x i1> %a to <2 x i32>
   %sext = sext <2 x i1> %a to <2 x i32>
