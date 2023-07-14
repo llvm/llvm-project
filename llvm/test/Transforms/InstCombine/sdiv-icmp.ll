@@ -4,8 +4,7 @@
 declare void @use.i8(i8)
 define i1 @sdiv_exact_eq_0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_exact_eq_0(
-; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[D]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %d = sdiv exact i8 %x, %y
@@ -15,7 +14,7 @@ define i1 @sdiv_exact_eq_0(i8 %x, i8 %y) {
 
 define i1 @udiv_exact_ne_0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_exact_ne_0(
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %d = udiv exact i8 %x, %y
@@ -25,8 +24,7 @@ define i1 @udiv_exact_ne_0(i8 %x, i8 %y) {
 
 define i1 @sdiv_exact_ne_1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_exact_ne_1(
-; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[D]], 0
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %d = sdiv exact i8 %x, %y
@@ -36,8 +34,7 @@ define i1 @sdiv_exact_ne_1(i8 %x, i8 %y) {
 
 define i1 @udiv_exact_eq_1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_exact_eq_1(
-; CHECK-NEXT:    [[D:%.*]] = udiv exact i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[D]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %d = udiv exact i8 %x, %y
@@ -48,8 +45,8 @@ define i1 @udiv_exact_eq_1(i8 %x, i8 %y) {
 define i1 @sdiv_exact_eq_9_no_of(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sdiv_exact_eq_9_no_of(
 ; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 7
-; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[X:%.*]], [[YY]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[D]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i8 [[YY]], 9
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %yy = and i8 %y, 7
@@ -100,8 +97,8 @@ define i1 @sdiv_exact_eq_9_must_of_todo_is_false(i8 %x, i8 %y) {
 define i1 @udiv_exact_ne_30_no_of(i8 %x, i8 %y) {
 ; CHECK-LABEL: @udiv_exact_ne_30_no_of(
 ; CHECK-NEXT:    [[YY:%.*]] = and i8 [[Y:%.*]], 7
-; CHECK-NEXT:    [[D:%.*]] = udiv exact i8 [[X:%.*]], [[YY]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[D]], 30
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i8 [[YY]], 30
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %yy = and i8 %y, 7
