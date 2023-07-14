@@ -4305,10 +4305,8 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       // by assumption and this case never wraps, so nowrap flags can be
       // ignored.
       if ((Opcode == Instruction::Sub || Opcode == Instruction::Xor) &&
-          NewOps[0] == NewOps[1]) {
-        assert(NewOps[0] == RepOp && "Precondition for non-poison assumption");
+          NewOps[0] == RepOp && NewOps[1] == RepOp)
         return Constant::getNullValue(I->getType());
-      }
 
       // If we are substituting an absorber constant into a binop and extra
       // poison can't leak if we remove the select -- because both operands of
