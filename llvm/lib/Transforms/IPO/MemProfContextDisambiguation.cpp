@@ -110,6 +110,7 @@ cl::opt<bool> SupportsHotColdNew(
     "supports-hot-cold-new", cl::init(false), cl::Hidden,
     cl::desc("Linking with hot/cold operator new interfaces"));
 
+namespace {
 /// CRTP base for graphs built from either IR or ThinLTO summary index.
 ///
 /// The graph represents the call contexts in all memprof metadata on allocation
@@ -628,6 +629,7 @@ private:
 
   const ModuleSummaryIndex &Index;
 };
+} // namespace
 
 namespace llvm {
 template <>

@@ -21,6 +21,7 @@
 #include "Diagnostics.h"
 #include "Headers.h"
 #include "ParsedAST.h"
+#include "Protocol.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"

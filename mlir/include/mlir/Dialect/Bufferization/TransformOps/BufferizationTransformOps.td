@@ -58,10 +58,12 @@ def OneShotBufferizeOp
       DefaultValuedAttr<BoolAttr, "false">:$bufferize_function_boundaries,
       DefaultValuedAttr<BoolAttr, "true">:$create_deallocs,
       DefaultValuedAttr<BoolAttr, "false">:$test_analysis_only,
-      DefaultValuedAttr<BoolAttr, "false">:$print_conflicts);
+      DefaultValuedAttr<BoolAttr, "false">:$print_conflicts,
+      DefaultValuedAttr<StrAttr, "\"memref.copy\"">:$memcpy_op);
 
   let results = (outs TransformHandleTypeInterface:$transformed);
 
+  let hasVerifier = 1;
   let assemblyFormat = [{
     (`layout` `{` $function_boundary_type_conversion^ `}`)?
     $target attr-dict `:` functional-type($target, results)

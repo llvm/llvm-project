@@ -434,8 +434,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
 LogicalResult
 ModuleImport::processAccessGroupMetadata(const llvm::MDNode *node) {
   Location loc = mlirModule.getLoc();
-  if (failed(loopAnnotationImporter->translateAccessGroup(
-          node, loc, getGlobalMetadataOp())))
+  if (failed(loopAnnotationImporter->translateAccessGroup(node, loc)))
     return emitError(loc) << "unsupported access group node: "
                           << diagMD(node, llvmModule.get());
   return success();
@@ -1803,7 +1802,7 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
   return success();
 }
 
-FailureOr<SmallVector<SymbolRefAttr>>
+FailureOr<SmallVector<AccessGroupAttr>>
 ModuleImport::lookupAccessGroupAttrs(const llvm::MDNode *node) const {
   return loopAnnotationImporter->lookupAccessGroupAttrs(node);
 }

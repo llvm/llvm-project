@@ -912,35 +912,8 @@ llvm.mlir.global appending @non_array_type_global_appending_linkage() : i32
 // -----
 
 module {
-  llvm.func @loopOptions() {
-      // expected-error@below {{expected '@func1' to reference a metadata op}}
-      llvm.br ^bb4 {loop_annotation = #llvm.loop_annotation<parallelAccesses = @func1>}
-    ^bb4:
-      llvm.return
-  }
-  llvm.func @func1() {
-    llvm.return
-  }
-}
-
-// -----
-
-module {
-  llvm.func @loopOptions() {
-      // expected-error@below {{expected '@metadata' to reference an access_group op}}
-      llvm.br ^bb4 {loop_annotation = #llvm.loop_annotation<parallelAccesses = @metadata>}
-    ^bb4:
-      llvm.return
-  }
-  llvm.metadata @metadata {
-  }
-}
-
-// -----
-
-module {
   llvm.func @accessGroups(%arg0 : !llvm.ptr) {
-      // expected-error@below {{expected '@func1' to specify a fully qualified reference}}
+      // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: LLVM dialect access group metadata array}}
       %0 = llvm.load %arg0 { "access_groups" = [@func1] } : !llvm.ptr -> i32
       llvm.return
   }
@@ -952,32 +925,8 @@ module {
 // -----
 
 module {
-  llvm.func @accessGroups(%arg0 : i32, %arg1 : !llvm.ptr) {
-      // expected-error@below {{expected '@accessGroups::@group1' to reference a metadata op}}
-      llvm.store %arg0, %arg1 { "access_groups" = [@accessGroups::@group1] } : i32, !llvm.ptr
-      llvm.return
-  }
-  llvm.metadata @metadata {
-  }
-}
-
-// -----
-
-module {
-  llvm.func @accessGroups(%arg0 : !llvm.ptr, %arg1 : f32) {
-      // expected-error@below {{expected '@metadata::@group1' to be a valid reference}}
-      %0 = llvm.atomicrmw fadd %arg0, %arg1 monotonic { "access_groups" = [@metadata::@group1] } : !llvm.ptr, f32
-      llvm.return
-  }
-  llvm.metadata @metadata {
-  }
-}
-
-// -----
-
-module {
   llvm.func @accessGroups(%arg0 : !llvm.ptr, %arg1 : i32, %arg2 : i32) {
-      // expected-error@below {{expected '@metadata::@scope' to resolve to a llvm.access_group}}
+      // expected-error@below {{attribute 'access_groups' failed to satisfy constraint: LLVM dialect access group metadata array}}
       %0 = llvm.cmpxchg %arg0, %arg1, %arg2 acq_rel monotonic { "access_groups" = [@metadata::@scope] } : !llvm.ptr, i32
       llvm.return
   }

@@ -3481,18 +3481,10 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
 static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   SmallVector<StringRef, 3> elidedAttrs;
   elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
-  if (op.permutation_map().isMinorIdentity())
+  if (op.getPermutationMap().isMinorIdentity())
     elidedAttrs.push_back(op.getPermutationMapAttrStrName());
-  bool elideInBounds = true;
-  if (auto inBounds = op.in_bounds()) {
-    for (auto attr : *inBounds) {
-      if (llvm::cast<BoolAttr>(attr).getValue()) {
-        elideInBounds = false;
-        break;
-      }
-    }
-  }
-  if (elideInBounds)
+  // Elide in_bounds attribute if all dims are out-of-bounds.
+  if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
     elidedAttrs.push_back(op.getInBoundsAttrStrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
@@ -4243,11 +4235,8 @@ public:
     }
 
     // Swap the tensor::ExtractSliceOp in front of the vector::TransferWriteOp.
-    SmallVector<int64_t> newResultShape = applyPermutationMap(
-        transferOp.getPermutationMap(), insertOp.getSourceType().getShape());
-    SmallVector<bool> newInBounds;
-    for (const auto &en : enumerate(newResultShape))
-      newInBounds.push_back(en.value() == vectorShape[en.index()]);
+    // Set all in_bounds to false and let the folder infer them.
+    SmallVector<bool> newInBounds(vectorShape.size(), false);
     auto newExtractOp = rewriter.create<tensor::ExtractSliceOp>(
         extractOp.getLoc(), insertOp.getSourceType(), insertOp.getDest(),
         insertOp.getMixedOffsets(), insertOp.getMixedSizes(),

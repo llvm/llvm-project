@@ -11477,6 +11477,7 @@ cc_library(
         ":BufferizationTransformOpsIncGen",
         ":BufferizationTransforms",
         ":IR",
+        ":LinalgDialect",
         ":MemRefDialect",
         ":Parser",
         ":SideEffectInterfaces",

@@ -72,6 +72,7 @@ using namespace llvm;
 using namespace llvm::json;
 using namespace llvm::MachO;
 
+namespace {
 struct JSONSymbol {
   SymbolKind Kind;
   std::string Name;
@@ -697,6 +698,7 @@ Expected<std::vector<IFPtr>> getInlinedLibs(const Object *File) {
 }
 
 } // namespace StubParser
+} // namespace
 
 Expected<std::unique_ptr<InterfaceFile>>
 MachO::getInterfaceFileFromJSON(StringRef JSON) {
