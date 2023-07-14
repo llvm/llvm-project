@@ -512,11 +512,19 @@ __OMP_ATTRS_SET(
               MemoryAttr(MemoryEffects::inaccessibleMemOnly(ModRefInfo::Ref)))
         : AttributeSet(EnumAttr(NoUnwind)))
 __OMP_ATTRS_SET(
+    GetterArgReadAttrs,
+    OptimisticAttributes
+        ? AttributeSet(
+              EnumAttr(NoUnwind), EnumAttr(NoSync), EnumAttr(NoFree),
+              EnumAttr(WillReturn),
+              MemoryAttr(MemoryEffects::inaccessibleOrArgMemOnly(ModRefInfo::Ref)))
+        : AttributeSet(EnumAttr(NoUnwind)))
+__OMP_ATTRS_SET(
     GetterArgWriteAttrs,
     OptimisticAttributes
         ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync), EnumAttr(NoFree),
                        EnumAttr(WillReturn),
-                       MemoryAttr(MemoryEffects::inaccessibleOrArgMemOnly()))
+                       MemoryAttr(MemoryEffects::argMemOnly() | MemoryEffects::inaccessibleMemOnly(ModRefInfo::Ref)))
         : AttributeSet(EnumAttr(NoUnwind)))
 __OMP_ATTRS_SET(
   SetterAttrs,
@@ -642,7 +650,7 @@ __OMP_RTL_ATTRS(__kmpc_error, AttributeSet(), AttributeSet(),
                 ParamAttrs(AttributeSet(), SExt))
 __OMP_RTL_ATTRS(__kmpc_flush, BarrierAttrs, AttributeSet(),
                 ParamAttrs(ReadOnlyPtrAttrs))
-__OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterAttrs, SExt,
+__OMP_RTL_ATTRS(__kmpc_global_thread_num, GetterArgReadAttrs, SExt,
                 ParamAttrs(ReadOnlyPtrAttrs))
 __OMP_RTL_ATTRS(__kmpc_get_hardware_thread_id_in_block, GetterAttrs, ZExt,
                 ParamAttrs())
@@ -693,9 +701,9 @@ __OMP_RTL_ATTRS(omp_get_place_proc_ids, GetterArgWriteAttrs, AttributeSet(),
                                               EnumAttr(WriteOnly))))
 __OMP_RTL_ATTRS(omp_get_place_num, GetterAttrs, SExt, ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_partition_num_places, GetterAttrs, SExt, ParamAttrs())
-__OMP_RTL_ATTRS(omp_get_partition_place_nums, GetterAttrs, AttributeSet(),
+__OMP_RTL_ATTRS(omp_get_partition_place_nums, GetterArgWriteAttrs, AttributeSet(),
                 ParamAttrs())
-__OMP_RTL_ATTRS(omp_get_wtime, GetterArgWriteAttrs, AttributeSet(), ParamAttrs())
+__OMP_RTL_ATTRS(omp_get_wtime, GetterAttrs, AttributeSet(), ParamAttrs())
 
 __OMP_RTL_ATTRS(omp_set_num_threads, SetterAttrs, AttributeSet(),
                 ParamAttrs(SExt))
