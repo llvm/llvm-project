@@ -21,7 +21,6 @@ define void @machinesink_loop_variable_out_of_divergent_loop(i32 %arg, i1 %cmp49
 ; CHECK-NEXT:  .LBB0_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    v_add_nc_u32_e32 v4, -4, v4
 ; CHECK-NEXT:  .LBB0_2: ; %Flow1
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s7
@@ -54,6 +53,7 @@ define void @machinesink_loop_variable_out_of_divergent_loop(i32 %arg, i1 %cmp49
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_add_nc_u32_e32 v4, s9, v2
 ; CHECK-NEXT:    v_cmp_ge_u32_e64 s4, v4, v0
+; CHECK-NEXT:    v_add_nc_u32_e32 v4, -4, v4
 ; CHECK-NEXT:    s_or_b32 s8, s4, s8
 ; CHECK-NEXT:    s_andn2_b32 exec_lo, exec_lo, s8
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_1
