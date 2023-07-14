@@ -8,8 +8,8 @@
 ; coalescing for simple unit tests.
 
 ; FIXME: This regressed after enabling opaque pointers.
-define i32 @testCase() nounwind ssp {
-; CHECK-LABEL: testCase:
+define i32 @test_inttoptr() nounwind {
+; CHECK-LABEL: test_inttoptr:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    mov x8, #0 // =0x0
@@ -47,4 +47,46 @@ while.body:                                       ; preds = %while.body, %entry
 while.end:                                        ; preds = %while.body
   tail call void inttoptr (i64 6442450944 to ptr)() nounwind
   ret i32 0
+}
+
+@g1 = external dso_local global i8
+@g2 = external dso_local global i8
+
+define ptr @test_globals() nounwind {
+; CHECK-LABEL: test_globals:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, #0 // =0x0
+; CHECK-NEXT:    mov w9, #1288 // =0x508
+; CHECK-NEXT:    adrp x10, g2
+; CHECK-NEXT:    add x10, x10, :lo12:g2
+; CHECK-NEXT:    adrp x11, g1
+; CHECK-NEXT:    add x11, x11, :lo12:g1
+; CHECK-NEXT:  .LBB1_1: // %while.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldr x12, [x10, x8]
+; CHECK-NEXT:    str x12, [x11, x8]
+; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    subs x9, x9, #8
+; CHECK-NEXT:    b.pl .LBB1_1
+; CHECK-NEXT:  // %bb.2: // %while.end
+; CHECK-NEXT:    adrp x0, g1
+; CHECK-NEXT:    add x0, x0, :lo12:g1
+; CHECK-NEXT:    ret
+entry:
+  br label %while.body
+
+while.body:                                       ; preds = %while.body, %entry
+  %len.06 = phi i64 [ 1288, %entry ], [ %sub, %while.body ]
+  %pDst.05 = phi ptr [ @g1, %entry ], [ %incdec.ptr1, %while.body ]
+  %pSrc.04 = phi ptr [ @g2, %entry ], [ %incdec.ptr, %while.body ]
+  %incdec.ptr = getelementptr inbounds i64, ptr %pSrc.04, i64 1
+  %tmp = load volatile i64, ptr %pSrc.04, align 8
+  %incdec.ptr1 = getelementptr inbounds i64, ptr %pDst.05, i64 1
+  store volatile i64 %tmp, ptr %pDst.05, align 8
+  %sub = add i64 %len.06, -8
+  %cmp = icmp sgt i64 %sub, -1
+  br i1 %cmp, label %while.body, label %while.end
+
+while.end:                                        ; preds = %while.body
+  ret ptr @g1
 }
