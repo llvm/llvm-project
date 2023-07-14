@@ -245,12 +245,10 @@ define <4 x i1> @illegal_abs_to_ne_and(<4 x i64> %x) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm1
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [129,129]
 ; SSE41-NEXT:    pcmpeqq %xmm0, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE41-NEXT:    pxor %xmm3, %xmm1
 ; SSE41-NEXT:    pcmpeqq %xmm0, %xmm2
-; SSE41-NEXT:    pxor %xmm3, %xmm2
 ; SSE41-NEXT:    packssdw %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; SSE2-LABEL: illegal_abs_to_ne_and:
@@ -267,13 +265,12 @@ define <4 x i1> @illegal_abs_to_ne_and(<4 x i64> %x) {
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm3
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm1, %xmm3
 ; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
+; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    packssdw %xmm3, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    pxor %xmm1, %xmm0
 ; SSE2-NEXT:    retq
   %abs = call <4 x i64> @llvm.abs.v4i64(<4 x i64> %x, i1 true)
   %cmp = icmp ne <4 x i64> %abs, <i64 129, i64 129, i64 129, i64 129>
