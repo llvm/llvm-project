@@ -2732,6 +2732,20 @@ multiclass VPseudoVALU_VF {
   }
 }
 
+multiclass VPseudoVALU_VF_RM {
+  foreach f = FPList in {
+    foreach m = f.MxList in {
+      defvar mx = m.MX;
+      defvar WriteVFALUF_MX = !cast<SchedWrite>("WriteVFALUF_" # mx);
+      defvar ReadVFALUV_MX = !cast<SchedRead>("ReadVFALUV_" # mx);
+      defvar ReadVFALUF_MX = !cast<SchedRead>("ReadVFALUF_" # mx);
+
+      defm "" : VPseudoBinaryV_VF_RM<m, f>,
+                Sched<[WriteVFALUF_MX, ReadVFALUV_MX, ReadVFALUF_MX, ReadVMask]>;
+    }
+  }
+}
+
 multiclass VPseudoVALU_VX_VI<Operand ImmType = simm5> {
   foreach m = MxList in {
     defvar mx = m.MX;
@@ -5711,11 +5725,8 @@ let Predicates = [HasVInstructionsAnyF] in {
 let mayRaiseFPException = true,
     hasPostISelHook = 1 in {
 defm PseudoVFADD  : VPseudoVALU_VV_VF_RM;
-}
-
-let Uses = [FRM], mayRaiseFPException = true in {
-defm PseudoVFSUB  : VPseudoVALU_VV_VF;
-defm PseudoVFRSUB : VPseudoVALU_VF;
+defm PseudoVFSUB  : VPseudoVALU_VV_VF_RM;
+defm PseudoVFRSUB : VPseudoVALU_VF_RM;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6374,8 +6385,9 @@ defm : VPatBinaryV_WV_WX_WI_RM<"int_riscv_vnclip", "PseudoVNCLIP",
 //===----------------------------------------------------------------------===//
 defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfadd", "PseudoVFADD",
                             AllFloatVectors>;
-defm : VPatBinaryV_VV_VX<"int_riscv_vfsub", "PseudoVFSUB", AllFloatVectors>;
-defm : VPatBinaryV_VX<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors>;
+defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfsub", "PseudoVFSUB",
+                            AllFloatVectors>;
+defm : VPatBinaryV_VX_RM<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
