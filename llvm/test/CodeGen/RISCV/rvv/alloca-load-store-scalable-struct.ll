@@ -41,7 +41,7 @@ entry:
   %3 = call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(
     <vscale x 1 x double> poison,
     <vscale x 1 x double> %1,
-    <vscale x 1 x double> %2, i64 %vl)
+    <vscale x 1 x double> %2, i64 7, i64 %vl)
   ret <vscale x 1 x double> %3
 }
 
@@ -49,4 +49,4 @@ declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(
   <vscale x 1 x double>,
   <vscale x 1 x double>,
   <vscale x 1 x double>,
-  i64)
+  i64, i64)

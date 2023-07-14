@@ -112,13 +112,11 @@ define void @v8i8(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-LABEL: v4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    movi d0, #0xff00ff00ff00ff
-; CHECK-NEXT:    ldr s2, [x1]
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-NEXT:    add v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    umin v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    movi d2, #0xff00ff00ff00ff
+; CHECK-NEXT:    ldr s1, [x1]
+; CHECK-NEXT:    uaddl v0.8h, v0.8b, v1.8b
+; CHECK-NEXT:    umin v0.4h, v0.4h, v2.4h
 ; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    str s0, [x2]
 ; CHECK-NEXT:    ret

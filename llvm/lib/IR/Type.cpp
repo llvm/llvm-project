@@ -798,24 +798,12 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
   assert(EltTy && "Can't get a pointer to <null> type!");
   assert(isValidElementType(EltTy) && "Invalid type for pointer element!");
 
-  LLVMContextImpl *CImpl = EltTy->getContext().pImpl;
-
   // Automatically convert typed pointers to opaque pointers.
-  if (CImpl->getOpaquePointers())
-    return get(EltTy->getContext(), AddressSpace);
-
-  PointerType *&Entry =
-      CImpl->LegacyPointerTypes[std::make_pair(EltTy, AddressSpace)];
-
-  if (!Entry)
-    Entry = new (CImpl->Alloc) PointerType(EltTy, AddressSpace);
-  return Entry;
+  return get(EltTy->getContext(), AddressSpace);
 }
 
 PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
   LLVMContextImpl *CImpl = C.pImpl;
-  assert(CImpl->getOpaquePointers() &&
-         "Can only create opaque pointers in opaque pointer mode");
 
   // Since AddressSpace #0 is the common case, we special case it.
   PointerType *&Entry = AddressSpace == 0 ? CImpl->AS0PointerType

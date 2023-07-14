@@ -271,6 +271,8 @@ int main(int argc, const char **argv) {
     }
   }
   auto HeaderFilter = headerFilter();
+  if (!HeaderFilter)
+    return 1; // error already reported.
   ActionFactory Factory(HeaderFilter);
   return clang::tooling::ClangTool(OptionsParser->getCompilations(),
                                    OptionsParser->getSourcePathList())

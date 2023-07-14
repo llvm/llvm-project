@@ -356,6 +356,11 @@ enum NodeType : unsigned {
   // the value read before the modification and the new chain pointer.
   SWAP_CSR,
 
+  // Branchless select operations, matching the semantics of the instructions
+  // defined in zicond.
+  CZERO_EQZ,
+  CZERO_NEZ,
+
   // FP to 32 bit int conversions for RV64. These are used to keep track of the
   // result being sign extended to 64 bit. These saturate out of range inputs.
   STRICT_FCVT_W_RV64 = ISD::FIRST_TARGET_STRICTFP_OPCODE,

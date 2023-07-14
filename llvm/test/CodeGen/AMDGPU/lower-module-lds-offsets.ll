@@ -42,6 +42,3 @@ define void @f0() {
   store i8 3, ptr addrspace(3) @lds.size.1.align.1, align 1
   ret void
 }
-
-attributes #0 = { "amdgpu-elide-module-lds" }
-; CHECK: attributes #0 = { "amdgpu-elide-module-lds" }

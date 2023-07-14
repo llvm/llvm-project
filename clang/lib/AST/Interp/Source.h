@@ -14,11 +14,17 @@
 #define LLVM_CLANG_AST_INTERP_SOURCE_H
 
 #include "PrimType.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/Stmt.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Endian.h"
 
 namespace clang {
+
+class Decl;
+class Stmt;
+class SourceLocation;
+class Expr;
+class SourceRange;
+
 namespace interp {
 class Function;
 
@@ -58,9 +64,9 @@ public:
 private:
   friend class Function;
   /// Constructor used by Function to generate pointers.
-  CodePtr(const char *Ptr) : Ptr(Ptr) {}
+  CodePtr(const std::byte *Ptr) : Ptr(Ptr) {}
   /// Pointer into the code owned by a function.
-  const char *Ptr;
+  const std::byte *Ptr;
 };
 
 /// Describes the statement/declaration an opcode was generated from.

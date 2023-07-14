@@ -454,14 +454,14 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
     return idx >= node->getNumOperands() ||
            isa<llvm::MDString>(node->getOperand(idx));
   };
-  // Helper that creates an alias scope domain operation.
+  // Helper that creates an alias scope domain attribute.
   auto createAliasScopeDomainOp = [&](const llvm::MDNode *aliasDomain) {
     StringAttr description = nullptr;
     if (aliasDomain->getNumOperands() >= 2)
       if (auto *operand = dyn_cast<llvm::MDString>(aliasDomain->getOperand(1)))
         description = builder.getStringAttr(operand->getString());
-    std::string name = llvm::formatv("domain_{0}", aliasScopeMapping.size());
-    return builder.create<AliasScopeDomainMetadataOp>(loc, name, description);
+    return builder.getAttr<AliasScopeDomainAttr>(
+        DistinctAttr::create(builder.getUnitAttr()), description);
   };
 
   // Collect the alias scopes and domains to translate them.
@@ -484,49 +484,34 @@ ModuleImport::processAliasScopeMetadata(const llvm::MDNode *node) {
       if (aliasScopeMapping.contains(scope))
         continue;
 
-      // Set the insertion point to the end of the global metadata operation.
-      MetadataOp metadataOp = getGlobalMetadataOp();
-      StringAttr metadataOpName =
-          SymbolTable::getSymbolName(getGlobalMetadataOp());
-      OpBuilder::InsertionGuard guard(builder);
-      builder.setInsertionPointToEnd(&metadataOp.getBody().back());
-
       // Convert the domain metadata node if it has not been translated before.
       auto it = aliasScopeMapping.find(aliasScope.getDomain());
       if (it == aliasScopeMapping.end()) {
         auto aliasScopeDomainOp = createAliasScopeDomainOp(domain);
-        auto symbolRef = SymbolRefAttr::get(
-            builder.getContext(), metadataOpName,
-            FlatSymbolRefAttr::get(builder.getContext(),
-                                   aliasScopeDomainOp.getSymName()));
-        it = aliasScopeMapping.try_emplace(domain, symbolRef).first;
+        it = aliasScopeMapping.try_emplace(domain, aliasScopeDomainOp).first;
       }
 
       // Convert the scope metadata node if it has not been converted before.
       StringAttr description = nullptr;
       if (!aliasScope.getName().empty())
         description = builder.getStringAttr(aliasScope.getName());
-      std::string name = llvm::formatv("scope_{0}", aliasScopeMapping.size());
-      auto aliasScopeOp = builder.create<AliasScopeMetadataOp>(
-          loc, name, it->getSecond().getLeafReference().getValue(),
-          description);
-      auto symbolRef =
-          SymbolRefAttr::get(builder.getContext(), metadataOpName,
-                             FlatSymbolRefAttr::get(builder.getContext(),
-                                                    aliasScopeOp.getSymName()));
-      aliasScopeMapping.try_emplace(aliasScope.getNode(), symbolRef);
+      auto aliasScopeOp = builder.getAttr<AliasScopeAttr>(
+          DistinctAttr::create(builder.getUnitAttr()),
+          cast<AliasScopeDomainAttr>(it->second), description);
+      aliasScopeMapping.try_emplace(aliasScope.getNode(), aliasScopeOp);
     }
   }
   return success();
 }
 
-FailureOr<SmallVector<SymbolRefAttr>>
+FailureOr<SmallVector<AliasScopeAttr>>
 ModuleImport::lookupAliasScopeAttrs(const llvm::MDNode *node) const {
-  SmallVector<SymbolRefAttr> aliasScopes;
+  SmallVector<AliasScopeAttr> aliasScopes;
   aliasScopes.reserve(node->getNumOperands());
   for (const llvm::MDOperand &operand : node->operands()) {
     auto *node = cast<llvm::MDNode>(operand.get());
-    aliasScopes.push_back(aliasScopeMapping.lookup(node));
+    aliasScopes.push_back(
+        dyn_cast_or_null<AliasScopeAttr>(aliasScopeMapping.lookup(node)));
   }
   // Return failure if one of the alias scope lookups failed.
   if (llvm::is_contained(aliasScopes, nullptr))
@@ -1261,7 +1246,7 @@ DILabelAttr ModuleImport::matchLabelAttr(llvm::Value *value) {
   return debugImporter->translate(node);
 }
 
-FailureOr<SmallVector<SymbolRefAttr>>
+FailureOr<SmallVector<AliasScopeAttr>>
 ModuleImport::matchAliasScopeAttrs(llvm::Value *value) {
   auto *nodeAsVal = cast<llvm::MetadataAsValue>(value);
   auto *node = cast<llvm::MDNode>(nodeAsVal->getMetadata());

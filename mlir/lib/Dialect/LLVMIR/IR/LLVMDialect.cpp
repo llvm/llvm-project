@@ -3085,21 +3085,6 @@ LogicalResult TBAATypeDescriptorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// AliasScopeMetadataOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult AliasScopeMetadataOp::verify() {
-  Operation *domainOp = SymbolTable::lookupNearestSymbolFrom(
-      this->getOperation(), getDomainAttr());
-  if (!isa_and_nonnull<AliasScopeDomainMetadataOp>(domainOp)) {
-    return this->emitOpError()
-           << "expected '" << getDomain()
-           << "' to reference a domain operation in the same region";
-  }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // OpAsmDialectInterface
 //===----------------------------------------------------------------------===//
 
@@ -3109,8 +3094,9 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
-        .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-              DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
+        .Case<AliasScopeAttr, AliasScopeDomainAttr, DIBasicTypeAttr,
+              DICompileUnitAttr, DICompositeTypeAttr, DIDerivedTypeAttr,
+              DIFileAttr, DILabelAttr, DILexicalBlockAttr,
               DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
               DINullTypeAttr, DISubprogramAttr, DISubroutineTypeAttr,
               LoopAnnotationAttr, LoopVectorizeAttr, LoopInterleaveAttr,

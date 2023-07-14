@@ -722,6 +722,8 @@ Error RewriteInstance::run() {
 
   postProcessFunctions();
 
+  processMetadataPostCFG();
+
   if (opts::DiffOnly)
     return Error::success();
 
@@ -2918,6 +2920,10 @@ void RewriteInstance::processMetadataPreCFG() {
   MetadataManager.runInitializersPreCFG();
 
   processProfileDataPreCFG();
+}
+
+void RewriteInstance::processMetadataPostCFG() {
+  MetadataManager.runInitializersPostCFG();
 }
 
 void RewriteInstance::processProfileDataPreCFG() {

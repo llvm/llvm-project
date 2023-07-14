@@ -218,6 +218,19 @@ static bool matchSelectWithOptionalNotCond(Value *V, Value *&Cond, Value *&A,
   return true;
 }
 
+static unsigned hashCallInst(CallInst *CI) {
+  // Don't CSE convergent calls in different basic blocks, because they
+  // implicitly depend on the set of threads that is currently executing.
+  if (CI->isConvergent()) {
+    return hash_combine(
+        CI->getOpcode(), CI->getParent(),
+        hash_combine_range(CI->value_op_begin(), CI->value_op_end()));
+  }
+  return hash_combine(
+      CI->getOpcode(),
+      hash_combine_range(CI->value_op_begin(), CI->value_op_end()));
+}
+
 static unsigned getHashValueImpl(SimpleValue Val) {
   Instruction *Inst = Val.Inst;
   // Hash in all of the operands as pointers.
@@ -320,11 +333,8 @@ static unsigned getHashValueImpl(SimpleValue Val) {
 
   // Don't CSE convergent calls in different basic blocks, because they
   // implicitly depend on the set of threads that is currently executing.
-  if (CallInst *CI = dyn_cast<CallInst>(Inst); CI && CI->isConvergent()) {
-    return hash_combine(
-        Inst->getOpcode(), Inst->getParent(),
-        hash_combine_range(Inst->value_op_begin(), Inst->value_op_end()));
-  }
+  if (CallInst *CI = dyn_cast<CallInst>(Inst))
+    return hashCallInst(CI);
 
   // Mix in the opcode.
   return hash_combine(
@@ -524,15 +534,21 @@ unsigned DenseMapInfo<CallValue>::getHashValue(CallValue Val) {
   Instruction *Inst = Val.Inst;
 
   // Hash all of the operands as pointers and mix in the opcode.
-  return hash_combine(
-      Inst->getOpcode(),
-      hash_combine_range(Inst->value_op_begin(), Inst->value_op_end()));
+  return hashCallInst(cast<CallInst>(Inst));
 }
 
 bool DenseMapInfo<CallValue>::isEqual(CallValue LHS, CallValue RHS) {
-  Instruction *LHSI = LHS.Inst, *RHSI = RHS.Inst;
   if (LHS.isSentinel() || RHS.isSentinel())
-    return LHSI == RHSI;
+    return LHS.Inst == RHS.Inst;
+
+  CallInst *LHSI = cast<CallInst>(LHS.Inst);
+  CallInst *RHSI = cast<CallInst>(RHS.Inst);
+
+  // Convergent calls implicitly depend on the set of threads that is
+  // currently executing, so conservatively return false if they are in
+  // different basic blocks.
+  if (LHSI->isConvergent() && LHSI->getParent() != RHSI->getParent())
+      return false;
 
   return LHSI->isIdenticalTo(RHSI);
 }
