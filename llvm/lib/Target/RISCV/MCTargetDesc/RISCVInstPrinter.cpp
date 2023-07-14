@@ -120,8 +120,11 @@ void RISCVInstPrinter::printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
                                               const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
+  auto SiFiveReg = RISCVSysReg::lookupSiFiveRegByEncoding(Imm);
   auto SysReg = RISCVSysReg::lookupSysRegByEncoding(Imm);
-  if (SysReg && SysReg->haveRequiredFeatures(STI.getFeatureBits()))
+  if (SiFiveReg && SiFiveReg->haveVendorRequiredFeatures(STI.getFeatureBits()))
+    O << SiFiveReg->Name;
+  else if (SysReg && SysReg->haveRequiredFeatures(STI.getFeatureBits()))
     O << SysReg->Name;
   else
     O << Imm;
