@@ -130,6 +130,18 @@ typedef void* dispatch_source_t;
 typedef u64 dispatch_time_t;
 typedef void (*dispatch_function_t)(void *block);
 typedef void* (*worker_t)(void *block);
+typedef unsigned long dispatch_mach_reason;
+typedef void *dispatch_mach_msg_t;
+typedef int mach_error_t;
+typedef void *dispatch_mach_t;
+
+typedef void (*dispatch_mach_handler_function_t)(void *context,
+                                                 dispatch_mach_reason reason,
+                                                 dispatch_mach_msg_t message,
+                                                 mach_error_t error);
+typedef void (^dispatch_mach_handler_t)(dispatch_mach_reason reason,
+                                        dispatch_mach_msg_t message,
+                                        mach_error_t error);
 
 // A wrapper for the ObjC blocks used to support libdispatch.
 typedef struct {
@@ -241,6 +253,8 @@ void dispatch_after(dispatch_time_t when, dispatch_queue_t queue,
 void dispatch_source_set_cancel_handler(dispatch_source_t ds,
                                         void(^work)(void));
 void dispatch_source_set_event_handler(dispatch_source_t ds, void(^work)(void));
+dispatch_mach_t dispatch_mach_create(const char *label, dispatch_queue_t queue,
+                                     dispatch_mach_handler_t handler);
 }
 
 #define GET_ASAN_BLOCK(work) \
@@ -290,6 +304,34 @@ INTERCEPTOR(void, dispatch_source_set_event_handler,
   GET_ASAN_BLOCK(work);
   REAL(dispatch_source_set_event_handler)(ds, asan_block);
 }
+
+INTERCEPTOR(void *, dispatch_mach_create, const char *label,
+            dispatch_queue_t dq, dispatch_mach_handler_t handler) {
+  int parent_tid = GetCurrentTidOrInvalid();
+  return REAL(dispatch_mach_create)(
+      label, dq,
+      ^(dispatch_mach_reason reason, dispatch_mach_msg_t message,
+        mach_error_t error) {
+        GET_STACK_TRACE_THREAD;
+        asan_register_worker_thread(parent_tid, &stack);
+        handler(reason, message, error);
+      });
+}
+
+INTERCEPTOR(void *, dispatch_mach_create_f, const char *label,
+            dispatch_queue_t dq, void *ctxt,
+            dispatch_mach_handler_function_t handler) {
+  int parent_tid = GetCurrentTidOrInvalid();
+  return REAL(dispatch_mach_create)(
+      label, dq,
+      ^(dispatch_mach_reason reason, dispatch_mach_msg_t message,
+        mach_error_t error) {
+        GET_STACK_TRACE_THREAD;
+        asan_register_worker_thread(parent_tid, &stack);
+        handler(ctxt, reason, message, error);
+      });
+}
+
 #endif
 
 #endif  // SANITIZER_APPLE
