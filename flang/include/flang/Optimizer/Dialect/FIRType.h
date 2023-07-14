@@ -22,6 +22,11 @@ namespace fir {
 class FIROpsDialect;
 class KindMapping;
 using KindTy = unsigned;
+
+namespace detail {
+struct RecordTypeStorage;
+} // namespace detail
+
 } // namespace fir
 
 //===----------------------------------------------------------------------===//
