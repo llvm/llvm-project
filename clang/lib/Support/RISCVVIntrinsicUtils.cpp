@@ -1072,10 +1072,7 @@ void RVVIntrinsic::updateNamesAndPolicy(
       appendPolicySuffix("_mu");
     else if (PolicyAttrs.isTAMAPolicy()) {
       Name += "_m";
-      if (HasPolicy)
-        BuiltinName += "_tama";
-      else
-        BuiltinName += "_m";
+      BuiltinName += "_m";
     } else
       llvm_unreachable("Unhandled policy condition");
   } else {
