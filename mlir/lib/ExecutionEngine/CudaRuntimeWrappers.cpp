@@ -512,7 +512,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuCreateSparseLtEnv() {
   ScopedContext scopedContext;
   assert(!cusparseLt_initiated &&
          "client called mgpuCreateSparseLtEnv() twice");
-  // Note that cuSparseLt still uses cusparseStatus_t
+  // Note that cuSparseLt still uses cusparseStatus_t.
   CUSPARSE_REPORT_IF_ERROR(cusparseLtInit(&cusparseLt_env));
   cusparseLt_initiated = true;
 }
@@ -527,29 +527,22 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuCreateCuSparseLtDnMat(void *dh, intptr_t rows, intptr_t cols, void *values,
                           int32_t dtp, CUstream /*stream*/) {
   assert(cusparseLt_initiated && "client did not call mgpuCreateSparseLtEnv()");
-  // CusparseLt expects the descriptors to be zero-initialized.
-  memset(dh, 0, sizeof(cusparseLtDnMatHandleAndData));
   auto dnmat_handle = reinterpret_cast<cusparseLtDnMatHandleAndData *>(dh);
+  // CusparseLt expects the descriptors to be zero-initialized.
+  memset(dnmat_handle, 0, sizeof(cusparseLtDnMatHandleAndData));
+  dnmat_handle->values = values;
   auto dTp = static_cast<cudaDataType_t>(dtp);
-  // assuming row-major when deciding lda
+  // Assume row-major when deciding lda.
+  const uint32_t alignment = 16;
   CUSPARSE_REPORT_IF_ERROR(cusparseLtDenseDescriptorInit(
       &cusparseLt_env, &(dnmat_handle->mat), rows, cols, /*lda=*/cols,
-      /*alignment=*/16, dTp, CUSPARSE_ORDER_ROW))
-  dnmat_handle->values = values;
-}
-
-// This can be used to destroy both dense matrices and sparse matrices in
-// cusparseLt
-extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
-mgpuDestroyCuSparseLtSpMat(void *m, CUstream /*stream*/) {
-  auto matAndData = reinterpret_cast<cusparseLtSpMatHandleAndData *>(m);
-  CUSPARSE_REPORT_IF_ERROR(cusparseLtMatDescriptorDestroy(&(matAndData->mat)))
+      alignment, dTp, CUSPARSE_ORDER_ROW))
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
-mgpuDestroyCuSparseLtDnMat(void *m, CUstream /*stream*/) {
-  auto matAndData = reinterpret_cast<cusparseLtDnMatHandleAndData *>(m);
-  CUSPARSE_REPORT_IF_ERROR(cusparseLtMatDescriptorDestroy(&(matAndData->mat)))
+mgpuDestroyCuSparseLtDnMat(void *dh, CUstream /*stream*/) {
+  auto dnmat_handle = reinterpret_cast<cusparseLtDnMatHandleAndData *>(dh);
+  CUSPARSE_REPORT_IF_ERROR(cusparseLtMatDescriptorDestroy(&(dnmat_handle->mat)))
 }
 
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
@@ -561,11 +554,17 @@ mgpuCusparseLtCreate2To4SpMat(void *sh, intptr_t rows, intptr_t cols,
   memset(spmat_handle, 0, sizeof(cusparseLtSpMatHandleAndData));
   spmat_handle->values = values;
   auto dTp = static_cast<cudaDataType_t>(dtp);
-  // assuming row-major when deciding lda
+  // Assume row-major when deciding lda.
+  const uint32_t alignment = 16;
   CUSPARSE_REPORT_IF_ERROR(cusparseLtStructuredDescriptorInit(
-      &cusparseLt_env, &(spmat_handle->mat), rows, cols, /*ld=*/cols,
-      /*alignment=*/16, dTp, CUSPARSE_ORDER_ROW,
-      CUSPARSELT_SPARSITY_50_PERCENT))
+      &cusparseLt_env, &(spmat_handle->mat), rows, cols, /*ld=*/cols, alignment,
+      dTp, CUSPARSE_ORDER_ROW, CUSPARSELT_SPARSITY_50_PERCENT))
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
+mgpuDestroyCuSparseLtSpMat(void *sh, CUstream /*stream*/) {
+  auto spmat_handle = reinterpret_cast<cusparseLtSpMatHandleAndData *>(sh);
+  CUSPARSE_REPORT_IF_ERROR(cusparseLtMatDescriptorDestroy(&(spmat_handle->mat)))
 }
 
 // Several things are being done in this stage, algorithm selection, planning,
@@ -607,7 +606,7 @@ mgpuCuSparseLtSpMMBufferSize(void *bs, int32_t ma, int32_t mb, void *a, void *b,
       &cusparseLt_env, &(matA->plan), &compressed_size_,
       &compressed_buffer_size_))
 
-  // avoid zero-alloc
+  // Avoid zero-allocation.
   *workspace_size = (workspace_size_ == 0 ? 1 : workspace_size_);
   *compressed_size = (compressed_size_ == 0 ? 1 : compressed_size_);
   *compressed_buffer_size =
