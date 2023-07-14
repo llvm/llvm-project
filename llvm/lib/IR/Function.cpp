@@ -917,11 +917,6 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
   std::string Result;
   if (PointerType *PTyp = dyn_cast<PointerType>(Ty)) {
     Result += "p" + utostr(PTyp->getAddressSpace());
-    // Opaque pointer doesn't have pointee type information, so we just mangle
-    // address space for opaque pointer.
-    if (!PTyp->isOpaque())
-      Result += getMangledTypeStr(PTyp->getNonOpaquePointerElementType(),
-                                  HasUnnamedType);
   } else if (ArrayType *ATyp = dyn_cast<ArrayType>(Ty)) {
     Result += "a" + utostr(ATyp->getNumElements()) +
               getMangledTypeStr(ATyp->getElementType(), HasUnnamedType);

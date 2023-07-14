@@ -977,18 +977,11 @@ void ModuleBitcodeWriter::writeTypeTable() {
     case Type::PointerTyID: {
       PointerType *PTy = cast<PointerType>(T);
       unsigned AddressSpace = PTy->getAddressSpace();
-      if (PTy->isOpaque()) {
-        // OPAQUE_POINTER: [address space]
-        Code = bitc::TYPE_CODE_OPAQUE_POINTER;
-        TypeVals.push_back(AddressSpace);
-        if (AddressSpace == 0)
-          AbbrevToUse = OpaquePtrAbbrev;
-      } else {
-        // POINTER: [pointee type, address space]
-        Code = bitc::TYPE_CODE_POINTER;
-        TypeVals.push_back(VE.getTypeID(PTy->getNonOpaquePointerElementType()));
-        TypeVals.push_back(AddressSpace);
-      }
+      // OPAQUE_POINTER: [address space]
+      Code = bitc::TYPE_CODE_OPAQUE_POINTER;
+      TypeVals.push_back(AddressSpace);
+      if (AddressSpace == 0)
+        AbbrevToUse = OpaquePtrAbbrev;
       break;
     }
     case Type::FunctionTyID: {
