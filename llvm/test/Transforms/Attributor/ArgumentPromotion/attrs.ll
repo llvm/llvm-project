@@ -17,12 +17,12 @@ define internal i32 @f(ptr byval(%struct.ss) %b, ptr byval(i32) %X, i32 %i) noun
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[B_PRIV]], align 4
 ; CHECK-NEXT:    [[B_PRIV_0_1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[B_PRIV]], i64 0, i32 1
 ; CHECK-NEXT:    store i64 [[TMP1]], ptr [[B_PRIV_0_1]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_PRIV]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[B_PRIV]], align 8
+; CHECK-NEXT:    [[TRUETMP1:%.*]] = load i32, ptr [[B_PRIV]], align 8
+; CHECK-NEXT:    [[TRUETMP2:%.*]] = add i32 [[TRUETMP1]], 1
+; CHECK-NEXT:    store i32 [[TRUETMP2]], ptr [[B_PRIV]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[X_PRIV]], align 4
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[X_PRIV]], align 4
-; CHECK-NEXT:    [[A:%.*]] = add i32 [[L]], [[TMP2]]
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[L]], [[TRUETMP2]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
 entry:
@@ -46,7 +46,7 @@ define i32 @test(ptr %X) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
 ; TUNIT-NEXT:    store i32 1, ptr [[S]], align 8
-; TUNIT-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
+; TUNIT-NEXT:    [[TRUETMP4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[S]], align 8
 ; TUNIT-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i64 0, i32 1
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, ptr [[S_0_1]], align 8
@@ -59,7 +59,7 @@ define i32 @test(ptr %X) {
 ; CGSCC-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[S:%.*]] = alloca [[STRUCT_SS:%.*]], align 8
-; CGSCC-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
+; CGSCC-NEXT:    [[TRUETMP4:%.*]] = getelementptr [[STRUCT_SS]], ptr [[S]], i32 0, i32 1
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 4
 ; CGSCC-NEXT:    [[C:%.*]] = call i32 @f(i32 noundef 1, i64 noundef 2, i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[C]]

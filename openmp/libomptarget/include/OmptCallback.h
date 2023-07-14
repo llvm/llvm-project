@@ -18,6 +18,8 @@
 
 #include "omp-tools.h"
 
+#pragma push_macro("DEBUG_PREFIX")
+#undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 
 #define FOREACH_OMPT_TARGET_CALLBACK(macro)                                    \
@@ -81,5 +83,7 @@ void connectLibrary();
 } // namespace llvm
 
 #endif // OMPT_SUPPORT
+
+#pragma pop_macro("DEBUG_PREFIX")
 
 #endif // _OMPTCALLBACK_H
