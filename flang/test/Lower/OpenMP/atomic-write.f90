@@ -63,3 +63,13 @@ subroutine atomic_write_pointer()
   x = 2
 end
 
+!CHECK-LABEL: func.func @_QPatomic_write_typed_assign
+!CHECK: %[[VAR:.*]] = fir.alloca f32 {bindc_name = "r2", uniq_name = "{{.*}}r2"}
+!CHECK: %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+!CHECK: omp.atomic.write %[[VAR]] = %[[CST]]   : !fir.ref<f32>, f32
+
+subroutine atomic_write_typed_assign
+  real :: r2
+  !$omp atomic write
+  r2 = 0
+end subroutine
