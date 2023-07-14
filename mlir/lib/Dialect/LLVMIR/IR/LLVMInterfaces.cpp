@@ -87,9 +87,13 @@ LogicalResult verifySymbolRefsPointTo(Operation *op, StringRef name,
 
 LogicalResult mlir::LLVM::detail::verifyAccessGroupOpInterface(Operation *op) {
   auto iface = cast<AccessGroupOpInterface>(op);
-  if (failed(verifySymbolRefsPointTo<LLVM::AccessGroupMetadataOp>(
-          iface, "access groups", iface.getAccessGroupsOrNull())))
-    return failure();
+  ArrayAttr accessGroups = iface.getAccessGroupsOrNull();
+  if (!accessGroups)
+    return success();
+  for (Attribute iter : accessGroups)
+    if (!isa<AccessGroupAttr>(iter))
+      return op->emitOpError("expected op to return array of ")
+             << AccessGroupAttr::getMnemonic() << " attributes";
   return success();
 }
 

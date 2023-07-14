@@ -215,7 +215,7 @@ def LoopAnnotationAttr : LLVM_Attr<"LoopAnnotation", "loop_annotation"> {
     OptionalParameter<"LoopUnswitchAttr">:$unswitch,
     OptionalParameter<"BoolAttr">:$mustProgress,
     OptionalParameter<"BoolAttr">:$isVectorized,
-    OptionalArrayRefParameter<"SymbolRefAttr">:$parallelAccesses,
+    OptionalArrayRefParameter<"AccessGroupAttr">:$parallelAccesses,
     OptionalParameter<"FusedLoc">:$startLoc,
     OptionalParameter<"FusedLoc">:$endLoc
   );
@@ -647,6 +647,41 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
 def LLVM_AliasScopeArrayAttr
     : TypedArrayAttrBase<LLVM_AliasScopeAttr,
                          LLVM_AliasScopeAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
+// AccessGroupAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_AccessGroupAttr : LLVM_Attr<"AccessGroup", "access_group"> {
+
+  let parameters = (ins "DistinctAttr":$id);
+
+  let builders = [
+    AttrBuilder<(ins), [{
+      return $_get($_ctxt, DistinctAttr::create(UnitAttr::get($_ctxt)));
+    }]>
+  ];
+
+  let summary = "LLVM dialect access group metadata";
+
+  let description = [{
+    Defines an access group metadata that can be set on any instruction
+    that potentially accesses memory via the `AccessGroupOpInterface` or on
+    branch instructions in the loop latch block via the `parallelAccesses`
+    parameter of `LoopAnnotationAttr`.
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#llvm-access-group-metadata
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LLVM_AccessGroupArrayAttr
+    : TypedArrayAttrBase<LLVM_AccessGroupAttr,
+                         LLVM_AccessGroupAttr.summary # " array"> {
   let constBuilderCall = ?;
 }
 
