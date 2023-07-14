@@ -171,19 +171,24 @@ LogicalResult acc::AttachOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// GetDevicePtrOp
+// DeclareDeviceResidentOp
 //===----------------------------------------------------------------------===//
-LogicalResult acc::GetDevicePtrOp::verify() {
-  // This operation is also created for use in unstructured constructs
-  // when we need an "accPtr" to feed to exit operation. Thus we test
-  // for those cases as well:
-  if (getDataClause() != acc::DataClause::acc_getdeviceptr &&
-      getDataClause() != acc::DataClause::acc_copyout &&
-      getDataClause() != acc::DataClause::acc_delete &&
-      getDataClause() != acc::DataClause::acc_detach &&
-      getDataClause() != acc::DataClause::acc_update_host &&
-      getDataClause() != acc::DataClause::acc_update_self)
-    return emitError("getDevicePtr mismatch");
+
+LogicalResult acc::DeclareDeviceResidentOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_declare_device_resident)
+    return emitError("data clause associated with device_resident operation "
+                     "must match its intent");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareLinkOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::DeclareLinkOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_declare_link)
+    return emitError(
+        "data clause associated with link operation must match its intent");
   return success();
 }
 
@@ -214,7 +219,12 @@ LogicalResult acc::DeleteOp::verify() {
   // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_delete &&
       getDataClause() != acc::DataClause::acc_create &&
-      getDataClause() != acc::DataClause::acc_create_zero)
+      getDataClause() != acc::DataClause::acc_create_zero &&
+      getDataClause() != acc::DataClause::acc_copyin &&
+      getDataClause() != acc::DataClause::acc_copyin_readonly &&
+      getDataClause() != acc::DataClause::acc_present &&
+      getDataClause() != acc::DataClause::acc_declare_device_resident &&
+      getDataClause() != acc::DataClause::acc_declare_link)
     return emitError(
         "data clause associated with delete operation must match its intent"
         " or specify original clause this operation was decomposed from");
@@ -963,6 +973,41 @@ Value EnterDataOp::getDataOperand(unsigned i) {
 void EnterDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<RemoveConstantIfCondition<EnterDataOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareEnterOp
+//===----------------------------------------------------------------------===//
+
+template <typename Op>
+static LogicalResult checkDeclareOperands(Op &op,
+                                          const mlir::ValueRange &operands) {
+  if (operands.empty())
+    return emitError(
+        op->getLoc(),
+        "at least one operand must appear on the declare operation");
+
+  for (mlir::Value operand : operands)
+    if (!mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+                   acc::DevicePtrOp, acc::GetDevicePtrOp, acc::PresentOp,
+                   acc::DeclareDeviceResidentOp, acc::DeclareLinkOp>(
+            operand.getDefiningOp()))
+      return op.emitError(
+          "expect valid declare data entry operation or acc.getdeviceptr "
+          "as defining op");
+  return success();
+}
+
+LogicalResult acc::DeclareEnterOp::verify() {
+  return checkDeclareOperands(*this, this->getDataClauseOperands());
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareExitOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::DeclareExitOp::verify() {
+  return checkDeclareOperands(*this, this->getDataClauseOperands());
 }
 
 //===----------------------------------------------------------------------===//

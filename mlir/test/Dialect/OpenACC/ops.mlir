@@ -1538,3 +1538,99 @@ func.func @acc_reduc_test(%a : i64) -> () {
 // CHECK-LABEL: func.func @acc_reduc_test(
 // CHECK-SAME:    %[[ARG0:.*]]: i64)
 // CHECK:         acc.serial reduction(@reduction_add_i64 -> %[[ARG0]] : i64)
+
+// -----
+
+func.func @testdeclareop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
+  %0 = acc.copyin varPtr(%a : memref<f32>) -> memref<f32>
+  // copyin(zero)
+  %1 = acc.copyin varPtr(%b : memref<f32>) -> memref<f32> {dataClause = 2}
+  // copy
+  %2 = acc.copyin varPtr(%c : memref<f32>) -> memref<f32> {dataClause = 3}
+  acc.declare_enter dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
+
+  %3 = acc.create varPtr(%a : memref<f32>) -> memref<f32>
+  // copyout
+  %4 = acc.create varPtr(%b : memref<f32>) -> memref<f32> {dataClause = 4}
+  %5 = acc.present varPtr(%c : memref<f32>) -> memref<f32>
+  acc.declare_enter dataOperands(%3, %4, %5 : memref<f32>, memref<f32>, memref<f32>)
+
+  %6 = acc.deviceptr varPtr(%a : memref<f32>) -> memref<f32>
+  %7 = acc.declare_device_resident varPtr(%b : memref<f32>) -> memref<f32>
+  %8 = acc.declare_link varPtr(%c : memref<f32>) -> memref<f32>
+  acc.declare_enter dataOperands(%6, %7, %8 : memref<f32>, memref<f32>, memref<f32>)
+
+  acc.declare_exit dataOperands(%7, %8 : memref<f32>, memref<f32>)
+  acc.delete accPtr(%7 : memref<f32>) {dataClause = 22 }
+  acc.delete accPtr(%8 : memref<f32>) {dataClause = 23 }
+
+  acc.declare_exit dataOperands(%3, %4, %5 : memref<f32>, memref<f32>, memref<f32>)
+  acc.delete accPtr(%3 : memref<f32>) {dataClause = 7 }
+  acc.copyout accPtr(%4 : memref<f32>) to varPtr(%b : memref<f32>)
+  acc.delete accPtr(%5 : memref<f32>) {dataClause = 6 }
+
+  acc.declare_exit dataOperands(%0, %1, %2 : memref<f32>, memref<f32>, memref<f32>)
+  acc.delete accPtr(%0 : memref<f32>) {dataClause = 1 }
+  acc.delete accPtr(%1 : memref<f32>) {dataClause = 2 }
+  acc.copyout accPtr(%2 : memref<f32>) to varPtr(%c : memref<f32>) { dataClause = 3 }
+
+  return
+}
+
+// CHECK-LABEL: func.func @testdeclareop(
+// CHECK-SAME: %[[ARGA:.*]]: memref<f32>, %[[ARGB:.*]]: memref<f32>, %[[ARGC:.*]]: memref<f32>)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
+// CHECK-NEXT: %[[COPYINRO:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {dataClause = 2 : i64}
+// CHECK-NEXT: %[[COPY:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) -> memref<f32> {dataClause = 3 : i64}
+// CHECK-NEXT: acc.declare_enter dataOperands(%[[COPYIN]], %[[COPYINRO]], %[[COPY]] : memref<f32>, memref<f32>, memref<f32>)
+// CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
+// CHECK-NEXT: %[[COPYOUT:.*]] = acc.create varPtr(%[[ARGB]] : memref<f32>) -> memref<f32> {dataClause = 4 : i64}
+// CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[ARGC]] : memref<f32>) -> memref<f32>
+// CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]], %[[COPYOUT]], %[[PRESENT]] : memref<f32>, memref<f32>, memref<f32>)
+// CHECK: %[[DEVICEPTR:.*]] = acc.deviceptr varPtr(%[[ARGA]] : memref<f32>) -> memref<f32>
+// CHECK-NEXT: %[[DEVICERES:.*]] = acc.declare_device_resident varPtr(%[[ARGB]] : memref<f32>) -> memref<f32>
+// CHECK-NEXT: %[[LINK:.*]] = acc.declare_link varPtr(%[[ARGC]] : memref<f32>) -> memref<f32>
+// CHECK-NEXT: acc.declare_enter dataOperands(%[[DEVICEPTR]], %[[DEVICERES]], %[[LINK]] : memref<f32>, memref<f32>, memref<f32>)
+// CHECK: acc.declare_exit dataOperands(%[[DEVICERES]], %[[LINK]] : memref<f32>, memref<f32>)
+// CHECK-NEXT: acc.delete accPtr(%[[DEVICERES]] : memref<f32>) {dataClause = 22 : i64}
+// CHECK-NEXT: acc.delete accPtr(%[[LINK]] : memref<f32>) {dataClause = 23 : i64}
+// CHECK: acc.declare_exit dataOperands(%[[CREATE]], %[[COPYOUT]], %[[PRESENT]] : memref<f32>, memref<f32>, memref<f32>)
+// CHECK-NEXT: acc.delete accPtr(%[[CREATE]] : memref<f32>) {dataClause = 7 : i64}
+// CHECK-NEXT: acc.copyout accPtr(%[[COPYOUT]] : memref<f32>) to varPtr(%[[ARGB]] : memref<f32>)
+// CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : memref<f32>) {dataClause = 6 : i64}
+// CHECK: acc.declare_exit dataOperands(%[[COPYIN]], %[[COPYINRO]], %[[COPY]] : memref<f32>, memref<f32>, memref<f32>)
+// CHECK-NEXT: acc.delete accPtr(%[[COPYIN]] : memref<f32>) {dataClause = 1 : i64}
+// CHECK-NEXT: acc.delete accPtr(%[[COPYINRO]] : memref<f32>) {dataClause = 2 : i64}
+// CHECK-NEXT: acc.copyout accPtr(%[[COPY]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) {dataClause = 3 : i64}
+
+// -----
+
+llvm.mlir.global external @globalvar() : i32 {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.return %0 : i32
+}
+
+acc.global_ctor @acc_constructor {
+  %0 = llvm.mlir.addressof @globalvar : !llvm.ptr<i32>
+  %1 = acc.create varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32>
+  acc.declare_enter dataOperands(%1 : !llvm.ptr<i32>)
+  acc.terminator
+}
+
+acc.global_dtor @acc_destructor {
+  %0 = llvm.mlir.addressof @globalvar : !llvm.ptr<i32>
+  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32> { dataClause = 7}
+  acc.declare_exit dataOperands(%1 : !llvm.ptr<i32>)
+  acc.delete accPtr(%1 : !llvm.ptr<i32>)
+  acc.terminator
+}
+
+// CHECK-LABEL: acc.global_ctor @acc_constructor
+// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar : !llvm.ptr<i32>
+// CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !llvm.ptr<i32>) -> !llvm.ptr<i32>
+// CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !llvm.ptr<i32>)
+// CHECK: acc.global_dtor @acc_destructor
+// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar : !llvm.ptr<i32>
+// CHECK-NEXT: %[[DELETE:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !llvm.ptr<i32>) -> !llvm.ptr<i32> {dataClause = 7 : i64}
+// CHECK-NEXT: acc.declare_exit dataOperands(%[[DELETE]] : !llvm.ptr<i32>)
+// CHECK-NEXT: acc.delete accPtr(%[[DELETE]] : !llvm.ptr<i32>)
