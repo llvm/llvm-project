@@ -74,7 +74,8 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
       .Default(llvm::Triple::UnknownArch);
 }
 
-void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
+void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str,
+                                           const ArgList &Args) {
   const llvm::Triple::ArchType Arch = getArchTypeForMachOArchName(Str);
   llvm::ARM::ArchKind ArchKind = llvm::ARM::parseArch(Str);
   T.setArch(Arch);
@@ -84,6 +85,11 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str) {
   if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
       ArchKind == llvm::ARM::ArchKind::ARMV7M ||
       ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
+    // Don't reject -mios-version-min= if we have an iOS triple.
+    if (T.isiOS())
+      if (Arg *A = Args.getLastArgNoClaim(options::OPT_mios_version_min_EQ))
+        A->ignoreTargetSpecific();
+
     T.setOS(llvm::Triple::UnknownOS);
     T.setObjectFormat(llvm::Triple::MachO);
   }

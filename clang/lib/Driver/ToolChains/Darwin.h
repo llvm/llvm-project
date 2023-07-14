@@ -28,7 +28,8 @@ namespace tools {
 
 namespace darwin {
 llvm::Triple::ArchType getArchTypeForMachOArchName(StringRef Str);
-void setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str);
+void setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str,
+                                   const llvm::opt::ArgList &Args);
 
 class LLVM_LIBRARY_VISIBILITY MachOTool : public Tool {
   virtual void anchor();
