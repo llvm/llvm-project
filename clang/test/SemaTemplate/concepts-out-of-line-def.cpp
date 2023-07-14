@@ -412,3 +412,9 @@ struct s {
 template<typename T>
 void s<T>::f() requires c<void(T)> { }
 }
+
+namespace GH62272 {
+template<typename T> concept A = true;
+template<typename T> struct X { A<T> auto f(); };
+template<typename T> A<T> auto X<T>::f() {}
+}
