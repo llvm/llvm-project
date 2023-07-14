@@ -638,6 +638,8 @@ public:
   std::string getCounterRefTmpAsString();
   std::string getCounterAggTmpAsString();
 
+  mlir::Type convertTypeForMem(QualType T);
+
   mlir::Type ConvertType(clang::QualType T);
   mlir::Type ConvertType(const TypeDecl *T) {
     return ConvertType(getContext().getTypeDeclType(T));
@@ -1187,6 +1189,16 @@ public:
   /// nonnull, if 1\p LHS is marked _Nonnull.
   void buildNullabilityCheck(LValue LHS, mlir::Value RHS,
                              clang::SourceLocation Loc);
+
+  /// Same as IRBuilder::CreateInBoundsGEP, but additionally emits a check to
+  /// detect undefined behavior when the pointer overflow sanitizer is enabled.
+  /// \p SignedIndices indicates whether any of the GEP indices are signed.
+  /// \p IsSubtraction indicates whether the expression used to form the GEP
+  /// is a subtraction.
+  mlir::Value buildCheckedInBoundsGEP(mlir::Type ElemTy, mlir::Value Ptr,
+                                      ArrayRef<mlir::Value> IdxList,
+                                      bool SignedIndices, bool IsSubtraction,
+                                      SourceLocation Loc);
 
   void buildScalarInit(const clang::Expr *init, mlir::Location loc,
                        LValue lvalue, bool capturedByInit = false);

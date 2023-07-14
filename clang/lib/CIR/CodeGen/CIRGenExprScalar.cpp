@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRDataLayout.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "UnimplementedFeatureGuarding.h"
@@ -1012,6 +1013,88 @@ static std::optional<QualType> getUnwidenedIntegerType(const ASTContext &Ctx,
          (2 * Ctx.getTypeSize(RHSTy)) < PromotedSize;
 }
 
+/// Emit pointer + index arithmetic.
+static mlir::Value buildPointerArithmetic(CIRGenFunction &CGF,
+                                          const BinOpInfo &op,
+                                          bool isSubtraction) {
+  // Must have binary (not unary) expr here.  Unary pointer
+  // increment/decrement doesn't use this path.
+  const BinaryOperator *expr = cast<BinaryOperator>(op.E);
+
+  mlir::Value pointer = op.LHS;
+  Expr *pointerOperand = expr->getLHS();
+  mlir::Value index = op.RHS;
+  Expr *indexOperand = expr->getRHS();
+
+  // In a subtraction, the LHS is always the pointer.
+  if (!isSubtraction && !pointer.getType().isa<mlir::cir::PointerType>()) {
+    std::swap(pointer, index);
+    std::swap(pointerOperand, indexOperand);
+  }
+
+  bool isSigned = indexOperand->getType()->isSignedIntegerOrEnumerationType();
+
+  auto &DL = CGF.CGM.getDataLayout();
+
+  // Some versions of glibc and gcc use idioms (particularly in their malloc
+  // routines) that add a pointer-sized integer (known to be a pointer value)
+  // to a null pointer in order to cast the value back to an integer or as
+  // part of a pointer alignment algorithm.  This is undefined behavior, but
+  // we'd like to be able to compile programs that use it.
+  //
+  // Normally, we'd generate a GEP with a null-pointer base here in response
+  // to that code, but it's also UB to dereference a pointer created that
+  // way.  Instead (as an acknowledged hack to tolerate the idiom) we will
+  // generate a direct cast of the integer value to a pointer.
+  //
+  // The idiom (p = nullptr + N) is not met if any of the following are true:
+  //
+  //   The operation is subtraction.
+  //   The index is not pointer-sized.
+  //   The pointer type is not byte-sized.
+  //
+  if (BinaryOperator::isNullPointerArithmeticExtension(
+          CGF.getContext(), op.Opcode, expr->getLHS(), expr->getRHS()))
+    llvm_unreachable("null pointer arithmetic extension is NYI");
+
+  if (UnimplementedFeature::dataLayoutGetIndexTypeSizeInBits()) {
+    // TODO(cir): original codegen zero/sign-extends the index to the same width
+    // as the pointer. Since CIR's pointer stride doesn't care about that, it's
+    // skiped here.
+    llvm_unreachable("target-specific pointer width is NYI");
+  }
+
+  // If this is subtraction, negate the index.
+  if (isSubtraction)
+    index = CGF.getBuilder().createNeg(index);
+
+  if (CGF.SanOpts.has(SanitizerKind::ArrayBounds))
+    llvm_unreachable("array bounds sanitizer is NYI");
+
+  const PointerType *pointerType =
+      pointerOperand->getType()->getAs<PointerType>();
+  if (!pointerType)
+    llvm_unreachable("ObjC is NYI");
+
+  QualType elementType = pointerType->getPointeeType();
+  if (const VariableArrayType *vla =
+          CGF.getContext().getAsVariableArrayType(elementType))
+    llvm_unreachable("VLA pointer arithmetic is NYI");
+
+  // Explicitly handle GNU void* and function pointer arithmetic extensions. The
+  // GNU void* casts amount to no-ops since our void* type is i8*, but this is
+  // future proof.
+  if (elementType->isVoidType() || elementType->isFunctionType())
+    llvm_unreachable("GNU void* and func ptr arithmetic extensions are NYI");
+
+  mlir::Type elemTy = CGF.convertTypeForMem(elementType);
+  if (CGF.getLangOpts().isSignedOverflowDefined())
+    llvm_unreachable("ptr arithmetic with signed overflow is NYI");
+
+  return CGF.buildCheckedInBoundsGEP(elemTy, pointer, index, isSigned,
+                                     isSubtraction, op.E->getExprLoc());
+}
+
 mlir::Value ScalarExprEmitter::buildMul(const BinOpInfo &Ops) {
   return Builder.create<mlir::cir::BinOp>(
       CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Mul,
@@ -1027,11 +1110,17 @@ mlir::Value ScalarExprEmitter::buildRem(const BinOpInfo &Ops) {
       CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Rem,
       Ops.LHS, Ops.RHS);
 }
+
 mlir::Value ScalarExprEmitter::buildAdd(const BinOpInfo &Ops) {
+  if (Ops.LHS.getType().isa<mlir::cir::PointerType>() ||
+      Ops.RHS.getType().isa<mlir::cir::PointerType>())
+    return buildPointerArithmetic(CGF, Ops, /*isSubtraction=*/false);
+
   return Builder.create<mlir::cir::BinOp>(
       CGF.getLoc(Ops.Loc), CGF.getCIRType(Ops.Ty), mlir::cir::BinOpKind::Add,
       Ops.LHS, Ops.RHS);
 }
+
 mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
   // The LHS is always a pointer if either side is.
   if (!Ops.LHS.getType().isa<mlir::cir::PointerType>()) {
@@ -1081,7 +1170,7 @@ mlir::Value ScalarExprEmitter::buildSub(const BinOpInfo &Ops) {
   // If the RHS is not a pointer, then we have normal pointer
   // arithmetic.
   if (!Ops.RHS.getType().isa<mlir::cir::PointerType>())
-    llvm_unreachable("NYI");
+    return buildPointerArithmetic(CGF, Ops, /*isSubtraction=*/true);
 
   // Otherwise, this is a pointer subtraction
 
@@ -2215,4 +2304,22 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
   // folding logic so we don't have to duplicate it here.
   return Builder.getConstInt(CGF.getLoc(E->getSourceRange()),
                              E->EvaluateKnownConstInt(CGF.getContext()));
+}
+
+mlir::Value CIRGenFunction::buildCheckedInBoundsGEP(
+    mlir::Type ElemTy, mlir::Value Ptr, ArrayRef<mlir::Value> IdxList,
+    bool SignedIndices, bool IsSubtraction, SourceLocation Loc) {
+  mlir::Type PtrTy = Ptr.getType();
+  assert(IdxList.size() == 1 && "multi-index ptr arithmetic NYI");
+  mlir::Value GEPVal = builder.create<mlir::cir::PtrStrideOp>(
+      CGM.getLoc(Loc), PtrTy, Ptr, IdxList[0]);
+
+  // If the pointer overflow sanitizer isn't enabled, do nothing.
+  if (!SanOpts.has(SanitizerKind::PointerOverflow))
+    return GEPVal;
+
+  // TODO(cir): the unreachable code below hides a substantial amount of code
+  // from the original codegen related with pointer overflow sanitizer.
+  assert(UnimplementedFeature::pointerOverflowSanitizer());
+  llvm_unreachable("pointer overflow sanitizer NYI");
 }
