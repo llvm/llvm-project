@@ -173,4 +173,14 @@ module  {
   //      CHECK: cir.func @removeEmptyScope
   // CHECK-NEXT: cir.return
 
+  // Should remove empty switch-case statements.
+  cir.func @removeEmptySwitch(%arg0: !s32i) {
+  //      CHECK: cir.func @removeEmptySwitch
+    cir.switch (%arg0 : !s32i) [
+    ]
+    // CHECK-NOT: cir.switch
+    cir.return
+    // CHECK: cir.return
+  }
+
 }
