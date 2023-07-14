@@ -81,7 +81,7 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
     // ub = extent - 1
     mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, ext, one);
     mlir::Value bound = builder.create<mlir::acc::DataBoundsOp>(
-        loc, boundTy, lb, ub, mlir::Value(), one, false, baseLb);
+        loc, boundTy, lb, ub, ext, one, false, baseLb);
     bounds.push_back(bound);
   }
   return bounds;
