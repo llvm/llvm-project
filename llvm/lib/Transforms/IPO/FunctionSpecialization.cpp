@@ -145,6 +145,8 @@ static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
 }
 
 static Constant *findConstantFor(Value *V, ConstMap &KnownConstants) {
+  if (auto *C = dyn_cast<Constant>(V))
+    return C;
   if (auto It = KnownConstants.find(V); It != KnownConstants.end())
     return It->second;
   return nullptr;
@@ -240,9 +242,7 @@ Constant *InstCostVisitor::visitCallBase(CallBase &I) {
 
   for (unsigned Idx = 0, E = I.getNumOperands() - 1; Idx != E; ++Idx) {
     Value *V = I.getOperand(Idx);
-    auto *C = dyn_cast<Constant>(V);
-    if (!C)
-      C = findConstantFor(V, KnownConstants);
+    Constant *C = findConstantFor(V, KnownConstants);
     if (!C)
       return nullptr;
     Operands.push_back(C);
@@ -264,9 +264,7 @@ Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 
   for (unsigned Idx = 0, E = I.getNumOperands(); Idx != E; ++Idx) {
     Value *V = I.getOperand(Idx);
-    auto *C = dyn_cast<Constant>(V);
-    if (!C)
-      C = findConstantFor(V, KnownConstants);
+    Constant *C = findConstantFor(V, KnownConstants);
     if (!C)
       return nullptr;
     Operands.push_back(C);
@@ -282,9 +280,7 @@ Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
 
   Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
                                                 : I.getTrueValue();
-  auto *C = dyn_cast<Constant>(V);
-  if (!C)
-    C = findConstantFor(V, KnownConstants);
+  Constant *C = findConstantFor(V, KnownConstants);
   return C;
 }
 
@@ -296,10 +292,7 @@ Constant *InstCostVisitor::visitCastInst(CastInst &I) {
 Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
   bool Swap = I.getOperand(1) == LastVisited->first;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
-  auto *Other = dyn_cast<Constant>(V);
-  if (!Other)
-    Other = findConstantFor(V, KnownConstants);
-
+  Constant *Other = findConstantFor(V, KnownConstants);
   if (!Other)
     return nullptr;
 
@@ -316,10 +309,7 @@ Constant *InstCostVisitor::visitUnaryOperator(UnaryOperator &I) {
 Constant *InstCostVisitor::visitBinaryOperator(BinaryOperator &I) {
   bool Swap = I.getOperand(1) == LastVisited->first;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
-  auto *Other = dyn_cast<Constant>(V);
-  if (!Other)
-    Other = findConstantFor(V, KnownConstants);
-
+  Constant *Other = findConstantFor(V, KnownConstants);
   if (!Other)
     return nullptr;
 

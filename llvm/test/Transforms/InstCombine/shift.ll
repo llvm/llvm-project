@@ -1689,6 +1689,10 @@ define i177 @lshr_out_of_range(i177 %Y, ptr %A2, ptr %ptr) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=26716
 define i177 @lshr_out_of_range2(i177 %Y, ptr %A2, ptr %ptr) {
 ; CHECK-LABEL: @lshr_out_of_range2(
+; CHECK-NEXT:    [[C8:%.*]] = icmp ne i177 [[Y:%.*]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i1 [[C8]] to i64
+; CHECK-NEXT:    [[G18:%.*]] = getelementptr ptr, ptr [[A2:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    store ptr [[G18]], ptr [[PTR:%.*]], align 8
 ; CHECK-NEXT:    ret i177 0
 ;
   %B5 = udiv i177 %Y, -1

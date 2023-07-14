@@ -42,7 +42,7 @@ using namespace mlir::vector;
 /// is in-bounds.
 static Value createInBoundsCond(RewriterBase &b,
                                 VectorTransferOpInterface xferOp) {
-  assert(xferOp.permutation_map().isMinorIdentity() &&
+  assert(xferOp.getPermutationMap().isMinorIdentity() &&
          "Expected minor identity map");
   Value inBoundsCond;
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
@@ -105,7 +105,7 @@ static Value createInBoundsCond(RewriterBase &b,
 /// where `alloc` is a top of the function alloca'ed buffer of one vector.
 ///
 /// Preconditions:
-///  1. `xferOp.permutation_map()` must be a minor identity map
+///  1. `xferOp.getPermutationMap()` must be a minor identity map
 ///  2. the rank of the `xferOp.memref()` and the rank of the `xferOp.vector()`
 ///  must be equal. This will be relaxed in the future but requires
 ///  rank-reducing subviews.
@@ -116,7 +116,7 @@ splitFullAndPartialTransferPrecondition(VectorTransferOpInterface xferOp) {
     return failure();
 
   // TODO: expand support to these 2 cases.
-  if (!xferOp.permutation_map().isMinorIdentity())
+  if (!xferOp.getPermutationMap().isMinorIdentity())
     return failure();
   // Must have some out-of-bounds dimension to be a candidate for splitting.
   if (!xferOp.hasOutOfBoundsDim())
@@ -512,7 +512,7 @@ static Operation *getAutomaticAllocationScope(Operation *op) {
 /// where `alloc` is a top of the function alloca'ed buffer of one vector.
 ///
 /// Preconditions:
-///  1. `xferOp.permutation_map()` must be a minor identity map
+///  1. `xferOp.getPermutationMap()` must be a minor identity map
 ///  2. the rank of the `xferOp.source()` and the rank of the `xferOp.vector()`
 ///  must be equal. This will be relaxed in the future but requires
 ///  rank-reducing subviews.

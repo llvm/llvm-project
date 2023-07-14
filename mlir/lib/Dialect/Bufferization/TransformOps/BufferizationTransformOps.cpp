@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -24,6 +25,12 @@ using namespace mlir::transform;
 //===----------------------------------------------------------------------===//
 // OneShotBufferizeOp
 //===----------------------------------------------------------------------===//
+
+LogicalResult transform::OneShotBufferizeOp::verify() {
+  if (getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
+    return emitOpError() << "unsupported memcpy op";
+  return success();
+}
 
 DiagnosedSilenceableFailure
 transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
@@ -39,6 +46,19 @@ transform::OneShotBufferizeOp::apply(transform::TransformRewriter &rewriter,
   if (getFunctionBoundaryTypeConversion().has_value())
     options.setFunctionBoundaryTypeConversion(
         *getFunctionBoundaryTypeConversion());
+  if (getMemcpyOp() == "memref.copy") {
+    options.memCpyFn = [](OpBuilder &b, Location loc, Value from, Value to) {
+      b.create<memref::CopyOp>(loc, from, to);
+      return success();
+    };
+  } else if (getMemcpyOp() == "linalg.copy") {
+    options.memCpyFn = [](OpBuilder &b, Location loc, Value from, Value to) {
+      b.create<linalg::CopyOp>(loc, from, to);
+      return success();
+    };
+  } else {
+    llvm_unreachable("invalid copy op");
+  }
 
   auto payloadOps = state.getPayloadOps(getTarget());
   for (Operation *target : payloadOps) {

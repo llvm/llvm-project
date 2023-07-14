@@ -42,6 +42,12 @@ COFF Improvements
   current directory.
   I.e. ``lld-link /libpath:c:\relative\root relative\path\my.lib`` where before
   we would have to do ``lld-link /libpath:c:\relative\root\relative\path my.lib``
+* lld-link learned -print-search-paths that will print all the paths where it will
+  search for libraries.
+* By default lld-link will now search for libraries in the toolchain directories.
+  Specifically it will search:
+  ``<toolchain>/lib``, ``<toolchain>/lib/clang/<version>/lib`` and
+  ``<toolchain>/lib/clang/<version>/lib/windows``.
 
 MinGW Improvements
 ------------------
