@@ -1,4 +1,4 @@
-// RUN: cir-tool %s -split-input-file -o %t.cir
+// RUN: cir-opt %s -split-input-file -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
 // Should parse and print C source language attribute.

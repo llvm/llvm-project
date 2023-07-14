@@ -1,4 +1,4 @@
-// RUN: cir-tool %s -cir-to-llvm -o %t.mlir
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s
 
 !s32i = !cir.int<s, 32>

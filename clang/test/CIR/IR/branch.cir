@@ -1,4 +1,4 @@
-// RUN: cir-tool %s | FileCheck %s
+// RUN: cir-opt %s | FileCheck %s
 
 #false = #cir.bool<false> : !cir.bool
 #true = #cir.bool<true> : !cir.bool

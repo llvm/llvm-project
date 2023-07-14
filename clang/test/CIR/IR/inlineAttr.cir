@@ -1,5 +1,5 @@
-// RUN: cir-tool %s | FileCheck %s -check-prefix=CIR
-// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s | FileCheck %s -check-prefix=CIR
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
 
 module {
   cir.func @l0() extra( {cir.inline = #cir.inline<no>} )  {

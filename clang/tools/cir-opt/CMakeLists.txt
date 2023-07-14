@@ -24,12 +24,12 @@ set(LIBS
   MLIRTransformUtils
 )
 
-add_clang_tool(cir-tool
-  cir-tool.cpp
+add_clang_tool(cir-opt
+  cir-opt.cpp
 
   DEPENDS
   ${LIBS}
 )
 
-target_link_libraries(cir-tool PRIVATE ${LIBS})
-llvm_update_compile_flags(cir-tool)
+target_link_libraries(cir-opt PRIVATE ${LIBS})
+llvm_update_compile_flags(cir-opt)

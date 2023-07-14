@@ -1,4 +1,4 @@
-// RUN: cir-tool %s -cir-to-mlir -cir-mlir-to-llvm -o %t.mlir
+// RUN: cir-opt %s -cir-to-mlir -cir-mlir-to-llvm -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s -check-prefix=MLIR
 // RUN: mlir-translate -mlir-to-llvmir %t.mlir -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM

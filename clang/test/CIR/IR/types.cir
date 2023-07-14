@@ -1,4 +1,4 @@
-// RUN: cir-tool %s | cir-tool | FileCheck %s
+// RUN: cir-opt %s | cir-opt | FileCheck %s
 
 !u32i = !cir.int<u, 32>
 

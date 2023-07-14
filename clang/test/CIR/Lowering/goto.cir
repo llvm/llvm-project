@@ -1,5 +1,5 @@
-// RUN: cir-tool %s -canonicalize -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -canonicalize -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir -allow-unregistered-dialect | FileCheck %s -check-prefix=LLVM
+// RUN: cir-opt %s -canonicalize -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -canonicalize -o - | cir-translate -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
 
 !u32i = !cir.int<u, 32>
 

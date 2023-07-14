@@ -1,4 +1,4 @@
-// RUN: cir-tool %s | FileCheck %s
+// RUN: cir-opt %s | FileCheck %s
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 module {

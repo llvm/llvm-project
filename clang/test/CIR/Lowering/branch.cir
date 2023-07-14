@@ -1,5 +1,5 @@
-// RUN: cir-tool %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir -allow-unregistered-dialect | FileCheck %s -check-prefix=LLVM
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s -check-prefix=LLVM
 
 !s32i = !cir.int<s, 32>
 cir.func @foo(%arg0: !cir.bool) -> !s32i {
@@ -25,7 +25,7 @@ cir.func @foo(%arg0: !cir.bool) -> !s32i {
 // MLIR-NEXT:   }
 // MLIR-NEXT: }
 
-//       LLVM: define i32 @foo(i8 %0) {
+//       LLVM: define i32 @foo(i8 %0)
 //  LLVM-NEXT:   %2 = trunc i8 %0 to i1
 //  LLVM-NEXT:   br i1 %2, label %3, label %4
 // LLVM-EMPTY:

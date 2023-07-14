@@ -1,5 +1,5 @@
-// RUN: cir-tool %s -cir-to-mlir -o - | FileCheck %s -check-prefix=MLIR
-// RUN: cir-tool %s -cir-to-mlir -cir-mlir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// RUN: cir-opt %s -cir-to-mlir -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-opt %s -cir-to-mlir -cir-mlir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
 
 module {
   cir.func @foo() {
