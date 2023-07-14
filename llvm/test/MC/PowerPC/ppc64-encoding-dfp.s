@@ -248,3 +248,33 @@
 # CHECK-BE: dscriq. 16, 10, 50             # encoding: [0xfe,0x0a,0xc8,0xc5]
 # CHECK-LE: dscriq. 16, 10, 50             # encoding: [0xc5,0xc8,0x0a,0xfe]
             dscriq. 16, 10, 50
+# CHECK-BE: dtstdc 2, 6, 4                 # encoding: [0xed,0x06,0x11,0x84]
+# CHECK-LE: dtstdc 2, 6, 4                 # encoding: [0x84,0x11,0x06,0xed]
+            dtstdc 2, 6, 4
+# CHECK-BE: dtstdcq 2, 6, 4                # encoding: [0xfd,0x06,0x11,0x84]
+# CHECK-LE: dtstdcq 2, 6, 4                # encoding: [0x84,0x11,0x06,0xfd]
+            dtstdcq 2, 6, 4
+# CHECK-BE: dtstdg 2, 6, 4                 # encoding: [0xed,0x06,0x11,0xc4]
+# CHECK-LE: dtstdg 2, 6, 4                 # encoding: [0xc4,0x11,0x06,0xed]
+            dtstdg 2, 6, 4
+# CHECK-BE: dtstdgq 2, 6, 4                # encoding: [0xfd,0x06,0x11,0xc4]
+# CHECK-LE: dtstdgq 2, 6, 4                # encoding: [0xc4,0x11,0x06,0xfd]
+            dtstdgq 2, 6, 4
+# CHECK-BE: dtstex 2, 6, 4                 # encoding: [0xed,0x06,0x21,0x44]
+# CHECK-LE: dtstex 2, 6, 4                 # encoding: [0x44,0x21,0x06,0xed]
+            dtstex 2, 6, 4
+# CHECK-BE: dtstexq 2, 6, 4                # encoding: [0xfd,0x06,0x21,0x44]
+# CHECK-LE: dtstexq 2, 6, 4                # encoding: [0x44,0x21,0x06,0xfd]
+            dtstexq 2, 6, 4
+# CHECK-BE: dtstsf 2, 6, 4                 # encoding: [0xed,0x06,0x25,0x44]
+# CHECK-LE: dtstsf 2, 6, 4                 # encoding: [0x44,0x25,0x06,0xed]
+            dtstsf 2, 6, 4
+# CHECK-BE: dtstsfq 2, 6, 4                # encoding: [0xfd,0x06,0x25,0x44]
+# CHECK-LE: dtstsfq 2, 6, 4                # encoding: [0x44,0x25,0x06,0xfd]
+            dtstsfq 2, 6, 4
+# CHECK-BE: dtstsfi 2, 6, 4                # encoding: [0xed,0x06,0x25,0x46]
+# CHECK-LE: dtstsfi 2, 6, 4                # encoding: [0x46,0x25,0x06,0xed]
+            dtstsfi 2, 6, 4
+# CHECK-BE: dtstsfiq 2, 6, 4               # encoding: [0xfd,0x06,0x25,0x46]
+# CHECK-LE: dtstsfiq 2, 6, 4               # encoding: [0x46,0x25,0x06,0xfd]
+            dtstsfiq 2, 6, 4
