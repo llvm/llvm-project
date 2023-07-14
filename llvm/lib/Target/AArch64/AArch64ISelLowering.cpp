@@ -1128,12 +1128,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SMIN, VT, Custom);
     }
 
-    // AArch64 doesn't have MUL.2d:
-    setOperationAction(ISD::MUL, MVT::v2i64, Expand);
     // Custom handling for some quad-vector types to detect MULL.
     setOperationAction(ISD::MUL, MVT::v8i16, Custom);
     setOperationAction(ISD::MUL, MVT::v4i32, Custom);
     setOperationAction(ISD::MUL, MVT::v2i64, Custom);
+    setOperationAction(ISD::MUL, MVT::v4i16, Custom);
+    setOperationAction(ISD::MUL, MVT::v2i32, Custom);
+    setOperationAction(ISD::MUL, MVT::v1i64, Custom);
 
     // Saturates
     for (MVT VT : { MVT::v8i8, MVT::v4i16, MVT::v2i32,
@@ -4592,24 +4593,44 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
   // If SVE is available then i64 vector multiplications can also be made legal.
-  bool OverrideNEON =
-      VT == MVT::v1i64 || Subtarget->forceStreamingCompatibleSVE();
+  bool OverrideNEON = Subtarget->forceStreamingCompatibleSVE();
 
   if (VT.isScalableVector() || useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
 
-  // Multiplications are only custom-lowered for 128-bit vectors so that
-  // VMULL can be detected.  Otherwise v2i64 multiplications are not legal.
-  assert(VT.is128BitVector() && VT.isInteger() &&
+  // Multiplications are only custom-lowered for 128-bit and 64-bit vectors so
+  // that VMULL can be detected.  Otherwise v2i64 multiplications are not legal.
+  assert((VT.is128BitVector() || VT.is64BitVector()) && VT.isInteger() &&
          "unexpected type for custom-lowering ISD::MUL");
   SDNode *N0 = Op.getOperand(0).getNode();
   SDNode *N1 = Op.getOperand(1).getNode();
   bool isMLA = false;
+  EVT OVT = VT;
+  if (VT.is64BitVector()) {
+    if (N0->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        isNullConstant(N0->getOperand(1)) &&
+        N1->getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        isNullConstant(N1->getOperand(1))) {
+      N0 = N0->getOperand(0).getNode();
+      N1 = N1->getOperand(0).getNode();
+      VT = N0->getValueType(0);
+    } else {
+      if (VT == MVT::v1i64) {
+        if (Subtarget->hasSVE())
+          return LowerToPredicatedOp(Op, DAG, AArch64ISD::MUL_PRED);
+        // Fall through to expand this.  It is not legal.
+        return SDValue();
+      } else
+        // Other vector multiplications are legal.
+        return Op;
+    }
+  }
+
   SDLoc DL(Op);
   unsigned NewOpc = selectUmullSmull(N0, N1, DAG, DL, isMLA);
 
   if (!NewOpc) {
-    if (VT == MVT::v2i64) {
+    if (VT.getVectorElementType() == MVT::i64) {
       // If SVE is available then i64 vector multiplications can also be made
       // legal.
       if (Subtarget->hasSVE())
@@ -4629,7 +4650,9 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
     assert(Op0.getValueType().is64BitVector() &&
            Op1.getValueType().is64BitVector() &&
            "unexpected types for extended operands to VMULL");
-    return DAG.getNode(NewOpc, DL, VT, Op0, Op1);
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, OVT,
+                       DAG.getNode(NewOpc, DL, VT, Op0, Op1),
+                       DAG.getConstant(0, DL, MVT::i64));
   }
   // Optimizing (zext A + zext B) * C, to (S/UMULL A, C) + (S/UMULL B, C) during
   // isel lowering to take advantage of no-stall back to back s/umul + s/umla.
@@ -4637,11 +4660,14 @@ SDValue AArch64TargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
   SDValue N00 = skipExtensionForVectorMULL(N0->getOperand(0).getNode(), DAG);
   SDValue N01 = skipExtensionForVectorMULL(N0->getOperand(1).getNode(), DAG);
   EVT Op1VT = Op1.getValueType();
-  return DAG.getNode(N0->getOpcode(), DL, VT,
-                     DAG.getNode(NewOpc, DL, VT,
-                               DAG.getNode(ISD::BITCAST, DL, Op1VT, N00), Op1),
-                     DAG.getNode(NewOpc, DL, VT,
-                               DAG.getNode(ISD::BITCAST, DL, Op1VT, N01), Op1));
+  return DAG.getNode(
+      ISD::EXTRACT_SUBVECTOR, DL, OVT,
+      DAG.getNode(N0->getOpcode(), DL, VT,
+                  DAG.getNode(NewOpc, DL, VT,
+                              DAG.getNode(ISD::BITCAST, DL, Op1VT, N00), Op1),
+                  DAG.getNode(NewOpc, DL, VT,
+                              DAG.getNode(ISD::BITCAST, DL, Op1VT, N01), Op1)),
+      DAG.getConstant(0, DL, MVT::i64));
 }
 
 static inline SDValue getPTrue(SelectionDAG &DAG, SDLoc DL, EVT VT,
