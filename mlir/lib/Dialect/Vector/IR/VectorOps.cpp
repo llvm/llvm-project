@@ -4243,11 +4243,8 @@ public:
     }
 
     // Swap the tensor::ExtractSliceOp in front of the vector::TransferWriteOp.
-    SmallVector<int64_t> newResultShape = applyPermutationMap(
-        transferOp.getPermutationMap(), insertOp.getSourceType().getShape());
-    SmallVector<bool> newInBounds;
-    for (const auto &en : enumerate(newResultShape))
-      newInBounds.push_back(en.value() == vectorShape[en.index()]);
+    // Set all in_bounds to false and let the folder infer them.
+    SmallVector<bool> newInBounds(vectorShape.size(), false);
     auto newExtractOp = rewriter.create<tensor::ExtractSliceOp>(
         extractOp.getLoc(), insertOp.getSourceType(), insertOp.getDest(),
         insertOp.getMixedOffsets(), insertOp.getMixedSizes(),
