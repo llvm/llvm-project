@@ -851,8 +851,8 @@ define i32 @select_and_1(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; CHECKZICOND-LABEL: select_and_1:
 ; CHECKZICOND:       # %bb.0: # %entry
+; CHECKZICOND-NEXT:    and a1, a1, a2
 ; CHECKZICOND-NEXT:    czero.nez a0, a2, a0
-; CHECKZICOND-NEXT:    and a1, a2, a1
 ; CHECKZICOND-NEXT:    or a0, a1, a0
 ; CHECKZICOND-NEXT:    ret
 entry:
@@ -889,9 +889,9 @@ define i32 @select_and_2(i1 zeroext %cond, i32 %a, i32 %b) {
 ;
 ; CHECKZICOND-LABEL: select_and_2:
 ; CHECKZICOND:       # %bb.0: # %entry
+; CHECKZICOND-NEXT:    and a2, a1, a2
 ; CHECKZICOND-NEXT:    czero.eqz a0, a1, a0
-; CHECKZICOND-NEXT:    and a1, a1, a2
-; CHECKZICOND-NEXT:    or a0, a1, a0
+; CHECKZICOND-NEXT:    or a0, a2, a0
 ; CHECKZICOND-NEXT:    ret
 entry:
   %c = and i32 %a, %b
@@ -928,10 +928,9 @@ define i32 @select_and_3(i1 zeroext %cond, i32 %a) {
 ;
 ; CHECKZICOND-LABEL: select_and_3:
 ; CHECKZICOND:       # %bb.0: # %entry
+; CHECKZICOND-NEXT:    andi a2, a1, 42
 ; CHECKZICOND-NEXT:    czero.eqz a0, a1, a0
-; CHECKZICOND-NEXT:    li a2, 42
-; CHECKZICOND-NEXT:    and a1, a1, a2
-; CHECKZICOND-NEXT:    or a0, a1, a0
+; CHECKZICOND-NEXT:    or a0, a2, a0
 ; CHECKZICOND-NEXT:    ret
 entry:
   %c = and i32 %a, 42
