@@ -207,6 +207,5 @@ foreach(archname ${HOSTRPC_ARCHS})
    endforeach() # end for each mcpu
 
 endforeach() # end foreach archs
-set(_version_dir 17.0.0)
-install(FILES ${h_file} DESTINATION ${DEVEL_PACKAGE}lib/clang/${_version_dir}/include)
+install(FILES ${h_file} DESTINATION ${DEVEL_PACKAGE}lib/clang/${LLVM_VERSION_MAJOR}/include)
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/disable_dynamic_devmem.ll" DESTINATION ${DEVEL_PACKAGE}${OPENMP_INSTALL_LIBDIR})
