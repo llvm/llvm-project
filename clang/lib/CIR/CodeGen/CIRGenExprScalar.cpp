@@ -570,8 +570,8 @@ public:
 
   /// Perform a pointer to boolean conversion.
   mlir::Value buildPointerToBoolConversion(mlir::Value V, QualType QT) {
-    // An extra pass should make this into a `cir.cmp V, nullptr` before
-    // lowering to LLVM.
+    // TODO(cir): comparing the ptr to null is done when lowering CIR to LLVM.
+    // We might want to have a separate pass for these types of conversions.
     return CGF.getBuilder().createPtrToBoolCast(V);
   }
 
@@ -815,7 +815,7 @@ public:
       return buildIntToBoolConversion(Src, loc);
 
     assert(Src.getType().isa<::mlir::cir::PointerType>());
-    llvm_unreachable("pointer source not implemented");
+    return buildPointerToBoolConversion(Src, SrcType);
   }
 
   /// Emit a conversion from the specified type to the specified destination
