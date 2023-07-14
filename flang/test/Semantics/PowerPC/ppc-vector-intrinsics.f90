@@ -21,3 +21,12 @@ program test
 ! ERROR: Argument #2 must be a constant expression in range 0-31
   rr = vec_ctf(arg1, 37)
 end program test
+
+subroutine test_vec_permi()
+  vector(integer(8)) :: arg1, arg2, r
+  integer :: arg3
+!ERROR: Actual argument #3 must be a constant expression
+  r = vec_permi(arg1, arg2, arg3)
+! ERROR: Argument #3 must be a constant expression in range 0-3
+  r = vec_permi(arg1, arg2, 11)
+end
