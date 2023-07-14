@@ -42,6 +42,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.5(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
   ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK killed [[SI_IF1]], [[SI_IF]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.5
@@ -51,7 +52,6 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.4
   ; CHECK-NEXT:   SI_END_CF [[SI_IF_BREAK]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
   ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, implicit [[V_ADD_U32_e64_]]
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
