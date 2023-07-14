@@ -121,6 +121,24 @@ static constexpr IntrinsicHandler ppcHandlers[]{
          &PI::genVecConvert<VecOp::Cvf>),
      {{{"arg1", asValue}}},
      /*isElemental=*/true},
+    {"__ppc_vec_extract",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(&PI::genVecExtract),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_insert",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(&PI::genVecInsert),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_mergeh",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecMerge<VecOp::Mergeh>),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_mergel",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecMerge<VecOp::Mergel>),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
     {"__ppc_vec_msub",
      static_cast<IntrinsicLibrary::ExtendedGenerator>(
          &PI::genVecNmaddMsub<VecOp::Msub>),
@@ -134,6 +152,16 @@ static constexpr IntrinsicHandler ppcHandlers[]{
     {"__ppc_vec_nmadd",
      static_cast<IntrinsicLibrary::ExtendedGenerator>(
          &PI::genVecNmaddMsub<VecOp::Nmadd>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_perm",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecPerm<VecOp::Perm>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_permi",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecPerm<VecOp::Permi>),
      {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asValue}}},
      /*isElemental=*/true},
     {"__ppc_vec_sel",
@@ -1066,6 +1094,150 @@ PPCIntrinsicLibrary::genVecConvert(mlir::Type resultType,
   }
 }
 
+static mlir::Value convertVectorElementOrder(fir::FirOpBuilder &builder,
+                                             mlir::Location loc,
+                                             VecTypeInfo vecInfo,
+                                             mlir::Value idx) {
+  mlir::Value numSub1{
+      builder.createIntegerConstant(loc, idx.getType(), vecInfo.len - 1)};
+  return builder.create<mlir::LLVM::SubOp>(loc, idx.getType(), numSub1, idx);
+}
+
+// VEC_EXTRACT
+fir::ExtendedValue
+PPCIntrinsicLibrary::genVecExtract(mlir::Type resultType,
+                                   llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto argBases{getBasesForArgs(args)};
+  auto argTypes{getTypesForArgs(argBases)};
+  auto vecTyInfo{getVecTypeFromFir(argBases[0])};
+
+  auto mlirTy{vecTyInfo.toMlirVectorType(builder.getContext())};
+  auto varg0{builder.createConvert(loc, mlirTy, argBases[0])};
+
+  // arg2 modulo the number of elements in arg1 to determine the element
+  // position
+  auto numEle{builder.createIntegerConstant(loc, argTypes[1], vecTyInfo.len)};
+  mlir::Value uremOp{
+      builder.create<mlir::LLVM::URemOp>(loc, argBases[1], numEle)};
+
+  if (!isNativeVecElemOrderOnLE())
+    uremOp = convertVectorElementOrder(builder, loc, vecTyInfo, uremOp);
+
+  return builder.create<mlir::vector::ExtractElementOp>(loc, varg0, uremOp);
+}
+
+// VEC_INSERT
+fir::ExtendedValue
+PPCIntrinsicLibrary::genVecInsert(mlir::Type resultType,
+                                  llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  auto argBases{getBasesForArgs(args)};
+  auto argTypes{getTypesForArgs(argBases)};
+  auto vecTyInfo{getVecTypeFromFir(argBases[1])};
+  auto mlirTy{vecTyInfo.toMlirVectorType(builder.getContext())};
+  auto varg1{builder.createConvert(loc, mlirTy, argBases[1])};
+
+  auto numEle{builder.createIntegerConstant(loc, argTypes[2], vecTyInfo.len)};
+  mlir::Value uremOp{
+      builder.create<mlir::LLVM::URemOp>(loc, argBases[2], numEle)};
+
+  if (!isNativeVecElemOrderOnLE())
+    uremOp = convertVectorElementOrder(builder, loc, vecTyInfo, uremOp);
+
+  auto res{builder.create<mlir::vector::InsertElementOp>(loc, argBases[0],
+                                                         varg1, uremOp)};
+  return builder.create<fir::ConvertOp>(loc, vecTyInfo.toFirVectorType(), res);
+}
+
+// VEC_MERGEH, VEC_MERGEL
+template <VecOp vop>
+fir::ExtendedValue
+PPCIntrinsicLibrary::genVecMerge(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  auto argBases{getBasesForArgs(args)};
+  auto vecTyInfo{getVecTypeFromFir(argBases[0])};
+  llvm::SmallVector<int64_t, 16> mMask; // native vector element order mask
+  llvm::SmallVector<int64_t, 16> rMask; // non-native vector element order mask
+
+  switch (vop) {
+  case VecOp::Mergeh: {
+    switch (vecTyInfo.len) {
+    case 2: {
+      enum { V1 = 0, V2 = 2 };
+      mMask = {V1 + 0, V2 + 0};
+      rMask = {V2 + 1, V1 + 1};
+      break;
+    }
+    case 4: {
+      enum { V1 = 0, V2 = 4 };
+      mMask = {V1 + 0, V2 + 0, V1 + 1, V2 + 1};
+      rMask = {V2 + 2, V1 + 2, V2 + 3, V1 + 3};
+      break;
+    }
+    case 8: {
+      enum { V1 = 0, V2 = 8 };
+      mMask = {V1 + 0, V2 + 0, V1 + 1, V2 + 1, V1 + 2, V2 + 2, V1 + 3, V2 + 3};
+      rMask = {V2 + 4, V1 + 4, V2 + 5, V1 + 5, V2 + 6, V1 + 6, V2 + 7, V1 + 7};
+      break;
+    }
+    case 16:
+      mMask = {0x00, 0x10, 0x01, 0x11, 0x02, 0x12, 0x03, 0x13,
+               0x04, 0x14, 0x05, 0x15, 0x06, 0x16, 0x07, 0x17};
+      rMask = {0x18, 0x08, 0x19, 0x09, 0x1A, 0x0A, 0x1B, 0x0B,
+               0x1C, 0x0C, 0x1D, 0x0D, 0x1E, 0x0E, 0x1F, 0x0F};
+      break;
+    default:
+      llvm_unreachable("unexpected vector length");
+    }
+    break;
+  }
+  case VecOp::Mergel: {
+    switch (vecTyInfo.len) {
+    case 2: {
+      enum { V1 = 0, V2 = 2 };
+      mMask = {V1 + 1, V2 + 1};
+      rMask = {V2 + 0, V1 + 0};
+      break;
+    }
+    case 4: {
+      enum { V1 = 0, V2 = 4 };
+      mMask = {V1 + 2, V2 + 2, V1 + 3, V2 + 3};
+      rMask = {V2 + 0, V1 + 0, V2 + 1, V1 + 1};
+      break;
+    }
+    case 8: {
+      enum { V1 = 0, V2 = 8 };
+      mMask = {V1 + 4, V2 + 4, V1 + 5, V2 + 5, V1 + 6, V2 + 6, V1 + 7, V2 + 7};
+      rMask = {V2 + 0, V1 + 0, V2 + 1, V1 + 1, V2 + 2, V1 + 2, V2 + 3, V1 + 3};
+      break;
+    }
+    case 16:
+      mMask = {0x08, 0x18, 0x09, 0x19, 0x0A, 0x1A, 0x0B, 0x1B,
+               0x0C, 0x1C, 0x0D, 0x1D, 0x0E, 0x1E, 0x0F, 0x1F};
+      rMask = {0x10, 0x00, 0x11, 0x01, 0x12, 0x02, 0x13, 0x03,
+               0x14, 0x04, 0x15, 0x05, 0x16, 0x06, 0x17, 0x07};
+      break;
+    default:
+      llvm_unreachable("unexpected vector length");
+    }
+    break;
+  }
+  default:
+    llvm_unreachable("invalid vector operation for generator");
+  }
+
+  auto vargs{convertVecArgs(builder, loc, vecTyInfo, argBases)};
+
+  llvm::SmallVector<int64_t, 16> &mergeMask =
+      (isBEVecElemOrderOnLE()) ? rMask : mMask;
+
+  auto callOp{builder.create<mlir::vector::ShuffleOp>(loc, vargs[0], vargs[1],
+                                                      mergeMask)};
+  return builder.createConvert(loc, resultType, callOp);
+}
+
 // VEC_NMADD, VEC_MSUB
 template <VecOp vop>
 fir::ExtendedValue
@@ -1110,6 +1282,123 @@ PPCIntrinsicLibrary::genVecNmaddMsub(mlir::Type resultType,
     return callOp.getResult(0);
   }
   llvm_unreachable("Invalid vector operation for generator");
+}
+
+// VEC_PERM, VEC_PERMI
+template <VecOp vop>
+fir::ExtendedValue
+PPCIntrinsicLibrary::genVecPerm(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  auto context{builder.getContext()};
+  auto argBases{getBasesForArgs(args)};
+  auto argTypes{getTypesForArgs(argBases)};
+  auto vecTyInfo{getVecTypeFromFir(argBases[0])};
+  auto mlirTy{vecTyInfo.toMlirVectorType(context)};
+
+  auto vi32Ty{mlir::VectorType::get(4, mlir::IntegerType::get(context, 32))};
+  auto vf64Ty{mlir::VectorType::get(2, mlir::FloatType::getF64(context))};
+
+  auto mArg0{builder.createConvert(loc, mlirTy, argBases[0])};
+  auto mArg1{builder.createConvert(loc, mlirTy, argBases[1])};
+
+  switch (vop) {
+  case VecOp::Perm: {
+    VecTypeInfo maskVecTyInfo{getVecTypeFromFir(argBases[2])};
+    auto mlirMaskTy{maskVecTyInfo.toMlirVectorType(context)};
+    auto mMask{builder.createConvert(loc, mlirMaskTy, argBases[2])};
+
+    if (mlirTy != vi32Ty) {
+      mArg0 =
+          builder.create<mlir::LLVM::BitcastOp>(loc, vi32Ty, mArg0).getResult();
+      mArg1 =
+          builder.create<mlir::LLVM::BitcastOp>(loc, vi32Ty, mArg1).getResult();
+    }
+
+    auto funcOp{builder.addNamedFunction(
+        loc, "llvm.ppc.altivec.vperm",
+        genFuncType<Ty::IntegerVector<4>, Ty::IntegerVector<4>,
+                    Ty::IntegerVector<4>, Ty::IntegerVector<1>>(context,
+                                                                builder))};
+
+    llvm::SmallVector<mlir::Value> newArgs;
+    if (isNativeVecElemOrderOnLE()) {
+      auto i8Ty{mlir::IntegerType::get(context, 8)};
+      auto v8Ty{mlir::VectorType::get(16, i8Ty)};
+      auto negOne{builder.createIntegerConstant(loc, i8Ty, -1)};
+      auto vNegOne{
+          builder.create<mlir::vector::BroadcastOp>(loc, v8Ty, negOne)};
+
+      mMask = builder.create<mlir::arith::XOrIOp>(loc, mMask, vNegOne);
+      newArgs = {mArg1, mArg0, mMask};
+    } else {
+      newArgs = {mArg0, mArg1, mMask};
+    }
+
+    auto res{builder.create<fir::CallOp>(loc, funcOp, newArgs).getResult(0)};
+
+    if (res.getType() != argTypes[0]) {
+      // fir.call llvm.ppc.altivec.vperm returns !fir.vector<i4:32>
+      // convert the result back to the original type
+      res = builder.createConvert(loc, vi32Ty, res);
+      if (mlirTy != vi32Ty)
+        res =
+            builder.create<mlir::LLVM::BitcastOp>(loc, mlirTy, res).getResult();
+    }
+    return builder.createConvert(loc, resultType, res);
+  }
+  case VecOp::Permi: {
+    // arg3 is a constant
+    auto constIntOp{
+        mlir::dyn_cast<mlir::arith::ConstantOp>(argBases[2].getDefiningOp())
+            .getValue()
+            .dyn_cast_or_null<mlir::IntegerAttr>()};
+    assert(constIntOp && "expected integer constant argument");
+    auto constInt{constIntOp.getInt()};
+    // arg1, arg2, and result type share same VecTypeInfo
+    if (vecTyInfo.isFloat()) {
+      mArg0 =
+          builder.create<mlir::LLVM::BitcastOp>(loc, vf64Ty, mArg0).getResult();
+      mArg1 =
+          builder.create<mlir::LLVM::BitcastOp>(loc, vf64Ty, mArg1).getResult();
+    }
+
+    llvm::SmallVector<int64_t, 2> nMask; // native vector element order mask
+    llvm::SmallVector<int64_t, 2> rMask; // non-native vector element order mask
+    enum { V1 = 0, V2 = 2 };
+    switch (constInt) {
+    case 0:
+      nMask = {V1 + 0, V2 + 0};
+      rMask = {V2 + 1, V1 + 1};
+      break;
+    case 1:
+      nMask = {V1 + 0, V2 + 1};
+      rMask = {V2 + 0, V1 + 1};
+      break;
+    case 2:
+      nMask = {V1 + 1, V2 + 0};
+      rMask = {V2 + 1, V1 + 0};
+      break;
+    case 3:
+      nMask = {V1 + 1, V2 + 1};
+      rMask = {V2 + 0, V1 + 0};
+      break;
+    default:
+      llvm_unreachable("unexpected arg3 value for vec_permi");
+    }
+
+    llvm::SmallVector<int64_t, 2> mask =
+        (isBEVecElemOrderOnLE()) ? rMask : nMask;
+    auto res{builder.create<mlir::vector::ShuffleOp>(loc, mArg0, mArg1, mask)};
+    if (res.getType() != mlirTy) {
+      auto cast{builder.create<mlir::LLVM::BitcastOp>(loc, mlirTy, res)};
+      return builder.createConvert(loc, resultType, cast);
+    }
+    return builder.createConvert(loc, resultType, res);
+  }
+  default:
+    llvm_unreachable("invalid vector operation for generator");
+  }
 }
 
 // VEC_SEL

@@ -29,9 +29,13 @@ enum class VecOp {
   Convert,
   Ctf,
   Cvf,
-  Nmadd,
+  Mergeh,
+  Mergel,
   Msub,
   Mul,
+  Nmadd,
+  Perm,
+  Permi,
   Sel,
   Sl,
   Sld,
@@ -166,6 +170,20 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
   template <VecOp>
   fir::ExtendedValue genVecAnyCompare(mlir::Type resultType,
                                       llvm::ArrayRef<fir::ExtendedValue> args);
+
+  fir::ExtendedValue genVecExtract(mlir::Type resultType,
+                                   llvm::ArrayRef<fir::ExtendedValue> args);
+
+  fir::ExtendedValue genVecInsert(mlir::Type resultType,
+                                  llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
+  fir::ExtendedValue genVecMerge(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
+  fir::ExtendedValue genVecPerm(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
   fir::ExtendedValue genVecNmaddMsub(mlir::Type resultType,
