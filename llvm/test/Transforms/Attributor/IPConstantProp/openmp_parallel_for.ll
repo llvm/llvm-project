@@ -76,32 +76,32 @@ define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bo
 ; TUNIT-NEXT:    store i32 4, ptr [[DOTOMP_UB]], align 4
 ; TUNIT-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 ; TUNIT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-; TUNIT-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
-; TUNIT-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 [[TMP5]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
-; TUNIT-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-; TUNIT-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TMP6]], 4
+; TUNIT-NEXT:    [[TRUETMP5:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; TUNIT-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 [[TRUETMP5]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
+; TUNIT-NEXT:    [[TRUETMP6:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+; TUNIT-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TRUETMP6]], 4
 ; TUNIT-NEXT:    br i1 [[CMP6]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; TUNIT:       cond.true:
 ; TUNIT-NEXT:    br label [[COND_END:%.*]]
 ; TUNIT:       cond.false:
-; TUNIT-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+; TUNIT-NEXT:    [[TRUETMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 ; TUNIT-NEXT:    br label [[COND_END]]
 ; TUNIT:       cond.end:
-; TUNIT-NEXT:    [[COND:%.*]] = phi i32 [ 4, [[COND_TRUE]] ], [ [[TMP7]], [[COND_FALSE]] ]
+; TUNIT-NEXT:    [[COND:%.*]] = phi i32 [ 4, [[COND_TRUE]] ], [ [[TRUETMP7]], [[COND_FALSE]] ]
 ; TUNIT-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
-; TUNIT-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+; TUNIT-NEXT:    [[TRUETMP8:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 ; TUNIT-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 ; TUNIT:       omp.inner.for.cond:
-; TUNIT-NEXT:    [[DOTOMP_IV_0:%.*]] = phi i32 [ [[TMP8]], [[COND_END]] ], [ [[ADD11:%.*]], [[OMP_INNER_FOR_INC:%.*]] ]
-; TUNIT-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-; TUNIT-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[DOTOMP_IV_0]], [[TMP9]]
+; TUNIT-NEXT:    [[DOTOMP_IV_0:%.*]] = phi i32 [ [[TRUETMP8]], [[COND_END]] ], [ [[ADD11:%.*]], [[OMP_INNER_FOR_INC:%.*]] ]
+; TUNIT-NEXT:    [[TRUETMP9:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+; TUNIT-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[DOTOMP_IV_0]], [[TRUETMP9]]
 ; TUNIT-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]], label [[OMP_INNER_FOR_BODY:%.*]]
 ; TUNIT:       omp.inner.for.cond.cleanup:
 ; TUNIT-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 ; TUNIT:       omp.inner.for.body:
 ; TUNIT-NEXT:    [[ADD10:%.*]] = add nsw i32 [[DOTOMP_IV_0]], 2
-; TUNIT-NEXT:    [[TMP11:%.*]] = load double, ptr [[Q_ADDR]], align 8
-; TUNIT-NEXT:    call void @bar(i32 [[ADD10]], float nofpclass(nan inf zero sub nnorm) 3.000000e+00, double [[TMP11]])
+; TUNIT-NEXT:    [[TRUETMP11:%.*]] = load double, ptr [[Q_ADDR]], align 8
+; TUNIT-NEXT:    call void @bar(i32 [[ADD10]], float nofpclass(nan inf zero sub nnorm) 3.000000e+00, double [[TRUETMP11]])
 ; TUNIT-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 ; TUNIT:       omp.body.continue:
 ; TUNIT-NEXT:    br label [[OMP_INNER_FOR_INC]]
@@ -111,8 +111,8 @@ define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bo
 ; TUNIT:       omp.inner.for.end:
 ; TUNIT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 ; TUNIT:       omp.loop.exit:
-; TUNIT-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
-; TUNIT-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 [[TMP12]])
+; TUNIT-NEXT:    [[TRUETMP12:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; TUNIT-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 [[TRUETMP12]])
 ; TUNIT-NEXT:    br label [[OMP_PRECOND_END:%.*]]
 ; TUNIT:       omp.precond.end:
 ; TUNIT-NEXT:    ret void
@@ -135,33 +135,33 @@ define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bo
 ; CGSCC-NEXT:    store i32 [[SUB3]], ptr [[DOTOMP_UB]], align 4
 ; CGSCC-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
 ; CGSCC-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
-; CGSCC-NEXT:    [[TMP5:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
-; CGSCC-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 [[TMP5]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
-; CGSCC-NEXT:    [[TMP6:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-; CGSCC-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TMP6]], [[SUB3]]
+; CGSCC-NEXT:    [[TRUETMP5:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; CGSCC-NEXT:    call void @__kmpc_for_static_init_4(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 [[TRUETMP5]], i32 noundef 34, ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_IS_LAST]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_LB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_UB]], ptr noundef nonnull align 4 dereferenceable(4) [[DOTOMP_STRIDE]], i32 noundef 1, i32 noundef 1)
+; CGSCC-NEXT:    [[TRUETMP6:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+; CGSCC-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[TRUETMP6]], [[SUB3]]
 ; CGSCC-NEXT:    br i1 [[CMP6]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
 ; CGSCC:       cond.true:
 ; CGSCC-NEXT:    br label [[COND_END:%.*]]
 ; CGSCC:       cond.false:
-; CGSCC-NEXT:    [[TMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+; CGSCC-NEXT:    [[TRUETMP7:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 ; CGSCC-NEXT:    br label [[COND_END]]
 ; CGSCC:       cond.end:
-; CGSCC-NEXT:    [[COND:%.*]] = phi i32 [ [[SUB3]], [[COND_TRUE]] ], [ [[TMP7]], [[COND_FALSE]] ]
+; CGSCC-NEXT:    [[COND:%.*]] = phi i32 [ [[SUB3]], [[COND_TRUE]] ], [ [[TRUETMP7]], [[COND_FALSE]] ]
 ; CGSCC-NEXT:    store i32 [[COND]], ptr [[DOTOMP_UB]], align 4
-; CGSCC-NEXT:    [[TMP8:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
+; CGSCC-NEXT:    [[TRUETMP8:%.*]] = load i32, ptr [[DOTOMP_LB]], align 4
 ; CGSCC-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 ; CGSCC:       omp.inner.for.cond:
-; CGSCC-NEXT:    [[DOTOMP_IV_0:%.*]] = phi i32 [ [[TMP8]], [[COND_END]] ], [ [[ADD11:%.*]], [[OMP_INNER_FOR_INC:%.*]] ]
-; CGSCC-NEXT:    [[TMP9:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
-; CGSCC-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[DOTOMP_IV_0]], [[TMP9]]
+; CGSCC-NEXT:    [[DOTOMP_IV_0:%.*]] = phi i32 [ [[TRUETMP8]], [[COND_END]] ], [ [[ADD11:%.*]], [[OMP_INNER_FOR_INC:%.*]] ]
+; CGSCC-NEXT:    [[TRUETMP9:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
+; CGSCC-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[DOTOMP_IV_0]], [[TRUETMP9]]
 ; CGSCC-NEXT:    br i1 [[CMP8]], label [[OMP_INNER_FOR_COND_CLEANUP:%.*]], label [[OMP_INNER_FOR_BODY:%.*]]
 ; CGSCC:       omp.inner.for.cond.cleanup:
 ; CGSCC-NEXT:    br label [[OMP_INNER_FOR_END:%.*]]
 ; CGSCC:       omp.inner.for.body:
 ; CGSCC-NEXT:    [[ADD10:%.*]] = add nsw i32 [[DOTOMP_IV_0]], 2
-; CGSCC-NEXT:    [[TMP10:%.*]] = load float, ptr [[P]], align 4
-; CGSCC-NEXT:    [[TMP11:%.*]] = load double, ptr [[Q_ADDR]], align 8
-; CGSCC-NEXT:    call void @bar(i32 [[ADD10]], float [[TMP10]], double [[TMP11]])
+; CGSCC-NEXT:    [[TRUETMP10:%.*]] = load float, ptr [[P]], align 4
+; CGSCC-NEXT:    [[TRUETMP11:%.*]] = load double, ptr [[Q_ADDR]], align 8
+; CGSCC-NEXT:    call void @bar(i32 [[ADD10]], float [[TRUETMP10]], double [[TRUETMP11]])
 ; CGSCC-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 ; CGSCC:       omp.body.continue:
 ; CGSCC-NEXT:    br label [[OMP_INNER_FOR_INC]]
@@ -171,8 +171,8 @@ define internal void @.omp_outlined.(ptr noalias %.global_tid., ptr noalias %.bo
 ; CGSCC:       omp.inner.for.end:
 ; CGSCC-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 ; CGSCC:       omp.loop.exit:
-; CGSCC-NEXT:    [[TMP12:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
-; CGSCC-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 [[TMP12]])
+; CGSCC-NEXT:    [[TRUETMP12:%.*]] = load i32, ptr [[DOTGLOBAL_TID_]], align 4
+; CGSCC-NEXT:    call void @__kmpc_for_static_fini(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB0]], i32 [[TRUETMP12]])
 ; CGSCC-NEXT:    br label [[OMP_PRECOND_END]]
 ; CGSCC:       omp.precond.end:
 ; CGSCC-NEXT:    ret void
