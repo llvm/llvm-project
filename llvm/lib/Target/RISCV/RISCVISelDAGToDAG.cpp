@@ -3353,13 +3353,13 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
       SDValue RoundMode = True->getOperand(TrueVLIndex - 1);
       Ops.append(True->op_begin() + HasTiedDest,
                  True->op_begin() + TrueVLIndex - 1);
-      Ops.append({Mask, RoundMode, VL, SEW});
+      Ops.append({Mask, RoundMode});
     } else {
       Ops.append(True->op_begin() + HasTiedDest,
                  True->op_begin() + TrueVLIndex);
-      Ops.append({Mask, VL, SEW});
+      Ops.push_back(Mask);
     }
-    Ops.push_back(PolicyOp);
+    Ops.append({VL, SEW, PolicyOp});
 
     // Result node should have chain operand of True.
     if (HasChainOp)
