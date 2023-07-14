@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/VirtualOutputBackend.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace llvm;
 using namespace llvm::vfs;
