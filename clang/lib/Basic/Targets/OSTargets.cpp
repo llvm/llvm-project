@@ -11,6 +11,7 @@
 
 #include "OSTargets.h"
 #include "clang/Basic/MacroBuilder.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace clang;
