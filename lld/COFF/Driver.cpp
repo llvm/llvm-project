@@ -637,6 +637,31 @@ void LinkerDriver::detectWinSysRoot(const opt::InputArgList &Args) {
   }
 }
 
+void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
+  std::string lldBinary = sys::fs::getMainExecutable(argv0.c_str(), nullptr);
+  SmallString<128> binDir(lldBinary);
+  sys::path::remove_filename(binDir); // remove lld-link.exe
+  StringRef rootDir = sys::path::parent_path(binDir); // remove 'bin'
+
+  SmallString<128> libDir(rootDir);
+  sys::path::append(libDir, "lib");
+  // We need to prepend the paths here in order to make sure that we always
+  // try to link the clang versions of the builtins over the ones supplied by MSVC.
+  searchPaths.insert(searchPaths.begin(), saver().save(libDir.str()));
+
+  // Add the resource dir library path
+  SmallString<128> runtimeLibDir(rootDir);
+  sys::path::append(runtimeLibDir, "lib", "clang", std::to_string(LLVM_VERSION_MAJOR), "lib");
+  searchPaths.insert(searchPaths.begin(), saver().save(runtimeLibDir.str()));
+
+  // Resource dir + osname, which is hardcoded to windows since we are in the
+  // COFF driver.
+  SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
+  sys::path::append(runtimeLibDirWithOS, "windows");
+  searchPaths.insert(searchPaths.begin(), saver().save(runtimeLibDirWithOS.str()));
+
+}
+
 void LinkerDriver::addWinSysRootLibSearchPaths() {
   if (!diaPath.empty()) {
     // The DIA SDK always uses the legacy vc arch, even in new MSVC versions.
@@ -1543,6 +1568,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   detectWinSysRoot(args);
   if (!args.hasArg(OPT_lldignoreenv) && !args.hasArg(OPT_winsysroot))
     addLibSearchPaths();
+  addClangLibSearchPaths(argsArr[0]);
 
   // Handle /ignore
   for (auto *arg : args.filtered(OPT_ignore)) {
