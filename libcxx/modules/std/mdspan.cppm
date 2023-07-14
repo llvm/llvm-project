@@ -23,11 +23,9 @@ export namespace std {
   using std::layout_right;
   // using std::layout_stride;
 
-#if 0
-  // [mdspan.accessor.default], class template default_­accessor
+  // [mdspan.accessor.default], class template default_accessor
   using std::default_accessor;
 
   // [mdspan.mdspan], class template mdspan
-  using std::mdspan;
-#endif
+  // using std::mdspan;
 } // namespace std
