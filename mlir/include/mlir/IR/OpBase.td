@@ -1806,6 +1806,10 @@ class AllAttrOf<list<AttrConstraint> constraints> : AttrConstraint<
     !interleave(!foreach(con, constraints, con.summary), " and ")> {
 }
 
+class IntNEQValue<int n> : AttrConstraint<
+    CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() != " # n>,
+    "whose minimum value is " # n>;
+
 class IntMinValue<int n> : AttrConstraint<
     CPred<"::llvm::cast<::mlir::IntegerAttr>($_self).getInt() >= " # n>,
     "whose minimum value is " # n>;
