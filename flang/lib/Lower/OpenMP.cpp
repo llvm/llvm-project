@@ -2641,6 +2641,39 @@ void Fortran::lower::genOpenMPConstruct(
       ompConstruct.u);
 }
 
+fir::GlobalOp globalInitialization(Fortran::lower::AbstractConverter &converter,
+                                   fir::FirOpBuilder &firOpBuilder,
+                                   const Fortran::semantics::Symbol &sym,
+                                   const Fortran::lower::pft::Variable &var,
+                                   mlir::Location currentLocation) {
+  mlir::Type ty = converter.genType(sym);
+  std::string globalName = converter.mangleName(sym);
+  mlir::StringAttr linkage = firOpBuilder.createInternalLinkage();
+  fir::GlobalOp global =
+      firOpBuilder.createGlobal(currentLocation, ty, globalName, linkage);
+
+  // Create default initialization for non-character scalar.
+  if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
+    mlir::Type baseAddrType = ty.dyn_cast<fir::BoxType>().getEleTy();
+    Fortran::lower::createGlobalInitialization(
+        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
+          mlir::Value nullAddr =
+              b.createNullConstant(currentLocation, baseAddrType);
+          mlir::Value box =
+              b.create<fir::EmboxOp>(currentLocation, ty, nullAddr);
+          b.create<fir::HasValueOp>(currentLocation, box);
+        });
+  } else {
+    Fortran::lower::createGlobalInitialization(
+        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
+          mlir::Value undef = b.create<fir::UndefOp>(currentLocation, ty);
+          b.create<fir::HasValueOp>(currentLocation, undef);
+        });
+  }
+
+  return global;
+}
+
 void Fortran::lower::genThreadprivateOp(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::pft::Variable &var) {
@@ -2670,30 +2703,9 @@ void Fortran::lower::genThreadprivateOp(
     // variable in main program, and it has implicit SAVE attribute. Take it as
     // with SAVE attribute, so to create GlobalOp for it to simplify the
     // translation to LLVM IR.
-    mlir::Type ty = converter.genType(sym);
-    std::string globalName = converter.mangleName(sym);
-    mlir::StringAttr linkage = firOpBuilder.createInternalLinkage();
-    fir::GlobalOp global =
-        firOpBuilder.createGlobal(currentLocation, ty, globalName, linkage);
+    fir::GlobalOp global = globalInitialization(converter, firOpBuilder, sym,
+                                                var, currentLocation);
 
-    // Create default initialization for non-character scalar.
-    if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
-      mlir::Type baseAddrType = ty.dyn_cast<fir::BoxType>().getEleTy();
-      Fortran::lower::createGlobalInitialization(
-          firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value nullAddr =
-                b.createNullConstant(currentLocation, baseAddrType);
-            mlir::Value box =
-                b.create<fir::EmboxOp>(currentLocation, ty, nullAddr);
-            b.create<fir::HasValueOp>(currentLocation, box);
-          });
-    } else {
-      Fortran::lower::createGlobalInitialization(
-          firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value undef = b.create<fir::UndefOp>(currentLocation, ty);
-            b.create<fir::HasValueOp>(currentLocation, undef);
-          });
-    }
     mlir::Value symValue = firOpBuilder.create<fir::AddrOfOp>(
         currentLocation, global.resultType(), global.getSymbol());
     symThreadprivateValue = firOpBuilder.create<mlir::omp::ThreadprivateOp>(
@@ -2714,6 +2726,23 @@ void Fortran::lower::genThreadprivateOp(
   fir::ExtendedValue symThreadprivateExv =
       getExtendedValue(sexv, symThreadprivateValue);
   converter.bindSymbol(sym, symThreadprivateExv);
+}
+
+// This function replicates threadprivate's behaviour of generating
+// an internal fir.GlobalOp for non-global variables in the main program
+// that have the implicit SAVE attribute, to simplifiy LLVM-IR and MLIR
+// generation.
+void Fortran::lower::genDeclareTargetIntGlobal(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::pft::Variable &var) {
+  if (!var.isGlobal()) {
+    // A non-global variable which can be in a declare target directive must
+    // be a variable in the main program, and it has the implicit SAVE
+    // attribute. We create a GlobalOp for it to simplify the translation to
+    // LLVM IR.
+    globalInitialization(converter, converter.getFirOpBuilder(),
+                         var.getSymbol(), var, converter.getCurrentLocation());
+  }
 }
 
 void handleDeclareTarget(Fortran::lower::AbstractConverter &converter,
