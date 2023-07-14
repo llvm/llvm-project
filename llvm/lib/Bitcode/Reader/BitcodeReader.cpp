@@ -1381,17 +1381,6 @@ unsigned BitcodeReader::getVirtualTypeID(Type *Ty,
     return It->second;
   }
 
-#ifndef NDEBUG
-  if (!Ty->isOpaquePointerTy()) {
-    assert(Ty->getNumContainedTypes() == ChildTypeIDs.size() &&
-           "Wrong number of contained types");
-    for (auto Pair : zip(Ty->subtypes(), ChildTypeIDs)) {
-      assert(std::get<0>(Pair) == getTypeByID(std::get<1>(Pair)) &&
-             "Incorrect contained type ID");
-    }
-  }
-#endif
-
   unsigned TypeID = TypeList.size();
   TypeList.push_back(Ty);
   if (!ChildTypeIDs.empty())
