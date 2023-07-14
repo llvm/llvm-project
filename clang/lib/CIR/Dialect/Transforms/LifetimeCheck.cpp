@@ -53,8 +53,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkAwait(AwaitOp awaitOp);
   void checkReturn(ReturnOp retOp);
 
-  void classifyTypeCategories(mlir::Value addr, mlir::Type t,
-                              mlir::Location loc);
+  void classifyAndInitTypeCategories(mlir::Value addr, mlir::Type t,
+                                     mlir::Location loc, unsigned nestLevel);
 
   // FIXME: classify tasks and lambdas prior to check ptr deref
   // and pass down an enum.
@@ -305,11 +305,11 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   }
 
   // Aggregates and exploded fields.
-  using ExplodedFieldsTy = llvm::SmallSet<unsigned, 4>;
+  using ExplodedFieldsTy = llvm::SmallVector<mlir::Value, 4>;
   DenseMap<mlir::Value, ExplodedFieldsTy> aggregates;
-  void addAggregate(mlir::Value a, SmallVectorImpl<unsigned> &fields) {
+  void addAggregate(mlir::Value a, SmallVectorImpl<mlir::Value> &fields) {
     assert(!aggregates.count(a) && "already tracked");
-    aggregates[a].insert(fields.begin(), fields.end());
+    aggregates[a].swap(fields);
   }
 
   // Useful helpers for debugging
@@ -432,9 +432,18 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 };
 } // namespace
 
-static StringRef getVarNameFromValue(mlir::Value v) {
+static std::string getVarNameFromValue(mlir::Value v) {
   if (auto allocaOp = dyn_cast<AllocaOp>(v.getDefiningOp()))
-    return allocaOp.getName();
+    return allocaOp.getName().str();
+  if (auto getElemOp = dyn_cast<StructElementAddr>(v.getDefiningOp())) {
+    auto parent = dyn_cast<AllocaOp>(getElemOp.getStructAddr().getDefiningOp());
+    if (parent) {
+      llvm::SmallString<128> finalName;
+      llvm::raw_svector_ostream Out(finalName);
+      Out << parent.getName() << "." << getElemOp.getMemberName();
+      return Out.str().str();
+    }
+  }
   assert(0 && "how did it get here?");
   return "";
 }
@@ -870,9 +879,13 @@ static bool containsPointerElts(mlir::cir::StructType s) {
   });
 }
 
-static bool isAggregateType(mlir::Type agg) {
+static bool isAggregateType(LifetimeCheckPass *pass, mlir::Type agg) {
   auto t = agg.dyn_cast<mlir::cir::StructType>();
   if (!t)
+    return false;
+  // Lambdas have their special handling, and shall not be considered as
+  // aggregate types.
+  if (pass->isLambdaType(agg))
     return false;
   // FIXME: For now we handle this in a more naive way: any pointer
   // element we find is enough to consider this an aggregate. But in
@@ -922,8 +935,10 @@ static bool isPointerType(mlir::Type t) {
   return isStructAndHasAttr<clang::PointerAttr>(t);
 }
 
-void LifetimeCheckPass::classifyTypeCategories(mlir::Value addr, mlir::Type t,
-                                               mlir::Location loc) {
+void LifetimeCheckPass::classifyAndInitTypeCategories(mlir::Value addr,
+                                                      mlir::Type t,
+                                                      mlir::Location loc,
+                                                      unsigned nestLevel) {
   assert(!getPmap().count(addr) && "only one map entry for a given address");
   getPmap()[addr] = {};
 
@@ -942,7 +957,7 @@ void LifetimeCheckPass::classifyTypeCategories(mlir::Value addr, mlir::Type t,
       return TypeCategory::Pointer;
     if (isOwnerType(t))
       return TypeCategory::Owner;
-    if (isAggregateType(t))
+    if (isAggregateType(this, t))
       return TypeCategory::Aggregate;
     return TypeCategory::Value;
   }();
@@ -964,24 +979,39 @@ void LifetimeCheckPass::classifyTypeCategories(mlir::Value addr, mlir::Type t,
     // 2.1 - Aggregates are types we will “explode” (consider memberwise) at
     // local scopes, because the function can operate on the members directly.
 
-    // Explode all pointer members.
-    SmallVector<unsigned, 4> fields;
+    // TODO: only track first level of aggregates subobjects for now, get some
+    // data before we increase this.
+    if (nestLevel > 1)
+      break;
+
+    // Map values for members to it's index in the aggregate.
     auto members = t.cast<mlir::cir::StructType>().getMembers();
+    SmallVector<mlir::Value, 4> fieldVals;
+    fieldVals.assign(members.size(), {});
 
-    unsigned fieldIdx = 0;
-    std::for_each(members.begin(), members.end(), [&](mlir::Type t) {
-      auto ptrType = t.dyn_cast<mlir::cir::PointerType>();
-      if (ptrType)
-        fields.push_back(fieldIdx);
-      fieldIdx++;
+    // Go through uses of the alloca via `cir.struct_element_addr`, and
+    // track only the fields that are actually used.
+    std::for_each(addr.use_begin(), addr.use_end(), [&](mlir::OpOperand &use) {
+      auto op = dyn_cast<mlir::cir::StructElementAddr>(use.getOwner());
+      if (!op)
+        return;
+
+      auto eltAddr = op.getResult();
+      auto eltTy =
+          eltAddr.getType().cast<mlir::cir::PointerType>().getPointee();
+
+      // Classify exploded types. Keep alloca original location.
+      classifyAndInitTypeCategories(eltAddr, eltTy, loc, ++nestLevel);
+      fieldVals[op.getMemberIndex().getZExtValue()] = eltAddr;
     });
-    addAggregate(addr, fields);
 
-    // Differently from `TypeCategory::Pointer`, initialization for exploded
-    // pointer is done lazily, triggered whenever the relevant
-    // `cir.struct_element_addr` are seen. This also serves optimization
-    // purposes: only track fields that are actually seen.
-    break;
+    // In case this aggregate gets initialized at once, the fields need
+    // to be mapped to the elements values.
+    addAggregate(addr, fieldVals);
+
+    // There might be pointers to this aggregate, so also make a value
+    // for it.
+    LLVM_FALLTHROUGH;
   }
   case TypeCategory::Value: {
     // 2.4.2 - When a local Value x is declared, add (x, {x}) to pmap.
@@ -995,8 +1025,8 @@ void LifetimeCheckPass::classifyTypeCategories(mlir::Value addr, mlir::Type t,
 }
 
 void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
-  classifyTypeCategories(allocaOp.getAddr(), allocaOp.getAllocaType(),
-                         allocaOp.getLoc());
+  classifyAndInitTypeCategories(allocaOp.getAddr(), allocaOp.getAllocaType(),
+                                allocaOp.getLoc(), /*nestLevel=*/0);
 }
 
 void LifetimeCheckPass::checkCoroTaskStore(StoreOp storeOp) {
@@ -1187,7 +1217,7 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
             << "declared here but invalid after enclosing " << parent
             << " ends";
       } else {
-        StringRef outOfScopeVarName = getVarNameFromValue(*info.val);
+        auto outOfScopeVarName = getVarNameFromValue(*info.val);
         D.attachNote(info.loc) << "pointee '" << outOfScopeVarName
                                << "' invalidated at end of scope";
       }
@@ -1233,7 +1263,7 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
 
   // Looks like we found a bad path leading to this deference point,
   // diagnose it.
-  StringRef varName = getVarNameFromValue(addr);
+  auto varName = getVarNameFromValue(addr);
   auto D = emitWarning(loc);
 
   if (tasks.count(addr))
