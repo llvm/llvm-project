@@ -4320,10 +4320,10 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
         return RepOp;
     }
 
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
-      // getelementptr x, 0 -> x
-      if (NewOps.size() == 2 && match(NewOps[1], m_Zero()) &&
-          !GEP->isInBounds())
+    if (isa<GetElementPtrInst>(I)) {
+      // getelementptr x, 0 -> x.
+      // This never returns poison, even if inbounds is set.
+      if (NewOps.size() == 2 && match(NewOps[1], m_Zero()))
         return NewOps[0];
     }
   } else if (MaxRecurse) {
