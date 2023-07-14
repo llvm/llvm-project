@@ -1129,6 +1129,15 @@ TEST(RenameTest, Renameable) {
         using ns::^foo;
       )cpp",
        "there are multiple symbols at the given location", !HeaderFile},
+
+      {R"cpp(
+        void test() {
+          // no crash
+          using namespace std;
+          int [[V^ar]];
+        }
+      )cpp",
+        nullptr, !HeaderFile},
   };
 
   for (const auto& Case : Cases) {
