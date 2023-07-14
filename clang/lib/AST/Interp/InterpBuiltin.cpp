@@ -13,13 +13,13 @@
 namespace clang {
 namespace interp {
 
-template <typename T> T getParam(InterpFrame *Frame, unsigned Index) {
+template <typename T> T getParam(const InterpFrame *Frame, unsigned Index) {
   unsigned Offset = Frame->getFunction()->getParamOffset(Index);
   return Frame->getParam<T>(Offset);
 }
 
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
-                                   InterpFrame *Frame) {
+                                   const InterpFrame *Frame) {
   const Pointer &A = getParam<Pointer>(Frame, 0);
   const Pointer &B = getParam<Pointer>(Frame, 1);
 
