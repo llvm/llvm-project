@@ -6,20 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that we can enable the debug mode on a per-TU basis regardless of how the library was built.
+// TODO(hardening): remove in LLVM 18.
+// This test ensures that enabling assertions now enables the hardened mode.
 
-// Hardened mode would additionally trigger the error that hardened and debug modes are mutually exclusive.
-// UNSUPPORTED: libcpp-has-hardened-mode
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers.
 // UNSUPPORTED: c++03, !has-unix-headers
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_DEBUG_MODE=1
+// Debug mode is mutually exclusive with hardened mode.
+// UNSUPPORTED: libcpp-has-debug-mode
+// Ignore the warning about `_LIBCPP_ENABLE_ASSERTIONS` being deprecated.
+// ADDITIONAL_COMPILE_FLAGS: -Wno-error -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 #include <cassert>
 #include "check_assertion.h"
 
 int main(int, char**) {
+  static_assert(_LIBCPP_ENABLE_HARDENED_MODE == 1, "Hardened mode should be implicitly enabled");
+
   _LIBCPP_ASSERT_UNCATEGORIZED(true, "Should not fire");
   TEST_LIBCPP_ASSERT_FAILURE([] {
     _LIBCPP_ASSERT_UNCATEGORIZED(false, "Should fire");

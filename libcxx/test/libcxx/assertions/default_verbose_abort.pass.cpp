@@ -8,8 +8,6 @@
 
 // Test that the default verbose termination function aborts the program.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
-
 #include <csignal>
 #include <cstdlib>
 
