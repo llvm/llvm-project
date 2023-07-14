@@ -3301,16 +3301,19 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
       True.getNumOperands() - HasVecPolicyOp - HasChainOp - HasGlueOp - 2;
   SDValue TrueVL = True.getOperand(TrueVLIndex);
 
-  auto IsNoFPExcept = [this](SDValue N) {
-    return !this->mayRaiseFPException(N.getNode()) ||
-           N->getFlags().hasNoFPExcept();
-  };
-
-  // Allow the peephole for non-exception True with VLMAX vector length, since
-  // all the values after VL of N are dependent on Merge. VLMAX should be
-  // lowered to (XLenVT -1).
-  if (TrueVL != VL && !(IsNoFPExcept(True) && isAllOnesConstant(TrueVL)))
+  // We need the VLs to be the same. But if True has a VL of VLMAX then we can
+  // go ahead and use N's VL because we know it will be smaller, so any tail
+  // elements in the result will be from Merge.
+  if (TrueVL != VL && !isAllOnesConstant(TrueVL))
     return false;
+
+  // If we end up changing the VL or mask of True, then we need to make sure it
+  // doesn't raise any observable fp exceptions, since changing the active
+  // elements will affect how fflags is set.
+  if (TrueVL != VL || !IsMasked)
+    if (mayRaiseFPException(True.getNode()) &&
+        !True->getFlags().hasNoFPExcept())
+      return false;
 
   SDLoc DL(N);
   unsigned MaskedOpc = Info->MaskedPseudo;
