@@ -32,7 +32,7 @@ module {
     llvm.return
   }
   llvm.metadata @metadata {
-    llvm.access_group @group1
+    llvm.func @group1()
   }
 }
 

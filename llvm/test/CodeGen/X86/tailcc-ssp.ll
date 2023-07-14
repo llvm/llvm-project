@@ -1,5 +1,5 @@
-; RUN: llc -opaque-pointers=1 -mtriple=x86_64-windows-msvc %s -o - -verify-machineinstrs | FileCheck %s -check-prefix=WINDOWS
-; RUN: llc -opaque-pointers=1 -mtriple=x86_64-linux-gnu    %s -o - -verify-machineinstrs | FileCheck %s -check-prefix=LINUX
+; RUN: llc -mtriple=x86_64-windows-msvc %s -o - -verify-machineinstrs | FileCheck %s -check-prefix=WINDOWS
+; RUN: llc -mtriple=x86_64-linux-gnu    %s -o - -verify-machineinstrs | FileCheck %s -check-prefix=LINUX
 
 declare void @h(i8*, i64, i8*)
 

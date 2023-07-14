@@ -9,7 +9,7 @@
 @B = external addrspace(3) global [0 x i32]
 
 define amdgpu_kernel void @kernel_0() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_0() !llvm.amdgcn.lds.kernel.id !1 {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_0() #0 !llvm.amdgcn.lds.kernel.id !1 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_0.lds) ]
 ; CHECK-NEXT:    call void @call_store_A()
 ; CHECK-NEXT:    ret void
@@ -29,7 +29,7 @@ define amdgpu_kernel void @kernel_1() {
 }
 
 define amdgpu_kernel void @kernel_2() {
-; CHECK-LABEL: define amdgpu_kernel void @kernel_2() !llvm.amdgcn.lds.kernel.id !3 {
+; CHECK-LABEL: define amdgpu_kernel void @kernel_2() #0 !llvm.amdgcn.lds.kernel.id !3 {
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kernel_2.lds) ]
 ; CHECK-NEXT:    call void @store_A()
 ; CHECK-NEXT:    ret void
@@ -82,3 +82,5 @@ define private ptr @get_B_ptr() {
 ;
   ret ptr addrspacecast (ptr addrspace(3) @B to ptr)
 }
+
+; CHECK: attributes #0 = { "amdgpu-lds-size"="64" }

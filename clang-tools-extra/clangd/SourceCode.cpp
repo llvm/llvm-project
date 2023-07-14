@@ -1242,5 +1242,17 @@ SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
   }
   return Loc;
 }
+
+clangd::Range rangeTillEOL(llvm::StringRef Code, unsigned HashOffset) {
+  clangd::Range Result;
+  Result.end = Result.start = offsetToPosition(Code, HashOffset);
+
+  // Span the warning until the EOL or EOF.
+  Result.end.character +=
+      lspLength(Code.drop_front(HashOffset).take_until([](char C) {
+        return C == '\n' || C == '\r';
+      }));
+  return Result;
+}
 } // namespace clangd
 } // namespace clang

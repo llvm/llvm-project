@@ -1,7 +1,7 @@
-# RUN: llvm-as --opaque-pointers=0 %S/Inputs/remangle1.ll -o %t.remangle1.bc
-# RUN: llvm-as --opaque-pointers=0 %S/Inputs/remangle2.ll -o %t.remangle2.bc
-# RUN: llvm-link --opaque-pointers=0 %t.remangle1.bc %t.remangle2.bc -o %t.remangle.linked.bc
-# RUN: llvm-dis --opaque-pointers=0 %t.remangle.linked.bc -o - | FileCheck %s
+# RUN: llvm-as  %S/Inputs/remangle1.ll -o %t.remangle1.bc
+# RUN: llvm-as  %S/Inputs/remangle2.ll -o %t.remangle2.bc
+# RUN: llvm-link  %t.remangle1.bc %t.remangle2.bc -o %t.remangle.linked.bc
+# RUN: llvm-dis  %t.remangle.linked.bc -o - | FileCheck %s
 
 ; CHECK-DAG: %fum.1 = type { %aab.0, i8, [7 x i8] }
 ; CHECK-DAG: %aab.0 = type { %aba }

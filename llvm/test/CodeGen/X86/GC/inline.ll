@@ -1,4 +1,4 @@
-; RUN: opt --opaque-pointers=1 < %s -passes='cgscc(inline)' -S | grep example
+; RUN: opt  < %s -passes='cgscc(inline)' -S | grep example
 
 	%IntArray = type { i32, [0 x i32*] }
 

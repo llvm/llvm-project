@@ -1,8 +1,8 @@
 ; RUN: split-file %s %t
-; RUN: llvm-as --opaque-pointers=0 -o %t1.bc %t/f01.ll
-; RUN: llvm-as --opaque-pointers=0 -o %t2.bc %t/f02.ll
-; RUN: llvm-link --opaque-pointers=0 %t1.bc %t2.bc -o %t3.bc
-; RUN: llvm-dis --opaque-pointers=0 -o - %t3.bc | FileCheck %s
+; RUN: llvm-as  -o %t1.bc %t/f01.ll
+; RUN: llvm-as  -o %t2.bc %t/f02.ll
+; RUN: llvm-link  %t1.bc %t2.bc -o %t3.bc
+; RUN: llvm-dis  -o - %t3.bc | FileCheck %s
 
 ; Make sure we can link files with clashing intrinsic names using unnamed types.
 

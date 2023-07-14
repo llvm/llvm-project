@@ -394,9 +394,7 @@ bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
   const DataLayout &DL = M.getDataLayout();
 
   PointerType *TableEntryTy =
-      Ctx.supportsTypedPointers()
-          ? PointerType::get(Type::getInt8Ty(Ctx), DL.getProgramAddressSpace())
-          : PointerType::get(Ctx, DL.getProgramAddressSpace());
+      PointerType::get(Ctx, DL.getProgramAddressSpace());
 
   ArrayType *FuncPtrTableTy =
       ArrayType::get(TableEntryTy, IFuncsToLower.size());
@@ -466,9 +464,7 @@ bool llvm::lowerGlobalIFuncUsersAsGlobalCtor(
 
   InitBuilder.CreateRetVoid();
 
-  PointerType *ConstantDataTy = Ctx.supportsTypedPointers()
-                                    ? PointerType::get(Type::getInt8Ty(Ctx), 0)
-                                    : PointerType::get(Ctx, 0);
+  PointerType *ConstantDataTy = PointerType::get(Ctx, 0);
 
   // TODO: Is this the right priority? Probably should be before any other
   // constructors?

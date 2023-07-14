@@ -1,4 +1,4 @@
-; RUN: llc < %s -opaque-pointers -mtriple=i386-linux | FileCheck %s
+; RUN: llc < %s  -mtriple=i386-linux | FileCheck %s
 	%union.x = type { i32 }
 
 ; CHECK:	.globl r

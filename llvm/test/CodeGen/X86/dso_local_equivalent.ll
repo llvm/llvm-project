@@ -1,7 +1,7 @@
-; RUN: llc --opaque-pointers=1 -mtriple=x86_64-linux-gnu -relocation-model=pic -data-sections -o - %s --asm-verbose=0 | FileCheck %s -check-prefixes=CHECK
+; RUN: llc  -mtriple=x86_64-linux-gnu -relocation-model=pic -data-sections -o - %s --asm-verbose=0 | FileCheck %s -check-prefixes=CHECK
 
 ; Just ensure that we can write to an object file without error.
-; RUN: llc --opaque-pointers=1 -filetype=obj -mtriple=x86_64-linux-gnu -relocation-model=pic -data-sections -o /dev/null %s
+; RUN: llc  -filetype=obj -mtriple=x86_64-linux-gnu -relocation-model=pic -data-sections -o /dev/null %s
 
 declare void @extern_func()
 

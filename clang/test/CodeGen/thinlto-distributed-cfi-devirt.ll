@@ -4,7 +4,7 @@
 ; It additionally enables -fwhole-program-vtables to get more information in
 ; TYPE_IDs of GLOBALVAL_SUMMARY_BLOCK.
 
-; RUN: opt --opaque-pointers=0 -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
+; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
 
 ; RUN: llvm-lto2 run -thinlto-distributed-indexes -disable-thinlto-funcattrs=0 %t.o \
 ; RUN:   -whole-program-visibility \
@@ -30,9 +30,9 @@
 ; CHECK: blob data = '_ZTS1A_ZN1A1nEi'
 ; CHECK-LABEL: </STRTAB_BLOCK
 
-; RUN: llvm-dis --opaque-pointers=0 %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=CHECK-DIS
+; RUN: llvm-dis  %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=CHECK-DIS
 ; Round trip it through llvm-as
-; RUN: llvm-dis --opaque-pointers=0 %t.o.thinlto.bc -o - | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=CHECK-DIS
+; RUN: llvm-dis  %t.o.thinlto.bc -o - | llvm-as -o - | llvm-dis -o - | FileCheck %s --check-prefix=CHECK-DIS
 ; CHECK-DIS: ^0 = module: (path: "{{.*}}thinlto-distributed-cfi-devirt.ll.tmp.o", hash: ({{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}))
 ; CHECK-DIS: ^1 = gv: (guid: 8346051122425466633, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 18, funcFlags: (readNone: 0, readOnly: 0, noRecurse: 0, returnDoesNotAlias: 0, noInline: 0, alwaysInline: 0, noUnwind: 0, mayThrow: 0, hasUnknownCall: 1, mustBeUnreachable: 0), typeIdInfo: (typeTests: (^2), typeCheckedLoadVCalls: (vFuncId: (^2, offset: 8), vFuncId: (^2, offset: 0))))))
 ; CHECK-DIS: ^2 = typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: allOnes, sizeM1BitWidth: 7), wpdResolutions: ((offset: 0, wpdRes: (kind: branchFunnel)), (offset: 8, wpdRes: (kind: singleImpl, singleImplName: "_ZN1A1nEi"))))) ; guid = 7004155349499253778
