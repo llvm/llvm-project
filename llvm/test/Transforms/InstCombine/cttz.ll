@@ -122,9 +122,7 @@ define <2 x i64> @cttz_sext_zero_def_vec(<2 x i32> %x) {
 
 define i32 @cttz_of_lowest_set_bit(i32 %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[AND]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG1]]
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %sub = sub i32 0, %x
@@ -136,9 +134,7 @@ define i32 @cttz_of_lowest_set_bit(i32 %x) {
 define i32 @cttz_of_lowest_set_bit_commuted(i32 %xx) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_commuted(
 ; CHECK-NEXT:    [[X:%.*]] = udiv i32 42, [[XX:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[SUB]]
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[AND]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 false), !range [[RNG1]]
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %x = udiv i32 42, %xx ; thwart complexity-based canonicalization
@@ -150,9 +146,7 @@ define i32 @cttz_of_lowest_set_bit_commuted(i32 %xx) {
 
 define i32 @cttz_of_lowest_set_bit_poison_flag(i32 %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_poison_flag(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
-; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[AND]], i1 true), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range [[RNG1]]
 ; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %sub = sub i32 0, %x
@@ -163,9 +157,7 @@ define i32 @cttz_of_lowest_set_bit_poison_flag(i32 %x) {
 
 define <2 x i64> @cttz_of_lowest_set_bit_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_vec(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[SUB]], [[X]]
-; CHECK-NEXT:    [[TZ:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[AND]], i1 false), !range [[RNG2]]
+; CHECK-NEXT:    [[TZ:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false), !range [[RNG2]]
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %sub = sub <2 x i64> zeroinitializer, %x
@@ -176,9 +168,7 @@ define <2 x i64> @cttz_of_lowest_set_bit_vec(<2 x i64> %x) {
 
 define <2 x i64> @cttz_of_lowest_set_bit_vec_undef(<2 x i64> %x) {
 ; CHECK-LABEL: @cttz_of_lowest_set_bit_vec_undef(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> zeroinitializer, [[X:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[SUB]], [[X]]
-; CHECK-NEXT:    [[TZ:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[AND]], i1 false), !range [[RNG2]]
+; CHECK-NEXT:    [[TZ:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false), !range [[RNG2]]
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %sub = sub <2 x i64> zeroinitializer, %x
