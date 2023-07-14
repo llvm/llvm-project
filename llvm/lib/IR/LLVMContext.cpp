@@ -374,9 +374,9 @@ std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
 }
 
 void LLVMContext::setOpaquePointers(bool Enable) const {
-  pImpl->setOpaquePointers(Enable);
+  assert(Enable && "Cannot disable opaque pointers");
 }
 
 bool LLVMContext::supportsTypedPointers() const {
-  return !pImpl->getOpaquePointers();
+  return false;
 }

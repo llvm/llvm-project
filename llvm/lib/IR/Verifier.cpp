@@ -807,10 +807,8 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
             "the third field of the element type is mandatory, "
             "specify ptr null to migrate from the obsoleted 2-field form");
       Type *ETy = STy->getTypeAtIndex(2);
-      Type *Int8Ty = Type::getInt8Ty(ETy->getContext());
-      Check(ETy->isPointerTy() &&
-                cast<PointerType>(ETy)->isOpaqueOrPointeeTypeMatches(Int8Ty),
-            "wrong type for intrinsic global variable", &GV);
+      Check(ETy->isPointerTy(), "wrong type for intrinsic global variable",
+            &GV);
     }
   }
 
@@ -1940,7 +1938,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
     }
   }
 
-  if (PointerType *PTy = dyn_cast<PointerType>(Ty)) {
+  if (isa<PointerType>(Ty)) {
     if (Attrs.hasAttribute(Attribute::ByVal)) {
       if (Attrs.hasAttribute(Attribute::Alignment)) {
         Align AttrAlign = Attrs.getAlignment().valueOrOne();
@@ -1966,38 +1964,6 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
       SmallPtrSet<Type *, 4> Visited;
       Check(Attrs.getPreallocatedType()->isSized(&Visited),
             "Attribute 'preallocated' does not support unsized types!", V);
-    }
-    if (!PTy->isOpaque()) {
-      if (!isa<PointerType>(PTy->getNonOpaquePointerElementType()))
-        Check(!Attrs.hasAttribute(Attribute::SwiftError),
-              "Attribute 'swifterror' only applies to parameters "
-              "with pointer to pointer type!",
-              V);
-      if (Attrs.hasAttribute(Attribute::ByRef)) {
-        Check(Attrs.getByRefType() == PTy->getNonOpaquePointerElementType(),
-              "Attribute 'byref' type does not match parameter!", V);
-      }
-
-      if (Attrs.hasAttribute(Attribute::ByVal) && Attrs.getByValType()) {
-        Check(Attrs.getByValType() == PTy->getNonOpaquePointerElementType(),
-              "Attribute 'byval' type does not match parameter!", V);
-      }
-
-      if (Attrs.hasAttribute(Attribute::Preallocated)) {
-        Check(Attrs.getPreallocatedType() ==
-                  PTy->getNonOpaquePointerElementType(),
-              "Attribute 'preallocated' type does not match parameter!", V);
-      }
-
-      if (Attrs.hasAttribute(Attribute::InAlloca)) {
-        Check(Attrs.getInAllocaType() == PTy->getNonOpaquePointerElementType(),
-              "Attribute 'inalloca' type does not match parameter!", V);
-      }
-
-      if (Attrs.hasAttribute(Attribute::ElementType)) {
-        Check(Attrs.getElementType() == PTy->getNonOpaquePointerElementType(),
-              "Attribute 'elementtype' type does not match parameter!", V);
-      }
     }
   }
 
@@ -3414,11 +3380,6 @@ static bool isControlledConvergent(const CallBase &Call) {
 void Verifier::visitCallBase(CallBase &Call) {
   Check(Call.getCalledOperand()->getType()->isPointerTy(),
         "Called function must be a pointer!", Call);
-  PointerType *FPTy = cast<PointerType>(Call.getCalledOperand()->getType());
-
-  Check(FPTy->isOpaqueOrPointeeTypeMatches(Call.getFunctionType()),
-        "Called function is not the same type as the call!", Call);
-
   FunctionType *FTy = Call.getFunctionType();
 
   // Verify that the correct number of arguments are being passed
@@ -4175,8 +4136,6 @@ void Verifier::visitStoreInst(StoreInst &SI) {
   PointerType *PTy = dyn_cast<PointerType>(SI.getOperand(1)->getType());
   Check(PTy, "Store operand must be a pointer.", &SI);
   Type *ElTy = SI.getOperand(0)->getType();
-  Check(PTy->isOpaqueOrPointeeTypeMatches(ElTy),
-        "Stored value type does not match pointer operand type!", &SI, ElTy);
   if (MaybeAlign A = SI.getAlign()) {
     Check(A->value() <= Value::MaximumAlignment,
           "huge alignment values are unsupported", &SI);
@@ -5679,7 +5638,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(Call.getType()->isVectorTy(), "masked_load: must return a vector",
           Call);
 
-    Value *Ptr = Call.getArgOperand(0);
     ConstantInt *Alignment = cast<ConstantInt>(Call.getArgOperand(1));
     Value *Mask = Call.getArgOperand(2);
     Value *PassThru = Call.getArgOperand(3);
@@ -5687,10 +5645,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           Call);
     Check(Alignment->getValue().isPowerOf2(),
           "masked_load: alignment must be a power of 2", Call);
-
-    PointerType *PtrTy = cast<PointerType>(Ptr->getType());
-    Check(PtrTy->isOpaqueOrPointeeTypeMatches(Call.getType()),
-          "masked_load: return must match pointer type", Call);
     Check(PassThru->getType() == Call.getType(),
           "masked_load: pass through and return type must match", Call);
     Check(cast<VectorType>(Mask->getType())->getElementCount() ==
@@ -5700,17 +5654,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::masked_store: {
     Value *Val = Call.getArgOperand(0);
-    Value *Ptr = Call.getArgOperand(1);
     ConstantInt *Alignment = cast<ConstantInt>(Call.getArgOperand(2));
     Value *Mask = Call.getArgOperand(3);
     Check(Mask->getType()->isVectorTy(), "masked_store: mask must be vector",
           Call);
     Check(Alignment->getValue().isPowerOf2(),
           "masked_store: alignment must be a power of 2", Call);
-
-    PointerType *PtrTy = cast<PointerType>(Ptr->getType());
-    Check(PtrTy->isOpaqueOrPointeeTypeMatches(Val->getType()),
-          "masked_store: storee must match pointer type", Call);
     Check(cast<VectorType>(Mask->getType())->getElementCount() ==
               cast<VectorType>(Val->getType())->getElementCount(),
           "masked_store: vector mask must be same length as value", Call);
@@ -5895,11 +5844,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       NumRows = cast<ConstantInt>(Call.getArgOperand(3));
       NumColumns = cast<ConstantInt>(Call.getArgOperand(4));
       ResultTy = cast<VectorType>(Call.getType());
-
-      PointerType *Op0PtrTy =
-          cast<PointerType>(Call.getArgOperand(0)->getType());
-      if (!Op0PtrTy->isOpaque())
-        Op0ElemTy = Op0PtrTy->getNonOpaquePointerElementType();
       break;
     }
     case Intrinsic::matrix_column_major_store: {
@@ -5909,11 +5853,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       ResultTy = cast<VectorType>(Call.getArgOperand(0)->getType());
       Op0ElemTy =
           cast<VectorType>(Call.getArgOperand(0)->getType())->getElementType();
-
-      PointerType *Op1PtrTy =
-          cast<PointerType>(Call.getArgOperand(1)->getType());
-      if (!Op1PtrTy->isOpaque())
-        Op1ElemTy = Op1PtrTy->getNonOpaquePointerElementType();
       break;
     }
     default:

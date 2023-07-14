@@ -45,11 +45,11 @@ namespace {
 // modified before a call to `makeObj()` to test parser with invalid
 // input, etc.
 
+struct MockData1 {
 // Use "pragma pack" to model .BTF & .BTF.ext sections content using
 // 'struct' objects. This pragma is supported by CLANG, GCC & MSVC,
 // which matters for LLVM CI.
 #pragma pack(push, 1)
-struct MockData1 {
   struct B {
     BTF::Header Header = {};
     // no types
@@ -100,6 +100,7 @@ struct MockData1 {
       Header.LineInfoLen = sizeof(Lines);
     }
   } Ext;
+#pragma pack(pop)
 
   int BTFSectionLen = sizeof(BTF);
   int ExtSectionLen = sizeof(Ext);
@@ -148,7 +149,6 @@ Sections:
     return *Obj.get();
   }
 };
-#pragma pack(pop)
 
 TEST(BTFParserTest, simpleCorrectInput) {
   BTFParser BTF;

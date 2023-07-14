@@ -554,11 +554,11 @@ template <> struct hash<u16string>;
 template <> struct hash<u32string>;
 template <> struct hash<wstring>;
 
-basic_string<char>     operator "" s( const char *str,     size_t len );           // C++14, constexpr since C++20
-basic_string<wchar_t>  operator "" s( const wchar_t *str,  size_t len );           // C++14, constexpr since C++20
-constexpr basic_string<char8_t>  operator "" s( const char8_t *str,  size_t len ); // C++20
-basic_string<char16_t> operator "" s( const char16_t *str, size_t len );           // C++14, constexpr since C++20
-basic_string<char32_t> operator "" s( const char32_t *str, size_t len );           // C++14, constexpr since C++20
+basic_string<char>     operator""s( const char *str,     size_t len );           // C++14, constexpr since C++20
+basic_string<wchar_t>  operator""s( const wchar_t *str,  size_t len );           // C++14, constexpr since C++20
+constexpr basic_string<char8_t>  operator""s( const char8_t *str,  size_t len ); // C++20
+basic_string<char16_t> operator""s( const char16_t *str, size_t len );           // C++14, constexpr since C++20
+basic_string<char32_t> operator""s( const char32_t *str, size_t len );           // C++14, constexpr since C++20
 
 }  // std
 
@@ -4371,14 +4371,14 @@ inline namespace literals
   inline namespace string_literals
   {
     inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string<char> operator "" s( const char *__str, size_t __len )
+    basic_string<char> operator""s( const char *__str, size_t __len )
     {
         return basic_string<char> (__str, __len);
     }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
     inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string<wchar_t> operator "" s( const wchar_t *__str, size_t __len )
+    basic_string<wchar_t> operator""s( const wchar_t *__str, size_t __len )
     {
         return basic_string<wchar_t> (__str, __len);
     }
@@ -4386,20 +4386,20 @@ inline namespace literals
 
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
     inline _LIBCPP_HIDE_FROM_ABI constexpr
-    basic_string<char8_t> operator "" s(const char8_t *__str, size_t __len)
+    basic_string<char8_t> operator""s(const char8_t *__str, size_t __len)
     {
         return basic_string<char8_t> (__str, __len);
     }
 #endif
 
     inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string<char16_t> operator "" s( const char16_t *__str, size_t __len )
+    basic_string<char16_t> operator""s( const char16_t *__str, size_t __len )
     {
         return basic_string<char16_t> (__str, __len);
     }
 
     inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string<char32_t> operator "" s( const char32_t *__str, size_t __len )
+    basic_string<char32_t> operator""s( const char32_t *__str, size_t __len )
     {
         return basic_string<char32_t> (__str, __len);
     }

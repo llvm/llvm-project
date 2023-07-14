@@ -144,9 +144,13 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
     generated temporary. In this case the temporary is initialized if needed
     (e.g. the LHS is of derived type with allocatable/pointer components),
     and the assignment is done without LHS (or its subobjects) finalization
-    and with automatic allocation. Since LHS is uninitialized in this case,
-    "keep_lhs_length_if_realloc" attribute does not make sense. "realloc"
-    attribute is allowed with "temporary_lhs", though, it is implied.
+    and with automatic allocation.
+    If "temporary_lhs" and "keep_lhs_length_if_realloc" are both set,
+    this assign operation denotes special case of character allocatable
+    LHS with explicit length. The LHS that must preserve its length
+    during the assignment regardless of the the RHS's length or/and
+    allocation status. This assign operation will be lowered into a call
+    to AssignExplicitLengthCharacter().
   }];
 
   let arguments = (ins AnyFortranEntity:$rhs,

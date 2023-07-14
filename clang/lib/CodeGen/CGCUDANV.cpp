@@ -358,9 +358,13 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
   TranslationUnitDecl *TUDecl = CGM.getContext().getTranslationUnitDecl();
   DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
   std::string KernelLaunchAPI = "LaunchKernel";
-  if (CGF.getLangOpts().HIP && CGF.getLangOpts().GPUDefaultStream ==
-                                   LangOptions::GPUDefaultStreamKind::PerThread)
-    KernelLaunchAPI = KernelLaunchAPI + "_spt";
+  if (CGF.getLangOpts().GPUDefaultStream ==
+      LangOptions::GPUDefaultStreamKind::PerThread) {
+    if (CGF.getLangOpts().HIP)
+      KernelLaunchAPI = KernelLaunchAPI + "_spt";
+    else if (CGF.getLangOpts().CUDA)
+      KernelLaunchAPI = KernelLaunchAPI + "_ptsz";
+  }
   auto LaunchKernelName = addPrefixToName(KernelLaunchAPI);
   IdentifierInfo &cudaLaunchKernelII =
       CGM.getContext().Idents.get(LaunchKernelName);

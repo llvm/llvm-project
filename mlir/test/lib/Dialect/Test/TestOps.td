@@ -3344,6 +3344,11 @@ def TestOpWithWrappedProperties : TEST_Op<"with_wrapped_properties"> {
   );
 }
 
+def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
+  let assemblyFormat = "custom<UsingPropertyInCustom>($prop) attr-dict";
+  let arguments = (ins ArrayProperty<"int64_t", 3>:$prop);
+}
+
 // Op with a properties struct defined out-of-line. The struct has custom
 // printer/parser.
 

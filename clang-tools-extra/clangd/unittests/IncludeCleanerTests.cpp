@@ -214,7 +214,7 @@ $insert_f[[]]$insert_vector[[]]
 })cpp");
 
   TestTU TU;
-  TU.Filename = "foo.cpp";
+  TU.Filename = "main.cpp";
   TU.AdditionalFiles["a.h"] = guard("#include \"b.h\"");
   TU.AdditionalFiles["b.h"] = guard("void b();");
 

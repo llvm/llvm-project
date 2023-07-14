@@ -1441,6 +1441,8 @@ static int sigaction_impl(int signo, const __sanitizer_sigaction *act,
     return REAL(func)(signo, handler);                       \
   }
 
+#define SIGNAL_INTERCEPTOR_ENTER() ENSURE_MSAN_INITED()
+
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
 static int sigaction_impl(int signo, const __sanitizer_sigaction *act,

@@ -17,6 +17,7 @@ def copy(
     Numeric casting is performed on the input operand, promoting it to the same
     data type as the accumulator/output.
     """
+    defines(Canonicalizer)
     O[None] = cast(U, I[None])
 
 

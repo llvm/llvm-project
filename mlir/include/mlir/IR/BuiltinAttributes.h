@@ -31,6 +31,12 @@ class Location;
 class Operation;
 class RankedTensorType;
 
+namespace detail {
+struct DenseIntOrFPElementsAttrStorage;
+struct DenseStringElementsAttrStorage;
+struct StringAttrStorage;
+} // namespace detail
+
 //===----------------------------------------------------------------------===//
 // Elements Attributes
 //===----------------------------------------------------------------------===//

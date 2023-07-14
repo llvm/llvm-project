@@ -102,6 +102,17 @@ struct type_caster<MlirAttribute> {
   }
 };
 
+/// Casts object -> MlirBlock.
+template <>
+struct type_caster<MlirBlock> {
+  PYBIND11_TYPE_CASTER(MlirBlock, _("MlirBlock"));
+  bool load(handle src, bool) {
+    py::object capsule = mlirApiObjectToCapsule(src);
+    value = mlirPythonCapsuleToBlock(capsule.ptr());
+    return !mlirBlockIsNull(value);
+  }
+};
+
 /// Casts object -> MlirContext.
 template <>
 struct type_caster<MlirContext> {

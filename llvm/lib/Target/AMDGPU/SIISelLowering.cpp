@@ -2462,8 +2462,6 @@ SDValue SITargetLowering::LowerFormalArguments(
     return DAG.getEntryNode();
   }
 
-  Info->allocateKnownAddressLDSGlobal(Fn);
-
   SmallVector<ISD::InputArg, 16> Splits;
   SmallVector<CCValAssign, 16> ArgLocs;
   BitVector Skipped(Ins.size());
@@ -8073,8 +8071,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     }
 
     Ops.push_back(TDescr);
-    if (IsA16)
-      Ops.push_back(DAG.getTargetConstant(1, DL, MVT::i1));
+    Ops.push_back(DAG.getTargetConstant(IsA16, DL, MVT::i1));
     Ops.push_back(M->getChain());
 
     auto *NewNode = DAG.getMachineNode(Opcode, DL, M->getVTList(), Ops);

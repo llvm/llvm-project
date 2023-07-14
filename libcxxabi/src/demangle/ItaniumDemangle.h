@@ -2342,7 +2342,7 @@ public:
         Float value;
         char buf[sizeof(Float)];
       };
-      const char *t = &*Contents.begin();
+      const char *t = Contents.data();
       const char *last = t + N;
       char *e = buf;
       for (; t != last; ++t, ++e) {
@@ -3719,7 +3719,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
       std::string_view ProtoSourceName(Qual.data() + Len, Qual.size() - Len);
       std::string_view Proto;
       {
-        ScopedOverride<const char *> SaveFirst(First, &*ProtoSourceName.begin()),
+        ScopedOverride<const char *> SaveFirst(First, ProtoSourceName.data()),
             SaveLast(Last, &*ProtoSourceName.rbegin() + 1);
         Proto = parseBareSourceName();
       }

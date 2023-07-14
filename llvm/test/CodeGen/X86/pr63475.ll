@@ -27,7 +27,8 @@ define void @caller() nounwind {
   ret void
 }
 
-; FIXME: This is a miscompile.
+; Make sure the stack offsets are correct. The distance between them should
+; be 8, not 4.
 define void @callee(ptr %p0, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, <7 x i32> %arg) nounwind {
 ; CHECK-LABEL: callee:
 ; CHECK:       # %bb.0: # %start
@@ -37,29 +38,41 @@ define void @callee(ptr %p0, ptr %p1, ptr %p2, ptr %p3, ptr %p4, ptr %p5, <7 x i
 ; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl 112(%rsp), %ebx
-; CHECK-NEXT:    movl 104(%rsp), %ebp
-; CHECK-NEXT:    movl 96(%rsp), %r14d
-; CHECK-NEXT:    movl 76(%rsp), %r15d
-; CHECK-NEXT:    movl 72(%rsp), %r12d
-; CHECK-NEXT:    movl 64(%rsp), %edi
-; CHECK-NEXT:    movl 68(%rsp), %r13d
-; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    movl %r13d, %edi
-; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    movl %r12d, %edi
+; CHECK-NEXT:    subq $40, %rsp
+; CHECK-NEXT:    movl 120(%rsp), %ebx
+; CHECK-NEXT:    movd %ebx, %xmm0
+; CHECK-NEXT:    movl 112(%rsp), %ebp
+; CHECK-NEXT:    movd %ebp, %xmm1
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    movl 104(%rsp), %r15d
+; CHECK-NEXT:    movd %r15d, %xmm0
+; CHECK-NEXT:    movl 96(%rsp), %edi
+; CHECK-NEXT:    movd %edi, %xmm2
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    movl 136(%rsp), %r14d
+; CHECK-NEXT:    movd %r14d, %xmm0
+; CHECK-NEXT:    movl 128(%rsp), %r12d
+; CHECK-NEXT:    movd %r12d, %xmm1
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; CHECK-NEXT:    movl 144(%rsp), %r13d
+; CHECK-NEXT:    movl %r13d, 36(%rsp)
+; CHECK-NEXT:    movq %xmm1, 28(%rsp)
+; CHECK-NEXT:    movdqu %xmm2, 12(%rsp)
 ; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    movl %r15d, %edi
-; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    movl %ebp, %edi
 ; CHECK-NEXT:    callq use@PLT
 ; CHECK-NEXT:    movl %ebx, %edi
 ; CHECK-NEXT:    callq use@PLT
+; CHECK-NEXT:    movl %r12d, %edi
 ; CHECK-NEXT:    callq use@PLT
-; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    movl %r14d, %edi
+; CHECK-NEXT:    callq use@PLT
+; CHECK-NEXT:    movl %r13d, %edi
+; CHECK-NEXT:    callq use@PLT
+; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r13
@@ -84,8 +97,6 @@ start:
   call void @use(i32 %extract5)
   %extract6 = extractelement <7 x i32> %arg, i64 6
   call void @use(i32 %extract6)
-  %extract7 = extractelement <7 x i32> %arg, i64 7
-  call void @use(i32 %extract7)
   ret void
 }
 

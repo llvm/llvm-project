@@ -29,11 +29,13 @@ releaser_t r2 = releaser; // no-warning
 
 template <typename T>
 void templateFunction(T) { } // expected-note {{candidate template ignored: could not match 'void (__strong id)' against 'void (__attribute__((ns_consumed)) id)'}} \
-                             // expected-note {{candidate template ignored: failed template argument deduction}}
+                             // expected-note {{candidate template ignored: could not match 'void (AntiRelease *__strong)' against 'void (__attribute__((ns_consumed)) AntiRelease *__strong)'}}
 releaser_t r3 = templateFunction<id>; // expected-error {{address of overloaded function 'templateFunction' does not match required type 'void (__attribute__((ns_consumed)) id)'}}
 
 template <typename T>
-void templateReleaser(__attribute__((ns_consumed)) T) { } // expected-note 2{{candidate template ignored: failed template argument deduction}}
+void templateReleaser(__attribute__((ns_consumed)) T) { }
+// expected-note@-1 {{candidate template ignored: could not match 'void (__attribute__((ns_consumed)) AntiRelease *__strong)' against 'void (AntiRelease *__strong)'}}
+// expected-note@-2 {{candidate template ignored: could not match 'void (__attribute__((ns_consumed)) ExplicitAntiRelease *__strong)' against 'void (ExplicitAntiRelease *__strong)'}}
 releaser_t r4 = templateReleaser<id>; // no-warning
 
 

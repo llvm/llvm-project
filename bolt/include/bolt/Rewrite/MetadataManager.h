@@ -33,6 +33,9 @@ public:
   /// CFG is not yet built.
   void runInitializersPreCFG();
 
+  /// Execute metadata initializers after CFG was constructed for functions.
+  void runInitializersPostCFG();
+
   /// Run finalization step of rewriters after code has been emitted.
   void runFinalizersAfterEmit();
 };

@@ -3851,13 +3851,10 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
 
   EVT ArgVT = Ins[i].ArgVT;
 
-  // If this is a vector that has been split into multiple parts, and the
-  // scalar size of the parts don't match the vector element size, then we can't
-  // elide the copy. The parts will have padding between them instead of being
-  // packed like a vector.
-  bool ScalarizedAndExtendedVector =
-      ArgVT.isVector() && !VA.getLocVT().isVector() &&
-      VA.getLocVT().getSizeInBits() != ArgVT.getScalarSizeInBits();
+  // If this is a vector that has been split into multiple parts, don't elide
+  // the copy. The layout on the stack may not match the packed in-memory
+  // layout.
+  bool ScalarizedVector = ArgVT.isVector() && !VA.getLocVT().isVector();
 
   // This is an argument in memory. We might be able to perform copy elision.
   // If the argument is passed directly in memory without any extension, then we
@@ -3865,7 +3862,7 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
   // indirectly by pointer.
   if (Flags.isCopyElisionCandidate() &&
       VA.getLocInfo() != CCValAssign::Indirect && !ExtendedInMem &&
-      !ScalarizedAndExtendedVector) {
+      !ScalarizedVector) {
     SDValue PartAddr;
     if (Ins[i].PartOffset == 0) {
       // If this is a one-part value or the first part of a multi-part value,
@@ -22933,6 +22930,27 @@ static SDValue LowerTruncateVecPack(MVT DstVT, SDValue In, const SDLoc &DL,
       return SDValue();
   }
 
+  // If the upper half of the source is undef, then attempt to split and
+  // only truncate the lower half.
+  if (DstVT.getSizeInBits() >= 128) {
+    SmallVector<SDValue> SubOps;
+    if (collectConcatOps(In.getNode(), SubOps, DAG)) {
+      ArrayRef<SDValue> LowerOps(SubOps.begin(), SubOps.end());
+      ArrayRef<SDValue> UpperOps(SubOps.begin(), SubOps.end());
+      LowerOps = LowerOps.drop_back(SubOps.size() / 2);
+      UpperOps = UpperOps.drop_front(SubOps.size() / 2);
+      if (all_of(UpperOps, [](SDValue Op) { return Op.isUndef(); })) {
+        MVT DstHalfVT = DstVT.getHalfNumVectorElementsVT();
+        MVT SrcHalfVT = SrcVT.getHalfNumVectorElementsVT();
+        SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcHalfVT, LowerOps);
+        if (SDValue Res =
+                LowerTruncateVecPack(DstHalfVT, Lo, DL, Subtarget, DAG))
+            return widenSubVector(Res, false, Subtarget, DAG, DL,
+                                  DstVT.getSizeInBits());
+      }
+    }
+  }
+
   // SSE2 provides PACKUS for only 2 x v8i16 -> v16i8 and SSE4.1 provides PACKUS
   // for 2 x v4i32 -> v8i16. For SSSE3 and below, we need to use PACKSS to
   // truncate 2 x v4i32 to v8i16.
@@ -34615,12 +34633,12 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    // Pre-SSSE3 (or v4i64 -> v4i16) widen the truncation input vector to let
-    // LowerTRUNCATE handle this via type legalization.
+    // Attempt to widen the truncation input vector to let LowerTRUNCATE handle
+    // this via type legalization.
     if ((InEltVT == MVT::i16 || InEltVT == MVT::i32 || InEltVT == MVT::i64) &&
         (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32) &&
-        (!Subtarget.hasSSSE3() || (InVT == MVT::v4i64 && VT == MVT::v4i16)) &&
-        !Subtarget.hasAVX()) {
+        (!Subtarget.hasSSSE3() || (InVT == MVT::v8i64 && VT == MVT::v8i8) ||
+         (InVT == MVT::v4i64 && VT == MVT::v4i16 && !Subtarget.hasAVX()))) {
       SDValue WidenIn = widenSubVector(In, false, Subtarget, DAG, dl,
                                        InEltVT.getSizeInBits() * WidenNumElts);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, WidenVT, WidenIn));
@@ -40997,7 +41015,7 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
           LHS = DAG.getBitcast(SrcVT, LHS);
           RHS = DAG.getBitcast(SrcVT, RHS ? RHS : LHS);
           SDValue Res = DAG.getNode(Opcode0, DL, VT0, LHS, RHS);
-          // Use SHUFPS for the permute so this will work on SSE3 targets,
+          // Use SHUFPS for the permute so this will work on SSE2 targets,
           // shuffle combining and domain handling will simplify this later on.
           MVT ShuffleVT = MVT::getVectorVT(MVT::f32, RootSizeInBits / 32);
           Res = DAG.getBitcast(ShuffleVT, Res);
@@ -41079,6 +41097,25 @@ static SDValue canonicalizeShuffleMaskWithHorizOp(
         Hi = (WideMask128[1] == SM_SentinelUndef ? Undef : Hi);
       }
       return DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
+    }
+  }
+
+  // If we are post-shuffling a 256-bit hop and not requiring the upper
+  // elements, then try to narrow to a 128-bit hop directly.
+  SmallVector<int, 16> WideMask64;
+  if (Ops.size() == 1 && NumLanes == 2 &&
+      scaleShuffleElements(Mask, 4, WideMask64) &&
+      isUndefInRange(WideMask64, 2, 2)) {
+    int M0 = WideMask64[0];
+    int M1 = WideMask64[1];
+    if (isInRange(M0, 0, 4) && isInRange(M1, 0, 4)) {
+      MVT HalfVT = VT0.getSimpleVT().getHalfNumVectorElementsVT();
+      unsigned Idx0 = (M0 & 2) ? (SrcVT.getVectorNumElements() / 2) : 0;
+      unsigned Idx1 = (M1 & 2) ? (SrcVT.getVectorNumElements() / 2) : 0;
+      SDValue V0 = extract128BitVector(BC[0].getOperand(M0 & 1), Idx0, DAG, DL);
+      SDValue V1 = extract128BitVector(BC[0].getOperand(M1 & 1), Idx1, DAG, DL);
+      SDValue Res = DAG.getNode(Opcode0, DL, HalfVT, V0, V1);
+      return widenSubVector(Res, false, Subtarget, DAG, DL, 256);
     }
   }
 
@@ -49501,6 +49538,23 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineHorizOpWithShuffle(N, DAG, Subtarget))
     return V;
 
+  // Try to fold PACKSS(NOT(X),NOT(Y)) -> NOT(PACKSS(X,Y)).
+  // Currently limit this to allsignbits cases only.
+  if (IsSigned &&
+      (N0.isUndef() || DAG.ComputeNumSignBits(N0) == SrcBitsPerElt) &&
+      (N1.isUndef() || DAG.ComputeNumSignBits(N1) == SrcBitsPerElt)) {
+    SDValue Not0 = N0.isUndef() ? N0 : IsNOT(N0, DAG);
+    SDValue Not1 = N1.isUndef() ? N1 : IsNOT(N1, DAG);
+    if (Not0 && Not1) {
+      SDLoc DL(N);
+      MVT SrcVT = N0.getSimpleValueType();
+      SDValue Pack =
+          DAG.getNode(X86ISD::PACKSS, DL, VT, DAG.getBitcast(SrcVT, Not0),
+                      DAG.getBitcast(SrcVT, Not1));
+      return DAG.getNOT(DL, Pack, VT);
+    }
+  }
+
   // Try to combine a PACKUSWB/PACKSSWB implemented truncate with a regular
   // truncate to create a larger truncate.
   if (Subtarget.hasAVX512() &&
@@ -53229,57 +53283,6 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// This function transforms truncation from vXi32/vXi64 to vXi8/vXi16 into
-/// X86ISD::PACKUS/X86ISD::PACKSS operations. We do it here because after type
-/// legalization the truncation will be translated into a BUILD_VECTOR with each
-/// element that is extracted from a vector and then truncated, and it is
-/// difficult to do this optimization based on them.
-/// TODO: Remove this and just use LowerTruncateVecPack.
-static SDValue combineVectorTruncation(SDNode *N, SelectionDAG &DAG,
-                                       const X86Subtarget &Subtarget) {
-  EVT OutVT = N->getValueType(0);
-  if (!OutVT.isVector())
-    return SDValue();
-
-  SDValue In = N->getOperand(0);
-  if (!In.getValueType().isSimple())
-    return SDValue();
-
-  EVT InVT = In.getValueType();
-  unsigned NumElems = OutVT.getVectorNumElements();
-
-  // AVX512 provides fast truncate ops.
-  if (!Subtarget.hasSSE2() || Subtarget.hasAVX512())
-    return SDValue();
-
-  EVT OutSVT = OutVT.getVectorElementType();
-  EVT InSVT = InVT.getVectorElementType();
-  if (!((InSVT == MVT::i16 || InSVT == MVT::i32 || InSVT == MVT::i64) &&
-        (OutSVT == MVT::i8 || OutSVT == MVT::i16) && isPowerOf2_32(NumElems) &&
-        NumElems >= 8))
-    return SDValue();
-
-  // SSSE3's pshufb results in less instructions in the cases below.
-  if (Subtarget.hasSSSE3() && NumElems == 8) {
-    if (InSVT == MVT::i16)
-      return SDValue();
-    if (InSVT == MVT::i32 &&
-        (OutSVT == MVT::i8 || !Subtarget.hasSSE41() || Subtarget.hasInt256()))
-      return SDValue();
-  }
-
-  SDLoc DL(N);
-  // SSE2 provides PACKUS for only 2 x v8i16 -> v16i8 and SSE4.1 provides PACKUS
-  // for 2 x v4i32 -> v8i16. For SSSE3 and below, we need to use PACKSS to
-  // truncate 2 x v4i32 to v8i16.
-  if (Subtarget.hasSSE41() || OutSVT == MVT::i8)
-    return truncateVectorWithPACKUS(OutVT, In, DL, Subtarget, DAG);
-  if (InSVT == MVT::i32)
-    return truncateVectorWithPACKSS(OutVT, In, DL, Subtarget, DAG);
-
-  return SDValue();
-}
-
 /// This function transforms vector truncation of 'extended sign-bits' or
 /// 'extended zero-bits' values.
 /// vXi16/vXi32/vXi64 to vXi8/vXi16/vXi32 into X86ISD::PACKSS/PACKUS operations.
@@ -53627,7 +53630,7 @@ static SDValue combineTruncate(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineVectorSignBitsTruncation(N, DL, DAG, Subtarget))
     return V;
 
-  return combineVectorTruncation(N, DAG, Subtarget);
+  return SDValue();
 }
 
 static SDValue combineVTRUNC(SDNode *N, SelectionDAG &DAG,
@@ -54378,11 +54381,12 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   MVT VT = N->getSimpleValueType(0);
   int NumElts = VT.getVectorNumElements();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  SDLoc DL(N);
 
   // ANDNP(undef, x) -> 0
   // ANDNP(x, undef) -> 0
   if (N0.isUndef() || N1.isUndef())
-    return DAG.getConstant(0, SDLoc(N), VT);
+    return DAG.getConstant(0, DL, VT);
 
   // ANDNP(0, x) -> x
   if (ISD::isBuildVectorAllZeros(N0.getNode()))
@@ -54390,21 +54394,27 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
 
   // ANDNP(x, 0) -> 0
   if (ISD::isBuildVectorAllZeros(N1.getNode()))
-    return DAG.getConstant(0, SDLoc(N), VT);
+    return DAG.getConstant(0, DL, VT);
 
   // ANDNP(x, -1) -> NOT(x) -> XOR(x, -1)
   if (ISD::isBuildVectorAllOnes(N1.getNode()))
-    return DAG.getNOT(SDLoc(N), N0, VT);
+    return DAG.getNOT(DL, N0, VT);
 
   // Turn ANDNP back to AND if input is inverted.
   if (SDValue Not = IsNOT(N0, DAG))
-    return DAG.getNode(ISD::AND, SDLoc(N), VT, DAG.getBitcast(VT, Not), N1);
+    return DAG.getNode(ISD::AND, DL, VT, DAG.getBitcast(VT, Not), N1);
+
+  // Fold for better commutatvity:
+  // ANDNP(x,NOT(y)) -> AND(NOT(x),NOT(y)) -> NOT(OR(X,Y)).
+  if (N1->hasOneUse())
+    if (SDValue Not = IsNOT(N1, DAG))
+      return DAG.getNOT(
+          DL, DAG.getNode(ISD::OR, DL, VT, N0, DAG.getBitcast(VT, Not)), VT);
 
   // Constant Folding
   APInt Undefs0, Undefs1;
   SmallVector<APInt> EltBits0, EltBits1;
   if (getTargetConstantBitsFromNode(N0, EltSizeInBits, Undefs0, EltBits0)) {
-    SDLoc DL(N);
     if (getTargetConstantBitsFromNode(N1, EltSizeInBits, Undefs1, EltBits1)) {
       SmallVector<APInt> ResultBits;
       for (int I = 0; I != NumElts; ++I)
@@ -56727,9 +56737,11 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with
   // one use and a constant, invert the immediate, saving one register.
+  // However, ignore cases where C1 is 0, as those will become a NEG.
   // sub(C1, xor(X, C2)) -> add(xor(X, ~C2), C1+1)
   if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
-      IsNonOpaqueConstant(Op1.getOperand(1)) && Op1->hasOneUse()) {
+      !isNullConstant(Op0) && IsNonOpaqueConstant(Op1.getOperand(1)) &&
+      Op1->hasOneUse()) {
     SDLoc DL(N);
     EVT VT = Op0.getValueType();
     SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),

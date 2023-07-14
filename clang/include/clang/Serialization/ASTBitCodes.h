@@ -41,7 +41,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 25;
+const unsigned VERSION_MAJOR = 26;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -696,8 +696,7 @@ enum ASTRecordTypes {
   /// Record code for \#pragma float_control options.
   FLOAT_CONTROL_PRAGMA_OPTIONS = 65,
 
-  /// Record code for included files.
-  PP_INCLUDED_FILES = 66,
+  /// ID 66 used to be the list of included files.
 
   /// Record code for an unterminated \#pragma clang assume_nonnull begin
   /// recorded in a preamble.

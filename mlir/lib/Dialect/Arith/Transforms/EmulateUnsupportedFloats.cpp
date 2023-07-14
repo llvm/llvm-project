@@ -19,6 +19,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <optional>
 
 namespace mlir::arith {
@@ -81,8 +82,12 @@ void EmulateFloatPattern::rewrite(Operation *op, ArrayRef<Value> operands,
   Location loc = op->getLoc();
   TypeConverter *converter = getTypeConverter();
   SmallVector<Type> resultTypes;
-  LogicalResult pass = converter->convertTypes(op->getResultTypes(), resultTypes);
-  (void) pass;
+  if (failed(converter->convertTypes(op->getResultTypes(), resultTypes))) {
+    // Note to anyone looking for this error message: this is a "can't happen".
+    // If you're seeing it, there's a bug.
+    op->emitOpError("type conversion failed in float emulation");
+    return;
+  }
   Operation *expandedOp =
       rewriter.create(loc, op->getName().getIdentifier(), operands, resultTypes,
                       op->getAttrs(), op->getSuccessors(), /*regions=*/{});

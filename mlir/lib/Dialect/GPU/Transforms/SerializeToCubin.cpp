@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "llvm/Support/Debug.h"
 
 #if MLIR_GPU_TO_CUBIN_PASS_ENABLE
 #include "mlir/Pass/Pass.h"
@@ -50,7 +51,7 @@ public:
 
   SerializeToCubinPass(StringRef triple = "nvptx64-nvidia-cuda",
                        StringRef chip = "sm_35", StringRef features = "+ptx60",
-                       int optLevel = 2);
+                       int optLevel = 2, bool dumpPtx = false);
 
   StringRef getArgument() const override { return "gpu-to-cubin"; }
   StringRef getDescription() const override {
@@ -73,10 +74,12 @@ static void maybeSetOption(Pass::Option<std::string> &option, StringRef value) {
 }
 
 SerializeToCubinPass::SerializeToCubinPass(StringRef triple, StringRef chip,
-                                           StringRef features, int optLevel) {
+                                           StringRef features, int optLevel,
+                                           bool dumpPtx) {
   maybeSetOption(this->triple, triple);
   maybeSetOption(this->chip, chip);
   maybeSetOption(this->features, features);
+  this->dumpPtx = dumpPtx;
   if (this->optLevel.getNumOccurrences() == 0)
     this->optLevel.setValue(optLevel);
 }
@@ -112,6 +115,10 @@ SerializeToCubinPass::serializeISA(const std::string &isa) {
                                     &linkState));
 
   auto kernelName = getOperation().getName().str();
+  if (dumpPtx) {
+    llvm::dbgs() << " Kernel Name : [" << kernelName << "]\n";
+    llvm::dbgs() << isa << "\n";
+  }
   RETURN_ON_CUDA_ERROR(cuLinkAddData(
       linkState, CUjitInputType::CU_JIT_INPUT_PTX,
       const_cast<void *>(static_cast<const void *>(isa.c_str())), isa.length(),
@@ -151,9 +158,10 @@ void mlir::registerGpuSerializeToCubinPass() {
 std::unique_ptr<Pass> mlir::createGpuSerializeToCubinPass(StringRef triple,
                                                           StringRef arch,
                                                           StringRef features,
-                                                          int optLevel) {
+                                                          int optLevel,
+                                                          bool dumpPtx) {
   return std::make_unique<SerializeToCubinPass>(triple, arch, features,
-                                                optLevel);
+                                                optLevel, dumpPtx);
 }
 
 #else  // MLIR_GPU_TO_CUBIN_PASS_ENABLE

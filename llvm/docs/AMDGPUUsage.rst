@@ -1090,6 +1090,12 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                              kernel argument that holds the completion action pointer. If this
                                              attribute is absent, then the amdgpu-no-implicitarg-ptr is also removed.
 
+     "amdgpu-lds-size"                       The number of bytes that will be allocated in the Local Data Store at
+                                             address zero. Variables are allocated within this frame using absolute
+                                             symbol metadata, primarily by the AMDGPULowerModuleLDS pass. Internal
+                                             detail of how LDS variables are lowered, language front ends should not
+                                             set this.
+
      ======================================= ==========================================================
 
 Calling Conventions

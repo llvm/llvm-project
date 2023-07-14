@@ -14,6 +14,7 @@
 #include "SPIRVBuiltins.h"
 #include "SPIRV.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include <string>

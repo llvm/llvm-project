@@ -127,21 +127,14 @@ define <4 x i32> @in_constant_varx_mone_invmask(ptr%px, ptr%py, ptr%pmask) {
 ;
 ; CHECK-SSE2-LABEL: in_constant_varx_mone_invmask:
 ; CHECK-SSE2:       # %bb.0:
-; CHECK-SSE2-NEXT:    movdqa (%rdi), %xmm0
-; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; CHECK-SSE2-NEXT:    movdqa (%rdx), %xmm2
-; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm2
-; CHECK-SSE2-NEXT:    pandn %xmm2, %xmm0
-; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    movaps (%rdi), %xmm0
+; CHECK-SSE2-NEXT:    orps (%rdx), %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
 ; CHECK-XOP-LABEL: in_constant_varx_mone_invmask:
 ; CHECK-XOP:       # %bb.0:
-; CHECK-XOP-NEXT:    vmovdqa (%rdi), %xmm0
-; CHECK-XOP-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-XOP-NEXT:    vpxor (%rdx), %xmm1, %xmm2
-; CHECK-XOP-NEXT:    vpandn %xmm2, %xmm0, %xmm0
-; CHECK-XOP-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; CHECK-XOP-NEXT:    vmovaps (%rdi), %xmm0
+; CHECK-XOP-NEXT:    vorps (%rdx), %xmm0, %xmm0
 ; CHECK-XOP-NEXT:    retq
   %x = load <4 x i32>, ptr%px, align 16
   %y = load <4 x i32>, ptr%py, align 16

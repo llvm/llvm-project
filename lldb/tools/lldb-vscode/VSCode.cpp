@@ -14,6 +14,7 @@
 
 #include "LLDBUtils.h"
 #include "VSCode.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #if defined(_WIN32)
