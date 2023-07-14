@@ -51,9 +51,9 @@ define amdgpu_kernel void @kern_call() {
 }
 
 ; This kernel does alloc the LDS block as it makes no calls
-; CHECK-LABEL: @kern_empty() #1
+; CHECK-LABEL: @kern_empty()
 ; CHECK-NOT: call void @llvm.donothing()
-define spir_kernel void @kern_empty() #0{
+define spir_kernel void @kern_empty() {
   ret void
 }
 
@@ -61,7 +61,4 @@ define spir_kernel void @kern_empty() #0{
 ; declaration.
 declare amdgpu_kernel void @kernel_declaration()
 
-attributes #0 = { "amdgpu-elide-module-lds" }
-
 ; CHECK: attributes #0 = { "amdgpu-lds-size"="12" }
-; CHECK: attributes #1 = { "amdgpu-elide-module-lds" }

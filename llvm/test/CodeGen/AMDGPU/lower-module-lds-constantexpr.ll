@@ -42,13 +42,13 @@ entry:
 ; CHECK:      %5 = inttoptr i64 %4 to ptr
 ; CHECK:      store i32 %x, ptr %5, align 4
 ; CHECK:      ret void
-define void @set_func(i32 %x) local_unnamed_addr #1 {
+define void @set_func(i32 %x) {
 entry:
   store i32 %x, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @b_both to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @b_both to ptr) to i64)) to ptr), align 4
   ret void
 }
 
-; CHECK-LABEL: @timestwo() #1
+; CHECK-LABEL: @timestwo() #0
 ; CHECK-NOT: call void @llvm.donothing()
 
 ; CHECK:      %1 = addrspacecast ptr addrspace(3) @llvm.amdgcn.kernel.timestwo.lds to ptr
@@ -67,14 +67,14 @@ entry:
 ; CHECK:      %12 = inttoptr i64 %11 to ptr
 ; CHECK:      store i32 %mul, ptr %12, align 4
 ; CHECK:      ret void
-define amdgpu_kernel void @timestwo() #1 {
+define amdgpu_kernel void @timestwo() {
   %ld = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @b_both to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @kern to ptr) to i64)) to ptr), align 4
   %mul = mul i32 %ld, 2
   store i32 %mul, ptr inttoptr (i64 add (i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @kern to ptr) to i64), i64 ptrtoint (ptr addrspacecast (ptr addrspace(3) @b_both to ptr) to i64)) to ptr), align 4
   ret void
 }
 
-; CHECK-LABEL: @through_functions() #2
+; CHECK-LABEL: @through_functions() #0
 define amdgpu_kernel void @through_functions() {
   %ld = call i32 @get_func()
   %mul = mul i32 %ld, 4
@@ -82,7 +82,4 @@ define amdgpu_kernel void @through_functions() {
   ret void
 }
 
-attributes #0 = { "amdgpu-elide-module-lds" }
-; CHECK: attributes #0 = { "amdgpu-elide-module-lds" }
-; CHECK: attributes #1 = { "amdgpu-elide-module-lds" "amdgpu-lds-size"="8" }
-; CHECK: attributes #2 = { "amdgpu-lds-size"="8" }
+; CHECK: attributes #0 = { "amdgpu-lds-size"="8" }

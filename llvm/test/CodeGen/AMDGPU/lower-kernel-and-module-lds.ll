@@ -93,10 +93,10 @@ define void @f0() {
   ret void
 }
 
-; CHECK: attributes #0 = { "amdgpu-elide-module-lds" "amdgpu-lds-size"="23" }
-; CHECK: attributes #1 = { "amdgpu-elide-module-lds" "amdgpu-lds-size"="22" }
-; CHECK: attributes #2 = { "amdgpu-elide-module-lds" "amdgpu-lds-size"="2" }
-; CHECK: attributes #3 = { "amdgpu-elide-module-lds" "amdgpu-lds-size"="4" }
+; CHECK: attributes #0 = { "amdgpu-lds-size"="23" }
+; CHECK: attributes #1 = { "amdgpu-lds-size"="22" }
+; CHECK: attributes #2 = { "amdgpu-lds-size"="2" }
+; CHECK: attributes #3 = { "amdgpu-lds-size"="4" }
 ; CHECK: attributes #4 = { "amdgpu-lds-size"="9" }
 
 ; CHECK: !0 = !{i64 0, i64 1}
