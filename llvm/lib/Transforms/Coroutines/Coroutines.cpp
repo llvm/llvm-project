@@ -596,20 +596,6 @@ static void checkAsyncFuncPointer(const Instruction *I, Value *V) {
   auto *AsyncFuncPtrAddr = dyn_cast<GlobalVariable>(V->stripPointerCasts());
   if (!AsyncFuncPtrAddr)
     fail(I, "llvm.coro.id.async async function pointer not a global", V);
-
-  if (AsyncFuncPtrAddr->getType()->isOpaquePointerTy())
-    return;
-
-  auto *StructTy = cast<StructType>(
-      AsyncFuncPtrAddr->getType()->getNonOpaquePointerElementType());
-  if (StructTy->isOpaque() || !StructTy->isPacked() ||
-      StructTy->getNumElements() != 2 ||
-      !StructTy->getElementType(0)->isIntegerTy(32) ||
-      !StructTy->getElementType(1)->isIntegerTy(32))
-    fail(I,
-         "llvm.coro.id.async async function pointer argument's type is not "
-         "<{i32, i32}>",
-         V);
 }
 
 void CoroIdAsyncInst::checkWellFormed() const {
