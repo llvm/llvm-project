@@ -1126,11 +1126,11 @@ static SBError LLDBSwigPythonCallLocateModuleCallback(
 
   PyErr_Cleaner py_err_cleaner(true);
   PythonObject module_spec_arg = SWIGBridge::ToSWIGWrapper(
-      std::move(std::make_unique<SBModuleSpec>(module_spec_sb)));
+      std::make_unique<SBModuleSpec>(module_spec_sb));
   PythonObject module_file_spec_arg = SWIGBridge::ToSWIGWrapper(
-      std::move(std::make_unique<SBFileSpec>(module_file_spec_sb)));
+      std::make_unique<SBFileSpec>(module_file_spec_sb));
   PythonObject symbol_file_spec_arg = SWIGBridge::ToSWIGWrapper(
-      std::move(std::make_unique<SBFileSpec>(symbol_file_spec_sb)));
+      std::make_unique<SBFileSpec>(symbol_file_spec_sb));
 
   PythonCallable callable =
       Retain<PythonCallable>(reinterpret_cast<PyObject *>(callback_baton));
