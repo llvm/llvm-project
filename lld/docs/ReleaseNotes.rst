@@ -37,6 +37,12 @@ Breaking changes
 COFF Improvements
 -----------------
 
+* lld-link can now find libraries with relative paths that are relative to
+  `/libpath`. Before it would only be able to find libraries relative to the
+  current directory.
+  I.e. ``lld-link /libpath:c:\relative\root relative\path\my.lib`` where before
+  we would have to do ``lld-link /libpath:c:\relative\root\relative\path my.lib``
+
 MinGW Improvements
 ------------------
 

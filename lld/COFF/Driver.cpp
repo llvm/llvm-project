@@ -483,8 +483,7 @@ StringRef LinkerDriver::findFile(StringRef filename) {
     return filename;
   };
 
-  bool hasPathSep = (filename.find_first_of("/\\") != StringRef::npos);
-  if (hasPathSep)
+  if (sys::path::is_absolute(filename))
     return getFilename(filename);
   bool hasExt = filename.contains('.');
   for (StringRef dir : searchPaths) {
