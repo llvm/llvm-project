@@ -11,9 +11,10 @@ define i32 @test_read_register(i32 %cond) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[COND]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[Y1:%.*]] = call i32 @llvm.read_register.i32(metadata [[META0]]) #[[ATTR2]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[Y2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X1]], [[IF]] ]
+; CHECK-NEXT:    [[Y2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[Y1]], [[IF]] ]
 ; CHECK-NEXT:    [[RET:%.*]] = add i32 [[X1]], [[Y2]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
@@ -57,9 +58,10 @@ define i1 @test_live_mask(i32 %cond) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[COND]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[Y1:%.*]] = call i1 @llvm.amdgcn.live.mask() #[[ATTR2]]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[Y2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[X1]], [[IF]] ]
+; CHECK-NEXT:    [[Y2:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[Y1]], [[IF]] ]
 ; CHECK-NEXT:    [[RET:%.*]] = add i1 [[X1]], [[Y2]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
