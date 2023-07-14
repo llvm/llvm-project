@@ -1244,10 +1244,20 @@ Attribute Parser::parseDistinctAttr(Type type) {
   if (parseToken(Token::r_square, "expected ']' to close distinct ID") ||
       parseToken(Token::less, "expected '<' after distinct ID"))
     return {};
-  Attribute referencedAttr = parseAttribute(type);
-  if (!referencedAttr) {
-    emitError("expected attribute");
-    return {};
+
+  Attribute referencedAttr;
+  if (getToken().is(Token::greater)) {
+    consumeToken();
+    referencedAttr = builder.getUnitAttr();
+  } else {
+    referencedAttr = parseAttribute(type);
+    if (!referencedAttr) {
+      emitError("expected attribute");
+      return {};
+    }
+
+    if (parseToken(Token::greater, "expected '>' to close distinct attribute"))
+      return {};
   }
 
   // Add the distinct attribute to the parser state, if it has not been parsed
@@ -1264,9 +1274,6 @@ Attribute Parser::parseDistinctAttr(Type type) {
         << it->getSecond().getReferencedAttr();
     return {};
   }
-
-  if (parseToken(Token::greater, "expected '>' to close distinct attribute"))
-    return {};
 
   return it->getSecond();
 }
