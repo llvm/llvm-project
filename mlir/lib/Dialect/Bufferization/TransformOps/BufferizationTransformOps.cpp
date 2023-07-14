@@ -23,6 +23,23 @@ using namespace mlir::bufferization;
 using namespace mlir::transform;
 
 //===----------------------------------------------------------------------===//
+// BufferLoopHoistingOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::BufferLoopHoistingOp::applyToOne(
+    TransformRewriter &rewriter, Operation *target,
+    ApplyToEachResultList &results, TransformState &state) {
+  bufferization::hoistBuffersFromLoops(target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::BufferLoopHoistingOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTarget(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
 // OneShotBufferizeOp
 //===----------------------------------------------------------------------===//
 
