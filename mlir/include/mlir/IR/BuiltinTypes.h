@@ -32,6 +32,12 @@ class RankedTensorType;
 class StringAttr;
 class TypeRange;
 
+namespace detail {
+struct FunctionTypeStorage;
+struct IntegerTypeStorage;
+struct TupleTypeStorage;
+} // namespace detail
+
 //===----------------------------------------------------------------------===//
 // FloatType
 //===----------------------------------------------------------------------===//
