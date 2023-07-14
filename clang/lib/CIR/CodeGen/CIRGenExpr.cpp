@@ -29,6 +29,7 @@
 #include "llvm/ADT/StringExtras.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 
 using namespace cir;
@@ -38,7 +39,11 @@ using namespace mlir::cir;
 static mlir::cir::FuncOp buildFunctionDeclPointer(CIRGenModule &CGM,
                                                   GlobalDecl GD) {
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
-  assert(!FD->hasAttr<WeakRefAttr>() && "NYI");
+
+  if (FD->hasAttr<WeakRefAttr>()) {
+    mlir::Operation* aliasee = CGM.getWeakRefReference(FD);
+    return dyn_cast<FuncOp>(aliasee);
+  }
 
   auto V = CGM.GetAddrOfFunction(GD);
 
