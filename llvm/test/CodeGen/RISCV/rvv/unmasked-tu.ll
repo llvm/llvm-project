@@ -284,7 +284,7 @@ declare <vscale x 1 x half> @llvm.riscv.vfadd.nxv1f16.nxv1f16(
   <vscale x 1 x half>,
   <vscale x 1 x half>,
   <vscale x 1 x half>,
-  iXLen);
+  iXLen, iXLen);
 
 define <vscale x 1 x half> @intrinsic_vfadd_vv_nxv1f16_nxv1f16_nxv1f16(<vscale x 1 x half> %0, <vscale x 1 x half> %1, <vscale x 1 x half> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vfadd_vv_nxv1f16_nxv1f16_nxv1f16:
@@ -297,7 +297,7 @@ entry:
     <vscale x 1 x half> %0,
     <vscale x 1 x half> %1,
     <vscale x 1 x half> %2,
-    iXLen %3)
+    iXLen 7, iXLen %3)
 
   ret <vscale x 1 x half> %a
 }

@@ -1094,7 +1094,8 @@ class VPseudoBinaryNoMaskTU<VReg RetClass,
 class VPseudoBinaryNoMaskRoundingMode<VReg RetClass,
                                       VReg Op1Class,
                                       DAGOperand Op2Class,
-                                      string Constraint> :
+                                      string Constraint,
+                                      int UsesVXRM_ = 1> :
         Pseudo<(outs RetClass:$rd),
                (ins RetClass:$merge, Op1Class:$rs2, Op2Class:$rs1, ixlenimm:$rm,
                     AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
@@ -1106,12 +1107,14 @@ class VPseudoBinaryNoMaskRoundingMode<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let HasRoundModeOp = 1;
+  let UsesVXRM = UsesVXRM_;
 }
 
 class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
                                           RegisterClass Op1Class,
                                           DAGOperand Op2Class,
-                                          string Constraint> :
+                                          string Constraint,
+                                          int UsesVXRM_> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                 (ins GetVRegNoV0<RetClass>.R:$merge,
                      Op1Class:$rs2, Op2Class:$rs1,
@@ -1126,6 +1129,7 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
   let HasRoundModeOp = 1;
+  let UsesVXRM = UsesVXRM_;
 }
 
 // Special version of VPseudoBinaryNoMask where we pretend the first source is
@@ -1864,18 +1868,21 @@ multiclass VPseudoBinaryRoundingMode<VReg RetClass,
                                      DAGOperand Op2Class,
                                      LMULInfo MInfo,
                                      string Constraint = "",
-                                     int sew = 0> {
+                                     int sew = 0,
+                                     int UsesVXRM = 1> {
   let VLMul = MInfo.value in {
     defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
     def suffix : VPseudoBinaryNoMaskRoundingMode<RetClass, Op1Class, Op2Class,
-                                                 Constraint>;
+                                                 Constraint, UsesVXRM>;
     def suffix # "_MASK" : VPseudoBinaryMaskPolicyRoundingMode<RetClass,
                                                                Op1Class,
                                                                Op2Class,
-                                                               Constraint>,
+                                                               Constraint,
+                                                               UsesVXRM>,
                            RISCVMaskedPseudo</*MaskOpIdx*/ 3>;
   }
 }
+
 
 multiclass VPseudoBinaryM<VReg RetClass,
                           VReg Op1Class,
@@ -1934,6 +1941,12 @@ multiclass VPseudoBinaryFV_VV<LMULInfo m, string Constraint = "", int sew = 0> {
   defm _VV : VPseudoBinary<m.vrclass, m.vrclass, m.vrclass, m, Constraint, sew>;
 }
 
+multiclass VPseudoBinaryFV_VV_RM<LMULInfo m, string Constraint = "", int sew = 0> {
+  defm _VV : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass, m.vrclass, m,
+                                       Constraint, sew,
+                                       /* UsesVXRM = */ 0>;
+}
+
 multiclass VPseudoVGTR_VV_EEW<int eew, string Constraint = ""> {
   foreach m = MxList in {
     defvar mx = m.MX;
@@ -1980,6 +1993,12 @@ multiclass VPseudoVSLD1_VX<string Constraint = ""> {
 multiclass VPseudoBinaryV_VF<LMULInfo m, FPR_Info f, string Constraint = "", int sew = 0> {
   defm "_V" # f.FX : VPseudoBinary<m.vrclass, m.vrclass,
                                    f.fprclass, m, Constraint, sew>;
+}
+
+multiclass VPseudoBinaryV_VF_RM<LMULInfo m, FPR_Info f, string Constraint = "", int sew = 0> {
+  defm "_V" # f.FX : VPseudoBinaryRoundingMode<m.vrclass, m.vrclass,
+                                               f.fprclass, m, Constraint, sew,
+                                               /* UsesVXRM = */ 0>;
 }
 
 multiclass VPseudoVSLD1_VF<string Constraint = ""> {
@@ -2672,6 +2691,28 @@ multiclass VPseudoVALU_VV_VF {
       defvar ReadVFALUV_MX = !cast<SchedRead>("ReadVFALUV_" # mx);
       defvar ReadVFALUF_MX = !cast<SchedRead>("ReadVFALUF_" # mx);
       defm "" : VPseudoBinaryV_VF<m, f>,
+                Sched<[WriteVFALUF_MX, ReadVFALUV_MX, ReadVFALUF_MX, ReadVMask]>;
+    }
+  }
+}
+
+multiclass VPseudoVALU_VV_VF_RM {
+  foreach m = MxListF in {
+    defvar mx = m.MX;
+    defvar WriteVFALUV_MX = !cast<SchedWrite>("WriteVFALUV_" # mx);
+    defvar ReadVFALUV_MX = !cast<SchedRead>("ReadVFALUV_" # mx);
+
+    defm "" : VPseudoBinaryFV_VV_RM<m>,
+              Sched<[WriteVFALUV_MX, ReadVFALUV_MX, ReadVFALUV_MX, ReadVMask]>;
+  }
+
+  foreach f = FPList in {
+    foreach m = f.MxList in {
+      defvar mx = m.MX;
+      defvar WriteVFALUF_MX = !cast<SchedWrite>("WriteVFALUF_" # mx);
+      defvar ReadVFALUV_MX = !cast<SchedRead>("ReadVFALUV_" # mx);
+      defvar ReadVFALUF_MX = !cast<SchedRead>("ReadVFALUF_" # mx);
+      defm "" : VPseudoBinaryV_VF_RM<m, f>,
                 Sched<[WriteVFALUF_MX, ReadVFALUV_MX, ReadVFALUF_MX, ReadVMask]>;
     }
   }
@@ -5667,8 +5708,12 @@ let Predicates = [HasVInstructionsAnyF] in {
 //===----------------------------------------------------------------------===//
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
+let mayRaiseFPException = true,
+    hasPostISelHook = 1 in {
+defm PseudoVFADD  : VPseudoVALU_VV_VF_RM;
+}
+
 let Uses = [FRM], mayRaiseFPException = true in {
-defm PseudoVFADD  : VPseudoVALU_VV_VF;
 defm PseudoVFSUB  : VPseudoVALU_VV_VF;
 defm PseudoVFRSUB : VPseudoVALU_VF;
 }
@@ -6327,7 +6372,8 @@ defm : VPatBinaryV_WV_WX_WI_RM<"int_riscv_vnclip", "PseudoVNCLIP",
 //===----------------------------------------------------------------------===//
 // 13.2. Vector Single-Width Floating-Point Add/Subtract Instructions
 //===----------------------------------------------------------------------===//
-defm : VPatBinaryV_VV_VX<"int_riscv_vfadd", "PseudoVFADD", AllFloatVectors>;
+defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfadd", "PseudoVFADD",
+                            AllFloatVectors>;
 defm : VPatBinaryV_VV_VX<"int_riscv_vfsub", "PseudoVFSUB", AllFloatVectors>;
 defm : VPatBinaryV_VX<"int_riscv_vfrsub", "PseudoVFRSUB", AllFloatVectors>;
 
