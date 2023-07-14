@@ -1933,6 +1933,18 @@ static ParseResult customParseProperties(OpAsmParser &parser,
   return success();
 }
 
+static bool parseUsingPropertyInCustom(OpAsmParser &parser, int64_t value[3]) {
+  return parser.parseLSquare() || parser.parseInteger(value[0]) ||
+         parser.parseComma() || parser.parseInteger(value[1]) ||
+         parser.parseComma() || parser.parseInteger(value[2]) ||
+         parser.parseRSquare();
+}
+
+static void printUsingPropertyInCustom(OpAsmPrinter &printer, Operation *op,
+                                       ArrayRef<int64_t> value) {
+  printer << '[' << value << ']';
+}
+
 #include "TestOpEnums.cpp.inc"
 #include "TestOpInterfaces.cpp.inc"
 #include "TestTypeInterfaces.cpp.inc"
