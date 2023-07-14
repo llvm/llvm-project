@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CODEGENTYPECACHE_H
 #define LLVM_CLANG_LIB_CIR_CODEGENTYPECACHE_H
 
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/Basic/AddressSpaces.h"
@@ -34,7 +35,9 @@ struct CIRGenTypeCache {
   mlir::cir::IntType UInt8Ty, UInt16Ty, UInt32Ty, UInt64Ty;
   /// half, bfloat, float, double
   // mlir::Type HalfTy, BFloatTy;
-  mlir::Type FloatTy, DoubleTy;
+  // TODO(cir): perhaps we should abstract long double variations into a custom
+  // cir.long_double type. Said type would also hold the semantics for lowering.
+  mlir::FloatType FloatTy, DoubleTy, LongDouble80BitsTy;
 
   /// int
   mlir::Type UIntTy;
