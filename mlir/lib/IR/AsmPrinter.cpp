@@ -3168,6 +3168,8 @@ void OperationPrinter::printResourceFileMetadata(
     function_ref<void()> checkAddMetadataDict, Operation *op) {
   // Functor used to add data entries to the file metadata dictionary.
   bool hadResource = false;
+  bool needResourceComma = false;
+  bool needEntryComma = false;
   auto processProvider = [&](StringRef dictName, StringRef name, auto &provider,
                              auto &&...providerArgs) {
     bool hadEntry = false;
@@ -3175,13 +3177,19 @@ void OperationPrinter::printResourceFileMetadata(
       checkAddMetadataDict();
 
       // Emit the top-level resource entry if we haven't yet.
-      if (!std::exchange(hadResource, true))
+      if (!std::exchange(hadResource, true)) {
+        if (needResourceComma)
+          os << "," << newLine;
         os << "  " << dictName << "_resources: {" << newLine;
+      }
       // Emit the parent resource entry if we haven't yet.
-      if (!std::exchange(hadEntry, true))
+      if (!std::exchange(hadEntry, true)) {
+        if (needEntryComma)
+          os << "," << newLine;
         os << "    " << name << ": {" << newLine;
-      else
+      } else {
         os << "," << newLine;
+      }
 
       os << "      " << key << ": ";
       valueFn(os);
@@ -3189,6 +3197,7 @@ void OperationPrinter::printResourceFileMetadata(
     ResourceBuilder entryBuilder(*this, printFn);
     provider.buildResources(op, providerArgs..., entryBuilder);
 
+    needEntryComma = hadEntry;
     if (hadEntry)
       os << newLine << "    }";
   };
@@ -3210,6 +3219,8 @@ void OperationPrinter::printResourceFileMetadata(
 
   // Print the `external_resources` section if we have any external clients with
   // resources.
+  needEntryComma = false;
+  needResourceComma = hadResource;
   hadResource = false;
   for (const auto &printer : state.getResourcePrinters())
     processProvider("external", printer.getName(), printer);
