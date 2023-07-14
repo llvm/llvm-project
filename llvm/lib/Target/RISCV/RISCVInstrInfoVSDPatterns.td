@@ -600,7 +600,54 @@ multiclass VPatWidenBinaryFPSDNode_VV_VF<SDNode op, string instruction_name> {
   }
 }
 
-multiclass VPatWidenBinaryFPSDNode_WV_WF<SDNode op, string instruction_name> {
+multiclass VPatWidenBinaryFPSDNode_VV_VF_RM<SDNode op, string instruction_name> {
+  foreach vtiToWti = AllWidenableFloatVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in {
+      def : Pat<(op (wti.Vector (riscv_fpextend_vl_oneuse
+                                     (vti.Vector vti.RegClass:$rs2),
+                                     (vti.Mask true_mask), (XLenVT srcvalue))),
+                    (wti.Vector (riscv_fpextend_vl_oneuse
+                                     (vti.Vector vti.RegClass:$rs1),
+                                     (vti.Mask true_mask), (XLenVT srcvalue)))),
+                (!cast<Instruction>(instruction_name#"_VV_"#vti.LMul.MX)
+                  (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                  vti.RegClass:$rs1,
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                  vti.AVL, vti.Log2SEW, TU_MU)>;
+      def : Pat<(op (wti.Vector (riscv_fpextend_vl_oneuse
+                                     (vti.Vector vti.RegClass:$rs2),
+                                     (vti.Mask true_mask), (XLenVT srcvalue))),
+                    (wti.Vector (riscv_fpextend_vl_oneuse
+                                     (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),
+                                     (vti.Mask true_mask), (XLenVT srcvalue)))),
+                (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
+                   (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                   vti.ScalarRegClass:$rs1,
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                   vti.AVL, vti.Log2SEW, TU_MU)>;
+      def : Pat<(op (wti.Vector (riscv_fpextend_vl_oneuse
+                                     (vti.Vector vti.RegClass:$rs2),
+                                     (vti.Mask true_mask), (XLenVT srcvalue))),
+                    (wti.Vector (SplatFPOp (fpext_oneuse vti.ScalarRegClass:$rs1)))),
+                (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
+                   (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
+                   vti.ScalarRegClass:$rs1,
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                   vti.AVL, vti.Log2SEW, TU_MU)>;
+    }
+  }
+}
+
+multiclass VPatWidenBinaryFPSDNode_WV_WF_RM<SDNode op, string instruction_name> {
   foreach vtiToWti = AllWidenableFloatVectors in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
@@ -611,7 +658,11 @@ multiclass VPatWidenBinaryFPSDNode_WV_WF<SDNode op, string instruction_name> {
                                      (vti.Vector vti.RegClass:$rs1),
                                      (vti.Mask true_mask), (XLenVT srcvalue)))),
                 (!cast<Instruction>(instruction_name#"_WV_"#vti.LMul.MX#"_TIED")
-                   wti.RegClass:$rs2, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW,
+                   wti.RegClass:$rs2, vti.RegClass:$rs1,
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                   vti.AVL, vti.Log2SEW,
                    TAIL_AGNOSTIC)>;
       def : Pat<(op (wti.Vector wti.RegClass:$rs2),
                     (wti.Vector (riscv_fpextend_vl_oneuse
@@ -619,20 +670,28 @@ multiclass VPatWidenBinaryFPSDNode_WV_WF<SDNode op, string instruction_name> {
                                      (vti.Mask true_mask), (XLenVT srcvalue)))),
                 (!cast<Instruction>(instruction_name#"_W"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                    (wti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs2,
-                   vti.ScalarRegClass:$rs1, vti.AVL, vti.Log2SEW, TU_MU)>;
+                   vti.ScalarRegClass:$rs1,
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                   vti.AVL, vti.Log2SEW, TU_MU)>;
       def : Pat<(op (wti.Vector wti.RegClass:$rs2),
                     (wti.Vector (SplatFPOp (fpext_oneuse vti.ScalarRegClass:$rs1)))),
                 (!cast<Instruction>(instruction_name#"_W"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                    (wti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs2,
-                   vti.ScalarRegClass:$rs1, vti.AVL, vti.Log2SEW, TU_MU)>;
+                   vti.ScalarRegClass:$rs1,
+                   // Value to indicate no rounding mode change in
+                   // RISCVInsertReadWriteCSR
+                   FRM_DYN,
+                   vti.AVL, vti.Log2SEW, TU_MU)>;
     }
   }
 }
 
-multiclass VPatWidenBinaryFPSDNode_VV_VF_WV_WF<SDNode op,
-                                               string instruction_name>
-    : VPatWidenBinaryFPSDNode_VV_VF<op, instruction_name>,
-      VPatWidenBinaryFPSDNode_WV_WF<op, instruction_name>;
+multiclass VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<SDNode op,
+                                                  string instruction_name>
+    : VPatWidenBinaryFPSDNode_VV_VF_RM<op, instruction_name>,
+      VPatWidenBinaryFPSDNode_WV_WF_RM<op, instruction_name>;
 
 multiclass VPatWidenFPMulAccSDNode_VV_VF<string instruction_name> {
   foreach vtiToWti = AllWidenableFloatVectors in {
@@ -1059,8 +1118,8 @@ defm : VPatBinaryFPSDNode_VV_VF_RM<any_fsub, "PseudoVFSUB">;
 defm : VPatBinaryFPSDNode_R_VF_RM<any_fsub, "PseudoVFRSUB">;
 
 // 13.3. Vector Widening Floating-Point Add/Subtract Instructions
-defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF<fadd, "PseudoVFWADD">;
-defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF<fsub, "PseudoVFWSUB">;
+defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<fadd, "PseudoVFWADD">;
+defm : VPatWidenBinaryFPSDNode_VV_VF_WV_WF_RM<fsub, "PseudoVFWSUB">;
 
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm : VPatBinaryFPSDNode_VV_VF<any_fmul, "PseudoVFMUL">;
