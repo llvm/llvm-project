@@ -3209,6 +3209,10 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   SDValue True = N->getOperand(2);
   SDValue Mask = N->getOperand(3);
   SDValue VL = N->getOperand(4);
+  // We always have a glue node for the mask at v0
+  assert(cast<RegisterSDNode>(Mask)->getReg() == RISCV::V0);
+  SDValue Glue = N->getOperand(N->getNumOperands() - 1);
+  assert(Glue.getValueType() == MVT::Glue);
 
   // We require that either merge and false are the same, or that merge
   // is undefined.
@@ -3289,8 +3293,7 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
     LoopWorklist.push_back(False.getNode());
     LoopWorklist.push_back(Mask.getNode());
     LoopWorklist.push_back(VL.getNode());
-    if (SDNode *Glued = N->getGluedNode())
-      LoopWorklist.push_back(Glued);
+    LoopWorklist.push_back(Glue.getNode());
     if (SDNode::hasPredecessorHelper(True.getNode(), Visited, LoopWorklist))
       return false;
   }
@@ -3361,8 +3364,8 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
     if (HasChainOp)
       Ops.push_back(True.getOperand(TrueChainOpIdx));
 
-    if (N->getGluedNode())
-      Ops.push_back(N->getOperand(N->getNumOperands() - 1));
+    // Add the glue for the CopyToReg of mask->v0.
+    Ops.push_back(Glue);
   }
 
   SDNode *Result =
