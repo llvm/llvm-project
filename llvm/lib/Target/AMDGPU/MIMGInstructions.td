@@ -48,6 +48,7 @@ class MIMGBaseOpcode : PredicateControl {
   bit IsAtomicRet = 0;
   bit MSAA = 0;
   bit BVH = 0;
+  bit A16 = 0;
 }
 
 def MIMGBaseOpcode : GenericEnum {
@@ -59,7 +60,7 @@ def MIMGBaseOpcodesTable : GenericTable {
   let CppTypeName = "MIMGBaseOpcodeInfo";
   let Fields = ["BaseOpcode", "Store", "Atomic", "AtomicX2", "Sampler",
                 "Gather4", "NumExtraArgs", "Gradients", "G16", "Coordinates",
-                "LodOrClampOrMip", "HasD16", "MSAA", "BVH"];
+                "LodOrClampOrMip", "HasD16", "MSAA", "BVH", "A16"];
   string TypeOf_BaseOpcode = "MIMGBaseOpcode";
 
   let PrimaryKey = ["BaseOpcode"];
@@ -1191,50 +1192,43 @@ class MIMG_IntersectRay_Helper<bit Is64, bit IsA16> {
         [node_ptr_type, VGPR_32, VReg_96, VReg_96, VReg_96]);
 }
 
-class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC, bit IsA16>
+class MIMG_IntersectRay_gfx10<mimgopc op, string opcode, RegisterClass AddrRC>
     : MIMG_gfx10<op.GFX10M, (outs VReg_128:$vdata), "AMDGPU"> {
-
-  let InOperandList = !con((ins AddrRC:$vaddr0, SReg_128:$srsrc),
-                           !if(IsA16, (ins A16:$a16), (ins)));
-  let AsmString = opcode#" $vdata, $vaddr0, $srsrc"#!if(IsA16, "$a16", "");
+  let InOperandList = (ins AddrRC:$vaddr0, SReg_128:$srsrc, A16:$a16);
+  let AsmString = opcode#" $vdata, $vaddr0, $srsrc$a16";
 
   let nsa = 0;
 }
 
-class MIMG_IntersectRay_nsa_gfx10<mimgopc op, string opcode, int num_addrs, bit IsA16>
+class MIMG_IntersectRay_nsa_gfx10<mimgopc op, string opcode, int num_addrs>
     : MIMG_nsa_gfx10<op.GFX10M, (outs VReg_128:$vdata), num_addrs, "AMDGPU"> {
-  let InOperandList = !con(nsah.AddrIns,
-                           (ins SReg_128:$srsrc),
-                           !if(IsA16, (ins A16:$a16), (ins)));
-  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc"#!if(IsA16, "$a16", "");
+  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$srsrc, A16:$a16));
+  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc$a16";
 }
 
-class MIMG_IntersectRay_gfx11<mimgopc op, string opcode, RegisterClass AddrRC, bit IsA16>
+class MIMG_IntersectRay_gfx11<mimgopc op, string opcode, RegisterClass AddrRC>
     : MIMG_gfx11<op.GFX11, (outs VReg_128:$vdata), "AMDGPU"> {
-
-  let InOperandList = !con((ins AddrRC:$vaddr0, SReg_128:$srsrc),
-                           !if(IsA16, (ins A16:$a16), (ins)));
-  let AsmString = opcode#" $vdata, $vaddr0, $srsrc"#!if(IsA16, "$a16", "");
+  let InOperandList = (ins AddrRC:$vaddr0, SReg_128:$srsrc, A16:$a16);
+  let AsmString = opcode#" $vdata, $vaddr0, $srsrc$a16";
 
   let nsa = 0;
 }
 
 class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
-                                  bit IsA16, list<RegisterClass> addr_types>
+                                  list<RegisterClass> addr_types>
     : MIMG_nsa_gfx11<op.GFX11, (outs VReg_128:$vdata), num_addrs, "AMDGPU",
                      addr_types> {
-  let InOperandList = !con(nsah.AddrIns,
-                           (ins SReg_128:$srsrc),
-                           !if(IsA16, (ins A16:$a16), (ins)));
-  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc"#!if(IsA16, "$a16", "");
+  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$srsrc, A16:$a16));
+  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc$a16";
 }
 
 multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16> {
   defvar info = MIMG_IntersectRay_Helper<Is64, IsA16>;
   def "" : MIMGBaseOpcode {
     let BVH = 1;
+    let A16 = IsA16;
   }
-  let AsmMatchConverter = !if(IsA16, "cvtIntersectRay", ""),
+  let AsmMatchConverter = "",
       dmask = 0xf,
       unorm = 1,
       d16 = 0,
@@ -1248,17 +1242,17 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit IsA16> {
       d16 = 0,
       BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
       VDataDwords = 4 in {
-    def _sa_gfx10 : MIMG_IntersectRay_gfx10<op, opcode, info.RegClass, IsA16> {
+    def _sa_gfx10 : MIMG_IntersectRay_gfx10<op, opcode, info.RegClass> {
       let VAddrDwords = info.VAddrDwords;
     }
-    def _sa_gfx11 : MIMG_IntersectRay_gfx11<op, opcode, info.RegClass, IsA16> {
+    def _sa_gfx11 : MIMG_IntersectRay_gfx11<op, opcode, info.RegClass> {
       let VAddrDwords = info.VAddrDwords;
     }
-    def _nsa_gfx10 : MIMG_IntersectRay_nsa_gfx10<op, opcode, info.num_addrs, IsA16> {
+    def _nsa_gfx10 : MIMG_IntersectRay_nsa_gfx10<op, opcode, info.num_addrs> {
       let VAddrDwords = info.num_addrs;
     }
     def _nsa_gfx11 : MIMG_IntersectRay_nsa_gfx11<op, opcode,
-                                                 info.gfx11_nsa_addrs, IsA16,
+                                                 info.gfx11_nsa_addrs,
                                                  info.gfx11_addr_types> {
       let VAddrDwords = info.num_addrs;
     }

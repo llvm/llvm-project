@@ -1632,7 +1632,7 @@ private:
   bool validateMIMGGatherDMask(const MCInst &Inst);
   bool validateMovrels(const MCInst &Inst, const OperandVector &Operands);
   bool validateMIMGDataSize(const MCInst &Inst, const SMLoc &IDLoc);
-  bool validateMIMGAddrSize(const MCInst &Inst);
+  bool validateMIMGAddrSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGD16(const MCInst &Inst);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
@@ -1742,8 +1742,6 @@ public:
   void cvtMIMG(MCInst &Inst, const OperandVector &Operands,
                bool IsAtomic = false);
   void cvtMIMGAtomic(MCInst &Inst, const OperandVector &Operands);
-  void cvtIntersectRay(MCInst &Inst, const OperandVector &Operands);
-
   void cvtSMEMAtomic(MCInst &Inst, const OperandVector &Operands);
 
   bool parseDimId(unsigned &Encoding);
@@ -3580,7 +3578,8 @@ bool AMDGPUAsmParser::validateMIMGDataSize(const MCInst &Inst,
   return false;
 }
 
-bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
+bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst,
+                                           const SMLoc &IDLoc) {
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
 
@@ -3600,8 +3599,13 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
   assert(SrsrcIdx != -1);
   assert(SrsrcIdx > VAddr0Idx);
 
-  if (DimIdx == -1)
-    return true; // intersect_ray
+  bool IsA16 = Inst.getOperand(A16Idx).getImm();
+  if (BaseOpcode->BVH) {
+    if (IsA16 == BaseOpcode->A16)
+      return true;
+    Error(IDLoc, "image address size does not match a16");
+    return false;
+  }
 
   unsigned Dim = Inst.getOperand(DimIdx).getImm();
   const AMDGPU::MIMGDimInfo *DimInfo = AMDGPU::getMIMGDimInfoByEncoding(Dim);
@@ -3609,7 +3613,6 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
   unsigned ActualAddrSize =
       IsNSA ? SrsrcIdx - VAddr0Idx
             : AMDGPU::getRegOperandSize(getMRI(), Desc, VAddr0Idx) / 4;
-  bool IsA16 = (A16Idx != -1 && Inst.getOperand(A16Idx).getImm());
 
   unsigned ExpectedAddrSize =
       AMDGPU::getAddrSizeMIMGOp(BaseOpcode, DimInfo, IsA16, hasG16());
@@ -3620,7 +3623,7 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
       unsigned VAddrLastSize =
           AMDGPU::getRegOperandSize(getMRI(), Desc, VAddrLastIdx) / 4;
 
-      return VAddrLastIdx - VAddr0Idx + VAddrLastSize == ExpectedAddrSize;
+      ActualAddrSize = VAddrLastIdx - VAddr0Idx + VAddrLastSize;
     }
   } else {
     if (ExpectedAddrSize > 12)
@@ -3633,7 +3636,11 @@ bool AMDGPUAsmParser::validateMIMGAddrSize(const MCInst &Inst) {
       return true;
   }
 
-  return ActualAddrSize == ExpectedAddrSize;
+  if (ActualAddrSize == ExpectedAddrSize)
+    return true;
+
+  Error(IDLoc, "image address size does not match dim and a16");
+  return false;
 }
 
 bool AMDGPUAsmParser::validateMIMGAtomicDMask(const MCInst &Inst) {
@@ -4569,11 +4576,8 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMIMGDataSize(Inst, IDLoc)) {
     return false;
   }
-  if (!validateMIMGAddrSize(Inst)) {
-    Error(IDLoc,
-      "image address size does not match dim and a16");
+  if (!validateMIMGAddrSize(Inst, IDLoc))
     return false;
-  }
   if (!validateMIMGAtomicDMask(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyDMask, Operands),
       "invalid atomic image dmask");
@@ -7758,17 +7762,6 @@ void AMDGPUAsmParser::cvtSMEMAtomic(MCInst &Inst, const OperandVector &Operands)
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
                           AMDGPUOperand::ImmTySMEMOffsetMod);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyCPol, 0);
-}
-
-void AMDGPUAsmParser::cvtIntersectRay(MCInst &Inst,
-                                      const OperandVector &Operands) {
-  for (unsigned I = 1; I < Operands.size(); ++I) {
-    auto &Operand = (AMDGPUOperand &)*Operands[I];
-    if (Operand.isReg())
-      Operand.addRegOperands(Inst, 1);
-  }
-
-  Inst.addOperand(MCOperand::createImm(1)); // a16
 }
 
 //===----------------------------------------------------------------------===//
