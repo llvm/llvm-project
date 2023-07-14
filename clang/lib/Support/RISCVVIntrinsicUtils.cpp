@@ -886,8 +886,7 @@ RVVIntrinsic::RVVIntrinsic(
     : IRName(IRName), IsMasked(IsMasked),
       HasMaskedOffOperand(HasMaskedOffOperand), HasVL(HasVL), Scheme(Scheme),
       SupportOverloading(SupportOverloading), HasBuiltinAlias(HasBuiltinAlias),
-      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs),
-      HasFRMRoundModeOp(HasFRMRoundModeOp) {
+      ManualCodegen(ManualCodegen.str()), NF(NF), PolicyAttrs(NewPolicyAttrs) {
 
   // Init BuiltinName, Name and OverloadedName
   BuiltinName = NewName.str();
