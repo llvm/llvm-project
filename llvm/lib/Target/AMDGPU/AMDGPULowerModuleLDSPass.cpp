@@ -1106,6 +1106,8 @@ public:
     return KernelToCreatedDynamicLDS;
   }
 
+  // This attribute is no longer used by the backend. TODO: Delete it in favour
+  // of pass-local state and update the tests to remove the string.
   static bool canElideModuleLDS(const Function &F) {
     return F.hasFnAttribute("amdgpu-elide-module-lds");
   }
@@ -1211,7 +1213,6 @@ public:
 
     // All kernel frames have been allocated. Calculate and record the
     // addresses.
-
     {
       const DataLayout &DL = M.getDataLayout();
 
@@ -1220,8 +1221,8 @@ public:
           continue;
 
         // All three of these are optional. The first variable is allocated at
-        // zero. They are allocated by allocateKnownAddressLDSGlobal in the
-        // following order:
+        // zero. They are allocated by AMDGPUMachineFunction as one block.
+        // Layout:
         //{
         //  module.lds
         //  alignment padding
@@ -1250,22 +1251,23 @@ public:
 
         if (AllocateKernelScopeStruct) {
           GlobalVariable *KernelStruct = Replacement->second.SGV;
-
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, KernelStruct));
-
           recordLDSAbsoluteAddress(&M, KernelStruct, Offset);
-
           Offset += DL.getTypeAllocSize(KernelStruct->getValueType());
-
         }
 
+        // If there is dynamic allocation, the alignment needed is included in
+        // the static frame size. There may be no reference to the dynamic
+        // variable in the kernel itself, so without including it here, that
+        // alignment padding could be missed.
         if (AllocateDynamicVariable) {
           GlobalVariable *DynamicVariable = KernelToCreatedDynamicLDS[&Func];
-
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, DynamicVariable));
-
           recordLDSAbsoluteAddress(&M, DynamicVariable, Offset);
         }
+
+        if (Offset != 0)
+          Func.addFnAttr("amdgpu-lds-size", std::to_string(Offset));
       }
     }
 
