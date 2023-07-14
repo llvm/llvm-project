@@ -10,7 +10,7 @@
 // RV32XTHEADBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
 // RV32XTHEADBB-NEXT:    ret i32 [[TMP1]]
 //
-int clz_32(int a) {
+unsigned int clz_32(unsigned int a) {
   return __builtin_riscv_clz_32(a);
 }
 
@@ -23,6 +23,6 @@ int clz_32(int a) {
 // RV32XTHEADBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[NOT]], i1 false)
 // RV32XTHEADBB-NEXT:    ret i32 [[TMP1]]
 //
-int clo_32(int a) {
+unsigned int clo_32(unsigned int a) {
   return __builtin_riscv_clz_32(~a);
 }
