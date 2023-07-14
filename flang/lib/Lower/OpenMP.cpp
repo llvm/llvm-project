@@ -2358,16 +2358,16 @@ genOmpAtomicWrite(Fortran::lower::AbstractConverter &converter,
       std::get<2>(atomicWrite.t);
   const Fortran::parser::OmpAtomicClauseList &leftHandClauseList =
       std::get<0>(atomicWrite.t);
-  const auto &assignmentStmtExpr =
-      std::get<Fortran::parser::Expr>(std::get<3>(atomicWrite.t).statement.t);
-  const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
-      std::get<3>(atomicWrite.t).statement.t);
+  const Fortran::parser::AssignmentStmt &stmt =
+      std::get<3>(atomicWrite.t).statement;
+  const Fortran::evaluate::Assignment &assign = *stmt.typedAssignment->v;
   Fortran::lower::StatementContext stmtCtx;
   // Get the value and address of atomic write operands.
-  mlir::Value rhs_expr = fir::getBase(converter.genExprValue(
-      *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
-  mlir::Value lhs_addr = fir::getBase(converter.genExprAddr(
-      *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+  mlir::Value rhs_expr =
+      fir::getBase(converter.genExprValue(assign.rhs, stmtCtx));
+
+  mlir::Value lhs_addr =
+      fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx));
   genOmpAtomicWriteStatement(converter, eval, lhs_addr, rhs_expr,
                              &leftHandClauseList, &rightHandClauseList);
 }
