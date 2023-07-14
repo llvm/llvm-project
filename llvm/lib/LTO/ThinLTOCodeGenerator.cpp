@@ -1057,11 +1057,14 @@ void ThinLTOCodeGenerator::run() {
   // via the internal option. Must be done before WPD below.
   if (hasWholeProgramVisibility(/* WholeProgramVisibilityEnabledInLTO */ false))
     Index->setWithWholeProgramVisibility();
+
+  // FIXME: This needs linker information via a TBD new interface
   updateVCallVisibilityInIndex(*Index,
-                               /* WholeProgramVisibilityEnabledInLTO */ false,
-                               // FIXME: This needs linker information via a
+                               /*WholeProgramVisibilityEnabledInLTO=*/false,
+                               // FIXME: These need linker information via a
                                // TBD new interface.
-                               /* DynamicExportSymbols */ {});
+                               /*DynamicExportSymbols=*/{},
+                               /*VisibleToRegularObjSymbols=*/{});
 
   // Perform index-based WPD. This will return immediately if there are
   // no index entries in the typeIdMetadata map (e.g. if we are instead

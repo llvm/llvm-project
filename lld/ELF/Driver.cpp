@@ -110,6 +110,7 @@ void Ctx::reset() {
   needsTlsLd.store(false, std::memory_order_relaxed);
   scriptSymOrderCounter = 1;
   scriptSymOrder.clear();
+  ltoAllVtablesHaveTypeInfos = false;
 }
 
 llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
@@ -1036,6 +1037,63 @@ template <class ELFT> static void readCallGraphsFromObjectFiles() {
   }
 }
 
+template <class ELFT>
+static void ltoValidateAllVtablesHaveTypeInfos(opt::InputArgList &args) {
+  DenseSet<StringRef> typeInfoSymbols;
+  SmallSetVector<StringRef, 0> vtableSymbols;
+  auto processVtableAndTypeInfoSymbols = [&](StringRef name) {
+    if (name.consume_front("_ZTI"))
+      typeInfoSymbols.insert(name);
+    else if (name.consume_front("_ZTV"))
+      vtableSymbols.insert(name);
+  };
+
+  // Examine all native symbol tables.
+  for (ELFFileBase *f : ctx.objectFiles) {
+    using Elf_Sym = typename ELFT::Sym;
+    for (const Elf_Sym &s : f->template getGlobalELFSyms<ELFT>()) {
+      if (s.st_shndx != SHN_UNDEF) {
+        StringRef name = check(s.getName(f->getStringTable()));
+        processVtableAndTypeInfoSymbols(name);
+      }
+    }
+  }
+
+  for (SharedFile *f : ctx.sharedFiles) {
+    using Elf_Sym = typename ELFT::Sym;
+    for (const Elf_Sym &s : f->template getELFSyms<ELFT>()) {
+      if (s.st_shndx != SHN_UNDEF) {
+        StringRef name = check(s.getName(f->getStringTable()));
+        processVtableAndTypeInfoSymbols(name);
+      }
+    }
+  }
+
+  SmallSetVector<StringRef, 0> vtableSymbolsWithNoRTTI;
+  for (StringRef s : vtableSymbols)
+    if (!typeInfoSymbols.count(s))
+      vtableSymbolsWithNoRTTI.insert(s);
+
+  // Remove known safe symbols.
+  for (auto *arg : args.filtered(OPT_lto_known_safe_vtables)) {
+    StringRef knownSafeName = arg->getValue();
+    if (!knownSafeName.consume_front("_ZTV"))
+      error("--lto-known-safe-vtables=: expected symbol to start with _ZTV, "
+            "but got " +
+            knownSafeName);
+    vtableSymbolsWithNoRTTI.remove(knownSafeName);
+  }
+
+  ctx.ltoAllVtablesHaveTypeInfos = vtableSymbolsWithNoRTTI.empty();
+  // Check for unmatched RTTI symbols
+  for (StringRef s : vtableSymbolsWithNoRTTI) {
+    message(
+        "--lto-validate-all-vtables-have-type-infos: RTTI missing for vtable "
+        "_ZTV" +
+        s + ", --lto-whole-program-visibility disabled");
+  }
+}
+
 static DebugCompressionType getCompressionType(StringRef s, StringRef option) {
   DebugCompressionType type = StringSwitch<DebugCompressionType>(s)
                                   .Case("zlib", DebugCompressionType::Zlib)
@@ -1236,6 +1294,9 @@ static void readConfigs(opt::InputArgList &args) {
   config->ltoWholeProgramVisibility =
       args.hasFlag(OPT_lto_whole_program_visibility,
                    OPT_no_lto_whole_program_visibility, false);
+  config->ltoValidateAllVtablesHaveTypeInfos =
+      args.hasFlag(OPT_lto_validate_all_vtables_have_type_infos,
+                   OPT_no_lto_validate_all_vtables_have_type_infos, false);
   config->ltoo = args::getInteger(args, OPT_lto_O, 2);
   if (config->ltoo > 3)
     error("invalid optimization level for LTO: " + Twine(config->ltoo));
@@ -2814,6 +2875,10 @@ void LinkerDriver::link(opt::InputArgList &args) {
   const bool skipLinkedOutput = config->thinLTOIndexOnly || config->emitLLVM ||
                                 config->ltoEmitAsm ||
                                 !config->thinLTOModulesToCompile.empty();
+
+  // Handle --lto-validate-all-vtables-have-type-infos.
+  if (config->ltoValidateAllVtablesHaveTypeInfos)
+    invokeELFT(ltoValidateAllVtablesHaveTypeInfos, args);
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
