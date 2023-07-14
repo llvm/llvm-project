@@ -15,6 +15,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Debuginfod/HTTPClient.h"
