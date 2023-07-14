@@ -11184,9 +11184,9 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       // if necessary).
       SmallString<16> CastBuf;
       llvm::raw_svector_ostream CastFix(CastBuf);
-      CastFix << "(";
+      CastFix << (S.LangOpts.CPlusPlus ? "static_cast<" : "(");
       IntendedTy.print(CastFix, S.Context.getPrintingPolicy());
-      CastFix << ")";
+      CastFix << (S.LangOpts.CPlusPlus ? ">" : ")");
 
       SmallVector<FixItHint,4> Hints;
       if (!AT.matchesType(S.Context, IntendedTy) || ShouldNotPrintDirectly)
@@ -11197,7 +11197,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         SourceRange CastRange(CCast->getLParenLoc(), CCast->getRParenLoc());
         Hints.push_back(FixItHint::CreateReplacement(CastRange, CastFix.str()));
 
-      } else if (!requiresParensToAddCast(E)) {
+      } else if (!requiresParensToAddCast(E) && !S.LangOpts.CPlusPlus) {
         // If the expression has high enough precedence,
         // just write the C-style cast.
         Hints.push_back(
