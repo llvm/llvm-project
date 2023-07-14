@@ -96,6 +96,7 @@ public:
   MVT getGRLenVT() const { return GRLenVT; }
   unsigned getGRLen() const { return GRLen; }
   LoongArchABI::ABI getTargetABI() const { return TargetABI; }
+  bool isXRaySupported() const override { return is64Bit(); }
 };
 } // end namespace llvm
 
