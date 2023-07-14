@@ -332,7 +332,8 @@ const NamedDecl *lookupSiblingWithinEnclosingScope(ASTContext &Ctx,
       return nullptr;
     for (const auto &Child : DS->getDeclGroup())
       if (const auto *ND = dyn_cast<NamedDecl>(Child))
-        if (ND != &RenamedDecl && ND->getName() == Name)
+        if (ND != &RenamedDecl && ND->getDeclName().isIdentifier() &&
+            ND->getName() == Name)
           return ND;
     return nullptr;
   };

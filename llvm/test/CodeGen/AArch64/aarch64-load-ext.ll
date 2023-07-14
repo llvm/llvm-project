@@ -381,9 +381,7 @@ define <4 x i16> @anyext_v4i16(ptr %a, ptr %b) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
 ; CHECK-LE-NEXT:    ldr s1, [x1]
-; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-LE-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-LE-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-LE-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-LE-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-LE-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-LE-NEXT:    ret
@@ -394,9 +392,7 @@ define <4 x i16> @anyext_v4i16(ptr %a, ptr %b) {
 ; CHECK-BE-NEXT:    ldr s1, [x1]
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    rev32 v1.8b, v1.8b
-; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-BE-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-BE-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-BE-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-BE-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-BE-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
@@ -413,9 +409,7 @@ define <4 x i32> @anyext_v4i32(ptr %a, ptr %b) {
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
 ; CHECK-LE-NEXT:    ldr s1, [x1]
-; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-LE-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-LE-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-LE-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-LE-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-LE-NEXT:    shl v0.4s, v0.4s, #24
 ; CHECK-LE-NEXT:    sshr v0.4s, v0.4s, #24
@@ -427,9 +421,7 @@ define <4 x i32> @anyext_v4i32(ptr %a, ptr %b) {
 ; CHECK-BE-NEXT:    ldr s1, [x1]
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    rev32 v1.8b, v1.8b
-; CHECK-BE-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-BE-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-BE-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-BE-NEXT:    uaddl v0.8h, v0.8b, v1.8b
 ; CHECK-BE-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-BE-NEXT:    shl v0.4s, v0.4s, #24
 ; CHECK-BE-NEXT:    sshr v0.4s, v0.4s, #24

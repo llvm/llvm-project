@@ -177,3 +177,47 @@ let Predicates = [HasStdExtZvksh], RVVConstraint = NoConstraint in {
   def VSM3C_VI  : PALUVINoVm<0b101011, "vsm3c.vi", uimm5>;
   def VSM3ME_VV : PALUVVNoVm<0b100000, OPMVV, "vsm3me.vv">;
 } // Predicates = [HasStdExtZvksh]
+
+//===----------------------------------------------------------------------===//
+// Pseudo instructions
+//===----------------------------------------------------------------------===//
+
+multiclass VPseudoUnaryV_V {
+  foreach m = MxList in {
+    let VLMul = m.value in {
+      def "_V_" # m.MX : VPseudoUnaryNoMask<m.vrclass, m.vrclass>;
+      def "_V_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, m.vrclass>,
+                                   RISCVMaskedPseudo</*MaskOpIdx*/ 2>;
+    }
+  }
+}
+
+defm PseudoVBREV : VPseudoUnaryV_V;
+defm PseudoVREV8 : VPseudoUnaryV_V;
+defm PseudoVCLZ : VPseudoUnaryV_V;
+defm PseudoVCTZ : VPseudoUnaryV_V;
+defm PseudoVCPOP : VPseudoUnaryV_V;
+
+//===----------------------------------------------------------------------===//
+// SDNode patterns
+//===----------------------------------------------------------------------===//
+
+multiclass VPatUnarySDNode_V<SDPatternOperator op, string instruction_name> {
+  foreach vti = AllIntegerVectors in {
+    let Predicates = GetVTypePredicates<vti>.Predicates in {
+      def : Pat<(vti.Vector (op (vti.Vector vti.RegClass:$rs1))),
+                (!cast<Instruction>(instruction_name#"_V_"#vti.LMul.MX)
+                   (vti.Vector (IMPLICIT_DEF)),
+                   vti.RegClass:$rs1,
+                   vti.AVL, vti.Log2SEW, TA_MA)>;
+    }
+  }
+}
+
+let Predicates = [HasStdExtZvbb] in {
+  defm : VPatUnarySDNode_V<bitreverse, "PseudoVBREV">;
+  defm : VPatUnarySDNode_V<bswap, "PseudoVREV8">;
+  defm : VPatUnarySDNode_V<ctlz, "PseudoVCLZ">;
+  defm : VPatUnarySDNode_V<cttz, "PseudoVCTZ">;
+  defm : VPatUnarySDNode_V<ctpop, "PseudoVCPOP">;
+}

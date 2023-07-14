@@ -859,7 +859,9 @@ static void test_valid_values_time_zone() {
 // The Apple CI gives %z='-0700'	%Ez='-0700'	%Oz='-0700'	%Z='UTC'
 // -0700 looks like the local time where the CI happens to recide, therefore
 // omit this test on Apple.
-#if !defined(__APPLE__)
+// The Windows CI gives %z='-0000', but on local machines set to a different
+// timezone, it gives e.g. %z='+0200'.
+#if !defined(__APPLE__) && !defined(_WIN32)
   using namespace std::literals::chrono_literals;
 
   constexpr std::basic_string_view<CharT> fmt  = SV("{:%%z='%z'%t%%Ez='%Ez'%t%%Oz='%Oz'%t%%Z='%Z'%n}");
@@ -884,22 +886,6 @@ static void test_valid_values_time_zone() {
         SV("%z='UTC'\t%Ez='UTC'\t%Oz='UTC'\t%Z='UTC'\n"),
         lfmt,
         std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-#  elif defined(_WIN32)                // defined(_AIX)
-  // Non localized output using C-locale
-  check(SV("%z='-0000'\t%Ez='-0000'\t%Oz='-0000'\t%Z='UTC'\n"),
-        fmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-
-  // Use the global locale (fr_FR)
-  check(SV("%z='-0000'\t%Ez='-0000'\t%Oz='-0000'\t%Z='UTC'\n"),
-        lfmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
-
-  // Use supplied locale (ja_JP). This locale has a different alternate.a
-  check(loc,
-        SV("%z='-0000'\t%Ez='-0000'\t%Oz='-0000'\t%Z='UTC'\n"),
-        lfmt,
-        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 #  else                                // defined(_AIX)
   // Non localized output using C-locale
   check(SV("%z='+0000'\t%Ez='+0000'\t%Oz='+0000'\t%Z='UTC'\n"),
@@ -918,7 +904,7 @@ static void test_valid_values_time_zone() {
         std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 #  endif                               // defined(_AIX)
   std::locale::global(std::locale::classic());
-#endif // !defined(__APPLE__)
+#endif // !defined(__APPLE__) && !defined(_WIN32)
 }
 
 template <class CharT>

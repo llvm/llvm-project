@@ -248,6 +248,15 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
   } else {
     llvm_unreachable("invalid memcpy op");
   }
+  if (getAllocOp() == "memref.alloc") {
+    options.allocOp =
+        linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloc;
+  } else if (getAllocOp() == "memref.alloca") {
+    options.allocOp =
+        linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloca;
+  } else {
+    llvm_unreachable("invalid alloc op");
+  }
 
   // Bufferize ops.
   Attribute memorySpace =
@@ -283,6 +292,8 @@ LogicalResult transform::BufferizeToAllocationOp::verify() {
   if (getMemcpyOp() != "memref.tensor_store" &&
       getMemcpyOp() != "memref.copy" && getMemcpyOp() != "linalg.copy")
     return emitOpError() << "unsupported memcpy op";
+  if (getAllocOp() != "memref.alloc" && getAllocOp() != "memref.alloca")
+    return emitOpError() << "unsupported alloc op";
   return success();
 }
 

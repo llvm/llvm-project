@@ -42,6 +42,20 @@ define i32 @select_clz_to_ctz_preserve_flag(i32 %a) {
   ret i32 %cond
 }
 
+define i32 @select_clz_to_ctz_constant_for_zero(i32 %a) {
+; CHECK-LABEL: @select_clz_to_ctz_constant_for_zero(
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 0, %a
+  %and = and i32 %sub, %a
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %and, i1 false)
+  %tobool = icmp eq i32 %a, 0
+  %sub1 = xor i32 %lz, 31
+  %cond = select i1 %tobool, i32 32, i32 %sub1
+  ret i32 %cond
+}
+
 define <2 x i32> @select_clz_to_ctz_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_vec(
 ; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[A:%.*]], i1 true), !range [[RNG0]]
@@ -58,9 +72,7 @@ define <2 x i32> @select_clz_to_ctz_vec(<2 x i32> %a) {
 
 define i32 @select_clz_to_ctz_extra_use(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_extra_use(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[A]]
-; CHECK-NEXT:    [[SUB1:%.*]] = call i32 @llvm.cttz.i32(i32 [[AND]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[SUB1:%.*]] = call i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 true), !range [[RNG0]]
 ; CHECK-NEXT:    call void @use(i32 [[SUB1]])
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 true), !range [[RNG0]]
 ; CHECK-NEXT:    ret i32 [[COND]]
@@ -216,6 +228,25 @@ define <2 x i32> @select_clz_to_ctz_vec_with_undef(<2 x i32> %a) {
   %sub1 = xor <2 x i32> %lz, <i32 31, i32 undef>
   %cond = select <2 x i1> %tobool, <2 x i32> %lz, <2 x i32> %sub1
   ret <2 x i32> %cond
+}
+
+define i32 @select_clz_to_ctz_wrong_constant_for_zero(i32 %a) {
+; CHECK-LABEL: @select_clz_to_ctz_wrong_constant_for_zero(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[A]]
+; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[AND]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    [[SUB1:%.*]] = xor i32 [[LZ]], 31
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 31, i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 0, %a
+  %and = and i32 %sub, %a
+  %lz = tail call i32 @llvm.ctlz.i32(i32 %and, i1 false)
+  %tobool = icmp eq i32 %a, 0
+  %sub1 = xor i32 %lz, 31
+  %cond = select i1 %tobool, i32 31, i32 %sub1
+  ret i32 %cond
 }
 
 define i4 @PR45762(i3 %x4) {

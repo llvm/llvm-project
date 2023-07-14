@@ -128,6 +128,11 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
     a fully dynamic layout is assumed for best compatibility. Users should use
     "memref.tensor_store" when possible.
 
+    "memref.alloc" is used for new buffer allocations. The buffer is deallocated
+    at the end of the block. Custom allocation ops can be specified via
+    `alloc_op`. Currently supported are "memref.alloc" and "memref.alloca". In
+    case of a "memref.alloca", the buffer is not deallocated.
+
     #### Return modes
 
     This operation consumes the `target` handle and produces the
@@ -137,7 +142,9 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
   let arguments = (ins TransformHandleTypeInterface:$target,
                        OptionalAttr<AnyAttr>:$memory_space,
                        DefaultValuedAttr<StrAttr, "\"memref.tensor_store\"">:
-                           $memcpy_op);
+                           $memcpy_op,
+                       DefaultValuedAttr<StrAttr, "\"memref.alloc\"">:
+                           $alloc_op);
   let hasVerifier = 1;
   let results = (outs Transform_AnyValue:$allocated_buffer,
                       Transform_AnyOpType:$new_ops);

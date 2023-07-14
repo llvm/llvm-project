@@ -146,3 +146,9 @@ image_bvh64_intersect_ray v[39:42], [v50, v46, v[20:22], v[40:42], v[47:49]], s[
 
 image_bvh64_intersect_ray v[39:42], [v[50:51], v46, v[20:22]], s[12:15] a16
 // NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+image_bvh_intersect_ray v[4:7], v[9:16], s[4:7] noa16
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: image address size does not match a16
+
+image_bvh_intersect_ray v[39:42], [v50, v46, v[20:22], v[40:42]], s[12:15] noa16
+// NOGFX11: :[[@LINE-1]]:{{[0-9]+}}: error: image address size does not match a16

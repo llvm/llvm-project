@@ -48,19 +48,14 @@ int64_t Fortran::lower::getCollapseValue(
   return 1;
 }
 
-static const Fortran::parser::Name *
-getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
-  const auto *dataRef = std::get_if<Fortran::parser::DataRef>(&designator.u);
-  return dataRef ? std::get_if<Fortran::parser::Name>(&dataRef->u) : nullptr;
-}
-
 static Fortran::semantics::Symbol *
 getOmpObjectSymbol(const Fortran::parser::OmpObject &ompObject) {
   Fortran::semantics::Symbol *sym = nullptr;
   std::visit(Fortran::common::visitors{
                  [&](const Fortran::parser::Designator &designator) {
                    if (const Fortran::parser::Name *name =
-                           getDesignatorNameIfDataRef(designator)) {
+                           Fortran::semantics::getDesignatorNameIfDataRef(
+                               designator)) {
                      sym = name->symbol;
                    }
                  },
@@ -2181,7 +2176,9 @@ static bool checkForSingleVariableOnRHS(
       std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
           &expr.u);
   const Fortran::parser::Name *name =
-      designator ? getDesignatorNameIfDataRef(designator->value()) : nullptr;
+      designator
+          ? Fortran::semantics::getDesignatorNameIfDataRef(designator->value())
+          : nullptr;
   return name != nullptr;
 }
 
@@ -2328,7 +2325,8 @@ static void genOmpAtomicUpdateStatement(
           &assignmentStmtVariable.u);
   assert(varDesignator && "Variable designator for atomic update assignment "
                           "statement does not exist");
-  const auto *name = getDesignatorNameIfDataRef(varDesignator->value());
+  const auto *name =
+      Fortran::semantics::getDesignatorNameIfDataRef(varDesignator->value());
   if (!name)
     TODO(converter.getCurrentLocation(),
          "Array references as atomic update variable");
@@ -2360,16 +2358,16 @@ genOmpAtomicWrite(Fortran::lower::AbstractConverter &converter,
       std::get<2>(atomicWrite.t);
   const Fortran::parser::OmpAtomicClauseList &leftHandClauseList =
       std::get<0>(atomicWrite.t);
-  const auto &assignmentStmtExpr =
-      std::get<Fortran::parser::Expr>(std::get<3>(atomicWrite.t).statement.t);
-  const auto &assignmentStmtVariable = std::get<Fortran::parser::Variable>(
-      std::get<3>(atomicWrite.t).statement.t);
+  const Fortran::parser::AssignmentStmt &stmt =
+      std::get<3>(atomicWrite.t).statement;
+  const Fortran::evaluate::Assignment &assign = *stmt.typedAssignment->v;
   Fortran::lower::StatementContext stmtCtx;
   // Get the value and address of atomic write operands.
-  mlir::Value rhs_expr = fir::getBase(converter.genExprValue(
-      *Fortran::semantics::GetExpr(assignmentStmtExpr), stmtCtx));
-  mlir::Value lhs_addr = fir::getBase(converter.genExprAddr(
-      *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+  mlir::Value rhs_expr =
+      fir::getBase(converter.genExprValue(assign.rhs, stmtCtx));
+
+  mlir::Value lhs_addr =
+      fir::getBase(converter.genExprAddr(assign.lhs, stmtCtx));
   genOmpAtomicWriteStatement(converter, eval, lhs_addr, rhs_expr,
                              &leftHandClauseList, &rightHandClauseList);
 }
@@ -2643,6 +2641,39 @@ void Fortran::lower::genOpenMPConstruct(
       ompConstruct.u);
 }
 
+fir::GlobalOp globalInitialization(Fortran::lower::AbstractConverter &converter,
+                                   fir::FirOpBuilder &firOpBuilder,
+                                   const Fortran::semantics::Symbol &sym,
+                                   const Fortran::lower::pft::Variable &var,
+                                   mlir::Location currentLocation) {
+  mlir::Type ty = converter.genType(sym);
+  std::string globalName = converter.mangleName(sym);
+  mlir::StringAttr linkage = firOpBuilder.createInternalLinkage();
+  fir::GlobalOp global =
+      firOpBuilder.createGlobal(currentLocation, ty, globalName, linkage);
+
+  // Create default initialization for non-character scalar.
+  if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
+    mlir::Type baseAddrType = ty.dyn_cast<fir::BoxType>().getEleTy();
+    Fortran::lower::createGlobalInitialization(
+        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
+          mlir::Value nullAddr =
+              b.createNullConstant(currentLocation, baseAddrType);
+          mlir::Value box =
+              b.create<fir::EmboxOp>(currentLocation, ty, nullAddr);
+          b.create<fir::HasValueOp>(currentLocation, box);
+        });
+  } else {
+    Fortran::lower::createGlobalInitialization(
+        firOpBuilder, global, [&](fir::FirOpBuilder &b) {
+          mlir::Value undef = b.create<fir::UndefOp>(currentLocation, ty);
+          b.create<fir::HasValueOp>(currentLocation, undef);
+        });
+  }
+
+  return global;
+}
+
 void Fortran::lower::genThreadprivateOp(
     Fortran::lower::AbstractConverter &converter,
     const Fortran::lower::pft::Variable &var) {
@@ -2672,30 +2703,9 @@ void Fortran::lower::genThreadprivateOp(
     // variable in main program, and it has implicit SAVE attribute. Take it as
     // with SAVE attribute, so to create GlobalOp for it to simplify the
     // translation to LLVM IR.
-    mlir::Type ty = converter.genType(sym);
-    std::string globalName = converter.mangleName(sym);
-    mlir::StringAttr linkage = firOpBuilder.createInternalLinkage();
-    fir::GlobalOp global =
-        firOpBuilder.createGlobal(currentLocation, ty, globalName, linkage);
+    fir::GlobalOp global = globalInitialization(converter, firOpBuilder, sym,
+                                                var, currentLocation);
 
-    // Create default initialization for non-character scalar.
-    if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
-      mlir::Type baseAddrType = ty.dyn_cast<fir::BoxType>().getEleTy();
-      Fortran::lower::createGlobalInitialization(
-          firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value nullAddr =
-                b.createNullConstant(currentLocation, baseAddrType);
-            mlir::Value box =
-                b.create<fir::EmboxOp>(currentLocation, ty, nullAddr);
-            b.create<fir::HasValueOp>(currentLocation, box);
-          });
-    } else {
-      Fortran::lower::createGlobalInitialization(
-          firOpBuilder, global, [&](fir::FirOpBuilder &b) {
-            mlir::Value undef = b.create<fir::UndefOp>(currentLocation, ty);
-            b.create<fir::HasValueOp>(currentLocation, undef);
-          });
-    }
     mlir::Value symValue = firOpBuilder.create<fir::AddrOfOp>(
         currentLocation, global.resultType(), global.getSymbol());
     symThreadprivateValue = firOpBuilder.create<mlir::omp::ThreadprivateOp>(
@@ -2718,6 +2728,23 @@ void Fortran::lower::genThreadprivateOp(
   converter.bindSymbol(sym, symThreadprivateExv);
 }
 
+// This function replicates threadprivate's behaviour of generating
+// an internal fir.GlobalOp for non-global variables in the main program
+// that have the implicit SAVE attribute, to simplifiy LLVM-IR and MLIR
+// generation.
+void Fortran::lower::genDeclareTargetIntGlobal(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::pft::Variable &var) {
+  if (!var.isGlobal()) {
+    // A non-global variable which can be in a declare target directive must
+    // be a variable in the main program, and it has the implicit SAVE
+    // attribute. We create a GlobalOp for it to simplify the translation to
+    // LLVM IR.
+    globalInitialization(converter, converter.getFirOpBuilder(),
+                         var.getSymbol(), var, converter.getCurrentLocation());
+  }
+}
+
 void handleDeclareTarget(Fortran::lower::AbstractConverter &converter,
                          Fortran::lower::pft::Evaluation &eval,
                          const Fortran::parser::OpenMPDeclareTargetConstruct
@@ -2735,7 +2762,8 @@ void handleDeclareTarget(Fortran::lower::AbstractConverter &converter,
           Fortran::common::visitors{
               [&](const Fortran::parser::Designator &designator) {
                 if (const Fortran::parser::Name *name =
-                        getDesignatorNameIfDataRef(designator)) {
+                        Fortran::semantics::getDesignatorNameIfDataRef(
+                            designator)) {
                   symbolAndClause.push_back(
                       std::make_pair(clause, *name->symbol));
                 }

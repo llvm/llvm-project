@@ -107,7 +107,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     InterfaceMethod<
       /*desc=*/"Return the permutation map.",
       /*retTy=*/"::mlir::AffineMap",
-      /*methodName=*/"permutation_map",
+      /*methodName=*/"getPermutationMap",
       /*args=*/(ins),
       /*methodBody=*/"return $_op.getPermutationMap();"
       /*defaultImplementation=*/
@@ -140,12 +140,17 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return the `in_bounds` boolean ArrayAttr.",
-      /*retTy=*/"::std::optional<::mlir::ArrayAttr>",
-      /*methodName=*/"in_bounds",
+      /*desc=*/"Return a vector of all in_bounds values as booleans.",
+      /*retTy=*/"::llvm::SmallVector<bool>",
+      /*methodName=*/"getInBoundsValues",
       /*args=*/(ins),
-      /*methodBody=*/"return $_op.getInBounds();"
-      /*defaultImplementation=*/
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        ::llvm::SmallVector<bool> inBounds;
+        for (int64_t i = 0, e = $_op.getTransferRank(); i < e; ++i)
+          inBounds.push_back($_op.isDimInBounds(i));
+        return inBounds;
+      }]
     >,
     InterfaceMethod<
       /*desc=*/"Return the ShapedType.",

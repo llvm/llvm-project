@@ -362,7 +362,8 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
   std::string BuiltinName = "__builtin_rvv_" + std::string(Record.Name);
 
   RVVIntrinsic::updateNamesAndPolicy(IsMasked, HasPolicy, Name, BuiltinName,
-                                     OverloadedName, PolicyAttrs);
+                                     OverloadedName, PolicyAttrs,
+                                     Record.HasFRMRoundModeOp);
 
   // Put into IntrinsicList.
   size_t Index = IntrinsicList.size();

@@ -358,15 +358,9 @@ def FeatureStdExtZcf
                        "'Zcf' (Compressed Single-Precision Floating-Point Instructions)",
                        [FeatureStdExtZca]>;
 
-def HasStdExtCOrZcf
-    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf()">,
-                AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcf),
-                                   "'C' (Compressed Instructions) or "
-                                   "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
-
 def FeatureStdExtZcmp
     : SubtargetFeature<"zcmp", "HasStdExtZcmp", "true",
-                       "'Zcmp' (sequenced instuctions for code-size reduction)", 
+                       "'Zcmp' (sequenced instuctions for code-size reduction)",
                        [FeatureStdExtZca]>;
 def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdExtC()">,
                                AssemblerPredicate<(all_of FeatureStdExtZcmp, (not FeatureStdExtC)),
@@ -374,11 +368,25 @@ def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdE
 
 def FeatureStdExtZcmt
     : SubtargetFeature<"zcmt", "HasStdExtZcmt", "true",
-                       "'Zcmt' (table jump instuctions for code-size reduction)", 
-                       [FeatureStdExtZca, FeatureStdExtZicsr]>; 
+                       "'Zcmt' (table jump instuctions for code-size reduction)",
+                       [FeatureStdExtZca, FeatureStdExtZicsr]>;
 def HasStdExtZcmt : Predicate<"Subtarget->hasStdExtZcmt()">,
                            AssemblerPredicate<(all_of FeatureStdExtZcmt),
                            "'Zcmt' (table jump instuctions for code-size reduction)">;
+
+def FeatureStdExtZce
+    : SubtargetFeature<"zce", "HasStdExtZce", "true",
+                       "'Zce' (Compressed extensions for microcontrollers)",
+                       [FeatureStdExtZca, FeatureStdExtZcb, FeatureStdExtZcmp,
+                        FeatureStdExtZcmt]>;
+
+def HasStdExtCOrZcfOrZce
+    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() "
+                "Subtarget->hasStdExtZce()">,
+                AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcf,
+                                           FeatureStdExtZce),
+                                   "'C' (Compressed Instructions) or "
+                                   "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
 def FeatureNoRVCHints
     : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",

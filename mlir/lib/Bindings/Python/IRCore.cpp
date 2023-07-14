@@ -258,6 +258,14 @@ struct PyAttrBuilderMap {
 };
 
 //------------------------------------------------------------------------------
+// PyBlock
+//------------------------------------------------------------------------------
+
+py::object PyBlock::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonBlockToCapsule(get()));
+}
+
+//------------------------------------------------------------------------------
 // Collections.
 //------------------------------------------------------------------------------
 
@@ -2968,6 +2976,7 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of PyBlock.
   //----------------------------------------------------------------------------
   py::class_<PyBlock>(m, "Block", py::module_local())
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyBlock::getCapsule)
       .def_property_readonly(
           "owner",
           [](PyBlock &self) {

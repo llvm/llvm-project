@@ -120,6 +120,11 @@ public:
         // Indicate the runtime that it should not reallocate in case of length
         // mismatch, and that it should use the LHS explicit/assumed length if
         // allocating/reallocation the LHS.
+        // Note that AssignExplicitLengthCharacter() must be used
+        // when isTemporaryLHS() is true here: the LHS is known to be
+        // character allocatable in this case, so finalization will not
+        // happen (as implied by temporary_lhs attribute), and LHS
+        // must keep its length (as implied by keep_lhs_length_if_realloc).
         fir::runtime::genAssignExplicitLengthCharacter(builder, loc, to, from);
       } else if (assignOp.isTemporaryLHS()) {
         // Use AssignTemporary, when the LHS is a compiler generated temporary.

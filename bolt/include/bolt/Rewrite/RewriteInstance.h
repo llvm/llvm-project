@@ -171,6 +171,9 @@ private:
   /// Process metadata in special sections before CFG is built for functions.
   void processMetadataPreCFG();
 
+  /// Process metadata in special sections after CFG is built for functions.
+  void processMetadataPostCFG();
+
   /// Update debug and other auxiliary information in the file.
   void updateMetadata();
 

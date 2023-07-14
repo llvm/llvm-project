@@ -5654,6 +5654,34 @@ defm : Neon_mul_acc_widen_patterns<sub, AArch64umull,
 defm : Neon_mul_acc_widen_patterns<sub, AArch64smull,
      SMLSLv8i8_v8i16, SMLSLv4i16_v4i32, SMLSLv2i32_v2i64>;
 
+
+multiclass Neon_addl_extract_patterns<SDPatternOperator opnode, SDPatternOperator ext, string Inst> {
+  def : Pat<(v4i16 (opnode (extract_subvector (ext (v8i8 V64:$Rn)), (i64 0)),
+                           (extract_subvector (ext (v8i8 V64:$Rm)), (i64 0)))),
+            (EXTRACT_SUBREG (v8i16 (!cast<Instruction>(Inst#"Lv8i8_v8i16") V64:$Rn, V64:$Rm)), dsub)>;
+  def : Pat<(v2i32 (opnode (extract_subvector (ext (v4i16 V64:$Rn)), (i64 0)),
+                           (extract_subvector (ext (v4i16 V64:$Rm)), (i64 0)))),
+            (EXTRACT_SUBREG (v4i32 (!cast<Instruction>(Inst#"Lv4i16_v4i32") V64:$Rn, V64:$Rm)), dsub)>;
+  def : Pat<(v1i64 (opnode (extract_subvector (ext (v2i32 V64:$Rn)), (i64 0)),
+                           (extract_subvector (ext (v2i32 V64:$Rm)), (i64 0)))),
+            (EXTRACT_SUBREG (v2i64 (!cast<Instruction>(Inst#"Lv2i32_v2i64") V64:$Rn, V64:$Rm)), dsub)>;
+
+  def : Pat<(v4i16 (opnode (v4i16 V64:$Rn),
+                           (extract_subvector (ext (v8i8 V64:$Rm)), (i64 0)))),
+            (EXTRACT_SUBREG (v8i16 (!cast<Instruction>(Inst#"Wv8i8_v8i16") (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), V64:$Rn, dsub), V64:$Rm)), dsub)>;
+  def : Pat<(v2i32 (opnode (v2i32 V64:$Rn),
+                           (extract_subvector (ext (v4i16 V64:$Rm)), (i64 0)))),
+            (EXTRACT_SUBREG (v4i32 (!cast<Instruction>(Inst#"Wv4i16_v4i32") (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), V64:$Rn, dsub), V64:$Rm)), dsub)>;
+  def : Pat<(v1i64 (opnode (v1i64 V64:$Rn),
+                           (extract_subvector (ext (v2i32 V64:$Rm)), (i64 0)))),
+            (EXTRACT_SUBREG (v2i64 (!cast<Instruction>(Inst#"Wv2i32_v2i64") (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), V64:$Rn, dsub), V64:$Rm)), dsub)>;
+}
+
+defm : Neon_addl_extract_patterns<add, zanyext, "UADD">;
+defm : Neon_addl_extract_patterns<add, sext, "SADD">;
+defm : Neon_addl_extract_patterns<sub, zanyext, "USUB">;
+defm : Neon_addl_extract_patterns<sub, sext, "SSUB">;
+
 // CodeGen patterns for addhn and subhn instructions, which can actually be
 // written in LLVM IR without too much difficulty.
 

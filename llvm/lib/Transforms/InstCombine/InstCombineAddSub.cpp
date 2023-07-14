@@ -1479,6 +1479,11 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
        match(RHS, m_ZExt(m_NUWSub(m_Value(B), m_Specific(A))))))
     return new ZExtInst(B, LHS->getType());
 
+  // zext(A) + sext(A) --> 0 if A is i1
+  if (match(&I, m_c_BinOp(m_ZExt(m_Value(A)), m_SExt(m_Deferred(A)))) &&
+      A->getType()->isIntOrIntVectorTy(1))
+    return replaceInstUsesWith(I, Constant::getNullValue(I.getType()));
+
   // A+B --> A|B iff A and B have no bits set in common.
   if (haveNoCommonBitsSet(LHS, RHS, DL, &AC, &I, &DT))
     return BinaryOperator::CreateOr(LHS, RHS);

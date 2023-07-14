@@ -65,16 +65,20 @@ def __lldb_init_module(debugger, internal_dict):
         "-F lldbDataFormatters.ConstStringSummaryProvider "
         '-x "^lldb_private::ConstString$"'
     )
-    debugger.HandleCommand(
-        "type synthetic add -w llvm "
-        "-l lldbDataFormatters.PointerIntPairSynthProvider "
-        '-x "^llvm::PointerIntPair<.+>$"'
-    )
-    debugger.HandleCommand(
-        "type synthetic add -w llvm "
-        "-l lldbDataFormatters.PointerUnionSynthProvider "
-        '-x "^llvm::PointerUnion<.+>$"'
-    )
+
+    # The synthetic providers for PointerIntPair and PointerUnion are disabled
+    # because of a few issues. One example is template arguments that are
+    # non-pointer types that instead specialize PointerLikeTypeTraits.
+    # debugger.HandleCommand(
+    #     "type synthetic add -w llvm "
+    #     "-l lldbDataFormatters.PointerIntPairSynthProvider "
+    #     '-x "^llvm::PointerIntPair<.+>$"'
+    # )
+    # debugger.HandleCommand(
+    #     "type synthetic add -w llvm "
+    #     "-l lldbDataFormatters.PointerUnionSynthProvider "
+    #     '-x "^llvm::PointerUnion<.+>$"'
+    # )
 
 
 # Pretty printer for llvm::SmallVector/llvm::SmallVectorImpl

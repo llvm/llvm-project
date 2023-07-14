@@ -11,6 +11,7 @@ group("unittests") {
     "CodeGen:CodeGenTests",
     "CodeGen/GlobalISel:GlobalISelTests",
     "DWARFLinkerParallel:DWARFLinkerParallelTests",
+    "DebugInfo/BTF:DebugInfoBTFTests",
     "DebugInfo/CodeView:DebugInfoCodeViewTests",
     "DebugInfo/DWARF:DebugInfoDWARFTests",
     "DebugInfo/GSYM:DebugInfoGSYMTests",

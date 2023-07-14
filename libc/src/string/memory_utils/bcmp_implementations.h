@@ -1,4 +1,4 @@
-//===-- Implementation of bcmp --------------------------------------------===//
+//===-- Dispatch logic for bcmp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,164 +10,34 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BCMP_IMPLEMENTATIONS_H
 
 #include "src/__support/common.h"
-#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY LIBC_LOOP_NOUNROLL
-#include "src/__support/macros/properties/architectures.h"
-#include "src/string/memory_utils/generic/aligned_access.h"
-#include "src/string/memory_utils/generic/byte_per_byte.h"
-#include "src/string/memory_utils/op_aarch64.h"
-#include "src/string/memory_utils/op_builtin.h"
-#include "src/string/memory_utils/op_generic.h"
-#include "src/string/memory_utils/op_riscv.h"
-#include "src/string/memory_utils/op_x86.h"
+#include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
 
 #include <stddef.h> // size_t
 
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+#include "src/string/memory_utils/x86_64/bcmp_implementations.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_x86
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#include "src/string/memory_utils/aarch64/bcmp_implementations.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_aarch64
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#include "src/string/memory_utils/riscv/bcmp_implementations.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_riscv
+#else
+// We may want to error instead of defaulting to suboptimal implementation.
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_byte_per_byte
+#endif
+
 namespace __llvm_libc {
 
-#if defined(LIBC_TARGET_ARCH_IS_X86) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
-[[maybe_unused]] LIBC_INLINE BcmpReturnType
-inline_bcmp_generic_gt16(CPtr p1, CPtr p2, size_t count) {
-  return generic::Bcmp<uint64_t>::loop_and_tail_align_above(256, p1, p2, count);
-}
-#endif // defined(LIBC_TARGET_ARCH_IS_X86) ||
-       // defined(LIBC_TARGET_ARCH_IS_AARCH64)
-
-#if defined(LIBC_TARGET_ARCH_IS_X86)
-#if defined(__SSE4_1__)
-[[maybe_unused]] LIBC_INLINE BcmpReturnType
-inline_bcmp_x86_sse41_gt16(CPtr p1, CPtr p2, size_t count) {
-  if (count <= 32)
-    return generic::Bcmp<__m128i>::head_tail(p1, p2, count);
-  return generic::Bcmp<__m128i>::loop_and_tail_align_above(256, p1, p2, count);
-}
-#endif // __SSE4_1__
-
-#if defined(__AVX__)
-[[maybe_unused]] LIBC_INLINE BcmpReturnType
-inline_bcmp_x86_avx_gt16(CPtr p1, CPtr p2, size_t count) {
-  if (count <= 32)
-    return generic::Bcmp<__m128i>::head_tail(p1, p2, count);
-  if (count <= 64)
-    return generic::Bcmp<__m256i>::head_tail(p1, p2, count);
-  return generic::Bcmp<__m256i>::loop_and_tail_align_above(256, p1, p2, count);
-}
-#endif // __AVX__
-
-#if defined(__AVX512BW__)
-[[maybe_unused]] LIBC_INLINE BcmpReturnType
-inline_bcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2, size_t count) {
-  if (count <= 32)
-    return generic::Bcmp<__m128i>::head_tail(p1, p2, count);
-  if (count <= 64)
-    return generic::Bcmp<__m256i>::head_tail(p1, p2, count);
-  if (count <= 128)
-    return generic::Bcmp<__m512i>::head_tail(p1, p2, count);
-  return generic::Bcmp<__m512i>::loop_and_tail_align_above(256, p1, p2, count);
-}
-#endif // __AVX512BW__
-
-[[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_x86(CPtr p1, CPtr p2,
-                                                            size_t count) {
-  if (count == 0)
-    return BcmpReturnType::ZERO();
-  if (count == 1)
-    return generic::Bcmp<uint8_t>::block(p1, p2);
-  if (count == 2)
-    return generic::Bcmp<uint16_t>::block(p1, p2);
-  if (count == 3)
-    return generic::BcmpSequence<uint16_t, uint8_t>::block(p1, p2);
-  if (count == 4)
-    return generic::Bcmp<uint32_t>::block(p1, p2);
-  if (count == 5)
-    return generic::BcmpSequence<uint32_t, uint8_t>::block(p1, p2);
-  if (count == 6)
-    return generic::BcmpSequence<uint32_t, uint16_t>::block(p1, p2);
-  if (count == 7)
-    return generic::BcmpSequence<uint32_t, uint16_t, uint8_t>::block(p1, p2);
-  if (count == 8)
-    return generic::Bcmp<uint64_t>::block(p1, p2);
-  if (count <= 16)
-    return generic::Bcmp<uint64_t>::head_tail(p1, p2, count);
-#if defined(__AVX512BW__)
-  return inline_bcmp_x86_avx512bw_gt16(p1, p2, count);
-#elif defined(__AVX__)
-  return inline_bcmp_x86_avx_gt16(p1, p2, count);
-#elif defined(__SSE4_1__)
-  return inline_bcmp_x86_sse41_gt16(p1, p2, count);
-#else
-  return inline_bcmp_generic_gt16(p1, p2, count);
-#endif
-}
-#endif // defined(LIBC_TARGET_ARCH_IS_X86)
-
-#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
-[[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_aarch64(CPtr p1,
-                                                                CPtr p2,
-                                                                size_t count) {
-  if (LIBC_LIKELY(count <= 32)) {
-    if (LIBC_UNLIKELY(count >= 16)) {
-      return aarch64::Bcmp<16>::head_tail(p1, p2, count);
-    }
-    switch (count) {
-    case 0:
-      return BcmpReturnType::ZERO();
-    case 1:
-      return generic::Bcmp<uint8_t>::block(p1, p2);
-    case 2:
-      return generic::Bcmp<uint16_t>::block(p1, p2);
-    case 3:
-      return generic::Bcmp<uint16_t>::head_tail(p1, p2, count);
-    case 4:
-      return generic::Bcmp<uint32_t>::block(p1, p2);
-    case 5:
-    case 6:
-    case 7:
-      return generic::Bcmp<uint32_t>::head_tail(p1, p2, count);
-    case 8:
-      return generic::Bcmp<uint64_t>::block(p1, p2);
-    case 9:
-    case 10:
-    case 11:
-    case 12:
-    case 13:
-    case 14:
-    case 15:
-      return generic::Bcmp<uint64_t>::head_tail(p1, p2, count);
-    }
-  }
-
-  if (count <= 64)
-    return aarch64::Bcmp<32>::head_tail(p1, p2, count);
-
-  // Aligned loop if > 256, otherwise normal loop
-  if (LIBC_UNLIKELY(count > 256)) {
-    if (auto value = aarch64::Bcmp<32>::block(p1, p2))
-      return value;
-    align_to_next_boundary<16, Arg::P1>(p1, p2, count);
-  }
-  return aarch64::Bcmp<32>::loop_and_tail(p1, p2, count);
-}
-#endif // defined(LIBC_TARGET_ARCH_IS_AARCH64)
-
-LIBC_INLINE BcmpReturnType inline_bcmp(CPtr p1, CPtr p2, size_t count) {
-#if defined(LIBC_TARGET_ARCH_IS_X86)
-  return inline_bcmp_x86(p1, p2, count);
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-  return inline_bcmp_aarch64(p1, p2, count);
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
-  return inline_bcmp_aligned_access_64bit(p1, p2, count);
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
-  return inline_bcmp_aligned_access_32bit(p1, p2, count);
-#else
-  return inline_bcmp_byte_per_byte(p1, p2, count);
-#endif
-}
-
 LIBC_INLINE int inline_bcmp(const void *p1, const void *p2, size_t count) {
-  return static_cast<int>(inline_bcmp(reinterpret_cast<CPtr>(p1),
-                                      reinterpret_cast<CPtr>(p2), count));
+  return static_cast<int>(LIBC_SRC_STRING_MEMORY_UTILS_BCMP(
+      reinterpret_cast<CPtr>(p1), reinterpret_cast<CPtr>(p2), count));
 }
 
 } // namespace __llvm_libc
+
+#undef LIBC_SRC_STRING_MEMORY_UTILS_BCMP
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BCMP_IMPLEMENTATIONS_H

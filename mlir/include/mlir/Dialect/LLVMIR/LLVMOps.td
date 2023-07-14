@@ -845,7 +845,6 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
     }]>,
     LLVM_TerminatorPassthroughOpBuilder
   ];
-  let hasVerifier = 1;
 }
 def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
@@ -880,7 +879,6 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
       build($_builder, $_state, condition, trueOperands, falseOperands, branchWeights,
       {}, trueDest, falseDest);
   }]>, LLVM_TerminatorPassthroughOpBuilder];
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1099,88 +1097,6 @@ def LLVM_MetadataOp : LLVM_Op<"metadata", [
 
   let hasCustomAssemblyFormat = 1;
   let hasRegionVerifier = 1;
-}
-
-def LLVM_AliasScopeDomainMetadataOp : LLVM_Op<"alias_scope_domain", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    OptionalAttr<StrAttr>:$description
-  );
-  let summary = "LLVM dialect alias.scope domain metadata.";
-  let description = [{
-    Defines a domain that may be associated with an alias scope.
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
-  }];
-  let assemblyFormat = "$sym_name attr-dict";
-}
-
-def LLVM_AliasScopeMetadataOp : LLVM_Op<"alias_scope", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    FlatSymbolRefAttr:$domain,
-    OptionalAttr<StrAttr>:$description
-  );
-  let summary = "LLVM dialect alias.scope metadata.";
-  let description = [{
-    Defines an alias scope that can be attached to a memory-accessing operation.
-    Such scopes can be used in combination with `noalias` metadata to indicate
-    that sets of memory-affecting operations in one scope do not alias with
-    memory-affecting operations in another scope.
-
-    Example:
-    ```mlir
-    module {
-      llvm.func @foo(%ptr1 : !llvm.ptr<i32>) {
-          %c0 = llvm.mlir.constant(0 : i32) : i32
-          %c4 = llvm.mlir.constant(4 : i32) : i32
-          %1 = llvm.ptrtoint %ptr1 : !llvm.ptr<i32> to i32
-          %2 = llvm.add %1, %c1 : i32
-          %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr<i32>
-          llvm.store %c0, %ptr1 { alias_scopes = [@metadata::@scope1], llvm.noalias = [@metadata::@scope2] } : !llvm.ptr<i32>
-          llvm.store %c4, %ptr2 { alias_scopes = [@metadata::@scope2], llvm.noalias = [@metadata::@scope1] } : !llvm.ptr<i32>
-          llvm.return
-      }
-
-      llvm.metadata @metadata {
-        llvm.alias_scope_domain @unused_domain
-        llvm.alias_scope_domain @domain { description = "Optional domain description"}
-        llvm.alias_scope @scope1 { domain = @domain }
-        llvm.alias_scope @scope2 { domain = @domain, description = "Optional scope description" }
-      }
-    }
-    ```
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
-  }];
-  let assemblyFormat = "$sym_name attr-dict";
-  let hasVerifier = 1;
-}
-
-def LLVM_AccessGroupMetadataOp : LLVM_Op<"access_group", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name
-  );
-  let summary = "LLVM dialect access group metadata.";
-  let description = [{
-    Defines an access group metadata that can be attached to any instruction
-    that potentially accesses memory. The access group may be attached to a
-    memory accessing instruction via the `llvm.access.group` metadata and
-    a branch instruction in the loop latch block via the
-    `llvm.loop.parallel_accesses` metadata.
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#llvm-access-group-metadata
-  }];
-  let assemblyFormat = "$sym_name attr-dict";
 }
 
 def LLVM_TBAARootMetadataOp : LLVM_Op<"tbaa_root", [

@@ -291,40 +291,9 @@ Type AllocaOp::getResultPtrElementType() {
 // LLVM::BrOp
 //===----------------------------------------------------------------------===//
 
-/// Check if the `loopAttr` references correct symbols.
-static LogicalResult verifyLoopAnnotationAttr(LoopAnnotationAttr loopAttr,
-                                              Operation *op) {
-  if (!loopAttr)
-    return success();
-  // If the `llvm.loop` attribute is present, enforce the following structure,
-  // which the module translation can assume.
-  ArrayRef<SymbolRefAttr> parallelAccesses = loopAttr.getParallelAccesses();
-  if (parallelAccesses.empty())
-    return success();
-  for (SymbolRefAttr accessGroupRef : parallelAccesses) {
-    StringAttr metadataName = accessGroupRef.getRootReference();
-    auto metadataOp = SymbolTable::lookupNearestSymbolFrom<LLVM::MetadataOp>(
-        op->getParentOp(), metadataName);
-    if (!metadataOp)
-      return op->emitOpError() << "expected '" << accessGroupRef
-                               << "' to reference a metadata op";
-    StringAttr accessGroupName = accessGroupRef.getLeafReference();
-    Operation *accessGroupOp =
-        SymbolTable::lookupNearestSymbolFrom(metadataOp, accessGroupName);
-    if (!accessGroupOp)
-      return op->emitOpError() << "expected '" << accessGroupRef
-                               << "' to reference an access_group op";
-  }
-  return success();
-}
-
 SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
   return SuccessorOperands(getDestOperandsMutable());
-}
-
-LogicalResult BrOp::verify() {
-  return verifyLoopAnnotationAttr(getLoopAnnotationAttr(), *this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -335,10 +304,6 @@ SuccessorOperands CondBrOp::getSuccessorOperands(unsigned index) {
   assert(index < getNumSuccessors() && "invalid successor index");
   return SuccessorOperands(index == 0 ? getTrueDestOperandsMutable()
                                       : getFalseDestOperandsMutable());
-}
-
-LogicalResult CondBrOp::verify() {
-  return verifyLoopAnnotationAttr(getLoopAnnotationAttr(), *this);
 }
 
 void CondBrOp::build(OpBuilder &builder, OperationState &result,
@@ -3085,21 +3050,6 @@ LogicalResult TBAATypeDescriptorOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// AliasScopeMetadataOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult AliasScopeMetadataOp::verify() {
-  Operation *domainOp = SymbolTable::lookupNearestSymbolFrom(
-      this->getOperation(), getDomainAttr());
-  if (!isa_and_nonnull<AliasScopeDomainMetadataOp>(domainOp)) {
-    return this->emitOpError()
-           << "expected '" << getDomain()
-           << "' to reference a domain operation in the same region";
-  }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // OpAsmDialectInterface
 //===----------------------------------------------------------------------===//
 
@@ -3109,7 +3059,8 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     return TypeSwitch<Attribute, AliasResult>(attr)
-        .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
+        .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
+              DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
               DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
               DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
               DINullTypeAttr, DISubprogramAttr, DISubroutineTypeAttr,

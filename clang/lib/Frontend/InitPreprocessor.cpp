@@ -574,6 +574,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
       Builder.defineMacro("__CLANG_RDC__");
     if (!LangOpts.HIP)
       Builder.defineMacro("__CUDA__");
+    if (LangOpts.GPUDefaultStream ==
+        LangOptions::GPUDefaultStreamKind::PerThread)
+      Builder.defineMacro("CUDA_API_PER_THREAD_DEFAULT_STREAM");
   }
   if (LangOpts.HIP) {
     Builder.defineMacro("__HIP__");
