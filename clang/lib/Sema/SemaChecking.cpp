@@ -11077,12 +11077,15 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
   assert(Match != ArgType::MatchPromotion);
   // Look through unscoped enums to their underlying type.
   bool IsEnum = false;
+  bool IsScopedEnum = false;
   if (auto EnumTy = ExprTy->getAs<EnumType>()) {
     if (EnumTy->isUnscopedEnumerationType()) {
       ExprTy = EnumTy->getDecl()->getIntegerType();
       // This controls whether we're talking about the underlying type or not,
       // which we only want to do when it's an unscoped enum.
       IsEnum = true;
+    } else {
+      IsScopedEnum = true;
     }
   }
 
@@ -11148,7 +11151,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
 
     CharSourceRange SpecRange = getSpecifierRange(StartSpecifier, SpecifierLen);
 
-    if (IntendedTy == ExprTy && !ShouldNotPrintDirectly) {
+    if (IntendedTy == ExprTy && !ShouldNotPrintDirectly && !IsScopedEnum) {
       unsigned Diag;
       switch (Match) {
       case ArgType::Match:
@@ -11184,12 +11187,18 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
       // if necessary).
       SmallString<16> CastBuf;
       llvm::raw_svector_ostream CastFix(CastBuf);
-      CastFix << "(";
-      IntendedTy.print(CastFix, S.Context.getPrintingPolicy());
-      CastFix << ")";
+      CastFix << (S.LangOpts.CPlusPlus ? "static_cast<" : "(");
+      if (IsScopedEnum) {
+        CastFix << AT.getRepresentativeType(S.Context).getAsString(
+            S.Context.getPrintingPolicy());
+      } else {
+        IntendedTy.print(CastFix, S.Context.getPrintingPolicy());
+      }
+      CastFix << (S.LangOpts.CPlusPlus ? ">" : ")");
 
       SmallVector<FixItHint,4> Hints;
-      if (!AT.matchesType(S.Context, IntendedTy) || ShouldNotPrintDirectly)
+      if ((!AT.matchesType(S.Context, IntendedTy) && !IsScopedEnum) ||
+          ShouldNotPrintDirectly)
         Hints.push_back(FixItHint::CreateReplacement(SpecRange, os.str()));
 
       if (const CStyleCastExpr *CCast = dyn_cast<CStyleCastExpr>(E)) {
@@ -11197,7 +11206,7 @@ CheckPrintfHandler::checkFormatExpr(const analyze_printf::PrintfSpecifier &FS,
         SourceRange CastRange(CCast->getLParenLoc(), CCast->getRParenLoc());
         Hints.push_back(FixItHint::CreateReplacement(CastRange, CastFix.str()));
 
-      } else if (!requiresParensToAddCast(E)) {
+      } else if (!requiresParensToAddCast(E) && !S.LangOpts.CPlusPlus) {
         // If the expression has high enough precedence,
         // just write the C-style cast.
         Hints.push_back(
