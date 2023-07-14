@@ -3481,18 +3481,10 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
 static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
   SmallVector<StringRef, 3> elidedAttrs;
   elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
-  if (op.permutation_map().isMinorIdentity())
+  if (op.getPermutationMap().isMinorIdentity())
     elidedAttrs.push_back(op.getPermutationMapAttrStrName());
-  bool elideInBounds = true;
-  if (auto inBounds = op.in_bounds()) {
-    for (auto attr : *inBounds) {
-      if (llvm::cast<BoolAttr>(attr).getValue()) {
-        elideInBounds = false;
-        break;
-      }
-    }
-  }
-  if (elideInBounds)
+  // Elide in_bounds attribute if all dims are out-of-bounds.
+  if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
     elidedAttrs.push_back(op.getInBoundsAttrStrName());
   p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
 }
