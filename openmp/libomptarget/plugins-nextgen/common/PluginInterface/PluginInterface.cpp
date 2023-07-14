@@ -1346,8 +1346,7 @@ int32_t __tgt_rtl_deinit_device(int32_t DeviceId) {
 int32_t __tgt_rtl_number_of_devices() { return Plugin::get().getNumDevices(); }
 
 int __tgt_rtl_number_of_team_procs(int DeviceId) {
-  // TODO have this find and return the correct number of CUs
-  return Plugin::get().getDevice(DeviceId).getDefaultNumThreads();
+  return Plugin::get().getDevice(DeviceId).getNumComputeUnits();
 }
 
 bool __tgt_rtl_has_apu_device() { return Plugin::get().hasAPUDevice(); }
