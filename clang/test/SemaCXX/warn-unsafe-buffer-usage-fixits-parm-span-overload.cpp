@@ -46,11 +46,11 @@ namespace NS {
     int tmp;
     tmp = p[5];
   }
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid foo(int *p) {return foo(std::span<int>(p, <# size #>));}\n"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void foo(int *p) {return foo(std::span<int>(p, <# size #>));}\n"
 
   // Similarly, `NS::bar` is distinct from `bar`:
   void bar(int *p);
-  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:3}:"{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\n"
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:3}:"{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} "
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:19-[[@LINE-2]]:19}:";\nvoid bar(std::span<int> p)"
 } // end of namespace NS
 
@@ -60,7 +60,7 @@ void NS::bar(int *p) {
   int tmp;
   tmp = p[5];
 }
-// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid NS::bar(int *p) {return NS::bar(std::span<int>(p, <# size #>));}\n"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void NS::bar(int *p) {return NS::bar(std::span<int>(p, <# size #>));}\n"
 
 namespace NESTED {
   void alpha(int);
@@ -74,7 +74,7 @@ namespace NESTED {
       int tmp;
       tmp = p[5];
     }
-    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:6-[[@LINE-1]]:6}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid alpha(int *p) {return alpha(std::span<int>(p, <# size #>));}\n"
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:6-[[@LINE-1]]:6}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void alpha(int *p) {return alpha(std::span<int>(p, <# size #>));}\n"
   }
 }
 
