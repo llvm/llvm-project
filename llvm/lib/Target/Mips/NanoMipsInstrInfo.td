@@ -407,6 +407,7 @@ def JRC_NM : IndirectBranchNM<"jrc", GPR32NMOpnd>;
 
 let isCodeGenOnly = 1, hasNoSchedulingInfo = 1,
     hasDelaySlot = 0, isBranch = 1,
+    isBarrier = 1,
    isTerminator = 1,
    hasDelaySlot = 0,
    isCTI = 1 in

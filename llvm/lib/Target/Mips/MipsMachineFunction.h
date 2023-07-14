@@ -101,7 +101,7 @@ public:
     if ((unsigned)Idx >= JumpTableEntryInfo.size())
       JumpTableEntryInfo.resize(Idx + 1);
     if (!JumpTableEntryInfo[Idx])
-      JumpTableEntryInfo[Idx] = new NanoMipsJumpTableInfo(Size, Sym, Sign);
+      JumpTableEntryInfo[Idx] = new NanoMipsJumpTableInfo(Sym, Size, Sign);
     else {
       JumpTableEntryInfo[Idx]->Size = Size;
       JumpTableEntryInfo[Idx]->Symbol = Sym;
@@ -163,8 +163,8 @@ private:
     MCSymbol *Symbol;
     unsigned Size;
     bool Signed;
-    NanoMipsJumpTableInfo(unsigned Size, MCSymbol *Sym, bool Sign)
-        : Size(Size), Symbol(Sym), Signed(Sign) {}
+    NanoMipsJumpTableInfo(MCSymbol *Sym, unsigned Size, bool Sign)
+        : Symbol(Sym), Size(Size), Signed(Sign) {}
   };
 
   SmallVector<NanoMipsJumpTableInfo *, 2> JumpTableEntryInfo;
