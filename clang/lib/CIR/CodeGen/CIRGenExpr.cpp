@@ -182,7 +182,14 @@ static Address buildPointerWithAlignment(const Expr *E,
 
   // Unary &.
   if (const UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
-    assert(0 && "not implemented");
+    // TODO(cir): maybe we should use cir.unary for pointers here instead.
+    if (UO->getOpcode() == UO_AddrOf) {
+      LValue LV = CGF.buildLValue(UO->getSubExpr());
+      if (BaseInfo)
+        *BaseInfo = LV.getBaseInfo();
+      assert(UnimplementedFeature::tbaa());
+      return LV.getAddress();
+    }
   }
 
   // TODO: conditional operators, comma.

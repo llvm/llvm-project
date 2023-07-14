@@ -180,3 +180,32 @@ void doubles(double d) {
   // CHECK: %[[#D_BOOL:]] = cir.cast(float_to_bool, %{{[0-9]+}} : f64), !cir.bool
   // CHECK: = cir.unary(not, %[[#D_BOOL]]) : !cir.bool, !cir.bool
 }
+
+void pointers(int *p) {
+// CHECK: cir.func @{{[^ ]+}}pointers
+  // CHECK: %[[#P:]] = cir.alloca !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+
+  +p;
+  // CHECK: cir.unary(plus, %{{.+}}) : !cir.ptr<!s32i>, !cir.ptr<!s32i>
+
+  ++p;
+  // CHECK:  %[[#INC:]] = cir.const(#cir.int<1> : !s32i) : !s32i
+  // CHECK:  %[[#RES:]] = cir.ptr_stride(%{{.+}} : !cir.ptr<!s32i>, %[[#INC]] : !s32i), !cir.ptr<!s32i>
+  // CHECK:  cir.store %[[#RES]], %[[#P]] : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+  --p;
+  // CHECK:  %[[#DEC:]] = cir.const(#cir.int<-1> : !s32i) : !s32i
+  // CHECK:  %[[#RES:]] = cir.ptr_stride(%{{.+}} : !cir.ptr<!s32i>, %[[#DEC]] : !s32i), !cir.ptr<!s32i>
+  // CHECK:  cir.store %[[#RES]], %[[#P]] : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+  p++;
+  // CHECK:  %[[#INC:]] = cir.const(#cir.int<1> : !s32i) : !s32i
+  // CHECK:  %[[#RES:]] = cir.ptr_stride(%{{.+}} : !cir.ptr<!s32i>, %[[#INC]] : !s32i), !cir.ptr<!s32i>
+  // CHECK:  cir.store %[[#RES]], %[[#P]] : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+  p--;
+  // CHECK:  %[[#DEC:]] = cir.const(#cir.int<-1> : !s32i) : !s32i
+  // CHECK:  %[[#RES:]] = cir.ptr_stride(%{{.+}} : !cir.ptr<!s32i>, %[[#DEC]] : !s32i), !cir.ptr<!s32i>
+  // CHECK:  cir.store %[[#RES]], %[[#P]] : !cir.ptr<!s32i>, cir.ptr <!cir.ptr<!s32i>>
+
+  !p;
+  // %[[BOOLPTR:]] = cir.cast(ptr_to_bool, %15 : !cir.ptr<!s32i>), !cir.bool
+  // cir.unary(not, %[[BOOLPTR]]) : !cir.bool, !cir.bool
+}
