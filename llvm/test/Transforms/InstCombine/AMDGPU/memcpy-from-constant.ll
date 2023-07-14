@@ -25,7 +25,7 @@ define i8 @memcpy_constant_arg_ptr_to_alloca_load_metadata(ptr addrspace(4) noal
 ; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_load_metadata(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [32 x i8], ptr addrspace(4) [[ARG:%.*]], i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(4) [[GEP]], align 1, !noalias !0
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(4) [[GEP]], align 1, !noalias [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %alloca = alloca [32 x i8], align 4, addrspace(5)
@@ -185,7 +185,7 @@ bb:
 define amdgpu_kernel void @byref_infloop_metadata(ptr %scratch, ptr addrspace(4) byref(%struct.ty) align 4 %arg) local_unnamed_addr #1 {
 ; CHECK-LABEL: @byref_infloop_metadata(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i32(ptr noundef nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], ptr addrspace(4) noundef align 4 dereferenceable(16) [[ARG:%.*]], i32 16, i1 false), !noalias !0
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p4.i32(ptr noundef nonnull align 4 dereferenceable(16) [[SCRATCH:%.*]], ptr addrspace(4) noundef align 4 dereferenceable(16) [[ARG:%.*]], i32 16, i1 false), !noalias [[META0]]
 ; CHECK-NEXT:    ret void
 ;
 bb:
