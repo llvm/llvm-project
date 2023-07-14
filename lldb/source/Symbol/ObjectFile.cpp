@@ -357,6 +357,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeDWARFAppleObjC:
           case eSectionTypeSwiftModules:
           case eSectionTypeDWARFGNUDebugAltLink:
+          case eSectionTypeCTF:
             return AddressClass::eDebug;
           case eSectionTypeEHFrame:
           case eSectionTypeARMexidx:
