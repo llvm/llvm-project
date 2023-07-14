@@ -4475,7 +4475,12 @@ bool CombinerHelper::tryReassocBinOp(unsigned Opc, Register DstReg,
   Register OpLHSLHS = OpLHSDef->getOperand(1).getReg();
   Register OpLHSRHS = OpLHSDef->getOperand(2).getReg();
 
-  if (isConstantOrConstantSplatVector(*MRI.getVRegDef(OpLHSRHS), MRI)) {
+  // If the inner op is (X op C), pull the constant out so it can be folded with
+  // other constants in the expression tree. Folding is not guaranteed so we
+  // might have (C1 op C2). In that case do not pull a constant out because it
+  // won't help and can lead to infinite loops.
+  if (isConstantOrConstantSplatVector(*MRI.getVRegDef(OpLHSRHS), MRI) &&
+      !isConstantOrConstantSplatVector(*MRI.getVRegDef(OpLHSLHS), MRI)) {
     if (isConstantOrConstantSplatVector(*OpRHSDef, MRI)) {
       // (Opc (Opc X, C1), C2) -> (Opc X, (Opc C1, C2))
       MatchInfo = [=](MachineIRBuilder &B) {
