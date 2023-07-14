@@ -268,10 +268,10 @@ The current vendor extensions supported are:
   LLVM implements `version 1.0.0 of the SiFive Vector Coprocessor Interface (VCIX) Software Specification <https://sifive.cdn.prismic.io/sifive/c3829e36-8552-41f0-a841-79945784241b_vcix-spec-software.pdf>`_ by SiFive.  All instructions are prefixed with `sf.vc.` as described in the specification, and the riscv-toolchain-convention document linked above.
 
 ``XCVbitmanip``
-  LLVM implements `version 1.3.1 of the Core-V bit manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`_ by Core-V.  All instructions are prefixed with `cv.` as described in the specification.
+  LLVM implements `version 1.0.0 of the CORE-V Bit Manipulation custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.` as described in the specification.
 
 ``XCVmac``
-  LLVM implements `version 1.3.1 of the Core-V Multiply-Accumulate (MAC) custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`_ by Core-V.  All instructions are prefixed with `cv.mac.` as described in the specification. These instructions are only available for riscv32 at this time.
+  LLVM implements `version 1.0.0 of the CORE-V Multiply-Accumulate (MAC) custom instructions specification <https://github.com/openhwgroup/cv32e40p/blob/4f024fe4b15a68b76615b0630c07a6745c620da7/docs/source/instruction_set_extensions.rst>`_ by OpenHW Group.  All instructions are prefixed with `cv.mac` as described in the specification. These instructions are only available for riscv32 at this time.
 
 ``XSfcie``
   LLVM implements `version 1.0.0 of the SiFive Custom Instruction Extension (CIE) Software Specification <https://sifive.cdn.prismic.io/sifive/767804da-53b2-4893-97d5-b7c030ae0a94_s76mc_core_complex_manual_21G3.pdf>`_ by SiFive.  All custom instruction are added as described in the specification, and the riscv-toolchain-convention document linked above. These instructions are only available for S76 processor at this time.
