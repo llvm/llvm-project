@@ -24,6 +24,38 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::objdump;
 
+namespace {
+template <typename ELFT> class ELFDumper : public Dumper {
+public:
+  ELFDumper(const ELFObjectFile<ELFT> &O) : Dumper(O), Obj(O) {}
+  void printPrivateHeaders(bool MachOOnlyFirst) override;
+
+private:
+  const ELFObjectFile<ELFT> &Obj;
+
+  const ELFFile<ELFT> &getELFFile() const { return Obj.getELFFile(); }
+  void printDynamicSection();
+  void printProgramHeaders();
+  void printSymbolVersion();
+};
+} // namespace
+
+template <class ELFT>
+static std::unique_ptr<Dumper> createDumper(const ELFObjectFile<ELFT> &Obj) {
+  return std::make_unique<ELFDumper<ELFT>>(Obj);
+}
+
+std::unique_ptr<Dumper>
+objdump::createELFDumper(const object::ELFObjectFileBase &Obj) {
+  if (const auto *O = dyn_cast<ELF32LEObjectFile>(&Obj))
+    return createDumper(*O);
+  if (const auto *O = dyn_cast<ELF32BEObjectFile>(&Obj))
+    return createDumper(*O);
+  if (const auto *O = dyn_cast<ELF64LEObjectFile>(&Obj))
+    return createDumper(*O);
+  return createDumper(cast<ELF64BEObjectFile>(Obj));
+}
+
 template <class ELFT>
 static Expected<StringRef> getDynamicStrTab(const ELFFile<ELFT> &Elf) {
   auto DynamicEntriesOrError = Elf.dynamicEntries();
@@ -166,11 +198,11 @@ uint64_t objdump::getELFSectionLMA(const object::ELFSectionRef &Sec) {
   return getSectionLMA(ELFObj->getELFFile(), Sec);
 }
 
-template <class ELFT>
-static void printDynamicSection(const ELFFile<ELFT> &Elf, StringRef Filename) {
+template <class ELFT> void ELFDumper<ELFT>::printDynamicSection() {
+  const ELFFile<ELFT> &Elf = getELFFile();
   auto DynamicEntriesOrErr = Elf.dynamicEntries();
   if (!DynamicEntriesOrErr) {
-    reportWarning(toString(DynamicEntriesOrErr.takeError()), Filename);
+    reportWarning(toString(DynamicEntriesOrErr.takeError()), Obj.getFileName());
     return;
   }
   ArrayRef<typename ELFT::Dyn> DynamicEntries = *DynamicEntriesOrErr;
@@ -200,21 +232,20 @@ static void printDynamicSection(const ELFFile<ELFT> &Elf, StringRef Filename) {
         outs() << (Data + Dyn.d_un.d_val) << "\n";
         continue;
       }
-      reportWarning(toString(StrTabOrErr.takeError()), Filename);
+      reportWarning(toString(StrTabOrErr.takeError()), Obj.getFileName());
       consumeError(StrTabOrErr.takeError());
     }
     outs() << format(Fmt, (uint64_t)Dyn.d_un.d_val);
   }
 }
 
-template <class ELFT>
-static void printProgramHeaders(const ELFFile<ELFT> &Obj, StringRef FileName) {
+template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
   outs() << "\nProgram Header:\n";
-  auto ProgramHeaderOrError = Obj.program_headers();
+  auto ProgramHeaderOrError = getELFFile().program_headers();
   if (!ProgramHeaderOrError) {
     reportWarning("unable to read program headers: " +
                       toString(ProgramHeaderOrError.takeError()),
-                  FileName);
+                  Obj.getFileName());
     return;
   }
 
@@ -338,9 +369,9 @@ static void printSymbolVersionDefinition(const typename ELFT::Shdr &Shdr,
   }
 }
 
-template <class ELFT>
-static void printSymbolVersionInfo(const ELFFile<ELFT> &Elf,
-                                   StringRef FileName) {
+template <class ELFT> void ELFDumper<ELFT>::printSymbolVersion() {
+  const ELFFile<ELFT> &Elf = getELFFile();
+  StringRef FileName = Obj.getFileName();
   ArrayRef<typename ELFT::Shdr> Sections =
       unwrapOrError(Elf.sections(), FileName);
   for (const typename ELFT::Shdr &Shdr : Sections) {
@@ -361,35 +392,8 @@ static void printSymbolVersionInfo(const ELFFile<ELFT> &Elf,
   }
 }
 
-void objdump::printELFFileHeader(const object::ObjectFile *Obj) {
-  if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
-    printProgramHeaders(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
-    printProgramHeaders(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(Obj))
-    printProgramHeaders(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
-    printProgramHeaders(ELFObj->getELFFile(), Obj->getFileName());
-}
-
-void objdump::printELFDynamicSection(const object::ObjectFile *Obj) {
-  if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
-    printDynamicSection(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
-    printDynamicSection(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(Obj))
-    printDynamicSection(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
-    printDynamicSection(ELFObj->getELFFile(), Obj->getFileName());
-}
-
-void objdump::printELFSymbolVersionInfo(const object::ObjectFile *Obj) {
-  if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
-    printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
-    printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(Obj))
-    printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
-  else if (const auto *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
-    printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
+template <class ELFT> void ELFDumper<ELFT>::printPrivateHeaders(bool) {
+  printProgramHeaders();
+  printDynamicSection();
+  printSymbolVersion();
 }

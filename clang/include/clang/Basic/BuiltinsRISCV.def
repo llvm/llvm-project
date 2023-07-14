@@ -18,10 +18,10 @@
 // Zbb extension
 TARGET_BUILTIN(__builtin_riscv_orc_b_32, "UZiUZi", "nc", "zbb")
 TARGET_BUILTIN(__builtin_riscv_orc_b_64, "UWiUWi", "nc", "zbb,64bit")
-TARGET_BUILTIN(__builtin_riscv_clz_32, "iUZi", "nc", "zbb|xtheadbb")
-TARGET_BUILTIN(__builtin_riscv_clz_64, "iUWi", "nc", "zbb|xtheadbb,64bit")
-TARGET_BUILTIN(__builtin_riscv_ctz_32, "iUZi", "nc", "zbb")
-TARGET_BUILTIN(__builtin_riscv_ctz_64, "iUWi", "nc", "zbb,64bit")
+TARGET_BUILTIN(__builtin_riscv_clz_32, "UiUZi", "nc", "zbb|xtheadbb")
+TARGET_BUILTIN(__builtin_riscv_clz_64, "UiUWi", "nc", "zbb|xtheadbb,64bit")
+TARGET_BUILTIN(__builtin_riscv_ctz_32, "UiUZi", "nc", "zbb")
+TARGET_BUILTIN(__builtin_riscv_ctz_64, "UiUWi", "nc", "zbb,64bit")
 
 // Zbc or Zbkc extension
 TARGET_BUILTIN(__builtin_riscv_clmul, "LiLiLi", "nc", "zbc|zbkc")
