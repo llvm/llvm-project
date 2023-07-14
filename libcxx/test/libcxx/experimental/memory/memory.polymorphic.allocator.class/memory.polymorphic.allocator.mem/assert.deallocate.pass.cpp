@@ -14,9 +14,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03
+// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
-
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>

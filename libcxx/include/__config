@@ -208,6 +208,19 @@
 
 // HARDENING {
 
+// TODO(hardening): remove this in LLVM 18.
+// This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
+// equivalent to setting the hardened mode.
+#  ifdef _LIBCPP_ENABLE_ASSERTIONS
+#    warning "_LIBCPP_ENABLE_ASSERTIONS is deprecated, please use _LIBCPP_ENABLE_HARDENED_MODE instead."
+#    if _LIBCPP_ENABLE_ASSERTIONS != 0 && _LIBCPP_ENABLE_ASSERTIONS != 1
+#      error "_LIBCPP_ENABLE_ASSERTIONS must be set to 0 or 1"
+#    endif
+#    if _LIBCPP_ENABLE_ASSERTIONS
+#      define _LIBCPP_ENABLE_HARDENED_MODE 1
+#    endif
+#  endif
+
 // Enables the hardened mode which consists of all checks intended to be used in production. Hardened mode prioritizes
 // security-critical checks that can be done with relatively little overhead in constant time. Mutually exclusive with
 // `_LIBCPP_ENABLE_DEBUG_MODE`.
@@ -245,26 +258,21 @@
 // Hardened mode checks.
 #  if _LIBCPP_ENABLE_HARDENED_MODE
 
-// Automatically enable assertions in hardened mode (unless the user explicitly turned them off).
-#    ifndef _LIBCPP_ENABLE_ASSERTIONS
-#      define _LIBCPP_ENABLE_ASSERTIONS 1
-#    endif
-
+// TODO(hardening): Once we categorize assertions, only enable the ones that we really want here.
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message) _LIBCPP_ASSERT(expression, message)
 // TODO(hardening): more checks to be added here...
 
 // Debug mode checks.
 #  elif _LIBCPP_ENABLE_DEBUG_MODE
 
-// Automatically enable assertions in debug mode (unless the user explicitly turned them off).
-#    ifndef _LIBCPP_ENABLE_ASSERTIONS
-#      define _LIBCPP_ENABLE_ASSERTIONS 1
-#    endif
-
+// TODO(hardening): Once we categorize assertions, only enable the ones that we really want here.
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message) _LIBCPP_ASSERT(expression, message)
 // TODO(hardening): more checks to be added here...
 
 // Disable all checks if neither the hardened mode nor the debug mode is enabled.
 #  else
 
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message) _LIBCPP_ASSUME(expression)
 // TODO: more checks to be added here...
 
 #  endif // _LIBCPP_ENABLE_HARDENED_MODE
