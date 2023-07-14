@@ -1326,27 +1326,45 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
   Register DstReg = I.getOperand(0).getReg();
   const unsigned Size = MRI->getType(DstReg).getSizeInBits();
   const bool Is64 = Size == 64;
+  const bool IsWave32 = (STI.getWavefrontSize() == 32);
 
-  if (Size != STI.getWavefrontSize())
+  // In the common case, the return type matches the wave size.
+  // However we also support emitting i64 ballots in wave32 mode.
+  if (Size != STI.getWavefrontSize() && (!Is64 || !IsWave32))
     return false;
 
   std::optional<ValueAndVReg> Arg =
       getIConstantVRegValWithLookThrough(I.getOperand(2).getReg(), *MRI);
+
+  const auto BuildCopy = [&](Register SrcReg) {
+    if (Size == STI.getWavefrontSize()) {
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg)
+          .addReg(SrcReg)
+          ->dump();
+      return;
+    }
+
+    // If emitting a i64 ballot in wave32, fill the upper bits with zeroes.
+    Register HiReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_MOV_B32), HiReg).addImm(0);
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
+        .addReg(SrcReg)
+        .addImm(AMDGPU::sub0)
+        .addReg(HiReg)
+        .addImm(AMDGPU::sub1);
+  };
 
   if (Arg) {
     const int64_t Value = Arg->Value.getSExtValue();
     if (Value == 0) {
       unsigned Opcode = Is64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
       BuildMI(*BB, &I, DL, TII.get(Opcode), DstReg).addImm(0);
-    } else if (Value == -1) { // all ones
-      Register SrcReg = Is64 ? AMDGPU::EXEC : AMDGPU::EXEC_LO;
-      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(SrcReg);
-    } else
+    } else if (Value == -1) // all ones
+      BuildCopy(IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC);
+    else
       return false;
-  } else {
-    Register SrcReg = I.getOperand(2).getReg();
-    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), DstReg).addReg(SrcReg);
-  }
+  } else
+    BuildCopy(I.getOperand(2).getReg());
 
   I.eraseFromParent();
   return true;
