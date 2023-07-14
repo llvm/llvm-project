@@ -76,8 +76,7 @@ static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
     const clang::FrontendOptions &feOptions, mlir::ModuleOp mlirMod,
     std::unique_ptr<mlir::MLIRContext> mlirCtx, llvm::LLVMContext &llvmCtx) {
   if (feOptions.ClangIRDirectLowering)
-    return direct::lowerDirectlyFromCIRToLLVMIR(mlirMod, std::move(mlirCtx),
-                                                llvmCtx);
+    return direct::lowerDirectlyFromCIRToLLVMIR(mlirMod, llvmCtx);
   else
     return lowerFromCIRToMLIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
 }

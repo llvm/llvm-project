@@ -1,4 +1,4 @@
-// RUN: cir-tool %s -cir-merge-cleanups -o %t.out.cir
+// RUN: cir-opt %s -cir-merge-cleanups -o %t.out.cir
 // RUN: FileCheck --input-file=%t.out.cir %s
 
 #false = #cir.bool<false> : !cir.bool

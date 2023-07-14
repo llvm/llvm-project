@@ -31,7 +31,6 @@ namespace cir {
 namespace direct {
 std::unique_ptr<llvm::Module>
 lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp theModule,
-                             std::unique_ptr<mlir::MLIRContext> mlirCtx,
                              llvm::LLVMContext &llvmCtx);
 }
 

@@ -85,7 +85,8 @@ tool_dirs = [config.clang_tools_dir, config.llvm_tools_dir]
 tools = [
     "apinotes-test",
     "c-index-test",
-    "cir-tool",
+    "cir-opt",
+    "cir-translate",
     "clang-diff",
     "clang-format",
     "clang-repl",

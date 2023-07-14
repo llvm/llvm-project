@@ -233,7 +233,7 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
     if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
       message(STATUS "${proj} project is enabled")
-      # ClangIR is integrated inside clang and also provides the cir-tool,
+      # ClangIR is integrated inside clang and also provides the cir-opt,
       # it needs some special handling.
       if ("${proj}" STREQUAL "cir")
         set(CLANG_ENABLE_CIR ON)

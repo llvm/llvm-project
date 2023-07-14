@@ -1,5 +1,5 @@
 // Test attempts to build bogus CIR
-// RUN: cir-tool %s -verify-diagnostics -split-input-file
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 !u32i = !cir.int<u, 32>
 
