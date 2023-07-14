@@ -10741,6 +10741,20 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMergeValues(RetOps, dl);
   }
 
+  case Intrinsic::ppc_mma_xxmfacc:
+  case Intrinsic::ppc_mma_xxmtacc: {
+    // Allow pre-isa-future subtargets to lower as normal.
+    if (!Subtarget.isISAFuture())
+      return SDValue();
+    // The intrinsics for xxmtacc and xxmfacc take one argument of
+    // type v512i1, for future cpu the corresponding wacc instruction
+    // dmxx[inst|extf]dmr512 is always generated for type v512i1, negating
+    // the need to produce the xxm[t|f]acc.
+    SDValue WideVec = Op.getOperand(1);
+    DAG.ReplaceAllUsesWith(Op, WideVec);
+    return SDValue();
+  }
+
   case Intrinsic::ppc_unpack_longdouble: {
     auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
     assert(Idx && (Idx->getSExtValue() == 0 || Idx->getSExtValue() == 1) &&
