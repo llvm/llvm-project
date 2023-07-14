@@ -73,6 +73,17 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
 }
 
 
+int getInternalParallelDepth(scf::ParallelOp op) {
+  int parallelDepth = 0;
+  for (auto parallelOp : op.getOps<scf::ParallelOp>())
+  {
+    int parallelDepth_tmp = getInternalParallelDepth(parallelOp) + 1;
+    if (parallelDepth_tmp > parallelDepth)
+      parallelDepth = parallelDepth_tmp;
+  }
+  return parallelDepth;
+}
+
 struct KokkosParallelEnv{
   KokkosParallelEnv(bool useHierarchicalParallelism) {
     useHierarchicalParallelism_ = useHierarchicalParallelism;
@@ -81,16 +92,19 @@ struct KokkosParallelEnv{
     useTeamThreadRange_ = false;
     useThreadVectorRange_ = false;
     useTeamVectorRange_ = false;
+    parallelDepth_ = -1;
   }
 
   KokkosParallelEnv(const KokkosParallelEnv &kokkosParallelEnv) {
     useHierarchicalParallelism_ = kokkosParallelEnv.useHierarchicalParallelism_;
     parallelLvl_ = kokkosParallelEnv.parallelLvl_;
+    parallelDepth_ = kokkosParallelEnv.parallelDepth_;
   }
 
   KokkosParallelEnv getInternalParallelEnv() {
     KokkosParallelEnv internalParallelEnv(*this);
     ++internalParallelEnv.parallelLvl_;
+    --internalParallelEnv.parallelDepth_;
     internalParallelEnv.insideTeamRange_ =  insideTeamRange_ || useTeamRange_;
     internalParallelEnv.insideTeamThreadRange_ = insideTeamThreadRange_ || useTeamThreadRange_;
     internalParallelEnv.insideThreadVectorRange_ = insideThreadVectorRange_ || useThreadVectorRange_;
@@ -103,14 +117,14 @@ struct KokkosParallelEnv{
   }
 
   bool useRangePolicy(int rank) {
-    if (parallelLvl_ == 0)
+    if (parallelLvl_ == 0 || (useHierarchicalParallelism_ && !insideTeamRange_ && parallelDepth_==0))
       return true;
     else
       return false;
   }
 
   bool useTeamRange(int rank) {
-    if (useHierarchicalParallelism_ && parallelLvl_==0 && rank==1)
+    if (useHierarchicalParallelism_ && parallelLvl_==0 && rank==1 && parallelDepth_>0)
       useTeamRange_ = true;
     else
       useTeamRange_ = false;
@@ -134,15 +148,15 @@ struct KokkosParallelEnv{
   }
 
   bool useTeamVectorRange(int rank) {
-    if (insideTeamRange_ && !insideTeamThreadRange_ && !insideThreadVectorRange_ && !insideTeamVectorRange_ && rank==1)
-      useTeamVectorRange_ = false; // TODO: To be changed
+    if (insideTeamRange_ && !insideTeamThreadRange_ && !insideThreadVectorRange_ && !insideTeamVectorRange_ && rank==1 && parallelDepth_==0)
+      useTeamVectorRange_ = true;
     else
       useTeamVectorRange_ = false;
     return useTeamVectorRange_;
   }
 
-  int getNumberInternalParallelDepth() {
-    return 0;
+  void computeInternalParallelDepth(scf::ParallelOp op) {
+    parallelDepth_ = getInternalParallelDepth(op);
   }
 
   bool insideTeamRange() {
@@ -152,6 +166,7 @@ struct KokkosParallelEnv{
   private:
     bool useHierarchicalParallelism_;
     int parallelLvl_;
+    int parallelDepth_;
     bool insideTeamRange_, insideTeamThreadRange_, insideThreadVectorRange_, insideTeamVectorRange_;
     bool useTeamRange_, useTeamThreadRange_, useThreadVectorRange_, useTeamVectorRange_;
 };
@@ -1162,6 +1177,8 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
       return failure();
   }
 
+  kokkosParallelEnv.computeInternalParallelDepth(op);
+
   int rank = inductionVars.size();
   const bool useTeamPolicy = kokkosParallelEnv.useTeamRange(rank);
   const bool usedInsideTeamPolicy = kokkosParallelEnv.insideTeamRange();
@@ -1206,7 +1223,9 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
   }
   else if(rank == 1)
   {
-    if (kokkosParallelEnv.useTeamThreadRange(rank))
+    if (kokkosParallelEnv.useTeamVectorRange(rank))
+      emitter << "(Kokkos::TeamVectorRange(member, (";
+    else if (kokkosParallelEnv.useTeamThreadRange(rank))
       emitter << "(Kokkos::TeamThreadRange(member, (";
     else if (kokkosParallelEnv.useThreadVectorRange(rank))
       emitter << "(Kokkos::ThreadVectorRange(member, (";
