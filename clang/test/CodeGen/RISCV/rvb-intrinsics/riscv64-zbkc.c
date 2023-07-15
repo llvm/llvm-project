@@ -2,7 +2,9 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zbkc -emit-llvm %s -o - \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZBKC
 
-// RV64ZBKC-LABEL: @clmul(
+#include <stdint.h>
+
+// RV64ZBKC-LABEL: @clmul_64(
 // RV64ZBKC-NEXT:  entry:
 // RV64ZBKC-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // RV64ZBKC-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8
@@ -13,11 +15,11 @@
 // RV64ZBKC-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.clmul.i64(i64 [[TMP0]], i64 [[TMP1]])
 // RV64ZBKC-NEXT:    ret i64 [[TMP2]]
 //
-long clmul(long a, long b) {
-  return __builtin_riscv_clmul(a, b);
+uint64_t clmul_64(uint64_t a, uint64_t b) {
+  return __builtin_riscv_clmul_64(a, b);
 }
 
-// RV64ZBKC-LABEL: @clmulh(
+// RV64ZBKC-LABEL: @clmulh_64(
 // RV64ZBKC-NEXT:  entry:
 // RV64ZBKC-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
 // RV64ZBKC-NEXT:    [[B_ADDR:%.*]] = alloca i64, align 8
@@ -28,6 +30,21 @@ long clmul(long a, long b) {
 // RV64ZBKC-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.clmulh.i64(i64 [[TMP0]], i64 [[TMP1]])
 // RV64ZBKC-NEXT:    ret i64 [[TMP2]]
 //
-long clmulh(long a, long b) {
-  return __builtin_riscv_clmulh(a, b);
+uint64_t clmulh_64(uint64_t a, uint64_t b) {
+  return __builtin_riscv_clmulh_64(a, b);
+}
+
+// RV64ZBKC-LABEL: @clmul_32(
+// RV64ZBKC-NEXT:  entry:
+// RV64ZBKC-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
+// RV64ZBKC-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
+// RV64ZBKC-NEXT:    store i32 [[A:%.*]], ptr [[A_ADDR]], align 4
+// RV64ZBKC-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
+// RV64ZBKC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
+// RV64ZBKC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR]], align 4
+// RV64ZBKC-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.clmul.i32(i32 [[TMP0]], i32 [[TMP1]])
+// RV64ZBKC-NEXT:    ret i32 [[TMP2]]
+//
+uint32_t clmul_32(uint32_t a, uint32_t b) {
+  return __builtin_riscv_clmul_32(a, b);
 }
