@@ -606,6 +606,10 @@ struct FragmentCompiler {
       Out.Apply.push_back([Value(**F.Designators)](const Params &, Config &C) {
         C.InlayHints.Designators = Value;
       });
+    if (F.BlockEnd)
+      Out.Apply.push_back([Value(**F.BlockEnd)](const Params &, Config &C) {
+        C.InlayHints.BlockEnd = Value;
+      });
     if (F.TypeNameLimit)
       Out.Apply.push_back(
           [Value(**F.TypeNameLimit)](const Params &, Config &C) {
