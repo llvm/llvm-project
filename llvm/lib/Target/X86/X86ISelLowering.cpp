@@ -3878,29 +3878,28 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
       return DAG.getLoad(
           ValVT, dl, Chain, PartAddr,
           MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
-    } else {
-      // This is not the first piece of an argument in memory. See if there is
-      // already a fixed stack object including this offset. If so, assume it
-      // was created by the PartOffset == 0 branch above and create a load from
-      // the appropriate offset into it.
-      int64_t PartBegin = VA.getLocMemOffset();
-      int64_t PartEnd = PartBegin + ValVT.getSizeInBits() / 8;
-      int FI = MFI.getObjectIndexBegin();
-      for (; MFI.isFixedObjectIndex(FI); ++FI) {
-        int64_t ObjBegin = MFI.getObjectOffset(FI);
-        int64_t ObjEnd = ObjBegin + MFI.getObjectSize(FI);
-        if (ObjBegin <= PartBegin && PartEnd <= ObjEnd)
-          break;
-      }
-      if (MFI.isFixedObjectIndex(FI)) {
-        SDValue Addr =
-            DAG.getNode(ISD::ADD, dl, PtrVT, DAG.getFrameIndex(FI, PtrVT),
-                        DAG.getIntPtrConstant(Ins[i].PartOffset, dl));
-        return DAG.getLoad(
-            ValVT, dl, Chain, Addr,
-            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI,
-                                              Ins[i].PartOffset));
-      }
+    }
+
+    // This is not the first piece of an argument in memory. See if there is
+    // already a fixed stack object including this offset. If so, assume it
+    // was created by the PartOffset == 0 branch above and create a load from
+    // the appropriate offset into it.
+    int64_t PartBegin = VA.getLocMemOffset();
+    int64_t PartEnd = PartBegin + ValVT.getSizeInBits() / 8;
+    int FI = MFI.getObjectIndexBegin();
+    for (; MFI.isFixedObjectIndex(FI); ++FI) {
+      int64_t ObjBegin = MFI.getObjectOffset(FI);
+      int64_t ObjEnd = ObjBegin + MFI.getObjectSize(FI);
+      if (ObjBegin <= PartBegin && PartEnd <= ObjEnd)
+        break;
+    }
+    if (MFI.isFixedObjectIndex(FI)) {
+      SDValue Addr =
+          DAG.getNode(ISD::ADD, dl, PtrVT, DAG.getFrameIndex(FI, PtrVT),
+                      DAG.getIntPtrConstant(Ins[i].PartOffset, dl));
+      return DAG.getLoad(ValVT, dl, Chain, Addr,
+                         MachinePointerInfo::getFixedStack(
+                             DAG.getMachineFunction(), FI, Ins[i].PartOffset));
     }
   }
 
