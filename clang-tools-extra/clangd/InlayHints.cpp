@@ -327,6 +327,33 @@ public:
           addReturnTypeHint(D, FTL.getRParenLoc());
       }
     }
+    if (Cfg.InlayHints.BlockEnd && D->isThisDeclarationADefinition()) {
+      // We use `printName` here to properly print name of ctor/dtor/operator
+      // overload.
+      if (const Stmt *Body = D->getBody())
+        addBlockEndHint(Body->getSourceRange(), "", printName(AST, *D), "");
+    }
+    return true;
+  }
+
+  bool VisitTagDecl(TagDecl *D) {
+    if (Cfg.InlayHints.BlockEnd && D->isThisDeclarationADefinition()) {
+      std::string DeclPrefix = D->getKindName().str();
+      if (const auto *ED = dyn_cast<EnumDecl>(D)) {
+        if (ED->isScoped())
+          DeclPrefix += ED->isScopedUsingClassTag() ? " class" : " struct";
+      };
+      addBlockEndHint(D->getBraceRange(), DeclPrefix, getSimpleName(*D), ";");
+    }
+    return true;
+  }
+
+  bool VisitNamespaceDecl(NamespaceDecl *D) {
+    if (Cfg.InlayHints.BlockEnd) {
+      // For namespace, the range actually starts at the namespace keyword. But
+      // it should be fine since it's usually very short.
+      addBlockEndHint(D->getSourceRange(), "namespace", getSimpleName(*D), "");
+    }
     return true;
   }
 
@@ -673,6 +700,16 @@ private:
   void addInlayHint(SourceRange R, HintSide Side, InlayHintKind Kind,
                     llvm::StringRef Prefix, llvm::StringRef Label,
                     llvm::StringRef Suffix) {
+    auto LSPRange = getHintRange(R);
+    if (!LSPRange)
+      return;
+
+    addInlayHint(*LSPRange, Side, Kind, Prefix, Label, Suffix);
+  }
+
+  void addInlayHint(Range LSPRange, HintSide Side, InlayHintKind Kind,
+                    llvm::StringRef Prefix, llvm::StringRef Label,
+                    llvm::StringRef Suffix) {
     // We shouldn't get as far as adding a hint if the category is disabled.
     // We'd like to disable as much of the analysis as possible above instead.
     // Assert in debug mode but add a dynamic check in production.
@@ -688,20 +725,18 @@ private:
       CHECK_KIND(Parameter, Parameters);
       CHECK_KIND(Type, DeducedTypes);
       CHECK_KIND(Designator, Designators);
+      CHECK_KIND(BlockEnd, BlockEnd);
 #undef CHECK_KIND
     }
 
-    auto LSPRange = getHintRange(R);
-    if (!LSPRange)
-      return;
-    Position LSPPos = Side == HintSide::Left ? LSPRange->start : LSPRange->end;
+    Position LSPPos = Side == HintSide::Left ? LSPRange.start : LSPRange.end;
     if (RestrictRange &&
         (LSPPos < RestrictRange->start || !(LSPPos < RestrictRange->end)))
       return;
     bool PadLeft = Prefix.consume_front(" ");
     bool PadRight = Suffix.consume_back(" ");
     Results.push_back(InlayHint{LSPPos, (Prefix + Label + Suffix).str(), Kind,
-                                PadLeft, PadRight, *LSPRange});
+                                PadLeft, PadRight, LSPRange});
   }
 
   // Get the range of the main file that *exactly* corresponds to R.
@@ -746,6 +781,76 @@ private:
   bool shouldPrintTypeHint(llvm::StringRef TypeName) const noexcept {
     return Cfg.InlayHints.TypeNameLimit == 0 ||
            TypeName.size() < Cfg.InlayHints.TypeNameLimit;
+  }
+
+  void addBlockEndHint(SourceRange BraceRange, StringRef DeclPrefix,
+                       StringRef Name, StringRef OptionalPunctuation) {
+    auto HintRange = computeBlockEndHintRange(BraceRange, OptionalPunctuation);
+    if (!HintRange)
+      return;
+
+    std::string Label = DeclPrefix.str();
+    if (!Label.empty() && !Name.empty())
+      Label += ' ';
+    Label += Name;
+
+    constexpr unsigned HintMaxLengthLimit = 60;
+    if (Label.length() > HintMaxLengthLimit)
+      return;
+
+    addInlayHint(*HintRange, HintSide::Right, InlayHintKind::BlockEnd, " // ",
+                 Label, "");
+  }
+
+  // Compute the LSP range to attach the block end hint to, if any allowed.
+  // 1. "}" is the last non-whitespace character on the line. The range of "}"
+  // is returned.
+  // 2. After "}", if the trimmed trailing text is exactly
+  // `OptionalPunctuation`, say ";". The range of "} ... ;" is returned.
+  // Otherwise, the hint shouldn't be shown.
+  std::optional<Range> computeBlockEndHintRange(SourceRange BraceRange,
+                                                StringRef OptionalPunctuation) {
+    constexpr unsigned HintMinLineLimit = 2;
+
+    auto &SM = AST.getSourceManager();
+    auto [BlockBeginFileId, BlockBeginOffset] =
+        SM.getDecomposedLoc(SM.getFileLoc(BraceRange.getBegin()));
+    auto RBraceLoc = SM.getFileLoc(BraceRange.getEnd());
+    auto [RBraceFileId, RBraceOffset] = SM.getDecomposedLoc(RBraceLoc);
+
+    // Because we need to check the block satisfies the minimum line limit, we
+    // require both source location to be in the main file. This prevents hint
+    // to be shown in weird cases like '{' is actually in a "#include", but it's
+    // rare anyway.
+    if (BlockBeginFileId != MainFileID || RBraceFileId != MainFileID)
+      return std::nullopt;
+
+    StringRef RestOfLine = MainFileBuf.substr(RBraceOffset).split('\n').first;
+    if (!RestOfLine.starts_with("}"))
+      return std::nullopt;
+
+    StringRef TrimmedTrailingText = RestOfLine.drop_front().trim();
+    if (!TrimmedTrailingText.empty() &&
+        TrimmedTrailingText != OptionalPunctuation)
+      return std::nullopt;
+
+    auto BlockBeginLine = SM.getLineNumber(BlockBeginFileId, BlockBeginOffset);
+    auto RBraceLine = SM.getLineNumber(RBraceFileId, RBraceOffset);
+
+    // Don't show hint on trivial blocks like `class X {};`
+    if (BlockBeginLine + HintMinLineLimit - 1 > RBraceLine)
+      return std::nullopt;
+
+    // This is what we attach the hint to, usually "}" or "};".
+    StringRef HintRangeText = RestOfLine.take_front(
+        TrimmedTrailingText.empty()
+            ? 1
+            : TrimmedTrailingText.bytes_end() - RestOfLine.bytes_begin());
+
+    Position HintStart = sourceLocToPosition(SM, RBraceLoc);
+    Position HintEnd = sourceLocToPosition(
+        SM, RBraceLoc.getLocWithOffset(HintRangeText.size()));
+    return Range{HintStart, HintEnd};
   }
 
   std::vector<InlayHint> &Results;
