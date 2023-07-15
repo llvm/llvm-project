@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple riscv32 -target-feature +zknd -emit-llvm %s -o - \
 // RUN:     | FileCheck %s  -check-prefix=RV32ZKND
 
+#include <stdint.h>
+
 // RV32ZKND-LABEL: @aes32dsi(
 // RV32ZKND-NEXT:  entry:
 // RV32ZKND-NEXT:    [[RS1_ADDR:%.*]] = alloca i32, align 4
@@ -13,7 +15,7 @@
 // RV32ZKND-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.aes32dsi(i32 [[TMP0]], i32 [[TMP1]], i32 3)
 // RV32ZKND-NEXT:    ret i32 [[TMP2]]
 //
-int aes32dsi(int rs1, int rs2) {
+uint32_t aes32dsi(uint32_t rs1, uint32_t rs2) {
   return __builtin_riscv_aes32dsi_32(rs1, rs2, 3);
 }
 
@@ -28,6 +30,6 @@ int aes32dsi(int rs1, int rs2) {
 // RV32ZKND-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.aes32dsmi(i32 [[TMP0]], i32 [[TMP1]], i32 3)
 // RV32ZKND-NEXT:    ret i32 [[TMP2]]
 //
-int aes32dsmi(int rs1, int rs2) {
+uint32_t aes32dsmi(uint32_t rs1, uint32_t rs2) {
   return __builtin_riscv_aes32dsmi_32(rs1, rs2, 3);
 }
