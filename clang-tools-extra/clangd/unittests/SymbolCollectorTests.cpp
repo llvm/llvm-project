@@ -304,10 +304,12 @@ public:
         Args, Factory->create(), Files.get(),
         std::make_shared<PCHContainerOperations>());
 
-    InMemoryFileSystem->addFile(TestHeaderName, 0,
-                                llvm::MemoryBuffer::getMemBuffer(HeaderCode));
-    InMemoryFileSystem->addFile(TestFileName, 0,
-                                llvm::MemoryBuffer::getMemBuffer(MainCode));
+    // Multiple calls to runSymbolCollector with different contents will fail
+    // to update the filesystem! Why are we sharing one across tests, anyway?
+    EXPECT_TRUE(InMemoryFileSystem->addFile(
+        TestHeaderName, 0, llvm::MemoryBuffer::getMemBuffer(HeaderCode)));
+    EXPECT_TRUE(InMemoryFileSystem->addFile(
+        TestFileName, 0, llvm::MemoryBuffer::getMemBuffer(MainCode)));
     Invocation.run();
     Symbols = Factory->Collector->takeSymbols();
     Refs = Factory->Collector->takeRefs();
@@ -1788,6 +1790,8 @@ TEST_F(SymbolCollectorTest, Origin) {
   runSymbolCollector("class Foo {};", /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            Field(&Symbol::Origin, SymbolOrigin::Static)));
+  InMemoryFileSystem = new llvm::vfs::InMemoryFileSystem;
+  CollectorOpts.CollectMacro = true;
   runSymbolCollector("#define FOO", /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            Field(&Symbol::Origin, SymbolOrigin::Static)));
@@ -1941,17 +1945,25 @@ TEST_F(SymbolCollectorTest, NoCrashOnObjCMethodCStyleParam) {
 
 TEST_F(SymbolCollectorTest, Reserved) {
   const char *Header = R"cpp(
+    #pragma once
     void __foo();
     namespace _X { int secret; }
   )cpp";
 
   CollectorOpts.CollectReserved = true;
-  runSymbolCollector("", Header);
+  runSymbolCollector(Header, "");
   EXPECT_THAT(Symbols, UnorderedElementsAre(qName("__foo"), qName("_X"),
                                             qName("_X::secret")));
 
   CollectorOpts.CollectReserved = false;
-  runSymbolCollector("", Header); //
+  runSymbolCollector(Header, "");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(qName("__foo"), qName("_X"),
+                                            qName("_X::secret")));
+
+  // Ugly: for some reason we reuse the test filesystem across tests.
+  // You can't overwrite the same filename with new content!
+  InMemoryFileSystem = new llvm::vfs::InMemoryFileSystem;
+  runSymbolCollector("#pragma GCC system_header\n" + std::string(Header), "");
   EXPECT_THAT(Symbols, IsEmpty());
 }
 
