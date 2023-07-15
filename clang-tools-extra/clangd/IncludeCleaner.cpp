@@ -36,7 +36,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GenericUniformityImpl.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -55,10 +54,6 @@
 #include <vector>
 
 namespace clang::clangd {
-
-static bool AnalyzeStdlib = false;
-void setIncludeCleanerAnalyzesStdlib(bool B) { AnalyzeStdlib = B; }
-
 namespace {
 
 bool isIgnored(llvm::StringRef HeaderPath, HeaderFilter IgnoreHeaders) {
@@ -78,11 +73,8 @@ bool mayConsiderUnused(
   // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
   // System headers are likely to be standard library headers.
   // Until we have good support for umbrella headers, don't warn about them.
-  if (Inc.Written.front() == '<') {
-    if (AnalyzeStdlib && tooling::stdlib::Header::named(Inc.Written))
-      return true;
-    return false;
-  }
+  if (Inc.Written.front() == '<')
+    return tooling::stdlib::Header::named(Inc.Written).has_value();
   assert(Inc.HeaderID);
   auto HID = static_cast<IncludeStructure::HeaderID>(*Inc.HeaderID);
   auto FE = AST.getSourceManager().getFileManager().getFileRef(

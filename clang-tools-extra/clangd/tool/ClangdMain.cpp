@@ -273,15 +273,6 @@ opt<bool> ImportInsertions{
     init(CodeCompleteOptions().ImportInsertions),
 };
 
-opt<bool> IncludeCleanerStdlib{
-    "include-cleaner-stdlib",
-    cat(Features),
-    desc("Apply include-cleaner analysis to standard library headers "
-         "(immature!)"),
-    init(false),
-    Hidden,
-};
-
 opt<bool> HeaderInsertionDecorators{
     "header-insertion-decorators",
     cat(Features),
@@ -317,7 +308,7 @@ RetiredFlag<bool> CrossFileRename("cross-file-rename");
 RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
 RetiredFlag<bool> InlayHints("inlay-hints");
 RetiredFlag<bool> FoldingRanges("folding-ranges");
-
+RetiredFlag<bool> IncludeCleanerStdlib("include-cleaner-stdlib");
 
 opt<int> LimitResults{
     "limit-results",
@@ -968,7 +959,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   };
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
     Opts.Encoding = ForceOffsetEncoding;
-  setIncludeCleanerAnalyzesStdlib(IncludeCleanerStdlib);
 
   if (CheckFile.getNumOccurrences()) {
     llvm::SmallString<256> Path;
