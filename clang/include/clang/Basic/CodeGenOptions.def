@@ -477,6 +477,10 @@ CODEGENOPT(Addrsig, 1, 0)
 /// Whether to emit unused static constants.
 CODEGENOPT(KeepStaticConsts, 1, 0)
 
+/// Whether to emit all variables that have a persistent storage duration,
+/// including global, static and thread local variables.
+CODEGENOPT(KeepPersistentStorageVariables, 1, 0)
+
 /// Whether to follow the AAPCS enforcing at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0)
 
