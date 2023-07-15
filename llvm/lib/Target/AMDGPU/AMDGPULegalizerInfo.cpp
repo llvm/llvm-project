@@ -4806,9 +4806,9 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
   auto Abs = B.buildFAbs(S32, RHS, Flags);
   const APFloat C0Val(1.0f);
 
-  auto C0 = B.buildConstant(S32, 0x6f800000);
-  auto C1 = B.buildConstant(S32, 0x2f800000);
-  auto C2 = B.buildConstant(S32, llvm::bit_cast<uint32_t>(1.0f));
+  auto C0 = B.buildFConstant(S32, 0x1p+96f);
+  auto C1 = B.buildFConstant(S32, 0x1p-32f);
+  auto C2 = B.buildFConstant(S32, 1.0f);
 
   auto CmpRes = B.buildFCmp(CmpInst::FCMP_OGT, S1, Abs, C0, Flags);
   auto Sel = B.buildSelect(S32, CmpRes, C1, C2, Flags);
