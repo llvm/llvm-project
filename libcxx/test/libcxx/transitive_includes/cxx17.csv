@@ -95,6 +95,7 @@ bitset limits
 bitset new
 bitset stdexcept
 bitset string
+bitset string_view
 bitset type_traits
 bitset version
 ccomplex complex
@@ -868,6 +869,7 @@ thread limits
 thread locale
 thread new
 thread ratio
+thread sstream
 thread stdexcept
 thread string
 thread string_view
