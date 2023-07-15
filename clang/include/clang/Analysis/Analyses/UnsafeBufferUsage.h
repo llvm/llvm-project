@@ -46,14 +46,9 @@ public:
   /// Returns a reference to the `Preprocessor`:
   virtual bool isSafeBufferOptOut(const SourceLocation &Loc) const = 0;
 
-  /// Returns the text indicating that the user needs to provide input there:
   virtual std::string
-  getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") const {
-    std::string s = std::string("<# ");
-    s += HintTextToUser;
-    s += " #>";
-    return s;
-  }
+  getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,
+                                      StringRef WSSuffix = "") const = 0;
 };
 
 // This function invokes the analysis and allows the caller to react to it
