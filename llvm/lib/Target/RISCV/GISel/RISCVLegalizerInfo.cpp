@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVLegalizerInfo.h"
+#include "RISCVSubtarget.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -19,5 +20,14 @@
 using namespace llvm;
 
 RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
+  const unsigned XLen = ST.getXLen();
+  const LLT XLenLLT = LLT::scalar(XLen);
+
+  using namespace TargetOpcode;
+
+  getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
+      .legalFor({XLenLLT})
+      .clampScalar(0, XLenLLT, XLenLLT);
+
   getLegacyLegalizerInfo().computeTables();
 }

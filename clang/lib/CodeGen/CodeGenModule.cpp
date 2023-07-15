@@ -2426,12 +2426,14 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
   if (D && D->hasAttr<UsedAttr>())
     addUsedOrCompilerUsedGlobal(GV);
 
-  if (CodeGenOpts.KeepStaticConsts && D && isa<VarDecl>(D)) {
-    const auto *VD = cast<VarDecl>(D);
-    if (VD->getType().isConstQualified() &&
-        VD->getStorageDuration() == SD_Static)
-      addUsedOrCompilerUsedGlobal(GV);
-  }
+  if (const auto *VD = dyn_cast_if_present<VarDecl>(D);
+      VD &&
+      ((CodeGenOpts.KeepPersistentStorageVariables &&
+        (VD->getStorageDuration() == SD_Static ||
+         VD->getStorageDuration() == SD_Thread)) ||
+       (CodeGenOpts.KeepStaticConsts && VD->getStorageDuration() == SD_Static &&
+        VD->getType().isConstQualified())))
+    addUsedOrCompilerUsedGlobal(GV);
 }
 
 bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
@@ -3312,12 +3314,14 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
   if (LangOpts.EmitAllDecls)
     return true;
 
-  if (CodeGenOpts.KeepStaticConsts) {
-    const auto *VD = dyn_cast<VarDecl>(Global);
-    if (VD && VD->getType().isConstQualified() &&
-        VD->getStorageDuration() == SD_Static)
-      return true;
-  }
+  const auto *VD = dyn_cast<VarDecl>(Global);
+  if (VD &&
+      ((CodeGenOpts.KeepPersistentStorageVariables &&
+        (VD->getStorageDuration() == SD_Static ||
+         VD->getStorageDuration() == SD_Thread)) ||
+       (CodeGenOpts.KeepStaticConsts && VD->getStorageDuration() == SD_Static &&
+        VD->getType().isConstQualified())))
+    return true;
 
   return getContext().DeclMustBeEmitted(Global);
 }

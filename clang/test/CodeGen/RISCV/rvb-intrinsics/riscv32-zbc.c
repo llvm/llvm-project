@@ -2,7 +2,9 @@
 // RUN: %clang_cc1 -triple riscv32 -target-feature +zbc -emit-llvm %s -o - \
 // RUN:     | FileCheck %s  -check-prefix=RV32ZBC
 
-// RV32ZBC-LABEL: @clmul(
+#include <stdint.h>
+
+// RV32ZBC-LABEL: @clmul_32(
 // RV32ZBC-NEXT:  entry:
 // RV32ZBC-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // RV32ZBC-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
@@ -13,11 +15,11 @@
 // RV32ZBC-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.clmul.i32(i32 [[TMP0]], i32 [[TMP1]])
 // RV32ZBC-NEXT:    ret i32 [[TMP2]]
 //
-long clmul(long a, long b) {
-  return __builtin_riscv_clmul(a, b);
+uint32_t clmul_32(uint32_t a, uint32_t b) {
+  return __builtin_riscv_clmul_32(a, b);
 }
 
-// RV32ZBC-LABEL: @clmulh(
+// RV32ZBC-LABEL: @clmulh_32(
 // RV32ZBC-NEXT:  entry:
 // RV32ZBC-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // RV32ZBC-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
@@ -28,11 +30,11 @@ long clmul(long a, long b) {
 // RV32ZBC-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.clmulh.i32(i32 [[TMP0]], i32 [[TMP1]])
 // RV32ZBC-NEXT:    ret i32 [[TMP2]]
 //
-long clmulh(long a, long b) {
-  return __builtin_riscv_clmulh(a, b);
+uint32_t clmulh_32(uint32_t a, uint32_t b) {
+  return __builtin_riscv_clmulh_32(a, b);
 }
 
-// RV32ZBC-LABEL: @clmulr(
+// RV32ZBC-LABEL: @clmulr_32(
 // RV32ZBC-NEXT:  entry:
 // RV32ZBC-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // RV32ZBC-NEXT:    [[B_ADDR:%.*]] = alloca i32, align 4
@@ -43,6 +45,6 @@ long clmulh(long a, long b) {
 // RV32ZBC-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.clmulr.i32(i32 [[TMP0]], i32 [[TMP1]])
 // RV32ZBC-NEXT:    ret i32 [[TMP2]]
 //
-long clmulr(long a, long b) {
-  return __builtin_riscv_clmulr(a, b);
+uint32_t clmulr_32(uint32_t a, uint32_t b) {
+  return __builtin_riscv_clmulr_32(a, b);
 }

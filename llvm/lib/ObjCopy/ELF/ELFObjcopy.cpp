@@ -172,13 +172,6 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
   }
 }
 
-template <class... Ts>
-static Error makeStringError(std::error_code EC, const Twine &Msg,
-                             Ts &&...Args) {
-  std::string FullMsg = (EC.message() + ": " + Msg).str();
-  return createStringError(EC, FullMsg.c_str(), std::forward<Ts>(Args)...);
-}
-
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
                                Object &Obj) {
   for (auto &Sec : Obj.sections()) {

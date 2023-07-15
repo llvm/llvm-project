@@ -661,19 +661,10 @@ llvm::hash_code OperationEquivalence::computeHash(
     hash = llvm::hash_combine(hash, op->getLoc());
 
   //   - Operands
-  ValueRange operands = op->getOperands();
-  SmallVector<Value> operandStorage;
-  if (op->hasTrait<mlir::OpTrait::IsCommutative>()) {
-    operandStorage.append(operands.begin(), operands.end());
-    llvm::sort(operandStorage, [](Value a, Value b) -> bool {
-      return a.getAsOpaquePointer() < b.getAsOpaquePointer();
-    });
-    operands = operandStorage;
-  }
-  for (Value operand : operands)
+  for (Value operand : op->getOperands())
     hash = llvm::hash_combine(hash, hashOperands(operand));
 
-  //   - Operands
+  //   - Results
   for (Value result : op->getResults())
     hash = llvm::hash_combine(hash, hashResults(result));
   return hash;
@@ -784,41 +775,7 @@ OperationEquivalence::isRegionEquivalentTo(Region *lhs, Region *rhs,
     return false;
 
   // 2. Compare operands.
-  ValueRange lhsOperands = lhs->getOperands(), rhsOperands = rhs->getOperands();
-  SmallVector<Value> lhsOperandStorage, rhsOperandStorage;
-  if (lhs->hasTrait<mlir::OpTrait::IsCommutative>()) {
-    auto sortValues = [](ValueRange values) {
-      SmallVector<Value> sortedValues = llvm::to_vector(values);
-      llvm::sort(sortedValues, [](Value a, Value b) {
-        auto aArg = llvm::dyn_cast<BlockArgument>(a);
-        auto bArg = llvm::dyn_cast<BlockArgument>(b);
-
-        // Case 1. Both `a` and `b` are `BlockArgument`s.
-        if (aArg && bArg) {
-          if (aArg.getParentBlock() == bArg.getParentBlock())
-            return aArg.getArgNumber() < bArg.getArgNumber();
-          return aArg.getParentBlock() < bArg.getParentBlock();
-        }
-
-        // Case 2. One of then is a `BlockArgument` and other is not. Treat
-        // `BlockArgument` as lesser.
-        if (aArg && !bArg)
-          return true;
-        if (bArg && !aArg)
-          return false;
-
-        // Case 3. Both are values.
-        return a.getAsOpaquePointer() < b.getAsOpaquePointer();
-      });
-      return sortedValues;
-    };
-    lhsOperandStorage = sortValues(lhsOperands);
-    lhsOperands = lhsOperandStorage;
-    rhsOperandStorage = sortValues(rhsOperands);
-    rhsOperands = rhsOperandStorage;
-  }
-
-  for (auto operandPair : llvm::zip(lhsOperands, rhsOperands)) {
+  for (auto operandPair : llvm::zip(lhs->getOperands(), rhs->getOperands())) {
     Value curArg = std::get<0>(operandPair);
     Value otherArg = std::get<1>(operandPair);
     if (curArg == otherArg)

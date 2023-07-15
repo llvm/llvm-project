@@ -56,7 +56,7 @@ declare void @_Z3barv()
 ; SYM64:  	.vbyte	8, .__gxx_personality_v0
 ; SYM64:  	.vbyte	8, TOC[TC0]
 ; SYM64:  	.vbyte	8, 0
-;   SYM:  	.csect .text[PR],5
+;   SYM:  	.csect [PR],5
 ;   SYM:  .__gxx_personality_v0:
 ;   SYM:  .__xlcxx_personality_v1:
 ;   SYM:  # %bb.0:                                # %entry

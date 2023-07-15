@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zknh -emit-llvm %s -o - \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZKNH
 
+#include <stdint.h>
 
 // RV64ZKNH-LABEL: @sha512sig0(
 // RV64ZKNH-NEXT:  entry:
@@ -11,7 +12,7 @@
 // RV64ZKNH-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.sha512sig0(i64 [[TMP0]])
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
-long sha512sig0(long rs1) {
+uint64_t sha512sig0(uint64_t rs1) {
   return __builtin_riscv_sha512sig0_64(rs1);
 }
 
@@ -24,7 +25,7 @@ long sha512sig0(long rs1) {
 // RV64ZKNH-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.sha512sig1(i64 [[TMP0]])
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
-long sha512sig1(long rs1) {
+uint64_t sha512sig1(uint64_t rs1) {
   return __builtin_riscv_sha512sig1_64(rs1);
 }
 
@@ -37,7 +38,7 @@ long sha512sig1(long rs1) {
 // RV64ZKNH-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.sha512sum0(i64 [[TMP0]])
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
-long sha512sum0(long rs1) {
+uint64_t sha512sum0(uint64_t rs1) {
   return __builtin_riscv_sha512sum0_64(rs1);
 }
 
@@ -50,7 +51,7 @@ long sha512sum0(long rs1) {
 // RV64ZKNH-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.sha512sum1(i64 [[TMP0]])
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
-long sha512sum1(long rs1) {
+uint64_t sha512sum1(uint64_t rs1) {
   return __builtin_riscv_sha512sum1_64(rs1);
 }
 
@@ -63,7 +64,7 @@ long sha512sum1(long rs1) {
 // RV64ZKNH-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.sha256sig0.i64(i64 [[TMP0]])
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
-long sha256sig0(long rs1) {
+uint64_t sha256sig0(uint64_t rs1) {
   return __builtin_riscv_sha256sig0(rs1);
 }
 
@@ -75,7 +76,7 @@ long sha256sig0(long rs1) {
 // RV64ZKNH-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.sha256sig1.i64(i64 [[TMP0]])
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
-long sha256sig1(long rs1) {
+uint64_t sha256sig1(uint64_t rs1) {
   return __builtin_riscv_sha256sig1(rs1);
 }
 
@@ -88,7 +89,7 @@ long sha256sig1(long rs1) {
 // RV64ZKNH-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.sha256sum0.i64(i64 [[TMP0]])
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
-long sha256sum0(long rs1) {
+uint64_t sha256sum0(uint64_t rs1) {
   return __builtin_riscv_sha256sum0(rs1);
 }
 
@@ -100,6 +101,6 @@ long sha256sum0(long rs1) {
 // RV64ZKNH-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.sha256sum1.i64(i64 [[TMP0]])
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
-long sha256sum1(long rs1) {
+uint64_t sha256sum1(uint64_t rs1) {
   return __builtin_riscv_sha256sum1(rs1);
 }

@@ -1152,6 +1152,22 @@ static void test() {
   check_exception("End of input while parsing the modifier E", SV("{:%E"), 0ms);
   check_exception("End of input while parsing the modifier O", SV("{:%O"), 0ms);
 
+  // Make sure the the required values work, based on their minimum number of required bits per [time.syn].
+  check(SV("23:47:16.854775807"),
+        SV("{:%T}"),
+        std::chrono::nanoseconds{0x7fff'ffff'ffff'ffffll}); // 64 bit signed value max
+  check(SV("23:35:09.481983"),
+        SV("{:%T}"),
+        std::chrono::microseconds{0x003f'ffff'ffff'ffffll});                                 // 55 bit signed value max
+  check(SV("06:20:44.415"), SV("{:%T}"), std::chrono::milliseconds{0x0000'fff'ffff'ffffll}); // 45 bit signed value max
+  check(SV("01:53:03"), SV("{:%T}"), std::chrono::seconds{0x0000'0003'ffff'ffffll});         // 35 bit signed value max
+  check(SV("12:15:00"), SV("{:%T}"), std::chrono::minutes{0x0fff'ffff});                     // 29 bit signed value max
+  check(SV("15:00:00"), SV("{:%T}"), std::chrono::hours{0x003f'ffff});                       // 23 bit signed value max
+  check(SV("00:00:00"), SV("{:%T}"), std::chrono::days{0x0ff'ffff});                         // 25 bit signed value max
+  check(SV("00:00:00"), SV("{:%T}"), std::chrono::weeks{0x003f'ffff});                       // 22 bit signed value max
+  check(SV("21:11:42"), SV("{:%T}"), std::chrono::months{0x0007'ffff});                      // 20 bit signed value max
+  check(SV("05:42:00"), SV("{:%T}"), std::chrono::years{0xffff});                            // 17 bit signed value max
+
   // Precision not allowed
   check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), 0ms);
 }
