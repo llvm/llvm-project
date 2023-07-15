@@ -76,4 +76,7 @@ namespace fmin {
 namespace inf {
   static_assert(__builtin_isinf(__builtin_inf()), "");
   static_assert(!__builtin_isinf(1.0), "");
+
+  static_assert(__builtin_isfinite(1.0), "");
+  static_assert(!__builtin_isfinite(__builtin_inf()), "");
 }
