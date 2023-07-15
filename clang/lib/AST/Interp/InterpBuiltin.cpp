@@ -173,6 +173,20 @@ static bool interp__builtin_isnan(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_isinf(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame, const Function *F,
+                                  bool CheckSign) {
+  const Floating &Arg = S.Stk.peek<Floating>();
+  bool IsInf = Arg.isInf();
+
+  if (CheckSign)
+    S.Stk.push<Integral<32, true>>(
+        Integral<32, true>::from(IsInf ? (Arg.isNegative() ? -1 : 1) : 0));
+  else
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isInf()));
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
@@ -236,6 +250,16 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
 
   case Builtin::BI__builtin_isnan:
     if (interp__builtin_isnan(S, OpPC, Frame, F))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_isinf:
+    if (interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/false))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_isinf_sign:
+    if (interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/true))
       return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
 
