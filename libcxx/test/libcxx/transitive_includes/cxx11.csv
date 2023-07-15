@@ -867,6 +867,7 @@ thread limits
 thread locale
 thread new
 thread ratio
+thread sstream
 thread stdexcept
 thread string
 thread string_view
