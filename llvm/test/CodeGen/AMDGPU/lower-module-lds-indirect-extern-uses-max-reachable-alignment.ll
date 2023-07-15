@@ -179,7 +179,7 @@ attributes #0 = { noinline }
 ; CHECK: declare i32 @llvm.amdgcn.lds.kernel.id() #3
 
 ; CHECK: attributes #0 = { noinline }
-; CHECK: attributes #1 = { "amdgpu-lds-size"="4" }
+; CHECK: attributes #1 = { "amdgpu-lds-size"="4,4" }
 ; CHECK: attributes #2 = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 

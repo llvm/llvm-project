@@ -920,10 +920,10 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
 void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // The default csect for program code. Functions without a specified section
   // get placed into this csect. The choice of csect name is not a property of
-  // the ABI or object file format. For example, the XL compiler uses an unnamed
-  // csect for program code.
+  // the ABI or object file format, but various tools rely on the section
+  // name being empty (considering named symbols to be "user symbol names").
   TextSection = Ctx->getXCOFFSection(
-      ".text", SectionKind::getText(),
+      "", SectionKind::getText(),
       XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_PR, XCOFF::XTY_SD),
       /* MultiSymbolsAllowed*/ true);
 
