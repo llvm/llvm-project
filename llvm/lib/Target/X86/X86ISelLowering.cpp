@@ -3063,44 +3063,44 @@ Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
   // tcbhead_t; use it instead of the usual global variable (see
   // sysdeps/{i386,x86_64}/nptl/tls.h)
   if (hasStackGuardSlotTLS(Subtarget.getTargetTriple())) {
-    if (Subtarget.isTargetFuchsia()) {
-      // <zircon/tls.h> defines ZX_TLS_STACK_GUARD_OFFSET with this value.
-      return SegmentOffset(IRB, 0x10, getAddressSpace());
-    } else {
-      unsigned AddressSpace = getAddressSpace();
-      Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-      // Specially, some users may customize the base reg and offset.
-      int Offset = M->getStackProtectorGuardOffset();
-      // If we don't set -stack-protector-guard-offset value:
-      // %fs:0x28, unless we're using a Kernel code model, in which case
-      // it's %gs:0x28.  gs:0x14 on i386.
-      if (Offset == INT_MAX)
-        Offset = (Subtarget.is64Bit()) ? 0x28 : 0x14;
+    unsigned AddressSpace = getAddressSpace();
 
-      StringRef GuardReg = M->getStackProtectorGuardReg();
-      if (GuardReg == "fs")
-        AddressSpace = X86AS::FS;
-      else if (GuardReg == "gs")
-        AddressSpace = X86AS::GS;
+    // <zircon/tls.h> defines ZX_TLS_STACK_GUARD_OFFSET with this value.
+    if (Subtarget.isTargetFuchsia())
+      return SegmentOffset(IRB, 0x10, AddressSpace);
 
-      // Use symbol guard if user specify.
-      StringRef GuardSymb = M->getStackProtectorGuardSymbol();
-      if (!GuardSymb.empty()) {
-        GlobalVariable *GV = M->getGlobalVariable(GuardSymb);
-        if (!GV) {
-          Type *Ty = Subtarget.is64Bit() ? Type::getInt64Ty(M->getContext())
-                                         : Type::getInt32Ty(M->getContext());
-          GV = new GlobalVariable(*M, Ty, false, GlobalValue::ExternalLinkage,
-                                  nullptr, GuardSymb, nullptr,
-                                  GlobalValue::NotThreadLocal, AddressSpace);
-          if (!Subtarget.isTargetDarwin())
-            GV->setDSOLocal(M->getDirectAccessExternalData());
-        }
-        return GV;
+    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+    // Specially, some users may customize the base reg and offset.
+    int Offset = M->getStackProtectorGuardOffset();
+    // If we don't set -stack-protector-guard-offset value:
+    // %fs:0x28, unless we're using a Kernel code model, in which case
+    // it's %gs:0x28.  gs:0x14 on i386.
+    if (Offset == INT_MAX)
+      Offset = (Subtarget.is64Bit()) ? 0x28 : 0x14;
+
+    StringRef GuardReg = M->getStackProtectorGuardReg();
+    if (GuardReg == "fs")
+      AddressSpace = X86AS::FS;
+    else if (GuardReg == "gs")
+      AddressSpace = X86AS::GS;
+
+    // Use symbol guard if user specify.
+    StringRef GuardSymb = M->getStackProtectorGuardSymbol();
+    if (!GuardSymb.empty()) {
+      GlobalVariable *GV = M->getGlobalVariable(GuardSymb);
+      if (!GV) {
+        Type *Ty = Subtarget.is64Bit() ? Type::getInt64Ty(M->getContext())
+                                       : Type::getInt32Ty(M->getContext());
+        GV = new GlobalVariable(*M, Ty, false, GlobalValue::ExternalLinkage,
+                                nullptr, GuardSymb, nullptr,
+                                GlobalValue::NotThreadLocal, AddressSpace);
+        if (!Subtarget.isTargetDarwin())
+          GV->setDSOLocal(M->getDirectAccessExternalData());
       }
-
-      return SegmentOffset(IRB, Offset, AddressSpace);
+      return GV;
     }
+
+    return SegmentOffset(IRB, Offset, AddressSpace);
   }
   return TargetLowering::getIRStackGuard(IRB);
 }
