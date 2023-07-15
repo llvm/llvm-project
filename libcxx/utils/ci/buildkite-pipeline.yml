@@ -468,24 +468,6 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Assertions enabled"
-    command: "libcxx/utils/ci/run-buildbot generic-assertions"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    env:
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
-        ENABLE_CLANG_TIDY: "On"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
   - label: "Hardened mode"
     command: "libcxx/utils/ci/run-buildbot generic-hardened-mode"
     artifact_paths:
@@ -929,8 +911,8 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-    - label: "Apple back-deployment with assertions enabled"
-      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-assertions-11.0"
+    - label: "Apple back-deployment with hardening enabled"
+      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-hardened-11.0"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"

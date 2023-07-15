@@ -10,8 +10,8 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 #include <algorithm>
 #include <array>
