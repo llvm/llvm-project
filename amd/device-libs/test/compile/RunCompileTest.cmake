@@ -17,6 +17,7 @@ execute_process(COMMAND
   -Xclang -finclude-default-header
   --rocm-path=${BINARY_DIR}
   -mllvm -amdgpu-simplify-libcall=0
+  ${COMPILE_FLAGS}
   -o ${OUTPUT_FILE} ${INPUT_FILE}
   RESULT_VARIABLE CLANG_RESULT
   ERROR_VARIABLE CLANG_ERR)
