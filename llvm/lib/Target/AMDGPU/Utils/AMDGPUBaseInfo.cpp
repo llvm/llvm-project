@@ -1233,16 +1233,16 @@ bool shouldEmitConstantsToTextSection(const Triple &TT) {
   return TT.getArch() == Triple::r600;
 }
 
-std::pair<int, int> getIntegerPairAttribute(const Function &F,
-                                            StringRef Name,
-                                            std::pair<int, int> Default,
-                                            bool OnlyFirstRequired) {
+std::pair<unsigned, unsigned>
+getIntegerPairAttribute(const Function &F, StringRef Name,
+                        std::pair<unsigned, unsigned> Default,
+                        bool OnlyFirstRequired) {
   Attribute A = F.getFnAttribute(Name);
   if (!A.isStringAttribute())
     return Default;
 
   LLVMContext &Ctx = F.getContext();
-  std::pair<int, int> Ints = Default;
+  std::pair<unsigned, unsigned> Ints = Default;
   std::pair<StringRef, StringRef> Strs = A.getValueAsString().split(',');
   if (Strs.first.trim().getAsInteger(0, Ints.first)) {
     Ctx.emitError("can't parse first integer attribute " + Name);
