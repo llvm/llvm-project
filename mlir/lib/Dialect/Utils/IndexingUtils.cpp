@@ -81,7 +81,15 @@ SmallVector<int64_t> mlir::computeElementwiseMul(ArrayRef<int64_t> v1,
   return computeElementwiseMulImpl(v1, v2);
 }
 
-int64_t mlir::computeMaxLinearIndex(ArrayRef<int64_t> basis) {
+int64_t mlir::computeSum(ArrayRef<int64_t> basis) {
+  assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
+         "basis must be nonnegative");
+  if (basis.empty())
+    return 0;
+  return std::accumulate(basis.begin(), basis.end(), 1, std::plus<int64_t>());
+}
+
+int64_t mlir::computeProduct(ArrayRef<int64_t> basis) {
   assert(llvm::all_of(basis, [](int64_t s) { return s > 0; }) &&
          "basis must be nonnegative");
   if (basis.empty())
@@ -149,8 +157,15 @@ SmallVector<AffineExpr> mlir::computeElementwiseMul(ArrayRef<AffineExpr> v1,
   return computeElementwiseMulImpl(v1, v2);
 }
 
-AffineExpr mlir::computeMaxLinearIndex(MLIRContext *ctx,
-                                       ArrayRef<AffineExpr> basis) {
+AffineExpr mlir::computeSum(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
+  if (basis.empty())
+    return getAffineConstantExpr(0, ctx);
+  return std::accumulate(basis.begin(), basis.end(),
+                         getAffineConstantExpr(1, ctx),
+                         std::plus<AffineExpr>());
+}
+
+AffineExpr mlir::computeProduct(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
   if (basis.empty())
     return getAffineConstantExpr(0, ctx);
   return std::accumulate(basis.begin(), basis.end(),

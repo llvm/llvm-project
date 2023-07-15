@@ -1399,9 +1399,9 @@ const char *SBDebugger::GetPrompt() const {
 
   Log *log = GetLog(LLDBLog::API);
 
-  LLDB_LOGF(log, "SBDebugger(%p)::GetPrompt () => \"%s\"",
-            static_cast<void *>(m_opaque_sp.get()),
-            (m_opaque_sp ? m_opaque_sp->GetPrompt().str().c_str() : ""));
+  LLDB_LOG(log, "SBDebugger({0:x})::GetPrompt () => \"{1}\"",
+           static_cast<void *>(m_opaque_sp.get()),
+           (m_opaque_sp ? m_opaque_sp->GetPrompt() : ""));
 
   return (m_opaque_sp ? ConstString(m_opaque_sp->GetPrompt()).GetCString()
                       : nullptr);

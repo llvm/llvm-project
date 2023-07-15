@@ -235,16 +235,16 @@ define internal ptr @internal_argmem_only_rec_1(ptr %arg) {
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARG]], align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TMP1]], 1
+; CHECK-NEXT:    [[TRUETMP1:%.*]] = load i32, ptr [[ARG]], align 4
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[TRUETMP1]], 1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then2:
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARG]], i64 -1
 ; CHECK-NEXT:    [[CALL:%.*]] = call noalias ptr @internal_argmem_only_rec_2(ptr nocapture nofree noundef nonnull align 4 dereferenceable(4) [[ADD_PTR]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       if.end3:
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP2]] to i64
+; CHECK-NEXT:    [[TRUETMP2:%.*]] = load i32, ptr [[ARG]], align 4
+; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TRUETMP2]] to i64
 ; CHECK-NEXT:    [[CALL4:%.*]] = call noalias ptr @malloc(i64 [[CONV]])
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       return:
@@ -618,7 +618,7 @@ define i8 @readnone_caller2(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@readnone_caller2
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR10]] {
-; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr undef, i1 noundef [[C]]) #[[ATTR14]]
+; CGSCC-NEXT:    [[R:%.*]] = call i8 @recursive_readnone_internal2(ptr nofree undef, i1 noundef [[C]]) #[[ATTR14]]
 ; CGSCC-NEXT:    ret i8 [[R]]
 ;
   %r = call i8 @recursive_readnone_internal2(ptr undef, i1 %c)

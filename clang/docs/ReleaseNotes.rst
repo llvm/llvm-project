@@ -423,6 +423,11 @@ Improvements to Clang's diagnostics
     source:1:6: note: candidate function not viable: no known conversion from 'const char[4]' to 'int' for 2nd argument
     void func(int aa, int bb);
          ^            ~~~~~~
+- ``-Wformat`` cast fix-its will now suggest ``static_cast`` instead of C-style casts
+  for C++ code.
+- ``-Wformat`` will no longer suggest a no-op fix-it for fixing scoped enum format
+  warnings. Instead, it will suggest casting the enum object to the type specified
+  in the format string.
 
 Bug Fixes in This Version
 -------------------------
