@@ -845,7 +845,8 @@ define i64 @urem_shl_vscale_range() vscale_range(1,16) {
 ; CHECK-LABEL: @urem_shl_vscale_range(
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i64 [[VSCALE]], 2
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 1024, [[SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[SHIFT]], 2047
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[TMP1]], 1024
 ; CHECK-NEXT:    ret i64 [[REM]]
 ;
   %vscale = call i64 @llvm.vscale.i64()
@@ -858,7 +859,8 @@ define i64 @urem_vscale_range() vscale_range(1,16) {
 ; CHECK-LABEL: @urem_vscale_range(
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i64 [[VSCALE]], 2
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 1024, [[SHIFT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[SHIFT]], 2047
+; CHECK-NEXT:    [[REM:%.*]] = and i64 [[TMP1]], 1024
 ; CHECK-NEXT:    ret i64 [[REM]]
 ;
   %vscale = call i64 @llvm.vscale.i64()
@@ -869,10 +871,7 @@ define i64 @urem_vscale_range() vscale_range(1,16) {
 
 define i64 @urem_shl_vscale_out_of_range() vscale_range(1,16) {
 ; CHECK-LABEL: @urem_shl_vscale_out_of_range(
-; CHECK-NEXT:    [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[SHIFT:%.*]] = shl nuw nsw i64 [[VSCALE]], 20
-; CHECK-NEXT:    [[REM:%.*]] = urem i64 1024, [[SHIFT]]
-; CHECK-NEXT:    ret i64 [[REM]]
+; CHECK-NEXT:    ret i64 1024
 ;
   %vscale = call i64 @llvm.vscale.i64()
   %shift = shl nuw nsw i64 %vscale, 20
