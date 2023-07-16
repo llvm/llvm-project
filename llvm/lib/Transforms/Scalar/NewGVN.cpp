@@ -1274,10 +1274,17 @@ const UnknownExpression *NewGVN::createUnknownExpression(Instruction *I) const {
 const CallExpression *
 NewGVN::createCallExpression(CallInst *CI, const MemoryAccess *MA) const {
   // FIXME: Add operand bundles for calls.
-  // FIXME: Allow commutative matching for intrinsics.
   auto *E =
       new (ExpressionAllocator) CallExpression(CI->getNumOperands(), CI, MA);
   setBasicExpressionInfo(CI, E);
+  if (CI->isCommutative()) {
+    // Ensure that commutative intrinsics that only differ by a permutation
+    // of their operands get the same value number by sorting the operand value
+    // numbers.
+    assert(CI->getNumOperands() >= 2 && "Unsupported commutative intrinsic!");
+    if (shouldSwapOperands(E->getOperand(0), E->getOperand(1)))
+      E->swapOperands(0, 1);
+  }
   return E;
 }
 
