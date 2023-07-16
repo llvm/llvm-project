@@ -337,45 +337,34 @@ define amdgpu_kernel void @div_v4_minus_1_by_minus_x_25ulp(ptr addrspace(1) %arg
 define amdgpu_kernel void @div_v4_c_by_x_25ulp(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_v4_c_by_x_25ulp:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
-; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[0:1], s4, s4, 2.0
-; GCN-DENORM-NEXT:    v_div_scale_f32 v1, s[0:1], s7, s7, -2.0
-; GCN-DENORM-NEXT:    v_div_scale_f32 v2, vcc, 2.0, s4, 2.0
-; GCN-DENORM-NEXT:    v_div_scale_f32 v3, s[0:1], -2.0, s7, -2.0
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v4, v0
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v5, v1
-; GCN-DENORM-NEXT:    v_fma_f32 v6, -v0, v4, 1.0
-; GCN-DENORM-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GCN-DENORM-NEXT:    v_fma_f32 v7, -v1, v5, 1.0
-; GCN-DENORM-NEXT:    v_fma_f32 v5, v7, v5, v5
-; GCN-DENORM-NEXT:    v_mul_f32_e32 v6, v2, v4
-; GCN-DENORM-NEXT:    v_mul_f32_e32 v7, v3, v5
-; GCN-DENORM-NEXT:    v_fma_f32 v8, -v0, v6, v2
-; GCN-DENORM-NEXT:    v_fma_f32 v9, -v1, v7, v3
-; GCN-DENORM-NEXT:    v_fma_f32 v6, v8, v4, v6
-; GCN-DENORM-NEXT:    v_fma_f32 v7, v9, v5, v7
-; GCN-DENORM-NEXT:    v_fma_f32 v0, -v0, v6, v2
-; GCN-DENORM-NEXT:    v_fma_f32 v1, -v1, v7, v3
-; GCN-DENORM-NEXT:    v_div_fmas_f32 v0, v0, v4, v6
-; GCN-DENORM-NEXT:    s_mov_b64 vcc, s[0:1]
-; GCN-DENORM-NEXT:    v_div_fmas_f32 v3, v1, v5, v7
-; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v1, s5
-; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v5, -s6
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v1, v1
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v5, v5
-; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s5
-; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v6, s6
-; GCN-DENORM-NEXT:    v_sub_u32_e32 v2, 0, v2
-; GCN-DENORM-NEXT:    v_sub_u32_e32 v6, 0, v6
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v4, 0
-; GCN-DENORM-NEXT:    v_ldexp_f32 v1, v1, v2
-; GCN-DENORM-NEXT:    v_ldexp_f32 v2, v5, v6
-; GCN-DENORM-NEXT:    v_div_fixup_f32 v0, v0, s4, 2.0
-; GCN-DENORM-NEXT:    v_div_fixup_f32 v3, v3, s7, -2.0
-; GCN-DENORM-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DENORM-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v1, s0
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v2, s1
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v1, v1
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v2, v2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v3, s1
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v5, -s2
+; GCN-DENORM-NEXT:    v_sub_u32_e32 v3, 0, v3
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v5, v5
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v7, 0.5, v1
+; GCN-DENORM-NEXT:    v_ldexp_f32 v1, v2, v3
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v2, s3
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v3, v2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v6, s2
+; GCN-DENORM-NEXT:    v_sub_u32_e32 v2, 0, v6
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v0, s0
+; GCN-DENORM-NEXT:    v_ldexp_f32 v2, v5, v2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v5, s3
+; GCN-DENORM-NEXT:    v_sub_u32_e32 v0, 2, v0
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v3, -0.5, v3
+; GCN-DENORM-NEXT:    v_sub_u32_e32 v5, 2, v5
+; GCN-DENORM-NEXT:    v_ldexp_f32 v0, v7, v0
+; GCN-DENORM-NEXT:    v_ldexp_f32 v3, v3, v5
+; GCN-DENORM-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_v4_c_by_x_25ulp:
@@ -412,45 +401,34 @@ define amdgpu_kernel void @div_v4_c_by_x_25ulp(ptr addrspace(1) %arg) {
 define amdgpu_kernel void @div_v4_c_by_minus_x_25ulp(ptr addrspace(1) %arg) {
 ; GCN-DENORM-LABEL: div_v4_c_by_minus_x_25ulp:
 ; GCN-DENORM:       ; %bb.0:
-; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
-; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    s_load_dwordx4 s[4:7], s[2:3], 0x0
-; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_div_scale_f32 v0, s[0:1], s4, s4, -2.0
-; GCN-DENORM-NEXT:    v_div_scale_f32 v1, s[0:1], -s7, -s7, -2.0
-; GCN-DENORM-NEXT:    v_div_scale_f32 v2, vcc, -2.0, s4, -2.0
-; GCN-DENORM-NEXT:    v_div_scale_f32 v3, s[0:1], -2.0, -s7, -2.0
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v4, v0
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v5, v1
-; GCN-DENORM-NEXT:    v_fma_f32 v6, -v0, v4, 1.0
-; GCN-DENORM-NEXT:    v_fma_f32 v4, v6, v4, v4
-; GCN-DENORM-NEXT:    v_fma_f32 v7, -v1, v5, 1.0
-; GCN-DENORM-NEXT:    v_fma_f32 v5, v7, v5, v5
-; GCN-DENORM-NEXT:    v_mul_f32_e32 v6, v2, v4
-; GCN-DENORM-NEXT:    v_mul_f32_e32 v7, v3, v5
-; GCN-DENORM-NEXT:    v_fma_f32 v8, -v0, v6, v2
-; GCN-DENORM-NEXT:    v_fma_f32 v9, -v1, v7, v3
-; GCN-DENORM-NEXT:    v_fma_f32 v6, v8, v4, v6
-; GCN-DENORM-NEXT:    v_fma_f32 v7, v9, v5, v7
-; GCN-DENORM-NEXT:    v_fma_f32 v0, -v0, v6, v2
-; GCN-DENORM-NEXT:    v_fma_f32 v1, -v1, v7, v3
-; GCN-DENORM-NEXT:    v_div_fmas_f32 v0, v0, v4, v6
-; GCN-DENORM-NEXT:    s_mov_b64 vcc, s[0:1]
-; GCN-DENORM-NEXT:    v_div_fmas_f32 v3, v1, v5, v7
-; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v1, -s5
-; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v5, s6
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v1, v1
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v5, v5
-; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s5
-; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v6, s6
-; GCN-DENORM-NEXT:    v_sub_u32_e32 v2, 0, v2
-; GCN-DENORM-NEXT:    v_sub_u32_e32 v6, 0, v6
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    v_mov_b32_e32 v4, 0
-; GCN-DENORM-NEXT:    v_ldexp_f32 v1, v1, v2
-; GCN-DENORM-NEXT:    v_ldexp_f32 v2, v5, v6
-; GCN-DENORM-NEXT:    v_div_fixup_f32 v0, v0, s4, -2.0
-; GCN-DENORM-NEXT:    v_div_fixup_f32 v3, v3, -s7, -2.0
-; GCN-DENORM-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
+; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DENORM-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v1, -s0
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v2, -s1
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v1, v1
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v2, v2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v3, s1
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v5, s2
+; GCN-DENORM-NEXT:    v_sub_u32_e32 v3, 0, v3
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v5, v5
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v7, 0.5, v1
+; GCN-DENORM-NEXT:    v_ldexp_f32 v1, v2, v3
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e64 v2, -s3
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v3, v2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v6, s2
+; GCN-DENORM-NEXT:    v_sub_u32_e32 v2, 0, v6
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v0, s0
+; GCN-DENORM-NEXT:    v_ldexp_f32 v2, v5, v2
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v5, s3
+; GCN-DENORM-NEXT:    v_sub_u32_e32 v0, 2, v0
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v3, -0.5, v3
+; GCN-DENORM-NEXT:    v_sub_u32_e32 v5, 2, v5
+; GCN-DENORM-NEXT:    v_ldexp_f32 v0, v7, v0
+; GCN-DENORM-NEXT:    v_ldexp_f32 v3, v3, v5
+; GCN-DENORM-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_v4_c_by_minus_x_25ulp:
@@ -492,24 +470,19 @@ define amdgpu_kernel void @div_v_by_x_25ulp(ptr addrspace(1) %arg, float %num) {
 ; GCN-DENORM:       ; %bb.0:
 ; GCN-DENORM-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-DENORM-NEXT:    s_load_dword s4, s[0:1], 0x2c
+; GCN-DENORM-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-DENORM-NEXT:    s_load_dword s5, s[2:3], 0x0
+; GCN-DENORM-NEXT:    s_load_dword s0, s[2:3], 0x0
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v2, s4
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v3, s4
 ; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-DENORM-NEXT:    v_div_scale_f32 v1, s[0:1], s5, s5, v0
-; GCN-DENORM-NEXT:    v_mov_b32_e32 v2, s5
-; GCN-DENORM-NEXT:    v_div_scale_f32 v2, vcc, s4, v2, s4
-; GCN-DENORM-NEXT:    v_rcp_f32_e32 v3, v1
-; GCN-DENORM-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
-; GCN-DENORM-NEXT:    v_fma_f32 v3, v4, v3, v3
-; GCN-DENORM-NEXT:    v_mul_f32_e32 v4, v2, v3
-; GCN-DENORM-NEXT:    v_fma_f32 v5, -v1, v4, v2
-; GCN-DENORM-NEXT:    v_fma_f32 v4, v5, v3, v4
-; GCN-DENORM-NEXT:    v_fma_f32 v1, -v1, v4, v2
-; GCN-DENORM-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
-; GCN-DENORM-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-DENORM-NEXT:    v_div_fixup_f32 v0, v1, s5, v0
-; GCN-DENORM-NEXT:    global_store_dword v2, v0, s[2:3]
+; GCN-DENORM-NEXT:    v_frexp_mant_f32_e32 v1, s0
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v1, v1
+; GCN-DENORM-NEXT:    v_frexp_exp_i32_f32_e32 v4, s0
+; GCN-DENORM-NEXT:    v_sub_u32_e32 v2, v2, v4
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v1, v3, v1
+; GCN-DENORM-NEXT:    v_ldexp_f32 v1, v1, v2
+; GCN-DENORM-NEXT:    global_store_dword v0, v1, s[2:3]
 ; GCN-DENORM-NEXT:    s_endpgm
 ;
 ; GCN-FLUSH-LABEL: div_v_by_x_25ulp:
