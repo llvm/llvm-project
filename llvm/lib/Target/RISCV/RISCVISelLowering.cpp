@@ -5784,7 +5784,7 @@ static bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  if (!LHS.getValueType().isInteger())
+  if (!LHS.getValueType().isScalarInteger())
     return false;
 
   // If the RHS side is 0, we don't need any extra instructions, return the LHS.
@@ -5904,7 +5904,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // the SELECT. Performing the lowering here allows for greater control over
   // when CZERO_{EQZ/NEZ} are used vs another branchless sequence or
   // RISCVISD::SELECT_CC node (branch-based select).
-  if (Subtarget.hasStdExtZicond() && VT.isInteger()) {
+  if (Subtarget.hasStdExtZicond() && VT.isScalarInteger()) {
     SDValue NewCondV;
     if (selectSETCC(CondV, ISD::SETNE, NewCondV, DAG)) {
       // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
