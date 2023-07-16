@@ -4322,10 +4322,10 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
         return RepOp;
     }
 
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
-      // getelementptr x, 0 -> x
-      if (NewOps.size() == 2 && match(NewOps[1], m_Zero()) &&
-          !GEP->isInBounds())
+    if (isa<GetElementPtrInst>(I)) {
+      // getelementptr x, 0 -> x.
+      // This never returns poison, even if inbounds is set.
+      if (NewOps.size() == 2 && match(NewOps[1], m_Zero()))
         return NewOps[0];
     }
   } else if (MaxRecurse) {
@@ -4888,10 +4888,8 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
     }
   }
 
-  // For opaque pointers an all-zero GEP is a no-op. For typed pointers,
-  // it may be equivalent to a bitcast.
-  if (Ptr->getType()->getScalarType()->isOpaquePointerTy() &&
-      Ptr->getType() == GEPTy &&
+  // All-zero GEP is a no-op, unless it performs a vector splat.
+  if (Ptr->getType() == GEPTy &&
       all_of(Indices, [](const auto *V) { return match(V, m_Zero()); }))
     return Ptr;
 

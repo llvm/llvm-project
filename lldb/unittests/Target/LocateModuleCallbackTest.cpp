@@ -233,6 +233,11 @@ public:
     m_module_spec = GetTestModuleSpec();
   }
 
+  void TearDown() override {
+    if (m_module_sp)
+      ModuleList::RemoveSharedModule(m_module_sp);
+  }
+
   void CheckNoCallback() {
     EXPECT_FALSE(m_platform_sp->GetLocateModuleCallback());
     EXPECT_EQ(m_callback_call_count, 0);
@@ -257,6 +262,7 @@ protected:
   TargetSP m_target_sp;
   ProcessSP m_process_sp;
   ModuleSpec m_module_spec;
+  ModuleSP m_module_sp;
   int m_callback_call_count = 0;
 };
 
@@ -269,12 +275,11 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleWithCachedModule) {
 
   CheckNoCallback();
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(), uuid_view);
-  ASSERT_FALSE(module_sp->GetSymbolFileFileSpec());
-  CheckStrippedSymbol(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
+  CheckStrippedSymbol(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleWithCachedModuleAndSymbol) {
@@ -285,12 +290,11 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleWithCachedModuleAndSymbol) {
 
   CheckNoCallback();
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(), uuid_view);
-  ASSERT_EQ(module_sp->GetSymbolFileFileSpec(), GetSymFileSpec(uuid_view));
-  CheckUnstrippedSymbol(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(), GetSymFileSpec(uuid_view));
+  CheckUnstrippedSymbol(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest,
@@ -302,12 +306,11 @@ TEST_F(LocateModuleCallbackTest,
 
   CheckNoCallback();
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(), uuid_view);
-  ASSERT_EQ(module_sp->GetSymbolFileFileSpec(), GetSymFileSpec(uuid_view));
-  CheckUnstrippedSymbol(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(), GetSymFileSpec(uuid_view));
+  CheckUnstrippedSymbol(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleFailure) {
@@ -318,9 +321,8 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleFailure) {
 
   CheckNoCallback();
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_FALSE(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_FALSE(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureNoCache) {
@@ -336,9 +338,8 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureNoCache) {
     return Status("The locate module callback failed");
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_FALSE(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_FALSE(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureCached) {
@@ -354,12 +355,11 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureCached) {
     return Status("The locate module callback failed");
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(), uuid_view);
-  ASSERT_FALSE(module_sp->GetSymbolFileFileSpec());
-  CheckStrippedSymbol(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
+  CheckStrippedSymbol(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNoFiles) {
@@ -377,12 +377,12 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNoFiles) {
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(), uuid_view);
-  ASSERT_FALSE(module_sp->GetSymbolFileFileSpec());
-  CheckStrippedSymbol(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
+  CheckStrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentModule) {
@@ -399,12 +399,12 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentModule) {
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(), uuid_view);
-  ASSERT_FALSE(module_sp->GetSymbolFileFileSpec());
-  CheckStrippedSymbol(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
+  CheckStrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentSymbol) {
@@ -424,12 +424,12 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackNonExistentSymbol) {
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(), uuid_view);
-  ASSERT_TRUE(module_sp->GetSymbolFileFileSpec().GetPath().empty());
-  CheckStrippedSymbol(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_TRUE(m_module_sp->GetSymbolFileFileSpec().GetPath().empty());
+  CheckStrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackSuccessWithModule) {
@@ -445,13 +445,13 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackSuccessWithModule) {
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(),
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
             FileSpec(GetInputFilePath(k_module_file)));
-  ASSERT_FALSE(module_sp->GetSymbolFileFileSpec());
-  CheckStrippedSymbol(module_sp);
+  ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
+  CheckStrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest,
@@ -470,13 +470,13 @@ TEST_F(LocateModuleCallbackTest,
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(),
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
             FileSpec(GetInputFilePath(k_symbol_file)));
-  ASSERT_FALSE(module_sp->GetSymbolFileFileSpec());
-  CheckUnstrippedSymbol(module_sp);
+  ASSERT_FALSE(m_module_sp->GetSymbolFileFileSpec());
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest,
@@ -496,14 +496,14 @@ TEST_F(LocateModuleCallbackTest,
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(),
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
             FileSpec(GetInputFilePath(k_symbol_file)));
-  ASSERT_EQ(module_sp->GetSymbolFileFileSpec(),
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
             FileSpec(GetInputFilePath(k_symbol_file)));
-  CheckUnstrippedSymbol(module_sp);
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest,
@@ -522,14 +522,14 @@ TEST_F(LocateModuleCallbackTest,
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(),
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
             FileSpec(GetInputFilePath(k_module_file)));
-  ASSERT_EQ(module_sp->GetSymbolFileFileSpec(),
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
             FileSpec(GetInputFilePath(k_symbol_file)));
-  CheckUnstrippedSymbol(module_sp);
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest,
@@ -548,14 +548,14 @@ TEST_F(LocateModuleCallbackTest,
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(),
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(),
             FileSpec(GetInputFilePath(k_module_file)));
-  ASSERT_EQ(module_sp->GetSymbolFileFileSpec(),
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
             FileSpec(GetInputFilePath(k_breakpad_symbol_file)));
-  CheckUnstrippedSymbol(module_sp);
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest,
@@ -573,13 +573,13 @@ TEST_F(LocateModuleCallbackTest,
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(), uuid_view);
-  ASSERT_EQ(module_sp->GetSymbolFileFileSpec(),
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
             FileSpec(GetInputFilePath(k_symbol_file)));
-  CheckUnstrippedSymbol(module_sp);
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest,
@@ -597,13 +597,13 @@ TEST_F(LocateModuleCallbackTest,
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  CheckModule(module_sp);
-  ASSERT_EQ(module_sp->GetFileSpec(), uuid_view);
-  ASSERT_EQ(module_sp->GetSymbolFileFileSpec(),
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  CheckModule(m_module_sp);
+  ASSERT_EQ(m_module_sp->GetFileSpec(), uuid_view);
+  ASSERT_EQ(m_module_sp->GetSymbolFileFileSpec(),
             FileSpec(GetInputFilePath(k_breakpad_symbol_file)));
-  CheckUnstrippedSymbol(module_sp);
+  CheckUnstrippedSymbol(m_module_sp);
+  ModuleList::RemoveSharedModule(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest,
@@ -620,9 +620,8 @@ TEST_F(LocateModuleCallbackTest,
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_FALSE(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_FALSE(m_module_sp);
 }
 
 TEST_F(LocateModuleCallbackTest,
@@ -639,7 +638,6 @@ TEST_F(LocateModuleCallbackTest,
     return Status();
   });
 
-  ModuleSP module_sp =
-      m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
-  ASSERT_FALSE(module_sp);
+  m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
+  ASSERT_FALSE(m_module_sp);
 }

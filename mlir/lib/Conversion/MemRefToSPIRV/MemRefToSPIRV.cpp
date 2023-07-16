@@ -257,6 +257,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+class ReinterpretCastPattern final
+    : public OpConversionPattern<memref::ReinterpretCastOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ReinterpretCastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -716,6 +726,52 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   return success();
 }
 
+LogicalResult ReinterpretCastPattern::matchAndRewrite(
+    memref::ReinterpretCastOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Value src = adaptor.getSource();
+  auto srcType = dyn_cast<spirv::PointerType>(src.getType());
+
+  if (!srcType)
+    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+      diag << "invalid src type " << src.getType();
+    });
+
+  TypeConverter *converter = getTypeConverter();
+
+  auto dstType = converter->convertType<spirv::PointerType>(op.getType());
+  if (dstType != srcType)
+    return rewriter.notifyMatchFailure(op, [&](Diagnostic &diag) {
+      diag << "invalid dst type " << op.getType();
+    });
+
+  OpFoldResult offset =
+      getMixedValues(adaptor.getStaticOffsets(), adaptor.getOffsets(), rewriter)
+          .front();
+  if (isConstantIntValue(offset, 0)) {
+    rewriter.replaceOp(op, src);
+    return success();
+  }
+
+  Type intType = converter->convertType(rewriter.getIndexType());
+  if (!intType)
+    return rewriter.notifyMatchFailure(op, "failed to convert index type");
+
+  Location loc = op.getLoc();
+  auto offsetValue = [&]() -> Value {
+    if (auto val = dyn_cast<Value>(offset))
+      return val;
+
+    int64_t attrVal = cast<IntegerAttr>(offset.get<Attribute>()).getInt();
+    Attribute attr = rewriter.getIntegerAttr(intType, attrVal);
+    return rewriter.create<spirv::ConstantOp>(loc, intType, attr);
+  }();
+
+  rewriter.replaceOpWithNewOp<spirv::InBoundsPtrAccessChainOp>(
+      op, src, offsetValue, std::nullopt);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Pattern population
 //===----------------------------------------------------------------------===//
@@ -723,9 +779,10 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
 namespace mlir {
 void populateMemRefToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                    RewritePatternSet &patterns) {
-  patterns.add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
-               DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern,
-               LoadOpPattern, MemorySpaceCastOpPattern, StoreOpPattern>(
-      typeConverter, patterns.getContext());
+  patterns
+      .add<AllocaOpPattern, AllocOpPattern, AtomicRMWOpPattern,
+           DeallocOpPattern, IntLoadOpPattern, IntStoreOpPattern, LoadOpPattern,
+           MemorySpaceCastOpPattern, StoreOpPattern, ReinterpretCastPattern>(
+          typeConverter, patterns.getContext());
 }
 } // namespace mlir

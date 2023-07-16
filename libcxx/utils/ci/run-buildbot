@@ -382,12 +382,6 @@ generic-merged)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-merged.cfg.in"
     check-runtimes
 ;;
-generic-assertions)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-assertions.cmake"
-    check-runtimes
-    check-abi-list
-;;
 generic-hardened-mode)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardened-mode.cmake"
@@ -495,7 +489,7 @@ apple-system)
     # TODO: It would be better to run the tests against the fake-installed version of libc++ instead
     xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi check-cxx-abilist
 ;;
-apple-system-backdeployment-assertions-*)
+apple-system-backdeployment-hardened-*)
     clean
 
     if [[ "${OSX_ROOTS}" == "" ]]; then
@@ -506,7 +500,7 @@ apple-system-backdeployment-assertions-*)
         curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
     fi
 
-    DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-assertions-}"
+    DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-hardened-}"
 
     # TODO: On Apple platforms, we never produce libc++abi.1.dylib or libunwind.1.dylib,
     #       only libc++abi.dylib and libunwind.dylib. Fix that in the build so that the
@@ -521,7 +515,7 @@ apple-system-backdeployment-assertions-*)
     PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
     PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
     PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
-    PARAMS+=";enable_assertions=True"
+    PARAMS+=";hardening_mode=hardened"
 
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \

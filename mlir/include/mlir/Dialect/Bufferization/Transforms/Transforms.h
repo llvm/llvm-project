@@ -41,6 +41,10 @@ LogicalResult eliminateEmptyTensors(RewriterBase &rewriter, Operation *op,
                                     AnchorMatchFn anchorMatchFunc,
                                     RewriteFn rewriteFunc);
 
+/// Within the given operation, hoist buffers from loops where possible. See
+/// "BufferLoopHoistingPass" for more information.
+void hoistBuffersFromLoops(Operation *op);
+
 /// Try to eliminate tensor::EmptyOps inside `op` that are anchored on an
 /// InsertSliceOp, i.e., if it is eventually inserted into another tensor
 /// (and some other conditions are met).

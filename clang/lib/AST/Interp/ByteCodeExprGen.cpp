@@ -1610,7 +1610,6 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *Exp) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   assert(!VD->isInvalidDecl() && "Trying to constant evaluate an invalid decl");
-  std::optional<PrimType> VarT = classify(VD->getType());
 
   // Create and initialize the variable.
   if (!this->visitVarDecl(VD))
@@ -1630,7 +1629,7 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   }
 
   // Return the value
-  if (VarT) {
+  if (std::optional<PrimType> VarT = classify(VD->getType())) {
     if (!this->emitLoadPop(*VarT, VD))
       return false;
 

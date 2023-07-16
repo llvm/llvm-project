@@ -119,21 +119,21 @@ define <4 x i1> @mul_nsw_ne0_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: mul_nsw_ne0_v4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm1
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE-NEXT:    pxor %xmm1, %xmm2
-; SSE-NEXT:    pandn %xmm2, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: mul_nsw_ne0_v4i32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %m = mul nsw <4 x i32> %x, %y
   %r = icmp ne <4 x i32> %m, zeroinitializer

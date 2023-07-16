@@ -3019,4 +3019,81 @@ define <2 x i32> @dec_zext_add_nonzero_vec_poison2(<2 x i8> %x) {
   ret <2 x i32> %c
 }
 
+define i32 @add_zext_sext_i1(i1 %a) {
+; CHECK-LABEL: @add_zext_sext_i1(
+; CHECK-NEXT:    ret i32 0
+;
+  %zext = zext i1 %a to i32
+  %sext = sext i1 %a to i32
+  %add = add i32 %zext, %sext
+  ret i32 %add
+}
+
+define i32 @add_sext_zext_i1(i1 %a) {
+; CHECK-LABEL: @add_sext_zext_i1(
+; CHECK-NEXT:    ret i32 0
+;
+  %zext = zext i1 %a to i32
+  %sext = sext i1 %a to i32
+  %add = add i32 %sext, %zext
+  ret i32 %add
+}
+
+define <2 x i32> @add_zext_sext_i1_vec(<2 x i1> %a) {
+; CHECK-LABEL: @add_zext_sext_i1_vec(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+;
+  %zext = zext <2 x i1> %a to <2 x i32>
+  %sext = sext <2 x i1> %a to <2 x i32>
+  %add = add <2 x i32> %zext, %sext
+  ret <2 x i32> %add
+}
+
+define i32 @add_zext_zext_i1(i1 %a) {
+; CHECK-LABEL: @add_zext_zext_i1(
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[A:%.*]], i32 2, i32 0
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %zext = zext i1 %a to i32
+  %add = add i32 %zext, %zext
+  ret i32 %add
+}
+
+define i32 @add_sext_sext_i1(i1 %a) {
+; CHECK-LABEL: @add_sext_sext_i1(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = shl nsw i32 [[SEXT]], 1
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %sext = sext i1 %a to i32
+  %add = add i32 %sext, %sext
+  ret i32 %add
+}
+
+define i32 @add_zext_sext_not_i1(i8 %a) {
+; CHECK-LABEL: @add_zext_sext_not_i1(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 [[A]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[ZEXT]], [[SEXT]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %zext = zext i8 %a to i32
+  %sext = sext i8 %a to i32
+  %add = add i32 %zext, %sext
+  ret i32 %add
+}
+
+define i32 @add_zext_sext_i1_different_values(i1 %a, i1 %b) {
+; CHECK-LABEL: @add_zext_sext_i1_different_values(
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SEXT:%.*]] = sext i1 [[B:%.*]] to i32
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[ZEXT]], [[SEXT]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %zext = zext i1 %a to i32
+  %sext = sext i1 %b to i32
+  %add = add i32 %zext, %sext
+  ret i32 %add
+}
+
 declare void @llvm.assume(i1)

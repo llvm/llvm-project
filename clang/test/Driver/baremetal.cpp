@@ -345,6 +345,58 @@
 // CHECK-RV32IMAFC-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f{{[/\\]+}}lib"
 // CHECK-RV32IMAFC-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f"
 
+// RUN: %clang %s -### --target=powerpc-unknown-eabi 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PPCEABI %s
+// CHECK-PPCEABI: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PPCEABI: "-nostdsysteminc"
+// CHECK-PPCEABI-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PPCEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PPCEABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PPCEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PPCEABI-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
+// CHECK-PPCEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-PPCEABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
+// CHECK-PPCEABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpc" "-o" "a.out"
+
+// RUN: %clang %s -### --target=powerpc64-unknown-eabi 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PPC64EABI %s
+// CHECK-PPC64EABI: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PPC64EABI: "-nostdsysteminc"
+// CHECK-PPC64EABI-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PPC64EABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PPC64EABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PPC64EABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PPC64EABI-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
+// CHECK-PPC64EABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-PPC64EABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
+// CHECK-PPC64EABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpc64" "-o" "a.out"
+
+// RUN: %clang %s -### --target=powerpcle-unknown-eabi 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PPCLEEABI %s
+// CHECK-PPCLEEABI: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PPCLEEABI: "-nostdsysteminc"
+// CHECK-PPCLEEABI-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PPCLEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PPCLEEABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PPCLEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PPCLEEABI-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
+// CHECK-PPCLEEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-PPCLEEABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
+// CHECK-PPCLEEABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpcle" "-o" "a.out"
+
+// RUN: %clang %s -### --target=powerpc64le-unknown-eabi 2>&1 \
+// RUN:   | FileCheck --check-prefix=CHECK-PPC64LEEABI %s
+// CHECK-PPC64LEEABI: InstalledDir: [[INSTALLEDDIR:.+]]
+// CHECK-PPC64LEEABI: "-nostdsysteminc"
+// CHECK-PPC64LEEABI-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
+// CHECK-PPC64LEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-PPC64LEEABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
+// CHECK-PPC64LEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PPC64LEEABI-NEXT: ld{{(.exe)?}}" "{{.*}}.o" "-Bstatic"
+// CHECK-PPC64LEEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
+// CHECK-PPC64LEEABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
+// CHECK-PPC64LEEABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpc64le" "-o" "a.out"
+
 // Check that compiler-rt library without the arch filename suffix will
 // be used if present.
 // RUN: rm -rf %T/baremetal_clang_rt_noarch

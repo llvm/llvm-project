@@ -52,13 +52,21 @@ inline SmallVector<int64_t> computeStrides(ArrayRef<int64_t> sizes) {
 SmallVector<int64_t> computeElementwiseMul(ArrayRef<int64_t> v1,
                                            ArrayRef<int64_t> v2);
 
+/// Self-explicit.
+int64_t computeSum(ArrayRef<int64_t> basis);
+
+/// Self-explicit.
+int64_t computeProduct(ArrayRef<int64_t> basis);
+
 /// Return the number of elements of basis (i.e. the max linear index).
 /// Return `0` if `basis` is empty.
 ///
 /// `basis` elements are asserted to be non-negative.
 ///
 /// Return `0` if `basis` is empty.
-int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis);
+inline int64_t computeMaxLinearIndex(ArrayRef<int64_t> basis) {
+  return computeProduct(basis);
+}
 
 /// Return the linearized index of 'offsets' w.r.t. 'basis'.
 ///
@@ -130,6 +138,12 @@ inline SmallVector<AffineExpr> computeStrides(ArrayRef<AffineExpr> sizes) {
 SmallVector<AffineExpr> computeElementwiseMul(ArrayRef<AffineExpr> v1,
                                               ArrayRef<AffineExpr> v2);
 
+/// Self-explicit.
+AffineExpr computeSum(MLIRContext *ctx, ArrayRef<AffineExpr> basis);
+
+/// Self-explicit.
+AffineExpr computeProduct(MLIRContext *ctx, ArrayRef<AffineExpr> basis);
+
 /// Return the number of elements of basis (i.e. the max linear index).
 /// Return `0` if `basis` is empty.
 ///
@@ -140,7 +154,10 @@ SmallVector<AffineExpr> computeElementwiseMul(ArrayRef<AffineExpr> v1,
 /// `basis` elements are expected to bind to non-negative values.
 ///
 /// Return the `0` AffineConstantExpr if `basis` is empty.
-AffineExpr computeMaxLinearIndex(MLIRContext *ctx, ArrayRef<AffineExpr> basis);
+inline AffineExpr computeMaxLinearIndex(MLIRContext *ctx,
+                                        ArrayRef<AffineExpr> basis) {
+  return computeProduct(ctx, basis);
+}
 
 /// Return the linearized index of 'offsets' w.r.t. 'basis'.
 ///

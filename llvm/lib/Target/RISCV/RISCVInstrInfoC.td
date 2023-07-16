@@ -348,7 +348,7 @@ def C_LW : CLoad_ri<0b010, "c.lw", GPRC, uimm7_lsb00>,
 }
 
 let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in
+    Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FLW  : CLoad_ri<0b011, "c.flw", FPR32C, uimm7_lsb00>,
              Sched<[WriteFLD32, ReadMemBase]> {
   bits<7> imm;
@@ -382,7 +382,7 @@ def C_SW : CStore_rri<0b110, "c.sw", GPRC, uimm7_lsb00>,
 }
 
 let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32]  in
+    Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32]  in
 def C_FSW  : CStore_rri<0b111, "c.fsw", FPR32C, uimm7_lsb00>,
              Sched<[WriteFST32, ReadStoreData, ReadMemBase]> {
   bits<7> imm;
@@ -534,7 +534,7 @@ def C_LWSP : CStackLoad<0b010, "c.lwsp", GPRNoX0, uimm8_lsb00>,
 }
 
 let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in
+    Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FLWSP  : CStackLoad<0b011, "c.flwsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFLD32, ReadMemBase]> {
   let Inst{6-4} = imm{4-2};
@@ -592,7 +592,7 @@ def C_SWSP : CStackStore<0b110, "c.swsp", GPR, uimm8_lsb00>,
 }
 
 let DecoderNamespace = "RISCV32Only_",
-    Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in
+    Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in
 def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00>,
                Sched<[WriteFST32, ReadStoreData, ReadMemBase]> {
   let Inst{12-9} = imm{5-2};
@@ -743,7 +743,7 @@ def : InstAlias<"c.ldsp $rd, (${rs1})", (C_LDSP GPRC:$rd, SPMem:$rs1, 0)>;
 def : InstAlias<"c.sdsp $rs2, (${rs1})", (C_SDSP GPRC:$rs2, SPMem:$rs1, 0)>;
 }
 
-let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : InstAlias<"c.flw $rd, (${rs1})", (C_FLW FPR32C:$rd, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.fsw $rs2, (${rs1})", (C_FSW FPR32C:$rs2, GPRCMem:$rs1, 0)>;
 def : InstAlias<"c.flwsp $rd, (${rs1})", (C_FLWSP FPR32C:$rd, SPMem:$rs1, 0)>;
@@ -875,7 +875,7 @@ def : CompressPat<(LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_LW GPRC:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 } // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : CompressPat<(FLW FPR32C:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_FLW FPR32C:$rd, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 } // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
@@ -895,7 +895,7 @@ def : CompressPat<(SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_SW GPRC:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 } // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : CompressPat<(FSW FPR32C:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm),
                   (C_FSW FPR32C:$rs2, GPRCMem:$rs1, uimm7_lsb00:$imm)>;
 } // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
@@ -992,7 +992,7 @@ def : CompressPat<(LW GPRNoX0:$rd, SPMem:$rs1,  uimm8_lsb00:$imm),
                   (C_LWSP GPRNoX0:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
 } // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : CompressPat<(FLW FPR32:$rd, SPMem:$rs1, uimm8_lsb00:$imm),
                   (C_FLWSP FPR32:$rd, SPMem:$rs1, uimm8_lsb00:$imm)>;
 } // Predicates = [HasStdExtC, HasStdExtF, IsRV32]
@@ -1034,7 +1034,7 @@ def : CompressPat<(SW GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
                   (C_SWSP GPR:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
 } // Predicates = [HasStdExtCOrZca]
 
-let Predicates = [HasStdExtCOrZcf, HasStdExtF, IsRV32] in {
+let Predicates = [HasStdExtCOrZcfOrZce, HasStdExtF, IsRV32] in {
 def : CompressPat<(FSW FPR32:$rs2, SPMem:$rs1, uimm8_lsb00:$imm),
                   (C_FSWSP FPR32:$rs2, SPMem:$rs1, uimm8_lsb00:$imm)>;
 } // Predicates = [HasStdExtC, HasStdExtF, IsRV32]

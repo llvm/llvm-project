@@ -18,11 +18,6 @@
     ret i32 0
   }
 
-  define i32 @spadj() {
-  start:
-    ret i32 0
-  }
-
 ...
 ---
 # CHECK-LABEL: name: foo
@@ -51,12 +46,4 @@ name:            test
 body: |
   bb.0.start (align 4, machine-block-address-taken):
   bb.1 (machine-block-address-taken, align 4):
-...
----
-# CHECK-LABEL: name: spadj
-# CHECK: body:
-# CHECK-NEXT: bb.0 (sp-adjustment 100):
-name: spadj
-body: |
-  bb.0 (sp-adjustment 100):
 ...

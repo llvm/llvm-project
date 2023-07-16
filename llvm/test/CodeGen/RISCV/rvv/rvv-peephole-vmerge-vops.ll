@@ -308,7 +308,7 @@ define <vscale x 2 x i32> @vpmerge_vflcass(<vscale x 2 x i32> %passthru, <vscale
 }
 
 ; Test riscv.vfsqrt
-declare <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, i64)
+declare <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, i64, i64)
 define <vscale x 2 x float> @vpmerge_vfsqrt(<vscale x 2 x float> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vfsqrt:
 ; CHECK:       # %bb.0:
@@ -316,13 +316,13 @@ define <vscale x 2 x float> @vpmerge_vfsqrt(<vscale x 2 x float> %passthru, <vsc
 ; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
-  %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 7, i64 %1)
   %b = call <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
   ret <vscale x 2 x float> %b
 }
 
 ; Test reciprocal operation by riscv.vfrec7
-declare <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, i64)
+declare <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, i64, i64)
 define <vscale x 2 x float> @vpmerge_vfrec7(<vscale x 2 x float> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vfrec7:
 ; CHECK:       # %bb.0:
@@ -330,7 +330,7 @@ define <vscale x 2 x float> @vpmerge_vfrec7(<vscale x 2 x float> %passthru, <vsc
 ; CHECK-NEXT:    vfrec7.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
-  %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 7, i64 %1)
   %b = call <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
   ret <vscale x 2 x float> %b
 }
@@ -358,6 +358,38 @@ define <vscale x 2 x float> @vpmerge_fadd(<vscale x 2 x float> %passthru, <vscal
 ; CHECK-NEXT:    ret
   %a = fadd <vscale x 2 x float> %x, %y
   %b = call <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; This shouldn't be folded because we need to preserve exceptions with
+; "fpexcept.strict" exception behaviour, and masking may hide them.
+define <vscale x 2 x float> @vpmerge_constrained_fadd(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i64 %vl) strictfp {
+; CHECK-LABEL: vpmerge_constrained_fadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v9, v9, v10
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 %vl)
+  ret <vscale x 2 x float> %b
+}
+declare <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float>, <vscale x 2 x float>, metadata, metadata)
+declare <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x i1>, i64)
+
+; This shouldn't be folded because we need to preserve exceptions with
+; "fpexcept.strict" exception behaviour, and masking may hide them.
+define <vscale x 2 x float> @vpmerge_constrained_fadd_vlmax(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m) strictfp {
+; CHECK-LABEL: vpmerge_constrained_fadd_vlmax:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v9, v9, v10
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 -1)
   ret <vscale x 2 x float> %b
 }
 
@@ -728,7 +760,7 @@ define <vscale x 2 x float> @vpselect_vfsqrt(<vscale x 2 x float> %passthru, <vs
 ; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
-  %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfsqrt.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 7, i64 %1)
   %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
   ret <vscale x 2 x float> %b
 }
@@ -741,7 +773,7 @@ define <vscale x 2 x float> @vpselect_vfrec7(<vscale x 2 x float> %passthru, <vs
 ; CHECK-NEXT:    vfrec7.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
-  %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 %1)
+  %a = call <vscale x 2 x float> @llvm.riscv.vfrec7.nxv2f32(<vscale x 2 x float> undef, <vscale x 2 x float> %vf, i64 7, i64 %1)
   %b = call <vscale x 2 x float> @llvm.vp.select.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
   ret <vscale x 2 x float> %b
 }

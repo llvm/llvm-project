@@ -54,7 +54,7 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, ._Renamed..24f_o     # @"f$o"
 ; ASM-NEXT:    .vbyte  4, TOC[TC0]
 ; ASM-NEXT:    .vbyte  4, 0
-; ASM-NEXT:    .csect .text[PR],5
+; ASM-NEXT:    .csect [PR],5
 ; ASM-NEXT:  ._Renamed..24f_o:
 ; ASM:         bl ._Renamed..40f_o[PR]
 ; ASM-NEXT:    nop
@@ -67,7 +67,7 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, ._Renamed..26f_o     # @"f&o"
 ; ASM-NEXT:    .vbyte  4, TOC[TC0]
 ; ASM-NEXT:    .vbyte  4, 0
-; ASM-NEXT:    .csect .text[PR],5
+; ASM-NEXT:    .csect [PR],5
 ; ASM-NEXT:  ._Renamed..26f_o:
 ; ASM:         bl ._Renamed..24f_o
 ; ASM:         .globl  _Renamed..265ff__o[DS] # -- Begin function f&_o
@@ -79,7 +79,7 @@ declare i32 @"f\40o"(...)
 ; ASM-NEXT:    .vbyte  4, ._Renamed..265ff__o  # @"f&_o"
 ; ASM-NEXT:    .vbyte  4, TOC[TC0]
 ; ASM-NEXT:    .vbyte  4, 0
-; ASM-NEXT:    .csect .text[PR],5
+; ASM-NEXT:    .csect [PR],5
 ; ASM-NEXT:  ._Renamed..265ff__o:
 ; ASM:         .csect .data[RW],2
 ; ASM-NEXT:    .globl  _Renamed..60f_o

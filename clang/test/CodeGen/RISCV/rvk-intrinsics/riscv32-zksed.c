@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple riscv32 -target-feature +zksed -emit-llvm %s -o - \
 // RUN:     | FileCheck %s  -check-prefix=RV32ZKSED
 
+#include <stdint.h>
+
 // RV32ZKSED-LABEL: @sm4ks(
 // RV32ZKSED-NEXT:  entry:
 // RV32ZKSED-NEXT:    [[RS1_ADDR:%.*]] = alloca i32, align 4
@@ -13,7 +15,7 @@
 // RV32ZKSED-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.sm4ks.i32(i32 [[TMP0]], i32 [[TMP1]], i32 0)
 // RV32ZKSED-NEXT:    ret i32 [[TMP2]]
 //
-long sm4ks(long rs1, long rs2) {
+unsigned long sm4ks(unsigned long rs1, unsigned long rs2) {
   return __builtin_riscv_sm4ks(rs1, rs2, 0);
 }
 
@@ -29,6 +31,6 @@ long sm4ks(long rs1, long rs2) {
 // RV32ZKSED-NEXT:    [[TMP2:%.*]] = call i32 @llvm.riscv.sm4ed.i32(i32 [[TMP0]], i32 [[TMP1]], i32 0)
 // RV32ZKSED-NEXT:    ret i32 [[TMP2]]
 //
-long sm4ed(long rs1, long rs2) {
+unsigned long sm4ed(unsigned long rs1, unsigned long rs2) {
   return __builtin_riscv_sm4ed(rs1, rs2, 0);
 }

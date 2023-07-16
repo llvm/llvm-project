@@ -635,6 +635,27 @@ AMDGPUToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
   for (Arg *A : Args)
     DAL->append(A);
 
+  // Replace -mcpu=native with detected GPU.
+  Arg *LastMCPUArg = DAL->getLastArg(options::OPT_mcpu_EQ);
+  if (LastMCPUArg && StringRef(LastMCPUArg->getValue()) == "native") {
+    DAL->eraseArg(options::OPT_mcpu_EQ);
+    auto GPUsOrErr = getSystemGPUArchs(Args);
+    if (!GPUsOrErr) {
+      getDriver().Diag(diag::err_drv_undetermined_gpu_arch)
+          << llvm::Triple::getArchTypeName(getArch())
+          << llvm::toString(GPUsOrErr.takeError()) << "-mcpu";
+    } else {
+      auto &GPUs = *GPUsOrErr;
+      if (GPUs.size() > 1) {
+        getDriver().Diag(diag::warn_drv_multi_gpu_arch)
+            << llvm::Triple::getArchTypeName(getArch())
+            << llvm::join(GPUs, ", ") << "-mcpu";
+      }
+      DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_mcpu_EQ),
+                        Args.MakeArgString(GPUs.front()));
+    }
+  }
+
   checkTargetID(*DAL);
 
   if (!Args.getLastArgValue(options::OPT_x).equals("cl"))

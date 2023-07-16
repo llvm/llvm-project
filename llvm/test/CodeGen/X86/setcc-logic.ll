@@ -557,10 +557,9 @@ define <4 x i32> @and_icmps_const_1bit_diff_vec(<4 x i32> %x) {
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [44,60,44,60]
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
-; CHECK-NEXT:    pxor %xmm0, %xmm2
-; CHECK-NEXT:    pandn %xmm2, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = icmp ne <4 x i32> %x, <i32 44, i32 60, i32 44, i32 60>
   %b = icmp ne <4 x i32> %x, <i32 60, i32 44, i32 60, i32 44>

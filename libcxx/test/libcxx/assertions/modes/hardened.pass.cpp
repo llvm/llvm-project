@@ -14,6 +14,7 @@
 // UNSUPPORTED: c++03
 // `check_assertion.h` requires Unix headers.
 // REQUIRES: has-unix-headers
+// XFAIL: availability-verbose_abort-missing
 
 #include <cassert>
 #include "check_assertion.h"

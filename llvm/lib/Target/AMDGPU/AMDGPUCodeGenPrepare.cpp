@@ -1549,12 +1549,17 @@ bool AMDGPUCodeGenPrepareImpl::canBreakPHINode(const PHINode &I) {
   // node as user, we don't want to break this PHI either because it's unlikely
   // to be beneficial. We would just explode the vector and reassemble it
   // directly, wasting instructions.
+  //
+  // In the case where multiple users are PHI nodes, we want at least half of
+  // them to be breakable.
+  int Score = 0;
   for (const Value *U : I.users()) {
-    if (const auto *PU = dyn_cast<PHINode>(U)) {
-      if (!canBreakPHINode(*PU))
-        return false;
-    }
+    if (const auto *PU = dyn_cast<PHINode>(U))
+      Score += canBreakPHINode(*PU) ? 1 : -1;
   }
+
+  if (Score < 0)
+    return false;
 
   return BreakPhiNodesCache[&I] = true;
 }

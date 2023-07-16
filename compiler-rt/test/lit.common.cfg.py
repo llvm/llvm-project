@@ -76,6 +76,40 @@ def find_compiler_libdir():
     return None
 
 
+def push_dynamic_library_lookup_path(config, new_path):
+    if platform.system() == "Windows":
+        dynamic_library_lookup_var = "PATH"
+    elif platform.system() == "Darwin":
+        dynamic_library_lookup_var = "DYLD_LIBRARY_PATH"
+    else:
+        dynamic_library_lookup_var = "LD_LIBRARY_PATH"
+
+    new_ld_library_path = os.path.pathsep.join(
+        (new_path, config.environment.get(dynamic_library_lookup_var, ""))
+    )
+    config.environment[dynamic_library_lookup_var] = new_ld_library_path
+
+    if platform.system() == "FreeBSD":
+        dynamic_library_lookup_var = "LD_32_LIBRARY_PATH"
+        new_ld_32_library_path = os.path.pathsep.join(
+            (new_path, config.environment.get(dynamic_library_lookup_var, ""))
+        )
+        config.environment[dynamic_library_lookup_var] = new_ld_32_library_path
+
+    if platform.system() == "SunOS":
+        dynamic_library_lookup_var = "LD_LIBRARY_PATH_32"
+        new_ld_library_path_32 = os.path.pathsep.join(
+            (new_path, config.environment.get(dynamic_library_lookup_var, ""))
+        )
+        config.environment[dynamic_library_lookup_var] = new_ld_library_path_32
+
+        dynamic_library_lookup_var = "LD_LIBRARY_PATH_64"
+        new_ld_library_path_64 = os.path.pathsep.join(
+            (new_path, config.environment.get(dynamic_library_lookup_var, ""))
+        )
+        config.environment[dynamic_library_lookup_var] = new_ld_library_path_64
+
+
 # Choose between lit's internal shell pipeline runner and a real shell.  If
 # LIT_USE_INTERNAL_SHELL is in the environment, we use that as an override.
 use_lit_shell = os.environ.get("LIT_USE_INTERNAL_SHELL")
@@ -895,3 +929,12 @@ if config.host_os == "Darwin":
 # related is likely to cause issues with sanitizer tests, because it may
 # preempt something we're looking to trap (e.g. _FORTIFY_SOURCE vs our ASAN).
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+# Set LD_LIBRARY_PATH to pick dynamic runtime up properly.
+push_dynamic_library_lookup_path(config, config.compiler_rt_libdir)
+
+# GCC-ASan uses dynamic runtime by default.
+if config.compiler_id == "GNU":
+    gcc_dir = os.path.dirname(config.clang)
+    libasan_dir = os.path.join(gcc_dir, "..", "lib" + config.bits)
+    push_dynamic_library_lookup_path(config, libasan_dir)

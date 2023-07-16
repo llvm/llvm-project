@@ -88,6 +88,11 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
+- The "safe" mode is replaced by the hardened mode in this release. The ``LIBCXX_ENABLE_ASSERTIONS`` CMake variable is
+  deprecated and setting it will trigger an error; use ``LIBCXX_HARDENING_MODE`` instead. Similarly, the
+  ``_LIBCPP_ENABLE_ASSERTIONS`` macro is deprecated and setting it to ``1`` now enables the hardened mode. See
+  ``libcxx/docs/HardenedMode.rst`` for more details.
+
 - The legacy debug mode has been removed in this release. Setting the macro ``_LIBCPP_ENABLE_DEBUG_MODE`` to ``1`` now
   enables the new debug mode which is part of hardening (see the "Improvements and New Features" section above). The
   ``LIBCXX_ENABLE_DEBUG_MODE`` CMake variable has been removed. For additional context, refer to the `Discourse post

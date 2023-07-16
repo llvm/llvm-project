@@ -423,10 +423,9 @@ GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
   unsigned BitWidth = DL.getIndexTypeSizeInBits(PtrTy);
   MapVector<Value *, APInt> VariableOffsets;
   APInt ConstantOffset(BitWidth, 0);
-  if (PtrTy->isOpaquePointerTy() &&
-      GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset)) {
-    // For opaque pointers, convert into offset representation, to recognize
-    // equivalent address calculations that use different type encoding.
+  if (GEP->collectOffset(DL, BitWidth, VariableOffsets, ConstantOffset)) {
+    // Convert into offset representation, to recognize equivalent address
+    // calculations that use different type encoding.
     LLVMContext &Context = GEP->getContext();
     E.opcode = GEP->getOpcode();
     E.type = nullptr;
@@ -439,8 +438,8 @@ GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
       E.varargs.push_back(
           lookupOrAdd(ConstantInt::get(Context, ConstantOffset)));
   } else {
-    // If converting to offset representation fails (for typed pointers and
-    // scalable vectors), fall back to type-based implementation:
+    // If converting to offset representation fails (for scalable vectors),
+    // fall back to type-based implementation:
     E.opcode = GEP->getOpcode();
     E.type = GEP->getSourceElementType();
     for (Use &Op : GEP->operands())

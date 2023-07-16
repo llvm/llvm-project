@@ -3270,25 +3270,25 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   if (EnableHeapToStack)
     getOrCreateAAFor<AAHeapToStack>(FPos);
 
+  // Every function might be "must-progress".
+  checkAndQueryIRAttr<Attribute::MustProgress, AAMustProgress>(FPos, FnAttrs);
+
+  // Every function might be "no-free".
+  checkAndQueryIRAttr<Attribute::NoFree, AANoFree>(FPos, FnAttrs);
+
+  // Every function might be "will-return".
+  checkAndQueryIRAttr<Attribute::WillReturn, AAWillReturn>(FPos, FnAttrs);
+
   // Everything that is visible from the outside (=function, argument, return
   // positions), cannot be changed if the function is not IPO amendable. We can
   // however analyse the code inside.
   if (IsIPOAmendable) {
-
-    // Every function might be "will-return".
-    checkAndQueryIRAttr<Attribute::WillReturn, AAWillReturn>(FPos, FnAttrs);
-
-    // Every function might be "must-progress".
-    checkAndQueryIRAttr<Attribute::MustProgress, AAMustProgress>(FPos, FnAttrs);
 
     // Every function can be nounwind.
     checkAndQueryIRAttr<Attribute::NoUnwind, AANoUnwind>(FPos, FnAttrs);
 
     // Every function might be marked "nosync"
     checkAndQueryIRAttr<Attribute::NoSync, AANoSync>(FPos, FnAttrs);
-
-    // Every function might be "no-free".
-    checkAndQueryIRAttr<Attribute::NoFree, AANoFree>(FPos, FnAttrs);
 
     // Every function might be "no-return".
     checkAndQueryIRAttr<Attribute::NoReturn, AANoReturn>(FPos, FnAttrs);
@@ -3348,55 +3348,61 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
         getOrCreateAAFor<AANoFPClass>(RetPos);
       }
     }
+  }
 
-    for (Argument &Arg : F.args()) {
-      IRPosition ArgPos = IRPosition::argument(Arg);
-      auto ArgNo = Arg.getArgNo();
-      AttributeSet ArgAttrs = Attrs.getParamAttrs(ArgNo);
+  for (Argument &Arg : F.args()) {
+    IRPosition ArgPos = IRPosition::argument(Arg);
+    auto ArgNo = Arg.getArgNo();
+    AttributeSet ArgAttrs = Attrs.getParamAttrs(ArgNo);
 
-      // Every argument might be simplified. We have to go through the
-      // Attributor interface though as outside AAs can register custom
-      // simplification callbacks.
-      bool UsedAssumedInformation = false;
-      getAssumedSimplified(ArgPos, /* AA */ nullptr, UsedAssumedInformation,
-                           AA::Intraprocedural);
-
-      // Every argument might be dead.
-      getOrCreateAAFor<AAIsDead>(ArgPos);
-
-      // Every argument might be marked noundef.
-      checkAndQueryIRAttr<Attribute::NoUndef, AANoUndef>(ArgPos, ArgAttrs);
-
-      if (Arg.getType()->isPointerTy()) {
-        // Every argument with pointer type might be marked nonnull.
-        checkAndQueryIRAttr<Attribute::NonNull, AANonNull>(ArgPos, ArgAttrs);
-
-        // Every argument with pointer type might be marked noalias.
-        checkAndQueryIRAttr<Attribute::NoAlias, AANoAlias>(ArgPos, ArgAttrs);
-
-        // Every argument with pointer type might be marked dereferenceable.
-        getOrCreateAAFor<AADereferenceable>(ArgPos);
-
-        // Every argument with pointer type might be marked align.
-        getOrCreateAAFor<AAAlign>(ArgPos);
-
-        // Every argument with pointer type might be marked nocapture.
-        checkAndQueryIRAttr<Attribute::NoCapture, AANoCapture>(ArgPos,
-                                                               ArgAttrs);
-
-        // Every argument with pointer type might be marked
-        // "readnone/readonly/writeonly/..."
-        getOrCreateAAFor<AAMemoryBehavior>(ArgPos);
-
+    if (!IsIPOAmendable) {
+      if (Arg.getType()->isPointerTy())
         // Every argument with pointer type might be marked nofree.
         checkAndQueryIRAttr<Attribute::NoFree, AANoFree>(ArgPos, ArgAttrs);
+      continue;
+    }
 
-        // Every argument with pointer type might be privatizable (or
-        // promotable)
-        getOrCreateAAFor<AAPrivatizablePtr>(ArgPos);
-      } else if (AttributeFuncs::isNoFPClassCompatibleType(Arg.getType())) {
-        getOrCreateAAFor<AANoFPClass>(ArgPos);
-      }
+    // Every argument might be simplified. We have to go through the
+    // Attributor interface though as outside AAs can register custom
+    // simplification callbacks.
+    bool UsedAssumedInformation = false;
+    getAssumedSimplified(ArgPos, /* AA */ nullptr, UsedAssumedInformation,
+                         AA::Intraprocedural);
+
+    // Every argument might be dead.
+    getOrCreateAAFor<AAIsDead>(ArgPos);
+
+    // Every argument might be marked noundef.
+    checkAndQueryIRAttr<Attribute::NoUndef, AANoUndef>(ArgPos, ArgAttrs);
+
+    if (Arg.getType()->isPointerTy()) {
+      // Every argument with pointer type might be marked nonnull.
+      checkAndQueryIRAttr<Attribute::NonNull, AANonNull>(ArgPos, ArgAttrs);
+
+      // Every argument with pointer type might be marked noalias.
+      checkAndQueryIRAttr<Attribute::NoAlias, AANoAlias>(ArgPos, ArgAttrs);
+
+      // Every argument with pointer type might be marked dereferenceable.
+      getOrCreateAAFor<AADereferenceable>(ArgPos);
+
+      // Every argument with pointer type might be marked align.
+      getOrCreateAAFor<AAAlign>(ArgPos);
+
+      // Every argument with pointer type might be marked nocapture.
+      checkAndQueryIRAttr<Attribute::NoCapture, AANoCapture>(ArgPos, ArgAttrs);
+
+      // Every argument with pointer type might be marked
+      // "readnone/readonly/writeonly/..."
+      getOrCreateAAFor<AAMemoryBehavior>(ArgPos);
+
+      // Every argument with pointer type might be marked nofree.
+      checkAndQueryIRAttr<Attribute::NoFree, AANoFree>(ArgPos, ArgAttrs);
+
+      // Every argument with pointer type might be privatizable (or
+      // promotable)
+      getOrCreateAAFor<AAPrivatizablePtr>(ArgPos);
+    } else if (AttributeFuncs::isNoFPClassCompatibleType(Arg.getType())) {
+      getOrCreateAAFor<AANoFPClass>(ArgPos);
     }
   }
 

@@ -185,9 +185,10 @@ static SmallVector<Value> reifyOrComputeDynamicSizes(OpBuilder &b,
   return dynSizes;
 }
 
-static Value createAllocationForTensor(RewriterBase &rewriter, Location loc,
-                                       Value value,
-                                       Attribute memorySpace = {}) {
+static Value
+createAllocationForTensor(RewriterBase &rewriter, Location loc, Value value,
+                          const linalg::BufferizeToAllocationOptions &options,
+                          Attribute memorySpace = {}) {
   OpBuilder::InsertionGuard g(rewriter);
   auto tensorType = cast<RankedTensorType>(value.getType());
 
@@ -196,11 +197,19 @@ static Value createAllocationForTensor(RewriterBase &rewriter, Location loc,
       cast<MemRefType>(bufferization::getMemRefTypeWithStaticIdentityLayout(
           tensorType, memorySpace));
   SmallVector<Value> dynamicSizes = reifyOrComputeDynamicSizes(rewriter, value);
-  Value alloc = rewriter.create<memref::AllocOp>(loc, memrefType, dynamicSizes);
 
-  // Place deallocation at the end of the block.
-  rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
-  rewriter.create<memref::DeallocOp>(loc, alloc);
+  Value alloc;
+  if (options.allocOp ==
+      linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloc) {
+    alloc = rewriter.create<memref::AllocOp>(loc, memrefType, dynamicSizes);
+    // Place deallocation at the end of the block.
+    rewriter.setInsertionPoint(rewriter.getInsertionBlock()->getTerminator());
+    rewriter.create<memref::DeallocOp>(loc, alloc);
+  } else if (options.allocOp ==
+             linalg::BufferizeToAllocationOptions::AllocOp::MemrefAlloca) {
+    alloc = rewriter.create<memref::AllocaOp>(loc, memrefType, dynamicSizes);
+    // No dealloc is needed.
+  }
 
   return alloc;
 }
@@ -213,8 +222,8 @@ Value linalg::bufferizeToAllocation(
   Location loc = padOp.getLoc();
 
   // Create buffer allocation.
-  Value alloc =
-      createAllocationForTensor(rewriter, loc, padOp.getResult(), memorySpace);
+  Value alloc = createAllocationForTensor(rewriter, loc, padOp.getResult(),
+                                          options, memorySpace);
   rewriter.setInsertionPoint(padOp);
 
   if (!padOp.hasZeroLowPad() || !padOp.hasZeroHighPad()) {
@@ -491,8 +500,8 @@ Value linalg::bufferizeToAllocation(
   rewriter.setInsertionPoint(insertionPoint ? insertionPoint : op);
   SmallVector<Value> allocs;
   for (OpOperand *operand : outOfPlaceOperands) {
-    Value alloc = createAllocationForTensor(rewriter, op->getLoc(),
-                                            operand->get(), memorySpace);
+    Value alloc = createAllocationForTensor(
+        rewriter, op->getLoc(), operand->get(), options, memorySpace);
     allocs.push_back(alloc);
     if (!state.findDefinitions(operand->get()).empty()) {
       // Initialize buffer with a copy of the operand data. Not needed if the

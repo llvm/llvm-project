@@ -27,8 +27,9 @@
 #include "Debug.h"
 #include "omptarget.h"
 
+#pragma push_macro("DEBUG_PREFIX")
+#undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
-#define LIBOMPTARGET_STRINGIFY(s) #s
 
 /// Type for the function to be invoked for connecting two libraries.
 typedef void (*OmptConnectRtnTy)(ompt_start_tool_result_t *result);
@@ -102,5 +103,7 @@ private:
 };
 
 #endif // OMPT_SUPPORT
+
+#pragma pop_macro("DEBUG_PREFIX")
 
 #endif // _OMPTCONNECTOR_H

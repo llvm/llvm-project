@@ -22,6 +22,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -234,17 +235,17 @@ auto isComparisonOperatorCall(L lhs_arg_matcher, R rhs_arg_matcher) {
       hasArgument(1, rhs_arg_matcher));
 }
 
-/// Ensures that `Expr` is mapped to a `BoolValue` and returns it.
-BoolValue &forceBoolValue(Environment &Env, const Expr &Expr) {
+/// Ensures that `Expr` is mapped to a `BoolValue` and returns its formula.
+const Formula &forceBoolValue(Environment &Env, const Expr &Expr) {
   auto *Value = cast_or_null<BoolValue>(Env.getValue(Expr, SkipPast::None));
   if (Value != nullptr)
-    return *Value;
+    return Value->formula();
 
   auto &Loc = Env.createStorageLocation(Expr);
   Value = &Env.makeAtomicBoolValue();
   Env.setValue(Loc, *Value);
   Env.setStorageLocation(Expr, Loc);
-  return *Value;
+  return Value->formula();
 }
 
 /// Sets `HasValueVal` as the symbolic value that represents the "has_value"
@@ -421,7 +422,7 @@ bool isEmptyOptional(const Value &OptionalVal, const Environment &Env) {
   auto *HasValueVal =
       cast_or_null<BoolValue>(OptionalVal.getProperty("has_value"));
   return HasValueVal != nullptr &&
-         Env.flowConditionImplies(Env.makeNot(*HasValueVal));
+         Env.flowConditionImplies(Env.arena().makeNot(HasValueVal->formula()));
 }
 
 /// Returns true if and only if `OptionalVal` is initialized and known to be
@@ -429,7 +430,8 @@ bool isEmptyOptional(const Value &OptionalVal, const Environment &Env) {
 bool isNonEmptyOptional(const Value &OptionalVal, const Environment &Env) {
   auto *HasValueVal =
       cast_or_null<BoolValue>(OptionalVal.getProperty("has_value"));
-  return HasValueVal != nullptr && Env.flowConditionImplies(*HasValueVal);
+  return HasValueVal != nullptr &&
+         Env.flowConditionImplies(HasValueVal->formula());
 }
 
 Value *getValueBehindPossiblePointer(const Expr &E, const Environment &Env) {
@@ -485,12 +487,11 @@ void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
 
 /// `ModelPred` builds a logical formula relating the predicate in
 /// `ValueOrPredExpr` to the optional's `has_value` property.
-void transferValueOrImpl(const clang::Expr *ValueOrPredExpr,
-                         const MatchFinder::MatchResult &Result,
-                         LatticeTransferState &State,
-                         BoolValue &(*ModelPred)(Environment &Env,
-                                                 BoolValue &ExprVal,
-                                                 BoolValue &HasValueVal)) {
+void transferValueOrImpl(
+    const clang::Expr *ValueOrPredExpr, const MatchFinder::MatchResult &Result,
+    LatticeTransferState &State,
+    const Formula &(*ModelPred)(Environment &Env, const Formula &ExprVal,
+                                const Formula &HasValueVal)) {
   auto &Env = State.Env;
 
   const auto *ObjectArgumentExpr =
@@ -502,24 +503,25 @@ void transferValueOrImpl(const clang::Expr *ValueOrPredExpr,
   if (HasValueVal == nullptr)
     return;
 
-  Env.addToFlowCondition(
-      ModelPred(Env, forceBoolValue(Env, *ValueOrPredExpr), *HasValueVal));
+  Env.addToFlowCondition(ModelPred(Env, forceBoolValue(Env, *ValueOrPredExpr),
+                                   HasValueVal->formula()));
 }
 
 void transferValueOrStringEmptyCall(const clang::Expr *ComparisonExpr,
                                     const MatchFinder::MatchResult &Result,
                                     LatticeTransferState &State) {
   return transferValueOrImpl(ComparisonExpr, Result, State,
-                             [](Environment &Env, BoolValue &ExprVal,
-                                BoolValue &HasValueVal) -> BoolValue & {
+                             [](Environment &Env, const Formula &ExprVal,
+                                const Formula &HasValueVal) -> const Formula & {
+                               auto &A = Env.arena();
                                // If the result is *not* empty, then we know the
                                // optional must have been holding a value. If
                                // `ExprVal` is true, though, we don't learn
                                // anything definite about `has_value`, so we
                                // don't add any corresponding implications to
                                // the flow condition.
-                               return Env.makeImplication(Env.makeNot(ExprVal),
-                                                          HasValueVal);
+                               return A.makeImplies(A.makeNot(ExprVal),
+                                                    HasValueVal);
                              });
 }
 
@@ -527,12 +529,13 @@ void transferValueOrNotEqX(const Expr *ComparisonExpr,
                            const MatchFinder::MatchResult &Result,
                            LatticeTransferState &State) {
   transferValueOrImpl(ComparisonExpr, Result, State,
-                      [](Environment &Env, BoolValue &ExprVal,
-                         BoolValue &HasValueVal) -> BoolValue & {
+                      [](Environment &Env, const Formula &ExprVal,
+                         const Formula &HasValueVal) -> const Formula & {
+                        auto &A = Env.arena();
                         // We know that if `(opt.value_or(X) != X)` then
                         // `opt.hasValue()`, even without knowing further
                         // details about the contents of `opt`.
-                        return Env.makeImplication(ExprVal, HasValueVal);
+                        return A.makeImplies(ExprVal, HasValueVal);
                       });
 }
 
@@ -701,8 +704,8 @@ void transferStdForwardCall(const CallExpr *E, const MatchFinder::MatchResult &,
   State.Env.setValue(*LocRet, *ValArg);
 }
 
-BoolValue &evaluateEquality(Environment &Env, BoolValue &EqVal, BoolValue &LHS,
-                            BoolValue &RHS) {
+const Formula &evaluateEquality(Arena &A, const Formula &EqVal,
+                                const Formula &LHS, const Formula &RHS) {
   // Logically, an optional<T> object is composed of two values - a `has_value`
   // bit and a value of type T. Equality of optional objects compares both
   // values. Therefore, merely comparing the `has_value` bits isn't sufficient:
@@ -717,37 +720,38 @@ BoolValue &evaluateEquality(Environment &Env, BoolValue &EqVal, BoolValue &LHS,
   // b) (!LHS & !RHS) => EqVal
   //    If neither is set, then they are equal.
   // We rewrite b) as !EqVal => (LHS v RHS), for a more compact formula.
-  return Env.makeAnd(
-      Env.makeImplication(
-          EqVal, Env.makeOr(Env.makeAnd(LHS, RHS),
-                            Env.makeAnd(Env.makeNot(LHS), Env.makeNot(RHS)))),
-      Env.makeImplication(Env.makeNot(EqVal), Env.makeOr(LHS, RHS)));
+  return A.makeAnd(
+      A.makeImplies(EqVal, A.makeOr(A.makeAnd(LHS, RHS),
+                                    A.makeAnd(A.makeNot(LHS), A.makeNot(RHS)))),
+      A.makeImplies(A.makeNot(EqVal), A.makeOr(LHS, RHS)));
 }
 
 void transferOptionalAndOptionalCmp(const clang::CXXOperatorCallExpr *CmpExpr,
                                     const MatchFinder::MatchResult &,
                                     LatticeTransferState &State) {
   Environment &Env = State.Env;
+  auto &A = Env.arena();
   auto *CmpValue = &forceBoolValue(Env, *CmpExpr);
   if (auto *LHasVal = getHasValue(
           Env, Env.getValue(*CmpExpr->getArg(0), SkipPast::Reference)))
     if (auto *RHasVal = getHasValue(
             Env, Env.getValue(*CmpExpr->getArg(1), SkipPast::Reference))) {
       if (CmpExpr->getOperator() == clang::OO_ExclaimEqual)
-        CmpValue = &State.Env.makeNot(*CmpValue);
-      Env.addToFlowCondition(
-          evaluateEquality(Env, *CmpValue, *LHasVal, *RHasVal));
+        CmpValue = &A.makeNot(*CmpValue);
+      Env.addToFlowCondition(evaluateEquality(A, *CmpValue, LHasVal->formula(),
+                                              RHasVal->formula()));
     }
 }
 
 void transferOptionalAndValueCmp(const clang::CXXOperatorCallExpr *CmpExpr,
                                  const clang::Expr *E, Environment &Env) {
+  auto &A = Env.arena();
   auto *CmpValue = &forceBoolValue(Env, *CmpExpr);
   if (auto *HasVal = getHasValue(Env, Env.getValue(*E, SkipPast::Reference))) {
     if (CmpExpr->getOperator() == clang::OO_ExclaimEqual)
-      CmpValue = &Env.makeNot(*CmpValue);
-    Env.addToFlowCondition(evaluateEquality(Env, *CmpValue, *HasVal,
-                                            Env.getBoolLiteralValue(true)));
+      CmpValue = &A.makeNot(*CmpValue);
+    Env.addToFlowCondition(
+        evaluateEquality(A, *CmpValue, HasVal->formula(), A.makeLiteral(true)));
   }
 }
 
@@ -929,7 +933,7 @@ std::vector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
   if (auto *OptionalVal = getValueBehindPossiblePointer(*ObjectExpr, Env)) {
     auto *Prop = OptionalVal->getProperty("has_value");
     if (auto *HasValueVal = cast_or_null<BoolValue>(Prop)) {
-      if (Env.flowConditionImplies(*HasValueVal))
+      if (Env.flowConditionImplies(HasValueVal->formula()))
         return {};
     }
   }
@@ -1015,13 +1019,14 @@ bool UncheckedOptionalAccessModel::merge(QualType Type, const Value &Val1,
   bool MustNonEmpty1 = isNonEmptyOptional(Val1, Env1);
   bool MustNonEmpty2 = isNonEmptyOptional(Val2, Env2);
   if (MustNonEmpty1 && MustNonEmpty2)
-    MergedEnv.addToFlowCondition(HasValueVal);
+    MergedEnv.addToFlowCondition(HasValueVal.formula());
   else if (
       // Only make the costly calls to `isEmptyOptional` if we got "unknown"
       // (false) for both calls to `isNonEmptyOptional`.
       !MustNonEmpty1 && !MustNonEmpty2 && isEmptyOptional(Val1, Env1) &&
       isEmptyOptional(Val2, Env2))
-    MergedEnv.addToFlowCondition(MergedEnv.makeNot(HasValueVal));
+    MergedEnv.addToFlowCondition(
+        MergedEnv.arena().makeNot(HasValueVal.formula()));
   setHasValue(MergedVal, HasValueVal);
   return true;
 }

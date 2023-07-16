@@ -41,7 +41,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; BIT64-NEXT:     .vbyte	8, .main                   # @main
 ; BIT64-NEXT:     .vbyte	8, TOC[TC0]
 ; BIT64-NEXT:     .vbyte	8, 0
-; COMMON-NEXT:    .csect  .text[PR]
+; COMMON-NEXT:    .csect  [PR]
 ; COMMON-NEXT:    .main:
 
 ; COMMON:         .csect  .data[RW]
@@ -180,7 +180,7 @@ declare extern_weak void @foo_ext_weak(ptr)
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index+10]]
-; CHECKSYM-NEXT:     Name: .text
+; CHECKSYM-NEXT:     Name:
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0
 ; CHECKSYM-NEXT:     Section: .text
 ; CHECKSYM-NEXT:     Type: 0x0
