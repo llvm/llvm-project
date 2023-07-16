@@ -21,6 +21,17 @@ static T getParam(const InterpFrame *Frame, unsigned Index) {
   return Frame->getParam<T>(Offset);
 }
 
+/// Peek an integer value from the stack into an APSInt.
+static APSInt peekToAPSInt(InterpStack &Stk, PrimType T) {
+  APSInt R;
+  INT_TYPE_SWITCH(T, {
+    T Val = Stk.peek<T>();
+    R = APSInt(APInt(T::bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
+  });
+
+  return R;
+}
+
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame) {
   const Pointer &A = getParam<Pointer>(Frame, 0);
@@ -205,6 +216,25 @@ static bool interp__builtin_isnormal(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// First parameter to __builtin_isfpclass is the floating value, the
+/// second one is an integral value.
+static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  const CallExpr *CE = cast<CallExpr>(E);
+  PrimType FPClassArgT = *S.getContext().classify(CE->getArgs()[1]->getType());
+  APSInt FPClassArg = peekToAPSInt(S.Stk, FPClassArgT);
+  const Floating &F =
+      S.Stk.peek<Floating>(align(primSize(FPClassArgT) + primSize(PT_Float)));
+
+  int32_t Result =
+      static_cast<int32_t>((F.classify() & FPClassArg).getZExtValue());
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Result));
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
@@ -287,6 +317,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
     break;
   case Builtin::BI__builtin_isnormal:
     if (interp__builtin_isnormal(S, OpPC, Frame, F))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_isfpclass:
+    if (interp__builtin_isfpclass(S, OpPC, Frame, F))
       return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
 
