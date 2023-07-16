@@ -9534,9 +9534,7 @@ SDValue SITargetLowering::LowerFFREXP(SDValue Op, SelectionDAG &DAG) const {
       ISD::INTRINSIC_WO_CHAIN, dl, InstrExpVT,
       DAG.getTargetConstant(Intrinsic::amdgcn_frexp_exp, dl, MVT::i32), Val);
 
-  const GCNSubtarget &ST =
-      DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
-  if (ST.hasFractBug()) {
+  if (Subtarget->hasFractBug()) {
     SDValue Fabs = DAG.getNode(ISD::FABS, dl, VT, Val);
     SDValue Inf = DAG.getConstantFP(
         APFloat::getInf(SelectionDAG::EVTToAPFloatSemantics(VT)), dl, VT);
