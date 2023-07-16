@@ -17,7 +17,7 @@ define void @test_01(ptr %arr, ptr %a_len_ptr) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT1:%.*]]
 ; CHECK:       in.bounds:
@@ -94,7 +94,7 @@ define void @test_02(ptr %arr, ptr %a_len_ptr) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_PRELOOP_COPY:%.*]], [[MAINLOOP:%.*]] ], [ [[IDX_NEXT:%.*]], [[IN_BOUNDS:%.*]] ]
-; CHECK-NEXT:    [[IDX_NEXT]] = add i32 [[IDX]], -1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nsw i32 [[IDX]], -1
 ; CHECK-NEXT:    [[ABC:%.*]] = icmp slt i32 [[IDX]], [[LEN]]
 ; CHECK-NEXT:    br i1 true, label [[IN_BOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT1:%.*]]
 ; CHECK:       in.bounds:
