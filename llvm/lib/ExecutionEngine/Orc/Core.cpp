@@ -1960,6 +1960,7 @@ JITDylib *ExecutionSession::getJITDylibByName(StringRef Name) {
 JITDylib &ExecutionSession::createBareJITDylib(std::string Name) {
   assert(!getJITDylibByName(Name) && "JITDylib with that name already exists");
   return runSessionLocked([&, this]() -> JITDylib & {
+    assert(SessionOpen && "Cannot create JITDylib after session is closed");
     JDs.push_back(new JITDylib(*this, std::move(Name)));
     return *JDs.back();
   });
