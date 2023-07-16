@@ -252,6 +252,10 @@ private:
       if (auto Value = boolValue(N, "Designators"))
         F.Designators = *Value;
     });
+    Dict.handle("BlockEnd", [&](Node &N) {
+      if (auto Value = boolValue(N, "BlockEnd"))
+        F.BlockEnd = *Value;
+    });
     Dict.handle("TypeNameLimit", [&](Node &N) {
       if (auto Value = uint32Value(N, "TypeNameLimit"))
         F.TypeNameLimit = *Value;
