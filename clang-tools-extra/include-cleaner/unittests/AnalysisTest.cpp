@@ -311,12 +311,9 @@ R"cpp(#include "d.h"
   Results = {};
   Results.Missing.push_back("\"d.h\"");
   Code = R"cpp(#include "a.h")cpp";
-  // FIXME: this isn't correct, the main-file header d.h should be added before
-  // a.h.
   EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
-R"cpp(#include "a.h"
-#include "d.h"
-)cpp");
+R"cpp(#include "d.h"
+#include "a.h")cpp");
 }
 
 MATCHER_P3(expandedAt, FileID, Offset, SM, "") {

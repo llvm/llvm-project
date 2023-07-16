@@ -357,9 +357,6 @@ public:
   void addAccelTableKind(AccelTableKind Kind) {
     assert(!llvm::is_contained(Options.AccelTables, Kind));
     Options.AccelTables.emplace_back(Kind);
-
-    if (Kind == AccelTableKind::Apple)
-      Options.CanStripTemplateName = true;
   }
 
   /// Set prepend path for clang modules.
@@ -880,7 +877,6 @@ private:
 
     /// The accelerator table kinds
     SmallVector<AccelTableKind, 1> AccelTables;
-    bool CanStripTemplateName = false;
 
     /// Prepend path for the clang modules.
     std::string PrependPath;

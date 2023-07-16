@@ -63,7 +63,7 @@ C c = {
   .x = 1, // override-note {{previous}}
   .x = 1, // override-error {{overrides prior initialization}} override-note {{previous}}
   .y = 1, // override-note {{previous}}
-  .y = 1, // override-error {{overrides prior initialization}}
+  .y = 1, // override-error {{overrides prior initialization}} // reorder-note {{previous initialization for field 'y' is here}}
   .x = 1, // reorder-error {{declaration order}} override-error {{overrides prior initialization}} override-note {{previous}}
   .x = 1, // override-error {{overrides prior initialization}}
 };
@@ -176,4 +176,44 @@ namespace no_unwrap {
   void i() {
     h({.a = 1});
   }
+}
+
+namespace GH63605 {
+struct A  {
+  unsigned x;
+  unsigned y;
+  unsigned z;
+};
+
+struct B {
+  unsigned a;
+  unsigned b;
+};
+
+struct : public A, public B {
+  unsigned : 2;
+  unsigned a : 6;
+  unsigned : 1;
+  unsigned b : 6;
+  unsigned : 2;
+  unsigned c : 6;
+  unsigned d : 1;
+  unsigned e : 2;
+} data = {
+  {.z=0,
+         // pedantic-note@-1 {{first non-designated initializer is here}}
+         // reorder-note@-2 {{previous initialization for field 'z' is here}}
+   .y=1, // reorder-error {{field 'z' will be initialized after field 'y'}}
+         // reorder-note@-1 {{previous initialization for field 'y' is here}}
+   .x=2}, // reorder-error {{field 'y' will be initialized after field 'x'}}
+  {.b=3,  // reorder-note {{previous initialization for field 'b' is here}}
+   .a=4}, // reorder-error {{field 'b' will be initialized after field 'a'}}
+    .e = 1, // reorder-note {{previous initialization for field 'e' is here}}
+            // pedantic-error@-1 {{mixture of designated and non-designated initializers in the same initializer list is a C99 extension}}
+    .d = 1, // reorder-error {{field 'e' will be initialized after field 'd'}}
+            // reorder-note@-1 {{previous initialization for field 'd' is here}}
+    .c = 1, // reorder-error {{field 'd' will be initialized after field 'c'}} // reorder-note {{previous initialization for field 'c' is here}}
+    .b = 1, // reorder-error {{field 'c' will be initialized after field 'b'}} // reorder-note {{previous initialization for field 'b' is here}}
+    .a = 1, // reorder-error {{field 'b' will be initialized after field 'a'}}
+};
 }

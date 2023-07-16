@@ -1150,23 +1150,22 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Initialize a group for B if it has an allowable stride. Even if we don't
     // create a group for B, we continue with the bottom-up algorithm to ensure
     // we don't break any of B's dependences.
-    InterleaveGroup<Instruction> *Group = nullptr;
+    InterleaveGroup<Instruction> *GroupB = nullptr;
     if (isStrided(DesB.Stride) &&
         (!isPredicated(B->getParent()) || EnablePredicatedInterleavedMemAccesses)) {
-      Group = getInterleaveGroup(B);
-      if (!Group) {
+      GroupB = getInterleaveGroup(B);
+      if (!GroupB) {
         LLVM_DEBUG(dbgs() << "LV: Creating an interleave group with:" << *B
                           << '\n');
-        Group = createInterleaveGroup(B, DesB.Stride, DesB.Alignment);
+        GroupB = createInterleaveGroup(B, DesB.Stride, DesB.Alignment);
+      } else if (CompletedLoadGroups.contains(GroupB)) {
+        // Skip B if no new instructions can be added to its load group.
+        continue;
       }
       if (B->mayWriteToMemory())
-        StoreGroups.insert(Group);
-      else {
-        // Skip B if no new instructions can be added to its load group.
-        if (CompletedLoadGroups.contains(Group))
-          continue;
-        LoadGroups.insert(Group);
-      }
+        StoreGroups.insert(GroupB);
+      else
+        LoadGroups.insert(GroupB);
     }
 
     for (auto AI = std::next(BI); AI != E; ++AI) {
@@ -1211,13 +1210,11 @@ void InterleavedAccessInfo::analyzeInterleaving(
         // be added to B's interleave group, because this would mean the load B
         // would need to be moved across store A. Mark the interleave group as
         // complete.
-        if (isInterleaved(B) && isa<LoadInst>(B)) {
-          InterleaveGroup<Instruction> *LoadGroup = getInterleaveGroup(B);
-
+        if (GroupB && isa<LoadInst>(B)) {
           LLVM_DEBUG(dbgs() << "LV: Marking interleave group for " << *B
                             << " as complete.\n");
 
-          CompletedLoadGroups.insert(LoadGroup);
+          CompletedLoadGroups.insert(GroupB);
         }
 
         // If a dependence exists and A is not already in a group (or it was
@@ -1277,18 +1274,18 @@ void InterleavedAccessInfo::analyzeInterleaving(
       // The index of A is the index of B plus A's distance to B in multiples
       // of the size.
       int IndexA =
-          Group->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
+          GroupB->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
 
       // Try to insert A into B's group.
-      if (Group->insertMember(A, IndexA, DesA.Alignment)) {
+      if (GroupB->insertMember(A, IndexA, DesA.Alignment)) {
         LLVM_DEBUG(dbgs() << "LV: Inserted:" << *A << '\n'
                           << "    into the interleave group with" << *B
                           << '\n');
-        InterleaveGroupMap[A] = Group;
+        InterleaveGroupMap[A] = GroupB;
 
         // Set the first load in program order as the insert position.
         if (A->mayReadFromMemory())
-          Group->setInsertPos(A);
+          GroupB->setInsertPos(A);
       }
     } // Iteration over A accesses.
   }   // Iteration over B accesses.

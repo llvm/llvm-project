@@ -879,7 +879,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = true;
   std::vector<std::unique_ptr<SymbolIndex>> IdxStack;
-  std::unique_ptr<SymbolIndex> StaticIdx;
 #if CLANGD_ENABLE_REMOTE
   if (RemoteIndexAddress.empty() != ProjectRoot.empty()) {
     llvm::errs() << "remote-index-address and project-path have to be "
@@ -900,14 +899,7 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   Opts.ReferencesLimit = ReferencesLimit;
   Opts.Rename.LimitFiles = RenameFileLimit;
   auto PAI = createProjectAwareIndex(loadExternalIndex, Sync);
-  if (StaticIdx) {
-    IdxStack.emplace_back(std::move(StaticIdx));
-    IdxStack.emplace_back(
-        std::make_unique<MergedIndex>(PAI.get(), IdxStack.back().get()));
-    Opts.StaticIndex = IdxStack.back().get();
-  } else {
-    Opts.StaticIndex = PAI.get();
-  }
+  Opts.StaticIndex = PAI.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
 

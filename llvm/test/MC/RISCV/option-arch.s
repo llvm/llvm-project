@@ -118,3 +118,9 @@ addi a0, a1, 0
 # Test extension name that has digits.
 .option arch, +zve32x
 # CHECK: .option arch, +zve32x
+
+.option arch, rv32i
+.option arch, +zce, +f
+# CHECK-INST: flw fa0, 0(a0)
+# CHECK: # encoding: [0x08,0x61]
+c.flw fa0, 0(a0)

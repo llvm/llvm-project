@@ -164,7 +164,7 @@ private:
            bool HasThisPointer, bool HasRVO);
 
   /// Sets the code of a function.
-  void setCode(unsigned NewFrameSize, std::vector<char> &&NewCode,
+  void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
                SourceMap &&NewSrcMap, llvm::SmallVector<Scope, 2> &&NewScopes,
                bool NewHasBody) {
     FrameSize = NewFrameSize;
@@ -192,7 +192,7 @@ private:
   /// Size of the argument stack.
   unsigned ArgSize;
   /// Program code.
-  std::vector<char> Code;
+  std::vector<std::byte> Code;
   /// Opcode-to-expression mapping.
   SourceMap SrcMap;
   /// List of block descriptors.

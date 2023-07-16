@@ -13,12 +13,14 @@
 
 #include <cassert>
 
+bool executed_condition = false;
+bool f() { executed_condition = true; return false; }
+
 int main(int, char**) {
-  // TODO(hardening): remove the `#if` guard once `_LIBCPP_ENABLE_ASSERTIONS` no longer affects hardening modes.
-#if !_LIBCPP_ENABLE_ASSERTIONS
   _LIBCPP_ASSERT_UNCATEGORIZED(true, "Should not fire");
   _LIBCPP_ASSERT_UNCATEGORIZED(false, "Also should not fire");
-#endif
+  _LIBCPP_ASSERT_UNCATEGORIZED(f(), "Should not execute anything");
+  assert(!executed_condition); // Really make sure we did not execute anything.
 
   return 0;
 }

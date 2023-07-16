@@ -211,6 +211,11 @@ let HasMaskedOffOperand = false in {
                                   [["vv", "v", "vvvv"],
                                    ["vf", "v", "vvev"]]>;
   }
+  multiclass RVVFloatingTerBuiltinSetRoundingMode {
+    defm "" : RVVOutOp1BuiltinSet<NAME, "xfd",
+                                  [["vv", "v", "vvvvu"],
+                                   ["vf", "v", "vvevu"]]>;
+  }
 }
 
 let HasMaskedOffOperand = false, Log2LMUL = [-2, -1, 0, 1, 2] in {
@@ -219,6 +224,11 @@ let HasMaskedOffOperand = false, Log2LMUL = [-2, -1, 0, 1, 2] in {
                                       [["vv", "w", "wwvv"],
                                        ["vf", "w", "wwev"]]>;
   }
+  multiclass RVVFloatingWidenTerBuiltinSetRoundingMode {
+    defm ""  : RVVOutOp1Op2BuiltinSet<NAME, "xf",
+                                      [["vv", "w", "wwvvu"],
+                                       ["vf", "w", "wwevu"]]>;
+  }
 }
 
 multiclass RVVFloatingBinBuiltinSet
@@ -226,9 +236,18 @@ multiclass RVVFloatingBinBuiltinSet
                           [["vv", "v", "vvv"],
                            ["vf", "v", "vve"]]>;
 
+multiclass RVVFloatingBinBuiltinSetRoundingMode
+    : RVVOutOp1BuiltinSet<NAME, "xfd",
+                          [["vv", "v", "vvvu"],
+                           ["vf", "v", "vveu"]]>;
+
 multiclass RVVFloatingBinVFBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "xfd",
                           [["vf", "v", "vve"]]>;
+
+multiclass RVVFloatingBinVFBuiltinSetRoundingMode
+    : RVVOutOp1BuiltinSet<NAME, "xfd",
+                          [["vf", "v", "vveu"]]>;
 
 multiclass RVVFloatingMaskOutBuiltinSet
     : RVVOp0Op1BuiltinSet<NAME, "xfd",
@@ -238,6 +257,21 @@ multiclass RVVFloatingMaskOutBuiltinSet
 multiclass RVVFloatingMaskOutVFBuiltinSet
     : RVVOp0Op1BuiltinSet<NAME, "fd",
                           [["vf", "vm", "mve"]]>;
+
+multiclass RVVConvBuiltinSet<string intrinsic_name, string type_range,
+                         list<list<string>> suffixes_prototypes> {
+let Name = intrinsic_name,
+    IRName = intrinsic_name,
+    MaskedIRName = intrinsic_name # "_mask",
+    IntrinsicTypes = [-1, 0] in {
+  foreach s_p = suffixes_prototypes in {
+      defvar suffix = s_p[0];
+      defvar prototype = s_p[1];
+      def : RVVBuiltin<suffix, prototype, type_range>;
+    }
+  }
+}
+
 
 class RVVMaskBinBuiltin : RVVOutBuiltin<"m", "mmm", "c"> {
   let Name = NAME # "_mm";
@@ -337,9 +371,17 @@ let HasMaskedOffOperand = true in {
     defm "" : RVVOutOp0BuiltinSet<NAME, "xfd",
                                   [["vs", "vSv", "SvvSv"]]>;
   }
+  multiclass RVVFloatingReductionBuiltinRoundingMode {
+    defm "" : RVVOutOp0BuiltinSet<NAME, "xfd",
+                                  [["vs", "vSv", "SvvSvu"]]>;
+  }
   multiclass RVVFloatingWidenReductionBuiltin {
     defm "" : RVVOutOp0BuiltinSet<NAME, "xf",
                                   [["vs", "vSw", "SwvSw"]]>;
+  }
+  multiclass RVVFloatingWidenReductionBuiltinRoundingMode {
+    defm "" : RVVOutOp0BuiltinSet<NAME, "xf",
+                                  [["vs", "vSw", "SwvSwu"]]>;
   }
 }
 
@@ -404,10 +446,20 @@ multiclass RVVFloatingWidenBinBuiltinSet
                          [["vv", "w", "wvv"],
                           ["vf", "w", "wve"]]>;
 
+multiclass RVVFloatingWidenBinBuiltinSetRoundingMode
+    : RVVWidenBuiltinSet<NAME, "xf",
+                         [["vv", "w", "wvvu"],
+                          ["vf", "w", "wveu"]]>;
+
 multiclass RVVFloatingWidenOp0BinBuiltinSet
     : RVVWidenWOp0BuiltinSet<NAME # "_w", "xf",
                              [["wv", "w", "wwv"],
                               ["wf", "w", "wwe"]]>;
+
+multiclass RVVFloatingWidenOp0BinBuiltinSetRoundingMode
+    : RVVWidenWOp0BuiltinSet<NAME # "_w", "xf",
+                             [["wv", "w", "wwvu"],
+                              ["wf", "w", "wweu"]]>;
 
 defvar TypeList = ["c","s","i","l","x","f","d"];
 defvar EEWList = [["8", "(Log2EEW:3)"],
@@ -1856,61 +1908,344 @@ let ManualCodegen = [{
   defm vnclipu : RVVUnsignedNShiftBuiltinSetRoundingMode;
   defm vnclip : RVVSignedNShiftBuiltinSetRoundingMode;
 }
+}
 
 // 14. Vector Floating-Point Instructions
-// 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
-defm vfadd  : RVVFloatingBinBuiltinSet;
-defm vfsub  : RVVFloatingBinBuiltinSet;
-defm vfrsub : RVVFloatingBinVFBuiltinSet;
+let HeaderCode =
+[{
+enum __RISCV_FRM {
+  __RISCV_FRM_RNE = 0,
+  __RISCV_FRM_RTZ = 1,
+  __RISCV_FRM_RDN = 2,
+  __RISCV_FRM_RUP = 3,
+  __RISCV_FRM_RMM = 4,
+};
+}] in def frm_enum : RVVHeader;
 
-// 14.3. Vector Widening Floating-Point Add/Subtract Instructions
-// Widening FP add/subtract, 2*SEW = SEW +/- SEW
-defm vfwadd : RVVFloatingWidenBinBuiltinSet;
-defm vfwsub : RVVFloatingWidenBinBuiltinSet;
-// Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
-defm vfwadd : RVVFloatingWidenOp0BinBuiltinSet;
-defm vfwsub : RVVFloatingWidenOp0BinBuiltinSet;
-
-// 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
-defm vfmul  : RVVFloatingBinBuiltinSet;
-defm vfdiv  : RVVFloatingBinBuiltinSet;
-defm vfrdiv : RVVFloatingBinVFBuiltinSet;
-
-// 14.5. Vector Widening Floating-Point Multiply
-let Log2LMUL = [-2, -1, 0, 1, 2] in {
-  defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
-                                       [["vv", "w", "wvv"],
-                                        ["vf", "w", "wve"]]>;
-}
-}
-
-// 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
-let UnMaskedPolicyScheme = HasPolicyOperand in {
-defm vfmacc  : RVVFloatingTerBuiltinSet;
-defm vfnmacc : RVVFloatingTerBuiltinSet;
-defm vfmsac  : RVVFloatingTerBuiltinSet;
-defm vfnmsac : RVVFloatingTerBuiltinSet;
-defm vfmadd  : RVVFloatingTerBuiltinSet;
-defm vfnmadd : RVVFloatingTerBuiltinSet;
-defm vfmsub  : RVVFloatingTerBuiltinSet;
-defm vfnmsub : RVVFloatingTerBuiltinSet;
-
-// 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
-defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
-defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
-defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
-defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
-}
-
-// 14.8. Vector Floating-Point Square-Root Instruction
 let UnMaskedPolicyScheme = HasPassthruOperand in {
-def vfsqrt : RVVFloatingUnaryVVBuiltin;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset + 1]->getType(),
+                      Operands.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = true in {
+    // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+    defm vfadd  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfsub  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfrsub : RVVFloatingBinVFBuiltinSetRoundingMode;
+
+    // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+    // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
+    defm vfwadd : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
+    defm vfwsub : RVVFloatingWidenOp0BinBuiltinSetRoundingMode;
+
+    // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+    defm vfmul  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfdiv  : RVVFloatingBinBuiltinSetRoundingMode;
+    defm vfrdiv : RVVFloatingBinVFBuiltinSetRoundingMode;
+  }
+  // 14.2. Vector Single-Width Floating-Point Add/Subtract Instructions
+  defm vfadd  : RVVFloatingBinBuiltinSet;
+  defm vfsub  : RVVFloatingBinBuiltinSet;
+  defm vfrsub : RVVFloatingBinVFBuiltinSet;
+
+  // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+  // Widening FP add/subtract, 2*SEW = 2*SEW +/- SEW
+  defm vfwadd : RVVFloatingWidenOp0BinBuiltinSet;
+  defm vfwsub : RVVFloatingWidenOp0BinBuiltinSet;
+
+  // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
+  defm vfmul  : RVVFloatingBinBuiltinSet;
+  defm vfdiv  : RVVFloatingBinBuiltinSet;
+  defm vfrdiv : RVVFloatingBinVFBuiltinSet;
+}
+
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+                      Ops.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = true in {
+    // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+    // Widening FP add/subtract, 2*SEW = SEW +/- SEW
+    defm vfwadd : RVVFloatingWidenBinBuiltinSetRoundingMode;
+    defm vfwsub : RVVFloatingWidenBinBuiltinSetRoundingMode;
+
+    // 14.5. Vector Widening Floating-Point Multiply
+    let Log2LMUL = [-2, -1, 0, 1, 2] in {
+      defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
+                                          [["vv", "w", "wvvu"],
+                                            ["vf", "w", "wveu"]]>;
+    }
+  }
+  // 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+  // Widening FP add/subtract, 2*SEW = SEW +/- SEW
+  defm vfwadd : RVVFloatingWidenBinBuiltinSet;
+  defm vfwsub : RVVFloatingWidenBinBuiltinSet;
+
+  // 14.5. Vector Widening Floating-Point Multiply
+  let Log2LMUL = [-2, -1, 0, 1, 2] in {
+    defm vfwmul : RVVOutOp0Op1BuiltinSet<"vfwmul", "xf",
+                                        [["vv", "w", "wvv"],
+                                          ["vf", "w", "wve"]]>;
+  }
+}
+}
+
+
+let UnMaskedPolicyScheme = HasPolicyOperand in {
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
+
+    unsigned Offset = IsMasked ? 2 : 1;
+
+    Operands.push_back(Ops[IsMasked ? 1 : 0]); // passthrough
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                      Operands.back()->getType()};
+
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+    defm vfmacc  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmacc : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfmsac  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmsac : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfmadd  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmadd : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfmsub  : RVVFloatingTerBuiltinSetRoundingMode;
+    defm vfnmsub : RVVFloatingTerBuiltinSetRoundingMode;
+  }
+  // 14.6. Vector Single-Width Floating-Point Fused Multiply-Add Instructions
+  defm vfmacc  : RVVFloatingTerBuiltinSet;
+  defm vfnmacc : RVVFloatingTerBuiltinSet;
+  defm vfmsac  : RVVFloatingTerBuiltinSet;
+  defm vfnmsac : RVVFloatingTerBuiltinSet;
+  defm vfmadd  : RVVFloatingTerBuiltinSet;
+  defm vfnmadd : RVVFloatingTerBuiltinSet;
+  defm vfmsub  : RVVFloatingTerBuiltinSet;
+  defm vfnmsub : RVVFloatingTerBuiltinSet;
+}
+
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasRoundModeOp = IsMasked ? Ops.size() == 6 : Ops.size() == 5;
+
+    unsigned Offset = IsMasked ? 2 : 1;
+
+    Operands.push_back(Ops[IsMasked ? 1 : 0]); // passthrough
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Ops[Offset + 1]->getType(),
+                      Operands.back()->getType()};
+
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+    defm vfwmacc  : RVVFloatingWidenTerBuiltinSetRoundingMode;
+    defm vfwnmacc : RVVFloatingWidenTerBuiltinSetRoundingMode;
+    defm vfwmsac  : RVVFloatingWidenTerBuiltinSetRoundingMode;
+    defm vfwnmsac : RVVFloatingWidenTerBuiltinSetRoundingMode;
+  }
+  // 14.7. Vector Widening Floating-Point Fused Multiply-Add Instructions
+  defm vfwmacc  : RVVFloatingWidenTerBuiltinSet;
+  defm vfwnmacc : RVVFloatingWidenTerBuiltinSet;
+  defm vfwmsac  : RVVFloatingWidenTerBuiltinSet;
+  defm vfwnmsac : RVVFloatingWidenTerBuiltinSet;
+}
+
+}
+
+let UnMaskedPolicyScheme = HasPassthruOperand in {
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, round_mode, vl)
+    // Masked:   (passthru, op0, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4) :
+      (HasMaskedOff ? Ops.size() == 4 : Ops.size() == 3);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 1]); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 1]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 1]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Operands.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 14.8. Vector Floating-Point Square-Root Instruction
+    defm vfsqrt : RVVOutBuiltinSet<"vfsqrt", "xfd", [["v", "v", "vvu"]]>;
+
+    // 14.10. Vector Floating-Point Reciprocal Estimate Instruction
+    defm vfrec7 : RVVOutBuiltinSet<"vfrec7", "xfd", [["v", "v", "vvu"]]>;
+  }
+  // 14.8. Vector Floating-Point Square-Root Instruction
+  defm vfsqrt : RVVOutBuiltinSet<"vfsqrt", "xfd", [["v", "v", "vv"]]>;
+
+  // 14.10. Vector Floating-Point Reciprocal Estimate Instruction
+  defm vfrec7 : RVVOutBuiltinSet<"vfrec7", "xfd", [["v", "v", "vv"]]>;
+}
 
 // 14.9. Vector Floating-Point Reciprocal Square-Root Estimate Instruction
 def vfrsqrt7 : RVVFloatingUnaryVVBuiltin;
-
-// 14.10. Vector Floating-Point Reciprocal Estimate Instruction
-def vfrec7 : RVVFloatingUnaryVVBuiltin;
 
 // 14.11. Vector Floating-Point MIN/MAX Instructions
 defm vfmin : RVVFloatingBinBuiltinSet;
@@ -1967,17 +2302,11 @@ let HasMasked = false,
 
 // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 let UnMaskedPolicyScheme = HasPassthruOperand in {
-def vfcvt_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_xu">;
-def vfcvt_x_f_v : RVVConvToSignedBuiltin<"vfcvt_x">;
 def vfcvt_rtz_xu_f_v : RVVConvToUnsignedBuiltin<"vfcvt_rtz_xu">;
 def vfcvt_rtz_x_f_v : RVVConvToSignedBuiltin<"vfcvt_rtz_x">;
-def vfcvt_f_xu_v : RVVConvBuiltin<"Fv", "FvUv", "sil", "vfcvt_f">;
-def vfcvt_f_x_v : RVVConvBuiltin<"Fv", "Fvv", "sil", "vfcvt_f">;
 
 // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-  def vfwcvt_xu_f_v : RVVConvToWidenUnsignedBuiltin<"vfwcvt_xu">;
-  def vfwcvt_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_x">;
   def vfwcvt_rtz_xu_f_v : RVVConvToWidenUnsignedBuiltin<"vfwcvt_rtz_xu">;
   def vfwcvt_rtz_x_f_v : RVVConvToWidenSignedBuiltin<"vfwcvt_rtz_x">;
   def vfwcvt_f_xu_v : RVVConvBuiltin<"Fw", "FwUv", "csi", "vfwcvt_f">;
@@ -1987,14 +2316,138 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 
 // 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
-  def vfncvt_xu_f_w : RVVConvToNarrowingUnsignedBuiltin<"vfncvt_xu">;
-  def vfncvt_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_x">;
   def vfncvt_rtz_xu_f_w : RVVConvToNarrowingUnsignedBuiltin<"vfncvt_rtz_xu">;
   def vfncvt_rtz_x_f_w : RVVConvToNarrowingSignedBuiltin<"vfncvt_rtz_x">;
-  def vfncvt_f_xu_w : RVVConvBuiltin<"Fv", "FvUw", "csi", "vfncvt_f">;
-  def vfncvt_f_x_w : RVVConvBuiltin<"Fv", "Fvw", "csi", "vfncvt_f">;
-  def vfncvt_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_f">;
   def vfncvt_rod_f_f_w : RVVConvBuiltin<"v", "vw", "xf", "vfncvt_rod_f">;
+}
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, frm, vl)
+    // Masked:   (passthru, op0, mask, frm, vl, policy)
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4) :
+      (HasMaskedOff ? Ops.size() == 4 : Ops.size() == 3);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 1]); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 1]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 1]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                      Operands.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+    let OverloadedName = "vfcvt_x" in
+      defm :
+        RVVConvBuiltinSet<"vfcvt_x_f_v", "xfd", [["Iv", "Ivvu"]]>;
+    let OverloadedName = "vfcvt_xu" in
+      defm :
+        RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvvu"]]>;
+    let OverloadedName = "vfcvt_f" in {
+      defm :
+        RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvvu"]]>;
+      defm :
+        RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUvu"]]>;
+    }
+
+    // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+    let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+      let OverloadedName = "vfwcvt_x" in
+        defm :
+          RVVConvBuiltinSet<"vfwcvt_x_f_v", "xf", [["Iw", "Iwvu"]]>;
+      let OverloadedName = "vfwcvt_xu" in
+        defm :
+          RVVConvBuiltinSet<"vfwcvt_xu_f_v", "xf", [["Uw", "Uwvu"]]>;
+    }
+    // 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+    let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+      let OverloadedName = "vfncvt_x" in
+        defm :
+          RVVConvBuiltinSet<"vfncvt_x_f_w", "csi", [["Iv", "IvFwu"]]>;
+      let OverloadedName = "vfncvt_xu" in
+        defm :
+          RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFwu"]]>;
+      let OverloadedName = "vfncvt_f" in {
+        defm :
+          RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvwu"]]>;
+        defm :
+          RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUwu"]]>;
+      }
+      let OverloadedName = "vfncvt_f" in
+        defm :
+          RVVConvBuiltinSet<"vfncvt_f_f_w", "xf", [["v", "vwu"]]>;
+    }
+  }
+
+  // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
+  let OverloadedName = "vfcvt_x" in
+    defm :
+      RVVConvBuiltinSet<"vfcvt_x_f_v", "xfd", [["Iv", "Ivv"]]>;
+  let OverloadedName = "vfcvt_xu" in
+    defm :
+      RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvv"]]>;
+  let OverloadedName = "vfcvt_f" in {
+    defm :
+      RVVConvBuiltinSet<"vfcvt_f_x_v", "sil", [["Fv", "Fvv"]]>;
+    defm :
+      RVVConvBuiltinSet<"vfcvt_f_xu_v", "sil", [["Fv", "FvUv"]]>;
+  }
+
+  // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
+  let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+    let OverloadedName = "vfwcvt_x" in
+      defm :
+        RVVConvBuiltinSet<"vfwcvt_x_f_v", "xf", [["Iw", "Iwv"]]>;
+    let OverloadedName = "vfwcvt_xu" in
+      defm :
+        RVVConvBuiltinSet<"vfwcvt_xu_f_v", "xf", [["Uw", "Uwv"]]>;
+  }
+  // 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
+  let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
+    let OverloadedName = "vfncvt_x" in
+      defm :
+        RVVConvBuiltinSet<"vfncvt_x_f_w", "csi", [["Iv", "IvFw"]]>;
+    let OverloadedName = "vfncvt_xu" in
+      defm :
+        RVVConvBuiltinSet<"vfncvt_xu_f_w", "csi", [["Uv", "UvFw"]]>;
+    let OverloadedName = "vfncvt_f" in {
+      defm :
+        RVVConvBuiltinSet<"vfncvt_f_x_w", "csi", [["Fv", "Fvw"]]>;
+      defm :
+        RVVConvBuiltinSet<"vfncvt_f_xu_w", "csi", [["Fv", "FvUw"]]>;
+    }
+    let OverloadedName = "vfncvt_f" in
+      defm :
+        RVVConvBuiltinSet<"vfncvt_f_f_w", "xf", [["v", "vw"]]>;
+  }
 }
 }
 
@@ -2024,12 +2477,65 @@ let HasMaskedOffOperand = true in {
 // 15.3. Vector Single-Width Floating-Point Reduction Instructions
 defm vfredmax : RVVFloatingReductionBuiltin;
 defm vfredmin : RVVFloatingReductionBuiltin;
-defm vfredusum : RVVFloatingReductionBuiltin;
-defm vfredosum : RVVFloatingReductionBuiltin;
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, op0, op1, round_mode, vl)
+    // Masked:   (passthru, vector_in, vector_in/scalar_in, mask, frm, vl, policy)
 
-// 15.4. Vector Widening Floating-Point Reduction Instructions
-defm vfwredusum : RVVFloatingWidenReductionBuiltin;
-defm vfwredosum : RVVFloatingWidenReductionBuiltin;
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(),
+                      Ops.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = 1 in {
+    // 15.3. Vector Single-Width Floating-Point Reduction Instructions
+    defm vfredusum : RVVFloatingReductionBuiltinRoundingMode;
+    defm vfredosum : RVVFloatingReductionBuiltinRoundingMode;
+
+    // 15.4. Vector Widening Floating-Point Reduction Instructions
+    defm vfwredusum : RVVFloatingWidenReductionBuiltinRoundingMode;
+    defm vfwredosum : RVVFloatingWidenReductionBuiltinRoundingMode;
+  }
+  // 15.3. Vector Single-Width Floating-Point Reduction Instructions
+  defm vfredusum : RVVFloatingReductionBuiltin;
+  defm vfredosum : RVVFloatingReductionBuiltin;
+
+  // 15.4. Vector Widening Floating-Point Reduction Instructions
+  defm vfwredusum : RVVFloatingWidenReductionBuiltin;
+  defm vfwredosum : RVVFloatingWidenReductionBuiltin;
+}
 }
 
 // 16. Vector Mask Instructions

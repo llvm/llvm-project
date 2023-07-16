@@ -730,6 +730,18 @@ def IsNotISAFuture : Predicate<"!Subtarget->isISAFuture()">;
 
 //===----------------------------------------------------------------------===//
 // PowerPC Multiclass Definitions.
+multiclass XForm_base_r3xo_r<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                      string asmbase, string asmstr, list<dag> pattern> {
+  let BaseName = asmbase in {
+    def NAME : XForm_base_r3xo<opcode, xo, OOL, IOL,
+                                !strconcat(asmbase, !strconcat(" ", asmstr)),
+                                NoItinerary, pattern>, RecFormRel;
+    let Defs = [CR1] in
+    def _rec : XForm_base_r3xo<opcode, xo, OOL, IOL,
+                               !strconcat(asmbase, !strconcat(". ", asmstr)),
+                               NoItinerary, []>, isRecordForm, RecFormRel;
+  }
+}
 
 multiclass XForm_6r<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                     string asmbase, string asmstr, InstrItinClass itin,
@@ -1043,6 +1055,32 @@ multiclass XForm_28r<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   }
 }
 
+multiclass XForm_SP2_FRTB5r<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                        string asmbase, string asmstr, list<dag> pattern> {
+  let BaseName = asmbase in {
+    def NAME : XForm_SP2_FRTB5<opcode, xo, OOL, IOL,
+                               !strconcat(asmbase, !strconcat(" ", asmstr)),
+                               pattern, NoItinerary>, RecFormRel;
+    let Defs = [CR1] in
+    def _rec : XForm_SP2_FRTB5<opcode, xo, OOL, IOL,
+                               !strconcat(asmbase, !strconcat(". ", asmstr)),
+                               [], NoItinerary>, isRecordForm, RecFormRel;
+  }
+}
+
+multiclass XForm_S1_FRTB5r<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                      string asmbase, string asmstr, list<dag> pattern> {
+  let BaseName = asmbase in {
+    def NAME : XForm_S1_FRTB5<opcode, xo, OOL, IOL,
+                              !strconcat(asmbase, !strconcat(" ", asmstr)),
+                              pattern, NoItinerary>, RecFormRel;
+    let Defs = [CR1] in
+    def _rec : XForm_S1_FRTB5<opcode, xo, OOL, IOL,
+                              !strconcat(asmbase, !strconcat(". ", asmstr)), [],
+                              NoItinerary>, isRecordForm, RecFormRel;
+  }
+}
+
 multiclass AForm_1r<bits<6> opcode, bits<5> xo, dag OOL, dag IOL,
                     string asmbase, string asmstr, InstrItinClass itin,
                     list<dag> pattern> {
@@ -1125,6 +1163,19 @@ multiclass
     def _rec : Z23Form_FRTB5_R1_RMC2<opcode, xo, OOL, IOL,
                                !strconcat(asmbase, !strconcat(". ", asmstr)),
                                []>, isRecordForm, RecFormRel;
+  }
+}
+
+multiclass Z22Form_FRTA5_SH6r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
+                      string asmbase, string asmstr, list<dag> pattern> {
+  let BaseName = asmbase in {
+    def NAME : Z22Form_FRTA5_SH6<opcode, xo, OOL, IOL,
+                                 !strconcat(asmbase, !strconcat(" ", asmstr)),
+                                 pattern, NoItinerary>, RecFormRel;
+    let Defs = [CR1] in
+    def _rec : Z22Form_FRTA5_SH6<opcode, xo, OOL, IOL,
+                                 !strconcat(asmbase, !strconcat(". ", asmstr)),
+                                 [], NoItinerary>, isRecordForm, RecFormRel;
   }
 }
 

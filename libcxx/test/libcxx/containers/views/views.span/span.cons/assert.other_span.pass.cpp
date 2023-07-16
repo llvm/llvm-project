@@ -14,8 +14,8 @@
 // Check that we ensure `other.size() == Extent`.
 
 // REQUIRES: has-unix-headers
+// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 #include <array>
 #include <span>

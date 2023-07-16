@@ -10,7 +10,7 @@
 // RV32ZKSH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sm3p0.i32(i32 [[TMP0]])
 // RV32ZKSH-NEXT:    ret i32 [[TMP1]]
 //
-long sm3p0(long rs1)
+unsigned long sm3p0(unsigned long rs1)
 {
   return __builtin_riscv_sm3p0(rs1);
 }
@@ -23,6 +23,6 @@ long sm3p0(long rs1)
 // RV32ZKSH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sm3p1.i32(i32 [[TMP0]])
 // RV32ZKSH-NEXT:    ret i32 [[TMP1]]
 //
-long sm3p1(long rs1) {
+unsigned long sm3p1(unsigned long rs1) {
   return __builtin_riscv_sm3p1(rs1);
 }

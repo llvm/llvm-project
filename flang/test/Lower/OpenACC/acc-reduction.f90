@@ -2,12 +2,27 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
+! CHECK-LABEL: acc.reduction.recipe @reduction_mul_z32 : !fir.complex<4> reduction_operator <mul> init {
+! CHECK: ^bb0(%{{.*}}: !fir.complex<4>):
+! CHECK:   %[[REAL:.*]] = arith.constant 1.000000e+00 : f32
+! CHECK:   %[[IMAG:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK:   %[[UNDEF:.*]] = fir.undefined !fir.complex<4>
+! CHECK:   %[[UNDEF1:.*]] = fir.insert_value %[[UNDEF]], %[[REAL]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:   %[[UNDEF2:.*]] = fir.insert_value %[[UNDEF1]], %[[IMAG]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:   acc.yield %[[UNDEF2]] : !fir.complex<4>
+! CHECK: } combiner {
+! CHECK: ^bb0(%[[ARG0:.*]]: !fir.complex<4>, %[[ARG1:.*]]: !fir.complex<4>):
+! CHECK:   %[[COMBINED:.*]] = fir.mulc %[[ARG0]], %[[ARG1]] : !fir.complex<4>
+! CHECK:   acc.yield %[[COMBINED]] : !fir.complex<4>
+! CHECK: }
+
 ! CHECK-LABEL: acc.reduction.recipe @reduction_add_z32 : !fir.complex<4> reduction_operator <add> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.complex<4>):
-! CHECK:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK:   %[[REAL:.*]] = arith.constant 0.000000e+00 : f32
+! CHECK:   %[[IMAG:.*]] = arith.constant 0.000000e+00 : f32
 ! CHECK:   %[[UNDEF:.*]] = fir.undefined !fir.complex<4>
-! CHECK:   %[[UNDEF1:.*]] = fir.insert_value %[[UNDEF]], %[[CST]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:   %[[UNDEF2:.*]] = fir.insert_value %[[UNDEF1]], %[[CST]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:   %[[UNDEF1:.*]] = fir.insert_value %[[UNDEF]], %[[REAL]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
+! CHECK:   %[[UNDEF2:.*]] = fir.insert_value %[[UNDEF1]], %[[IMAG]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
 ! CHECK:   acc.yield %[[UNDEF2]] : !fir.complex<4>
 ! CHECK: } combiner {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.complex<4>, %[[ARG1:.*]]: !fir.complex<4>):
@@ -752,3 +767,13 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_add_cmplx()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>> {name = "c"}
 ! CHECK: acc.parallel reduction(@reduction_add_z32 -> %[[RED]] : !fir.ref<!fir.complex<4>>)
+
+subroutine acc_reduction_mul_cmplx()
+  complex :: c
+  !$acc parallel reduction(*:c)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_mul_cmplx()
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>> {name = "c"}
+! CHECK: acc.parallel reduction(@reduction_mul_z32 -> %[[RED]] : !fir.ref<!fir.complex<4>>)

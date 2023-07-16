@@ -151,9 +151,9 @@ public:
   /// Converts `value` to a label attribute. Asserts if the matching fails.
   DILabelAttr matchLabelAttr(llvm::Value *value);
 
-  /// Converts `value` to an array of symbol references pointing to alias scope
-  /// operations, or returns failure if the conversion fails.
-  FailureOr<SmallVector<SymbolRefAttr>>
+  /// Converts `value` to an array of alias scopes or returns failure if the
+  /// conversion fails.
+  FailureOr<SmallVector<AliasScopeAttr>>
   matchAliasScopeAttrs(llvm::Value *value);
 
   /// Translates the debug location.
@@ -191,10 +191,10 @@ public:
     return tbaaMapping.lookup(node);
   }
 
-  /// Returns the symbol references pointing to the access group operations that
-  /// map to the access group nodes starting from the access group metadata
-  /// `node`. Returns failure, if any of the symbol references cannot be found.
-  FailureOr<SmallVector<SymbolRefAttr>>
+  /// Returns the access group attributes that map to the access group nodes
+  /// starting from the access group metadata `node`. Returns failure, if any of
+  /// the attributes cannot be found.
+  FailureOr<SmallVector<AccessGroupAttr>>
   lookupAccessGroupAttrs(const llvm::MDNode *node) const;
 
   /// Returns the loop annotation attribute that corresponds to the given LLVM
@@ -202,10 +202,10 @@ public:
   LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
                                                  Location loc) const;
 
-  /// Returns the symbol references pointing to the alias scope operations that
-  /// map to the alias scope nodes starting from the metadata `node`. Returns
-  /// failure, if any of the symbol references cannot be found.
-  FailureOr<SmallVector<SymbolRefAttr>>
+  /// Returns the alias scope attributes that map to the alias scope nodes
+  /// starting from the metadata `node`. Returns failure, if any of the
+  /// attributes cannot be found.
+  FailureOr<SmallVector<AliasScopeAttr>>
   lookupAliasScopeAttrs(const llvm::MDNode *node) const;
 
 private:
@@ -349,9 +349,9 @@ private:
   /// operations for all operations that return no result. All operations that
   /// return a result have a valueMapping entry instead.
   DenseMap<llvm::Instruction *, Operation *> noResultOpMapping;
-  /// Mapping between LLVM alias scope and domain metadata nodes and symbol
-  /// references to the LLVM dialect operations corresponding to these nodes.
-  DenseMap<const llvm::MDNode *, SymbolRefAttr> aliasScopeMapping;
+  /// Mapping between LLVM alias scope and domain metadata nodes and
+  /// attributes in the LLVM dialect corresponding to these nodes.
+  DenseMap<const llvm::MDNode *, Attribute> aliasScopeMapping;
   /// Mapping between LLVM TBAA metadata nodes and symbol references to the LLVM
   /// dialect TBAA operations corresponding to these nodes.
   DenseMap<const llvm::MDNode *, SymbolRefAttr> tbaaMapping;

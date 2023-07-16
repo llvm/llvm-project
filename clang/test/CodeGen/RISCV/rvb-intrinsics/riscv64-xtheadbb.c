@@ -10,7 +10,7 @@
 // RV64XTHEADBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP0]], i1 false)
 // RV64XTHEADBB-NEXT:    ret i32 [[TMP1]]
 //
-int clz_32(int a) {
+unsigned int clz_32(unsigned int a) {
   return __builtin_riscv_clz_32(a);
 }
 
@@ -23,7 +23,7 @@ int clz_32(int a) {
 // RV64XTHEADBB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctlz.i32(i32 [[NOT]], i1 false)
 // RV64XTHEADBB-NEXT:    ret i32 [[TMP1]]
 //
-int clo_32(int a) {
+unsigned int clo_32(unsigned int a) {
   return __builtin_riscv_clz_32(~a);
 }
 
@@ -36,7 +36,7 @@ int clo_32(int a) {
 // RV64XTHEADBB-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP1]] to i32
 // RV64XTHEADBB-NEXT:    ret i32 [[CAST]]
 //
-int clz_64(long a) {
+unsigned int clz_64(unsigned long a) {
   return __builtin_riscv_clz_64(a);
 }
 
@@ -50,6 +50,6 @@ int clz_64(long a) {
 // RV64XTHEADBB-NEXT:    [[CAST:%.*]] = trunc i64 [[TMP1]] to i32
 // RV64XTHEADBB-NEXT:    ret i32 [[CAST]]
 //
-int clo_64(long a) {
+unsigned int clo_64(unsigned long a) {
   return __builtin_riscv_clz_64(~a);
 }

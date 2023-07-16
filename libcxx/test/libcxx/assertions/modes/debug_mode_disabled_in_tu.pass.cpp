@@ -8,9 +8,7 @@
 
 // This test ensures that we can disable the debug mode on a per-TU basis regardless of how the library was built.
 
-// TODO(hardening): currently, explicitly enabling assertions enables all uncategorized assertions and overrides
-// disabling the debug mode.
-// UNSUPPORTED: libcpp-has-hardened-mode, libcpp-has-assertions
+// UNSUPPORTED: libcpp-has-hardened-mode
 // ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_DEBUG_MODE=0
 
 #include <cassert>

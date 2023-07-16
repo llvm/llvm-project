@@ -183,7 +183,7 @@ struct ConvertNVVMToLLVMPass
     ConversionTarget target(getContext());
     target.addLegalDialect<::mlir::LLVM::LLVMDialect>();
     RewritePatternSet pattern(&getContext());
-    pattern.add<PtxLowering>(pattern.getContext());
+    mlir::populateNVVMToLLVMConversionPatterns(pattern);
     if (failed(
             applyPartialConversion(getOperation(), target, std::move(pattern))))
       signalPassFailure();
@@ -191,3 +191,7 @@ struct ConvertNVVMToLLVMPass
 };
 
 } // namespace
+
+void mlir::populateNVVMToLLVMConversionPatterns(RewritePatternSet &patterns) {
+  patterns.add<PtxLowering>(patterns.getContext());
+}

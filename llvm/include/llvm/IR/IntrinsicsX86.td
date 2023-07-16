@@ -2558,7 +2558,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_x86mmx_ty], [IntrNoMem]>;
 
   def int_x86_mmx_movnt_dq : ClangBuiltin<"__builtin_ia32_movntq">,
-              Intrinsic<[], [llvm_ptrx86mmx_ty, llvm_x86mmx_ty], []>;
+              Intrinsic<[], [llvm_ptr_ty, llvm_x86mmx_ty], []>;
 
   def int_x86_mmx_palignr_b : ClangBuiltin<"__builtin_ia32_palignr">,
       DefaultAttrsIntrinsic<[llvm_x86mmx_ty],

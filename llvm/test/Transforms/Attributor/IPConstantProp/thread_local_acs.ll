@@ -31,8 +31,8 @@ define internal i32 @callee(ptr %thread_local_ptr, ptr %shared_ptr) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @gtl, align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @gsh, align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP]], [[TMP1]]
+; CHECK-NEXT:    [[TRUETMP1:%.*]] = load i32, ptr @gsh, align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP]], [[TRUETMP1]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
 entry:

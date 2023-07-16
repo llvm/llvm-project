@@ -847,6 +847,17 @@ _Bool __aarch64_have_lse_atomics
 #if defined(__has_include)
 #if __has_include(<sys/auxv.h>)
 #include <sys/auxv.h>
+
+#if __has_include(<sys/ifunc.h>)
+#include <sys/ifunc.h>
+#else
+typedef struct __ifunc_arg_t {
+  unsigned long _size;
+  unsigned long _hwcap;
+  unsigned long _hwcap2;
+} __ifunc_arg_t;
+#endif // __has_include(<sys/ifunc.h>)
+
 #if __has_include(<asm/hwcap.h>)
 #include <asm/hwcap.h>
 
@@ -858,6 +869,9 @@ _Bool __aarch64_have_lse_atomics
 #include <zircon/syscalls.h>
 #endif
 
+#ifndef _IFUNC_ARG_HWCAP
+#define _IFUNC_ARG_HWCAP (1ULL << 62)
+#endif
 #ifndef AT_HWCAP
 #define AT_HWCAP 16
 #endif
@@ -1140,11 +1154,16 @@ struct {
   // As features grows new fields could be added
 } __aarch64_cpu_features __attribute__((visibility("hidden"), nocommon));
 
-void init_cpu_features_resolver(unsigned long hwcap, unsigned long hwcap2) {
+void init_cpu_features_resolver(unsigned long hwcap, const __ifunc_arg_t *arg) {
 #define setCPUFeature(F) __aarch64_cpu_features.features |= 1ULL << F
 #define getCPUFeature(id, ftr) __asm__("mrs %0, " #id : "=r"(ftr))
 #define extractBits(val, start, number)                                        \
   (val & ((1ULL << number) - 1ULL) << start) >> start
+  if (__aarch64_cpu_features.features)
+    return;
+  unsigned long hwcap2 = 0;
+  if (hwcap & _IFUNC_ARG_HWCAP)
+    hwcap2 = arg->_hwcap2;
   if (hwcap & HWCAP_CRC32)
     setCPUFeature(FEAT_CRC);
   if (hwcap & HWCAP_PMULL)
@@ -1320,6 +1339,7 @@ void init_cpu_features_resolver(unsigned long hwcap, unsigned long hwcap2) {
     if (hwcap & HWCAP_SHA3)
       setCPUFeature(FEAT_SHA3);
   }
+  setCPUFeature(FEAT_MAX);
 }
 
 void CONSTRUCTOR_ATTRIBUTE init_cpu_features(void) {
@@ -1328,7 +1348,6 @@ void CONSTRUCTOR_ATTRIBUTE init_cpu_features(void) {
   // CPU features already initialized.
   if (__aarch64_cpu_features.features)
     return;
-  setCPUFeature(FEAT_MAX);
 #if defined(__FreeBSD__)
   int res = 0;
   res = elf_aux_info(AT_HWCAP, &hwcap, sizeof hwcap);
@@ -1344,7 +1363,11 @@ void CONSTRUCTOR_ATTRIBUTE init_cpu_features(void) {
   hwcap = getauxval(AT_HWCAP);
   hwcap2 = getauxval(AT_HWCAP2);
 #endif // defined(__FreeBSD__)
-  init_cpu_features_resolver(hwcap, hwcap2);
+  __ifunc_arg_t arg;
+  arg._size = sizeof(__ifunc_arg_t);
+  arg._hwcap = hwcap;
+  arg._hwcap2 = hwcap2;
+  init_cpu_features_resolver(hwcap | _IFUNC_ARG_HWCAP, &arg);
 #undef extractBits
 #undef getCPUFeature
 #undef setCPUFeature

@@ -730,18 +730,18 @@ define dso_local zeroext i1 @phi(i32 %arg) {
 ; TUNIT-NEXT:    br label [[BB3]]
 ; TUNIT:       bb3:
 ; TUNIT-NEXT:    [[DOT02:%.*]] = phi i32 [ 1, [[BB1]] ], [ 2, [[BB2]] ]
-; TUNIT-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[ARG]], 10
-; TUNIT-NEXT:    br i1 [[TMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
+; TUNIT-NEXT:    [[TRUETMP4:%.*]] = icmp sgt i32 [[ARG]], 10
+; TUNIT-NEXT:    br i1 [[TRUETMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
 ; TUNIT:       bb5:
-; TUNIT-NEXT:    [[TMP6:%.*]] = add nsw i32 [[DOT02]], 1
+; TUNIT-NEXT:    [[TRUETMP6:%.*]] = add nsw i32 [[DOT02]], 1
 ; TUNIT-NEXT:    br label [[BB9:%.*]]
 ; TUNIT:       bb7:
-; TUNIT-NEXT:    [[TMP8:%.*]] = add nsw i32 [[DOT02]], 2
+; TUNIT-NEXT:    [[TRUETMP8:%.*]] = add nsw i32 [[DOT02]], 2
 ; TUNIT-NEXT:    br label [[BB9]]
 ; TUNIT:       bb9:
-; TUNIT-NEXT:    [[DOT01:%.*]] = phi i32 [ [[TMP6]], [[BB5]] ], [ [[TMP8]], [[BB7]] ]
-; TUNIT-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[DOT01]], 5
-; TUNIT-NEXT:    br i1 [[TMP10]], label [[BB11:%.*]], label [[BB12:%.*]]
+; TUNIT-NEXT:    [[DOT01:%.*]] = phi i32 [ [[TRUETMP6]], [[BB5]] ], [ [[TRUETMP8]], [[BB7]] ]
+; TUNIT-NEXT:    [[TRUETMP10:%.*]] = icmp eq i32 [[DOT01]], 5
+; TUNIT-NEXT:    br i1 [[TRUETMP10]], label [[BB11:%.*]], label [[BB12:%.*]]
 ; TUNIT:       bb11:
 ; TUNIT-NEXT:    br label [[BB13:%.*]]
 ; TUNIT:       bb12:
@@ -762,18 +762,18 @@ define dso_local zeroext i1 @phi(i32 %arg) {
 ; CGSCC-NEXT:    br label [[BB3]]
 ; CGSCC:       bb3:
 ; CGSCC-NEXT:    [[DOT02:%.*]] = phi i32 [ 1, [[BB1]] ], [ 2, [[BB2]] ]
-; CGSCC-NEXT:    [[TMP4:%.*]] = icmp sgt i32 [[ARG]], 10
-; CGSCC-NEXT:    br i1 [[TMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
+; CGSCC-NEXT:    [[TRUETMP4:%.*]] = icmp sgt i32 [[ARG]], 10
+; CGSCC-NEXT:    br i1 [[TRUETMP4]], label [[BB5:%.*]], label [[BB7:%.*]]
 ; CGSCC:       bb5:
-; CGSCC-NEXT:    [[TMP6:%.*]] = add nsw i32 [[DOT02]], 1
+; CGSCC-NEXT:    [[TRUETMP6:%.*]] = add nsw i32 [[DOT02]], 1
 ; CGSCC-NEXT:    br label [[BB9:%.*]]
 ; CGSCC:       bb7:
-; CGSCC-NEXT:    [[TMP8:%.*]] = add nsw i32 [[DOT02]], 2
+; CGSCC-NEXT:    [[TRUETMP8:%.*]] = add nsw i32 [[DOT02]], 2
 ; CGSCC-NEXT:    br label [[BB9]]
 ; CGSCC:       bb9:
-; CGSCC-NEXT:    [[DOT01:%.*]] = phi i32 [ [[TMP6]], [[BB5]] ], [ [[TMP8]], [[BB7]] ]
-; CGSCC-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[DOT01]], 5
-; CGSCC-NEXT:    br i1 [[TMP10]], label [[BB11:%.*]], label [[BB12:%.*]]
+; CGSCC-NEXT:    [[DOT01:%.*]] = phi i32 [ [[TRUETMP6]], [[BB5]] ], [ [[TRUETMP8]], [[BB7]] ]
+; CGSCC-NEXT:    [[TRUETMP10:%.*]] = icmp eq i32 [[DOT01]], 5
+; CGSCC-NEXT:    br i1 [[TRUETMP10]], label [[BB11:%.*]], label [[BB12:%.*]]
 ; CGSCC:       bb11:
 ; CGSCC-NEXT:    br label [[BB13:%.*]]
 ; CGSCC:       bb12:
@@ -1698,8 +1698,8 @@ define void @spam(ptr %arg, ptr %arg1) {
 ; CHECK-SAME: (ptr nocapture nofree noundef nonnull readonly align 8 dereferenceable(4) [[ARG:%.*]], ptr nocapture nofree readnone [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP]], 4
-; CHECK-NEXT:    br i1 [[TMP2]], label [[BB3:%.*]], label [[BB4:%.*]]
+; CHECK-NEXT:    [[TRUETMP2:%.*]] = icmp ult i32 [[TMP]], 4
+; CHECK-NEXT:    br i1 [[TRUETMP2]], label [[BB3:%.*]], label [[BB4:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    call fastcc void @wobble(i32 signext [[TMP]])
 ; CHECK-NEXT:    br label [[BB5:%.*]]

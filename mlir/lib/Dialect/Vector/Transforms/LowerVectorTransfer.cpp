@@ -272,15 +272,12 @@ struct TransferWriteNonPermutationLowering
     exprs.append(map.getResults().begin(), map.getResults().end());
     AffineMap newMap =
         AffineMap::get(map.getNumDims(), 0, exprs, op.getContext());
-    ArrayAttr newInBoundsAttr;
-    if (op.getInBounds()) {
-      // All the new dimensions added are inbound.
-      SmallVector<bool> newInBoundsValues(missingInnerDim.size(), true);
-      for (Attribute attr : op.getInBounds().value().getValue()) {
-        newInBoundsValues.push_back(cast<BoolAttr>(attr).getValue());
-      }
-      newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
+    // All the new dimensions added are inbound.
+    SmallVector<bool> newInBoundsValues(missingInnerDim.size(), true);
+    for (int64_t i = 0, e = op.getVectorType().getRank(); i < e; ++i) {
+      newInBoundsValues.push_back(op.isDimInBounds(i));
     }
+    ArrayAttr newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         op, newVec, op.getSource(), op.getIndices(), AffineMapAttr::get(newMap),
         newMask, newInBoundsAttr);
