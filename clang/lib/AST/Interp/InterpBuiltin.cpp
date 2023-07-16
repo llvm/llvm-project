@@ -266,6 +266,20 @@ static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+// The C standard says "fabs raises no floating-point exceptions,
+// even if x is a signaling NaN. The returned value is independent of
+// the current rounding direction mode."  Therefore constant folding can
+// proceed without regard to the floating point settings.
+// Reference, WG14 N2478 F.10.4.3
+static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame,
+                                 const Function *Func) {
+  const Floating &Val = getParam<Floating>(Frame, 0);
+
+  S.Stk.push<Floating>(Floating::abs(Val));
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
@@ -357,6 +371,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   case Builtin::BI__builtin_fpclassify:
     if (interp__builtin_fpclassify(S, OpPC, Frame, F))
       return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_fabs:
+  case Builtin::BI__builtin_fabsf:
+  case Builtin::BI__builtin_fabsl:
+  case Builtin::BI__builtin_fabsf128:
+    if (interp__builtin_fabs(S, OpPC, Frame, F))
+      return Ret<PT_Float>(S, OpPC, Dummy);
     break;
 
   default:
