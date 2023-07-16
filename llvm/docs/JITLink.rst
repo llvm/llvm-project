@@ -1142,7 +1142,7 @@ Support levels:
      -
    * - x86-64
      - Good
-     -
+     - Usable
      - Good
 
 .. [1] See ``llvm/examples/OrcV2Examples/LLJITWithObjectLinkingLayerPlugin`` for
