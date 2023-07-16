@@ -616,7 +616,7 @@ private:
     auto __guard  = std::__make_exception_guard([&] {
       allocator_traits<_Alloc>::deallocate(__alloc_, __result.ptr, __result.count);
     });
-    // This shouldn't throw, but just to be safe. Not that at -O1 this
+    // This shouldn't throw, but just to be safe. Note that at -O1 this
     // guard is optimized away so there is no runtime overhead.
     std::uninitialized_move_n(__ptr_, __size_, __result.ptr);
     __guard.__complete();
