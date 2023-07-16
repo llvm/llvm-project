@@ -3828,8 +3828,7 @@ define float @v_fdiv_f32_daz_25ulp_contractable_user(float %x, float %y, float %
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_mul_f32_e32 v0, v3, v0
-; GFX11-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX11-NEXT:    v_fma_f32 v0, v3, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; EG-LABEL: v_fdiv_f32_daz_25ulp_contractable_user:
@@ -5087,8 +5086,7 @@ define float @v_fdiv_f32_daz_25ulp__nnan_ninf_contractable_user(float %x, float 
 ; GFX11-NEXT:    v_rcp_f32_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GFX11-NEXT:    v_mul_f32_e32 v0, v3, v0
-; GFX11-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX11-NEXT:    v_fma_f32 v0, v3, v0, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; EG-LABEL: v_fdiv_f32_daz_25ulp__nnan_ninf_contractable_user:
