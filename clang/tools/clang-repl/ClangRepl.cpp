@@ -201,7 +201,6 @@ int main(int argc, const char **argv) {
     DeviceCI->LoadRequestedPlugins();
 
   std::unique_ptr<clang::Interpreter> Interp;
-
   if (CudaEnabled) {
     Interp = ExitOnErr(
         clang::Interpreter::createWithCUDA(std::move(CI), std::move(DeviceCI)));

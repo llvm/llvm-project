@@ -36,6 +36,7 @@ set(core_files
   tgmath.h
   unwind.h
   varargs.h
+  __clang_interpreter_runtime_printvalue.h
   )
 
 set(arm_common_files

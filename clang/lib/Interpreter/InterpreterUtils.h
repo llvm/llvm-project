@@ -47,7 +47,25 @@ NamespaceDecl *LookupNamespace(Sema &S, llvm::StringRef Name,
 NamedDecl *LookupNamed(Sema &S, llvm::StringRef Name,
                        const DeclContext *Within);
 
+NestedNameSpecifier *CreateNestedNameSpecifier(const ASTContext &Ctx,
+                                               const NamespaceDecl *Namesp);
+
+NestedNameSpecifier *CreateNestedNameSpecifier(const ASTContext &Ctx,
+                                               const TypedefNameDecl *TD,
+                                               bool FullyQualify);
+
+NestedNameSpecifier *CreateNestedNameSpecifier(const ASTContext &Ctx,
+                                               const TagDecl *TD,
+                                               bool FullyQualify);
+
+QualType GetFullyQualifiedType(QualType QT, const ASTContext &Ctx);
+
 std::string GetFullTypeName(ASTContext &Ctx, QualType QT);
+
+class Value;
+
+std::string ReplPrintTypeImpl(const Value &);
+std::string ReplPrintDataImpl(const Value &);
 } // namespace clang
 
 #endif

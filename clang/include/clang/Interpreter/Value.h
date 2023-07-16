@@ -49,8 +49,9 @@ class raw_ostream;
 namespace clang {
 
 class ASTContext;
-class Interpreter;
 class QualType;
+
+class Interpreter;
 
 #if defined(_WIN32)
 // REPL_EXTERNAL_VISIBILITY are symbols that we need to be able to locate
@@ -118,9 +119,9 @@ public:
   ~Value();
 
   void printType(llvm::raw_ostream &Out) const;
-  void printData(llvm::raw_ostream &Out) const;
-  void print(llvm::raw_ostream &Out) const;
-  void dump() const;
+  void printData(llvm::raw_ostream &Out);
+  void print(llvm::raw_ostream &Out);
+  void dump();
   void clear();
 
   ASTContext &getASTContext();
@@ -138,6 +139,7 @@ public:
   void setOpaqueType(void *Ty) { OpaqueType = Ty; }
 
   void *getPtr() const;
+  void **getPtrAddress() const;
   void setPtr(void *Ptr) { Data.m_Ptr = Ptr; }
 
 #define X(type, name)                                                          \
@@ -204,6 +206,5 @@ template <> inline void *Value::as() const {
     return Data.m_Ptr;
   return (void *)as<uintptr_t>();
 }
-
 } // namespace clang
 #endif

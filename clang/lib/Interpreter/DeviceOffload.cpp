@@ -15,6 +15,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Interpreter/PartialTranslationUnit.h"
 
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -24,11 +25,10 @@
 namespace clang {
 
 IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
-    Interpreter &Interp, std::unique_ptr<CompilerInstance> Instance,
-    IncrementalParser &HostParser, llvm::LLVMContext &LLVMCtx,
+    std::unique_ptr<CompilerInstance> Instance, IncrementalParser &HostParser,
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
-    llvm::Error &Err)
-    : IncrementalParser(Interp, std::move(Instance), LLVMCtx, Err),
+    llvm::Error &Err, const std::list<PartialTranslationUnit> &PTUs)
+    : IncrementalParser(std::move(Instance), Err), PTUs(PTUs),
       HostParser(HostParser), VFS(FS) {
   if (Err)
     return;
@@ -41,7 +41,7 @@ IncrementalCUDADeviceParser::IncrementalCUDADeviceParser(
   }
 }
 
-llvm::Expected<PartialTranslationUnit &>
+llvm::Expected<TranslationUnitDecl *>
 IncrementalCUDADeviceParser::Parse(llvm::StringRef Input) {
   auto PTU = IncrementalParser::Parse(Input);
   if (!PTU)

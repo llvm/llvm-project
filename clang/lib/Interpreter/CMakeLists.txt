@@ -24,6 +24,7 @@ add_clang_library(clangInterpreter
   Interpreter.cpp
   InterpreterUtils.cpp
   Value.cpp
+  InterpreterValuePrinter.cpp
   ${WASM_SRC}
   PARTIAL_SOURCES_INTENDED
 
