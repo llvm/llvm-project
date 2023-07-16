@@ -1672,6 +1672,16 @@ enum class InlayHintKind {
   /// This is a clangd extension.
   Designator = 3,
 
+  /// A hint after function, type or namespace definition, indicating the
+  /// defined symbol name of the definition.
+  ///
+  /// An example of a decl name hint in this position:
+  ///    void func() {
+  ///    } ^
+  /// Uses comment-like syntax like "// func".
+  /// This is a clangd extension.
+  BlockEnd = 4,
+
   /// Other ideas for hints that are not currently implemented:
   ///
   /// * Chaining hints, showing the types of intermediate expressions

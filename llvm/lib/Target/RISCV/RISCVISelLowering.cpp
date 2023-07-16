@@ -5784,7 +5784,7 @@ static bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  if (!LHS.getValueType().isInteger())
+  if (!LHS.getValueType().isScalarInteger())
     return false;
 
   // If the RHS side is 0, we don't need any extra instructions, return the LHS.
@@ -5893,17 +5893,24 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op.getSimpleValueType();
   MVT XLenVT = Subtarget.getXLenVT();
 
+  // Lower vector SELECTs to VSELECTs by splatting the condition.
+  if (VT.isVector()) {
+    MVT SplatCondVT = VT.changeVectorElementType(MVT::i1);
+    SDValue CondSplat = DAG.getSplat(SplatCondVT, DL, CondV);
+    return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
+  }
+
   // When Zicond is present, emit CZERO_EQZ and CZERO_NEZ nodes to implement
   // the SELECT. Performing the lowering here allows for greater control over
   // when CZERO_{EQZ/NEZ} are used vs another branchless sequence or
   // RISCVISD::SELECT_CC node (branch-based select).
-  if (Subtarget.hasStdExtZicond() && VT.isInteger()) {
+  if (Subtarget.hasStdExtZicond() && VT.isScalarInteger()) {
     SDValue NewCondV;
     if (selectSETCC(CondV, ISD::SETNE, NewCondV, DAG)) {
       if (isNullConstant(FalseV))
         // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
         return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, NewCondV);
-      else if (isNullConstant(TrueV))
+      if (isNullConstant(TrueV))
         // (select (riscv_setne c), 0, f) -> (czero_nez f, c)
         return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, NewCondV);
       // (select (riscv_setne c), t, f) -> (or (czero_eqz t, c), (czero_nez f,
@@ -5917,7 +5924,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (isNullConstant(FalseV))
         // (select (riscv_seteq c), t, 0) -> (czero_nez t, c)
         return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, NewCondV);
-      else if (isNullConstant(TrueV))
+      if (isNullConstant(TrueV))
         // (select (riscv_seteq c), 0, f) -> (czero_eqz f, c)
         return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, FalseV, NewCondV);
       // (select (riscv_seteq c), t, f) -> (or (czero_eqz f, c), (czero_nez t,
@@ -5953,13 +5960,6 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::OR, DL, VT,
                        DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
                        DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV));
-  }
-
-  // Lower vector SELECTs to VSELECTs by splatting the condition.
-  if (VT.isVector()) {
-    MVT SplatCondVT = VT.changeVectorElementType(MVT::i1);
-    SDValue CondSplat = DAG.getSplat(SplatCondVT, DL, CondV);
-    return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
   if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
