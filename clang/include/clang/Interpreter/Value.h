@@ -119,9 +119,9 @@ public:
   ~Value();
 
   void printType(llvm::raw_ostream &Out) const;
-  void printData(llvm::raw_ostream &Out) const;
-  void print(llvm::raw_ostream &Out) const;
-  void dump() const;
+  void printData(llvm::raw_ostream &Out);
+  void print(llvm::raw_ostream &Out);
+  void dump();
   void clear();
 
   ASTContext &getASTContext();
@@ -205,6 +205,5 @@ template <> inline void *Value::as() const {
     return Data.m_Ptr;
   return (void *)as<uintptr_t>();
 }
-
 } // namespace clang
 #endif
