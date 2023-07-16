@@ -2181,10 +2181,13 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     unsigned VScaleMin = Attrs.getFnAttrs().getVScaleRangeMin();
     if (VScaleMin == 0)
       CheckFailed("'vscale_range' minimum must be greater than 0", V);
-
+    else if (!isPowerOf2_32(VScaleMin))
+      CheckFailed("'vscale_range' minimum must be power-of-two value", V);
     std::optional<unsigned> VScaleMax = Attrs.getFnAttrs().getVScaleRangeMax();
     if (VScaleMax && VScaleMin > VScaleMax)
       CheckFailed("'vscale_range' minimum cannot be greater than maximum", V);
+    else if (VScaleMax && !isPowerOf2_32(*VScaleMax))
+      CheckFailed("'vscale_range' maximum must be power-of-two value", V);
   }
 
   if (Attrs.hasFnAttr("frame-pointer")) {

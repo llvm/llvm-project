@@ -10,6 +10,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUSubtarget.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -43,10 +44,16 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
   // Assume the attribute allocates before any known GDS globals.
   StaticGDSSize = GDSSize;
 
+  // Second value, if present, is the maximum value that can be assigned.
+  // Useful in PromoteAlloca or for LDS spills. Could be used for diagnostics
+  // during codegen.
+  std::pair<unsigned, unsigned> LDSSizeRange = AMDGPU::getIntegerPairAttribute(
+      F, "amdgpu-lds-size", {0, UINT32_MAX}, true);
+
   // The two separate variables are only profitable when the LDS module lowering
   // pass is disabled. If graphics does not use dynamic LDS, this is never
   // profitable. Leaving cleanup for a later change.
-  LDSSize = F.getFnAttributeAsParsedInteger("amdgpu-lds-size", 0);
+  LDSSize = LDSSizeRange.first;
   StaticLDSSize = LDSSize;
 
   CallingConv::ID CC = F.getCallingConv();

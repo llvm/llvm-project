@@ -8,8 +8,6 @@
 
 // Test that we can set a custom verbose termination function at link-time.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
-
 // We flag uses of the verbose termination function in older dylibs at compile-time to avoid runtime
 // failures when back-deploying.
 // XFAIL: availability-verbose_abort-missing

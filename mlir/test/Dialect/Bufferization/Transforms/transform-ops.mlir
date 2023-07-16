@@ -180,3 +180,23 @@ func.func @empty_tensor_elimination(
       : tensor<5xf32> into tensor<10xf32>
   return %2 : tensor<10xf32>
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.bufferization.buffer_loop_hoisting %0 : !transform.any_op
+}
+
+// CHECK-LABEL: func @buffer_loop_hoisting(
+//       CHECK:   memref.alloca
+//       CHECK:   scf.for
+//       CHECK:     memref.store
+func.func @buffer_loop_hoisting(%lb: index, %ub: index, %step: index, %f: f32, %pos: index) {
+  scf.for %iv = %lb to %ub step %step {
+    %0 = memref.alloca() : memref<5xf32>
+    memref.store %f, %0[%pos] : memref<5xf32>
+  }
+  return
+}

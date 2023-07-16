@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zknd -emit-llvm %s -o - \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZKND
 
+#include <stdint.h>
 
 // RV64ZKND-LABEL: @aes64dsm(
 // RV64ZKND-NEXT:  entry:
@@ -14,7 +15,7 @@
 // RV64ZKND-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.aes64dsm(i64 [[TMP0]], i64 [[TMP1]])
 // RV64ZKND-NEXT:    ret i64 [[TMP2]]
 //
-long aes64dsm(long rs1, long rs2) {
+uint64_t aes64dsm(uint64_t rs1, uint64_t rs2) {
   return __builtin_riscv_aes64dsm_64(rs1, rs2);
 }
 
@@ -30,7 +31,7 @@ long aes64dsm(long rs1, long rs2) {
 // RV64ZKND-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.aes64ds(i64 [[TMP0]], i64 [[TMP1]])
 // RV64ZKND-NEXT:    ret i64 [[TMP2]]
 //
-long aes64ds(long rs1, long rs2) {
+uint64_t aes64ds(uint64_t rs1, uint64_t rs2) {
   return __builtin_riscv_aes64ds_64(rs1, rs2);
 }
 
@@ -43,6 +44,6 @@ long aes64ds(long rs1, long rs2) {
 // RV64ZKND-NEXT:    [[TMP1:%.*]] = call i64 @llvm.riscv.aes64im(i64 [[TMP0]])
 // RV64ZKND-NEXT:    ret i64 [[TMP1]]
 //
-long aes64im(long rs1) {
+uint64_t aes64im(uint64_t rs1) {
   return __builtin_riscv_aes64im_64(rs1);
 }

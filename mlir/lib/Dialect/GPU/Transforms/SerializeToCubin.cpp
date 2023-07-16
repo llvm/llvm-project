@@ -19,6 +19,7 @@
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Threading.h"
 
 #include <cuda.h>
 
@@ -46,6 +47,8 @@ static void emitCudaError(const llvm::Twine &expr, const char *buffer,
 namespace {
 class SerializeToCubinPass
     : public PassWrapper<SerializeToCubinPass, gpu::SerializeToBlobPass> {
+  static llvm::once_flag initializeBackendOnce;
+
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SerializeToCubinPass)
 
@@ -73,9 +76,21 @@ static void maybeSetOption(Pass::Option<std::string> &option, StringRef value) {
     option = value.str();
 }
 
+llvm::once_flag SerializeToCubinPass::initializeBackendOnce;
+
 SerializeToCubinPass::SerializeToCubinPass(StringRef triple, StringRef chip,
                                            StringRef features, int optLevel,
                                            bool dumpPtx) {
+  // No matter how this pass is constructed, ensure that the NVPTX backend
+  // is initialized exactly once.
+  llvm::call_once(initializeBackendOnce, []() {
+    // Initialize LLVM NVPTX backend.
+    LLVMInitializeNVPTXTarget();
+    LLVMInitializeNVPTXTargetInfo();
+    LLVMInitializeNVPTXTargetMC();
+    LLVMInitializeNVPTXAsmPrinter();
+  });
+
   maybeSetOption(this->triple, triple);
   maybeSetOption(this->chip, chip);
   maybeSetOption(this->features, features);
@@ -144,15 +159,8 @@ SerializeToCubinPass::serializeISA(const std::string &isa) {
 
 // Register pass to serialize GPU kernel functions to a CUBIN binary annotation.
 void mlir::registerGpuSerializeToCubinPass() {
-  PassRegistration<SerializeToCubinPass> registerSerializeToCubin([] {
-    // Initialize LLVM NVPTX backend.
-    LLVMInitializeNVPTXTarget();
-    LLVMInitializeNVPTXTargetInfo();
-    LLVMInitializeNVPTXTargetMC();
-    LLVMInitializeNVPTXAsmPrinter();
-
-    return std::make_unique<SerializeToCubinPass>();
-  });
+  PassRegistration<SerializeToCubinPass> registerSerializeToCubin(
+      [] { return std::make_unique<SerializeToCubinPass>(); });
 }
 
 std::unique_ptr<Pass> mlir::createGpuSerializeToCubinPass(StringRef triple,

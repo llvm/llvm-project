@@ -384,6 +384,42 @@ Improvements to Clang's diagnostics
   (`#57081: <https://github.com/llvm/llvm-project/issues/57081>`_)
 - Clang no longer emits inappropriate notes about the loss of ``__unaligned`` qualifier
   on overload resolution, when the actual reason for the failure is loss of other qualifiers.
+- Clang's notes about unconvertible types in overload resolution failure now covers
+  the source range of parameter declaration of the candidate function declaration.
+
+  *Example Code*:
+
+  .. code-block:: c++
+
+     void func(int aa, int bb);
+     void test() { func(1, "two"); }
+
+  *BEFORE*:
+
+  .. code-block:: text
+
+    source:2:15: error: no matching function for call to 'func'
+    void test() { func(1, "two");  }
+                  ^~~~
+    source:1:6: note: candidate function not viable: no known conversion from 'const char[4]' to 'int' for 2nd argument
+    void func(int aa, int bb);
+         ^
+
+  *AFTER*:
+
+  .. code-block:: text
+
+    source:2:15: error: no matching function for call to 'func'
+    void test() { func(1, "two");  }
+                  ^~~~
+    source:1:6: note: candidate function not viable: no known conversion from 'const char[4]' to 'int' for 2nd argument
+    void func(int aa, int bb);
+         ^            ~~~~~~
+- ``-Wformat`` cast fix-its will now suggest ``static_cast`` instead of C-style casts
+  for C++ code.
+- ``-Wformat`` will no longer suggest a no-op fix-it for fixing scoped enum format
+  warnings. Instead, it will suggest casting the enum object to the type specified
+  in the format string.
 
 Bug Fixes in This Version
 -------------------------
@@ -659,6 +695,9 @@ Bug Fixes to C++ Support
 - Fix handling of using-declarations in the init statements of for
   loop declarations.
   (`#63627 <https://github.com/llvm/llvm-project/issues/63627>`_)
+- Fix crash when emitting diagnostic for out of order designated initializers
+  in C++.
+  (`#63605 <https://github.com/llvm/llvm-project/issues/63605>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

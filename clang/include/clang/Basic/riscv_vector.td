@@ -2368,7 +2368,7 @@ let ManualCodegen = [{
     let OverloadedName = "vfcvt_x" in
       defm :
         RVVConvBuiltinSet<"vfcvt_x_f_v", "xfd", [["Iv", "Ivvu"]]>;
-    let OverloadedName = "vfcvt_xu" in    
+    let OverloadedName = "vfcvt_xu" in
       defm :
         RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvvu"]]>;
     let OverloadedName = "vfcvt_f" in {
@@ -2411,7 +2411,7 @@ let ManualCodegen = [{
   let OverloadedName = "vfcvt_x" in
     defm :
       RVVConvBuiltinSet<"vfcvt_x_f_v", "xfd", [["Iv", "Ivv"]]>;
-  let OverloadedName = "vfcvt_xu" in    
+  let OverloadedName = "vfcvt_xu" in
     defm :
       RVVConvBuiltinSet<"vfcvt_xu_f_v", "xfd", [["Uv", "Uvv"]]>;
   let OverloadedName = "vfcvt_f" in {

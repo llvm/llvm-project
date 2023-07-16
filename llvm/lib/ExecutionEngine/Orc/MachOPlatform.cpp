@@ -1370,7 +1370,7 @@ Error MachOPlatform::MachOPlatformPlugin::populateObjCRuntimeObject(
     DataSections.push_back({});
     auto &SD = DataSections.back();
     memset(&SD.Sec, 0, sizeof(SD.Sec));
-    strncpy(SD.Sec.sectname, "__objc_imageinfo", 16);
+    memcpy(SD.Sec.sectname, "__objc_imageinfo", 16);
     strcpy(SD.Sec.segname, "__DATA");
     SD.Sec.size = 8;
     SD.AddFixups = [&](size_t RecordOffset) {

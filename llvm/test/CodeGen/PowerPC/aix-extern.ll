@@ -51,7 +51,7 @@ declare i32 @bar_extern(ptr)
 ; BIT64-NEXT:       .vbyte	8, .foo                    # @foo
 ; BIT64-NEXT:       .vbyte	8, TOC[TC0]
 ; BIT64-NEXT:       .vbyte	8, 0
-; COMMON-NEXT:      .csect .text[PR]
+; COMMON-NEXT:      .csect [PR]
 ; COMMON-NEXT: .foo:
 
 ; COMMON:           .globl	main[DS]                # -- Begin function main
@@ -64,7 +64,7 @@ declare i32 @bar_extern(ptr)
 ; BIT64-NEXT:       .vbyte	8, .main                   # @main
 ; BIT64-NEXT:       .vbyte	8, TOC[TC0]
 ; BIT64-NEXT:       .vbyte	8, 0
-; COMMON-NEXT:      .csect .text[PR]
+; COMMON-NEXT:      .csect [PR]
 ; COMMON-NEXT: .main:
 
 ; COMMON:           .csect .data[RW]
@@ -203,7 +203,7 @@ declare i32 @bar_extern(ptr)
 ; CHECKSYM-NEXT:   }
 ; CHECKSYM-NEXT:   Symbol {
 ; CHECKSYM-NEXT:     Index: [[#Index+10]]
-; CHECKSYM-NEXT:     Name: .text
+; CHECKSYM-NEXT:     Name:
 ; CHECKSYM-NEXT:     Value (RelocatableAddress): 0x0
 ; CHECKSYM-NEXT:     Section: .text
 ; CHECKSYM-NEXT:     Type: 0x0
