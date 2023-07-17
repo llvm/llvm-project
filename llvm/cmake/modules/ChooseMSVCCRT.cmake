@@ -62,33 +62,32 @@ variables (LLVM_USE_CRT_DEBUG, etc) instead.")
 
   foreach(build_type ${CMAKE_CONFIGURATION_TYPES} ${CMAKE_BUILD_TYPE})
     string(TOUPPER "${build_type}" build)
-    if (NOT LLVM_USE_CRT_${build})
-      get_current_crt(LLVM_USE_CRT_${build}
-        MSVC_CRT_REGEX
-        CMAKE_CXX_FLAGS_${build})
-      set(LLVM_USE_CRT_${build}
-        "${LLVM_USE_CRT_${build}}"
-        CACHE STRING "Specify VC++ CRT to use for ${build_type} configurations."
-        FORCE)
-      set_property(CACHE LLVM_USE_CRT_${build}
-        PROPERTY STRINGS ;${${MSVC_CRT}})
-    endif(NOT LLVM_USE_CRT_${build})
-  endforeach(build_type)
-
-  foreach(build_type ${CMAKE_CONFIGURATION_TYPES} ${CMAKE_BUILD_TYPE})
-    string(TOUPPER "${build_type}" build)
-    if ("${LLVM_USE_CRT_${build}}" STREQUAL "")
-      set(flag_string " ")
-    else()
-      set(flag_string " /${LLVM_USE_CRT_${build}} ")
+    if (NOT "${LLVM_USE_CRT_${build}}" STREQUAL "")
       if (NOT ${LLVM_USE_CRT_${build}} IN_LIST ${MSVC_CRT})
         message(FATAL_ERROR
           "Invalid value for LLVM_USE_CRT_${build}: ${LLVM_USE_CRT_${build}}. Valid options are one of: ${${MSVC_CRT}}")
       endif()
-      message(STATUS "Using ${build_type} VC++ CRT: ${LLVM_USE_CRT_${build}}")
+      set(library "MultiThreaded")
+      if ("${LLVM_USE_CRT_${build}}" MATCHES "d$")
+        set(library "${library}Debug")
+      endif()
+      if ("${LLVM_USE_CRT_${build}}" MATCHES "^MD")
+        set(library "${library}DLL")
+      endif()
+      if(${runtime_library_set})
+        message(WARNING "Conflicting LLVM_USE_CRT_* options")
+      else()
+        message(WARNING "The LLVM_USE_CRT_* options are deprecated, use the CMake provided CMAKE_MSVC_RUNTIME_LIBRARY setting instead")
+      endif()
+      set(CMAKE_MSVC_RUNTIME_LIBRARY "${library}" CACHE STRING "" FORCE)
+      message(STATUS "Using VC++ CRT: ${CMAKE_MSVC_RUNTIME_LIBRARY}")
+      set(runtime_library_set 1)
     endif()
     foreach(lang C CXX)
-      set_flag_in_var(CMAKE_${lang}_FLAGS_${build} MSVC_CRT_REGEX flag_string)
+      # Clear any potentially manually set options from these variables.
+      # Kept as temporary backwards compat (unsure if necessary).
+      # TODO: We probably should remove it.
+      set_flag_in_var(CMAKE_${lang}_FLAGS_${build} MSVC_CRT_REGEX "")
     endforeach(lang)
   endforeach(build_type)
 endmacro(choose_msvc_crt MSVC_CRT)

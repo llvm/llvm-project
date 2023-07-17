@@ -121,6 +121,12 @@ New checks
   Detect implicit and explicit casts of ``enum`` type into ``bool`` where ``enum`` type
   doesn't have a zero-value enumerator.
 
+- New :doc:`bugprone-switch-missing-default-case
+  <clang-tidy/checks/bugprone/switch-missing-default-case>` check.
+
+  Ensures that switch statements without default cases are flagged, focuses only
+  on covering cases with non-enums where the compiler may not issue warnings.
+
 - New :doc:`bugprone-unique-ptr-array-mismatch
   <clang-tidy/checks/bugprone/unique-ptr-array-mismatch>` check.
 
@@ -232,17 +238,17 @@ New check aliases
 
 - New alias :doc:`cppcoreguidelines-noexcept-destructor
   <clang-tidy/checks/cppcoreguidelines/noexcept-destructor>` to
-  :doc`performance-noexcept-destructor
+  :doc:`performance-noexcept-destructor
   <clang-tidy/checks/performance/noexcept-destructor>` was added.
 
 - New alias :doc:`cppcoreguidelines-noexcept-move-operations
   <clang-tidy/checks/cppcoreguidelines/noexcept-move-operations>` to
-  :doc`performance-noexcept-move-constructor
+  :doc:`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` was added.
 
 - New alias :doc:`cppcoreguidelines-noexcept-swap
   <clang-tidy/checks/cppcoreguidelines/noexcept-swap>` to
-  :doc`performance-noexcept-swap
+  :doc:`performance-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` was added.
 
 - New alias :doc:`cppcoreguidelines-use-default-member-init

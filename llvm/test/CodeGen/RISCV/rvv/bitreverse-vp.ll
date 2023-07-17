@@ -3,6 +3,10 @@
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+experimental-zvfh,+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
+; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb,+m -target-abi=ilp32d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
+; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb,+m -target-abi=lp64d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
 
 declare <vscale x 1 x i8> @llvm.vp.bitreverse.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i1>, i32)
 
@@ -28,6 +32,12 @@ define <vscale x 1 x i8> @vp_bitreverse_nxv1i8(<vscale x 1 x i8> %va, <vscale x 
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vor.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv1i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i8> @llvm.vp.bitreverse.nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i8> %v
 }
@@ -54,6 +64,12 @@ define <vscale x 1 x i8> @vp_bitreverse_nxv1i8_unmasked(<vscale x 1 x i8> %va, i
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv1i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i8> @llvm.vp.bitreverse.nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -84,6 +100,12 @@ define <vscale x 2 x i8> @vp_bitreverse_nxv2i8(<vscale x 2 x i8> %va, <vscale x 
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vor.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv2i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.bitreverse.nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i8> %v
 }
@@ -110,6 +132,12 @@ define <vscale x 2 x i8> @vp_bitreverse_nxv2i8_unmasked(<vscale x 2 x i8> %va, i
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv2i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i8> @llvm.vp.bitreverse.nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -140,6 +168,12 @@ define <vscale x 4 x i8> @vp_bitreverse_nxv4i8(<vscale x 4 x i8> %va, <vscale x 
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vor.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv4i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 4 x i8> @llvm.vp.bitreverse.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i8> %v
 }
@@ -166,6 +200,12 @@ define <vscale x 4 x i8> @vp_bitreverse_nxv4i8_unmasked(<vscale x 4 x i8> %va, i
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv4i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i8> @llvm.vp.bitreverse.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -196,6 +236,12 @@ define <vscale x 8 x i8> @vp_bitreverse_nxv8i8(<vscale x 8 x i8> %va, <vscale x 
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vor.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv8i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 8 x i8> @llvm.vp.bitreverse.nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i8> %v
 }
@@ -222,6 +268,12 @@ define <vscale x 8 x i8> @vp_bitreverse_nxv8i8_unmasked(<vscale x 8 x i8> %va, i
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v9, v8
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv8i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i8> @llvm.vp.bitreverse.nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -252,6 +304,12 @@ define <vscale x 16 x i8> @vp_bitreverse_nxv16i8(<vscale x 16 x i8> %va, <vscale
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vor.vv v8, v10, v8, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv16i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 16 x i8> @llvm.vp.bitreverse.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i8> %v
 }
@@ -278,6 +336,12 @@ define <vscale x 16 x i8> @vp_bitreverse_nxv16i8_unmasked(<vscale x 16 x i8> %va
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v10, v8
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv16i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %v = call <vscale x 16 x i8> @llvm.vp.bitreverse.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i1> %m, i32 %evl)
@@ -308,6 +372,12 @@ define <vscale x 32 x i8> @vp_bitreverse_nxv32i8(<vscale x 32 x i8> %va, <vscale
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vor.vv v8, v12, v8, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv32i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 32 x i8> @llvm.vp.bitreverse.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i8> %v
 }
@@ -334,6 +404,12 @@ define <vscale x 32 x i8> @vp_bitreverse_nxv32i8_unmasked(<vscale x 32 x i8> %va
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v12, v8
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv32i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
   %v = call <vscale x 32 x i8> @llvm.vp.bitreverse.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i1> %m, i32 %evl)
@@ -364,6 +440,12 @@ define <vscale x 64 x i8> @vp_bitreverse_nxv64i8(<vscale x 64 x i8> %va, <vscale
 ; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vor.vv v8, v16, v8, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv64i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 64 x i8> @llvm.vp.bitreverse.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i8> %v
 }
@@ -390,6 +472,12 @@ define <vscale x 64 x i8> @vp_bitreverse_nxv64i8_unmasked(<vscale x 64 x i8> %va
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    vor.vv v8, v16, v8
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv64i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 64 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 64 x i1> %head, <vscale x 64 x i1> poison, <vscale x 64 x i32> zeroinitializer
   %v = call <vscale x 64 x i8> @llvm.vp.bitreverse.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i1> %m, i32 %evl)
@@ -456,6 +544,12 @@ define <vscale x 1 x i16> @vp_bitreverse_nxv1i16(<vscale x 1 x i16> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v9, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv1i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i16> @llvm.vp.bitreverse.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i16> %v
 }
@@ -518,6 +612,12 @@ define <vscale x 1 x i16> @vp_bitreverse_nxv1i16_unmasked(<vscale x 1 x i16> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv1i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i16> @llvm.vp.bitreverse.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -584,6 +684,12 @@ define <vscale x 2 x i16> @vp_bitreverse_nxv2i16(<vscale x 2 x i16> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v9, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv2i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.bitreverse.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i16> %v
 }
@@ -646,6 +752,12 @@ define <vscale x 2 x i16> @vp_bitreverse_nxv2i16_unmasked(<vscale x 2 x i16> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv2i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i16> @llvm.vp.bitreverse.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -712,6 +824,12 @@ define <vscale x 4 x i16> @vp_bitreverse_nxv4i16(<vscale x 4 x i16> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v9, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv4i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 4 x i16> @llvm.vp.bitreverse.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i16> %v
 }
@@ -774,6 +892,12 @@ define <vscale x 4 x i16> @vp_bitreverse_nxv4i16_unmasked(<vscale x 4 x i16> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv4i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i16> @llvm.vp.bitreverse.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -840,6 +964,12 @@ define <vscale x 8 x i16> @vp_bitreverse_nxv8i16(<vscale x 8 x i16> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v10, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv8i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 8 x i16> @llvm.vp.bitreverse.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i16> %v
 }
@@ -902,6 +1032,12 @@ define <vscale x 8 x i16> @vp_bitreverse_nxv8i16_unmasked(<vscale x 8 x i16> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v10, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv8i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i16> @llvm.vp.bitreverse.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -968,6 +1104,12 @@ define <vscale x 16 x i16> @vp_bitreverse_nxv16i16(<vscale x 16 x i16> %va, <vsc
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v12, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv16i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 16 x i16> @llvm.vp.bitreverse.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i16> %v
 }
@@ -1030,6 +1172,12 @@ define <vscale x 16 x i16> @vp_bitreverse_nxv16i16_unmasked(<vscale x 16 x i16> 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v12, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv16i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %v = call <vscale x 16 x i16> @llvm.vp.bitreverse.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 %evl)
@@ -1096,6 +1244,12 @@ define <vscale x 32 x i16> @vp_bitreverse_nxv32i16(<vscale x 32 x i16> %va, <vsc
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v16, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv32i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 32 x i16> @llvm.vp.bitreverse.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i16> %v
 }
@@ -1158,6 +1312,12 @@ define <vscale x 32 x i16> @vp_bitreverse_nxv32i16_unmasked(<vscale x 32 x i16> 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv32i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
   %v = call <vscale x 32 x i16> @llvm.vp.bitreverse.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 %evl)
@@ -1240,6 +1400,12 @@ define <vscale x 1 x i32> @vp_bitreverse_nxv1i32(<vscale x 1 x i32> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v9, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv1i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i32> @llvm.vp.bitreverse.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i32> %v
 }
@@ -1318,6 +1484,12 @@ define <vscale x 1 x i32> @vp_bitreverse_nxv1i32_unmasked(<vscale x 1 x i32> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv1i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i32> @llvm.vp.bitreverse.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -1400,6 +1572,12 @@ define <vscale x 2 x i32> @vp_bitreverse_nxv2i32(<vscale x 2 x i32> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v9, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv2i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.bitreverse.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i32> %v
 }
@@ -1478,6 +1656,12 @@ define <vscale x 2 x i32> @vp_bitreverse_nxv2i32_unmasked(<vscale x 2 x i32> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv2i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i32> @llvm.vp.bitreverse.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -1560,6 +1744,12 @@ define <vscale x 4 x i32> @vp_bitreverse_nxv4i32(<vscale x 4 x i32> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v10, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv4i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.vp.bitreverse.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i32> %v
 }
@@ -1638,6 +1828,12 @@ define <vscale x 4 x i32> @vp_bitreverse_nxv4i32_unmasked(<vscale x 4 x i32> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v10, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv4i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i32> @llvm.vp.bitreverse.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -1720,6 +1916,12 @@ define <vscale x 8 x i32> @vp_bitreverse_nxv8i32(<vscale x 8 x i32> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v12, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv8i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vp.bitreverse.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i32> %v
 }
@@ -1798,6 +2000,12 @@ define <vscale x 8 x i32> @vp_bitreverse_nxv8i32_unmasked(<vscale x 8 x i32> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v12, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv8i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i32> @llvm.vp.bitreverse.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -1880,6 +2088,12 @@ define <vscale x 16 x i32> @vp_bitreverse_nxv16i32(<vscale x 16 x i32> %va, <vsc
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v16, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv16i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vp.bitreverse.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i32> %v
 }
@@ -1958,6 +2172,12 @@ define <vscale x 16 x i32> @vp_bitreverse_nxv16i32_unmasked(<vscale x 16 x i32> 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv16i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %v = call <vscale x 16 x i32> @llvm.vp.bitreverse.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 %evl)
@@ -2106,6 +2326,12 @@ define <vscale x 1 x i64> @vp_bitreverse_nxv1i64(<vscale x 1 x i64> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v9, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv1i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i64> @llvm.vp.bitreverse.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
@@ -2250,6 +2476,12 @@ define <vscale x 1 x i64> @vp_bitreverse_nxv1i64_unmasked(<vscale x 1 x i64> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v9, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv1i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i64> @llvm.vp.bitreverse.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -2398,6 +2630,12 @@ define <vscale x 2 x i64> @vp_bitreverse_nxv2i64(<vscale x 2 x i64> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v10, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv2i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.bitreverse.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %v
 }
@@ -2542,6 +2780,12 @@ define <vscale x 2 x i64> @vp_bitreverse_nxv2i64_unmasked(<vscale x 2 x i64> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v10, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv2i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i64> @llvm.vp.bitreverse.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -2690,6 +2934,12 @@ define <vscale x 4 x i64> @vp_bitreverse_nxv4i64(<vscale x 4 x i64> %va, <vscale
 ; RV64-NEXT:    vsll.vi v8, v8, 1, v0.t
 ; RV64-NEXT:    vor.vv v8, v12, v8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv4i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 4 x i64> @llvm.vp.bitreverse.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i64> %v
 }
@@ -2834,6 +3084,12 @@ define <vscale x 4 x i64> @vp_bitreverse_nxv4i64_unmasked(<vscale x 4 x i64> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v12, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv4i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i64> @llvm.vp.bitreverse.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -3046,6 +3302,12 @@ define <vscale x 7 x i64> @vp_bitreverse_nxv7i64(<vscale x 7 x i64> %va, <vscale
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv7i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 7 x i64> @llvm.vp.bitreverse.nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 %evl)
   ret <vscale x 7 x i64> %v
 }
@@ -3204,6 +3466,12 @@ define <vscale x 7 x i64> @vp_bitreverse_nxv7i64_unmasked(<vscale x 7 x i64> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv7i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 7 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 7 x i1> %head, <vscale x 7 x i1> poison, <vscale x 7 x i32> zeroinitializer
   %v = call <vscale x 7 x i64> @llvm.vp.bitreverse.nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 %evl)
@@ -3416,6 +3684,12 @@ define <vscale x 8 x i64> @vp_bitreverse_nxv8i64(<vscale x 8 x i64> %va, <vscale
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv8i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 8 x i64> @llvm.vp.bitreverse.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i64> %v
 }
@@ -3574,6 +3848,12 @@ define <vscale x 8 x i64> @vp_bitreverse_nxv8i64_unmasked(<vscale x 8 x i64> %va
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v16, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv8i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i64> @llvm.vp.bitreverse.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -3757,6 +4037,29 @@ define <vscale x 64 x i16> @vp_bitreverse_nxv64i16(<vscale x 64 x i16> %va, <vsc
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv64i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vmv1r.v v24, v0
+; CHECK-ZVBB-NEXT:    csrr a1, vlenb
+; CHECK-ZVBB-NEXT:    srli a2, a1, 1
+; CHECK-ZVBB-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vslidedown.vx v0, v0, a2
+; CHECK-ZVBB-NEXT:    slli a1, a1, 2
+; CHECK-ZVBB-NEXT:    sub a2, a0, a1
+; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVBB-NEXT:    addi a3, a3, -1
+; CHECK-ZVBB-NEXT:    and a2, a3, a2
+; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v16, v16, v0.t
+; CHECK-ZVBB-NEXT:    bltu a0, a1, .LBB46_2
+; CHECK-ZVBB-NEXT:  # %bb.1:
+; CHECK-ZVBB-NEXT:    mv a0, a1
+; CHECK-ZVBB-NEXT:  .LBB46_2:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vmv1r.v v0, v24
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 64 x i16> @llvm.vp.bitreverse.nxv64i16(<vscale x 64 x i16> %va, <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i16> %v
 }
@@ -3877,6 +4180,24 @@ define <vscale x 64 x i16> @vp_bitreverse_nxv64i16_unmasked(<vscale x 64 x i16> 
 ; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vor.vv v8, v24, v8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_bitreverse_nxv64i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    csrr a1, vlenb
+; CHECK-ZVBB-NEXT:    slli a1, a1, 2
+; CHECK-ZVBB-NEXT:    sub a2, a0, a1
+; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVBB-NEXT:    addi a3, a3, -1
+; CHECK-ZVBB-NEXT:    and a2, a3, a2
+; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e16, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v16, v16
+; CHECK-ZVBB-NEXT:    bltu a0, a1, .LBB47_2
+; CHECK-ZVBB-NEXT:  # %bb.1:
+; CHECK-ZVBB-NEXT:    mv a0, a1
+; CHECK-ZVBB-NEXT:  .LBB47_2:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vbrev.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 64 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 64 x i1> %head, <vscale x 64 x i1> poison, <vscale x 64 x i32> zeroinitializer
   %v = call <vscale x 64 x i16> @llvm.vp.bitreverse.nxv64i16(<vscale x 64 x i16> %va, <vscale x 64 x i1> %m, i32 %evl)
