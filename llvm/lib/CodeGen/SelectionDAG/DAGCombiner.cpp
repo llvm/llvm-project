@@ -508,6 +508,7 @@ namespace {
     SDValue visitFABS(SDNode *N);
     SDValue visitFCEIL(SDNode *N);
     SDValue visitFTRUNC(SDNode *N);
+    SDValue visitFFREXP(SDNode *N);
     SDValue visitFFLOOR(SDNode *N);
     SDValue visitFMinMax(SDNode *N);
     SDValue visitBRCOND(SDNode *N);
@@ -1982,6 +1983,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FMAXIMUM:           return visitFMinMax(N);
   case ISD::FCEIL:              return visitFCEIL(N);
   case ISD::FTRUNC:             return visitFTRUNC(N);
+  case ISD::FFREXP:             return visitFFREXP(N);
   case ISD::BRCOND:             return visitBRCOND(N);
   case ISD::BR_CC:              return visitBR_CC(N);
   case ISD::LOAD:               return visitLOAD(N);
@@ -17123,6 +17125,15 @@ SDValue DAGCombiner::visitFTRUNC(SDNode *N) {
     return N0;
   }
 
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitFFREXP(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+
+  // fold (ffrexp c1) -> ffrexp(c1)
+  if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
+    return DAG.getNode(ISD::FFREXP, SDLoc(N), N->getVTList(), N0);
   return SDValue();
 }
 

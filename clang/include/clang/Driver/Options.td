@@ -2588,6 +2588,10 @@ defm modules_search_all : BoolFOption<"modules-search-all",
 defm implicit_modules : BoolFOption<"implicit-modules",
   LangOpts<"ImplicitModules">, DefaultTrue,
   NegFlag<SetFalse, [CC1Option]>, PosFlag<SetTrue>, BothFlags<[NoXarchOption,CoreOption]>>;
+def fno_modules_check_relocated : Joined<["-"], "fno-modules-check-relocated">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Skip checks for relocated modules when loading PCM files">,
+  MarshallingInfoNegativeFlag<PreprocessorOpts<"ModulesCheckRelocated">>;
 def fretain_comments_from_system_headers : Flag<["-"], "fretain-comments-from-system-headers">, Group<f_Group>, Flags<[CC1Option]>,
   MarshallingInfoFlag<LangOpts<"RetainCommentsFromSystemHeaders">>;
 def fmodule_header : Flag <["-"], "fmodule-header">, Group<f_Group>,
