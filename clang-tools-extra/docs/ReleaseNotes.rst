@@ -313,6 +313,11 @@ Changes in existing checks
   sequenced when constructor call is written as list-initialization. Understand
   that there is a sequence point between designated initializers.
 
+- Improved :doc:`bugprone-swapped-arguments
+  <clang-tidy/checks/bugprone/swapped-arguments>` by enhancing handling of
+  implicit conversions, resulting in better detection of argument swaps
+  involving integral and floating-point types.
+
 - Deprecated :doc:`cert-dcl21-cpp
   <clang-tidy/checks/cert/dcl21-cpp>` check.
 
