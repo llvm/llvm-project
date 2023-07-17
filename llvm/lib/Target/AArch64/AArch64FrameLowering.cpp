@@ -1739,10 +1739,23 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     NumBytes = 0;
 
     if (RealignmentPadding > 0) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X15)
-          .addReg(AArch64::SP)
-          .addImm(RealignmentPadding)
-          .addImm(0);
+      if (RealignmentPadding >= 4096) {
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVi64imm))
+            .addReg(AArch64::X16, RegState::Define)
+            .addImm(RealignmentPadding)
+            .setMIFlags(MachineInstr::FrameSetup);
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXrx64), AArch64::X15)
+            .addReg(AArch64::SP)
+            .addReg(AArch64::X16, RegState::Kill)
+            .addImm(AArch64_AM::getArithExtendImm(AArch64_AM::UXTX, 0))
+            .setMIFlag(MachineInstr::FrameSetup);
+      } else {
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X15)
+            .addReg(AArch64::SP)
+            .addImm(RealignmentPadding)
+            .addImm(0)
+            .setMIFlag(MachineInstr::FrameSetup);
+      }
 
       uint64_t AndMask = ~(MFI.getMaxAlign().value() - 1);
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::ANDXri), AArch64::SP)
