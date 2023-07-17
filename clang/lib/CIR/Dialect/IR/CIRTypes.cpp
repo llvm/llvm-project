@@ -156,31 +156,6 @@ void StructType::print(mlir::AsmPrinter &printer) const {
   printer << '>';
 }
 
-Type ArrayType::parse(mlir::AsmParser &parser) {
-  if (parser.parseLess())
-    return Type();
-  Type eltType;
-  if (parser.parseType(eltType))
-    return Type();
-  if (parser.parseKeyword("x"))
-    return Type();
-
-  uint64_t val = 0;
-  if (parser.parseInteger(val).failed())
-    return Type();
-
-  if (parser.parseGreater())
-    return Type();
-  return get(parser.getContext(), eltType, val);
-}
-
-void ArrayType::print(mlir::AsmPrinter &printer) const {
-  printer << '<';
-  printer.printType(getEltType());
-  printer << " x " << getSize();
-  printer << '>';
-}
-
 //===----------------------------------------------------------------------===//
 // Data Layout information for types
 //===----------------------------------------------------------------------===//

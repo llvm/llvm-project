@@ -162,7 +162,9 @@ def CIR_ArrayType : CIR_Type<"Array", "array",
 
   let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    `<` $eltType `x` $size `>`
+  }];
 }
 
 //===----------------------------------------------------------------------===//
