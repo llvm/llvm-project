@@ -363,7 +363,7 @@ def FeatureStdExtZcmp
                        "'Zcmp' (sequenced instuctions for code-size reduction)",
                        [FeatureStdExtZca]>;
 def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdExtC()">,
-                               AssemblerPredicate<(all_of FeatureStdExtZcmp, (not FeatureStdExtC)),
+                               AssemblerPredicate<(all_of FeatureStdExtZcmp),
                                "'Zcmp' (sequenced instuctions for code-size reduction)">;
 
 def FeatureStdExtZcmt
