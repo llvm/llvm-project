@@ -205,3 +205,130 @@ void lambdas()
     auto c5 = x5;
   };
 }
+
+struct NonCopyableWithRef
+{
+  NonCopyableWithRef(NonCopyableWithRef const&) = delete;
+  NonCopyableWithRef& operator=(NonCopyableWithRef const&) = delete;
+  NonCopyableWithRef(NonCopyableWithRef&&) = default;
+  NonCopyableWithRef& operator=(NonCopyableWithRef&&) = default;
+
+  int& x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'x' of type 'int &' is a reference
+};
+
+struct NonMovableWithRef
+{
+  NonMovableWithRef(NonMovableWithRef const&) = default;
+  NonMovableWithRef& operator=(NonMovableWithRef const&) = default;
+  NonMovableWithRef(NonMovableWithRef&&) = delete;
+  NonMovableWithRef& operator=(NonMovableWithRef&&) = delete;
+
+  int& x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'x' of type 'int &' is a reference
+};
+
+struct NonCopyableNonMovableWithRef
+{
+  NonCopyableNonMovableWithRef(NonCopyableNonMovableWithRef const&) = delete;
+  NonCopyableNonMovableWithRef(NonCopyableNonMovableWithRef&&) = delete;
+  NonCopyableNonMovableWithRef& operator=(NonCopyableNonMovableWithRef const&) = delete;
+  NonCopyableNonMovableWithRef& operator=(NonCopyableNonMovableWithRef&&) = delete;
+
+  int& x; // OK, non copyable nor movable
+};
+
+struct NonCopyable
+{
+  NonCopyable(NonCopyable const&) = delete;
+  NonCopyable& operator=(NonCopyable const&) = delete;
+  NonCopyable(NonCopyable&&) = default;
+  NonCopyable& operator=(NonCopyable&&) = default;
+};
+
+struct NonMovable
+{
+  NonMovable(NonMovable const&) = default;
+  NonMovable& operator=(NonMovable const&) = default;
+  NonMovable(NonMovable&&) = delete;
+  NonMovable& operator=(NonMovable&&) = delete;
+};
+
+struct NonCopyableNonMovable
+{
+  NonCopyableNonMovable(NonCopyableNonMovable const&) = delete;
+  NonCopyableNonMovable(NonCopyableNonMovable&&) = delete;
+  NonCopyableNonMovable& operator=(NonCopyableNonMovable const&) = delete;
+  NonCopyableNonMovable& operator=(NonCopyableNonMovable&&) = delete;
+};
+
+// Test inheritance
+struct InheritFromNonCopyable : NonCopyable
+{
+  int& x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'x' of type 'int &' is a reference
+};
+
+struct InheritFromNonMovable : NonMovable
+{
+  int& x;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'x' of type 'int &' is a reference
+};
+
+struct InheritFromNonCopyableNonMovable : NonCopyableNonMovable
+{
+  int& x;  // OK, non copyable nor movable
+};
+
+struct InheritBothFromNonCopyableAndNonMovable : NonCopyable, NonMovable
+{
+  int& x;  // OK, non copyable nor movable
+};
+
+// Test composition
+struct ContainsNonCopyable
+{
+  NonCopyable x;
+  int& y;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'y' of type 'int &' is a reference
+};
+
+struct ContainsNonMovable
+{
+  NonMovable x;
+  int& y;
+  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: member 'y' of type 'int &' is a reference
+};
+
+struct ContainsNonCopyableNonMovable
+{
+  NonCopyableNonMovable x;
+  int& y;  // OK, non copyable nor movable
+};
+
+struct ContainsBothNonCopyableAndNonMovable
+{
+  NonCopyable x;
+  NonMovable y;
+  int& z;  // OK, non copyable nor movable
+};
+
+// If copies are deleted and moves are not declared, moves are not implicitly declared,
+// so the class is also not movable and we should not warn
+struct NonCopyableMovesNotDeclared
+{
+  NonCopyableMovesNotDeclared(NonCopyableMovesNotDeclared const&) = delete;
+  NonCopyableMovesNotDeclared& operator=(NonCopyableMovesNotDeclared const&) = delete;
+
+  int& x;  // OK, non copyable nor movable
+};
+
+// If moves are deleted but copies are not declared, copies are implicitly deleted,
+// so the class is also not copyable and we should not warn
+struct NonMovableCopiesNotDeclared
+{
+  NonMovableCopiesNotDeclared(NonMovableCopiesNotDeclared&&) = delete;
+  NonMovableCopiesNotDeclared& operator=(NonMovableCopiesNotDeclared&&) = delete;
+
+  int& x;  // OK, non copyable nor movable
+};
