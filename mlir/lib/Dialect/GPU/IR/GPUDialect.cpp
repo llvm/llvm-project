@@ -1546,17 +1546,6 @@ void MemcpyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // GPU_SubgroupMmaLoadMatrixOp
 //===----------------------------------------------------------------------===//
 
-/// Return true if the last dimension of the MemRefType has unit stride. Also
-/// return true for memrefs with no strides.
-static bool isLastMemrefDimUnitStride(MemRefType type) {
-  int64_t offset;
-  SmallVector<int64_t> strides;
-  if (failed(getStridesAndOffset(type, strides, offset))) {
-    return false;
-  }
-  return strides.back() == 1;
-}
-
 LogicalResult SubgroupMmaLoadMatrixOp::verify() {
   auto srcType = getSrcMemref().getType();
   auto resType = getRes().getType();

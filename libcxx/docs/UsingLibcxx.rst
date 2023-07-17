@@ -525,6 +525,8 @@ in their code base.
 In C++26 formatting pointers gained a type ``P`` and allows to use
 zero-padding. These options have been retroactively applied to C++20.
 
+.. _turning-off-asan:
+
 Turning off ASan annotation in containers
 -----------------------------------------
 

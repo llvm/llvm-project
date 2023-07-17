@@ -1,22 +1,7 @@
 // RUN: mlir-opt %s \
 // RUN:  -test-transform-dialect-interpreter \
 // RUN:  -test-transform-dialect-erase-schedule \
-// RUN:  -gpu-kernel-outlining \
-// RUN:  -convert-scf-to-cf \
-// RUN:  -convert-vector-to-llvm \
-// RUN:  -convert-math-to-llvm \
-// RUN:  -expand-strided-metadata \
-// RUN:  -lower-affine \
-// RUN:  -convert-index-to-llvm=index-bitwidth=32 \
-// RUN:  -convert-arith-to-llvm \
-// RUN:  -finalize-memref-to-llvm \
-// RUN:  -convert-func-to-llvm \
-// RUN:  -canonicalize \
-// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-nvgpu-to-nvvm{use-opaque-pointers=1},lower-affine,convert-scf-to-cf,convert-vector-to-llvm,convert-math-to-llvm,expand-strided-metadata,lower-affine,convert-index-to-llvm{index-bitwidth=32},convert-arith-to-llvm,reconcile-unrealized-casts,gpu-to-cubin{chip=sm_80 features=+ptx76}))' \
-// RUN: | mlir-opt -convert-index-to-llvm=index-bitwidth=32 \
-// RUN:  -gpu-to-llvm \
-// RUN:  -convert-func-to-llvm \
-// RUN:  -reconcile-unrealized-casts \
+// RUN:  -test-lower-to-nvvm="kernel-index-bitwidth=32 cubin-chip=sm_80 cubin-features=+ptx76" \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_cuda_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
