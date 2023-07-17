@@ -1288,6 +1288,40 @@ TEST_F(CoreAPIsStandardTest, FailAfterPartialResolution) {
   EXPECT_TRUE(QueryHandlerRun) << "Query handler never ran";
 }
 
+TEST_F(CoreAPIsStandardTest, FailDefineMaterializingDueToDefunctTracker) {
+  // Check that a defunct resource tracker causes defineMaterializing to error
+  // immediately.
+
+  std::unique_ptr<MaterializationResponsibility> FooMR;
+  auto MU = std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}}),
+      [&](std::unique_ptr<MaterializationResponsibility> R) {
+        FooMR = std::move(R);
+      });
+
+  auto RT = JD.createResourceTracker();
+  cantFail(JD.define(std::move(MU), RT));
+
+  bool OnCompletionRan = false;
+  auto OnCompletion = [&](Expected<SymbolMap> Result) {
+    EXPECT_THAT_EXPECTED(Result, Failed());
+    OnCompletionRan = true;
+  };
+
+  ES.lookup(LookupKind::Static, makeJITDylibSearchOrder(&JD),
+            SymbolLookupSet(Foo), SymbolState::Ready, OnCompletion,
+            NoDependenciesToRegister);
+
+  cantFail(RT->remove());
+
+  EXPECT_THAT_ERROR(FooMR->defineMaterializing(SymbolFlagsMap()), Failed())
+      << "defineMaterializing should have failed due to a defunct tracker";
+
+  FooMR->failMaterialization();
+
+  EXPECT_TRUE(OnCompletionRan) << "OnCompletion handler did not run.";
+}
+
 TEST_F(CoreAPIsStandardTest, TestLookupWithUnthreadedMaterialization) {
   auto MU = std::make_unique<SimpleMaterializationUnit>(
       SymbolFlagsMap({{Foo, JITSymbolFlags::Exported}}),
