@@ -485,7 +485,7 @@ class CommandLineCompletionTestCase(TestBase):
             "target create " + root_dir,
             list(
                 filter(
-                    lambda x: os.path.exists(x),
+                    lambda x: os.path.exists(x) and os.path.isdir(x),
                     map(lambda x: root_dir + x + os.sep, os.listdir(root_dir)),
                 )
             ),
