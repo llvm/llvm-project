@@ -208,62 +208,15 @@ public:
     if (D.hasGlobalStorage())
       return;
 
-    if (D.getType()->isReferenceType()) {
-      // If this is the holding variable for a `BindingDecl`, we may already
-      // have a storage location set up -- so check. (See also explanation below
-      // where we process the `BindingDecl`.)
-      if (Env.getStorageLocation(D) == nullptr) {
-        const Expr *InitExpr = D.getInit();
-        assert(InitExpr != nullptr);
-        if (auto *InitExprLoc =
-                Env.getStorageLocation(*InitExpr, SkipPast::Reference)) {
-          Env.setStorageLocation(D, *InitExprLoc);
-        } else {
-          // Even though we have an initializer, we might not get an
-          // InitExprLoc, for example if the InitExpr is a CallExpr for which we
-          // don't have a function body. In this case, we just invent a storage
-          // location and value -- it's the best we can do.
-          StorageLocation &Loc =
-              Env.createStorageLocation(D.getType().getNonReferenceType());
-          Env.setStorageLocation(D, Loc);
-          if (Value *Val = Env.createValue(D.getType().getNonReferenceType()))
-            Env.setValue(Loc, *Val);
-        }
-      }
-    } else {
-      // Not a reference type.
+    // If this is the holding variable for a `BindingDecl`, we may already
+    // have a storage location set up -- so check. (See also explanation below
+    // where we process the `BindingDecl`.)
+    if (D.getType()->isReferenceType() && Env.getStorageLocation(D) != nullptr)
+      return;
 
-      assert(Env.getStorageLocation(D) == nullptr);
-      StorageLocation &Loc = Env.createStorageLocation(D);
-      Env.setStorageLocation(D, Loc);
+    assert(Env.getStorageLocation(D) == nullptr);
 
-      const Expr *InitExpr = D.getInit();
-      if (InitExpr == nullptr) {
-        // No initializer expression - associate `Loc` with a new value.
-        if (Value *Val = Env.createValue(D.getType()))
-          Env.setValue(Loc, *Val);
-        return;
-      }
-
-      if (auto *InitExprVal = Env.getValueStrict(*InitExpr))
-        Env.setValue(Loc, *InitExprVal);
-
-      if (Env.getValue(Loc) == nullptr) {
-        // We arrive here in (the few) cases where an expression is
-        // intentionally "uninterpreted". There are two ways to handle this
-        // situation: propagate the status, so that uninterpreted initializers
-        // result in uninterpreted variables, or provide a default value. We
-        // choose the latter so that later refinements of the variable can be
-        // used for reasoning about the surrounding code.
-        //
-        // FIXME. If and when we interpret all language cases, change this to
-        // assert that `InitExpr` is interpreted, rather than supplying a
-        // default value (assuming we don't update the environment API to return
-        // references).
-        if (Value *Val = Env.createValue(D.getType()))
-          Env.setValue(Loc, *Val);
-      }
-    }
+    Env.setStorageLocation(D, Env.createObject(D));
 
     // `DecompositionDecl` must be handled after we've interpreted the loc
     // itself, because the binding expression refers back to the
