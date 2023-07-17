@@ -160,7 +160,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   bool AllowSameVGPR = ST.hasGFX12_10Insts();
 
   if (InstInfo.hasInvalidOperand(getVRegIdx, *TRI, SkipSrc, AllowSameVGPR,
-                                 IsVOPD3, IsVOPD3))
+                                 IsVOPD3))
     return false;
 
   if (IsVOPD3) {

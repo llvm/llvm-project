@@ -108,6 +108,7 @@ public:
 
     for (auto CompIdx : VOPD::COMPONENTS) {
       auto CompSrcOprNum = InstInfo[CompIdx].getCompSrcOperandsNum();
+      bool IsVOP3 = SII->isVOP3(*MI[CompIdx]);
       for (unsigned CompSrcIdx = 0; CompSrcIdx < CompSrcOprNum; ++CompSrcIdx) {
         if (MI[CompIdx]->getOpcode() == AMDGPU::V_CNDMASK_B32_e64 &&
             CompSrcIdx == 2) {
@@ -121,7 +122,7 @@ public:
           VOPDInst.addImm(Mod ? Mod->getImm() : 0);
         }
         auto MCOprIdx =
-            InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx, CI.IsVOPD3);
+            InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx, IsVOP3);
         VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
       }
     }

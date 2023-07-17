@@ -3686,11 +3686,10 @@ std::optional<unsigned> AMDGPUAsmParser::checkVOPDRegBankConstraints(
     }
   }
 
-  bool VOPD3Layout = MII.get(Opcode).TSFlags & SIInstrFlags::VOPD3;
   const auto &InstInfo = getVOPDInstInfo(Opcode, &MII);
   auto InvalidCompOprIdx =
       InstInfo.getInvalidCompOperandIndex(getVRegIdx, *TRI, SkipSrc,
-                                          AllowSameVGPR, AsVOPD3, VOPD3Layout);
+                                          AllowSameVGPR, AsVOPD3);
 
   return InvalidCompOprIdx;
 }

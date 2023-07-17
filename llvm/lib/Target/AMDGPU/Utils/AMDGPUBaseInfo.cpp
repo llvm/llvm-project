@@ -650,41 +650,7 @@ std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
 
 namespace VOPD {
 
-unsigned ComponentLayout::getIndexOfSrcInMCOperands(unsigned CompSrcIdx,
-                                                    bool VOPD3) const {
-  assert(CompSrcIdx < Component::MAX_SRC_NUM);
-
-  const unsigned Ops[] = {OpName::src0, OpName::src1, OpName::src2};
-  unsigned Opcode = OpDesc.getOpcode();
-
-  if (Kind == SINGLE && Opcode != AMDGPU::V_FMAAK_F32 &&
-      Opcode != AMDGPU::V_FMAMK_F32) {
-    // FMAAK/FMAMK do not have $src2. However, for VOP2 the following method
-    // will work because it does not have modifiers.
-    if (CompSrcIdx == 2) {
-      int BitOp3 = getNamedOperandIdx(Opcode, OpName::bitop3);
-      if (BitOp3 != -1)
-        return BitOp3;
-    }
-    return getNamedOperandIdx(Opcode, Ops[CompSrcIdx]);
-  }
-
-  unsigned Idx = FIRST_MC_SRC_IDX[Kind] + getPrevCompSrcNum() + CompSrcIdx;
-
-  if (VOPD3) { // Count potential modifiers
-    Idx += getPrevCompVOPD3ModsNum();
-    ComponentProps Props(OpDesc);
-    if (Props.getCompVOPD3ModsNum()) {
-      Idx += CompSrcIdx + 1;
-      if (Props.hasSrc2Acc() && CompSrcIdx == 2)
-        --Idx; // No modifers for tied operand.
-    }
-  }
-
-  return Idx;
-}
-
-ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
+ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
   assert(OpDesc.getNumDefs() == Component::DST_NUM);
 
   assert(OpDesc.getOperandConstraint(Component::SRC0, MCOI::TIED_TO) == -1);
@@ -692,19 +658,26 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto TiedIdx = OpDesc.getOperandConstraint(Component::SRC2, MCOI::TIED_TO);
   assert(TiedIdx == -1 || TiedIdx == Component::DST);
   HasSrc2Acc = TiedIdx != -1;
-  unsigned Opc = OpDesc.getOpcode();
+  Opcode = OpDesc.getOpcode();
 
-  SrcOperandsNum = AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src2) ? 3 :
-                   AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::imm)  ? 3 :
-                   AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1) ? 2 : 1;
+  IsVOP3 = VOP3Layout || (OpDesc.TSFlags & SIInstrFlags::VOP3);
+  SrcOperandsNum = AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2) ? 3 :
+                   AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)  ? 3 :
+                   AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1) ? 2 :
+                                                                           1;
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
 
-  if (isSISrcFPOperand(OpDesc, getNamedOperandIdx(Opc, OpName::src0))) {
+  if (isSISrcFPOperand(OpDesc, getNamedOperandIdx(Opcode, OpName::src0))) {
     // All FP VOPD instructions have Neg modifiers for all operands except
     // for tied src2.
     NumVOPD3Mods = SrcOperandsNum;
     if (HasSrc2Acc)
       --NumVOPD3Mods;
+  } else if (Opcode == AMDGPU::V_CNDMASK_B32_e32 ||
+             Opcode == AMDGPU::V_CNDMASK_B32_e64) {
+    // CNDMASK is an awkward exception, it has FP modifiers, but not FP
+    // operands.
+    NumVOPD3Mods = 2;
   }
 
   if (OpDesc.TSFlags & SIInstrFlags::VOP3)
@@ -718,6 +691,10 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
       break;
     }
   }
+}
+
+int ComponentProps::getBitOp3OperandIdx() const {
+  return getNamedOperandIdx(Opcode, OpName::bitop3);
 }
 
 unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
@@ -737,10 +714,12 @@ unsigned ComponentInfo::getIndexInParsedOperands(unsigned CompOprIdx) const {
 std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     std::function<unsigned(unsigned, unsigned)> GetRegIdx,
     const MCRegisterInfo &MRI, bool SkipSrc, bool AllowSameVGPR,
-    bool VOPD3, bool VOPD3Layout) const {
+    bool VOPD3) const {
 
-  auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx, VOPD3Layout);
-  auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx, VOPD3Layout);
+  auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx,
+                               CompInfo[ComponentIndex::X].isVOP3());
+  auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx,
+                               CompInfo[ComponentIndex::Y].isVOP3());
 
   const auto banksOverlap = [&MRI](MCRegister X, MCRegister Y,
                                    unsigned BanksMask) -> bool {
@@ -835,8 +814,9 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   auto [OpX, OpY] = getVOPDComponents(VOPDOpcode);
   const auto &OpXDesc = InstrInfo->get(OpX);
   const auto &OpYDesc = InstrInfo->get(OpY);
-  VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X);
-  VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo);
+  bool VOPD3 = InstrInfo->get(VOPDOpcode).TSFlags & SIInstrFlags::VOPD3;
+  VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X, VOPD3);
+  VOPD::ComponentInfo OpYInfo(OpYDesc, OpXInfo, VOPD3);
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 
