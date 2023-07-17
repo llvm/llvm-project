@@ -129,81 +129,74 @@ static bool createReassociationMapsForCollapse(
 }
 
 namespace {
-class ReshapeConverterCollapse : public OpConversionPattern<tosa::ReshapeOp> {
-public:
-  using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
+Value createCollapse(ConversionPatternRewriter &rewriter, Location loc,
+                     ShapedType resultTy, Value operand) {
+  ShapedType operandTy = cast<ShapedType>(operand.getType());
+  if (resultTy == operandTy)
+    return operand;
 
-  LogicalResult
-  matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    ShapedType operandTy = cast<ShapedType>(adaptor.getInput1().getType());
-    ShapedType resultTy = cast<ShapedType>(reshape.getType());
-    bool isDynamic = !operandTy.hasStaticShape();
+  bool isDynamic = !operandTy.hasStaticShape();
 
-    if (isDynamic && resultTy.getRank() != 1) {
-      return rewriter.notifyMatchFailure(
-          reshape, "Cannot collapse dynamic dims to more than one dimension");
-    }
-
-    SmallVector<ReassociationExprs, 4> reassociationMap;
-    if (!createReassociationMapsForCollapse(rewriter, operandTy.getShape(),
-                                            resultTy.getShape(),
-                                            reassociationMap, isDynamic)) {
-      return rewriter.notifyMatchFailure(
-          reshape,
-          "tosa.reshape Attempting to collapse into an incompatible shape");
-    }
-
-    SmallVector<int64_t> intermediateShape;
-    if (!findIntermediateShape(operandTy.getShape(), resultTy.getShape(),
-                               intermediateShape, isDynamic)) {
-      return rewriter.notifyMatchFailure(
-          reshape, "tosa.reshape Cannot collapse into given shape");
-    }
-
-    rewriter.replaceOpWithNewOp<tensor::CollapseShapeOp>(
-        reshape, resultTy, adaptor.getOperands()[0], reassociationMap);
-    return success();
+  if (isDynamic && resultTy.getRank() != 1) {
+    (void)rewriter.notifyMatchFailure(
+        loc, "Cannot collapse dynamic dims to more than one dimension");
+    return {};
   }
-};
 
-class ReshapeConverterExpand : public OpConversionPattern<tosa::ReshapeOp> {
-public:
-  using OpConversionPattern<tosa::ReshapeOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(tosa::ReshapeOp reshape, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const final {
-    ShapedType operandTy = cast<ShapedType>(adaptor.getInput1().getType());
-    ShapedType resultTy = cast<ShapedType>(reshape.getType());
-    bool isDynamic = !operandTy.hasStaticShape();
-
-    if (isDynamic && operandTy.getRank() != 1) {
-      return rewriter.notifyMatchFailure(
-          reshape, "Cannot expand dynamic dims from more than one dimension");
-    }
-
-    SmallVector<ReassociationExprs, 4> reassociationMap;
-    if (!createReassociationMapsForCollapse(rewriter, resultTy.getShape(),
-                                            operandTy.getShape(),
-                                            reassociationMap, isDynamic)) {
-      return rewriter.notifyMatchFailure(
-          reshape,
-          "tosa.reshape Attempting to expand into an incompatible shape");
-    }
-
-    SmallVector<int64_t> intermediateShape;
-    if (!findIntermediateShape(operandTy.getShape(), resultTy.getShape(),
-                               intermediateShape, isDynamic) ||
-        intermediateShape != operandTy.getShape()) {
-      return rewriter.notifyMatchFailure(
-          reshape, "tosa.reshape Cannot expand into given shape");
-    }
-    rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
-        reshape, resultTy, adaptor.getOperands()[0], reassociationMap);
-    return success();
+  SmallVector<ReassociationExprs, 4> reassociationMap;
+  if (!createReassociationMapsForCollapse(rewriter, operandTy.getShape(),
+                                          resultTy.getShape(),
+                                          reassociationMap, isDynamic)) {
+    (void)rewriter.notifyMatchFailure(
+        loc, "tosa.reshape Attempting to collapse into an incompatible shape");
+    return {};
   }
-};
+
+  SmallVector<int64_t> intermediateShape;
+  if (!findIntermediateShape(operandTy.getShape(), resultTy.getShape(),
+                             intermediateShape, isDynamic)) {
+    (void)rewriter.notifyMatchFailure(
+        loc, "tosa.reshape Cannot collapse into given shape");
+    return {};
+  }
+  return rewriter.create<tensor::CollapseShapeOp>(loc, resultTy, operand,
+                                                  reassociationMap);
+}
+
+Value createExpand(ConversionPatternRewriter &rewriter, Location loc,
+                   ShapedType resultTy, Value operand) {
+  ShapedType operandTy = cast<ShapedType>(operand.getType());
+  if (resultTy == operandTy)
+    return operand;
+
+  bool isDynamic = !operandTy.hasStaticShape();
+
+  if (isDynamic && operandTy.getRank() != 1) {
+    (void)rewriter.notifyMatchFailure(
+        loc, "Cannot expand dynamic dims from more than one dimension");
+    return {};
+  }
+
+  SmallVector<ReassociationExprs, 4> reassociationMap;
+  if (!createReassociationMapsForCollapse(rewriter, resultTy.getShape(),
+                                          operandTy.getShape(),
+                                          reassociationMap, isDynamic)) {
+    (void)rewriter.notifyMatchFailure(
+        loc, "tosa.reshape Attempting to expand into an incompatible shape");
+    return {};
+  }
+
+  SmallVector<int64_t> intermediateShape;
+  if (!findIntermediateShape(operandTy.getShape(), resultTy.getShape(),
+                             intermediateShape, isDynamic) ||
+      intermediateShape != operandTy.getShape()) {
+    (void)rewriter.notifyMatchFailure(
+        loc, "tosa.reshape Cannot expand into given shape");
+    return {};
+  }
+  return rewriter.create<tensor::ExpandShapeOp>(loc, resultTy, operand,
+                                                reassociationMap);
+}
 
 class ReshapeConverterCollapseExpand
     : public OpConversionPattern<tosa::ReshapeOp> {
@@ -224,17 +217,19 @@ public:
           reshape, "tosa.reshape Cannot identify an intermediate shape between "
                    "the given two shapes");
     }
+    auto intermediateTy = RankedTensorType::get(
+        intermediateShape, reshape.getType().getElementType());
 
-    Value collapse = rewriter.create<tosa::ReshapeOp>(
-        reshape.getLoc(),
-        RankedTensorType::get(intermediateShape,
-                              reshape.getType().getElementType()),
-        adaptor.getInput1(), rewriter.getDenseI64ArrayAttr(intermediateShape));
-    Value expand = rewriter.create<tosa::ReshapeOp>(
-        reshape.getLoc(), resultTy, collapse,
-        rewriter.getDenseI64ArrayAttr(resultTy.getShape()));
+    Value collapse = createCollapse(rewriter, reshape.getLoc(), intermediateTy,
+                                    adaptor.getInput1());
+    if (!collapse)
+      return failure();
+
+    Value expand = createExpand(rewriter, reshape.getLoc(), resultTy, collapse);
+    if (!expand)
+      return failure();
+
     rewriter.replaceOp(reshape, expand);
-
     return success();
   }
 };
@@ -420,10 +415,6 @@ void mlir::tosa::populateTosaToTensorConversionPatterns(
     RewritePatternSet *patterns) {
   patterns->add<SliceConverter, PadConverter, ConcatConverter>(
       patterns->getContext());
-  patterns->add<ReshapeConverterCollapse>(patterns->getContext(),
-                                          /*benefit=*/100);
-  patterns->add<ReshapeConverterExpand>(patterns->getContext(),
-                                        /*benefit=*/200);
-  patterns->add<ReshapeConverterCollapseExpand>(patterns->getContext(),
-                                                /*benefit=*/300);
+
+  patterns->add<ReshapeConverterCollapseExpand>(patterns->getContext());
 }

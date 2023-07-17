@@ -370,13 +370,6 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
   // FIXME: Called functions at point `p` should contain only "foo".
 }
 
-StructValue &createNewStructValue(AggregateStorageLocation &Loc,
-                                  Environment &Env) {
-  auto &Val = *cast<StructValue>(Env.createValue(Loc.getType()));
-  Env.setValue(Loc, Val);
-  return Val;
-}
-
 // Models an analysis that uses flow conditions.
 class SpecialBoolAnalysis final
     : public DataflowAnalysis<SpecialBoolAnalysis, NoopLattice> {
@@ -407,7 +400,7 @@ public:
       auto &ObjectLoc =
           *cast<AggregateStorageLocation>(getImplicitObjectLocation(*E, Env));
 
-      createNewStructValue(ObjectLoc, Env)
+      refreshStructValue(ObjectLoc, Env)
           .setProperty("is_set", Env.getBoolLiteralValue(true));
     }
   }
@@ -562,10 +555,7 @@ public:
       auto *Object = E->getArg(0);
       assert(Object != nullptr);
 
-      auto &ObjectLoc = *cast<AggregateStorageLocation>(
-          Env.getStorageLocation(*Object, SkipPast::Reference));
-
-      createNewStructValue(ObjectLoc, Env)
+      refreshStructValue(*Object, Env)
           .setProperty("has_value", Env.getBoolLiteralValue(true));
     }
   }

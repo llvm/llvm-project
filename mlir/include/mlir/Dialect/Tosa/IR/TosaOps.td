@@ -1480,7 +1480,6 @@ def Tosa_ReshapeOp: Tosa_Op<"reshape", [
     No data conversion happens during a reshape operation.
   }];
 
-  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 

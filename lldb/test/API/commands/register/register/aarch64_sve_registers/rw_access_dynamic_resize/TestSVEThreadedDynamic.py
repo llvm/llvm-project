@@ -125,8 +125,6 @@ class RegisterCommandsTestCase(TestBase):
 
         process = self.dbg.GetSelectedTarget().GetProcess()
 
-        thread1 = process.GetThreadAtIndex(0)
-
         self.expect(
             "thread info 1",
             STOPPED_DUE_TO_BREAKPOINT,
@@ -139,6 +137,10 @@ class RegisterCommandsTestCase(TestBase):
             self.check_sve_registers(4)
 
         self.runCmd("process continue", RUN_SUCCEEDED)
+
+        # If we start the checks too quickly, thread 3 may not have started.
+        while (process.GetNumThreads() < 3):
+            pass
 
         for idx in range(1, process.GetNumThreads()):
             thread = process.GetThreadAtIndex(idx)

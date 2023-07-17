@@ -3,6 +3,10 @@
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+experimental-zvfh,+v,+m -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
+; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb,+m -target-abi=ilp32d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
+; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb,+m -target-abi=lp64d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK-ZVBB
 
 declare <vscale x 1 x i8> @llvm.vp.ctpop.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i1>, i32)
 
@@ -23,6 +27,12 @@ define <vscale x 1 x i8> @vp_ctpop_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv1i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i8> @llvm.vp.ctpop.nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i8> %v
 }
@@ -44,6 +54,12 @@ define <vscale x 1 x i8> @vp_ctpop_nxv1i8_unmasked(<vscale x 1 x i8> %va, i32 ze
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vand.vi v8, v8, 15
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv1i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i8> @llvm.vp.ctpop.nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -69,6 +85,12 @@ define <vscale x 2 x i8> @vp_ctpop_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv2i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.ctpop.nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i8> %v
 }
@@ -90,6 +112,12 @@ define <vscale x 2 x i8> @vp_ctpop_nxv2i8_unmasked(<vscale x 2 x i8> %va, i32 ze
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vand.vi v8, v8, 15
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv2i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i8> @llvm.vp.ctpop.nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -115,6 +143,12 @@ define <vscale x 4 x i8> @vp_ctpop_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv4i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 4 x i8> @llvm.vp.ctpop.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i8> %v
 }
@@ -136,6 +170,12 @@ define <vscale x 4 x i8> @vp_ctpop_nxv4i8_unmasked(<vscale x 4 x i8> %va, i32 ze
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vand.vi v8, v8, 15
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv4i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i8> @llvm.vp.ctpop.nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -161,6 +201,12 @@ define <vscale x 8 x i8> @vp_ctpop_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i
 ; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv8i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 8 x i8> @llvm.vp.ctpop.nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i8> %v
 }
@@ -182,6 +228,12 @@ define <vscale x 8 x i8> @vp_ctpop_nxv8i8_unmasked(<vscale x 8 x i8> %va, i32 ze
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vand.vi v8, v8, 15
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv8i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i8> @llvm.vp.ctpop.nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -207,6 +259,12 @@ define <vscale x 16 x i8> @vp_ctpop_nxv16i8(<vscale x 16 x i8> %va, <vscale x 16
 ; CHECK-NEXT:    vadd.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 16 x i8> @llvm.vp.ctpop.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i8> %v
 }
@@ -228,6 +286,12 @@ define <vscale x 16 x i8> @vp_ctpop_nxv16i8_unmasked(<vscale x 16 x i8> %va, i32
 ; CHECK-NEXT:    vadd.vv v8, v8, v10
 ; CHECK-NEXT:    vand.vi v8, v8, 15
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %v = call <vscale x 16 x i8> @llvm.vp.ctpop.nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i1> %m, i32 %evl)
@@ -253,6 +317,12 @@ define <vscale x 32 x i8> @vp_ctpop_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32
 ; CHECK-NEXT:    vadd.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv32i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 32 x i8> @llvm.vp.ctpop.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i8> %v
 }
@@ -274,6 +344,12 @@ define <vscale x 32 x i8> @vp_ctpop_nxv32i8_unmasked(<vscale x 32 x i8> %va, i32
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    vand.vi v8, v8, 15
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv32i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
   %v = call <vscale x 32 x i8> @llvm.vp.ctpop.nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i1> %m, i32 %evl)
@@ -299,6 +375,12 @@ define <vscale x 64 x i8> @vp_ctpop_nxv64i8(<vscale x 64 x i8> %va, <vscale x 64
 ; CHECK-NEXT:    vadd.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    vand.vi v8, v8, 15, v0.t
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv64i8:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 64 x i8> @llvm.vp.ctpop.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i8> %v
 }
@@ -320,6 +402,12 @@ define <vscale x 64 x i8> @vp_ctpop_nxv64i8_unmasked(<vscale x 64 x i8> %va, i32
 ; CHECK-NEXT:    vadd.vv v8, v8, v16
 ; CHECK-NEXT:    vand.vi v8, v8, 15
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv64i8_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 64 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 64 x i1> %head, <vscale x 64 x i1> poison, <vscale x 64 x i32> zeroinitializer
   %v = call <vscale x 64 x i8> @llvm.vp.ctpop.nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i1> %m, i32 %evl)
@@ -376,6 +464,12 @@ define <vscale x 1 x i16> @vp_ctpop_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv1i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i16> @llvm.vp.ctpop.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i16> %v
 }
@@ -428,6 +522,12 @@ define <vscale x 1 x i16> @vp_ctpop_nxv1i16_unmasked(<vscale x 1 x i16> %va, i32
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv1i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i16> @llvm.vp.ctpop.nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -484,6 +584,12 @@ define <vscale x 2 x i16> @vp_ctpop_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv2i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.ctpop.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i16> %v
 }
@@ -536,6 +642,12 @@ define <vscale x 2 x i16> @vp_ctpop_nxv2i16_unmasked(<vscale x 2 x i16> %va, i32
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv2i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i16> @llvm.vp.ctpop.nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -592,6 +704,12 @@ define <vscale x 4 x i16> @vp_ctpop_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv4i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 4 x i16> @llvm.vp.ctpop.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i16> %v
 }
@@ -644,6 +762,12 @@ define <vscale x 4 x i16> @vp_ctpop_nxv4i16_unmasked(<vscale x 4 x i16> %va, i32
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv4i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i16> @llvm.vp.ctpop.nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -700,6 +824,12 @@ define <vscale x 8 x i16> @vp_ctpop_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv8i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 8 x i16> @llvm.vp.ctpop.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i16> %v
 }
@@ -752,6 +882,12 @@ define <vscale x 8 x i16> @vp_ctpop_nxv8i16_unmasked(<vscale x 8 x i16> %va, i32
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv8i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i16> @llvm.vp.ctpop.nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -808,6 +944,12 @@ define <vscale x 16 x i16> @vp_ctpop_nxv16i16(<vscale x 16 x i16> %va, <vscale x
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 16 x i16> @llvm.vp.ctpop.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i16> %v
 }
@@ -860,6 +1002,12 @@ define <vscale x 16 x i16> @vp_ctpop_nxv16i16_unmasked(<vscale x 16 x i16> %va, 
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %v = call <vscale x 16 x i16> @llvm.vp.ctpop.nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i1> %m, i32 %evl)
@@ -916,6 +1064,12 @@ define <vscale x 32 x i16> @vp_ctpop_nxv32i16(<vscale x 32 x i16> %va, <vscale x
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 8, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv32i16:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 32 x i16> @llvm.vp.ctpop.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x i16> %v
 }
@@ -968,6 +1122,12 @@ define <vscale x 32 x i16> @vp_ctpop_nxv32i16_unmasked(<vscale x 32 x i16> %va, 
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 8
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv32i16_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 32 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 32 x i1> %head, <vscale x 32 x i1> poison, <vscale x 32 x i32> zeroinitializer
   %v = call <vscale x 32 x i16> @llvm.vp.ctpop.nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i1> %m, i32 %evl)
@@ -1026,6 +1186,12 @@ define <vscale x 1 x i32> @vp_ctpop_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv1i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i32> @llvm.vp.ctpop.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i32> %v
 }
@@ -1080,6 +1246,12 @@ define <vscale x 1 x i32> @vp_ctpop_nxv1i32_unmasked(<vscale x 1 x i32> %va, i32
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 24
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv1i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i32> @llvm.vp.ctpop.nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -1138,6 +1310,12 @@ define <vscale x 2 x i32> @vp_ctpop_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv2i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.ctpop.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i32> %v
 }
@@ -1192,6 +1370,12 @@ define <vscale x 2 x i32> @vp_ctpop_nxv2i32_unmasked(<vscale x 2 x i32> %va, i32
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 24
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv2i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i32> @llvm.vp.ctpop.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -1250,6 +1434,12 @@ define <vscale x 4 x i32> @vp_ctpop_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv4i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 4 x i32> @llvm.vp.ctpop.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i32> %v
 }
@@ -1304,6 +1494,12 @@ define <vscale x 4 x i32> @vp_ctpop_nxv4i32_unmasked(<vscale x 4 x i32> %va, i32
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 24
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv4i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i32> @llvm.vp.ctpop.nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -1362,6 +1558,12 @@ define <vscale x 8 x i32> @vp_ctpop_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv8i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 8 x i32> @llvm.vp.ctpop.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i32> %v
 }
@@ -1416,6 +1618,12 @@ define <vscale x 8 x i32> @vp_ctpop_nxv8i32_unmasked(<vscale x 8 x i32> %va, i32
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 24
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv8i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i32> @llvm.vp.ctpop.nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -1474,6 +1682,12 @@ define <vscale x 16 x i32> @vp_ctpop_nxv16i32(<vscale x 16 x i32> %va, <vscale x
 ; RV64-NEXT:    vmul.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    vsrl.vi v8, v8, 24, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i32:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 16 x i32> @llvm.vp.ctpop.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i32> %v
 }
@@ -1528,6 +1742,12 @@ define <vscale x 16 x i32> @vp_ctpop_nxv16i32_unmasked(<vscale x 16 x i32> %va, 
 ; RV64-NEXT:    vmul.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 24
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i32_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %v = call <vscale x 16 x i32> @llvm.vp.ctpop.nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i1> %m, i32 %evl)
@@ -1623,6 +1843,12 @@ define <vscale x 1 x i64> @vp_ctpop_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv1i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i64> @llvm.vp.ctpop.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i64> %v
 }
@@ -1714,6 +1940,12 @@ define <vscale x 1 x i64> @vp_ctpop_nxv1i64_unmasked(<vscale x 1 x i64> %va, i32
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv1i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 1 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 1 x i1> %head, <vscale x 1 x i1> poison, <vscale x 1 x i32> zeroinitializer
   %v = call <vscale x 1 x i64> @llvm.vp.ctpop.nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i1> %m, i32 %evl)
@@ -1809,6 +2041,12 @@ define <vscale x 2 x i64> @vp_ctpop_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv2i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 2 x i64> @llvm.vp.ctpop.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x i64> %v
 }
@@ -1900,6 +2138,12 @@ define <vscale x 2 x i64> @vp_ctpop_nxv2i64_unmasked(<vscale x 2 x i64> %va, i32
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv2i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 2 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 2 x i1> %head, <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
   %v = call <vscale x 2 x i64> @llvm.vp.ctpop.nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i1> %m, i32 %evl)
@@ -1995,6 +2239,12 @@ define <vscale x 4 x i64> @vp_ctpop_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv4i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 4 x i64> @llvm.vp.ctpop.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x i64> %v
 }
@@ -2086,6 +2336,12 @@ define <vscale x 4 x i64> @vp_ctpop_nxv4i64_unmasked(<vscale x 4 x i64> %va, i32
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv4i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 4 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 4 x i1> %head, <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer
   %v = call <vscale x 4 x i64> @llvm.vp.ctpop.nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i1> %m, i32 %evl)
@@ -2181,6 +2437,12 @@ define <vscale x 7 x i64> @vp_ctpop_nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv7i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 7 x i64> @llvm.vp.ctpop.nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 %evl)
   ret <vscale x 7 x i64> %v
 }
@@ -2272,6 +2534,12 @@ define <vscale x 7 x i64> @vp_ctpop_nxv7i64_unmasked(<vscale x 7 x i64> %va, i32
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv7i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 7 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 7 x i1> %head, <vscale x 7 x i1> poison, <vscale x 7 x i32> zeroinitializer
   %v = call <vscale x 7 x i64> @llvm.vp.ctpop.nxv7i64(<vscale x 7 x i64> %va, <vscale x 7 x i1> %m, i32 %evl)
@@ -2367,6 +2635,12 @@ define <vscale x 8 x i64> @vp_ctpop_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv8i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 8 x i64> @llvm.vp.ctpop.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i64> %v
 }
@@ -2458,6 +2732,12 @@ define <vscale x 8 x i64> @vp_ctpop_nxv8i64_unmasked(<vscale x 8 x i64> %va, i32
 ; RV64-NEXT:    li a0, 56
 ; RV64-NEXT:    vsrl.vx v8, v8, a0
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv8i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 8 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 8 x i1> %head, <vscale x 8 x i1> poison, <vscale x 8 x i32> zeroinitializer
   %v = call <vscale x 8 x i64> @llvm.vp.ctpop.nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i1> %m, i32 %evl)
@@ -2771,6 +3051,28 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64(<vscale x 16 x i64> %va, <vscale x
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i64:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    vmv1r.v v24, v0
+; CHECK-ZVBB-NEXT:    csrr a1, vlenb
+; CHECK-ZVBB-NEXT:    srli a2, a1, 3
+; CHECK-ZVBB-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
+; CHECK-ZVBB-NEXT:    vslidedown.vx v0, v0, a2
+; CHECK-ZVBB-NEXT:    sub a2, a0, a1
+; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVBB-NEXT:    addi a3, a3, -1
+; CHECK-ZVBB-NEXT:    and a2, a3, a2
+; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v16, v16, v0.t
+; CHECK-ZVBB-NEXT:    bltu a0, a1, .LBB46_2
+; CHECK-ZVBB-NEXT:  # %bb.1:
+; CHECK-ZVBB-NEXT:    mv a0, a1
+; CHECK-ZVBB-NEXT:  .LBB46_2:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vmv1r.v v0, v24
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8, v0.t
+; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 16 x i64> @llvm.vp.ctpop.nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i64> %v
 }
@@ -2963,6 +3265,23 @@ define <vscale x 16 x i64> @vp_ctpop_nxv16i64_unmasked(<vscale x 16 x i64> %va, 
 ; RV64-NEXT:    vmul.vx v16, v16, a5
 ; RV64-NEXT:    vsrl.vx v16, v16, a6
 ; RV64-NEXT:    ret
+;
+; CHECK-ZVBB-LABEL: vp_ctpop_nxv16i64_unmasked:
+; CHECK-ZVBB:       # %bb.0:
+; CHECK-ZVBB-NEXT:    csrr a1, vlenb
+; CHECK-ZVBB-NEXT:    sub a2, a0, a1
+; CHECK-ZVBB-NEXT:    sltu a3, a0, a2
+; CHECK-ZVBB-NEXT:    addi a3, a3, -1
+; CHECK-ZVBB-NEXT:    and a2, a3, a2
+; CHECK-ZVBB-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v16, v16
+; CHECK-ZVBB-NEXT:    bltu a0, a1, .LBB47_2
+; CHECK-ZVBB-NEXT:  # %bb.1:
+; CHECK-ZVBB-NEXT:    mv a0, a1
+; CHECK-ZVBB-NEXT:  .LBB47_2:
+; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-ZVBB-NEXT:    vcpop.v v8, v8
+; CHECK-ZVBB-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer
   %v = call <vscale x 16 x i64> @llvm.vp.ctpop.nxv16i64(<vscale x 16 x i64> %va, <vscale x 16 x i1> %m, i32 %evl)

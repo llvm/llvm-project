@@ -73,6 +73,7 @@ static_library("bugprone") {
     "SuspiciousSemicolonCheck.cpp",
     "SuspiciousStringCompareCheck.cpp",
     "SwappedArgumentsCheck.cpp",
+    "SwitchMissingDefaultCaseCheck.cpp",
     "TerminatingContinueCheck.cpp",
     "ThrowKeywordMissingCheck.cpp",
     "TooSmallLoopVariableCheck.cpp",
