@@ -36,9 +36,7 @@
 # include <threads.h>
 #endif
 
-#if defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
-    defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL) || \
-    defined(_LIBCPP_HAS_THREAD_API_WIN32)
+#if defined(_LIBCPP_HAS_THREAD_API_WIN32)
 #define _LIBCPP_THREAD_ABI_VISIBILITY _LIBCPP_EXPORTED_FROM_ABI
 #else
 #define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_INLINE_VISIBILITY
@@ -247,9 +245,6 @@ _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_tls_set(__libcpp_tls_key __key, void *__p);
 
 #endif // !defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
-
-#if (!defined(_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL) || \
-     defined(_LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL))
 
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
 
@@ -584,8 +579,6 @@ int __libcpp_tls_set(__libcpp_tls_key __key, void *__p)
 }
 
 #endif
-
-#endif // !_LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL || _LIBCPP_BUILDING_THREAD_LIBRARY_EXTERNAL
 
 #endif // !_LIBCPP_HAS_NO_THREADS
 
