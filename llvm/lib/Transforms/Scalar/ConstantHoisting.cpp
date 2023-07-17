@@ -742,45 +742,43 @@ static bool updateOperand(Instruction *Inst, unsigned Idx, Instruction *Mat) {
 /// Emit materialization code for all rebased constants and update their
 /// users.
 void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
-                                             Constant *Offset,
-                                             Type *Ty,
-                                             const ConstantUser &ConstUser) {
+                                             UserAdjustment *Adj) {
   Instruction *Mat = Base;
 
   // The same offset can be dereferenced to different types in nested struct.
-  if (!Offset && Ty && Ty != Base->getType())
-    Offset = ConstantInt::get(Type::getInt32Ty(*Ctx), 0);
+  if (!Adj->Offset && Adj->Ty && Adj->Ty != Base->getType())
+    Adj->Offset = ConstantInt::get(Type::getInt32Ty(*Ctx), 0);
 
-  if (Offset) {
-    Instruction *InsertionPt = findMatInsertPt(ConstUser.Inst,
-                                               ConstUser.OpndIdx);
-    if (Ty) {
+  if (Adj->Offset) {
+    Instruction *InsertionPt =
+        findMatInsertPt(Adj->User.Inst, Adj->User.OpndIdx);
+    if (Adj->Ty) {
       // Constant being rebased is a ConstantExpr.
-      PointerType *Int8PtrTy = Type::getInt8PtrTy(*Ctx,
-          cast<PointerType>(Ty)->getAddressSpace());
+      PointerType *Int8PtrTy = Type::getInt8PtrTy(
+          *Ctx, cast<PointerType>(Adj->Ty)->getAddressSpace());
       Base = new BitCastInst(Base, Int8PtrTy, "base_bitcast", InsertionPt);
-      Mat = GetElementPtrInst::Create(Type::getInt8Ty(*Ctx), Base,
-          Offset, "mat_gep", InsertionPt);
-      Mat = new BitCastInst(Mat, Ty, "mat_bitcast", InsertionPt);
+      Mat = GetElementPtrInst::Create(Type::getInt8Ty(*Ctx), Base, Adj->Offset,
+                                      "mat_gep", InsertionPt);
+      Mat = new BitCastInst(Mat, Adj->Ty, "mat_bitcast", InsertionPt);
     } else
       // Constant being rebased is a ConstantInt.
-      Mat = BinaryOperator::Create(Instruction::Add, Base, Offset,
-                                 "const_mat", InsertionPt);
+      Mat = BinaryOperator::Create(Instruction::Add, Base, Adj->Offset,
+                                   "const_mat", InsertionPt);
 
     LLVM_DEBUG(dbgs() << "Materialize constant (" << *Base->getOperand(0)
-                      << " + " << *Offset << ") in BB "
+                      << " + " << *Adj->Offset << ") in BB "
                       << Mat->getParent()->getName() << '\n'
                       << *Mat << '\n');
-    Mat->setDebugLoc(ConstUser.Inst->getDebugLoc());
+    Mat->setDebugLoc(Adj->User.Inst->getDebugLoc());
   }
-  Value *Opnd = ConstUser.Inst->getOperand(ConstUser.OpndIdx);
+  Value *Opnd = Adj->User.Inst->getOperand(Adj->User.OpndIdx);
 
   // Visit constant integer.
   if (isa<ConstantInt>(Opnd)) {
-    LLVM_DEBUG(dbgs() << "Update: " << *ConstUser.Inst << '\n');
-    if (!updateOperand(ConstUser.Inst, ConstUser.OpndIdx, Mat) && Offset)
+    LLVM_DEBUG(dbgs() << "Update: " << *Adj->User.Inst << '\n');
+    if (!updateOperand(Adj->User.Inst, Adj->User.OpndIdx, Mat) && Adj->Offset)
       Mat->eraseFromParent();
-    LLVM_DEBUG(dbgs() << "To    : " << *ConstUser.Inst << '\n');
+    LLVM_DEBUG(dbgs() << "To    : " << *Adj->User.Inst << '\n');
     return;
   }
 
@@ -800,9 +798,9 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
                         << "To               : " << *ClonedCastInst << '\n');
     }
 
-    LLVM_DEBUG(dbgs() << "Update: " << *ConstUser.Inst << '\n');
-    updateOperand(ConstUser.Inst, ConstUser.OpndIdx, ClonedCastInst);
-    LLVM_DEBUG(dbgs() << "To    : " << *ConstUser.Inst << '\n');
+    LLVM_DEBUG(dbgs() << "Update: " << *Adj->User.Inst << '\n');
+    updateOperand(Adj->User.Inst, Adj->User.OpndIdx, ClonedCastInst);
+    LLVM_DEBUG(dbgs() << "To    : " << *Adj->User.Inst << '\n');
     return;
   }
 
@@ -810,28 +808,28 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
     if (isa<GEPOperator>(ConstExpr)) {
       // Operand is a ConstantGEP, replace it.
-      updateOperand(ConstUser.Inst, ConstUser.OpndIdx, Mat);
+      updateOperand(Adj->User.Inst, Adj->User.OpndIdx, Mat);
       return;
     }
 
     // Aside from constant GEPs, only constant cast expressions are collected.
     assert(ConstExpr->isCast() && "ConstExpr should be a cast");
     Instruction *ConstExprInst = ConstExpr->getAsInstruction(
-        findMatInsertPt(ConstUser.Inst, ConstUser.OpndIdx));
+        findMatInsertPt(Adj->User.Inst, Adj->User.OpndIdx));
     ConstExprInst->setOperand(0, Mat);
 
     // Use the same debug location as the instruction we are about to update.
-    ConstExprInst->setDebugLoc(ConstUser.Inst->getDebugLoc());
+    ConstExprInst->setDebugLoc(Adj->User.Inst->getDebugLoc());
 
     LLVM_DEBUG(dbgs() << "Create instruction: " << *ConstExprInst << '\n'
                       << "From              : " << *ConstExpr << '\n');
-    LLVM_DEBUG(dbgs() << "Update: " << *ConstUser.Inst << '\n');
-    if (!updateOperand(ConstUser.Inst, ConstUser.OpndIdx, ConstExprInst)) {
+    LLVM_DEBUG(dbgs() << "Update: " << *Adj->User.Inst << '\n');
+    if (!updateOperand(Adj->User.Inst, Adj->User.OpndIdx, ConstExprInst)) {
       ConstExprInst->eraseFromParent();
-      if (Offset)
+      if (Adj->Offset)
         Mat->eraseFromParent();
     }
-    LLVM_DEBUG(dbgs() << "To    : " << *ConstUser.Inst << '\n');
+    LLVM_DEBUG(dbgs() << "To    : " << *Adj->User.Inst << '\n');
     return;
   }
 }
@@ -854,8 +852,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
     for (Instruction *IP : IPSet) {
       // First, collect constants depending on this IP of the base.
       UsesNum = 0;
-      using RebasedUse = std::tuple<Constant *, Type *, ConstantUser>;
-      SmallVector<RebasedUse, 4> ToBeRebased;
+      SmallVector<UserAdjustment, 4> ToBeRebased;
       for (auto const &RCI : ConstInfo.RebasedConstants) {
         UsesNum += RCI.Uses.size();
         for (auto const &U : RCI.Uses) {
@@ -865,7 +862,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
           // generate rebase for U using the Base dominating U.
           if (IPSet.size() == 1 ||
               DT->dominates(IP->getParent(), OrigMatInsertBB))
-            ToBeRebased.push_back(RebasedUse(RCI.Offset, RCI.Ty, U));
+            ToBeRebased.emplace_back(RCI.Offset, RCI.Ty, U);
         }
       }
 
@@ -895,15 +892,12 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
                         << *Base << '\n');
 
       // Emit materialization code for rebased constants depending on this IP.
-      for (auto const &R : ToBeRebased) {
-        Constant *Off = std::get<0>(R);
-        Type *Ty = std::get<1>(R);
-        ConstantUser U = std::get<2>(R);
-        emitBaseConstants(Base, Off, Ty, U);
+      for (UserAdjustment &R : ToBeRebased) {
+        emitBaseConstants(Base, &R);
         ReBasesNum++;
         // Use the same debug location as the last user of the constant.
         Base->setDebugLoc(DILocation::getMergedLocation(
-            Base->getDebugLoc(), U.Inst->getDebugLoc()));
+            Base->getDebugLoc(), R.User.Inst->getDebugLoc()));
       }
       assert(!Base->use_empty() && "The use list is empty!?");
       assert(isa<Instruction>(Base->user_back()) &&
