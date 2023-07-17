@@ -20265,39 +20265,31 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   // Zknh
   case RISCV::BI__builtin_riscv_sha256sig0:
     ID = Intrinsic::riscv_sha256sig0;
-    IntrinsicTypes = {ResultType};
     break;
   case RISCV::BI__builtin_riscv_sha256sig1:
     ID = Intrinsic::riscv_sha256sig1;
-    IntrinsicTypes = {ResultType};
     break;
   case RISCV::BI__builtin_riscv_sha256sum0:
     ID = Intrinsic::riscv_sha256sum0;
-    IntrinsicTypes = {ResultType};
     break;
   case RISCV::BI__builtin_riscv_sha256sum1:
     ID = Intrinsic::riscv_sha256sum1;
-    IntrinsicTypes = {ResultType};
     break;
 
   // Zksed
   case RISCV::BI__builtin_riscv_sm4ks:
     ID = Intrinsic::riscv_sm4ks;
-    IntrinsicTypes = {ResultType};
     break;
   case RISCV::BI__builtin_riscv_sm4ed:
     ID = Intrinsic::riscv_sm4ed;
-    IntrinsicTypes = {ResultType};
     break;
 
   // Zksh
   case RISCV::BI__builtin_riscv_sm3p0:
     ID = Intrinsic::riscv_sm3p0;
-    IntrinsicTypes = {ResultType};
     break;
   case RISCV::BI__builtin_riscv_sm3p1:
     ID = Intrinsic::riscv_sm3p1;
-    IntrinsicTypes = {ResultType};
     break;
 
   // Zihintntl
