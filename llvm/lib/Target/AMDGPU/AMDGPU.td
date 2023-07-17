@@ -1309,25 +1309,36 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureImageInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
-   FeatureVALUTransUseHazard,
    FeatureMADIntraFwdBug]>;
 
-def FeatureISAVersion11_0_0 : FeatureSet<
+def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureVALUTransUseHazard])>;
+
+def FeatureISAVersion11_0_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [FeatureGFX11FullVGPRs,
      FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [FeatureGFX11FullVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
-  !listconcat(FeatureISAVersion11_Common.Features,
+  !listconcat(FeatureISAVersion11_0_Common.Features,
     [FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_3 : FeatureSet<
+  !listconcat(FeatureISAVersion11_0_Common.Features,
+    [])>;
+
+def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [])>;
+
+def FeatureISAVersion11_5_1 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureGFX11FullVGPRs])>;
 
 //===----------------------------------------------------------------------===//
 
