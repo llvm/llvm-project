@@ -15189,7 +15189,10 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
     }
   }
 
-  if (LocVT == MVT::f16) {
+  const RISCVSubtarget &Subtarget = TLI.getSubtarget();
+
+  if (LocVT == MVT::f16 &&
+      (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZfhmin())) {
     static const MCPhysReg FPR16List[] = {
         RISCV::F10_H, RISCV::F11_H, RISCV::F12_H, RISCV::F13_H, RISCV::F14_H,
         RISCV::F15_H, RISCV::F16_H, RISCV::F17_H, RISCV::F0_H,  RISCV::F1_H,
@@ -15201,7 +15204,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
     }
   }
 
-  if (LocVT == MVT::f32) {
+  if (LocVT == MVT::f32 && Subtarget.hasStdExtF()) {
     static const MCPhysReg FPR32List[] = {
         RISCV::F10_F, RISCV::F11_F, RISCV::F12_F, RISCV::F13_F, RISCV::F14_F,
         RISCV::F15_F, RISCV::F16_F, RISCV::F17_F, RISCV::F0_F,  RISCV::F1_F,
@@ -15213,13 +15216,25 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
     }
   }
 
-  if (LocVT == MVT::f64) {
+  if (LocVT == MVT::f64 && Subtarget.hasStdExtD()) {
     static const MCPhysReg FPR64List[] = {
         RISCV::F10_D, RISCV::F11_D, RISCV::F12_D, RISCV::F13_D, RISCV::F14_D,
         RISCV::F15_D, RISCV::F16_D, RISCV::F17_D, RISCV::F0_D,  RISCV::F1_D,
         RISCV::F2_D,  RISCV::F3_D,  RISCV::F4_D,  RISCV::F5_D,  RISCV::F6_D,
         RISCV::F7_D,  RISCV::F28_D, RISCV::F29_D, RISCV::F30_D, RISCV::F31_D};
     if (unsigned Reg = State.AllocateReg(FPR64List)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  // Check if there is an available GPR before hitting the stack.
+  if ((LocVT == MVT::f16 &&
+       (Subtarget.hasStdExtZhinx() || Subtarget.hasStdExtZhinxmin())) ||
+      (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
+      (LocVT == MVT::f64 && Subtarget.is64Bit() &&
+       Subtarget.hasStdExtZdinx())) {
+    if (unsigned Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
