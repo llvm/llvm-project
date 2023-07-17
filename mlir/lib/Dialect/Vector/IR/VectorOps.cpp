@@ -1218,8 +1218,7 @@ static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
   std::reverse(globalPosition.begin(), globalPosition.end());
-  extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
-                     b.getI64ArrayAttr(globalPosition));
+  extractOp.setPositionAttr(b.getI64ArrayAttr(globalPosition));
   return success();
 }
 
@@ -1499,8 +1498,7 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
   extractOp.setOperand(source);
-  extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
-                     b.getI64ArrayAttr(extractPos));
+  extractOp.setPositionAttr(b.getI64ArrayAttr(extractPos));
   return extractOp.getResult();
 }
 
@@ -1565,8 +1563,7 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   SmallVector<int64_t, 4> newPosition = delinearize(position, newStrides);
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
-  extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
-                     b.getI64ArrayAttr(newPosition));
+  extractOp.setPositionAttr(b.getI64ArrayAttr(newPosition));
   extractOp.setOperand(shapeCastOp.getSource());
   return extractOp.getResult();
 }
@@ -1613,8 +1610,7 @@ static Value foldExtractFromExtractStrided(ExtractOp extractOp) {
   extractOp.getVectorMutable().assign(extractStridedSliceOp.getVector());
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
-  extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
-                     b.getI64ArrayAttr(extractedPos));
+  extractOp.setPositionAttr(b.getI64ArrayAttr(extractedPos));
   return extractOp.getResult();
 }
 
@@ -1679,8 +1675,7 @@ static Value foldExtractStridedOpFromInsertChain(ExtractOp extractOp) {
       extractOp.getVectorMutable().assign(insertOp.getSource());
       // OpBuilder is only used as a helper to build an I64ArrayAttr.
       OpBuilder b(extractOp.getContext());
-      extractOp->setAttr(ExtractOp::getPositionAttrStrName(),
-                         b.getI64ArrayAttr(offsetDiffs));
+      extractOp.setPositionAttr(b.getI64ArrayAttr(offsetDiffs));
       return extractOp.getResult();
     }
     // If the chunk extracted is disjoint from the chunk inserted, keep
@@ -2300,7 +2295,7 @@ void InsertOp::build(OpBuilder &builder, OperationState &result, Value source,
   result.addOperands({source, dest});
   auto positionAttr = getVectorSubscriptAttr(builder, position);
   result.addTypes(dest.getType());
-  result.addAttribute(getPositionAttrStrName(), positionAttr);
+  result.addAttribute(InsertOp::getPositionAttrName(result.name), positionAttr);
 }
 
 // Convenience builder which assumes the values are constant indices.
@@ -2467,8 +2462,10 @@ void InsertStridedSliceOp::build(OpBuilder &builder, OperationState &result,
   auto offsetsAttr = getVectorSubscriptAttr(builder, offsets);
   auto stridesAttr = getVectorSubscriptAttr(builder, strides);
   result.addTypes(dest.getType());
-  result.addAttribute(getOffsetsAttrStrName(), offsetsAttr);
-  result.addAttribute(getStridesAttrStrName(), stridesAttr);
+  result.addAttribute(InsertStridedSliceOp::getOffsetsAttrName(result.name),
+                      offsetsAttr);
+  result.addAttribute(InsertStridedSliceOp::getStridesAttrName(result.name),
+                      stridesAttr);
 }
 
 // TODO: Should be moved to Tablegen ConfinedAttr attributes.
@@ -2790,9 +2787,9 @@ ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
                               scalableDimsRes);
   }
 
-  if (!result.attributes.get(OuterProductOp::getKindAttrStrName())) {
+  if (!result.attributes.get(OuterProductOp::getKindAttrName(result.name))) {
     result.attributes.append(
-        OuterProductOp::getKindAttrStrName(),
+        OuterProductOp::getKindAttrName(result.name),
         CombiningKindAttr::get(result.getContext(),
                                OuterProductOp::getDefaultKind()));
   }
@@ -2951,9 +2948,12 @@ void ExtractStridedSliceOp::build(OpBuilder &builder, OperationState &result,
   result.addTypes(
       inferStridedSliceOpResultType(llvm::cast<VectorType>(source.getType()),
                                     offsetsAttr, sizesAttr, stridesAttr));
-  result.addAttribute(getOffsetsAttrStrName(), offsetsAttr);
-  result.addAttribute(getSizesAttrStrName(), sizesAttr);
-  result.addAttribute(getStridesAttrStrName(), stridesAttr);
+  result.addAttribute(ExtractStridedSliceOp::getOffsetsAttrName(result.name),
+                      offsetsAttr);
+  result.addAttribute(ExtractStridedSliceOp::getSizesAttrName(result.name),
+                      sizesAttr);
+  result.addAttribute(ExtractStridedSliceOp::getStridesAttrName(result.name),
+                      stridesAttr);
 }
 
 LogicalResult ExtractStridedSliceOp::verify() {
@@ -3046,8 +3046,7 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
       op.setOperand(insertOp.getSource());
       // OpBuilder is only used as a helper to build an I64ArrayAttr.
       OpBuilder b(op.getContext());
-      op->setAttr(ExtractStridedSliceOp::getOffsetsAttrStrName(),
-                  b.getI64ArrayAttr(offsetDiffs));
+      op.setOffsetsAttr(b.getI64ArrayAttr(offsetDiffs));
       return success();
     }
     // If the chunk extracted is disjoint from the chunk inserted, keep looking
@@ -4973,7 +4972,8 @@ void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
 
   result.addOperands(vector);
   result.addTypes(VectorType::get(transposedShape, vt.getElementType()));
-  result.addAttribute(getTranspAttrStrName(), builder.getI64ArrayAttr(transp));
+  result.addAttribute(TransposeOp::getTranspAttrName(result.name),
+                      builder.getI64ArrayAttr(transp));
 }
 
 OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
