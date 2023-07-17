@@ -140,7 +140,7 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
   // TODO: handle -march=native and -mtune=xx.
 
   // Select a default arch name.
-  if (ArchName.empty() && Triple.getArch() == llvm::Triple::loongarch64)
+  if (ArchName.empty() && Triple.isLoongArch64())
     ArchName = "loongarch64";
 
   if (!ArchName.empty())

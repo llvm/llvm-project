@@ -2752,11 +2752,11 @@ gentbl_cc_library(
                 "-gen-pass-decls",
                 "-name=NVGPU",
             ],
-            "include/mlir/Dialect/NVGPU/Passes.h.inc",
+            "include/mlir/Dialect/NVGPU/Transforms/Passes.h.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/NVGPU/Passes.td",
+    td_file = "include/mlir/Dialect/NVGPU/Transforms/Passes.td",
     deps = [":PassBaseTdFiles"],
 )
 
@@ -2769,7 +2769,6 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":NVGPUIncGen",
-        ":NVGPUPassIncGen",
         ":SideEffectInterfaces",
         "//llvm:Core",
         "//llvm:Support",
@@ -2851,14 +2850,12 @@ cc_library(
 
 cc_library(
     name = "NVGPUTransforms",
-    srcs = [
-        "lib/Dialect/NVGPU/Transforms/MmaSyncTF32Transform.cpp",
-        "lib/Dialect/NVGPU/Transforms/OptimizeSharedMemory.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/NVGPU/Passes.h",
-        "include/mlir/Dialect/NVGPU/Transforms/Transforms.h",
-    ],
+    srcs = glob([
+        "lib/Dialect/NVGPU/Transforms/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/NVGPU/Transforms/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":AffineDialect",

@@ -346,27 +346,6 @@ set_target_properties(cxx_experimental
 cxx_add_common_build_flags(cxx_experimental)
 target_compile_options(cxx_experimental PUBLIC -D_LIBCPP_ENABLE_EXPERIMENTAL)
 
-
-if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
-  set(LIBCXX_EXTERNAL_THREADING_SUPPORT_SOURCES
-      "${CMAKE_CURRENT_SOURCE_DIR}/../test/support/external_threads.cpp")
-
-  if (LIBCXX_ENABLE_SHARED)
-    add_library(cxx_external_threads SHARED ${LIBCXX_EXTERNAL_THREADING_SUPPORT_SOURCES})
-  else()
-    add_library(cxx_external_threads STATIC ${LIBCXX_EXTERNAL_THREADING_SUPPORT_SOURCES})
-  endif()
-
-  set_target_properties(cxx_external_threads
-    PROPERTIES
-      LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
-      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
-      OUTPUT_NAME   "c++external_threads"
-  )
-
-  target_link_libraries(cxx_external_threads PRIVATE cxx-headers)
-endif()
-
 if (LIBCXX_INSTALL_SHARED_LIBRARY)
   install(TARGETS cxx_shared
     ARCHIVE DESTINATION ${LIBCXX_INSTALL_LIBRARY_DIR} COMPONENT cxx
