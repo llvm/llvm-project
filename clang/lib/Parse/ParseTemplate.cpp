@@ -1744,6 +1744,7 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
 
   // Parsing should occur with empty FP pragma stack and FP options used in the
   // point of the template definition.
+  Sema::FpPragmaStackSaveRAII SavedStack(Actions);
   Actions.resetFPOptions(LPT.FPO);
 
   assert(!LPT.Toks.empty() && "Empty body!");
