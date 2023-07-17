@@ -260,10 +260,8 @@ void Environment::initFieldsGlobalsAndFuncs(const FunctionDecl *FuncDecl) {
   for (const VarDecl *D : Vars) {
     if (getStorageLocation(*D) != nullptr)
       continue;
-    auto &Loc = createStorageLocation(D->getType().getNonReferenceType());
-    setStorageLocation(*D, Loc);
-    if (auto *Val = createValue(D->getType().getNonReferenceType()))
-      setValue(Loc, *Val);
+
+    setStorageLocation(*D, createObject(*D));
   }
 
   for (const FunctionDecl *FD : Funcs) {
@@ -296,16 +294,7 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
 
     for (const auto *ParamDecl : FuncDecl->parameters()) {
       assert(ParamDecl != nullptr);
-      // References aren't objects, so the reference itself doesn't have a
-      // storage location. Instead, the storage location for a reference refers
-      // directly to an object of the referenced type -- so strip off any
-      // reference from the type.
-      auto &ParamLoc =
-          createStorageLocation(ParamDecl->getType().getNonReferenceType());
-      setStorageLocation(*ParamDecl, ParamLoc);
-      if (Value *ParamVal =
-              createValue(ParamDecl->getType().getNonReferenceType()))
-          setValue(ParamLoc, *ParamVal);
+      setStorageLocation(*ParamDecl, createObject(*ParamDecl, nullptr));
     }
   }
 
@@ -382,27 +371,8 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
   // overloaded operators implemented as member functions, and parameter packs.
   for (unsigned ArgIndex = 0; ArgIndex < Args.size(); ++ParamIt, ++ArgIndex) {
     assert(ParamIt != FuncDecl->param_end());
-
-    const Expr *Arg = Args[ArgIndex];
-    auto *ArgLoc = getStorageLocation(*Arg, SkipPast::Reference);
-    if (ArgLoc == nullptr)
-      continue;
-
     const VarDecl *Param = *ParamIt;
-
-    QualType ParamType = Param->getType();
-    if (ParamType->isReferenceType()) {
-      setStorageLocation(*Param, *ArgLoc);
-    } else {
-      auto &Loc = createStorageLocation(*Param);
-      setStorageLocation(*Param, Loc);
-
-      if (auto *ArgVal = getValue(*ArgLoc)) {
-        setValue(Loc, *ArgVal);
-      } else if (Value *Val = createValue(ParamType)) {
-        setValue(Loc, *Val);
-      }
-    }
+    setStorageLocation(*Param, createObject(*Param, Args[ArgIndex]));
   }
 }
 
@@ -870,6 +840,54 @@ Value *Environment::createValueUnlessSelfReferential(
   }
 
   return nullptr;
+}
+
+StorageLocation &Environment::createObjectInternal(const VarDecl *D,
+                                                   QualType Ty,
+                                                   const Expr *InitExpr) {
+  if (Ty->isReferenceType()) {
+    // Although variables of reference type always need to be initialized, it
+    // can happen that we can't see the initializer, so `InitExpr` may still
+    // be null.
+    if (InitExpr) {
+      if (auto *InitExprLoc =
+              getStorageLocation(*InitExpr, SkipPast::Reference))
+        return *InitExprLoc;
+    }
+
+    // Even though we have an initializer, we might not get an
+    // InitExprLoc, for example if the InitExpr is a CallExpr for which we
+    // don't have a function body. In this case, we just invent a storage
+    // location and value -- it's the best we can do.
+    return createObjectInternal(D, Ty.getNonReferenceType(), nullptr);
+  }
+
+  Value *Val = nullptr;
+  if (InitExpr)
+    // In the (few) cases where an expression is intentionally
+    // "uninterpreted", `InitExpr` is not associated with a value.  There are
+    // two ways to handle this situation: propagate the status, so that
+    // uninterpreted initializers result in uninterpreted variables, or
+    // provide a default value. We choose the latter so that later refinements
+    // of the variable can be used for reasoning about the surrounding code.
+    // For this reason, we let this case be handled by the `createValue()`
+    // call below.
+    //
+    // FIXME. If and when we interpret all language cases, change this to
+    // assert that `InitExpr` is interpreted, rather than supplying a
+    // default value (assuming we don't update the environment API to return
+    // references).
+    Val = getValueStrict(*InitExpr);
+  if (!Val)
+    Val = createValue(Ty);
+
+  StorageLocation &Loc =
+      D ? createStorageLocation(*D) : createStorageLocation(Ty);
+
+  if (Val)
+    setValue(Loc, *Val);
+
+  return Loc;
 }
 
 StorageLocation &Environment::skip(StorageLocation &Loc, SkipPast SP) const {
