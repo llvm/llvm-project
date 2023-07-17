@@ -5414,23 +5414,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT) {
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
-                              SDValue Operand) {
+                              SDValue N1) {
   SDNodeFlags Flags;
   if (Inserter)
     Flags = Inserter->getFlags();
-  return getNode(Opcode, DL, VT, Operand, Flags);
+  return getNode(Opcode, DL, VT, N1, Flags);
 }
 
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
-                              SDValue Operand, const SDNodeFlags Flags) {
-  assert(Operand.getOpcode() != ISD::DELETED_NODE &&
-         "Operand is DELETED_NODE!");
+                              SDValue N1, const SDNodeFlags Flags) {
+  assert(N1.getOpcode() != ISD::DELETED_NODE && "Operand is DELETED_NODE!");
   // Constant fold unary operations with an integer constant operand. Even
   // opaque constant will be folded, because the folding of unary operations
   // doesn't create new constants with different values. Nevertheless, the
   // opaque flag is preserved during folding to prevent future folding with
   // other constants.
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Operand)) {
+  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(N1)) {
     const APInt &Val = C->getAPIntValue();
     switch (Opcode) {
     default: break;
@@ -5446,7 +5445,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
                          C->isTargetOpcode(), C->isOpaque());
     case ISD::ANY_EXTEND:
       // Some targets like RISCV prefer to sign extend some types.
-      if (TLI->isSExtCheaperThanZExt(Operand.getValueType(), VT))
+      if (TLI->isSExtCheaperThanZExt(N1.getValueType(), VT))
         return getConstant(Val.sextOrTrunc(VT.getSizeInBits()), DL, VT,
                            C->isTargetOpcode(), C->isOpaque());
       return getConstant(Val.zextOrTrunc(VT.getSizeInBits()), DL, VT,
@@ -5504,7 +5503,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getConstantFP(FPV, DL, VT);
     }
     case ISD::STEP_VECTOR: {
-      if (SDValue V = FoldSTEP_VECTOR(DL, VT, Operand, *this))
+      if (SDValue V = FoldSTEP_VECTOR(DL, VT, N1, *this))
         return V;
       break;
     }
@@ -5512,7 +5511,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
 
   // Constant fold unary operations with a floating point constant operand.
-  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Operand)) {
+  if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N1)) {
     APFloat V = C->getValueAPF();    // make copy
     switch (Opcode) {
     case ISD::FNEG:
@@ -5609,262 +5608,249 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTPOP: {
-    SDValue Ops = {Operand};
+    SDValue Ops = {N1};
     if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
       return Fold;
   }
   }
 
-  unsigned OpOpcode = Operand.getNode()->getOpcode();
+  unsigned OpOpcode = N1.getNode()->getOpcode();
   switch (Opcode) {
   case ISD::STEP_VECTOR:
     assert(VT.isScalableVector() &&
            "STEP_VECTOR can only be used with scalable types");
     assert(OpOpcode == ISD::TargetConstant &&
-           VT.getVectorElementType() == Operand.getValueType() &&
+           VT.getVectorElementType() == N1.getValueType() &&
            "Unexpected step operand");
     break;
   case ISD::FREEZE:
-    assert(VT == Operand.getValueType() && "Unexpected VT!");
-    if (isGuaranteedNotToBeUndefOrPoison(Operand, /*PoisonOnly*/ false,
+    assert(VT == N1.getValueType() && "Unexpected VT!");
+    if (isGuaranteedNotToBeUndefOrPoison(N1, /*PoisonOnly*/ false,
                                          /*Depth*/ 1))
-      return Operand;
+      return N1;
     break;
   case ISD::TokenFactor:
   case ISD::MERGE_VALUES:
   case ISD::CONCAT_VECTORS:
-    return Operand;         // Factor, merge or concat of one node?  No need.
+    return N1;         // Factor, merge or concat of one node?  No need.
   case ISD::BUILD_VECTOR: {
     // Attempt to simplify BUILD_VECTOR.
-    SDValue Ops[] = {Operand};
+    SDValue Ops[] = {N1};
     if (SDValue V = FoldBUILD_VECTOR(DL, VT, Ops, *this))
       return V;
     break;
   }
   case ISD::FP_ROUND: llvm_unreachable("Invalid method to make FP_ROUND node");
   case ISD::FP_EXTEND:
-    assert(VT.isFloatingPoint() &&
-           Operand.getValueType().isFloatingPoint() && "Invalid FP cast!");
-    if (Operand.getValueType() == VT) return Operand;  // noop conversion.
-    assert((!VT.isVector() ||
-            VT.getVectorElementCount() ==
-            Operand.getValueType().getVectorElementCount()) &&
+    assert(VT.isFloatingPoint() && N1.getValueType().isFloatingPoint() &&
+           "Invalid FP cast!");
+    if (N1.getValueType() == VT) return N1;  // noop conversion.
+    assert((!VT.isVector() || VT.getVectorElementCount() ==
+                                  N1.getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
-    assert(Operand.getValueType().bitsLT(VT) &&
-           "Invalid fpext node, dst < src!");
-    if (Operand.isUndef())
+    assert(N1.getValueType().bitsLT(VT) && "Invalid fpext node, dst < src!");
+    if (N1.isUndef())
       return getUNDEF(VT);
     break;
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
-    if (Operand.isUndef())
+    if (N1.isUndef())
       return getUNDEF(VT);
     break;
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
     // [us]itofp(undef) = 0, because the result value is bounded.
-    if (Operand.isUndef())
+    if (N1.isUndef())
       return getConstantFP(0.0, DL, VT);
     break;
   case ISD::SIGN_EXTEND:
-    assert(VT.isInteger() && Operand.getValueType().isInteger() &&
+    assert(VT.isInteger() && N1.getValueType().isInteger() &&
            "Invalid SIGN_EXTEND!");
-    assert(VT.isVector() == Operand.getValueType().isVector() &&
+    assert(VT.isVector() == N1.getValueType().isVector() &&
            "SIGN_EXTEND result type type should be vector iff the operand "
            "type is vector!");
-    if (Operand.getValueType() == VT) return Operand;   // noop extension
-    assert((!VT.isVector() ||
-            VT.getVectorElementCount() ==
-                Operand.getValueType().getVectorElementCount()) &&
+    if (N1.getValueType() == VT) return N1;   // noop extension
+    assert((!VT.isVector() || VT.getVectorElementCount() ==
+                                  N1.getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
-    assert(Operand.getValueType().bitsLT(VT) &&
-           "Invalid sext node, dst < src!");
+    assert(N1.getValueType().bitsLT(VT) && "Invalid sext node, dst < src!");
     if (OpOpcode == ISD::SIGN_EXTEND || OpOpcode == ISD::ZERO_EXTEND)
-      return getNode(OpOpcode, DL, VT, Operand.getOperand(0));
+      return getNode(OpOpcode, DL, VT, N1.getOperand(0));
     if (OpOpcode == ISD::UNDEF)
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
     break;
   case ISD::ZERO_EXTEND:
-    assert(VT.isInteger() && Operand.getValueType().isInteger() &&
+    assert(VT.isInteger() && N1.getValueType().isInteger() &&
            "Invalid ZERO_EXTEND!");
-    assert(VT.isVector() == Operand.getValueType().isVector() &&
+    assert(VT.isVector() == N1.getValueType().isVector() &&
            "ZERO_EXTEND result type type should be vector iff the operand "
            "type is vector!");
-    if (Operand.getValueType() == VT) return Operand;   // noop extension
-    assert((!VT.isVector() ||
-            VT.getVectorElementCount() ==
-                Operand.getValueType().getVectorElementCount()) &&
+    if (N1.getValueType() == VT) return N1;   // noop extension
+    assert((!VT.isVector() || VT.getVectorElementCount() ==
+                                  N1.getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
-    assert(Operand.getValueType().bitsLT(VT) &&
-           "Invalid zext node, dst < src!");
-    if (OpOpcode == ISD::ZERO_EXTEND)   // (zext (zext x)) -> (zext x)
-      return getNode(ISD::ZERO_EXTEND, DL, VT, Operand.getOperand(0));
+    assert(N1.getValueType().bitsLT(VT) && "Invalid zext node, dst < src!");
+    if (OpOpcode == ISD::ZERO_EXTEND) // (zext (zext x)) -> (zext x)
+      return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0));
     if (OpOpcode == ISD::UNDEF)
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
     break;
   case ISD::ANY_EXTEND:
-    assert(VT.isInteger() && Operand.getValueType().isInteger() &&
+    assert(VT.isInteger() && N1.getValueType().isInteger() &&
            "Invalid ANY_EXTEND!");
-    assert(VT.isVector() == Operand.getValueType().isVector() &&
+    assert(VT.isVector() == N1.getValueType().isVector() &&
            "ANY_EXTEND result type type should be vector iff the operand "
            "type is vector!");
-    if (Operand.getValueType() == VT) return Operand;   // noop extension
-    assert((!VT.isVector() ||
-            VT.getVectorElementCount() ==
-                Operand.getValueType().getVectorElementCount()) &&
+    if (N1.getValueType() == VT) return N1;   // noop extension
+    assert((!VT.isVector() || VT.getVectorElementCount() ==
+                                  N1.getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
-    assert(Operand.getValueType().bitsLT(VT) &&
-           "Invalid anyext node, dst < src!");
+    assert(N1.getValueType().bitsLT(VT) && "Invalid anyext node, dst < src!");
 
     if (OpOpcode == ISD::ZERO_EXTEND || OpOpcode == ISD::SIGN_EXTEND ||
         OpOpcode == ISD::ANY_EXTEND)
       // (ext (zext x)) -> (zext x)  and  (ext (sext x)) -> (sext x)
-      return getNode(OpOpcode, DL, VT, Operand.getOperand(0));
+      return getNode(OpOpcode, DL, VT, N1.getOperand(0));
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
 
     // (ext (trunc x)) -> x
     if (OpOpcode == ISD::TRUNCATE) {
-      SDValue OpOp = Operand.getOperand(0);
+      SDValue OpOp = N1.getOperand(0);
       if (OpOp.getValueType() == VT) {
-        transferDbgValues(Operand, OpOp);
+        transferDbgValues(N1, OpOp);
         return OpOp;
       }
     }
     break;
   case ISD::TRUNCATE:
-    assert(VT.isInteger() && Operand.getValueType().isInteger() &&
+    assert(VT.isInteger() && N1.getValueType().isInteger() &&
            "Invalid TRUNCATE!");
-    assert(VT.isVector() == Operand.getValueType().isVector() &&
+    assert(VT.isVector() == N1.getValueType().isVector() &&
            "TRUNCATE result type type should be vector iff the operand "
            "type is vector!");
-    if (Operand.getValueType() == VT) return Operand;   // noop truncate
-    assert((!VT.isVector() ||
-            VT.getVectorElementCount() ==
-                Operand.getValueType().getVectorElementCount()) &&
+    if (N1.getValueType() == VT) return N1;   // noop truncate
+    assert((!VT.isVector() || VT.getVectorElementCount() ==
+                                  N1.getValueType().getVectorElementCount()) &&
            "Vector element count mismatch!");
-    assert(Operand.getValueType().bitsGT(VT) &&
-           "Invalid truncate node, src < dst!");
+    assert(N1.getValueType().bitsGT(VT) && "Invalid truncate node, src < dst!");
     if (OpOpcode == ISD::TRUNCATE)
-      return getNode(ISD::TRUNCATE, DL, VT, Operand.getOperand(0));
+      return getNode(ISD::TRUNCATE, DL, VT, N1.getOperand(0));
     if (OpOpcode == ISD::ZERO_EXTEND || OpOpcode == ISD::SIGN_EXTEND ||
         OpOpcode == ISD::ANY_EXTEND) {
       // If the source is smaller than the dest, we still need an extend.
-      if (Operand.getOperand(0).getValueType().getScalarType()
-            .bitsLT(VT.getScalarType()))
-        return getNode(OpOpcode, DL, VT, Operand.getOperand(0));
-      if (Operand.getOperand(0).getValueType().bitsGT(VT))
-        return getNode(ISD::TRUNCATE, DL, VT, Operand.getOperand(0));
-      return Operand.getOperand(0);
+      if (N1.getOperand(0).getValueType().getScalarType().bitsLT(
+              VT.getScalarType()))
+        return getNode(OpOpcode, DL, VT, N1.getOperand(0));
+      if (N1.getOperand(0).getValueType().bitsGT(VT))
+        return getNode(ISD::TRUNCATE, DL, VT, N1.getOperand(0));
+      return N1.getOperand(0);
     }
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
     if (OpOpcode == ISD::VSCALE && !NewNodesMustHaveLegalTypes)
-      return getVScale(DL, VT, Operand.getConstantOperandAPInt(0));
+      return getVScale(DL, VT, N1.getConstantOperandAPInt(0));
     break;
   case ISD::ANY_EXTEND_VECTOR_INREG:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
     assert(VT.isVector() && "This DAG node is restricted to vector types.");
-    assert(Operand.getValueType().bitsLE(VT) &&
+    assert(N1.getValueType().bitsLE(VT) &&
            "The input must be the same size or smaller than the result.");
     assert(VT.getVectorMinNumElements() <
-               Operand.getValueType().getVectorMinNumElements() &&
+               N1.getValueType().getVectorMinNumElements() &&
            "The destination vector type must have fewer lanes than the input.");
     break;
   case ISD::ABS:
-    assert(VT.isInteger() && VT == Operand.getValueType() &&
-           "Invalid ABS!");
+    assert(VT.isInteger() && VT == N1.getValueType() && "Invalid ABS!");
     if (OpOpcode == ISD::UNDEF)
       return getConstant(0, DL, VT);
     break;
   case ISD::BSWAP:
-    assert(VT.isInteger() && VT == Operand.getValueType() &&
-           "Invalid BSWAP!");
+    assert(VT.isInteger() && VT == N1.getValueType() && "Invalid BSWAP!");
     assert((VT.getScalarSizeInBits() % 16 == 0) &&
            "BSWAP types must be a multiple of 16 bits!");
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
     // bswap(bswap(X)) -> X.
     if (OpOpcode == ISD::BSWAP)
-      return Operand.getOperand(0);
+      return N1.getOperand(0);
     break;
   case ISD::BITREVERSE:
-    assert(VT.isInteger() && VT == Operand.getValueType() &&
-           "Invalid BITREVERSE!");
+    assert(VT.isInteger() && VT == N1.getValueType() && "Invalid BITREVERSE!");
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
     break;
   case ISD::BITCAST:
-    assert(VT.getSizeInBits() == Operand.getValueSizeInBits() &&
+    assert(VT.getSizeInBits() == N1.getValueSizeInBits() &&
            "Cannot BITCAST between types of different sizes!");
-    if (VT == Operand.getValueType()) return Operand;  // noop conversion.
-    if (OpOpcode == ISD::BITCAST)  // bitconv(bitconv(x)) -> bitconv(x)
-      return getNode(ISD::BITCAST, DL, VT, Operand.getOperand(0));
+    if (VT == N1.getValueType()) return N1;   // noop conversion.
+    if (OpOpcode == ISD::BITCAST) // bitconv(bitconv(x)) -> bitconv(x)
+      return getNode(ISD::BITCAST, DL, VT, N1.getOperand(0));
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
     break;
   case ISD::SCALAR_TO_VECTOR:
-    assert(VT.isVector() && !Operand.getValueType().isVector() &&
-           (VT.getVectorElementType() == Operand.getValueType() ||
+    assert(VT.isVector() && !N1.getValueType().isVector() &&
+           (VT.getVectorElementType() == N1.getValueType() ||
             (VT.getVectorElementType().isInteger() &&
-             Operand.getValueType().isInteger() &&
-             VT.getVectorElementType().bitsLE(Operand.getValueType()))) &&
+             N1.getValueType().isInteger() &&
+             VT.getVectorElementType().bitsLE(N1.getValueType()))) &&
            "Illegal SCALAR_TO_VECTOR node!");
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
     // scalar_to_vector(extract_vector_elt V, 0) -> V, top bits are undefined.
     if (OpOpcode == ISD::EXTRACT_VECTOR_ELT &&
-        isa<ConstantSDNode>(Operand.getOperand(1)) &&
-        Operand.getConstantOperandVal(1) == 0 &&
-        Operand.getOperand(0).getValueType() == VT)
-      return Operand.getOperand(0);
+        isa<ConstantSDNode>(N1.getOperand(1)) &&
+        N1.getConstantOperandVal(1) == 0 &&
+        N1.getOperand(0).getValueType() == VT)
+      return N1.getOperand(0);
     break;
   case ISD::FNEG:
     // Negation of an unknown bag of bits is still completely undefined.
     if (OpOpcode == ISD::UNDEF)
       return getUNDEF(VT);
 
-    if (OpOpcode == ISD::FNEG)  // --X -> X
-      return Operand.getOperand(0);
+    if (OpOpcode == ISD::FNEG) // --X -> X
+      return N1.getOperand(0);
     break;
   case ISD::FABS:
-    if (OpOpcode == ISD::FNEG)  // abs(-X) -> abs(X)
-      return getNode(ISD::FABS, DL, VT, Operand.getOperand(0));
+    if (OpOpcode == ISD::FNEG) // abs(-X) -> abs(X)
+      return getNode(ISD::FABS, DL, VT, N1.getOperand(0));
     break;
   case ISD::VSCALE:
-    assert(VT == Operand.getValueType() && "Unexpected VT!");
+    assert(VT == N1.getValueType() && "Unexpected VT!");
     break;
   case ISD::CTPOP:
-    if (Operand.getValueType().getScalarType() == MVT::i1)
-      return Operand;
+    if (N1.getValueType().getScalarType() == MVT::i1)
+      return N1;
     break;
   case ISD::CTLZ:
   case ISD::CTTZ:
-    if (Operand.getValueType().getScalarType() == MVT::i1)
-      return getNOT(DL, Operand, Operand.getValueType());
+    if (N1.getValueType().getScalarType() == MVT::i1)
+      return getNOT(DL, N1, N1.getValueType());
     break;
   case ISD::VECREDUCE_ADD:
-    if (Operand.getValueType().getScalarType() == MVT::i1)
-      return getNode(ISD::VECREDUCE_XOR, DL, VT, Operand);
+    if (N1.getValueType().getScalarType() == MVT::i1)
+      return getNode(ISD::VECREDUCE_XOR, DL, VT, N1);
     break;
   case ISD::VECREDUCE_SMIN:
   case ISD::VECREDUCE_UMAX:
-    if (Operand.getValueType().getScalarType() == MVT::i1)
-      return getNode(ISD::VECREDUCE_OR, DL, VT, Operand);
+    if (N1.getValueType().getScalarType() == MVT::i1)
+      return getNode(ISD::VECREDUCE_OR, DL, VT, N1);
     break;
   case ISD::VECREDUCE_SMAX:
   case ISD::VECREDUCE_UMIN:
-    if (Operand.getValueType().getScalarType() == MVT::i1)
-      return getNode(ISD::VECREDUCE_AND, DL, VT, Operand);
+    if (N1.getValueType().getScalarType() == MVT::i1)
+      return getNode(ISD::VECREDUCE_AND, DL, VT, N1);
     break;
   }
 
   SDNode *N;
   SDVTList VTs = getVTList(VT);
-  SDValue Ops[] = {Operand};
+  SDValue Ops[] = {N1};
   if (VT != MVT::Glue) { // Don't CSE flag producing nodes
     FoldingSetNodeID ID;
     AddNodeIDNode(ID, Opcode, VTs, Ops);
