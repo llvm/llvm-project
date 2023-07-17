@@ -7500,6 +7500,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":LLVMDialect",
         ":OpenMPCommon",
         ":OpenMPDialect",
         ":Support",
