@@ -8,7 +8,7 @@
 
 #include "flang/Runtime/numeric.h"
 #include "terminator.h"
-#include "flang/Runtime/float128.h"
+#include "flang/Common/float128.h"
 #include <cfloat>
 #include <climits>
 #include <cmath>

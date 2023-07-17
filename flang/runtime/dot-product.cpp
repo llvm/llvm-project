@@ -9,6 +9,7 @@
 #include "float.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/float128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/reduction.h"
