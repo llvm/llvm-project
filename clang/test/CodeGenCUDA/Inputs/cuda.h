@@ -35,7 +35,7 @@ int hipConfigureCall(dim3 gridSize, dim3 blockSize, size_t sharedSize = 0,
 extern "C" hipError_t __hipPushCallConfiguration(dim3 gridSize, dim3 blockSize,
                                                  size_t sharedSize = 0,
                                                  hipStream_t stream = 0);
-#ifndef HIP_API_PER_THREAD_DEFAULT_STREAM
+#ifndef __HIP_API_PER_THREAD_DEFAULT_STREAM__
 extern "C" hipError_t hipLaunchKernel(const void *func, dim3 gridDim,
                                       dim3 blockDim, void **args,
                                       size_t sharedMem,
@@ -45,7 +45,7 @@ extern "C" hipError_t hipLaunchKernel_spt(const void *func, dim3 gridDim,
                                       dim3 blockDim, void **args,
                                       size_t sharedMem,
                                       hipStream_t stream);
-#endif //HIP_API_PER_THREAD_DEFAULT_STREAM
+#endif // __HIP_API_PER_THREAD_DEFAULT_STREAM__
 #else
 typedef struct cudaStream *cudaStream_t;
 typedef enum cudaError {} cudaError_t;

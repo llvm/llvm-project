@@ -24,15 +24,21 @@ namespace scf {
 /// For example if we break a loop into 3 stages named S0, S1, S2 we would
 /// generate the following code with the number in parenthesis as the iteration
 /// index:
-/// S0(0)                        // Prologue
-/// S0(1) S1(0)                  // Prologue
-/// scf.for %I = %C0 to %N - 2 {
-///  S0(I+2) S1(I+1) S2(I)       // Pipelined kernel
-/// }
-/// S1(N) S2(N-1)                // Epilogue
-/// S2(N)                        // Epilogue
+///
+///   S0(0)                        // Prologue
+///   S0(1) S1(0)                  // Prologue
+///   scf.for %I = %C0 to %N - 2 {
+///     S0(I+2) S1(I+1) S2(I)       // Pipelined kernel
+///   }
+///   S1(N) S2(N-1)                // Epilogue
+///   S2(N)                        // Epilogue
+///
+/// If `modifiedIR` is provided, it will be set to a value that indicates
+/// whether pipelining modified the IR before failing, signaling to the caller
+/// whether they can proceed with different transformations.
 FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
-                                 const PipeliningOption &options);
+                                 const PipeliningOption &options,
+                                 bool *modifiedIR = nullptr);
 
 // TODO: such patterns should be auto-generated.
 class ForLoopPipeliningPattern : public OpRewritePattern<ForOp> {

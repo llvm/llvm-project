@@ -534,8 +534,12 @@ AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
 AffineExpr makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                                           MLIRContext *context);
 
-/// Return true if the layout for `t` is compatible with strided semantics.
+/// Return "true" if the layout for `t` is compatible with strided semantics.
 bool isStrided(MemRefType t);
+
+/// Return "true" if the last dimension of the given type has a static unit
+/// stride. Also return "true" for types with no strides.
+bool isLastMemrefDimUnitStride(MemRefType type);
 
 } // namespace mlir
 

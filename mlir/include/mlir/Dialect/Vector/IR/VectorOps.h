@@ -90,10 +90,6 @@ ArrayAttr getVectorSubscriptAttr(Builder &b, ArrayRef<int64_t> values);
 Value getVectorReductionOp(arith::AtomicRMWKind op, OpBuilder &builder,
                            Location loc, Value vector);
 
-/// Return true if the last dimension of the MemRefType has unit stride. Also
-/// return true for memrefs with no strides.
-bool isLastMemrefDimUnitStride(MemRefType type);
-
 /// Build the default minor identity map suitable for a vector transfer. This
 /// also handles the case memref<... x vector<...>> -> vector<...> in which the
 /// rank of the identity map must take the vector element type into account.

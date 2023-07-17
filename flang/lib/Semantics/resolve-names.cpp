@@ -697,6 +697,7 @@ protected:
   bool CheckPossibleBadForwardRef(const Symbol &);
 
   bool inSpecificationPart_{false};
+  bool inDataStmtObject_{false};
   bool inEquivalenceStmt_{false};
 
   // Some information is collected from a specification part for deferred
@@ -879,7 +880,7 @@ public:
 
 protected:
   // Set when we see a stmt function that is really an array element assignment
-  bool badStmtFuncFound_{false};
+  bool misparsedStmtFuncFound_{false};
 
 private:
   // Edits an existing symbol created for earlier calls to a subprogram or ENTRY
@@ -2313,6 +2314,7 @@ void ScopeHandler::PushScope(Scope &scope) {
   }
 }
 void ScopeHandler::PopScope() {
+  CHECK(currScope_ && !currScope_->IsGlobal());
   // Entities that are not yet classified as objects or procedures are now
   // assumed to be objects.
   // TODO: Statement functions
@@ -2478,6 +2480,9 @@ void ScopeHandler::ApplyImplicitRules(
     // Dummy argument, no declaration or reference; if it turns
     // out to be a subroutine, it's fine, and if it is a function
     // or object, it'll be caught later.
+    return;
+  }
+  if (inDataStmtObject_) {
     return;
   }
   if (!context().HasError(symbol)) {
@@ -2653,7 +2658,7 @@ const DeclTypeSpec &ScopeHandler::MakeLogicalType(int kind) {
 }
 
 void ScopeHandler::NotePossibleBadForwardRef(const parser::Name &name) {
-  if (inSpecificationPart_ && name.symbol) {
+  if (inSpecificationPart_ && !inDataStmtObject_ && name.symbol) {
     auto kind{currScope().kind()};
     if ((kind == Scope::Kind::Subprogram && !currScope().IsStmtFunction()) ||
         kind == Scope::Kind::BlockConstruct) {
@@ -3439,18 +3444,27 @@ bool SubprogramVisitor::HandleStmtFunction(const parser::StmtFunctionStmt &x) {
   const DeclTypeSpec *resultType{nullptr};
   // Look up name: provides return type or tells us if it's an array
   if (auto *symbol{FindSymbol(name)}) {
-    auto *details{symbol->detailsIf<EntityDetails>()};
-    if (!details || symbol->has<ObjectEntityDetails>() ||
-        symbol->has<ProcEntityDetails>()) {
-      badStmtFuncFound_ = true;
+    Symbol &ultimate{symbol->GetUltimate()};
+    if (ultimate.has<ObjectEntityDetails>() ||
+        CouldBeDataPointerValuedFunction(&ultimate)) {
+      misparsedStmtFuncFound_ = true;
       return false;
     }
-    // TODO: check that attrs are compatible with stmt func
-    resultType = details->type();
-    symbol->details() = UnknownDetails{}; // will be replaced below
+    if (DoesScopeContain(&ultimate.owner(), currScope())) {
+      Say(name,
+          "Name '%s' from host scope should have a type declaration before its local statement function definition"_port_en_US);
+      MakeSymbol(name, Attrs{}, UnknownDetails{});
+    } else if (auto *entity{ultimate.detailsIf<EntityDetails>()};
+               entity && !ultimate.has<ProcEntityDetails>()) {
+      resultType = entity->type();
+      ultimate.details() = UnknownDetails{}; // will be replaced below
+    } else {
+      misparsedStmtFuncFound_ = true;
+    }
   }
-  if (badStmtFuncFound_) {
-    Say(name, "'%s' has not been declared as an array"_err_en_US);
+  if (misparsedStmtFuncFound_) {
+    Say(name,
+        "'%s' has not been declared as an array or pointer-valued function"_err_en_US);
     return false;
   }
   auto &symbol{PushSubprogramScope(name, Symbol::Flag::Function)};
@@ -6271,6 +6285,12 @@ void DeclarationVisitor::SetType(
   }
   auto *prevType{symbol.GetType()};
   if (!prevType) {
+    if (symbol.test(Symbol::Flag::InDataStmt) && isImplicitNoneType() &&
+        context().ShouldWarn(
+            common::LanguageFeature::ForwardRefImplicitNoneData)) {
+      Say(name,
+          "'%s' appeared in a DATA statement before its type was declared under IMPLICIT NONE(TYPE)"_port_en_US);
+    }
     symbol.SetType(type);
   } else if (symbol.has<UseDetails>()) {
     // error recovery case, redeclaration of use-associated name
@@ -6632,6 +6652,7 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
   auto flagRestorer{common::ScopedSet(inSpecificationPart_, false)};
   common::visit(common::visitors{
                     [&](const Indirection<parser::Variable> &y) {
+                      auto restorer{common::ScopedSet(inDataStmtObject_, true)};
                       Walk(y.value());
                       const parser::Name &first{
                           parser::GetFirstName(y.value())};
@@ -7189,7 +7210,7 @@ const parser::Name *DeclarationVisitor::ResolveName(const parser::Name &name) {
     }
     return &name;
   }
-  if (isImplicitNoneType()) {
+  if (isImplicitNoneType() && !inDataStmtObject_) {
     Say(name, "No explicit type declared for '%s'"_err_en_US);
     return nullptr;
   }
@@ -7847,7 +7868,7 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
 
 void ResolveNamesVisitor::FinishSpecificationPart(
     const std::list<parser::DeclarationConstruct> &decls) {
-  badStmtFuncFound_ = false;
+  misparsedStmtFuncFound_ = false;
   funcResultStack().CompleteFunctionResultType();
   CheckImports();
   bool inModule{currScope().kind() == Scope::Kind::Module};
@@ -7903,8 +7924,9 @@ void ResolveNamesVisitor::AnalyzeStmtFunctionStmt(
   const auto &name{std::get<parser::Name>(stmtFunc.t)};
   Symbol *symbol{name.symbol};
   auto *details{symbol ? symbol->detailsIf<SubprogramDetails>() : nullptr};
-  if (!details || !symbol->scope()) {
-    return;
+  if (!details || !symbol->scope() ||
+      &symbol->scope()->parent() != &currScope()) {
+    return; // error recovery
   }
   // Resolve the symbols on the RHS of the statement function.
   PushScope(*symbol->scope());
@@ -8031,7 +8053,8 @@ bool ResolveNamesVisitor::Pre(const parser::StmtFunctionStmt &x) {
   if (HandleStmtFunction(x)) {
     return false;
   } else {
-    // This is an array element assignment: resolve names of indices
+    // This is an array element or pointer-valued function assignment:
+    // resolve the names of indices/arguments
     const auto &names{std::get<std::list<parser::Name>>(x.t)};
     for (auto &name : names) {
       ResolveName(name);

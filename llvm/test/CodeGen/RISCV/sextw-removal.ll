@@ -1319,13 +1319,11 @@ define void @test18(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    addi sp, sp, 32
 ; NOREMOVAL-NEXT:    ret
 bb:
-  %sext = sext i32 %arg1 to i64
-  %i = call i64 @llvm.riscv.sha256sig0.i64(i64 %sext)
-  %trunc = trunc i64 %i to i32
+  %i = call i32 @llvm.riscv.sha256sig0(i32 %arg1)
   br label %bb2
 
 bb2:                                              ; preds = %bb2, %bb
-  %i3 = phi i32 [ %trunc, %bb ], [ %i5, %bb2 ]
+  %i3 = phi i32 [ %i, %bb ], [ %i5, %bb2 ]
   %i4 = tail call signext i32 @bar(i32 signext %i3)
   %i5 = shl i32 %i3, %arg1
   %i6 = icmp eq i32 %i4, 0
@@ -1334,7 +1332,7 @@ bb2:                                              ; preds = %bb2, %bb
 bb7:                                              ; preds = %bb2
   ret void
 }
-declare i64 @llvm.riscv.sha256sig0.i64(i64)
+declare i32 @llvm.riscv.sha256sig0(i32)
 
 ; The type promotion of %7 forms a sext_inreg, but %7 and %6 are combined to
 ; form a sh2add. This leaves behind a sext.w that isn't needed.
