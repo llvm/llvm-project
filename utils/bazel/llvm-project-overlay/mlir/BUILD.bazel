@@ -5259,6 +5259,7 @@ cc_library(
         ":LLVMDialect",
         ":NVVMOpsIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         "//llvm:AsmParser",
         "//llvm:Core",
         "//llvm:Support",
