@@ -6953,6 +6953,7 @@ _LIBCPP_POP_MACROS
 #  include <cstdlib>
 #  include <iosfwd>
 #  include <iterator>
+#  include <mutex>
 #  include <new>
 #  include <type_traits>
 #  include <typeinfo>
