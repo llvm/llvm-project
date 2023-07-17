@@ -1460,8 +1460,15 @@ static_assert((CodeSignatureSection::fixedHeadersSize % 8) == 0);
 CodeSignatureSection::CodeSignatureSection()
     : LinkEditSection(segment_names::linkEdit, section_names::codeSignature) {
   align = 16; // required by libstuff
-  // FIXME: Consider using finalOutput instead of outputFile.
-  fileName = config->outputFile;
+
+  // XXX: This mimics LD64, where it uses the install-name as codesign
+  // identifier, if available.
+  if (!config->installName.empty())
+    fileName = config->installName;
+  else
+    // FIXME: Consider using finalOutput instead of outputFile.
+    fileName = config->outputFile;
+
   size_t slashIndex = fileName.rfind("/");
   if (slashIndex != std::string::npos)
     fileName = fileName.drop_front(slashIndex + 1);
