@@ -1809,7 +1809,7 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
   // FIXME: need to make this conflict checking better:
   if (hasConflictingOverload(FD))
     return std::nullopt;
-  
+
   const SourceManager &SM = Ctx.getSourceManager();
   const LangOptions &LangOpts = Ctx.getLangOpts();
   // FIXME Respect indentation of the original code.

@@ -121,6 +121,12 @@ New checks
   Detect implicit and explicit casts of ``enum`` type into ``bool`` where ``enum`` type
   doesn't have a zero-value enumerator.
 
+- New :doc:`bugprone-switch-missing-default-case
+  <clang-tidy/checks/bugprone/switch-missing-default-case>` check.
+
+  Ensures that switch statements without default cases are flagged, focuses only
+  on covering cases with non-enums where the compiler may not issue warnings.
+
 - New :doc:`bugprone-unique-ptr-array-mismatch
   <clang-tidy/checks/bugprone/unique-ptr-array-mismatch>` check.
 
