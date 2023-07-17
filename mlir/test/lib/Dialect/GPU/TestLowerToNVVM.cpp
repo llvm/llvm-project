@@ -16,11 +16,7 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
-#include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
-#include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
-#include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
-#include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
@@ -28,25 +24,13 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
-#include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/ExecutionEngine/JitRunner.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
-#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Transforms/Passes.h"
-#include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
 
@@ -96,8 +80,6 @@ void buildGpuPassPipeline(OpPassManager &pm,
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
 
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertVectorToSCFPass());
-  // Blanket-convert any remaining linalg ops to loops if any remain.
-  pm.addNestedPass<gpu::GPUModuleOp>(createConvertLinalgToLoopsPass());
   // Convert SCF to CF (always needed).
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertSCFToCFPass());
   // Convert Math to LLVM (always needed).
@@ -210,8 +192,6 @@ void buildLowerToNVVMPassPipeline(OpPassManager &pm,
   // gpu::LaunchOp and gpu::HostRegisterOp.
   // TODO: fix GPU layering.
   pm.addNestedPass<func::FuncOp>(createConvertVectorToSCFPass());
-  // Blanket-convert any remaining linalg ops to loops if any remain.
-  pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
   // Convert SCF to CF (always needed).
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());
   // Convert Math to LLVM (always needed).
