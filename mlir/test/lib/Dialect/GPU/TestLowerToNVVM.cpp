@@ -50,6 +50,7 @@
 
 using namespace mlir;
 
+#if MLIR_CUDA_CONVERSIONS_ENABLED
 namespace {
 struct TestLowerToNVVMOptions
     : public PassPipelineOptions<TestLowerToNVVMOptions> {
@@ -187,8 +188,11 @@ void buildGpuPassPipeline(OpPassManager &pm,
 
   // Finally we can reconcile unrealized casts.
   pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
+
+#if MLIR_GPU_TO_CUBIN_PASS_ENABLE
   pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass(
       options.cubinTriple, options.cubinChip, options.cubinFeatures));
+#endif // MLIR_GPU_TO_CUBIN_PASS_ENABLE
 }
 
 void buildLowerToNVVMPassPipeline(OpPassManager &pm,
@@ -328,3 +332,4 @@ void registerTestLowerToNVVM() {
 }
 } // namespace test
 } // namespace mlir
+#endif // MLIR_CUDA_CONVERSIONS_ENABLED
