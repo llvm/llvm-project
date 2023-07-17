@@ -1,4 +1,5 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
+// radar 7509234
 
 @protocol Foo
 @property (readonly, copy) id foos;
@@ -22,6 +23,7 @@
 @end
 
 
+// rdar://10142679
 @class NSString;
 
 typedef struct {
@@ -40,6 +42,7 @@ typedef struct {
 @property (readwrite, strong) NSRect bar; // expected-error {{type of property 'NSRect' in class extension does not match property type in primary class}}
 @end
 
+// rdar://10655530
 struct S;
 struct S1;
 @interface STAdKitContext
@@ -59,6 +62,7 @@ struct S1;
 @property (nonatomic, readwrite, assign) struct S2 *httpRequest4;
 @end
 
+// rdar://15859862
 @protocol ADCameraJSO_Bindings
 @property (nonatomic, readonly) NSString *currentPictureURI;
 @end

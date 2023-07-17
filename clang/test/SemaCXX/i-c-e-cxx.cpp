@@ -53,6 +53,7 @@ void pr6373(const unsigned x = 0) {
 }
 
 
+// rdar://9204520
 namespace rdar9204520 {
   
 struct A {

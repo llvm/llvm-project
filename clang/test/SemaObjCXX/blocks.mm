@@ -25,6 +25,7 @@ void foo5(id (^x)(int)) {
   if (x) { }
 }
 
+// <rdar://problem/6590445>
 @interface Foo {
     @private
     void (^_block)(void);
@@ -50,7 +51,8 @@ void foo6(void *block) {
     BOOL (^bb)(id obj, int idx, BOOL *stop) = (BOOL (^)(id, int, BOOL *))block;
 }
 
-// Require that the types of block parameters are complete.
+// <rdar://problem/8600419>: Require that the types of block
+// parameters are complete.
 namespace N1 {
   template<class _T> class ptr; // expected-note{{template is declared here}}
 
@@ -108,6 +110,8 @@ namespace N3 {
     X<N> xN = ^() { return X<N>(); }();
   }
 }
+
+// rdar://8979379
 
 @interface A
 @end

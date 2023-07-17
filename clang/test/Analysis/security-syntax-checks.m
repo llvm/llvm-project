@@ -48,7 +48,8 @@
 typedef typeof(sizeof(int)) size_t;
 
 
-// rule request: floating point used as loop condition (FLP30-C, FLP-30-CPP)
+// <rdar://problem/6336718> rule request: floating point used as loop 
+//  condition (FLP30-C, FLP-30-CPP)
 //
 // For reference: https://www.securecoding.cert.org/confluence/display/seccode/FLP30-C.+Do+not+use+floating+point+variables+as+loop+counters
 //
@@ -89,7 +90,7 @@ void test_bzero(void *a, size_t n) {
   bzero(a, n); // expected-warning{{The bzero() function is obsoleted by memset()}}
 }
 
-// rule request: gets() buffer overflow
+// <rdar://problem/6335715> rule request: gets() buffer overflow
 // Part of recommendation: 300-BSI (buildsecurityin.us-cert.gov)
 char* gets(char *buf);
 
@@ -105,7 +106,8 @@ void test_getpw(void) {
   getpw(2, buff); // expected-warning{{The getpw() function is dangerous as it may overflow the provided buffer. It is obsoleted by getpwuid()}}
 }
 
-// CWE-273: Failure to Check Whether Privileges Were Dropped Successfully
+// <rdar://problem/6337132> CWE-273: Failure to Check Whether Privileges Were
+//  Dropped Successfully
 typedef unsigned int __uint32_t;
 typedef __uint32_t __darwin_uid_t;
 typedef __uint32_t __darwin_gid_t;
@@ -136,7 +138,7 @@ void test_setuid(void)
   setregid(2,2); // expected-warning{{The return value from the call to 'setregid' is not checked.  If an error occurs in 'setregid', the following code may execute with unexpected privileges}}
 }
 
-// CWE-338: Use of cryptographically weak prng
+// <rdar://problem/6337100> CWE-338: Use of cryptographically weak prng
 typedef  unsigned short *ushort_ptr_t;  // Test that sugar doesn't confuse the warning.
 int      rand(void);
 double   drand48(void);

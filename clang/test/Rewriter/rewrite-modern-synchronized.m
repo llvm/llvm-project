@@ -33,6 +33,7 @@ void test_sync_with_implicit_finally(void) {
     }
 }
 
+// rdar://14993814
 @interface NSObject @end
 
 @interface I : NSObject @end

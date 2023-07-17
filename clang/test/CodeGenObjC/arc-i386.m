@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i386-apple-darwin10 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple i386-apple-iossimulator6.0 -emit-llvm -fblocks -fobjc-arc -o - %s | FileCheck %s
 
-// implement objc_retainAutoreleasedReturnValue on i386
+// <rdar://24531556>: implement objc_retainAutoreleasedReturnValue on i386
 
 // CHECK-LABEL: define{{.*}} ptr @test0()
 id test0(void) {
@@ -23,6 +23,7 @@ void test1(void) {
   id x = test1_helper();
 }
 
+// rdar://problem/12133032
 // CHECK-LABEL: define {{.*}} @test2()
 @class A;
 A *test2(void) {

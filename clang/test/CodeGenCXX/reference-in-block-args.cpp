@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fblocks %s -emit-llvm -o %t
+// rdar: // 8041962
 
 extern "C" int printf(const char*, ...);
 

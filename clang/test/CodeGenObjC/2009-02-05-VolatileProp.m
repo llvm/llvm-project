@@ -1,4 +1,5 @@
 // RUN: %clang -fexceptions -S -emit-llvm %s -o /dev/null -pedantic-errors
+// rdar://6551276
 
 void foo(const unsigned short *);
 void bar(void) {

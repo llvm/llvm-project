@@ -3,6 +3,7 @@
 template <class T> void takeItByValue(T);
 void takeABlock(void (^)());
 
+// rdar://problem/11022704
 namespace test_int {
   void test() {
     const int x = 100;
@@ -80,6 +81,7 @@ namespace test_complex_int_ref_mutable {
   }
 }
 
+// rdar://13295759
 namespace test_block_in_lambda {
   void takeBlock(void (^block)());
 

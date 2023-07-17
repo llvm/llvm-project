@@ -14,6 +14,7 @@
 - (int) OK;
 @end
 
+// rdar://16312105
 @class NSObject;
 
 __attribute__((objc_root_class)) @interface AppDelegate

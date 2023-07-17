@@ -16,6 +16,7 @@ C: for(for))
 // CHECK: {{^}}B: f(){{$}}
 // CHECK: {{^}}C: for(){{$}}
 
+// rdar://6880648
 #define f(x,y...) y
 f()
 

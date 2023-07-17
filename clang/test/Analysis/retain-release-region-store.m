@@ -135,10 +135,10 @@ CFAbsoluteTime f4(void) {
 }
 @end
 
-//===----------------------------------------------------------------------===//
-// False positive due to not invalidating the reference count of a tracked
-// region that was itself invalidated.
-//===----------------------------------------------------------------------===//
+//===------------------------------------------------------------------------------------------===//
+// <rdar://problem/7257223> (also <rdar://problem/7283470>) - False positive due to not invalidating
+//  the reference count of a tracked region that was itself invalidated.
+//===------------------------------------------------------------------------------------------===//
 
 typedef struct __rdar_7257223 { CFDateRef x; } RDar7257223;
 void rdar_7257223_aux(RDar7257223 *p);
@@ -229,7 +229,7 @@ void pr6699(int x) {
   }
 }
 
-// Idempotent operation checker false positive with ObjC ivars
+// <rdar://problem/8261992> Idempotent operation checker false positive with ObjC ivars
 @interface R8261992 : NSObject {
   @package int myIvar;
 }

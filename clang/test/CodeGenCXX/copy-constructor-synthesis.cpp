@@ -171,6 +171,7 @@ void f(B b1) {
 // CHECK-NEXT: ret void
 }
 
+// rdar://13816940
 // Test above because things get weirdly re-ordered.
 namespace rdar13816940 {
   struct A {

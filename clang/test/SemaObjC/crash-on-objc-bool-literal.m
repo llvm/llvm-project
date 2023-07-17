@@ -1,5 +1,6 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -verify %s
+// rdar://12456743
 
 typedef signed char BOOL;
 

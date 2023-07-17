@@ -169,6 +169,7 @@ namespace test7 {
   }
 }
 
+// rdar://problem/10155256
 namespace test8 {
   class A {
     typedef void* (A::*UnspecifiedBoolType)() const;

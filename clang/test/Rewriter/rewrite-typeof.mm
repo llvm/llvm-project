@@ -21,6 +21,7 @@ int main() {
 
 // CHECK-LP: ((void (^)(void))_Block_copy((const void *)(b)))
 
+// radar 7628153
 void f() {
 	int a;	
 	__typeof__(a) aVal = a;

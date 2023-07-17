@@ -50,6 +50,7 @@ struct CGRect {
   _labelLayer.frame = labelLayerFrame;
 }
 
+// rdar://8366604
 - (void)dealloc
   {
       CGRect cgrect = self.extent;
@@ -69,6 +70,7 @@ int main() {
   return 0;
 }
 
+// rdar://8379892
 // CHECK-LABEL: define{{.*}} void @_Z1fP1A
 // CHECK: call void @_ZN1XC1Ev(ptr {{[^,]*}} [[LVTEMP:%[a-zA-Z0-9\.]+]])
 // CHECK: call void @_ZN1XC1ERKS_(ptr {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[LVTEMP]])
@@ -90,6 +92,7 @@ void f(A* a) {
   a.x = X();
 }
 
+// rdar://21801088
 //   Ensure that pseudo-objecet expressions that require the RHS to be
 //   rewritten don't result in crashes or redundant emission of code.
 struct B0 { long long x; };

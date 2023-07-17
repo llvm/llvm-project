@@ -6,6 +6,7 @@
 
 // expected-no-diagnostics
 
+// rdar://12631281
 // This reduced test case exposed a use-after-free memory bug, which was reliable
 // reproduced only on guarded malloc (and probably valgrind).
 

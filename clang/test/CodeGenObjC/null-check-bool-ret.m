@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple arm64e-apple-ios15.0.0 -emit-llvm-bc -fobjc-arc -disable-llvm-passes %s -emit-llvm -o - | FileCheck %s
 
+// rdar://73361264
+
 @protocol NSObject
 @end
 
