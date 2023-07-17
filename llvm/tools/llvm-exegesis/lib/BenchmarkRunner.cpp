@@ -38,7 +38,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#if defined(__GLIBC__) && __has_include(<sys/rseq.h>)
+#if defined(__GLIBC__) && __has_include(<sys/rseq.h>) && __has_builtin(__builtin_thread_pointer)
 #include <sys/rseq.h>
 #ifdef RSEQ_SIG
 #define GLIBC_INITS_RSEQ
