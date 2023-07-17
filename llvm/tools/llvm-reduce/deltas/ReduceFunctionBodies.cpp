@@ -54,9 +54,6 @@ static void reduceFunctionData(Oracle &O, ReducerWorkItem &WorkItem) {
 
     if (F.hasPrologueData() && !O.shouldKeep())
       F.setPrologueData(nullptr);
-
-    if (F.getCallingConv() != CallingConv::C && !O.shouldKeep())
-      F.setCallingConv(CallingConv::C);
   }
 }
 
