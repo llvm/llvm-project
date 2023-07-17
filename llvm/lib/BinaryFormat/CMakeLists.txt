@@ -1,9 +1,12 @@
+find_package (SQLite3 REQUIRED)
+
 add_llvm_component_library(LLVMBinaryFormat
   AMDGPUMetadataVerifier.cpp
   COFF.cpp
   Dwarf.cpp
   DXContainer.cpp
   ELF.cpp
+  SQELF.cpp
   MachO.cpp
   Magic.cpp
   Minidump.cpp
@@ -20,4 +23,4 @@ add_llvm_component_library(LLVMBinaryFormat
   LINK_COMPONENTS
   Support
   TargetParser
-  )
+)
