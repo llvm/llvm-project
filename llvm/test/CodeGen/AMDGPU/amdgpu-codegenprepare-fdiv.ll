@@ -818,27 +818,27 @@ define amdgpu_kernel void @rcp_fdiv_f32_vector_fpmath_partial_constant_arcp(ptr 
 define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_fpmath
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[SQRT_X_NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
-; IEEE-NEXT:    [[NO_MD:%.*]] = fdiv float 1.000000e+00, [[SQRT_X_NO_MD]]
+; IEEE-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
+; IEEE-NEXT:    [[NO_MD:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_X_NO_MD]]
 ; IEEE-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
-; IEEE-NEXT:    [[MD_1ULP:%.*]] = fdiv float 1.000000e+00, [[SQRT_MD_1ULP]], !fpmath !2
+; IEEE-NEXT:    [[SQRT_MD_1ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    [[MD_1ULP:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_MD_1ULP]], !fpmath !2
 ; IEEE-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_MD_1ULP_MULTI_USE:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    [[SQRT_MD_1ULP_MULTI_USE:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
 ; IEEE-NEXT:    store volatile float [[SQRT_MD_1ULP_MULTI_USE]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[MD_1ULP_MULTI_USE:%.*]] = fdiv float 1.000000e+00, [[SQRT_MD_1ULP_MULTI_USE]], !fpmath !2
+; IEEE-NEXT:    [[MD_1ULP_MULTI_USE:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_MD_1ULP_MULTI_USE]], !fpmath !2
 ; IEEE-NEXT:    store volatile float [[MD_1ULP_MULTI_USE]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; IEEE-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_MD_25ULP]])
+; IEEE-NEXT:    [[SQRT_MD_25ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !0
+; IEEE-NEXT:    [[MD_25ULP:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_MD_25ULP]])
 ; IEEE-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
-; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float 1.000000e+00, [[SQRT_MD_HALF_ULP]], !fpmath !1
+; IEEE-NEXT:    [[SQRT_MD_HALF_ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_MD_HALF_ULP]], !fpmath !1
 ; IEEE-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_AFN_NO_MD:%.*]] = call afn float @llvm.sqrt.f32(float [[X]])
-; IEEE-NEXT:    [[AFN_NO_MD:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[SQRT_X_AFN_NO_MD]])
+; IEEE-NEXT:    [[SQRT_X_AFN_NO_MD:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]])
+; IEEE-NEXT:    [[AFN_NO_MD:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[SQRT_X_AFN_NO_MD]])
 ; IEEE-NEXT:    store volatile float [[AFN_NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_AFN_25ULP:%.*]] = call afn float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; IEEE-NEXT:    [[AFN_25ULP:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[SQRT_X_AFN_25ULP]])
+; IEEE-NEXT:    [[SQRT_X_AFN_25ULP:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]]), !fpmath !0
+; IEEE-NEXT:    [[AFN_25ULP:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[SQRT_X_AFN_25ULP]])
 ; IEEE-NEXT:    store volatile float [[AFN_25ULP]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    [[SQRT_X_FAST_NO_MD:%.*]] = call fast float @llvm.sqrt.f32(float [[X]])
 ; IEEE-NEXT:    [[FAST_NO_MD:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[SQRT_X_FAST_NO_MD]])
@@ -846,46 +846,46 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; IEEE-NEXT:    [[SQRT_X_FAST_25ULP:%.*]] = call fast float @llvm.sqrt.f32(float [[X]]), !fpmath !0
 ; IEEE-NEXT:    [[FAST_25ULP:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[SQRT_X_FAST_25ULP]])
 ; IEEE-NEXT:    store volatile float [[FAST_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP]])
+; IEEE-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[NEG_SQRT_X_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[NEG_FDIV_OPENCL:%.*]] = call float @llvm.amdgcn.fdiv.fast(float -1.000000e+00, float [[NEG_SQRT_X_3ULP]])
+; IEEE-NEXT:    [[NEG_SQRT_X_3ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[NEG_FDIV_OPENCL:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float -1.000000e+00, float [[NEG_SQRT_X_3ULP]])
 ; IEEE-NEXT:    store volatile float [[NEG_FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
-; IEEE-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_HALF_ULP]])
+; IEEE-NEXT:    [[SQRT_X_HALF_ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; IEEE-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_HALF_ULP]])
 ; IEEE-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD0]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    [[SQRT_MISMATCH_MD1:%.*]] = call afn float @llvm.sqrt.f32(float [[X]])
-; IEEE-NEXT:    [[FDIV_SQRT_MISMATCH_MD1:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_MISMATCH_MD1]])
+; IEEE-NEXT:    [[FDIV_SQRT_MISMATCH_MD1:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_MISMATCH_MD1]])
 ; IEEE-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD1]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_MISMATCH_MD2:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_SQRT_MISMATCH_MD2:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[SQRT_MISMATCH_MD2]])
+; IEEE-NEXT:    [[SQRT_MISMATCH_MD2:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_SQRT_MISMATCH_MD2:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[SQRT_MISMATCH_MD2]])
 ; IEEE-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD2]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
 ; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_fpmath
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[SQRT_X_NO_MD:%.*]] = call float @llvm.sqrt.f32(float [[X]])
-; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv float 1.000000e+00, [[SQRT_X_NO_MD]]
+; DAZ-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
+; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_X_NO_MD]]
 ; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_MD_1ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
-; DAZ-NEXT:    [[MD_1ULP:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_MD_1ULP]])
+; DAZ-NEXT:    [[SQRT_MD_1ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; DAZ-NEXT:    [[MD_1ULP:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_MD_1ULP]])
 ; DAZ-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_MD_1ULP_MULTI_USE:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; DAZ-NEXT:    [[SQRT_MD_1ULP_MULTI_USE:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
 ; DAZ-NEXT:    store volatile float [[SQRT_MD_1ULP_MULTI_USE]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[MD_1ULP_MULTI_USE:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_MD_1ULP_MULTI_USE]])
+; DAZ-NEXT:    [[MD_1ULP_MULTI_USE:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_MD_1ULP_MULTI_USE]])
 ; DAZ-NEXT:    store volatile float [[MD_1ULP_MULTI_USE]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_MD_25ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; DAZ-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_MD_25ULP]])
+; DAZ-NEXT:    [[SQRT_MD_25ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !0
+; DAZ-NEXT:    [[MD_25ULP:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_MD_25ULP]])
 ; DAZ-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_MD_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
-; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float 1.000000e+00, [[SQRT_MD_HALF_ULP]], !fpmath !1
+; DAZ-NEXT:    [[SQRT_MD_HALF_ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_MD_HALF_ULP]], !fpmath !1
 ; DAZ-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_AFN_NO_MD:%.*]] = call afn float @llvm.sqrt.f32(float [[X]])
-; DAZ-NEXT:    [[AFN_NO_MD:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[SQRT_X_AFN_NO_MD]])
+; DAZ-NEXT:    [[SQRT_X_AFN_NO_MD:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]])
+; DAZ-NEXT:    [[AFN_NO_MD:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[SQRT_X_AFN_NO_MD]])
 ; DAZ-NEXT:    store volatile float [[AFN_NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_AFN_25ULP:%.*]] = call afn float @llvm.sqrt.f32(float [[X]]), !fpmath !0
-; DAZ-NEXT:    [[AFN_25ULP:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[SQRT_X_AFN_25ULP]])
+; DAZ-NEXT:    [[SQRT_X_AFN_25ULP:%.*]] = call contract afn float @llvm.sqrt.f32(float [[X]]), !fpmath !0
+; DAZ-NEXT:    [[AFN_25ULP:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[SQRT_X_AFN_25ULP]])
 ; DAZ-NEXT:    store volatile float [[AFN_25ULP]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[SQRT_X_FAST_NO_MD:%.*]] = call fast float @llvm.sqrt.f32(float [[X]])
 ; DAZ-NEXT:    [[FAST_NO_MD:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[SQRT_X_FAST_NO_MD]])
@@ -893,52 +893,52 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 ; DAZ-NEXT:    [[SQRT_X_FAST_25ULP:%.*]] = call fast float @llvm.sqrt.f32(float [[X]]), !fpmath !0
 ; DAZ-NEXT:    [[FAST_25ULP:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[SQRT_X_FAST_25ULP]])
 ; DAZ-NEXT:    store volatile float [[FAST_25ULP]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP]])
+; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[NEG_SQRT_X_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[TMP1:%.*]] = fneg float [[NEG_SQRT_X_3ULP]]
-; DAZ-NEXT:    [[NEG_FDIV_OPENCL:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP1]])
+; DAZ-NEXT:    [[NEG_SQRT_X_3ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[TMP1:%.*]] = fneg contract float [[NEG_SQRT_X_3ULP]]
+; DAZ-NEXT:    [[NEG_FDIV_OPENCL:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP1]])
 ; DAZ-NEXT:    store volatile float [[NEG_FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_HALF_ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !1
-; DAZ-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_HALF_ULP]])
+; DAZ-NEXT:    [[SQRT_X_HALF_ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !1
+; DAZ-NEXT:    [[FDIV_SQRT_MISMATCH_MD0:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_HALF_ULP]])
 ; DAZ-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD0]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    [[SQRT_MISMATCH_MD1:%.*]] = call afn float @llvm.sqrt.f32(float [[X]])
-; DAZ-NEXT:    [[FDIV_SQRT_MISMATCH_MD1:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_MISMATCH_MD1]])
+; DAZ-NEXT:    [[FDIV_SQRT_MISMATCH_MD1:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_MISMATCH_MD1]])
 ; DAZ-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD1]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_MISMATCH_MD2:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_SQRT_MISMATCH_MD2:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[SQRT_MISMATCH_MD2]])
+; DAZ-NEXT:    [[SQRT_MISMATCH_MD2:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_SQRT_MISMATCH_MD2:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[SQRT_MISMATCH_MD2]])
 ; DAZ-NEXT:    store volatile float [[FDIV_SQRT_MISMATCH_MD2]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
-  %sqrt.x.no.md = call float @llvm.sqrt.f32(float %x)
-  %no.md = fdiv float 1.000000e+00, %sqrt.x.no.md
+  %sqrt.x.no.md = call contract float @llvm.sqrt.f32(float %x)
+  %no.md = fdiv contract float 1.000000e+00, %sqrt.x.no.md
   store volatile float %no.md, ptr addrspace(1) %out, align 4
 
   ; Matches the rsq instruction accuracy
-  %sqrt.md.1ulp = call float @llvm.sqrt.f32(float %x), !fpmath !2
-  %md.1ulp = fdiv float 1.000000e+00, %sqrt.md.1ulp, !fpmath !2
+  %sqrt.md.1ulp = call contract float @llvm.sqrt.f32(float %x), !fpmath !2
+  %md.1ulp = fdiv contract float 1.000000e+00, %sqrt.md.1ulp, !fpmath !2
   store volatile float %md.1ulp, ptr addrspace(1) %out, align 4
 
-  %sqrt.md.1ulp.multi.use = call float @llvm.sqrt.f32(float %x), !fpmath !2
+  %sqrt.md.1ulp.multi.use = call contract float @llvm.sqrt.f32(float %x), !fpmath !2
   store volatile float %sqrt.md.1ulp.multi.use, ptr addrspace(1) %out, align 4
-  %md.1ulp.multi.use = fdiv float 1.000000e+00, %sqrt.md.1ulp.multi.use, !fpmath !2
+  %md.1ulp.multi.use = fdiv contract float 1.000000e+00, %sqrt.md.1ulp.multi.use, !fpmath !2
   store volatile float %md.1ulp.multi.use, ptr addrspace(1) %out, align 4
 
-  %sqrt.md.25ulp = call float @llvm.sqrt.f32(float %x), !fpmath !0
-  %md.25ulp = fdiv float 1.000000e+00, %sqrt.md.25ulp, !fpmath !0
+  %sqrt.md.25ulp = call contract float @llvm.sqrt.f32(float %x), !fpmath !0
+  %md.25ulp = fdiv contract float 1.000000e+00, %sqrt.md.25ulp, !fpmath !0
   store volatile float %md.25ulp, ptr addrspace(1) %out, align 4
 
-  %sqrt.md.half.ulp = call float @llvm.sqrt.f32(float %x), !fpmath !1
-  %md.half.ulp = fdiv float 1.000000e+00, %sqrt.md.half.ulp, !fpmath !1
+  %sqrt.md.half.ulp = call contract float @llvm.sqrt.f32(float %x), !fpmath !1
+  %md.half.ulp = fdiv contract float 1.000000e+00, %sqrt.md.half.ulp, !fpmath !1
   store volatile float %md.half.ulp, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.afn.no.md = call afn float @llvm.sqrt.f32(float %x)
-  %afn.no.md = fdiv afn float 1.000000e+00, %sqrt.x.afn.no.md
+  %sqrt.x.afn.no.md = call contract afn float @llvm.sqrt.f32(float %x)
+  %afn.no.md = fdiv contract afn float 1.000000e+00, %sqrt.x.afn.no.md
   store volatile float %afn.no.md, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.afn.25ulp = call afn float @llvm.sqrt.f32(float %x), !fpmath !0
-  %afn.25ulp = fdiv afn float 1.000000e+00, %sqrt.x.afn.25ulp, !fpmath !0
+  %sqrt.x.afn.25ulp = call contract afn float @llvm.sqrt.f32(float %x), !fpmath !0
+  %afn.25ulp = fdiv contract afn float 1.000000e+00, %sqrt.x.afn.25ulp, !fpmath !0
   store volatile float %afn.25ulp, ptr addrspace(1) %out, align 4
 
   %sqrt.x.fast.no.md = call fast float @llvm.sqrt.f32(float %x)
@@ -953,27 +953,27 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
   ; Test mismatched metadata/flags between the sqrt and fdiv
 
   ; Test the expected opencl default pattern
-  %sqrt.x.3ulp = call float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
-  %fdiv.opencl = fdiv float 1.0, %sqrt.x.3ulp, !fpmath !0
+  %sqrt.x.3ulp = call contract float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
+  %fdiv.opencl = fdiv contract float 1.0, %sqrt.x.3ulp, !fpmath !0
   store volatile float %fdiv.opencl, ptr addrspace(1) %out, align 4
 
-  %neg.sqrt.x.3ulp = call float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
-  %neg.fdiv.opencl = fdiv float -1.0, %neg.sqrt.x.3ulp, !fpmath !0
+  %neg.sqrt.x.3ulp = call contract float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
+  %neg.fdiv.opencl = fdiv contract float -1.0, %neg.sqrt.x.3ulp, !fpmath !0
   store volatile float %neg.fdiv.opencl, ptr addrspace(1) %out, align 4
 
   ; sqrt demands higher precision than fdiv
-  %sqrt.x.half.ulp = call float @llvm.sqrt.f32(float %x), !fpmath !1
-  %fdiv.sqrt.mismatch.md0 = fdiv float 1.0, %sqrt.x.half.ulp, !fpmath !0
+  %sqrt.x.half.ulp = call contract float @llvm.sqrt.f32(float %x), !fpmath !1
+  %fdiv.sqrt.mismatch.md0 = fdiv contract float 1.0, %sqrt.x.half.ulp, !fpmath !0
   store volatile float %fdiv.sqrt.mismatch.md0, ptr addrspace(1) %out, align 4
 
   ; sqrt demands full precision but has afn
   %sqrt.mismatch.md1 = call afn float @llvm.sqrt.f32(float %x)
-  %fdiv.sqrt.mismatch.md1 = fdiv float 1.0, %sqrt.mismatch.md1, !fpmath !0
+  %fdiv.sqrt.mismatch.md1 = fdiv contract float 1.0, %sqrt.mismatch.md1, !fpmath !0
   store volatile float %fdiv.sqrt.mismatch.md1, ptr addrspace(1) %out, align 4
 
   ; sqrt has relaxed precision fdiv has afn only
-  %sqrt.mismatch.md2 = call float @llvm.sqrt.f32(float %x), !fpmath !3
-  %fdiv.sqrt.mismatch.md2 = fdiv afn float 1.0, %sqrt.mismatch.md2
+  %sqrt.mismatch.md2 = call contract float @llvm.sqrt.f32(float %x), !fpmath !3
+  %fdiv.sqrt.mismatch.md2 = fdiv contract afn float 1.0, %sqrt.mismatch.md2
   store volatile float %fdiv.sqrt.mismatch.md2, ptr addrspace(1) %out, align 4
 
   ret void
@@ -982,132 +982,168 @@ define amdgpu_kernel void @rsq_f32_fpmath(ptr addrspace(1) %out, float %x) {
 define amdgpu_kernel void @rsq_f32_fpmath_flags(ptr addrspace(1) %out, float %x) {
 ; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_fpmath_flags
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[SQRT_X_3ULP_NINF_NNAN:%.*]] = call nnan ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NINF_NNAN:%.*]] = call nnan ninf float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NINF_NNAN]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NINF_NNAN:%.*]] = call nnan ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NINF_NNAN:%.*]] = call nnan ninf contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NINF_NNAN]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NINF_NNAN]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NINF:%.*]] = call ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NINF:%.*]] = call ninf float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NINF]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NINF:%.*]] = call ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NINF:%.*]] = call ninf contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NINF]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NINF]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NNAN:%.*]] = call nnan float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NNAN:%.*]] = call nnan float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NNAN]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NNAN:%.*]] = call nnan contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NNAN:%.*]] = call nnan contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NNAN]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NNAN]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NSZ:%.*]] = call nsz float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NSZ:%.*]] = call nsz float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NSZ]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NSZ:%.*]] = call nsz contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NSZ:%.*]] = call nsz contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NSZ]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NSZ]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NINF_MIX0:%.*]] = call ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NNAN_MIX0:%.*]] = call nnan float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NINF_MIX0]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NINF_MIX0:%.*]] = call ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NNAN_MIX0:%.*]] = call nnan contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NINF_MIX0]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NNAN_MIX0]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NINF_MIX1:%.*]] = call ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NNAN_MIX1:%.*]] = call nnan float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NINF_MIX1]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NINF_MIX1:%.*]] = call ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NNAN_MIX1:%.*]] = call nnan contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NINF_MIX1]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NNAN_MIX1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
 ; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_fpmath_flags
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[SQRT_X_3ULP_NINF_NNAN:%.*]] = call nnan ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NINF_NNAN:%.*]] = call nnan ninf float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NINF_NNAN]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NINF_NNAN:%.*]] = call nnan ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NINF_NNAN:%.*]] = call nnan ninf contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NINF_NNAN]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NINF_NNAN]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NINF:%.*]] = call ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NINF:%.*]] = call ninf float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NINF]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NINF:%.*]] = call ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NINF:%.*]] = call ninf contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NINF]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NINF]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NNAN:%.*]] = call nnan float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NNAN:%.*]] = call nnan float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NNAN]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NNAN:%.*]] = call nnan contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NNAN:%.*]] = call nnan contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NNAN]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NNAN]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NSZ:%.*]] = call nsz float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NSZ:%.*]] = call nsz float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NSZ]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NSZ:%.*]] = call nsz contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NSZ:%.*]] = call nsz contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NSZ]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NSZ]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NINF_MIX0:%.*]] = call ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NNAN_MIX0:%.*]] = call nnan float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NINF_MIX0]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NINF_MIX0:%.*]] = call ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NNAN_MIX0:%.*]] = call nnan contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NINF_MIX0]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NNAN_MIX0]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NINF_MIX1:%.*]] = call ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NNAN_MIX1:%.*]] = call nnan float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NINF_MIX1]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NINF_MIX1:%.*]] = call ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NNAN_MIX1:%.*]] = call nnan contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NINF_MIX1]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NNAN_MIX1]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
-  %sqrt.x.3ulp.ninf.nnan = call ninf nnan float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
-  %fdiv.opencl.ninf.nnan = fdiv ninf nnan float 1.0, %sqrt.x.3ulp.ninf.nnan, !fpmath !0
+  %sqrt.x.3ulp.ninf.nnan = call contract ninf nnan float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
+  %fdiv.opencl.ninf.nnan = fdiv contract ninf nnan float 1.0, %sqrt.x.3ulp.ninf.nnan, !fpmath !0
   store volatile float %fdiv.opencl.ninf.nnan, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.ninf = call ninf float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
-  %fdiv.opencl.ninf = fdiv ninf float 1.0, %sqrt.x.3ulp.ninf, !fpmath !0
+  %sqrt.x.3ulp.ninf = call contract ninf float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
+  %fdiv.opencl.ninf = fdiv contract ninf float 1.0, %sqrt.x.3ulp.ninf, !fpmath !0
   store volatile float %fdiv.opencl.ninf, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.nnan = call nnan float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
-  %fdiv.opencl.nnan = fdiv nnan float 1.0, %sqrt.x.3ulp.nnan, !fpmath !0
+  %sqrt.x.3ulp.nnan = call contract nnan float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
+  %fdiv.opencl.nnan = fdiv contract nnan float 1.0, %sqrt.x.3ulp.nnan, !fpmath !0
   store volatile float %fdiv.opencl.nnan, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.nsz = call nsz float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
-  %fdiv.opencl.nsz = fdiv nsz float 1.0, %sqrt.x.3ulp.nsz, !fpmath !0
+  %sqrt.x.3ulp.nsz = call contract nsz float @llvm.sqrt.f32(float %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
+  %fdiv.opencl.nsz = fdiv contract nsz float 1.0, %sqrt.x.3ulp.nsz, !fpmath !0
   store volatile float %fdiv.opencl.nsz, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.ninf.mix0 = call ninf float @llvm.sqrt.f32(float %x), !fpmath !3
-  %fdiv.opencl.nnan.mix0 = fdiv nnan float 1.0, %sqrt.x.3ulp.ninf.mix0, !fpmath !0
+  %sqrt.x.3ulp.ninf.mix0 = call contract ninf float @llvm.sqrt.f32(float %x), !fpmath !3
+  %fdiv.opencl.nnan.mix0 = fdiv contract nnan float 1.0, %sqrt.x.3ulp.ninf.mix0, !fpmath !0
   store volatile float %fdiv.opencl.nnan.mix0, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.ninf.mix1 = call ninf float @llvm.sqrt.f32(float %x), !fpmath !3
-  %fdiv.opencl.nnan.mix1 = fdiv nnan float 1.0, %sqrt.x.3ulp.ninf.mix1, !fpmath !0
+  %sqrt.x.3ulp.ninf.mix1 = call contract ninf float @llvm.sqrt.f32(float %x), !fpmath !3
+  %fdiv.opencl.nnan.mix1 = fdiv contract nnan float 1.0, %sqrt.x.3ulp.ninf.mix1, !fpmath !0
   store volatile float %fdiv.opencl.nnan.mix1, ptr addrspace(1) %out, align 4
 
   ret void
 }
 
+define float @rsq_f32_missing_contract0(float %x) {
+; IEEE-LABEL: define float @rsq_f32_missing_contract0
+; IEEE-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-NEXT:    [[SQRT_X_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = fdiv contract float 1.000000e+00, [[SQRT_X_3ULP]], !fpmath !2
+; IEEE-NEXT:    ret float [[FDIV_OPENCL]]
+;
+; DAZ-LABEL: define float @rsq_f32_missing_contract0
+; DAZ-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP]])
+; DAZ-NEXT:    ret float [[FDIV_OPENCL]]
+;
+  %sqrt.x.3ulp = call float @llvm.sqrt.f32(float %x), !fpmath !2
+  %fdiv.opencl = fdiv contract float 1.0, %sqrt.x.3ulp, !fpmath !2
+  ret float %fdiv.opencl
+}
+
+define float @rsq_f32_missing_contract1(float %x) {
+; IEEE-LABEL: define float @rsq_f32_missing_contract1
+; IEEE-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; IEEE-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = fdiv float 1.000000e+00, [[SQRT_X_3ULP]], !fpmath !2
+; IEEE-NEXT:    ret float [[FDIV_OPENCL]]
+;
+; DAZ-LABEL: define float @rsq_f32_missing_contract1
+; DAZ-SAME: (float [[X:%.*]]) #[[ATTR1]] {
+; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP]])
+; DAZ-NEXT:    ret float [[FDIV_OPENCL]]
+;
+  %sqrt.x.3ulp = call contract float @llvm.sqrt.f32(float %x), !fpmath !2
+  %fdiv.opencl = fdiv float 1.0, %sqrt.x.3ulp, !fpmath !2
+  ret float %fdiv.opencl
+}
+
 define float @rsq_f32_flag_merge(float %x) {
 ; IEEE-LABEL: define float @rsq_f32_flag_merge
 ; IEEE-SAME: (float [[X:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[SQRT_X_3ULP:%.*]] = call ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !2
-; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = fdiv nsz float 1.000000e+00, [[SQRT_X_3ULP]], !fpmath !2
+; IEEE-NEXT:    [[SQRT_X_3ULP:%.*]] = call ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = fdiv nsz contract float 1.000000e+00, [[SQRT_X_3ULP]], !fpmath !2
 ; IEEE-NEXT:    ret float [[FDIV_OPENCL]]
 ;
 ; DAZ-LABEL: define float @rsq_f32_flag_merge
 ; DAZ-SAME: (float [[X:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call ninf float @llvm.sqrt.f32(float [[X]]), !fpmath !2
-; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call nsz float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP]])
+; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call ninf contract float @llvm.sqrt.f32(float [[X]]), !fpmath !2
+; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = call nsz contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP]])
 ; DAZ-NEXT:    ret float [[FDIV_OPENCL]]
 ;
-  %sqrt.x.3ulp = call ninf float @llvm.sqrt.f32(float %x), !fpmath !2
-  %fdiv.opencl = fdiv nsz float 1.0, %sqrt.x.3ulp, !fpmath !2
+  %sqrt.x.3ulp = call contract ninf float @llvm.sqrt.f32(float %x), !fpmath !2
+  %fdiv.opencl = fdiv contract nsz float 1.0, %sqrt.x.3ulp, !fpmath !2
   ret float %fdiv.opencl
 }
 
 define amdgpu_kernel void @rsq_f32_knownfinite(ptr addrspace(1) %out, float nofpclass(nan) %no.nan,
 ; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_knownfinite
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[SQRT_X_3ULP_NO_NAN:%.*]] = call float @llvm.sqrt.f32(float [[NO_NAN]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NO_NAN:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_NAN]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NO_NAN:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_NAN]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NO_NAN:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_NAN]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_NAN]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NO_INF:%.*]] = call float @llvm.sqrt.f32(float [[NO_INF]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NO_INF:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_INF]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NO_INF:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_INF]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NO_INF:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_INF]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_INF]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NO_INF_NAN:%.*]] = call float @llvm.sqrt.f32(float [[NO_INF_NAN]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NO_INF_NAN:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_INF_NAN]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NO_INF_NAN:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_INF_NAN]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NO_INF_NAN:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_INF_NAN]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_INF_NAN]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
 ; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_knownfinite
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(nan) [[NO_NAN:%.*]], float nofpclass(nan) [[NO_INF:%.*]], float nofpclass(nan inf) [[NO_INF_NAN:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[SQRT_X_3ULP_NO_NAN:%.*]] = call float @llvm.sqrt.f32(float [[NO_NAN]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NO_NAN:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_NAN]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NO_NAN:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_NAN]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NO_NAN:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_NAN]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_NAN]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NO_INF:%.*]] = call float @llvm.sqrt.f32(float [[NO_INF]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NO_INF:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_INF]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NO_INF:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_INF]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NO_INF:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_INF]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_INF]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NO_INF_NAN:%.*]] = call float @llvm.sqrt.f32(float [[NO_INF_NAN]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NO_INF_NAN:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_INF_NAN]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NO_INF_NAN:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_INF_NAN]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NO_INF_NAN:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_INF_NAN]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_INF_NAN]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
   float nofpclass(nan) %no.inf,
   float nofpclass(inf nan) %no.inf.nan) {
-  %sqrt.x.3ulp.no.nan = call float @llvm.sqrt.f32(float %no.nan), !fpmath !3
-  %fdiv.opencl.no.nan = fdiv float 1.0, %sqrt.x.3ulp.no.nan, !fpmath !0
+  %sqrt.x.3ulp.no.nan = call contract float @llvm.sqrt.f32(float %no.nan), !fpmath !3
+  %fdiv.opencl.no.nan = fdiv contract float 1.0, %sqrt.x.3ulp.no.nan, !fpmath !0
   store volatile float %fdiv.opencl.no.nan, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.no.inf = call float @llvm.sqrt.f32(float %no.inf), !fpmath !3
-  %fdiv.opencl.no.inf = fdiv float 1.0, %sqrt.x.3ulp.no.inf, !fpmath !0
+  %sqrt.x.3ulp.no.inf = call contract float @llvm.sqrt.f32(float %no.inf), !fpmath !3
+  %fdiv.opencl.no.inf = fdiv contract float 1.0, %sqrt.x.3ulp.no.inf, !fpmath !0
   store volatile float %fdiv.opencl.no.inf, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.no.inf.nan = call float @llvm.sqrt.f32(float %no.inf.nan), !fpmath !3
-  %fdiv.opencl.no.inf.nan = fdiv float 1.0, %sqrt.x.3ulp.no.inf.nan, !fpmath !0
+  %sqrt.x.3ulp.no.inf.nan = call contract float @llvm.sqrt.f32(float %no.inf.nan), !fpmath !3
+  %fdiv.opencl.no.inf.nan = fdiv contract float 1.0, %sqrt.x.3ulp.no.inf.nan, !fpmath !0
   store volatile float %fdiv.opencl.no.inf.nan, ptr addrspace(1) %out, align 4
 
   ret void
@@ -1116,30 +1152,30 @@ define amdgpu_kernel void @rsq_f32_knownfinite(ptr addrspace(1) %out, float nofp
 define amdgpu_kernel void @rsq_f32_known_nozero(ptr addrspace(1) %out, float nofpclass(zero) %no.zero, float nofpclass(zero sub) %no.zero.sub) {
 ; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_known_nozero
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[SQRT_X_3ULP_NO_ZERO:%.*]] = call float @llvm.sqrt.f32(float [[NO_ZERO]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NO_ZERO:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_ZERO]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NO_ZERO:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_ZERO]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NO_ZERO:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_ZERO]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_ZERO]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NO_ZERO_SUB:%.*]] = call float @llvm.sqrt.f32(float [[NO_ZERO_SUB]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NO_ZERO_SUB:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_ZERO_SUB]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NO_ZERO_SUB:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_ZERO_SUB]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NO_ZERO_SUB:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_ZERO_SUB]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_ZERO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
 ; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_known_nozero
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(zero) [[NO_ZERO:%.*]], float nofpclass(zero sub) [[NO_ZERO_SUB:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[SQRT_X_3ULP_NO_ZERO:%.*]] = call float @llvm.sqrt.f32(float [[NO_ZERO]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NO_ZERO:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_ZERO]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NO_ZERO:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_ZERO]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NO_ZERO:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_ZERO]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_ZERO]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NO_ZERO_SUB:%.*]] = call float @llvm.sqrt.f32(float [[NO_ZERO_SUB]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NO_ZERO_SUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_ZERO_SUB]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NO_ZERO_SUB:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_ZERO_SUB]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NO_ZERO_SUB:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_ZERO_SUB]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_ZERO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
-  %sqrt.x.3ulp.no.zero = call float @llvm.sqrt.f32(float %no.zero), !fpmath !3
-  %fdiv.opencl.no.zero = fdiv float 1.0, %sqrt.x.3ulp.no.zero, !fpmath !0
+  %sqrt.x.3ulp.no.zero = call contract float @llvm.sqrt.f32(float %no.zero), !fpmath !3
+  %fdiv.opencl.no.zero = fdiv contract float 1.0, %sqrt.x.3ulp.no.zero, !fpmath !0
   store volatile float %fdiv.opencl.no.zero, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.no.zero.sub = call float @llvm.sqrt.f32(float %no.zero.sub), !fpmath !3
-  %fdiv.opencl.no.zero.sub = fdiv float 1.0, %sqrt.x.3ulp.no.zero.sub, !fpmath !0
+  %sqrt.x.3ulp.no.zero.sub = call contract float @llvm.sqrt.f32(float %no.zero.sub), !fpmath !3
+  %fdiv.opencl.no.zero.sub = fdiv contract float 1.0, %sqrt.x.3ulp.no.zero.sub, !fpmath !0
   store volatile float %fdiv.opencl.no.zero.sub, ptr addrspace(1) %out, align 4
 
   ret void
@@ -1148,40 +1184,40 @@ define amdgpu_kernel void @rsq_f32_known_nozero(ptr addrspace(1) %out, float nof
 define amdgpu_kernel void @rsq_f32_known_nosub(ptr addrspace(1) %out, float nofpclass(sub) %no.sub, float nofpclass(psub) %no.psub, float nofpclass(nsub) %no.nsub) {
 ; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_known_nosub
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[SQRT_X_3ULP_NO_SUB:%.*]] = call float @llvm.sqrt.f32(float [[NO_SUB]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_SUB]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NO_SUB:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_SUB]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_SUB]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NO_PSUB:%.*]] = call float @llvm.sqrt.f32(float [[NO_PSUB]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NO_PSUB:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_PSUB]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NO_PSUB:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_PSUB]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NO_PSUB:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_PSUB]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_PSUB]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP_NO_NSUB:%.*]] = call float @llvm.sqrt.f32(float [[NO_NSUB]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NO_NSUB:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_NSUB]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NO_NSUB:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_NSUB]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NO_NSUB:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_NSUB]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_NSUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
 ; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_known_nosub
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[NO_SUB:%.*]], float nofpclass(psub) [[NO_PSUB:%.*]], float nofpclass(nsub) [[NO_NSUB:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[SQRT_X_3ULP_NO_SUB:%.*]] = call float @llvm.sqrt.f32(float [[NO_SUB]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_SUB]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NO_SUB:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_SUB]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_SUB]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NO_PSUB:%.*]] = call float @llvm.sqrt.f32(float [[NO_PSUB]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NO_PSUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_PSUB]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NO_PSUB:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_PSUB]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NO_PSUB:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_PSUB]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_PSUB]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP_NO_NSUB:%.*]] = call float @llvm.sqrt.f32(float [[NO_NSUB]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NO_NSUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_NSUB]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NO_NSUB:%.*]] = call contract float @llvm.sqrt.f32(float [[NO_NSUB]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NO_NSUB:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_NSUB]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_NSUB]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
-  %sqrt.x.3ulp.no.sub = call float @llvm.sqrt.f32(float %no.sub), !fpmath !3
-  %fdiv.opencl.no.sub = fdiv float 1.0, %sqrt.x.3ulp.no.sub, !fpmath !0
+  %sqrt.x.3ulp.no.sub = call contract float @llvm.sqrt.f32(float %no.sub), !fpmath !3
+  %fdiv.opencl.no.sub = fdiv contract float 1.0, %sqrt.x.3ulp.no.sub, !fpmath !0
   store volatile float %fdiv.opencl.no.sub, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.no.psub = call float @llvm.sqrt.f32(float %no.psub), !fpmath !3
-  %fdiv.opencl.no.psub = fdiv float 1.0, %sqrt.x.3ulp.no.psub, !fpmath !0
+  %sqrt.x.3ulp.no.psub = call contract float @llvm.sqrt.f32(float %no.psub), !fpmath !3
+  %fdiv.opencl.no.psub = fdiv contract float 1.0, %sqrt.x.3ulp.no.psub, !fpmath !0
   store volatile float %fdiv.opencl.no.psub, ptr addrspace(1) %out, align 4
 
-  %sqrt.x.3ulp.no.nsub = call float @llvm.sqrt.f32(float %no.nsub), !fpmath !3
-  %fdiv.opencl.no.nsub = fdiv float 1.0, %sqrt.x.3ulp.no.nsub, !fpmath !0
+  %sqrt.x.3ulp.no.nsub = call contract float @llvm.sqrt.f32(float %no.nsub), !fpmath !3
+  %fdiv.opencl.no.nsub = fdiv contract float 1.0, %sqrt.x.3ulp.no.nsub, !fpmath !0
   store volatile float %fdiv.opencl.no.nsub, ptr addrspace(1) %out, align 4
 
   ret void
@@ -1193,8 +1229,8 @@ define amdgpu_kernel void @rsq_f32_assume_nosub(ptr addrspace(1) %out, float %x)
 ; IEEE-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; IEEE-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
 ; IEEE-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
-; IEEE-NEXT:    [[SQRT_X_3ULP_NO_SUB:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; IEEE-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_SUB]])
+; IEEE-NEXT:    [[SQRT_X_3ULP_NO_SUB:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; IEEE-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[SQRT_X_3ULP_NO_SUB]])
 ; IEEE-NEXT:    store volatile float [[FDIV_OPENCL_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
@@ -1203,16 +1239,16 @@ define amdgpu_kernel void @rsq_f32_assume_nosub(ptr addrspace(1) %out, float %x)
 ; DAZ-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; DAZ-NEXT:    [[IS_NOT_SUBNORMAL:%.*]] = fcmp oge float [[FABS_X]], 0x3810000000000000
 ; DAZ-NEXT:    call void @llvm.assume(i1 [[IS_NOT_SUBNORMAL]])
-; DAZ-NEXT:    [[SQRT_X_3ULP_NO_SUB:%.*]] = call float @llvm.sqrt.f32(float [[X]]), !fpmath !3
-; DAZ-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_SUB]])
+; DAZ-NEXT:    [[SQRT_X_3ULP_NO_SUB:%.*]] = call contract float @llvm.sqrt.f32(float [[X]]), !fpmath !3
+; DAZ-NEXT:    [[FDIV_OPENCL_NO_SUB:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[SQRT_X_3ULP_NO_SUB]])
 ; DAZ-NEXT:    store volatile float [[FDIV_OPENCL_NO_SUB]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
   %is.not.subnormal = fcmp oge float %fabs.x, 0x3810000000000000
   call void @llvm.assume(i1 %is.not.subnormal)
-  %sqrt.x.3ulp.no.sub = call float @llvm.sqrt.f32(float %x), !fpmath !3
-  %fdiv.opencl.no.sub = fdiv float 1.0, %sqrt.x.3ulp.no.sub, !fpmath !0
+  %sqrt.x.3ulp.no.sub = call contract float @llvm.sqrt.f32(float %x), !fpmath !3
+  %fdiv.opencl.no.sub = fdiv contract float 1.0, %sqrt.x.3ulp.no.sub, !fpmath !0
   store volatile float %fdiv.opencl.no.sub, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -1220,95 +1256,95 @@ define amdgpu_kernel void @rsq_f32_assume_nosub(ptr addrspace(1) %out, float %x)
 define amdgpu_kernel void @rsq_f32_vector_fpmath(ptr addrspace(1) %out, <2 x float> %x) {
 ; IEEE-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[SQRT_X_NO_MD:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
+; IEEE-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
 ; IEEE-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[SQRT_X_NO_MD]], i64 0
-; IEEE-NEXT:    [[TMP2:%.*]] = fdiv float 1.000000e+00, [[TMP1]]
+; IEEE-NEXT:    [[TMP2:%.*]] = fdiv contract float 1.000000e+00, [[TMP1]]
 ; IEEE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i64 0
 ; IEEE-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[SQRT_X_NO_MD]], i64 1
-; IEEE-NEXT:    [[TMP5:%.*]] = fdiv float 1.000000e+00, [[TMP4]]
+; IEEE-NEXT:    [[TMP5:%.*]] = fdiv contract float 1.000000e+00, [[TMP4]]
 ; IEEE-NEXT:    [[NO_MD:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP5]], i64 1
 ; IEEE-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_MD_1ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
+; IEEE-NEXT:    [[SQRT_MD_1ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
 ; IEEE-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 0
-; IEEE-NEXT:    [[TMP7:%.*]] = fdiv float 1.000000e+00, [[TMP6]]
+; IEEE-NEXT:    [[TMP7:%.*]] = fdiv contract float 1.000000e+00, [[TMP6]]
 ; IEEE-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i64 0
 ; IEEE-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 1
-; IEEE-NEXT:    [[TMP10:%.*]] = fdiv float 1.000000e+00, [[TMP9]]
+; IEEE-NEXT:    [[TMP10:%.*]] = fdiv contract float 1.000000e+00, [[TMP9]]
 ; IEEE-NEXT:    [[MD_1ULP:%.*]] = insertelement <2 x float> [[TMP8]], float [[TMP10]], i64 1
 ; IEEE-NEXT:    store volatile <2 x float> [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_MD_1ULP_UNDEF:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
+; IEEE-NEXT:    [[SQRT_MD_1ULP_UNDEF:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
 ; IEEE-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP_UNDEF]], i64 0
-; IEEE-NEXT:    [[TMP12:%.*]] = fdiv float 1.000000e+00, [[TMP11]]
+; IEEE-NEXT:    [[TMP12:%.*]] = fdiv contract float 1.000000e+00, [[TMP11]]
 ; IEEE-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> poison, float [[TMP12]], i64 0
 ; IEEE-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP_UNDEF]], i64 1
-; IEEE-NEXT:    [[TMP15:%.*]] = fdiv float undef, [[TMP14]]
+; IEEE-NEXT:    [[TMP15:%.*]] = fdiv contract float undef, [[TMP14]]
 ; IEEE-NEXT:    [[MD_1ULP_UNDEF:%.*]] = insertelement <2 x float> [[TMP13]], float [[TMP15]], i64 1
 ; IEEE-NEXT:    store volatile <2 x float> [[MD_1ULP_UNDEF]], ptr addrspace(1) [[OUT]], align 4
-; IEEE-NEXT:    [[SQRT_X_3ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !3
+; IEEE-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !3
 ; IEEE-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 0
-; IEEE-NEXT:    [[TMP17:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[TMP16]])
+; IEEE-NEXT:    [[TMP17:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[TMP16]])
 ; IEEE-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> poison, float [[TMP17]], i64 0
 ; IEEE-NEXT:    [[TMP19:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 1
-; IEEE-NEXT:    [[TMP20:%.*]] = call float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[TMP19]])
+; IEEE-NEXT:    [[TMP20:%.*]] = call contract float @llvm.amdgcn.fdiv.fast(float 1.000000e+00, float [[TMP19]])
 ; IEEE-NEXT:    [[FDIV_OPENCL:%.*]] = insertelement <2 x float> [[TMP18]], float [[TMP20]], i64 1
 ; IEEE-NEXT:    store volatile <2 x float> [[FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
 ; DAZ-LABEL: define amdgpu_kernel void @rsq_f32_vector_fpmath
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[SQRT_X_NO_MD:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
+; DAZ-NEXT:    [[SQRT_X_NO_MD:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]])
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[SQRT_X_NO_MD]], i64 0
-; DAZ-NEXT:    [[TMP2:%.*]] = fdiv float 1.000000e+00, [[TMP1]]
+; DAZ-NEXT:    [[TMP2:%.*]] = fdiv contract float 1.000000e+00, [[TMP1]]
 ; DAZ-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i64 0
 ; DAZ-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[SQRT_X_NO_MD]], i64 1
-; DAZ-NEXT:    [[TMP5:%.*]] = fdiv float 1.000000e+00, [[TMP4]]
+; DAZ-NEXT:    [[TMP5:%.*]] = fdiv contract float 1.000000e+00, [[TMP4]]
 ; DAZ-NEXT:    [[NO_MD:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP5]], i64 1
 ; DAZ-NEXT:    store volatile <2 x float> [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_MD_1ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
+; DAZ-NEXT:    [[SQRT_MD_1ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
 ; DAZ-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 0
-; DAZ-NEXT:    [[TMP7:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP6]])
+; DAZ-NEXT:    [[TMP7:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP6]])
 ; DAZ-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> poison, float [[TMP7]], i64 0
 ; DAZ-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP]], i64 1
-; DAZ-NEXT:    [[TMP10:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP9]])
+; DAZ-NEXT:    [[TMP10:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP9]])
 ; DAZ-NEXT:    [[MD_1ULP:%.*]] = insertelement <2 x float> [[TMP8]], float [[TMP10]], i64 1
 ; DAZ-NEXT:    store volatile <2 x float> [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_MD_1ULP_UNDEF:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
+; DAZ-NEXT:    [[SQRT_MD_1ULP_UNDEF:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !2
 ; DAZ-NEXT:    [[TMP11:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP_UNDEF]], i64 0
-; DAZ-NEXT:    [[TMP12:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP11]])
+; DAZ-NEXT:    [[TMP12:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP11]])
 ; DAZ-NEXT:    [[TMP13:%.*]] = insertelement <2 x float> poison, float [[TMP12]], i64 0
 ; DAZ-NEXT:    [[TMP14:%.*]] = extractelement <2 x float> [[SQRT_MD_1ULP_UNDEF]], i64 1
-; DAZ-NEXT:    [[TMP15:%.*]] = fdiv float undef, [[TMP14]]
+; DAZ-NEXT:    [[TMP15:%.*]] = fdiv contract float undef, [[TMP14]]
 ; DAZ-NEXT:    [[MD_1ULP_UNDEF:%.*]] = insertelement <2 x float> [[TMP13]], float [[TMP15]], i64 1
 ; DAZ-NEXT:    store volatile <2 x float> [[MD_1ULP_UNDEF]], ptr addrspace(1) [[OUT]], align 4
-; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !3
+; DAZ-NEXT:    [[SQRT_X_3ULP:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[X]]), !fpmath !3
 ; DAZ-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 0
-; DAZ-NEXT:    [[TMP17:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP16]])
+; DAZ-NEXT:    [[TMP17:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP16]])
 ; DAZ-NEXT:    [[TMP18:%.*]] = insertelement <2 x float> poison, float [[TMP17]], i64 0
 ; DAZ-NEXT:    [[TMP19:%.*]] = extractelement <2 x float> [[SQRT_X_3ULP]], i64 1
-; DAZ-NEXT:    [[TMP20:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP19]])
+; DAZ-NEXT:    [[TMP20:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP19]])
 ; DAZ-NEXT:    [[FDIV_OPENCL:%.*]] = insertelement <2 x float> [[TMP18]], float [[TMP20]], i64 1
 ; DAZ-NEXT:    store volatile <2 x float> [[FDIV_OPENCL]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
-  %sqrt.x.no.md = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
-  %no.md = fdiv <2 x float> <float 1.0, float 1.0>, %sqrt.x.no.md
+  %sqrt.x.no.md = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> %x)
+  %no.md = fdiv contract <2 x float> <float 1.0, float 1.0>, %sqrt.x.no.md
   store volatile <2 x float> %no.md, ptr addrspace(1) %out, align 4
 
   ; Matches the rsq instruction accuracy
-  %sqrt.md.1ulp = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x), !fpmath !2
-  %md.1ulp = fdiv <2 x float> <float 1.0, float 1.0>, %sqrt.md.1ulp, !fpmath !2
+  %sqrt.md.1ulp = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> %x), !fpmath !2
+  %md.1ulp = fdiv contract <2 x float> <float 1.0, float 1.0>, %sqrt.md.1ulp, !fpmath !2
   store volatile <2 x float> %md.1ulp, ptr addrspace(1) %out, align 4
 
   ; Matches the rsq instruction accuracy
-  %sqrt.md.1ulp.undef = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x), !fpmath !2
-  %md.1ulp.undef = fdiv <2 x float> <float 1.0, float undef>, %sqrt.md.1ulp.undef, !fpmath !2
+  %sqrt.md.1ulp.undef = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> %x), !fpmath !2
+  %md.1ulp.undef = fdiv contract <2 x float> <float 1.0, float undef>, %sqrt.md.1ulp.undef, !fpmath !2
   store volatile <2 x float> %md.1ulp.undef, ptr addrspace(1) %out, align 4
 
   ; Test mismatched metadata/flags between the sqrt and fdiv
 
   ; Test the expected opencl default pattern
-  %sqrt.x.3ulp = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
-  %fdiv.opencl = fdiv <2 x float> <float 1.0, float 1.0>, %sqrt.x.3ulp, !fpmath !0
+  %sqrt.x.3ulp = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> %x), !fpmath !3  ; OpenCL default requires 3 for sqrt and 2.5 for fdiv
+  %fdiv.opencl = fdiv contract <2 x float> <float 1.0, float 1.0>, %sqrt.x.3ulp, !fpmath !0
   store volatile <2 x float> %fdiv.opencl, ptr addrspace(1) %out, align 4
 
   ret void
@@ -1481,25 +1517,25 @@ define amdgpu_kernel void @multiple_arcp_fdiv_denom_1ulp_vector(ptr addrspace(1)
 define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(ptr addrspace(1) %out, float %x, float %y, float %sqr.denom) {
 ; IEEE-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[DENOM:%.*]] = call float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
-; IEEE-NEXT:    [[ARCP0:%.*]] = fdiv arcp float [[X]], [[DENOM]], !fpmath !0
-; IEEE-NEXT:    [[ARCP1:%.*]] = fdiv arcp float [[Y]], [[DENOM]], !fpmath !0
+; IEEE-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
+; IEEE-NEXT:    [[ARCP0:%.*]] = fdiv arcp contract float [[X]], [[DENOM]], !fpmath !0
+; IEEE-NEXT:    [[ARCP1:%.*]] = fdiv arcp contract float [[Y]], [[DENOM]], !fpmath !0
 ; IEEE-NEXT:    store volatile float [[ARCP0]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    ret void
 ;
 ; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[DENOM:%.*]] = call float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
-; DAZ-NEXT:    [[ARCP0:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[X]], float [[DENOM]])
-; DAZ-NEXT:    [[ARCP1:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[Y]], float [[DENOM]])
+; DAZ-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
+; DAZ-NEXT:    [[ARCP0:%.*]] = call arcp contract float @llvm.amdgcn.fdiv.fast(float [[X]], float [[DENOM]])
+; DAZ-NEXT:    [[ARCP1:%.*]] = call arcp contract float @llvm.amdgcn.fdiv.fast(float [[Y]], float [[DENOM]])
 ; DAZ-NEXT:    store volatile float [[ARCP0]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
-  %denom = call float @llvm.sqrt.f32(float %sqr.denom), !fpmath !3
-  %arcp0 = fdiv arcp float %x, %denom, !fpmath !0
-  %arcp1 = fdiv arcp float %y, %denom, !fpmath !0
+  %denom = call contract float @llvm.sqrt.f32(float %sqr.denom), !fpmath !3
+  %arcp0 = fdiv contract arcp float %x, %denom, !fpmath !0
+  %arcp1 = fdiv contract arcp float %y, %denom, !fpmath !0
   store volatile float %arcp0, ptr addrspace(1) %out
   store volatile float %arcp1, ptr addrspace(1) %out
   ret void
@@ -1508,22 +1544,22 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp(ptr addrspace(1) 
 define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrspace(1) %out, <2 x float> %x, <2 x float> %y, <2 x float> %sqr.denom) {
 ; IEEE-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[DENOM:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[SQR_DENOM]]), !fpmath !3
+; IEEE-NEXT:    [[DENOM:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[SQR_DENOM]]), !fpmath !3
 ; IEEE-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; IEEE-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[DENOM]], i64 0
-; IEEE-NEXT:    [[TMP3:%.*]] = fdiv arcp float [[TMP1]], [[TMP2]]
+; IEEE-NEXT:    [[TMP3:%.*]] = fdiv arcp contract float [[TMP1]], [[TMP2]]
 ; IEEE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
 ; IEEE-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; IEEE-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[DENOM]], i64 1
-; IEEE-NEXT:    [[TMP7:%.*]] = fdiv arcp float [[TMP5]], [[TMP6]]
+; IEEE-NEXT:    [[TMP7:%.*]] = fdiv arcp contract float [[TMP5]], [[TMP6]]
 ; IEEE-NEXT:    [[ARCP0:%.*]] = insertelement <2 x float> [[TMP4]], float [[TMP7]], i64 1
 ; IEEE-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[Y]], i64 0
 ; IEEE-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[DENOM]], i64 0
-; IEEE-NEXT:    [[TMP10:%.*]] = fdiv arcp float [[TMP8]], [[TMP9]]
+; IEEE-NEXT:    [[TMP10:%.*]] = fdiv arcp contract float [[TMP8]], [[TMP9]]
 ; IEEE-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> poison, float [[TMP10]], i64 0
 ; IEEE-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[Y]], i64 1
 ; IEEE-NEXT:    [[TMP13:%.*]] = extractelement <2 x float> [[DENOM]], i64 1
-; IEEE-NEXT:    [[TMP14:%.*]] = fdiv arcp float [[TMP12]], [[TMP13]]
+; IEEE-NEXT:    [[TMP14:%.*]] = fdiv arcp contract float [[TMP12]], [[TMP13]]
 ; IEEE-NEXT:    [[ARCP1:%.*]] = insertelement <2 x float> [[TMP11]], float [[TMP14]], i64 1
 ; IEEE-NEXT:    store volatile <2 x float> [[ARCP0]], ptr addrspace(1) [[OUT]], align 8
 ; IEEE-NEXT:    store volatile <2 x float> [[ARCP1]], ptr addrspace(1) [[OUT]], align 8
@@ -1531,30 +1567,30 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrsp
 ;
 ; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[DENOM:%.*]] = call <2 x float> @llvm.sqrt.v2f32(<2 x float> [[SQR_DENOM]]), !fpmath !3
+; DAZ-NEXT:    [[DENOM:%.*]] = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> [[SQR_DENOM]]), !fpmath !3
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X]], i64 0
 ; DAZ-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[DENOM]], i64 0
-; DAZ-NEXT:    [[TMP3:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[TMP1]], float [[TMP2]])
+; DAZ-NEXT:    [[TMP3:%.*]] = call arcp contract float @llvm.amdgcn.fdiv.fast(float [[TMP1]], float [[TMP2]])
 ; DAZ-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
 ; DAZ-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[X]], i64 1
 ; DAZ-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[DENOM]], i64 1
-; DAZ-NEXT:    [[TMP7:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[TMP5]], float [[TMP6]])
+; DAZ-NEXT:    [[TMP7:%.*]] = call arcp contract float @llvm.amdgcn.fdiv.fast(float [[TMP5]], float [[TMP6]])
 ; DAZ-NEXT:    [[ARCP0:%.*]] = insertelement <2 x float> [[TMP4]], float [[TMP7]], i64 1
 ; DAZ-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[Y]], i64 0
 ; DAZ-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[DENOM]], i64 0
-; DAZ-NEXT:    [[TMP10:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[TMP8]], float [[TMP9]])
+; DAZ-NEXT:    [[TMP10:%.*]] = call arcp contract float @llvm.amdgcn.fdiv.fast(float [[TMP8]], float [[TMP9]])
 ; DAZ-NEXT:    [[TMP11:%.*]] = insertelement <2 x float> poison, float [[TMP10]], i64 0
 ; DAZ-NEXT:    [[TMP12:%.*]] = extractelement <2 x float> [[Y]], i64 1
 ; DAZ-NEXT:    [[TMP13:%.*]] = extractelement <2 x float> [[DENOM]], i64 1
-; DAZ-NEXT:    [[TMP14:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[TMP12]], float [[TMP13]])
+; DAZ-NEXT:    [[TMP14:%.*]] = call arcp contract float @llvm.amdgcn.fdiv.fast(float [[TMP12]], float [[TMP13]])
 ; DAZ-NEXT:    [[ARCP1:%.*]] = insertelement <2 x float> [[TMP11]], float [[TMP14]], i64 1
 ; DAZ-NEXT:    store volatile <2 x float> [[ARCP0]], ptr addrspace(1) [[OUT]], align 8
 ; DAZ-NEXT:    store volatile <2 x float> [[ARCP1]], ptr addrspace(1) [[OUT]], align 8
 ; DAZ-NEXT:    ret void
 ;
-  %denom = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %sqr.denom), !fpmath !3
-  %arcp0 = fdiv arcp <2 x float> %x, %denom, !fpmath !0
-  %arcp1 = fdiv arcp <2 x float> %y, %denom, !fpmath !0
+  %denom = call contract <2 x float> @llvm.sqrt.v2f32(<2 x float> %sqr.denom), !fpmath !3
+  %arcp0 = fdiv contract arcp <2 x float> %x, %denom, !fpmath !0
+  %arcp1 = fdiv contract arcp <2 x float> %y, %denom, !fpmath !0
   store volatile <2 x float> %arcp0, ptr addrspace(1) %out
   store volatile <2 x float> %arcp1, ptr addrspace(1) %out
   ret void
@@ -1563,10 +1599,10 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_vector_25ulp(ptr addrsp
 define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(ptr addrspace(1) %out, float %x, float %y, float %z, float %sqr.denom) {
 ; IEEE-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[DENOM:%.*]] = call float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
-; IEEE-NEXT:    [[ARCP0:%.*]] = fdiv arcp float [[X]], [[DENOM]], !fpmath !0
-; IEEE-NEXT:    [[ARCP1:%.*]] = fdiv arcp float [[Y]], [[DENOM]], !fpmath !0
-; IEEE-NEXT:    [[ARCP2:%.*]] = fdiv arcp float [[Z]], [[DENOM]], !fpmath !0
+; IEEE-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
+; IEEE-NEXT:    [[ARCP0:%.*]] = fdiv arcp contract float [[X]], [[DENOM]], !fpmath !0
+; IEEE-NEXT:    [[ARCP1:%.*]] = fdiv arcp contract float [[Y]], [[DENOM]], !fpmath !0
+; IEEE-NEXT:    [[ARCP2:%.*]] = fdiv arcp contract float [[Z]], [[DENOM]], !fpmath !0
 ; IEEE-NEXT:    store volatile float [[ARCP0]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; IEEE-NEXT:    store volatile float [[ARCP2]], ptr addrspace(1) [[OUT]], align 4
@@ -1574,19 +1610,19 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(ptr addrspace(
 ;
 ; DAZ-LABEL: define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]], float [[SQR_DENOM:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[DENOM:%.*]] = call float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
-; DAZ-NEXT:    [[ARCP0:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[X]], float [[DENOM]])
-; DAZ-NEXT:    [[ARCP1:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[Y]], float [[DENOM]])
-; DAZ-NEXT:    [[ARCP2:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[Z]], float [[DENOM]])
+; DAZ-NEXT:    [[DENOM:%.*]] = call contract float @llvm.sqrt.f32(float [[SQR_DENOM]]), !fpmath !3
+; DAZ-NEXT:    [[ARCP0:%.*]] = call arcp contract float @llvm.amdgcn.fdiv.fast(float [[X]], float [[DENOM]])
+; DAZ-NEXT:    [[ARCP1:%.*]] = call arcp contract float @llvm.amdgcn.fdiv.fast(float [[Y]], float [[DENOM]])
+; DAZ-NEXT:    [[ARCP2:%.*]] = call arcp contract float @llvm.amdgcn.fdiv.fast(float [[Z]], float [[DENOM]])
 ; DAZ-NEXT:    store volatile float [[ARCP0]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    store volatile float [[ARCP1]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    store volatile float [[ARCP2]], ptr addrspace(1) [[OUT]], align 4
 ; DAZ-NEXT:    ret void
 ;
-  %denom = call float @llvm.sqrt.f32(float %sqr.denom), !fpmath !3
-  %arcp0 = fdiv arcp float %x, %denom, !fpmath !0
-  %arcp1 = fdiv arcp float %y, %denom, !fpmath !0
-  %arcp2 = fdiv arcp float %z, %denom, !fpmath !0
+  %denom = call contract float @llvm.sqrt.f32(float %sqr.denom), !fpmath !3
+  %arcp0 = fdiv contract arcp float %x, %denom, !fpmath !0
+  %arcp1 = fdiv contract arcp float %y, %denom, !fpmath !0
+  %arcp2 = fdiv contract arcp float %z, %denom, !fpmath !0
   store volatile float %arcp0, ptr addrspace(1) %out
   store volatile float %arcp1, ptr addrspace(1) %out
   store volatile float %arcp2, ptr addrspace(1) %out
@@ -1596,236 +1632,236 @@ define amdgpu_kernel void @multiple_arcp_fdiv_sqrt_denom_25ulp_x3(ptr addrspace(
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator(<4 x float> %arg) {
 ; IEEE-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator
 ; IEEE-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[DENOM:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
+; IEEE-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; IEEE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; IEEE-NEXT:    [[TMP2:%.*]] = fdiv float 1.000000e+00, [[TMP1]]
+; IEEE-NEXT:    [[TMP2:%.*]] = fdiv contract float 1.000000e+00, [[TMP1]]
 ; IEEE-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; IEEE-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; IEEE-NEXT:    [[TMP5:%.*]] = fdiv float -1.000000e+00, [[TMP4]]
+; IEEE-NEXT:    [[TMP5:%.*]] = fdiv contract float -1.000000e+00, [[TMP4]]
 ; IEEE-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP5]], i64 1
 ; IEEE-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; IEEE-NEXT:    [[TMP8:%.*]] = fdiv float 4.000000e+00, [[TMP7]]
+; IEEE-NEXT:    [[TMP8:%.*]] = fdiv contract float 4.000000e+00, [[TMP7]]
 ; IEEE-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP8]], i64 2
 ; IEEE-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; IEEE-NEXT:    [[TMP11:%.*]] = fdiv float undef, [[TMP10]]
+; IEEE-NEXT:    [[TMP11:%.*]] = fdiv contract float undef, [[TMP10]]
 ; IEEE-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP11]], i64 3
 ; IEEE-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
 ; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator
 ; DAZ-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[DENOM:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
+; DAZ-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; DAZ-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP1]])
+; DAZ-NEXT:    [[TMP2:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP1]])
 ; DAZ-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; DAZ-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; DAZ-NEXT:    [[TMP5:%.*]] = fneg float [[TMP4]]
-; DAZ-NEXT:    [[TMP6:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP5]])
+; DAZ-NEXT:    [[TMP5:%.*]] = fneg contract float [[TMP4]]
+; DAZ-NEXT:    [[TMP6:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP5]])
 ; DAZ-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP6]], i64 1
 ; DAZ-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; DAZ-NEXT:    [[TMP9:%.*]] = fdiv float 4.000000e+00, [[TMP8]]
+; DAZ-NEXT:    [[TMP9:%.*]] = fdiv contract float 4.000000e+00, [[TMP8]]
 ; DAZ-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP9]], i64 2
 ; DAZ-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; DAZ-NEXT:    [[TMP12:%.*]] = fdiv float undef, [[TMP11]]
+; DAZ-NEXT:    [[TMP12:%.*]] = fdiv contract float undef, [[TMP11]]
 ; DAZ-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP12]], i64 3
 ; DAZ-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-  %denom = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
-  %partial.rsq = fdiv <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom, !fpmath !2
+  %denom = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
+  %partial.rsq = fdiv contract <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom, !fpmath !2
   ret <4 x float> %partial.rsq
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt(<4 x float> %arg) {
 ; IEEE-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt
 ; IEEE-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[DENOM:%.*]] = call afn <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
+; IEEE-NEXT:    [[DENOM:%.*]] = call contract afn <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; IEEE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; IEEE-NEXT:    [[TMP2:%.*]] = fdiv float 1.000000e+00, [[TMP1]]
+; IEEE-NEXT:    [[TMP2:%.*]] = fdiv contract float 1.000000e+00, [[TMP1]]
 ; IEEE-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; IEEE-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; IEEE-NEXT:    [[TMP5:%.*]] = fdiv float -1.000000e+00, [[TMP4]]
+; IEEE-NEXT:    [[TMP5:%.*]] = fdiv contract float -1.000000e+00, [[TMP4]]
 ; IEEE-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP5]], i64 1
 ; IEEE-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; IEEE-NEXT:    [[TMP8:%.*]] = fdiv float 4.000000e+00, [[TMP7]]
+; IEEE-NEXT:    [[TMP8:%.*]] = fdiv contract float 4.000000e+00, [[TMP7]]
 ; IEEE-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP8]], i64 2
 ; IEEE-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; IEEE-NEXT:    [[TMP11:%.*]] = fdiv float undef, [[TMP10]]
+; IEEE-NEXT:    [[TMP11:%.*]] = fdiv contract float undef, [[TMP10]]
 ; IEEE-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP11]], i64 3
 ; IEEE-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
 ; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_sqrt
 ; DAZ-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[DENOM:%.*]] = call afn <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
+; DAZ-NEXT:    [[DENOM:%.*]] = call contract afn <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; DAZ-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP1]])
+; DAZ-NEXT:    [[TMP2:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP1]])
 ; DAZ-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; DAZ-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; DAZ-NEXT:    [[TMP5:%.*]] = fneg float [[TMP4]]
-; DAZ-NEXT:    [[TMP6:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP5]])
+; DAZ-NEXT:    [[TMP5:%.*]] = fneg contract float [[TMP4]]
+; DAZ-NEXT:    [[TMP6:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP5]])
 ; DAZ-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP6]], i64 1
 ; DAZ-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; DAZ-NEXT:    [[TMP9:%.*]] = fdiv float 4.000000e+00, [[TMP8]]
+; DAZ-NEXT:    [[TMP9:%.*]] = fdiv contract float 4.000000e+00, [[TMP8]]
 ; DAZ-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP9]], i64 2
 ; DAZ-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; DAZ-NEXT:    [[TMP12:%.*]] = fdiv float undef, [[TMP11]]
+; DAZ-NEXT:    [[TMP12:%.*]] = fdiv contract float undef, [[TMP11]]
 ; DAZ-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP12]], i64 3
 ; DAZ-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-  %denom = call afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg)
-  %partial.rsq = fdiv <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom, !fpmath !2
+  %denom = call contract afn <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg)
+  %partial.rsq = fdiv contract <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom, !fpmath !2
   ret <4 x float> %partial.rsq
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_div(<4 x float> %arg) {
 ; CHECK-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_afn_div
 ; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[DENOM:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
+; CHECK-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fneg afn float [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[TMP5]])
+; CHECK-NEXT:    [[TMP5:%.*]] = fneg contract afn float [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[TMP5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; CHECK-NEXT:    [[TMP9:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[TMP8]])
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul afn float 4.000000e+00, [[TMP9]]
+; CHECK-NEXT:    [[TMP9:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[TMP8]])
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul contract afn float 4.000000e+00, [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP10]], i64 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; CHECK-NEXT:    [[TMP13:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[TMP12]])
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul afn float undef, [[TMP13]]
+; CHECK-NEXT:    [[TMP13:%.*]] = call contract afn float @llvm.amdgcn.rcp.f32(float [[TMP12]])
+; CHECK-NEXT:    [[TMP14:%.*]] = fmul contract afn float undef, [[TMP13]]
 ; CHECK-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP11]], float [[TMP14]], i64 3
 ; CHECK-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-  %denom = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
-  %partial.rsq = fdiv afn <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom
+  %denom = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
+  %partial.rsq = fdiv contract afn <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom
   ret <4 x float> %partial.rsq
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_fdiv(<4 x float> %arg) {
 ; CHECK-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_fdiv
 ; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[DENOM:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
+; CHECK-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv float 1.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv contract float 1.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fdiv float -1.000000e+00, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fdiv contract float -1.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; CHECK-NEXT:    [[TMP8:%.*]] = fdiv float 4.000000e+00, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fdiv contract float 4.000000e+00, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP8]], i64 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; CHECK-NEXT:    [[TMP11:%.*]] = fdiv float undef, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fdiv contract float undef, [[TMP10]]
 ; CHECK-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP11]], i64 3
 ; CHECK-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-  %denom = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
-  %partial.rsq = fdiv <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom
+  %denom = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
+  %partial.rsq = fdiv contract <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom
   ret <4 x float> %partial.rsq
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt(<4 x float> %arg) {
 ; IEEE-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt
 ; IEEE-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[DENOM:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
+; IEEE-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; IEEE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; IEEE-NEXT:    [[TMP2:%.*]] = fdiv float 1.000000e+00, [[TMP1]]
+; IEEE-NEXT:    [[TMP2:%.*]] = fdiv contract float 1.000000e+00, [[TMP1]]
 ; IEEE-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; IEEE-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; IEEE-NEXT:    [[TMP5:%.*]] = fdiv float -1.000000e+00, [[TMP4]]
+; IEEE-NEXT:    [[TMP5:%.*]] = fdiv contract float -1.000000e+00, [[TMP4]]
 ; IEEE-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP5]], i64 1
 ; IEEE-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; IEEE-NEXT:    [[TMP8:%.*]] = fdiv float 4.000000e+00, [[TMP7]]
+; IEEE-NEXT:    [[TMP8:%.*]] = fdiv contract float 4.000000e+00, [[TMP7]]
 ; IEEE-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP8]], i64 2
 ; IEEE-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; IEEE-NEXT:    [[TMP11:%.*]] = fdiv float undef, [[TMP10]]
+; IEEE-NEXT:    [[TMP11:%.*]] = fdiv contract float undef, [[TMP10]]
 ; IEEE-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP11]], i64 3
 ; IEEE-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
 ; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_correct_sqrt
 ; DAZ-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[DENOM:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
+; DAZ-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]])
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; DAZ-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP1]])
+; DAZ-NEXT:    [[TMP2:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP1]])
 ; DAZ-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; DAZ-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; DAZ-NEXT:    [[TMP5:%.*]] = fneg float [[TMP4]]
-; DAZ-NEXT:    [[TMP6:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP5]])
+; DAZ-NEXT:    [[TMP5:%.*]] = fneg contract float [[TMP4]]
+; DAZ-NEXT:    [[TMP6:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP5]])
 ; DAZ-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP6]], i64 1
 ; DAZ-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; DAZ-NEXT:    [[TMP9:%.*]] = fdiv float 4.000000e+00, [[TMP8]]
+; DAZ-NEXT:    [[TMP9:%.*]] = fdiv contract float 4.000000e+00, [[TMP8]]
 ; DAZ-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP9]], i64 2
 ; DAZ-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; DAZ-NEXT:    [[TMP12:%.*]] = fdiv float undef, [[TMP11]]
+; DAZ-NEXT:    [[TMP12:%.*]] = fdiv contract float undef, [[TMP11]]
 ; DAZ-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP12]], i64 3
 ; DAZ-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-  %denom = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg)
-  %partial.rsq = fdiv <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom, !fpmath !2
+  %denom = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg)
+  %partial.rsq = fdiv contract <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom, !fpmath !2
   ret <4 x float> %partial.rsq
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp(<4 x float> %arg) {
 ; IEEE-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp
 ; IEEE-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[DENOM:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
+; IEEE-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; IEEE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; IEEE-NEXT:    [[TMP2:%.*]] = fdiv arcp float 1.000000e+00, [[TMP1]]
+; IEEE-NEXT:    [[TMP2:%.*]] = fdiv arcp contract float 1.000000e+00, [[TMP1]]
 ; IEEE-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; IEEE-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; IEEE-NEXT:    [[TMP5:%.*]] = fdiv arcp float -1.000000e+00, [[TMP4]]
+; IEEE-NEXT:    [[TMP5:%.*]] = fdiv arcp contract float -1.000000e+00, [[TMP4]]
 ; IEEE-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP5]], i64 1
 ; IEEE-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; IEEE-NEXT:    [[TMP8:%.*]] = fdiv arcp float 4.000000e+00, [[TMP7]]
+; IEEE-NEXT:    [[TMP8:%.*]] = fdiv arcp contract float 4.000000e+00, [[TMP7]]
 ; IEEE-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP8]], i64 2
 ; IEEE-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; IEEE-NEXT:    [[TMP11:%.*]] = fdiv arcp float undef, [[TMP10]]
+; IEEE-NEXT:    [[TMP11:%.*]] = fdiv arcp contract float undef, [[TMP10]]
 ; IEEE-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP11]], i64 3
 ; IEEE-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
 ; DAZ-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp
 ; DAZ-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[DENOM:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
+; DAZ-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; DAZ-NEXT:    [[TMP2:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[TMP1]])
+; DAZ-NEXT:    [[TMP2:%.*]] = call arcp contract float @llvm.amdgcn.rcp.f32(float [[TMP1]])
 ; DAZ-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; DAZ-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; DAZ-NEXT:    [[TMP5:%.*]] = fneg arcp float [[TMP4]]
-; DAZ-NEXT:    [[TMP6:%.*]] = call arcp float @llvm.amdgcn.rcp.f32(float [[TMP5]])
+; DAZ-NEXT:    [[TMP5:%.*]] = fneg arcp contract float [[TMP4]]
+; DAZ-NEXT:    [[TMP6:%.*]] = call arcp contract float @llvm.amdgcn.rcp.f32(float [[TMP5]])
 ; DAZ-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP6]], i64 1
 ; DAZ-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; DAZ-NEXT:    [[TMP9:%.*]] = fdiv arcp float 4.000000e+00, [[TMP8]]
+; DAZ-NEXT:    [[TMP9:%.*]] = fdiv arcp contract float 4.000000e+00, [[TMP8]]
 ; DAZ-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP9]], i64 2
 ; DAZ-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; DAZ-NEXT:    [[TMP12:%.*]] = fdiv arcp float undef, [[TMP11]]
+; DAZ-NEXT:    [[TMP12:%.*]] = fdiv arcp contract float undef, [[TMP11]]
 ; DAZ-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP12]], i64 3
 ; DAZ-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-  %denom = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
-  %partial.rsq = fdiv arcp <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom, !fpmath !2
+  %denom = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
+  %partial.rsq = fdiv contract arcp <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom, !fpmath !2
   ret <4 x float> %partial.rsq
 }
 
 define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp_correct(<4 x float> %arg) {
 ; CHECK-LABEL: define <4 x float> @rsq_f32_vector_mixed_constant_numerator_arcp_correct
 ; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[DENOM:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
+; CHECK-NEXT:    [[DENOM:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> [[ARG]]), !fpmath !2
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[DENOM]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = fdiv arcp float 1.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fdiv arcp contract float 1.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[DENOM]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = fdiv arcp float -1.000000e+00, [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fdiv arcp contract float -1.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[DENOM]], i64 2
-; CHECK-NEXT:    [[TMP8:%.*]] = fdiv arcp float 4.000000e+00, [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fdiv arcp contract float 4.000000e+00, [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP8]], i64 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[DENOM]], i64 3
-; CHECK-NEXT:    [[TMP11:%.*]] = fdiv arcp float undef, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fdiv arcp contract float undef, [[TMP10]]
 ; CHECK-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP11]], i64 3
 ; CHECK-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-  %denom = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
-  %partial.rsq = fdiv arcp <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom
+  %denom = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> %arg), !fpmath !2
+  %partial.rsq = fdiv contract arcp <4 x float> <float 1.0, float -1.0, float 4.0, float undef>, %denom
   ret <4 x float> %partial.rsq
 }
 
@@ -1892,41 +1928,41 @@ define <4 x float> @rcp_f32_vector_mixed_constant_numerator_arcp_correct(<4 x fl
 define <4 x float> @rsq_f32_vector_const_denom(ptr addrspace(1) %out, <2 x float> %x) {
 ; IEEE-LABEL: define <4 x float> @rsq_f32_vector_const_denom
 ; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
-; IEEE-NEXT:    [[SQRT:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> <float 4.000000e+00, float 2.000000e+00, float 8.000000e+00, float undef>), !fpmath !2
+; IEEE-NEXT:    [[SQRT:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> <float 4.000000e+00, float 2.000000e+00, float 8.000000e+00, float undef>), !fpmath !2
 ; IEEE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[SQRT]], i64 0
-; IEEE-NEXT:    [[TMP2:%.*]] = fdiv float 1.000000e+00, [[TMP1]]
+; IEEE-NEXT:    [[TMP2:%.*]] = fdiv contract float 1.000000e+00, [[TMP1]]
 ; IEEE-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; IEEE-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[SQRT]], i64 1
-; IEEE-NEXT:    [[TMP5:%.*]] = fdiv float -1.000000e+00, [[TMP4]]
+; IEEE-NEXT:    [[TMP5:%.*]] = fdiv contract float -1.000000e+00, [[TMP4]]
 ; IEEE-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP5]], i64 1
 ; IEEE-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[SQRT]], i64 2
-; IEEE-NEXT:    [[TMP8:%.*]] = fdiv float undef, [[TMP7]]
+; IEEE-NEXT:    [[TMP8:%.*]] = fdiv contract float undef, [[TMP7]]
 ; IEEE-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP6]], float [[TMP8]], i64 2
 ; IEEE-NEXT:    [[TMP10:%.*]] = extractelement <4 x float> [[SQRT]], i64 3
-; IEEE-NEXT:    [[TMP11:%.*]] = fdiv float 2.000000e+00, [[TMP10]]
+; IEEE-NEXT:    [[TMP11:%.*]] = fdiv contract float 2.000000e+00, [[TMP10]]
 ; IEEE-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP11]], i64 3
 ; IEEE-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
 ; DAZ-LABEL: define <4 x float> @rsq_f32_vector_const_denom
 ; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], <2 x float> [[X:%.*]]) #[[ATTR1]] {
-; DAZ-NEXT:    [[SQRT:%.*]] = call <4 x float> @llvm.sqrt.v4f32(<4 x float> <float 4.000000e+00, float 2.000000e+00, float 8.000000e+00, float undef>), !fpmath !2
+; DAZ-NEXT:    [[SQRT:%.*]] = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> <float 4.000000e+00, float 2.000000e+00, float 8.000000e+00, float undef>), !fpmath !2
 ; DAZ-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[SQRT]], i64 0
-; DAZ-NEXT:    [[TMP2:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP1]])
+; DAZ-NEXT:    [[TMP2:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP1]])
 ; DAZ-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i64 0
 ; DAZ-NEXT:    [[TMP4:%.*]] = extractelement <4 x float> [[SQRT]], i64 1
-; DAZ-NEXT:    [[TMP5:%.*]] = fneg float [[TMP4]]
-; DAZ-NEXT:    [[TMP6:%.*]] = call float @llvm.amdgcn.rcp.f32(float [[TMP5]])
+; DAZ-NEXT:    [[TMP5:%.*]] = fneg contract float [[TMP4]]
+; DAZ-NEXT:    [[TMP6:%.*]] = call contract float @llvm.amdgcn.rcp.f32(float [[TMP5]])
 ; DAZ-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP6]], i64 1
 ; DAZ-NEXT:    [[TMP8:%.*]] = extractelement <4 x float> [[SQRT]], i64 2
-; DAZ-NEXT:    [[TMP9:%.*]] = fdiv float undef, [[TMP8]]
+; DAZ-NEXT:    [[TMP9:%.*]] = fdiv contract float undef, [[TMP8]]
 ; DAZ-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP7]], float [[TMP9]], i64 2
 ; DAZ-NEXT:    [[TMP11:%.*]] = extractelement <4 x float> [[SQRT]], i64 3
-; DAZ-NEXT:    [[TMP12:%.*]] = fdiv float 2.000000e+00, [[TMP11]]
+; DAZ-NEXT:    [[TMP12:%.*]] = fdiv contract float 2.000000e+00, [[TMP11]]
 ; DAZ-NEXT:    [[PARTIAL_RSQ:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP12]], i64 3
 ; DAZ-NEXT:    ret <4 x float> [[PARTIAL_RSQ]]
 ;
-  %sqrt = call <4 x float> @llvm.sqrt.v4f32(<4 x float> <float 4.0, float 2.0, float 8.0, float undef>), !fpmath !2
-  %partial.rsq = fdiv <4 x float> <float 1.0, float -1.0, float undef, float 2.0>, %sqrt, !fpmath !2
+  %sqrt = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> <float 4.0, float 2.0, float 8.0, float undef>), !fpmath !2
+  %partial.rsq = fdiv contract <4 x float> <float 1.0, float -1.0, float undef, float 2.0>, %sqrt, !fpmath !2
   ret <4 x float> %partial.rsq
 }
 
