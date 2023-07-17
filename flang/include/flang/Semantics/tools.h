@@ -662,5 +662,7 @@ inline const parser::Name *getDesignatorNameIfDataRef(
   return dataRef ? std::get_if<parser::Name>(&dataRef->u) : nullptr;
 }
 
+bool CouldBeDataPointerValuedFunction(const Symbol *);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_
