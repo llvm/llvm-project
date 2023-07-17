@@ -312,6 +312,7 @@ bool CodeGenAction::beginSourceFileAction() {
 
     if (isDevice)
       pm.addPass(fir::createOMPEarlyOutliningPass());
+    pm.addPass(fir::createOMPFunctionFilteringPass());
   }
 
   pm.enableVerifier(/*verifyPasses=*/true);
