@@ -483,6 +483,11 @@ def VariableInvalidO : TestFormat_Op<[{
   custom<Test>($prop, $prop) attr-dict
 }]>, Arguments<(ins IntProperty<"int64_t">:$prop)>;
 
+// CHECK: error: property 'prop' must be bound before it is referenced
+def VariableInvalidP : TestFormat_Op<[{
+  custom<Test>(ref($prop)) attr-dict
+}]>, Arguments<(ins IntProperty<"int64_t">:$prop)>;
+
 //===----------------------------------------------------------------------===//
 // Coverage Checks
 //===----------------------------------------------------------------------===//

@@ -62,31 +62,6 @@ void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ConcatOptimization>(context);
 }
 
-struct ReshapeReshapeOptimization : public OpRewritePattern<tosa::ReshapeOp> {
-  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.getInput1();
-    Operation *definingOp = input.getDefiningOp();
-    if (!definingOp)
-      return failure();
-
-    if (tosa::ReshapeOp reshapeOp = dyn_cast<tosa::ReshapeOp>(definingOp)) {
-      rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
-          op, op.getType(), reshapeOp.getInput1(), op.getNewShape());
-      return success();
-    }
-
-    return failure();
-  }
-};
-
-void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                            MLIRContext *context) {
-  results.add<ReshapeReshapeOptimization>(context);
-}
-
 LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
   auto notOp = op.getPred().getDefiningOp<tosa::LogicalNotOp>();
   if (!notOp)
@@ -820,25 +795,32 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (inputTy == outputTy)
     return getInput1();
 
-  // Constants must have static shape.
-  if (!outputTy.hasStaticShape())
-    return {};
-
-  auto operand = llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1());
-  if (!operand)
-    return {};
-
-  // Okay to duplicate splat constants.
-  if (operand.isSplat()) {
-    return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
+  // reshape(reshape(x)) -> reshape(x)
+  if (auto reshapeOp = llvm::dyn_cast_if_present<tosa::ReshapeOp>(
+          getInput1().getDefiningOp())) {
+    getInput1Mutable().assign(reshapeOp.getInput1());
+    return getResult();
   }
 
-  // Don't duplicate other constants.
-  if (!getInput1().hasOneUse())
-    return {};
+  // reshape(const(x)) -> const(reshape-attr(x))
+  if (auto operand = llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1())) {
+    // Constants must have static shape.
+    if (!outputTy.hasStaticShape())
+      return {};
 
-  return operand.reshape(
-      llvm::cast<ShapedType>(operand.getType()).clone(getNewShape()));
+    // Okay to duplicate splat constants.
+    if (operand.isSplat())
+      return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
+
+    // Don't duplicate other constants.
+    if (!getInput1().hasOneUse())
+      return {};
+
+    return operand.reshape(
+        llvm::cast<ShapedType>(operand.getType()).clone(getNewShape()));
+  }
+
+  return {};
 }
 
 OpFoldResult PadOp::fold(FoldAdaptor adaptor) {

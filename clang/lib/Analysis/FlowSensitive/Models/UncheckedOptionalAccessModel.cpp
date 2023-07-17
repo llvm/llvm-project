@@ -683,25 +683,8 @@ void transferStdForwardCall(const CallExpr *E, const MatchFinder::MatchResult &,
                             LatticeTransferState &State) {
   assert(E->getNumArgs() == 1);
 
-  StorageLocation *LocRet = State.Env.getStorageLocation(*E, SkipPast::None);
-  if (LocRet != nullptr)
-    return;
-
-  StorageLocation *LocArg =
-      State.Env.getStorageLocation(*E->getArg(0), SkipPast::Reference);
-
-  if (LocArg == nullptr)
-    return;
-
-  Value *ValArg = State.Env.getValue(*LocArg);
-  if (ValArg == nullptr)
-    ValArg = &createOptionalValue(State.Env.makeAtomicBoolValue(), State.Env);
-
-  // Create a new storage location
-  LocRet = &State.Env.createStorageLocation(*E);
-  State.Env.setStorageLocation(*E, *LocRet);
-
-  State.Env.setValue(*LocRet, *ValArg);
+  if (auto *Loc = State.Env.getStorageLocationStrict(*E->getArg(0)))
+    State.Env.setStorageLocationStrict(*E, *Loc);
 }
 
 const Formula &evaluateEquality(Arena &A, const Formula &EqVal,

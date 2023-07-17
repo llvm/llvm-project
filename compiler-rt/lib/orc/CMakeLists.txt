@@ -131,7 +131,7 @@ else() # not Apple
       )
 
     if (MSVC)
-      set(ORC_CFLAGS "${ORC_CFLAGS} /MD")
+      set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
     endif()
   else()
     set(ORC_BUILD_TYPE STATIC)

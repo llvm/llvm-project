@@ -56,7 +56,7 @@ define i8 @test1(i8 %limit, i8 %n) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp sge i8 [[SUB]], 2
 ; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT8:%.*]]
 ; CHECK:       inbounds:
-; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -150,7 +150,7 @@ define i8 @test1a(i8 %limit, ptr %p) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp sge i8 [[SUB]], 2
 ; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT5:%.*]]
 ; CHECK:       inbounds:
-; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -404,7 +404,7 @@ define i8 @test3a(i8 %limit, ptr %p) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp sle i8 [[ADD]], [[N]]
 ; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT4:%.*]]
 ; CHECK:       inbounds:
-; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -508,7 +508,7 @@ define i8 @test4(i8 %limit, i8 %n) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp sgt i8 [[SUB]], 2
 ; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT9:%.*]]
 ; CHECK:       inbounds:
-; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -607,7 +607,7 @@ define i8 @test4a(i8 %limit, ptr %p) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp sgt i8 [[SUB]], 2
 ; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT7:%.*]]
 ; CHECK:       inbounds:
-; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -812,7 +812,7 @@ define i8 @test6(i8 %limit, i8 %n) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i8 [[ADD]], [[N]]
 ; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT7:%.*]]
 ; CHECK:       inbounds:
-; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -903,7 +903,7 @@ define i8 @test6a(i8 %limit, ptr %p) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp slt i8 [[ADD]], [[N]]
 ; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT4:%.*]]
 ; CHECK:       inbounds:
-; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -997,7 +997,7 @@ define i8 @test_overflow_check_compile_time(i8 %limit, ptr %p) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp sgt i8 [[SUB]], -2
 ; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT4:%.*]]
 ; CHECK:       inbounds:
-; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
@@ -1106,7 +1106,7 @@ define i8 @test_overflow_check_runtime(i8 %limit, ptr %p) {
 ; CHECK-NEXT:    [[CHECK:%.*]] = icmp sge i8 [[SUB]], -2
 ; CHECK-NEXT:    br i1 true, label [[INBOUNDS]], label [[OUT_OF_BOUNDS_LOOPEXIT8:%.*]]
 ; CHECK:       inbounds:
-; CHECK-NEXT:    [[IDX_NEXT]] = add nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_NEXT]] = add nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[IDX_NEXT]], [[LIMIT]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp slt i8 [[IDX_NEXT]], [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[LOOP]], label [[MAIN_EXIT_SELECTOR:%.*]]
