@@ -22619,7 +22619,8 @@ TEST_F(FormatTest, FormatsBlocks) {
                "    }\n"
                "  }\n"
                "});");
-  verifyFormat("Block b = ^int *(A *a, B *b) {}");
+  verifyFormat("Block b = ^int *(A *a, B *b) {\n"
+               "};");
   verifyFormat("BOOL (^aaa)(void) = ^BOOL {\n"
                "};");
 

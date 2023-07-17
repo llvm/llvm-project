@@ -2203,6 +2203,14 @@ define <4 x half> @v_mad_mix_v4f32_clamp_precvt(<4 x half> %src0, <4 x half> %sr
 }
 
 define i32 @mixlo_zext(float %src0, float %src1, float %src2) #0 {
+; GFX1100-LABEL: mixlo_zext:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1100-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
+;
 ; GFX900-LABEL: mixlo_zext:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2224,12 +2232,19 @@ define i32 @mixlo_zext(float %src0, float %src1, float %src2) #0 {
 ; VI-NEXT:    v_cvt_f16_f32_e32 v0, v2
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
-; CI-LABEL: mixlo_zext:
-; CI:       ; %bb.0:
-; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    v_mac_f32_e32 v2, v0, v1
-; CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
-; CI-NEXT:    s_setpc_b64 s[30:31]
+; SDAG-CI-LABEL: mixlo_zext:
+; SDAG-CI:       ; %bb.0:
+; SDAG-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; SDAG-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-CI-LABEL: mixlo_zext:
+; GISEL-CI:       ; %bb.0:
+; GISEL-CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-CI-NEXT:    v_mac_f32_e32 v2, v0, v1
+; GISEL-CI-NEXT:    v_cvt_f16_f32_e32 v0, v2
+; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.fmuladd.f32(float %src0, float %src1, float %src2)
   %cvt.result = fptrunc float %result to half
   %cvt.result.i16 = bitcast half %cvt.result to i16
