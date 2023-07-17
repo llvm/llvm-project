@@ -182,6 +182,8 @@ let Predicates = [HasStdExtZvksh], RVVConstraint = NoConstraint in {
 // Pseudo instructions
 //===----------------------------------------------------------------------===//
 
+defm PseudoVANDN : VPseudoVALU_VV_VX;
+
 multiclass VPseudoUnaryV_V {
   foreach m = MxList in {
     let VLMul = m.value in {
@@ -212,6 +214,34 @@ multiclass VPatUnarySDNode_V<SDPatternOperator op, string instruction_name> {
                    vti.RegClass:$rs1,
                    vti.AVL, vti.Log2SEW, TA_MA)>;
     }
+  }
+}
+
+// Helpers for detecting splats since we preprocess splat_vector to vmv.v.x
+// This should match the logic in RISCVDAGToDAGISel::selectVSplat
+def riscv_splat_vector : PatFrag<(ops node:$rs1),
+                                 (riscv_vmv_v_x_vl undef, node:$rs1, srcvalue)>;
+def riscv_vnot : PatFrag<(ops node:$rs1), (xor node:$rs1,
+                                               (riscv_splat_vector -1))>;
+
+foreach vti = AllIntegerVectors in {
+  let Predicates = !listconcat([HasStdExtZvbb],
+                               GetVTypePredicates<vti>.Predicates) in {
+    def : Pat<(vti.Vector (and (riscv_vnot vti.RegClass:$rs1),
+                               vti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVANDN_VV_"#vti.LMul.MX)
+                 (vti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2,
+                 vti.RegClass:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
+    def : Pat<(vti.Vector (and (riscv_splat_vector
+                                 (not vti.ScalarRegClass:$rs1)),
+                               vti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVANDN_VX_"#vti.LMul.MX)
+                 (vti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2,
+                 vti.ScalarRegClass:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
 
