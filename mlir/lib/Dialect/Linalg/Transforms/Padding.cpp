@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
@@ -125,8 +126,17 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     return rewriter.notifyMatchFailure(opToPad, "--no padding value specified");
   }
   Attribute paddingAttr = options.paddingValues[opOperand->getOperandNumber()];
-  Value paddingValue = rewriter.create<arith::ConstantOp>(
-      opToPad.getLoc(), cast<TypedAttr>(paddingAttr));
+
+  Value paddingValue;
+  if (auto complexTy = dyn_cast<ComplexType>(
+          getElementTypeOrSelf(opOperand->get().getType()))) {
+    auto complexAttr = cast<ArrayAttr>(paddingAttr);
+    paddingValue = rewriter.create<complex::ConstantOp>(opToPad.getLoc(),
+                                                        complexTy, complexAttr);
+  } else {
+    paddingValue = rewriter.create<arith::ConstantOp>(
+        opToPad.getLoc(), cast<TypedAttr>(paddingAttr));
+  }
 
   // Pad the operand to the bounding box defined by `paddedShape`.
   auto paddedTensorType = RankedTensorType::get(
