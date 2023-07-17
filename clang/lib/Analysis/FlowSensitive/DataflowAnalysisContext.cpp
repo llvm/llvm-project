@@ -72,7 +72,7 @@ StorageLocation &
 DataflowAnalysisContext::getStableStorageLocation(const VarDecl &D) {
   if (auto *Loc = getStorageLocation(D))
     return *Loc;
-  auto &Loc = createStorageLocation(D.getType());
+  auto &Loc = createStorageLocation(D.getType().getNonReferenceType());
   setStorageLocation(D, Loc);
   return Loc;
 }

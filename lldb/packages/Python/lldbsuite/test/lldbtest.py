@@ -1271,6 +1271,9 @@ class Base(unittest2.TestCase):
     def isAArch64SVE(self):
         return self.isAArch64() and "sve" in self.getCPUInfo()
 
+    def isAArch64SME(self):
+        return self.isAArch64() and "sme" in self.getCPUInfo()
+
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()
 

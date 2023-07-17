@@ -21,6 +21,13 @@
 // Helpers to define the VL patterns.
 //===----------------------------------------------------------------------===//
 
+def SDT_RISCVIntUnOp_VL : SDTypeProfile<1, 4, [SDTCisSameAs<0, 1>,
+                                               SDTCisSameAs<0, 2>,
+                                               SDTCisVec<0>, SDTCisInt<0>,
+                                               SDTCVecEltisVT<3, i1>,
+                                               SDTCisSameNumEltsAs<0, 3>,
+                                               SDTCisVT<4, XLenVT>]>;
+
 def SDT_RISCVIntBinOp_VL : SDTypeProfile<1, 5, [SDTCisSameAs<0, 1>,
                                                 SDTCisSameAs<0, 2>,
                                                 SDTCisVec<0>, SDTCisInt<0>,
@@ -95,6 +102,12 @@ def riscv_smin_vl  : SDNode<"RISCVISD::SMIN_VL",  SDT_RISCVIntBinOp_VL, [SDNPCom
 def riscv_smax_vl  : SDNode<"RISCVISD::SMAX_VL",  SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_umin_vl  : SDNode<"RISCVISD::UMIN_VL",  SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_umax_vl  : SDNode<"RISCVISD::UMAX_VL",  SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+
+def riscv_bitreverse_vl : SDNode<"RISCVISD::BITREVERSE_VL", SDT_RISCVIntUnOp_VL>;
+def riscv_bswap_vl      : SDNode<"RISCVISD::BSWAP_VL",      SDT_RISCVIntUnOp_VL>;
+def riscv_ctlz_vl       : SDNode<"RISCVISD::CTLZ_VL",       SDT_RISCVIntUnOp_VL>;
+def riscv_cttz_vl       : SDNode<"RISCVISD::CTTZ_VL",       SDT_RISCVIntUnOp_VL>;
+def riscv_ctpop_vl      : SDNode<"RISCVISD::CTPOP_VL",      SDT_RISCVIntUnOp_VL>;
 
 def riscv_saddsat_vl   : SDNode<"RISCVISD::SADDSAT_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_uaddsat_vl   : SDNode<"RISCVISD::UADDSAT_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;

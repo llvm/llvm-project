@@ -262,7 +262,7 @@ def UseNegativeImmediates
 
 def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
 
-def NotInStreamingSVEMode  : Predicate<"!Subtarget->forceStreamingCompatibleSVE()">;
+def IsNeonAvailable : Predicate<"Subtarget->isNeonAvailable()">;
 
 def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
                                   SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
@@ -7595,7 +7595,7 @@ def : Ld1Lane64IdxOpPat<extloadi8, VectorIndexH, v4i16, i32, LD1i8, VectorIndexH
 
 // Same as above, but the first element is populated using
 // scalar_to_vector + insert_subvector instead of insert_vector_elt.
-let Predicates = [NotInStreamingSVEMode] in {
+let Predicates = [IsNeonAvailable] in {
   class Ld1Lane128FirstElm<ValueType ResultTy, ValueType VecTy,
                           SDPatternOperator ExtLoad, Instruction LD1>
     : Pat<(ResultTy (scalar_to_vector (i32 (ExtLoad GPR64sp:$Rn)))),

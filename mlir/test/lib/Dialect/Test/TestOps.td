@@ -3349,6 +3349,11 @@ def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
   let arguments = (ins ArrayProperty<"int64_t", 3>:$prop);
 }
 
+def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
+  let assemblyFormat = "custom<IntProperty>($first) `+` custom<SumProperty>($second, ref($first)) attr-dict";
+  let arguments = (ins IntProperty<"int64_t">:$first, IntProperty<"int64_t">:$second);
+}
+
 // Op with a properties struct defined out-of-line. The struct has custom
 // printer/parser.
 

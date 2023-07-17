@@ -387,20 +387,19 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "s390x")
 endif()
 
 if(MSVC)
-  # Replace the /M[DT][d] flags with /MT, and strip any definitions of _DEBUG,
-  # which cause definition mismatches at link time.
   # FIXME: In fact, sanitizers should support both /MT and /MD, see PR20214.
-  if(COMPILER_RT_HAS_MT_FLAG)
-    foreach(flag_var
-      CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-      CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
-      CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-      CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
-      string(REGEX REPLACE "/M[DT]d" "/MT" ${flag_var} "${${flag_var}}")
-      string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-      string(REGEX REPLACE "/D_DEBUG" "" ${flag_var} "${${flag_var}}")
-    endforeach()
-  endif()
+  set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
+  # Remove any /M[DT][d] flags, and strip any definitions of _DEBUG.
+  # TODO: We probably could remove this altogether.
+  foreach(flag_var
+    CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+    CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO
+    CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+    CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    string(REGEX REPLACE "[/-]M[DT]d" "" ${flag_var} "${${flag_var}}")
+    string(REGEX REPLACE "[/-]MD" "" ${flag_var} "${${flag_var}}")
+    string(REGEX REPLACE "[/-]D_DEBUG" "" ${flag_var} "${${flag_var}}")
+  endforeach()
   append_list_if(COMPILER_RT_HAS_Oy_FLAG /Oy- SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_GS_FLAG /GS- SANITIZER_COMMON_CFLAGS)
 

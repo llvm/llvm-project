@@ -1258,7 +1258,9 @@ private:
                                        const SymbolStringPtr &DependantName,
                                        MaterializingInfo &EmittedMI);
 
-  Expected<SymbolFlagsMap> defineMaterializing(SymbolFlagsMap SymbolFlags);
+  Expected<SymbolFlagsMap>
+  defineMaterializing(MaterializationResponsibility &FromMR,
+                      SymbolFlagsMap SymbolFlags);
 
   Error replace(MaterializationResponsibility &FromMR,
                 std::unique_ptr<MaterializationUnit> MU);
