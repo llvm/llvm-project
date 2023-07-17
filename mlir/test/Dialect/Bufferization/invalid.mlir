@@ -103,3 +103,11 @@ func.func @invalid_tensor_copy(%arg0: tensor<?xf32>, %arg1: tensor<5xf32>) {
   // expected-error @below{{expects different type than prior uses: 'tensor<?xf32>' vs 'tensor<5xf32>'}}
   bufferization.copy_tensor %arg0, %arg1 : tensor<?xf32>
 }
+
+// -----
+
+func.func @invalid_dealloc_memref_condition_mismatch(%arg0: memref<2xf32>, %arg1: memref<4xi32>, %arg2: i1) -> i1 {
+  // expected-error @below{{must have the same number of conditions as memrefs to deallocate}}
+  %0 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<4xi32>) if (%arg2)
+  return %0 : i1
+}
