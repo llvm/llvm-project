@@ -74,6 +74,10 @@ $isWindows =  ($^O eq 'MSWin32' or $^O eq 'msys');
 # ROCM_PATH is defined relative to HIP_PATH else it is hardcoded to /opt/rocm.
 #
 $HIP_PATH=$ENV{'HIP_PATH'} // dirname(Cwd::abs_path("$0/../")); # use parent directory of hipcc
+if ($isWindows and defined $ENV{'HIP_PATH'}) {
+  $HIP_PATH =~ s/^"(.*)"$/$1/;
+  $HIP_PATH =~ s/\\/\//g;
+}
 if (-e "$HIP_PATH/bin/rocm_agent_enumerator") {
     $ROCM_PATH=$ENV{'ROCM_PATH'} // "$HIP_PATH"; # use HIP_PATH
 }elsif (-e "$HIP_PATH/../bin/rocm_agent_enumerator") { # case for backward compatibility
@@ -84,7 +88,7 @@ if (-e "$HIP_PATH/bin/rocm_agent_enumerator") {
 $CUDA_PATH=$ENV{'CUDA_PATH'} // '/usr/local/cuda';
 
 # Windows/Distro's have a different structure, all binaries are with hipcc
-if (-e "$HIP_PATH/bin/clang" or -e "$HIP_PATH/bin/clang.exe") {
+if ($isWindows or -e "$HIP_PATH/bin/clang") {
     $HIP_CLANG_PATH=$ENV{'HIP_CLANG_PATH'} // "$HIP_PATH/bin";
 } else {
     $HIP_CLANG_PATH=$ENV{'HIP_CLANG_PATH'} // "$ROCM_PATH/llvm/bin";
@@ -120,7 +124,7 @@ if (defined $HIP_RUNTIME and $HIP_RUNTIME eq "rocclr" and !defined $HIP_ROCCLR_H
 }
 
 if (not defined $HIP_PLATFORM) {
-    if (can_run("$HIP_CLANG_PATH/clang++") or can_run("clang++")) {
+    if (can_run("\"$HIP_CLANG_PATH/clang++\"") or can_run("clang++")) {
         $HIP_PLATFORM = "amd";
     } elsif (can_run("$CUDA_PATH/bin/nvcc") or can_run("nvcc")) {
         $HIP_PLATFORM = "nvidia";
