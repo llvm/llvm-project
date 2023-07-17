@@ -5,6 +5,7 @@ add_header_library(
     aarch64/bcmp_implementations.h
     aarch64/memcmp_implementations.h
     aarch64/memcpy_implementations.h
+    aarch64/memmove_implementations.h
     aarch64/memset_implementations.h
     bcmp_implementations.h
     bzero_implementations.h
@@ -21,11 +22,13 @@ add_header_library(
     riscv/bcmp_implementations.h
     riscv/memcmp_implementations.h
     riscv/memcpy_implementations.h
+    riscv/memmove_implementations.h
     riscv/memset_implementations.h
     utils.h
     x86_64/bcmp_implementations.h
     x86_64/memcmp_implementations.h
     x86_64/memcpy_implementations.h
+    x86_64/memmove_implementations.h
     x86_64/memset_implementations.h
   DEPS
     libc.src.__support.common
