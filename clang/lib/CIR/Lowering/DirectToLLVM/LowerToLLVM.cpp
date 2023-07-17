@@ -33,6 +33,7 @@
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
@@ -56,6 +57,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstdint>
 #include <optional>
 
 using namespace cir;
@@ -611,6 +613,61 @@ public:
   }
 };
 
+mlir::DenseElementsAttr
+convertStringAttrToDenseElementsAttr(mlir::cir::ConstArrayAttr attr,
+                                     mlir::Type type) {
+  auto values = llvm::SmallVector<mlir::APInt, 8>{};
+  auto stringAttr = attr.getElts().dyn_cast<mlir::StringAttr>();
+  assert(stringAttr && "expected string attribute here");
+  for (auto element : stringAttr)
+    values.push_back({8, (uint64_t)element});
+  return mlir::DenseElementsAttr::get(
+      mlir::RankedTensorType::get({(int64_t)values.size()}, type),
+      llvm::ArrayRef(values));
+}
+
+template <typename AttrTy, typename StorageTy>
+mlir::DenseElementsAttr
+convertToDenseElementsAttr(mlir::cir::ConstArrayAttr attr, mlir::Type type) {
+  auto values = llvm::SmallVector<StorageTy, 8>{};
+  auto arrayAttr = attr.getElts().dyn_cast<mlir::ArrayAttr>();
+  assert(arrayAttr && "expected array here");
+  for (auto element : arrayAttr)
+    values.push_back(element.cast<AttrTy>().getValue());
+  return mlir::DenseElementsAttr::get(
+      mlir::RankedTensorType::get({(int64_t)values.size()}, type),
+      llvm::ArrayRef(values));
+}
+
+std::optional<mlir::Attribute>
+lowerConstArrayAttr(mlir::cir::ConstArrayAttr constArr,
+                    const mlir::TypeConverter *converter) {
+
+  // Ensure ConstArrayAttr has a type.
+  auto typedConstArr = constArr.dyn_cast<mlir::TypedAttr>();
+  assert(typedConstArr && "cir::ConstArrayAttr is not a mlir::TypedAttr");
+
+  // Ensure ConstArrayAttr type is a ArrayType.
+  auto cirArrayType = typedConstArr.getType().dyn_cast<mlir::cir::ArrayType>();
+  assert(cirArrayType && "cir::ConstArrayAttr is not a cir::ArrayType");
+
+  // Is a ConstArrayAttr with an cir::ArrayType: fetch element type.
+  auto type = cirArrayType.getEltType();
+
+  // Convert array attr to LLVM compatible dense elements attr.
+  if (constArr.getElts().isa<mlir::StringAttr>())
+    return convertStringAttrToDenseElementsAttr(constArr,
+                                                converter->convertType(type));
+  if (type.isa<mlir::cir::IntType>())
+    return convertToDenseElementsAttr<mlir::cir::IntAttr, mlir::APInt>(
+        constArr, converter->convertType(type));
+  if (type.isa<mlir::FloatType>())
+    return convertToDenseElementsAttr<mlir::FloatAttr, mlir::APFloat>(
+        constArr, converter->convertType(type));
+
+  return std::nullopt;
+}
+
 class CIRConstantLowering
     : public mlir::OpConversionPattern<mlir::cir::ConstantOp> {
 public:
@@ -642,8 +699,27 @@ public:
         return mlir::success();
       }
       attr = op.getValue();
+    }
+    // TODO(cir): constant arrays are currently just pushed into the stack using
+    // the store instruction, instead of being stored as global variables and
+    // then memcopyied into the stack (as done in Clang).
+    else if (auto arrTy = op.getType().dyn_cast<mlir::cir::ArrayType>()) {
+      // Fetch operation constant array initializer.
+      auto constArr = op.getValue().dyn_cast<mlir::cir::ConstArrayAttr>();
+      if (!constArr)
+        return op.emitError() << "array does not have a constant initializer";
+
+      // Lower constant array initializer.
+      auto denseAttr = lowerConstArrayAttr(constArr, typeConverter);
+      if (!denseAttr.has_value()) {
+        op.emitError()
+            << "unsupported lowering for #cir.const_array with element type "
+            << arrTy.getEltType();
+        return mlir::failure();
+      }
+      attr = denseAttr.value();
     } else
-      return op.emitError("unsupported constant type");
+      return op.emitError() << "unsupported constant type " << op.getType();
 
     rewriter.replaceOpWithNewOp<mlir::LLVM::ConstantOp>(
         op, getTypeConverter()->convertType(op.getType()), attr);
@@ -795,44 +871,6 @@ public:
     return mlir::LogicalResult::success();
   }
 };
-
-template <typename AttrTy, typename StorageTy>
-mlir::DenseElementsAttr
-convertToDenseElementsAttr(mlir::cir::ConstArrayAttr attr, mlir::Type type) {
-  auto values = llvm::SmallVector<StorageTy, 8>{};
-  auto arrayAttr = attr.getElts().dyn_cast<mlir::ArrayAttr>();
-  assert(arrayAttr && "expected array here");
-  for (auto element : arrayAttr)
-    values.push_back(element.cast<AttrTy>().getValue());
-  return mlir::DenseElementsAttr::get(
-      mlir::RankedTensorType::get({(int64_t)values.size()}, type),
-      llvm::ArrayRef(values));
-}
-
-std::optional<mlir::Attribute>
-lowerConstArrayAttr(mlir::cir::ConstArrayAttr constArr,
-                    const mlir::TypeConverter *converter) {
-
-  // Ensure ConstArrayAttr has a type.
-  auto typedConstArr = constArr.dyn_cast<mlir::TypedAttr>();
-  assert(typedConstArr && "cir::ConstArrayAttr is not a mlir::TypedAttr");
-
-  // Ensure ConstArrayAttr type is a ArrayType.
-  auto cirArrayType = typedConstArr.getType().dyn_cast<mlir::cir::ArrayType>();
-  assert(cirArrayType && "cir::ConstArrayAttr is not a cir::ArrayType");
-
-  // Is a ConstArrayAttr with an cir::ArrayType: fetch element type.
-  auto type = cirArrayType.getEltType();
-
-  if (type.isa<mlir::cir::IntType>())
-    return convertToDenseElementsAttr<mlir::cir::IntAttr, mlir::APInt>(
-        constArr, converter->convertType(type));
-  if (type.isa<mlir::FloatType>())
-    return convertToDenseElementsAttr<mlir::FloatAttr, mlir::APFloat>(
-        constArr, converter->convertType(type));
-
-  return std::nullopt;
-}
 
 class CIRGetGlobalOpLowering
     : public mlir::OpConversionPattern<mlir::cir::GetGlobalOp> {

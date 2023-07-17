@@ -1,0 +1,17 @@
+// RUN: cir-tool %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+// XFAIL: *
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+module {
+  cir.func @testConstArrInit() {
+    %0 = cir.const(#cir.const_array<"string\00" : !cir.array<!s8i x 7>> : !cir.array<!s8i x 7>) : !cir.array<!s8i x 7>
+    // CHECK: llvm.mlir.constant(dense<[115, 116, 114, 105, 110, 103, 0]> : tensor<7xi8>) : !llvm.array<7 x i8>
+    %1 = cir.const(#cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>) : !cir.array<!s32i x 2>
+    // CHECK: llvm.mlir.constant(dense<[1, 2]> : tensor<2xi32>) : !llvm.array<2 x i32>
+    %3 = cir.const(#cir.const_array<[1.000000e+00 : f32, 2.000000e+00 : f32]> : !cir.array<f32 x 2>) : !cir.array<f32 x 2>
+    // CHECK: llvm.mlir.constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) : !llvm.array<2 x f32>
+    cir.return
+  }
+}
