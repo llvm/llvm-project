@@ -1629,4 +1629,21 @@ void WarnOnDeferredLengthCharacterScalar(SemanticsContext &context,
   }
 }
 
+bool CouldBeDataPointerValuedFunction(const Symbol *original) {
+  if (original) {
+    const Symbol &ultimate{original->GetUltimate()};
+    if (const Symbol * result{FindFunctionResult(ultimate)}) {
+      return IsPointer(*result) && !IsProcedure(*result);
+    }
+    if (const auto *generic{ultimate.detailsIf<GenericDetails>()}) {
+      for (const SymbolRef &ref : generic->specificProcs()) {
+        if (CouldBeDataPointerValuedFunction(&*ref)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 } // namespace Fortran::semantics
