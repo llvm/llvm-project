@@ -2999,7 +2999,8 @@ bool RISCVDAGToDAGISel::selectVSplatSimm5Plus1NonZero(SDValue N,
       });
 }
 
-bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
+bool RISCVDAGToDAGISel::selectVSplatUimm(SDValue N, unsigned Bits,
+                                         SDValue &SplatVal) {
   if (N.getOpcode() != RISCVISD::VMV_V_X_VL || !N.getOperand(0).isUndef() ||
       !isa<ConstantSDNode>(N.getOperand(1)))
     return false;
@@ -3007,7 +3008,7 @@ bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
   int64_t SplatImm =
       cast<ConstantSDNode>(N.getOperand(1))->getSExtValue();
 
-  if (!isUInt<5>(SplatImm))
+  if (!isUIntN(Bits, SplatImm))
     return false;
 
   SplatVal =
