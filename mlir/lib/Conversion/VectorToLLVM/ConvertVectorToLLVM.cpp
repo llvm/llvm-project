@@ -92,13 +92,11 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter,
 // Check if the last stride is non-unit or the memory space is not zero.
 static LogicalResult isMemRefTypeSupported(MemRefType memRefType,
                                            LLVMTypeConverter &converter) {
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto successStrides = getStridesAndOffset(memRefType, strides, offset);
+  if (!isLastMemrefDimUnitStride(memRefType))
+    return failure();
   FailureOr<unsigned> addressSpace =
       converter.getMemRefAddressSpace(memRefType);
-  if (failed(successStrides) || strides.back() != 1 || failed(addressSpace) ||
-      *addressSpace != 0)
+  if (failed(addressSpace) || *addressSpace != 0)
     return failure();
   return success();
 }
