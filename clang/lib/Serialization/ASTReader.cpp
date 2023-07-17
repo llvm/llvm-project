@@ -2990,6 +2990,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       BaseDirectoryAsWritten = Blob;
       assert(!F.ModuleName.empty() &&
              "MODULE_DIRECTORY found before MODULE_NAME");
+      F.BaseDirectory = std::string(Blob);
+      if (!PP.getPreprocessorOpts().ModulesCheckRelocated)
+        break;
       // If we've already loaded a module map file covering this module, we may
       // have a better path for it (relative to the current build).
       Module *M = PP.getHeaderSearchInfo().lookupModule(
@@ -3011,8 +3014,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           }
         }
         F.BaseDirectory = std::string(M->Directory->getName());
-      } else {
-        F.BaseDirectory = std::string(Blob);
       }
       break;
     }
@@ -3990,7 +3991,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   // usable header search context.
   assert(!F.ModuleName.empty() &&
          "MODULE_NAME should come before MODULE_MAP_FILE");
-  if (F.Kind == MK_ImplicitModule && ModuleMgr.begin()->Kind != MK_MainFile) {
+  if (PP.getPreprocessorOpts().ModulesCheckRelocated &&
+      F.Kind == MK_ImplicitModule && ModuleMgr.begin()->Kind != MK_MainFile) {
     // An implicitly-loaded module file should have its module listed in some
     // module map file that we've already loaded.
     Module *M =
@@ -5607,7 +5609,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       break;
 
     case SUBMODULE_DEFINITION: {
-      if (Record.size() < 12)
+      if (Record.size() < 13)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "malformed module definition");
 
@@ -5616,6 +5618,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[Idx++]);
       SubmoduleID Parent = getGlobalSubmoduleID(F, Record[Idx++]);
       Module::ModuleKind Kind = (Module::ModuleKind)Record[Idx++];
+      SourceLocation DefinitionLoc = ReadSourceLocation(F, Record[Idx++]);
       bool IsFramework = Record[Idx++];
       bool IsExplicit = Record[Idx++];
       bool IsSystem = Record[Idx++];
@@ -5636,8 +5639,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
           ModMap.findOrCreateModule(Name, ParentModule, IsFramework, IsExplicit)
               .first;
 
-      // FIXME: set the definition loc for CurrentModule, or call
-      // ModMap.setInferredModuleAllowedBy()
+      // FIXME: Call ModMap.setInferredModuleAllowedBy()
 
       SubmoduleID GlobalIndex = GlobalID - NUM_PREDEF_SUBMODULE_IDS;
       if (GlobalIndex >= SubmodulesLoaded.size() ||
@@ -5666,6 +5668,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       }
 
       CurrentModule->Kind = Kind;
+      CurrentModule->DefinitionLoc = DefinitionLoc;
       CurrentModule->Signature = F.Signature;
       CurrentModule->IsFromModuleFile = true;
       CurrentModule->IsSystem = IsSystem || CurrentModule->IsSystem;

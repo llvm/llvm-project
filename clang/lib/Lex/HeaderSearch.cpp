@@ -1783,9 +1783,6 @@ HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
 
 Module *HeaderSearch::loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
                                           bool IsSystem) {
-  if (Module *Module = ModMap.findModule(Name))
-    return Module;
-
   // Try to load a module map file.
   switch (loadModuleMapFile(Dir, IsSystem, /*IsFramework*/true)) {
   case LMM_InvalidModuleMap:
@@ -1794,10 +1791,10 @@ Module *HeaderSearch::loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
       ModMap.inferFrameworkModule(Dir, IsSystem, /*Parent=*/nullptr);
     break;
 
-  case LMM_AlreadyLoaded:
   case LMM_NoDirectory:
     return nullptr;
 
+  case LMM_AlreadyLoaded:
   case LMM_NewlyLoaded:
     break;
   }

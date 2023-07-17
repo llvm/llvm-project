@@ -1378,36 +1378,67 @@ std::optional<Value *> Attributor::getAssumedSimplified(
 }
 
 bool Attributor::getAssumedSimplifiedValues(
-    const IRPosition &IRP, const AbstractAttribute *AA,
+    const IRPosition &InitialIRP, const AbstractAttribute *AA,
     SmallVectorImpl<AA::ValueAndContext> &Values, AA::ValueScope S,
-    bool &UsedAssumedInformation) {
-  // First check all callbacks provided by outside AAs. If any of them returns
-  // a non-null value that is different from the associated value, or
-  // std::nullopt, we assume it's simplified.
-  const auto &SimplificationCBs = SimplificationCallbacks.lookup(IRP);
-  for (const auto &CB : SimplificationCBs) {
-    std::optional<Value *> CBResult = CB(IRP, AA, UsedAssumedInformation);
-    if (!CBResult.has_value())
-      continue;
-    Value *V = *CBResult;
-    if (!V)
-      return false;
-    if ((S & AA::ValueScope::Interprocedural) ||
-        AA::isValidInScope(*V, IRP.getAnchorScope()))
-      Values.push_back(AA::ValueAndContext{*V, nullptr});
-    else
-      return false;
-  }
-  if (!SimplificationCBs.empty())
-    return true;
+    bool &UsedAssumedInformation, bool RecurseForSelectAndPHI) {
+  SmallPtrSet<Value *, 8> Seen;
+  SmallVector<IRPosition, 8> Worklist;
+  Worklist.push_back(InitialIRP);
+  while (!Worklist.empty()) {
+    const IRPosition &IRP = Worklist.pop_back_val();
 
-  // If no high-level/outside simplification occurred, use AAPotentialValues.
-  const auto *PotentialValuesAA =
-      getOrCreateAAFor<AAPotentialValues>(IRP, AA, DepClassTy::OPTIONAL);
-  if (!PotentialValuesAA ||
-      !PotentialValuesAA->getAssumedSimplifiedValues(*this, Values, S))
-    return false;
-  UsedAssumedInformation |= !PotentialValuesAA->isAtFixpoint();
+    // First check all callbacks provided by outside AAs. If any of them returns
+    // a non-null value that is different from the associated value, or
+    // std::nullopt, we assume it's simplified.
+    int NV = Values.size();
+    const auto &SimplificationCBs = SimplificationCallbacks.lookup(IRP);
+    for (const auto &CB : SimplificationCBs) {
+      std::optional<Value *> CBResult = CB(IRP, AA, UsedAssumedInformation);
+      if (!CBResult.has_value())
+        continue;
+      Value *V = *CBResult;
+      if (!V)
+        return false;
+      if ((S & AA::ValueScope::Interprocedural) ||
+          AA::isValidInScope(*V, IRP.getAnchorScope()))
+        Values.push_back(AA::ValueAndContext{*V, nullptr});
+      else
+        return false;
+    }
+    if (SimplificationCBs.empty()) {
+      // If no high-level/outside simplification occurred, use
+      // AAPotentialValues.
+      const auto *PotentialValuesAA =
+          getOrCreateAAFor<AAPotentialValues>(IRP, AA, DepClassTy::OPTIONAL);
+      if (PotentialValuesAA && PotentialValuesAA->getAssumedSimplifiedValues(*this, Values, S)) {
+        UsedAssumedInformation |= !PotentialValuesAA->isAtFixpoint();
+      } else if (IRP.getPositionKind() != IRPosition::IRP_RETURNED) {
+        Values.push_back({IRP.getAssociatedValue(), IRP.getCtxI()});
+      } else {
+        // TODO: We could visit all returns and add the operands.
+        return false;
+      }
+    }
+
+    if (!RecurseForSelectAndPHI)
+      break;
+
+    for (int I = NV, E = Values.size(); I < E; ++I) {
+      Value *V = Values[I].getValue();
+      if (!isa<PHINode>(V) && !isa<SelectInst>(V))
+        continue;
+      if (!Seen.insert(V).second)
+        continue;
+      // Move the last element to this slot.
+      Values[I] = Values[E - 1];
+      // Eliminate the last slot, adjust the indices.
+      Values.pop_back();
+      --E;
+      --I;
+      // Add a new value (select or phi) to the worklist.
+      Worklist.push_back(IRPosition::value(*V));
+    }
+  }
   return true;
 }
 
@@ -1882,49 +1913,26 @@ bool Attributor::shouldPropagateCallBaseContext(const IRPosition &IRP) {
   return EnableCallSiteSpecific;
 }
 
-bool Attributor::checkForAllReturnedValuesAndReturnInsts(
-    function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred,
-    const AbstractAttribute &QueryingAA) {
-
-  const IRPosition &IRP = QueryingAA.getIRPosition();
-  // Since we need to provide return instructions we have to have an exact
-  // definition.
-  const Function *AssociatedFunction = IRP.getAssociatedFunction();
-  if (!AssociatedFunction)
-    return false;
-
-  // If this is a call site query we use the call site specific return values
-  // and liveness information.
-  // TODO: use the function scope once we have call site AAReturnedValues.
-  const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
-  const auto *AARetVal =
-      getAAFor<AAReturnedValues>(QueryingAA, QueryIRP, DepClassTy::REQUIRED);
-  if (!AARetVal || !AARetVal->getState().isValidState())
-    return false;
-
-  return AARetVal->checkForAllReturnedValuesAndReturnInsts(Pred);
-}
-
-bool Attributor::checkForAllReturnedValues(
-    function_ref<bool(Value &)> Pred, const AbstractAttribute &QueryingAA) {
+bool Attributor::checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
+                                           const AbstractAttribute &QueryingAA,
+                                           AA::ValueScope S,
+                                           bool RecurseForSelectAndPHI) {
 
   const IRPosition &IRP = QueryingAA.getIRPosition();
   const Function *AssociatedFunction = IRP.getAssociatedFunction();
   if (!AssociatedFunction)
     return false;
 
-  // TODO: use the function scope once we have call site AAReturnedValues.
-  const IRPosition &QueryIRP = IRPosition::function(
-      *AssociatedFunction, QueryingAA.getCallBaseContext());
-  const auto *AARetVal =
-      getAAFor<AAReturnedValues>(QueryingAA, QueryIRP, DepClassTy::REQUIRED);
-  if (!AARetVal || !AARetVal->getState().isValidState())
+  bool UsedAssumedInformation;
+  SmallVector<AA::ValueAndContext> Values;
+  if (!getAssumedSimplifiedValues(
+          IRPosition::returned(*AssociatedFunction), &QueryingAA, Values, S,
+          UsedAssumedInformation, RecurseForSelectAndPHI))
     return false;
 
-  return AARetVal->checkForAllReturnedValuesAndReturnInsts(
-      [&](Value &RV, const SmallSetVector<ReturnInst *, 4> &) {
-        return Pred(RV);
-      });
+  return llvm::all_of(Values, [&](const AA::ValueAndContext &VAC) {
+    return Pred(*VAC.getValue());
+  });
 }
 
 static bool checkForAllInstructionsImpl(
@@ -1968,7 +1976,6 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
   if (!Fn || Fn->isDeclaration())
     return false;
 
-  // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*Fn);
   const auto *LivenessAA =
       CheckPotentiallyDead
@@ -2007,7 +2014,6 @@ bool Attributor::checkForAllReadWriteInstructions(
   if (!AssociatedFunction)
     return false;
 
-  // TODO: use the function scope once we have call site AAReturnedValues.
   const IRPosition &QueryIRP = IRPosition::function(*AssociatedFunction);
   const auto *LivenessAA =
       getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE);
@@ -3312,10 +3318,6 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     // Return attributes are only appropriate if the return type is non void.
     Type *ReturnType = F.getReturnType();
     if (!ReturnType->isVoidTy()) {
-      // Argument attribute "returned" --- Create only one per function even
-      // though it is an argument attribute.
-      getOrCreateAAFor<AAReturnedValues>(FPos);
-
       IRPosition RetPos = IRPosition::returned(F);
       AttributeSet RetAttrs = Attrs.getRetAttrs();
 

@@ -191,8 +191,17 @@ private:
   // If BaseGV is nullptr, find base among Constant Integer candidates;
   // otherwise find base among constant GEPs sharing BaseGV as base pointer.
   void findBaseConstants(GlobalVariable *BaseGV);
-  void emitBaseConstants(Instruction *Base, Constant *Offset, Type *Ty,
-                         const consthoist::ConstantUser &ConstUser);
+
+  /// A ConstantUser grouped with the Type and Constant adjustment. The user
+  /// will be adjusted by Offset.
+  struct UserAdjustment {
+    Constant *Offset;
+    Type *Ty;
+    const consthoist::ConstantUser User;
+    UserAdjustment(Constant *O, Type *T, consthoist::ConstantUser U)
+        : Offset(O), Ty(T), User(U) {}
+  };
+  void emitBaseConstants(Instruction *Base, UserAdjustment *Adj);
   // If BaseGV is nullptr, emit Constant Integer base; otherwise emit
   // constant GEP base.
   bool emitBaseConstants(GlobalVariable *BaseGV);

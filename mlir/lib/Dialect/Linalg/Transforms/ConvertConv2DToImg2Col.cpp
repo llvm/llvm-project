@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -29,9 +30,10 @@ static bool hasAllOneValues(DenseIntElementsAttr attr) {
 }
 
 static Value createAdd(Location loc, Value x, Value y, OpBuilder &builder) {
-  bool isInt = isa<IntegerType>(x.getType());
-  if (isInt)
+  if (isa<IntegerType>(x.getType()))
     return builder.create<arith::AddIOp>(loc, x, y);
+  if (isa<ComplexType>(x.getType()))
+    return builder.create<complex::AddOp>(loc, x, y);
   return builder.create<arith::AddFOp>(loc, x, y);
 }
 
@@ -42,6 +44,8 @@ static Value createMul(Location loc, Value x, Value y, Type accType,
       convertScalarToDtype(builder, loc, x, accType, /*isUnsignedCast=*/false);
   Value yConvert =
       convertScalarToDtype(builder, loc, y, accType, /*isUnsignedCast=*/false);
+  if (isa<ComplexType>(accType))
+    return builder.create<complex::MulOp>(loc, xConvert, yConvert);
   if (isa<IntegerType>(accType))
     return builder.create<arith::MulIOp>(loc, xConvert, yConvert);
   return builder.create<arith::MulFOp>(loc, xConvert, yConvert);
@@ -111,7 +115,7 @@ rewriteInIm2Col(RewriterBase &rewriter, linalg::Conv2DNhwcHwcfOp convOp) {
   // Reshape output and filter to the LHS and result of a (B)MNK matmul.
   SmallVector<ReassociationIndices> filterReassocIndices = {{0, 1, 2}, {3}};
   auto reshapedFilterType =
-      RankedTensorType::get({fh * fw * ic, oc}, inputType.getElementType());
+      RankedTensorType::get({fh * fw * ic, oc}, filterType.getElementType());
   Value reshapedFilter = rewriter.create<tensor::CollapseShapeOp>(
       loc, reshapedFilterType, filter, filterReassocIndices);
 
