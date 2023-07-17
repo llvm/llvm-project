@@ -1717,6 +1717,27 @@ bool LoopConstrainer::run() {
     CanonicalizeLoop(PostL, false);
   CanonicalizeLoop(&OriginalLoop, true);
 
+  /// At this point:
+  /// - We've broken a "main loop" out of the loop in a way that the "main loop"
+  /// runs with the induction variable in a subset of [Begin, End).
+  /// - There is no overflow when computing "main loop" exit limit.
+  /// - Max latch taken count of the loop is limited.
+  /// It guarantees that induction variable will not overflow iterating in the
+  /// "main loop".
+  if (auto BO = dyn_cast<BinaryOperator>(MainLoopStructure.IndVarBase))
+    if (IsSignedPredicate)
+      BO->setHasNoSignedWrap(true);
+  /// TODO: support unsigned predicate.
+  /// To add NUW flag we need to prove that both operands of BO are
+  /// non-negative. E.g:
+  /// ...
+  /// %iv.next = add nsw i32 %iv, -1
+  /// %cmp = icmp ult i32 %iv.next, %n
+  /// br i1 %cmp, label %loopexit, label %loop
+  ///
+  /// -1 is MAX_UINT in terms of unsigned int. Adding anything but zero will
+  /// overflow, therefore NUW flag is not legal here.
+
   return true;
 }
 

@@ -1392,4 +1392,31 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM TMA Ops
+//===----------------------------------------------------------------------===//
+
+def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+  Arguments<(ins  LLVM_i64ptr_shared:$dstMem,
+                  LLVM_i64ptr_any:$tmaDescriptor,
+                  LLVM_i64ptr_shared:$mbar,
+                  Variadic<I32>:$coordinates)> {
+  let assemblyFormat = "$dstMem `,` $tmaDescriptor `,` $mbar `,` `box` `[`$coordinates `]` attr-dict  `:` type(operands)";
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      int dim = getCoordinates().size();
+      std::string ptx = "cp.async.bulk.tensor.";
+      ptx += std::to_string(dim) + "d.";
+      ptx += "shared::cluster.global.mbarrier::complete_tx::bytes";
+      if(dim == 1) ptx += " [%0], [%1, {%3}\], [%2];";
+      if(dim == 2) ptx += " [%0], [%1, {%3, %4}\], [%2];";
+      if(dim == 3) ptx += " [%0], [%1, {%3, %4, %5}\], [%2];";
+      if(dim == 4) ptx += " [%0], [%1, {%3, %4, %5, %6}\], [%2];";
+      if(dim == 5) ptx += " [%0], [%1, {%3, %4, %5, %6, %7}\], [%2];";
+      return ptx;
+    }
+  }];
+  let hasVerifier = 1;
+}
+
 #endif // NVVMIR_OPS

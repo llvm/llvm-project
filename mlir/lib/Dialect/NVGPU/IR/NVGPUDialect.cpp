@@ -14,6 +14,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -53,17 +54,6 @@ bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
 // NVGPU_DeviceAsyncCopyOp
 //===----------------------------------------------------------------------===//
 
-/// Return true if the last dimension of the MemRefType has unit stride. Also
-/// return true for memrefs with no strides.
-static bool isLastMemrefDimUnitStride(MemRefType type) {
-  int64_t offset;
-  SmallVector<int64_t> strides;
-  if (failed(getStridesAndOffset(type, strides, offset))) {
-    return false;
-  }
-  return strides.back() == 1;
-}
-
 LogicalResult DeviceAsyncCopyOp::verify() {
   auto srcMemref = llvm::cast<MemRefType>(getSrc().getType());
   auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
@@ -87,10 +77,23 @@ LogicalResult DeviceAsyncCopyOp::verify() {
     return emitOpError() << "expected " << dstMemref.getRank()
                          << " destination indices, got "
                          << getDstIndices().size();
+  int64_t dstElements = getDstElements().getZExtValue();
+  int64_t sizeInBytes = (dstMemref.getElementTypeBitWidth() * dstElements) / 8;
+  if (sizeInBytes != 4 && sizeInBytes != 8 && sizeInBytes != 16) {
+    unsigned dstWidth = dstMemref.getElementTypeBitWidth();
+    InFlightDiagnostic diag = emitError();
+    diag << "Requested copy elements is " << dstElements << " with width "
+         << dstMemref.getElementTypeBitWidth()
+         << ". But copy elements could be one of ";
+    if ((32 / dstWidth) > 0)
+      diag << (32 / dstWidth) << ", ";
+    if ((64 / dstWidth) > 0)
+      diag << (64 / dstWidth) << ", ";
+    if ((128 / dstWidth) > 0)
+      diag << (128 / dstWidth) << ".";
+    return diag;
+  }
   if (getBypassL1().has_value()) {
-    int64_t dstElements = getDstElements().getZExtValue();
-    int64_t sizeInBytes =
-        (dstMemref.getElementTypeBitWidth() * dstElements) / 8;
     int64_t req = 16 * 8 / dstMemref.getElementTypeBitWidth();
     if (getBypassL1().value() && sizeInBytes != 16) {
       return emitOpError() << "bypassL1 does not satify alignment for "

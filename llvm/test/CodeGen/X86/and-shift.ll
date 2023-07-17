@@ -54,8 +54,8 @@ define i64 @shift30_and2_i64(i64 %x) {
 ; X64-LABEL: shift30_and2_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    shrq $30, %rax
-; X64-NEXT:    andl $2, %eax
+; X64-NEXT:    shrl $30, %eax
+; X64-NEXT:    andl $-2, %eax
 ; X64-NEXT:    retq
   %shr = lshr i64 %x, 30
   %and = and i64 %shr, 2
