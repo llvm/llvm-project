@@ -929,7 +929,10 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(reductionTy))
       reductionTy = seqTy.getEleTy();
 
-    if (!fir::isa_trivial(reductionTy))
+    if (!fir::isa_trivial(reductionTy) &&
+        ((fir::isAllocatableType(reductionTy) ||
+          fir::isPointerType(reductionTy)) &&
+         !bounds.empty()))
       TODO(operandLocation, "reduction with unsupported type");
 
     auto op = createDataEntryOp<mlir::acc::ReductionOp>(
