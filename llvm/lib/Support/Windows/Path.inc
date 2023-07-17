@@ -158,12 +158,7 @@ std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
 }
 
 UniqueID file_status::getUniqueID() const {
-  // The file is uniquely identified by the volume serial number along
-  // with the 64-bit file identifier.
-  uint64_t FileID = (static_cast<uint64_t>(FileIndexHigh) << 32ULL) |
-                    static_cast<uint64_t>(FileIndexLow);
-
-  return UniqueID(VolumeSerialNumber, FileID);
+  return UniqueID(VolumeSerialNumber, PathHash);
 }
 
 ErrorOr<space_info> disk_space(const Twine &Path) {
@@ -362,16 +357,17 @@ std::error_code is_local(const Twine &path, bool &result) {
 }
 
 static std::error_code realPathFromHandle(HANDLE H,
-                                          SmallVectorImpl<wchar_t> &Buffer) {
+                                          SmallVectorImpl<wchar_t> &Buffer,
+                                          DWORD flags = VOLUME_NAME_DOS) {
   Buffer.resize_for_overwrite(Buffer.capacity());
   DWORD CountChars = ::GetFinalPathNameByHandleW(
-      H, Buffer.begin(), Buffer.capacity(), FILE_NAME_NORMALIZED);
+      H, Buffer.begin(), Buffer.capacity(), FILE_NAME_NORMALIZED | flags);
   if (CountChars && CountChars >= Buffer.capacity()) {
     // The buffer wasn't big enough, try again.  In this case the return value
     // *does* indicate the size of the null terminator.
     Buffer.resize_for_overwrite(CountChars);
     CountChars = ::GetFinalPathNameByHandleW(H, Buffer.begin(), Buffer.size(),
-                                             FILE_NAME_NORMALIZED);
+                                             FILE_NAME_NORMALIZED | flags);
   }
   Buffer.truncate(CountChars);
   if (CountChars == 0)
@@ -647,12 +643,7 @@ bool can_execute(const Twine &Path) {
 
 bool equivalent(file_status A, file_status B) {
   assert(status_known(A) && status_known(B));
-  return A.FileIndexHigh == B.FileIndexHigh &&
-         A.FileIndexLow == B.FileIndexLow && A.FileSizeHigh == B.FileSizeHigh &&
-         A.FileSizeLow == B.FileSizeLow &&
-         A.LastWriteTimeHigh == B.LastWriteTimeHigh &&
-         A.LastWriteTimeLow == B.LastWriteTimeLow &&
-         A.VolumeSerialNumber == B.VolumeSerialNumber;
+  return A.getUniqueID() == B.getUniqueID();
 }
 
 std::error_code equivalent(const Twine &A, const Twine &B, bool &result) {
@@ -698,6 +689,7 @@ static perms perms_from_attrs(DWORD Attrs) {
 }
 
 static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
+  SmallVector<wchar_t, MAX_PATH> ntPath;
   if (FileHandle == INVALID_HANDLE_VALUE)
     goto handle_status_error;
 
@@ -725,13 +717,37 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   if (!::GetFileInformationByHandle(FileHandle, &Info))
     goto handle_status_error;
 
+  // File indices aren't necessarily stable after closing the file handle;
+  // instead hash a canonicalized path.
+  //
+  // For getting a canonical path to the file, call GetFinalPathNameByHandleW
+  // with VOLUME_NAME_NT. We don't really care exactly what the path looks
+  // like here, as long as it is canonical (e.g. doesn't differentiate between
+  // whether a file was referred to with upper/lower case names originally).
+  // The default format with VOLUME_NAME_DOS doesn't work with all file system
+  // drivers, such as ImDisk. (See
+  // https://github.com/rust-lang/rust/pull/86447.)
+  uint64_t PathHash;
+  if (std::error_code EC =
+          realPathFromHandle(FileHandle, ntPath, VOLUME_NAME_NT)) {
+    // If realPathFromHandle failed, fall back on the fields
+    // nFileIndex{High,Low} instead. They're not necessarily stable on all file
+    // systems as they're only documented as being unique/stable as long as the
+    // file handle is open - but they're a decent fallback if we couldn't get
+    // the canonical path.
+    PathHash = (static_cast<uint64_t>(Info.nFileIndexHigh) << 32ULL) |
+               static_cast<uint64_t>(Info.nFileIndexLow);
+  } else {
+    PathHash = hash_combine_range(ntPath.begin(), ntPath.end());
+  }
+
   Result = file_status(
       file_type_from_attrs(Info.dwFileAttributes),
       perms_from_attrs(Info.dwFileAttributes), Info.nNumberOfLinks,
       Info.ftLastAccessTime.dwHighDateTime, Info.ftLastAccessTime.dwLowDateTime,
       Info.ftLastWriteTime.dwHighDateTime, Info.ftLastWriteTime.dwLowDateTime,
       Info.dwVolumeSerialNumber, Info.nFileSizeHigh, Info.nFileSizeLow,
-      Info.nFileIndexHigh, Info.nFileIndexLow);
+      PathHash);
   return std::error_code();
 
 handle_status_error:
