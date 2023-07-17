@@ -20,7 +20,7 @@
 
 namespace {
 class R600DAGToDAGISel : public AMDGPUDAGToDAGISel {
-  const R600Subtarget *Subtarget;
+  const R600Subtarget *Subtarget = nullptr;
 
   bool isConstantLoad(const MemSDNode *N, int cbID) const;
   bool SelectGlobalValueConstantOffset(SDValue Addr, SDValue &IntPtr);
