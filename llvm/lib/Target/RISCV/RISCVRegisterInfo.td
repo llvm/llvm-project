@@ -224,7 +224,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
 // meaning caller-save regs are listed before callee-save.
 // We start by allocating argument registers in reverse order since they are
 // compressible.
-def FPR16 : RegisterClass<"RISCV", [f16], 16, (add
+def FPR16 : RegisterClass<"RISCV", [f16, bf16], 16, (add
     (sequence "F%u_H", 15, 10), // fa5-fa0
     (sequence "F%u_H", 0, 7),   // ft0-f7
     (sequence "F%u_H", 16, 17), // fa6-fa7

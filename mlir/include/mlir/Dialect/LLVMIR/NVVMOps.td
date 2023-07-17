@@ -1408,11 +1408,11 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : NVVM_Op<"cp.async.bulk.tenso
       std::string ptx = "cp.async.bulk.tensor.";
       ptx += std::to_string(dim) + "d.";
       ptx += "shared::cluster.global.mbarrier::complete_tx::bytes";
-      if(dim == 1) ptx += " [%0], [%1, {%3}\], [%2];";
-      if(dim == 2) ptx += " [%0], [%1, {%3, %4}\], [%2];";
-      if(dim == 3) ptx += " [%0], [%1, {%3, %4, %5}\], [%2];";
-      if(dim == 4) ptx += " [%0], [%1, {%3, %4, %5, %6}\], [%2];";
-      if(dim == 5) ptx += " [%0], [%1, {%3, %4, %5, %6, %7}\], [%2];";
+      if(dim == 1) ptx += " [%0], [%1, {%3} ], [%2];";
+      if(dim == 2) ptx += " [%0], [%1, {%3, %4} ], [%2];";
+      if(dim == 3) ptx += " [%0], [%1, {%3, %4, %5} ], [%2];";
+      if(dim == 4) ptx += " [%0], [%1, {%3, %4, %5, %6} ], [%2];";
+      if(dim == 5) ptx += " [%0], [%1, {%3, %4, %5, %6, %7} ], [%2];";
       return ptx;
     }
   }];
