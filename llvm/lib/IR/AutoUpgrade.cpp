@@ -1235,17 +1235,57 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       return true;
     }
     if (Name.startswith("riscv.sm4ks") &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+        (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
+         F->getFunctionType()->getReturnType()->isIntegerTy(64))) {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ks,
-                                        F->getReturnType());
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ks);
       return true;
     }
     if (Name.startswith("riscv.sm4ed") &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+        (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
+         F->getFunctionType()->getReturnType()->isIntegerTy(64))) {
       rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ed,
-                                        F->getReturnType());
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ed);
+      return true;
+    }
+    if (Name.startswith("riscv.sha256sig0") &&
+        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::riscv_sha256sig0);
+      return true;
+    }
+    if (Name.startswith("riscv.sha256sig1") &&
+        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::riscv_sha256sig1);
+      return true;
+    }
+    if (Name.startswith("riscv.sha256sum0") &&
+        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::riscv_sha256sum0);
+      return true;
+    }
+    if (Name.startswith("riscv.sha256sum1") &&
+        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                        Intrinsic::riscv_sha256sum1);
+      return true;
+    }
+    if (Name.startswith("riscv.sm3p0") &&
+        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm3p0);
+      return true;
+    }
+    if (Name.startswith("riscv.sm3p1") &&
+        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+      rename(F);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm3p1);
       return true;
     }
     break;
@@ -4426,15 +4466,51 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::riscv_sm4ks:
   case Intrinsic::riscv_sm4ed: {
     // The last argument to these intrinsics used to be i8 and changed to i32.
+    // The type overload for sm4ks and sm4ed was removed.
     Value *Arg2 = CI->getArgOperand(2);
-    if (Arg2->getType()->isIntegerTy(32))
+    if (Arg2->getType()->isIntegerTy(32) && !CI->getType()->isIntegerTy(64))
       return;
 
-    Arg2 = ConstantInt::get(Type::getInt32Ty(C), cast<ConstantInt>(Arg2)->getZExtValue());
+    Value *Arg0 = CI->getArgOperand(0);
+    Value *Arg1 = CI->getArgOperand(1);
+    if (CI->getType()->isIntegerTy(64)) {
+      Arg0 = Builder.CreateTrunc(Arg0, Builder.getInt32Ty());
+      Arg1 = Builder.CreateTrunc(Arg1, Builder.getInt32Ty());
+    }
 
-    NewCall = Builder.CreateCall(NewFn, {CI->getArgOperand(0),
-                                 CI->getArgOperand(1), Arg2});
-    break;
+    Arg2 = ConstantInt::get(Type::getInt32Ty(C),
+                            cast<ConstantInt>(Arg2)->getZExtValue());
+
+    NewCall = Builder.CreateCall(NewFn, {Arg0, Arg1, Arg2});
+    Value *Res = NewCall;
+    if (Res->getType() != CI->getType())
+      Res = Builder.CreateIntCast(NewCall, CI->getType(), /*isSigned*/ true);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
+  }
+  case Intrinsic::riscv_sha256sig0:
+  case Intrinsic::riscv_sha256sig1:
+  case Intrinsic::riscv_sha256sum0:
+  case Intrinsic::riscv_sha256sum1:
+  case Intrinsic::riscv_sm3p0:
+  case Intrinsic::riscv_sm3p1: {
+    // The last argument to these intrinsics used to be i8 and changed to i32.
+    // The type overload for sm4ks and sm4ed was removed.
+    if (!CI->getType()->isIntegerTy(64))
+      return;
+
+    Value *Arg =
+        Builder.CreateTrunc(CI->getArgOperand(0), Builder.getInt32Ty());
+
+    NewCall = Builder.CreateCall(NewFn, Arg);
+    Value *Res =
+        Builder.CreateIntCast(NewCall, CI->getType(), /*isSigned*/ true);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
   }
 
   case Intrinsic::x86_xop_vfrcz_ss:
