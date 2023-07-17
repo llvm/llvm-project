@@ -77,6 +77,8 @@ std::unique_ptr<mlir::Pass> createPolymorphicOpConversionPass();
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 createOMPEarlyOutliningPass();
 std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
+createOMPMarkDeclareTargetPass();
 
 // declarative passes
 #define GEN_PASS_REGISTRATION
