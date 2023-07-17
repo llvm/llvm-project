@@ -4647,10 +4647,12 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           break;
 
         const Value *Exp = II->getArgOperand(1);
-        unsigned BitWidth =
-            Exp->getType()->getScalarType()->getIntegerBitWidth();
+        Type *ExpTy = Exp->getType();
+        unsigned BitWidth = ExpTy->getScalarType()->getIntegerBitWidth();
         KnownBits ExponentKnownBits(BitWidth);
-        computeKnownBits(Exp, DemandedElts, ExponentKnownBits, Depth + 1, Q);
+        computeKnownBits(Exp,
+                         isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
+                         ExponentKnownBits, Depth + 1, Q);
 
         if (ExponentKnownBits.Zero[0]) { // Is even
           Known.knownNot(fcNegative);
