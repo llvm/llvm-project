@@ -40,6 +40,7 @@ C c;
 // CHECK: call i32 @__cxa_atexit(ptr @_ZN1DD1Ev, ptr @d, ptr @__dso_handle)
 D d;
 
+// <rdar://problem/7458115>
 namespace test1 {
   int f();
   const int x = f();   // This has side-effects and gets emitted immediately.
@@ -51,6 +52,7 @@ namespace test1 {
   // All of these initializers end up delayed, so we check them later.
 }
 
+// <rdar://problem/8246444>
 namespace test2 {
   struct allocator { allocator(); ~allocator(); };
   struct A { A(const allocator &a = allocator()); ~A(); };
@@ -201,7 +203,7 @@ namespace test7 {
 // CHECK:   call void [[TEST1_Y_INIT]]
 // CHECK:   call void [[TEST1_Z_INIT]]
 
-// this should be nounwind
+// rdar://problem/8090834: this should be nounwind
 // CHECK-NOEXC: define internal void @_GLOBAL__sub_I_global_init.cpp() [[NUW:#[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK-NOEXC: attributes [[NUW]] = { noinline nounwind{{.*}} }
 

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
+// rdar://10633434
 
 @interface testClass
 @end

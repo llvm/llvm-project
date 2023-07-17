@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -verify -fsyntax-only -Wno-objc-root-class %s
 // expected-no-diagnostics
+// rdar://8225011
 
 int glob;
 
@@ -12,10 +13,12 @@ int glob;
 @property int r;
 @end
 
+// rdar://9027673
 // Warning on future name lookup rule is removed.
 @implementation I
 - (int) Meth { return glob; } // no warning
 @synthesize glob;
+// rdar://8248681
 - (int) Meth1: (int) p {
   extern int le;
   int l = 1;

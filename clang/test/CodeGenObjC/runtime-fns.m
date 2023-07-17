@@ -26,6 +26,7 @@ id objc_msgSend(int x) {
   return 0;
 }
 
+// rdar://6800430
 void objc_assign_weak(id value, id *location) {
 }
 

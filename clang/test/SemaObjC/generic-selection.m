@@ -11,6 +11,7 @@ __attribute__((objc_root_class))
 @property (strong) id x;
 @end
 
+// rdar://13193560
 void test0(A *a) {
   int kind = _Generic(a.x, id : 0, int : 1, float : 2);
 }

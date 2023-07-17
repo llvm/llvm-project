@@ -14,6 +14,7 @@ SEL func(void)
 	return @selector(compare:);	// expected-warning {{several methods with selector 'compare:' of mismatched types are found for the @selector expression}}
 }
 
+// rdar://16458579
 void Test16458579(void) {
  SEL s = @selector((retain));
  SEL s1 = @selector((meth1:));
@@ -38,6 +39,7 @@ int main(void) {
  SEL s9 = @selector(:enum:bool:);
 }
 
+// rdar://15794055
 @interface NSObject @end
 
 @class NSNumber;

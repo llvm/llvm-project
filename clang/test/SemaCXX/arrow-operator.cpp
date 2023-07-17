@@ -24,6 +24,7 @@ void f(C &c, D& d, E& e) {
   e->f(); // expected-error{{incomplete definition of type}}
 }
 
+// rdar://8875304
 namespace rdar8875304 {
 class Point {};
 class Line_Segment{ public: Line_Segment(const Point&){} };

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
+// rdar: // 8379892
 
 struct X {
   X();
@@ -44,6 +45,7 @@ void g(B *b) {
 
 @implementation C
 - (void)method:(B *)b {
+  // <rdar://problem/8985943>
   b.operator+ = 17; // expected-error{{'operator+' is not a valid property name (accessing an object of type 'B *')}}
   b->operator+ = 17; // expected-error{{'B' does not have a member named 'operator+'}}
 }

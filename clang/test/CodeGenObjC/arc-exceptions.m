@@ -2,7 +2,7 @@
 
 @class Ety;
 
-// These first two tests are all PR11732
+// These first two tests are all PR11732 / rdar://problem/10667070.
 
 void test0_helper(void);
 void test0(void) {

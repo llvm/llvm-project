@@ -1,7 +1,8 @@
 // RUN: %clang_analyze_cc1 -triple thumbv7-apple-ios0.0.0 -target-feature +neon -analyzer-checker=core -verify -fblocks -Wno-objc-root-class %s
 // expected-no-diagnostics
 
-// Handle casts of vectors to structs, and loading a value.
+// <rdar://problem/11405978> - Handle casts of vectors to structs, and loading
+// a value.
 typedef float float32_t;
 typedef __attribute__((neon_vector_type(2))) float32_t float32x2_t;
 

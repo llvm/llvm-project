@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
+// rdar: //8550657
 
 @interface NSArray @end
 
@@ -30,6 +31,7 @@ int main(void)
   return 0;
 }
 
+// rdar://6137845
 class TCPPObject
 {
 public:

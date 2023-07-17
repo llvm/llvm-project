@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-darwin-apple -debug-info-kind=limited -emit-llvm -o - %s | FileCheck %s
+// Radar 9199234
 
 int bar(void);
 int foo(int i) {

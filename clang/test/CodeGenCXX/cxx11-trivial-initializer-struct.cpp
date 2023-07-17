@@ -7,6 +7,8 @@
 // RUN: diff %t-c++11.ll  %t-c++17.ll
 // RUN: diff %t.ll  %t-c++03.ll
 
+// rdar://12897704
+
 struct sAFSearchPos {
     unsigned char *pos;
     unsigned char count;

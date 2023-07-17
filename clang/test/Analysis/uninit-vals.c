@@ -76,6 +76,7 @@ int ret_uninit(void) {
               // expected-note@-1{{Undefined or garbage value returned to caller}}
 }
 
+// <rdar://problem/6451816>
 typedef unsigned char Boolean;
 typedef const struct __CFNumber * CFNumberRef;
 typedef signed long CFIndex;
@@ -134,7 +135,8 @@ int pr4631_f1_b(void)
   return x;  // no-warning
 }
 
-// FP when returning a void-valued expression from a void function...or block.
+// <rdar://problem/12278788> - FP when returning a void-valued expression from
+// a void function...or block.
 void foo_radar12278788(void) { return; }
 void test_radar12278788(void) {
   return foo_radar12278788(); // no-warning

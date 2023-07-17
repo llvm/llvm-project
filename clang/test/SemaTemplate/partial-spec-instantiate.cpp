@@ -41,6 +41,7 @@ namespace WonkyAccess {
   }
 }
 
+// <rdar://problem/9169404>
 namespace rdar9169404 {
   template<typename T, T N> struct X { };
   template<bool C> struct X<bool, C> {
@@ -53,6 +54,7 @@ namespace rdar9169404 {
 #endif
 }
 
+// rdar://problem/39524996
 namespace rdar39524996 {
   template <typename T, typename U>
   struct enable_if_not_same

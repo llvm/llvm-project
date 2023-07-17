@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
+// rdar://problem/8347416
 namespace test0 {
   struct A {
     void foo(void (A::*)(int)); // expected-note {{passing argument to parameter here}}
@@ -25,6 +26,7 @@ namespace test1 {
   };
 }
 
+// Also rdar://problem/8347416
 namespace test2 {
   struct A {
     static int foo(short);

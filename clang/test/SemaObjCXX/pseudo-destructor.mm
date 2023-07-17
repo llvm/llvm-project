@@ -18,5 +18,6 @@ template <class T> void destroyReference(T &t) {
 template void destroyPointer<Root*>(Root **);
 template void destroyReference<Root*>(Root *&);
 
+// rdar://18522255
 template void destroyPointer<Forward*>(Forward **);
 template void destroyReference<Forward*>(Forward *&);

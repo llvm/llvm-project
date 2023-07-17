@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wimplicit-atomic-properties -verify -Wno-objc-root-class %s
+// rdar://8774580
 
 @interface Super
 @property (nonatomic, readwrite) int P; // OK
