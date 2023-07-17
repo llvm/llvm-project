@@ -18,6 +18,7 @@ add_flang_library(FIRTransforms
   LoopVersioning.cpp
   OMPEarlyOutlining.cpp
   OMPFunctionFiltering.cpp
+  OMPMarkDeclareTarget.cpp
 
   DEPENDS
   FIRDialect

@@ -272,9 +272,6 @@ option(LIBCXX_HAS_WIN32_THREAD_API "Ignore auto-detection and force use of win32
 option(LIBCXX_HAS_EXTERNAL_THREAD_API
   "Build libc++ with an externalized threading API.
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
-option(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY
-    "Build libc++ with an externalized threading library.
-     This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON" OFF)
 
 if (LIBCXX_ENABLE_THREADS)
   set(LIBCXX_PSTL_CPU_BACKEND "std_thread" CACHE STRING "Which PSTL CPU backend to use")
@@ -327,10 +324,6 @@ if(NOT LIBCXX_ENABLE_THREADS)
     message(FATAL_ERROR "LIBCXX_HAS_EXTERNAL_THREAD_API can only be set to ON"
                         " when LIBCXX_ENABLE_THREADS is also set to ON.")
   endif()
-  if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
-    message(FATAL_ERROR "LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY can only be set "
-                        "to ON when LIBCXX_ENABLE_THREADS is also set to ON.")
-  endif()
   if (LIBCXX_HAS_WIN32_THREAD_API)
     message(FATAL_ERROR "LIBCXX_HAS_WIN32_THREAD_API can only be set to ON"
                         " when LIBCXX_ENABLE_THREADS is also set to ON.")
@@ -339,11 +332,6 @@ if(NOT LIBCXX_ENABLE_THREADS)
 endif()
 
 if (LIBCXX_HAS_EXTERNAL_THREAD_API)
-  if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
-    message(FATAL_ERROR "The options LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY and "
-                        "LIBCXX_HAS_EXTERNAL_THREAD_API cannot both be ON at "
-                        "the same time")
-  endif()
   if (LIBCXX_HAS_PTHREAD_API)
     message(FATAL_ERROR "The options LIBCXX_HAS_EXTERNAL_THREAD_API"
                         "and LIBCXX_HAS_PTHREAD_API cannot be both"
@@ -573,17 +561,6 @@ function(cxx_add_rtti_flags target)
   endif()
 endfunction()
 
-# Threading flags =============================================================
-if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY AND LIBCXX_ENABLE_SHARED)
-  # Need to allow unresolved symbols if this is to work with shared library builds
-  if (APPLE)
-    add_link_flags("-undefined dynamic_lookup")
-  else()
-    # Relax this restriction from HandleLLVMOptions
-    string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
-  endif()
-endif()
-
 # Modules flags ===============================================================
 # FIXME The libc++ sources are fundamentally non-modular. They need special
 # versions of the headers in order to provide C++03 and legacy ABI definitions.
@@ -764,7 +741,6 @@ endif()
 config_define_if(LIBCXX_HAS_PTHREAD_API _LIBCPP_HAS_THREAD_API_PTHREAD)
 config_define_if(LIBCXX_HAS_EXTERNAL_THREAD_API _LIBCPP_HAS_THREAD_API_EXTERNAL)
 config_define_if(LIBCXX_HAS_WIN32_THREAD_API _LIBCPP_HAS_THREAD_API_WIN32)
-config_define_if(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY _LIBCPP_HAS_THREAD_LIBRARY_EXTERNAL)
 config_define_if(LIBCXX_HAS_MUSL_LIBC _LIBCPP_HAS_MUSL_LIBC)
 config_define_if(LIBCXX_NO_VCRUNTIME _LIBCPP_NO_VCRUNTIME)
 config_define_if_not(LIBCXX_ENABLE_FILESYSTEM _LIBCPP_HAS_NO_FILESYSTEM)
@@ -859,10 +835,6 @@ if (LIBCXX_ENABLE_STD_MODULES)
 endif()
 
 set(LIBCXX_TEST_DEPS "cxx_experimental")
-
-if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
-  list(APPEND LIBCXX_TEST_DEPS cxx_external_threads)
-endif()
 
 if (LIBCXX_ENABLE_CLANG_TIDY)
   list(APPEND LIBCXX_TEST_DEPS cxx-tidy)

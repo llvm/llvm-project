@@ -623,3 +623,26 @@ namespace BaseAndFieldInit {
   constexpr C c = {1,2,3};
   static_assert(c.a == 1 && c.b == 2 && c.c == 3);
 }
+
+namespace ImplicitFunction {
+  struct A {
+    int a; // ref-note {{subobject declared here}}
+  };
+
+  constexpr int callMe() {
+   A a;
+   A b{12};
+
+   /// The operator= call here will fail and the diagnostics should be fine.
+   b = a; // ref-note {{subobject 'a' is not initialized}} \
+          // ref-note {{in call to}} \
+          // expected-note {{read of uninitialized object}} \
+          // expected-note {{in call to}}
+
+   return 1;
+  }
+  static_assert(callMe() == 1, ""); // ref-error {{not an integral constant expression}} \
+                                    // ref-note {{in call to 'callMe()'}} \
+                                    // expected-error {{not an integral constant expression}} \
+                                    // expected-note {{in call to 'callMe()'}}
+}

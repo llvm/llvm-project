@@ -23,67 +23,59 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_HAS_NO_THREADS
-
-class _LIBCPP_EXPORTED_FROM_ABI thread;
 class _LIBCPP_EXPORTED_FROM_ABI __thread_id;
 
-namespace this_thread
-{
+namespace this_thread {
 
-_LIBCPP_INLINE_VISIBILITY __thread_id get_id() _NOEXCEPT;
+_LIBCPP_HIDE_FROM_ABI __thread_id get_id() _NOEXCEPT;
 
 } // namespace this_thread
 
-template<> struct hash<__thread_id>;
+template <>
+struct hash<__thread_id>;
 
-class _LIBCPP_TEMPLATE_VIS __thread_id
-{
-    // FIXME: pthread_t is a pointer on Darwin but a long on Linux.
-    // NULL is the no-thread value on Darwin.  Someone needs to check
-    // on other platforms.  We assume 0 works everywhere for now.
-    __libcpp_thread_id __id_;
+class _LIBCPP_TEMPLATE_VIS __thread_id {
+  // FIXME: pthread_t is a pointer on Darwin but a long on Linux.
+  // NULL is the no-thread value on Darwin.  Someone needs to check
+  // on other platforms.  We assume 0 works everywhere for now.
+  __libcpp_thread_id __id_;
 
-    static _LIBCPP_HIDE_FROM_ABI
-        bool __lt_impl(__thread_id __x, __thread_id __y) _NOEXCEPT
-        { // id==0 is always less than any other thread_id
-        if (__x.__id_ == 0) return __y.__id_ != 0;
-        if (__y.__id_ == 0) return false;
-        return  __libcpp_thread_id_less(__x.__id_, __y.__id_);
-        }
+  static _LIBCPP_HIDE_FROM_ABI bool
+  __lt_impl(__thread_id __x, __thread_id __y) _NOEXCEPT { // id==0 is always less than any other thread_id
+    if (__x.__id_ == 0)
+      return __y.__id_ != 0;
+    if (__y.__id_ == 0)
+      return false;
+    return __libcpp_thread_id_less(__x.__id_, __y.__id_);
+  }
 
 public:
-    _LIBCPP_INLINE_VISIBILITY
-    __thread_id() _NOEXCEPT : __id_(0) {}
+  _LIBCPP_HIDE_FROM_ABI __thread_id() _NOEXCEPT : __id_(0) {}
 
-    _LIBCPP_INLINE_VISIBILITY
-    void __reset() { __id_ = 0; }
+  _LIBCPP_HIDE_FROM_ABI void __reset() { __id_ = 0; }
 
-    friend _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT;
-#if _LIBCPP_STD_VER <= 17
-    friend _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT;
-#else // _LIBCPP_STD_VER <= 17
-    friend _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(__thread_id __x, __thread_id __y) noexcept;
-#endif // _LIBCPP_STD_VER <= 17
+  friend _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT;
+#  if _LIBCPP_STD_VER <= 17
+  friend _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT;
+#  else  // _LIBCPP_STD_VER <= 17
+  friend _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(__thread_id __x, __thread_id __y) noexcept;
+#  endif // _LIBCPP_STD_VER <= 17
 
-    template<class _CharT, class _Traits>
-    friend
-    _LIBCPP_INLINE_VISIBILITY
-    basic_ostream<_CharT, _Traits>&
-    operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id);
+  template <class _CharT, class _Traits>
+  friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+  operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id);
 
 private:
-    _LIBCPP_INLINE_VISIBILITY
-    __thread_id(__libcpp_thread_id __id) : __id_(__id) {}
+  _LIBCPP_HIDE_FROM_ABI __thread_id(__libcpp_thread_id __id) : __id_(__id) {}
 
-    _LIBCPP_HIDE_FROM_ABI friend __libcpp_thread_id __get_underlying_id(const __thread_id __id) { return __id.__id_; }
+  _LIBCPP_HIDE_FROM_ABI friend __libcpp_thread_id __get_underlying_id(const __thread_id __id) { return __id.__id_; }
 
-    friend __thread_id this_thread::get_id() _NOEXCEPT;
-    friend class _LIBCPP_EXPORTED_FROM_ABI thread;
-    friend struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>;
+  friend __thread_id this_thread::get_id() _NOEXCEPT;
+  friend class _LIBCPP_EXPORTED_FROM_ABI thread;
+  friend struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>;
 };
 
-inline _LIBCPP_HIDE_FROM_ABI
-bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT {
   // Don't pass id==0 to underlying routines
   if (__x.__id_ == 0)
     return __y.__id_ == 0;
@@ -92,15 +84,11 @@ bool operator==(__thread_id __x, __thread_id __y) _NOEXCEPT {
   return __libcpp_thread_id_equal(__x.__id_, __y.__id_);
 }
 
-#if _LIBCPP_STD_VER <= 17
+#  if _LIBCPP_STD_VER <= 17
 
-inline _LIBCPP_HIDE_FROM_ABI
-bool operator!=(__thread_id __x, __thread_id __y) _NOEXCEPT {
-  return !(__x == __y);
-}
+inline _LIBCPP_HIDE_FROM_ABI bool operator!=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__x == __y); }
 
-inline _LIBCPP_HIDE_FROM_ABI
-bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI bool operator<(__thread_id __x, __thread_id __y) _NOEXCEPT {
   return __thread_id::__lt_impl(__x.__id_, __y.__id_);
 }
 
@@ -108,10 +96,9 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(__thread_id __x, __thread_id __y) _
 inline _LIBCPP_HIDE_FROM_ABI bool operator>(__thread_id __x, __thread_id __y) _NOEXCEPT { return __y < __x; }
 inline _LIBCPP_HIDE_FROM_ABI bool operator>=(__thread_id __x, __thread_id __y) _NOEXCEPT { return !(__x < __y); }
 
-#else // _LIBCPP_STD_VER <= 17
+#  else // _LIBCPP_STD_VER <= 17
 
-inline _LIBCPP_HIDE_FROM_ABI
-strong_ordering operator<=>(__thread_id __x, __thread_id __y) noexcept {
+inline _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(__thread_id __x, __thread_id __y) noexcept {
   if (__x == __y)
     return strong_ordering::equal;
   if (__thread_id::__lt_impl(__x, __y))
@@ -119,24 +106,11 @@ strong_ordering operator<=>(__thread_id __x, __thread_id __y) noexcept {
   return strong_ordering::greater;
 }
 
-#endif // _LIBCPP_STD_VER <= 17
+#  endif // _LIBCPP_STD_VER <= 17
 
-namespace this_thread
-{
+namespace this_thread {
 
-_LIBCPP_INLINE_VISIBILITY __thread_id get_id() _NOEXCEPT;
-
-} // namespace this_thread
-
-namespace this_thread
-{
-
-inline _LIBCPP_INLINE_VISIBILITY
-__thread_id
-get_id() _NOEXCEPT
-{
-    return __libcpp_thread_get_current_id();
-}
+inline _LIBCPP_HIDE_FROM_ABI __thread_id get_id() _NOEXCEPT { return __libcpp_thread_get_current_id(); }
 
 } // namespace this_thread
 
