@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -fblocks -o %t %s
 
+// rdar: // 8064140
+
 @interface IDEWorkspaceDocument 
 {
   id _defaultEditorStateTree;

@@ -9,6 +9,7 @@ int main(void) {
   return 0;
 }
 
+// <rdar://problem/15084587>
 @interface A
 -method;
 @end

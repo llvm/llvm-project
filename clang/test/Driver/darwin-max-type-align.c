@@ -1,4 +1,5 @@
 // Check the -fmax-type-align=N flag
+// rdar://16254558
 //
 // RUN: %clang --target=x86_64-apple-macosx10.7.0 %s -o - -### 2>&1 | \
 // RUN:   FileCheck -check-prefix=TEST0 %s

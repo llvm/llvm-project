@@ -1,4 +1,5 @@
 // RUN: %clang_cc1  -fsyntax-only -Wselector -verify -Wno-objc-root-class %s
+// rdar://8851684
 
 @interface Foo
 - (void) foo;
@@ -27,6 +28,7 @@ SEL func(void)
     return  @selector(length);  // expected-warning {{no method with selector 'length' is implemented in this translation unit}}
 }
 
+// rdar://9545564
 @class MSPauseManager;
 
 @protocol MSPauseManagerDelegate 
@@ -50,6 +52,7 @@ SEL func(void)
 }
 @end
 
+// rdar://12938616
 @class NSXPCConnection;
 
 @interface NSObject
@@ -79,6 +82,7 @@ extern SEL MySelector(SEL s);
 }
 @end
 
+// rdar://14007194
 @interface UxTechTest : NSObject
 - (int) invalidate : (id)Arg;
 + (int) C_invalidate : (int)arg;
@@ -107,6 +111,7 @@ extern SEL MySelector(SEL s);
 - (int) invalidate : (id)arg;
 @end
 
+// rdar://16428638
 @interface I16428638
 - (int) compare: (I16428638 *) arg1; // commenting out this line avoids the warning
 @end
@@ -130,6 +135,7 @@ void test16428638(void) {
     (void)s;
 }
 
+// rdar://16607480
 @class NSString;
 @interface SELCanary : NSObject
 @property (readonly, nonatomic) NSString *name;

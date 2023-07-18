@@ -6,6 +6,8 @@ typedef void (^block_t)(void);
 void use_block(block_t);
 void use_int(int);
 
+// rdar://problem/10211676
+
 void test0(int i) {
   block_t block = ^{ use_int(i); };
   // CHECK-LABEL:      define {{.*}}void @test0(

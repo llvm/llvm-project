@@ -14,6 +14,7 @@ extern __unknown_anytype test1d();
 @interface A
 @end
 
+// rdar://problem/9416370
 namespace rdar9416370 {
   void test(id x) {
     if ([x foo]) {} // expected-error {{no known method '-foo'; cast the message send to the method's return type}}
@@ -21,6 +22,7 @@ namespace rdar9416370 {
   }
 }
 
+// rdar://10988847
 @class NSString; // expected-note {{forward declaration of class here}}
 namespace rdar10988847 {
   void test() {
@@ -28,6 +30,7 @@ namespace rdar10988847 {
   }
 }
 
+// rdar://13338107
 namespace rdar13338107 {
   void test() {
     id x1 = test0a;

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1  -fsyntax-only -Wduplicate-method-arg -verify -Wno-objc-root-class %s
 
+// rdar://8877730
+
 int object;
 
 @class NSString, NSArray;

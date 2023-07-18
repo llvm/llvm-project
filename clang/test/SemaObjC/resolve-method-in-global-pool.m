@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -fsyntax-only -verify -fblocks -Wno-objc-root-class %s
 // expected-no-diagnostics
 
+// rdar://16808765
+
 @interface NSObject 
 + (void)clsMethod:(int*)arg;
 @end
@@ -39,6 +41,7 @@ void func( Class c, float g ) {
     [c clsMethod: &g];
 }
 
+// rdar://18095772
 @protocol NSKeyedArchiverDelegate @end
 
 @interface NSKeyedArchiver

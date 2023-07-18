@@ -12,6 +12,7 @@ struct A {
 int a[sizeof(A<int>) == 16 ? 1 : -1];
 int a2[sizeof(A<int>::B) == 16 ? 1 : -1];
 
+// rdar://problem/8243419
 namespace test1 {
   template <typename T> struct A {
     int a;

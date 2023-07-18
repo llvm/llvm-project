@@ -380,7 +380,7 @@ namespace test10 {
   template class A<int>;
 }
 
-// class.protected friendship
+// rdar://problem/8360285: class.protected friendship
 namespace test11 {
   class A {
   protected:

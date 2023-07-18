@@ -17,6 +17,7 @@ int main(void)
 	Protocol *p1p = @protocol(cl); // expected-error {{cannot find protocol declaration for 'cl'}}
 }
 
+// rdar://17768630
 @protocol SuperProtocol; // expected-note {{'SuperProtocol' declared here}}
 @protocol TestProtocol; // expected-note {{'TestProtocol' declared here}}
 

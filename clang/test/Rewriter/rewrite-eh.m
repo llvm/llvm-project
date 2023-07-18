@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -rewrite-objc -fobjc-runtime=macosx-fragile-10.5  -fobjc-exceptions -o - %s
+// rdar://7522880
 
 @interface NSException
 @end

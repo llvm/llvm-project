@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// rdar://problem/9468526
 //
 // Setting a breakpoint on a property should create breakpoints in
 // synthesized getters/setters.

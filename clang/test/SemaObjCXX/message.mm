@@ -106,6 +106,7 @@ void test_I5(I5 *i5, String s) {
   [i5 method:s other:"world"]; // expected-error{{non-const lvalue reference to type 'String' cannot bind to a value of unrelated type 'const char[6]'}}
 }
 
+// <rdar://problem/8483253>
 @interface A
 
 struct X { };
@@ -125,6 +126,7 @@ void foo(void)
              callbackData:ptr];
 }
 
+// <rdar://problem/8807070>
 template<typename T> struct X1; // expected-note{{template is declared here}}
 
 @interface B
