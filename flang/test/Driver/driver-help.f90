@@ -27,7 +27,7 @@
 ! HELP-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! HELP-NEXT: -fconvert=<value>      Set endian conversion of data for unformatted files
 ! HELP-NEXT: -fdefault-double-8     Set the default double precision kind to an 8 byte wide type
-! HELP-NEXT: -fdefault-integer-8    Set the default integer kind to an 8 byte wide type
+! HELP-NEXT: -fdefault-integer-8    Set the default integer and logical kind to an 8 byte wide type
 ! HELP-NEXT: -fdefault-real-8       Set the default real kind to an 8 byte wide type
 ! HELP-NEXT: -ffast-math            Allow aggressive, lossy floating-point optimizations
 ! HELP-NEXT: -ffixed-form           Process source files in fixed form
@@ -125,7 +125,7 @@
 ! HELP-FC1-NEXT:                        Unparse and stop.
 ! HELP-FC1-NEXT: -fdebug-unparse        Unparse and stop.
 ! HELP-FC1-NEXT: -fdefault-double-8  Set the default double precision kind to an 8 byte wide type
-! HELP-FC1-NEXT: -fdefault-integer-8 Set the default integer kind to an 8 byte wide type
+! HELP-FC1-NEXT: -fdefault-integer-8 Set the default integer and logical kind to an 8 byte wide type
 ! HELP-FC1-NEXT: -fdefault-real-8    Set the default real kind to an 8 byte wide type
 ! HELP-FC1-NEXT: -fembed-offload-object=<value>
 ! HELP-FC1-NEXT:                        Embed Offloading device-side binary into host object file as a section.
