@@ -13,8 +13,8 @@
 
 #include "llvm/TargetParser/LoongArchTargetParser.h"
 
-using namespace llvm;
-using namespace llvm::LoongArch;
+namespace llvm {
+namespace LoongArch {
 
 const FeatureInfo AllFeatures[] = {
 #define LOONGARCH_FEATURE(NAME, KIND) {NAME, KIND},
@@ -27,15 +27,14 @@ const ArchInfo AllArchs[] = {
 #include "llvm/TargetParser/LoongArchTargetParser.def"
 };
 
-bool LoongArch::isValidArchName(StringRef Arch) {
+bool isValidArchName(StringRef Arch) {
   for (const auto A : AllArchs)
     if (A.Name == Arch)
       return true;
   return false;
 }
 
-bool LoongArch::getArchFeatures(StringRef Arch,
-                                std::vector<StringRef> &Features) {
+bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features) {
   for (const auto A : AllArchs) {
     if (A.Name == Arch) {
       for (const auto F : AllFeatures)
@@ -46,3 +45,5 @@ bool LoongArch::getArchFeatures(StringRef Arch,
   }
   return false;
 }
+} // namespace LoongArch
+} // namespace llvm
