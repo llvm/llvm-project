@@ -1128,8 +1128,6 @@ TEST_F(OpenMPIRBuilderTest, ParallelForwardAsPointers) {
   Type *I32PtrTy = Type::getInt32PtrTy(M->getContext());
   Type *StructTy = StructType::get(I32Ty, I32PtrTy);
   Type *StructPtrTy = StructTy->getPointerTo();
-  StructType *ArgStructTy =
-      StructType::get(I32PtrTy, StructPtrTy, I32PtrTy, StructPtrTy);
   Type *VoidTy = Type::getVoidTy(M->getContext());
   FunctionCallee RetI32Func = M->getOrInsertFunction("ret_i32", I32Ty);
   FunctionCallee TakeI32Func =
