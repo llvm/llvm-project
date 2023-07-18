@@ -16,6 +16,51 @@ include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
+// CreateAsyncGroupsOp
+//===----------------------------------------------------------------------===//
+
+def CreateAsyncGroupsOp :
+  Op<Transform_Dialect, "nvgpu.create_async_groups",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     TransformEachOpTrait,
+     TransformOpInterface,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Look for global to shared memory copies within the targeted op in the form
+    of vector transfer ops and convert them to async copies when possible.
+    Consecutive copies are put into the same group. A "wait" operation is
+    inserted right at the of end the group.
+
+    `bypass_l1` specifies whether `bypassL1` attributes should be added to
+    the async copies. `bypass_l1` is a compiler hint: only 16 byte transfers
+    can bypass the L1 cache, so this attribute is not set for any other transfer
+    sizes.
+
+    #### Return modes
+
+    This op consumes the `target` handle and produces the `result` handle, which
+    is mapped to the same payload operations as the `target` handle. The op
+    modifies the payload.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                   UnitAttr:$bypass_l1);
+  let results = (outs TransformHandleTypeInterface:$result);
+
+  let assemblyFormat = [{
+    $target attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // PipelineSharedMemoryCopiesOp
 //===----------------------------------------------------------------------===//
 
