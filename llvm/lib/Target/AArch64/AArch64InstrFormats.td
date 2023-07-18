@@ -861,6 +861,11 @@ let DiagnosticType = "LogicalSecondSource" in {
     let RenderMethod = "addLogicalImmNotOperands<int64_t>";
   }
 }
+
+def Imm0_127Operand : AsmImmRange<0, 127>;
+
+let OperandType = "OPERAND_IMMEDIATE" in {
+
 def logical_imm32 : Operand<i32>, IntImmLeaf<i32, [{
   return AArch64_AM::isLogicalImmediate(Imm.getZExtValue(), 32);
 }], logical_imm32_XFORM> {
@@ -893,7 +898,7 @@ def timm64_0_65535 : Operand<i64>, TImmLeaf<i64, [{
 def imm64_0_65535 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 65536;
 }]>;
-}
+} // ParserMatchClass
 
 def imm0_255 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 256;
@@ -903,7 +908,6 @@ def imm0_255 : Operand<i32>, ImmLeaf<i32, [{
 }
 
 // imm0_127 predicate - True if the immediate is in the range [0,127]
-def Imm0_127Operand : AsmImmRange<0, 127>;
 def imm0_127 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 128;
 }]> {
@@ -1039,6 +1043,8 @@ def timm32_0_255 : Operand<i32>, TImmLeaf<i32, [{
 }]> {
   let ParserMatchClass = Imm0_255Operand;
 }
+
+} // let OperandType = "OPERAND_IMMEDIATE"
 
 // An arithmetic shifter operand:
 //  {7-6} - shift type: 00 = lsl, 01 = lsr, 10 = asr
