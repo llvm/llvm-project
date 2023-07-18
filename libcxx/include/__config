@@ -1137,6 +1137,12 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 #  endif
 
+#  if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(__no_thread_safety_analysis__)
+#    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((__no_thread_safety_analysis__))
+#  else
+#    define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
+#  endif
+
 #  if defined(_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS)
 #    if defined(__clang__) && __has_attribute(acquire_capability)
 // Work around the attribute handling in clang.  When both __declspec and
