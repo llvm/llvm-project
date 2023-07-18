@@ -353,7 +353,7 @@ public:
 
   // Ref to the clangd::Diag.
   struct DiagRef {
-    Range Range;
+    clangd::Range Range;
     std::string Message;
     bool operator==(const DiagRef &Other) const {
       return std::tie(Range, Message) == std::tie(Other.Range, Other.Message);
