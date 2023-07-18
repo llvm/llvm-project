@@ -1272,6 +1272,52 @@ static ExvAndCleanup genOptionalBox(fir::FirOpBuilder &builder,
   return {fir::BoxValue(boxOrAbsent), cleanup};
 }
 
+/// Lower calls to intrinsic procedures with custom optional handling where the
+/// actual arguments have been pre-lowered
+static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
+    Fortran::lower::PreparedActualArguments &loweredActuals,
+    const Fortran::evaluate::SpecificIntrinsic *intrinsic,
+    CallContext &callContext) {
+  auto &converter = callContext.converter;
+  auto &builder = callContext.getBuilder();
+  const auto &loc = callContext.loc;
+  assert(intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+                          callContext.procRef, *intrinsic, converter));
+
+  // helper to get a particular prepared argument
+  auto getArgument = [&](std::size_t i, bool loadArg) -> fir::ExtendedValue {
+    if (!loweredActuals[i])
+      return fir::getAbsentIntrinsicArgument();
+    hlfir::Entity actual = loweredActuals[i]->getActual(loc, builder);
+    if (loadArg && fir::conformsWithPassByRef(actual.getType())) {
+      return hlfir::loadTrivialScalar(loc, builder, actual);
+    }
+    return actual;
+  };
+  // helper to get the isPresent flag for a particular prepared argument
+  auto isPresent = [&](std::size_t i) -> std::optional<mlir::Value> {
+    if (!loweredActuals[i])
+      return {builder.createBool(loc, false)};
+    if (loweredActuals[i]->handleDynamicOptional())
+      return {loweredActuals[i]->getIsPresent()};
+    return std::nullopt;
+  };
+
+  assert(callContext.resultType &&
+         "the elemental intrinsics with custom handling are all functions");
+  // if callContext.resultType is an array then this was originally an elemental
+  // call. What we are lowering here is inside the kernel of the hlfir.elemental
+  // so we should return the scalar type. If the return type is already a scalar
+  // then it should be unchanged here.
+  mlir::Type resTy = hlfir::getFortranElementType(*callContext.resultType);
+  fir::ExtendedValue result = Fortran::lower::lowerCustomIntrinsic(
+      builder, loc, callContext.getProcedureName(), resTy, isPresent,
+      getArgument, loweredActuals.size(), callContext.stmtCtx);
+
+  return {hlfir::EntityWithAttributes{extendedValueToHlfirEntity(
+      loc, builder, result, ".tmp.custom_intrinsic_result")}};
+}
+
 /// Lower calls to intrinsic procedures with actual arguments that have been
 /// pre-lowered but have not yet been prepared according to the interface.
 static std::optional<hlfir::EntityWithAttributes>
@@ -1279,6 +1325,10 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
                     const Fortran::evaluate::SpecificIntrinsic *intrinsic,
                     const fir::IntrinsicArgumentLoweringRules *argLowering,
                     CallContext &callContext) {
+  auto &converter = callContext.converter;
+  if (intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
+                       callContext.procRef, *intrinsic, converter))
+    return genCustomIntrinsicRefCore(loweredActuals, intrinsic, callContext);
   llvm::SmallVector<fir::ExtendedValue> operands;
   llvm::SmallVector<hlfir::CleanupFunction> cleanupFns;
   auto addToCleanups = [&cleanupFns](std::optional<hlfir::CleanupFunction> fn) {
@@ -1286,7 +1336,6 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
       cleanupFns.emplace_back(std::move(*fn));
   };
   auto &stmtCtx = callContext.stmtCtx;
-  auto &converter = callContext.converter;
   fir::FirOpBuilder &builder = callContext.getBuilder();
   mlir::Location loc = callContext.loc;
   for (auto arg : llvm::enumerate(loweredActuals)) {
@@ -1758,16 +1807,11 @@ genCustomElementalIntrinsicRef(
   auto prepareOptionalArg = [&](const Fortran::lower::SomeExpr &expr) {
     hlfir::EntityWithAttributes actual = Fortran::lower::convertExprToHLFIR(
         loc, converter, expr, callContext.symMap, callContext.stmtCtx);
-    if (expr.Rank() == 0) {
-      std::optional<mlir::Value> isPresent =
-          genIsPresentIfArgMaybeAbsent(loc, actual, expr, callContext,
-                                       /*passAsAllocatableOrPointer=*/false);
-      operands.emplace_back(
-          Fortran::lower::PreparedActualArgument{actual, isPresent});
-    } else {
-      TODO(loc, "elemental intrinsic with custom optional handling optional "
-                "array argument");
-    }
+    std::optional<mlir::Value> isPresent =
+        genIsPresentIfArgMaybeAbsent(loc, actual, expr, callContext,
+                                     /*passAsAllocatableOrPointer=*/false);
+    operands.emplace_back(
+        Fortran::lower::PreparedActualArgument{actual, isPresent});
   };
 
   // callback for non-optional arguments
@@ -1855,31 +1899,7 @@ genCustomIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
       callContext.procRef, *intrinsic, callContext.resultType,
       prepareOptionalArg, prepareOtherArg, converter);
 
-  // helper to get a particular prepared argument
-  auto getArgument = [&](std::size_t i, bool loadArg) -> fir::ExtendedValue {
-    if (!loweredActuals[i])
-      return fir::getAbsentIntrinsicArgument();
-    hlfir::Entity actual = loweredActuals[i]->getActual(loc, builder);
-    if (loadArg && fir::conformsWithPassByRef(actual.getType())) {
-      return hlfir::loadTrivialScalar(loc, builder, actual);
-    }
-    return actual;
-  };
-  // helper to get the isPresent flag for a particular prepared argument
-  auto isPresent = [&](std::size_t i) -> std::optional<mlir::Value> {
-    if (!loweredActuals[i])
-      return {builder.createBool(loc, false)};
-    if (loweredActuals[i]->handleDynamicOptional())
-      return {loweredActuals[i]->getIsPresent()};
-    return std::nullopt;
-  };
-
-  fir::ExtendedValue result = Fortran::lower::lowerCustomIntrinsic(
-      builder, loc, callContext.getProcedureName(), callContext.resultType,
-      isPresent, getArgument, loweredActuals.size(), stmtCtx);
-
-  return {hlfir::EntityWithAttributes{extendedValueToHlfirEntity(
-      loc, builder, result, ".tmp.custom_intrinsic_result")}};
+  return genCustomIntrinsicRefCore(loweredActuals, intrinsic, callContext);
 }
 
 /// Lower an intrinsic procedure reference.
