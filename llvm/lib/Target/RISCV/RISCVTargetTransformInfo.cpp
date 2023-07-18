@@ -263,6 +263,12 @@ static VectorType *getVRGatherIndexType(MVT DataVT, const RISCVSubtarget &ST,
   return cast<VectorType>(EVT(IndexVT).getTypeForEVT(C));
 }
 
+/// Return the cost of a vrgather.vv instruction for the type VT.  vrgather.vv
+/// is generally quadratic in the number of vreg implied by LMUL.  Note that
+/// operand (index and possibly mask) are handled separately.
+InstructionCost RISCVTTIImpl::getVRGatherVVCost(MVT VT) {
+  return getLMULCost(VT) * getLMULCost(VT);
+}
 
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
@@ -311,7 +317,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
              LT.second.getVectorNumElements() <= 256)) {
           VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, Tp->getContext());
           InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
-          return IndexCost + getLMULCost(LT.second);
+          return IndexCost + getVRGatherVVCost(LT.second);
         }
       }
       break;
@@ -331,7 +337,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
           VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
           InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
           InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
-          return 2 * IndexCost + 2 * getLMULCost(LT.second) + MaskCost;
+          return 2 * IndexCost + 2 * getVRGatherVVCost(LT.second) + MaskCost;
         }
       }
       break;
@@ -407,11 +413,11 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     return 2 * LT.first * getLMULCost(LT.second);
   case TTI::SK_Reverse: {
     // TODO: Cases to improve here:
-    // * LMUL > 1
+    // * Illegal vector types
     // * i64 on RV32
     // * i1 vector
-
-    // Most of the cost here is producing the vrgather index register
+    // At low LMUL, most of the cost is producing the vrgather index register.
+    // At high LMUL, the cost of the vrgather itself will dominate.
     // Example sequence:
     //   csrr a0, vlenb
     //   srli a0, a0, 3
@@ -420,14 +426,14 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     //   vid.v v9
     //   vrsub.vx v10, v9, a0
     //   vrgather.vv v9, v8, v10
-    unsigned LenCost = 3;
+    InstructionCost LenCost = 3;
     if (LT.second.isFixedLengthVector())
       // vrsub.vi has a 5 bit immediate field, otherwise an li suffices
       LenCost = isInt<5>(LT.second.getVectorNumElements() - 1) ? 0 : 1;
-    if (Tp->getElementType()->isIntegerTy(1))
-      // Mask operation additionally required extend and truncate
-      return LT.first * (LenCost + 6);
-    return LT.first * (LenCost + 3);
+    InstructionCost GatherCost = 2 + getVRGatherVVCost(LT.second);
+    // Mask operation additionally required extend and truncate
+    InstructionCost ExtendCost = Tp->getElementType()->isIntegerTy(1) ? 3 : 0;
+    return LT.first * (LenCost + GatherCost + ExtendCost);
   }
   }
   return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
