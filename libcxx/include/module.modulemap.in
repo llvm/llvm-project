@@ -1239,6 +1239,7 @@ module std [system] {
     export *
 
     module __mdspan {
+      module default_accessor                { private header "__mdspan/default_accessor.h" }
       module extents                         {
         private header "__mdspan/extents.h"
         export array
