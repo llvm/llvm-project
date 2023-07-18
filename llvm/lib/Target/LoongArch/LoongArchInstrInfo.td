@@ -533,224 +533,223 @@ include "LoongArchLASXInstrFormats.td"
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-class ALU_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), opstr, "$rd, $rj, $rk">;
-class ALU_2R<bits<22> op, string opstr>
-    : Fmt2R<op, (outs GPR:$rd), (ins GPR:$rj), opstr, "$rd, $rj">;
+class ALU_3R<bits<17> op>
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), "$rd, $rj, $rk">;
+class ALU_2R<bits<22> op>
+    : Fmt2R<op, (outs GPR:$rd), (ins GPR:$rj), "$rd, $rj">;
 
-class ALU_3RI2<bits<15> op, string opstr, Operand ImmOpnd>
-    : Fmt3RI2<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk, ImmOpnd:$imm2), opstr,
+class ALU_3RI2<bits<15> op, Operand ImmOpnd>
+    : Fmt3RI2<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk, ImmOpnd:$imm2),
               "$rd, $rj, $rk, $imm2">;
-class ALU_3RI3<bits<14> op, string opstr, Operand ImmOpnd>
-    : Fmt3RI3<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk, ImmOpnd:$imm3), opstr,
+class ALU_3RI3<bits<14> op, Operand ImmOpnd>
+    : Fmt3RI3<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk, ImmOpnd:$imm3),
               "$rd, $rj, $rk, $imm3">;
-class ALU_2RI5<bits<17> op, string opstr, Operand ImmOpnd>
-    : Fmt2RI5<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm5), opstr,
+class ALU_2RI5<bits<17> op, Operand ImmOpnd>
+    : Fmt2RI5<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm5),
               "$rd, $rj, $imm5">;
-class ALU_2RI6<bits<16> op, string opstr, Operand ImmOpnd>
-    : Fmt2RI6<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm6), opstr,
+class ALU_2RI6<bits<16> op, Operand ImmOpnd>
+    : Fmt2RI6<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm6),
               "$rd, $rj, $imm6">;
-class ALU_2RI12<bits<10> op, string opstr, Operand ImmOpnd>
-    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm12), opstr,
+class ALU_2RI12<bits<10> op, Operand ImmOpnd>
+    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm12),
                "$rd, $rj, $imm12">;
-class ALU_2RI16<bits<6> op, string opstr, Operand ImmOpnd>
-    : Fmt2RI16<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm16), opstr,
+class ALU_2RI16<bits<6> op, Operand ImmOpnd>
+    : Fmt2RI16<op, (outs GPR:$rd), (ins GPR:$rj, ImmOpnd:$imm16),
                "$rd, $rj, $imm16">;
-class ALU_1RI20<bits<7> op, string opstr, Operand ImmOpnd>
-    : Fmt1RI20<op, (outs GPR:$rd), (ins ImmOpnd:$imm20), opstr, "$rd, $imm20">;
+class ALU_1RI20<bits<7> op, Operand ImmOpnd>
+    : Fmt1RI20<op, (outs GPR:$rd), (ins ImmOpnd:$imm20), "$rd, $imm20">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class MISC_I15<bits<17> op, string opstr>
-    : FmtI15<op, (outs), (ins uimm15:$imm15), opstr, "$imm15">;
+class MISC_I15<bits<17> op>
+    : FmtI15<op, (outs), (ins uimm15:$imm15), "$imm15">;
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-class RDTIME_2R<bits<22> op, string opstr>
-    : Fmt2R<op, (outs GPR:$rd, GPR:$rj), (ins), opstr, "$rd, $rj">;
+class RDTIME_2R<bits<22> op>
+    : Fmt2R<op, (outs GPR:$rd, GPR:$rj), (ins), "$rd, $rj">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-class BrCC_2RI16<bits<6> op, string opstr>
-    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2_br:$imm16), opstr,
+class BrCC_2RI16<bits<6> op>
+    : Fmt2RI16<op, (outs), (ins GPR:$rj, GPR:$rd, simm16_lsl2_br:$imm16),
                "$rj, $rd, $imm16"> {
   let isBranch = 1;
   let isTerminator = 1;
 }
-class BrCCZ_1RI21<bits<6> op, string opstr>
-    : Fmt1RI21<op, (outs), (ins GPR:$rj, simm21_lsl2:$imm21), opstr,
+class BrCCZ_1RI21<bits<6> op>
+    : Fmt1RI21<op, (outs), (ins GPR:$rj, simm21_lsl2:$imm21),
                "$rj, $imm21"> {
   let isBranch = 1;
   let isTerminator = 1;
 }
-class Br_I26<bits<6> op, string opstr>
-    : FmtI26<op, (outs), (ins simm26_b:$imm26), opstr, "$imm26"> {
+class Br_I26<bits<6> op>
+    : FmtI26<op, (outs), (ins simm26_b:$imm26), "$imm26"> {
   let isBranch = 1;
   let isTerminator = 1;
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
-class LOAD_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), opstr, "$rd, $rj, $rk">;
-class LOAD_2RI12<bits<10> op, string opstr>
-    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, simm12_addlike:$imm12), opstr,
+class LOAD_3R<bits<17> op>
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rj, GPR:$rk), "$rd, $rj, $rk">;
+class LOAD_2RI12<bits<10> op>
+    : Fmt2RI12<op, (outs GPR:$rd), (ins GPR:$rj, simm12_addlike:$imm12),
                "$rd, $rj, $imm12">;
-class LOAD_2RI14<bits<8> op, string opstr>
-    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14), opstr,
+class LOAD_2RI14<bits<8> op>
+    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14),
                "$rd, $rj, $imm14">;
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
-class STORE_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs), (ins GPR:$rd, GPR:$rj, GPR:$rk), opstr,
+class STORE_3R<bits<17> op>
+    : Fmt3R<op, (outs), (ins GPR:$rd, GPR:$rj, GPR:$rk),
             "$rd, $rj, $rk">;
-class STORE_2RI12<bits<10> op, string opstr>
-    : Fmt2RI12<op, (outs), (ins GPR:$rd, GPR:$rj, simm12_addlike:$imm12), opstr,
+class STORE_2RI12<bits<10> op>
+    : Fmt2RI12<op, (outs), (ins GPR:$rd, GPR:$rj, simm12_addlike:$imm12),
                "$rd, $rj, $imm12">;
-class STORE_2RI14<bits<8> op, string opstr>
-    : Fmt2RI14<op, (outs), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14), opstr,
+class STORE_2RI14<bits<8> op>
+    : Fmt2RI14<op, (outs), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14),
                "$rd, $rj, $imm14">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1, Constraints = "@earlyclobber $rd" in
-class AM_3R<bits<17> op, string opstr>
-    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj), opstr,
+class AM_3R<bits<17> op>
+    : Fmt3R<op, (outs GPR:$rd), (ins GPR:$rk, GPRMemAtomic:$rj),
             "$rd, $rk, $rj">;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-class LLBase<bits<8> op, string opstr>
-    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14), opstr,
+class LLBase<bits<8> op>
+    : Fmt2RI14<op, (outs GPR:$rd), (ins GPR:$rj, simm14_lsl2:$imm14),
                "$rd, $rj, $imm14">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Constraints = "$rd = $dst" in
-class SCBase<bits<8> op, string opstr>
+class SCBase<bits<8> op>
     : Fmt2RI14<op, (outs GPR:$dst), (ins GPR:$rd, GPR:$rj, simm14_lsl2:$imm14),
-               opstr, "$rd, $rj, $imm14">;
+               "$rd, $rj, $imm14">;
 
 let hasSideEffects = 1 in
-class IOCSRRD<bits<22> op, string opstr>
-    : Fmt2R<op, (outs GPR:$rd), (ins GPR:$rj), opstr, "$rd, $rj">;
+class IOCSRRD<bits<22> op>
+    : Fmt2R<op, (outs GPR:$rd), (ins GPR:$rj), "$rd, $rj">;
 
 let hasSideEffects = 1 in
-class IOCSRWR<bits<22> op, string opstr>
-    : Fmt2R<op, (outs), (ins GPR:$rd, GPR:$rj), opstr, "$rd, $rj">;
+class IOCSRWR<bits<22> op>
+    : Fmt2R<op, (outs), (ins GPR:$rd, GPR:$rj), "$rd, $rj">;
 
 //===----------------------------------------------------------------------===//
 // Basic Integer Instructions
 //===----------------------------------------------------------------------===//
 
 // Arithmetic Operation Instructions
-def ADD_W : ALU_3R<0b00000000000100000, "add.w">;
-def SUB_W : ALU_3R<0b00000000000100010, "sub.w">;
-def ADDI_W : ALU_2RI12<0b0000001010, "addi.w", simm12_addlike>;
-def ALSL_W : ALU_3RI2<0b000000000000010, "alsl.w", uimm2_plus1>;
-def LU12I_W : ALU_1RI20<0b0001010, "lu12i.w", simm20_lu12iw>;
-def SLT  : ALU_3R<0b00000000000100100, "slt">;
-def SLTU : ALU_3R<0b00000000000100101, "sltu">;
-def SLTI  : ALU_2RI12<0b0000001000, "slti", simm12>;
-def SLTUI : ALU_2RI12<0b0000001001, "sltui", simm12>;
-def PCADDI    : ALU_1RI20<0b0001100, "pcaddi", simm20>;
-def PCADDU12I : ALU_1RI20<0b0001110, "pcaddu12i", simm20>;
-def PCALAU12I : ALU_1RI20<0b0001101, "pcalau12i", simm20_pcalau12i>;
-def AND  : ALU_3R<0b00000000000101001, "and">;
-def OR   : ALU_3R<0b00000000000101010, "or">;
-def NOR  : ALU_3R<0b00000000000101000, "nor">;
-def XOR  : ALU_3R<0b00000000000101011, "xor">;
-def ANDN : ALU_3R<0b00000000000101101, "andn">;
-def ORN  : ALU_3R<0b00000000000101100, "orn">;
-def ANDI : ALU_2RI12<0b0000001101, "andi", uimm12>;
-def ORI  : ALU_2RI12<0b0000001110, "ori", uimm12_ori>;
-def XORI : ALU_2RI12<0b0000001111, "xori", uimm12>;
-def MUL_W   : ALU_3R<0b00000000000111000, "mul.w">;
-def MULH_W  : ALU_3R<0b00000000000111001, "mulh.w">;
-def MULH_WU : ALU_3R<0b00000000000111010, "mulh.wu">;
+def ADD_W : ALU_3R<0b00000000000100000>;
+def SUB_W : ALU_3R<0b00000000000100010>;
+def ADDI_W : ALU_2RI12<0b0000001010, simm12_addlike>;
+def ALSL_W : ALU_3RI2<0b000000000000010, uimm2_plus1>;
+def LU12I_W : ALU_1RI20<0b0001010, simm20_lu12iw>;
+def SLT  : ALU_3R<0b00000000000100100>;
+def SLTU : ALU_3R<0b00000000000100101>;
+def SLTI  : ALU_2RI12<0b0000001000, simm12>;
+def SLTUI : ALU_2RI12<0b0000001001, simm12>;
+def PCADDI    : ALU_1RI20<0b0001100, simm20>;
+def PCADDU12I : ALU_1RI20<0b0001110, simm20>;
+def PCALAU12I : ALU_1RI20<0b0001101, simm20_pcalau12i>;
+def AND  : ALU_3R<0b00000000000101001>;
+def OR   : ALU_3R<0b00000000000101010>;
+def NOR  : ALU_3R<0b00000000000101000>;
+def XOR  : ALU_3R<0b00000000000101011>;
+def ANDN : ALU_3R<0b00000000000101101>;
+def ORN  : ALU_3R<0b00000000000101100>;
+def ANDI : ALU_2RI12<0b0000001101, uimm12>;
+def ORI  : ALU_2RI12<0b0000001110, uimm12_ori>;
+def XORI : ALU_2RI12<0b0000001111, uimm12>;
+def MUL_W   : ALU_3R<0b00000000000111000>;
+def MULH_W  : ALU_3R<0b00000000000111001>;
+def MULH_WU : ALU_3R<0b00000000000111010>;
 let usesCustomInserter = true in {
-def DIV_W   : ALU_3R<0b00000000001000000, "div.w">;
-def MOD_W   : ALU_3R<0b00000000001000001, "mod.w">;
-def DIV_WU  : ALU_3R<0b00000000001000010, "div.wu">;
-def MOD_WU  : ALU_3R<0b00000000001000011, "mod.wu">;
+def DIV_W   : ALU_3R<0b00000000001000000>;
+def MOD_W   : ALU_3R<0b00000000001000001>;
+def DIV_WU  : ALU_3R<0b00000000001000010>;
+def MOD_WU  : ALU_3R<0b00000000001000011>;
 } // usesCustomInserter = true
 
 // Bit-shift Instructions
-def SLL_W  : ALU_3R<0b00000000000101110, "sll.w">;
-def SRL_W  : ALU_3R<0b00000000000101111, "srl.w">;
-def SRA_W  : ALU_3R<0b00000000000110000, "sra.w">;
-def ROTR_W : ALU_3R<0b00000000000110110, "rotr.w">;
+def SLL_W  : ALU_3R<0b00000000000101110>;
+def SRL_W  : ALU_3R<0b00000000000101111>;
+def SRA_W  : ALU_3R<0b00000000000110000>;
+def ROTR_W : ALU_3R<0b00000000000110110>;
 
-def SLLI_W  : ALU_2RI5<0b00000000010000001, "slli.w", uimm5>;
-def SRLI_W  : ALU_2RI5<0b00000000010001001, "srli.w", uimm5>;
-def SRAI_W  : ALU_2RI5<0b00000000010010001, "srai.w", uimm5>;
-def ROTRI_W : ALU_2RI5<0b00000000010011001, "rotri.w", uimm5>;
+def SLLI_W  : ALU_2RI5<0b00000000010000001, uimm5>;
+def SRLI_W  : ALU_2RI5<0b00000000010001001, uimm5>;
+def SRAI_W  : ALU_2RI5<0b00000000010010001, uimm5>;
+def ROTRI_W : ALU_2RI5<0b00000000010011001, uimm5>;
 
 // Bit-manipulation Instructions
-def EXT_W_B : ALU_2R<0b0000000000000000010111, "ext.w.b">;
-def EXT_W_H : ALU_2R<0b0000000000000000010110, "ext.w.h">;
-def CLO_W   : ALU_2R<0b0000000000000000000100, "clo.w">;
-def CLZ_W   : ALU_2R<0b0000000000000000000101, "clz.w">;
-def CTO_W   : ALU_2R<0b0000000000000000000110, "cto.w">;
-def CTZ_W   : ALU_2R<0b0000000000000000000111, "ctz.w">;
-def BYTEPICK_W : ALU_3RI2<0b000000000000100, "bytepick.w", uimm2>;
-def REVB_2H   : ALU_2R<0b0000000000000000001100, "revb.2h">;
-def BITREV_4B : ALU_2R<0b0000000000000000010010, "bitrev.4b">;
-def BITREV_W  : ALU_2R<0b0000000000000000010100, "bitrev.w">;
+def EXT_W_B : ALU_2R<0b0000000000000000010111>;
+def EXT_W_H : ALU_2R<0b0000000000000000010110>;
+def CLO_W   : ALU_2R<0b0000000000000000000100>;
+def CLZ_W   : ALU_2R<0b0000000000000000000101>;
+def CTO_W   : ALU_2R<0b0000000000000000000110>;
+def CTZ_W   : ALU_2R<0b0000000000000000000111>;
+def BYTEPICK_W : ALU_3RI2<0b000000000000100, uimm2>;
+def REVB_2H   : ALU_2R<0b0000000000000000001100>;
+def BITREV_4B : ALU_2R<0b0000000000000000010010>;
+def BITREV_W  : ALU_2R<0b0000000000000000010100>;
 let Constraints = "$rd = $dst" in {
 def BSTRINS_W  : FmtBSTR_W<0b000000000110, (outs GPR:$dst),
                            (ins GPR:$rd, GPR:$rj, uimm5:$msbw, uimm5:$lsbw),
-                           "bstrins.w", "$rd, $rj, $msbw, $lsbw">;
+                           "$rd, $rj, $msbw, $lsbw">;
 }
 def BSTRPICK_W : FmtBSTR_W<0b000000000111, (outs GPR:$rd),
                            (ins GPR:$rj, uimm5:$msbw, uimm5:$lsbw),
-                           "bstrpick.w", "$rd, $rj, $msbw, $lsbw">;
-def MASKEQZ : ALU_3R<0b00000000000100110, "maskeqz">;
-def MASKNEZ : ALU_3R<0b00000000000100111, "masknez">;
+                           "$rd, $rj, $msbw, $lsbw">;
+def MASKEQZ : ALU_3R<0b00000000000100110>;
+def MASKNEZ : ALU_3R<0b00000000000100111>;
 
 // Branch Instructions
-def BEQ  : BrCC_2RI16<0b010110, "beq">;
-def BNE  : BrCC_2RI16<0b010111, "bne">;
-def BLT  : BrCC_2RI16<0b011000, "blt">;
-def BGE  : BrCC_2RI16<0b011001, "bge">;
-def BLTU : BrCC_2RI16<0b011010, "bltu">;
-def BGEU : BrCC_2RI16<0b011011, "bgeu">;
-def BEQZ : BrCCZ_1RI21<0b010000, "beqz">;
-def BNEZ : BrCCZ_1RI21<0b010001, "bnez">;
-def B : Br_I26<0b010100, "b">;
+def BEQ  : BrCC_2RI16<0b010110>;
+def BNE  : BrCC_2RI16<0b010111>;
+def BLT  : BrCC_2RI16<0b011000>;
+def BGE  : BrCC_2RI16<0b011001>;
+def BLTU : BrCC_2RI16<0b011010>;
+def BGEU : BrCC_2RI16<0b011011>;
+def BEQZ : BrCCZ_1RI21<0b010000>;
+def BNEZ : BrCCZ_1RI21<0b010001>;
+def B : Br_I26<0b010100>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1, Defs=[R1] in
-def BL : FmtI26<0b010101, (outs), (ins simm26_symbol:$imm26), "bl", "$imm26">;
+def BL : FmtI26<0b010101, (outs), (ins simm26_symbol:$imm26), "$imm26">;
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def JIRL : Fmt2RI16<0b010011, (outs GPR:$rd),
-                    (ins GPR:$rj, simm16_lsl2:$imm16), "jirl",
-                    "$rd, $rj, $imm16">;
+                    (ins GPR:$rj, simm16_lsl2:$imm16), "$rd, $rj, $imm16">;
 
 // Common Memory Access Instructions
-def LD_B  : LOAD_2RI12<0b0010100000, "ld.b">;
-def LD_H  : LOAD_2RI12<0b0010100001, "ld.h">;
-def LD_W  : LOAD_2RI12<0b0010100010, "ld.w">;
-def LD_BU : LOAD_2RI12<0b0010101000, "ld.bu">;
-def LD_HU : LOAD_2RI12<0b0010101001, "ld.hu">;
-def ST_B : STORE_2RI12<0b0010100100, "st.b">;
-def ST_H : STORE_2RI12<0b0010100101, "st.h">;
-def ST_W : STORE_2RI12<0b0010100110, "st.w">;
+def LD_B  : LOAD_2RI12<0b0010100000>;
+def LD_H  : LOAD_2RI12<0b0010100001>;
+def LD_W  : LOAD_2RI12<0b0010100010>;
+def LD_BU : LOAD_2RI12<0b0010101000>;
+def LD_HU : LOAD_2RI12<0b0010101001>;
+def ST_B : STORE_2RI12<0b0010100100>;
+def ST_H : STORE_2RI12<0b0010100101>;
+def ST_W : STORE_2RI12<0b0010100110>;
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
-def PRELD : FmtPRELD<(outs), (ins uimm5:$imm5, GPR:$rj, simm12:$imm12), "preld",
+def PRELD : FmtPRELD<(outs), (ins uimm5:$imm5, GPR:$rj, simm12:$imm12),
                      "$imm5, $rj, $imm12">;
 
 // Atomic Memory Access Instructions
-def LL_W : LLBase<0b00100000, "ll.w">;
-def SC_W : SCBase<0b00100001, "sc.w">;
+def LL_W : LLBase<0b00100000>;
+def SC_W : SCBase<0b00100001>;
 
 // Barrier Instructions
-def DBAR : MISC_I15<0b00111000011100100, "dbar">;
-def IBAR : MISC_I15<0b00111000011100101, "ibar">;
+def DBAR : MISC_I15<0b00111000011100100>;
+def IBAR : MISC_I15<0b00111000011100101>;
 
 // Other Miscellaneous Instructions
-def SYSCALL : MISC_I15<0b00000000001010110, "syscall">;
-def BREAK   : MISC_I15<0b00000000001010100, "break">;
-def RDTIMEL_W : RDTIME_2R<0b0000000000000000011000, "rdtimel.w">;
-def RDTIMEH_W : RDTIME_2R<0b0000000000000000011001, "rdtimeh.w">;
-def CPUCFG : ALU_2R<0b0000000000000000011011, "cpucfg">;
+def SYSCALL : MISC_I15<0b00000000001010110>;
+def BREAK   : MISC_I15<0b00000000001010100>;
+def RDTIMEL_W : RDTIME_2R<0b0000000000000000011000>;
+def RDTIMEH_W : RDTIME_2R<0b0000000000000000011001>;
+def CPUCFG : ALU_2R<0b0000000000000000011011>;
 
 // Cache Maintenance Instructions
-def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12), "cacop",
+def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12),
                      "$op, $rj, $imm12">;
 
 /// LA64 instructions
@@ -758,161 +757,161 @@ def CACOP : FmtCACOP<(outs), (ins uimm5:$op, GPR:$rj, simm12:$imm12), "cacop",
 let Predicates = [IsLA64] in {
 
 // Arithmetic Operation Instructions for 64-bits
-def ADD_D : ALU_3R<0b00000000000100001, "add.d">;
-def SUB_D : ALU_3R<0b00000000000100011, "sub.d">;
-def ADDI_D : ALU_2RI12<0b0000001011, "addi.d", simm12_addlike>;
-def ADDU16I_D : ALU_2RI16<0b000100, "addu16i.d", simm16>;
-def ALSL_WU : ALU_3RI2<0b000000000000011, "alsl.wu", uimm2_plus1>;
-def ALSL_D  : ALU_3RI2<0b000000000010110, "alsl.d", uimm2_plus1>;
+def ADD_D : ALU_3R<0b00000000000100001>;
+def SUB_D : ALU_3R<0b00000000000100011>;
+def ADDI_D : ALU_2RI12<0b0000001011, simm12_addlike>;
+def ADDU16I_D : ALU_2RI16<0b000100, simm16>;
+def ALSL_WU : ALU_3RI2<0b000000000000011, uimm2_plus1>;
+def ALSL_D  : ALU_3RI2<0b000000000010110, uimm2_plus1>;
 let Constraints = "$rd = $dst" in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def LU32I_D : Fmt1RI20<0b0001011, (outs GPR:$dst),
-                       (ins GPR:$rd, simm20_lu32id:$imm20), "lu32i.d",
+                       (ins GPR:$rd, simm20_lu32id:$imm20),
                        "$rd, $imm20">;
 }
-def LU52I_D : ALU_2RI12<0b0000001100, "lu52i.d", simm12_lu52id>;
-def PCADDU18I : ALU_1RI20<0b0001111, "pcaddu18i", simm20>;
-def MUL_D     : ALU_3R<0b00000000000111011, "mul.d">;
-def MULH_D    : ALU_3R<0b00000000000111100, "mulh.d">;
-def MULH_DU   : ALU_3R<0b00000000000111101, "mulh.du">;
-def MULW_D_W  : ALU_3R<0b00000000000111110, "mulw.d.w">;
-def MULW_D_WU : ALU_3R<0b00000000000111111, "mulw.d.wu">;
+def LU52I_D : ALU_2RI12<0b0000001100, simm12_lu52id>;
+def PCADDU18I : ALU_1RI20<0b0001111, simm20>;
+def MUL_D     : ALU_3R<0b00000000000111011>;
+def MULH_D    : ALU_3R<0b00000000000111100>;
+def MULH_DU   : ALU_3R<0b00000000000111101>;
+def MULW_D_W  : ALU_3R<0b00000000000111110>;
+def MULW_D_WU : ALU_3R<0b00000000000111111>;
 let usesCustomInserter = true in {
-def DIV_D     : ALU_3R<0b00000000001000100, "div.d">;
-def MOD_D     : ALU_3R<0b00000000001000101, "mod.d">;
-def DIV_DU    : ALU_3R<0b00000000001000110, "div.du">;
-def MOD_DU    : ALU_3R<0b00000000001000111, "mod.du">;
+def DIV_D     : ALU_3R<0b00000000001000100>;
+def MOD_D     : ALU_3R<0b00000000001000101>;
+def DIV_DU    : ALU_3R<0b00000000001000110>;
+def MOD_DU    : ALU_3R<0b00000000001000111>;
 } // usesCustomInserter = true
 
 // Bit-shift Instructions for 64-bits
-def SLL_D  : ALU_3R<0b00000000000110001, "sll.d">;
-def SRL_D  : ALU_3R<0b00000000000110010, "srl.d">;
-def SRA_D  : ALU_3R<0b00000000000110011, "sra.d">;
-def ROTR_D : ALU_3R<0b00000000000110111, "rotr.d">;
-def SLLI_D  : ALU_2RI6<0b0000000001000001, "slli.d", uimm6>;
-def SRLI_D  : ALU_2RI6<0b0000000001000101, "srli.d", uimm6>;
-def SRAI_D  : ALU_2RI6<0b0000000001001001, "srai.d", uimm6>;
-def ROTRI_D : ALU_2RI6<0b0000000001001101, "rotri.d", uimm6>;
+def SLL_D  : ALU_3R<0b00000000000110001>;
+def SRL_D  : ALU_3R<0b00000000000110010>;
+def SRA_D  : ALU_3R<0b00000000000110011>;
+def ROTR_D : ALU_3R<0b00000000000110111>;
+def SLLI_D  : ALU_2RI6<0b0000000001000001, uimm6>;
+def SRLI_D  : ALU_2RI6<0b0000000001000101, uimm6>;
+def SRAI_D  : ALU_2RI6<0b0000000001001001, uimm6>;
+def ROTRI_D : ALU_2RI6<0b0000000001001101, uimm6>;
 
 // Bit-manipulation Instructions for 64-bits
-def CLO_D : ALU_2R<0b0000000000000000001000, "clo.d">;
-def CLZ_D : ALU_2R<0b0000000000000000001001, "clz.d">;
-def CTO_D : ALU_2R<0b0000000000000000001010, "cto.d">;
-def CTZ_D : ALU_2R<0b0000000000000000001011, "ctz.d">;
-def BYTEPICK_D : ALU_3RI3<0b00000000000011, "bytepick.d", uimm3>;
-def REVB_4H   : ALU_2R<0b0000000000000000001101, "revb.4h">;
-def REVB_2W   : ALU_2R<0b0000000000000000001110, "revb.2w">;
-def REVB_D    : ALU_2R<0b0000000000000000001111, "revb.d">;
-def REVH_2W   : ALU_2R<0b0000000000000000010000, "revh.2w">;
-def REVH_D    : ALU_2R<0b0000000000000000010001, "revh.d">;
-def BITREV_8B : ALU_2R<0b0000000000000000010011, "bitrev.8b">;
-def BITREV_D  : ALU_2R<0b0000000000000000010101, "bitrev.d">;
+def CLO_D : ALU_2R<0b0000000000000000001000>;
+def CLZ_D : ALU_2R<0b0000000000000000001001>;
+def CTO_D : ALU_2R<0b0000000000000000001010>;
+def CTZ_D : ALU_2R<0b0000000000000000001011>;
+def BYTEPICK_D : ALU_3RI3<0b00000000000011, uimm3>;
+def REVB_4H   : ALU_2R<0b0000000000000000001101>;
+def REVB_2W   : ALU_2R<0b0000000000000000001110>;
+def REVB_D    : ALU_2R<0b0000000000000000001111>;
+def REVH_2W   : ALU_2R<0b0000000000000000010000>;
+def REVH_D    : ALU_2R<0b0000000000000000010001>;
+def BITREV_8B : ALU_2R<0b0000000000000000010011>;
+def BITREV_D  : ALU_2R<0b0000000000000000010101>;
 let Constraints = "$rd = $dst" in {
 def BSTRINS_D  : FmtBSTR_D<0b0000000010, (outs GPR:$dst),
                            (ins GPR:$rd, GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
-                           "bstrins.d", "$rd, $rj, $msbd, $lsbd">;
+                           "$rd, $rj, $msbd, $lsbd">;
 }
 def BSTRPICK_D : FmtBSTR_D<0b0000000011, (outs GPR:$rd),
                            (ins GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
-                           "bstrpick.d", "$rd, $rj, $msbd, $lsbd">;
+                           "$rd, $rj, $msbd, $lsbd">;
 
 // Common Memory Access Instructions for 64-bits
-def LD_WU : LOAD_2RI12<0b0010101010, "ld.wu">;
-def LD_D  : LOAD_2RI12<0b0010100011, "ld.d">;
-def ST_D : STORE_2RI12<0b0010100111, "st.d">;
-def LDX_B  : LOAD_3R<0b00111000000000000, "ldx.b">;
-def LDX_H  : LOAD_3R<0b00111000000001000, "ldx.h">;
-def LDX_W  : LOAD_3R<0b00111000000010000, "ldx.w">;
-def LDX_D  : LOAD_3R<0b00111000000011000, "ldx.d">;
-def LDX_BU : LOAD_3R<0b00111000001000000, "ldx.bu">;
-def LDX_HU : LOAD_3R<0b00111000001001000, "ldx.hu">;
-def LDX_WU : LOAD_3R<0b00111000001010000, "ldx.wu">;
-def STX_B : STORE_3R<0b00111000000100000, "stx.b">;
-def STX_H : STORE_3R<0b00111000000101000, "stx.h">;
-def STX_W : STORE_3R<0b00111000000110000, "stx.w">;
-def STX_D : STORE_3R<0b00111000000111000, "stx.d">;
-def LDPTR_W : LOAD_2RI14<0b00100100, "ldptr.w">;
-def LDPTR_D : LOAD_2RI14<0b00100110, "ldptr.d">;
-def STPTR_W : STORE_2RI14<0b00100101, "stptr.w">;
-def STPTR_D : STORE_2RI14<0b00100111, "stptr.d">;
+def LD_WU : LOAD_2RI12<0b0010101010>;
+def LD_D  : LOAD_2RI12<0b0010100011>;
+def ST_D : STORE_2RI12<0b0010100111>;
+def LDX_B  : LOAD_3R<0b00111000000000000>;
+def LDX_H  : LOAD_3R<0b00111000000001000>;
+def LDX_W  : LOAD_3R<0b00111000000010000>;
+def LDX_D  : LOAD_3R<0b00111000000011000>;
+def LDX_BU : LOAD_3R<0b00111000001000000>;
+def LDX_HU : LOAD_3R<0b00111000001001000>;
+def LDX_WU : LOAD_3R<0b00111000001010000>;
+def STX_B : STORE_3R<0b00111000000100000>;
+def STX_H : STORE_3R<0b00111000000101000>;
+def STX_W : STORE_3R<0b00111000000110000>;
+def STX_D : STORE_3R<0b00111000000111000>;
+def LDPTR_W : LOAD_2RI14<0b00100100>;
+def LDPTR_D : LOAD_2RI14<0b00100110>;
+def STPTR_W : STORE_2RI14<0b00100101>;
+def STPTR_D : STORE_2RI14<0b00100111>;
 let hasSideEffects = 0, mayLoad = 1, mayStore = 1 in
-def PRELDX : FmtPRELDX<(outs), (ins uimm5:$imm5, GPR:$rj, GPR:$rk), "preldx",
+def PRELDX : FmtPRELDX<(outs), (ins uimm5:$imm5, GPR:$rj, GPR:$rk),
                        "$imm5, $rj, $rk">;
 
 // Bound Check Memory Access Instructions
-def LDGT_B : LOAD_3R<0b00111000011110000, "ldgt.b">;
-def LDGT_H : LOAD_3R<0b00111000011110001, "ldgt.h">;
-def LDGT_W : LOAD_3R<0b00111000011110010, "ldgt.w">;
-def LDGT_D : LOAD_3R<0b00111000011110011, "ldgt.d">;
-def LDLE_B : LOAD_3R<0b00111000011110100, "ldle.b">;
-def LDLE_H : LOAD_3R<0b00111000011110101, "ldle.h">;
-def LDLE_W : LOAD_3R<0b00111000011110110, "ldle.w">;
-def LDLE_D : LOAD_3R<0b00111000011110111, "ldle.d">;
-def STGT_B : STORE_3R<0b00111000011111000, "stgt.b">;
-def STGT_H : STORE_3R<0b00111000011111001, "stgt.h">;
-def STGT_W : STORE_3R<0b00111000011111010, "stgt.w">;
-def STGT_D : STORE_3R<0b00111000011111011, "stgt.d">;
-def STLE_B : STORE_3R<0b00111000011111100, "stle.b">;
-def STLE_H : STORE_3R<0b00111000011111101, "stle.h">;
-def STLE_W : STORE_3R<0b00111000011111110, "stle.w">;
-def STLE_D : STORE_3R<0b00111000011111111, "stle.d">;
+def LDGT_B : LOAD_3R<0b00111000011110000>;
+def LDGT_H : LOAD_3R<0b00111000011110001>;
+def LDGT_W : LOAD_3R<0b00111000011110010>;
+def LDGT_D : LOAD_3R<0b00111000011110011>;
+def LDLE_B : LOAD_3R<0b00111000011110100>;
+def LDLE_H : LOAD_3R<0b00111000011110101>;
+def LDLE_W : LOAD_3R<0b00111000011110110>;
+def LDLE_D : LOAD_3R<0b00111000011110111>;
+def STGT_B : STORE_3R<0b00111000011111000>;
+def STGT_H : STORE_3R<0b00111000011111001>;
+def STGT_W : STORE_3R<0b00111000011111010>;
+def STGT_D : STORE_3R<0b00111000011111011>;
+def STLE_B : STORE_3R<0b00111000011111100>;
+def STLE_H : STORE_3R<0b00111000011111101>;
+def STLE_W : STORE_3R<0b00111000011111110>;
+def STLE_D : STORE_3R<0b00111000011111111>;
 
 // Atomic Memory Access Instructions for 64-bits
-def AMSWAP_W    : AM_3R<0b00111000011000000, "amswap.w">;
-def AMSWAP_D    : AM_3R<0b00111000011000001, "amswap.d">;
-def AMADD_W     : AM_3R<0b00111000011000010, "amadd.w">;
-def AMADD_D     : AM_3R<0b00111000011000011, "amadd.d">;
-def AMAND_W     : AM_3R<0b00111000011000100, "amand.w">;
-def AMAND_D     : AM_3R<0b00111000011000101, "amand.d">;
-def AMOR_W      : AM_3R<0b00111000011000110, "amor.w">;
-def AMOR_D      : AM_3R<0b00111000011000111, "amor.d">;
-def AMXOR_W     : AM_3R<0b00111000011001000, "amxor.w">;
-def AMXOR_D     : AM_3R<0b00111000011001001, "amxor.d">;
-def AMMAX_W     : AM_3R<0b00111000011001010, "ammax.w">;
-def AMMAX_D     : AM_3R<0b00111000011001011, "ammax.d">;
-def AMMIN_W     : AM_3R<0b00111000011001100, "ammin.w">;
-def AMMIN_D     : AM_3R<0b00111000011001101, "ammin.d">;
-def AMMAX_WU    : AM_3R<0b00111000011001110, "ammax.wu">;
-def AMMAX_DU    : AM_3R<0b00111000011001111, "ammax.du">;
-def AMMIN_WU    : AM_3R<0b00111000011010000, "ammin.wu">;
-def AMMIN_DU    : AM_3R<0b00111000011010001, "ammin.du">;
-def AMSWAP_DB_W : AM_3R<0b00111000011010010, "amswap_db.w">;
-def AMSWAP_DB_D : AM_3R<0b00111000011010011, "amswap_db.d">;
-def AMADD_DB_W  : AM_3R<0b00111000011010100, "amadd_db.w">;
-def AMADD_DB_D  : AM_3R<0b00111000011010101, "amadd_db.d">;
-def AMAND_DB_W  : AM_3R<0b00111000011010110, "amand_db.w">;
-def AMAND_DB_D  : AM_3R<0b00111000011010111, "amand_db.d">;
-def AMOR_DB_W   : AM_3R<0b00111000011011000, "amor_db.w">;
-def AMOR_DB_D   : AM_3R<0b00111000011011001, "amor_db.d">;
-def AMXOR_DB_W  : AM_3R<0b00111000011011010, "amxor_db.w">;
-def AMXOR_DB_D  : AM_3R<0b00111000011011011, "amxor_db.d">;
-def AMMAX_DB_W  : AM_3R<0b00111000011011100, "ammax_db.w">;
-def AMMAX_DB_D  : AM_3R<0b00111000011011101, "ammax_db.d">;
-def AMMIN_DB_W  : AM_3R<0b00111000011011110, "ammin_db.w">;
-def AMMIN_DB_D  : AM_3R<0b00111000011011111, "ammin_db.d">;
-def AMMAX_DB_WU : AM_3R<0b00111000011100000, "ammax_db.wu">;
-def AMMAX_DB_DU : AM_3R<0b00111000011100001, "ammax_db.du">;
-def AMMIN_DB_WU : AM_3R<0b00111000011100010, "ammin_db.wu">;
-def AMMIN_DB_DU : AM_3R<0b00111000011100011, "ammin_db.du">;
-def LL_D : LLBase<0b00100010, "ll.d">;
-def SC_D : SCBase<0b00100011, "sc.d">;
+def AMSWAP_W     : AM_3R<0b00111000011000000>;
+def AMSWAP_D     : AM_3R<0b00111000011000001>;
+def AMADD_W      : AM_3R<0b00111000011000010>;
+def AMADD_D      : AM_3R<0b00111000011000011>;
+def AMAND_W      : AM_3R<0b00111000011000100>;
+def AMAND_D      : AM_3R<0b00111000011000101>;
+def AMOR_W       : AM_3R<0b00111000011000110>;
+def AMOR_D       : AM_3R<0b00111000011000111>;
+def AMXOR_W      : AM_3R<0b00111000011001000>;
+def AMXOR_D      : AM_3R<0b00111000011001001>;
+def AMMAX_W      : AM_3R<0b00111000011001010>;
+def AMMAX_D      : AM_3R<0b00111000011001011>;
+def AMMIN_W      : AM_3R<0b00111000011001100>;
+def AMMIN_D      : AM_3R<0b00111000011001101>;
+def AMMAX_WU     : AM_3R<0b00111000011001110>;
+def AMMAX_DU     : AM_3R<0b00111000011001111>;
+def AMMIN_WU     : AM_3R<0b00111000011010000>;
+def AMMIN_DU     : AM_3R<0b00111000011010001>;
+def AMSWAP__DB_W : AM_3R<0b00111000011010010>;
+def AMSWAP__DB_D : AM_3R<0b00111000011010011>;
+def AMADD__DB_W  : AM_3R<0b00111000011010100>;
+def AMADD__DB_D  : AM_3R<0b00111000011010101>;
+def AMAND__DB_W  : AM_3R<0b00111000011010110>;
+def AMAND__DB_D  : AM_3R<0b00111000011010111>;
+def AMOR__DB_W   : AM_3R<0b00111000011011000>;
+def AMOR__DB_D   : AM_3R<0b00111000011011001>;
+def AMXOR__DB_W  : AM_3R<0b00111000011011010>;
+def AMXOR__DB_D  : AM_3R<0b00111000011011011>;
+def AMMAX__DB_W  : AM_3R<0b00111000011011100>;
+def AMMAX__DB_D  : AM_3R<0b00111000011011101>;
+def AMMIN__DB_W  : AM_3R<0b00111000011011110>;
+def AMMIN__DB_D  : AM_3R<0b00111000011011111>;
+def AMMAX__DB_WU : AM_3R<0b00111000011100000>;
+def AMMAX__DB_DU : AM_3R<0b00111000011100001>;
+def AMMIN__DB_WU : AM_3R<0b00111000011100010>;
+def AMMIN__DB_DU : AM_3R<0b00111000011100011>;
+def LL_D : LLBase<0b00100010>;
+def SC_D : SCBase<0b00100011>;
 
 // CRC Check Instructions
-def CRC_W_B_W  : ALU_3R<0b00000000001001000, "crc.w.b.w">;
-def CRC_W_H_W  : ALU_3R<0b00000000001001001, "crc.w.h.w">;
-def CRC_W_W_W  : ALU_3R<0b00000000001001010, "crc.w.w.w">;
-def CRC_W_D_W  : ALU_3R<0b00000000001001011, "crc.w.d.w">;
-def CRCC_W_B_W : ALU_3R<0b00000000001001100, "crcc.w.b.w">;
-def CRCC_W_H_W : ALU_3R<0b00000000001001101, "crcc.w.h.w">;
-def CRCC_W_W_W : ALU_3R<0b00000000001001110, "crcc.w.w.w">;
-def CRCC_W_D_W : ALU_3R<0b00000000001001111, "crcc.w.d.w">;
+def CRC_W_B_W  : ALU_3R<0b00000000001001000>;
+def CRC_W_H_W  : ALU_3R<0b00000000001001001>;
+def CRC_W_W_W  : ALU_3R<0b00000000001001010>;
+def CRC_W_D_W  : ALU_3R<0b00000000001001011>;
+def CRCC_W_B_W : ALU_3R<0b00000000001001100>;
+def CRCC_W_H_W : ALU_3R<0b00000000001001101>;
+def CRCC_W_W_W : ALU_3R<0b00000000001001110>;
+def CRCC_W_D_W : ALU_3R<0b00000000001001111>;
 
 // Other Miscellaneous Instructions for 64-bits
 def ASRTLE_D : FmtASRT<0b00000000000000010, (outs), (ins GPR:$rj, GPR:$rk),
-                       "asrtle.d", "$rj, $rk">;
+                       "$rj, $rk">;
 def ASRTGT_D : FmtASRT<0b00000000000000011, (outs), (ins GPR:$rj, GPR:$rk),
-                       "asrtgt.d", "$rj, $rk">;
-def RDTIME_D : RDTIME_2R<0b0000000000000000011010, "rdtime.d">;
+                       "$rj, $rk">;
+def RDTIME_D : RDTIME_2R<0b0000000000000000011010>;
 } // Predicates = [IsLA64]
 
 //===----------------------------------------------------------------------===//
@@ -1631,7 +1630,7 @@ defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
 
 def PseudoAtomicStoreW
   : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
-           PseudoInstExpansion<(AMSWAP_DB_W R0, GPR:$rk, GPRMemAtomic:$rj)>;
+           PseudoInstExpansion<(AMSWAP__DB_W R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreW GPR:$rj, GPR:$rk)>;
@@ -1639,7 +1638,7 @@ def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
 let Predicates = [IsLA64] in {
 def PseudoAtomicStoreD
   : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
-           PseudoInstExpansion<(AMSWAP_DB_D R0, GPR:$rk, GPRMemAtomic:$rj)>;
+           PseudoInstExpansion<(AMSWAP__DB_D R0, GPR:$rk, GPRMemAtomic:$rj)>;
 
 def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
@@ -1766,54 +1765,54 @@ let Predicates = [IsLA64] in {
 def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i64,
                 PseudoMaskedAtomicSwap32>;
 def : Pat<(atomic_swap_32 GPR:$addr, GPR:$incr),
-          (AMSWAP_DB_W GPR:$incr, GPR:$addr)>;
+          (AMSWAP__DB_W GPR:$incr, GPR:$addr)>;
 def : Pat<(atomic_swap_64 GPR:$addr, GPR:$incr),
-          (AMSWAP_DB_D GPR:$incr, GPR:$addr)>;
+          (AMSWAP__DB_D GPR:$incr, GPR:$addr)>;
 def : Pat<(atomic_load_add_64 GPR:$rj, GPR:$rk),
-          (AMADD_DB_D GPR:$rk, GPR:$rj)>;
+          (AMADD__DB_D GPR:$rk, GPR:$rj)>;
 def : AtomicPat<int_loongarch_masked_atomicrmw_add_i64,
                 PseudoMaskedAtomicLoadAdd32>;
 def : Pat<(atomic_load_sub_32 GPR:$rj, GPR:$rk),
-          (AMADD_DB_W (SUB_W R0, GPR:$rk), GPR:$rj)>;
+          (AMADD__DB_W (SUB_W R0, GPR:$rk), GPR:$rj)>;
 def : Pat<(atomic_load_sub_64 GPR:$rj, GPR:$rk),
-          (AMADD_DB_D (SUB_D R0, GPR:$rk), GPR:$rj)>;
+          (AMADD__DB_D (SUB_D R0, GPR:$rk), GPR:$rj)>;
 def : AtomicPat<int_loongarch_masked_atomicrmw_sub_i64,
                 PseudoMaskedAtomicLoadSub32>;
 defm : PseudoBinPat<"atomic_load_nand_64", PseudoAtomicLoadNand64>;
 def : AtomicPat<int_loongarch_masked_atomicrmw_nand_i64,
                 PseudoMaskedAtomicLoadNand32>;
 def : Pat<(atomic_load_add_32 GPR:$rj, GPR:$rk),
-          (AMADD_DB_W GPR:$rk, GPR:$rj)>;
+          (AMADD__DB_W GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_and_32 GPR:$rj, GPR:$rk),
-          (AMAND_DB_W GPR:$rk, GPR:$rj)>;
+          (AMAND__DB_W GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_and_64 GPR:$rj, GPR:$rk),
-          (AMAND_DB_D GPR:$rk, GPR:$rj)>;
+          (AMAND__DB_D GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_or_32 GPR:$rj, GPR:$rk),
-          (AMOR_DB_W GPR:$rk, GPR:$rj)>;
+          (AMOR__DB_W GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_or_64 GPR:$rj, GPR:$rk),
-          (AMOR_DB_D GPR:$rk, GPR:$rj)>;
+          (AMOR__DB_D GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_xor_32 GPR:$rj, GPR:$rk),
-          (AMXOR_DB_W GPR:$rk, GPR:$rj)>;
+          (AMXOR__DB_W GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_xor_64 GPR:$rj, GPR:$rk),
-          (AMXOR_DB_D GPR:$rk, GPR:$rj)>;
+          (AMXOR__DB_D GPR:$rk, GPR:$rj)>;
 
 def : Pat<(atomic_load_umin_32 GPR:$rj, GPR:$rk),
-          (AMMIN_DB_WU GPR:$rk, GPR:$rj)>;
+          (AMMIN__DB_WU GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_umin_64 GPR:$rj, GPR:$rk),
-          (AMMIN_DB_DU GPR:$rk, GPR:$rj)>;
+          (AMMIN__DB_DU GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_umax_32 GPR:$rj, GPR:$rk),
-          (AMMAX_DB_WU GPR:$rk, GPR:$rj)>;
+          (AMMAX__DB_WU GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_umax_64 GPR:$rj, GPR:$rk),
-          (AMMAX_DB_DU GPR:$rk, GPR:$rj)>;
+          (AMMAX__DB_DU GPR:$rk, GPR:$rj)>;
 
 def : Pat<(atomic_load_min_32 GPR:$rj, GPR:$rk),
-          (AMMIN_DB_W GPR:$rk, GPR:$rj)>;
+          (AMMIN__DB_W GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_min_64 GPR:$rj, GPR:$rk),
-          (AMMIN_DB_D GPR:$rk, GPR:$rj)>;
+          (AMMIN__DB_D GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_max_32 GPR:$rj, GPR:$rk),
-          (AMMAX_DB_W GPR:$rk, GPR:$rj)>;
+          (AMMAX__DB_W GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_max_64 GPR:$rj, GPR:$rk),
-          (AMMAX_DB_D GPR:$rk, GPR:$rj)>;
+          (AMMAX__DB_D GPR:$rk, GPR:$rj)>;
 
 def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i64,
                 PseudoMaskedAtomicLoadUMax32>;
@@ -1950,50 +1949,50 @@ let Predicates = [HasBasicF], usesCustomInserter = 1 in {
 // CSR Access Instructions
 let hasSideEffects = 1 in
 def CSRRD : FmtCSR<0b0000010000000, (outs GPR:$rd), (ins uimm14:$csr_num),
-                   "csrrd", "$rd, $csr_num">;
+                   "$rd, $csr_num">;
 let hasSideEffects = 1, Constraints = "$rd = $dst" in {
 def CSRWR : FmtCSR<0b0000010000001, (outs GPR:$dst),
-                   (ins GPR:$rd, uimm14:$csr_num), "csrwr", "$rd, $csr_num">;
+                   (ins GPR:$rd, uimm14:$csr_num), "$rd, $csr_num">;
 def CSRXCHG : FmtCSRXCHG<0b00000100, (outs GPR:$dst),
                          (ins GPR:$rd, GPR:$rj, uimm14:$csr_num),
-                         "csrxchg", "$rd, $rj, $csr_num">;
+                         "$rd, $rj, $csr_num">;
 } // hasSideEffects = 1, Constraints = "$rd = $dst"
 
 // IOCSR Access Instructions
-def IOCSRRD_B : IOCSRRD<0b0000011001001000000000, "iocsrrd.b">;
-def IOCSRRD_H : IOCSRRD<0b0000011001001000000001, "iocsrrd.h">;
-def IOCSRRD_W : IOCSRRD<0b0000011001001000000010, "iocsrrd.w">;
-def IOCSRWR_B : IOCSRWR<0b0000011001001000000100, "iocsrwr.b">;
-def IOCSRWR_H : IOCSRWR<0b0000011001001000000101, "iocsrwr.h">;
-def IOCSRWR_W : IOCSRWR<0b0000011001001000000110, "iocsrwr.w">;
+def IOCSRRD_B : IOCSRRD<0b0000011001001000000000>;
+def IOCSRRD_H : IOCSRRD<0b0000011001001000000001>;
+def IOCSRRD_W : IOCSRRD<0b0000011001001000000010>;
+def IOCSRWR_B : IOCSRWR<0b0000011001001000000100>;
+def IOCSRWR_H : IOCSRWR<0b0000011001001000000101>;
+def IOCSRWR_W : IOCSRWR<0b0000011001001000000110>;
 let Predicates = [IsLA64] in {
-def IOCSRRD_D : IOCSRRD<0b0000011001001000000011, "iocsrrd.d">;
-def IOCSRWR_D : IOCSRWR<0b0000011001001000000111, "iocsrwr.d">;
+def IOCSRRD_D : IOCSRRD<0b0000011001001000000011>;
+def IOCSRWR_D : IOCSRWR<0b0000011001001000000111>;
 } // Predicates = [IsLA64]
 
 // TLB Maintenance Instructions
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
-def TLBSRCH  : FmtI32<0b00000110010010000010100000000000, "tlbsrch">;
-def TLBRD    : FmtI32<0b00000110010010000010110000000000, "tlbrd">;
-def TLBWR    : FmtI32<0b00000110010010000011000000000000, "tlbwr">;
-def TLBFILL  : FmtI32<0b00000110010010000011010000000000, "tlbfill">;
-def TLBCLR   : FmtI32<0b00000110010010000010000000000000, "tlbclr">;
-def TLBFLUSH : FmtI32<0b00000110010010000010010000000000, "tlbflush">;
-def INVTLB : FmtINVTLB<(outs), (ins GPR:$rk, GPR:$rj, uimm5:$op), "invtlb",
+def TLBSRCH  : FmtI32<0b00000110010010000010100000000000>;
+def TLBRD    : FmtI32<0b00000110010010000010110000000000>;
+def TLBWR    : FmtI32<0b00000110010010000011000000000000>;
+def TLBFILL  : FmtI32<0b00000110010010000011010000000000>;
+def TLBCLR   : FmtI32<0b00000110010010000010000000000000>;
+def TLBFLUSH : FmtI32<0b00000110010010000010010000000000>;
+def INVTLB : FmtINVTLB<(outs), (ins GPR:$rk, GPR:$rj, uimm5:$op),
                        "$op, $rj, $rk">;
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 
 // Software Page Walking Instructions
 def LDDIR : Fmt2RI8<0b00000110010000, (outs GPR:$rd),
-                    (ins GPR:$rj, uimm8:$imm8), "lddir", "$rd, $rj, $imm8">;
-def LDPTE : FmtLDPTE<(outs), (ins GPR:$rj, uimm8:$seq), "ldpte", "$rj, $seq">;
+                    (ins GPR:$rj, uimm8:$imm8), "$rd, $rj, $imm8">;
+def LDPTE : FmtLDPTE<(outs), (ins GPR:$rj, uimm8:$seq), "$rj, $seq">;
 
 
 // Other Miscellaneous Instructions
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
-def ERTN : FmtI32<0b00000110010010000011100000000000, "ertn">;
-def DBCL : MISC_I15<0b00000000001010101, "dbcl">;
-def IDLE : MISC_I15<0b00000110010010001, "idle">;
+def ERTN : FmtI32<0b00000110010010000011100000000000>;
+def DBCL : MISC_I15<0b00000000001010101>;
+def IDLE : MISC_I15<0b00000110010010001>;
 
 //===----------------------------------------------------------------------===//
 // Privilege Intrinsics
