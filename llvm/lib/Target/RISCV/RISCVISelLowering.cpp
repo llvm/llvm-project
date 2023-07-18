@@ -5767,31 +5767,29 @@ static SDValue combineSelectToBinOp(SDNode *N, SelectionDAG &DAG,
 /// seteq/setne into something that can be compared with 0.
 /// Based on RISCVDAGToDAGISel::selectSETCC but modified to produce
 /// target-independent SelectionDAG nodes rather than machine nodes.
-static bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val,
-                        SelectionDAG &DAG) {
+static SDValue selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
+                           SelectionDAG &DAG) {
   assert(ISD::isIntEqualitySetCC(ExpectedCCVal) &&
          "Unexpected condition code!");
 
   // We're looking for a setcc.
   if (N->getOpcode() != ISD::SETCC)
-    return false;
+    return SDValue();
 
   // Must be an equality comparison.
   ISD::CondCode CCVal = cast<CondCodeSDNode>(N->getOperand(2))->get();
   if (CCVal != ExpectedCCVal)
-    return false;
+    return SDValue();
 
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
   if (!LHS.getValueType().isScalarInteger())
-    return false;
+    return SDValue();
 
   // If the RHS side is 0, we don't need any extra instructions, return the LHS.
-  if (isNullConstant(RHS)) {
-    Val = LHS;
-    return true;
-  }
+  if (isNullConstant(RHS))
+    return LHS;
 
   SDLoc DL(N);
 
@@ -5799,24 +5797,19 @@ static bool selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal, SDValue &Val,
     int64_t CVal = C->getSExtValue();
     // If the RHS is -2048, we can use xori to produce 0 if the LHS is -2048 and
     // non-zero otherwise.
-    if (CVal == -2048) {
-      Val = DAG.getNode(ISD::XOR, DL, N->getValueType(0), LHS,
-                        DAG.getConstant(CVal, DL, N->getValueType(0)));
-      return true;
-    }
+    if (CVal == -2048)
+      return DAG.getNode(ISD::XOR, DL, N->getValueType(0), LHS,
+                         DAG.getConstant(CVal, DL, N->getValueType(0)));
     // If the RHS is [-2047,2048], we can use addi with -RHS to produce 0 if the
     // LHS is equal to the RHS and non-zero otherwise.
-    if (isInt<12>(CVal) || CVal == 2048) {
-      Val = DAG.getNode(ISD::ADD, DL, N->getValueType(0), LHS,
-                        DAG.getConstant(-CVal, DL, N->getValueType(0)));
-      return true;
-    }
+    if (isInt<12>(CVal) || CVal == 2048)
+      return DAG.getNode(ISD::ADD, DL, N->getValueType(0), LHS,
+                         DAG.getConstant(-CVal, DL, N->getValueType(0)));
   }
 
   // If nothing else we can XOR the LHS and RHS to produce zero if they are
   // equal and a non-zero value if they aren't.
-  Val = DAG.getNode(ISD::XOR, DL, N->getValueType(0), LHS, RHS);
-  return true;
+  return DAG.getNode(ISD::XOR, DL, N->getValueType(0), LHS, RHS);
 }
 
 // Transform `binOp (select cond, x, c0), c1` where `c0` and `c1` are constants
@@ -5904,9 +5897,14 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // the SELECT. Performing the lowering here allows for greater control over
   // when CZERO_{EQZ/NEZ} are used vs another branchless sequence or
   // RISCVISD::SELECT_CC node (branch-based select).
+<<<<<<< HEAD
   if (Subtarget.hasStdExtZicond() && VT.isScalarInteger()) {
     SDValue NewCondV;
     if (selectSETCC(CondV, ISD::SETNE, NewCondV, DAG)) {
+=======
+  if (Subtarget.hasStdExtZicond() && VT.isInteger()) {
+    if (SDValue NewCondV = selectSETCC(CondV, ISD::SETNE, DAG)) {
+>>>>>>> 8f5aee536b99 ([RISCV] Make selectSETCC return SDValue instead of bool. NFC)
       if (isNullConstant(FalseV))
         // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
         return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, NewCondV);
@@ -5920,7 +5918,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, NewCondV),
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, NewCondV));
     }
-    if (selectSETCC(CondV, ISD::SETEQ, NewCondV, DAG)) {
+    if (SDValue NewCondV =  selectSETCC(CondV, ISD::SETEQ, DAG)) {
       if (isNullConstant(FalseV))
         // (select (riscv_seteq c), t, 0) -> (czero_nez t, c)
         return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, NewCondV);
