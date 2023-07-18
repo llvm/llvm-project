@@ -58,10 +58,15 @@ f:
 
 ; FIXME: This should *not* return true.
 define i1 @recursive_inst_generator_caller(i1 %c) {
-; CHECK-LABEL: define {{[^@]+}}@recursive_inst_generator_caller
-; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_generator(i1 [[C]], ptr undef)
-; CHECK-NEXT:    ret i1 [[CALL]]
+; TUNIT-LABEL: define {{[^@]+}}@recursive_inst_generator_caller
+; TUNIT-SAME: (i1 [[C:%.*]]) {
+; TUNIT-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_generator(i1 [[C]], ptr undef)
+; TUNIT-NEXT:    ret i1 [[CALL]]
+;
+; CGSCC-LABEL: define {{[^@]+}}@recursive_inst_generator_caller
+; CGSCC-SAME: (i1 [[C:%.*]]) {
+; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_inst_generator(i1 [[C]], ptr nofree undef)
+; CGSCC-NEXT:    ret i1 [[CALL]]
 ;
   %call = call i1 @recursive_inst_generator(i1 %c, ptr undef)
   ret i1 %call
@@ -136,7 +141,7 @@ define i1 @recursive_alloca_compare_caller(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_alloca_compare_caller
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_alloca_compare(i1 noundef [[C]], ptr undef) #[[ATTR5:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i1 @recursive_alloca_compare(i1 noundef [[C]], ptr nofree undef) #[[ATTR5:[0-9]+]]
 ; CGSCC-NEXT:    ret i1 [[CALL]]
 ;
   %call = call i1 @recursive_alloca_compare(i1 %c, ptr undef)
@@ -195,7 +200,7 @@ define i8 @recursive_alloca_load_return_caller(i1 %c) {
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@recursive_alloca_load_return_caller
 ; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR1]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i8 @recursive_alloca_load_return(i1 noundef [[C]], ptr undef, i8 noundef 42) #[[ATTR6:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i8 @recursive_alloca_load_return(i1 noundef [[C]], ptr nofree undef, i8 noundef 42) #[[ATTR6:[0-9]+]]
 ; CGSCC-NEXT:    ret i8 [[CALL]]
 ;
   %call = call i8 @recursive_alloca_load_return(i1 %c, ptr undef, i8 42)

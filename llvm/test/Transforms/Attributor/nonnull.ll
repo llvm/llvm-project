@@ -993,14 +993,14 @@ declare void @use_i32_ptr(ptr readnone nocapture) nounwind
 define internal void @called_by_weak(ptr %a) {
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@called_by_weak
-; TUNIT-SAME: (ptr noalias nocapture nonnull readnone [[A:%.*]]) #[[ATTR5]] {
-; TUNIT-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nonnull readnone [[A]]) #[[ATTR5]]
+; TUNIT-SAME: (ptr noalias nocapture nofree nonnull readnone [[A:%.*]]) #[[ATTR5]] {
+; TUNIT-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@called_by_weak
-; CGSCC-SAME: (ptr noalias nocapture nonnull readnone [[A:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nonnull readnone [[A]]) #[[ATTR4]]
+; CGSCC-SAME: (ptr noalias nocapture nofree nonnull readnone [[A:%.*]]) #[[ATTR4]] {
+; CGSCC-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1012,12 +1012,12 @@ define weak_odr void @weak_caller(ptr nonnull %a) {
 ;
 ; TUNIT-LABEL: define {{[^@]+}}@weak_caller
 ; TUNIT-SAME: (ptr nonnull [[A:%.*]]) {
-; TUNIT-NEXT:    call void @called_by_weak(ptr noalias nocapture nonnull readnone [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @called_by_weak(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@weak_caller
 ; CGSCC-SAME: (ptr nonnull [[A:%.*]]) {
-; CGSCC-NEXT:    call void @called_by_weak(ptr noalias nocapture nonnull readnone [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @called_by_weak(ptr noalias nocapture nofree nonnull readnone [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @called_by_weak(ptr %a)
@@ -1028,14 +1028,14 @@ define weak_odr void @weak_caller(ptr nonnull %a) {
 define internal void @control(ptr dereferenceable(4) %a) {
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@control
-; TUNIT-SAME: (ptr noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
-; TUNIT-NEXT:    call void @use_i32_ptr(ptr noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR5]]
+; TUNIT-SAME: (ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR5]] {
+; TUNIT-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@control
-; CGSCC-SAME: (ptr noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    call void @use_i32_ptr(ptr noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR4]]
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A:%.*]]) #[[ATTR4]] {
+; CGSCC-NEXT:    call void @use_i32_ptr(ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1046,7 +1046,7 @@ define internal void @naked(ptr dereferenceable(4) %a) naked {
 ; CHECK: Function Attrs: naked
 ; CHECK-LABEL: define {{[^@]+}}@naked
 ; CHECK-SAME: (ptr noundef nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR11:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr nocapture noundef nonnull [[A]])
+; CHECK-NEXT:    call void @use_i32_ptr(ptr nocapture nofree noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1058,7 +1058,7 @@ define internal void @optnone(ptr dereferenceable(4) %a) optnone noinline {
 ; CHECK: Function Attrs: noinline optnone
 ; CHECK-LABEL: define {{[^@]+}}@optnone
 ; CHECK-SAME: (ptr noundef nonnull dereferenceable(4) [[A:%.*]]) #[[ATTR12:[0-9]+]] {
-; CHECK-NEXT:    call void @use_i32_ptr(ptr nocapture noundef nonnull [[A]])
+; CHECK-NEXT:    call void @use_i32_ptr(ptr nocapture nofree noundef nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
   call void @use_i32_ptr(ptr %a)
@@ -1068,14 +1068,14 @@ define void @make_live(ptr nonnull dereferenceable(8) %a) {
 ; TUNIT-LABEL: define {{[^@]+}}@make_live
 ; TUNIT-SAME: (ptr noundef nonnull align 16 dereferenceable(8) [[A:%.*]]) {
 ; TUNIT-NEXT:    call void @naked(ptr noundef nonnull align 16 dereferenceable(8) [[A]])
-; TUNIT-NEXT:    call void @control(ptr noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @control(ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR5]]
 ; TUNIT-NEXT:    call void @optnone(ptr noundef nonnull align 16 dereferenceable(8) [[A]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@make_live
 ; CGSCC-SAME: (ptr noundef nonnull align 16 dereferenceable(8) [[A:%.*]]) {
 ; CGSCC-NEXT:    call void @naked(ptr noundef nonnull align 16 dereferenceable(8) [[A]])
-; CGSCC-NEXT:    call void @control(ptr noalias nocapture noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR4]]
+; CGSCC-NEXT:    call void @control(ptr noalias nocapture nofree noundef nonnull readnone align 16 dereferenceable(8) [[A]]) #[[ATTR4]]
 ; CGSCC-NEXT:    call void @optnone(ptr noundef nonnull align 16 dereferenceable(8) [[A]])
 ; CGSCC-NEXT:    ret void
 ;
