@@ -5897,19 +5897,13 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // the SELECT. Performing the lowering here allows for greater control over
   // when CZERO_{EQZ/NEZ} are used vs another branchless sequence or
   // RISCVISD::SELECT_CC node (branch-based select).
-<<<<<<< HEAD
   if (Subtarget.hasStdExtZicond() && VT.isScalarInteger()) {
-    SDValue NewCondV;
-    if (selectSETCC(CondV, ISD::SETNE, NewCondV, DAG)) {
-=======
-  if (Subtarget.hasStdExtZicond() && VT.isInteger()) {
     if (SDValue NewCondV = selectSETCC(CondV, ISD::SETNE, DAG)) {
->>>>>>> 8f5aee536b99 ([RISCV] Make selectSETCC return SDValue instead of bool. NFC)
+      // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
       if (isNullConstant(FalseV))
-        // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
         return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, NewCondV);
+      // (select (riscv_setne c), 0, f) -> (czero_nez f, c)
       if (isNullConstant(TrueV))
-        // (select (riscv_setne c), 0, f) -> (czero_nez f, c)
         return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, NewCondV);
       // (select (riscv_setne c), t, f) -> (or (czero_eqz t, c), (czero_nez f,
       // c)
@@ -5919,11 +5913,11 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, NewCondV));
     }
     if (SDValue NewCondV =  selectSETCC(CondV, ISD::SETEQ, DAG)) {
+      // (select (riscv_seteq c), t, 0) -> (czero_nez t, c)
       if (isNullConstant(FalseV))
-        // (select (riscv_seteq c), t, 0) -> (czero_nez t, c)
         return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, NewCondV);
+      // (select (riscv_seteq c), 0, f) -> (czero_eqz f, c)
       if (isNullConstant(TrueV))
-        // (select (riscv_seteq c), 0, f) -> (czero_eqz f, c)
         return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, FalseV, NewCondV);
       // (select (riscv_seteq c), t, f) -> (or (czero_eqz f, c), (czero_nez t,
       // c)
@@ -5932,28 +5926,27 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, FalseV, NewCondV),
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, NewCondV));
     }
-    if (isNullConstant(FalseV)) {
-      // (select c, t, 0) -> (czero_eqz t, c)
+
+    // (select c, t, 0) -> (czero_eqz t, c)
+    if (isNullConstant(FalseV))
       return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV);
-    }
-    if (isNullConstant(TrueV)) {
-      // (select c, 0, f) -> (czero_nez f, c)
+    // (select c, 0, f) -> (czero_nez f, c)
+    if (isNullConstant(TrueV))
       return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV);
-    }
+
+    // (select c, (and f, x), f) -> (or (and f, x), (czero_nez f, c))
     if (TrueV.getOpcode() == ISD::AND &&
-        (TrueV.getOperand(0) == FalseV || TrueV.getOperand(1) == FalseV)) {
-      // (select c, (and f, x), f) -> (or (and f, x), (czero_nez f, c))
+        (TrueV.getOperand(0) == FalseV || TrueV.getOperand(1) == FalseV))
       return DAG.getNode(
           ISD::OR, DL, VT, TrueV,
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV));
-    }
+    // (select c, t, (and t, x)) -> (or (czero_eqz t, c), (and t, x))
     if (FalseV.getOpcode() == ISD::AND &&
-        (FalseV.getOperand(0) == TrueV || FalseV.getOperand(1) == TrueV)) {
-      // (select c, t, (and t, x)) -> (or (czero_eqz t, c), (and t, x))
+        (FalseV.getOperand(0) == TrueV || FalseV.getOperand(1) == TrueV))
       return DAG.getNode(
           ISD::OR, DL, VT, FalseV,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV));
-    }
+
     // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
     return DAG.getNode(ISD::OR, DL, VT,
                        DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
