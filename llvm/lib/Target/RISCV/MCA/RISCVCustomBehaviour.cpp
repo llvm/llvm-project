@@ -32,6 +32,7 @@ struct PseudoInfo {
   uint16_t Pseudo;
   uint16_t BaseInstr;
   uint8_t VLMul;
+  uint8_t SEW;
 };
 
 #define GET_RISCVVInversePseudosTable_IMPL
@@ -144,7 +145,7 @@ unsigned RISCVInstrumentManager::getSchedClassID(
     if (I->getDesc() == RISCVLMULInstrument::DESC_NAME) {
       uint8_t LMUL = static_cast<RISCVLMULInstrument *>(I)->getLMUL();
       const RISCVVInversePseudosTable::PseudoInfo *RVV =
-          RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL);
+          RISCVVInversePseudosTable::getBaseInfo(Opcode, LMUL, 0);
       // Not a RVV instr
       if (!RVV) {
         LLVM_DEBUG(
