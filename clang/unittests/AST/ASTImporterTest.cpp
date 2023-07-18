@@ -2332,6 +2332,43 @@ TEST_P(ImportFunctions,
   EXPECT_EQ(ToDFOutOfClass->getPreviousDecl(), ToDFInClass);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportVirtualOverriddenMethodOnALoopTest) {
+  // B::f() calls => f1() ==> C ==> C::f()
+  //     \
+  //      \---- A::f()
+  //
+  // C::f()'s ImportOverriddenMethods() asserts B::isVirtual(), so B::f()'s
+  // ImportOverriddenMethods() should be completed before B::f()'s body
+  const char *Code =
+      R"(
+      void f1();
+      class A {
+        virtual void f(){}
+      };
+      class B: public A {
+        void f() override {
+          f1();
+        }
+      };
+      class C: public B {
+        void f() override {}
+      };
+      void f1() { C c; }
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+
+  auto *FromF = FirstDeclMatcher<CXXMethodDecl>().match(
+      FromTU, cxxMethodDecl(hasName("B::f")));
+
+  auto *ToBF = Import(FromF, Lang_CXX11);
+  EXPECT_TRUE(ToBF->isVirtual());
+
+  auto *ToCF = FirstDeclMatcher<CXXMethodDecl>().match(
+      ToBF->getTranslationUnitDecl(), cxxMethodDecl(hasName("C::f")));
+  EXPECT_TRUE(ToCF->isVirtual());
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportVariableChainInC) {
     std::string Code = "static int v; static int v = 0;";
     auto Pattern = varDecl(hasName("v"));
@@ -7968,6 +8005,27 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportDeductionGuideDifferentOrder) {
                 ->getParam(0)
                 ->getDeclContext(),
             ToDGOther);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportFieldsFirstForCorrectRecordLayoutTest) {
+  // UnaryOperator(&) triggers RecordLayout computation, which relies on
+  // correctly imported fields.
+  auto Code =
+      R"(
+      class A {
+        int m() {
+          return &((A *)0)->f1 - &((A *)0)->f2;
+        }
+        int f1;
+        int f2;
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+
+  auto *FromF = FirstDeclMatcher<CXXMethodDecl>().match(
+      FromTU, cxxMethodDecl(hasName("A::m")));
+  Import(FromF, Lang_CXX11);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,

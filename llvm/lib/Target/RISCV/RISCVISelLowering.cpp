@@ -765,9 +765,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         // range of f32.
         EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
         if (isTypeLegal(FloatVT)) {
-          setOperationAction(
-              {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
-              Custom);
+          setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF,
+                              ISD::CTTZ_ZERO_UNDEF, ISD::VP_CTLZ,
+                              ISD::VP_CTLZ_ZERO_UNDEF, ISD::VP_CTTZ_ZERO_UNDEF},
+                             VT, Custom);
         }
       }
     }
@@ -4285,6 +4286,16 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   unsigned EltSize = VT.getScalarSizeInBits();
   SDValue Src = Op.getOperand(0);
   SDLoc DL(Op);
+  MVT ContainerVT = VT;
+
+  SDValue Mask, VL;
+  if (Op->isVPOpcode()) {
+    Mask = Op.getOperand(1);
+    if (VT.isFixedLengthVector())
+      Mask = convertToScalableVector(getMaskTypeFor(ContainerVT), Mask, DAG,
+                                     Subtarget);
+    VL = Op.getOperand(2);
+  }
 
   // We choose FP type that can represent the value if possible. Otherwise, we
   // use rounding to zero conversion for correct exponent of the result.
@@ -4305,21 +4316,27 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
     SDValue Neg = DAG.getNegative(Src, DL, VT);
     Src = DAG.getNode(ISD::AND, DL, VT, Src, Neg);
+  } else if (Op.getOpcode() == ISD::VP_CTTZ_ZERO_UNDEF) {
+    SDValue Neg = DAG.getNode(ISD::VP_SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                              Src, Mask, VL);
+    Src = DAG.getNode(ISD::VP_AND, DL, VT, Src, Neg, Mask, VL);
   }
 
   // We have a legal FP type, convert to it.
   SDValue FloatVal;
   if (FloatVT.bitsGT(VT)) {
-    FloatVal = DAG.getNode(ISD::UINT_TO_FP, DL, FloatVT, Src);
+    if (Op->isVPOpcode())
+      FloatVal = DAG.getNode(ISD::VP_UINT_TO_FP, DL, FloatVT, Src, Mask, VL);
+    else
+      FloatVal = DAG.getNode(ISD::UINT_TO_FP, DL, FloatVT, Src);
   } else {
     // Use RTZ to avoid rounding influencing exponent of FloatVal.
-    MVT ContainerVT = VT;
     if (VT.isFixedLengthVector()) {
       ContainerVT = getContainerForFixedLengthVector(VT);
       Src = convertToScalableVector(ContainerVT, Src, DAG, Subtarget);
     }
-
-    auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+    if (!Op->isVPOpcode())
+      std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
     SDValue RTZRM =
         DAG.getTargetConstant(RISCVFPRndMode::RTZ, DL, Subtarget.getXLenVT());
     MVT ContainerFloatVT =
@@ -4333,30 +4350,49 @@ RISCVTargetLowering::lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op,
   EVT IntVT = FloatVT.changeVectorElementTypeToInteger();
   SDValue Bitcast = DAG.getBitcast(IntVT, FloatVal);
   unsigned ShiftAmt = FloatEltVT == MVT::f64 ? 52 : 23;
-  SDValue Exp = DAG.getNode(ISD::SRL, DL, IntVT, Bitcast,
-                            DAG.getConstant(ShiftAmt, DL, IntVT));
+
+  SDValue Exp;
   // Restore back to original type. Truncation after SRL is to generate vnsrl.
-  if (IntVT.bitsLT(VT))
-    Exp = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Exp);
-  else if (IntVT.bitsGT(VT))
-    Exp = DAG.getNode(ISD::TRUNCATE, DL, VT, Exp);
+  if (Op->isVPOpcode()) {
+    Exp = DAG.getNode(ISD::VP_LSHR, DL, IntVT, Bitcast,
+                      DAG.getConstant(ShiftAmt, DL, IntVT), Mask, VL);
+    Exp = DAG.getVPZExtOrTrunc(DL, VT, Exp, Mask, VL);
+  } else {
+    Exp = DAG.getNode(ISD::SRL, DL, IntVT, Bitcast,
+                      DAG.getConstant(ShiftAmt, DL, IntVT));
+    if (IntVT.bitsLT(VT))
+      Exp = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Exp);
+    else if (IntVT.bitsGT(VT))
+      Exp = DAG.getNode(ISD::TRUNCATE, DL, VT, Exp);
+  }
+
   // The exponent contains log2 of the value in biased form.
   unsigned ExponentBias = FloatEltVT == MVT::f64 ? 1023 : 127;
-
   // For trailing zeros, we just need to subtract the bias.
   if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF)
     return DAG.getNode(ISD::SUB, DL, VT, Exp,
                        DAG.getConstant(ExponentBias, DL, VT));
+  if (Op.getOpcode() == ISD::VP_CTTZ_ZERO_UNDEF)
+    return DAG.getNode(ISD::VP_SUB, DL, VT, Exp,
+                       DAG.getConstant(ExponentBias, DL, VT), Mask, VL);
 
   // For leading zeros, we need to remove the bias and convert from log2 to
   // leading zeros. We can do this by subtracting from (Bias + (EltSize - 1)).
   unsigned Adjust = ExponentBias + (EltSize - 1);
-  SDValue Res =
-      DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(Adjust, DL, VT), Exp);
+  SDValue Res;
+  if (Op->isVPOpcode())
+    Res = DAG.getNode(ISD::VP_SUB, DL, VT, DAG.getConstant(Adjust, DL, VT), Exp,
+                      Mask, VL);
+  else
+    Res = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(Adjust, DL, VT), Exp);
+
   // The above result with zero input equals to Adjust which is greater than
   // EltSize. Hence, we can do min(Res, EltSize) for CTLZ.
   if (Op.getOpcode() == ISD::CTLZ)
     Res = DAG.getNode(ISD::UMIN, DL, VT, Res, DAG.getConstant(EltSize, DL, VT));
+  else if (Op.getOpcode() == ISD::VP_CTLZ)
+    Res = DAG.getNode(ISD::VP_UMIN, DL, VT, Res,
+                      DAG.getConstant(EltSize, DL, VT), Mask, VL);
   return Res;
 }
 
@@ -5440,10 +5476,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPOp(Op, DAG, RISCVISD::BSWAP_VL, /*HasMergeOp*/ true);
   case ISD::VP_CTLZ:
   case ISD::VP_CTLZ_ZERO_UNDEF:
-    return lowerVPOp(Op, DAG, RISCVISD::CTLZ_VL, /*HasMergeOp*/ true);
+    if (Subtarget.hasStdExtZvbb())
+      return lowerVPOp(Op, DAG, RISCVISD::CTLZ_VL, /*HasMergeOp*/ true);
+    return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
   case ISD::VP_CTTZ:
   case ISD::VP_CTTZ_ZERO_UNDEF:
-    return lowerVPOp(Op, DAG, RISCVISD::CTTZ_VL, /*HasMergeOp*/ true);
+    if (Subtarget.hasStdExtZvbb())
+      return lowerVPOp(Op, DAG, RISCVISD::CTTZ_VL, /*HasMergeOp*/ true);
+    return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
   case ISD::VP_CTPOP:
     return lowerVPOp(Op, DAG, RISCVISD::CTPOP_VL, /*HasMergeOp*/ true);
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:

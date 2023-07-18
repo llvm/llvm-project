@@ -918,16 +918,18 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
               SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Depth + 1))
             return I;
         } else { // fshl is a rotate
-        // Avoid converting rotate into funnel shift. 
-        // Only simplify if one operand is constant.
-          KnownBits LHSKnown = computeKnownBits(I->getOperand(0), Depth + 1, I);
-          if (DemandedMaskLHS.isSubsetOf(LHSKnown.Zero | LHSKnown.One)) {
+          // Avoid converting rotate into funnel shift. 
+          // Only simplify if one operand is constant.
+          LHSKnown = computeKnownBits(I->getOperand(0), Depth + 1, I);
+          if (DemandedMaskLHS.isSubsetOf(LHSKnown.Zero | LHSKnown.One) &&
+              !match(I->getOperand(0), m_SpecificInt(LHSKnown.One))) {
             replaceOperand(*I, 0, Constant::getIntegerValue(VTy, LHSKnown.One));
             return I;
           }
 
-          KnownBits RHSKnown = computeKnownBits(I->getOperand(1), Depth + 1, I);
-          if (DemandedMaskRHS.isSubsetOf(RHSKnown.Zero | RHSKnown.One)) {
+          RHSKnown = computeKnownBits(I->getOperand(1), Depth + 1, I);
+          if (DemandedMaskRHS.isSubsetOf(RHSKnown.Zero | RHSKnown.One) &&
+              !match(I->getOperand(1), m_SpecificInt(RHSKnown.One))) {
             replaceOperand(*I, 1, Constant::getIntegerValue(VTy, RHSKnown.One));
             return I;
           }

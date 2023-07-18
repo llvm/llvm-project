@@ -18,9 +18,9 @@
 
 // 1RI13-type
 // <opcode | I13 | xd>
-class Fmt1RI13_XI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt1RI13_XI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<13> imm13;
   bits<5> xd;
 
@@ -31,9 +31,9 @@ class Fmt1RI13_XI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2R-type
 // <opcode | xj | xd>
-class Fmt2R_XX<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2R_XX<bits<32> op, dag outs, dag ins, string opnstr,
                list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> xj;
   bits<5> xd;
 
@@ -43,9 +43,9 @@ class Fmt2R_XX<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | rj | xd>
-class Fmt2R_XR<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2R_XR<bits<32> op, dag outs, dag ins, string opnstr,
                list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> rj;
   bits<5> xd;
 
@@ -55,9 +55,9 @@ class Fmt2R_XR<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | xj | cd>
-class Fmt2R_CX<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2R_CX<bits<32> op, dag outs, dag ins, string opnstr,
                list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> xj;
   bits<3> cd;
 
@@ -68,9 +68,9 @@ class Fmt2R_CX<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI1-type
 // <opcode | I1 | xj | xd>
-class Fmt2RI1_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI1_XXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<1> imm1;
   bits<5> xj;
   bits<5> xd;
@@ -83,9 +83,9 @@ class Fmt2RI1_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI2-type
 // <opcode | I2 | xj | xd>
-class Fmt2RI2_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI2_XXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<2> imm2;
   bits<5> xj;
   bits<5> xd;
@@ -97,9 +97,9 @@ class Fmt2RI2_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | I2 | rj | xd>
-class Fmt2RI2_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI2_XRI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<2> imm2;
   bits<5> rj;
   bits<5> xd;
@@ -111,9 +111,9 @@ class Fmt2RI2_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | I2 | xj | rd>
-class Fmt2RI2_RXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI2_RXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<2> imm2;
   bits<5> xj;
   bits<5> rd;
@@ -126,9 +126,9 @@ class Fmt2RI2_RXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI3-type
 // <opcode | I3 | xj | xd>
-class Fmt2RI3_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI3_XXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<3> imm3;
   bits<5> xj;
   bits<5> xd;
@@ -140,9 +140,9 @@ class Fmt2RI3_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | I3 | rj | xd>
-class Fmt2RI3_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI3_XRI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<3> imm3;
   bits<5> rj;
   bits<5> xd;
@@ -154,9 +154,9 @@ class Fmt2RI3_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | I3 | xj | rd>
-class Fmt2RI3_RXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI3_RXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<3> imm3;
   bits<5> xj;
   bits<5> rd;
@@ -169,9 +169,9 @@ class Fmt2RI3_RXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI4-type
 // <opcode | I4 | xj | xd>
-class Fmt2RI4_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI4_XXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<4> imm4;
   bits<5> xj;
   bits<5> xd;
@@ -183,9 +183,9 @@ class Fmt2RI4_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | I4 | rj | xd>
-class Fmt2RI4_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI4_XRI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<4> imm4;
   bits<5> rj;
   bits<5> xd;
@@ -197,9 +197,9 @@ class Fmt2RI4_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | I4 | xj | rd>
-class Fmt2RI4_RXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI4_RXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<4> imm4;
   bits<5> xj;
   bits<5> rd;
@@ -212,9 +212,9 @@ class Fmt2RI4_RXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI5-type
 // <opcode | I5 | xj | xd>
-class Fmt2RI5_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI5_XXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> imm5;
   bits<5> xj;
   bits<5> xd;
@@ -227,9 +227,9 @@ class Fmt2RI5_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI6-type
 // <opcode | I6 | xj | xd>
-class Fmt2RI6_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI6_XXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<6> imm6;
   bits<5> xj;
   bits<5> xd;
@@ -242,9 +242,9 @@ class Fmt2RI6_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI7-type
 // <opcode | I7 | xj | xd>
-class Fmt2RI7_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI7_XXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<7> imm7;
   bits<5> xj;
   bits<5> xd;
@@ -257,9 +257,9 @@ class Fmt2RI7_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI8-type
 // <opcode | I8 | xj | xd>
-class Fmt2RI8_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI8_XXI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<8> imm8;
   bits<5> xj;
   bits<5> xd;
@@ -272,9 +272,9 @@ class Fmt2RI8_XXI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI8I2-type
 // <opcode | I2 | I8 | xj | xd>
-class Fmt2RI8I2_XRII<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI8I2_XRII<bits<32> op, dag outs, dag ins, string opnstr,
                      list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<2> imm2;
   bits<8> imm8;
   bits<5> rj;
@@ -289,9 +289,9 @@ class Fmt2RI8I2_XRII<bits<32> op, dag outs, dag ins, string opcstr, string opnst
 
 // 2RI8I3-type
 // <opcode | I3 | I8 | xj | xd>
-class Fmt2RI8I3_XRII<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI8I3_XRII<bits<32> op, dag outs, dag ins, string opnstr,
                      list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<3> imm3;
   bits<8> imm8;
   bits<5> rj;
@@ -306,9 +306,9 @@ class Fmt2RI8I3_XRII<bits<32> op, dag outs, dag ins, string opcstr, string opnst
 
 // 2RI8I4-type
 // <opcode | I4 | I8 | xj | xd>
-class Fmt2RI8I4_XRII<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI8I4_XRII<bits<32> op, dag outs, dag ins, string opnstr,
                      list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<4> imm4;
   bits<8> imm8;
   bits<5> rj;
@@ -323,9 +323,9 @@ class Fmt2RI8I4_XRII<bits<32> op, dag outs, dag ins, string opcstr, string opnst
 
 // 2RI8I5-type
 // <opcode | I5 | I8 | xj | xd>
-class Fmt2RI8I5_XRII<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI8I5_XRII<bits<32> op, dag outs, dag ins, string opnstr,
                      list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> imm5;
   bits<8> imm8;
   bits<5> rj;
@@ -340,9 +340,9 @@ class Fmt2RI8I5_XRII<bits<32> op, dag outs, dag ins, string opcstr, string opnst
 
 // 2RI9-type
 // <opcode | I9 | rj | xd>
-class Fmt2RI9_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI9_XRI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<9> imm9;
   bits<5> rj;
   bits<5> xd;
@@ -355,9 +355,9 @@ class Fmt2RI9_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI10-type
 // <opcode | I10 | rj | xd>
-class Fmt2RI10_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI10_XRI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<10> imm10;
   bits<5> rj;
   bits<5> xd;
@@ -370,9 +370,9 @@ class Fmt2RI10_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI11-type
 // <opcode | I11 | rj | xd>
-class Fmt2RI11_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI11_XRI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<11> imm11;
   bits<5> rj;
   bits<5> xd;
@@ -385,9 +385,9 @@ class Fmt2RI11_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI12-type
 // <opcode | I12 | rj | xd>
-class Fmt2RI12_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt2RI12_XRI<bits<32> op, dag outs, dag ins, string opnstr,
                   list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<12> imm12;
   bits<5> rj;
   bits<5> xd;
@@ -400,9 +400,9 @@ class Fmt2RI12_XRI<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 3R-type
 // <opcode | xk | xj | xd>
-class Fmt3R_XXX<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt3R_XXX<bits<32> op, dag outs, dag ins, string opnstr,
                 list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> xk;
   bits<5> xj;
   bits<5> xd;
@@ -414,9 +414,9 @@ class Fmt3R_XXX<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | rk | xj | xd>
-class Fmt3R_XXR<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt3R_XXR<bits<32> op, dag outs, dag ins, string opnstr,
                 list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> rk;
   bits<5> xj;
   bits<5> xd;
@@ -428,9 +428,9 @@ class Fmt3R_XXR<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 }
 
 // <opcode | rk | rj | xd>
-class Fmt3R_XRR<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt3R_XRR<bits<32> op, dag outs, dag ins, string opnstr,
                 list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> rk;
   bits<5> rj;
   bits<5> xd;
@@ -443,9 +443,9 @@ class Fmt3R_XRR<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 4R-type
 // <opcode | xa | xk | xj | xd>
-class Fmt4R_XXXX<bits<32> op, dag outs, dag ins, string opcstr, string opnstr,
+class Fmt4R_XXXX<bits<32> op, dag outs, dag ins, string opnstr,
                  list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> xa;
   bits<5> xk;
   bits<5> xj;

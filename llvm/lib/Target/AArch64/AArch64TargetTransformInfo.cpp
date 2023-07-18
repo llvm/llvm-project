@@ -1925,8 +1925,7 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (!ST->isStreamingSVEModeDisabled() &&
-        !EnableFixedwidthAutovecInStreamingMode)
+    if (!ST->isNeonAvailable() && !EnableFixedwidthAutovecInStreamingMode)
       return TypeSize::getFixed(0);
 
     if (ST->hasSVE())
@@ -1935,7 +1934,8 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 
     return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
-    if (!ST->isStreamingSVEModeDisabled() && !EnableScalableAutovecInStreamingMode)
+    if ((ST->isStreaming() || ST->isStreamingCompatible()) &&
+        !EnableScalableAutovecInStreamingMode)
       return TypeSize::getScalable(0);
 
     return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
