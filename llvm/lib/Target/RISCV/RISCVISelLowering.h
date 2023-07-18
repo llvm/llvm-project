@@ -128,6 +128,10 @@ enum NodeType : unsigned {
   ORC_B,
   ZIP,
   UNZIP,
+
+  // Scalar cryptography
+  CLMUL, CLMULH, CLMULR,
+
   // Vector Extension
   // VMV_V_V_VL matches the semantics of vmv.v.v but includes an extra operand
   // for the VL value to be used for the operation. The first operand is
