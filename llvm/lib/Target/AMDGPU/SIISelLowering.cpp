@@ -1434,12 +1434,14 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     if (AM.BaseOffs % 4 != 0)
       return isLegalMUBUFAddressingMode(AM);
 
-    // There are no SMRD extloads, so if we have to do a small type access we
-    // will use a MUBUF load.
-    // FIXME?: We also need to do this if unaligned, but we don't know the
-    // alignment here.
-    if (Ty->isSized() && DL.getTypeStoreSize(Ty) < 4)
-      return isLegalGlobalAddressingMode(AM);
+    if (!Subtarget->hasScalarSubwordLoads()) {
+      // There are no SMRD extloads, so if we have to do a small type access we
+      // will use a MUBUF load.
+      // FIXME?: We also need to do this if unaligned, but we don't know the
+      // alignment here.
+      if (Ty->isSized() && DL.getTypeStoreSize(Ty) < 4)
+        return isLegalGlobalAddressingMode(AM);
+    }
 
     if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS) {
       // SMRD instructions have an 8-bit, dword offset on SI.
@@ -1454,10 +1456,14 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       // On VI, these use the SMEM format and the offset is 20-bit in bytes.
       if (!isUInt<20>(AM.BaseOffs))
         return false;
-    } else {
+    } else if (Subtarget->getGeneration() < AMDGPUSubtarget::GFX12) {
       // On GFX9 the offset is signed 21-bit in bytes (but must not be negative
       // for S_BUFFER_* instructions).
       if (!isInt<21>(AM.BaseOffs))
+        return false;
+    } else {
+      // On GFX12, all offsets are signed 24-bit in bytes.
+      if (!isInt<24>(AM.BaseOffs))
         return false;
     }
 
