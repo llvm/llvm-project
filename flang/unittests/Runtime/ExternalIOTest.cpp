@@ -529,12 +529,12 @@ TEST(ExternalIOTests, TestNonAvancingInput) {
   };
   // Actual non advancing input IO test
   TestItems inputItems[]{
-      {std::string(4, '+'), IostatOk, "ABCD", "ABCD"},
-      {std::string(4, '+'), IostatOk, "EFGH", "EFGH"},
-      {std::string(4, '+'), IostatEor, "++++", "    "},
-      {std::string(2, '+'), IostatOk, "IJ", "IJ"},
-      {std::string(8, '+'), IostatEor, "++++++++", "KLMNOP  "},
-      {std::string(10, '+'), IostatEor, "++++++++++", "QRSTUVWX  "},
+      {std::string(4, '+'), IostatOk, {"ABCD", "ABCD"}},
+      {std::string(4, '+'), IostatOk, {"EFGH", "EFGH"}},
+      {std::string(4, '+'), IostatEor, {"++++", "    "}},
+      {std::string(2, '+'), IostatOk, {"IJ", "IJ"}},
+      {std::string(8, '+'), IostatEor, {"++++++++", "KLMNOP  "}},
+      {std::string(10, '+'), IostatEor, {"++++++++++", "QRSTUVWX  "}},
   };
 
   // Test with PAD='NO'
