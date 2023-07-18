@@ -778,17 +778,17 @@ def HasVendorXSfcie : Predicate<"Subtarget->hasVendorXSfcie()">,
 
 def FeatureVendorXCVbitmanip
     : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",
-                       "'XCVbitmanip' (Bit Manipulation)">;
+                       "'XCVbitmanip' (CORE-V Bit Manipulation)">;
 def HasVendorXCVbitmanip : Predicate<"Subtarget->hasVendorXCVbitmanip()">,
                                 AssemblerPredicate<(all_of FeatureVendorXCVbitmanip),
-                                "'XCVbitmanip' (Bit Manipulation)">;
+                                "'XCVbitmanip' (CORE-V Bit Manipulation)">;
 
 def FeatureVendorXCVmac
     : SubtargetFeature<"xcvmac", "HasVendorXCVmac", "true",
-                       "'XCVmac' (Multiply-Accumulate)">;
+                       "'XCVmac' (CORE-V Multiply-Accumulate)">;
 def HasVendorXCVmac : Predicate<"Subtarget->hasVendorXCVmac()">,
                                 AssemblerPredicate<(all_of FeatureVendorXCVmac),
-                                "'XCVmac' (Multiply-Accumulate)">;
+                                "'XCVmac' (CORE-V Multiply-Accumulate)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions
