@@ -16,8 +16,8 @@
 
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
-#include "src/string/memory_utils/bzero_implementations.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/inline_bzero.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 #include <stddef.h> // For size_t
 
 namespace __llvm_libc {

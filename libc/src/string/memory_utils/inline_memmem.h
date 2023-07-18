@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMMEM_IMPLEMENTATIONS_H
-#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMMEM_IMPLEMENTATIONS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMEM_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMEM_H
 
 #include <stddef.h>
 
 namespace __llvm_libc {
 
 template <typename Comp>
-constexpr static void *
-memmem_implementation(const void *haystack, size_t haystack_len,
-                      const void *needle, size_t needle_len, Comp &&comp) {
+constexpr static void *inline_memmem(const void *haystack, size_t haystack_len,
+                                     const void *needle, size_t needle_len,
+                                     Comp &&comp) {
   // TODO: simple brute force implementation. This can be
   // improved upon using well known string matching algorithms.
   if (!needle_len)
@@ -39,4 +39,4 @@ memmem_implementation(const void *haystack, size_t haystack_len,
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMMEM_IMPLEMENTATIONS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMMEM_H

@@ -11,7 +11,7 @@
 #include "src/__support/threads/thread.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #include <asm/prctl.h>
 #include <linux/auxvec.h>

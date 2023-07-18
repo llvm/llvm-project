@@ -1,12 +1,12 @@
-//===-- Memcmp implementation for riscv -------------------------*- C++ -*-===//
+//===-- Bcmp implementation for riscv ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LIBC_SRC_STRING_MEMORY_UTILS_RISCV_MEMCMP_IMPLEMENTATIONS_H
-#define LIBC_SRC_STRING_MEMORY_UTILS_RISCV_MEMCMP_IMPLEMENTATIONS_H
+#ifndef LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_BCMP_H
+#define LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_BCMP_H
 
 #include "src/__support/macros/attributes.h"               // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_RISCV64
@@ -17,12 +17,12 @@
 
 namespace __llvm_libc {
 
-[[maybe_unused]] LIBC_INLINE MemcmpReturnType
-inline_memcmp_riscv(CPtr p1, CPtr p2, size_t count) {
+[[maybe_unused]] LIBC_INLINE BcmpReturnType inline_bcmp_riscv(CPtr p1, CPtr p2,
+                                                              size_t count) {
 #if defined(LIBC_TARGET_ARCH_IS_RISCV64)
-  return inline_memcmp_aligned_access_64bit(p1, p2, count);
+  return inline_bcmp_aligned_access_64bit(p1, p2, count);
 #elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
-  return inline_memcmp_aligned_access_32bit(p1, p2, count);
+  return inline_bcmp_aligned_access_32bit(p1, p2, count);
 #else
 #error "Unimplemented"
 #endif
@@ -30,4 +30,4 @@ inline_memcmp_riscv(CPtr p1, CPtr p2, size_t count) {
 
 } // namespace __llvm_libc
 
-#endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_MEMCMP_IMPLEMENTATIONS_H
+#endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_BCMP_H
