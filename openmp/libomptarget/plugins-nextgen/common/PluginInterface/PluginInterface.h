@@ -67,15 +67,23 @@ struct AsyncInfoWrapperTy {
   /// Get the raw __tgt_async_info pointer.
   operator __tgt_async_info *() const { return AsyncInfoPtr; }
 
-  /// Get a reference to the underlying plugin-specific queue type.
-  template <typename Ty> Ty &getQueueAs() const {
-    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
-                  "Queue is not of the same size as target type");
-    return reinterpret_cast<Ty &>(AsyncInfoPtr->Queue);
-  }
-
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
+
+  /// Get the queue.
+  template <typename Ty> Ty getQueueAs() {
+    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
+                  "Queue is not of the same size as target type");
+    return static_cast<Ty>(AsyncInfoPtr->Queue);
+  }
+
+  /// Set the queue.
+  template <typename Ty> void setQueueAs(Ty Queue) {
+    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
+                  "Queue is not of the same size as target type");
+    assert(!AsyncInfoPtr->Queue && "Overwriting queue");
+    AsyncInfoPtr->Queue = Queue;
+  }
 
   /// Synchronize with the __tgt_async_info's pending operations if it's the
   /// internal async info. The error associated to the aysnchronous operations
@@ -1118,6 +1126,10 @@ public:
 /// some basic functions to be implemented. The derived class should define an
 /// empty constructor that creates an empty and invalid resource reference. Do
 /// not create a new resource on the ctor, but on the create() function instead.
+///
+/// The derived class should also define the type HandleTy as the underlying
+/// resource handle type. For instance, in a CUDA stream it would be:
+///   using HandleTy = CUstream;
 struct GenericDeviceResourceRef {
   /// Create a new resource and stores a reference.
   virtual Error create(GenericDeviceTy &Device) = 0;
@@ -1135,6 +1147,7 @@ protected:
 /// and destroy virtual functions.
 template <typename ResourceRef> class GenericDeviceResourceManagerTy {
   using ResourcePoolTy = GenericDeviceResourceManagerTy<ResourceRef>;
+  using ResourceHandleTy = typename ResourceRef::HandleTy;
 
 public:
   /// Create an empty resource pool for a specific device.
@@ -1169,31 +1182,33 @@ public:
     return Plugin::success();
   }
 
-  /// Get resource from the pool or create new resources.
-  ResourceRef getResource() {
+  /// Get resource from the pool or create new resources. If the function
+  /// succeeeds, the handle to the resource is saved in \p Handle.
+  Error getResource(ResourceHandleTy &Handle) {
     const std::lock_guard<std::mutex> Lock(Mutex);
 
     assert(NextAvailable <= ResourcePool.size() &&
            "Resource pool is corrupted");
 
-    if (NextAvailable == ResourcePool.size()) {
+    if (NextAvailable == ResourcePool.size())
       // By default we double the resource pool every time.
-      if (auto Err = ResourcePoolTy::resizeResourcePool(NextAvailable * 2)) {
-        REPORT("Failure to resize the resource pool: %s",
-               toString(std::move(Err)).data());
-        // Return an empty reference.
-        return ResourceRef();
-      }
-    }
-    return ResourcePool[NextAvailable++];
+      if (auto Err = ResourcePoolTy::resizeResourcePool(NextAvailable * 2))
+        return Err;
+
+    // Save the handle in the output parameter.
+    Handle = ResourcePool[NextAvailable++];
+
+    return Plugin::success();
   }
 
   /// Return resource to the pool.
-  void returnResource(ResourceRef Resource) {
+  Error returnResource(ResourceHandleTy Handle) {
     const std::lock_guard<std::mutex> Lock(Mutex);
 
     assert(NextAvailable > 0 && "Resource pool is corrupted");
-    ResourcePool[--NextAvailable] = Resource;
+    ResourcePool[--NextAvailable] = Handle;
+
+    return Plugin::success();
   }
 
 private:
