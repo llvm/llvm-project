@@ -777,3 +777,30 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_reduction_mul_cmplx()
 ! CHECK: %[[RED:.*]] = acc.reduction varPtr(%{{.*}} : !fir.ref<!fir.complex<4>>) -> !fir.ref<!fir.complex<4>> {name = "c"}
 ! CHECK: acc.parallel reduction(@reduction_mul_z32 -> %[[RED]] : !fir.ref<!fir.complex<4>>)
+
+subroutine acc_reduction_add_alloc()
+  integer, allocatable :: i
+  allocate(i)
+  !$acc parallel reduction(+:i)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_alloc()
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "i", uniq_name = "_QFacc_reduction_add_allocEi"}
+! CHECK: %[[LOAD:.*]] = fir.load %[[ALLOCA]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.heap<i32>) -> !fir.heap<i32> {name = "i"}
+! CHECK: acc.parallel reduction(@reduction_add_i32 -> %[[RED]] : !fir.heap<i32>)
+
+subroutine acc_reduction_add_pointer(i)
+  integer, pointer :: i
+  !$acc parallel reduction(+:i)
+  !$acc end parallel
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_reduction_add_pointer(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "i"})
+! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[BOX_ADDR]] : !fir.ptr<i32>) -> !fir.ptr<i32> {name = "i"}
+! CHECK: acc.parallel reduction(@reduction_add_i32 -> %[[RED]] : !fir.ptr<i32>)
