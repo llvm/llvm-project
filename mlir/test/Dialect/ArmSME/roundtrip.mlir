@@ -183,3 +183,20 @@ func.func @arm_sme_get_tile_id_i128() -> i128 {
   %0 = arm_sme.get_tile_id : i128
   return %0 : i128
 }
+
+// -----
+
+func.func @arm_sme_zero() -> () {
+  // CHECK: arm_sme.zero : vector<[16]x[16]xi8>
+  %0 = arm_sme.zero : vector<[16]x[16]xi8>
+  return
+}
+
+// -----
+
+func.func @arm_sme_store_tile(%tile : vector<[16]x[16]xi8>, %dest : memref<?x?xi8>) -> () {
+  // CHECK: arm_sme.tile_store {{.*}} : memref<?x?xi8>, vector<[16]x[16]xi8>
+  %c0 = arith.constant 0 : index
+  arm_sme.tile_store %tile, %dest[%c0, %c0] : memref<?x?xi8>, vector<[16]x[16]xi8>
+  return
+}
