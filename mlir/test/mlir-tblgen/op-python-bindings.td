@@ -3,7 +3,6 @@
 include "mlir/IR/OpBase.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Bindings/Python/Attributes.td"
 
 // CHECK: @_ods_cext.register_dialect
 // CHECK: class _Dialect(_ods_ir.Dialect):
@@ -13,8 +12,6 @@ def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "Test";
 }
-def TestAttr : AttrDef<Test_Dialect, "TestAttr">;
-def : PythonAttr<TestAttr.cppType, "<TestAttr hook>">;
 
 class TestOp<string mnemonic, list<Trait> traits = []> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -114,7 +111,7 @@ def AttrSizedResultsOp : TestOp<"attr_sized_results",
 // CHECK-NOT: _ODS_OPERAND_SEGMENTS
 // CHECK-NOT: _ODS_RESULT_SEGMENTS
 def AttributedOp : TestOp<"attributed_op"> {
-  // CHECK: def __init__(self, i32attr, in_, test_attr, *, optionalF32Attr=None, unitAttr=None, loc=None, ip=None):
+  // CHECK: def __init__(self, i32attr, in_, *, optionalF32Attr=None, unitAttr=None, loc=None, ip=None):
   // CHECK:   operands = []
   // CHECK:   results = []
   // CHECK:   attributes = {}
@@ -134,13 +131,13 @@ def AttributedOp : TestOp<"attributed_op"> {
 
   // CHECK: @builtins.property
   // CHECK: def i32attr(self):
-  // CHECK:   return (self.operation.attributes["i32attr"])
+  // CHECK:   return self.operation.attributes["i32attr"]
 
   // CHECK: @builtins.property
   // CHECK: def optionalF32Attr(self):
   // CHECK:   if "optionalF32Attr" not in self.operation.attributes:
   // CHECK:     return None
-  // CHECK:   return (self.operation.attributes["optionalF32Attr"])
+  // CHECK:   return self.operation.attributes["optionalF32Attr"]
 
   // CHECK: @builtins.property
   // CHECK: def unitAttr(self):
@@ -148,13 +145,10 @@ def AttributedOp : TestOp<"attributed_op"> {
 
   // CHECK: @builtins.property
   // CHECK: def in_(self):
-  // CHECK:   return (self.operation.attributes["in"])
+  // CHECK:   return self.operation.attributes["in"]
 
-  // CHECK: @builtins.property
-  // CHECK: def test_attr(self):
-  // CHECK:   return <TestAttr hook>(self.operation.attributes["test_attr"])
   let arguments = (ins I32Attr:$i32attr, OptionalAttr<F32Attr>:$optionalF32Attr,
-                   UnitAttr:$unitAttr, I32Attr:$in, TestAttr:$test_attr);
+                   UnitAttr:$unitAttr, I32Attr:$in);
 }
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
@@ -186,7 +180,7 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   // CHECK: def is_(self):
   // CHECK:   if "is" not in self.operation.attributes:
   // CHECK:     return None
-  // CHECK:   return (self.operation.attributes["is"])
+  // CHECK:   return self.operation.attributes["is"]
   let arguments = (ins I32, UnitAttr:$in, F32, OptionalAttr<F32Attr>:$is);
 }
 
