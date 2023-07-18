@@ -269,7 +269,7 @@ Modified Compiler Flags
 
 - ``-ffat-lto-objects`` can now be used to emit object files with both object
   code and LLVM bitcode. Previously this flag was ignored for GCC compatibility.
-  (`See patch <https://reviews.llvm.org/D146777>`_).
+  (`See related patch <https://reviews.llvm.org/D146777>`_).
 
 Removed Compiler Flags
 -------------------------
