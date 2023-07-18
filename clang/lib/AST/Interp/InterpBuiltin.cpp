@@ -240,10 +240,9 @@ static bool interp__builtin_isnormal(InterpState &S, CodePtr OpPC,
 /// second one is an integral value.
 static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
                                       const InterpFrame *Frame,
-                                      const Function *Func) {
-  const Expr *E = S.Current->getExpr(OpPC);
-  const CallExpr *CE = cast<CallExpr>(E);
-  PrimType FPClassArgT = *S.getContext().classify(CE->getArgs()[1]->getType());
+                                      const Function *Func,
+                                      const CallExpr *Call) {
+  PrimType FPClassArgT = *S.getContext().classify(Call->getArg(1)->getType());
   APSInt FPClassArg = peekToAPSInt(S.Stk, FPClassArgT);
   const Floating &F =
       S.Stk.peek<Floating>(align(primSize(FPClassArgT) + primSize(PT_Float)));
@@ -300,7 +299,8 @@ static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
   return true;
 }
 
-bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
+                      const CallExpr *Call) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
 
@@ -394,7 +394,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
       return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
   case Builtin::BI__builtin_isfpclass:
-    if (interp__builtin_isfpclass(S, OpPC, Frame, F))
+    if (interp__builtin_isfpclass(S, OpPC, Frame, F, Call))
       return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
   case Builtin::BI__builtin_fpclassify:
