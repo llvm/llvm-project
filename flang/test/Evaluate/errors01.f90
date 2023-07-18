@@ -12,11 +12,11 @@ module m
     integer :: ub1(ubound(a,1))
     !CHECK-NOT: error: DIM=1 dimension is out of range for rank-1 assumed-size array
     integer :: lb1(lbound(a,1))
-    !CHECK: error: DIM=0 dimension is out of range for rank-1 array
+    !CHECK: error: DIM=0 dimension must be positive
     integer :: ub2(ubound(a,0))
     !CHECK: error: DIM=2 dimension is out of range for rank-1 array
     integer :: ub3(ubound(a,2))
-    !CHECK: error: DIM=0 dimension is out of range for rank-1 array
+    !CHECK: error: DIM=0 dimension must be positive
     integer :: lb2(lbound(b,0))
     !CHECK: error: DIM=2 dimension is out of range for rank-1 array
     integer :: lb3(lbound(b,2))
