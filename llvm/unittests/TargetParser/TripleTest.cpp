@@ -1243,12 +1243,14 @@ TEST(TripleTest, BitWidthPredicates) {
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
   EXPECT_TRUE(T.isLoongArch());
+  EXPECT_TRUE(T.isLoongArch32());
 
   T.setArch(Triple::loongarch64);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
   EXPECT_TRUE(T.isLoongArch());
+  EXPECT_TRUE(T.isLoongArch64());
 
   T.setArch(Triple::dxil);
   EXPECT_FALSE(T.isArch16Bit());
