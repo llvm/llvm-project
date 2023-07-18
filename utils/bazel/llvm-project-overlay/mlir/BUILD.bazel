@@ -2786,6 +2786,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineDialect",
+        ":Analysis",
         ":ArithDialect",
         ":ArithUtils",
         ":DialectUtils",
@@ -2795,6 +2796,8 @@ cc_library(
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVGPUTransformOpsIncGen",
+        ":SCFDialect",
+        ":SCFTransforms",
         ":Support",
         ":TransformDialect",
         ":VectorDialect",
