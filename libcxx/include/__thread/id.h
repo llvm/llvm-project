@@ -23,8 +23,6 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_HAS_NO_THREADS
-
-class _LIBCPP_EXPORTED_FROM_ABI thread;
 class _LIBCPP_EXPORTED_FROM_ABI __thread_id;
 
 namespace this_thread {
@@ -109,12 +107,6 @@ inline _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(__thread_id __x, __thre
 }
 
 #  endif // _LIBCPP_STD_VER <= 17
-
-namespace this_thread {
-
-_LIBCPP_HIDE_FROM_ABI __thread_id get_id() _NOEXCEPT;
-
-} // namespace this_thread
 
 namespace this_thread {
 
