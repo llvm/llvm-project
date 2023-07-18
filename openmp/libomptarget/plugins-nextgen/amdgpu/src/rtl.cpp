@@ -1146,13 +1146,11 @@ public:
   Error pushMemoryCopyD2HAsync(void *Dst, const void *Src, void *Inter,
                                uint64_t CopySize,
                                AMDGPUMemoryManagerTy &MemoryManager) {
-    // TODO: Managers should define a function to retrieve multiple resources
-    // in a single call.
     // Retrieve available signals for the operation's outputs.
     AMDGPUSignalTy *OutputSignals[2] = {};
-    for (auto &Signal : OutputSignals) {
-      if (auto Err = SignalManager.getResource(Signal))
-        return Err;
+    if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
+      return Err;
+    for (auto Signal : OutputSignals) {
       Signal->reset();
       Signal->increaseUseCount();
     }
@@ -1218,9 +1216,9 @@ public:
                                AMDGPUMemoryManagerTy &MemoryManager) {
     // Retrieve available signals for the operation's outputs.
     AMDGPUSignalTy *OutputSignals[2] = {};
-    for (auto &Signal : OutputSignals) {
-      if (auto Err = SignalManager.getResource(Signal))
-        return Err;
+    if (auto Err = SignalManager.getResources(/*Num=*/2, OutputSignals))
+      return Err;
+    for (auto Signal : OutputSignals) {
       Signal->reset();
       Signal->increaseUseCount();
     }
