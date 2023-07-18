@@ -14,9 +14,9 @@ define <2 x i32> @bitcast() nounwind {
 ;
 ; CHECK-LE-LABEL: bitcast:
 ; CHECK-LE:       ! %bb.0:
-; CHECK-LE-NEXT:    mov %g0, %o0
-; CHECK-LE-NEXT:    retl
 ; CHECK-LE-NEXT:    sethi 1049856, %o1
+; CHECK-LE-NEXT:    retl
+; CHECK-LE-NEXT:    mov %g0, %o0
   %1 = bitcast double 5.0 to <2 x i32>
   ret <2 x i32> %1
 }
