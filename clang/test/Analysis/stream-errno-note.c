@@ -11,7 +11,6 @@
 void check_fopen(void) {
   FILE *F = fopen("xxx", "r");
   // expected-note@-1{{'errno' may be undefined after successful call to 'fopen'}}
-  // expected-note@-2{{'fopen' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
@@ -24,7 +23,6 @@ void check_fopen(void) {
 void check_tmpfile(void) {
   FILE *F = tmpfile();
   // expected-note@-1{{'errno' may be undefined after successful call to 'tmpfile'}}
-  // expected-note@-2{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
@@ -36,14 +34,12 @@ void check_tmpfile(void) {
 
 void check_freopen(void) {
   FILE *F = tmpfile();
-  // expected-note@-1{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
     return;
   F = freopen("xxx", "w", F);
   // expected-note@-1{{'errno' may be undefined after successful call to 'freopen'}}
-  // expected-note@-2{{'freopen' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
@@ -55,14 +51,12 @@ void check_freopen(void) {
 
 void check_fclose(void) {
   FILE *F = tmpfile();
-  // expected-note@-1{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
     return;
   (void)fclose(F);
   // expected-note@-1{{'errno' may be undefined after successful call to 'fclose'}}
-  // expected-note@-2{{'fclose' is successful}}
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   // expected-note@-1{{An undefined value may be read from 'errno'}}
 }
@@ -70,14 +64,12 @@ void check_fclose(void) {
 void check_fread(void) {
   char Buf[10];
   FILE *F = tmpfile();
-  // expected-note@-1{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
     return;
   (void)fread(Buf, 1, 10, F);
   // expected-note@-1{{'errno' may be undefined after successful call to 'fread'}}
-  // expected-note@-2{{'fread' is successful}}
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   // expected-note@-1{{An undefined value may be read from 'errno'}}
   (void)fclose(F);
@@ -86,14 +78,12 @@ void check_fread(void) {
 void check_fread_size0(void) {
   char Buf[10];
   FILE *F = tmpfile();
-  // expected-note@-1{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
     return;
   fread(Buf, 0, 1, F);
   // expected-note@-1{{'errno' may be undefined after successful call to 'fread'}}
-  // expected-note@-2{{'fread' is successful}}
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   // expected-note@-1{{An undefined value may be read from 'errno'}}
 }
@@ -101,14 +91,12 @@ void check_fread_size0(void) {
 void check_fread_nmemb0(void) {
   char Buf[10];
   FILE *F = tmpfile();
-  // expected-note@-1{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
     return;
   fread(Buf, 1, 0, F);
   // expected-note@-1{{'errno' may be undefined after successful call to 'fread'}}
-  // expected-note@-2{{'fread' is successful}}
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   // expected-note@-1{{An undefined value may be read from 'errno'}}
 }
@@ -116,14 +104,12 @@ void check_fread_nmemb0(void) {
 void check_fwrite(void) {
   char Buf[] = "0123456789";
   FILE *F = tmpfile();
-  // expected-note@-1{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
     return;
   int R = fwrite(Buf, 1, 10, F);
   // expected-note@-1{{'errno' may be undefined after successful call to 'fwrite'}}
-  // expected-note@-2{{'fwrite' is successful}}
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   // expected-note@-1{{An undefined value may be read from 'errno'}}
   (void)fclose(F);
@@ -131,14 +117,12 @@ void check_fwrite(void) {
 
 void check_fseek(void) {
   FILE *F = tmpfile();
-  // expected-note@-1{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
     return;
   (void)fseek(F, 11, SEEK_SET);
   // expected-note@-1{{'errno' may be undefined after successful call to 'fseek'}}
-  // expected-note@-2{{'fseek' is successful}}
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   // expected-note@-1{{An undefined value may be read from 'errno'}}
   (void)fclose(F);
@@ -146,7 +130,6 @@ void check_fseek(void) {
 
 void check_rewind_errnocheck(void) {
   FILE *F = tmpfile();
-  // expected-note@-1{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
@@ -159,14 +142,12 @@ void check_rewind_errnocheck(void) {
 
 void check_fileno(void) {
   FILE *F = tmpfile();
-  // expected-note@-1{{'tmpfile' is successful}}
   // expected-note@+2{{'F' is non-null}}
   // expected-note@+1{{Taking false branch}}
   if (!F)
     return;
   fileno(F);
-  // expected-note@-1{{Assuming that 'fileno' is successful}}
-  // expected-note@-2{{'errno' may be undefined after successful call to 'fileno'}}
+  // expected-note@-1{{'errno' may be undefined after successful call to 'fileno'}}
   if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
   // expected-note@-1{{An undefined value may be read from 'errno'}}
   (void)fclose(F);
