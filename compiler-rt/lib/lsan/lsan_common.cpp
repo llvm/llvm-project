@@ -34,8 +34,6 @@
 #    else
 #      define OBJC_DATA_MASK 0x00007ffffffffff8UL
 #    endif
-// https://github.com/apple-oss-distributions/objc4/blob/8701d5672d3fd3cd817aeb84db1077aafe1a1604/runtime/objc-runtime-new.h#L139
-#    define OBJC_FAST_IS_RW 0x8000000000000000UL
 #  endif
 
 namespace __lsan {
@@ -173,13 +171,11 @@ static uptr GetCallerPC(const StackTrace &stack) {
 }
 
 #  if SANITIZER_APPLE
-// Objective-C class data pointers are stored with flags in the low bits, so
-// they need to be transformed back into something that looks like a pointer.
-static inline void *MaybeTransformPointer(void *p) {
+// Several pointers in the Objective-C runtime (method cache and class_rw_t,
+// for example) are tagged with additional bits we need to strip.
+static inline void *TransformPointer(void *p) {
   uptr ptr = reinterpret_cast<uptr>(p);
-  if ((ptr & OBJC_FAST_IS_RW) == OBJC_FAST_IS_RW)
-    ptr &= OBJC_DATA_MASK;
-  return reinterpret_cast<void *>(ptr);
+  return reinterpret_cast<void *>(ptr & OBJC_DATA_MASK);
 }
 #  endif
 
@@ -301,7 +297,7 @@ void ScanRangeForPointers(uptr begin, uptr end, Frontier *frontier,
   for (; pp + sizeof(void *) <= end; pp += alignment) {
     void *p = *reinterpret_cast<void **>(pp);
 #  if SANITIZER_APPLE
-    p = MaybeTransformPointer(p);
+    p = TransformPointer(p);
 #  endif
     if (!MaybeUserPointer(reinterpret_cast<uptr>(p)))
       continue;
