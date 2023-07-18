@@ -766,6 +766,9 @@ Bug Fixes to C++ Support
 - Merge lambdas in require expressions in standard C++ modules.
   (`#63544 <https://github.com/llvm/llvm-project/issues/63544>`_)
 
+- Fix location of default member initialization in parenthesized aggregate
+  initialization.
+  (`#63903 <https://github.com/llvm/llvm-project/issues/63903>`_)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
