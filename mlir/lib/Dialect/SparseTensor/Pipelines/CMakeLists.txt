@@ -24,6 +24,6 @@ add_mlir_dialect_library(MLIRSparseTensorPipelines
   MLIRSparseTensorDialect
   MLIRSparseTensorTransforms
   MLIRTensorTransforms
-  MLIRVectorToLLVM
+  MLIRVectorToLLVMPass
   MLIRVectorTransforms
 )
