@@ -91,7 +91,7 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   uint32_t TId = mapping::getThreadIdInBlock();
 
   // Assert the parallelism level is zero if disabled by the user.
-  ASSERT((config::mayUseNestedParallelism() || icv::Level == 0) &&
+  ASSERT((config::mayUseNestedParallelism() || icv::Level == 0),
          "nested parallelism while disabled");
 
   // Handle the serialized case first, same for SPMD/non-SPMD:
@@ -107,7 +107,7 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   }
 
   // From this point forward we know that there is no thread state used.
-  ASSERT(state::HasThreadState == false);
+  ASSERT(state::HasThreadState == false, nullptr);
 
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
   if (mapping::isSPMDMode()) {
@@ -280,10 +280,10 @@ __attribute__((noinline)) void __kmpc_kernel_end_parallel() {
   FunctionTracingRAII();
   // In case we have modified an ICV for this thread before a ThreadState was
   // created. We drop it now to not contaminate the next parallel region.
-  ASSERT(!mapping::isSPMDMode());
+  ASSERT(!mapping::isSPMDMode(), nullptr);
   uint32_t TId = mapping::getThreadIdInBlock();
   state::resetStateForThread(TId);
-  ASSERT(!mapping::isSPMDMode());
+  ASSERT(!mapping::isSPMDMode(), nullptr);
 }
 
 uint16_t __kmpc_parallel_level(IdentTy *, uint32_t) {

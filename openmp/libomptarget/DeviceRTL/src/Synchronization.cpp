@@ -331,7 +331,7 @@ void namedBarrierInit() {}
 
 void namedBarrier() {
   uint32_t NumThreads = omp_get_num_threads();
-  ASSERT(NumThreads % 32 == 0);
+  ASSERT(NumThreads % 32 == 0, nullptr);
 
   // The named barrier for active parallel threads of a team in an L1 parallel
   // region to synchronize with each other.
