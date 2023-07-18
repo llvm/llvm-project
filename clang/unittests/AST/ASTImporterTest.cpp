@@ -8008,6 +8008,27 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportDeductionGuideDifferentOrder) {
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportFieldsFirstForCorrectRecordLayoutTest) {
+  // UnaryOperator(&) triggers RecordLayout computation, which relies on
+  // correctly imported fields.
+  auto Code =
+      R"(
+      class A {
+        int m() {
+          return &((A *)0)->f1 - &((A *)0)->f2;
+        }
+        int f1;
+        int f2;
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+
+  auto *FromF = FirstDeclMatcher<CXXMethodDecl>().match(
+      FromTU, cxxMethodDecl(hasName("A::m")));
+  Import(FromF, Lang_CXX11);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
        ImportRecordWithLayoutRequestingExpr) {
   TranslationUnitDecl *FromTU = getTuDecl(
       R"(
