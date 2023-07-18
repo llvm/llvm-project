@@ -11,6 +11,7 @@
 #define _LIBCPP_EXPERIMENTAL___SIMD_SCALAR_H
 
 #include <cstddef>
+#include <experimental/__simd/internal_declaration.h>
 
 #if _LIBCPP_STD_VER >= 17 && defined(_LIBCPP_ENABLE_EXPERIMENTAL)
 
@@ -20,8 +21,36 @@ namespace simd_abi {
 struct __scalar {
   static constexpr size_t __simd_size = 1;
 };
-
 } // namespace simd_abi
+
+template <class _Tp>
+struct __simd_storage<_Tp, simd_abi::__scalar> {
+  _Tp __data;
+
+  _Tp __get([[maybe_unused]] size_t __idx) const noexcept {
+    _LIBCPP_ASSERT_UNCATEGORIZED(__idx == 0, "Index is out of bounds");
+    return __data;
+  }
+  void __set([[maybe_unused]] size_t __idx, _Tp __v) noexcept {
+    _LIBCPP_ASSERT_UNCATEGORIZED(__idx == 0, "Index is out of bounds");
+    __data = __v;
+  }
+};
+
+template <class _Tp>
+struct __mask_storage<_Tp, simd_abi::__scalar> : __simd_storage<bool, simd_abi::__scalar> {};
+
+template <class _Tp>
+struct __simd_operations<_Tp, simd_abi::__scalar> {
+  using _SimdStorage = __simd_storage<_Tp, simd_abi::__scalar>;
+  using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
+};
+
+template <class _Tp>
+struct __mask_operations<_Tp, simd_abi::__scalar> {
+  using _MaskStorage = __mask_storage<_Tp, simd_abi::__scalar>;
+};
+
 } // namespace parallelism_v2
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL
 
