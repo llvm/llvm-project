@@ -12,6 +12,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/StringSaver.h"
 #include <optional>
@@ -171,6 +172,13 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
     // Remove the now unused option.
     CI.getHeaderSearchOpts().ModulesIgnoreMacros.clear();
   }
+
+  // Apply -Wsystem-headers-in-module for the current module.
+  if (llvm::is_contained(CI.getDiagnosticOpts().SystemHeaderWarningsModules,
+                         Deps.ID.ModuleName))
+    CI.getDiagnosticOpts().Warnings.push_back("system-headers");
+  // Remove the now unused option(s).
+  CI.getDiagnosticOpts().SystemHeaderWarningsModules.clear();
 
   Optimize(CI);
 
