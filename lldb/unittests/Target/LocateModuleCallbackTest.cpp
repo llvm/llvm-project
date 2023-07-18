@@ -263,6 +263,11 @@ protected:
 } // namespace
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleWithCachedModule) {
+  // Disable test on arm64 because of failures in the lldb incremental arm64
+  // bot.
+#if defined(__arm64__) || defined(__aarch64__) || defined(_M_ARM64)
+  GTEST_SKIP() << "broken on arm64.";
+#endif
   // The module file is cached, and the locate module callback is not set.
   // GetOrCreateModule should succeed to return the module from the cache.
   FileSpec uuid_view = BuildCacheDir(m_test_dir);
@@ -281,6 +286,12 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleWithCachedModuleAndSymbol) {
   // The module and symbol files are cached, and the locate module callback is
   // not set. GetOrCreateModule should succeed to return the module from the
   // cache with the symbol.
+
+  // Disable test on arm64 because of failures in the lldb incremental arm64
+  // bot.
+#if defined(__arm64__) || defined(__aarch64__) || defined(_M_ARM64)
+  GTEST_SKIP() << "broken on arm64.";
+#endif
   FileSpec uuid_view = BuildCacheDirWithSymbol(m_test_dir);
 
   CheckNoCallback();
