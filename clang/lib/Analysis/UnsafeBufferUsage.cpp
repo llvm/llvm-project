@@ -1804,8 +1804,8 @@ static std::string getUnsafeBufferUsageAttributeText() {
 // parameter indexed by `ParmIdx` is being changed.
 static std::optional<FixItList>
 createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
-                                const FunctionDecl *FD, const ASTContext &Ctx,
-                                UnsafeBufferUsageHandler &Handler) {
+                              const FunctionDecl *FD, const ASTContext &Ctx,
+                              UnsafeBufferUsageHandler &Handler) {
   // FIXME: need to make this conflict checking better:
   if (hasConflictingOverload(FD))
     return std::nullopt;
@@ -1889,8 +1889,8 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
              "A parameter of a function definition has no name");
       if (i == ParmIdx)
         // This is our spanified paramter!
-        SS << NewTypeText.str() << "(" << Parm->getIdentifier()->getName().str() << ", "
-           << Handler.getUserFillPlaceHolder("size") << ")";
+        SS << NewTypeText.str() << "(" << Parm->getIdentifier()->getName().str()
+           << ", " << Handler.getUserFillPlaceHolder("size") << ")";
       else
         SS << Parm->getIdentifier()->getName().str();
       if (i != NumParms - 1)
@@ -1990,7 +1990,7 @@ static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
   }
   if (ParmIdx < FD->getNumParams())
     if (auto OverloadFix = createOverloadsForFixedParams(ParmIdx, SpanTyText,
-                                                           FD, Ctx, Handler)) {
+                                                         FD, Ctx, Handler)) {
       Fixes.append(*OverloadFix);
       return Fixes;
     }
@@ -2096,8 +2096,8 @@ static std::map<const VarDecl *, FixItList>
 getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
 	  ASTContext &Ctx,
           /* The function decl under analysis */ const Decl *D,
-    const DeclUseTracker &Tracker, UnsafeBufferUsageHandler &Handler,
-	  const DefMapTy &VarGrpMap) {
+          const DeclUseTracker &Tracker, UnsafeBufferUsageHandler &Handler,
+          const DefMapTy &VarGrpMap) {
   std::map<const VarDecl *, FixItList> FixItsForVariable;
   for (const auto &[VD, Fixables] : FixablesForAllVars.byVar) {
     FixItsForVariable[VD] =
@@ -2170,8 +2170,8 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
 
         FixItList GroupFix;
         if (FixItsForVariable.find(Var) == FixItsForVariable.end()) {
-          GroupFix = fixVariable(Var, ReplacementTypeForVD, D,
-                                 Tracker, Var->getASTContext(), Handler);
+          GroupFix = fixVariable(Var, ReplacementTypeForVD, D, Tracker,
+                                 Var->getASTContext(), Handler);
         } else {
           GroupFix = FixItsForVariable[Var];
         }
