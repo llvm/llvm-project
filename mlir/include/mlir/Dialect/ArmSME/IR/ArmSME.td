@@ -37,6 +37,166 @@ def ArmSME_Dialect : Dialect {
 }
 
 //===----------------------------------------------------------------------===//
+// ArmSME type definitions
+//===----------------------------------------------------------------------===//
+
+class SMETileType<Type datatype, list<int> dims, string description>
+  : ShapedContainerType<[datatype],
+      And<[IsVectorOfRankPred<[2]>, allDimsScalableVectorTypePred,
+           IsVectorOfShape<dims>]>,
+  description>;
+
+def nxnxv16i8  : SMETileType<I8,   [16, 16], "vector<[16]x[16]xi8>">;
+def nxnxv8i16  : SMETileType<I16,  [8,  8 ], "vector<[8]x[8]xi16>">;
+def nxnxv4i32  : SMETileType<I32,  [4,  4 ], "vector<[4]x[4]xi32>">;
+def nxnxv2i64  : SMETileType<I64,  [2,  2 ], "vector<[2]x[2]xi64>">;
+def nxnxv1i128 : SMETileType<I128, [1,  1 ], "vector<[1]x[1]xi128>">;
+
+def nxnxv8f16  : SMETileType<F16,  [8,  8 ], "vector<[8]x[8]xf16>">;
+def nxnxv8bf16 : SMETileType<BF16, [8,  8 ], "vector<[8]x[8]xbf16>">;
+def nxnxv4f32  : SMETileType<F32,  [4,  4 ], "vector<[4]x[4]xf32>">;
+def nxnxv2f64  : SMETileType<F64,  [2,  2 ], "vector<[2]x[2]xf64>">;
+
+def SMETile : AnyTypeOf<[nxnxv16i8, nxnxv8i16, nxnxv4i32, nxnxv2i64, nxnxv1i128,
+                         nxnxv8f16, nxnxv8bf16, nxnxv4f32, nxnxv2f64]>;
+
+// A type constraint that verifies the bitwidth of the scalar integer returned
+// from 'arm_sme.get_tile_id' matches the element bitwidth of a "virtual tile".
+def TileElementWidthMatchesTileID : TypesMatchWith<
+  "`tile_id` has the same number of bits as elements in `vector`",
+  "vector", "tile_id",
+  "IntegerType::get("
+      "$_self.getContext(),"
+      "::llvm::isa<IntegerType>(::llvm::cast<VectorType>($_self).getElementType())"
+          "? ::llvm::cast<IntegerType>("
+                  "::llvm::cast<VectorType>($_self).getElementType())"
+                  ".getWidth()"
+          ": ::llvm::cast<FloatType>("
+                  "::llvm::cast<VectorType>($_self).getElementType())"
+                  ".getWidth())">;
+
+//===----------------------------------------------------------------------===//
+// ArmSME op definitions
+//===----------------------------------------------------------------------===//
+
+class ArmSME_Op<string mnemonic, list<Trait> traits = []> :
+  Op<ArmSME_Dialect, mnemonic, traits> {}
+
+def CastTileToVector : ArmSME_Op<"cast_tile_to_vector", [Pure, TileElementWidthMatchesTileID]> {
+  let summary = "Cast from tile id to 2-d scalable vector type";
+  let description = [{
+    A `cast_tile_to_vector` operation does a cast from a tile id to a 2-d
+    scalable vector type, which represents an SME "virtual tile". This would
+    normally be used when lowering operations that return "virtual tile" vector
+    types to model the output. This is required to preserve dataflow as SME
+    intrinsics have no return values.
+
+    Example:
+
+    Input:
+    ```mlir
+    %tile = vector.load %mem1[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
+    vector.store %tile, %mem2[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
+    ```
+
+    After lowering `vector.load`:
+    ```mlir
+    %tile_id = arm_sme.get_tile_id : i32
+    scf.for %vnum = %c0 to %num_vectors step %c1 {
+      // ...
+      "arm_sme.intr.ld1w.horiz"(%pg, %ptr, %tile_id, %vnum) : (vector<[4]xi1>, !llvm.ptr, i32, i32) -> ()
+    }
+    %tile = arm_sme.cast_tile_to_vector %tile_id : i32 to vector<[4]x[4]xi32>
+    vector.store %tile, %mem2[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
+    ```
+
+    In the example above, the `vector.load` can't be replaced with an SME
+    intrinsic that has no outputs since it is used by the `vector.store`.
+    However, by inserting a `cast_tile_to_vector` op after the load intrinsics
+    the `vector.load` can be replaced. This enables "local" rewrites on
+    individual vector ops, rather than "global" rewrites that would have to
+    look at the vector op uses and also lower them.
+
+    Canonicalization will look through `arm_sme.cast_tile_to_vector` and fold
+    the cast away if it comes from a `arm_sme.cast_vector_to_tile`.
+  }];
+  let arguments = (ins AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
+  let results = (outs SMETile:$vector);
+  let assemblyFormat =
+    "$tile_id attr-dict `:` type($tile_id) `to` type($vector)";
+  let hasCanonicalizeMethod = 1;
+}
+
+def CastVectorToTile : ArmSME_Op<"cast_vector_to_tile", [Pure, TileElementWidthMatchesTileID]> {
+  let summary = "Cast from 2-d scalable vector type to tile id";
+  let description = [{
+    A `cast_vector_to_tile` operation does a cast from a 2-d scalable vector
+    type, which represents an SME "virtual tile", to a tile id. This is
+    required to preserve dataflow as the SME intrinsics have no return values.
+
+    Example:
+
+    Input:
+    ```mlir
+    %tile = vector.load %mem1[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
+    vector.store %tile, %mem2[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
+    ```
+
+    After lowering `vector.store`:
+    ```mlir
+    %tile = vector.load %mem1[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
+    scf.for %vnum = %c0 to %num_vectors step %c1 {
+      // ...
+      %tile_id = arm_sme.cast_vector_to_tile %tile : (vector<[4]x[4]xi32>) -> i32
+      "arm_sme.intr.st1w.horiz"(%pg, %ptr, %tile_id, %vnum) : (vector<[4]xi1>, !llvm.ptr, i32, i32) -> ()
+    }
+    ```
+
+    Canonicalization will look through `arm_sme.cast_vector_to_tile` and fold
+    the cast away if it comes from a `arm_sme.cast_tile_to_vector`.
+  }];
+  let arguments = (ins SMETile:$vector);
+  let results = (outs AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
+  let assemblyFormat =
+    "$vector attr-dict `:` type($vector) `to` type($tile_id)";
+  let hasCanonicalizeMethod = 1;
+}
+
+def GetTileID : ArmSME_Op<"get_tile_id", [Pure]> {
+  let summary = "Returns an SME \"virtual tile\" id";
+  let description = [{
+    A `get_tile_id` operation returns a scalar integer representing an SME
+    "virtual tile" id. The bitwidth of the scalar indicates the element
+    bitwidth of the "virtual tile".
+
+    The scope of a tile id is a function and cannot be passed or returned from
+    functions.
+
+    Example:
+    ```mlir
+    // Allocate and return an 8-bit element "virtual tile" id
+    %za0_b = arm_sme.get_tile_id : i8
+    ```
+
+    Example:
+    ```
+    // Allocate and return two 16-bit element "virtual tile" ids
+    %za0_h = arm_sme.get_tile_id : i16
+    %za1_h = arm_sme.get_tile_id : i16
+    ```
+
+    Example:
+    ```
+    // Allocate and return an 128-bit element "virtual tile" id
+    %za0_q = arm_sme.get_tile_id : i128
+    ```
+  }];
+
+  let results = (outs AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
+  let assemblyFormat = "attr-dict `:` type($tile_id)";
+}
+
+//===----------------------------------------------------------------------===//
 // ArmSME Intrinsic op definitions
 //===----------------------------------------------------------------------===//
 
