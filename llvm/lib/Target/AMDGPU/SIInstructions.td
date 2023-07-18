@@ -952,8 +952,10 @@ defm SI_SPILL_AV384 : SI_SPILL_VGPR <AV_384, 1>;
 defm SI_SPILL_AV512 : SI_SPILL_VGPR <AV_512, 1>;
 defm SI_SPILL_AV1024 : SI_SPILL_VGPR <AV_1024, 1>;
 
-let isConvergent = 1 in
-defm SI_SPILL_WWM_V32 : SI_SPILL_VGPR <VGPR_32>;
+let isConvergent = 1 in {
+  defm SI_SPILL_WWM_V32  : SI_SPILL_VGPR <VGPR_32>;
+  defm SI_SPILL_WWM_AV32 : SI_SPILL_VGPR <AV_32, 1>;
+}
 
 def SI_PC_ADD_REL_OFFSET : SPseudoInstSI <
   (outs SReg_64:$dst),
