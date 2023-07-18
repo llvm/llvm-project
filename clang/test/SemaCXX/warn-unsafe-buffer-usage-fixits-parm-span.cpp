@@ -6,13 +6,13 @@
 #define INCLUDE_ME
 
 void simple(int *p);
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:1-[[@LINE-1]]:1}:"{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:1-[[@LINE-1]]:1}:"{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} "
 // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:20-[[@LINE-2]]:20}:";\nvoid simple(std::span<int> p)"
 
 #else
 
 void simple(int *);
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:1-[[@LINE-1]]:1}:"{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:1-[[@LINE-1]]:1}:"{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} "
 // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:19-[[@LINE-2]]:19}:";\nvoid simple(std::span<int>)"
 
 void simple(int *p) {
@@ -20,7 +20,7 @@ void simple(int *p) {
   int tmp;
   tmp = p[5];
 }
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid simple(int *p) {return simple(std::span<int>(p, <# size #>));}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void simple(int *p) {return simple(std::span<int>(p, <# size #>));}\n"
 
 
 void twoParms(int *p, int * q) {
@@ -29,14 +29,14 @@ void twoParms(int *p, int * q) {
   int tmp;
   tmp = p[5] + q[5];
 }
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid twoParms(int *p, int * q) {return twoParms(std::span<int>(p, <# size #>), q);}\n"
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:2-[[@LINE-2]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid twoParms(int *p, int * q) {return twoParms(p, std::span<int>(q, <# size #>));}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void twoParms(int *p, int * q) {return twoParms(std::span<int>(p, <# size #>), q);}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:2-[[@LINE-2]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void twoParms(int *p, int * q) {return twoParms(p, std::span<int>(q, <# size #>));}\n"
 
 void ptrToConst(const int * x) {
   // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:17-[[@LINE-1]]:30}:"std::span<int const> x"
   int tmp = x[5];
 }
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid ptrToConst(const int * x) {return ptrToConst(std::span<int const>(x, <# size #>));}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void ptrToConst(const int * x) {return ptrToConst(std::span<int const>(x, <# size #>));}\n"
 
 // The followings test cases where multiple FileIDs maybe involved
 // when the analyzer loads characters from source files.
@@ -50,7 +50,7 @@ void FUN_NAME(macro_defined_name)(int * x) {
   // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:35-[[@LINE-1]]:42}:"std::span<int> x"
   int tmp = x[5];
 }
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid FUN_NAME(macro_defined_name)(int * x) {return FUN_NAME(macro_defined_name)(std::span<int>(x, <# size #>));}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void FUN_NAME(macro_defined_name)(int * x) {return FUN_NAME(macro_defined_name)(std::span<int>(x, <# size #>));}\n"
 
 
 // The followings test various type specifiers
@@ -59,13 +59,13 @@ namespace {
     // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:24-[[@LINE-1]]:49}:"std::span<unsigned long long int> p"
     auto tmp = p[5];
   }
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid simpleSpecifier(unsigned long long int *p) {return simpleSpecifier(std::span<unsigned long long int>(p, <# size #>));}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void simpleSpecifier(unsigned long long int *p) {return simpleSpecifier(std::span<unsigned long long int>(p, <# size #>));}\n"
 
   void attrParm([[maybe_unused]] int * p) {
     // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:34-[[@LINE-1]]:41}:"std::span<int> p"
     int tmp = p[5];
   }
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid attrParm({{\[}}{{\[}}maybe_unused{{\]}}{{\]}} int * p) {return attrParm(std::span<int>(p, <# size #>));}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void attrParm({{\[}}{{\[}}maybe_unused{{\]}}{{\]}} int * p) {return attrParm(std::span<int>(p, <# size #>));}\n"
 
   using T = unsigned long long int;
 
@@ -73,7 +73,7 @@ namespace {
     // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:31-[[@LINE-1]]:36}:"std::span<T> p"
     int tmp = p[5];
   }
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid usingTypenameSpecifier(T * p) {return usingTypenameSpecifier(std::span<T>(p, <# size #>));}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void usingTypenameSpecifier(T * p) {return usingTypenameSpecifier(std::span<T>(p, <# size #>));}\n"
 
   typedef unsigned long long int T2;
 
@@ -81,7 +81,7 @@ namespace {
     // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:25-[[@LINE-1]]:31}:"std::span<T2> p"
     int tmp = p[5];
   }
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid typedefSpecifier(T2 * p) {return typedefSpecifier(std::span<T2>(p, <# size #>));}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void typedefSpecifier(T2 * p) {return typedefSpecifier(std::span<T2>(p, <# size #>));}\n"
 
   class SomeClass {
   } C;
@@ -90,7 +90,7 @@ namespace {
     // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:27-[[@LINE-1]]:52}:"std::span<class SomeClass const> p"
     if (++p) {}
   }
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid classTypeSpecifier(const class SomeClass * p) {return classTypeSpecifier(std::span<class SomeClass const>(p, <# size #>));}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void classTypeSpecifier(const class SomeClass * p) {return classTypeSpecifier(std::span<class SomeClass const>(p, <# size #>));}\n"
 
   struct {
     // anon
@@ -113,9 +113,9 @@ namespace {
     if (++r) {}
     if (++rr) {}
   }
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n{{.*}}decltype(NAMED_S) ** rr) {return decltypeSpecifier(std::span<decltype(C)>(p, <# size #>), q, r, rr);}\n
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:4-[[@LINE-2]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n{{.*}}decltype(NAMED_S) ** rr) {return decltypeSpecifier(p, q, std::span<decltype(NAMED_S)>(r, <# size #>), rr);}\n"
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-3]]:4-[[@LINE-3]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n{{.*}}decltype(NAMED_S) ** rr) {return decltypeSpecifier(p, q, r, std::span<decltype(NAMED_S) *>(rr, <# size #>));}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n{{.*}}decltype(NAMED_S) ** rr) {return decltypeSpecifier(std::span<decltype(C)>(p, <# size #>), q, r, rr);}\n
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:4-[[@LINE-2]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n{{.*}}decltype(NAMED_S) ** rr) {return decltypeSpecifier(p, q, std::span<decltype(NAMED_S)>(r, <# size #>), rr);}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-3]]:4-[[@LINE-3]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void decltypeSpecifier(decltype(C) * p, decltype(ANON_S) * q, decltype(NAMED_S) * r,\n{{.*}}decltype(NAMED_S) ** rr) {return decltypeSpecifier(p, q, r, std::span<decltype(NAMED_S) *>(rr, <# size #>));}\n"
 
 #define MACRO_TYPE(T) long T
 
@@ -125,8 +125,8 @@ namespace {
     int tmp = p[5];
     tmp = q[5];
   }
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid macroType(unsigned MACRO_TYPE(int) * p, unsigned MACRO_TYPE(long) * q) {return macroType(std::span<unsigned MACRO_TYPE(int)>(p, <# size #>), q);}\n"
-  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:4-[[@LINE-2]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid macroType(unsigned MACRO_TYPE(int) * p, unsigned MACRO_TYPE(long) * q) {return macroType(p, std::span<unsigned MACRO_TYPE(long)>(q, <# size #>));}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:4-[[@LINE-1]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void macroType(unsigned MACRO_TYPE(int) * p, unsigned MACRO_TYPE(long) * q) {return macroType(std::span<unsigned MACRO_TYPE(int)>(p, <# size #>), q);}\n"
+  // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-2]]:4-[[@LINE-2]]:4}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void macroType(unsigned MACRO_TYPE(int) * p, unsigned MACRO_TYPE(long) * q) {return macroType(p, std::span<unsigned MACRO_TYPE(long)>(q, <# size #>));}\n"
 }
 
 // The followings test various declarators:
@@ -135,7 +135,7 @@ void decayedArray(int a[]) {
   int tmp;
   tmp = a[5];
 }
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid decayedArray(int a[]) {return decayedArray(std::span<int>(a, <# size #>));}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void decayedArray(int a[]) {return decayedArray(std::span<int>(a, <# size #>));}\n"
 
 void decayedArrayOfArray(int a[10][10]) {
   // CHECK-NOT: fix-it:{{.*}}:{[[@LINE-1]]
