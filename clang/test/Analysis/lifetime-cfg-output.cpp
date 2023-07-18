@@ -752,32 +752,40 @@ struct B {
   ~B();
 };
 
-// CHECK:       [B4 (ENTRY)]
+// CHECK:       [B5 (ENTRY)]
 // CHECK-NEXT:    Succs (1): B3
 // CHECK:       [B1]
 // CHECK-NEXT:    1: i
 // CHECK-NEXT:    2: [B1.1]++
-// CHECK-NEXT:    3: [B2.2] (Lifetime ends)
-// CHECK-NEXT:    4: [B3.1] (Lifetime ends)
+// CHECK-NEXT:    3: [B2.4] (Lifetime ends)
+// CHECK-NEXT:    4: [B2.2] (Lifetime ends)
+// CHECK-NEXT:    5: [B3.1] (Lifetime ends)
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
 // CHECK-NEXT:   label:
 // CHECK-NEXT:    1:  (CXXConstructExpr, B)
-// CHECK-NEXT:    2: B b;
-// CHECK-NEXT:    3: [B2.2] (Lifetime ends)
-// CHECK-NEXT:    T: goto label;
-// CHECK-NEXT:    Preds (2): B3 B2
-// CHECK-NEXT:    Succs (1): B2
+// CHECK-NEXT:    2: B b1;
+// CHECK-NEXT:    3:  (CXXConstructExpr, B)
+// CHECK-NEXT:    4: B b2;
+// CHECK-NEXT:    Preds (2): B3 B4
+// CHECK-NEXT:    Succs (1): B4
 // CHECK:       [B3]
 // CHECK-NEXT:    1: int i;
-// CHECK-NEXT:    Preds (1): B4
+// CHECK-NEXT:    Preds (1): B5
+// CHECK-NEXT:    Succs (1): B2
+// CHECK:       [B4]
+// CHECK-NEXT:    1: [B2.4] (Lifetime ends)
+// CHECK-NEXT:    2: [B2.2] (Lifetime ends)
+// CHECK-NEXT:    T: goto label;
+// CHECK-NEXT:    Preds (1): B2
 // CHECK-NEXT:    Succs (1): B2
 // CHECK:       [B0 (EXIT)]
 // CHECK-NEXT:    Preds (1): B1
 int backpatched_goto() {
   int i;
 label:
-  B b;
+  B b1;
+  B b2;
   goto label;
   i++;
 }
