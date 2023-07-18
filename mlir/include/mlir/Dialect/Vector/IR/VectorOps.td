@@ -354,9 +354,6 @@ def Vector_MultiDimReductionOp :
                    "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getKindAttrStrName() { return "kind"; }
-    static StringRef getReductionDimsAttrStrName() { return "reduction_dims"; }
-
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getSource().getType());
     }
@@ -510,7 +507,6 @@ def Vector_ShuffleOp :
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let extraClassDeclaration = [{
-    static StringRef getMaskAttrStrName() { return "mask"; }
     VectorType getV1VectorType() {
       return ::llvm::cast<VectorType>(getV1().getType());
     }
@@ -599,7 +595,6 @@ def Vector_ExtractOp :
     OpBuilder<(ins "Value":$source, "ValueRange":$position)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getPositionAttrStrName() { return "position"; }
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getVector().getType());
     }
@@ -723,7 +718,6 @@ def Vector_InsertOp :
     OpBuilder<(ins "Value":$source, "Value":$dest, "ValueRange":$position)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getPositionAttrStrName() { return "position"; }
     Type getSourceType() { return getSource().getType(); }
     VectorType getDestVectorType() {
       return ::llvm::cast<VectorType>(getDest().getType());
@@ -882,8 +876,6 @@ def Vector_InsertStridedSliceOp :
       "ArrayRef<int64_t>":$offsets, "ArrayRef<int64_t>":$strides)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getOffsetsAttrStrName() { return "offsets"; }
-    static StringRef getStridesAttrStrName() { return "strides"; }
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getSource().getType());
     }
@@ -980,9 +972,6 @@ def Vector_OuterProductOp :
     }
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
-    }
-    static constexpr StringRef getKindAttrStrName() {
-      return "kind";
     }
     static CombiningKind getDefaultKind() {
       return CombiningKind::ADD;
@@ -1099,12 +1088,6 @@ def Vector_ReshapeOp :
     int64_t getNumOutputShapeSizes() { return getOutputShape().size(); }
 
     void getFixedVectorSizes(SmallVectorImpl<int64_t> &results);
-
-    static StringRef getFixedVectorSizesAttrStrName() {
-      return "fixed_vector_sizes";
-    }
-    static StringRef getInputShapeAttrStrName() { return "input_shape"; }
-    static StringRef getOutputShapeAttrStrName() { return "output_shape"; }
   }];
 
   let assemblyFormat = [{
@@ -1151,9 +1134,6 @@ def Vector_ExtractStridedSliceOp :
       "ArrayRef<int64_t>":$sizes, "ArrayRef<int64_t>":$strides)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getOffsetsAttrStrName() { return "offsets"; }
-    static StringRef getSizesAttrStrName() { return "sizes"; }
-    static StringRef getStridesAttrStrName() { return "strides"; }
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getVector().getType());
     }
@@ -2288,9 +2268,6 @@ def Vector_ConstantMaskOp :
     ```
   }];
 
-  let extraClassDeclaration = [{
-    static StringRef getMaskDimSizesAttrStrName() { return "mask_dim_sizes"; }
-  }];
   let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
   let hasVerifier = 1;
 }
@@ -2473,7 +2450,6 @@ def Vector_TransposeOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
     void getTransp(SmallVectorImpl<int64_t> &results);
-    static StringRef getTranspAttrStrName() { return "transp"; }
   }];
   let assemblyFormat = [{
     $vector `,` $transp attr-dict `:` type($vector) `to` type($result)
@@ -2738,8 +2714,6 @@ def Vector_ScanOp :
                    CArg<"bool", "true">:$inclusive)>
   ];
   let extraClassDeclaration = [{
-    static StringRef getKindAttrStrName() { return "kind"; }
-    static StringRef getReductionDimAttrStrName() { return "reduction_dim"; }
     VectorType getSourceType() {
       return ::llvm::cast<VectorType>(getSource().getType());
     }
