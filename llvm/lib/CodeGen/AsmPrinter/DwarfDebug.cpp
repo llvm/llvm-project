@@ -257,44 +257,23 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   return DbgValueLoc(Expr, DbgValueLocEntries, IsVariadic);
 }
 
-/// Initialize from the MMI table.
-void DbgVariable::initializeMMI(const DIExpression *E, int FI) {
-  assert(holds<std::monostate>() && "Already initialized");
-  assert((!E || E->isValid()) && "Expected valid expression");
-  assert(FI != std::numeric_limits<int>::max() && "Expected valid index");
-  emplace<MMILoc>().FrameIndexExprs.push_back({FI, E});
+Loc::Single::Single(DbgValueLoc ValueLoc)
+    : ValueLoc(std::make_unique<DbgValueLoc>(ValueLoc)),
+      Expr(ValueLoc.getExpression()) {
+  if (!Expr->getNumElements())
+    Expr = nullptr;
 }
 
-void DbgVariable::initializeDbgValue(DbgValueLoc Value) {
-  assert(holds<std::monostate>() && "Already initialized");
-  assert(!Value.getExpression()->isFragment() && "Fragments not supported");
-  emplace<SingleLoc>(Value);
-}
+Loc::Single::Single(const MachineInstr *DbgValue)
+    : Single(getDebugLocValue(DbgValue)) {}
 
-void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
-  assert(holds<std::monostate>() && "Already initialized");
-  assert(getVariable() == DbgValue->getDebugVariable() && "Wrong variable");
-  assert(getInlinedAt() == DbgValue->getDebugLoc()->getInlinedAt() &&
-         "Wrong inlined-at");
-  emplace<SingleLoc>(getDebugLocValue(DbgValue));
-}
-
-void DbgVariable::initializeEntryValue(MCRegister Reg,
-                                       const DIExpression &Expr) {
-  assert(holds<std::monostate>() && "Already initialized?");
-  emplace<EntryValueLoc>(Reg, Expr);
-}
-
-ArrayRef<FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
-  auto &FrameIndexExprs = get<MMILoc>().FrameIndexExprs;
-
+ArrayRef<FrameIndexExpr> Loc::MMI::getFrameIndexExprs() const {
   if (FrameIndexExprs.size() == 1)
     return FrameIndexExprs;
 
-  assert(llvm::all_of(FrameIndexExprs,
-                      [](const FrameIndexExpr &A) {
-                        return A.Expr->isFragment();
-                      }) &&
+  assert(llvm::all_of(
+             FrameIndexExprs,
+             [](const FrameIndexExpr &A) { return A.Expr->isFragment(); }) &&
          "multiple FI expressions without DW_OP_LLVM_fragment");
   llvm::sort(FrameIndexExprs,
              [](const FrameIndexExpr &A, const FrameIndexExpr &B) -> bool {
@@ -305,9 +284,7 @@ ArrayRef<FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
   return FrameIndexExprs;
 }
 
-void DbgVariable::addMMIEntry(const DIExpression *Expr, int FI) {
-  auto &FrameIndexExprs = get<MMILoc>().FrameIndexExprs;
-
+void Loc::MMI::addFrameIndexExpr(const DIExpression *Expr, int FI) {
   // FIXME: This logic should not be necessary anymore, as we now have proper
   // deduplication. However, without it, we currently run into the assertion
   // below, which means that we are likely dealing with broken input, i.e. two
@@ -1570,19 +1547,20 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
 
     if (DbgVariable *DbgVar = MFVars.lookup(Var)) {
-      if (DbgVar->hasFrameIndexExprs())
-        DbgVar->addMMIEntry(VI.Expr, VI.getStackSlot());
+      if (auto *MMI = std::get_if<Loc::MMI>(DbgVar))
+        MMI->addFrameIndexExpr(VI.Expr, VI.getStackSlot());
       else
-        DbgVar->addEntryValueExpr(VI.getEntryValueRegister(), *VI.Expr);
+        DbgVar->get<Loc::EntryValue>().addExpr(VI.getEntryValueRegister(),
+                                               *VI.Expr);
       continue;
     }
 
     auto RegVar = std::make_unique<DbgVariable>(
                     cast<DILocalVariable>(Var.first), Var.second);
     if (VI.inStackSlot())
-      RegVar->initializeMMI(VI.Expr, VI.getStackSlot());
+      RegVar->emplace<Loc::MMI>(VI.Expr, VI.getStackSlot());
     else
-      RegVar->initializeEntryValue(VI.getEntryValueRegister(), *VI.Expr);
+      RegVar->emplace<Loc::EntryValue>(VI.getEntryValueRegister(), *VI.Expr);
     LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
                       << "\n");
     InfoHolder.addScopeVariable(Scope, RegVar.get());
@@ -1921,7 +1899,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       const auto *End =
           SingleValueWithClobber ? HistoryMapEntries[1].getInstr() : nullptr;
       if (validThroughout(LScopes, MInsn, End, getInstOrdering())) {
-        RegVar->initializeDbgValue(MInsn);
+        RegVar->emplace<Loc::Single>(MInsn);
         continue;
       }
     }
@@ -1931,7 +1909,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       continue;
 
     // Handle multiple DBG_VALUE instructions describing one variable.
-    DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar, *MInsn);
+    DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar);
 
     // Build the location list for this variable.
     SmallVector<DebugLocEntry, 8> Entries;
@@ -1941,7 +1919,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     // that is valid throughout the variable's scope. If so, produce single
     // value location.
     if (isValidSingleLocation) {
-      RegVar->initializeDbgValue(Entries[0].getValues()[0]);
+      RegVar->emplace<Loc::Single>(Entries[0].getValues()[0]);
       continue;
     }
 
