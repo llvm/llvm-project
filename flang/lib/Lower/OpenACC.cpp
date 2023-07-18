@@ -888,6 +888,20 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   return recipe;
 }
 
+/// Determine if the bounds represent a dynamic shape.
+bool hasDynamicShape(llvm::SmallVector<mlir::Value> &bounds) {
+  if (bounds.empty())
+    return false;
+  for (auto b : bounds) {
+    auto op = mlir::dyn_cast<mlir::acc::DataBoundsOp>(b.getDefiningOp());
+    if (((op.getLowerbound() && !fir::getIntIfConstant(op.getLowerbound())) ||
+         (op.getUpperbound() && !fir::getIntIfConstant(op.getUpperbound()))) &&
+        op.getExtent() && !fir::getIntIfConstant(op.getExtent()))
+      return true;
+  }
+  return false;
+}
+
 static void
 genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
               Fortran::lower::AbstractConverter &converter,
@@ -907,6 +921,9 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     mlir::Value baseAddr = gatherDataOperandAddrAndBounds(
         converter, builder, semanticsContext, stmtCtx, accObject,
         operandLocation, asFortran, bounds);
+
+    if (hasDynamicShape(bounds))
+      TODO(operandLocation, "OpenACC reductions with dynamic shaped array");
 
     mlir::Type reductionTy = fir::unwrapRefType(baseAddr.getType());
     if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(reductionTy))
