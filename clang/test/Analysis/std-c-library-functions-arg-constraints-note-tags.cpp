@@ -52,6 +52,7 @@ void test_buffer_size_note(char *buf, int y) {
 int __test_case_note();
 
 int test_case_note_1(int y) {
+  int x0 = __test_case_note(); // expected-note{{Function returns 1}}
   int x = __test_case_note(); // expected-note{{Function returns 0}} \
                               // expected-note{{'x' initialized here}}
   return y / x; // expected-warning{{Division by zero}} \
