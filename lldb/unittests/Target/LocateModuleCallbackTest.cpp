@@ -22,6 +22,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_android;
+using namespace lldb_private::platform_linux;
 using namespace lldb_private::breakpad;
 using namespace testing;
 
@@ -190,7 +191,8 @@ ProcessSP MockProcessCreateInstance(TargetSP target_sp, ListenerSP listener_sp,
 
 class LocateModuleCallbackTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo, ObjectFileBreakpad, ObjectFileELF,
-                PlatformAndroid, SymbolFileBreakpad, SymbolFileSymtab>
+                PlatformAndroid, PlatformLinux, SymbolFileBreakpad,
+                SymbolFileSymtab>
       subsystems;
 
 public:
@@ -202,6 +204,9 @@ public:
         m_test_dir);
 
     // Create Debugger.
+    ArchSpec host_arch("i386-pc-linux");
+    Platform::SetHostPlatform(
+        platform_linux::PlatformLinux::CreateInstance(true, &host_arch));
     m_debugger_sp = Debugger::CreateInstance();
     EXPECT_TRUE(m_debugger_sp);
 
