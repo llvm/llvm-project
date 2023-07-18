@@ -118,7 +118,6 @@ chrono compare
 chrono concepts
 chrono cstddef
 chrono cstdint
-chrono cstdlib
 chrono cstring
 chrono ctime
 chrono limits
@@ -311,7 +310,6 @@ format array
 format cmath
 format cstddef
 format cstdint
-format cstdlib
 format initializer_list
 format limits
 format locale
@@ -865,7 +863,6 @@ thread cerrno
 thread compare
 thread cstddef
 thread cstdint
-thread cstdlib
 thread cstring
 thread ctime
 thread functional
