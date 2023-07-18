@@ -1178,7 +1178,8 @@ def Vector_TransferReadOp :
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-      AttrSizedOperandSegments
+      AttrSizedOperandSegments,
+      DestinationStyleOpInterface
     ]>,
     Arguments<(ins AnyShaped:$source,
                    Variadic<Index>:$indices,
@@ -1400,6 +1401,10 @@ def Vector_TransferReadOp :
   let extraClassDeclaration = [{
     // MaskableOpInterface methods.
     bool supportsPassthru() { return true; }
+
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
+      return {0, 0};  // empty range (no init operands)
+    }
   }];
 
   let hasCanonicalizer = 1;
