@@ -17,5 +17,12 @@ Operation::operand_range getIndices(Operation *op);
 /// Set the indices that the given load/store operation is operating on.
 void setIndices(Operation *op, ArrayRef<Value> indices);
 
+/// Get the value that is stored by the given store operation.
+Value getValueStored(Operation *op);
+
+/// Get the memref that is loaded from/stored into by the given load/store
+/// operation.
+Value getMemrefOperand(Operation *op);
+
 } // namespace nvgpu
 } // namespace mlir
