@@ -35,6 +35,7 @@ template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
 template <class Emitter> class ArrayIndexScope;
+template <class Emitter> class SourceLocScope;
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -102,6 +103,7 @@ public:
   bool VisitCXXReinterpretCastExpr(const CXXReinterpretCastExpr *E);
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
   bool VisitCXXConstructExpr(const CXXConstructExpr *E);
+  bool VisitSourceLocExpr(const SourceLocExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -154,6 +156,8 @@ protected:
 
   /// Creates and initializes a variable from the given decl.
   bool visitVarDecl(const VarDecl *VD);
+  /// Visit an APValue.
+  bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
@@ -210,6 +214,7 @@ private:
   friend class DeclScope<Emitter>;
   friend class OptionScope<Emitter>;
   friend class ArrayIndexScope<Emitter>;
+  friend class SourceLocScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(QualType QT, const Expr *E);
@@ -239,12 +244,14 @@ private:
                       llvm::function_ref<bool(PrimType)> Indirect);
 
   /// Emits an APSInt constant.
+  bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
   bool emitConst(const llvm::APSInt &Value, const Expr *E);
   bool emitConst(const llvm::APInt &Value, const Expr *E) {
     return emitConst(static_cast<llvm::APSInt>(Value), E);
   }
 
   /// Emits an integer constant.
+  template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
 
   /// Returns the CXXRecordDecl for the type of the given expression,
@@ -284,6 +291,9 @@ protected:
 
   /// Current argument index. Needed to emit ArrayInitIndexExpr.
   std::optional<uint64_t> ArrayIndex;
+
+  /// DefaultInit- or DefaultArgExpr, needed for SourceLocExpr.
+  const Expr *SourceLocDefaultExpr = nullptr;
 
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
@@ -442,6 +452,28 @@ public:
 private:
   ByteCodeExprGen<Emitter> *Ctx;
   std::optional<uint64_t> OldArrayIndex;
+};
+
+template <class Emitter> class SourceLocScope final {
+public:
+  SourceLocScope(ByteCodeExprGen<Emitter> *Ctx, const Expr *DefaultExpr)
+      : Ctx(Ctx) {
+    assert(DefaultExpr);
+    // We only switch if the current SourceLocDefaultExpr is null.
+    if (!Ctx->SourceLocDefaultExpr) {
+      Enabled = true;
+      Ctx->SourceLocDefaultExpr = DefaultExpr;
+    }
+  }
+
+  ~SourceLocScope() {
+    if (Enabled)
+      Ctx->SourceLocDefaultExpr = nullptr;
+  }
+
+private:
+  ByteCodeExprGen<Emitter> *Ctx;
+  bool Enabled = false;
 };
 
 } // namespace interp
