@@ -381,6 +381,46 @@ define void @src_mod_dest_mod_after_copy() {
   ret void
 }
 
+; TODO: if the last user is terminator, we won't insert lifetime.end.
+; For multi-bb patch, we will insert it for next immediate post dominator block.
+define void @terminator_lastuse() personality i32 0 {
+; CHECK-LABEL: define void @terminator_lastuse() personality i32 0 {
+; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
+; CHECK-NEXT:    [[DEST:%.*]] = alloca [[STRUCT_FOO]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr nocapture [[SRC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr nocapture [[DEST]])
+; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DEST]], ptr align 4 [[SRC]], i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr [[SRC]])
+; CHECK-NEXT:    [[RV:%.*]] = invoke i32 @use_nocapture(ptr [[DEST]])
+; CHECK-NEXT:    to label [[SUC:%.*]] unwind label [[UNW:%.*]]
+; CHECK:       unw:
+; CHECK-NEXT:    [[LP:%.*]] = landingpad i32
+; CHECK-NEXT:    cleanup
+; CHECK-NEXT:    resume i32 0
+; CHECK:       suc:
+; CHECK-NEXT:    ret void
+;
+  %src = alloca %struct.Foo, align 4
+  %dest = alloca %struct.Foo, align 4
+  call void @llvm.lifetime.start.p0(i64 12, ptr nocapture %src)
+  call void @llvm.lifetime.start.p0(i64 12, ptr nocapture %dest)
+  store %struct.Foo { i32 10, i32 20, i32 30 }, ptr %src
+  %1 = call i32 @use_nocapture(ptr nocapture %src)
+
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 12, i1 false)
+
+  call void @llvm.lifetime.end.p0(i64 12, ptr %src)
+  %rv = invoke i32 @use_nocapture(ptr %dest)
+  to label %suc unwind label %unw
+unw:
+  %lp = landingpad i32 cleanup
+  resume i32 0
+suc:
+  ret void
+}
+
 ; TODO: merge allocas for bb-separated, but logically straight
 define void @multi_bb_memcpy(i1 %b) {
 ; CHECK-LABEL: define void @multi_bb_memcpy
