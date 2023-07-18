@@ -5,13 +5,13 @@ void const_ptr(int * const x) { // expected-warning{{'x' is an unsafe pointer us
   // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:16-[[@LINE-1]]:29}:"std::span<int> const x"
   int tmp = x[5]; // expected-note{{used in buffer access here}}
 }
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void const_ptr(int * const x) {return const_ptr(std::span<int>(x, <# size #>));}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid const_ptr(int * const x) {return const_ptr(std::span<int>(x, <# size #>));}\n"
 
 void const_ptr_to_const(const int * const x) {// expected-warning{{'x' is an unsafe pointer used for buffer access}} expected-note{{change type of 'x' to 'std::span' to preserve bounds information}}
   // CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:25-[[@LINE-1]]:44}:"std::span<int const> const x"
   int tmp = x[5]; // expected-note{{used in buffer access here}}
 }
-// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void const_ptr_to_const(const int * const x) {return const_ptr_to_const(std::span<int const>(x, <# size #>));}\n"
+// CHECK-DAG: fix-it:{{.*}}:{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid const_ptr_to_const(const int * const x) {return const_ptr_to_const(std::span<int const>(x, <# size #>));}\n"
 
 typedef struct {int x;} NAMED_UNNAMED_STRUCT; // an unnamed struct type named by a typedef
 typedef struct {int x;} * PTR_TO_ANON;        // pointer to an unnamed struct
@@ -24,7 +24,7 @@ void namedPointeeType(NAMED_UNNAMED_STRUCT * p) {  // expected-warning{{'p' is a
     // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:7-[[@LINE-1]]:10}:"(p = p.subspan(1)).data()"
   }
 }
-// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void namedPointeeType(NAMED_UNNAMED_STRUCT * p) {return namedPointeeType(std::span<NAMED_UNNAMED_STRUCT>(p, <# size #>));}\n"
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}}\nvoid namedPointeeType(NAMED_UNNAMED_STRUCT * p) {return namedPointeeType(std::span<NAMED_UNNAMED_STRUCT>(p, <# size #>));}\n"
 
 // We CANNOT fix a pointer to an unnamed type
 // CHECK-NOT: fix-it:
