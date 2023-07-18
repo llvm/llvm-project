@@ -5,7 +5,7 @@
 // The test seems to segfault on aarch64 with tsan:
 // https://lab.llvm.org/buildbot/#/builders/179/builds/6662
 // Reason unknown, needs debugging.
-// XFAIL: target=aarch64{{.*}}
+// XFAIL: target=aarch64{{.*}} && ubsan-tsan
 
 #include <assert.h>
 #include <signal.h>
