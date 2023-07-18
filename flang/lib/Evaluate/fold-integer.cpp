@@ -115,14 +115,14 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
   using T = Type<TypeCategory::Integer, KIND>;
   ActualArguments &args{funcRef.arguments()};
   if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-    if (int rank{array->Rank()}; rank > 0) {
+    if (int rank{array->Rank()}; rank > 0 && !IsAssumedRank(*array)) {
       std::optional<int> dim;
       if (funcRef.Rank() == 0) {
         // Optional DIM= argument is present: result is scalar.
         if (auto dim64{ToInt64(args[1])}) {
           if (*dim64 < 1 || *dim64 > rank) {
-            context.messages().Say("DIM=%jd dimension is out of range for "
-                                   "rank-%d array"_err_en_US,
+            context.messages().Say(
+                "DIM=%jd dimension is out of range for rank-%d array"_err_en_US,
                 *dim64, rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
@@ -169,14 +169,14 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
   using T = Type<TypeCategory::Integer, KIND>;
   ActualArguments &args{funcRef.arguments()};
   if (auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-    if (int rank{array->Rank()}; rank > 0) {
+    if (int rank{array->Rank()}; rank > 0 && !IsAssumedRank(*array)) {
       std::optional<int> dim;
       if (funcRef.Rank() == 0) {
         // Optional DIM= argument is present: result is scalar.
         if (auto dim64{ToInt64(args[1])}) {
           if (*dim64 < 1 || *dim64 > rank) {
-            context.messages().Say("DIM=%jd dimension is out of range for "
-                                   "rank-%d array"_err_en_US,
+            context.messages().Say(
+                "DIM=%jd dimension is out of range for rank-%d array"_err_en_US,
                 *dim64, rank);
             return MakeInvalidIntrinsic<T>(std::move(funcRef));
           } else {
@@ -194,8 +194,8 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
           takeBoundsFromShape = false;
           if (dim) {
             if (semantics::IsAssumedSizeArray(symbol) && *dim == rank - 1) {
-              context.messages().Say("DIM=%jd dimension is out of range for "
-                                     "rank-%d assumed-size array"_err_en_US,
+              context.messages().Say(
+                  "DIM=%jd dimension is out of range for rank-%d assumed-size array"_err_en_US,
                   rank, rank);
               return MakeInvalidIntrinsic<T>(std::move(funcRef));
             } else if (auto ub{GetUBOUND(context, *named, *dim)}) {
