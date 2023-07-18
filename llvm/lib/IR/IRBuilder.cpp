@@ -1260,8 +1260,7 @@ Value *IRBuilderBase::CreatePreserveArrayAccessIndex(
   SmallVector<Value *, 4> IdxList(Dimension, Zero);
   IdxList.push_back(LastIndexV);
 
-  Type *ResultType =
-      GetElementPtrInst::getGEPReturnType(ElTy, Base, IdxList);
+  Type *ResultType = GetElementPtrInst::getGEPReturnType(Base, IdxList);
 
   Module *M = BB->getParent()->getParent();
   Function *FnPreserveArrayAccessIndex = Intrinsic::getDeclaration(
@@ -1307,7 +1306,7 @@ Value *IRBuilderBase::CreatePreserveStructAccessIndex(
   Value *GEPIndex = getInt32(Index);
   Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
   Type *ResultType =
-      GetElementPtrInst::getGEPReturnType(ElTy, Base, {Zero, GEPIndex});
+      GetElementPtrInst::getGEPReturnType(Base, {Zero, GEPIndex});
 
   Module *M = BB->getParent()->getParent();
   Function *FnPreserveStructAccessIndex = Intrinsic::getDeclaration(
