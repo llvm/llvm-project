@@ -803,7 +803,7 @@ Module *ModuleMap::findModule(StringRef Name) const {
   if (Known != Modules.end()) {
     Module *M = Known->getValue();
     // Notify callbacks that we found a module map for the module.
-    if (!M->DefinitionLoc.isInvalid())
+    if (M->DefinitionLoc.isValid() && !M->IsFromModuleFile)
       for (const auto &Cb : Callbacks)
         Cb->moduleMapFoundForModule(
             **getContainingModuleMapFile(M), M,
