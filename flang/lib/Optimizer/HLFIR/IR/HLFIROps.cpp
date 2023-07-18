@@ -733,7 +733,9 @@ mlir::LogicalResult hlfir::DotProductOp::verify() {
   int64_t lhsSize = lhsShape[0];
   int64_t rhsSize = rhsShape[0];
 
-  if (lhsSize != rhsSize)
+  constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+  if ((lhsSize != unknownExtent) && (rhsSize != unknownExtent) &&
+      (lhsSize != rhsSize))
     return emitOpError("both arrays must have the same size");
 
   if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
