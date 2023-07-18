@@ -149,7 +149,7 @@ public:
 
   bool hasThisPointer() const { return HasThisPointer; }
 
-  // Checks if the funtion already has a body attached.
+  /// Checks if the function already has a body attached.
   bool hasBody() const { return HasBody; }
 
   unsigned getBuiltinID() const { return F->getBuiltinID(); }
