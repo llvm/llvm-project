@@ -81,11 +81,10 @@ entry:
   ret float %call
 }
 ; CHECK-LABEL: f1_1_call:
-; CHECK:       movw r1, #52429
-; CHECK:       mov  r0, #0
-; CHECK:       movt r1, #16204
-; CHECK-DAG:   str  r1, [sp]
-; CHECK-DAG:   str  r0, [sp, #4]
+; CHECK:       movw r0, #52429
+; CHECK:       mov  r1, #0
+; CHECK:       movt r0, #16204
+; CHECK-DAG:   strd r0, r1, [sp]
 ; CHECK:       bl   f1_1
 
 ; pass in memory, alignment 8
@@ -96,13 +95,12 @@ entry:
   ret float %call
 }
 ; CHECK-LABEL: f1_2_call:
-; CHECK-DAG:   mov   r0, #0
-; CHECK-DAG:   movw  r1, #26214
-; CHECK:       str   r0, [sp, #12]
+; CHECK-DAG:   movw  r0, #26214
+; CHECK-DAG:   mov   r1, #0
+; CHECK:       movt  r0, #16230
+; CHECK:       strd  r0, r1, [sp, #8]
 ; CHECK:       movw  r0, #52429
-; CHECK:       movt  r1, #16230
 ; CHECK:       movt  r0, #16204
-; CHECK-DAG:   str   r1, [sp, #8]
 ; CHECK-DAG:   str   r0, [sp]
 ; CHECK:       bl    f1_2
 
