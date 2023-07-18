@@ -2944,6 +2944,39 @@ TEST(TransferTest, AggregateInitializationReferenceField) {
       });
 }
 
+TEST(TransferTest, AggregateInitialization_NotExplicitlyInitializedField) {
+  std::string Code = R"(
+    struct S {
+      int i1;
+      int i2;
+    };
+
+    void target(int i) {
+      S s = { i };
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *I1FieldDecl = findValueDecl(ASTCtx, "i1");
+        const ValueDecl *I2FieldDecl = findValueDecl(ASTCtx, "i2");
+
+        auto &SLoc = getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "s");
+
+        auto &IValue = getValueForDecl<IntegerValue>(ASTCtx, Env, "i");
+        auto &I1Value =
+            *cast<IntegerValue>(getFieldValue(&SLoc, *I1FieldDecl, Env));
+        EXPECT_EQ(&I1Value, &IValue);
+        auto &I2Value =
+            *cast<IntegerValue>(getFieldValue(&SLoc, *I2FieldDecl, Env));
+        EXPECT_NE(&I2Value, &IValue);
+      });
+}
+
 TEST(TransferTest, AssignToUnionMember) {
   std::string Code = R"(
     union A {
