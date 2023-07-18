@@ -434,33 +434,31 @@ bb:
 define amdgpu_kernel void @add_and(ptr addrspace(1) nocapture %arg) {
 ; GCN-LABEL: add_and:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
-; GCN-NEXT:    s_mov_b32 s7, 0xf000
-; GCN-NEXT:    s_mov_b32 s6, 0
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s2, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    buffer_load_dword v4, v[2:3], s[4:7], 0 addr64
-; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
-; GCN-NEXT:    v_cmp_lt_u32_e64 s[0:1], 1, v0
-; GCN-NEXT:    s_and_b64 vcc, vcc, s[0:1]
+; GCN-NEXT:    buffer_load_dword v4, v[2:3], s[0:3], 0 addr64
+; GCN-NEXT:    v_max_u32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_addc_u32_e32 v0, vcc, 0, v4, vcc
-; GCN-NEXT:    buffer_store_dword v0, v[2:3], s[4:7], 0 addr64
+; GCN-NEXT:    buffer_store_dword v0, v[2:3], s[0:3], 0 addr64
 ; GCN-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: add_and:
 ; GFX9:       ; %bb.0: ; %bb
-; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v0, v1
-; GFX9-NEXT:    v_cmp_lt_u32_e64 s[0:1], 1, v0
-; GFX9-NEXT:    s_and_b64 vcc, vcc, s[0:1]
+; GFX9-NEXT:    v_max_u32_e32 v1, 1, v1
+; GFX9-NEXT:    v_cmp_lt_u32_e32 vcc, v1, v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v2, s[2:3]
+; GFX9-NEXT:    global_load_dword v3, v2, s[0:1]
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_addc_co_u32_e32 v0, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_store_dword v2, v0, s[2:3]
+; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 bb:
   %x = tail call i32 @llvm.amdgcn.workitem.id.x()
