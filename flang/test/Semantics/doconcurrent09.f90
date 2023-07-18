@@ -33,15 +33,15 @@ program test
   do concurrent (j=1:1)
     call ps(1) ! ok
     call purity(1) ! ok
-    !ERROR: Call to an impure procedure is not allowed in DO CONCURRENT
+    !ERROR: Impure procedure 'ips' may not be referenced in DO CONCURRENT
     call purity(1.)
-    !ERROR: Call to an impure procedure is not allowed in DO CONCURRENT
+    !ERROR: Impure procedure 'ips' may not be referenced in DO CONCURRENT
     call ips(1.)
     call x%pb(1) ! ok
     call x%purity(1) ! ok
-    !ERROR: Call to an impure procedure component is not allowed in DO CONCURRENT
+    !ERROR: Impure procedure 'ipb' may not be referenced in DO CONCURRENT
     call x%purity(1.)
-    !ERROR: Call to an impure procedure component is not allowed in DO CONCURRENT
+    !ERROR: Impure procedure 'ipb' may not be referenced in DO CONCURRENT
     call x%ipb(1.)
   end do
 end program
