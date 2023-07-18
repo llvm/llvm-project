@@ -1,12 +1,5 @@
-# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=si-lower-sgpr-spills -stop-after=greedy,1 -verify-machineinstrs --stress-regalloc=2 %s -o /dev/null 2>&1 | FileCheck %s
-
-# This test would fail as there is no wwm-register spill pseudo instructions supported for the vector superclass (AV).
-# Currently there is only VGPR_32 regclass spilling allowed for wwm-registers.
-
-# CHECK: Bad machine code: Illegal virtual register for instruction
-# CHECK: instruction: {{.*}}    [[AV_REG:%[0-9]+]]:av_32 = SI_SPILL_WWM_V32_RESTORE
-# CHECK-NEXT: - operand 0:   [[AV_REG]]:av_32
-# CHECK-NEXT: Expected a VGPR_32 register, but got a AV_32 register
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=si-lower-sgpr-spills -stop-after=greedy,1 -verify-machineinstrs --stress-regalloc=2 -o - %s | FileCheck -check-prefix GCN-REGALLOC %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -start-before=si-lower-sgpr-spills -stop-after=virtregrewriter,1 -verify-machineinstrs --stress-regalloc=2 -o - %s | FileCheck -check-prefix GCN-REWRITER %s
 
 name:            test_wwm_reg_superclass_spill
 tracksRegLiveness: true
@@ -19,6 +12,11 @@ machineFunctionInfo:
   sgprForEXECCopy:   '$sgpr100_sgpr101'
 body:             |
   bb.0:
+    ; GCN-REGALLOC-NUM-2: %{{[0-9]+}}:av_32 = SI_SPILL_WWM_AV32_RESTORE
+    ; GCN-REGALLOC: S_ENDPGM 0
+    ;
+    ; GCN-REWRITER-NUM-2: renamable $vgpr0 = SI_SPILL_WWM_AV32_RESTORE
+    ; GCN-REWRITER: S_ENDPGM 0
     $vgpr0 = IMPLICIT_DEF
     $sgpr0_sgpr1 = IMPLICIT_DEF
     %temp0:vgpr_32(s32) = COPY $vgpr0

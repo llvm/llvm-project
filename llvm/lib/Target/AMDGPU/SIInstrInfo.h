@@ -670,7 +670,9 @@ public:
 
   static bool isWWMRegSpillOpcode(uint16_t Opcode) {
     return Opcode == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
-           Opcode == AMDGPU::SI_SPILL_WWM_V32_RESTORE;
+           Opcode == AMDGPU::SI_SPILL_WWM_AV32_SAVE ||
+           Opcode == AMDGPU::SI_SPILL_WWM_V32_RESTORE ||
+           Opcode == AMDGPU::SI_SPILL_WWM_AV32_RESTORE;
   }
 
   static bool isDPP(const MachineInstr &MI) {
