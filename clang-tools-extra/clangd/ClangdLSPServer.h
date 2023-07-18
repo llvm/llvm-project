@@ -237,10 +237,10 @@ private:
   // emit them via the LSP's data field (which was newly added in LSP 3.16).
   std::mutex DiagRefMutex;
   struct DiagKey {
-    clangd::Range Range;
+    clangd::Range Rng;
     std::string Message;
     bool operator<(const DiagKey &Other) const {
-      return std::tie(Range, Message) < std::tie(Other.Range, Other.Message);
+      return std::tie(Rng, Message) < std::tie(Other.Rng, Other.Message);
     }
   };
   DiagKey toDiagKey(const clangd::Diagnostic &LSPDiag) {
