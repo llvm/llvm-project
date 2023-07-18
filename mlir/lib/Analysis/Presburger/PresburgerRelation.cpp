@@ -30,6 +30,13 @@ void PresburgerRelation::setSpace(const PresburgerSpace &oSpace) {
     disjunct.setSpaceExceptLocals(space);
 }
 
+void PresburgerRelation::insertVarInPlace(VarKind kind, unsigned pos,
+                                          unsigned num) {
+  for (IntegerRelation &cs : disjuncts)
+    cs.insertVar(kind, pos, num);
+  space.insertVar(kind, pos, num);
+}
+
 unsigned PresburgerRelation::getNumDisjuncts() const {
   return disjuncts.size();
 }
@@ -115,6 +122,26 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
     }
   }
   return result;
+}
+
+PresburgerRelation PresburgerRelation::intersectRange(PresburgerSet &set) {
+  assert(space.getRangeSpace().isCompatible(set.getSpace()) &&
+         "Range of `this` must be compatible with range of `set`");
+
+  PresburgerRelation other = set;
+  other.insertVarInPlace(VarKind::Domain, 0, getNumDomainVars());
+  return intersect(other);
+}
+
+PresburgerRelation
+PresburgerRelation::intersectDomain(const PresburgerSet &set) {
+  assert(space.getDomainSpace().isCompatible(set.getSpace()) &&
+         "Domain of `this` must be compatible with range of `set`");
+
+  PresburgerRelation other = set;
+  other.insertVarInPlace(VarKind::Domain, 0, getNumDomainVars());
+  other.inverse();
+  return intersect(other);
 }
 
 void PresburgerRelation::inverse() {
