@@ -36,6 +36,12 @@ config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
 config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
 config.mlir_run_amx_tests = @MLIR_RUN_AMX_TESTS@
 config.mlir_run_arm_sve_tests = @MLIR_RUN_ARM_SVE_TESTS@
+# This is a workaround for the fact that LIT's:
+#   %if <cond>
+# requires <cond> to be in the set of available features. 
+# TODO: Update LIT's TestRunner so that this is not required.
+if config.mlir_run_arm_sve_tests:
+    config.available_features.add("mlir_arm_sve_tests")
 config.mlir_run_arm_sme_tests = @MLIR_RUN_ARM_SME_TESTS@
 config.mlir_run_x86vector_tests = @MLIR_RUN_X86VECTOR_TESTS@
 config.mlir_run_riscv_vector_tests = "@MLIR_RUN_RISCV_VECTOR_TESTS@"

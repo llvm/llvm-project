@@ -44,9 +44,10 @@ public:
   using InstructionT = MachineInstr;
   using ValueRefT = Register;
   using ConstValueRefT = Register;
-  static const Register ValueRefNull;
   using UseT = MachineOperand;
   using DominatorTreeT = DominatorTreeBase<BlockT, false>;
+
+  static constexpr Register ValueRefNull = 0;
 
   void setFunction(MachineFunction &Fn);
   MachineFunction *getFunction() const { return MF; }

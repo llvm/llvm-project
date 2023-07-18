@@ -28,7 +28,7 @@ func.func @_QPmatmul1(%arg0: !fir.box<!fir.array<?x?xi32>> {fir.bindc_name = "lh
 // CHECK:         %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>) -> !fir.ref<!fir.box<none>>
 // CHECK-DAG:     %[[LHS_ARG:.*]] = fir.convert %[[LHS_VAR]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
 // CHECK-DAG:     %[[RHS_ARG:.*]] = fir.convert %[[RHS_VAR]]#1 : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranAMatmul(%[[RET_ARG]], %[[LHS_ARG]], %[[RHS_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
+// CHECK:         %[[NONE:.*]] = fir.call @_FortranAMatmul(%[[RET_ARG]], %[[LHS_ARG]], %[[RHS_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) fastmath<contract>
 
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK-DAG:     %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
@@ -71,11 +71,7 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<3x3xf32>> {fir.bindc_name = "a"}, 
 }
 // just check that we apply the patterns successfully. The details are checked above
 // CHECK-LABEL: func.func @_QPtest(
-// CHECK:           %arg0: !fir.ref<!fir.array<3x3xf32>> {fir.bindc_name = "a"},
-// CHECK-SAME:      %arg1: !fir.ref<!fir.array<3x3xf32>> {fir.bindc_name = "b"},
-// CHECK-SAME:      %arg2: !fir.ref<!fir.array<3x3xf32>> {fir.bindc_name = "c"},
-// CHECK-SAME:      %arg3: !fir.ref<!fir.array<3x3xf32>> {fir.bindc_name = "out"}) {
-// CHECK:         fir.call @_FortranAMatmul(
-// CHECK;         fir.call @_FortranAMatmul(%40, %41, %42, %43, %c20_i32) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+// CHECK:         fir.call @_FortranAMatmul({{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+// CHECK:         fir.call @_FortranAMatmul({{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 // CHECK:         return
 // CHECK-NEXT:  }

@@ -16,11 +16,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Some FP instructions are defined twice, for accepting FPR32 and FPR64, but
+// with the same mnemonic. Also some are codegen-only definitions that
+// nevertheless require a "normal" mnemonic.
+//
+// In order to accommodate these needs, the instruction defs have names
+// suffixed with `_x[SD]` or `_64`, that will get trimmed before the mnemonics
+// are derived.
+class deriveFPInsnMnemonic<string name> {
+  string ret = deriveInsnMnemonic<!subst("_64", "",
+                                         !subst("_xD", "",
+                                                !subst("_xS", "", name)))>.ret;
+}
+
 // 2R-type
 // <opcode | fj | fd>
-class FPFmt2R<bits<22> op, dag outs, dag ins, string opcstr, string opnstr,
+class FPFmt2R<bits<22> op, dag outs, dag ins, string opnstr,
               list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveFPInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> fj;
   bits<5> fd;
 
@@ -31,9 +44,9 @@ class FPFmt2R<bits<22> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 3R-type
 // <opcode | fk | fj | fd>
-class FPFmt3R<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
+class FPFmt3R<bits<17> op, dag outs, dag ins, string opnstr,
               list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveFPInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> fk;
   bits<5> fj;
   bits<5> fd;
@@ -46,9 +59,9 @@ class FPFmt3R<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 4R-type
 // <opcode | fa | fk | fj | fd>
-class FPFmt4R<bits<12> op, dag outs, dag ins, string opcstr, string opnstr,
+class FPFmt4R<bits<12> op, dag outs, dag ins, string opnstr,
               list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveFPInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> fa;
   bits<5> fk;
   bits<5> fj;
@@ -63,9 +76,9 @@ class FPFmt4R<bits<12> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // 2RI12-type
 // <opcode | I12 | rj | fd>
-class FPFmt2RI12<bits<10> op, dag outs, dag ins, string opcstr, string opnstr,
+class FPFmt2RI12<bits<10> op, dag outs, dag ins, string opnstr,
                  list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveFPInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<12> imm12;
   bits<5> rj;
   bits<5> fd;
@@ -78,9 +91,9 @@ class FPFmt2RI12<bits<10> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // FmtFCMP
 // <opcode | cond | fk | fj | 0b00 | cd>
-class FPFmtFCMP<bits<12> op, bits<5> cond, dag outs, dag ins, string opcstr,
-                string opnstr, list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+class FPFmtFCMP<bits<12> op, bits<5> cond, dag outs, dag ins, string opnstr,
+                list<dag> pattern = []>
+    : LAInst<outs, ins, deriveFPInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> fk;
   bits<5> fj;
   bits<3> cd;
@@ -95,9 +108,9 @@ class FPFmtFCMP<bits<12> op, bits<5> cond, dag outs, dag ins, string opcstr,
 
 // FPFmtBR
 // <opcode[7:2] | I21[15:0] | opcode[1:0] | cj | I21[20:16]>
-class FPFmtBR<bits<8> opcode, dag outs, dag ins, string opcstr,
-              string opnstr, list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+class FPFmtBR<bits<8> opcode, dag outs, dag ins, string opnstr,
+              list<dag> pattern = []>
+    : LAInst<outs, ins, deriveFPInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<21> imm21;
   bits<3> cj;
 
@@ -110,9 +123,9 @@ class FPFmtBR<bits<8> opcode, dag outs, dag ins, string opcstr,
 
 // FmtFSEL
 // <opcode | ca | fk | fj | fd>
-class FPFmtFSEL<bits<14> op, dag outs, dag ins, string opcstr, string opnstr,
+class FPFmtFSEL<bits<14> op, dag outs, dag ins, string opnstr,
                 list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveFPInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<3> ca;
   bits<5> fk;
   bits<5> fj;
@@ -127,9 +140,9 @@ class FPFmtFSEL<bits<14> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // FPFmtMOV
 // <opcode | src | dst>
-class FPFmtMOV<bits<22> op, dag outs, dag ins, string opcstr, string opnstr,
+class FPFmtMOV<bits<22> op, dag outs, dag ins, string opnstr,
                list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveFPInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> src;
   bits<5> dst;
 
@@ -140,9 +153,9 @@ class FPFmtMOV<bits<22> op, dag outs, dag ins, string opcstr, string opnstr,
 
 // FPFmtMEM
 // <opcode | rk | rj | fd>
-class FPFmtMEM<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
+class FPFmtMEM<bits<17> op, dag outs, dag ins, string opnstr,
                list<dag> pattern = []>
-    : LAInst<outs, ins, opcstr, opnstr, pattern> {
+    : LAInst<outs, ins, deriveFPInsnMnemonic<NAME>.ret, opnstr, pattern> {
   bits<5> rk;
   bits<5> rj;
   bits<5> fd;
@@ -158,14 +171,14 @@ class FPFmtMEM<bits<17> op, dag outs, dag ins, string opcstr, string opnstr,
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-class FP_ALU_2R<bits<22> op, string opstr, RegisterClass rc>
-    : FPFmt2R<op, (outs rc:$fd), (ins rc:$fj), opstr, "$fd, $fj">;
+class FP_ALU_2R<bits<22> op, RegisterClass rc>
+    : FPFmt2R<op, (outs rc:$fd), (ins rc:$fj), "$fd, $fj">;
 
-class FP_ALU_3R<bits<17> op, string opstr, RegisterClass rc>
-    : FPFmt3R<op, (outs rc:$fd), (ins rc:$fj, rc:$fk), opstr, "$fd, $fj, $fk">;
+class FP_ALU_3R<bits<17> op, RegisterClass rc>
+    : FPFmt3R<op, (outs rc:$fd), (ins rc:$fj, rc:$fk), "$fd, $fj, $fk">;
 
-class FP_ALU_4R<bits<12> op, string opstr, RegisterClass rc>
-    : FPFmt4R<op, (outs rc:$fd), (ins rc:$fj, rc:$fk, rc:$fa), opstr,
+class FP_ALU_4R<bits<12> op, RegisterClass rc>
+    : FPFmt4R<op, (outs rc:$fd), (ins rc:$fj, rc:$fk, rc:$fa),
               "$fd, $fj, $fk, $fa">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
@@ -178,22 +191,22 @@ class FPCMPCond<bits<5> value> {
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-class FP_CMP<FPCMPOpc op, FPCMPCond cond, string opstr, RegisterClass rc>
-    : FPFmtFCMP<op.val, cond.val, (outs CFR:$cd), (ins rc:$fj, rc:$fk), opstr,
+class FP_CMP<FPCMPOpc op, FPCMPCond cond, RegisterClass rc>
+    : FPFmtFCMP<op.val, cond.val, (outs CFR:$cd), (ins rc:$fj, rc:$fk),
                 "$cd, $fj, $fk">;
 
-class FP_CONV<bits<22> op, string opstr, RegisterClass rcd, RegisterClass rcs>
-    : FPFmt2R<op, (outs rcd:$fd), (ins rcs:$fj), opstr, "$fd, $fj">;
+class FP_CONV<bits<22> op, RegisterClass rcd, RegisterClass rcs>
+    : FPFmt2R<op, (outs rcd:$fd), (ins rcs:$fj), "$fd, $fj">;
 
-class FP_MOV<bits<22> op, string opstr, RegisterClass rcd, RegisterClass rcs>
-    : FPFmtMOV<op, (outs rcd:$dst), (ins rcs:$src), opstr, "$dst, $src">;
+class FP_MOV<bits<22> op, RegisterClass rcd, RegisterClass rcs>
+    : FPFmtMOV<op, (outs rcd:$dst), (ins rcs:$src), "$dst, $src">;
 
-class FP_SEL<bits<14> op, string opstr, RegisterClass rc>
-    : FPFmtFSEL<op, (outs rc:$fd), (ins rc:$fj, rc:$fk, CFR:$ca), opstr,
+class FP_SEL<bits<14> op, RegisterClass rc>
+    : FPFmtFSEL<op, (outs rc:$fd), (ins rc:$fj, rc:$fk, CFR:$ca),
                 "$fd, $fj, $fk, $ca">;
 
-class FP_BRANCH<bits<8> opcode, string opstr>
-    : FPFmtBR<opcode, (outs), (ins CFR:$cj, simm21_lsl2:$imm21), opstr,
+class FP_BRANCH<bits<8> opcode>
+    : FPFmtBR<opcode, (outs), (ins CFR:$cj, simm21_lsl2:$imm21),
               "$cj, $imm21"> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -201,20 +214,20 @@ class FP_BRANCH<bits<8> opcode, string opstr>
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
-class FP_LOAD_3R<bits<17> op, string opstr, RegisterClass rc>
-    : FPFmtMEM<op, (outs rc:$fd), (ins GPR:$rj, GPR:$rk), opstr,
+class FP_LOAD_3R<bits<17> op, RegisterClass rc>
+    : FPFmtMEM<op, (outs rc:$fd), (ins GPR:$rj, GPR:$rk),
                "$fd, $rj, $rk">;
-class FP_LOAD_2RI12<bits<10> op, string opstr, RegisterClass rc>
-    : FPFmt2RI12<op, (outs rc:$fd), (ins GPR:$rj, simm12:$imm12), opstr,
+class FP_LOAD_2RI12<bits<10> op, RegisterClass rc>
+    : FPFmt2RI12<op, (outs rc:$fd), (ins GPR:$rj, simm12:$imm12),
                  "$fd, $rj, $imm12">;
 } // hasSideEffects = 0, mayLoad = 1, mayStore = 0
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
-class FP_STORE_3R<bits<17> op, string opstr, RegisterClass rc>
-    : FPFmtMEM<op, (outs), (ins rc:$fd, GPR:$rj, GPR:$rk), opstr,
+class FP_STORE_3R<bits<17> op, RegisterClass rc>
+    : FPFmtMEM<op, (outs), (ins rc:$fd, GPR:$rj, GPR:$rk),
                "$fd, $rj, $rk">;
-class FP_STORE_2RI12<bits<10> op, string opstr, RegisterClass rc>
-    : FPFmt2RI12<op, (outs), (ins rc:$fd, GPR:$rj, simm12:$imm12), opstr,
+class FP_STORE_2RI12<bits<10> op, RegisterClass rc>
+    : FPFmt2RI12<op, (outs), (ins rc:$fd, GPR:$rj, simm12:$imm12),
                  "$fd, $rj, $imm12">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 1
 

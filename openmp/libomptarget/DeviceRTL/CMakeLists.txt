@@ -152,7 +152,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       COMMENT "Building LLVM bitcode ${outfile}"
       VERBATIM
     )
-    if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
+    if(TARGET clang)
       # Add a file-level dependency to ensure that clang is up-to-date.
       # By default, add_custom_command only builds clang if the
       # executable is missing.
@@ -175,7 +175,8 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       DEPENDS ${bc_files}
       COMMENT "Linking LLVM bitcode ${bclib_name}"
   )
-  if("${LINK_TOOL}" STREQUAL "$<TARGET_FILE:llvm-link>")
+
+  if(TARGET llvm-link)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
       DEPENDS llvm-link
       APPEND)
@@ -187,7 +188,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       DEPENDS ${source_directory}/exports ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
       COMMENT "Internalizing LLVM bitcode ${bclib_name}"
   )
-  if("${OPT_TOOL}" STREQUAL "$<TARGET_FILE:opt>")
+  if(TARGET opt)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/internalized_${bclib_name}
       DEPENDS opt
       APPEND)
@@ -199,7 +200,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/internalized_${bclib_name}
       COMMENT "Optimizing LLVM bitcode ${bclib_name}"
   )
-  if("${OPT_TOOL}" STREQUAL "$<TARGET_FILE:opt>")
+  if(TARGET opt)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
       DEPENDS opt
       APPEND)
@@ -231,7 +232,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
       COMMENT "Packaging LLVM offloading binary ${bclib_name}.out"
   )
-  if("${PACKAGER_TOOL}" STREQUAL "$<TARGET_FILE:clang-offload-packager>")
+  if(TARGET clang-offload-packager)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
       DEPENDS clang-offload-packager
       APPEND)
@@ -247,7 +248,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
     COMMENT "Embedding LLVM offloading binary in devicertl-${target_name}-${target_cpu}.o"
     VERBATIM
   )
-  if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
+  if(TARGET clang)
     add_custom_command(OUTPUT ${output_name}
       DEPENDS clang
       APPEND)

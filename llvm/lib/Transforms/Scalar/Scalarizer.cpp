@@ -374,14 +374,7 @@ INITIALIZE_PASS_END(ScalarizerLegacyPass, "scalarizer",
 Scatterer::Scatterer(BasicBlock *bb, BasicBlock::iterator bbi, Value *v,
                      const VectorSplit &VS, ValueVector *cachePtr)
     : BB(bb), BBI(bbi), V(v), VS(VS), CachePtr(cachePtr) {
-  Type *Ty = V->getType();
-  if (Ty->isPointerTy()) {
-    assert(cast<PointerType>(Ty)->isOpaqueOrPointeeTypeMatches(VS.VecTy) &&
-           "Pointer element type mismatch");
-    IsPointer = true;
-  } else {
-    IsPointer = false;
-  }
+  IsPointer = V->getType()->isPointerTy();
   if (!CachePtr) {
     Tmp.resize(VS.NumFragments, nullptr);
   } else {

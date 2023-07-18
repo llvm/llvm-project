@@ -2749,10 +2749,10 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
       return nullptr;
     }
     // No point in doing this for one-operand phis.
-    if (OpPHI->getNumOperands() == 1) {
-      OpPHI = nullptr;
-      continue;
-    }
+    // Since all PHIs for operands must be in the same block, then they must
+    // have the same number of operands so we can just abort.
+    if (OpPHI->getNumOperands() == 1)
+      return nullptr;
   }
 
   if (!OpPHI)

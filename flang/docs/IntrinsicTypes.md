@@ -73,8 +73,7 @@ COMPLEX 8
 
 #### Modifying the default kind with default-integer-8:  
 INTEGER 8
-
-There is no option to modify the default logical kind.
+LOGICAL 8
 
 Modules compiled with different default-real and default-integer kinds
 may be freely mixed.
