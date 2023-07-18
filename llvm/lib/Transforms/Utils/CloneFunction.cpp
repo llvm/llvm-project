@@ -244,7 +244,12 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       mapToSelfIfNew(CU);
 
     for (DIType *Type : DIFinder->types())
-      mapToSelfIfNew(Type);
+      // Don't skip subprogram's local types.
+      if (!isa_and_present<DILocalScope>(Type->getScope()) ||
+          SPClonedWithinModule == nullptr ||
+          dyn_cast<DILocalScope>(Type->getScope())->getSubprogram() !=
+              SPClonedWithinModule)
+        mapToSelfIfNew(Type);
   } else {
     assert(!SPClonedWithinModule &&
            "Subprogram should be in DIFinder->subprogram_count()...");
