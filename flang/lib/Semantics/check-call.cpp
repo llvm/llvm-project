@@ -448,6 +448,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // Definability
+  bool actualIsVariable{evaluate::IsVariable(actual)};
   const char *reason{nullptr};
   if (dummy.intent == common::Intent::Out) {
     reason = "INTENT(OUT)";
@@ -457,7 +458,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   if (reason && scope) {
     // Problems with polymorphism are caught in the callee's definition.
     DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
-    if (isElemental || dummyIsValue) { // 15.5.2.4(21)
+    if (isElemental) { // 15.5.2.4(21)
       flags.set(DefinabilityFlag::VectorSubscriptIsOk);
     }
     if (actualIsPointer && dummyIsPointer) { // 19.6.8
@@ -475,7 +476,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // technically legal but worth emitting a warning
   // llvm-project issue #58973: constant actual argument passed in where dummy
   // argument is marked volatile
-  bool actualIsVariable{evaluate::IsVariable(actual)};
   if (dummyIsVolatile && !actualIsVariable &&
       context.ShouldWarn(common::UsageWarning::ExprPassedToVolatile)) {
     messages.Say(
