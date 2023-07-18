@@ -205,10 +205,7 @@ def config():
     )
     parser.add_argument(
         "--check-globals",
-        nargs="?",
-        const="all",
-        default="default",
-        choices=["none", "smart", "all"],
+        action="store_true",
         help="Check global entries (global variables, metadata, attribute sets, ...) for functions",
     )
     parser.add_argument("tests", nargs="+")
@@ -439,7 +436,7 @@ def main():
                         is_filtered=builder.is_filtered(),
                     )
 
-            if ti.args.check_globals != 'none':
+            if ti.args.check_globals:
                 generated_prefixes.extend(
                     common.add_global_checks(
                         builder.global_var_dict(),
@@ -447,9 +444,8 @@ def main():
                         run_list,
                         output_lines,
                         global_vars_seen_dict,
-                        False,
                         True,
-                        ti.args.check_globals,
+                        True,
                     )
                 )
             generated_prefixes.extend(
@@ -497,7 +493,7 @@ def main():
                                 output_lines.pop()
                                 last_line = output_lines[-1].strip()
                             if (
-                                ti.args.check_globals != 'none'
+                                ti.args.check_globals
                                 and not has_checked_pre_function_globals
                             ):
                                 generated_prefixes.extend(
@@ -507,9 +503,8 @@ def main():
                                         run_list,
                                         output_lines,
                                         global_vars_seen_dict,
-                                        False,
                                         True,
-                                        ti.args.check_globals,
+                                        True,
                                     )
                                 )
                                 has_checked_pre_function_globals = True
@@ -536,7 +531,7 @@ def main():
                 if include_line:
                     output_lines.append(line.rstrip("\n"))
 
-        if ti.args.check_globals != 'none':
+        if ti.args.check_globals:
             generated_prefixes.extend(
                 common.add_global_checks(
                     builder.global_var_dict(),
@@ -544,9 +539,8 @@ def main():
                     run_list,
                     output_lines,
                     global_vars_seen_dict,
+                    True,
                     False,
-                    False,
-                    ti.args.check_globals,
                 )
             )
         if ti.args.gen_unused_prefix_body:
