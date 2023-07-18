@@ -1094,9 +1094,7 @@ define i8 @select_eq_xor_recursive(i8 %a, i8 %b) {
 ; CHECK-LABEL: @select_eq_xor_recursive(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[INV:%.*]] = xor i8 [[XOR]], -1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], [[B]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -1, i8 [[INV]]
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 [[INV]]
 ;
   %xor = xor i8 %a, %b
   %inv = xor i8 %xor, -1
@@ -1110,9 +1108,7 @@ define i8 @select_eq_xor_recursive2(i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[INV:%.*]] = xor i8 [[XOR]], -1
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[INV]], 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], [[B]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 9, i8 [[ADD]]
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 [[ADD]]
 ;
   %xor = xor i8 %a, %b
   %inv = xor i8 %xor, -1
@@ -1162,9 +1158,7 @@ define i8 @select_eq_and_recursive(i8 %a) {
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i8 0, [[A:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[NEG]], [[A]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[AND]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 1, i8 [[ADD]]
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 [[ADD]]
 ;
   %neg = sub i8 0, %a
   %and = and i8 %neg, %a
@@ -1194,16 +1188,40 @@ define i8 @select_eq_and_recursive_propagates_poison(i8 %a, i8 %b) {
 
 define i8 @select_eq_xor_recursive_allow_refinement(i8 %a, i8 %b) {
 ; CHECK-LABEL: @select_eq_xor_recursive_allow_refinement(
-; CHECK-NEXT:    [[XOR1:%.*]] = add i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[A]], [[XOR1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[B]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 [[XOR2]], i8 0
-; CHECK-NEXT:    ret i8 [[SEL]]
+; CHECK-NEXT:    ret i8 0
 ;
   %xor1 = add i8 %a, %b
   %xor2 = xor i8 %a, %xor1
   %cmp = icmp eq i8 %b, 0
   %sel = select i1 %cmp, i8 %xor2, i8 0
+  ret i8 %sel
+}
+
+define i8 @select_eq_mul_absorber(i8 %x, i8 noundef %y) {
+; CHECK-LABEL: @select_eq_mul_absorber(
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[MUL]]
+;
+  %cmp = icmp eq i8 %x, 1
+  %add = add i8 %x, -1
+  %mul = mul i8 %add, %y
+  %sel = select i1 %cmp, i8 0, i8 %mul
+  ret i8 %sel
+}
+
+define i8 @select_eq_mul_not_absorber(i8 %x, i8 noundef %y) {
+; CHECK-LABEL: @select_eq_mul_not_absorber(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[MUL]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 0
+  %add = add i8 %x, -1
+  %mul = mul i8 %add, %y
+  %sel = select i1 %cmp, i8 0, i8 %mul
   ret i8 %sel
 }
 

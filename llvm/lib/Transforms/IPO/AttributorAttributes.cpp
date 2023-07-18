@@ -11928,9 +11928,8 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
             getAssociatedType()->getPointerAddressSpace())
       return ChangeStatus::UNCHANGED;
 
-    Type *NewPtrTy = PointerType::getWithSamePointeeType(
-        cast<PointerType>(getAssociatedType()),
-        static_cast<uint32_t>(getAddressSpace()));
+    Type *NewPtrTy = PointerType::get(getAssociatedType()->getContext(),
+                                      static_cast<uint32_t>(getAddressSpace()));
     bool UseOriginalValue =
         OriginalValue->getType()->getPointerAddressSpace() ==
         static_cast<uint32_t>(getAddressSpace());

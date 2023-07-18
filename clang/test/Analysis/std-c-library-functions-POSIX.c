@@ -5,6 +5,15 @@
 // RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
 // RUN:   -analyzer-checker=debug.ExprInspection \
 // RUN:   -analyzer-config eagerly-assume=false \
+// RUN:   -triple i686-unknown-linux -verify
+
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.unix.StdCLibraryFunctions \
+// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:ModelPOSIX=true \
+// RUN:   -analyzer-config alpha.unix.StdCLibraryFunctions:DisplayLoadedSummaries=true \
+// RUN:   -analyzer-checker=debug.ExprInspection \
+// RUN:   -analyzer-config eagerly-assume=false \
 // RUN:   -triple i686-unknown-linux 2>&1 | FileCheck %s
 
 // CHECK: Loaded summary for: FILE *fopen(const char *restrict pathname, const char *restrict mode)
@@ -15,6 +24,8 @@
 // CHECK: Loaded summary for: int fileno(FILE *stream)
 // CHECK: Loaded summary for: long a64l(const char *str64)
 // CHECK: Loaded summary for: char *l64a(long value)
+// CHECK: Loaded summary for: int open(const char *path, int oflag, ...)
+// CHECK: Loaded summary for: int openat(int fd, const char *path, int oflag, ...)
 // CHECK: Loaded summary for: int access(const char *pathname, int amode)
 // CHECK: Loaded summary for: int faccessat(int dirfd, const char *pathname, int mode, int flags)
 // CHECK: Loaded summary for: int dup(int fildes)
@@ -82,6 +93,7 @@
 // CHECK: Loaded summary for: int execv(const char *path, char *const argv[])
 // CHECK: Loaded summary for: int execvp(const char *file, char *const argv[])
 // CHECK: Loaded summary for: int getopt(int argc, char *const argv[], const char *optstring)
+// CHECK: Loaded summary for: int socket(int domain, int type, int protocol)
 // CHECK: Loaded summary for: int accept(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len)
 // CHECK: Loaded summary for: int bind(int socket, __CONST_SOCKADDR_ARG address, socklen_t address_len)
 // CHECK: Loaded summary for: int getpeername(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len)
@@ -97,6 +109,7 @@
 // CHECK: Loaded summary for: int getsockopt(int socket, int level, int option_name, void *restrict option_value, socklen_t *restrict option_len)
 // CHECK: Loaded summary for: ssize_t send(int sockfd, const void *buf, size_t len, int flags)
 // CHECK: Loaded summary for: int socketpair(int domain, int type, int protocol, int sv[2])
+// CHECK: Loaded summary for: int shutdown(int socket, int how)
 // CHECK: Loaded summary for: int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen, char *restrict node, socklen_t nodelen, char *restrict service, socklen_t servicelen, int flags)
 // CHECK: Loaded summary for: int utime(const char *filename, struct utimbuf *buf)
 // CHECK: Loaded summary for: int futimens(int fd, const struct timespec times[2])
@@ -128,8 +141,12 @@
 
 #include "Inputs/std-c-library-functions-POSIX.h"
 
-// Must have at least one call expression to initialize the summary map.
-int bar(void);
-void foo(void) {
-  bar();
+void test_open(void) {
+  open(0, 0); // \
+  // expected-warning{{The 1st argument to 'open' is NULL but should not be NULL}}
+}
+
+void test_open_additional_arg(void) {
+  open(0, 0, 0); // \
+  // expected-warning{{The 1st argument to 'open' is NULL but should not be NULL}}
 }

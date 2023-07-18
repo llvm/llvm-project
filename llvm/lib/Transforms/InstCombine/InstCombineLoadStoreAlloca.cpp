@@ -404,9 +404,8 @@ void PointerReplacer::replace(Instruction *I) {
   } else if (auto *BC = dyn_cast<BitCastInst>(I)) {
     auto *V = getReplacement(BC->getOperand(0));
     assert(V && "Operand not replaced");
-    auto *NewT = PointerType::getWithSamePointeeType(
-        cast<PointerType>(BC->getType()),
-        V->getType()->getPointerAddressSpace());
+    auto *NewT = PointerType::get(BC->getType()->getContext(),
+                                  V->getType()->getPointerAddressSpace());
     auto *NewI = new BitCastInst(V, NewT);
     IC.InsertNewInstWith(NewI, *BC);
     NewI->takeName(BC);

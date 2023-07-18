@@ -4410,8 +4410,7 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
                                              unsigned AddressSpace) {
   auto &Elem = *InternalVars.try_emplace(Name, nullptr).first;
   if (Elem.second) {
-    assert(cast<PointerType>(Elem.second->getType())
-               ->isOpaqueOrPointeeTypeMatches(Ty) &&
+    assert(Elem.second->getValueType() == Ty &&
            "OMP internal variable has different type than requested");
   } else {
     // TODO: investigate the appropriate linkage type used for the global
@@ -4426,7 +4425,7 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     Elem.second = GV;
   }
 
-  return cast<GlobalVariable>(&*Elem.second);
+  return Elem.second;
 }
 
 Value *OpenMPIRBuilder::getOMPCriticalRegionLock(StringRef CriticalName) {

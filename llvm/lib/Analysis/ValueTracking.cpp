@@ -4523,10 +4523,24 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         break;
       }
       case Intrinsic::canonicalize: {
+        KnownFPClass KnownSrc;
         computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                            InterestedClasses, Known, Depth + 1, Q);
+                            InterestedClasses, KnownSrc, Depth + 1, Q);
+
+        // This is essentially a stronger form of
+        // propagateCanonicalizingSrc. Other "canonicalizing" operations don't
+        // actually have an IR canonicalization guarantee.
+
+        // Canonicalize may flush denormals to zero, so we have to consider the
+        // denormal mode to preserve known-not-0 knowledge.
+        Known.KnownFPClasses = KnownSrc.KnownFPClasses | fcZero | fcQNan;
+
+        // Stronger version of propagateNaN
         // Canonicalize is guaranteed to quiet signaling nans.
-        Known.knownNot(fcSNan);
+        if (KnownSrc.isKnownNeverNaN())
+          Known.knownNot(fcNan);
+        else
+          Known.knownNot(fcSNan);
 
         const Function *F = II->getFunction();
         if (!F)
@@ -4537,6 +4551,14 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         const fltSemantics &FPType =
             II->getType()->getScalarType()->getFltSemantics();
         DenormalMode DenormMode = F->getDenormalMode(FPType);
+        if (DenormMode == DenormalMode::getIEEE()) {
+          if (KnownSrc.isKnownNever(fcPosZero))
+            Known.knownNot(fcPosZero);
+          if (KnownSrc.isKnownNever(fcNegZero))
+            Known.knownNot(fcNegZero);
+          break;
+        }
+
         if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
           Known.knownNot(fcSubnormal);
 
