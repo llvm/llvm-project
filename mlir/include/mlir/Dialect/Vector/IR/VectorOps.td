@@ -463,7 +463,7 @@ def Vector_ShuffleOp :
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      PredOpTrait<"second operand v2 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 1>>,
-     DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
+     InferTypeOpAdaptor]>,
      Arguments<(ins AnyVectorOfAnyRank:$v1, AnyVectorOfAnyRank:$v2,
                     I64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
@@ -572,7 +572,7 @@ def Vector_ExtractOp :
   Vector_Op<"extract", [Pure,
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
+     InferTypeOpAdaptorWithIsCompatible]>,
     Arguments<(ins AnyVectorOfAnyRank:$vector, I64ArrayAttr:$position)>,
     Results<(outs AnyType)> {
   let summary = "extract operation";
@@ -598,7 +598,6 @@ def Vector_ExtractOp :
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getVector().getType());
     }
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r);
   }];
   let assemblyFormat = "$vector `` $position attr-dict `:` type($vector)";
   let hasCanonicalizer = 1;

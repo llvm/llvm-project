@@ -73,33 +73,33 @@ static void test_no_chrono_specs() {
 template <class CharT>
 static void test_valid_values() {
   // Test that %b, %h, and %B throw an exception.
-  check_exception("formatting a month name from an invalid month number",
+  check_exception("Formatting a month name from an invalid month number",
                   SV("{:%b}"),
                   std::chrono::month_day{std::chrono::month{200}, std::chrono::day{31}});
-  check_exception("formatting a month name from an invalid month number",
+  check_exception("Formatting a month name from an invalid month number",
                   SV("{:%b}"),
                   std::chrono::month_day{std::chrono::month{13}, std::chrono::day{31}});
-  check_exception("formatting a month name from an invalid month number",
+  check_exception("Formatting a month name from an invalid month number",
                   SV("{:%b}"),
                   std::chrono::month_day{std::chrono::month{255}, std::chrono::day{31}});
 
-  check_exception("formatting a month name from an invalid month number",
+  check_exception("Formatting a month name from an invalid month number",
                   SV("{:%h}"),
                   std::chrono::month_day{std::chrono::month{0}, std::chrono::day{31}});
-  check_exception("formatting a month name from an invalid month number",
+  check_exception("Formatting a month name from an invalid month number",
                   SV("{:%h}"),
                   std::chrono::month_day{std::chrono::month{13}, std::chrono::day{31}});
-  check_exception("formatting a month name from an invalid month number",
+  check_exception("Formatting a month name from an invalid month number",
                   SV("{:%h}"),
                   std::chrono::month_day{std::chrono::month{255}, std::chrono::day{31}});
 
-  check_exception("formatting a month name from an invalid month number",
+  check_exception("Formatting a month name from an invalid month number",
                   SV("{:%B}"),
                   std::chrono::month_day{std::chrono::month{0}, std::chrono::day{31}});
-  check_exception("formatting a month name from an invalid month number",
+  check_exception("Formatting a month name from an invalid month number",
                   SV("{:%B}"),
                   std::chrono::month_day{std::chrono::month{13}, std::chrono::day{31}});
-  check_exception("formatting a month name from an invalid month number",
+  check_exception("Formatting a month name from an invalid month number",
                   SV("{:%B}"),
                   std::chrono::month_day{std::chrono::month{255}, std::chrono::day{31}});
 
@@ -500,13 +500,13 @@ static void test() {
   check_invalid_types<CharT>({SV("b"), SV("B"), SV("d"), SV("e"), SV("h"), SV("m"), SV("Od"), SV("Oe"), SV("Om")},
                              std::chrono::month_day{std::chrono::January, std::chrono::day{31}});
 
-  check_exception("Expected '%' or '}' in the chrono format-string",
+  check_exception("The format specifier expects a '%' or a '}'",
                   SV("{:A"),
                   std::chrono::month_day{std::chrono::January, std::chrono::day{31}});
-  check_exception("The chrono-specs contains a '{'",
+  check_exception("The chrono specifiers contain a '{'",
                   SV("{:%%{"),
                   std::chrono::month_day{std::chrono::January, std::chrono::day{31}});
-  check_exception("End of input while parsing the modifier chrono conversion-spec",
+  check_exception("End of input while parsing a conversion specifier",
                   SV("{:%"),
                   std::chrono::month_day{std::chrono::January, std::chrono::day{31}});
   check_exception("End of input while parsing the modifier E",
@@ -517,7 +517,7 @@ static void test() {
                   std::chrono::month_day{std::chrono::January, std::chrono::day{31}});
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string",
+  check_exception("The format specifier expects a '%' or a '}'",
                   SV("{:.3}"),
                   std::chrono::month_day{std::chrono::January, std::chrono::day{31}});
 }

@@ -129,14 +129,14 @@ static void test() {
   test_valid_values<CharT>();
   check_invalid_types<CharT>({SV("d"), SV("e"), SV("Od"), SV("Oe")}, 0d);
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), 0d);
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), 0d);
-  check_exception("End of input while parsing the modifier chrono conversion-spec", SV("{:%"), 0d);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), 0d);
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), 0d);
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), 0d);
   check_exception("End of input while parsing the modifier E", SV("{:%E"), 0d);
   check_exception("End of input while parsing the modifier O", SV("{:%O"), 0d);
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), 0d);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), 0d);
 }
 
 int main(int, char**) {

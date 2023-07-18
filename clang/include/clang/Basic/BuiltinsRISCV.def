@@ -16,11 +16,11 @@
 #endif
 
 // Zbb extension
-TARGET_BUILTIN(__builtin_riscv_orc_b_32, "UZiUZi", "nc", "zbb")
+TARGET_BUILTIN(__builtin_riscv_orc_b_32, "UiUi", "nc", "zbb")
 TARGET_BUILTIN(__builtin_riscv_orc_b_64, "UWiUWi", "nc", "zbb,64bit")
-TARGET_BUILTIN(__builtin_riscv_clz_32, "UiUZi", "nc", "zbb|xtheadbb")
+TARGET_BUILTIN(__builtin_riscv_clz_32, "UiUi", "nc", "zbb|xtheadbb")
 TARGET_BUILTIN(__builtin_riscv_clz_64, "UiUWi", "nc", "zbb|xtheadbb,64bit")
-TARGET_BUILTIN(__builtin_riscv_ctz_32, "UiUZi", "nc", "zbb")
+TARGET_BUILTIN(__builtin_riscv_ctz_32, "UiUi", "nc", "zbb")
 TARGET_BUILTIN(__builtin_riscv_ctz_64, "UiUWi", "nc", "zbb,64bit")
 
 // Zbc or Zbkc extension
@@ -50,7 +50,7 @@ TARGET_BUILTIN(__builtin_riscv_aes64ds_64, "UWiUWiUWi", "nc", "zknd,64bit")
 TARGET_BUILTIN(__builtin_riscv_aes64dsm_64, "UWiUWiUWi", "nc", "zknd,64bit")
 TARGET_BUILTIN(__builtin_riscv_aes64im_64, "UWiUWi", "nc", "zknd,64bit")
 
-// Zknd & zkne
+// Zknd & Zkne
 TARGET_BUILTIN(__builtin_riscv_aes64ks1i_64, "UWiUWiIUi", "nc", "zknd|zkne,64bit")
 TARGET_BUILTIN(__builtin_riscv_aes64ks2_64, "UWiUWiUWi", "nc", "zknd|zkne,64bit")
 

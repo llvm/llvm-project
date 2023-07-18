@@ -510,20 +510,20 @@ static void test_invalid_values() {
 
   // This looks odd, however the 24 hours is not valid for a 24 hour clock.
   // TODO FMT discuss what the "proper" behaviour is.
-  check_exception("formatting a hour needs a valid value", SV("{:%H"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%OH"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%I"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%OI"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%H"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%OH"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%I"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%OI"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%M}"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%OM}"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%S}"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%OS}"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%p"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%R"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%T"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%r"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%X"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%EX"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%p"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%R"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%T"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%r"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%X"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%EX"), std::chrono::hh_mm_ss{24h});
 }
 
 template <class CharT>
@@ -550,14 +550,13 @@ static void test() {
        SV("EX")},
       std::chrono::hh_mm_ss{0ms});
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::hh_mm_ss{0ms});
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::hh_mm_ss{0ms});
-  check_exception(
-      "End of input while parsing the modifier chrono conversion-spec", SV("{:%"), std::chrono::hh_mm_ss{0ms});
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::hh_mm_ss{0ms});
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::hh_mm_ss{0ms});
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), std::chrono::hh_mm_ss{0ms});
   check_exception("End of input while parsing the modifier E", SV("{:%E"), std::chrono::hh_mm_ss{0ms});
   check_exception("End of input while parsing the modifier O", SV("{:%O"), std::chrono::hh_mm_ss{0ms});
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), std::chrono::hh_mm_ss{0ms});
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::hh_mm_ss{0ms});
 }
 
 int main(int, char**) {

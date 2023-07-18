@@ -110,7 +110,11 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
      OpenACC_Reduction, OpenACC_DeclareDeviceResident, OpenACC_DeclareLink,
     ]> {
   let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
 }
+
+def OpenACC_DataClauseAttr : EnumAttr<OpenACC_Dialect, OpenACC_DataClauseEnum,
+                                      "data_clause">;
 
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
@@ -190,7 +194,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescriptio
   let arguments = (ins OpenACC_PointerLikeTypeInterface:$varPtr,
                        Optional<OpenACC_PointerLikeTypeInterface>:$varPtrPtr,
                        Variadic<OpenACC_DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
-                       DefaultValuedAttr<OpenACC_DataClauseEnum,clause>:$dataClause,
+                       DefaultValuedAttr<OpenACC_DataClauseAttr,clause>:$dataClause,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);
@@ -377,7 +381,7 @@ class OpenACC_DataExitOp<string mnemonic, string clause, list<Trait> traits = []
   let arguments = (ins OpenACC_PointerLikeTypeInterface:$accPtr,
                        Optional<OpenACC_PointerLikeTypeInterface>:$varPtr,
                        Variadic<OpenACC_DataBoundsType>:$bounds,
-                       DefaultValuedAttr<OpenACC_DataClauseEnum,clause>:$dataClause,
+                       DefaultValuedAttr<OpenACC_DataClauseAttr,clause>:$dataClause,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);
@@ -1210,9 +1214,9 @@ def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit", []> {
     Example showing `acc declare device_resident(a)`:
 
     ```mlir
-    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = 22}
+    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = #acc<data_clause declare_device_resident>}
     acc.declare_exit dataOperands(%0 : !llvm.ptr<f32>)
-    acc.delete accPtr(%0 : !llvm.ptr<f32>) {dataClause = 22}
+    acc.delete accPtr(%0 : !llvm.ptr<f32>) {dataClause = #acc<data_clause declare_device_resident>}
     ```
   }];
 
@@ -1280,9 +1284,9 @@ def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
     }
     acc.global_dtor @acc_destructor {
       %0 = llvm.mlir.addressof @globalvar : !llvm.ptr<i32>
-      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32> {dataClause = 7}
+      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32> {dataClause = #acc<data_clause create>}
       acc.declare_exit dataOperands(%1 : !llvm.ptr<i32>)
-      acc.delete accPtr(%1 : !llvm.ptr<i32>) {dataClause = 7}
+      acc.delete accPtr(%1 : !llvm.ptr<i32>) {dataClause = #acc<data_clause create>}
     }
     ```
   }];
