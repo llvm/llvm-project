@@ -394,6 +394,32 @@ public:
   ///  `Type` must not be null.
   Value *createValue(QualType Type);
 
+  /// Creates an object (i.e. a storage location with an associated value) of
+  /// type `Ty`. If `InitExpr` is non-null and has a value associated with it,
+  /// initializes the object with this value. Otherwise, initializes the object
+  /// with a value created using `createValue()`.
+  StorageLocation &createObject(QualType Ty, const Expr *InitExpr = nullptr) {
+    return createObjectInternal(nullptr, Ty, InitExpr);
+  }
+
+  /// Creates an object for the variable declaration `D`. If `D` has an
+  /// initializer and this initializer is associated with a value, initializes
+  /// the object with this value.  Otherwise, initializes the object with a
+  /// value created using `createValue()`. Uses the storage location returned by
+  /// `DataflowAnalysisContext::getStableStorageLocation(D)`.
+  StorageLocation &createObject(const VarDecl &D) {
+    return createObjectInternal(&D, D.getType(), D.getInit());
+  }
+
+  /// Creates an object for the variable declaration `D`. If `InitExpr` is
+  /// non-null and has a value associated with it, initializes the object with
+  /// this value. Otherwise, initializes the object with a value created using
+  /// `createValue()`.  Uses the storage location returned by
+  /// `DataflowAnalysisContext::getStableStorageLocation(D)`.
+  StorageLocation &createObject(const VarDecl &D, const Expr *InitExpr) {
+    return createObjectInternal(&D, D.getType(), InitExpr);
+  }
+
   /// Assigns `Val` as the value of `Loc` in the environment.
   void setValue(const StorageLocation &Loc, Value &Val);
 
@@ -591,6 +617,11 @@ private:
   Value *createValueUnlessSelfReferential(QualType Type,
                                           llvm::DenseSet<QualType> &Visited,
                                           int Depth, int &CreatedValuesCount);
+
+  /// Shared implementation of `createObject()` overloads.
+  /// `D` and `InitExpr` may be null.
+  StorageLocation &createObjectInternal(const VarDecl *D, QualType Ty,
+                                        const Expr *InitExpr);
 
   StorageLocation &skip(StorageLocation &Loc, SkipPast SP) const;
   const StorageLocation &skip(const StorageLocation &Loc, SkipPast SP) const;
