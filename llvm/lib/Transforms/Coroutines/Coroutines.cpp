@@ -611,7 +611,6 @@ void CoroIdAsyncInst::checkWellFormed() const {
 static void checkAsyncContextProjectFunction(const Instruction *I,
                                              Function *F) {
   auto *FunTy = cast<FunctionType>(F->getValueType());
-  Type *Int8Ty = Type::getInt8Ty(F->getContext());
   if (!FunTy->getReturnType()->isPointerTy())
     fail(I,
          "llvm.coro.suspend.async resume function projection function must "
