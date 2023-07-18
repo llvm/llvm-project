@@ -28,6 +28,10 @@ Operation::operand_range nvgpu::getIndices(Operation *op) {
     return vectorReadOp.getIndices();
   if (auto vectorStoreOp = dyn_cast<vector::StoreOp>(op))
     return vectorStoreOp.getIndices();
+  if (auto transferReadOp = dyn_cast<vector::TransferReadOp>(op))
+    return transferReadOp.getIndices();
+  if (auto transferWriteOp = dyn_cast<vector::TransferWriteOp>(op))
+    return transferWriteOp.getIndices();
   llvm_unreachable("unsupported op type");
 }
 
@@ -44,5 +48,35 @@ void nvgpu::setIndices(Operation *op, ArrayRef<Value> indices) {
     return vectorReadOp.getIndicesMutable().assign(indices);
   if (auto vectorStoreOp = dyn_cast<vector::StoreOp>(op))
     return vectorStoreOp.getIndicesMutable().assign(indices);
+  if (auto transferReadOp = dyn_cast<vector::TransferReadOp>(op))
+    return transferReadOp.getIndicesMutable().assign(indices);
+  if (auto transferWriteOp = dyn_cast<vector::TransferWriteOp>(op))
+    return transferWriteOp.getIndicesMutable().assign(indices);
+  llvm_unreachable("unsupported op type");
+}
+
+Value nvgpu::getValueStored(Operation *op) {
+  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
+    return storeOp.getValueToStore();
+  if (auto transferWrite = dyn_cast<vector::TransferWriteOp>(op))
+    return transferWrite.getValue();
+  if (auto storeOp = dyn_cast<vector::StoreOp>(op))
+    return storeOp.getValueToStore();
+  llvm_unreachable("unsupported op type");
+}
+
+Value nvgpu::getMemrefOperand(Operation *op) {
+  if (auto loadOp = dyn_cast<memref::LoadOp>(op))
+    return loadOp.getMemref();
+  if (auto storeOp = dyn_cast<memref::StoreOp>(op))
+    return storeOp.getMemref();
+  if (auto transferWrite = dyn_cast<vector::TransferWriteOp>(op))
+    return transferWrite.getSource();
+  if (auto transferRead = dyn_cast<vector::TransferReadOp>(op))
+    return transferRead.getSource();
+  if (auto storeOp = dyn_cast<vector::StoreOp>(op))
+    return storeOp.getBase();
+  if (auto loadOp = dyn_cast<vector::LoadOp>(op))
+    return loadOp.getBase();
   llvm_unreachable("unsupported op type");
 }

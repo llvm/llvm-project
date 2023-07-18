@@ -2311,6 +2311,13 @@ def Vector_CreateMaskOp :
     OpBuilder<(ins "VectorType":$type, "ArrayRef<OpFoldResult>":$mixedOperands)>
   ];
 
+  let extraClassDeclaration = [{
+    /// Return the result type of this op.
+    VectorType getVectorType() {
+      return cast<VectorType>(getOperation()->getResultTypes()[0]);
+    }
+  }];
+
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let assemblyFormat = "$operands attr-dict `:` type(results)";
