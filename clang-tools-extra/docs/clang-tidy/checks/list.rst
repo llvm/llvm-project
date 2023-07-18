@@ -92,6 +92,7 @@ Clang-Tidy Checks
    `bugprone-forwarding-reference-overload <bugprone/forwarding-reference-overload.html>`_,
    `bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result.html>`_, "Yes"
    `bugprone-inaccurate-erase <bugprone/inaccurate-erase.html>`_, "Yes"
+   `bugprone-switch-missing-default-case <bugprone/switch-missing-default-case.html>`_,
    `bugprone-incorrect-roundings <bugprone/incorrect-roundings.html>`_,
    `bugprone-infinite-loop <bugprone/infinite-loop.html>`_,
    `bugprone-integer-division <bugprone/integer-division.html>`_,
