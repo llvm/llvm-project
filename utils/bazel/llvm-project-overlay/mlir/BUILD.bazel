@@ -2848,6 +2848,7 @@ cc_library(
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVGPUTransformOpsIncGen",
+        ":NVGPUTransforms",
         ":SCFDialect",
         ":SCFTransforms",
         ":Support",
