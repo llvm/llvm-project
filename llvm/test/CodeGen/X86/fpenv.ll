@@ -277,6 +277,37 @@ entry:
   ret void
 }
 
+define void @get_fpenv_01_native(ptr %ptr) nounwind {
+; X86-NOSSE-LABEL: get_fpenv_01_native:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    subl $44, %esp
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    calll fegetenv
+; X86-NOSSE-NEXT:    addl $44, %esp
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE-LABEL: get_fpenv_01_native:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $44, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl %eax, (%esp)
+; X86-SSE-NEXT:    calll fegetenv
+; X86-SSE-NEXT:    addl $44, %esp
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: get_fpenv_01_native:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    subq $40, %rsp
+; X64-NEXT:    callq fegetenv@PLT
+; X64-NEXT:    addq $40, %rsp
+; X64-NEXT:    retq
+entry:
+  %env = call i256 @llvm.get.fpenv.i256()
+  store i256 %env, ptr %ptr
+  ret void
+}
+
 define void @set_fpenv_01(ptr %ptr) #0 {
 ; X86-NOSSE-LABEL: set_fpenv_01:
 ; X86-NOSSE:       # %bb.0: # %entry
@@ -308,6 +339,36 @@ entry:
   ret void
 }
 
+define void @set_fpenv_01_native(ptr %ptr) nounwind {
+; X86-NOSSE-LABEL: set_fpenv_01_native:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    subl $44, %esp
+; X86-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NOSSE-NEXT:    movl %eax, (%esp)
+; X86-NOSSE-NEXT:    calll fesetenv
+; X86-NOSSE-NEXT:    addl $44, %esp
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE-LABEL: set_fpenv_01_native:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $44, %esp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movl %eax, (%esp)
+; X86-SSE-NEXT:    calll fesetenv
+; X86-SSE-NEXT:    addl $44, %esp
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: set_fpenv_01_native:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    subq $40, %rsp
+; X64-NEXT:    callq fesetenv@PLT
+; X64-NEXT:    addq $40, %rsp
+; X64-NEXT:    retq
+entry:
+  %env = load i256, ptr %ptr
+  call void @llvm.set.fpenv.i256(i256 %env)
+  ret void
+}
 
 define void @reset_fpenv_01() #0 {
 ; X86-NOSSE-LABEL: reset_fpenv_01:
@@ -327,6 +388,35 @@ define void @reset_fpenv_01() #0 {
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: reset_fpenv_01:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movq $-1, %rdi
+; X64-NEXT:    callq fesetenv@PLT
+; X64-NEXT:    popq %rax
+; X64-NEXT:    retq
+entry:
+  call void @llvm.reset.fpenv()
+  ret void
+}
+
+define void @reset_fpenv_01_native() nounwind {
+; X86-NOSSE-LABEL: reset_fpenv_01_native:
+; X86-NOSSE:       # %bb.0: # %entry
+; X86-NOSSE-NEXT:    subl $12, %esp
+; X86-NOSSE-NEXT:    movl $-1, (%esp)
+; X86-NOSSE-NEXT:    calll fesetenv
+; X86-NOSSE-NEXT:    addl $12, %esp
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE-LABEL: reset_fpenv_01_native:
+; X86-SSE:       # %bb.0: # %entry
+; X86-SSE-NEXT:    subl $12, %esp
+; X86-SSE-NEXT:    movl $-1, (%esp)
+; X86-SSE-NEXT:    calll fesetenv
+; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    retl
+;
+; X64-LABEL: reset_fpenv_01_native:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movq $-1, %rdi
