@@ -386,6 +386,13 @@ Improvements to Clang's diagnostics
   on overload resolution, when the actual reason for the failure is loss of other qualifiers.
 - Clang's notes about unconvertible types in overload resolution failure now covers
   the source range of parameter declaration of the candidate function declaration.
+- Added a new diagnostic warning group
+  ``-Wdeprecated-redundant-constexpr-static-def``, under the existing
+  ``-Wdeprecated`` group. This controls warnings about out-of-line definitions
+  of 'static constexpr' data members that are unnecessary from C++17 onwards.
+
+ Bug Fixes in This Version
+ -------------------------
 
   *Example Code*:
 
