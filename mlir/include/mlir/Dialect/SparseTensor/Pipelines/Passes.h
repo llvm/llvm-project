@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 #define MLIR_DIALECT_SPARSETENSOR_PIPELINES_PASSES_H_
 
-#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Pass/PassOptions.h"
 
