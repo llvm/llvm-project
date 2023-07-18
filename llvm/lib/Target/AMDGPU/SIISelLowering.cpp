@@ -1388,12 +1388,16 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       // in 8-bits, it can use a smaller encoding.
       if (!isUInt<32>(AM.BaseOffs / 4))
         return false;
-    } else if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    } else if (Subtarget->getGeneration() < AMDGPUSubtarget::GFX9) {
       // On VI, these use the SMEM format and the offset is 20-bit in bytes.
       if (!isUInt<20>(AM.BaseOffs))
         return false;
-    } else
-      llvm_unreachable("unhandled generation");
+    } else {
+      // On GFX9 the offset is signed 21-bit in bytes (but must not be negative
+      // for S_BUFFER_* instructions).
+      if (!isInt<21>(AM.BaseOffs))
+        return false;
+    }
 
     if (AM.Scale == 0) // r + i or just i, depending on HasBaseReg.
       return true;
