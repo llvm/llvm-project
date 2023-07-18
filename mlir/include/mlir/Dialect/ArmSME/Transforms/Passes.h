@@ -30,6 +30,9 @@ std::unique_ptr<Pass>
 createEnableArmStreamingPass(const ArmStreaming mode = ArmStreaming::Default,
                              const bool enableZA = false);
 
+/// Pass that replaces 'arm_sme.get_tile_id' ops with actual tiles.
+std::unique_ptr<Pass> createTileAllocationPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
