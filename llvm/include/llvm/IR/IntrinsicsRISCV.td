@@ -1739,11 +1739,6 @@ let TargetPrefix = "riscv" in {
 
 let TargetPrefix = "riscv" in {
 
-class ScalarCryptoGprIntrinsicAny
-    : DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                [LLVMMatchType<0>],
-                [IntrNoMem, IntrSpeculatable]>;
-
 class ScalarCryptoByteSelect32
     : DefaultAttrsIntrinsic<[llvm_i32_ty],
                             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
@@ -1760,15 +1755,15 @@ class ScalarCryptoGprGprIntrinsic64
                             [llvm_i64_ty, llvm_i64_ty],
                             [IntrNoMem, IntrSpeculatable]>;
 
+class ScalarCryptoGprIntrinsic32
+    : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                            [llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
+
 class ScalarCryptoGprIntrinsic64
     : DefaultAttrsIntrinsic<[llvm_i64_ty],
                             [llvm_i64_ty],
                             [IntrNoMem, IntrSpeculatable]>;
-
-class ScalarCryptoByteSelectAny
-    : DefaultAttrsIntrinsic<[llvm_anyint_ty],
-                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
 
 // Zknd
 def int_riscv_aes32dsi  : ScalarCryptoByteSelect32,
@@ -1805,10 +1800,10 @@ def int_riscv_aes64ks1i : DefaultAttrsIntrinsic<[llvm_i64_ty],
                           ClangBuiltin<"__builtin_riscv_aes64ks1i_64">;
 
 // Zknh
-def int_riscv_sha256sig0 : ScalarCryptoGprIntrinsicAny;
-def int_riscv_sha256sig1 : ScalarCryptoGprIntrinsicAny;
-def int_riscv_sha256sum0 : ScalarCryptoGprIntrinsicAny;
-def int_riscv_sha256sum1 : ScalarCryptoGprIntrinsicAny;
+def int_riscv_sha256sig0 : ScalarCryptoGprIntrinsic32;
+def int_riscv_sha256sig1 : ScalarCryptoGprIntrinsic32;
+def int_riscv_sha256sum0 : ScalarCryptoGprIntrinsic32;
+def int_riscv_sha256sum1 : ScalarCryptoGprIntrinsic32;
 
 def int_riscv_sha512sig0l : ScalarCryptoGprGprIntrinsic32,
                             ClangBuiltin<"__builtin_riscv_sha512sig0l_32">;
@@ -1833,12 +1828,12 @@ def int_riscv_sha512sum1 : ScalarCryptoGprIntrinsic64,
                            ClangBuiltin<"__builtin_riscv_sha512sum1_64">;
 
 // Zksed
-def int_riscv_sm4ks      : ScalarCryptoByteSelectAny;
-def int_riscv_sm4ed      : ScalarCryptoByteSelectAny;
+def int_riscv_sm4ks      : ScalarCryptoByteSelect32;
+def int_riscv_sm4ed      : ScalarCryptoByteSelect32;
 
 // Zksh
-def int_riscv_sm3p0      : ScalarCryptoGprIntrinsicAny;
-def int_riscv_sm3p1      : ScalarCryptoGprIntrinsicAny;
+def int_riscv_sm3p0      : ScalarCryptoGprIntrinsic32;
+def int_riscv_sm3p1      : ScalarCryptoGprIntrinsic32;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
