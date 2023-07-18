@@ -12,8 +12,12 @@ typedef __INTPTR_TYPE__ intptr_t;
 static_assert(true, "");
 static_assert(false, ""); // expected-error{{failed}} ref-error{{failed}}
 static_assert(nullptr == nullptr, "");
+static_assert(__null == __null, "");
 static_assert(1 == 1, "");
 static_assert(1 == 3, ""); // expected-error{{failed}} ref-error{{failed}}
+
+constexpr void* v = nullptr;
+static_assert(__null == v, "");
 
 constexpr int number = 10;
 static_assert(number == 10, "");
@@ -923,6 +927,7 @@ namespace DiscardExprs {
 
     (short)5;
     (bool)1;
+    __null;
 
     return 0;
   }

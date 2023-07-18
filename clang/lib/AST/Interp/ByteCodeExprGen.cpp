@@ -1953,6 +1953,17 @@ bool ByteCodeExprGen<Emitter>::VisitCXXNullPtrLiteralExpr(
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitGNUNullExpr(const GNUNullExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  assert(E->getType()->isIntegerType());
+
+  PrimType T = classifyPrim(E->getType());
+  return this->emitZero(T, E);
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
   if (DiscardResult)
     return true;
