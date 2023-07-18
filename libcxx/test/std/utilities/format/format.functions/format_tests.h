@@ -2727,7 +2727,7 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
       9,
       0);
 
-  // ** Test invalid format strings ***
+  // *** Test invalid format strings ***
   check_exception("The format string terminates at a '{'", SV("{"));
   check_exception("The replacement field misses a terminating '}'", SV("{:"), 42);
 
