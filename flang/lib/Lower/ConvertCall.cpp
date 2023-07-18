@@ -1278,11 +1278,10 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
     Fortran::lower::PreparedActualArguments &loweredActuals,
     const Fortran::evaluate::SpecificIntrinsic *intrinsic,
     CallContext &callContext) {
-  auto &converter = callContext.converter;
   auto &builder = callContext.getBuilder();
   const auto &loc = callContext.loc;
   assert(intrinsic && Fortran::lower::intrinsicRequiresCustomOptionalHandling(
-                          callContext.procRef, *intrinsic, converter));
+                          callContext.procRef, *intrinsic, callContext.converter));
 
   // helper to get a particular prepared argument
   auto getArgument = [&](std::size_t i, bool loadArg) -> fir::ExtendedValue {
