@@ -1831,6 +1831,7 @@ cc_library(
         ":LLVMDialect",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":VectorDialect",
         "//llvm:Core",
         "//llvm:Support",
     ],
