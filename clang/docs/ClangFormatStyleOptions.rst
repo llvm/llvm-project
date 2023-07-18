@@ -6214,6 +6214,7 @@ the configuration (without a prefix: ``Auto``).
     # Example of usage:
     SpacesInParens: Custom
     SpacesInParensOptions:
+      ExceptDoubleParentheses: false
       InConditionalStatements: true
       InEmptyParentheses: true
 
@@ -6226,8 +6227,22 @@ the configuration (without a prefix: ``Auto``).
     # Should be declared this way:
     SpacesInParens: Custom
     SpacesInParensOptions:
+      ExceptDoubleParentheses: false
       InConditionalStatements: true
       Other: true
+
+  * ``bool ExceptDoubleParentheses`` Override any of the following options to prevent addition of space
+    between the first two parentheses in situations where a pair of
+    parentheses have been used.
+
+    .. code-block:: c++
+
+      true:
+      __attribute__(( noreturn ))
+      __decltype__(( x ))
+      if (( a = b ))
+     false:
+       Uses the applicable option.
 
   * ``bool InConditionalStatements`` Put a space in parentheses only inside conditional statements
     (``for/if/while/switch...``).
@@ -6242,8 +6257,9 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-       true:                                  false:
-       x = ( int32 )y                 vs.     x = (int32)y
+      true:                                  false:
+      x = ( int32 )y                  vs.    x = (int32)y
+      y = (( int (*)(int) )foo)(x);          y = ((int (*)(int))foo)(x);
 
   * ``bool InEmptyParentheses`` Insert a space in empty parentheses, i.e. ``()``.
 
@@ -6261,8 +6277,12 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-       true:                                  false:
-       t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+      true:                                 false:
+      t f( Deleted & ) & = delete;    vs.   t f(Deleted &) & = delete;
+      decltype( ( x ) )                     decltype((x))
+      x = ( (int32)y )                      x = ((int32))y
+      y = ( (int ( * )( int ))foo )( x );   y = ((int (*)(int))foo)(x);
+       __attribute__( ( noreturn ) )        __attribute__((noreturn))
 
 
 .. _SpacesInParentheses:

@@ -1079,6 +1079,9 @@ clang-format
 - Adds ``AllowShortCaseExpressionOnASingleLine`` option.
 - Adds ``AlignCaseArrows`` suboption to ``AlignConsecutiveShortCaseStatements``.
 - Adds ``LeftWithLastLine`` suboption to ``AlignEscapedNewlines``.
+- Add ``ExceptDoubleParentheses`` sub-option for ``SpacesInParensOptions``
+  to override addition of spaces between multiple, non-redundant parentheses
+  similar to the rules used for ``RemoveParentheses``.
 
 libclang
 --------
