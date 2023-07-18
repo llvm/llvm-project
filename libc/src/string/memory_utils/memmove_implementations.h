@@ -20,6 +20,8 @@
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/memmove_implementations.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_riscv
+#elif defined(LIBC_TARGET_ARCH_IS_GPU)
+// TODO: Define a more optimal GPU impolementation.
 #else
 // We may want to error instead of defaulting to suboptimal implementation.
 #include "src/string/memory_utils/generic/byte_per_byte.h"
