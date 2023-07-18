@@ -231,6 +231,12 @@ enum NodeType : unsigned {
   UMIN_VL,
   UMAX_VL,
 
+  BITREVERSE_VL,
+  BSWAP_VL,
+  CTLZ_VL,
+  CTTZ_VL,
+  CTPOP_VL,
+
   SADDSAT_VL,
   UADDSAT_VL,
   SSUBSAT_VL,

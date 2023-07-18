@@ -220,3 +220,32 @@ defm : VPatUnarySDNode_V<bswap, "PseudoVREV8">;
 defm : VPatUnarySDNode_V<ctlz, "PseudoVCLZ">;
 defm : VPatUnarySDNode_V<cttz, "PseudoVCTZ">;
 defm : VPatUnarySDNode_V<ctpop, "PseudoVCPOP">;
+
+//===----------------------------------------------------------------------===//
+// VL patterns
+//===----------------------------------------------------------------------===//
+
+multiclass VPatUnaryVL_V<SDPatternOperator op, string instruction_name> {
+  foreach vti = AllIntegerVectors in {
+    let Predicates = !listconcat([HasStdExtZvbb],
+                                 GetVTypePredicates<vti>.Predicates) in {
+      def : Pat<(vti.Vector (op (vti.Vector vti.RegClass:$rs1),
+                                (vti.Vector vti.RegClass:$merge),
+                                (vti.Mask V0),
+                                VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_V_"#vti.LMul.MX#"_MASK")
+                   vti.RegClass:$merge,
+                   vti.RegClass:$rs1,
+                   (vti.Mask V0),
+                   GPR:$vl,
+                   vti.Log2SEW,
+                   TAIL_AGNOSTIC)>;
+    }
+  }
+}
+
+defm : VPatUnaryVL_V<riscv_bitreverse_vl, "PseudoVBREV">;
+defm : VPatUnaryVL_V<riscv_bswap_vl, "PseudoVREV8">;
+defm : VPatUnaryVL_V<riscv_ctlz_vl, "PseudoVCLZ">;
+defm : VPatUnaryVL_V<riscv_cttz_vl, "PseudoVCTZ">;
+defm : VPatUnaryVL_V<riscv_ctpop_vl, "PseudoVCPOP">;
