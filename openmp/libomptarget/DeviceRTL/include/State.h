@@ -52,6 +52,7 @@ struct ICVStateTy {
   uint32_t NThreadsVar;
   uint32_t LevelVar;
   uint32_t ActiveLevelVar;
+  uint32_t Padding0Val;
   uint32_t MaxActiveLevelsVar;
   uint32_t RunSchedVar;
   uint32_t RunSchedChunkVar;
@@ -338,6 +339,9 @@ inline state::PtrValue<ParallelRegionFnTy, state::VK_ParallelRegionFn>
 void runAndCheckState(void(Func(void)));
 
 void assumeInitialState(bool IsSPMD);
+
+/// Return the value of the ParallelTeamSize ICV.
+int getEffectivePTeamSize();
 
 } // namespace state
 

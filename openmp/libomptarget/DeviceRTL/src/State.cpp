@@ -198,9 +198,10 @@ void state::ICVStateTy::assertEqual(const ICVStateTy &Other) const {
 }
 
 void state::TeamStateTy::init(bool IsSPMD) {
-  ICVState.NThreadsVar = mapping::getBlockSize(IsSPMD);
+  ICVState.NThreadsVar = 0;
   ICVState.LevelVar = 0;
   ICVState.ActiveLevelVar = 0;
+  ICVState.Padding0Val = 0;
   ICVState.MaxActiveLevelsVar = 1;
   ICVState.RunSchedVar = omp_sched_static;
   ICVState.RunSchedChunkVar = 1;
@@ -312,6 +313,11 @@ void state::assumeInitialState(bool IsSPMD) {
   ASSERT(mapping::isSPMDMode() == IsSPMD, nullptr);
 }
 
+int state::getEffectivePTeamSize() {
+  int PTeamSize = state::ParallelTeamSize;
+  return PTeamSize ? PTeamSize : mapping::getBlockSize();
+}
+
 extern "C" {
 void omp_set_dynamic(int V) {}
 
@@ -319,7 +325,10 @@ int omp_get_dynamic(void) { return 0; }
 
 void omp_set_num_threads(int V) { icv::NThreads = V; }
 
-int omp_get_max_threads(void) { return icv::NThreads; }
+int omp_get_max_threads(void) {
+  int NT = icv::NThreads;
+  return NT > 0 ? NT : mapping::getBlockSize();
+}
 
 int omp_get_level(void) {
   int LevelVar = icv::Level;
@@ -350,11 +359,11 @@ int omp_get_thread_num(void) {
 }
 
 int omp_get_team_size(int Level) {
-  return returnValIfLevelIsActive(Level, state::ParallelTeamSize, 1);
+  return returnValIfLevelIsActive(Level, state::getEffectivePTeamSize(), 1);
 }
 
 int omp_get_num_threads(void) {
-  return omp_get_level() > 1 ? 1 : state::ParallelTeamSize;
+  return omp_get_level() != 1 ? 1 : state::getEffectivePTeamSize();
 }
 
 int omp_get_thread_limit(void) { return mapping::getBlockSize(); }
