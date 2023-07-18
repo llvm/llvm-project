@@ -2713,12 +2713,17 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
           "An interoperable procedure with an OPTIONAL dummy argument might not be portable"_port_en_US);
     }
   } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (!proc->isDummy() &&
-        (!proc->procInterface() ||
-            !proc->procInterface()->attrs().test(Attr::BIND_C))) {
-      messages_.Say(symbol.name(),
-          "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
-      context_.SetError(symbol);
+    if (!proc->procInterface() ||
+        !proc->procInterface()->attrs().test(Attr::BIND_C)) {
+      if (proc->isDummy()) {
+        messages_.Say(symbol.name(),
+            "A dummy procedure to an interoperable procedure must also be interoperable"_err_en_US);
+        context_.SetError(symbol);
+      } else {
+        messages_.Say(symbol.name(),
+            "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
+        context_.SetError(symbol);
+      }
     }
   } else if (const auto *subp{symbol.detailsIf<SubprogramDetails>()}) {
     for (const Symbol *dummy : subp->dummyArgs()) {
