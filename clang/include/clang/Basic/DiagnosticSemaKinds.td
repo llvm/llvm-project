@@ -406,6 +406,9 @@ def warn_reserved_extern_symbol: Warning<
   "it starts with '_' followed by a capital letter|"
   "it contains '__'}1">,
   InGroup<ReservedIdentifier>, DefaultIgnore;
+def warn_deprecated_literal_operator_id: Warning<
+  "identifier %0 preceded by whitespace in a literal operator declaration "
+  "is deprecated">, InGroup<DeprecatedLiteralOperator>, DefaultIgnore;
 def warn_reserved_module_name : Warning<
   "%0 is a reserved name for a module">, InGroup<ReservedModuleIdentifier>;
 
@@ -9261,8 +9264,8 @@ def ext_string_literal_operator_template : ExtWarn<
   "string literal operator templates are a GNU extension">,
   InGroup<GNUStringLiteralOperatorTemplate>;
 def warn_user_literal_reserved : Warning<
-  "user-defined literal suffixes not starting with '_' are reserved"
-  "%select{; no literal will invoke this operator|}0">,
+  "user-defined literal suffixes %select{<ERROR>|not starting with '_'|containing '__'}0 are reserved"
+  "%select{; no literal will invoke this operator|}1">,
   InGroup<UserDefinedLiterals>;
 
 // C++ conversion functions
