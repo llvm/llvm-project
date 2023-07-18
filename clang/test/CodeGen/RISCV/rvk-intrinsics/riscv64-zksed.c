@@ -13,7 +13,7 @@
 // RV64ZKSED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.sm4ks.i64(i64 [[TMP0]], i64 [[TMP1]], i32 0)
 // RV64ZKSED-NEXT:    ret i64 [[TMP2]]
 //
-long sm4ks(long rs1, long rs2) {
+unsigned long sm4ks(unsigned long rs1, unsigned long rs2) {
   return __builtin_riscv_sm4ks(rs1, rs2, 0);
 }
 
@@ -28,6 +28,6 @@ long sm4ks(long rs1, long rs2) {
 // RV64ZKSED-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.sm4ed.i64(i64 [[TMP0]], i64 [[TMP1]], i32 0)
 // RV64ZKSED-NEXT:    ret i64 [[TMP2]]
 //
-long sm4ed(long rs1, long rs2) {
+unsigned long sm4ed(unsigned long rs1, unsigned long rs2) {
   return __builtin_riscv_sm4ed(rs1, rs2, 0);
 }
