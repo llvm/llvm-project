@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple riscv32 -target-feature +zbkb -emit-llvm %s -o - \
 // RUN:     | FileCheck %s  -check-prefix=RV32ZBKB
 
+#include <stdint.h>
+
 // RV32ZBKB-LABEL: @brev8(
 // RV32ZBKB-NEXT:  entry:
 // RV32ZBKB-NEXT:    [[RS1_ADDR:%.*]] = alloca i32, align 4
@@ -10,7 +12,7 @@
 // RV32ZBKB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.brev8.i32(i32 [[TMP0]])
 // RV32ZBKB-NEXT:    ret i32 [[TMP1]]
 //
-int brev8(int rs1)
+uint32_t brev8(uint32_t rs1)
 {
   return __builtin_riscv_brev8_32(rs1);
 }
@@ -23,7 +25,7 @@ int brev8(int rs1)
 // RV32ZBKB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.zip.i32(i32 [[TMP0]])
 // RV32ZBKB-NEXT:    ret i32 [[TMP1]]
 //
-int zip(int rs1)
+uint32_t zip(uint32_t rs1)
 {
   return __builtin_riscv_zip_32(rs1);
 }
@@ -36,7 +38,7 @@ int zip(int rs1)
 // RV32ZBKB-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.unzip.i32(i32 [[TMP0]])
 // RV32ZBKB-NEXT:    ret i32 [[TMP1]]
 //
-int unzip(int rs1)
+uint32_t unzip(uint32_t rs1)
 {
   return __builtin_riscv_unzip_32(rs1);
 }
