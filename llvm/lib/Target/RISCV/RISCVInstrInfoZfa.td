@@ -197,8 +197,8 @@ def : InstAlias<"fgeq.h $rd, $rs, $rt",
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZfa] in {
-def: PatFprFpr<fminimum, FMINM_S, FPR32>;
-def: PatFprFpr<fmaximum, FMAXM_S, FPR32>;
+def: PatFprFpr<fminimum, FMINM_S, FPR32, f32>;
+def: PatFprFpr<fmaximum, FMAXM_S, FPR32, f32>;
 
 // frint rounds according to the current rounding mode and detects
 // inexact conditions.
@@ -219,8 +219,8 @@ def: PatSetCC<FPR32, strict_fsetcc, SETOLE, FLEQ_S, f32>;
 } // Predicates = [HasStdExtZfa]
 
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
-def: PatFprFpr<fminimum, FMINM_D, FPR64>;
-def: PatFprFpr<fmaximum, FMAXM_D, FPR64>;
+def: PatFprFpr<fminimum, FMINM_D, FPR64, f64>;
+def: PatFprFpr<fmaximum, FMAXM_D, FPR64, f64>;
 
 // frint rounds according to the current rounding mode and detects
 // inexact conditions.
@@ -247,21 +247,21 @@ def : Pat<(RISCVBuildPairF64 GPR:$rs1, GPR:$rs2),
 }
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
-def: PatFprFpr<fminimum, FMINM_H, FPR16>;
-def: PatFprFpr<fmaximum, FMAXM_H, FPR16>;
+def: PatFprFpr<fminimum, FMINM_H, FPR16, f16>;
+def: PatFprFpr<fmaximum, FMAXM_H, FPR16, f16>;
 
 // frint rounds according to the current rounding mode and detects
 // inexact conditions.
-def: Pat<(any_frint FPR16:$rs1), (FROUNDNX_H FPR16:$rs1, FRM_DYN)>;
+def: Pat<(f16 (any_frint FPR16:$rs1)), (FROUNDNX_H FPR16:$rs1, FRM_DYN)>;
 
 // fnearbyint is like frint but does not detect inexact conditions.
-def: Pat<(any_fnearbyint FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_DYN)>;
+def: Pat<(f16 (any_fnearbyint FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_DYN)>;
 
-def: Pat<(any_fround FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RMM)>;
-def: Pat<(any_froundeven FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RNE)>;
-def: Pat<(any_ffloor FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RDN)>;
-def: Pat<(any_fceil FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RUP)>;
-def: Pat<(any_ftrunc FPR16:$rs1), (FROUND_H FPR16:$rs1, FRM_RTZ)>;
+def: Pat<(f16 (any_fround FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_RMM)>;
+def: Pat<(f16 (any_froundeven FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_RNE)>;
+def: Pat<(f16 (any_ffloor FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_RDN)>;
+def: Pat<(f16 (any_fceil FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_RUP)>;
+def: Pat<(f16 (any_ftrunc FPR16:$rs1)), (FROUND_H FPR16:$rs1, FRM_RTZ)>;
 
 def: PatSetCC<FPR16, strict_fsetcc, SETLT, FLTQ_H, f16>;
 def: PatSetCC<FPR16, strict_fsetcc, SETOLT, FLTQ_H, f16>;

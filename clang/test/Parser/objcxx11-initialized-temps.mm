@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // expected-no-diagnostics
+// rdar://12788429
 
 struct CGPoint {
   double x;

@@ -13,6 +13,7 @@
 #ifndef HEADER
 #define HEADER
 
+// rdar://12627738
 namespace rdar12627738 {
 
 class RecyclerTag {

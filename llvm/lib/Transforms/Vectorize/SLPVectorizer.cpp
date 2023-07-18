@@ -8659,17 +8659,19 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
     for (const TreeEntry *TEPtr : ValueToGatherNodes.find(V)->second) {
       if (TEPtr == TE)
         continue;
-      if (!any_of(TEPtr->Scalars, [&GatheredScalars](Value *V) {
-            return GatheredScalars.contains(V);
-          }))
-        continue;
+      assert(any_of(TEPtr->Scalars,
+                    [&](Value *V) { return GatheredScalars.contains(V); }) &&
+             "Must contain at least single gathered value.");
       assert(TEPtr->UserTreeIndices.size() == 1 &&
              "Expected only single user of the gather node.");
-      Instruction &EntryUserInst =
-          getLastInstructionInBundle(TEPtr->UserTreeIndices.front().UserTE);
       PHINode *EntryPHI =
           dyn_cast<PHINode>(TEPtr->UserTreeIndices.front().UserTE->getMainOp());
-      if (&UserInst == &EntryUserInst && !EntryPHI) {
+      Instruction *EntryUserInst =
+          EntryPHI ? nullptr
+                   : &getLastInstructionInBundle(
+                         TEPtr->UserTreeIndices.front().UserTE);
+      if (&UserInst == EntryUserInst) {
+        assert(!EntryPHI && "Unexpected phi node entry.");
         // If 2 gathers are operands of the same entry, compare operands
         // indices, use the earlier one as the base.
         if (TE->UserTreeIndices.front().UserTE ==
@@ -8680,18 +8682,18 @@ BoUpSLP::isGatherShuffledEntry(const TreeEntry *TE, ArrayRef<Value *> VL,
       }
       // Check if the user node of the TE comes after user node of EntryPtr,
       // otherwise EntryPtr depends on TE.
-      auto *EntryI = EntryPHI
-                         ? EntryPHI
-                               ->getIncomingBlock(
-                                   TEPtr->UserTreeIndices.front().EdgeIdx)
-                               ->getTerminator()
-                         : &EntryUserInst;
-      if (!CheckOrdering(EntryI) &&
-          (ParentBB != EntryI->getParent() ||
-           TE->UserTreeIndices.front().UserTE !=
-               TEPtr->UserTreeIndices.front().UserTE ||
+      auto *EntryI =
+          EntryPHI
+              ? EntryPHI
+                    ->getIncomingBlock(TEPtr->UserTreeIndices.front().EdgeIdx)
+                    ->getTerminator()
+              : EntryUserInst;
+      if ((ParentBB != EntryI->getParent() ||
            TE->UserTreeIndices.front().EdgeIdx <
-               TEPtr->UserTreeIndices.front().EdgeIdx))
+               TEPtr->UserTreeIndices.front().EdgeIdx ||
+           TE->UserTreeIndices.front().UserTE !=
+               TEPtr->UserTreeIndices.front().UserTE) &&
+          !CheckOrdering(EntryI))
         continue;
       VToTEs.insert(TEPtr);
     }

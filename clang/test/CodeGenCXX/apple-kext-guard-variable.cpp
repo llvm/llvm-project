@@ -1,5 +1,7 @@
 // RUN: %clang -target x86_64-apple-darwin10 -S -o %t.s -Wno-stdlibcxx-not-found -mkernel -Xclang -verify %s
 
+// rdar://problem/9143356
+
 int foo();
 void test() {
   static int y = 0;

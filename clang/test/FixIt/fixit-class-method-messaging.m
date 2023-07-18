@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
+// rdar://16263395
 
 @interface NSObject @end
 

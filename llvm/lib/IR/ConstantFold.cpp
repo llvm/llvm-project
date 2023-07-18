@@ -2000,7 +2000,7 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   if (Idxs.empty()) return C;
 
   Type *GEPTy = GetElementPtrInst::getGEPReturnType(
-      PointeeTy, C, ArrayRef((Value *const *)Idxs.data(), Idxs.size()));
+      C, ArrayRef((Value *const *)Idxs.data(), Idxs.size()));
 
   if (isa<PoisonValue>(C))
     return PoisonValue::get(GEPTy);

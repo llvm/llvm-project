@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -isystem %S/Inputs %s -verify
 // expected-no-diagnostics
+// rdar://18295240
+
 #include <override-system-header.h>
 
 struct A

@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -triple x86_64-apple-darwin10  -fblocks -verify -Wno-objc-root-class %s 
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -triple x86_64-apple-darwin10  -fblocks -verify -Wno-objc-root-class %s 
 // expected-no-diagnostics
+// rdar://9154582
 
 @interface Blocky @end
 
@@ -17,6 +18,8 @@
 
 @end
 
+
+// rdar://9284603
 @interface ShadowSelf
 {
     int _anIvar;

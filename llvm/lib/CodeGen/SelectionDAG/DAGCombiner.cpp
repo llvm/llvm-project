@@ -508,6 +508,7 @@ namespace {
     SDValue visitFABS(SDNode *N);
     SDValue visitFCEIL(SDNode *N);
     SDValue visitFTRUNC(SDNode *N);
+    SDValue visitFFREXP(SDNode *N);
     SDValue visitFFLOOR(SDNode *N);
     SDValue visitFMinMax(SDNode *N);
     SDValue visitBRCOND(SDNode *N);
@@ -1982,6 +1983,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::FMAXIMUM:           return visitFMinMax(N);
   case ISD::FCEIL:              return visitFCEIL(N);
   case ISD::FTRUNC:             return visitFTRUNC(N);
+  case ISD::FFREXP:             return visitFFREXP(N);
   case ISD::BRCOND:             return visitBRCOND(N);
   case ISD::BR_CC:              return visitBR_CC(N);
   case ISD::LOAD:               return visitLOAD(N);
@@ -6019,25 +6021,90 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   AndOrSETCCFoldKind TargetPreference = TLI.isDesirableToCombineLogicOpOfSETCC(
       LogicOp, LHS.getNode(), RHS.getNode());
 
-  if (TargetPreference == AndOrSETCCFoldKind::None)
-    return SDValue();
-
-  ISD::CondCode CCL = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
-  ISD::CondCode CCR = cast<CondCodeSDNode>(RHS.getOperand(2))->get();
-
   SDValue LHS0 = LHS->getOperand(0);
   SDValue RHS0 = RHS->getOperand(0);
   SDValue LHS1 = LHS->getOperand(1);
   SDValue RHS1 = RHS->getOperand(1);
-
   // TODO: We don't actually need a splat here, for vectors we just need the
   // invariants to hold for each element.
   auto *LHS1C = isConstOrConstSplat(LHS1);
   auto *RHS1C = isConstOrConstSplat(RHS1);
-
+  ISD::CondCode CCL = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+  ISD::CondCode CCR = cast<CondCodeSDNode>(RHS.getOperand(2))->get();
   EVT VT = LogicOp->getValueType(0);
   EVT OpVT = LHS0.getValueType();
   SDLoc DL(LogicOp);
+
+  // Check if the operands of an and/or operation are comparisons and if they
+  // compare against the same value. Replace the and/or-cmp-cmp sequence with
+  // min/max cmp sequence. If LHS1 is equal to RHS1, then the or-cmp-cmp
+  // sequence will be replaced with min-cmp sequence:
+  // (LHS0 < LHS1) | (RHS0 < RHS1) -> min(LHS0, RHS0) < LHS1
+  // and and-cmp-cmp will be replaced with max-cmp sequence:
+  // (LHS0 < LHS1) & (RHS0 < RHS1) -> max(LHS0, RHS0) < LHS1
+  if (OpVT.isInteger() && TLI.isOperationLegal(ISD::UMAX, OpVT) &&
+      TLI.isOperationLegal(ISD::SMAX, OpVT) &&
+      TLI.isOperationLegal(ISD::UMIN, OpVT) &&
+      TLI.isOperationLegal(ISD::SMIN, OpVT)) {
+    SDValue CommonValue;
+    SDValue Operand1;
+    SDValue Operand2;
+    ISD::CondCode CC = ISD::SETCC_INVALID;
+    if (LHS->getOpcode() == ISD::SETCC && RHS->getOpcode() == ISD::SETCC &&
+        LHS->hasOneUse() && RHS->hasOneUse() &&
+        // The two comparisons should have either the same predicate or the
+        // predicate of one of the comparisons is the opposite of the other one.
+        (CCL == CCR || CCL == ISD::getSetCCSwappedOperands(CCR)) &&
+        // The optimization does not work for `==` or `!=` .
+        !ISD::isIntEqualitySetCC(CCL) && !ISD::isIntEqualitySetCC(CCR)) {
+      if (CCL == CCR) {
+        if (LHS0 == RHS0) {
+          CommonValue = LHS0;
+          Operand1 = LHS1;
+          Operand2 = RHS1;
+          CC = ISD::getSetCCSwappedOperands(CCL);
+        } else if (LHS1 == RHS1) {
+          CommonValue = LHS1;
+          Operand1 = LHS0;
+          Operand2 = RHS0;
+          CC = CCL;
+        }
+      } else if (CCL == ISD::getSetCCSwappedOperands(CCR)) {
+        if (LHS0 == RHS1) {
+          CommonValue = LHS0;
+          Operand1 = LHS1;
+          Operand2 = RHS0;
+          CC = ISD::getSetCCSwappedOperands(CCL);
+        } else if (RHS0 == LHS1) {
+          CommonValue = LHS1;
+          Operand1 = LHS0;
+          Operand2 = RHS1;
+          CC = CCL;
+        }
+      }
+
+      if (CC != ISD::SETCC_INVALID) {
+        unsigned NewOpcode;
+        bool IsSigned = isSignedIntSetCC(CC);
+        if (((CC == ISD::SETLE || CC == ISD::SETULE || CC == ISD::SETLT ||
+              CC == ISD::SETULT) &&
+             (LogicOp->getOpcode() == ISD::OR)) ||
+            ((CC == ISD::SETGE || CC == ISD::SETUGE || CC == ISD::SETGT ||
+              CC == ISD::SETUGT) &&
+             (LogicOp->getOpcode() == ISD::AND)))
+          NewOpcode = IsSigned ? ISD::SMIN : ISD::UMIN;
+        else
+          NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
+
+        SDValue MinMaxValue =
+            DAG.getNode(NewOpcode, DL, OpVT, Operand1, Operand2);
+        return DAG.getSetCC(DL, VT, MinMaxValue, CommonValue, CC);
+      }
+    }
+  }
+
+  if (TargetPreference == AndOrSETCCFoldKind::None)
+    return SDValue();
 
   if (CCL == CCR &&
       CCL == (LogicOp->getOpcode() == ISD::AND ? ISD::SETNE : ISD::SETEQ) &&
@@ -6147,55 +6214,6 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
               return SDValue(N, 0);
             }
           }
-        }
-      }
-    }
-  }
-
-  // Reduce bit extract of low half of an integer to the narrower type.
-  // (and (srl i64:x, K), KMask) ->
-  //   (i64 zero_extend (and (srl (i32 (trunc i64:x)), K)), KMask)
-  if (N0.getOpcode() == ISD::SRL && N0.hasOneUse()) {
-    if (ConstantSDNode *CAnd = dyn_cast<ConstantSDNode>(N1)) {
-      if (ConstantSDNode *CShift = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
-        unsigned Size = VT.getSizeInBits();
-        const APInt &AndMask = CAnd->getAPIntValue();
-        unsigned ShiftBits = CShift->getZExtValue();
-
-        // Bail out, this node will probably disappear anyway.
-        if (ShiftBits == 0)
-          return SDValue();
-
-        unsigned MaskBits = AndMask.countr_one();
-        EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), Size / 2);
-
-        if (AndMask.isMask() &&
-            // Required bits must not span the two halves of the integer and
-            // must fit in the half size type.
-            (ShiftBits + MaskBits <= Size / 2) &&
-            TLI.isNarrowingProfitable(VT, HalfVT) &&
-            TLI.isTypeDesirableForOp(ISD::AND, HalfVT) &&
-            TLI.isTypeDesirableForOp(ISD::SRL, HalfVT) &&
-            TLI.isTruncateFree(VT, HalfVT) &&
-            TLI.isZExtFree(HalfVT, VT)) {
-          // The isNarrowingProfitable is to avoid regressions on PPC and
-          // AArch64 which match a few 64-bit bit insert / bit extract patterns
-          // on downstream users of this. Those patterns could probably be
-          // extended to handle extensions mixed in.
-
-          SDValue SL(N0);
-          assert(MaskBits <= Size);
-
-          // Extracting the highest bit of the low half.
-          EVT ShiftVT = TLI.getShiftAmountTy(HalfVT, DAG.getDataLayout());
-          SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, HalfVT,
-                                      N0.getOperand(0));
-
-          SDValue NewMask = DAG.getConstant(AndMask.trunc(Size / 2), SL, HalfVT);
-          SDValue ShiftK = DAG.getConstant(ShiftBits, SL, ShiftVT);
-          SDValue Shift = DAG.getNode(ISD::SRL, SL, HalfVT, Trunc, ShiftK);
-          SDValue And = DAG.getNode(ISD::AND, SL, HalfVT, Shift, NewMask);
-          return DAG.getNode(ISD::ZERO_EXTEND, SL, VT, And);
         }
       }
     }
@@ -17172,6 +17190,15 @@ SDValue DAGCombiner::visitFTRUNC(SDNode *N) {
     return N0;
   }
 
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitFFREXP(SDNode *N) {
+  SDValue N0 = N->getOperand(0);
+
+  // fold (ffrexp c1) -> ffrexp(c1)
+  if (DAG.isConstantFPBuildVectorOrConstantFP(N0))
+    return DAG.getNode(ISD::FFREXP, SDLoc(N), N->getVTList(), N0);
   return SDValue();
 }
 

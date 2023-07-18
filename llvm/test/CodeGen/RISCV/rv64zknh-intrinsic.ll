@@ -3,48 +3,48 @@
 ; RUN:   | FileCheck %s -check-prefix=RV64ZKNH
 
 
-declare i64 @llvm.riscv.sha256sig0.i64(i64);
+declare i32 @llvm.riscv.sha256sig0(i32);
 
-define i64 @sha256sig0_i64(i64 %a) nounwind {
-; RV64ZKNH-LABEL: sha256sig0_i64:
+define signext i32 @sha256sig0_i32(i32 signext %a) nounwind {
+; RV64ZKNH-LABEL: sha256sig0_i32:
 ; RV64ZKNH:       # %bb.0:
 ; RV64ZKNH-NEXT:    sha256sig0 a0, a0
 ; RV64ZKNH-NEXT:    ret
-    %val = call i64 @llvm.riscv.sha256sig0.i64(i64 %a)
-    ret i64 %val
+    %val = call i32 @llvm.riscv.sha256sig0(i32 signext %a)
+    ret i32 %val
 }
 
-declare i64 @llvm.riscv.sha256sig1.i64(i64);
+declare i32 @llvm.riscv.sha256sig1(i32);
 
-define i64 @sha256sig1_i64(i64 %a) nounwind {
-; RV64ZKNH-LABEL: sha256sig1_i64:
+define signext i32 @sha256sig1_i32(i32 signext %a) nounwind {
+; RV64ZKNH-LABEL: sha256sig1_i32:
 ; RV64ZKNH:       # %bb.0:
 ; RV64ZKNH-NEXT:    sha256sig1 a0, a0
 ; RV64ZKNH-NEXT:    ret
-    %val = call i64 @llvm.riscv.sha256sig1.i64(i64 %a)
-    ret i64 %val
+    %val = call i32 @llvm.riscv.sha256sig1(i32 signext %a)
+    ret i32 %val
 }
 
-declare i64 @llvm.riscv.sha256sum0.i64(i64);
+declare i32 @llvm.riscv.sha256sum0(i32);
 
-define i64 @sha256sum0_i64(i64 %a) nounwind {
-; RV64ZKNH-LABEL: sha256sum0_i64:
+define signext i32 @sha256sum0_i32(i32 signext %a) nounwind {
+; RV64ZKNH-LABEL: sha256sum0_i32:
 ; RV64ZKNH:       # %bb.0:
 ; RV64ZKNH-NEXT:    sha256sum0 a0, a0
 ; RV64ZKNH-NEXT:    ret
-    %val = call i64 @llvm.riscv.sha256sum0.i64(i64 %a)
-    ret i64 %val
+    %val = call i32 @llvm.riscv.sha256sum0(i32 signext %a)
+    ret i32 %val
 }
 
-declare i64 @llvm.riscv.sha256sum1.i64(i64);
+declare i32 @llvm.riscv.sha256sum1(i32);
 
-define i64 @sha256sum1_i64(i64 %a) nounwind {
-; RV64ZKNH-LABEL: sha256sum1_i64:
+define signext i32 @sha256sum1_i32(i32 signext %a) nounwind {
+; RV64ZKNH-LABEL: sha256sum1_i32:
 ; RV64ZKNH:       # %bb.0:
 ; RV64ZKNH-NEXT:    sha256sum1 a0, a0
 ; RV64ZKNH-NEXT:    ret
-    %val = call i64 @llvm.riscv.sha256sum1.i64(i64 %a)
-    ret i64 %val
+    %val = call i32 @llvm.riscv.sha256sum1(i32 signext %a)
+    ret i32 %val
 }
 
 declare i64 @llvm.riscv.sha512sig0(i64);

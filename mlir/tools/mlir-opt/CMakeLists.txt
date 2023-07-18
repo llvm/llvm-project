@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS
 
 if(MLIR_INCLUDE_TESTS)
   set(test_libs
+    ${cuda_test_libs}
     MLIRTestFuncToLLVM
     MLIRAffineTransformsTestPasses
     MLIRArithTestPasses

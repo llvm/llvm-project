@@ -44,6 +44,7 @@ void expect_value_side_effects(void) {
 
 // Make sure that issigprocmask() is called before bar()?
 // There's no compare, so there's nothing to expect?
+// rdar://9330105
 void isigprocmask(void);
 long bar(void);
 

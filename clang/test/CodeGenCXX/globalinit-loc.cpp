@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
+// rdar://problem/14985269.
 //
 // Verify that the global init helper function does not get associated
 // with any source location.

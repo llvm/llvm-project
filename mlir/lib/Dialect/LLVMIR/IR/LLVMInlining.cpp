@@ -125,6 +125,69 @@ handleInlinedAllocas(Operation *call,
   }
 }
 
+/// Handles all interactions with alias scopes during inlining.
+/// Currently:
+/// - Maps all alias scopes in the inlined operations to deep clones of the
+///   scopes and domain. This is required for code such as
+///   `foo(a, b); foo(a2, b2);` to not incorrectly return `noalias` for e.g.
+///   operations on `a` and `a2`.
+static void handleAliasScopes(Operation *call,
+                              iterator_range<Region::iterator> inlinedBlocks) {
+  DenseMap<Attribute, Attribute> mapping;
+
+  // Register handles in the walker to create the deep clones.
+  // The walker ensures that an attribute is only ever walked once and does a
+  // post-order walk, ensuring the domain is visited prior to the scope.
+  AttrTypeWalker walker;
+
+  // Perform the deep clones while visiting. Builders create a distinct
+  // attribute to make sure that new instances are always created by the
+  // uniquer.
+  walker.addWalk([&](LLVM::AliasScopeDomainAttr domainAttr) {
+    mapping[domainAttr] = LLVM::AliasScopeDomainAttr::get(
+        domainAttr.getContext(), domainAttr.getDescription());
+  });
+
+  walker.addWalk([&](LLVM::AliasScopeAttr scopeAttr) {
+    mapping[scopeAttr] = LLVM::AliasScopeAttr::get(
+        cast<LLVM::AliasScopeDomainAttr>(mapping.lookup(scopeAttr.getDomain())),
+        scopeAttr.getDescription());
+  });
+
+  // Map an array of scopes to an array of deep clones.
+  auto convertScopeList = [&](ArrayAttr arrayAttr) -> ArrayAttr {
+    if (!arrayAttr)
+      return nullptr;
+
+    // Create the deep clones if necessary.
+    walker.walk(arrayAttr);
+
+    return ArrayAttr::get(arrayAttr.getContext(),
+                          llvm::map_to_vector(arrayAttr, [&](Attribute attr) {
+                            return mapping.lookup(attr);
+                          }));
+  };
+
+  for (Block &block : inlinedBlocks) {
+    for (Operation &op : block) {
+      if (auto aliasInterface = dyn_cast<LLVM::AliasAnalysisOpInterface>(op)) {
+        aliasInterface.setAliasScopes(
+            convertScopeList(aliasInterface.getAliasScopesOrNull()));
+        aliasInterface.setNoAliasScopes(
+            convertScopeList(aliasInterface.getNoAliasScopesOrNull()));
+      }
+
+      if (auto noAliasScope = dyn_cast<LLVM::NoAliasScopeDeclOp>(op)) {
+        // Create the deep clones if necessary.
+        walker.walk(noAliasScope.getScopeAttr());
+
+        noAliasScope.setScopeAttr(cast<LLVM::AliasScopeAttr>(
+            mapping.lookup(noAliasScope.getScopeAttr())));
+      }
+    }
+  }
+}
+
 /// If `requestedAlignment` is higher than the alignment specified on `alloca`,
 /// realigns `alloca` if this does not exceed the natural stack alignment.
 /// Returns the post-alignment of `alloca`, whether it was realigned or not.
@@ -323,13 +386,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     // Some attributes on memory operations require handling during
     // inlining. Since this is not yet implemented, refuse to inline memory
     // operations that have any of these attributes.
-    if (auto iface = dyn_cast<LLVM::AliasAnalysisOpInterface>(op)) {
-      if (iface.getAliasScopesOrNull() || iface.getNoAliasScopesOrNull()) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Cannot inline: unhandled alias analysis metadata\n");
-        return false;
-      }
-    }
     if (auto iface = dyn_cast<LLVM::AccessGroupOpInterface>(op)) {
       if (iface.getAccessGroupsOrNull()) {
         LLVM_DEBUG(llvm::dbgs()
@@ -353,6 +409,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
             LLVM::MemcpyOp,
             LLVM::MemmoveOp,
             LLVM::MemsetOp,
+            LLVM::NoAliasScopeDeclOp,
             LLVM::StackRestoreOp,
             LLVM::StackSaveOp,
             LLVM::StoreOp,
@@ -417,6 +474,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
       Operation *call,
       iterator_range<Region::iterator> inlinedBlocks) const override {
     handleInlinedAllocas(call, inlinedBlocks);
+    handleAliasScopes(call, inlinedBlocks);
   }
 
   // Keeping this (immutable) state on the interface allows us to look up

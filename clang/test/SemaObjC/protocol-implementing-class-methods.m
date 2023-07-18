@@ -1,4 +1,5 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
+// rdar://7020493
 
 @protocol P1
 @optional
@@ -26,6 +27,7 @@
 - (void) CEMeth {}; // expected-warning {{category is implementing a method which will also be implemented by its primary class}}
 @end
 
+// rdar://10014946
 typedef char BOOL;
 @interface I
 {

@@ -1839,6 +1839,7 @@ C* C::f() { return 0; }
 
 }
 
+// rdar://problem/10959710
 namespace Test38 {
   struct A {
     virtual void *foo();

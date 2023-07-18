@@ -374,8 +374,8 @@ void testGetMostInformativeDerivedForId(NSArray<NSString *> *a,
   id idB = b;
   a = idB; // expected-warning {{Conversion from value of type 'UnrelatedTypeGeneric<NSString *> *' to incompatible type 'NSArray<NSString *> *'}}
 
-  // crash here caused by symbolic type being unrelated to compile-time source
-  // type of cast.
+  // rdar://problem/26086914 crash here caused by symbolic type being unrelated
+  // to compile-time source type of cast.
   id x = a; // Compile-time type is NSArray<>, Symbolic type is UnrelatedTypeGeneric<>.
   [x takesType:[[NSNumber alloc] init]]; // expected-warning {{Conversion from value of type 'NSNumber *' to incompatible type 'NSString *'}}
 }

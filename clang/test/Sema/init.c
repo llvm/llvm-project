@@ -66,8 +66,10 @@ int pbool(void) {
 }
 
 
+// rdar://5870981
 union { float f; unsigned u; } u = { 1.0f };
 
+// rdar://6156694
 int f3(int x) { return x; }
 typedef void (*vfunc)(void);
 void *bar = (vfunc) f3;
@@ -92,6 +94,7 @@ struct s1 s2 = { // expected-error {{variable has incomplete type 'struct s1'}} 
 // PR3382
 char t[] = ("Hello");
 
+// <rdar://problem/6094855>
 typedef struct { } empty;
 
 typedef struct {
@@ -101,6 +104,7 @@ typedef struct {
 
 st st1 = { .i2 = 1 };
 
+// <rdar://problem/6096826>
 struct {
   int a;
   int z[2];
@@ -153,7 +157,7 @@ int PR4386_b = ((void *) PR4386_foo) != 0; // expected-error{{initializer elemen
 int PR4386_c = ((void *) PR4386_zed) != 0;
 int PR4386_zed(void) __attribute((weak));
 
-// (derived from SPEC vortex benchmark)
+// <rdar://problem/10185490> (derived from SPEC vortex benchmark)
 typedef char strty[10];
 struct vortexstruct { strty s; };
 struct vortexstruct vortexvar = { "asdf" };

@@ -25,6 +25,7 @@ char* f2(char* a, char* b) {
 }
 
 // frexp is NOT readnone. It writes to its pointer argument.
+// <rdar://problem/10070234>
 //
 // CHECK: f3
 // CHECK: call double @frexp(double noundef %

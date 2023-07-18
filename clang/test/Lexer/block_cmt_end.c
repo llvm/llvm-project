@@ -29,7 +29,7 @@ next comment ends with a trigraph escaped newline: */
 foo
 
 
-// We should not get warnings about trigraphs in comments:
+// rdar://6060752 - We should not get warnings about trigraphs in comments:
 // '????'
 /* ???? */
 

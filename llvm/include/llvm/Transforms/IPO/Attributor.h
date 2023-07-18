@@ -1949,7 +1949,8 @@ public:
                                   const AbstractAttribute *AA,
                                   SmallVectorImpl<AA::ValueAndContext> &Values,
                                   AA::ValueScope S,
-                                  bool &UsedAssumedInformation);
+                                  bool &UsedAssumedInformation,
+                                  bool RecurseForSelectAndPHI = true);
 
   /// Register \p CB as a simplification callback.
   /// `Attributor::getAssumedSimplified` will use these callbacks before
@@ -2264,22 +2265,15 @@ public:
                             bool &UsedAssumedInformation,
                             bool CheckPotentiallyDead = false);
 
-  /// Check \p Pred on all values potentially returned by \p F.
-  ///
-  /// This method will evaluate \p Pred on all values potentially returned by
-  /// the function associated with \p QueryingAA. The returned values are
-  /// matched with their respective return instructions. Returns true if \p Pred
-  /// holds on all of them.
-  bool checkForAllReturnedValuesAndReturnInsts(
-      function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred,
-      const AbstractAttribute &QueryingAA);
-
   /// Check \p Pred on all values potentially returned by the function
   /// associated with \p QueryingAA.
   ///
   /// This is the context insensitive version of the method above.
-  bool checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
-                                 const AbstractAttribute &QueryingAA);
+  bool
+  checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
+                            const AbstractAttribute &QueryingAA,
+                            AA::ValueScope S = AA::ValueScope::Intraprocedural,
+                            bool RecurseForSelectAndPHI = true);
 
   /// Check \p Pred on all instructions in \p Fn with an opcode present in
   /// \p Opcodes.
@@ -3384,53 +3378,6 @@ ChangeStatus clampStateAndIndicateChange(StateType &S, const StateType &R) {
 /// ----------------------------------------------------------------------------
 ///                       Abstract Attribute Classes
 /// ----------------------------------------------------------------------------
-
-/// An abstract attribute for the returned values of a function.
-struct AAReturnedValues
-    : public IRAttribute<Attribute::Returned, AbstractAttribute,
-                         AAReturnedValues> {
-  AAReturnedValues(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
-
-  /// Check \p Pred on all returned values.
-  ///
-  /// This method will evaluate \p Pred on returned values and return
-  /// true if (1) all returned values are known, and (2) \p Pred returned true
-  /// for all returned values.
-  ///
-  /// Note: Unlike the Attributor::checkForAllReturnedValuesAndReturnInsts
-  /// method, this one will not filter dead return instructions.
-  virtual bool checkForAllReturnedValuesAndReturnInsts(
-      function_ref<bool(Value &, const SmallSetVector<ReturnInst *, 4> &)> Pred)
-      const = 0;
-
-  using iterator =
-      MapVector<Value *, SmallSetVector<ReturnInst *, 4>>::iterator;
-  using const_iterator =
-      MapVector<Value *, SmallSetVector<ReturnInst *, 4>>::const_iterator;
-  virtual llvm::iterator_range<iterator> returned_values() = 0;
-  virtual llvm::iterator_range<const_iterator> returned_values() const = 0;
-
-  virtual size_t getNumReturnValues() const = 0;
-
-  /// Create an abstract attribute view for the position \p IRP.
-  static AAReturnedValues &createForPosition(const IRPosition &IRP,
-                                             Attributor &A);
-
-  /// See AbstractAttribute::getName()
-  const std::string getName() const override { return "AAReturnedValues"; }
-
-  /// See AbstractAttribute::getIdAddr()
-  const char *getIdAddr() const override { return &ID; }
-
-  /// This function should return true if the type of the \p AA is
-  /// AAReturnedValues
-  static bool classof(const AbstractAttribute *AA) {
-    return (AA->getIdAddr() == &ID);
-  }
-
-  /// Unique ID (due to the unique address)
-  static const char ID;
-};
 
 struct AANoUnwind
     : public IRAttribute<Attribute::NoUnwind,
@@ -5162,10 +5109,9 @@ struct AAPotentialValues
   static const char ID;
 
 private:
-  virtual bool
-  getAssumedSimplifiedValues(Attributor &A,
-                             SmallVectorImpl<AA::ValueAndContext> &Values,
-                             AA::ValueScope) const = 0;
+  virtual bool getAssumedSimplifiedValues(
+      Attributor &A, SmallVectorImpl<AA::ValueAndContext> &Values,
+      AA::ValueScope, bool RecurseForSelectAndPHI = false) const = 0;
 
   friend struct Attributor;
 };

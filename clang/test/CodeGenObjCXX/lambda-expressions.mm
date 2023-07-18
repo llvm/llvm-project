@@ -43,6 +43,7 @@ void f2() { global = []{ return 3; }; }
 template <class T> void take_lambda(T &&lambda) { lambda(); }
 void take_block(void (^block)()) { block(); }
 
+// rdar://13800041
 @interface A
 - (void) test;
 @end

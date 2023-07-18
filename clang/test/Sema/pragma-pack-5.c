@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -fsyntax-only -verify -ffreestanding
 // expected-no-diagnostics
-// PR9560
+// <rdar://problem/10494810> and PR9560
 // Check #pragma pack handling with bitfields.
 
 #include <stddef.h>

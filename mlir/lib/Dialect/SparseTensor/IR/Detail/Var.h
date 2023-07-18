@@ -361,9 +361,9 @@ public:
                     std::optional<Var::Num> n = {})
       : name(name), loc(loc), id(id), num(n), kind(vk) {
     assert(!name.empty() && "null StringRef");
+    assert(loc.isValid() && "null SMLoc");
     assert(isWF(vk) && "unknown VarKind");
     assert((!n || Var::isWF_Num(*n)) && "Var::Num is too large");
-    // NOTE TO Wren: windows did not like loc.isValid constexpr
   }
 
   constexpr StringRef getName() const { return name; }
@@ -386,7 +386,8 @@ public:
 };
 // We don't actually require this, since `VarInfo` is a proper struct
 // rather than a newtype.  But it passes, so for now we'll keep it around.
-static_assert(IsZeroCostAbstraction<VarInfo>);
+// TODO: Uncomment the static assert, it fails the build with gcc7 right now.
+// static_assert(IsZeroCostAbstraction<VarInfo>);
 
 //===----------------------------------------------------------------------===//
 enum class CreationPolicy { MustNot, May, Must };

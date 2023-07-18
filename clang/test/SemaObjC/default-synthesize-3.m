@@ -40,6 +40,7 @@ __attribute ((objc_requires_property_definitions)) // expected-error {{'objc_req
 __attribute ((objc_requires_property_definitions)) // expected-error {{'objc_requires_property_definitions' attribute only applies to Objective-C interfaces}}
 @protocol P @end
 
+// rdar://13388503
 @interface NSObject @end
 @protocol Foo
 @property (readonly) char isFoo; // expected-note {{property declared here}}
@@ -111,6 +112,7 @@ __attribute ((objc_requires_property_definitions)) // expected-error {{'objc_req
 @implementation S // expected-note 3 {{detected while default synthesizing properties in class implementation}}
 @end
 
+// rdar://14085456
 // No warning must be issued in this test.
 @interface ParentObject
 @end
@@ -127,6 +129,7 @@ __attribute ((objc_requires_property_definitions)) // expected-error {{'objc_req
 @synthesize six;
 @end
 
+// rdar://14094682
 // no warning in this test
 @interface ISAChallenge : NSObject {
 }
@@ -155,6 +158,7 @@ __attribute ((objc_requires_property_definitions(1))) // expected-error {{'objc_
 @interface I1
 @end
 
+// rdar://15051465
 @protocol SubFooling
   @property(nonatomic, readonly) id hoho; // expected-note 2 {{property declared here}}
 @end
@@ -177,6 +181,7 @@ typedef NSObject<Fooing> FooObject;
 @implementation Fail // expected-warning {{auto property synthesis will not synthesize property 'muahahaha' declared in protocol 'Fooing'}} expected-warning {{auto property synthesis will not synthesize property 'hoho' declared in protocol 'SubFooling'}}
 @end // expected-note 2 {{add a '@synthesize' directive}}
 
+// rdar://16089191
 @class NSURL;
 
 @interface Root

@@ -2152,7 +2152,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
           llvm::Value *UndefVec = llvm::UndefValue::get(DstTy);
           llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
           llvm::Value *Result = Builder.CreateInsertVector(
-              DstTy, UndefVec, Src, Zero, "castScalableSve");
+              DstTy, UndefVec, Src, Zero, "cast.scalable");
           if (NeedsBitCast)
             Result = Builder.CreateBitCast(Result, OrigType);
           return Result;
@@ -2176,7 +2176,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
         }
         if (ScalableSrc->getElementType() == FixedDst->getElementType()) {
           llvm::Value *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
-          return Builder.CreateExtractVector(DstTy, Src, Zero, "castFixedSve");
+          return Builder.CreateExtractVector(DstTy, Src, Zero, "cast.fixed");
         }
       }
     }

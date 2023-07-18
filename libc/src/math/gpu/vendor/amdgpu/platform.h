@@ -100,6 +100,10 @@ extern const uint32_t __oclc_ISA_version = 11001;
 extern const uint32_t __oclc_ISA_version = 11002;
 #elif defined(__gfx1103__)
 extern const uint32_t __oclc_ISA_version = 11003;
+#elif defined(__gfx1150__)
+extern const uint32_t __oclc_ISA_version = 11500;
+#elif defined(__gfx1151__)
+extern const uint32_t __oclc_ISA_version = 11501;
 #else
 #error "Unknown AMDGPU architecture"
 #endif

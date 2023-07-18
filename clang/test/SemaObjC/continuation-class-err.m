@@ -40,6 +40,7 @@
 @synthesize fee = _fee;
 @end
 
+// rdar://10752081
 @interface MyOtherClass() // expected-error {{cannot find interface declaration for 'MyOtherClass'}}
 {
  id array;

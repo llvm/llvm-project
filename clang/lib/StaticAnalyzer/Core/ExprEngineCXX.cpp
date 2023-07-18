@@ -61,30 +61,30 @@ void ExprEngine::performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
     AlwaysReturnsLValue = true;
   }
 
-  assert(ThisRD);
-  if (ThisRD->isEmpty()) {
-    // Do nothing for empty classes. Otherwise it'd retrieve an UnknownVal
-    // and bind it and RegionStore would think that the actual value
-    // in this region at this offset is unknown.
-    return;
-  }
-
   const LocationContext *LCtx = Pred->getLocationContext();
+  const Expr *CallExpr = Call.getOriginExpr();
 
   ExplodedNodeSet Dst;
   Bldr.takeNodes(Pred);
 
-  SVal V = Call.getArgSVal(0);
+  assert(ThisRD);
+  if (!ThisRD->isEmpty()) {
+    // Load the source value only for non-empty classes.
+    // Otherwise it'd retrieve an UnknownVal
+    // and bind it and RegionStore would think that the actual value
+    // in this region at this offset is unknown.
+    SVal V = Call.getArgSVal(0);
 
-  // If the value being copied is not unknown, load from its location to get
-  // an aggregate rvalue.
-  if (std::optional<Loc> L = V.getAs<Loc>())
-    V = Pred->getState()->getSVal(*L);
-  else
-    assert(V.isUnknownOrUndef());
-
-  const Expr *CallExpr = Call.getOriginExpr();
-  evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
+    // If the value being copied is not unknown, load from its location to get
+    // an aggregate rvalue.
+    if (std::optional<Loc> L = V.getAs<Loc>())
+      V = Pred->getState()->getSVal(*L);
+    else
+      assert(V.isUnknownOrUndef());
+    evalBind(Dst, CallExpr, Pred, ThisVal, V, true);
+  } else {
+    Dst.Add(Pred);
+  }
 
   PostStmt PS(CallExpr, LCtx);
   for (ExplodedNode *N : Dst) {

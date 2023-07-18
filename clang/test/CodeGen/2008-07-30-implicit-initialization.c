@@ -5,6 +5,7 @@
 // CHECK:   ret i32 0
 // CHECK-LABEL: define{{.*}} i32 @f2()
 // CHECK:   ret i32 0
+// <rdar://problem/6113085>
 
 struct s0 {
   int x, y;

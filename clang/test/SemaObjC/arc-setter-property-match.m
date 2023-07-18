@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fsyntax-only -fobjc-arc -fblocks -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
+// rdar://10156674
 
 @class NSArray;
 

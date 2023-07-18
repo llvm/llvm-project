@@ -1005,6 +1005,7 @@ StructValue &refreshStructValue(const Expr &Expr, Environment &Env) {
     StorageLocation *Loc = Env.getStorageLocationStrict(Expr);
     if (Loc == nullptr) {
       Loc = &Env.createStorageLocation(Expr);
+      Env.setStorageLocation(Expr, *Loc);
     }
     Env.setValue(*Loc, NewVal);
   }
