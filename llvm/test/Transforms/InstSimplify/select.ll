@@ -1207,6 +1207,36 @@ define i8 @select_eq_xor_recursive_allow_refinement(i8 %a, i8 %b) {
   ret i8 %sel
 }
 
+define i8 @select_eq_mul_absorber(i8 %x, i8 noundef %y) {
+; CHECK-LABEL: @select_eq_mul_absorber(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[MUL]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 1
+  %add = add i8 %x, -1
+  %mul = mul i8 %add, %y
+  %sel = select i1 %cmp, i8 0, i8 %mul
+  ret i8 %sel
+}
+
+define i8 @select_eq_mul_not_absorber(i8 %x, i8 noundef %y) {
+; CHECK-LABEL: @select_eq_mul_not_absorber(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[ADD]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 0, i8 [[MUL]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 0
+  %add = add i8 %x, -1
+  %mul = mul i8 %add, %y
+  %sel = select i1 %cmp, i8 0, i8 %mul
+  ret i8 %sel
+}
+
 ; Vector to scalar options should be treated as lane-crossing.
 define <2 x i8> @select_eq_vector_insert_extract(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @select_eq_vector_insert_extract(
