@@ -1221,6 +1221,23 @@ class XForm_XD6_RA5_RB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
   let Inst{31}    = D{5};    // DX
 }
 
+class XForm_BF3_UIM6_FRB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+                          string asmstr, InstrItinClass itin, list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> BF;
+  bits<6> UIM;
+  bits<5> FRB;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}   = BF;
+  let Inst{9}     = 0;
+  let Inst{10-15} = UIM;
+  let Inst{16-20} = FRB;
+  let Inst{21-30} = xo;
+  let Inst{31}    = 0;
+}
+
 class XForm_SP2_FRTB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
                   list<dag> pattern, InstrItinClass itin>
     : I<opcode, OOL, IOL, asmstr, itin> {
@@ -2168,6 +2185,24 @@ class VX_RD5_RSp5_PS1_XO9<bits<9> xo, dag OOL, dag IOL, string asmstr,
   let Inst{21}    = 1;
   let Inst{22}    = PS;
   let Inst{23-31} = xo;
+}
+
+class Z22Form_BF3_FRA5_DCM6<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
+                            string asmstr, InstrItinClass itin,
+                            list<dag> pattern>
+  : I<opcode, OOL, IOL, asmstr, itin> {
+  bits<3> BF;
+  bits<5> FRA;
+  bits<6> DCM;
+
+  let Pattern = pattern;
+
+  let Inst{6-8}   = BF;
+  let Inst{9-10}  = 0;
+  let Inst{11-15} = FRA;
+  let Inst{16-21} = DCM;
+  let Inst{22-30} = xo;
+  let Inst{31}    = 0;
 }
 
 class Z22Form_FRTA5_SH6<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
