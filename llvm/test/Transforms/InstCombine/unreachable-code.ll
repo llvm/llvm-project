@@ -14,8 +14,7 @@ define i32 @br_true(i1 %x) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 1
 ;
   %c = or i1 %x, true
   br i1 %c, label %if, label %else
@@ -43,8 +42,7 @@ define i32 @br_false(i1 %x) {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 2
 ;
   %c = and i1 %x, false
   br i1 %c, label %if, label %else
@@ -63,26 +61,15 @@ join:
 }
 
 define i32 @br_undef(i1 %x) {
-; DEFAULT_ITER-LABEL: define i32 @br_undef
-; DEFAULT_ITER-SAME: (i1 [[X:%.*]]) {
-; DEFAULT_ITER-NEXT:    br i1 undef, label [[IF:%.*]], label [[ELSE:%.*]]
-; DEFAULT_ITER:       if:
-; DEFAULT_ITER-NEXT:    br label [[JOIN:%.*]]
-; DEFAULT_ITER:       else:
-; DEFAULT_ITER-NEXT:    br label [[JOIN]]
-; DEFAULT_ITER:       join:
-; DEFAULT_ITER-NEXT:    ret i32 poison
-;
-; MAX1-LABEL: define i32 @br_undef
-; MAX1-SAME: (i1 [[X:%.*]]) {
-; MAX1-NEXT:    br i1 undef, label [[IF:%.*]], label [[ELSE:%.*]]
-; MAX1:       if:
-; MAX1-NEXT:    br label [[JOIN:%.*]]
-; MAX1:       else:
-; MAX1-NEXT:    br label [[JOIN]]
-; MAX1:       join:
-; MAX1-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ELSE]] ]
-; MAX1-NEXT:    ret i32 [[PHI]]
+; CHECK-LABEL: define i32 @br_undef
+; CHECK-SAME: (i1 [[X:%.*]]) {
+; CHECK-NEXT:    br i1 undef, label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i32 undef
 ;
   %c = xor i1 %x, undef
   br i1 %c, label %if, label %else
@@ -110,8 +97,7 @@ define i32 @br_true_phi_with_repeated_preds(i1 %x) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br i1 false, label [[JOIN]], label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 2, [[ELSE]] ], [ 2, [[ELSE]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    ret i32 1
 ;
   %c = or i1 %x, true
   br i1 %c, label %if, label %else
