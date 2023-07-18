@@ -10,7 +10,9 @@
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mrelax 2>&1 | FileCheck %s -check-prefix=RELAX
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-relax 2>&1 | FileCheck %s -check-prefix=NO-RELAX
 
+// ANDROID: "-target-feature" "+zba"
 // ANDROID: "-target-feature" "+zbb"
+// ANDROID: "-target-feature" "+zbs"
 // RELAX: "-target-feature" "+relax"
 // NO-RELAX: "-target-feature" "-relax"
 // DEFAULT: "-target-feature" "+relax"
