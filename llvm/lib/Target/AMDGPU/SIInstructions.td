@@ -1128,8 +1128,8 @@ def : GCNPat <
 >;
 
 class VOPSelectModsPat <ValueType vt> : GCNPat <
-  (vt (select i1:$src0, (VOP3Mods vt:$src1, i32:$src1_mods),
-                        (VOP3Mods vt:$src2, i32:$src2_mods))),
+  (vt (select i1:$src0, (VOP3ModsNonCanonicalizing vt:$src1, i32:$src1_mods),
+                        (VOP3ModsNonCanonicalizing vt:$src2, i32:$src2_mods))),
   (V_CNDMASK_B32_e64 FP32InputMods:$src2_mods, VSrc_b32:$src2,
                      FP32InputMods:$src1_mods, VSrc_b32:$src1, SSrc_i1:$src0)
 >;

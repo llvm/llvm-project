@@ -3486,8 +3486,10 @@ AMDGPUInstructionSelector::selectVCSRC(MachineOperand &Root) const {
 
 }
 
-std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3ModsImpl(
-    MachineOperand &Root, bool AllowAbs, bool OpSel) const {
+std::pair<Register, unsigned>
+AMDGPUInstructionSelector::selectVOP3ModsImpl(MachineOperand &Root,
+                                              bool IsCanonicalizing,
+                                              bool AllowAbs, bool OpSel) const {
   Register Src = Root.getReg();
   unsigned Mods = 0;
   MachineInstr *MI = getDefIgnoringCopies(Src, *MRI);
@@ -3496,6 +3498,15 @@ std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3ModsImpl(
     Src = MI->getOperand(1).getReg();
     Mods |= SISrcMods::NEG;
     MI = getDefIgnoringCopies(Src, *MRI);
+  } else if (MI->getOpcode() == AMDGPU::G_FSUB && IsCanonicalizing) {
+    // Fold fsub [+-]0 into fneg. This may not have folded depending on the
+    // denormal mode, but we're implicitly canonicalizing in a source operand.
+    const ConstantFP *LHS =
+        getConstantFPVRegVal(MI->getOperand(1).getReg(), *MRI);
+    if (LHS && LHS->isZero()) {
+      Mods |= SISrcMods::NEG;
+      Src = MI->getOperand(2).getReg();
+    }
   }
 
   if (AllowAbs && MI->getOpcode() == AMDGPU::G_FABS) {
@@ -3558,7 +3569,9 @@ InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3BMods0(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3ModsImpl(Root, /* AllowAbs */ false);
+  std::tie(Src, Mods) = selectVOP3ModsImpl(Root,
+                                           /*IsCanonicalizing=*/true,
+                                           /*AllowAbs=*/false);
 
   return {{
       [=](MachineInstrBuilder &MIB) {
@@ -3594,10 +3607,26 @@ AMDGPUInstructionSelector::selectVOP3Mods(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3ModsNonCanonicalizing(
+    MachineOperand &Root) const {
+  Register Src;
+  unsigned Mods;
+  std::tie(Src, Mods) = selectVOP3ModsImpl(Root, /*IsCanonicalizing=*/false);
+
+  return {{
+      [=](MachineInstrBuilder &MIB) {
+        MIB.addReg(copyToVGPRIfSrcFolded(Src, Mods, Root, MIB));
+      },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3BMods(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3ModsImpl(Root, /* AllowAbs */ false);
+  std::tie(Src, Mods) = selectVOP3ModsImpl(Root, /*IsCanonicalizing=*/true,
+                                           /*AllowAbs=*/false);
 
   return {{
       [=](MachineInstrBuilder &MIB) {
@@ -3632,6 +3661,8 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(
     Src = MI->getOperand(1).getReg();
     MI = MRI.getVRegDef(Src);
   }
+
+  // TODO: Handle G_FSUB 0 as fneg
 
   // TODO: Match op_sel through g_build_vector_trunc and g_shuffle_vector.
   (void)IsDOT; // DOTs do not use OPSEL on gfx940+, check ST.hasDOTOpSelHazard()
@@ -3719,8 +3750,9 @@ AMDGPUInstructionSelector::selectVINTERPMods(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root,
-                                           /* AllowAbs */ false,
-                                           /* OpSel */ false);
+                                           /*IsCanonicalizing=*/true,
+                                           /*AllowAbs=*/false,
+                                           /*OpSel=*/false);
 
   return {{
       [=](MachineInstrBuilder &MIB) {
@@ -3736,8 +3768,9 @@ AMDGPUInstructionSelector::selectVINTERPModsHi(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root,
-                                           /* AllowAbs */ false,
-                                           /* OpSel */ true);
+                                           /*IsCanonicalizing=*/true,
+                                           /*AllowAbs=*/false,
+                                           /*OpSel=*/true);
 
   return {{
       [=](MachineInstrBuilder &MIB) {

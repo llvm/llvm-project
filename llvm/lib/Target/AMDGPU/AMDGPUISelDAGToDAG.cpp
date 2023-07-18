@@ -2570,6 +2570,7 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
 
 bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
                                             unsigned &Mods,
+                                            bool IsCanonicalizing,
                                             bool AllowAbs) const {
   Mods = 0;
   Src = In;
@@ -2577,6 +2578,14 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
   if (Src.getOpcode() == ISD::FNEG) {
     Mods |= SISrcMods::NEG;
     Src = Src.getOperand(0);
+  } else if (Src.getOpcode() == ISD::FSUB && IsCanonicalizing) {
+    // Fold fsub [+-]0 into fneg. This may not have folded depending on the
+    // denormal mode, but we're implicitly canonicalizing in a source operand.
+    auto *LHS = dyn_cast<ConstantFPSDNode>(Src.getOperand(0));
+    if (LHS && LHS->isZero()) {
+      Mods |= SISrcMods::NEG;
+      Src = Src.getOperand(1);
+    }
   }
 
   if (AllowAbs && Src.getOpcode() == ISD::FABS) {
@@ -2590,7 +2599,20 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
 bool AMDGPUDAGToDAGISel::SelectVOP3Mods(SDValue In, SDValue &Src,
                                         SDValue &SrcMods) const {
   unsigned Mods;
-  if (SelectVOP3ModsImpl(In, Src, Mods)) {
+  if (SelectVOP3ModsImpl(In, Src, Mods, /*IsCanonicalizing=*/true,
+                         /*AllowAbs=*/true)) {
+    SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+    return true;
+  }
+
+  return false;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3ModsNonCanonicalizing(
+    SDValue In, SDValue &Src, SDValue &SrcMods) const {
+  unsigned Mods;
+  if (SelectVOP3ModsImpl(In, Src, Mods, /*IsCanonicalizing=*/false,
+                         /*AllowAbs=*/true)) {
     SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
     return true;
   }
@@ -2601,7 +2623,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3Mods(SDValue In, SDValue &Src,
 bool AMDGPUDAGToDAGISel::SelectVOP3BMods(SDValue In, SDValue &Src,
                                          SDValue &SrcMods) const {
   unsigned Mods;
-  if (SelectVOP3ModsImpl(In, Src, Mods, /* AllowAbs */ false)) {
+  if (SelectVOP3ModsImpl(In, Src, Mods,
+                         /*IsCanonicalizing=*/true,
+                         /*AllowAbs=*/false)) {
     SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
     return true;
   }
@@ -2621,7 +2645,9 @@ bool AMDGPUDAGToDAGISel::SelectVINTERPModsImpl(SDValue In, SDValue &Src,
                                                SDValue &SrcMods,
                                                bool OpSel) const {
   unsigned Mods;
-  if (SelectVOP3ModsImpl(In, Src, Mods, /* AllowAbs */ false)) {
+  if (SelectVOP3ModsImpl(In, Src, Mods,
+                         /*IsCanonicalizing=*/true,
+                         /*AllowAbs=*/false)) {
     if (OpSel)
       Mods |= SISrcMods::OP_SEL_0;
     SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
@@ -2677,6 +2703,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
   unsigned Mods = 0;
   Src = In;
 
+  // TODO: Handle G_FSUB 0 as fneg
   if (Src.getOpcode() == ISD::FNEG) {
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
     Src = Src.getOperand(0);
