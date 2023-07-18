@@ -38,7 +38,8 @@ namespace test1 {
 }
 
 
-// This test case previously had a false "missing return" warning.
+// <rdar://problem/7880658> - This test case previously had a false "missing return"
+// warning.
 struct R7880658 {
   R7880658 &operator++();
   bool operator==(const R7880658 &) const;
@@ -82,7 +83,7 @@ namespace test3 {
   };
 }
 
-// Properly handle CFGs with destructors.
+// <rdar://problem/8875247> - Properly handle CFGs with destructors.
 struct rdar8875247 {
   ~rdar8875247 ();
 };

@@ -20,7 +20,8 @@ void test2(void) {
   l: goto l;
   }
 
-  /* PR3429 */
+  /* PR3429 & rdar://8287027
+   */
   {
   l:  /* expected-error {{redefinition of label 'l'}} */
     ;

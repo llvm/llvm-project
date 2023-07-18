@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
+// rdar://15454846
 
 typedef struct __attribute__ ((objc_bridge(NSError))) __CFErrorRef * CFErrorRef; // expected-note 3 {{declared here}}
 
@@ -141,6 +142,7 @@ void Test9(void) {
   NSNumber *w2 = (NSNumber*) bar(); // expected-error {{CF object of type 'CFDictionaryRef' (aka 'struct __CFDictionary *') is bridged to 'NSDictionary', which is not an Objective-C class}}
 }
 
+// rdar://18311183
 @interface NSObject @end
 
 @interface NSFont : NSObject @end

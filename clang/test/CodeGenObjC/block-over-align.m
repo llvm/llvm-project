@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fblocks -triple x86_64-apple-darwin -emit-llvm -o /dev/null %s
+// rdar://17878679
 
 typedef struct
 {

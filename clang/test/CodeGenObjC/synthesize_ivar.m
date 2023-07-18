@@ -27,7 +27,7 @@
 @synthesize bindingInfo;
 @end
 
-// [irgen] crash in synthesized property construction
+// <rdar://problem/7336352> [irgen] crash in synthesized property construction
 
 @interface I0 @end
 @protocol P0 @end

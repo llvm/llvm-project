@@ -11,7 +11,7 @@ void move_it(__strong id &&from) {
 - init;
 @end
 
-// don't warn about this
+// <rdar://problem/12031870>: don't warn about this
 extern "C" A* MakeA();
 
 // Ensure that deduction works with lifetime qualifiers.
@@ -34,6 +34,7 @@ void deduction(id obj) {
   }
 }
 
+// rdar://problem/11068137
 void test1a() {
   __autoreleasing id p; // expected-note 2 {{'p' declared here}}
   (void) [&p] {};
@@ -54,6 +55,8 @@ void test1c() {
   (void) ^{ (void) v; }; // expected-error {{cannot capture __autoreleasing variable in a block}}
 }
 
+
+// <rdar://problem/11319689>
 // warn when initializing an 'auto' variable with an 'id' initializer expression
 
 void testAutoId(id obj) {
@@ -77,6 +80,7 @@ void testAutoIdTemplate(id obj) {
   autoTemplateFunction<id, 2>(obj, obj, [Array new]); // no-warning
 }
 
+// rdar://12229679
 @interface NSObject @end
 typedef __builtin_va_list va_list;
 @interface MyClass : NSObject

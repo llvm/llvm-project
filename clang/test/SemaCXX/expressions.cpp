@@ -11,6 +11,7 @@ void test() {
 }
 
 #if __cplusplus < 201703L
+// rdar://8018252
 void f0() {
   extern void f0_1(int*);
   register int x;

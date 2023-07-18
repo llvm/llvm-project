@@ -9,6 +9,7 @@ typedef float CGFloat;
                                                       // expected-error {{expected ';' after method prototype}}
 @end
 
+// rdar: // 7822196
 @interface A
 (void) x;	// expected-error {{method type specifier must start with '-' or '+'}} 
 (int)im; // expected-error {{method type specifier must start with '-' or '+'}} \

@@ -3,6 +3,7 @@
 // Verify strictfp attributes on invoke calls (and therefore also on
 // function definitions).
 
+// rdar://problem/8621849
 void test1(void) {
   extern void test1_helper(void (^)(int));
 

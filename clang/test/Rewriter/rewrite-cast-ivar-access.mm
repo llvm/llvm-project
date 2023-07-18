@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -x objective-c++ -fblocks -fms-extensions -rewrite-objc -fobjc-runtime=macosx-fragile-10.5 %s -o %t-rw.cpp
 // RUN: FileCheck -check-prefix CHECK-LP --input-file=%t-rw.cpp %s
+// radar 7575882
 
 @interface F {
   int supervar;
@@ -24,6 +25,7 @@ void __CFAssignWithWriteBarrier(void **location, void *value) {
         objc_assign_strongCast((id)value);
 }
 
+// radar 7607605
 @interface RealClass {
         @public
         int f;

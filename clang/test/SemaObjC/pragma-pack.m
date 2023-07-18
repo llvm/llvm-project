@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple i686-apple-darwin9 -fsyntax-only -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
 
-// Make sure pragma pack works inside ObjC methods.
+// Make sure pragma pack works inside ObjC methods.  <rdar://problem/10893316>
 @interface X
 @end
 @implementation X

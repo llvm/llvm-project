@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -verify -fsyntax-only -Wformat -Wno-format-y2k %s
+// rdar://9504680
 
 void foo(const char *, ...) __attribute__((__format__ (__printf__, 1, 2)));
 

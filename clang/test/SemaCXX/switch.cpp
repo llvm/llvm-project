@@ -58,7 +58,7 @@ namespace test3 {
   template void foo<C>(); //expected-note {{in instantiation}}
 }
 
-// PR9304
+// PR9304 and rdar://9045501
 void click_check_header_sizes() {
   switch (0 == 8) {  // expected-warning {{switch condition has boolean value}}
   case 0: ;
@@ -101,6 +101,7 @@ namespace Conversion {
   template void f(S); // expected-note {{instantiation of}}
 }
 
+// rdar://29230764
 namespace OpaqueEnumWarnings {
 
 enum Opaque : int;

@@ -71,7 +71,6 @@ chrono cmath
 chrono compare
 chrono cstddef
 chrono cstdint
-chrono cstdlib
 chrono ctime
 chrono initializer_list
 chrono limits
@@ -214,7 +213,6 @@ format array
 format cmath
 format cstddef
 format cstdint
-format cstdlib
 format initializer_list
 format limits
 format locale
@@ -615,7 +613,6 @@ thread cerrno
 thread compare
 thread cstddef
 thread cstdint
-thread cstdlib
 thread ctime
 thread initializer_list
 thread iosfwd
@@ -691,7 +688,6 @@ vector climits
 vector compare
 vector cstddef
 vector cstdint
-vector cstdlib
 vector cstring
 vector cwchar
 vector initializer_list

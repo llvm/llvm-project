@@ -21,6 +21,8 @@
 // RUN:     -fmodules-ignore-macro=PREFIX -Wno-error=implicit-int -I %S/Inputs/va_list -include-pch %t.pch \
 // RUN:     -x objective-c %s -fsyntax-only
 
+// rdar://18039719
+
 #ifdef PREFIX
 @import va_list_b;
 #endif
