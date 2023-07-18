@@ -282,9 +282,9 @@ private:
   /// metadata nodes for them and their domains.
   LogicalResult createAliasScopeMetadata();
 
-  /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
-  /// LLVM dialect TBAATagOp operation.
-  llvm::MDNode *getTBAANode(Operation *op, SymbolRefAttr tagRef) const;
+  /// Returns the LLVM metadata corresponding to the given mlir LLVM dialect
+  /// TBAATagAttr.
+  llvm::MDNode *getTBAANode(TBAATagAttr tbaaAttr) const;
 
   /// Process tbaa LLVM Metadata operations and create LLVM
   /// metadata nodes for them.
@@ -332,9 +332,9 @@ private:
   /// This map is populated on module entry.
   DenseMap<Attribute, llvm::MDNode *> aliasScopeMetadataMapping;
 
-  /// Mapping from a tbaa metadata operation to its LLVM metadata.
+  /// Mapping from a tbaa attribute to its LLVM metadata.
   /// This map is populated on module entry.
-  DenseMap<const Operation *, llvm::MDNode *> tbaaMetadataMapping;
+  DenseMap<Attribute, llvm::MDNode *> tbaaMetadataMapping;
 
   /// Mapping from a comdat selector operation to its LLVM comdat struct.
   /// This map is populated on module entry.

@@ -176,18 +176,15 @@ public:
   /// implement the fastmath interface.
   void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
 
-  /// Converts all LLVM metadata nodes that translate to operations nested in a
-  /// global metadata operation, such as alias analysis or access group
-  /// metadata, and builds a map from the metadata nodes to the symbols pointing
-  /// to the converted operations. Returns success if all conversions succeed
-  /// and failure otherwise.
-  // Note: All metadata is nested inside a single global metadata operation to
-  // minimize the number of symbols that pollute the global namespace.
+  /// Converts all LLVM metadata nodes that translate to attributes such as
+  /// alias analysis or access group metadata, and builds a map from the
+  /// metadata nodes to the converted attributes.
+  /// Returns success if all conversions succeed and failure otherwise.
   LogicalResult convertMetadata();
 
-  /// Returns the MLIR symbol reference mapped to the given LLVM TBAA
+  /// Returns the MLIR attribute mapped to the given LLVM TBAA
   /// metadata `node`.
-  SymbolRefAttr lookupTBAAAttr(const llvm::MDNode *node) const {
+  Attribute lookupTBAAAttr(const llvm::MDNode *node) const {
     return tbaaMapping.lookup(node);
   }
 
@@ -288,10 +285,6 @@ private:
   /// them fails. All operations are inserted at the start of the current
   /// function entry block.
   FailureOr<Value> convertConstantExpr(llvm::Constant *constant);
-  /// Returns a global metadata operation that serves as a container for LLVM
-  /// metadata that converts to MLIR operations. Creates the global metadata
-  /// operation on the first invocation.
-  MetadataOp getGlobalMetadataOp();
   /// Returns a global comdat operation that serves as a container for LLVM
   /// comdat selectors. Creates the global comdat operation on the first
   /// invocation.
@@ -304,14 +297,13 @@ private:
   LogicalResult processTBAAMetadata(const llvm::MDNode *node);
   /// Converts all LLVM access groups starting from `node` to MLIR access group
   /// operations and stores a mapping from every nested access group node to the
-  /// symbol pointing to the translated operation. Returns success if all
-  /// conversions succeed and failure otherwise.
+  /// translated attribute. Returns success if all conversions succeed and
+  /// failure otherwise.
   LogicalResult processAccessGroupMetadata(const llvm::MDNode *node);
   /// Converts all LLVM alias scopes and domains starting from `node` to MLIR
-  /// alias scope and domain operations and stores a mapping from every nested
-  /// alias scope or alias domain node to the symbol pointing to the translated
-  /// operation. Returns success if all conversions succeed and failure
-  /// otherwise.
+  /// alias scope and domain attributes and stores a mapping from every nested
+  /// alias scope or alias domain node to the translated attribute. Returns
+  /// success if all conversions succeed and failure otherwise.
   LogicalResult processAliasScopeMetadata(const llvm::MDNode *node);
   /// Converts the given LLVM comdat struct to an MLIR comdat selector operation
   /// and stores a mapping from the struct to the symbol pointing to the
@@ -326,8 +318,6 @@ private:
   Operation *constantInsertionOp = nullptr;
   /// Operation to insert the next global after.
   Operation *globalInsertionOp = nullptr;
-  /// Operation to insert metadata operations into.
-  MetadataOp globalMetadataOp = nullptr;
   /// Operation to insert comdat selector operations into.
   ComdatOp globalComdatOp = nullptr;
   /// The current context.
@@ -352,9 +342,9 @@ private:
   /// Mapping between LLVM alias scope and domain metadata nodes and
   /// attributes in the LLVM dialect corresponding to these nodes.
   DenseMap<const llvm::MDNode *, Attribute> aliasScopeMapping;
-  /// Mapping between LLVM TBAA metadata nodes and symbol references to the LLVM
-  /// dialect TBAA operations corresponding to these nodes.
-  DenseMap<const llvm::MDNode *, SymbolRefAttr> tbaaMapping;
+  /// Mapping between LLVM TBAA metadata nodes and LLVM dialect TBAA attributes
+  /// corresponding to these nodes.
+  DenseMap<const llvm::MDNode *, Attribute> tbaaMapping;
   /// Mapping between LLVM comdat structs and symbol references to LLVM dialect
   /// comdat selector operations corresponding to these structs.
   DenseMap<const llvm::Comdat *, SymbolRefAttr> comdatMapping;
