@@ -692,13 +692,14 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   auto TiedIdx = OpDesc.getOperandConstraint(Component::SRC2, MCOI::TIED_TO);
   assert(TiedIdx == -1 || TiedIdx == Component::DST);
   HasSrc2Acc = TiedIdx != -1;
+  unsigned Opc = OpDesc.getOpcode();
 
-  SrcOperandsNum = (OpDesc.TSFlags & SIInstrFlags::VOP3)
-      ? 3 : OpDesc.getNumOperands() - OpDesc.getNumDefs();
+  SrcOperandsNum = AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src2) ? 3 :
+                   AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::imm)  ? 3 :
+                   AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1) ? 2 : 1;
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
 
-  if (isSISrcFPOperand(OpDesc,
-                       getNamedOperandIdx(OpDesc.getOpcode(), OpName::src0))) {
+  if (isSISrcFPOperand(OpDesc, getNamedOperandIdx(Opc, OpName::src0))) {
     // All FP VOPD instructions have Neg modifiers for all operands except
     // for tied src2.
     NumVOPD3Mods = SrcOperandsNum;

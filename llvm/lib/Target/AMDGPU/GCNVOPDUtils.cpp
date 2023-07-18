@@ -45,6 +45,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
 
   if (IsVOPD3 && !ST.hasVOPD3())
     return false;
+  if (!IsVOPD3 && (TII.isVOP3(FirstMI) || TII.isVOP3(SecondMI)))
+    return false;
 
   const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST.getRegisterInfo());
   const MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -112,9 +114,18 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
         const MachineOperand *Src = TII.getNamedOperand(MI, OpName);
         if (!Src)
           continue;
-        if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3) &&
-            OpName == AMDGPU::OpName::src2)
-          continue;
+        if (OpName == AMDGPU::OpName::src2) {
+          if (AMDGPU::hasNamedOperand(MI.getOpcode(), AMDGPU::OpName::bitop3))
+            continue;
+          if (MI.getOpcode() == AMDGPU::V_CNDMASK_B32_e64) {
+            // Only allow VCC which is implicit in a dual instruction. We cannot
+            // encode any other SGPR.
+            if (Src->getReg() != AMDGPU::VCC_LO)
+              return false;
+            UniqueScalarRegs.push_back(AMDGPU::VCC_LO);
+            continue;
+          }
+        }
         if (!Src->isReg() || !TRI->isVGPR(MRI, Src->getReg()))
           return false;
       }

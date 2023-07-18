@@ -169,6 +169,16 @@ multiclass VOP2Inst_e64<string opName,
   } // End renamedInGFX9 = GFX9Renamed
 }
 
+multiclass VOP2Inst_e64_VOPD<string opName,
+                             VOPProfile P, bits<5> VOPDOp,
+                             string VOPDName,
+                             SDPatternOperator node = null_frag,
+                             string revOp = opName,
+                             bit GFX9Renamed = 0> {
+  defm NAME: VOP2Inst_e64<opName, P, node, revOp, GFX9Renamed>,
+             VOPD_Component<VOPDOp, VOPDName>;
+}
+
 multiclass VOP2Inst_sdwa<string opName,
                          VOPProfile P,
                          bit GFX9Renamed = 0> {
@@ -230,7 +240,7 @@ multiclass VOP2Inst_VOPD<string opName,
                          string revOp = opName,
                          bit GFX9Renamed = 0> :
     VOP2Inst_e32_VOPD<opName, P, VOPDOp, VOPDName, node, revOp, GFX9Renamed>,
-    VOP2Inst_e64<opName, P, node, revOp, GFX9Renamed>,
+    VOP2Inst_e64_VOPD<opName, P, VOPDOp, VOPDName, node, revOp, GFX9Renamed>,
     VOP2Inst_sdwa<opName, P, GFX9Renamed> {
   let renamedInGFX9 = GFX9Renamed in {
     if P.HasExtDPP then
@@ -312,9 +322,14 @@ multiclass
         def _dpp  : VOP2_DPP_Pseudo <opName, P>;
     }
 
-    def _e64 : VOP3InstBase <opName, P, node, 1>,
-               Commutable_REV<revOp#"_e64", !eq(revOp, opName)> {
-      let isReMaterializable = 1;
+    let isReMaterializable = 1 in {
+    if !eq(VOPDOp, -1) then
+      def _e64 : VOP3InstBase <opName, P, node, 1>,
+                 Commutable_REV<revOp#"_e64", !eq(revOp, opName)>;
+    else
+      def _e64 : VOP3InstBase <opName, P, node, 1>,
+                 Commutable_REV<revOp#"_e64", !eq(revOp, opName)>,
+                 VOPD_Component<VOPDOp, VOPDName>;
     }
 
     let SubtargetPredicate = isGFX11Plus in {
