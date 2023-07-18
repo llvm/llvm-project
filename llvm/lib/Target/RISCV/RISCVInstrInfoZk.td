@@ -15,6 +15,21 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def riscv_sha256sig0 : SDNode<"RISCVISD::SHA256SIG0", SDTIntUnaryOp>;
+def riscv_sha256sig1 : SDNode<"RISCVISD::SHA256SIG1", SDTIntUnaryOp>;
+def riscv_sha256sum0 : SDNode<"RISCVISD::SHA256SUM0", SDTIntUnaryOp>;
+def riscv_sha256sum1 : SDNode<"RISCVISD::SHA256SUM1", SDTIntUnaryOp>;
+
+def SDT_RISCVZkByteSelect : SDTypeProfile<1, 3, [SDTCisVT<0, XLenVT>,
+                                                 SDTCisVT<1, XLenVT>,
+                                                 SDTCisVT<2, XLenVT>,
+                                                 SDTCisVT<3, i32>]>;
+def riscv_sm4ks : SDNode<"RISCVISD::SM4KS", SDT_RISCVZkByteSelect>;
+def riscv_sm4ed : SDNode<"RISCVISD::SM4ED", SDT_RISCVZkByteSelect>;
+
+def riscv_sm3p0 : SDNode<"RISCVISD::SM3P0", SDTIntUnaryOp>;
+def riscv_sm3p1 : SDNode<"RISCVISD::SM3P1", SDTIntUnaryOp>;
+
 def RnumArg : AsmOperandClass {
   let Name = "RnumArg";
   let RenderMethod = "addImmOperands";
@@ -119,12 +134,12 @@ def SHA512SUM0 : RVKUnary<0b000100000100, 0b001, "sha512sum0">;
 def SHA512SUM1 : RVKUnary<0b000100000101, 0b001, "sha512sum1">;
 } // Predicates = [HasStdExtZknh, IsRV64]
 
-let Predicates = [HasStdExtZksed] in {
+let Predicates = [HasStdExtZksed], IsSignExtendingOpW = 1 in {
 def SM4ED : RVKByteSelect<0b11000, "sm4ed">;
 def SM4KS : RVKByteSelect<0b11010, "sm4ks">;
 } // Predicates = [HasStdExtZksed]
 
-let Predicates = [HasStdExtZksh] in {
+let Predicates = [HasStdExtZksh], IsSignExtendingOpW = 1 in {
 def SM3P0 : RVKUnary<0b000100001000, 0b001, "sm3p0">;
 def SM3P1 : RVKUnary<0b000100001001, 0b001, "sm3p1">;
 } // Predicates = [HasStdExtZksh]
@@ -168,10 +183,10 @@ def : PatGprGpr<int_riscv_aes64esm, AES64ESM>;
 
 // Zknh
 let Predicates = [HasStdExtZknh] in {
-def : PatGpr<int_riscv_sha256sig0, SHA256SIG0>;
-def : PatGpr<int_riscv_sha256sig1, SHA256SIG1>;
-def : PatGpr<int_riscv_sha256sum0, SHA256SUM0>;
-def : PatGpr<int_riscv_sha256sum1, SHA256SUM1>;
+def : PatGpr<riscv_sha256sig0, SHA256SIG0>;
+def : PatGpr<riscv_sha256sig1, SHA256SIG1>;
+def : PatGpr<riscv_sha256sum0, SHA256SUM0>;
+def : PatGpr<riscv_sha256sum1, SHA256SUM1>;
 } // Predicates = [HasStdExtZknh]
 
 let Predicates = [HasStdExtZknh, IsRV32] in {
@@ -192,12 +207,12 @@ def : PatGpr<int_riscv_sha512sum1, SHA512SUM1>;
 
 // Zksed
 let Predicates = [HasStdExtZksed] in {
-def : PatGprGprByteSelect<int_riscv_sm4ks, SM4KS>;
-def : PatGprGprByteSelect<int_riscv_sm4ed, SM4ED>;
+def : PatGprGprByteSelect<riscv_sm4ks, SM4KS>;
+def : PatGprGprByteSelect<riscv_sm4ed, SM4ED>;
 } // Predicates = [HasStdExtZksed]
 
 // Zksh
 let Predicates = [HasStdExtZksh] in {
-def : PatGpr<int_riscv_sm3p0, SM3P0>;
-def : PatGpr<int_riscv_sm3p1, SM3P1>;
+def : PatGpr<riscv_sm3p0, SM3P0>;
+def : PatGpr<riscv_sm3p1, SM3P1>;
 } // Predicates = [HasStdExtZksh]

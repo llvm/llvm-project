@@ -9,10 +9,10 @@
 // RV32ZKNH-NEXT:    [[RS1_ADDR:%.*]] = alloca i32, align 4
 // RV32ZKNH-NEXT:    store i32 [[RS1:%.*]], ptr [[RS1_ADDR]], align 4
 // RV32ZKNH-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RS1_ADDR]], align 4
-// RV32ZKNH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sha256sig0.i32(i32 [[TMP0]])
+// RV32ZKNH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sha256sig0(i32 [[TMP0]])
 // RV32ZKNH-NEXT:    ret i32 [[TMP1]]
 //
-unsigned long sha256sig0(unsigned long rs1) {
+uint32_t sha256sig0(uint32_t rs1) {
   return __builtin_riscv_sha256sig0(rs1);
 }
 
@@ -21,10 +21,10 @@ unsigned long sha256sig0(unsigned long rs1) {
 // RV32ZKNH-NEXT:    [[RS1_ADDR:%.*]] = alloca i32, align 4
 // RV32ZKNH-NEXT:    store i32 [[RS1:%.*]], ptr [[RS1_ADDR]], align 4
 // RV32ZKNH-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RS1_ADDR]], align 4
-// RV32ZKNH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sha256sig1.i32(i32 [[TMP0]])
+// RV32ZKNH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sha256sig1(i32 [[TMP0]])
 // RV32ZKNH-NEXT:    ret i32 [[TMP1]]
 //
-unsigned long sha256sig1(unsigned long rs1) {
+uint32_t sha256sig1(uint32_t rs1) {
   return __builtin_riscv_sha256sig1(rs1);
 }
 
@@ -33,10 +33,10 @@ unsigned long sha256sig1(unsigned long rs1) {
 // RV32ZKNH-NEXT:    [[RS1_ADDR:%.*]] = alloca i32, align 4
 // RV32ZKNH-NEXT:    store i32 [[RS1:%.*]], ptr [[RS1_ADDR]], align 4
 // RV32ZKNH-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RS1_ADDR]], align 4
-// RV32ZKNH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sha256sum0.i32(i32 [[TMP0]])
+// RV32ZKNH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sha256sum0(i32 [[TMP0]])
 // RV32ZKNH-NEXT:    ret i32 [[TMP1]]
 //
-unsigned long sha256sum0(unsigned long rs1) {
+uint32_t sha256sum0(uint32_t rs1) {
   return __builtin_riscv_sha256sum0(rs1);
 }
 
@@ -45,10 +45,10 @@ unsigned long sha256sum0(unsigned long rs1) {
 // RV32ZKNH-NEXT:    [[RS1_ADDR:%.*]] = alloca i32, align 4
 // RV32ZKNH-NEXT:    store i32 [[RS1:%.*]], ptr [[RS1_ADDR]], align 4
 // RV32ZKNH-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RS1_ADDR]], align 4
-// RV32ZKNH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sha256sum1.i32(i32 [[TMP0]])
+// RV32ZKNH-NEXT:    [[TMP1:%.*]] = call i32 @llvm.riscv.sha256sum1(i32 [[TMP0]])
 // RV32ZKNH-NEXT:    ret i32 [[TMP1]]
 //
-unsigned long sha256sum1(unsigned long rs1) {
+uint32_t sha256sum1(uint32_t rs1) {
   return __builtin_riscv_sha256sum1(rs1);
 }
 
