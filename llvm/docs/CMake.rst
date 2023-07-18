@@ -680,7 +680,7 @@ enabled sub-projects. Nearly all of these variable names begin with
     $ D:\llvm-project> cmake ... -DLLVM_INTEGRATED_CRT_ALLOC=D:\git\rpmalloc
 
   This flag needs to be used along with the static CRT, ie. if building the
-  Release target, add -DLLVM_USE_CRT_RELEASE=MT.
+  Release target, add -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded.
 
 **LLVM_INSTALL_DOXYGEN_HTML_DIR**:STRING
   The path to install Doxygen-generated HTML documentation to. This path can
@@ -768,7 +768,8 @@ enabled sub-projects. Nearly all of these variable names begin with
 **LLVM_USE_CRT_{target}**:STRING
   On Windows, tells which version of the C runtime library (CRT) should be used.
   For example, -DLLVM_USE_CRT_RELEASE=MT would statically link the CRT into the
-  LLVM tools and library.
+  LLVM tools and library. This is deprecated; use ``CMAKE_MSVC_RUNTIME_LIBRARY``
+  instead.
 
 **LLVM_USE_INTEL_JITEVENTS**:BOOL
   Enable building support for Intel JIT Events API. Defaults to OFF.
