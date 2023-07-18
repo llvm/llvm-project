@@ -202,6 +202,11 @@ public:
 
   bool isXRaySupported() const override { return true; }
 
+  /// Returns true if the target has NEON and the function at runtime is known
+  /// to have NEON enabled (e.g. the function is known not to be in streaming-SVE
+  /// mode, which disables NEON instructions).
+  bool isNeonAvailable() const;
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0.
     if (!isStreamingSVEModeDisabled())
@@ -380,7 +385,7 @@ public:
   }
 
   bool useSVEForFixedLengthVectors() const {
-    if (forceStreamingCompatibleSVE())
+    if (!isNeonAvailable())
       return true;
 
     // Prefer NEON unless larger SVE registers are available.
@@ -391,10 +396,8 @@ public:
     if (!useSVEForFixedLengthVectors() || !VT.isFixedLengthVector())
       return false;
     return VT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock ||
-           forceStreamingCompatibleSVE();
+           !isNeonAvailable();
   }
-
-  bool forceStreamingCompatibleSVE() const;
 
   unsigned getVScaleForTuning() const { return VScaleForTuning; }
 

@@ -64,9 +64,11 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<bool>
-    ForceStreamingCompatibleSVE("force-streaming-compatible-sve",
-                                cl::init(false), cl::Hidden);
+static cl::opt<bool> ForceStreamingCompatibleSVE(
+    "force-streaming-compatible-sve",
+    cl::desc(
+        "Force the use of streaming-compatible SVE code for all functions"),
+    cl::Hidden);
 
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
@@ -473,10 +475,9 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
 
-bool AArch64Subtarget::forceStreamingCompatibleSVE() const {
-  if (ForceStreamingCompatibleSVE) {
-    assert(hasSVEorSME() && "Expected SVE to be available");
-    return hasSVEorSME();
-  }
-  return false;
+bool AArch64Subtarget::isNeonAvailable() const {
+  if (!hasNEON())
+    return false;
+
+  return !ForceStreamingCompatibleSVE;
 }
