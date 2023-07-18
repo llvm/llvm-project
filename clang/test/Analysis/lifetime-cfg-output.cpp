@@ -529,13 +529,15 @@ void test_do_jumps() {
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
+// CHECK-NEXT:    1: b
+// CHECK-NEXT:    2: [B2.1].p
+// CHECK-NEXT:    3: [B4.4] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B3
 // CHECK-NEXT:    Succs (1): B4
 // CHECK:       [B3]
 // CHECK-NEXT:    1:  (CXXConstructExpr, A)
 // CHECK-NEXT:    2: A c;
 // CHECK-NEXT:    3: [B3.2] (Lifetime ends)
-// CHECK-NEXT:    4: [B4.4] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B4
 // CHECK-NEXT:    Succs (1): B2
 // CHECK:       [B4]
@@ -549,7 +551,7 @@ void test_do_jumps() {
 // CHECK-NEXT:    8: [B4.6]
 // CHECK-NEXT:    9: [B4.8] (ImplicitCastExpr, UserDefinedConversion, int)
 // CHECK-NEXT:   10: [B4.9] (ImplicitCastExpr, IntegralToBoolean, _Bool)
-// CHECK-NEXT:    T: for (...; [B4.10]; )
+// CHECK-NEXT:    T: for (...; [B4.10]; ...)
 // CHECK-NEXT:    Preds (2): B2 B5
 // CHECK-NEXT:    Succs (2): B3 B1
 // CHECK:       [B5]
@@ -560,7 +562,7 @@ void test_do_jumps() {
 // CHECK:       [B0 (EXIT)]
 // CHECK-NEXT:    Preds (1): B1
 void test_for_implicit_scope() {
-  for (A a; A b = a;)
+  for (A a; A b = a; b.p)
     A c;
 }
 
@@ -576,6 +578,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:    Preds (2): B8 B10
 // CHECK-NEXT:    Succs (1): B0
 // CHECK:       [B2]
+// CHECK-NEXT:    1: [B10.4] (Lifetime ends)
 // CHECK-NEXT:    Preds (2): B3 B6
 // CHECK-NEXT:    Succs (1): B10
 // CHECK:       [B3]
@@ -583,7 +586,6 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:    2: A e;
 // CHECK-NEXT:    3: [B3.2] (Lifetime ends)
 // CHECK-NEXT:    4: [B9.2] (Lifetime ends)
-// CHECK-NEXT:    5: [B10.4] (Lifetime ends)
 // CHECK-NEXT:    Preds (1): B5
 // CHECK-NEXT:    Succs (1): B2
 // CHECK:       [B4]
@@ -649,7 +651,7 @@ void test_for_implicit_scope() {
 // CHECK-NEXT:    Preds (2): B1 B4
 void test_for_jumps() {
   A a;
-  for (A b; A c = b;) {
+  for (A b; A c = b; ) {
     A d;
     if (UV)
       break;
@@ -660,6 +662,66 @@ void test_for_jumps() {
     A e;
   }
   A f;
+}
+
+// CHECK:      [B9 (ENTRY)]
+// CHECK-NEXT:   Succs (1): B8
+// CHECK:      [B1]
+// CHECK-NEXT:   1: [B7.4] (Lifetime ends)
+// CHECK-NEXT:   2: [B8.2] (Lifetime ends)
+// CHECK-NEXT:   Preds (1): B7
+// CHECK-NEXT:   Succs (1): B0
+// CHECK:      [B2]
+// CHECK-NEXT:   1: [B5.4] ? [B3.3] : [B4.2]
+// CHECK-NEXT:   2: [B7.4] (Lifetime ends)
+// CHECK-NEXT:   Preds (2): B3 B4
+// CHECK-NEXT:   Succs (1): B7
+// CHECK:      [B3]
+// CHECK-NEXT:   1: b
+// CHECK-NEXT:   2: [B3.1].p
+// CHECK-NEXT:   3: [B3.2]++
+// CHECK-NEXT:   Preds (1): B5
+// CHECK-NEXT:   Succs (1): B2
+// CHECK:      [B4]
+// CHECK-NEXT:   1: 0
+// CHECK-NEXT:   2: [B4.1] (ImplicitCastExpr, NullToPointer, int *)
+// CHECK-NEXT:   Preds (1): B5
+// CHECK-NEXT:   Succs (1): B2
+// CHECK:      [B5]
+// CHECK-NEXT:   1: b
+// CHECK-NEXT:   2: [B5.1].p
+// CHECK-NEXT:   3: [B5.2] (ImplicitCastExpr, LValueToRValue, int *)
+// CHECK-NEXT:   4: [B5.3] (ImplicitCastExpr, PointerToBoolean, _Bool)
+// CHECK-NEXT:   T: [B5.4] ? ... : ...
+// CHECK-NEXT:   Preds (1): B6
+// CHECK-NEXT:   Succs (2): B3 B4
+// CHECK:      [B6]
+// CHECK-NEXT:   1: 0
+// CHECK-NEXT:   2: (void)[B6.1] (CStyleCastExpr, ToVoid, void)
+// CHECK-NEXT:   Preds (1): B7
+// CHECK-NEXT:   Succs (1): B5
+// CHECK:      [B7]
+// CHECK-NEXT:   1: a
+// CHECK-NEXT:   2: [B7.1] (ImplicitCastExpr, NoOp, const A)
+// CHECK-NEXT:   3: [B7.2] (CXXConstructExpr, A)
+// CHECK-NEXT:   4: A b = a;
+// CHECK-NEXT:   5: b
+// CHECK-NEXT:   6: [B7.5] (ImplicitCastExpr, NoOp, const class A)
+// CHECK-NEXT:   7: [B7.6].operator int
+// CHECK-NEXT:   8: [B7.6]
+// CHECK-NEXT:   9: [B7.8] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK-NEXT:  10: [B7.9] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-NEXT:   T: for (...; [B7.10]; ...)
+// CHECK-NEXT:   Preds (2): B2 B8
+// CHECK-NEXT:   Succs (2): B6 B1
+// CHECK:      [B8]
+// CHECK-NEXT:   1:  (CXXConstructExpr, A)
+// CHECK-NEXT:   2: A a;
+// CHECK-NEXT:   Preds (1): B9
+// CHECK-NEXT:   Succs (1): B7
+void test_for_inc_conditional() {
+  for (A a; A b = a; b.p ? b.p++ : 0)
+    (void)0;
 }
 
 // CHECK:       [B2 (ENTRY)]
