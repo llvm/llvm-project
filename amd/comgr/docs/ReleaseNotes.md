@@ -56,6 +56,9 @@ linking action caused errors when AMD\_COMGR\_SAVE\_TEMPS was enabled, or when
 linking bitcode bundles.
 - Updated to use lld::lldMain() introduced in D110949 instead of the older
 lld::elf::link in Comgr's linkWithLLD()
+- Added -x assembler option to assembly compilation. Before, if an assembly file
+did not end with a .s file extension, it was not handled properly by the Comgr
+ASSEMBLE\_SOURCE\_TO\_RELOCATABLE action.
 
 
 New APIs
