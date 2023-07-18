@@ -127,10 +127,8 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
                                            const ArgList &Args,
                                            std::vector<StringRef> &Features) {
   StringRef ArchName;
-  llvm::LoongArch::ArchKind ArchKind = llvm::LoongArch::ArchKind::AK_INVALID;
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
-    ArchKind = llvm::LoongArch::parseArch(A->getValue());
-    if (ArchKind == llvm::LoongArch::ArchKind::AK_INVALID) {
+    if (!llvm::LoongArch::isValidArchName(A->getValue())) {
       D.Diag(clang::diag::err_drv_invalid_arch_name) << A->getAsString(Args);
       return;
     }
