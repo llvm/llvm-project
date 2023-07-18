@@ -386,13 +386,6 @@ Improvements to Clang's diagnostics
   on overload resolution, when the actual reason for the failure is loss of other qualifiers.
 - Clang's notes about unconvertible types in overload resolution failure now covers
   the source range of parameter declaration of the candidate function declaration.
-- Added a new diagnostic warning group
-  ``-Wdeprecated-redundant-constexpr-static-def``, under the existing
-  ``-Wdeprecated`` group. This controls warnings about out-of-line definitions
-  of 'static constexpr' data members that are unnecessary from C++17 onwards.
-
- Bug Fixes in This Version
- -------------------------
 
   *Example Code*:
 
@@ -422,6 +415,7 @@ Improvements to Clang's diagnostics
     source:1:6: note: candidate function not viable: no known conversion from 'const char[4]' to 'int' for 2nd argument
     void func(int aa, int bb);
          ^            ~~~~~~
+
 - ``-Wformat`` cast fix-its will now suggest ``static_cast`` instead of C-style casts
   for C++ code.
 - ``-Wformat`` will no longer suggest a no-op fix-it for fixing scoped enum format
@@ -431,6 +425,10 @@ Improvements to Clang's diagnostics
 Bug Fixes in This Version
 -------------------------
 
+- Added a new diagnostic warning group
+  ``-Wdeprecated-redundant-constexpr-static-def``, under the existing
+  ``-Wdeprecated`` group. This controls warnings about out-of-line definitions
+  of 'static constexpr' data members that are unnecessary from C++17 onwards.
 - Fix segfault while running clang-rename on a non existing file.
   (`#36471 <https://github.com/llvm/llvm-project/issues/36471>`_)
 - Fix crash when diagnosing incorrect usage of ``_Nullable`` involving alias
