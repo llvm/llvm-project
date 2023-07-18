@@ -26,6 +26,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdlib> // ::getenv
 
 using namespace clang::driver;
@@ -85,9 +86,15 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str,
   if (ArchKind == llvm::ARM::ArchKind::ARMV6M ||
       ArchKind == llvm::ARM::ArchKind::ARMV7M ||
       ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
-    // Don't reject -mios-version-min= if we have an iOS triple.
-    if (T.isiOS())
+    // Don't reject these -version-min= if we have the appropriate triple.
+    if (T.getOS() == llvm::Triple::IOS)
       for (Arg *A : Args.filtered(options::OPT_mios_version_min_EQ))
+        A->ignoreTargetSpecific();
+    if (T.getOS() == llvm::Triple::WatchOS)
+      for (Arg *A : Args.filtered(options::OPT_mwatchos_version_min_EQ))
+        A->ignoreTargetSpecific();
+    if (T.getOS() == llvm::Triple::TvOS)
+      for (Arg *A : Args.filtered(options::OPT_mtvos_version_min_EQ))
         A->ignoreTargetSpecific();
 
     T.setOS(llvm::Triple::UnknownOS);
