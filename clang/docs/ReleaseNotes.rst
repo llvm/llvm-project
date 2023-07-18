@@ -267,6 +267,10 @@ Modified Compiler Flags
   directory (``/tmp`` on \*NIX systems, if none of the environment variables
   TMPDIR, TMP, and TEMP are specified).
 
+- ``-ffat-lto-objects`` can now be used to emit object files with both object
+  code and LLVM bitcode. Previously this flag was ignored for GCC compatibility.
+  (`See patch <https://reviews.llvm.org/D146777>`_).
+
 Removed Compiler Flags
 -------------------------
 - The deprecated flag `-fmodules-ts` is removed. Please use ``-std=c++20``
