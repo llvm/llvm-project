@@ -36,6 +36,7 @@ body: |
     $vgpr0 = COPY %1(s32)
 ...
 
+# FIXME: Mode fields are redundant and not considered.
 ---
 name: test_denormal_fconstant
 tracksRegLiveness: true
@@ -49,8 +50,7 @@ body: |
 
     ; CHECK-LABEL: name: test_denormal_fconstant
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.618950e-319
-    ; CHECK-NEXT: [[FCANONICALIZE:%[0-9]+]]:_(s64) = G_FCANONICALIZE [[C]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FCANONICALIZE]](s64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[C]](s64)
     %0:_(s64) = G_FCONSTANT double 0x0000000000008000
     %1:_(s64) = G_FCANONICALIZE %0
     $vgpr0_vgpr1 = COPY %1(s64)
