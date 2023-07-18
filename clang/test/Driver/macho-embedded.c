@@ -7,6 +7,7 @@
 // RUN: %clang -arch armv7em -target thumbv7-apple-darwin -### -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-MACHO-EMBEDDED
 
 // RUN: %clang -arch armv7m --target=thumbv7-apple-ios -mios-version-min=5 -fdriver-only -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-MACHO-EMBEDDED-DIAG
+// RUN: %clang -arch armv7m --target=thumbv7-apple-ios -mios-version-min=5 -mios-version-min=5 -fdriver-only -c %s 2>&1 | FileCheck %s --check-prefix=CHECK-MACHO-EMBEDDED-DIAG
 
 // CHECK-IOS: "-triple" "thumbv7" "thumbv7-apple-ios
 
