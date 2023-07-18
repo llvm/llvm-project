@@ -612,18 +612,15 @@ static void checkAsyncContextProjectFunction(const Instruction *I,
                                              Function *F) {
   auto *FunTy = cast<FunctionType>(F->getValueType());
   Type *Int8Ty = Type::getInt8Ty(F->getContext());
-  auto *RetPtrTy = dyn_cast<PointerType>(FunTy->getReturnType());
-  if (!RetPtrTy || !RetPtrTy->isOpaqueOrPointeeTypeMatches(Int8Ty))
+  if (!FunTy->getReturnType()->isPointerTy())
     fail(I,
          "llvm.coro.suspend.async resume function projection function must "
-         "return an i8* type",
+         "return a ptr type",
          F);
-  if (FunTy->getNumParams() != 1 || !FunTy->getParamType(0)->isPointerTy() ||
-      !cast<PointerType>(FunTy->getParamType(0))
-           ->isOpaqueOrPointeeTypeMatches(Int8Ty))
+  if (FunTy->getNumParams() != 1 || !FunTy->getParamType(0)->isPointerTy())
     fail(I,
          "llvm.coro.suspend.async resume function projection function must "
-         "take one i8* type as parameter",
+         "take one ptr type as parameter",
          F);
 }
 
