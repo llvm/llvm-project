@@ -99,18 +99,25 @@ def simm5_plus1_nonzero : ImmLeaf<XLenVT,
 //===----------------------------------------------------------------------===//
 
 // Common class of scheduling definitions.
-// `ReadVMask` will be appended if instruction is masked.
+// `ReadVMergeOp` will be prepended to reads if instruction is masked.
+// `ReadVMask` will be appended to reads if instruction is masked.
 // Operands:
 //   `writes`       SchedWrites that are listed for each explicit def operand
 //                  in order.
 //   `reads`        SchedReads that are listed for each explicit use operand.
 //   `forceMasked`  Forced to be masked (e.g. Add-with-Carry Instructions).
 class SchedCommon<list<SchedWrite> writes, list<SchedRead> reads,
-                  bit forceMasked = 0>: Sched<[]> {
+                  string mx = "WorstCase", int sew = 0, bit forceMasked = 0>
+    : Sched<[]> {
   defvar isMasked = !ne(!find(NAME, "_MASK"), -1);
-  defvar needReadVMask = !or(forceMasked, isMasked);
-  let SchedRW = !listconcat(writes, reads,
-                            !if(needReadVMask, [ReadVMask], []));
+  defvar isMaskedOrForceMasked = !or(forceMasked, isMasked);
+  defvar mergeOp = !if(!or(!eq(mx, "WorstCase"), !eq(sew, 0)),
+                            !cast<SchedRead>("ReadVMergeOp_" # mx),
+                            !cast<SchedRead>("ReadVMergeOp_" # mx # "_E" #sew));
+  defvar allReads = !if(isMaskedOrForceMasked,
+                        !listconcat([mergeOp], reads, [ReadVMask]),
+                        reads);
+  let SchedRW = !listconcat(writes, allReads);
 }
 
 // Common class of scheduling definitions for n-ary instructions.
@@ -124,7 +131,7 @@ class SchedNary<string write, list<string> reads,
                 !cast<SchedRead>(
                   !if(sew, read # "_" # mx # "_E" # sew,
                            read # "_" # mx))),
-              forceMasked>;
+              mx, sew, forceMasked>;
 
 // Classes with postfix "MC" are only used in MC layer.
 // For these classes, we assume that they are with the worst case costs and
@@ -159,7 +166,7 @@ class SchedTernary<string write, string read0, string read1, string read2,
 // For reduction instructions.
 class SchedReduction<string write, string read, string mx, int sew>:
   SchedCommon<[!cast<SchedWrite>(write # "_" # mx # "_E" # sew)],
-              !listsplat(!cast<SchedRead>(read), 3)>;
+              !listsplat(!cast<SchedRead>(read), 3), mx, sew>;
 class SchedReductionMC<string write, string readV, string readV0>:
   SchedCommon<[!cast<SchedWrite>(write # "_WorstCase")],
               [!cast<SchedRead>(readV), !cast<SchedRead>(readV0)],
@@ -167,82 +174,83 @@ class SchedReductionMC<string write, string readV, string readV0>:
 
 // Whole Vector Register Move
 class VMVRSched<int n> : SchedCommon<
-  [!cast<SchedWrite>("WriteVMov" #n #"V")],
-  [!cast<SchedRead>("ReadVMov" #n #"V")]
+  [!cast<SchedWrite>("WriteVMov" # n # "V")],
+  [!cast<SchedRead>("ReadVMov" # n # "V")]
 >;
 
 // Vector Unit-Stride Loads and Stores
 class VLESched<string lmul, bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVLDE_" #lmul)],
-  [ReadVLDX], forceMasked
+  [!cast<SchedWrite>("WriteVLDE_" # lmul)],
+  [ReadVLDX], mx=lmul, forceMasked=forceMasked
 >;
 class VLESchedMC : VLESched<"WorstCase", forceMasked=1>;
 
 class VSESched<string lmul, bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVSTE_" #lmul)],
-  [!cast<SchedRead>("ReadVSTEV_" #lmul), ReadVSTX], forceMasked
+  [!cast<SchedWrite>("WriteVSTE_" # lmul)],
+  [!cast<SchedRead>("ReadVSTEV_" # lmul), ReadVSTX], mx=lmul,
+  forceMasked=forceMasked
 >;
 class VSESchedMC : VSESched<"WorstCase", forceMasked=1>;
 
 // Vector Strided Loads and Stores
 class VLSSched<int eew, string emul, bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVLDS" #eew #"_" #emul)],
-  [ReadVLDX, ReadVLDSX], forceMasked
+  [!cast<SchedWrite>("WriteVLDS" # eew # "_" # emul)],
+  [ReadVLDX, ReadVLDSX], emul, eew, forceMasked
 >;
 class VLSSchedMC<int eew> : VLSSched<eew, "WorstCase", forceMasked=1>;
 
 class VSSSched<int eew, string emul, bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVSTS" #eew #"_" #emul)],
-  [!cast<SchedRead>("ReadVSTS" #eew #"V_" #emul), ReadVSTX, ReadVSTSX],
-  forceMasked
+  [!cast<SchedWrite>("WriteVSTS" # eew # "_" # emul)],
+  [!cast<SchedRead>("ReadVSTS" # eew # "V_" # emul), ReadVSTX, ReadVSTSX],
+  emul, eew, forceMasked
 >;
 class VSSSchedMC<int eew> : VSSSched<eew, "WorstCase", forceMasked=1>;
 
 // Vector Indexed Loads and Stores
 class VLXSched<int dataEEW, string isOrdered, string dataEMUL, string idxEMUL,
                bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVLD" #isOrdered #"X" #dataEEW #"_" #dataEMUL)],
-  [ReadVLDX, !cast<SchedRead>("ReadVLD" #isOrdered #"XV_" #idxEMUL)],
-  forceMasked
+  [!cast<SchedWrite>("WriteVLD" # isOrdered # "X" # dataEEW # "_" # dataEMUL)],
+  [ReadVLDX, !cast<SchedRead>("ReadVLD" # isOrdered # "XV_" # idxEMUL)],
+  dataEMUL, dataEEW, forceMasked
 >;
 class VLXSchedMC<int dataEEW, string isOrdered>:
   VLXSched<dataEEW, isOrdered, "WorstCase", "WorstCase", forceMasked=1>;
 
 class VSXSched<int dataEEW, string isOrdered, string dataEMUL, string idxEMUL,
                bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVST" #isOrdered #"X" #dataEEW #"_" #dataEMUL)],
-  [!cast<SchedRead>("ReadVST" #isOrdered #"X" #dataEEW #"_" #dataEMUL),
-   ReadVSTX, !cast<SchedRead>("ReadVST" #isOrdered #"XV_" #idxEMUL)],
-  forceMasked
+  [!cast<SchedWrite>("WriteVST" # isOrdered # "X" # dataEEW # "_" # dataEMUL)],
+  [!cast<SchedRead>("ReadVST" # isOrdered #"X" # dataEEW # "_" # dataEMUL),
+   ReadVSTX, !cast<SchedRead>("ReadVST" # isOrdered # "XV_" # idxEMUL)],
+  dataEMUL, dataEEW, forceMasked
 >;
 class VSXSchedMC<int dataEEW, string isOrdered>:
   VSXSched<dataEEW, isOrdered, "WorstCase", "WorstCase", forceMasked=1>;
 
 // Unit-stride Fault-Only-First Loads
 class VLFSched<string lmul, bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVLDFF_" #lmul)],
-  [ReadVLDX], forceMasked
+  [!cast<SchedWrite>("WriteVLDFF_" # lmul)],
+  [ReadVLDX], mx=lmul, forceMasked=forceMasked
 >;
 class VLFSchedMC: VLFSched<"WorstCase", forceMasked=1>;
 
 // Unit-Stride Segment Loads and Stores
 class VLSEGSched<int nf, int eew, string emul, bit forceMasked = 0> : SchedCommon<
   [!cast<SchedWrite>("WriteVLSEG" #nf #"e" #eew #"_" #emul)],
-  [ReadVLDX], forceMasked
+  [ReadVLDX], emul, eew, forceMasked
 >;
 class VLSEGSchedMC<int nf, int eew> : VLSEGSched<nf, eew, "WorstCase",
                                                  forceMasked=1>;
 
 class VSSEGSched<int nf, int eew, string emul, bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVSSEG" #nf #"e" #eew #"_" #emul)],
-  [!cast<SchedRead>("ReadVSTEV_" #emul), ReadVSTX], forceMasked
+  [!cast<SchedWrite>("WriteVSSEG" # nf # "e" # eew # "_" # emul)],
+  [!cast<SchedRead>("ReadVSTEV_" #emul), ReadVSTX], emul, eew, forceMasked
 >;
 class VSSEGSchedMC<int nf, int eew> : VSSEGSched<nf, eew, "WorstCase",
                                                  forceMasked=1>;
 
 class VLSEGFFSched<int nf, int eew, string emul, bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVLSEGFF" #nf #"e" #eew #"_" #emul)],
-  [ReadVLDX], forceMasked
+  [!cast<SchedWrite>("WriteVLSEGFF" # nf # "e" # eew # "_" # emul)],
+  [ReadVLDX], emul, eew, forceMasked
 >;
 class VLSEGFFSchedMC<int nf, int eew> : VLSEGFFSched<nf, eew, "WorstCase",
                                                      forceMasked=1>;
@@ -250,7 +258,7 @@ class VLSEGFFSchedMC<int nf, int eew> : VLSEGFFSched<nf, eew, "WorstCase",
 // Strided Segment Loads and Stores
 class VLSSEGSched<int nf, int eew, string emul, bit forceMasked = 0> : SchedCommon<
   [!cast<SchedWrite>("WriteVLSSEG" #nf #"e" #eew #"_" #emul)],
-  [ReadVLDX, ReadVLDSX], forceMasked
+  [ReadVLDX, ReadVLDSX], emul, eew, forceMasked
 >;
 class VLSSEGSchedMC<int nf, int eew> : VLSSEGSched<nf, eew, "WorstCase",
                                                    forceMasked=1>;
@@ -258,7 +266,7 @@ class VLSSEGSchedMC<int nf, int eew> : VLSSEGSched<nf, eew, "WorstCase",
 class VSSSEGSched<int nf, int eew, string emul, bit forceMasked = 0> : SchedCommon<
   [!cast<SchedWrite>("WriteVSSSEG" #nf #"e" #eew #"_" #emul)],
   [!cast<SchedRead>("ReadVSTS" #eew #"V_" #emul),
-   ReadVSTX, ReadVSTSX], forceMasked
+   ReadVSTX, ReadVSTSX], emul, eew, forceMasked
 >;
 class VSSSEGSchedMC<int nf, int eew> : VSSSEGSched<nf, eew, "WorstCase",
                                                    forceMasked=1>;
@@ -268,17 +276,18 @@ class VLXSEGSched<int nf, int eew, string isOrdered, string emul,
                   bit forceMasked = 0> : SchedCommon<
   [!cast<SchedWrite>("WriteVL" #isOrdered #"XSEG" #nf #"e" #eew #"_" #emul)],
   [ReadVLDX, !cast<SchedRead>("ReadVLD" #isOrdered #"XV_" #emul)],
-  forceMasked
+  emul, eew, forceMasked
 >;
 class VLXSEGSchedMC<int nf, int eew, string isOrdered>:
   VLXSEGSched<nf, eew, isOrdered, "WorstCase", forceMasked=1>;
 
+// Passes sew=0 instead of eew=0 since this pseudo does not follow MX_E form.
 class VSXSEGSched<int nf, int eew, string isOrdered, string emul,
                   bit forceMasked = 0> : SchedCommon<
   [!cast<SchedWrite>("WriteVS" #isOrdered #"XSEG" #nf #"e" #eew #"_" #emul)],
   [!cast<SchedRead>("ReadVST" #isOrdered #"X" #eew #"_" #emul),
    ReadVSTX, !cast<SchedRead>("ReadVST" #isOrdered #"XV_" #emul)],
-  forceMasked
+  emul, sew=0, forceMasked=forceMasked
 >;
 class VSXSEGSchedMC<int nf, int eew, string isOrdered>:
   VSXSEGSched<nf, eew, isOrdered, "WorstCase", forceMasked=1>;
