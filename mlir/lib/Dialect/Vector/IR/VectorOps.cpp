@@ -130,15 +130,6 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   return false;
 }
 
-/// Return true if the last dimension of the MemRefType has unit stride. Also
-/// return true for memrefs with no strides.
-bool mlir::vector::isLastMemrefDimUnitStride(MemRefType type) {
-  int64_t offset;
-  SmallVector<int64_t> strides;
-  auto successStrides = getStridesAndOffset(type, strides, offset);
-  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
-}
-
 AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
                                                     VectorType vectorType) {
   int64_t elementVectorRank = 0;

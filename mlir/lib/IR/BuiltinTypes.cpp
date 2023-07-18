@@ -956,10 +956,16 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
   return makeCanonicalStridedLayoutExpr(sizes, exprs, context);
 }
 
-/// Return true if the layout for `t` is compatible with strided semantics.
 bool mlir::isStrided(MemRefType t) {
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   auto res = getStridesAndOffset(t, strides, offset);
   return succeeded(res);
+}
+
+bool mlir::isLastMemrefDimUnitStride(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t> strides;
+  auto successStrides = getStridesAndOffset(type, strides, offset);
+  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
 }
