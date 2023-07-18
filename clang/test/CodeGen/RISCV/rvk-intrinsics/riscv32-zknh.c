@@ -64,7 +64,7 @@ uint32_t sha256sum1(uint32_t rs1) {
 // RV32ZKNH-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t sha512sig0h(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_sha512sig0h_32(rs1, rs2);
+  return __builtin_riscv_sha512sig0h(rs1, rs2);
 }
 
 // RV32ZKNH-LABEL: @sha512sig0l(
@@ -79,7 +79,7 @@ uint32_t sha512sig0h(uint32_t rs1, uint32_t rs2) {
 // RV32ZKNH-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t sha512sig0l(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_sha512sig0l_32(rs1, rs2);
+  return __builtin_riscv_sha512sig0l(rs1, rs2);
 }
 
 // RV32ZKNH-LABEL: @sha512sig1h(
@@ -94,7 +94,7 @@ uint32_t sha512sig0l(uint32_t rs1, uint32_t rs2) {
 // RV32ZKNH-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t sha512sig1h(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_sha512sig1h_32(rs1, rs2);
+  return __builtin_riscv_sha512sig1h(rs1, rs2);
 }
 
 // RV32ZKNH-LABEL: @sha512sig1l(
@@ -109,7 +109,7 @@ uint32_t sha512sig1h(uint32_t rs1, uint32_t rs2) {
 // RV32ZKNH-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t sha512sig1l(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_sha512sig1l_32(rs1, rs2);
+  return __builtin_riscv_sha512sig1l(rs1, rs2);
 }
 
 // RV32ZKNH-LABEL: @sha512sum0r(
@@ -124,7 +124,7 @@ uint32_t sha512sig1l(uint32_t rs1, uint32_t rs2) {
 // RV32ZKNH-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t sha512sum0r(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_sha512sum0r_32(rs1, rs2);
+  return __builtin_riscv_sha512sum0r(rs1, rs2);
 }
 
 // RV32ZKNH-LABEL: @sha512sum1r(
@@ -139,5 +139,5 @@ uint32_t sha512sum0r(uint32_t rs1, uint32_t rs2) {
 // RV32ZKNH-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t sha512sum1r(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_sha512sum1r_32(rs1, rs2);
+  return __builtin_riscv_sha512sum1r(rs1, rs2);
 }
