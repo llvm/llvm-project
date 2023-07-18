@@ -1767,37 +1767,37 @@ class ScalarCryptoGprIntrinsic64
 
 // Zknd
 def int_riscv_aes32dsi  : ScalarCryptoByteSelect32,
-                          ClangBuiltin<"__builtin_riscv_aes32dsi_32">;
+                          ClangBuiltin<"__builtin_riscv_aes32dsi">;
 def int_riscv_aes32dsmi : ScalarCryptoByteSelect32,
-                          ClangBuiltin<"__builtin_riscv_aes32dsmi_32">;
+                          ClangBuiltin<"__builtin_riscv_aes32dsmi">;
 
 def int_riscv_aes64ds   : ScalarCryptoGprGprIntrinsic64,
-                          ClangBuiltin<"__builtin_riscv_aes64ds_64">;
+                          ClangBuiltin<"__builtin_riscv_aes64ds">;
 def int_riscv_aes64dsm  : ScalarCryptoGprGprIntrinsic64,
-                          ClangBuiltin<"__builtin_riscv_aes64dsm_64">;
+                          ClangBuiltin<"__builtin_riscv_aes64dsm">;
 
 def int_riscv_aes64im   : ScalarCryptoGprIntrinsic64,
-                          ClangBuiltin<"__builtin_riscv_aes64im_64">;
+                          ClangBuiltin<"__builtin_riscv_aes64im">;
 
 // Zkne
 def int_riscv_aes32esi  : ScalarCryptoByteSelect32,
-                          ClangBuiltin<"__builtin_riscv_aes32esi_32">;
+                          ClangBuiltin<"__builtin_riscv_aes32esi">;
 def int_riscv_aes32esmi : ScalarCryptoByteSelect32,
-                          ClangBuiltin<"__builtin_riscv_aes32esmi_32">;
+                          ClangBuiltin<"__builtin_riscv_aes32esmi">;
 
 def int_riscv_aes64es   : ScalarCryptoGprGprIntrinsic64,
-                          ClangBuiltin<"__builtin_riscv_aes64es_64">;
+                          ClangBuiltin<"__builtin_riscv_aes64es">;
 def int_riscv_aes64esm  : ScalarCryptoGprGprIntrinsic64,
-                          ClangBuiltin<"__builtin_riscv_aes64esm_64">;
+                          ClangBuiltin<"__builtin_riscv_aes64esm">;
 
 // Zknd & Zkne
 def int_riscv_aes64ks2  : ScalarCryptoGprGprIntrinsic64,
-                          ClangBuiltin<"__builtin_riscv_aes64ks2_64">;
+                          ClangBuiltin<"__builtin_riscv_aes64ks2">;
 def int_riscv_aes64ks1i : DefaultAttrsIntrinsic<[llvm_i64_ty],
                                                 [llvm_i64_ty, llvm_i32_ty],
                                                 [IntrNoMem, IntrSpeculatable,
                                                  ImmArg<ArgIndex<1>>]>,
-                          ClangBuiltin<"__builtin_riscv_aes64ks1i_64">;
+                          ClangBuiltin<"__builtin_riscv_aes64ks1i">;
 
 // Zknh
 def int_riscv_sha256sig0 : ScalarCryptoGprIntrinsic32;
@@ -1806,26 +1806,26 @@ def int_riscv_sha256sum0 : ScalarCryptoGprIntrinsic32;
 def int_riscv_sha256sum1 : ScalarCryptoGprIntrinsic32;
 
 def int_riscv_sha512sig0l : ScalarCryptoGprGprIntrinsic32,
-                            ClangBuiltin<"__builtin_riscv_sha512sig0l_32">;
+                            ClangBuiltin<"__builtin_riscv_sha512sig0l">;
 def int_riscv_sha512sig0h : ScalarCryptoGprGprIntrinsic32,
-                            ClangBuiltin<"__builtin_riscv_sha512sig0h_32">;
+                            ClangBuiltin<"__builtin_riscv_sha512sig0h">;
 def int_riscv_sha512sig1l : ScalarCryptoGprGprIntrinsic32,
-                            ClangBuiltin<"__builtin_riscv_sha512sig1l_32">;
+                            ClangBuiltin<"__builtin_riscv_sha512sig1l">;
 def int_riscv_sha512sig1h : ScalarCryptoGprGprIntrinsic32,
-                            ClangBuiltin<"__builtin_riscv_sha512sig1h_32">;
+                            ClangBuiltin<"__builtin_riscv_sha512sig1h">;
 def int_riscv_sha512sum0r : ScalarCryptoGprGprIntrinsic32,
-                            ClangBuiltin<"__builtin_riscv_sha512sum0r_32">;
+                            ClangBuiltin<"__builtin_riscv_sha512sum0r">;
 def int_riscv_sha512sum1r : ScalarCryptoGprGprIntrinsic32,
-                            ClangBuiltin<"__builtin_riscv_sha512sum1r_32">;
+                            ClangBuiltin<"__builtin_riscv_sha512sum1r">;
 
 def int_riscv_sha512sig0 : ScalarCryptoGprIntrinsic64,
-                           ClangBuiltin<"__builtin_riscv_sha512sig0_64">;
+                           ClangBuiltin<"__builtin_riscv_sha512sig0">;
 def int_riscv_sha512sig1 : ScalarCryptoGprIntrinsic64,
-                           ClangBuiltin<"__builtin_riscv_sha512sig1_64">;
+                           ClangBuiltin<"__builtin_riscv_sha512sig1">;
 def int_riscv_sha512sum0 : ScalarCryptoGprIntrinsic64,
-                           ClangBuiltin<"__builtin_riscv_sha512sum0_64">;
+                           ClangBuiltin<"__builtin_riscv_sha512sum0">;
 def int_riscv_sha512sum1 : ScalarCryptoGprIntrinsic64,
-                           ClangBuiltin<"__builtin_riscv_sha512sum1_64">;
+                           ClangBuiltin<"__builtin_riscv_sha512sum1">;
 
 // Zksed
 def int_riscv_sm4ks      : ScalarCryptoByteSelect32;
