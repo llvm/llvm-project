@@ -310,6 +310,7 @@ bool CodeGenAction::beginSourceFileAction() {
             mlirModule->getOperation()))
       isDevice = offloadMod.getIsTargetDevice();
 
+    pm.addPass(fir::createOMPMarkDeclareTargetPass());
     if (isDevice)
       pm.addPass(fir::createOMPEarlyOutliningPass());
     pm.addPass(fir::createOMPFunctionFilteringPass());

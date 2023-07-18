@@ -308,6 +308,12 @@ def OMPEarlyOutliningPass
     the optimizer to perform transforms across target region boundaries.
   }];
   let constructor = "::fir::createOMPEarlyOutliningPass()";
+}
+
+def OMPMarkDeclareTargetPass
+    : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
+  let summary = "Marks all functions called by an OpenMP declare target function as declare target";
+  let constructor = "::fir::createOMPMarkDeclareTargetPass()";
   let dependentDialects = ["mlir::omp::OpenMPDialect"];
 }
 
