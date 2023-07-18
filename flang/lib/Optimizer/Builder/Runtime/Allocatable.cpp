@@ -40,3 +40,17 @@ mlir::Value fir::runtime::genMoveAlloc(fir::FirOpBuilder &builder,
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
+
+void fir::runtime::genAllocatableApplyMold(fir::FirOpBuilder &builder,
+                                           mlir::Location loc, mlir::Value desc,
+                                           mlir::Value mold, int rank) {
+  mlir::func::FuncOp func{
+      fir::runtime::getRuntimeFunc<mkRTKey(AllocatableApplyMold)>(loc,
+                                                                  builder)};
+  mlir::FunctionType fTy = func.getFunctionType();
+  mlir::Value rankVal =
+      builder.createIntegerConstant(loc, fTy.getInput(2), rank);
+  llvm::SmallVector<mlir::Value> args{
+      fir::runtime::createArguments(builder, loc, fTy, desc, mold, rankVal)};
+  builder.create<fir::CallOp>(loc, func, args);
+}

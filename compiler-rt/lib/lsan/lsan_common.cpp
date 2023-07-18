@@ -260,9 +260,14 @@ static inline bool MaybeUserPointer(uptr p) {
   if (p < kMinAddress)
     return false;
 #  if defined(__x86_64__)
-  // TODO: add logic similar to ARM when Intel LAM is available.
-  // Accept only canonical form user-space addresses.
-  return ((p >> 47) == 0);
+  // TODO: support LAM48 and 5 level page tables.
+  // LAM_U57 mask format
+  //  * top byte: 0x81 because the format is: [0] [6-bit tag] [0]
+  //  * top-1 byte: 0xff because it should be 0
+  //  * top-2 byte: 0x80 because Linux uses 128 TB VMA ending at 0x7fffffffffff
+  constexpr uptr kLAM_U57Mask = 0x81ff80;
+  constexpr uptr kPointerMask = kLAM_U57Mask << 40;
+  return ((p & kPointerMask) == 0);
 #  elif defined(__mips64)
   return ((p >> 40) == 0);
 #  elif defined(__aarch64__)

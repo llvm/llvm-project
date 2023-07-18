@@ -35,7 +35,7 @@ public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_pointer);
-    __format_spec::__process_display_type_pointer(__parser_.__type_);
+    __format_spec::__process_display_type_pointer(__parser_.__type_, "a pointer");
     return __result;
   }
 

@@ -772,6 +772,12 @@ feature_test_macros = [
             "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)",
         },
         {
+            "name": "__cpp_lib_print",
+            "values": {"c++23": 202207},
+            "headers": ["ostream", "print"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_quoted_string_io",
             "values": {"c++14": 201304},
             "headers": ["iomanip"],

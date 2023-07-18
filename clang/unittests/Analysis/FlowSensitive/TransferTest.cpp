@@ -3619,7 +3619,8 @@ TEST(TransferTest, BooleanEquality) {
         EXPECT_TRUE(EnvThen.flowConditionImplies(BarValThen));
 
         auto &BarValElse = getFormula(*BarDecl, EnvElse);
-        EXPECT_FALSE(EnvElse.flowConditionImplies(BarValElse));
+        EXPECT_TRUE(
+            EnvElse.flowConditionImplies(EnvElse.arena().makeNot(BarValElse)));
       });
 }
 
@@ -3650,7 +3651,8 @@ TEST(TransferTest, BooleanInequality) {
         ASSERT_THAT(BarDecl, NotNull());
 
         auto &BarValThen = getFormula(*BarDecl, EnvThen);
-        EXPECT_FALSE(EnvThen.flowConditionImplies(BarValThen));
+        EXPECT_TRUE(
+            EnvThen.flowConditionImplies(EnvThen.arena().makeNot(BarValThen)));
 
         auto &BarValElse = getFormula(*BarDecl, EnvElse);
         EXPECT_TRUE(EnvElse.flowConditionImplies(BarValElse));

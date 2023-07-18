@@ -15,7 +15,7 @@
 // RV64ZKND-ZKNE-NEXT:    ret i64 [[TMP1]]
 //
 uint64_t aes64ks1i(uint64_t rs1) {
-  return __builtin_riscv_aes64ks1i_64(rs1, 0);
+  return __builtin_riscv_aes64ks1i(rs1, 0);
 }
 
 // RV64ZKND-ZKNE-LABEL: @aes64ks2(
@@ -30,5 +30,5 @@ uint64_t aes64ks1i(uint64_t rs1) {
 // RV64ZKND-ZKNE-NEXT:    ret i64 [[TMP2]]
 //
 uint64_t aes64ks2(uint64_t rs1, uint64_t rs2) {
-  return __builtin_riscv_aes64ks2_64(rs1, rs2);
+  return __builtin_riscv_aes64ks2(rs1, rs2);
 }

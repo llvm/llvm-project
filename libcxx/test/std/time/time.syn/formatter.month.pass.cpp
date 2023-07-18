@@ -51,17 +51,17 @@ static void test_no_chrono_specs() {
 template <class CharT>
 static void test_valid_values() {
   // Test that %b, %h, and %B throw an exception.
-  check_exception("formatting a month name from an invalid month number", SV("{:%b}"), std::chrono::month{200});
-  check_exception("formatting a month name from an invalid month number", SV("{:%b}"), std::chrono::month{13});
-  check_exception("formatting a month name from an invalid month number", SV("{:%b}"), std::chrono::month{255});
+  check_exception("Formatting a month name from an invalid month number", SV("{:%b}"), std::chrono::month{200});
+  check_exception("Formatting a month name from an invalid month number", SV("{:%b}"), std::chrono::month{13});
+  check_exception("Formatting a month name from an invalid month number", SV("{:%b}"), std::chrono::month{255});
 
-  check_exception("formatting a month name from an invalid month number", SV("{:%h}"), std::chrono::month{0});
-  check_exception("formatting a month name from an invalid month number", SV("{:%h}"), std::chrono::month{13});
-  check_exception("formatting a month name from an invalid month number", SV("{:%h}"), std::chrono::month{255});
+  check_exception("Formatting a month name from an invalid month number", SV("{:%h}"), std::chrono::month{0});
+  check_exception("Formatting a month name from an invalid month number", SV("{:%h}"), std::chrono::month{13});
+  check_exception("Formatting a month name from an invalid month number", SV("{:%h}"), std::chrono::month{255});
 
-  check_exception("formatting a month name from an invalid month number", SV("{:%B}"), std::chrono::month{0});
-  check_exception("formatting a month name from an invalid month number", SV("{:%B}"), std::chrono::month{13});
-  check_exception("formatting a month name from an invalid month number", SV("{:%B}"), std::chrono::month{255});
+  check_exception("Formatting a month name from an invalid month number", SV("{:%B}"), std::chrono::month{0});
+  check_exception("Formatting a month name from an invalid month number", SV("{:%B}"), std::chrono::month{13});
+  check_exception("Formatting a month name from an invalid month number", SV("{:%B}"), std::chrono::month{255});
 
   constexpr std::basic_string_view<CharT> fmt  = SV("{:%%b='%b'%t%%B='%B'%t%%h='%h'%t%%m='%m'%t%%Om='%Om'%n}");
   constexpr std::basic_string_view<CharT> lfmt = SV("{:L%%b='%b'%t%%B='%B'%t%%h='%h'%t%%m='%m'%t%%Om='%Om'%n}");
@@ -180,14 +180,14 @@ static void test() {
   test_valid_values<CharT>();
   check_invalid_types<CharT>({SV("b"), SV("B"), SV("h"), SV("m"), SV("Om")}, std::chrono::January);
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::January);
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::January);
-  check_exception("End of input while parsing the modifier chrono conversion-spec", SV("{:%"), std::chrono::January);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::January);
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::January);
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), std::chrono::January);
   check_exception("End of input while parsing the modifier E", SV("{:%E"), std::chrono::January);
   check_exception("End of input while parsing the modifier O", SV("{:%O"), std::chrono::January);
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), std::chrono::January);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::January);
 }
 
 int main(int, char**) {

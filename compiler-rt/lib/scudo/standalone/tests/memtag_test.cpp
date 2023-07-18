@@ -88,8 +88,8 @@ TEST_F(MemtagDeathTest, AddFixedTag) {
   for (uptr Tag = 0; Tag < 0x10; ++Tag)
     EXPECT_EQ(Tag, extractTag(addFixedTag(Addr, Tag)));
   if (SCUDO_DEBUG) {
-    EXPECT_DEBUG_DEATH(addFixedTag(Addr, 16), "");
-    EXPECT_DEBUG_DEATH(addFixedTag(~Addr, 0), "");
+    EXPECT_DEATH(addFixedTag(Addr, 16), "");
+    EXPECT_DEATH(addFixedTag(~Addr, 0), "");
   }
 }
 
@@ -131,8 +131,8 @@ TEST_F(MemtagDeathTest, SKIP_NO_DEBUG(LoadStoreTagUnaligned)) {
   for (uptr P = Addr; P < Addr + 4 * archMemoryTagGranuleSize(); ++P) {
     if (P % archMemoryTagGranuleSize() == 0)
       continue;
-    EXPECT_DEBUG_DEATH(loadTag(P), "");
-    EXPECT_DEBUG_DEATH(storeTag(P), "");
+    EXPECT_DEATH(loadTag(P), "");
+    EXPECT_DEATH(storeTag(P), "");
   }
 }
 
@@ -153,7 +153,7 @@ TEST_F(MemtagDeathTest, SKIP_NO_DEBUG(StoreTagsUnaligned)) {
     uptr Tagged = addFixedTag(P, 5);
     if (Tagged % archMemoryTagGranuleSize() == 0)
       continue;
-    EXPECT_DEBUG_DEATH(storeTags(Tagged, Tagged), "");
+    EXPECT_DEATH(storeTags(Tagged, Tagged), "");
   }
 }
 
