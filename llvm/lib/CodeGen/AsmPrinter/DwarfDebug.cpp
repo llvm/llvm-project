@@ -227,6 +227,10 @@ void DebugLocDwarfExpression::commitTemporaryBuffer() {
   TmpBuf->Comments.clear();
 }
 
+const DIType *DbgVariable::getType() const {
+  return getVariable()->getType();
+}
+
 /// Get .debug_loc entry for the instruction range starting at MI.
 static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   const DIExpression *Expr = MI->getDebugExpression();
@@ -253,28 +257,23 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   return DbgValueLoc(Expr, DbgValueLocEntries, IsVariadic);
 }
 
-void OldDbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
-  assert(FrameIndexExprs.empty() && "Already initialized?");
-  assert(!ValueLoc.get() && "Already initialized?");
-
-  assert(getVariable() == DbgValue->getDebugVariable() && "Wrong variable");
-  assert(getInlinedAt() == DbgValue->getDebugLoc()->getInlinedAt() &&
-         "Wrong inlined-at");
-
-  ValueLoc = std::make_unique<DbgValueLoc>(getDebugLocValue(DbgValue));
-  if (auto *E = DbgValue->getDebugExpression())
-    if (E->getNumElements())
-      FrameIndexExprs.push_back({0, E});
+Loc::Single::Single(DbgValueLoc ValueLoc)
+    : ValueLoc(std::make_unique<DbgValueLoc>(ValueLoc)),
+      Expr(ValueLoc.getExpression()) {
+  if (!Expr->getNumElements())
+    Expr = nullptr;
 }
 
-ArrayRef<DbgVariable::FrameIndexExpr> OldDbgVariable::getFrameIndexExprs() const {
+Loc::Single::Single(const MachineInstr *DbgValue)
+    : Single(getDebugLocValue(DbgValue)) {}
+
+ArrayRef<FrameIndexExpr> Loc::MMI::getFrameIndexExprs() const {
   if (FrameIndexExprs.size() == 1)
     return FrameIndexExprs;
 
-  assert(llvm::all_of(FrameIndexExprs,
-                      [](const FrameIndexExpr &A) {
-                        return A.Expr->isFragment();
-                      }) &&
+  assert(llvm::all_of(
+             FrameIndexExprs,
+             [](const FrameIndexExpr &A) { return A.Expr->isFragment(); }) &&
          "multiple FI expressions without DW_OP_LLVM_fragment");
   llvm::sort(FrameIndexExprs,
              [](const FrameIndexExpr &A, const FrameIndexExpr &B) -> bool {
@@ -285,17 +284,7 @@ ArrayRef<DbgVariable::FrameIndexExpr> OldDbgVariable::getFrameIndexExprs() const
   return FrameIndexExprs;
 }
 
-void OldDbgVariable::addMMIEntry(const DbgVariable &V) {
-  const OldDbgVariable *OV = dyn_cast<OldDbgVariable>(&V);
-
-  assert(DebugLocListIndex == ~0U && !ValueLoc.get() && "not an MMI entry");
-  assert(OV->DebugLocListIndex == ~0U && !OV->ValueLoc.get() && "not an MMI entry");
-  assert(OV->getVariable() == getVariable() && "conflicting variable");
-  assert(OV->getInlinedAt() == getInlinedAt() && "conflicting inlined-at location");
-
-  assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
-  assert(!OV->FrameIndexExprs.empty() && "Expected an MMI entry");
-
+void Loc::MMI::addFrameIndexExpr(const DIExpression *Expr, int FI) {
   // FIXME: This logic should not be necessary anymore, as we now have proper
   // deduplication. However, without it, we currently run into the assertion
   // below, which means that we are likely dealing with broken input, i.e. two
@@ -306,12 +295,10 @@ void OldDbgVariable::addMMIEntry(const DbgVariable &V) {
       return;
   }
 
-  for (const auto &FIE : OV->FrameIndexExprs)
-    // Ignore duplicate entries.
-    if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
-          return FIE.FI == Other.FI && FIE.Expr == Other.Expr;
-        }))
-      FrameIndexExprs.push_back(FIE);
+  if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
+        return FI == Other.FI && Expr == Other.Expr;
+      }))
+    FrameIndexExprs.push_back({FI, Expr});
 
   assert((FrameIndexExprs.size() == 1 ||
           llvm::all_of(FrameIndexExprs,
@@ -1608,24 +1595,27 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     }
 
     ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
-    auto RegVar = std::make_unique<OldDbgVariable>(
-                    cast<DILocalVariable>(Var.first), Var.second);
-    if (VI.inStackSlot())
-      RegVar->initializeMMI(VI.Expr, VI.getStackSlot());
-    else
-      RegVar->initializeEntryValue(VI.getEntryValueRegister(), *VI.Expr);
-    LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
-                      << "\n");
 
     if (DbgVariable *DbgVar = MFVars.lookup(Var)) {
-      if (DbgVar->hasFrameIndexExprs())
-        DbgVar->addMMIEntry(*RegVar);
+      if (auto *MMI = std::get_if<Loc::MMI>(DbgVar))
+        MMI->addFrameIndexExpr(VI.Expr, VI.getStackSlot());
       else
-        DbgVar->getEntryValue()->addExpr(VI.getEntryValueRegister(), *VI.Expr);
-    } else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
-      MFVars.insert({Var, RegVar.get()});
-      ConcreteEntities.push_back(std::move(RegVar));
+        DbgVar->get<Loc::EntryValue>().addExpr(VI.getEntryValueRegister(),
+                                               *VI.Expr);
+      continue;
     }
+
+    auto RegVar = std::make_unique<DbgVariable>(
+                    cast<DILocalVariable>(Var.first), Var.second);
+    if (VI.inStackSlot())
+      RegVar->emplace<Loc::MMI>(VI.Expr, VI.getStackSlot());
+    else
+      RegVar->emplace<Loc::EntryValue>(VI.getEntryValueRegister(), *VI.Expr);
+    LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
+                      << "\n");
+    InfoHolder.addScopeVariable(Scope, RegVar.get());
+    MFVars.insert({Var, RegVar.get()});
+    ConcreteEntities.push_back(std::move(RegVar));
   }
 }
 
@@ -1897,13 +1887,9 @@ DbgEntity *DwarfDebug::createConcreteEntity(DwarfCompileUnit &TheCU,
                                             const MCSymbol *Sym) {
   ensureAbstractEntityIsCreatedIfScoped(TheCU, Node, Scope.getScopeNode());
   if (isa<const DILocalVariable>(Node)) {
-    if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent())) {
-      ConcreteEntities.push_back(std::make_unique<NewDbgVariable>(
-          cast<const DILocalVariable>(Node), Location));
-    } else {
-      ConcreteEntities.push_back(std::make_unique<OldDbgVariable>(
-          cast<const DILocalVariable>(Node), Location));
-    }
+    ConcreteEntities.push_back(
+        std::make_unique<DbgVariable>(cast<const DILocalVariable>(Node),
+                                       Location));
     InfoHolder.addScopeVariable(&Scope,
         cast<DbgVariable>(ConcreteEntities.back().get()));
   } else if (isa<const DILabel>(Node)) {
@@ -1963,17 +1949,17 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       const auto *End =
           SingleValueWithClobber ? HistoryMapEntries[1].getInstr() : nullptr;
       if (validThroughout(LScopes, MInsn, End, getInstOrdering())) {
-        RegVar->initializeDbgValue(MInsn);
+        RegVar->emplace<Loc::Single>(MInsn);
         continue;
       }
     }
 
-    // Do not emit location lists if .debug_loc section is disabled.
+    // Do not emit location lists if .debug_loc secton is disabled.
     if (!useLocSection())
       continue;
 
     // Handle multiple DBG_VALUE instructions describing one variable.
-    DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar, *MInsn);
+    DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar);
 
     // Build the location list for this variable.
     SmallVector<DebugLocEntry, 8> Entries;
@@ -1983,7 +1969,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     // that is valid throughout the variable's scope. If so, produce single
     // value location.
     if (isValidSingleLocation) {
-      RegVar->initializeDbgValue(Entries[0].getValues()[0]);
+      RegVar->emplace<Loc::Single>(Entries[0].getValues()[0]);
       continue;
     }
 
@@ -2071,7 +2057,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     // live out of the function. Should this also confirm there are no non-meta
     // instructions preceding the DEF?
     if (Entries.size() == 1 && Entries[0].isLiveThroughFunction()) {
-      RegVar->initializeDbgDefProxy(*LT, MI.getDebugReferrer());
+      RegVar->emplace<Loc::Def>(*LT, MI.getDebugReferrer());
       LLVM_DEBUG(dbgs() << "Created DbgVariable for " << LocalVar->getName()
                         << "\n");
       continue;
@@ -2082,8 +2068,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       continue;
 
     // Handle multiple DBG_VALUE instructions describing one variable.
-    DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar,
-                                     *Entries.front().getBegin());
+    DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar);
     for (auto &Entry : Entries) {
       auto &MI = *Entry.getBegin();
       // FIXME: Handle when this spans multiple sections
