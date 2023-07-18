@@ -389,6 +389,12 @@ public:
   /// necessary storage locations and values for indirections until it finds a
   /// non-pointer/non-reference type.
   ///
+  /// If `Type` is one of the following types, this function will always return
+  /// a non-null pointer:
+  /// - `bool`
+  /// - Any integer type
+  /// - Any class, struct, or union type
+  ///
   /// Requirements:
   ///
   ///  `Type` must not be null.
@@ -691,6 +697,24 @@ AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
 /// Returns the fields of `RD` that are initialized by an `InitListExpr`, in the
 /// order in which they appear in `InitListExpr::inits()`.
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD);
+
+/// Associates a new `StructValue` with `Loc` and returns the new value.
+/// It is not defined whether the field values remain the same or not.
+///
+/// This function is primarily intended for use by checks that set custom
+/// properties on `StructValue`s to model the state of these values. Such checks
+/// should avoid modifying the properties of an existing `StructValue` because
+/// these changes would be visible to other `Environment`s that share the same
+/// `StructValue`. Instead, call `refreshStructValue()`, then set the properties
+/// on the new `StructValue` that it returns. Typical usage:
+///
+///   refreshStructValue(Loc, Env).setProperty("my_prop", MyPropValue);
+StructValue &refreshStructValue(AggregateStorageLocation &Loc,
+                                Environment &Env);
+
+/// Associates a new `StructValue` with `Expr` and returns the new value.
+/// See also documentation for the overload above.
+StructValue &refreshStructValue(const Expr &Expr, Environment &Env);
 
 } // namespace dataflow
 } // namespace clang

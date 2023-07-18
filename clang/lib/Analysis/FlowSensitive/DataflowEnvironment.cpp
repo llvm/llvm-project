@@ -987,5 +987,30 @@ std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
   return Fields;
 }
 
+StructValue &refreshStructValue(AggregateStorageLocation &Loc,
+                                Environment &Env) {
+  auto &NewVal = *cast<StructValue>(Env.createValue(Loc.getType()));
+  Env.setValue(Loc, NewVal);
+  return NewVal;
+}
+
+StructValue &refreshStructValue(const Expr &Expr, Environment &Env) {
+  assert(Expr.getType()->isRecordType());
+
+  auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
+
+  if (Expr.isPRValue()) {
+    Env.setValueStrict(Expr, NewVal);
+  } else {
+    StorageLocation *Loc = Env.getStorageLocationStrict(Expr);
+    if (Loc == nullptr) {
+      Loc = &Env.createStorageLocation(Expr);
+    }
+    Env.setValue(*Loc, NewVal);
+  }
+
+  return NewVal;
+}
+
 } // namespace dataflow
 } // namespace clang
