@@ -49888,6 +49888,29 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
       return Res;
   }
 
+  // Attempt to detect an expanded vXi64 SIGN_EXTEND_INREG vXi1 pattern, and
+  // convert to a splatted v2Xi32 SIGN_EXTEND_INREG pattern:
+  // psrad(pshufd(psllq(X,63),1,1,3,3),31) ->
+  // pshufd(psrad(pslld(X,31),31),0,0,2,2).
+  if (Opcode == X86ISD::VSRAI && NumBitsPerElt == 32 && ShiftVal == 31 &&
+      N0.getOpcode() == X86ISD::PSHUFD &&
+      N0.getConstantOperandVal(1) == getV4X86ShuffleImm({1, 1, 3, 3}) &&
+      N0->hasOneUse()) {
+    SDValue BC = peekThroughOneUseBitcasts(N0.getOperand(0));
+    if (BC.getOpcode() == X86ISD::VSHLI &&
+        BC.getScalarValueSizeInBits() == 64 &&
+        BC.getConstantOperandVal(1) == 63) {
+      SDLoc DL(N);
+      SDValue Src = BC.getOperand(0);
+      Src = DAG.getBitcast(VT, Src);
+      Src = DAG.getNode(X86ISD::PSHUFD, DL, VT, Src,
+                        getV4X86ShuffleImm8ForMask({0, 0, 2, 2}, DL, DAG));
+      Src = DAG.getNode(X86ISD::VSHLI, DL, VT, Src, N1);
+      Src = DAG.getNode(X86ISD::VSRAI, DL, VT, Src, N1);
+      return Src;
+    }
+  }
+
   auto TryConstantFold = [&](SDValue V) {
     APInt UndefElts;
     SmallVector<APInt, 32> EltBits;
