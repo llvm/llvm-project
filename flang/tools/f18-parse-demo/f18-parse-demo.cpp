@@ -405,6 +405,7 @@ int main(int argc, char *const argv[]) {
       defaultKinds.set_defaultRealKind(8);
     } else if (arg == "-i8" || arg == "-fdefault-integer-8") {
       defaultKinds.set_defaultIntegerKind(8);
+      defaultKinds.set_defaultLogicalKind(8);
     } else if (arg == "-help" || arg == "--help" || arg == "-?") {
       llvm::errs()
           << "f18-parse-demo options:\n"

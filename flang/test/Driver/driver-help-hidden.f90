@@ -27,7 +27,7 @@
 ! CHECK-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! CHECK-NEXT: -fconvert=<value>      Set endian conversion of data for unformatted files
 ! CHECK-NEXT: -fdefault-double-8     Set the default double precision kind to an 8 byte wide type
-! CHECK-NEXT: -fdefault-integer-8    Set the default integer kind to an 8 byte wide type
+! CHECK-NEXT: -fdefault-integer-8    Set the default integer and logical kind to an 8 byte wide type
 ! CHECK-NEXT: -fdefault-real-8       Set the default real kind to an 8 byte wide type
 ! CHECK-NEXT: -ffast-math            Allow aggressive, lossy floating-point optimizations
 ! CHECK-NEXT: -ffixed-form           Process source files in fixed form
