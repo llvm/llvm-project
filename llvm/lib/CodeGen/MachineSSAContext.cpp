@@ -21,8 +21,6 @@
 
 using namespace llvm;
 
-const Register MachineSSAContext::ValueRefNull{};
-
 void MachineSSAContext::setFunction(MachineFunction &Fn) {
   MF = &Fn;
   RegInfo = &MF->getRegInfo();

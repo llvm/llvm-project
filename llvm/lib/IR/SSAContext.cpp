@@ -22,8 +22,6 @@
 
 using namespace llvm;
 
-Value *SSAContext::ValueRefNull = nullptr;
-
 void SSAContext::setFunction(Function &Fn) { F = &Fn; }
 
 BasicBlock *SSAContext::getEntryBlock(Function &F) {
