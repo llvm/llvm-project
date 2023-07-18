@@ -130,6 +130,19 @@ static bool interp__builtin_inf(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_copysign(InterpState &S, CodePtr OpPC,
+                                     const InterpFrame *Frame,
+                                     const Function *F) {
+  const Floating &Arg1 = getParam<Floating>(Frame, 0);
+  const Floating &Arg2 = getParam<Floating>(Frame, 1);
+
+  APFloat Copy = Arg1.getAPFloat();
+  Copy.copySign(Arg2.getAPFloat());
+  S.Stk.push<Floating>(Floating(Copy));
+
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
@@ -172,6 +185,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   case Builtin::BI__builtin_inff16:
   case Builtin::BI__builtin_inff128:
     if (interp__builtin_inf(S, OpPC, Frame, F))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_copysign:
+  case Builtin::BI__builtin_copysignf:
+  case Builtin::BI__builtin_copysignl:
+  case Builtin::BI__builtin_copysignf128:
+    if (interp__builtin_copysign(S, OpPC, Frame, F))
       return Ret<PT_Float>(S, OpPC, Dummy);
     break;
 
