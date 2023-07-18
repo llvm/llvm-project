@@ -634,6 +634,8 @@ Bug Fixes in This Version
   that construct (`#62133 <https://github.com/llvm/llvm-project/issues/38717>_`).
 - Fix crash caused by PseudoObjectExprBitfields: NumSubExprs overflow.
   (`#63169 <https://github.com/llvm/llvm-project/issues/63169>_`)
+- Fix crash when casting an object to an array type.
+  (`#63758 <https://github.com/llvm/llvm-project/issues/63758>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

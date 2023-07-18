@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_SPARSE_TENSOR_OPS
 #define PYTHON_BINDINGS_SPARSE_TENSOR_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/SparseTensor/IR/SparseTensorOps.td"
 
 #endif

@@ -42,18 +42,16 @@ define <2 x i64> @load_zext_v2i32i64(ptr %ap) #0 {
 define <2 x i256> @load_zext_v2i64i256(ptr %ap) #0 {
 ; CHECK-LABEL: load_zext_v2i64i256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
-; CHECK-NEXT:    ldr q1, [x0]
-; CHECK-NEXT:    mov z2.d, z0.d[1]
-; CHECK-NEXT:    fmov x2, d0
-; CHECK-NEXT:    fmov x3, d2
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    mov x1, xzr
-; CHECK-NEXT:    mov z0.d, z1.d[1]
-; CHECK-NEXT:    fmov x0, d1
-; CHECK-NEXT:    fmov x4, d0
+; CHECK-NEXT:    mov x2, xzr
+; CHECK-NEXT:    mov x3, xzr
 ; CHECK-NEXT:    mov x5, xzr
-; CHECK-NEXT:    mov x6, x2
-; CHECK-NEXT:    mov x7, x3
+; CHECK-NEXT:    mov x6, xzr
+; CHECK-NEXT:    mov z1.d, z0.d[1]
+; CHECK-NEXT:    fmov x0, d0
+; CHECK-NEXT:    fmov x4, d1
+; CHECK-NEXT:    mov x7, xzr
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %ap
   %val = zext <2 x i64> %a to <2 x i256>
