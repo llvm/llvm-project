@@ -19,12 +19,25 @@
 using namespace llvm;
 using namespace llvm::object;
 
-void objdump::printWasmFileHeader(const object::ObjectFile *Obj) {
-  const auto *File = cast<const WasmObjectFile>(Obj);
+namespace {
+class WasmDumper : public objdump::Dumper {
+  const WasmObjectFile &Obj;
 
+public:
+  WasmDumper(const WasmObjectFile &O) : Dumper(O), Obj(O) {}
+  void printPrivateHeaders(bool MachOOnlyFirst) override;
+};
+} // namespace
+
+std::unique_ptr<objdump::Dumper>
+objdump::createWasmDumper(const object::WasmObjectFile &Obj) {
+  return std::make_unique<WasmDumper>(Obj);
+}
+
+void WasmDumper::printPrivateHeaders(bool) {
   outs() << "Program Header:\n";
   outs() << "Version: 0x";
-  outs().write_hex(File->getHeader().Version);
+  outs().write_hex(Obj.getHeader().Version);
   outs() << "\n";
 }
 
