@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zkne -emit-llvm %s -o - \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZKNE
 
+#include <stdint.h>
 
 // RV64ZKNE-LABEL: @aes64es(
 // RV64ZKNE-NEXT:  entry:
@@ -14,7 +15,7 @@
 // RV64ZKNE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.aes64es(i64 [[TMP0]], i64 [[TMP1]])
 // RV64ZKNE-NEXT:    ret i64 [[TMP2]]
 //
-long aes64es(long rs1, long rs2) {
+uint64_t aes64es(uint64_t rs1, uint64_t rs2) {
   return __builtin_riscv_aes64es_64(rs1, rs2);
 }
 
@@ -30,6 +31,6 @@ long aes64es(long rs1, long rs2) {
 // RV64ZKNE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.aes64esm(i64 [[TMP0]], i64 [[TMP1]])
 // RV64ZKNE-NEXT:    ret i64 [[TMP2]]
 //
-long aes64esm(long rs1, long rs2) {
+uint64_t aes64esm(uint64_t rs1, uint64_t rs2) {
   return __builtin_riscv_aes64esm_64(rs1, rs2);
 }

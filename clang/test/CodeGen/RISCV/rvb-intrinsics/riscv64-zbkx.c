@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +zbkx -emit-llvm %s -o - \
 // RUN:     | FileCheck %s  -check-prefix=RV64ZBKX
 
+#include <stdint.h>
+
 // RV64ZBKX-LABEL: @xperm8(
 // RV64ZBKX-NEXT:  entry:
 // RV64ZBKX-NEXT:    [[RS1_ADDR:%.*]] = alloca i64, align 8
@@ -13,7 +15,7 @@
 // RV64ZBKX-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.xperm8.i64(i64 [[TMP0]], i64 [[TMP1]])
 // RV64ZBKX-NEXT:    ret i64 [[TMP2]]
 //
-long xperm8(long rs1, long rs2)
+uint64_t xperm8(uint64_t rs1, uint64_t rs2)
 {
   return __builtin_riscv_xperm8_64(rs1, rs2);
 }
@@ -29,7 +31,7 @@ long xperm8(long rs1, long rs2)
 // RV64ZBKX-NEXT:    [[TMP2:%.*]] = call i64 @llvm.riscv.xperm4.i64(i64 [[TMP0]], i64 [[TMP1]])
 // RV64ZBKX-NEXT:    ret i64 [[TMP2]]
 //
-long xperm4(long rs1, long rs2)
+uint64_t xperm4(uint64_t rs1, uint64_t rs2)
 {
   return __builtin_riscv_xperm4_64(rs1, rs2);
 }
