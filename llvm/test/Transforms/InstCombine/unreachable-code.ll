@@ -71,15 +71,23 @@ else:
 }
 
 define void @br_undef(i1 %x) {
-; CHECK-LABEL: define void @br_undef
-; CHECK-SAME: (i1 [[X:%.*]]) {
-; CHECK-NEXT:    br i1 undef, label [[IF:%.*]], label [[ELSE:%.*]]
-; CHECK:       if:
-; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    ret void
-; CHECK:       else:
-; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    ret void
+; DEFAULT_ITER-LABEL: define void @br_undef
+; DEFAULT_ITER-SAME: (i1 [[X:%.*]]) {
+; DEFAULT_ITER-NEXT:    br i1 undef, label [[IF:%.*]], label [[ELSE:%.*]]
+; DEFAULT_ITER:       if:
+; DEFAULT_ITER-NEXT:    ret void
+; DEFAULT_ITER:       else:
+; DEFAULT_ITER-NEXT:    ret void
+;
+; MAX1-LABEL: define void @br_undef
+; MAX1-SAME: (i1 [[X:%.*]]) {
+; MAX1-NEXT:    br i1 undef, label [[IF:%.*]], label [[ELSE:%.*]]
+; MAX1:       if:
+; MAX1-NEXT:    call void @dummy()
+; MAX1-NEXT:    ret void
+; MAX1:       else:
+; MAX1-NEXT:    call void @dummy()
+; MAX1-NEXT:    ret void
 ;
   %c = xor i1 %x, undef
   br i1 %c, label %if, label %else
@@ -172,17 +180,27 @@ default:
 }
 
 define void @switch_undef(i32 %x) {
-; CHECK-LABEL: define void @switch_undef
-; CHECK-SAME: (i32 [[X:%.*]]) {
-; CHECK-NEXT:    switch i32 undef, label [[DEFAULT:%.*]] [
-; CHECK-NEXT:    i32 0, label [[CASE0:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       case0:
-; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    ret void
-; CHECK:       default:
-; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    ret void
+; DEFAULT_ITER-LABEL: define void @switch_undef
+; DEFAULT_ITER-SAME: (i32 [[X:%.*]]) {
+; DEFAULT_ITER-NEXT:    switch i32 undef, label [[DEFAULT:%.*]] [
+; DEFAULT_ITER-NEXT:    i32 0, label [[CASE0:%.*]]
+; DEFAULT_ITER-NEXT:    ]
+; DEFAULT_ITER:       case0:
+; DEFAULT_ITER-NEXT:    ret void
+; DEFAULT_ITER:       default:
+; DEFAULT_ITER-NEXT:    ret void
+;
+; MAX1-LABEL: define void @switch_undef
+; MAX1-SAME: (i32 [[X:%.*]]) {
+; MAX1-NEXT:    switch i32 undef, label [[DEFAULT:%.*]] [
+; MAX1-NEXT:    i32 0, label [[CASE0:%.*]]
+; MAX1-NEXT:    ]
+; MAX1:       case0:
+; MAX1-NEXT:    call void @dummy()
+; MAX1-NEXT:    ret void
+; MAX1:       default:
+; MAX1-NEXT:    call void @dummy()
+; MAX1-NEXT:    ret void
 ;
   %v = xor i32 %x, undef
   switch i32 %v, label %default [
