@@ -258,26 +258,11 @@ def find_tests_for_inputs(lit_config, inputs):
     tests to execute.
     """
 
-    # Expand '@...' form in inputs.
-    actual_inputs = []
-    for input in inputs:
-        if input.startswith("@"):
-            f = open(input[1:])
-            try:
-                for ln in f:
-                    ln = ln.strip()
-                    if ln:
-                        actual_inputs.append(ln)
-            finally:
-                f.close()
-        else:
-            actual_inputs.append(input)
-
     # Load the tests from the inputs.
     tests = []
     test_suite_cache = {}
     local_config_cache = {}
-    for input in actual_inputs:
+    for input in inputs:
         prev = len(tests)
         tests.extend(
             getTests(
