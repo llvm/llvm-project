@@ -1383,6 +1383,62 @@ bool ByteCodeExprGen<Emitter>::VisitCXXConstructExpr(
   return false;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitSourceLocExpr(const SourceLocExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  const APValue Val =
+      E->EvaluateInContext(Ctx.getASTContext(), SourceLocDefaultExpr);
+
+  // Things like __builtin_LINE().
+  if (E->getType()->isIntegerType()) {
+    assert(Val.isInt());
+    const APSInt &I = Val.getInt();
+    return this->emitConst(I, E);
+  }
+  // Otherwise, the APValue is an LValue, with only one element.
+  // Theoretically, we don't need the APValue at all of course.
+  assert(E->getType()->isPointerType());
+  assert(Val.isLValue());
+  const APValue::LValueBase &Base = Val.getLValueBase();
+  if (const Expr *LValueExpr = Base.dyn_cast<const Expr *>())
+    return this->visit(LValueExpr);
+
+  // Otherwise, we have a decl (which is the case for
+  // __builtin_source_location).
+  assert(Base.is<const ValueDecl *>());
+  assert(Val.getLValuePath().size() == 0);
+  const auto *BaseDecl = Base.dyn_cast<const ValueDecl *>();
+  assert(BaseDecl);
+
+  auto *UGCD = cast<UnnamedGlobalConstantDecl>(BaseDecl);
+
+  std::optional<unsigned> GlobalIndex = P.getOrCreateGlobal(UGCD);
+  if (!GlobalIndex)
+    return false;
+
+  if (!this->emitGetPtrGlobal(*GlobalIndex, E))
+    return false;
+
+  const Record *R = getRecord(E->getType());
+  const APValue &V = UGCD->getValue();
+  for (unsigned I = 0, N = R->getNumFields(); I != N; ++I) {
+    const Record::Field *F = R->getField(I);
+    const APValue &FieldValue = V.getStructField(I);
+
+    PrimType FieldT = classifyPrim(F->Decl->getType());
+
+    if (!this->visitAPValue(FieldValue, FieldT, E))
+      return false;
+    if (!this->emitInitField(FieldT, F->Offset, E))
+      return false;
+  }
+
+  // Leave the pointer to the global on the stack.
+  return true;
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
@@ -1694,8 +1750,8 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
 
 template <class Emitter>
 template <typename T>
-bool ByteCodeExprGen<Emitter>::emitConst(T Value, const Expr *E) {
-  switch (classifyPrim(E->getType())) {
+bool ByteCodeExprGen<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
+  switch (Ty) {
   case PT_Sint8:
     return this->emitConstSint8(Value, E);
   case PT_Uint8:
@@ -1724,10 +1780,22 @@ bool ByteCodeExprGen<Emitter>::emitConst(T Value, const Expr *E) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
+template <typename T>
+bool ByteCodeExprGen<Emitter>::emitConst(T Value, const Expr *E) {
+  return this->emitConst(Value, classifyPrim(E->getType()), E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitConst(const APSInt &Value, PrimType Ty,
+                                         const Expr *E) {
   if (Value.isSigned())
-    return this->emitConst(Value.getSExtValue(), E);
-  return this->emitConst(Value.getZExtValue(), E);
+    return this->emitConst(Value.getSExtValue(), Ty, E);
+  return this->emitConst(Value.getZExtValue(), Ty, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
+  return this->emitConst(Value, classifyPrim(E->getType()), E);
 }
 
 template <class Emitter>
@@ -1924,6 +1992,22 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::visitAPValue(const APValue &Val,
+                                            PrimType ValType, const Expr *E) {
+  assert(!DiscardResult);
+  if (Val.isInt())
+    return this->emitConst(Val.getInt(), ValType, E);
+
+  if (Val.isLValue()) {
+    APValue::LValueBase Base = Val.getLValueBase();
+    if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
+      return this->visit(BaseExpr);
+  }
+
+  return false;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
   const Function *Func = getFunction(E->getDirectCallee());
   if (!Func)
@@ -2054,14 +2138,16 @@ bool ByteCodeExprGen<Emitter>::VisitCXXDefaultInitExpr(
     return this->visitInitializer(E->getExpr());
 
   assert(classify(E->getType()));
+  SourceLocScope<Emitter> SLS(this, E);
   return this->visit(E->getExpr());
 }
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXDefaultArgExpr(
     const CXXDefaultArgExpr *E) {
-  const Expr *SubExpr = E->getExpr();
+  SourceLocScope<Emitter> SLS(this, E);
 
+  const Expr *SubExpr = E->getExpr();
   if (std::optional<PrimType> T = classify(E->getExpr()))
     return this->visit(SubExpr);
 
