@@ -6,17 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that _LIBCPP_ASSERT is a single expression. This is useful so we can use
-// it in places that require an expression, such as in a constructor initializer list.
-
-// RUN: %{build} -Wno-macro-redefined -D_LIBCPP_ENABLE_ASSERTIONS=1
-// RUN: %{run}
-
-// RUN: %{build} -Wno-macro-redefined -D_LIBCPP_ENABLE_ASSERTIONS=0
-// RUN: %{run}
-
-// RUN: %{build} -Wno-macro-redefined -D_LIBCPP_ENABLE_ASSERTIONS=0 -D_LIBCPP_ASSERTIONS_DISABLE_ASSUME
-// RUN: %{run}
+// Make sure that `_LIBCPP_ASSERT` and `_LIBCPP_ASSUME` are each a single expression.
+// This is useful so we can use them  in places that require an expression, such as
+// in a constructor initializer list.
 
 #include <__assert>
 #include <cassert>
@@ -27,7 +19,14 @@ void f() {
   return _LIBCPP_ASSERT(true, "message");
 }
 
+void g() {
+  int i = (_LIBCPP_ASSUME(true), 3);
+  assert(i == 3);
+  return _LIBCPP_ASSUME(true);
+}
+
 int main(int, char**) {
   f();
+  g();
   return 0;
 }
