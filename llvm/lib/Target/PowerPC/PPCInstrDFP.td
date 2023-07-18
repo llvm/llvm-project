@@ -152,4 +152,42 @@ defm DSCRI: Z22Form_FRTA5_SH6r<59, 98, (outs f8rc:$FRT),
 defm DSCRIQ: Z22Form_FRTA5_SH6r<63, 98, (outs fpairrc:$FRT),
                                 (ins fpairrc:$FRA, u6imm:$SH),
                                 "dscriq", "$FRT, $FRA, $SH", []>;
+
+// 5.6.3 DFP Test Instructions
+def DTSTDC : Z22Form_BF3_FRA5_DCM6<59, 194, (outs crrc:$BF),
+                                   (ins f8rc:$FRA, u6imm:$DCM),
+                                   "dtstdc $BF, $FRA, $DCM", IIC_FPCompare, []>;
+
+def DTSTDCQ : Z22Form_BF3_FRA5_DCM6<63, 194, (outs crrc:$BF),
+                                    (ins fpairrc:$FRA, u6imm:$DCM),
+                                    "dtstdcq $BF, $FRA, $DCM", IIC_FPCompare, []>;
+
+def DTSTDG : Z22Form_BF3_FRA5_DCM6<59, 226, (outs crrc:$BF),
+                                   (ins f8rc:$FRA, u6imm:$DCM),
+                                   "dtstdg $BF, $FRA, $DCM", IIC_FPCompare, []>;
+
+def DTSTDGQ : Z22Form_BF3_FRA5_DCM6<63, 226, (outs crrc:$BF),
+                                    (ins fpairrc:$FRA, u6imm:$DCM),
+                                    "dtstdgq $BF, $FRA, $DCM", IIC_FPCompare, []>;
+
+def DTSTEX : XForm_17<59, 162, (outs crrc:$BF), (ins f8rc:$RA, f8rc:$RB),
+                      "dtstex $BF, $RA, $RB", IIC_FPCompare>;
+
+def DTSTEXQ : XForm_17<63, 162, (outs crrc:$BF), (ins fpairrc:$RA, fpairrc:$RB),
+                       "dtstexq $BF, $RA, $RB", IIC_FPCompare>;
+
+def DTSTSF : XForm_17<59, 674, (outs crrc:$BF), (ins f8rc:$RA, f8rc:$RB),
+                      "dtstsf $BF, $RA, $RB", IIC_FPCompare>;
+
+def DTSTSFQ : XForm_17<63, 674, (outs crrc:$BF), (ins f8rc:$RA, fpairrc:$RB),
+                       "dtstsfq $BF, $RA, $RB", IIC_FPCompare>;
+
+def DTSTSFI : XForm_BF3_UIM6_FRB5<59, 675, (outs crrc:$BF),
+                                  (ins u6imm:$UIM, f8rc:$FRB),
+                                  "dtstsfi $BF, $UIM, $FRB", IIC_FPCompare, []>;
+
+def DTSTSFIQ : XForm_BF3_UIM6_FRB5<63, 675, (outs crrc:$BF),
+                                   (ins u6imm:$UIM, fpairrc:$FRB),
+                                   "dtstsfiq $BF, $UIM, $FRB", IIC_FPCompare, []>;
+
 } // hasNoSchedulingInfo
