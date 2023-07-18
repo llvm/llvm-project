@@ -50,17 +50,6 @@ struct DisableZAPattern : public OpRewritePattern<func::ReturnOp> {
     return success();
   }
 };
-
-struct GetTileIDConversion : public ConvertOpToLLVMPattern<GetTileID> {
-  using ConvertOpToLLVMPattern<GetTileID>::ConvertOpToLLVMPattern;
-  LogicalResult
-  matchAndRewrite(GetTileID op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // TODO: implement tile allocation, currently only tile 0 is supported.
-    rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(op, rewriter.getI32Type(), 0);
-    return success();
-  }
-};
 } // namespace
 
 /// Lower 'arm_sme.zero'. Use 'arm_sme.cast_tile_to_vector' to model the return

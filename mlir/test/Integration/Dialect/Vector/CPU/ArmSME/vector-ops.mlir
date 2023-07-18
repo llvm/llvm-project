@@ -1,5 +1,6 @@
-// RUN: mlir-opt %s -convert-vector-to-arm-sme -enable-arm-streaming="mode=locally enable-za" \
-// RUN:   -convert-vector-to-llvm="enable-arm-sme" -test-lower-to-llvm | \
+// RUN: mlir-opt %s -enable-arm-streaming="mode=locally enable-za" \
+// RUN:   -convert-vector-to-arm-sme -convert-vector-to-llvm="enable-arm-sme" \
+// RUN:   -allocate-arm-sme-tiles -test-lower-to-llvm | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli_aarch64_cmd --march=aarch64 --mattr="+sve,+sme" \
 // RUN:   --entry-function=entry \
