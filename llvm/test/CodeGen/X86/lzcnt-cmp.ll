@@ -68,7 +68,7 @@ define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) nounwind {
 ; X64-BSR-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
 ; X64-BSR:       # %bb.0:
 ; X64-BSR-NEXT:    bsrq %rdi, %rax
-; X64-BSR-NEXT:    shrq $6, %rax
+; X64-BSR-NEXT:    shrl $6, %eax
 ; X64-BSR-NEXT:    cmpl $1, %eax
 ; X64-BSR-NEXT:    sete %al
 ; X64-BSR-NEXT:    retq
@@ -76,7 +76,7 @@ define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) nounwind {
 ; X64-LZCNT-LABEL: lshr_ctlz_undef_cmpeq_one_i64:
 ; X64-LZCNT:       # %bb.0:
 ; X64-LZCNT-NEXT:    lzcntq %rdi, %rax
-; X64-LZCNT-NEXT:    shrq $6, %rax
+; X64-LZCNT-NEXT:    shrl $6, %eax
 ; X64-LZCNT-NEXT:    cmpl $1, %eax
 ; X64-LZCNT-NEXT:    sete %al
 ; X64-LZCNT-NEXT:    retq
@@ -149,7 +149,7 @@ define i1 @lshr_ctlz_undef_cmpne_zero_i64(i64 %in) nounwind {
 ; X64-BSR-LABEL: lshr_ctlz_undef_cmpne_zero_i64:
 ; X64-BSR:       # %bb.0:
 ; X64-BSR-NEXT:    bsrq %rdi, %rax
-; X64-BSR-NEXT:    testq $-64, %rax
+; X64-BSR-NEXT:    testl $-64, %eax
 ; X64-BSR-NEXT:    setne %al
 ; X64-BSR-NEXT:    retq
 ;
