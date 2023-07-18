@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm  -triple x86_64-apple-darwin -x objective-c %s -o - | FileCheck %s
+// rdar://10840980
 
 @interface A {
         struct {

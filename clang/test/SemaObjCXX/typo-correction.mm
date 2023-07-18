@@ -22,6 +22,8 @@ public:
 }
 @end
 
+// rdar://30310772
+
 @interface InvalidNameInIvarAndPropertyBase
 {
 @public
@@ -35,6 +37,7 @@ void invalidNameInIvarAndPropertyBase() {
   float b = ((InvalidNameInIvarAndPropertyBase*)node)._b; // expected-error {{use of undeclared identifier 'node'}}
 }
 
+// rdar://problem/33102722
 // Typo correction for a property when it has as correction candidates
 // synthesized ivar and a class name, both at the same edit distance.
 @class TypoCandidate;
@@ -53,6 +56,7 @@ void invalidNameInIvarAndPropertyBase() {
 }
 @end
 
+// rdar://35172419
 // The scope of 'do-while' ends before typo-correction takes place.
 
 struct Mat2 { int rows; };

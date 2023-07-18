@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -o %t %s
+// rdar: // 8062778
 
 @interface NSDictionary @end
 

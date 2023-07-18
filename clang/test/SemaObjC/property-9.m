@@ -48,7 +48,7 @@ typedef signed char BOOL;
 @property (readonly) int : 4; // expected-error {{property requires fields to be named}}
 
 
-// test parser recovery
+// test parser recovery: rdar://6254579
 @property (                           // expected-note {{to match this '('}}
            readonly getter=isAwesome) // expected-error {{expected ')'}}
            
@@ -84,6 +84,7 @@ typedef signed char BOOL;
 }
 @end
 
+// radar 7427072
 @interface MyStyleIntf 
 {
     int _myStyle;
@@ -94,6 +95,7 @@ typedef signed char BOOL;
 - (float)setMyStyle:(int)style;
 @end
 
+// rdar://8774513
 @class MDAInstance; // expected-note {{forward declaration of class here}}
 
 @interface MDATestDocument
@@ -104,6 +106,7 @@ id f0(MDATestDocument *d) {
   return d.instance.path; // expected-error {{property 'path' cannot be found in forward class object 'MDAInstance'}}
 }
 
+// rdar://20469452
 @interface UIView @end
 
 @interface FRFakeBannerView : UIView

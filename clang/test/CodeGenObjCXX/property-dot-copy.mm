@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
+// rdar://8427922
 
 struct Vector3D
 {
@@ -32,6 +33,7 @@ int main ()
         return 0;
 }
 
+// rdar: // 8437253
 extern "C" void exit(...);
 
 struct CGPoint {

@@ -53,6 +53,7 @@ void eMaisUma(void) {
     return;
 }
 
+// rdar://6520707
 void f0(void (*fp)(void), void (*fp2)(void)) {
   int x = fp - fp2;
 }
@@ -104,6 +105,7 @@ int f8(void) {
   return ({ foo(); }).Y;
 }
 
+// rdar://6880558
 struct S;
 struct C {
   int i;
@@ -118,6 +120,7 @@ void f10(void) {
   __builtin_sin(0);
 }
 
+// rdar://7530813
 // CHECK-LABEL: define{{.*}} i32 @f11
 int f11(long X) {
   int A[100];

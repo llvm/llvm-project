@@ -13,6 +13,7 @@ y;  /* expected-warning {{type specifier missing, defaults to 'int'}} \
        ext-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}} \
        unsupported-error {{a type specifier is required for all declarations}} */
 
+/* rdar://6131634 */
 void f((x));  /* expected-warning {{type specifier missing, defaults to 'int'}} \
                  ext-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}} \
                  unsupported-error {{a type specifier is required for all declarations}} */

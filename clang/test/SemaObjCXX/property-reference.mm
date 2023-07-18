@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -fsyntax-only -verify -Wno-objc-root-class %s
+// rdar://9070460
 
 class TCPPObject
 {
@@ -43,6 +44,7 @@ typedef const TCPPObject& CREF_TCPPObject;
 @end
 
 
+// <rdar://problem/11052352>
 @interface NSObject
 + alloc;
 - init;
@@ -56,6 +58,8 @@ template<typename T> void f() {
 
 template void f<int>();
 
+// rdar://13602832
+//
 // Make sure that the default-argument checker looks through
 // pseudo-object expressions correctly.  The default argument
 // needs to force l2r to test this effectively because the checker

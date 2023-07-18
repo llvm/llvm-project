@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fms-extensions -verify %s
 
+// rdar://22464808
+
 namespace test0 {
   class A {
   private:

@@ -12,7 +12,7 @@ void a(void) {
   __func__[0] = 'a';  // expected-error {{variable is not assignable}}
 }
 
-// GCC permits this.
+// rdar://6097892 - GCC permits this.
 const char *b = __func__;  // expected-warning {{predefined identifier is only valid}}
 const char *c = __FUNCTION__; // expected-warning {{predefined identifier is only valid}}
 const char *d = __PRETTY_FUNCTION__; // expected-warning {{predefined identifier is only valid}}

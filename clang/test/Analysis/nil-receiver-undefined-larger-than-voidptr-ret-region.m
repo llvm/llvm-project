@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -triple i386-apple-darwin8 -analyzer-checker=core,alpha.core -verify -Wno-objc-root-class %s
 
-// This test case shows that a nil instance variable can possibly be
-// initialized by a method.
+// <rdar://problem/6888289> - This test case shows that a nil instance
+// variable can possibly be initialized by a method.
 @interface RDar6888289
 {
   id *x;

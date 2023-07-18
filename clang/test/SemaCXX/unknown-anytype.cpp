@@ -35,6 +35,7 @@ namespace test3 {
   }
 }
 
+// rdar://problem/9899447
 namespace test4 {
   extern __unknown_anytype test0(...);
   extern __unknown_anytype test1(...);
@@ -45,6 +46,7 @@ namespace test4 {
   }
 }
 
+// rdar://problem/23959960
 namespace test5 {
   template<typename T> struct X; // expected-note{{template is declared here}}
 

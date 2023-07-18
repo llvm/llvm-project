@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple i686-unknown-windows-msvc %s -fsyntax-only -verify -fms-extensions -Wunknown-pragmas
 // RUN: not %clang_cc1 -triple i686-unknown-windows-msvc %s -fms-extensions -E | FileCheck %s
 
+// rdar://6495941
+
 #define FOO 1
 #define BAR "2"
 

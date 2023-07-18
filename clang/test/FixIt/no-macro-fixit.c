@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -pedantic -fixit -x c %s
+// rdar://9091893
 
 #define va_arg(ap, type)    __builtin_va_arg(ap, type)
 typedef __builtin_va_list va_list;

@@ -61,6 +61,7 @@ int test4(void) {
   return i;
 }
 
+// rdar://6103124
 void test5(void) {
   do { break; } while(0);
 }

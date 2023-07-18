@@ -144,6 +144,7 @@ typedef struct {
 }
 @end
 
+// rdar://problem/7854674
 // CHECK:    define{{.*}} void @test0(ptr
 // CHECK-NF: define{{.*}} void @test0(ptr
 void test0(A *x) {

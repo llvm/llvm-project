@@ -1923,7 +1923,7 @@ bool Attributor::checkForAllReturnedValues(function_ref<bool(Value &)> Pred,
   if (!AssociatedFunction)
     return false;
 
-  bool UsedAssumedInformation;
+  bool UsedAssumedInformation = false;
   SmallVector<AA::ValueAndContext> Values;
   if (!getAssumedSimplifiedValues(
           IRPosition::returned(*AssociatedFunction), &QueryingAA, Values, S,

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s 
+// rdar://15014468
 
 @protocol P
   @property(readonly) id z;

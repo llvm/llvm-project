@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - 
 
-// crash due to forward-declared struct in protocol method parameter.
+// <rdar://problem/9123036> crash due to forward-declared struct in
+// protocol method parameter.
 
 @protocol P
 - (void) A:(struct z) z;
