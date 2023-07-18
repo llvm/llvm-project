@@ -1949,6 +1949,158 @@ define <4 x float> @fdiv_constant_f32_vector(ptr addrspace(1) %out, <2 x float> 
   ret <4 x float> %const.partial.rcp
 }
 
+define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs(ptr addrspace(1) %out, float nofpclass(sub) %a, float %b) {
+; IEEE-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs
+; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
+; IEEE-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
+; IEEE-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
+; IEEE-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_1ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !2
+; IEEE-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_25ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !0
+; IEEE-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_3ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !3
+; IEEE-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[B]])
+; IEEE-NEXT:    [[FAST_MD_25ULP:%.*]] = fmul fast float [[A]], [[TMP1]]
+; IEEE-NEXT:    store volatile float [[FAST_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP2:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[B]])
+; IEEE-NEXT:    [[AFN_MD_25ULP:%.*]] = fmul afn float [[A]], [[TMP2]]
+; IEEE-NEXT:    store volatile float [[AFN_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[NO_MD_ARCP:%.*]] = fdiv arcp float [[A]], [[B]]
+; IEEE-NEXT:    store volatile float [[NO_MD_ARCP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[ARCP_MD_25ULP:%.*]] = fdiv arcp float [[A]], [[B]], !fpmath !0
+; IEEE-NEXT:    store volatile float [[ARCP_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[ARCP_MD_1ULP:%.*]] = fdiv arcp float [[A]], [[B]], !fpmath !2
+; IEEE-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    ret void
+;
+; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_lhs
+; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float nofpclass(sub) [[A:%.*]], float [[B:%.*]]) #[[ATTR1]] {
+; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
+; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
+; DAZ-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_1ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !2
+; DAZ-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.fdiv.fast(float [[A]], float [[B]])
+; DAZ-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.amdgcn.fdiv.fast(float [[A]], float [[B]])
+; DAZ-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[B]])
+; DAZ-NEXT:    [[FAST_MD_25ULP:%.*]] = fmul fast float [[A]], [[TMP1]]
+; DAZ-NEXT:    store volatile float [[FAST_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[TMP2:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[B]])
+; DAZ-NEXT:    [[AFN_MD_25ULP:%.*]] = fmul afn float [[A]], [[TMP2]]
+; DAZ-NEXT:    store volatile float [[AFN_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[NO_MD_ARCP:%.*]] = fdiv arcp float [[A]], [[B]]
+; DAZ-NEXT:    store volatile float [[NO_MD_ARCP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[ARCP_MD_25ULP:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[A]], float [[B]])
+; DAZ-NEXT:    store volatile float [[ARCP_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[ARCP_MD_1ULP:%.*]] = fdiv arcp float [[A]], [[B]], !fpmath !2
+; DAZ-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    ret void
+;
+  %no.md = fdiv float %a, %b
+  store volatile float %no.md, ptr addrspace(1) %out, align 4
+  %md.half.ulp = fdiv float %a, %b, !fpmath !1
+  store volatile float %md.half.ulp, ptr addrspace(1) %out, align 4
+  %md.1ulp = fdiv float %a, %b, !fpmath !2
+  store volatile float %md.1ulp, ptr addrspace(1) %out, align 4
+  %md.25ulp = fdiv float %a, %b, !fpmath !0
+  store volatile float %md.25ulp, ptr addrspace(1) %out, align 4
+  %md.3ulp = fdiv float %a, %b, !fpmath !3
+  store volatile float %md.3ulp, ptr addrspace(1) %out, align 4
+  %fast.md.25ulp = fdiv fast float %a, %b, !fpmath !0
+  store volatile float %fast.md.25ulp, ptr addrspace(1) %out, align 4
+  %afn.md.25ulp = fdiv afn float %a, %b, !fpmath !0
+  store volatile float %afn.md.25ulp, ptr addrspace(1) %out, align 4
+  %no.md.arcp = fdiv arcp float %a, %b
+  store volatile float %no.md.arcp, ptr addrspace(1) %out, align 4
+  %arcp.md.25ulp = fdiv arcp float %a, %b, !fpmath !0
+  store volatile float %arcp.md.25ulp, ptr addrspace(1) %out, align 4
+  %arcp.md.1ulp = fdiv arcp float %a, %b, !fpmath !2
+  store volatile float %arcp.md.1ulp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs(ptr addrspace(1) %out, float %a, float nofpclass(sub) %b) {
+; IEEE-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs
+; IEEE-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float nofpclass(sub) [[B:%.*]]) #[[ATTR1]] {
+; IEEE-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
+; IEEE-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
+; IEEE-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_1ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !2
+; IEEE-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_25ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !0
+; IEEE-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[MD_3ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !3
+; IEEE-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[B]])
+; IEEE-NEXT:    [[FAST_MD_25ULP:%.*]] = fmul fast float [[A]], [[TMP1]]
+; IEEE-NEXT:    store volatile float [[FAST_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[TMP2:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[B]])
+; IEEE-NEXT:    [[AFN_MD_25ULP:%.*]] = fmul afn float [[A]], [[TMP2]]
+; IEEE-NEXT:    store volatile float [[AFN_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[NO_MD_ARCP:%.*]] = fdiv arcp float [[A]], [[B]]
+; IEEE-NEXT:    store volatile float [[NO_MD_ARCP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[ARCP_MD_25ULP:%.*]] = fdiv arcp float [[A]], [[B]], !fpmath !0
+; IEEE-NEXT:    store volatile float [[ARCP_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    [[ARCP_MD_1ULP:%.*]] = fdiv arcp float [[A]], [[B]], !fpmath !2
+; IEEE-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; IEEE-NEXT:    ret void
+;
+; DAZ-LABEL: define amdgpu_kernel void @fdiv_fpmath_f32_nosub_rhs
+; DAZ-SAME: (ptr addrspace(1) [[OUT:%.*]], float [[A:%.*]], float nofpclass(sub) [[B:%.*]]) #[[ATTR1]] {
+; DAZ-NEXT:    [[NO_MD:%.*]] = fdiv float [[A]], [[B]]
+; DAZ-NEXT:    store volatile float [[NO_MD]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_HALF_ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !1
+; DAZ-NEXT:    store volatile float [[MD_HALF_ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_1ULP:%.*]] = fdiv float [[A]], [[B]], !fpmath !2
+; DAZ-NEXT:    store volatile float [[MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_25ULP:%.*]] = call float @llvm.amdgcn.fdiv.fast(float [[A]], float [[B]])
+; DAZ-NEXT:    store volatile float [[MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[MD_3ULP:%.*]] = call float @llvm.amdgcn.fdiv.fast(float [[A]], float [[B]])
+; DAZ-NEXT:    store volatile float [[MD_3ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[TMP1:%.*]] = call fast float @llvm.amdgcn.rcp.f32(float [[B]])
+; DAZ-NEXT:    [[FAST_MD_25ULP:%.*]] = fmul fast float [[A]], [[TMP1]]
+; DAZ-NEXT:    store volatile float [[FAST_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[TMP2:%.*]] = call afn float @llvm.amdgcn.rcp.f32(float [[B]])
+; DAZ-NEXT:    [[AFN_MD_25ULP:%.*]] = fmul afn float [[A]], [[TMP2]]
+; DAZ-NEXT:    store volatile float [[AFN_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[NO_MD_ARCP:%.*]] = fdiv arcp float [[A]], [[B]]
+; DAZ-NEXT:    store volatile float [[NO_MD_ARCP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[ARCP_MD_25ULP:%.*]] = call arcp float @llvm.amdgcn.fdiv.fast(float [[A]], float [[B]])
+; DAZ-NEXT:    store volatile float [[ARCP_MD_25ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    [[ARCP_MD_1ULP:%.*]] = fdiv arcp float [[A]], [[B]], !fpmath !2
+; DAZ-NEXT:    store volatile float [[ARCP_MD_1ULP]], ptr addrspace(1) [[OUT]], align 4
+; DAZ-NEXT:    ret void
+;
+  %no.md = fdiv float %a, %b
+  store volatile float %no.md, ptr addrspace(1) %out, align 4
+  %md.half.ulp = fdiv float %a, %b, !fpmath !1
+  store volatile float %md.half.ulp, ptr addrspace(1) %out, align 4
+  %md.1ulp = fdiv float %a, %b, !fpmath !2
+  store volatile float %md.1ulp, ptr addrspace(1) %out, align 4
+  %md.25ulp = fdiv float %a, %b, !fpmath !0
+  store volatile float %md.25ulp, ptr addrspace(1) %out, align 4
+  %md.3ulp = fdiv float %a, %b, !fpmath !3
+  store volatile float %md.3ulp, ptr addrspace(1) %out, align 4
+  %fast.md.25ulp = fdiv fast float %a, %b, !fpmath !0
+  store volatile float %fast.md.25ulp, ptr addrspace(1) %out, align 4
+  %afn.md.25ulp = fdiv afn float %a, %b, !fpmath !0
+  store volatile float %afn.md.25ulp, ptr addrspace(1) %out, align 4
+  %no.md.arcp = fdiv arcp float %a, %b
+  store volatile float %no.md.arcp, ptr addrspace(1) %out, align 4
+  %arcp.md.25ulp = fdiv arcp float %a, %b, !fpmath !0
+  store volatile float %arcp.md.25ulp, ptr addrspace(1) %out, align 4
+  %arcp.md.1ulp = fdiv arcp float %a, %b, !fpmath !2
+  store volatile float %arcp.md.1ulp, ptr addrspace(1) %out, align 4
+  ret void
+}
+
 declare float @llvm.sqrt.f32(float)
 declare float @llvm.fabs.f32(float)
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
