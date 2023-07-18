@@ -23,8 +23,7 @@
   ; CHECK-NEXT:    li a2, 128
   ; CHECK-NEXT:    bgeu a0, a2, .LBB0_2
   ; CHECK-NEXT:  .LBB0_4: # %entry
-  ; CHECK-NEXT:    vmv1r.v v8, v9
-  ; CHECK-NEXT:    vse64.v v8, (a1)
+  ; CHECK-NEXT:    vse64.v v9, (a1)
   ; CHECK-NEXT:    ret
   entry:
     ret void
