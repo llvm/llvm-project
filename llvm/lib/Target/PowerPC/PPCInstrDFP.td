@@ -114,5 +114,42 @@ let RA = 1 in
                                 "dctfixqq $RST, $RB", IIC_FPGeneral, []>;
 } // HasP10Vector
 
+// 5.6.6 DFP Format Instructions
+defm DENBCD: XForm_S1_FRTB5r<59, 834, (outs f8rc:$FRT),
+                              (ins u1imm:$S, f8rc:$FRB),
+                              "denbcd", "$S, $FRT, $FRB", []>;
+defm DENBCDQ: XForm_S1_FRTB5r<63, 834, (outs fpairrc:$FRT),
+                               (ins u1imm:$S, fpairrc:$FRB),
+                               "denbcdq", "$S, $FRT, $FRB", []>;
 } // mayRaiseFPException
+
+// 5.6.6 DFP none exception raising format instructions.
+defm DDEDPD: XForm_SP2_FRTB5r<59, 322, (outs f8rc:$FRT),
+                              (ins u2imm:$SP, f8rc:$FRB),
+                              "ddedpd", "$SP, $FRT, $FRB", []>;
+defm DDEDPDQ: XForm_SP2_FRTB5r<63, 322, (outs fpairrc:$FRT),
+                               (ins u2imm:$SP, fpairrc:$FRB),
+                               "ddedpdq", "$SP, $FRT, $FRB", []>;
+defm DXEX: XForm_26r<59, 354, (outs f8rc:$RST), (ins f8rc:$RB),
+                     "dxex", "$RST, $RB", NoItinerary, []>;
+defm DXEXQ: XForm_26r<63, 354, (outs f8rc:$RST), (ins fpairrc:$RB),
+                      "dxexq", "$RST, $RB", NoItinerary, []>;
+defm DIEX: XForm_base_r3xo_r<59, 866, (outs f8rc:$RST),
+                             (ins f8rc:$RA, f8rc:$RB),
+                             "diex", "$RST, $RA, $RB", []>;
+defm DIEXQ: XForm_base_r3xo_r<63, 866, (outs fpairrc:$RST),
+                              (ins f8rc:$RA, fpairrc:$RB),
+                              "diexq", "$RST, $RA, $RB", []>;
+defm DSCLI: Z22Form_FRTA5_SH6r<59, 66, (outs f8rc:$FRT),
+                               (ins f8rc:$FRA, u6imm:$SH),
+                               "dscli", "$FRT, $FRA, $SH", []>;
+defm DSCLIQ: Z22Form_FRTA5_SH6r<63, 66, (outs fpairrc:$FRT),
+                                (ins fpairrc:$FRA, u6imm:$SH),
+                                "dscliq", "$FRT, $FRA, $SH", []>;
+defm DSCRI: Z22Form_FRTA5_SH6r<59, 98, (outs f8rc:$FRT),
+                               (ins f8rc:$FRA, u6imm:$SH),
+                               "dscri", "$FRT, $FRA, $SH", []>;
+defm DSCRIQ: Z22Form_FRTA5_SH6r<63, 98, (outs fpairrc:$FRT),
+                                (ins fpairrc:$FRA, u6imm:$SH),
+                                "dscriq", "$FRT, $FRA, $SH", []>;
 } // hasNoSchedulingInfo
