@@ -204,7 +204,8 @@ defm PseudoVCPOP : VPseudoUnaryV_V;
 
 multiclass VPatUnarySDNode_V<SDPatternOperator op, string instruction_name> {
   foreach vti = AllIntegerVectors in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
+    let Predicates = !listconcat([HasStdExtZvbb],
+                                 GetVTypePredicates<vti>.Predicates) in {
       def : Pat<(vti.Vector (op (vti.Vector vti.RegClass:$rs1))),
                 (!cast<Instruction>(instruction_name#"_V_"#vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)),
@@ -214,10 +215,8 @@ multiclass VPatUnarySDNode_V<SDPatternOperator op, string instruction_name> {
   }
 }
 
-let Predicates = [HasStdExtZvbb] in {
-  defm : VPatUnarySDNode_V<bitreverse, "PseudoVBREV">;
-  defm : VPatUnarySDNode_V<bswap, "PseudoVREV8">;
-  defm : VPatUnarySDNode_V<ctlz, "PseudoVCLZ">;
-  defm : VPatUnarySDNode_V<cttz, "PseudoVCTZ">;
-  defm : VPatUnarySDNode_V<ctpop, "PseudoVCPOP">;
-}
+defm : VPatUnarySDNode_V<bitreverse, "PseudoVBREV">;
+defm : VPatUnarySDNode_V<bswap, "PseudoVREV8">;
+defm : VPatUnarySDNode_V<ctlz, "PseudoVCLZ">;
+defm : VPatUnarySDNode_V<cttz, "PseudoVCTZ">;
+defm : VPatUnarySDNode_V<ctpop, "PseudoVCPOP">;
