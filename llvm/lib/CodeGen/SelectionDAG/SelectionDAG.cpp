@@ -9654,6 +9654,23 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, SDVTList VTList,
            "Binary operator types must match!");
     break;
   }
+  case ISD::FFREXP: {
+    assert(VTList.NumVTs == 2 && Ops.size() == 1 && "Invalid ffrexp op!");
+    assert(VTList.VTs[0].isFloatingPoint() && VTList.VTs[1].isInteger() &&
+           VTList.VTs[0] == Ops[0].getValueType() && "frexp type mismatch");
+
+    if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Ops[0])) {
+      int FrexpExp;
+      APFloat FrexpMant =
+          frexp(C->getValueAPF(), FrexpExp, APFloat::rmNearestTiesToEven);
+      SDValue Result0 = getConstantFP(FrexpMant, DL, VTList.VTs[0]);
+      SDValue Result1 =
+          getConstant(FrexpMant.isFinite() ? FrexpExp : 0, DL, VTList.VTs[1]);
+      return getNode(ISD::MERGE_VALUES, DL, VTList, {Result0, Result1}, Flags);
+    }
+
+    break;
+  }
   case ISD::STRICT_FP_EXTEND:
     assert(VTList.NumVTs == 2 && Ops.size() == 2 &&
            "Invalid STRICT_FP_EXTEND!");
