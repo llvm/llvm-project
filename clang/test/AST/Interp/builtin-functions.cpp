@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated
 // RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter %s -verify
 // RUN: %clang_cc1 -std=c++20 -verify=ref %s -Wno-constant-evaluated
+// RUN: %clang_cc1 -triple avr -std=c++20 -fexperimental-new-constant-interpreter %s -verify
+// RUN: %clang_cc1 -triple avr -std=c++20 -verify=ref %s -Wno-constant-evaluated
 
 
 namespace strcmp {
@@ -96,10 +98,12 @@ namespace isfpclass {
   char isfpclass_pos_1    [!__builtin_isfpclass(1.0f, 0x0008) ? 1 : -1]; // fcNegNormal
   char isfpclass_pos_2    [__builtin_isfpclass(1.0L, 0x01F8) ? 1 : -1]; // fcFinite
   char isfpclass_pos_3    [!__builtin_isfpclass(1.0, 0x0003) ? 1 : -1]; // fcSNan|fcQNan
+#ifndef __AVR__
   char isfpclass_pdenorm_0[__builtin_isfpclass(1.0e-40f, 0x0080) ? 1 : -1]; // fcPosSubnormal
   char isfpclass_pdenorm_1[__builtin_isfpclass(1.0e-310, 0x01F8) ? 1 : -1]; // fcFinite
   char isfpclass_pdenorm_2[!__builtin_isfpclass(1.0e-40f, 0x003C) ? 1 : -1]; // fcNegative
   char isfpclass_pdenorm_3[!__builtin_isfpclass(1.0e-310, 0x0207) ? 1 : -1]; // ~fcFinite
+#endif
   char isfpclass_pzero_0  [__builtin_isfpclass(0.0f, 0x0060) ? 1 : -1]; // fcZero
   char isfpclass_pzero_1  [__builtin_isfpclass(0.0, 0x01F8) ? 1 : -1]; // fcFinite
   char isfpclass_pzero_2  [!__builtin_isfpclass(0.0L, 0x0020) ? 1 : -1]; // fcNegZero
@@ -109,9 +113,11 @@ namespace isfpclass {
   char isfpclass_nzero_2  [!__builtin_isfpclass(-0.0L, 0x0040) ? 1 : -1]; // fcPosZero
   char isfpclass_nzero_3  [!__builtin_isfpclass(-0.0, 0x0003) ? 1 : -1]; // fcNan
   char isfpclass_ndenorm_0[__builtin_isfpclass(-1.0e-40f, 0x0010) ? 1 : -1]; // fcNegSubnormal
-  char isfpclass_ndenorm_1[__builtin_isfpclass(-1.0e-310, 0x01F8) ? 1 : -1]; // fcFinite
   char isfpclass_ndenorm_2[!__builtin_isfpclass(-1.0e-40f, 0x03C0) ? 1 : -1]; // fcPositive
+#ifndef __AVR__
+  char isfpclass_ndenorm_1[__builtin_isfpclass(-1.0e-310, 0x01F8) ? 1 : -1]; // fcFinite
   char isfpclass_ndenorm_3[!__builtin_isfpclass(-1.0e-310, 0x0207) ? 1 : -1]; // ~fcFinite
+#endif
   char isfpclass_neg_0    [__builtin_isfpclass(-1.0, 0x0008) ? 1 : -1]; // fcNegNormal
   char isfpclass_neg_1    [!__builtin_isfpclass(-1.0f, 0x00100) ? 1 : -1]; // fcPosNormal
   char isfpclass_neg_2    [__builtin_isfpclass(-1.0L, 0x01F8) ? 1 : -1]; // fcFinite
@@ -136,9 +142,11 @@ namespace fpclassify {
   char classify_inf     [__builtin_fpclassify(-1, +1, -1, -1, -1, __builtin_inf())];
   char classify_neg_inf [__builtin_fpclassify(-1, +1, -1, -1, -1, -__builtin_inf())];
   char classify_normal  [__builtin_fpclassify(-1, -1, +1, -1, -1, 1.539)];
+#ifndef __AVR__
   char classify_normal2 [__builtin_fpclassify(-1, -1, +1, -1, -1, 1e-307)];
   char classify_denorm  [__builtin_fpclassify(-1, -1, -1, +1, -1, 1e-308)];
   char classify_denorm2 [__builtin_fpclassify(-1, -1, -1, +1, -1, -1e-308)];
+#endif
   char classify_zero    [__builtin_fpclassify(-1, -1, -1, -1, +1, 0.0)];
   char classify_neg_zero[__builtin_fpclassify(-1, -1, -1, -1, +1, -0.0)];
   char classify_subnorm [__builtin_fpclassify(-1, -1, -1, +1, -1, 1.0e-38f)];
