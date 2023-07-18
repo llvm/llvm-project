@@ -1,4 +1,3 @@
-; REQUIRES: x86-registered-target
 ; RUN: %llc_dwarf -split-dwarf-file=%t.dwo < %s | FileCheck %s
 
 ; Ensure function-local DW_TAG_imported_declaration get skipped if its parent subprogram was not emitted.
