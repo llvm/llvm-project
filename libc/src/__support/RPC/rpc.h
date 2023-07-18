@@ -56,11 +56,8 @@ template <uint32_t lane_size = gpu::LANE_SIZE> struct alignas(64) Packet {
   Payload<lane_size> payload;
 };
 
-// TODO: This should be configured by the server and passed in. The general rule
-//       of thumb is that you should have at least as many ports as possible
-//       concurrent work items on the GPU to mitigate the lack offorward
-//       progress guarantees on the GPU.
-constexpr uint64_t DEFAULT_PORT_COUNT = 64;
+/// The maximum number of parallel ports that the RPC interface can support.
+constexpr uint64_t MAX_PORT_COUNT = 512;
 
 /// A common process used to synchronize communication between a client and a
 /// server. The process contains a read-only inbox and a write-only outbox used
@@ -87,7 +84,8 @@ template <bool Invert, typename Packet> struct Process {
   cpp::Atomic<uint32_t> *outbox;
   Packet *packet;
 
-  cpp::Atomic<uint32_t> lock[DEFAULT_PORT_COUNT] = {0};
+  static constexpr uint64_t NUM_BITS_IN_WORD = (sizeof(uint32_t) * 8);
+  cpp::Atomic<uint32_t> lock[MAX_PORT_COUNT / NUM_BITS_IN_WORD] = {0};
 
   /// Initialize the communication channels.
   LIBC_INLINE void reset(uint64_t port_count, void *buffer) {
@@ -158,10 +156,9 @@ template <bool Invert, typename Packet> struct Process {
 
   /// Attempt to claim the lock at index. Return true on lock taken.
   /// lane_mask is a bitmap of the threads in the warp that would hold the
-  /// single lock on success, e.g. the result of gpu::get_lane_mask()
-  /// The lock is held when the zeroth bit of the uint32_t at lock[index]
-  /// is set, and available when that bit is clear. Bits [1, 32) are zero.
-  /// Or with one is a no-op when the lock is already held.
+  /// single lock on success, e.g. the result of gpu::get_lane_mask().
+  /// The lock is held when the nth bit of the lock bitfield is set, otherwise
+  /// it is availible.
   [[clang::convergent]] LIBC_INLINE bool try_lock(uint64_t lane_mask,
                                                   uint64_t index) {
     // On amdgpu, test and set to lock[index] and a sync_lane would suffice
@@ -173,11 +170,10 @@ template <bool Invert, typename Packet> struct Process {
     // succeed in taking the lock, as otherwise it will leak. This is handled
     // by making threads which are not in lane_mask or with 0, a no-op.
     uint32_t id = gpu::get_lane_id();
-    bool id_in_lane_mask = lane_mask & (1ul << id);
+    bool id_in_lane_mask = lane_mask & (1u << id);
 
     // All threads in the warp call fetch_or. Possibly at the same time.
-    bool before =
-        lock[index].fetch_or(id_in_lane_mask, cpp::MemoryOrder::RELAXED);
+    bool before = set_nth(lock, index, id_in_lane_mask);
     uint64_t packed = gpu::ballot(lane_mask, before);
 
     // If every bit set in lane_mask is also set in packed, every single thread
@@ -212,12 +208,11 @@ template <bool Invert, typename Packet> struct Process {
     // Wait for other threads in the warp to finish using the lock
     gpu::sync_lane(lane_mask);
 
-    // Use exactly one thread to clear the bit at position 0 in lock[index]
-    // Must restrict to a single thread to avoid one thread dropping the lock,
-    // then an unrelated warp claiming the lock, then a second thread in this
-    // warp dropping the lock again.
-    uint32_t and_mask = ~(rpc::is_first_lane(lane_mask) ? 1 : 0);
-    lock[index].fetch_and(and_mask, cpp::MemoryOrder::RELAXED);
+    // Use exactly one thread to clear the associated lock bit. Must restrict
+    // to a single thread to avoid one thread dropping the lock, then an
+    // unrelated warp claiming the lock, then a second thread in this warp
+    // dropping the lock again.
+    clear_nth(lock, index, rpc::is_first_lane(lane_mask));
     gpu::sync_lane(lane_mask);
   }
 
@@ -244,6 +239,26 @@ template <bool Invert, typename Packet> struct Process {
   /// Offset of the buffer containing the packets after the inbox and outbox.
   LIBC_INLINE static constexpr uint64_t buffer_offset(uint64_t port_count) {
     return align_up(2 * mailbox_bytes(port_count), alignof(Packet));
+  }
+
+  /// Conditionally set the n-th bit in the atomic bitfield.
+  LIBC_INLINE static constexpr uint32_t set_nth(cpp::Atomic<uint32_t> *bits,
+                                                uint64_t index, bool cond) {
+    const uint32_t slot = index / NUM_BITS_IN_WORD;
+    const uint32_t bit = index % NUM_BITS_IN_WORD;
+    return bits[slot].fetch_or(static_cast<uint32_t>(cond) << bit,
+                               cpp::MemoryOrder::RELAXED) &
+           (1u << bit);
+  }
+
+  /// Conditionally clear the n-th bit in the atomic bitfield.
+  LIBC_INLINE static constexpr uint32_t clear_nth(cpp::Atomic<uint32_t> *bits,
+                                                  uint64_t index, bool cond) {
+    const uint32_t slot = index / NUM_BITS_IN_WORD;
+    const uint32_t bit = index % NUM_BITS_IN_WORD;
+    return bits[slot].fetch_and(-1u ^ (static_cast<uint32_t>(cond) << bit),
+                                cpp::MemoryOrder::RELAXED) &
+           (1u << bit);
   }
 };
 
