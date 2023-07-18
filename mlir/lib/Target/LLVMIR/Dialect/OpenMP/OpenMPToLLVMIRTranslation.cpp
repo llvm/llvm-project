@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/IRMapping.h"
@@ -1667,6 +1668,38 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   return bodyGenStatus;
 }
 
+static LogicalResult
+convertDeclareTargetAttr(Operation *op,
+                         omp::DeclareTargetAttr declareTargetAttr,
+                         LLVM::ModuleTranslation &moduleTranslation) {
+  // Amend omp.declare_target by deleting the IR of the outlined functions
+  // created for target regions. They cannot be filtered out from MLIR earlier
+  // because the omp.target operation inside must be translated to LLVM, but the
+  // wrapper functions themselves must not remain at the end of the process.
+  // We know that functions where omp.declare_target does not match
+  // omp.is_target_device at this stage can only be wrapper functions because
+  // those that aren't are removed earlier as an MLIR transformation pass.
+  if (FunctionOpInterface funcOp = dyn_cast<FunctionOpInterface>(op)) {
+    if (auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(
+            op->getParentOfType<ModuleOp>().getOperation())) {
+      bool isDeviceCompilation = offloadMod.getIsTargetDevice();
+      omp::DeclareTargetDeviceType declareType =
+          declareTargetAttr.getDeviceType().getValue();
+
+      if ((isDeviceCompilation &&
+           declareType == omp::DeclareTargetDeviceType::host) ||
+          (!isDeviceCompilation &&
+           declareType == omp::DeclareTargetDeviceType::nohost)) {
+        llvm::Function *llvmFunc =
+            moduleTranslation.lookupFunction(funcOp.getName());
+        llvmFunc->dropAllReferences();
+        llvmFunc->eraseFromParent();
+      }
+    }
+  }
+  return success();
+}
+
 namespace {
 
 /// Implementation of the dialect interface that converts operations belonging
@@ -1694,7 +1727,6 @@ public:
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
     Operation *op, NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
-
   return llvm::TypeSwitch<Attribute, LogicalResult>(attribute.getValue())
       .Case([&](mlir::omp::FlagsAttr rtlAttr) {
         return convertFlagsAttr(op, rtlAttr, moduleTranslation);
@@ -1705,6 +1737,10 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
         ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp",
                                     versionAttr.getVersion());
         return success();
+      })
+      .Case([&](mlir::omp::DeclareTargetAttr declareTargetAttr) {
+        return convertDeclareTargetAttr(op, declareTargetAttr,
+                                        moduleTranslation);
       })
       .Default([&](Attribute attr) {
         // fall through for omp attributes that do not require lowering and/or
