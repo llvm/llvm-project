@@ -7092,10 +7092,33 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getRegister(RISCV::X4, PtrVT);
   }
   case Intrinsic::riscv_orc_b:
-  case Intrinsic::riscv_brev8: {
-    unsigned Opc =
-        IntNo == Intrinsic::riscv_brev8 ? RISCVISD::BREV8 : RISCVISD::ORC_B;
+  case Intrinsic::riscv_brev8:
+  case Intrinsic::riscv_sha256sig0:
+  case Intrinsic::riscv_sha256sig1:
+  case Intrinsic::riscv_sha256sum0:
+  case Intrinsic::riscv_sha256sum1:
+  case Intrinsic::riscv_sm3p0:
+  case Intrinsic::riscv_sm3p1: {
+    unsigned Opc;
+    switch (IntNo) {
+    case Intrinsic::riscv_orc_b:      Opc = RISCVISD::ORC_B;      break;
+    case Intrinsic::riscv_brev8:      Opc = RISCVISD::BREV8;      break;
+    case Intrinsic::riscv_sha256sig0: Opc = RISCVISD::SHA256SIG0; break;
+    case Intrinsic::riscv_sha256sig1: Opc = RISCVISD::SHA256SIG1; break;
+    case Intrinsic::riscv_sha256sum0: Opc = RISCVISD::SHA256SUM0; break;
+    case Intrinsic::riscv_sha256sum1: Opc = RISCVISD::SHA256SUM1; break;
+    case Intrinsic::riscv_sm3p0:      Opc = RISCVISD::SM3P0;      break;
+    case Intrinsic::riscv_sm3p1:      Opc = RISCVISD::SM3P1;      break;
+    }
+
     return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1));
+  }
+  case Intrinsic::riscv_sm4ks:
+  case Intrinsic::riscv_sm4ed: {
+    unsigned Opc =
+        IntNo == Intrinsic::riscv_sm4ks ? RISCVISD::SM4KS : RISCVISD::SM4ED;
+    return DAG.getNode(Opc, DL, XLenVT, Op.getOperand(1), Op.getOperand(2),
+                       Op.getOperand(3));
   }
   case Intrinsic::riscv_zip:
   case Intrinsic::riscv_unzip: {
@@ -9974,14 +9997,43 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     case Intrinsic::riscv_orc_b:
-    case Intrinsic::riscv_brev8: {
+    case Intrinsic::riscv_brev8:
+    case Intrinsic::riscv_sha256sig0:
+    case Intrinsic::riscv_sha256sig1:
+    case Intrinsic::riscv_sha256sum0:
+    case Intrinsic::riscv_sha256sum1:
+    case Intrinsic::riscv_sm3p0:
+    case Intrinsic::riscv_sm3p1: {
       if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
         return;
-      unsigned Opc =
-          IntNo == Intrinsic::riscv_brev8 ? RISCVISD::BREV8 : RISCVISD::ORC_B;
+      unsigned Opc;
+      switch (IntNo) {
+      case Intrinsic::riscv_orc_b:      Opc = RISCVISD::ORC_B;      break;
+      case Intrinsic::riscv_brev8:      Opc = RISCVISD::BREV8;      break;
+      case Intrinsic::riscv_sha256sig0: Opc = RISCVISD::SHA256SIG0; break;
+      case Intrinsic::riscv_sha256sig1: Opc = RISCVISD::SHA256SIG1; break;
+      case Intrinsic::riscv_sha256sum0: Opc = RISCVISD::SHA256SUM0; break;
+      case Intrinsic::riscv_sha256sum1: Opc = RISCVISD::SHA256SUM1; break;
+      case Intrinsic::riscv_sm3p0:      Opc = RISCVISD::SM3P0;      break;
+      case Intrinsic::riscv_sm3p1:      Opc = RISCVISD::SM3P1;      break;
+      }
+
       SDValue NewOp =
           DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
       SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
+      return;
+    }
+    case Intrinsic::riscv_sm4ks:
+    case Intrinsic::riscv_sm4ed: {
+      unsigned Opc =
+          IntNo == Intrinsic::riscv_sm4ks ? RISCVISD::SM4KS : RISCVISD::SM4ED;
+      SDValue NewOp0 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
+      SDValue NewOp1 =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Res =
+          DAG.getNode(Opc, DL, MVT::i64, NewOp0, NewOp1, N->getOperand(3));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
@@ -15998,6 +16050,14 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CLMUL)
   NODE_NAME_CASE(CLMULH)
   NODE_NAME_CASE(CLMULR)
+  NODE_NAME_CASE(SHA256SIG0)
+  NODE_NAME_CASE(SHA256SIG1)
+  NODE_NAME_CASE(SHA256SUM0)
+  NODE_NAME_CASE(SHA256SUM1)
+  NODE_NAME_CASE(SM4KS)
+  NODE_NAME_CASE(SM4ED)
+  NODE_NAME_CASE(SM3P0)
+  NODE_NAME_CASE(SM3P1)
   NODE_NAME_CASE(TH_LWD)
   NODE_NAME_CASE(TH_LWUD)
   NODE_NAME_CASE(TH_LDD)
