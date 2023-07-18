@@ -6152,55 +6152,6 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
     }
   }
 
-  // Reduce bit extract of low half of an integer to the narrower type.
-  // (and (srl i64:x, K), KMask) ->
-  //   (i64 zero_extend (and (srl (i32 (trunc i64:x)), K)), KMask)
-  if (N0.getOpcode() == ISD::SRL && N0.hasOneUse()) {
-    if (ConstantSDNode *CAnd = dyn_cast<ConstantSDNode>(N1)) {
-      if (ConstantSDNode *CShift = dyn_cast<ConstantSDNode>(N0.getOperand(1))) {
-        unsigned Size = VT.getSizeInBits();
-        const APInt &AndMask = CAnd->getAPIntValue();
-        unsigned ShiftBits = CShift->getZExtValue();
-
-        // Bail out, this node will probably disappear anyway.
-        if (ShiftBits == 0)
-          return SDValue();
-
-        unsigned MaskBits = AndMask.countr_one();
-        EVT HalfVT = EVT::getIntegerVT(*DAG.getContext(), Size / 2);
-
-        if (AndMask.isMask() &&
-            // Required bits must not span the two halves of the integer and
-            // must fit in the half size type.
-            (ShiftBits + MaskBits <= Size / 2) &&
-            TLI.isNarrowingProfitable(VT, HalfVT) &&
-            TLI.isTypeDesirableForOp(ISD::AND, HalfVT) &&
-            TLI.isTypeDesirableForOp(ISD::SRL, HalfVT) &&
-            TLI.isTruncateFree(VT, HalfVT) &&
-            TLI.isZExtFree(HalfVT, VT)) {
-          // The isNarrowingProfitable is to avoid regressions on PPC and
-          // AArch64 which match a few 64-bit bit insert / bit extract patterns
-          // on downstream users of this. Those patterns could probably be
-          // extended to handle extensions mixed in.
-
-          SDValue SL(N0);
-          assert(MaskBits <= Size);
-
-          // Extracting the highest bit of the low half.
-          EVT ShiftVT = TLI.getShiftAmountTy(HalfVT, DAG.getDataLayout());
-          SDValue Trunc = DAG.getNode(ISD::TRUNCATE, SL, HalfVT,
-                                      N0.getOperand(0));
-
-          SDValue NewMask = DAG.getConstant(AndMask.trunc(Size / 2), SL, HalfVT);
-          SDValue ShiftK = DAG.getConstant(ShiftBits, SL, ShiftVT);
-          SDValue Shift = DAG.getNode(ISD::SRL, SL, HalfVT, Trunc, ShiftK);
-          SDValue And = DAG.getNode(ISD::AND, SL, HalfVT, Shift, NewMask);
-          return DAG.getNode(ISD::ZERO_EXTEND, SL, VT, And);
-        }
-      }
-    }
-  }
-
   return SDValue();
 }
 
