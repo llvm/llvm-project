@@ -27,7 +27,7 @@ namespace std {
 
   // [mdspan.accessor.default], class template default_accessor
   template<class ElementType>
-    class default_accessor; // not implemented yet
+    class default_accessor;
 
   // [mdspan.mdspan], class template mdspan
   template<class ElementType, class Extents, class LayoutPolicy = layout_right,
@@ -190,6 +190,24 @@ namespace std {
   };
 }
 
+// default_accessor synopsis
+
+namespace std {
+  template<class ElementType>
+  struct default_accessor {
+    using offset_policy = default_accessor;
+    using element_type = ElementType;
+    using reference = ElementType&;
+    using data_handle_type = ElementType*;
+
+    constexpr default_accessor() noexcept = default;
+    template<class OtherElementType>
+      constexpr default_accessor(default_accessor<OtherElementType>) noexcept;
+    constexpr reference access(data_handle_type p, size_t i) const noexcept;
+    constexpr data_handle_type offset(data_handle_type p, size_t i) const noexcept;
+  };
+}
+
 */
 
 #ifndef _LIBCPP_MDSPAN
@@ -197,6 +215,7 @@ namespace std {
 
 #include <__config>
 #include <__fwd/mdspan.h>
+#include <__mdspan/default_accessor.h>
 #include <__mdspan/extents.h>
 #include <__mdspan/layout_left.h>
 #include <__mdspan/layout_right.h>
