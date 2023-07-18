@@ -3038,14 +3038,14 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
     ok &= semantics::CheckArguments(*chars, arguments, context_,
         context_.FindScope(callSite), treatExternalAsImplicit,
         specificIntrinsic);
-    if (procSymbol && !IsPureProcedure(*procSymbol)) {
-      if (const semantics::Scope *
-          pure{semantics::FindPureProcedureContaining(
-              context_.FindScope(callSite))}) {
-        Say(callSite,
-            "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
-            procSymbol->name(), DEREF(pure->symbol()).name());
-      }
+  }
+  if (procSymbol && !IsPureProcedure(*procSymbol)) {
+    if (const semantics::Scope *
+        pure{semantics::FindPureProcedureContaining(
+            context_.FindScope(callSite))}) {
+      Say(callSite,
+          "Procedure '%s' referenced in pure subprogram '%s' must be pure too"_err_en_US,
+          procSymbol->name(), DEREF(pure->symbol()).name());
     }
   }
   if (ok && !treatExternalAsImplicit && procSymbol &&
@@ -4010,8 +4010,10 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
   std::string oprNameString{
       isUserOp ? std::string{opr} : "operator("s + opr + ')'};
   parser::CharBlock oprName{oprNameString};
+  parser::Messages hitBuffer;
   {
-    auto restorer{context_.GetContextualMessages().DiscardMessages()};
+    parser::Messages buffer;
+    auto restorer{context_.GetContextualMessages().SetMessages(buffer)};
     const auto &scope{context_.context().FindScope(source_)};
     if (Symbol *symbol{scope.FindSymbol(oprName)}) {
       anyPossibilities = true;
@@ -4023,10 +4025,12 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
           result.reset();
         } else {
           hit.push_back(symbol);
+          hitBuffer = std::move(buffer);
         }
       }
     }
     for (std::size_t passIndex{0}; passIndex < actuals_.size(); ++passIndex) {
+      buffer.clear();
       const Symbol *generic{nullptr};
       if (const Symbol *binding{
               FindBoundOp(oprName, passIndex, generic, false)}) {
@@ -4038,6 +4042,7 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
           } else {
             result = std::move(thisResult);
             hit.push_back(binding);
+            hitBuffer = std::move(buffer);
           }
         }
       }
@@ -4052,6 +4057,9 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
           AttachDeclaration(*msg, *symbol);
         }
       }
+    }
+    if (auto *msgs{context_.GetContextualMessages().messages()}) {
+      msgs->Annex(std::move(hitBuffer));
     }
   } else if (inaccessible) {
     context_.Say(source_, std::move(*inaccessible));
@@ -4074,12 +4082,15 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
   }
   MaybeExpr result;
   std::vector<const char *> hit;
+  parser::Messages hitBuffer;
   {
-    auto restorer{context_.GetContextualMessages().DiscardMessages()};
     for (std::size_t i{0}; i < oprs.size(); ++i) {
+      parser::Messages buffer;
+      auto restorer{context_.GetContextualMessages().SetMessages(buffer)};
       if (MaybeExpr thisResult{TryDefinedOp(oprs[i], error)}) {
         result = std::move(thisResult);
         hit.push_back(oprs[i]);
+        hitBuffer = std::move(buffer);
       }
     }
   }
@@ -4089,6 +4100,8 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(
     context_.Say(
         "Matching accessible definitions were found with %zd variant spellings of the generic operator ('%s', '%s')"_err_en_US,
         hit.size(), ToUpperCase(hit[0]), ToUpperCase(hit[1]));
+  } else { // one hit; preserve errors
+    context_.context().messages().Annex(std::move(hitBuffer));
   }
   return result;
 }
