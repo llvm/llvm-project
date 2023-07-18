@@ -26,6 +26,7 @@
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
 #  include <locale>
+#  include <sstream>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
