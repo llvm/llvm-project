@@ -824,13 +824,6 @@ void CheckHelper::CheckObjectEntity(
           "An initialized variable in BLOCK DATA must be in a COMMON block"_err_en_US);
     }
   }
-  if (type && type->IsPolymorphic() &&
-      !(type->IsAssumedType() || IsAllocatableOrPointer(symbol) ||
-          IsDummy(symbol))) { // C708
-    messages_.Say("CLASS entity '%s' must be a dummy argument or have "
-                  "ALLOCATABLE or POINTER attribute"_err_en_US,
-        symbol.name());
-  }
   if (derived && InPure() && !InInterface() &&
       IsAutomaticallyDestroyed(symbol) &&
       !IsIntentOut(symbol) /*has better messages*/ &&
@@ -3093,15 +3086,22 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
 }
 
 void CheckHelper::CheckSymbolType(const Symbol &symbol) {
-  if (!IsAllocatable(symbol) &&
-      (!IsPointer(symbol) ||
-          (IsProcedure(symbol) && !symbol.HasExplicitInterface()))) { // C702
-    if (auto dyType{evaluate::DynamicType::From(symbol)}) {
-      if (dyType->HasDeferredTypeParameter()) {
-        messages_.Say(
-            "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
-            symbol.name(), dyType->AsFortran());
-      }
+  const Symbol *result{FindFunctionResult(symbol)};
+  const Symbol &relevant{result ? *result : symbol};
+  if (IsAllocatable(relevant)) { // always ok
+  } else if (IsPointer(relevant) && !IsProcedure(relevant)) {
+    // object pointers are always ok
+  } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {
+    if (dyType->IsPolymorphic() && !dyType->IsAssumedType() &&
+        !(IsDummy(symbol) && !IsProcedure(relevant))) { // C708
+      messages_.Say(
+          "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
+          symbol.name());
+    }
+    if (dyType->HasDeferredTypeParameter()) { // C702
+      messages_.Say(
+          "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
+          symbol.name(), dyType->AsFortran());
     }
   }
 }
