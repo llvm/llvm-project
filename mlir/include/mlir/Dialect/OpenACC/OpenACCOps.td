@@ -116,6 +116,25 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
 def OpenACC_DataClauseAttr : EnumAttr<OpenACC_Dialect, OpenACC_DataClauseEnum,
                                       "data_clause">;
 
+class OpenACC_Attr<string name, string attrMnemonic,
+                   list<Trait> traits = [],
+                   string baseCppClass = "::mlir::Attribute">
+    : AttrDef<OpenACC_Dialect, name, traits, baseCppClass> {
+  let mnemonic = attrMnemonic;
+}
+
+// Attribute to describe the declare data clause used on variable.
+// Intended to be used at the variable creation site (on the global op or the
+// corresponding allocation operation). This is used in conjunction with the
+// declare operations (`acc.declare_enter` and `acc.declare_exit`) since those
+// describe how the data action is performed. The attribute itself makes it
+// easier to find out whether the variable is in a declare clause and what kind
+// of clause it is.
+def DeclareAttr : OpenACC_Attr<"Declare", "declare"> {
+  let parameters = (ins "DataClauseAttr":$dataClause);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
 def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
