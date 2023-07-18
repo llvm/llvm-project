@@ -5593,7 +5593,8 @@ static void TryOrBuildParenListInitialization(
             // C++ [dcl.init]p16.6.2.2
             //   The remaining elements are initialized with their default
             //   member initializers, if any
-            ExprResult DIE = S.BuildCXXDefaultInitExpr(FD->getLocation(), FD);
+            ExprResult DIE = S.BuildCXXDefaultInitExpr(
+                Kind.getParenOrBraceRange().getEnd(), FD);
             if (DIE.isInvalid())
               return;
             S.checkInitializerLifetime(SubEntity, DIE.get());
