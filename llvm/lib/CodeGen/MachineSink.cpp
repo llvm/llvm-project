@@ -276,8 +276,6 @@ static bool blockPrologueInterferes(const MachineBasicBlock *BB,
                                     const TargetRegisterInfo *TRI,
                                     const TargetInstrInfo *TII,
                                     const MachineRegisterInfo *MRI) {
-  if (BB->begin() == End)
-    return false; // no prologue
   for (MachineBasicBlock::const_iterator PI = BB->getFirstNonPHI(); PI != End;
        ++PI) {
     // Only check target defined prologue instructions
