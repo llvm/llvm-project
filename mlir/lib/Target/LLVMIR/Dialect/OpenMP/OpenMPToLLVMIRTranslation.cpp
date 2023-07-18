@@ -1127,27 +1127,28 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
 
   // Convert values and types.
   auto &innerOpList = opInst.getRegion().front().getOperations();
-  if (innerOpList.size() != 2)
-    return opInst.emitError("exactly two operations are allowed inside an "
-                            "atomic update region while lowering to LLVM IR");
+  bool isRegionArgUsed{false}, isXBinopExpr{false};
+  llvm::AtomicRMWInst::BinOp binop;
+  mlir::Value mlirExpr;
+  // Find the binary update operation that uses the region argument
+  // and get the expression to update
+  for (Operation &innerOp : innerOpList) {
+    if (innerOp.getNumOperands() == 2) {
+      binop = convertBinOpToAtomic(innerOp);
+      if (!llvm::is_contained(innerOp.getOperands(),
+                              opInst.getRegion().getArgument(0)))
+        continue;
+      isRegionArgUsed = true;
+      isXBinopExpr = innerOp.getNumOperands() > 0 &&
+                     innerOp.getOperand(0) == opInst.getRegion().getArgument(0);
+      mlirExpr = (isXBinopExpr ? innerOp.getOperand(1) : innerOp.getOperand(0));
+      break;
+    }
+  }
+  if (!isRegionArgUsed)
+    return opInst.emitError("no atomic update operation with region argument"
+                            " as operand found inside atomic.update region");
 
-  Operation &innerUpdateOp = innerOpList.front();
-
-  if (innerUpdateOp.getNumOperands() != 2 ||
-      !llvm::is_contained(innerUpdateOp.getOperands(),
-                          opInst.getRegion().getArgument(0)))
-    return opInst.emitError(
-        "the update operation inside the region must be a binary operation and "
-        "that update operation must have the region argument as an operand");
-
-  llvm::AtomicRMWInst::BinOp binop = convertBinOpToAtomic(innerUpdateOp);
-
-  bool isXBinopExpr =
-      innerUpdateOp.getNumOperands() > 0 &&
-      innerUpdateOp.getOperand(0) == opInst.getRegion().getArgument(0);
-
-  mlir::Value mlirExpr = (isXBinopExpr ? innerUpdateOp.getOperand(1)
-                                       : innerUpdateOp.getOperand(0));
   llvm::Value *llvmExpr = moduleTranslation.lookupValue(mlirExpr);
   llvm::Value *llvmX = moduleTranslation.lookupValue(opInst.getX());
   llvm::Type *llvmXElementType = moduleTranslation.convertType(
@@ -1210,25 +1211,28 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     isPostfixUpdate = atomicCaptureOp.getSecondOp() ==
                       atomicCaptureOp.getAtomicUpdateOp().getOperation();
     auto &innerOpList = atomicUpdateOp.getRegion().front().getOperations();
-    if (innerOpList.size() != 2)
+    bool isRegionArgUsed{false};
+    // Find the binary update operation that uses the region argument
+    // and get the expression to update
+    for (Operation &innerOp : innerOpList) {
+      if (innerOp.getNumOperands() == 2) {
+        binop = convertBinOpToAtomic(innerOp);
+        if (!llvm::is_contained(innerOp.getOperands(),
+                                atomicUpdateOp.getRegion().getArgument(0)))
+          continue;
+        isRegionArgUsed = true;
+        isXBinopExpr =
+            innerOp.getNumOperands() > 0 &&
+            innerOp.getOperand(0) == atomicUpdateOp.getRegion().getArgument(0);
+        mlirExpr =
+            (isXBinopExpr ? innerOp.getOperand(1) : innerOp.getOperand(0));
+        break;
+      }
+    }
+    if (!isRegionArgUsed)
       return atomicUpdateOp.emitError(
-          "exactly two operations are allowed inside an "
-          "atomic update region while lowering to LLVM IR");
-    Operation *innerUpdateOp = atomicUpdateOp.getFirstOp();
-    if (innerUpdateOp->getNumOperands() != 2 ||
-        !llvm::is_contained(innerUpdateOp->getOperands(),
-                            atomicUpdateOp.getRegion().getArgument(0)))
-      return atomicUpdateOp.emitError(
-          "the update operation inside the region must be a binary operation "
-          "and that update operation must have the region argument as an "
-          "operand");
-    binop = convertBinOpToAtomic(*innerUpdateOp);
-
-    isXBinopExpr = innerUpdateOp->getOperand(0) ==
-                   atomicUpdateOp.getRegion().getArgument(0);
-
-    mlirExpr = (isXBinopExpr ? innerUpdateOp->getOperand(1)
-                             : innerUpdateOp->getOperand(0));
+          "no atomic update operation with region argument"
+          " as operand found inside atomic.update region");
   }
 
   llvm::Value *llvmExpr = moduleTranslation.lookupValue(mlirExpr);
