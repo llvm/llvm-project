@@ -142,7 +142,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
   void *GlobalMemory = memory::allocGlobal(
       AlignedBytes, "Slow path shared memory allocation, insufficient "
                     "shared memory stack memory!");
-  ASSERT(GlobalMemory != nullptr && "nullptr returned by malloc!");
+  ASSERT(GlobalMemory != nullptr, "nullptr returned by malloc!");
 
   return GlobalMemory;
 }
@@ -189,12 +189,12 @@ bool state::ICVStateTy::operator==(const ICVStateTy &Other) const {
 }
 
 void state::ICVStateTy::assertEqual(const ICVStateTy &Other) const {
-  ASSERT(NThreadsVar == Other.NThreadsVar);
-  ASSERT(LevelVar == Other.LevelVar);
-  ASSERT(ActiveLevelVar == Other.ActiveLevelVar);
-  ASSERT(MaxActiveLevelsVar == Other.MaxActiveLevelsVar);
-  ASSERT(RunSchedVar == Other.RunSchedVar);
-  ASSERT(RunSchedChunkVar == Other.RunSchedChunkVar);
+  ASSERT(NThreadsVar == Other.NThreadsVar, nullptr);
+  ASSERT(LevelVar == Other.LevelVar, nullptr);
+  ASSERT(ActiveLevelVar == Other.ActiveLevelVar, nullptr);
+  ASSERT(MaxActiveLevelsVar == Other.MaxActiveLevelsVar, nullptr);
+  ASSERT(RunSchedVar == Other.RunSchedVar, nullptr);
+  ASSERT(RunSchedChunkVar == Other.RunSchedChunkVar, nullptr);
 }
 
 void state::TeamStateTy::init(bool IsSPMD) {
@@ -217,8 +217,8 @@ bool state::TeamStateTy::operator==(const TeamStateTy &Other) const {
 
 void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
   ICVState.assertEqual(Other.ICVState);
-  ASSERT(ParallelTeamSize == Other.ParallelTeamSize);
-  ASSERT(HasThreadState == Other.HasThreadState);
+  ASSERT(ParallelTeamSize == Other.ParallelTeamSize, nullptr);
+  ASSERT(HasThreadState == Other.HasThreadState, nullptr);
 }
 
 state::TeamStateTy SHARED(ompx::state::TeamState);
@@ -251,7 +251,7 @@ void state::init(bool IsSPMD) {
 }
 
 void state::enterDataEnvironment(IdentTy *Ident) {
-  ASSERT(config::mayUseThreadStates() &&
+  ASSERT(config::mayUseThreadStates(),
          "Thread state modified while explicitly disabled!");
   if (!config::mayUseThreadStates())
     return;
@@ -269,7 +269,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
                      atomic::seq_cst, atomic::seq_cst))
       memory::freeGlobal(ThreadStatesPtr,
                          "Thread state array allocated multiple times");
-    ASSERT(atomic::load(ThreadStatesBitsPtr, atomic::seq_cst) &&
+    ASSERT(atomic::load(ThreadStatesBitsPtr, atomic::seq_cst),
            "Expected valid thread states bit!");
   }
   NewThreadState->init(ThreadStates[TId]);
@@ -278,7 +278,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
 }
 
 void state::exitDataEnvironment() {
-  ASSERT(config::mayUseThreadStates() &&
+  ASSERT(config::mayUseThreadStates(),
          "Thread state modified while explicitly disabled!");
 
   unsigned TId = mapping::getThreadIdInBlock();
@@ -309,7 +309,7 @@ void state::assumeInitialState(bool IsSPMD) {
   TeamStateTy InitialTeamState;
   InitialTeamState.init(IsSPMD);
   InitialTeamState.assertEqual(TeamState);
-  ASSERT(mapping::isSPMDMode() == IsSPMD);
+  ASSERT(mapping::isSPMDMode() == IsSPMD, nullptr);
 }
 
 extern "C" {
@@ -323,7 +323,7 @@ int omp_get_max_threads(void) { return icv::NThreads; }
 
 int omp_get_level(void) {
   int LevelVar = icv::Level;
-  ASSERT(LevelVar >= 0);
+  ASSERT(LevelVar >= 0, nullptr);
   return LevelVar;
 }
 
@@ -445,7 +445,7 @@ void __kmpc_begin_sharing_variables(void ***GlobalArgs, uint64_t nArgs) {
   } else {
     SharedMemVariableSharingSpacePtr = (void **)memory::allocGlobal(
         nArgs * sizeof(void *), "new extended args");
-    ASSERT(SharedMemVariableSharingSpacePtr != nullptr &&
+    ASSERT(SharedMemVariableSharingSpacePtr != nullptr,
            "Nullptr returned by malloc!");
   }
   *GlobalArgs = SharedMemVariableSharingSpacePtr;
