@@ -22,11 +22,9 @@ char test_getenv() {
 }
 
 int test_isalpha(int *x, char c, char d) {
-  int iad = isalpha(d);// \
-  // expected-note{{Assuming the character is non-alphabetical}}
+  int iad = isalpha(d);
   if (isalpha(c)) {// \
-    // expected-note{{Taking true branch}} \
-    // expected-note{{Assuming the character is alphabetical}}
+    // expected-note{{Taking true branch}}
     x = NULL; // \
     // expected-note{{Null pointer value stored to 'x'}}
   }
@@ -38,7 +36,6 @@ int test_isalpha(int *x, char c, char d) {
 
 int test_isdigit(int *x, char c) {
   if (!isdigit(c)) {// \
-  // expected-note{{Assuming the character is not a digit}} \
   // expected-note{{Taking true branch}}
     x = NULL; // \
     // expected-note{{Null pointer value stored to 'x'}}
@@ -64,8 +61,7 @@ int test_islower(int *x) {
 }
 
 int test_bugpath_notes(FILE *f1, char c, FILE *f2) {
-  int f = fileno(f2); // \
-  // expected-note{{Assuming that 'fileno' is successful}}
+  int f = fileno(f2);
   if (f == -1) // \
     // expected-note{{Taking false branch}}
     return 0;
@@ -76,4 +72,11 @@ int test_bugpath_notes(FILE *f1, char c, FILE *f2) {
   return dup(f); // \
   // expected-warning{{The 1st argument to 'dup' is -1 but should be >= 0}} \
   // expected-note{{The 1st argument to 'dup' is -1 but should be >= 0}}
+}
+
+int test_fileno_arg_note(FILE *f1) {
+  return dup(fileno(f1)); // \
+  // expected-warning{{The 1st argument to 'dup' is < 0 but should be >= 0}} \
+  // expected-note{{The 1st argument to 'dup' is < 0 but should be >= 0}} \
+  // expected-note{{Assuming that 'fileno' fails}}
 }

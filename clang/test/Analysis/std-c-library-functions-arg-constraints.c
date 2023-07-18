@@ -35,8 +35,7 @@ void test_alnum_concrete(int v) {
 }
 
 void test_alnum_symbolic(int x) {
-  int ret = isalnum(x); // \
-  // bugpath-note{{Assuming the character is non-alphanumeric}}
+  int ret = isalnum(x);
   (void)ret;
 
   clang_analyzer_eval(EOF <= x && x <= 255); // \
@@ -170,8 +169,7 @@ void test_notnull_concrete(FILE *fp) {
   // bugpath-note{{The 1st argument to 'fread' is NULL but should not be NULL}}
 }
 void test_notnull_symbolic(FILE *fp, int *buf) {
-  fread(buf, sizeof(int), 10, fp); // \
-  // bugpath-note{{'fread' fails}}
+  fread(buf, sizeof(int), 10, fp);
   clang_analyzer_eval(buf != 0); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \

@@ -835,6 +835,7 @@ private:
 
     for (ArgNo ArgN : VC->getArgsToTrack()) {
       bugreporter::trackExpressionValue(N, Call.getArgExpr(ArgN), *R);
+      R->markInteresting(Call.getArgSVal(ArgN));
       // All tracked arguments are important, highlight them.
       R->addRange(Call.getArgSourceRange(ArgN));
     }
@@ -1298,6 +1299,7 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
     // StdLibraryFunctionsChecker.
     ExplodedNode *Pred = Node;
     if (!Case.getNote().empty()) {
+      const SVal RV = Call.getReturnValue();
       // If there is a description for this execution branch (summary case),
       // use it as a note tag.
       std::string Note =
@@ -1305,7 +1307,7 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
                         cast<NamedDecl>(Call.getDecl())->getDeclName());
       if (Summary.getInvalidationKd() == EvalCallAsPure) {
         const NoteTag *Tag = C.getNoteTag(
-            [Node, Note](PathSensitiveBugReport &BR) -> std::string {
+            [Node, Note, RV](PathSensitiveBugReport &BR) -> std::string {
               // Try to omit the note if we know in advance which branch is
               // taken (this means, only one branch exists).
               // This check is performed inside the lambda, after other
@@ -1316,18 +1318,22 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
               // split that was performed by another checker (and can not find
               // the successors). This is why this check is only used in the
               // EvalCallAsPure case.
-              if (Node->succ_size() > 1)
+              if (BR.isInteresting(RV) && Node->succ_size() > 1)
                 return Note;
               return "";
-            },
-            /*IsPrunable=*/true);
+            });
         Pred = C.addTransition(NewState, Pred, Tag);
       } else {
-        const NoteTag *Tag = C.getNoteTag(Note, /*IsPrunable=*/true);
+        const NoteTag *Tag =
+            C.getNoteTag([Note, RV](PathSensitiveBugReport &BR) -> std::string {
+              if (BR.isInteresting(RV))
+                return Note;
+              return "";
+            });
         Pred = C.addTransition(NewState, Pred, Tag);
       }
       if (!Pred)
-        break;
+        continue;
     }
 
     // If we can get a note tag for the errno change, add this additionally to
