@@ -1315,6 +1315,54 @@ LIBOMPTARGET_RPC_LATENCY
 """"""""""""""""""""""""
 This is the maximum amount of time the client will wait for a response from the server.
 
+
+.. _libomptarget_libc:
+
+LLVM/OpenMP support for C library routines
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Support for calling standard C library routines on GPU targets is provided by 
+the `LLVM C Library <https://libc.llvm.org/gpu/>`_. This project provides two 
+static libraries, ``libcgpu.a`` and ``libllvmlibc_rpc_server.a``, which are used 
+by the OpenMP runtime to provide ``libc`` support. The ``libcgpu.a`` library 
+contains the GPU device code, while ``libllvmlibc_rpc_server.a`` provides the 
+interface to the RPC interface. More information on the RPC construction can be 
+found in the `associated documentation <https://libc.llvm.org/gpu/rpc.html>`_.
+
+To provide host services, we run an RPC server inside of the runtime. This 
+allows the host to respond to requests made from the GPU asynchronously. For 
+``libc`` calls that require an RPC server, such as printing, an external handle 
+to the RPC client running on the GPU will be present in the GPU executable. If 
+we find this symbol, we will initialize a client and server and run it in the 
+background while the kernel is executing.
+
+For example, consider the following simple OpenMP offloading code. Here we will 
+simply print a string to the user from the GPU.
+
+.. code-block:: c++
+
+   #include <stdio.h>
+
+   int main() {
+    #pragma omp target
+      { fputs("Hello World!\n", stderr); }
+   }
+
+We can compile this using the ``libcgpu.a`` library to resolve the symbols. 
+Because this function requires RPC support, this will also pull in an externally 
+visible symbol called ``__llvm_libc_rpc_client`` into the device image. When 
+loading the device image, the runtime will check for this symbol and initialize 
+an RPC interface if it is found. The following example shows the RPC server 
+being used.
+
+.. code-block:: console
+
+    $ clang++ hello.c -fopenmp --offload-arch=gfx90a -lcgpu
+    $ env LIBOMPTARGET_DEBUG=1 ./a.out
+    PluginInterface --> Running an RPC server on device 0
+    ...
+    Hello World!
+
 .. _libomptarget_device:
 
 LLVM/OpenMP Target Device Runtime (``libomptarget-ARCH-SUBARCH.bc``)
