@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 
 using namespace mlir;
@@ -43,6 +45,17 @@ struct DisableZAPattern : public OpRewritePattern<func::ReturnOp> {
     return success();
   }
 };
+
+struct GetTileIDConversion : public ConvertOpToLLVMPattern<GetTileID> {
+  using ConvertOpToLLVMPattern<GetTileID>::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(GetTileID op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // TODO: implement tile allocation, currently only tile 0 is supported.
+    rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(op, rewriter.getI32Type(), 0);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::populateArmSMELegalizeForLLVMExportPatterns(
@@ -52,9 +65,11 @@ void mlir::populateArmSMELegalizeForLLVMExportPatterns(
 
 void mlir::configureArmSMELegalizeForExportTarget(
     LLVMConversionTarget &target) {
-  target.addLegalOp<scf::ForOp, scf::YieldOp, arm_sme::aarch64_sme_zero,
+  target.addLegalOp<scf::ForOp, scf::YieldOp, arm_sme::CastTileToVector,
+                    arm_sme::CastVectorToTile, arm_sme::aarch64_sme_zero,
                     arm_sme::aarch64_sme_str, arm_sme::aarch64_sme_za_enable,
                     arm_sme::aarch64_sme_za_disable>();
+  target.addLegalOp<GetTileID>();
 
   // Mark 'func.func' ops as legal if either:
   //   1. no 'arm_za' function attribute is present.
