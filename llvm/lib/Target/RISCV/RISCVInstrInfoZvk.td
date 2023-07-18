@@ -42,12 +42,11 @@ class RVInstIVI_VROR<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let RVVConstraint = VMConstraint;
 }
 
-multiclass VROR_IV_V_X_I<string opcodestr, bits<6> funct6,
-                              Operand optype = uimm6, string vw = "v">
+multiclass VROR_IV_V_X_I<string opcodestr, bits<6> funct6>
     : VALU_IV_V_X<opcodestr, funct6> {
   def I : RVInstIVI_VROR<funct6, (outs VR:$vd),
-              (ins VR:$vs2, optype:$imm, VMaskOp:$vm),
-              opcodestr # "." # vw # "i", "$vd, $vs2, $imm$vm">,
+              (ins VR:$vs2, uimm6:$imm, VMaskOp:$vm),
+              opcodestr # ".vi", "$vd, $vs2, $imm$vm">,
          Sched<[WriteVIALUI_WorstCase, ReadVIALUV_WorstCase,
                 ReadVMask]>;
 }
