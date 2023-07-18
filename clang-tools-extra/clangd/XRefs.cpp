@@ -1367,9 +1367,6 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
       rangeTillEOL(SM.getBufferData(SM.getMainFileID()), Inc.HashOffset);
   Result.Loc.uri = URIMainFile;
   Results.References.push_back(std::move(Result));
-
-  if (Results.References.empty())
-    return std::nullopt;
   return Results;
 }
 } // namespace
