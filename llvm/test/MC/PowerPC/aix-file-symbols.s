@@ -14,6 +14,6 @@
 # CHECK-NEXT: 00000000      df *DEBUG*	00000000 1.c
 # CHECK-NEXT: 00000000      df *DEBUG*	00000000 2.c
 # CHECK-NEXT: 00000000      df *DEBUG*	00000000 3.c
-# CHECK-NEXT: 00000000 l       .text	00000000 .text
-# CHECK-NEXT: 00000000 g     F .text (csect: .text) 	00000000 .var1
-# CHECK-NEXT: 00000000 g     F .text (csect: .text) 	00000000 .var2
+# CHECK-NEXT: 00000000 l       .text	00000000 
+# CHECK-NEXT: 00000000 g     F .text (csect: ) 	00000000 .var1
+# CHECK-NEXT: 00000000 g     F .text (csect: ) 	00000000 .var2

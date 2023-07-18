@@ -19,7 +19,7 @@
 ; SECTION-NEXT: Sections [
 ; SECTION-NEXT:   Section {
 ; SECTION-NEXT:     Index: 1
-; SECTION-NEXT:     Name: .text
+; SECTION-NEXT:     Name:
 ; SECTION-NEXT:     PhysicalAddress: 0x0
 ; SECTION-NEXT:     VirtualAddress: 0x0
 ; SECTION-NEXT:     Size: 0x4
@@ -117,7 +117,7 @@
 
 ; SYMS-NEXT:   Symbol {
 ; SYMS-NEXT:     Index: [[#INDX+4]]
-; SYMS-NEXT:     Name: .text
+; SYMS-NEXT:     Name:
 ; SYMS-NEXT:     Value (RelocatableAddress): 0x0
 ; SYMS-NEXT:     Section: .text
 ; SYMS-NEXT:     Type: 0x0
