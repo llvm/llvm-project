@@ -35,8 +35,23 @@ see the `releases page <https://llvm.org/releases/>`_.
 What's New in Libc++ 17.0.0?
 ============================
 
+The main focus of the libc++ team has been to implement new C++20 and C++23
+features. Work on the next C++ version, C++26, has started.
+
+The C++20 ``format`` library is marked as stable. The library is not complete since
+the C++20 ``chrono`` library lacks supports for time zones and some clocks.
+
+The C++20 spaceship operator is almost complete. It misses ``long double`` and
+time zone support.
+
 There is an experimental implementation of the C++23 ``std`` module. See
 :ref:`ModulesInLibcxx` for more information.
+
+An experimental implementation of the C++20 ``stop_token`` is available.
+
+Work has started on the C++17 Parallel STL. This feature is experimental, see
+:ref:`pstl-status` for the current status.
+
 
 Implemented Papers
 ------------------
@@ -48,11 +63,17 @@ Implemented Papers
 - P2711R1 - Making Multi-Param Constructors Of views explicit (``join_with_view`` is not done yet)
 - P2572R1 - ``std::format`` fill character allowances
 - P2510R3 - Formatting pointers
+- P2136R3 - ``invoke_r``
+- P2494R2 - Relaxing range adaptors to allow for move only types
+- P2585R0 - Improving default container formatting
+- P0408R7 - Efficient Access to ``basic_stringbuf``'s Buffer
+
 
 Improvements and New Features
 -----------------------------
-- ``std::equal`` and ``std::ranges::equal`` are now forwarding to ``std::memcmp`` for integral types and pointers,
-  which can lead up to 40x performance improvements.
+- ``std::equal``, ``std::ranges::equal``, ``std::find``, and
+  ``std::ranges::find``  are now forwarding to ``std::memcmp`` for trivially
+  equality comparable types, which can lead up to 40x performance improvements.
 
 - ``std::string_view`` now provides iterators that check for out-of-bounds accesses when the safe
   libc++ mode is enabled.
@@ -85,6 +106,9 @@ Improvements and New Features
   Users can control whether the debug mode is enabled on a per translation unit basis using the
   ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See ``libcxx/docs/HardenedMode.rst`` for more details.
 
+- ASAN annotations to detect container overflow have been added to the
+  containers ``std::deque``, and ``std::vector``.
+
 Deprecations and Removals
 -------------------------
 
@@ -109,12 +133,12 @@ Deprecations and Removals
   - C++23: ``atomic``, ``bit``, ``cstdint``, ``cstdlib``, ``cstring``, ``initializer_list``, ``limits``, ``new``,
            ``stdexcept``, ``system_error``, ``type_traits``, ``typeinfo``
 
-- ``<algorithm>`` no longer includes ``<chrono>`` in any C++ version (it was previously included in C++17 and earlier).
+  - ``<algorithm>`` no longer includes ``<chrono>`` in any C++ version (it was previously included in C++17 and earlier).
 
-- ``<string>`` no longer includes ``<vector>`` in any C++ version (it was previously included in C++20 and earlier).
+  - ``<string>`` no longer includes ``<vector>`` in any C++ version (it was previously included in C++20 and earlier).
 
-- ``<string>``, ``<string_view>``, and ``<mutex>`` no longer include ``<functional>``
-  in any C++ version (it was previously included in C++20 and earlier).
+  - ``<string>``, ``<string_view>``, and ``<mutex>`` no longer include ``<functional>``
+    in any C++ version (it was previously included in C++20 and earlier).
 
 - ``<atomic>``, ``<barrier>``, ``<latch>``, ``<numeric>``, ``<semaphore>`` and ``<shared_mutex>`` no longer include ``<iosfwd>``
   (it was previously included in all Standard versions).
@@ -145,6 +169,8 @@ Deprecations and Removals
 - LWG3631 ``basic_format_arg(T&&) should use remove_cvref_t<T> throughout`` removed
   support for ``volatile`` qualified formatters.
 
+- The unmaintained Solaris support has been removed.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
@@ -172,6 +198,10 @@ LLVM 18
 
 API Changes
 -----------
+- Added ``__asan_annotate_container_with_allocator``, which is is a
+  customization point to allow users to disable Address Sanitizer annotations
+  for containers for specific allocators. See :ref:`turning-off-asan` for more
+  information.
 
 ABI Affecting Changes
 ---------------------
