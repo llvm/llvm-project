@@ -2957,12 +2957,18 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
   }
 
   if (const NamedProperty *property = findArg(op.getProperties(), name)) {
-    if (ctx != CustomDirectiveContext)
+    if (ctx != CustomDirectiveContext && ctx != RefDirectiveContext)
       return emitError(
           loc, "properties currently only supported in `custom` directive");
 
-    if (!seenProperties.insert(property).second)
-      return emitError(loc, "property '" + name + "' is already bound");
+    if (ctx == RefDirectiveContext) {
+      if (!seenProperties.count(property))
+        return emitError(loc, "property '" + name +
+                                  "' must be bound before it is referenced");
+    } else {
+      if (!seenProperties.insert(property).second)
+        return emitError(loc, "property '" + name + "' is already bound");
+    }
 
     return create<PropertyVariable>(property);
   }
