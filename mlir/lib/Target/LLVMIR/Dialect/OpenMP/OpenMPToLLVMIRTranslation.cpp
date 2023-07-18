@@ -1687,6 +1687,11 @@ convertDeclareTargetAttr(Operation *op,
     if (auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(
             op->getParentOfType<ModuleOp>().getOperation())) {
       bool isDeviceCompilation = offloadMod.getIsTargetDevice();
+      // FIXME: Temporarily disabled for host as it causes some issues when
+      // lowering while removing functions at the current time.
+      if (!isDeviceCompilation)
+        return success();
+      
       omp::DeclareTargetDeviceType declareType =
           declareTargetAttr.getDeviceType().getValue();
 
