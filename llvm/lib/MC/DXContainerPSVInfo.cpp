@@ -16,16 +16,20 @@ using namespace llvm::dxbc::PSV;
 
 void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
   uint32_t InfoSize;
+  uint32_t BindingSize;
   switch (Version) {
   case 0:
     InfoSize = sizeof(dxbc::PSV::v0::RuntimeInfo);
+    BindingSize = sizeof(dxbc::PSV::v0::ResourceBindInfo);
     break;
   case 1:
     InfoSize = sizeof(dxbc::PSV::v1::RuntimeInfo);
+    BindingSize = sizeof(dxbc::PSV::v0::ResourceBindInfo);
     break;
   case 2:
   default:
     InfoSize = sizeof(dxbc::PSV::v2::RuntimeInfo);
+    BindingSize = sizeof(dxbc::PSV::v2::ResourceBindInfo);
   }
   uint32_t InfoSizeSwapped = InfoSize;
   if (sys::IsBigEndianHost)
@@ -40,8 +44,7 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
     sys::swapByteOrder(ResourceCount);
   OS.write(reinterpret_cast<const char *>(&ResourceCount), sizeof(uint32_t));
 
-  size_t BindingSize = (Version < 2) ? sizeof(v0::ResourceBindInfo)
-                                     : sizeof(v2::ResourceBindInfo);
+  OS.write(reinterpret_cast<const char *>(&BindingSize), sizeof(uint32_t));
   for (const auto &Res : Resources)
     OS.write(reinterpret_cast<const char *>(&Res), BindingSize);
 }
