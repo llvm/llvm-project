@@ -5907,11 +5907,11 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   if (Subtarget.hasStdExtZicond() && VT.isScalarInteger()) {
     SDValue NewCondV;
     if (selectSETCC(CondV, ISD::SETNE, NewCondV, DAG)) {
-      // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
       if (isNullConstant(FalseV))
+        // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
         return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, NewCondV);
-      // (select (riscv_setne c), 0, f) -> (czero_nez f, c)
       if (isNullConstant(TrueV))
+        // (select (riscv_setne c), 0, f) -> (czero_nez f, c)
         return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, NewCondV);
       // (select (riscv_setne c), t, f) -> (or (czero_eqz t, c), (czero_nez f,
       // c)
@@ -5921,11 +5921,11 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, NewCondV));
     }
     if (selectSETCC(CondV, ISD::SETEQ, NewCondV, DAG)) {
-      // (select (riscv_seteq c), t, 0) -> (czero_nez t, c)
       if (isNullConstant(FalseV))
+        // (select (riscv_seteq c), t, 0) -> (czero_nez t, c)
         return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, NewCondV);
-      // (select (riscv_seteq c), 0, f) -> (czero_eqz f, c)
       if (isNullConstant(TrueV))
+        // (select (riscv_seteq c), 0, f) -> (czero_eqz f, c)
         return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, FalseV, NewCondV);
       // (select (riscv_seteq c), t, f) -> (or (czero_eqz f, c), (czero_nez t,
       // c)
@@ -5934,27 +5934,28 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, FalseV, NewCondV),
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, NewCondV));
     }
-
-    // (select c, t, 0) -> (czero_eqz t, c)
-    if (isNullConstant(FalseV))
+    if (isNullConstant(FalseV)) {
+      // (select c, t, 0) -> (czero_eqz t, c)
       return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV);
-    // (select c, 0, f) -> (czero_nez f, c)
-    if (isNullConstant(TrueV))
+    }
+    if (isNullConstant(TrueV)) {
+      // (select c, 0, f) -> (czero_nez f, c)
       return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV);
-
-    // (select c, (and f, x), f) -> (or (and f, x), (czero_nez f, c))
+    }
     if (TrueV.getOpcode() == ISD::AND &&
-        (TrueV.getOperand(0) == FalseV || TrueV.getOperand(1) == FalseV))
+        (TrueV.getOperand(0) == FalseV || TrueV.getOperand(1) == FalseV)) {
+      // (select c, (and f, x), f) -> (or (and f, x), (czero_nez f, c))
       return DAG.getNode(
           ISD::OR, DL, VT, TrueV,
           DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, CondV));
-    // (select c, t, (and t, x)) -> (or (czero_eqz t, c), (and t, x))
+    }
     if (FalseV.getOpcode() == ISD::AND &&
-        (FalseV.getOperand(0) == TrueV || FalseV.getOperand(1) == TrueV))
+        (FalseV.getOperand(0) == TrueV || FalseV.getOperand(1) == TrueV)) {
+      // (select c, t, (and t, x)) -> (or (czero_eqz t, c), (and t, x))
       return DAG.getNode(
           ISD::OR, DL, VT, FalseV,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV));
-
+    }
     // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
     return DAG.getNode(ISD::OR, DL, VT,
                        DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
