@@ -285,6 +285,10 @@ end
   it's an error only if the resolution is ambiguous.
 * An entity may appear in a `DATA` statement before its explicit
   type declaration under `IMPLICIT NONE(TYPE)`.
+* INCLUDE lines can start in any column, can be preceded in
+  fixed form source by a '0' in column 6, can contain spaces
+  between the letters of the word INCLUDE, and can have a
+  numeric character literal kind prefix on the file name.
 
 ### Extensions supported when enabled by options
 
@@ -412,6 +416,9 @@ end
   This is especially desirable when two generics of the same
   name are combined due to USE association and the mixture may
   be inadvertent.
+* Since Fortran 90, INCLUDE lines have been allowed to have
+  a numeric kind parameter prefix on the file name.  No other
+  Fortran compiler supports them that I can find.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
