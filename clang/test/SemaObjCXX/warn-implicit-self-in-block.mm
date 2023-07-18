@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -x objective-c++ -std=c++11 -fobjc-arc -fblocks -Wimplicit-retain-self -verify %s
+// rdar://11194874
 
 typedef void (^BlockTy)();
 

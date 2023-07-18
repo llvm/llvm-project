@@ -48,6 +48,7 @@ extern struct foo x;
 }
 @end
 
+// rdar://10309454
 @interface Radar10309454
 {
   int IVAR; // expected-note 4 {{previous definition is here}}
@@ -81,6 +82,7 @@ extern struct foo x;
 @end
 
 // PR5984
+// rdar://14037151
 @interface Radar14037151 {
   int myStatus;
 }
@@ -109,6 +111,7 @@ extern struct foo x;
 }
 @end
 
+// rdar://14278560
 @class NSString, NSData, NSNumber;
 
 @interface NSObject

@@ -43,6 +43,7 @@ int f2();
 
 int f2(int x) { return x; }
 
+// rdar://6759522
 int main(void) { return 0; }
 
 void not_a_prototype_test(); // expected-note{{this declaration is not a prototype; add 'void' to make it a prototype for a zero-parameter function}}

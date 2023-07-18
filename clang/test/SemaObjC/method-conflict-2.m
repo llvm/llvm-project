@@ -40,10 +40,11 @@
 - (A*) test2;
 @end
 @implementation Test4
-- (A*) test1 { return 0; }
+- (A*) test1 { return 0; } // id -> A* is rdar://problem/8596987
 - (id) test2 { return 0; }
 @end
 
+// rdar://12522752
 typedef int int32_t;
 typedef long long int64_t;
 
@@ -64,6 +65,7 @@ typedef long long int64_t;
 }
 @end
 
+// rdar://14650159
 // Tests that property inherited indirectly from a nested protocol
 // is seen by the method implementation type matching logic before
 // method in super class is seen. This fixes the warning coming

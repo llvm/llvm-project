@@ -12,7 +12,10 @@
 }
 @end
 
+// rdar://7823675
 int f0(I *a) { return a->IP; } // expected-error {{instance variable 'IP' is private}}
+
+// rdar://8769582
 
 @interface I1 {
  int protected_ivar;
@@ -53,5 +56,6 @@ int f0(I *a) { return a->IP; } // expected-error {{instance variable 'IP' is pri
 @end
 
 @implementation A
+// rdar://9605088
 @synthesize testObjectWeakProperty; // expected-error {{cannot synthesize weak property because the current deployment target does not support weak references}}
 @end

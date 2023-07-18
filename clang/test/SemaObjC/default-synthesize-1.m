@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wobjc-missing-property-synthesis -verify -Wno-objc-root-class -triple=x86_64-apple-macos10.10 %s
+// rdar://11295716
 
 @interface NSObject 
 - (void) release;
@@ -85,6 +86,7 @@
 }
 @end
 
+// rdar://8349319
 // No default synthesis if implementation has getter (readonly) and setter(readwrite) methods.
 @interface DSATextSearchResult 
 @property(assign,readonly) float relevance;
@@ -123,6 +125,7 @@
 @synthesize x; // expected-error {{cannot synthesize property 'x' with incomplete type 'enum A'}}
 @end
 
+// rdar://17774815
 @interface ZXParsedResult
 @property (nonatomic, copy, readonly) NSString *description; // expected-note {{property declared here}}
 @end

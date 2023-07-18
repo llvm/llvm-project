@@ -232,6 +232,7 @@ int* f10(int* p, signed char x, int y) {
   return p;
 }
 
+// Test case from <rdar://problem/6407949>
 void f11(unsigned i) {
   int *x = 0;
   if (i >= 0) { // expected-warning{{always true}}

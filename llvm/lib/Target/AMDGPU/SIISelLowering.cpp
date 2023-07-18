@@ -9277,10 +9277,10 @@ SDValue SITargetLowering::lowerFDIV_FAST(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue r1 = DAG.getNode(ISD::FABS, SL, MVT::f32, RHS);
 
-  const APFloat K0Val(llvm::bit_cast<float>(0x6f800000));
+  const APFloat K0Val(0x1p+96f);
   const SDValue K0 = DAG.getConstantFP(K0Val, SL, MVT::f32);
 
-  const APFloat K1Val(llvm::bit_cast<float>(0x2f800000));
+  const APFloat K1Val(0x1p-32f);
   const SDValue K1 = DAG.getConstantFP(K1Val, SL, MVT::f32);
 
   const SDValue One = DAG.getConstantFP(1.0, SL, MVT::f32);
@@ -9534,9 +9534,7 @@ SDValue SITargetLowering::LowerFFREXP(SDValue Op, SelectionDAG &DAG) const {
       ISD::INTRINSIC_WO_CHAIN, dl, InstrExpVT,
       DAG.getTargetConstant(Intrinsic::amdgcn_frexp_exp, dl, MVT::i32), Val);
 
-  const GCNSubtarget &ST =
-      DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
-  if (ST.hasFractBug()) {
+  if (Subtarget->hasFractBug()) {
     SDValue Fabs = DAG.getNode(ISD::FABS, dl, VT, Val);
     SDValue Inf = DAG.getConstantFP(
         APFloat::getInf(SelectionDAG::EVTToAPFloatSemantics(VT)), dl, VT);
@@ -10858,10 +10856,15 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     return true;
 
   if (auto *CFP = dyn_cast<ConstantFPSDNode>(Op)) {
-    auto F = CFP->getValueAPF();
+    const auto &F = CFP->getValueAPF();
     if (F.isNaN() && F.isSignaling())
       return false;
-    return !F.isDenormal() || denormalsEnabledForType(DAG, Op.getValueType());
+    if (!F.isDenormal())
+      return true;
+
+    DenormalMode Mode =
+        DAG.getMachineFunction().getDenormalMode(F.getSemantics());
+    return Mode == DenormalMode::getIEEE();
   }
 
   // If source is a result of another standard FP operation it is already in
@@ -10930,6 +10933,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
 
     // snans will be quieted, so we only need to worry about denormals.
     if (Subtarget->supportsMinMaxDenormModes() ||
+        // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(DAG, Op.getValueType()))
       return true;
 
@@ -11009,6 +11013,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
     [[fallthrough]];
   }
   default:
+    // FIXME: denormalsEnabledForType is broken for dynamic
     return denormalsEnabledForType(DAG, Op.getValueType()) &&
            DAG.isKnownNeverSNaN(Op);
   }
@@ -11030,8 +11035,11 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
   if (mi_match(Reg, MRI, MIPatternMatch::m_GFCstOrSplat(FCR))) {
     if (FCR->Value.isSignaling())
       return false;
-    return !FCR->Value.isDenormal() ||
-           denormalsEnabledForType(MRI.getType(FCR->VReg), MF);
+    if (!FCR->Value.isDenormal())
+      return true;
+
+    DenormalMode Mode = MF.getDenormalMode(FCR->Value.getSemantics());
+    return Mode == DenormalMode::getIEEE();
   }
 
   if (MaxDepth == 0)
@@ -11074,6 +11082,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
   case AMDGPU::G_FMINNUM_IEEE:
   case AMDGPU::G_FMAXNUM_IEEE: {
     if (Subtarget->supportsMinMaxDenormModes() ||
+        // FIXME: denormalsEnabledForType is broken for dynamic
         denormalsEnabledForType(MRI.getType(Reg), MF))
       return true;
 
@@ -11130,9 +11139,16 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
 SDValue SITargetLowering::getCanonicalConstantFP(
   SelectionDAG &DAG, const SDLoc &SL, EVT VT, const APFloat &C) const {
   // Flush denormals to 0 if not enabled.
-  if (C.isDenormal() && !denormalsEnabledForType(DAG, VT)) {
-    return DAG.getConstantFP(APFloat::getZero(C.getSemantics(),
-                                              C.isNegative()), SL, VT);
+  if (C.isDenormal()) {
+    DenormalMode Mode =
+        DAG.getMachineFunction().getDenormalMode(C.getSemantics());
+    if (Mode == DenormalMode::getPreserveSign()) {
+      return DAG.getConstantFP(
+          APFloat::getZero(C.getSemantics(), C.isNegative()), SL, VT);
+    }
+
+    if (Mode != DenormalMode::getIEEE())
+      return SDValue();
   }
 
   if (C.isNaN()) {

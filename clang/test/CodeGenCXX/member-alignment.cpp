@@ -19,6 +19,8 @@
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown-windows-msvc %s -o - | \
 // RUN: FileCheck -check-prefix CHECK-MSVC %s
 
+// rdar://7268289
+
 class t {
 public:
   virtual void foo(void);

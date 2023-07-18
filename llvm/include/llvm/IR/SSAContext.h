@@ -43,9 +43,10 @@ public:
   using InstructionT = Instruction;
   using ValueRefT = Value *;
   using ConstValueRefT = const Value *;
-  static Value *ValueRefNull;
   using UseT = Use;
   using DominatorTreeT = DominatorTreeBase<BlockT, false>;
+
+  static constexpr Value *ValueRefNull = nullptr;
 
   void setFunction(Function &Fn);
   Function *getFunction() const { return F; }

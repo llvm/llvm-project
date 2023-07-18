@@ -38,6 +38,7 @@ void f1(NestedNonnullMember *Root) {
 
 // Check that we correctly process situations when non-pointer parameters
 // get nonnul attributes.
+// Original problem: rdar://problem/63150074
 typedef struct {
   long a;
 } B;

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// rdar: //7824372
 
 @interface A // expected-note {{class started here}}
 -(void) im0;

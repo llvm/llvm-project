@@ -442,7 +442,7 @@ void test_return() {
   A c;
 }
 
-// CHECK:      [B8 (ENTRY)]
+// CHECK:      [B9 (ENTRY)]
 // CHECK-NEXT:   Succs (1): B7
 // CHECK:      [B1]
 // CHECK:       l1:
@@ -474,11 +474,8 @@ void test_return() {
 // CHECK-NEXT:   Preds (1): B6
 // CHECK-NEXT:   Succs (2): B3 B2
 // CHECK:      [B5]
-// CHECK-NEXT:   1: [B6.4].~A() (Implicit destructor)
-// CHECK-NEXT:   2: [B6.2].~A() (Implicit destructor)
-// CHECK-NEXT:   T: goto l0;
 // CHECK:        Preds (1): B6
-// CHECK-NEXT:   Succs (1): B6
+// CHECK-NEXT:   Succs (1): B8
 // CHECK:      [B6]
 // CHECK:       l0:
 // WARNINGS-NEXT:   1:  (CXXConstructExpr, A)
@@ -490,13 +487,19 @@ void test_return() {
 // CHECK-NEXT:   5: UV
 // CHECK-NEXT:   6: [B6.5] (ImplicitCastExpr, LValueToRValue, _Bool)
 // CHECK-NEXT:   T: if [B6.6]
-// CHECK-NEXT:   Preds (2): B7 B5
+// CHECK-NEXT:   Preds (2): B7 B8
 // CHECK-NEXT:   Succs (2): B5 B4
 // CHECK:      [B7]
 // WARNINGS-NEXT:   1:  (CXXConstructExpr, A)
 // ANALYZER-NEXT:   1:  (CXXConstructExpr, [B7.2], A)
 // CHECK-NEXT:   2: A a;
-// CHECK-NEXT:   Preds (1): B8
+// CHECK-NEXT:   Preds (1): B9
+// CHECK-NEXT:   Succs (1): B6
+// CHECK:      [B8]
+// CHECK-NEXT:   1: [B6.4].~A() (Implicit destructor)
+// CHECK-NEXT:   2: [B6.2].~A() (Implicit destructor)
+// CHECK-NEXT:   T: goto l0;
+// CHECK-NEXT:   Preds (1): B5
 // CHECK-NEXT:   Succs (1): B6
 // CHECK:      [B0 (EXIT)]
 // CHECK-NEXT:   Preds (1): B1

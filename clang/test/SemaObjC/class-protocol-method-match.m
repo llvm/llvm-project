@@ -1,4 +1,5 @@
 // RUN: %clang_cc1  -Woverriding-method-mismatch -fsyntax-only -verify -Wno-objc-root-class %s
+// rdar://9352731
 
 @protocol Bar 
 @required

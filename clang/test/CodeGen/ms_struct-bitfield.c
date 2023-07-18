@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -emit-llvm -o - -triple x86_64-apple-darwin9 %s | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm -o - -triple thumbv7-apple-ios -target-abi apcs-gnu %s | FileCheck %s -check-prefix=CHECK-ARM
 
+// rdar://8823265
+
 // Note that we're declaring global variables with these types,
 // triggering both Sema and IRGen struct layout.
 
@@ -147,7 +149,8 @@ int s10 = sizeof(t10);
 // CHECK: @s10 ={{.*}} global i32 16
 // CHECK-ARM: @s10 ={{.*}} global i32 8
 
-// ensure that ms_structs work correctly on a !useBitFieldTypeAlignment() target
+// rdar://16041826 - ensure that ms_structs work correctly on a
+// !useBitFieldTypeAlignment() target
 struct {
   unsigned int a : 31;
   unsigned int b : 2;

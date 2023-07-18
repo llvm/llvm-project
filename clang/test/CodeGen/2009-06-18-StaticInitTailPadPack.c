@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -o -
+// rdar://6983634
 
   typedef struct A *Foo;
 #pragma pack(push, 2)

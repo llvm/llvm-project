@@ -49,6 +49,7 @@ void f(void) {
 }
 @end
 
+// rdar://48247290
 @interface Base
 -(instancetype)init;
 @end

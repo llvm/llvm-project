@@ -485,6 +485,7 @@ id returnInputParam(id x) {
 }
 @end
 
+// Original problem: rdar://problem/50739539
 @interface MyClassThatLeaksDuringInit : NSObject
 
 + (MyClassThatLeaksDuringInit *)getAnInstance1;

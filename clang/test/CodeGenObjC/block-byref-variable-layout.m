@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fblocks -fobjc-arc -fobjc-runtime-has-weak -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
 
+// rdar://12759433
 @class NSString;
 
 void Test12759433(void) {
@@ -40,6 +41,7 @@ int main(void) {
   c();
 }
 
+// rdar://12787751
 typedef char mds_path_t[1024];
 void directVolumePerfWaitForStoreState(void)
 {

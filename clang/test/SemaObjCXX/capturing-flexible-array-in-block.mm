@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -verify -std=c++11 %s
+// rdar://12655829
 
 void f() {
   struct { int x; int y[]; } a; // expected-note 3 {{'a' declared here}}

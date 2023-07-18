@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -x objective-c++ %s -triple x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// rdar://6137845
 
 struct TCPPObject
 {

@@ -254,6 +254,7 @@ void inlinedIsDifferent(int inlined) {
 }
 
 void testInlinedIsDifferent(void) {
+  // <rdar://problem/13787723>
   inlinedIsDifferent(0);
 }
 

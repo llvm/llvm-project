@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -rewrite-objc -fobjc-runtime=macosx-fragile-10.5 -o - %s
+// rdar://5950938
 @interface NSArray {}
 + (id)arrayWithObjects:(id)firstObj, ...;
 @end
@@ -11,6 +12,7 @@ int main(void) {
     return 0;
 }
 
+// rdar://6291588
 @protocol A
 @end
 

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -o - %s | FileCheck %s
+// rdar://10139365
 
 @interface Test58
 - (char* &) interior __attribute__((objc_returns_inner_pointer));

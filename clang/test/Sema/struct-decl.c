@@ -42,11 +42,12 @@ struct s0 {
 
 struct s0 f0(void) {}
 
-// This previously triggered an assertion failure.
+// <rdar://problem/8177927> - This previously triggered an assertion failure.
 struct x0 {
   unsigned int x1;
 };
 
+// rdar://problem/9150338
 static struct test1 { // expected-warning {{'static' ignored on this declaration}}
   int x;
 };
