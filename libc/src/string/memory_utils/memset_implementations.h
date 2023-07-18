@@ -21,13 +21,14 @@
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "src/string/memory_utils/aarch64/memset_implementations.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_aarch64
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_byte_per_byte
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/memset_implementations.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_riscv
 #else
-// We may want to error instead of defaulting to suboptimal implementation.
-#include "src/string/memory_utils/generic/byte_per_byte.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_byte_per_byte
+#error "Unsupported architecture"
 #endif
 
 namespace __llvm_libc {
