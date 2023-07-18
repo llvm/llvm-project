@@ -52,10 +52,9 @@ define <vscale x 16 x i32> @masked_ld1b_i8_zext_i32(<vscale x 16 x i8> *%base, <
 define <vscale x 8 x i32> @masked_ld1b_nxv8i8_zext_i32(<vscale x 8 x i8> *%a, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: masked_ld1b_nxv8i8_zext_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1b { z0.h }, p0/z, [x0]
-; CHECK-NEXT:    uunpkhi z1.s, z0.h
-; CHECK-NEXT:    and z0.h, z0.h, #0xff
-; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
 ; CHECK-NEXT:    ret
   %wide.masked.load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr %a, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> poison)
   %res = zext <vscale x 8 x i8> %wide.masked.load to <vscale x 8 x i32>
@@ -125,10 +124,9 @@ define <vscale x 16 x i64> @masked_ld1b_i8_zext(<vscale x 16 x i8> *%base, <vsca
 define <vscale x 4 x i64> @masked_ld1b_nxv4i8_zext_i64(<vscale x 4 x i8> *%a, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: masked_ld1b_nxv4i8_zext_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    uunpkhi z1.d, z0.s
-; CHECK-NEXT:    and z0.s, z0.s, #0xff
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEXT:    ret
   %wide.masked.load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8.p0(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
   %res = zext <vscale x 4 x i8> %wide.masked.load to <vscale x 4 x i64>
@@ -186,10 +184,9 @@ define <vscale x 8 x i64> @masked_ld1h_i16_zext(<vscale x 8 x i16> *%base, <vsca
 define <vscale x 4 x i64> @masked_ld1h_nxv4i16_zext(<vscale x 4 x i16> *%a, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: masked_ld1h_nxv4i16_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1h { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    uunpkhi z1.d, z0.s
-; CHECK-NEXT:    and z0.s, z0.s, #0xffff
-; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
 ; CHECK-NEXT:    ret
   %wide.masked.load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16.p0(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i16> poison)
   %res = zext <vscale x 4 x i16> %wide.masked.load to <vscale x 4 x i64>
