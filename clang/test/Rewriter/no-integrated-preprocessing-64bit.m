@@ -1,4 +1,5 @@
 // RUN: %clang -target x86_64-unknown-unknown -fms-extensions -rewrite-objc %s -o - | FileCheck %s
+// rdar://12189793
 
 #ifdef __cplusplus
 

@@ -6,6 +6,8 @@
 // cleanup. This way we make sure the object will not be released until the
 // end of the full expression.
 
+// rdar://problem/24528966
+
 @interface C
 - (id)m0;
 + (id)m1;

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-unused-value %s
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -verify -Wcast-of-sel-type -Wno-unused-value %s
+// rdar://12107381
 
 SEL s;
 
@@ -18,5 +19,6 @@ int main(void) {
 
 (const void *const)s; // ok
 
+// rdar://12859590
 (SEL)sel_registerName("foo");  // ok
 }

@@ -53,6 +53,7 @@ vec3 f5(vec3 value) {
   }};
 }
 
+// rdar://problem/8154689
 void f6(void) {
   int x;
   long ids[] = { (long) &x };  

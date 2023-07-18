@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // expected-no-diagnostics
+// rdar://13749180
 
 @interface NSDictionary
 - (id)objectForKeyedSubscript:(id)key;

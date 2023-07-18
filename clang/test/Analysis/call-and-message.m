@@ -112,6 +112,7 @@ typedef unsigned int NSUInteger;
 
 @implementation Test
 
+// <rdar://problem/9241180> for subscripting
 - (id)testUninitializedObject:(BOOL)keyed {
   Test *o;
   if (keyed) {

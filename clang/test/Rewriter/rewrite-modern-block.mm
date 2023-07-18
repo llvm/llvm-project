@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -x objective-c++ -fblocks -fms-extensions -rewrite-objc %s -o %t-rw.cpp
 // RUN: %clang_cc1 -fsyntax-only -Werror -Wno-address-of-temporary -D"Class=void*" -D"id=void*" -D"SEL=void*" -U__declspec -D"__declspec(X)=" %t-rw.cpp
+// rdar://11230308
 
 typedef unsigned long size_t;
 typedef struct {
@@ -17,11 +18,13 @@ void y() {
     };
 }
 
+// rdar://11236342
 int foo() {
     __block int hello;
     return hello;
 }
 
+// rdar://7547630
 // rewriting multiple __block decls on wintin same decl stmt.
 void radar7547630() {
   __block int BI1, BI2;
@@ -44,6 +47,7 @@ int  rdar7547630(const char *keybuf, const char *valuebuf) {
   return BI2;
 }
 
+// rdar://11326988
 typedef struct _z {
     int location;
     int length;
@@ -60,4 +64,5 @@ z w(int loc, int len);
 }
 @end
 
+// rdar://18799145
 int Test18799145() { return ^(){return 0;}(); }

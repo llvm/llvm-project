@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o %t %s
+// rdar://7547942.
 
 @interface Base @end
 

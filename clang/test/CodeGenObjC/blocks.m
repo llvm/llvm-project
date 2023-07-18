@@ -7,6 +7,7 @@
 
 void (^gb0)(void);
 
+// test1.  All of this is somehow testing rdar://6676764
 struct S {
   void (^F)(struct S*);
 } P;
@@ -44,6 +45,7 @@ void foo(T *P) {
 }
 @end
 
+// rdar://problem/9006315
 // In-depth test for the initialization of a __weak __block variable.
 @interface Test2 -(void) destroy; @end
 void test2(Test2 *x) {
@@ -91,6 +93,7 @@ void test2(Test2 *x) {
   test2_helper(^{ [weakX destroy]; });
 }
 
+// rdar://problem/9124263
 // In the test above, check that the use in the invocation function
 // doesn't require a read barrier.
 // CHECK-LABEL:    define internal void @__test2_block_invoke
@@ -101,6 +104,7 @@ void test2(Test2 *x) {
 // CHECK-NEXT: [[WEAKX:%.*]] = getelementptr inbounds [[WEAK_T]]{{.*}}, ptr [[T4]], i32 0, i32 6
 // CHECK-NEXT: [[T0:%.*]] = load ptr, ptr [[WEAKX]], align 4
 
+// rdar://problem/12722954
 // Make sure that ... is appropriately positioned in a block call.
 void test3(void (^block)(int, ...)) {
   block(0, 1, 2, 3);

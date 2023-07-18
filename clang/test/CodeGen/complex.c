@@ -87,6 +87,7 @@ void t6(void) {
   --ci1;
 }
 
+// <rdar://problem/7958272>
 double t7(double _Complex c) {
   return __builtin_fabs(__real__(c));
 }

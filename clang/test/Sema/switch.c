@@ -230,6 +230,7 @@ void test12(void) {
   }
 }
 
+// <rdar://problem/7643909>
 typedef enum {
     val1,
     val2,
@@ -246,6 +247,7 @@ int test13(my_type_t t) {
   return -1;
 }
 
+// <rdar://problem/7658121>
 enum {
   EC0 = 0xFFFF0000,
   EC1 = 0xFFFF0001,
@@ -313,6 +315,7 @@ int test18(void) {
   }
 }
 
+// rdar://110822110
 typedef enum {
         kOne = 1,
 } Ints;

@@ -151,6 +151,7 @@ typedef struct {
 @property footype d __attribute((deprecated));
 @end
 
+// rdar://13569424
 @interface NewI
 +(void)cmeth;
 @end
@@ -168,6 +169,7 @@ typedef NewI DeprI __attribute__((deprecated("blah"))); // expected-note 4 {{'De
 }
 @end
 
+// <rdar://problem/15407366> and <rdar://problem/15466783>:
 // - Using deprecated class name inside class should not warn about deprecation.
 // - Implementations of deprecated classes should not result in deprecation warnings.
 __attribute__((deprecated))
@@ -205,6 +207,7 @@ __attribute__((deprecated))
 
 @end
 
+// rdar://16068470
 @interface TestBase
 @property (nonatomic, strong) id object __attribute__((deprecated("deprecated"))); // expected-note {{'object' has been explicitly marked deprecated here}} \
 expected-note {{property 'object' is declared deprecated here}} \
@@ -239,6 +242,7 @@ expected-note {{property declared here}}
 
 @end
 
+// rdar://18848183
 @interface NSString
 - (const char *)cString __attribute__((availability(macosx,introduced=10.0 ,deprecated=10.4,message="" ))); // expected-note {{'cString' has been explicitly marked deprecated here}}
 @end
@@ -248,6 +252,7 @@ const char * func(void) {
   return [PID cString]; // expected-warning {{'cString' is deprecated: first deprecated in macOS 10.4}}
 }
 
+// rdar://18960378
 @interface NSObject
 + (instancetype)alloc;
 - (instancetype)init;

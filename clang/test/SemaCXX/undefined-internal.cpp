@@ -72,6 +72,7 @@ namespace test4 {
   };
 }
 
+// rdar://problem/9014651
 namespace test5 {
   namespace {
     struct A {};

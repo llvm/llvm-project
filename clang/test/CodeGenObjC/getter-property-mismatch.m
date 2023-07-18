@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple x86_64-apple-darwin -o - | FileCheck %s
+// rdar://11323676
 
 @interface NSDictionary @end
 @interface NSMutableDictionary : NSDictionary@end@interface CalDAVAddManagedAttachmentsTaskGroup {

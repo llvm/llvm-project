@@ -134,6 +134,7 @@ namespace test4 {
   typedef A<i> Ai; // ok
 }
 
+// rdar://16064952
 namespace rdar16064952 {
   template < typename T > void fn1() {
    T b;

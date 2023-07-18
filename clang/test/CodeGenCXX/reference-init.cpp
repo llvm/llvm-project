@@ -24,6 +24,7 @@ namespace PR5911 {
   int test() { return f(iarr); }
 }
 
+// radar 7574896
 struct Foo { int foo; };
 Foo& ignoreSetMutex = *(new Foo);
 

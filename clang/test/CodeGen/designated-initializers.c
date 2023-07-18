@@ -53,6 +53,7 @@ struct ds ds7 = {
 };
 
 
+// <rdar://problem/10465114>
 struct overwrite_string_struct1 {
   __typeof(L"foo"[0]) L[6];
   int M;
@@ -141,6 +142,7 @@ union_16644_t union_16644_instance_4[2] =
 // CHECK: @lab ={{.*}} global { [4 x i8], i32 } { [4 x i8] undef, i32 123 }
 struct leading_anon_bitfield { int : 32; int n; } lab = { .n = 123 };
 
+// rdar://45691981
 struct Base {
   struct {
     int A;

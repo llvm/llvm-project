@@ -25,6 +25,7 @@ void foo(void) {
   int sin; // okay; 'sin' has not been declared, even though it's a builtin.
 }
 
+// <rdar://problem/7677531>
 void (^test1)(int) = ^(int i) { // expected-warning {{declaration shadows a variable in the global scope}} \
                                  // expected-note{{previous declaration is here}}
   {
@@ -56,6 +57,7 @@ void test7(void *context, void (*callback)(void *context)) {}
 
 extern int bob; // expected-note {{previous declaration is here}}
 
+// rdar://8883302
 void rdar8883302(void) {
   extern int bob; // don't warn for shadowing.
 }

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -Wno-unused-value -Wbad-function-cast -ffixed-point -triple x86_64-unknown-unknown -verify
+// rdar://9103192
 
 void vf(void);
 int if1(void);
