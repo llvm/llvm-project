@@ -205,7 +205,6 @@ uint32_t mapping::getThreadIdInWarp() {
 
 uint32_t mapping::getThreadIdInBlock() {
   uint32_t ThreadIdInBlock = impl::getThreadIdInBlock();
-  ASSERT(ThreadIdInBlock < impl::getNumHardwareThreadsInBlock(), nullptr);
   return ThreadIdInBlock;
 }
 
