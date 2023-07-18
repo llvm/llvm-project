@@ -316,6 +316,7 @@ void test_file_fd_at_functions() {
   // bugpath-note{{The 1st argument to 'linkat' is -22 but should be a valid file descriptor or AT_FDCWD}}
 
   // no warning for these functions if the AT_FDCWD value is used
+  (void)openat(AT_FDCWD, "path", 0);
   (void)linkat(AT_FDCWD, "from", AT_FDCWD, "to", 0);
   (void)faccessat(AT_FDCWD, "path", 0, 0);
   (void)symlinkat("oldpath", AT_FDCWD, "newpath");
