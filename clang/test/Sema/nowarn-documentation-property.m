@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -Wno-objc-root-class -Wdocumentation -verify %s
 // expected-no-diagnostics
+// rdar://13189938
 
 @interface NSPredicate
 ///     The full predicate to be used for drawing objects from the store.

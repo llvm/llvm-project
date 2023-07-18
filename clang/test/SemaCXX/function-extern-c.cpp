@@ -62,6 +62,7 @@ namespace test3 {
   }
 }
 
+// rdar://13364028
 namespace rdar13364028 {
 class A {
 public:

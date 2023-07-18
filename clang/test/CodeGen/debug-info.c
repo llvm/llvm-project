@@ -41,6 +41,8 @@ struct foo2 {
 
 struct foo2 foo2;
 
+
+// Radar 7325611
 // CHECK-DAG: !DIDerivedType(tag: DW_TAG_typedef, name: "barfoo"
 typedef int barfoo;
 barfoo foo(void) {

@@ -35,6 +35,9 @@
 - (void) dep __attribute__((deprecated)) { } // OK private methodn
 @end
 
+
+// rdar://10529259
+
 @interface Foo 
 - (void)doSomething1:(id)sender;
 - (void)doSomething2:(id)sender;
@@ -54,6 +57,7 @@
 - (IBAction)doSomething3:(id)sender {}
 @end
 
+// rdar://11593375
 @interface NSObject @end
 
 @interface Test : NSObject
@@ -86,6 +90,7 @@ __attribute__((cdecl))  // expected-warning {{'cdecl' attribute only applies to 
 @interface Complain 
 @end
 
+// rdar://15450637
 @interface rdar15450637 : NSObject
 @property int p __attribute__((section("__TEXT,foo")));
 

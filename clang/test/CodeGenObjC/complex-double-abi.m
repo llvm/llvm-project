@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple i386-apple-macosx10.7.2 %s -o - | FileCheck %s 
+// rdar://10331109
 
 @interface CNumber
 - (double _Complex)sum;

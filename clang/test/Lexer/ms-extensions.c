@@ -17,6 +17,7 @@ __complex double c1 = 1i;
 __complex double c2 = 1.0i;
 __complex float c3 = 1.0if;
 
+// radar 7562363
 #define ULLONG_MAX 0xffffffffffffffffui64
 #define UINT 0xffffffffui32
 #define USHORT 0xffffui16

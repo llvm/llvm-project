@@ -51,6 +51,7 @@ namespace test0 {
   }
 
   // This should magically be okay;  see comment in SemaDecl.cpp.
+  // rdar://problem/7898108
   typedef struct A A;
   int test() {
     struct A a;

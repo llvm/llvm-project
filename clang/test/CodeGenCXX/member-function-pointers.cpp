@@ -240,8 +240,9 @@ namespace test9 {
   }
 }
 
-// Verify that we can emit reinterprets of member pointers as constant
-// initializers. For added trickiness, we also add some non-trivial adjustments.
+// rdar://problem/10815683 - Verify that we can emit reinterprets of
+// member pointers as constant initializers.  For added trickiness,
+// we also add some non-trivial adjustments.
 namespace test10 {
   struct A {
     int nonEmpty;

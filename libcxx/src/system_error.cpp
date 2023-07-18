@@ -12,6 +12,7 @@
 #endif
 
 #include <__assert>
+#include <__verbose_abort>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
@@ -289,9 +290,7 @@ __throw_system_error(int ev, const char* what_arg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw system_error(error_code(ev, system_category()), what_arg);
 #else
-    (void)ev;
-    (void)what_arg;
-    _VSTD::abort();
+    _LIBCPP_VERBOSE_ABORT("system_error was thrown in -fno-exceptions mode with error %i and message \"%s\"", ev, what_arg);
 #endif
 }
 

@@ -60,5 +60,6 @@ int f12(int x) {
   return y;
 }
 
+// rdar://8793832
 static int glob_var = 0;
 #pragma unused(glob_var)

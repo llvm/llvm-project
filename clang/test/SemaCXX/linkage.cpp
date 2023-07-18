@@ -107,7 +107,7 @@ namespace test5 {
 }
 
 // Test that we don't compute linkage too hastily before we're done
-// processing a record decl.
+// processing a record decl.  rdar://15928125
 namespace test6 {
   typedef struct {
     int foo() {

@@ -12,6 +12,8 @@
 #define TYPE_PROTECTED __attribute__((type_visibility("protected")))
 #define TYPE_DEFAULT __attribute__((type_visibility("default")))
 
+// type_visibility is rdar://11880378
+
 #if !__has_attribute(type_visibility)
 #error No type_visibility attribute!
 #endif

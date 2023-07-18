@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -verify %s 
 // expected-no-diagnostics
 
+// rdar://8366474
 int main(void) {
   SEL s = @selector(retain);
   SEL s1 = @selector(meth1:);

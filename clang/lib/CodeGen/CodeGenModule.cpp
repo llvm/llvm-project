@@ -5979,7 +5979,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   }
 
   // Note: -fwritable-strings doesn't make the backing store strings of
-  // CFStrings writable.
+  // CFStrings writable. (See <rdar://problem/10657500>)
   auto *GV =
       new llvm::GlobalVariable(getModule(), C->getType(), /*isConstant=*/true,
                                llvm::GlobalValue::PrivateLinkage, C, ".str");

@@ -3,6 +3,7 @@
 // RUN: %clang_cc1  -fblocks -fobjc-arc -fsyntax-only -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -x objective-c++ -fblocks -fobjc-arc -fsyntax-only -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
+// rdar://17259812
 
 typedef void (^BT) (void);
 

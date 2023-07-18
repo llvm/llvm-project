@@ -9,5 +9,6 @@ void f(void) {
   CFSTR("Hello, World!");
 }
 
+// rdar://6151192
 void *G = CFSTR("yo joe");
 

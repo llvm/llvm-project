@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdocumentation -verify %s
+// rdar://12390371
 
 /** @return s Test*/
 struct s* f(void);

@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fblocks -fobjc-arc -fobjc-runtime-has-weak %s -verify
 
+// rdar://21612439
+
 __attribute__((objc_root_class))
 @interface NSObject
 @end

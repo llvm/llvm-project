@@ -143,6 +143,8 @@ Deprecations and Removals
 - ``<atomic>``, ``<barrier>``, ``<latch>``, ``<numeric>``, ``<semaphore>`` and ``<shared_mutex>`` no longer include ``<iosfwd>``
   (it was previously included in all Standard versions).
 
+- ``<format>``, ``<chrono>`` and ``<thread>`` no longer transitively include ``<cstdlib>``.
+
 - The headers ``<experimental/algorithm>`` and ``<experimental/functional>`` have been removed, since all the contents
   have been implemented in namespace ``std`` for at least two releases.
 

@@ -619,6 +619,7 @@ unsigned int no_warning_on_getter(ArrayOwner *owner) {
 unsigned int warn_on_overrelease(ArrayOwner *owner) {
   // FIXME: summaries are not applied in case the source of the getter/setter
   // is known.
+  // rdar://45681203
   OSArray *arr = owner->getArray();
   arr->release();
   return arr->getCount();
