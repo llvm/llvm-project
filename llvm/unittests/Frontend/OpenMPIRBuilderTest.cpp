@@ -5122,16 +5122,18 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   IRBuilder<> Builder(BB);
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
+  LoadInst *Value = nullptr;
   StoreInst *TargetStore = nullptr;
   llvm::SmallVector<llvm::Value *, 2> CapturedArgs = {
-      Constant::getIntegerValue(Type::getInt32Ty(Ctx), APInt(32, 0)),
+      Constant::getNullValue(Type::getInt32PtrTy(Ctx)),
       Constant::getNullValue(Type::getInt32PtrTy(Ctx))};
 
   auto BodyGenCB = [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
                        OpenMPIRBuilder::InsertPointTy CodeGenIP)
       -> OpenMPIRBuilder::InsertPointTy {
     Builder.restoreIP(CodeGenIP);
-    TargetStore = Builder.CreateStore(CapturedArgs[0], CapturedArgs[1]);
+    Value = Builder.CreateLoad(Type::getInt32Ty(Ctx), CapturedArgs[0]);
+    TargetStore = Builder.CreateStore(Value, CapturedArgs[1]);
     return Builder.saveIP();
   };
 
@@ -5155,7 +5157,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   EXPECT_TRUE(OutlinedFn->hasWeakODRLinkage());
   EXPECT_EQ(OutlinedFn->arg_size(), 2U);
   EXPECT_EQ(OutlinedFn->getName(), "__omp_offloading_1_2_parent_l3");
-  EXPECT_TRUE(OutlinedFn->getArg(0)->getType()->isIntegerTy(32));
+  EXPECT_TRUE(OutlinedFn->getArg(0)->getType()->isPointerTy());
   EXPECT_TRUE(OutlinedFn->getArg(1)->getType()->isPointerTy());
 
   // Check entry block
@@ -5180,8 +5182,22 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   // Check user code block
   auto *UserCodeBlock = EntryBlockBranch->getSuccessor(0);
   EXPECT_EQ(UserCodeBlock->getName(), "user_code.entry");
-  EXPECT_EQ(UserCodeBlock->getFirstNonPHI(), TargetStore);
+  auto *Alloca1 = UserCodeBlock->getFirstNonPHI();
+  EXPECT_TRUE(isa<AllocaInst>(Alloca1));
+  auto *Store1 = Alloca1->getNextNode();
+  EXPECT_TRUE(isa<StoreInst>(Store1));
+  auto *Load1 = Store1->getNextNode();
+  EXPECT_TRUE(isa<LoadInst>(Load1));
+  auto *Alloca2 = Load1->getNextNode();
+  EXPECT_TRUE(isa<AllocaInst>(Alloca2));
+  auto *Store2 = Alloca2->getNextNode();
+  EXPECT_TRUE(isa<StoreInst>(Store2));
+  auto *Load2 = Store2->getNextNode();
+  EXPECT_TRUE(isa<LoadInst>(Load2));
 
+  auto *Value1 = Load2->getNextNode();
+  EXPECT_EQ(Value1, Value);
+  EXPECT_EQ(Value1->getNextNode(), TargetStore);
   auto *Deinit = TargetStore->getNextNode();
   EXPECT_NE(Deinit, nullptr);
 
