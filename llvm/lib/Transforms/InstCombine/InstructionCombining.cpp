@@ -2781,9 +2781,19 @@ bool InstCombinerImpl::handleUnreachableFrom(Instruction *I) {
 bool InstCombinerImpl::handlePotentiallyDeadSuccessors(BasicBlock *BB,
                                                        BasicBlock *LiveSucc) {
   bool Changed = false;
-  for (BasicBlock *Succ : successors(BB))
-    if (Succ != LiveSucc && Succ->getSinglePredecessor())
-      Changed |= handleUnreachableFrom(&Succ->front());
+  for (BasicBlock *Succ : successors(BB)) {
+    // The live successor isn't dead.
+    if (Succ == LiveSucc)
+      continue;
+
+    if (!all_of(predecessors(Succ), [&](BasicBlock *Pred) {
+          return DT.dominates(BasicBlockEdge(BB, Succ),
+                              BasicBlockEdge(Pred, Succ));
+        }))
+      continue;
+
+    Changed |= handleUnreachableFrom(&Succ->front());
+  }
   return Changed;
 }
 
