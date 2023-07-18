@@ -13,9 +13,11 @@ int access(const char *path, int amode);
 void clang_analyzer_warnIfReached();
 
 void test1() {
-  access("path", 0); // no note here
   access("path", 0);
-  // expected-note@-1{{Assuming that function 'access' is successful, in this case the value 'errno' may be undefined after the call and should not be used}}
+  // expected-note@-1{{Assuming that 'access' fails}}
+  access("path", 0);
+  // expected-note@-1{{Assuming that 'access' is successful}}
+  // expected-note@-2{{'errno' may be undefined after successful call to 'access'}}
   if (errno != 0) {
     // expected-warning@-1{{An undefined value may be read from 'errno'}}
     // expected-note@-2{{An undefined value may be read from 'errno'}}
@@ -24,7 +26,8 @@ void test1() {
 
 void test2() {
   if (access("path", 0) == -1) {
-    // expected-note@-1{{Taking true branch}}
+    // expected-note@-1{{Assuming that 'access' fails}}
+    // expected-note@-2{{Taking true branch}}
     // Failure path.
     if (errno != 0) {
       // expected-note@-1{{'errno' is not equal to 0}}
@@ -39,8 +42,9 @@ void test2() {
 void test3() {
   if (access("path", 0) != -1) {
     // Success path.
-    // expected-note@-2{{Assuming that function 'access' is successful, in this case the value 'errno' may be undefined after the call and should not be used}}
-    // expected-note@-3{{Taking true branch}}
+    // expected-note@-2{{Assuming that 'access' is successful}}
+    // expected-note@-3{{'errno' may be undefined after successful call to 'access'}}
+    // expected-note@-4{{Taking true branch}}
     if (errno != 0) {
       // expected-warning@-1{{An undefined value may be read from 'errno'}}
       // expected-note@-2{{An undefined value may be read from 'errno'}}

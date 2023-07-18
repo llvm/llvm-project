@@ -170,7 +170,8 @@ void test_notnull_concrete(FILE *fp) {
   // bugpath-note{{The 1st argument to 'fread' is NULL but should not be NULL}}
 }
 void test_notnull_symbolic(FILE *fp, int *buf) {
-  fread(buf, sizeof(int), 10, fp);
+  fread(buf, sizeof(int), 10, fp); // \
+  // bugpath-note{{'fread' fails}}
   clang_analyzer_eval(buf != 0); // \
   // report-warning{{TRUE}} \
   // bugpath-warning{{TRUE}} \
