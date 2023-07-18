@@ -333,8 +333,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit())
     setOperationAction(ISD::ABS, MVT::i32, Custom);
 
-  if (!Subtarget.hasVendorXVentanaCondOps() &&
-      !Subtarget.hasVendorXTHeadCondMov())
+  if (!Subtarget.hasVendorXTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   static const unsigned FPLegalNodeTypes[] = {
@@ -5949,11 +5948,12 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
-  // When Zicond is present, emit CZERO_EQZ and CZERO_NEZ nodes to implement
-  // the SELECT. Performing the lowering here allows for greater control over
-  // when CZERO_{EQZ/NEZ} are used vs another branchless sequence or
-  // RISCVISD::SELECT_CC node (branch-based select).
-  if (Subtarget.hasStdExtZicond() && VT.isScalarInteger()) {
+  // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
+  // nodes to implement the SELECT. Performing the lowering here allows for
+  // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
+  // sequence or RISCVISD::SELECT_CC node (branch-based select).
+  if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
+      VT.isScalarInteger()) {
     if (SDValue NewCondV = selectSETCC(CondV, ISD::SETNE, DAG)) {
       // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
       if (isNullConstant(FalseV))
