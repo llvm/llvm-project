@@ -308,6 +308,12 @@ def IsFixedVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
 def IsScalableVectorTypePred : CPred<[{::llvm::isa<::mlir::VectorType>($_self) &&
                                    ::llvm::cast<VectorType>($_self).isScalable()}]>;
 
+// Whether a type is a VectorType and all dimensions are scalable.
+def allDimsScalableVectorTypePred : And<[
+  IsVectorTypePred,
+  CPred<[{::llvm::cast<::mlir::VectorType>($_self).allDimsScalable()}]>
+]>;
+
 // Whether a type is a TensorType.
 def IsTensorTypePred : CPred<"::llvm::isa<::mlir::TensorType>($_self)">;
 
@@ -488,6 +494,7 @@ def I8  : I<8>;
 def I16 : I<16>;
 def I32 : I<32>;
 def I64 : I<64>;
+def I128 : I<128>;
 
 // Any signed integer type irrespective of its width.
 def AnySignedInteger : Type<
@@ -744,6 +751,10 @@ class IsScalableVectorOfLengthPred<list<int> allowedLengths> :
                    CPred<[{::llvm::cast<::mlir::VectorType>($_self).getNumElements()
                            == }]
                          # allowedlength>)>]>;
+
+// Whether the shape of a vector matches the given `shape` list.
+class IsVectorOfShape<list<int> shape>
+  : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
 
 // Any vector where the number of elements is from the given
 // `allowedLengths` list

@@ -10881,6 +10881,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ComplexDialect",
         ":IR",
         "//llvm:Support",
     ],
