@@ -82,8 +82,12 @@ body:             |
     ; CHECK: liveins: $d0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<2 x s16>) = G_FPTRUNC [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: $s0 = COPY [[FPTRUNC]](<2 x s16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[FPTRUNC]](<4 x s16>)
+    ; CHECK-NEXT: $s0 = COPY [[UV2]](<2 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s16>) = G_FPTRUNC %0

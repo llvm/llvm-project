@@ -16,11 +16,11 @@
 #endif
 
 // Zbb extension
-TARGET_BUILTIN(__builtin_riscv_orc_b_32, "UZiUZi", "nc", "zbb")
+TARGET_BUILTIN(__builtin_riscv_orc_b_32, "UiUi", "nc", "zbb")
 TARGET_BUILTIN(__builtin_riscv_orc_b_64, "UWiUWi", "nc", "zbb,64bit")
-TARGET_BUILTIN(__builtin_riscv_clz_32, "UiUZi", "nc", "zbb|xtheadbb")
+TARGET_BUILTIN(__builtin_riscv_clz_32, "UiUi", "nc", "zbb|xtheadbb")
 TARGET_BUILTIN(__builtin_riscv_clz_64, "UiUWi", "nc", "zbb|xtheadbb,64bit")
-TARGET_BUILTIN(__builtin_riscv_ctz_32, "UiUZi", "nc", "zbb")
+TARGET_BUILTIN(__builtin_riscv_ctz_32, "UiUi", "nc", "zbb")
 TARGET_BUILTIN(__builtin_riscv_ctz_64, "UiUWi", "nc", "zbb,64bit")
 
 // Zbc or Zbkc extension
@@ -44,21 +44,21 @@ TARGET_BUILTIN(__builtin_riscv_zip_32, "UiUi", "nc", "zbkb,32bit")
 TARGET_BUILTIN(__builtin_riscv_unzip_32, "UiUi", "nc", "zbkb,32bit")
 
 // Zknd extension
-TARGET_BUILTIN(__builtin_riscv_aes32dsi_32, "UiUiUiIUi", "nc", "zknd,32bit")
-TARGET_BUILTIN(__builtin_riscv_aes32dsmi_32, "UiUiUiIUi", "nc", "zknd,32bit")
-TARGET_BUILTIN(__builtin_riscv_aes64ds_64, "UWiUWiUWi", "nc", "zknd,64bit")
-TARGET_BUILTIN(__builtin_riscv_aes64dsm_64, "UWiUWiUWi", "nc", "zknd,64bit")
-TARGET_BUILTIN(__builtin_riscv_aes64im_64, "UWiUWi", "nc", "zknd,64bit")
+TARGET_BUILTIN(__builtin_riscv_aes32dsi, "UiUiUiIUi", "nc", "zknd,32bit")
+TARGET_BUILTIN(__builtin_riscv_aes32dsmi, "UiUiUiIUi", "nc", "zknd,32bit")
+TARGET_BUILTIN(__builtin_riscv_aes64ds, "UWiUWiUWi", "nc", "zknd,64bit")
+TARGET_BUILTIN(__builtin_riscv_aes64dsm, "UWiUWiUWi", "nc", "zknd,64bit")
+TARGET_BUILTIN(__builtin_riscv_aes64im, "UWiUWi", "nc", "zknd,64bit")
 
-// Zknd & zkne
-TARGET_BUILTIN(__builtin_riscv_aes64ks1i_64, "UWiUWiIUi", "nc", "zknd|zkne,64bit")
-TARGET_BUILTIN(__builtin_riscv_aes64ks2_64, "UWiUWiUWi", "nc", "zknd|zkne,64bit")
+// Zknd & Zkne
+TARGET_BUILTIN(__builtin_riscv_aes64ks1i, "UWiUWiIUi", "nc", "zknd|zkne,64bit")
+TARGET_BUILTIN(__builtin_riscv_aes64ks2, "UWiUWiUWi", "nc", "zknd|zkne,64bit")
 
 // Zkne extension
-TARGET_BUILTIN(__builtin_riscv_aes32esi_32, "UiUiUiIUi", "nc", "zkne,32bit")
-TARGET_BUILTIN(__builtin_riscv_aes32esmi_32, "UiUiUiIUi", "nc", "zkne,32bit")
-TARGET_BUILTIN(__builtin_riscv_aes64es_64, "UWiUWiUWi", "nc", "zkne,64bit")
-TARGET_BUILTIN(__builtin_riscv_aes64esm_64, "UWiUWiUWi", "nc", "zkne,64bit")
+TARGET_BUILTIN(__builtin_riscv_aes32esi, "UiUiUiIUi", "nc", "zkne,32bit")
+TARGET_BUILTIN(__builtin_riscv_aes32esmi, "UiUiUiIUi", "nc", "zkne,32bit")
+TARGET_BUILTIN(__builtin_riscv_aes64es, "UWiUWiUWi", "nc", "zkne,64bit")
+TARGET_BUILTIN(__builtin_riscv_aes64esm, "UWiUWiUWi", "nc", "zkne,64bit")
 
 // Zknh extension
 TARGET_BUILTIN(__builtin_riscv_sha256sig0, "UiUi", "nc", "zknh")
@@ -66,16 +66,16 @@ TARGET_BUILTIN(__builtin_riscv_sha256sig1, "UiUi", "nc", "zknh")
 TARGET_BUILTIN(__builtin_riscv_sha256sum0, "UiUi", "nc", "zknh")
 TARGET_BUILTIN(__builtin_riscv_sha256sum1, "UiUi", "nc", "zknh")
 
-TARGET_BUILTIN(__builtin_riscv_sha512sig0h_32, "UiUiUi", "nc", "zknh,32bit")
-TARGET_BUILTIN(__builtin_riscv_sha512sig0l_32, "UiUiUi", "nc", "zknh,32bit")
-TARGET_BUILTIN(__builtin_riscv_sha512sig1h_32, "UiUiUi", "nc", "zknh,32bit")
-TARGET_BUILTIN(__builtin_riscv_sha512sig1l_32, "UiUiUi", "nc", "zknh,32bit")
-TARGET_BUILTIN(__builtin_riscv_sha512sum0r_32, "UiUiUi", "nc", "zknh,32bit")
-TARGET_BUILTIN(__builtin_riscv_sha512sum1r_32, "UiUiUi", "nc", "zknh,32bit")
-TARGET_BUILTIN(__builtin_riscv_sha512sig0_64, "UWiUWi", "nc", "zknh,64bit")
-TARGET_BUILTIN(__builtin_riscv_sha512sig1_64, "UWiUWi", "nc", "zknh,64bit")
-TARGET_BUILTIN(__builtin_riscv_sha512sum0_64, "UWiUWi", "nc", "zknh,64bit")
-TARGET_BUILTIN(__builtin_riscv_sha512sum1_64, "UWiUWi", "nc", "zknh,64bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sig0h, "UiUiUi", "nc", "zknh,32bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sig0l, "UiUiUi", "nc", "zknh,32bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sig1h, "UiUiUi", "nc", "zknh,32bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sig1l, "UiUiUi", "nc", "zknh,32bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sum0r, "UiUiUi", "nc", "zknh,32bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sum1r, "UiUiUi", "nc", "zknh,32bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sig0, "UWiUWi", "nc", "zknh,64bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sig1, "UWiUWi", "nc", "zknh,64bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sum0, "UWiUWi", "nc", "zknh,64bit")
+TARGET_BUILTIN(__builtin_riscv_sha512sum1, "UWiUWi", "nc", "zknh,64bit")
 
 // Zksed extension
 TARGET_BUILTIN(__builtin_riscv_sm4ed, "UiUiUiIUi", "nc", "zksed")

@@ -16,7 +16,7 @@
 // RV64ZKND-NEXT:    ret i64 [[TMP2]]
 //
 uint64_t aes64dsm(uint64_t rs1, uint64_t rs2) {
-  return __builtin_riscv_aes64dsm_64(rs1, rs2);
+  return __builtin_riscv_aes64dsm(rs1, rs2);
 }
 
 
@@ -32,7 +32,7 @@ uint64_t aes64dsm(uint64_t rs1, uint64_t rs2) {
 // RV64ZKND-NEXT:    ret i64 [[TMP2]]
 //
 uint64_t aes64ds(uint64_t rs1, uint64_t rs2) {
-  return __builtin_riscv_aes64ds_64(rs1, rs2);
+  return __builtin_riscv_aes64ds(rs1, rs2);
 }
 
 
@@ -45,5 +45,5 @@ uint64_t aes64ds(uint64_t rs1, uint64_t rs2) {
 // RV64ZKND-NEXT:    ret i64 [[TMP1]]
 //
 uint64_t aes64im(uint64_t rs1) {
-  return __builtin_riscv_aes64im_64(rs1);
+  return __builtin_riscv_aes64im(rs1);
 }

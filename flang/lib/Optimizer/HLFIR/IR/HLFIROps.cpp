@@ -981,9 +981,16 @@ void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
                                mlir::ValueRange typeparams,
                                fir::FortranVariableFlagsAttr fortran_attrs) {
   auto nameAttr = builder.getStringAttr(uniq_name);
-  // TODO: preserve polymorphism of polymorphic expr.
-  mlir::Type firVarType = fir::ReferenceType::get(
-      getFortranElementOrSequenceType(source.getType()));
+  mlir::Type dataType = getFortranElementOrSequenceType(source.getType());
+
+  // Preserve polymorphism of polymorphic expr.
+  mlir::Type firVarType;
+  auto sourceExprType = mlir::dyn_cast<hlfir::ExprType>(source.getType());
+  if (sourceExprType && sourceExprType.isPolymorphic())
+    firVarType = fir::ClassType::get(fir::HeapType::get(dataType));
+  else
+    firVarType = fir::ReferenceType::get(dataType);
+
   mlir::Type hlfirVariableType =
       DeclareOp::getHLFIRVariableType(firVarType, /*hasExplicitLbs=*/false);
   mlir::Type i1Type = builder.getI1Type();
@@ -1010,6 +1017,7 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &result, mlir::Value var,
                             mlir::Value mustFree) {
   hlfir::ExprType::Shape typeShape;
+  bool isPolymorphic = fir::isPolymorphicType(var.getType());
   mlir::Type type = getFortranElementOrSequenceType(var.getType());
   if (auto seqType = type.dyn_cast<fir::SequenceType>()) {
     typeShape.append(seqType.getShape().begin(), seqType.getShape().end());
@@ -1017,7 +1025,7 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
   }
 
   auto resultType = hlfir::ExprType::get(builder.getContext(), typeShape, type,
-                                         /*isPolymorphic: TODO*/ false);
+                                         isPolymorphic);
   return build(builder, result, resultType, var, mustFree);
 }
 

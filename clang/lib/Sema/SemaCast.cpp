@@ -454,9 +454,27 @@ static bool tryDiagnoseOverloadedCast(Sema &S, CastType CT,
   switch (sequence.getFailureKind()) {
   default: return false;
 
+  case InitializationSequence::FK_ParenthesizedListInitFailed:
+    // In C++20, if the underlying destination type is a RecordType, Clang
+    // attempts to perform parentesized aggregate initialization if constructor
+    // overload fails:
+    //
+    // C++20 [expr.static.cast]p4:
+    //   An expression E can be explicitly converted to a type T...if overload
+    //   resolution for a direct-initialization...would find at least one viable
+    //   function ([over.match.viable]), or if T is an aggregate type having a
+    //   first element X and there is an implicit conversion sequence from E to
+    //   the type of X.
+    //
+    // If that fails, then we'll generate the diagnostics from the failed
+    // previous constructor overload attempt. Array initialization, however, is
+    // not done after attempting constructor overloading, so we exit as there
+    // won't be a failed overload result.
+    if (destType->isArrayType())
+      return false;
+    break;
   case InitializationSequence::FK_ConstructorOverloadFailed:
   case InitializationSequence::FK_UserConversionOverloadFailed:
-  case InitializationSequence::FK_ParenthesizedListInitFailed:
     break;
   }
 

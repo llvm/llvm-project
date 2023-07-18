@@ -722,3 +722,27 @@ void calls_non_and_throwing() noexcept {
   test_basic_throw();
 }
 
+namespace PR55143 { namespace PR40583 {
+
+struct test_explicit_throw {
+    test_explicit_throw() throw(int) { throw 42; }
+    test_explicit_throw(const test_explicit_throw&) throw(int) { throw 42; }
+    test_explicit_throw(test_explicit_throw&&) throw(int) { throw 42; }
+    test_explicit_throw& operator=(const test_explicit_throw&) throw(int) { throw 42; }
+    test_explicit_throw& operator=(test_explicit_throw&&) throw(int) { throw 42; }
+    ~test_explicit_throw() throw(int) { throw 42; }
+};
+
+struct test_implicit_throw {
+    test_implicit_throw() { throw 42; }
+    test_implicit_throw(const test_implicit_throw&) { throw 42; }
+    test_implicit_throw(test_implicit_throw&&) { throw 42; }
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'test_implicit_throw' which should not throw exceptions
+    test_implicit_throw& operator=(const test_implicit_throw&) { throw 42; }
+    test_implicit_throw& operator=(test_implicit_throw&&) { throw 42; }
+    // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: an exception may be thrown in function 'operator=' which should not throw exceptions
+    ~test_implicit_throw() { throw 42; }
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function '~test_implicit_throw' which should not throw exceptions
+};
+
+}}

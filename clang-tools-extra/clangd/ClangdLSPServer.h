@@ -197,7 +197,8 @@ private:
                  Callback<llvm::json::Value> Reply);
 
   void bindMethods(LSPBinder &, const ClientCapabilities &Caps);
-  std::vector<CodeAction> getFixes(StringRef File, const clangd::Diagnostic &D);
+  std::optional<ClangdServer::DiagRef> getDiagRef(StringRef File,
+                                                  const clangd::Diagnostic &D);
 
   /// Checks if completion request should be ignored. We need this due to the
   /// limitation of the LSP. Per LSP, a client sends requests for all "trigger
@@ -230,13 +231,28 @@ private:
   /// Used to indicate the ClangdLSPServer is being destroyed.
   std::atomic<bool> IsBeingDestroyed = {false};
 
-  std::mutex FixItsMutex;
-  typedef std::map<clangd::Diagnostic, std::vector<CodeAction>,
-                   LSPDiagnosticCompare>
-      DiagnosticToReplacementMap;
-  /// Caches FixIts per file and diagnostics
-  llvm::StringMap<DiagnosticToReplacementMap>
-      FixItsMap;
+  // FIXME: The caching is a temporary solution to get corresponding clangd 
+  // diagnostic from a LSP diagnostic.
+  // Ideally, ClangdServer can generate an identifier for each diagnostic,
+  // emit them via the LSP's data field (which was newly added in LSP 3.16).
+  std::mutex DiagRefMutex;
+  struct DiagKey {
+    clangd::Range Rng;
+    std::string Message;
+    bool operator<(const DiagKey &Other) const {
+      return std::tie(Rng, Message) < std::tie(Other.Rng, Other.Message);
+    }
+  };
+  DiagKey toDiagKey(const clangd::Diagnostic &LSPDiag) {
+    return {LSPDiag.range, LSPDiag.message};
+  }
+  /// A map from LSP diagnostic to clangd-naive diagnostic.
+  typedef std::map<DiagKey, ClangdServer::DiagRef>
+      DiagnosticToDiagRefMap;
+  /// Caches the mapping LSP and clangd-naive diagnostics per file.
+  llvm::StringMap<DiagnosticToDiagRefMap>
+      DiagRefMap;
+
   // Last semantic-tokens response, for incremental requests.
   std::mutex SemanticTokensMutex;
   llvm::StringMap<SemanticTokens> LastSemanticTokens;

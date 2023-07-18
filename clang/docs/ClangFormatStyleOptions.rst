@@ -5355,6 +5355,15 @@ the configuration (without a prefix: ``Auto``).
 **TabWidth** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <TabWidth>`
   The number of columns used for tab stops.
 
+.. _TypeNames:
+
+**TypeNames** (``List of Strings``) :versionbadge:`clang-format 17` :ref:`¶ <TypeNames>`
+  A vector of non-keyword identifiers that should be interpreted as type
+  names.
+
+  A `*`, `&`, or `&&` between a type name and another non-keyword identifier
+  is annotated as a pointer or reference token instead of a binary operator.
+
 .. _TypenameMacros:
 
 **TypenameMacros** (``List of Strings``) :versionbadge:`clang-format 9` :ref:`¶ <TypenameMacros>`

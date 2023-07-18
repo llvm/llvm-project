@@ -15,7 +15,8 @@
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
-#include "flang/Optimizer/Builder/Runtime/Assign.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
+#include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -101,15 +102,38 @@ static mlir::Value getBufferizedExprMustFreeFlag(mlir::Value bufferizedExpr) {
 static std::pair<hlfir::Entity, mlir::Value>
 createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                    hlfir::Entity mold) {
-  if (mold.isPolymorphic())
-    TODO(loc, "creating polymorphic temporary");
   llvm::SmallVector<mlir::Value> lenParams;
   hlfir::genLengthParameters(loc, builder, mold, lenParams);
   llvm::StringRef tmpName{".tmp"};
   mlir::Value alloc;
   mlir::Value isHeapAlloc;
   mlir::Value shape{};
-  if (mold.isArray()) {
+  fir::FortranVariableFlagsAttr declAttrs;
+
+  if (mold.isPolymorphic()) {
+    // Create unallocated polymorphic temporary using the dynamic type
+    // of the mold. The static type of the temporary matches
+    // the static type of the mold, but then the dynamic type
+    // of the mold is applied to the temporary's descriptor.
+
+    if (mold.isArray())
+      hlfir::genShape(loc, builder, mold);
+
+    // Create polymorphic allocatable box on the stack.
+    mlir::Type boxHeapType = fir::HeapType::get(fir::unwrapRefType(
+        mlir::cast<fir::BaseBoxType>(mold.getType()).getEleTy()));
+    // The box must be initialized, because AllocatableApplyMold
+    // may read its contents (e.g. for checking whether it is allocated).
+    alloc = fir::factory::genNullBoxStorage(builder, loc,
+                                            fir::ClassType::get(boxHeapType));
+    // The temporary is unallocated even after AllocatableApplyMold below.
+    // If the temporary is used as assignment LHS it will be automatically
+    // allocated on the heap, as long as we use Assign family
+    // runtime functions. So set MustFree to true.
+    isHeapAlloc = builder.createBool(loc, true);
+    declAttrs = fir::FortranVariableFlagsAttr::get(
+        builder.getContext(), fir::FortranVariableFlagsEnum::allocatable);
+  } else if (mold.isArray()) {
     mlir::Type sequenceType =
         hlfir::getFortranElementOrSequenceType(mold.getType());
     shape = hlfir::genShape(loc, builder, mold);
@@ -122,8 +146,17 @@ createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
                                     /*shape=*/std::nullopt, lenParams);
     isHeapAlloc = builder.createBool(loc, false);
   }
-  auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, alloc, tmpName, shape, lenParams, fir::FortranVariableFlagsAttr{});
+  auto declareOp = builder.create<hlfir::DeclareOp>(loc, alloc, tmpName, shape,
+                                                    lenParams, declAttrs);
+  if (mold.isPolymorphic()) {
+    int rank = mold.getRank();
+    // TODO: should probably read rank from the mold.
+    if (rank < 0)
+      TODO(loc, "create temporary for assumed rank polymorphic");
+    fir::runtime::genAllocatableApplyMold(builder, loc, alloc,
+                                          mold.getFirBase(), rank);
+  }
+
   return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
 }
 
@@ -162,7 +195,7 @@ struct AsExprOpConversion : public mlir::OpConversionPattern<hlfir::AsExprOp> {
     // Otherwise, create a copy in a new buffer.
     hlfir::Entity source = hlfir::Entity{adaptor.getVar()};
     auto [temp, cleanup] = createTempFromMold(loc, builder, source);
-    builder.create<hlfir::AssignOp>(loc, source, temp, /*realloc=*/false,
+    builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
                                     /*keep_lhs_length_if_realloc=*/false,
                                     /*temporary_lhs=*/true);
     mlir::Value bufferizedExpr =
@@ -414,24 +447,32 @@ struct AssociateOpConversion
       //
       // !fir.box<!fir.heap<!fir.type<_T{y:i32}>>> value must be
       // propagated as the box address !fir.ref<!fir.type<_T{y:i32}>>.
+      auto adjustVar = [&](mlir::Value sourceVar, mlir::Type assocType) {
+        if (mlir::isa<fir::ReferenceType>(sourceVar.getType()) &&
+            mlir::isa<fir::ClassType>(
+                fir::unwrapRefType(sourceVar.getType()))) {
+          // Association of a polymorphic value.
+          sourceVar = builder.create<fir::LoadOp>(loc, sourceVar);
+          assert(mlir::isa<fir::ClassType>(sourceVar.getType()) &&
+                 fir::isAllocatableType(sourceVar.getType()));
+          assert(sourceVar.getType() == assocType);
+        } else if ((sourceVar.getType().isa<fir::BaseBoxType>() &&
+                    !assocType.isa<fir::BaseBoxType>()) ||
+                   ((sourceVar.getType().isa<fir::BoxCharType>() &&
+                     !assocType.isa<fir::BoxCharType>()))) {
+          sourceVar = builder.create<fir::BoxAddrOp>(loc, assocType, sourceVar);
+        } else {
+          sourceVar = builder.createConvert(loc, assocType, sourceVar);
+        }
+        return sourceVar;
+      };
+
       mlir::Type associateHlfirVarType = associate.getResultTypes()[0];
-      if (hlfirVar.getType().isa<fir::BaseBoxType>() &&
-          !associateHlfirVarType.isa<fir::BaseBoxType>())
-        hlfirVar = builder.create<fir::BoxAddrOp>(loc, associateHlfirVarType,
-                                                  hlfirVar);
-      else
-        hlfirVar = builder.createConvert(loc, associateHlfirVarType, hlfirVar);
+      hlfirVar = adjustVar(hlfirVar, associateHlfirVarType);
       associate.getResult(0).replaceAllUsesWith(hlfirVar);
 
       mlir::Type associateFirVarType = associate.getResultTypes()[1];
-      if ((firVar.getType().isa<fir::BaseBoxType>() &&
-           !associateFirVarType.isa<fir::BaseBoxType>()) ||
-          (firVar.getType().isa<fir::BoxCharType>() &&
-           !associateFirVarType.isa<fir::BoxCharType>()))
-        firVar =
-            builder.create<fir::BoxAddrOp>(loc, associateFirVarType, firVar);
-      else
-        firVar = builder.createConvert(loc, associateFirVarType, firVar);
+      firVar = adjustVar(firVar, associateFirVarType);
       associate.getResult(1).replaceAllUsesWith(firVar);
       associate.getResult(2).replaceAllUsesWith(flag);
       rewriter.replaceOp(associate, {hlfirVar, firVar, flag});
@@ -465,7 +506,7 @@ struct AssociateOpConversion
     // use that
     hlfir::Entity source = hlfir::Entity{adaptor.getSource()};
     auto [temp, cleanup] = createTempFromMold(loc, builder, source);
-    builder.create<hlfir::AssignOp>(loc, source, temp, /*reassoc=*/false,
+    builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
                                     /*keep_lhs_length_if_realloc=*/false,
                                     /*temporary_lhs=*/true);
     mlir::Value bufferTuple =
@@ -483,10 +524,22 @@ static void genFreeIfMustFree(mlir::Location loc, fir::FirOpBuilder &builder,
     // fir::FreeMemOp operand type must be a fir::HeapType.
     mlir::Type heapType = fir::HeapType::get(
         hlfir::getFortranElementOrSequenceType(var.getType()));
-    if (var.getType().isa<fir::BaseBoxType, fir::BoxCharType>())
+    if (mlir::isa<fir::ReferenceType>(var.getType()) &&
+        mlir::isa<fir::ClassType>(fir::unwrapRefType(var.getType()))) {
+      // A temporary for a polymorphic expression is represented
+      // via an allocatable. Variable type in this case
+      // is !fir.ref<!fir.class<!fir.heap<!fir.type<>>>>.
+      // We need to free the allocatable data, not the box
+      // that is allocated on the stack.
+      var = builder.create<fir::LoadOp>(loc, var);
+      assert(mlir::isa<fir::ClassType>(var.getType()) &&
+             fir::isAllocatableType(var.getType()));
       var = builder.create<fir::BoxAddrOp>(loc, heapType, var);
-    else if (!var.getType().isa<fir::HeapType>())
+    } else if (var.getType().isa<fir::BaseBoxType, fir::BoxCharType>()) {
+      var = builder.create<fir::BoxAddrOp>(loc, heapType, var);
+    } else if (!var.getType().isa<fir::HeapType>()) {
       var = builder.create<fir::ConvertOp>(loc, heapType, var);
+    }
     builder.create<fir::FreeMemOp>(loc, var);
   };
   if (auto cstMustFree = fir::getIntIfConstant(mustFree)) {

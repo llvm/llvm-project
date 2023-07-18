@@ -322,7 +322,7 @@ define <3 x i1> @test_setcc_v3i1_v3i16(ptr %a) nounwind {
 ; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE41-NEXT:    pxor %xmm1, %xmm1
 ; SSE41-NEXT:    pcmpeqw %xmm0, %xmm1
-; SSE41-NEXT:    pextrb $0, %xmm1, %eax
+; SSE41-NEXT:    movd %xmm1, %eax
 ; SSE41-NEXT:    pextrb $2, %xmm1, %edx
 ; SSE41-NEXT:    pextrb $4, %xmm1, %ecx
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
@@ -335,7 +335,7 @@ define <3 x i1> @test_setcc_v3i1_v3i16(ptr %a) nounwind {
 ; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpextrb $0, %xmm0, %eax
+; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    vpextrb $2, %xmm0, %edx
 ; AVX-NEXT:    vpextrb $4, %xmm0, %ecx
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
