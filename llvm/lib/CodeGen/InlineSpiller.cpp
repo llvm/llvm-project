@@ -289,11 +289,12 @@ static Register isCopyOfBundle(const MachineInstr &FirstMI, Register Reg,
   MachineBasicBlock::const_instr_iterator I = FirstMI.getIterator();
   while (I->isBundledWithSucc()) {
     const MachineInstr &MI = *I;
-    if (!TII.isCopyInstr(FirstMI))
+    auto CopyInst = TII.isCopyInstr(MI);
+    if (!CopyInst)
       return Register();
 
-    const MachineOperand &DstOp = MI.getOperand(0);
-    const MachineOperand &SrcOp = MI.getOperand(1);
+    const MachineOperand &DstOp = *CopyInst->Destination;
+    const MachineOperand &SrcOp = *CopyInst->Source;
     if (DstOp.getReg() == Reg) {
       if (!SnipReg)
         SnipReg = SrcOp.getReg();
