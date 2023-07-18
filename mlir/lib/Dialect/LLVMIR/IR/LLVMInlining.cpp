@@ -125,14 +125,11 @@ handleInlinedAllocas(Operation *call,
   }
 }
 
-/// Handles all interactions with alias scopes during inlining.
-/// Currently:
-/// - Maps all alias scopes in the inlined operations to deep clones of the
-///   scopes and domain. This is required for code such as
-///   `foo(a, b); foo(a2, b2);` to not incorrectly return `noalias` for e.g.
-///   operations on `a` and `a2`.
-static void handleAliasScopes(Operation *call,
-                              iterator_range<Region::iterator> inlinedBlocks) {
+/// Maps all alias scopes in the inlined operations to deep clones of the scopes
+/// and domain. This is required for code such as `foo(a, b); foo(a2, b2);` to
+/// not incorrectly return `noalias` for e.g. operations on `a` and `a2`.
+static void
+deepCloneAliasScopes(iterator_range<Region::iterator> inlinedBlocks) {
   DenseMap<Attribute, Attribute> mapping;
 
   // Register handles in the walker to create the deep clones.
@@ -186,6 +183,59 @@ static void handleAliasScopes(Operation *call,
       }
     }
   }
+}
+
+/// Creates a new ArrayAttr by concatenating `lhs` with `rhs`.
+/// Returns null if both parameters are null. If only one attribute is null,
+/// return the other.
+static ArrayAttr concatArrayAttr(ArrayAttr lhs, ArrayAttr rhs) {
+  if (!lhs)
+    return rhs;
+  if (!rhs)
+    return lhs;
+
+  SmallVector<Attribute> result;
+  llvm::append_range(result, lhs);
+  llvm::append_range(result, rhs);
+  return ArrayAttr::get(lhs.getContext(), result);
+}
+
+/// Appends any alias scopes of the call operation to any inlined memory
+/// operation.
+static void
+appendCallOpAliasScopes(Operation *call,
+                        iterator_range<Region::iterator> inlinedBlocks) {
+  auto callAliasInterface = dyn_cast<LLVM::AliasAnalysisOpInterface>(call);
+  if (!callAliasInterface)
+    return;
+
+  ArrayAttr aliasScopes = callAliasInterface.getAliasScopesOrNull();
+  ArrayAttr noAliasScopes = callAliasInterface.getNoAliasScopesOrNull();
+  // If the call has neither alias scopes or noalias scopes we have nothing to
+  // do here.
+  if (!aliasScopes && !noAliasScopes)
+    return;
+
+  // Simply append the call op's alias and noalias scopes to any operation
+  // implementing AliasAnalysisOpInterface.
+  for (Block &block : inlinedBlocks) {
+    for (auto aliasInterface : block.getOps<LLVM::AliasAnalysisOpInterface>()) {
+      if (aliasScopes)
+        aliasInterface.setAliasScopes(concatArrayAttr(
+            aliasInterface.getAliasScopesOrNull(), aliasScopes));
+
+      if (noAliasScopes)
+        aliasInterface.setNoAliasScopes(concatArrayAttr(
+            aliasInterface.getNoAliasScopesOrNull(), noAliasScopes));
+    }
+  }
+}
+
+/// Handles all interactions with alias scopes during inlining.
+static void handleAliasScopes(Operation *call,
+                              iterator_range<Region::iterator> inlinedBlocks) {
+  deepCloneAliasScopes(inlinedBlocks);
+  appendCallOpAliasScopes(call, inlinedBlocks);
 }
 
 /// If `requestedAlignment` is higher than the alignment specified on `alloca`,
