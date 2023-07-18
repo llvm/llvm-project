@@ -351,7 +351,7 @@ def BINV : ALU_rr<0b0110100, 0b001, "binv">,
            Sched<[WriteSingleBit, ReadSingleBit, ReadSingleBit]>;
 let IsSignExtendingOpW = 1 in
 def BEXT : ALU_rr<0b0100100, 0b101, "bext">,
-           Sched<[WriteSingleBit, ReadSingleBit, ReadSingleBit]>;
+           Sched<[WriteBEXT, ReadSingleBit, ReadSingleBit]>;
 
 def BCLRI : RVBShift_ri<0b01001, 0b001, OPC_OP_IMM, "bclri">,
             Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
@@ -361,7 +361,7 @@ def BINVI : RVBShift_ri<0b01101, 0b001, OPC_OP_IMM, "binvi">,
             Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
 let IsSignExtendingOpW = 1 in
 def BEXTI : RVBShift_ri<0b01001, 0b101, OPC_OP_IMM, "bexti">,
-            Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
+            Sched<[WriteBEXTI, ReadSingleBitImm]>;
 } // Predicates = [HasStdExtZbs]
 
 // These instructions were named xperm.n and xperm.b in the last version of
