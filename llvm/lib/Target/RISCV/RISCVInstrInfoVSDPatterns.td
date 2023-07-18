@@ -632,7 +632,7 @@ multiclass VPatWidenBinaryFPSDNode_VV_VF_RM<SDNode op, string instruction_name> 
                                      (vti.Vector vti.RegClass:$rs2),
                                      (vti.Mask true_mask), (XLenVT srcvalue))),
                     (wti.Vector (riscv_fpextend_vl_oneuse
-                                     (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),
+                                     (vti.Vector (SplatFPOp (vti.Scalar vti.ScalarRegClass:$rs1))),
                                      (vti.Mask true_mask), (XLenVT srcvalue)))),
                 (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                    (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
@@ -644,7 +644,7 @@ multiclass VPatWidenBinaryFPSDNode_VV_VF_RM<SDNode op, string instruction_name> 
       def : Pat<(op (wti.Vector (riscv_fpextend_vl_oneuse
                                      (vti.Vector vti.RegClass:$rs2),
                                      (vti.Mask true_mask), (XLenVT srcvalue))),
-                    (wti.Vector (SplatFPOp (fpext_oneuse vti.ScalarRegClass:$rs1)))),
+                    (wti.Vector (SplatFPOp (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1))))),
                 (!cast<Instruction>(instruction_name#"_V"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                    (wti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs2,
                    vti.ScalarRegClass:$rs1,
@@ -685,7 +685,7 @@ multiclass VPatWidenBinaryFPSDNode_WV_WF_RM<SDNode op, string instruction_name> 
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TU_MU)>;
       def : Pat<(op (wti.Vector wti.RegClass:$rs2),
-                    (wti.Vector (SplatFPOp (fpext_oneuse vti.ScalarRegClass:$rs1)))),
+                    (wti.Vector (SplatFPOp (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1))))),
                 (!cast<Instruction>(instruction_name#"_W"#vti.ScalarSuffix#"_"#vti.LMul.MX)
                    (wti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs2,
                    vti.ScalarRegClass:$rs1,
@@ -722,7 +722,7 @@ multiclass VPatWidenFPMulAccSDNode_VV_VF_RM<string instruction_name> {
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
       def : Pat<(fma (wti.Vector (SplatFPOp
-                                      (fpext_oneuse vti.ScalarRegClass:$rs1))),
+                                      (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1)))),
                      (wti.Vector (riscv_fpextend_vl_oneuse
                                       (vti.Vector vti.RegClass:$rs2),
                                       (vti.Mask true_mask), (XLenVT srcvalue))),
@@ -755,7 +755,7 @@ multiclass VPatWidenFPNegMulAccSDNode_VV_VF_RM<string instruction_name> {
                    // RISCVInsertReadWriteCSR
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
-      def : Pat<(fma (SplatFPOp (fpext_oneuse vti.ScalarRegClass:$rs1)),
+      def : Pat<(fma (SplatFPOp (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1))),
                      (fneg (wti.Vector (riscv_fpextend_vl_oneuse
                                             (vti.Vector vti.RegClass:$rs2),
                                             (vti.Mask true_mask), (XLenVT srcvalue)))),
@@ -766,7 +766,7 @@ multiclass VPatWidenFPNegMulAccSDNode_VV_VF_RM<string instruction_name> {
                    // RISCVInsertReadWriteCSR
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
-      def : Pat<(fma (fneg (wti.Vector (SplatFPOp (fpext_oneuse vti.ScalarRegClass:$rs1)))),
+      def : Pat<(fma (fneg (wti.Vector (SplatFPOp (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1))))),
                      (riscv_fpextend_vl_oneuse (vti.Vector vti.RegClass:$rs2),
                                                (vti.Mask true_mask), (XLenVT srcvalue)),
                      (fneg wti.RegClass:$rd)),
@@ -798,7 +798,7 @@ multiclass VPatWidenFPMulSacSDNode_VV_VF_RM<string instruction_name> {
                    // RISCVInsertReadWriteCSR
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
-      def : Pat<(fma (wti.Vector (SplatFPOp (fpext_oneuse vti.ScalarRegClass:$rs1))),
+      def : Pat<(fma (wti.Vector (SplatFPOp (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1)))),
                      (riscv_fpextend_vl_oneuse (vti.Vector vti.RegClass:$rs2),
                                                (vti.Mask true_mask), (XLenVT srcvalue)),
                      (fneg wti.RegClass:$rd)),
@@ -830,7 +830,7 @@ multiclass VPatWidenFPNegMulSacSDNode_VV_VF_RM<string instruction_name> {
                    // RISCVInsertReadWriteCSR
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
-      def : Pat<(fma (wti.Vector (SplatFPOp (fpext_oneuse vti.ScalarRegClass:$rs1))),
+      def : Pat<(fma (wti.Vector (SplatFPOp (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1)))),
                      (fneg (wti.Vector (riscv_fpextend_vl_oneuse
                                             (vti.Vector vti.RegClass:$rs2),
                                             (vti.Mask true_mask), (XLenVT srcvalue)))),
@@ -841,7 +841,7 @@ multiclass VPatWidenFPNegMulSacSDNode_VV_VF_RM<string instruction_name> {
                    // RISCVInsertReadWriteCSR
                    FRM_DYN,
                    vti.AVL, vti.Log2SEW, TAIL_AGNOSTIC)>;
-      def : Pat<(fma (fneg (wti.Vector (SplatFPOp (fpext_oneuse vti.ScalarRegClass:$rs1)))),
+      def : Pat<(fma (fneg (wti.Vector (SplatFPOp (fpext_oneuse (vti.Scalar vti.ScalarRegClass:$rs1))))),
                      (riscv_fpextend_vl_oneuse (vti.Vector vti.RegClass:$rs2),
                                                (vti.Mask true_mask), (XLenVT srcvalue)),
                      wti.RegClass:$rd),
