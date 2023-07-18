@@ -30073,7 +30073,7 @@ SDValue X86TargetLowering::LowerSET_ROUNDING(SDValue Op,
 
 const unsigned X87StateSize = 28;
 const unsigned FPStateSize = 32;
-const unsigned FPStateSizeInBits = FPStateSize * 8;
+[[maybe_unused]] const unsigned FPStateSizeInBits = FPStateSize * 8;
 
 SDValue X86TargetLowering::LowerGET_FPENV_MEM(SDValue Op,
                                               SelectionDAG &DAG) const {
