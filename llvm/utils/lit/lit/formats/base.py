@@ -12,6 +12,9 @@ class TestFormat(object):
         to that path. There can be zero, one or more tests. For example, some testing
         formats allow expanding a single path in the test suite into multiple Lit tests
         (e.g. they are generated on the fly).
+
+        Note that this method is only used when Lit needs to actually perform test
+        discovery, which is not the case for configs with standalone tests.
         """
         yield lit.Test.Test(testSuite, path_in_suite, localConfig)
 

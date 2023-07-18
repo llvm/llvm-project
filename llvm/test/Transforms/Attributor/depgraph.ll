@@ -99,26 +99,29 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_ret: [@-1]} with state set-state(< {  %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
 ; GRAPH-NEXT:   updates [AAPotentialValues] for CtxI '  %.0 = phi ptr [ %6, %4 ], [ %0, %7 ]' at position {flt:.0 [.0@-1]} with state set-state(< {ptr %0[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
 ; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state set-state(< {ptr %0[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
+; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state set-state(< {  %.0 = phi ptr [ %6, %4 ], [ %0, %7 ][3], } >)
 ; GRAPH-NEXT:   updates [AAPotentialValues] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_ret: [@-1]} with state set-state(< {  %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
-; GRAPH-EMPTY:
-; GRAPH-NEXT: [AAReturnedValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-return(#2)
-; GRAPH-NEXT:   updates [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state set-state(< {ptr %0[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
+; GRAPH-NEXT:   updates [AANoUndef] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state may-undef-or-poison
 ; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
 ; GRAPH-NEXT:   updates [AAAlign] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state align<1-16>
 ; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
-; GRAPH-EMPTY:
+; GRAPH-NEXT:   updates [AADereferenceable] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state unknown-dereferenceable
+; GRAPH-EMPTY: 
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %.0 = phi ptr [ %6, %4 ], [ %0, %7 ]' at position {flt:.0 [.0@-1]} with state set-state(< {ptr %0[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
-; GRAPH-NEXT:   updates [AAReturnedValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-return(#2)
-; GRAPH-EMPTY:
+; GRAPH-NEXT:   updates [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state set-state(< {  %.0 = phi ptr [ %6, %4 ], [ %0, %7 ][3], } >)
+; GRAPH-NEXT:   updates [AAPotentialValues] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_ret: [@-1]} with state set-state(< {  %5 = getelementptr inbounds i32, ptr %0, i64 4[3],   %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
+; GRAPH-NEXT:   updates [AANoCapture] for CtxI '  %2 = load i32, ptr %0, align 4' at position {arg: [@0]} with state assumed not-captured-maybe-returned
+; GRAPH-NEXT:   updates [AAAlign] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state align<1-16>
+; GRAPH-NEXT:   updates [AANonNull] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn_ret:checkAndAdvance [checkAndAdvance@-1]} with state nonnull
+; GRAPH-EMPTY: 
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state set-state(< {  %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
-; GRAPH-EMPTY:
+; GRAPH-EMPTY: 
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI <<null inst>> at position {flt: [@-1]} with state set-state(< {i64 4[3], } >)
-; GRAPH-EMPTY:
+; GRAPH-EMPTY: 
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %2 = load i32, ptr %0, align 4' at position {flt:checkAndAdvance [checkAndAdvance@-1]} with state set-state(< {@checkAndAdvance[3], } >)
-; GRAPH-EMPTY:
+; GRAPH-EMPTY: 
 ; GRAPH-NEXT: [AAPotentialValues] for CtxI '  %6 = call ptr @checkAndAdvance(ptr %5)' at position {cs_arg: [@0]} with state set-state(< {  %5 = getelementptr inbounds i32, ptr %0, i64 4[3], } >)
-; GRAPH-EMPTY:
+; GRAPH-EMPTY: 
 ; GRAPH-NEXT: [AAInstanceInfo] for CtxI '  %5 = getelementptr inbounds i32, ptr %0, i64 4' at position {flt: [@-1]} with state <unique [fAa]>
 ; GRAPH-EMPTY:
 ; GRAPH-NEXT: [AANoRecurse] for CtxI '  %2 = load i32, ptr %0, align 4' at position {fn:checkAndAdvance [checkAndAdvance@-1]} with state may-recurse
@@ -260,7 +263,6 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node18:0x[a-z0-9]+]] [shape=record,label="{[AAMemoryBehavior]
 ; DOT-DAG: Node[[Node19:0x[a-z0-9]+]] [shape=record,label="{[AAPotentialValues]
 ; DOT-DAG: Node[[Node20:0x[a-z0-9]+]] [shape=record,label="{[AAPotentialValues]
-; DOT-DAG: Node[[Node21:0x[a-z0-9]+]] [shape=record,label="{[AAReturnedValues]
 ; DOT-DAG: Node[[Node22:0x[a-z0-9]+]] [shape=record,label="{[AAPotentialValues]
 ; DOT-DAG: Node[[Node23:0x[a-z0-9]+]] [shape=record,label="{[AAPotentialValues]
 ; DOT-DAG: Node[[Node24:0x[a-z0-9]+]] [shape=record,label="{[AAPotentialValues]
@@ -317,25 +319,20 @@ define ptr @checkAndAdvance(ptr align 16 %0) {
 ; DOT-DAG: Node[[Node13]] -> Node[[Node12]];
 ; DOT-DAG: Node[[Node55]] -> Node[[Node56]];
 ; DOT-DAG: Node[[Node68]] -> Node[[Node73]];
-; DOT-DAG: Node[[Node21]] -> Node[[Node20]];
 ; DOT-DAG: Node[[Node64]] -> Node[[Node61]];
 ; DOT-DAG: Node[[Node61]] -> Node[[Node64]];
 ; DOT-DAG: Node[[Node12]] -> Node[[Node13]];
 ; DOT-DAG: Node[[Node11]] -> Node[[Node61]];
 ; DOT-DAG: Node[[Node14]] -> Node[[Node18]];
-; DOT-DAG: Node[[Node22]] -> Node[[Node21]];
 ; DOT-DAG: Node[[Node43]] -> Node[[Node68]];
 ; DOT-DAG: Node[[Node19]] -> Node[[Node22]];
-; DOT-DAG: Node[[Node21]] -> Node[[Node51]];
 ; DOT-DAG: Node[[Node10]] -> Node[[Node11]];
 ; DOT-DAG: Node[[Node41]] -> Node[[Node42]];
 ; DOT-DAG: Node[[Node42]] -> Node[[Node41]];
 ; DOT-DAG: Node[[Node11]] -> Node[[Node10]];
-; DOT-DAG: Node[[Node21]] -> Node[[Node61]];
 ; DOT-DAG: Node[[Node67]] -> Node[[Node66]];
 ; DOT-DAG: Node[[Node18]] -> Node[[Node14]];
 ; DOT-DAG: Node[[Node66]] -> Node[[Node67]];
-; DOT-DAG: Node[[Node21]] -> Node[[Node47]];
 ; DOT-DAG: Node[[Node44]] -> Node[[Node43]];
 ; DOT-DAG: Node[[Node43]] -> Node[[Node44]];
 ;.

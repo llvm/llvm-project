@@ -826,25 +826,13 @@ define dso_local i1 @select(i32 %a) local_unnamed_addr #0 {
 ; TUNIT-LABEL: define {{[^@]+}}@select
 ; TUNIT-SAME: (i32 [[A:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
-; TUNIT-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
-; TUNIT-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
-; TUNIT-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
-; TUNIT-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
-; TUNIT-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
-; TUNIT-NEXT:    ret i1 [[CMP6]]
+; TUNIT-NEXT:    ret i1 false
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@select
 ; CGSCC-SAME: (i32 [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
-; CGSCC-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
-; CGSCC-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
-; CGSCC-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
-; CGSCC-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
-; CGSCC-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
-; CGSCC-NEXT:    ret i1 [[CMP6]]
+; CGSCC-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp sgt i32 %a, 5
@@ -861,27 +849,13 @@ define dso_local i32 @select_zext(i32 %a) local_unnamed_addr #0 {
 ; TUNIT-LABEL: define {{[^@]+}}@select_zext
 ; TUNIT-SAME: (i32 [[A:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; TUNIT-NEXT:  entry:
-; TUNIT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
-; TUNIT-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
-; TUNIT-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
-; TUNIT-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
-; TUNIT-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
-; TUNIT-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
-; TUNIT-NEXT:    [[DOT13:%.*]] = zext i1 [[CMP6]] to i32
-; TUNIT-NEXT:    ret i32 [[DOT13]]
+; TUNIT-NEXT:    ret i32 0
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@select_zext
 ; CGSCC-SAME: (i32 [[A:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 5
-; CGSCC-NEXT:    [[DOT:%.*]] = select i1 [[CMP]], i32 1, i32 2
-; CGSCC-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[A]], 10
-; CGSCC-NEXT:    [[Y_0_V:%.*]] = select i1 [[CMP1]], i32 1, i32 2
-; CGSCC-NEXT:    [[Y_0:%.*]] = add nuw nsw i32 [[DOT]], [[Y_0_V]]
-; CGSCC-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[Y_0]], 5
-; CGSCC-NEXT:    [[DOT13:%.*]] = zext i1 [[CMP6]] to i32
-; CGSCC-NEXT:    ret i32 [[DOT13]]
+; CGSCC-NEXT:    ret i32 0
 ;
 entry:
   %cmp = icmp sgt i32 %a, 5
@@ -1649,8 +1623,7 @@ define internal i1 @non_zero(i8 %v) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@non_zero
 ; CGSCC-SAME: (i8 [[V:%.*]]) #[[ATTR2]] {
-; CGSCC-NEXT:    [[R:%.*]] = icmp ne i8 [[V]], 0
-; CGSCC-NEXT:    ret i1 [[R]]
+; CGSCC-NEXT:    ret i1 true
 ;
   %r = icmp ne i8 %v, 0
   ret i1 %r
@@ -1677,7 +1650,7 @@ define i1 @context(ptr %p) {
 ; CGSCC-NEXT:    [[C:%.*]] = icmp slt i8 0, [[L]]
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[R:%.*]] = call i1 @non_zero(i8 [[L]]) #[[ATTR6]]
+; CGSCC-NEXT:    [[R:%.*]] = call noundef i1 @non_zero(i8 [[L]]) #[[ATTR6]]
 ; CGSCC-NEXT:    ret i1 [[R]]
 ; CGSCC:       f:
 ; CGSCC-NEXT:    ret i1 false

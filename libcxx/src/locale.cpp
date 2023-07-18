@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__utility/unreachable.h>
+#include <__verbose_abort>
 #include <algorithm>
 #include <clocale>
 #include <codecvt>
@@ -115,8 +116,7 @@ _LIBCPP_NORETURN static void __throw_runtime_error(const string &msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw runtime_error(msg);
 #else
-    (void)msg;
-    _VSTD::abort();
+    _LIBCPP_VERBOSE_ABORT("runtime_error was thrown in -fno-exceptions mode with message \"%s\"", msg.c_str());
 #endif
 }
 
@@ -6532,8 +6532,7 @@ void __throw_runtime_error(const char* msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw runtime_error(msg);
 #else
-    (void)msg;
-    _VSTD::abort();
+    _LIBCPP_VERBOSE_ABORT("runtime_error was thrown in -fno-exceptions mode with message \"%s\"", msg);
 #endif
 }
 

@@ -54,12 +54,12 @@ def FPR64IN32X : RegisterOperand<GPRPF64> {
   let ParserMatchClass = GPRPF64AsFPR;
 }
 
-def DExt       : ExtInfo<"", "", [HasStdExtD], FPR64, FPR32, FPR64, ?>;
+def DExt       : ExtInfo<"", "", [HasStdExtD], f64, FPR64, FPR32, FPR64, ?>;
 
 def ZdinxExt   : ExtInfo<"_INX", "RVZfinx", [HasStdExtZdinx, IsRV64],
-                         FPR64INX, FPR32INX, FPR64INX, ?>;
+                         f64, FPR64INX, FPR32INX, FPR64INX, ?>;
 def Zdinx32Ext : ExtInfo<"_IN32X", "RV32Zdinx", [HasStdExtZdinx, IsRV32],
-                         FPR64IN32X, FPR32INX, FPR64IN32X, ?>;
+                         f64, FPR64IN32X, FPR32INX, FPR64IN32X, ?>;
 
 defvar DExts     = [DExt, ZdinxExt, Zdinx32Ext];
 defvar DExtsRV64 = [DExt, ZdinxExt];
@@ -279,7 +279,7 @@ def : Pat<(fabs FPR64:$rs1), (FSGNJX_D $rs1, $rs1)>;
 
 def : Pat<(riscv_fpclass FPR64:$rs1), (FCLASS_D $rs1)>;
 
-def : PatFprFpr<fcopysign, FSGNJ_D, FPR64>;
+def : PatFprFpr<fcopysign, FSGNJ_D, FPR64, f64>;
 def : Pat<(fcopysign FPR64:$rs1, (fneg FPR64:$rs2)), (FSGNJN_D $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64:$rs1, FPR32:$rs2), (FSGNJ_D $rs1, (FCVT_D_S $rs2))>;
 def : Pat<(fcopysign FPR32:$rs1, FPR64:$rs2), (FSGNJ_S $rs1, (FCVT_S_D $rs2,
@@ -314,7 +314,7 @@ def : Pat<(fabs FPR64INX:$rs1), (FSGNJX_D_INX $rs1, $rs1)>;
 
 def : Pat<(riscv_fpclass FPR64INX:$rs1), (FCLASS_D_INX $rs1)>;
 
-def : PatFprFpr<fcopysign, FSGNJ_D_INX, FPR64INX>;
+def : PatFprFpr<fcopysign, FSGNJ_D_INX, FPR64INX, f64>;
 def : Pat<(fcopysign FPR64INX:$rs1, (fneg FPR64INX:$rs2)),
           (FSGNJN_D_INX $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64INX:$rs1, FPR32INX:$rs2),
@@ -351,7 +351,7 @@ def : Pat<(fabs FPR64IN32X:$rs1), (FSGNJX_D_IN32X $rs1, $rs1)>;
 
 def : Pat<(riscv_fpclass FPR64IN32X:$rs1), (FCLASS_D_IN32X $rs1)>;
 
-def : PatFprFpr<fcopysign, FSGNJ_D_IN32X, FPR64IN32X>;
+def : PatFprFpr<fcopysign, FSGNJ_D_IN32X, FPR64IN32X, f64>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, (fneg FPR64IN32X:$rs2)),
           (FSGNJN_D_IN32X $rs1, $rs2)>;
 def : Pat<(fcopysign FPR64IN32X:$rs1, FPR32INX:$rs2),
@@ -465,7 +465,7 @@ def : PatSetCC<FPR64IN32X, any_fsetccs, SETOLE, FLE_D_IN32X, f64>;
 let Predicates = [HasStdExtD] in {
 defm Select_FPR64 : SelectCC_GPR_rrirr<FPR64, f64>;
 
-def PseudoFROUND_D : PseudoFROUND<FPR64>;
+def PseudoFROUND_D : PseudoFROUND<FPR64, f64>;
 
 /// Loads
 
@@ -494,7 +494,7 @@ def SplitF64Pseudo
 let Predicates = [HasStdExtZdinx, IsRV64] in {
 defm Select_FPR64INX : SelectCC_GPR_rrirr<FPR64INX, f64>;
 
-def PseudoFROUND_D_INX : PseudoFROUND<FPR64INX>;
+def PseudoFROUND_D_INX : PseudoFROUND<FPR64INX, f64>;
 
 /// Loads
 def : LdPat<load, LD, f64>;
@@ -506,7 +506,7 @@ def : StPat<store, SD, GPR, f64>;
 let Predicates = [HasStdExtZdinx, IsRV32] in {
 defm Select_FPR64IN32X : SelectCC_GPR_rrirr<FPR64IN32X, f64>;
 
-def PseudoFROUND_D_IN32X : PseudoFROUND<FPR64IN32X>;
+def PseudoFROUND_D_IN32X : PseudoFROUND<FPR64IN32X, f64>;
 
 /// Loads
 let isCall = 0, mayLoad = 1, mayStore = 0, Size = 8, isCodeGenOnly = 1 in

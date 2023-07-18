@@ -8130,22 +8130,22 @@ define void @pr38938(i32* %a0, i64* %a1) nounwind {
 ;
 ; X64-NOBMI-LABEL: pr38938:
 ; X64-NOBMI:       # %bb.0:
-; X64-NOBMI-NEXT:    movq (%rsi), %rax
-; X64-NOBMI-NEXT:    shrq $19, %rax
-; X64-NOBMI-NEXT:    andl $4092, %eax # imm = 0xFFC
-; X64-NOBMI-NEXT:    incl (%rdi,%rax)
+; X64-NOBMI-NEXT:    movl (%rsi), %eax
+; X64-NOBMI-NEXT:    shrl $21, %eax
+; X64-NOBMI-NEXT:    andl $1023, %eax # imm = 0x3FF
+; X64-NOBMI-NEXT:    incl (%rdi,%rax,4)
 ; X64-NOBMI-NEXT:    retq
 ;
 ; X64-BMINOTBM-LABEL: pr38938:
 ; X64-BMINOTBM:       # %bb.0:
 ; X64-BMINOTBM-NEXT:    movl $2581, %eax # imm = 0xA15
-; X64-BMINOTBM-NEXT:    bextrq %rax, (%rsi), %rax
+; X64-BMINOTBM-NEXT:    bextrl %eax, (%rsi), %eax
 ; X64-BMINOTBM-NEXT:    incl (%rdi,%rax,4)
 ; X64-BMINOTBM-NEXT:    retq
 ;
 ; X64-BMITBM-LABEL: pr38938:
 ; X64-BMITBM:       # %bb.0:
-; X64-BMITBM-NEXT:    bextrq $2581, (%rsi), %rax # imm = 0xA15
+; X64-BMITBM-NEXT:    bextrl $2581, (%rsi), %eax # imm = 0xA15
 ; X64-BMITBM-NEXT:    incl (%rdi,%rax,4)
 ; X64-BMITBM-NEXT:    retq
   %tmp = load i64, i64* %a1, align 8

@@ -42,12 +42,6 @@
 #define _LIBCPP_THREAD_ABI_VISIBILITY inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
-#if defined(__FreeBSD__) && defined(__clang__) && __has_attribute(no_thread_safety_analysis)
-#define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS __attribute__((no_thread_safety_analysis))
-#else
-#define _LIBCPP_NO_THREAD_SAFETY_ANALYSIS
-#endif
-
 typedef ::timespec __libcpp_timespec_t;
 #endif // !defined(_LIBCPP_HAS_NO_THREADS)
 

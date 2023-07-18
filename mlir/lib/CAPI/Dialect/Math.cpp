@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===- Math.cpp - C Interface for Math dialect ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: *
+#include "mlir-c/Dialect/Math.h"
+#include "mlir/CAPI/Registration.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 
-// Make sure the test DOES NOT pass if it has no 'RUN:' steps
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Math, math, mlir::math::MathDialect)

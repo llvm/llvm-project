@@ -1340,7 +1340,7 @@ define weak_odr align 16 ptr @non_exact_4(ptr align 32 %a) {
 ; We can use the alignment information of the weak function non_exact_3 argument
 ; because it was given to us and not derived.
 ; We can use the return information of the weak function non_exact_4.
-; FIXME: %c2 and %c3 should be replaced but not %c0 or %c1!
+; %c2 and %c3 should be replaced but not %c0 or %c1!
 define i32 @exact(ptr align 8 %a, ptr align 8 %b) {
 ; CHECK-LABEL: define {{[^@]+}}@exact
 ; CHECK-SAME: (ptr align 8 [[A:%.*]], ptr align 8 [[B:%.*]]) {
@@ -1349,10 +1349,10 @@ define i32 @exact(ptr align 8 %a, ptr align 8 %b) {
 ; CHECK-NEXT:    [[C2:%.*]] = call i32 @non_exact_2(i32 noundef 2)
 ; CHECK-NEXT:    [[C3:%.*]] = call align 32 ptr @non_exact_3(ptr align 32 [[A]])
 ; CHECK-NEXT:    [[C4:%.*]] = call align 16 ptr @non_exact_4(ptr align 32 [[B]])
-; CHECK-NEXT:    [[C3L:%.*]] = load i32, ptr [[C3]], align 32
+; CHECK-NEXT:    [[C3L:%.*]] = load i32, ptr [[A]], align 32
 ; CHECK-NEXT:    [[C4L:%.*]] = load i32, ptr [[C4]], align 16
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[C0]], [[C1]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], [[C2]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD1]], 2
 ; CHECK-NEXT:    [[ADD3:%.*]] = add i32 [[ADD2]], [[C3L]]
 ; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[ADD3]], [[C4L]]
 ; CHECK-NEXT:    ret i32 [[ADD4]]
