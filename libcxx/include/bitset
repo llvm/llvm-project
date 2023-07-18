@@ -122,6 +122,7 @@ template <size_t N> struct hash<std::bitset<N>>;
 #include <climits>
 #include <cstddef>
 #include <stdexcept>
+#include <string_view>
 #include <version>
 
 // standard-mandated includes
@@ -691,18 +692,30 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR bitset() _NOEXCEPT {}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
         bitset(unsigned long long __v) _NOEXCEPT : base(__v) {}
-    template<class _CharT, class = __enable_if_t<_IsCharLikeType<_CharT>::value> >
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
-        explicit bitset(const _CharT* __str,
-                        typename basic_string<_CharT>::size_type __n = basic_string<_CharT>::npos,
-                        _CharT __zero = _CharT('0'), _CharT __one = _CharT('1'));
-    template<class _CharT, class _Traits, class _Allocator>
-    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
-        explicit bitset(const basic_string<_CharT,_Traits,_Allocator>& __str,
-                        typename basic_string<_CharT,_Traits,_Allocator>::size_type __pos = 0,
-                        typename basic_string<_CharT,_Traits,_Allocator>::size_type __n =
-                                (basic_string<_CharT,_Traits,_Allocator>::npos),
-                        _CharT __zero = _CharT('0'), _CharT __one = _CharT('1'));
+    template <class _CharT, class = __enable_if_t<_IsCharLikeType<_CharT>::value> >
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit bitset(
+        const _CharT* __str,
+        typename basic_string<_CharT>::size_type __n = basic_string<_CharT>::npos,
+        _CharT __zero                                = _CharT('0'),
+        _CharT __one                                 = _CharT('1')) {
+
+        size_t __rlen = std::min(__n, char_traits<_CharT>::length(__str));
+        __init_from_string_view(basic_string_view<_CharT>(__str, __rlen), __zero, __one);
+    }
+    template <class _CharT, class _Traits, class _Allocator>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 explicit bitset(
+        const basic_string<_CharT, _Traits, _Allocator>& __str,
+        typename basic_string<_CharT, _Traits, _Allocator>::size_type __pos = 0,
+        typename basic_string<_CharT, _Traits, _Allocator>::size_type __n =
+            basic_string<_CharT, _Traits, _Allocator>::npos,
+        _CharT __zero = _CharT('0'),
+        _CharT __one  = _CharT('1')) {
+        if (__pos > __str.size())
+            std::__throw_out_of_range("bitset string pos out of range");
+
+        size_t __rlen = std::min(__n, __str.size() - __pos);
+        __init_from_string_view(basic_string_view<_CharT, _Traits>(__str.data() + __pos, __rlen), __zero, __one);
+    }
 
     // 23.3.5.2 bitset operations:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX23
@@ -778,60 +791,28 @@ public:
     bitset operator>>(size_t __pos) const _NOEXCEPT;
 
 private:
+    template <class _CharT, class _Traits>
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void
+    __init_from_string_view(basic_string_view<_CharT, _Traits> __str, _CharT __zero, _CharT __one) {
+
+        for (size_t __i = 0; __i < __str.size(); ++__i)
+            if (!_Traits::eq(__str[__i], __zero) && !_Traits::eq(__str[__i], __one))
+              std::__throw_invalid_argument("bitset string ctor has invalid argument");
+
+        size_t __mp = std::min(__str.size(), _Size);
+        size_t __i  = 0;
+        for (; __i < __mp; ++__i) {
+            _CharT __c   = __str[__mp - 1 - __i];
+            (*this)[__i] = _Traits::eq(__c, __one);
+        }
+        std::fill(base::__make_iter(__i), base::__make_iter(_Size), false);
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     size_t __hash_code() const _NOEXCEPT {return base::__hash_code();}
 
     friend struct hash<bitset>;
 };
-
-template <size_t _Size>
-template<class _CharT, class>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
-bitset<_Size>::bitset(const _CharT* __str,
-                      typename basic_string<_CharT>::size_type __n,
-                      _CharT __zero, _CharT __one)
-{
-    size_t __rlen = _VSTD::min(__n, char_traits<_CharT>::length(__str));
-    for (size_t __i = 0; __i < __rlen; ++__i)
-        if (__str[__i] != __zero && __str[__i] != __one)
-            __throw_invalid_argument("bitset string ctor has invalid argument");
-
-    size_t __mp = _VSTD::min(__rlen, _Size);
-    size_t __i = 0;
-    for (; __i < __mp; ++__i)
-    {
-        _CharT __c = __str[__mp - 1 - __i];
-        (*this)[__i] = (__c == __one);
-    }
-    _VSTD::fill(base::__make_iter(__i), base::__make_iter(_Size), false);
-}
-
-template <size_t _Size>
-template<class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
-bitset<_Size>::bitset(const basic_string<_CharT,_Traits,_Allocator>& __str,
-       typename basic_string<_CharT,_Traits,_Allocator>::size_type __pos,
-       typename basic_string<_CharT,_Traits,_Allocator>::size_type __n,
-       _CharT __zero, _CharT __one)
-{
-    if (__pos > __str.size())
-        __throw_out_of_range("bitset string pos out of range");
-
-    size_t __rlen = _VSTD::min(__n, __str.size() - __pos);
-    for (size_t __i = __pos; __i < __pos + __rlen; ++__i)
-        if (!_Traits::eq(__str[__i], __zero) && !_Traits::eq(__str[__i], __one))
-            __throw_invalid_argument("bitset string ctor has invalid argument");
-
-    size_t __mp = _VSTD::min(__rlen, _Size);
-    size_t __i = 0;
-    for (; __i < __mp; ++__i)
-    {
-        _CharT __c = __str[__pos + __mp - 1 - __i];
-        (*this)[__i] = _Traits::eq(__c, __one);
-    }
-    _VSTD::fill(base::__make_iter(__i), base::__make_iter(_Size), false);
-}
 
 template <size_t _Size>
 inline
