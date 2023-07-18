@@ -1798,12 +1798,18 @@ void UnwrappedLineParser::parseStructuralElement(
       break;
     case tok::caret:
       nextToken();
+      // Block return type.
       if (FormatTok->Tok.isAnyIdentifier() ||
           FormatTok->isSimpleTypeSpecifier()) {
         nextToken();
+        // Return types: pointers are ok too.
+        while (FormatTok->is(tok::star))
+          nextToken();
       }
+      // Block argument list.
       if (FormatTok->is(tok::l_paren))
         parseParens();
+      // Block body.
       if (FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;
