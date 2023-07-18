@@ -29,7 +29,7 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.constant 50 : index
 ! CHECK: %[[UB:.*]] = arith.constant 99 : index
 ! CHECK: %[[BOUND_51_100:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
-! CHECK: %[[COPYOUT_CREATE:.*]] = acc.create varPtr(%[[ARR]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_51_100]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = 4 : i64, name = "a(51:100)"}
+! CHECK: %[[COPYOUT_CREATE:.*]] = acc.create varPtr(%[[ARR]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND_51_100]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a(51:100)"}
 ! CHECK: acc.data dataOperands(%[[COPYIN]], %[[COPYOUT_CREATE]] : !fir.ref<!fir.array<100xf32>>, !fir.ref<!fir.array<100xf32>>) {
 ! CHECK:   acc.terminator
 ! CHECK: }
@@ -52,11 +52,11 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.constant 19 : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
-! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = 3 : i64, name = "w%data(1:20)"}
+! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = #acc<data_clause acc_copy>, name = "w%data(1:20)"}
 ! CHECK: acc.data dataOperands(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) {
 ! CHECK:   acc.terminator
 ! CHECK: }
-! CHECK: acc.copyout accPtr(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) to varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) {dataClause = 3 : i64, name = "w%data(1:20)"}
+! CHECK: acc.copyout accPtr(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) to varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "w%data(1:20)"}
 
 ! Testing derived-type component without section
 subroutine acc_operand_derived_type_component()
@@ -75,11 +75,11 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.subi %[[EXT]], %[[ONE]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXT]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index)
-! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = 3 : i64, name = "w%data"}
+! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = #acc<data_clause acc_copy>, name = "w%data"}
 ! CHECK: acc.data dataOperands(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) {
 ! CHECK:   acc.terminator
 ! CHECK: }
-! CHECK: acc.copyout accPtr(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) to varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) {dataClause = 3 : i64, name = "w%data"}
+! CHECK: acc.copyout accPtr(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) to varPtr(%[[COORD_DATA]] : !fir.ref<!fir.array<100xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "w%data"}
 
 
 ! Testing array of derived-type component without section
@@ -103,11 +103,11 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.constant 0 : index
 ! CHECK: %[[UB:.*]] = arith.subi %[[EXT]], %[[ONE]] : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) extent(%[[EXT]] : index) stride(%[[ONE]] : index) startIdx(%[[ONE]] : index) 
-! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_W1_DATA]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = 3 : i64, name = "w(1_8)%data"}
+! CHECK: %[[COPY_COPYIN:.*]] = acc.copyin varPtr(%[[COORD_W1_DATA]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xf32>> {dataClause = #acc<data_clause acc_copy>, name = "w(1_8)%data"}
 ! CHECK: acc.data dataOperands(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) {
 ! CHECK:   acc.terminator
 ! CHECK: }
-! CHECK: acc.copyout accPtr(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) to varPtr(%[[COORD_W1_DATA]] : !fir.ref<!fir.array<100xf32>>) {dataClause = 3 : i64, name = "w(1_8)%data"}
+! CHECK: acc.copyout accPtr(%[[COPY_COPYIN]] : !fir.ref<!fir.array<100xf32>>) bounds(%[[BOUND]]) to varPtr(%[[COORD_W1_DATA]] : !fir.ref<!fir.array<100xf32>>) {dataClause = #acc<data_clause acc_copy>, name = "w(1_8)%data"}
 
 ! Testing array sections on allocatable array
 subroutine acc_operand_array_section_allocatable()
@@ -148,7 +148,7 @@ end subroutine
 ! CHECK: %[[UB:.*]] = arith.subi %[[C100]], %[[DIMS0_0]]#0 : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[DIMS0_1]]#2 : index) startIdx(%[[DIMS0_0]]#0 : index) {strideInBytes = true}
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[LOAD_BOX_A_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-! CHECK: %[[COPYOUT_CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {dataClause = 4 : i64, name = "a(51:100)"}
+! CHECK: %[[COPYOUT_CREATE:.*]] = acc.create varPtr(%[[BOX_ADDR]] : !fir.heap<!fir.array<?xf32>>) bounds(%[[BOUND]]) -> !fir.heap<!fir.array<?xf32>> {dataClause = #acc<data_clause acc_copyout>, name = "a(51:100)"}
 ! CHECK: acc.data dataOperands(%[[COPYIN]], %[[COPYOUT_CREATE]] : !fir.heap<!fir.array<?xf32>>, !fir.heap<!fir.array<?xf32>>) {
 ! CHECK:   acc.terminator
 ! CHECK: }

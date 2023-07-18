@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRNVGPUTransformOps
   MLIRIR
   MLIRLinalgDialect
   MLIRNVGPUDialect
+  MLIRNVGPUTransforms
   MLIRParser
   MLIRSideEffectInterfaces
   MLIRSCFDialect

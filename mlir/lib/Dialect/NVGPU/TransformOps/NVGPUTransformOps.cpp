@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -39,6 +40,25 @@ using namespace mlir::transform;
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define DBGSNL() (llvm::dbgs() << "\n")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
+
+//===---------------------------------------------------------------------===//
+// CreateAsyncGroupsOp
+//===---------------------------------------------------------------------===//
+
+void transform::CreateAsyncGroupsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getTarget(), effects);
+  transform::producesHandle(getResult(), effects);
+  transform::modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure transform::CreateAsyncGroupsOp::applyToOne(
+    TransformRewriter &rewriter, Operation *target,
+    ApplyToEachResultList &results, TransformState &state) {
+  nvgpu::createAsyncGroups(rewriter, target, getBypassL1());
+  results.push_back(target);
+  return DiagnosedSilenceableFailure::success();
+}
 
 //===----------------------------------------------------------------------===//
 // PipelineSharedMemoryCopiesOp

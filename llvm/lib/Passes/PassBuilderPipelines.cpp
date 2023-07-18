@@ -746,7 +746,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
 
     FunctionPassManager FPM;
     FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
-    FPM.addPass(EarlyCSEPass());    // Catch trivial redundancies.
+    FPM.addPass(EarlyCSEPass()); // Catch trivial redundancies.
     FPM.addPass(SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
         true)));                    // Merge & remove basic blocks.
     FPM.addPass(InstCombinePass()); // Combine silly sequences.

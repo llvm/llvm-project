@@ -395,8 +395,8 @@ cc_library(
 cc_library(
     name = "DebugInfo",
     hdrs = glob(["include/llvm/DebugInfo/**/*.h"]),
-    textual_hdrs = glob(["include/llvm/DebugInfo/**/*.def"]),
     copts = llvm_copts,
+    textual_hdrs = glob(["include/llvm/DebugInfo/**/*.def"]),
     deps = [
         ":Object",
         ":Support",
@@ -420,8 +420,9 @@ cc_library(
         "lib/DebugInfo/BTF/*.cpp",
         "lib/DebugInfo/BTF/*.h",
     ]),
-    hdrs = glob(["include/llvm/DebugInfo/BTF/*.h"]) +
-           ["include/llvm/DebugInfo/BTF/BTF.def"],
+    hdrs = glob(["include/llvm/DebugInfo/BTF/*.h"]) + [
+        "include/llvm/DebugInfo/BTF/BTF.def",
+    ],
     copts = llvm_copts,
     deps = [
         ":DebugInfo",
@@ -489,9 +490,9 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
+        ":DebugInfoBTF",
         ":DebugInfoCodeView",
         ":DebugInfoMSF",
-        ":DebugInfoBTF",
         ":Object",
         ":Support",
         ":config",
@@ -2796,6 +2797,7 @@ cc_library(
         ":DebugInfoDWARF",
         ":MC",
         ":Support",
+        ":Target",
         ":TargetParser",
     ],
 )
@@ -3735,8 +3737,8 @@ cc_binary(
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":BinaryFormat",
-        ":LibtoolDarwinOptionsTableGen",
         ":Core",
+        ":LibtoolDarwinOptionsTableGen",
         ":Object",
         ":Option",
         ":Support",
@@ -4237,9 +4239,9 @@ cc_binary(
     stamp = 0,
     deps = [
         ":BinaryFormat",
+        ":DebugInfoBTF",
         ":DebugInfoCodeView",
         ":DebugInfoMSF",
-        ":DebugInfoBTF",
         ":DebugInfoPDB",
         ":Object",
         ":ObjectYAML",

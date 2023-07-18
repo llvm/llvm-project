@@ -704,10 +704,8 @@ NVPTXToolChain::NVPTXToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args, bool Freestanding = false)
     : ToolChain(D, Triple, Args), CudaInstallation(D, HostTriple, Args),
       Freestanding(Freestanding) {
-  if (CudaInstallation.isValid()) {
-    CudaInstallation.WarnIfUnsupportedVersion();
+  if (CudaInstallation.isValid())
     getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
-  }
   // Lookup binaries into the driver directory, this is used to
   // discover the 'nvptx-arch' executable.
   getProgramPaths().push_back(getDriver().Dir);

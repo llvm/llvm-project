@@ -333,8 +333,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit())
     setOperationAction(ISD::ABS, MVT::i32, Custom);
 
-  if (!Subtarget.hasVendorXVentanaCondOps() &&
-      !Subtarget.hasVendorXTHeadCondMov())
+  if (!Subtarget.hasVendorXTHeadCondMov())
     setOperationAction(ISD::SELECT, XLenVT, Custom);
 
   static const unsigned FPLegalNodeTypes[] = {
@@ -5949,11 +5948,12 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
-  // When Zicond is present, emit CZERO_EQZ and CZERO_NEZ nodes to implement
-  // the SELECT. Performing the lowering here allows for greater control over
-  // when CZERO_{EQZ/NEZ} are used vs another branchless sequence or
-  // RISCVISD::SELECT_CC node (branch-based select).
-  if (Subtarget.hasStdExtZicond() && VT.isScalarInteger()) {
+  // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
+  // nodes to implement the SELECT. Performing the lowering here allows for
+  // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
+  // sequence or RISCVISD::SELECT_CC node (branch-based select).
+  if ((Subtarget.hasStdExtZicond() || Subtarget.hasVendorXVentanaCondOps()) &&
+      VT.isScalarInteger()) {
     if (SDValue NewCondV = selectSETCC(CondV, ISD::SETNE, DAG)) {
       // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
       if (isNullConstant(FalseV))
@@ -10094,14 +10094,28 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
         return;
 
+      // Extend inputs to XLen, and shift by 32. This will add 64 trailing zeros
+      // to the full 128-bit clmul result of multiplying two xlen values.
+      // Perform clmulr or clmulh on the shifted values. Finally, extract the
+      // upper 32 bits.
+      //
+      // The alternative is to mask the inputs to 32 bits and use clmul, but
+      // that requires two shifts to mask each input without zext.w.
+      // FIXME: If the inputs are known zero extended or could be freely
+      // zero extended, the mask form would be better.
       SDValue NewOp0 =
-          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(1));
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(1));
       SDValue NewOp1 =
-          DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, N->getOperand(2));
-      SDValue Res = DAG.getNode(RISCVISD::CLMUL, DL, MVT::i64, NewOp0, NewOp1);
-      unsigned ShAmt = IntNo == Intrinsic::riscv_clmulh ? 32 : 31;
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      NewOp0 = DAG.getNode(ISD::SHL, DL, MVT::i64, NewOp0,
+                           DAG.getConstant(32, DL, MVT::i64));
+      NewOp1 = DAG.getNode(ISD::SHL, DL, MVT::i64, NewOp1,
+                           DAG.getConstant(32, DL, MVT::i64));
+      unsigned Opc = IntNo == Intrinsic::riscv_clmulh ? RISCVISD::CLMULH
+                                                      : RISCVISD::CLMULR;
+      SDValue Res = DAG.getNode(Opc, DL, MVT::i64, NewOp0, NewOp1);
       Res = DAG.getNode(ISD::SRL, DL, MVT::i64, Res,
-                        DAG.getConstant(ShAmt, DL, MVT::i64));
+                        DAG.getConstant(32, DL, MVT::i64));
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
@@ -15189,7 +15203,10 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
     }
   }
 
-  if (LocVT == MVT::f16) {
+  const RISCVSubtarget &Subtarget = TLI.getSubtarget();
+
+  if (LocVT == MVT::f16 &&
+      (Subtarget.hasStdExtZfh() || Subtarget.hasStdExtZfhmin())) {
     static const MCPhysReg FPR16List[] = {
         RISCV::F10_H, RISCV::F11_H, RISCV::F12_H, RISCV::F13_H, RISCV::F14_H,
         RISCV::F15_H, RISCV::F16_H, RISCV::F17_H, RISCV::F0_H,  RISCV::F1_H,
@@ -15201,7 +15218,7 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
     }
   }
 
-  if (LocVT == MVT::f32) {
+  if (LocVT == MVT::f32 && Subtarget.hasStdExtF()) {
     static const MCPhysReg FPR32List[] = {
         RISCV::F10_F, RISCV::F11_F, RISCV::F12_F, RISCV::F13_F, RISCV::F14_F,
         RISCV::F15_F, RISCV::F16_F, RISCV::F17_F, RISCV::F0_F,  RISCV::F1_F,
@@ -15213,13 +15230,25 @@ bool RISCV::CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
     }
   }
 
-  if (LocVT == MVT::f64) {
+  if (LocVT == MVT::f64 && Subtarget.hasStdExtD()) {
     static const MCPhysReg FPR64List[] = {
         RISCV::F10_D, RISCV::F11_D, RISCV::F12_D, RISCV::F13_D, RISCV::F14_D,
         RISCV::F15_D, RISCV::F16_D, RISCV::F17_D, RISCV::F0_D,  RISCV::F1_D,
         RISCV::F2_D,  RISCV::F3_D,  RISCV::F4_D,  RISCV::F5_D,  RISCV::F6_D,
         RISCV::F7_D,  RISCV::F28_D, RISCV::F29_D, RISCV::F30_D, RISCV::F31_D};
     if (unsigned Reg = State.AllocateReg(FPR64List)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
+  // Check if there is an available GPR before hitting the stack.
+  if ((LocVT == MVT::f16 &&
+       (Subtarget.hasStdExtZhinx() || Subtarget.hasStdExtZhinxmin())) ||
+      (LocVT == MVT::f32 && Subtarget.hasStdExtZfinx()) ||
+      (LocVT == MVT::f64 && Subtarget.is64Bit() &&
+       Subtarget.hasStdExtZdinx())) {
+    if (unsigned Reg = State.AllocateReg(GPRList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
