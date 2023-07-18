@@ -94,7 +94,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                              ASTCtx.getPreprocessor(), *CanonIncludes);
     };
 
-    if (Opts.AsyncPreambleIndexing && Tasks) {
+    if (Tasks) {
       Tasks->runAsync("Preamble indexing for:" + Path + Version,
                       std::move(Task));
     } else
