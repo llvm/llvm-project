@@ -507,14 +507,17 @@ static bool isExtHandlingFromDiagsError(DiagnosticsEngine &Diags) {
 }
 
 static bool checkDiagnosticMappings(DiagnosticsEngine &StoredDiags,
-                                    DiagnosticsEngine &Diags,
-                                    bool IsSystem, bool Complain) {
+                                    DiagnosticsEngine &Diags, bool IsSystem,
+                                    bool SystemHeaderWarningsInModule,
+                                    bool Complain) {
   // Top-level options
   if (IsSystem) {
     if (Diags.getSuppressSystemWarnings())
       return false;
-    // If -Wsystem-headers was not enabled before, be conservative
-    if (StoredDiags.getSuppressSystemWarnings()) {
+    // If -Wsystem-headers was not enabled before, and it was not explicit,
+    // be conservative
+    if (StoredDiags.getSuppressSystemWarnings() &&
+        !SystemHeaderWarningsInModule) {
       if (Complain)
         Diags.Report(diag::err_pch_diagopt_mismatch) << "-Wsystem-headers";
       return true;
@@ -586,10 +589,17 @@ bool PCHValidator::ReadDiagnosticOptions(
   if (!TopM)
     return false;
 
+  Module *Importer = PP.getCurrentModule();
+
+  DiagnosticOptions &ExistingOpts = ExistingDiags.getDiagnosticOptions();
+  bool SystemHeaderWarningsInModule =
+      Importer && llvm::is_contained(ExistingOpts.SystemHeaderWarningsModules,
+                                     Importer->Name);
+
   // FIXME: if the diagnostics are incompatible, save a DiagnosticOptions that
   // contains the union of their flags.
   return checkDiagnosticMappings(*Diags, ExistingDiags, TopM->IsSystem,
-                                 Complain);
+                                 SystemHeaderWarningsInModule, Complain);
 }
 
 /// Collect the macro definitions provided by the given preprocessor

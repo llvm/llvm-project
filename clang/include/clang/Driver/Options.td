@@ -843,6 +843,10 @@ def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
 def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
 def Wsystem_headers : Flag<["-"], "Wsystem-headers">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
 def Wno_system_headers : Flag<["-"], "Wno-system-headers">, Group<W_Group>, Flags<[CC1Option, HelpHidden]>;
+def Wsystem_headers_in_module_EQ : Joined<["-"], "Wsystem-headers-in-module=">,
+  Flags<[CC1Option, HelpHidden]>, MetaVarName<"<module>">,
+  HelpText<"Enable -Wsystem-headers when building <module>">,
+  MarshallingInfoStringVector<DiagnosticOpts<"SystemHeaderWarningsModules">>;
 def Wdeprecated : Flag<["-"], "Wdeprecated">, Group<W_Group>, Flags<[CC1Option]>,
   HelpText<"Enable warnings for deprecated constructs and define __DEPRECATED">;
 def Wno_deprecated : Flag<["-"], "Wno-deprecated">, Group<W_Group>, Flags<[CC1Option]>;
