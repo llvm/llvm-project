@@ -588,12 +588,18 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__HIP_MEMORY_SCOPE_SYSTEM", "5");
     if (LangOpts.CUDAIsDevice) {
       Builder.defineMacro("__HIP_DEVICE_COMPILE__");
-      if (!TI.hasHIPImageSupport())
+      if (!TI.hasHIPImageSupport()) {
+        Builder.defineMacro("__HIP_NO_IMAGE_SUPPORT__", "1");
+        // Deprecated.
         Builder.defineMacro("__HIP_NO_IMAGE_SUPPORT", "1");
+      }
     }
     if (LangOpts.GPUDefaultStream ==
-        LangOptions::GPUDefaultStreamKind::PerThread)
+        LangOptions::GPUDefaultStreamKind::PerThread) {
+      Builder.defineMacro("__HIP_API_PER_THREAD_DEFAULT_STREAM__");
+      // Deprecated.
       Builder.defineMacro("HIP_API_PER_THREAD_DEFAULT_STREAM");
+    }
   }
 }
 
