@@ -1,5 +1,6 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
 // expected-no-diagnostics
+// rdar://8530080
 
 @protocol ViewDelegate @end
 

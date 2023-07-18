@@ -15,6 +15,7 @@ void f() {
   float& fr = enumerator_type(Val2);
 }
 
+// <rdar://problem/6502934>
 typedef enum Foo {
   A = 0,
   B = 1

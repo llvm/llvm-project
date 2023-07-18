@@ -144,11 +144,6 @@
 # CHECK-ERROR-INPUT-CONTAINED-NO-TESTS: warning: input 'Inputs/discovery/test.not-txt' contained no tests
 # CHECK-ERROR-INPUT-CONTAINED-NO-TESTS: error: did not discover any tests for provided path(s)
 
-# Check that no error is emitted with --no-indirectly-run-check.
-#
-# RUN: %{lit} \
-# RUN:     %{inputs}/discovery/test.not-txt --no-indirectly-run-check
-
 # Check that a standalone test with no suffixes set is run without any errors.
 #
 # RUN: %{lit} %{inputs}/standalone-tests/true.txt > %t.out

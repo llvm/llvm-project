@@ -71,6 +71,8 @@ typedef unsigned int FSCatalogInfoBitmap;
 
 @implementation NSFileLocationComponent @end
 
+// rdar://11229770
+
 @interface Foo {
   int bar:26;
 }

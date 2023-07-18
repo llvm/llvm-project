@@ -407,6 +407,7 @@ namespace rdar8018245 {
 
 }
 
+// <rdar://problem/8248780>
 namespace Instantiate {
   template<typename T> struct X {
     operator T*();
@@ -454,6 +455,7 @@ namespace DeleteParam {
   };
 }
 
+// <rdar://problem/8427878>
 // Test that the correct 'operator delete' is selected to pair with
 // the unexpected placement 'operator new'.
 namespace PairedDelete {

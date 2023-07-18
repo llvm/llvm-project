@@ -96,6 +96,7 @@ class Abstract {
   virtual void f() = 0;
 };
 
+// <rdar://problem/6854087>
 class foo {
 public:
   virtual foo *getFoo() = 0;
@@ -108,6 +109,7 @@ public:
 
 bar x;
 
+// <rdar://problem/6902298>
 class A {
 public:
   virtual void release() = 0;
@@ -198,6 +200,7 @@ namespace test1 {
   }
 }
 
+// rdar://problem/8302168
 namespace test2 {
   struct X1 {
     virtual void xfunc(void) = 0;  // expected-note {{unimplemented pure virtual method}}

@@ -69,6 +69,7 @@ namespace N3 {
 
 // Friends declared as template-ids aren't subject to the restriction
 // on innermost namespaces.
+// rdar://problem/8552377
 namespace test5 {
   template <class T> void f(T);  
   namespace ns {
@@ -91,6 +92,7 @@ namespace test5 {
   template void f<long>(long); //expected-note {{instantiation}}
 }
 
+// rdar://13393749
 namespace test6 {
   class A;
   namespace ns {

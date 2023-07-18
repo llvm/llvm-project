@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fexceptions -o - %s | FileCheck %s
+// rdar://8409336
 
 struct TFENode {
 void GetURL() const;
@@ -16,6 +17,7 @@ void GetURL() const;
 }	// expected-warning {{non-void function does not return a value}}
 @end
 
+// rdar://8437240
 struct X {
   int x;
 };

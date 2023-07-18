@@ -201,6 +201,7 @@ void h() {
   A (*h)() = [] { return A(); };
 }
 
+// <rdar://problem/12778708>
 struct XXX {};
 void nestedCapture () {
   XXX localKey;

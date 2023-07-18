@@ -222,8 +222,8 @@
 #endif
 @end
 
-// 'myproperty' has kind 'assign' and thus the assignment through the setter
-// does not perform a release.
+// <rdar://problem/6380411>: 'myproperty' has kind 'assign' and thus the
+//  assignment through the setter does not perform a release.
 
 @interface MyObject : NSObject {
   id __unsafe_unretained _myproperty;

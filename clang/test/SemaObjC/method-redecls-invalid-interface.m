@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wdocumentation -Wno-objc-root-class %s
+// rdar://29220965
 
 @interface InvalidInterface { // expected-note {{previous definition is here}}
   int *_property;

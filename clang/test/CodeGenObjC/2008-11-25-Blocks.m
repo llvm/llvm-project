@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -o /dev/null
+// rdar://6394879
 
 @interface bork
 - (id)B:(void (^)(void))blk;

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-objc-root-class %s
+// rdar://13075400
 
 @protocol FooAsID
 @property (assign) id foo; // expected-note 2 {{it could also be property of type 'id' declared here}} \\

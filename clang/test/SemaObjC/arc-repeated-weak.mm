@@ -423,6 +423,7 @@ void doubleLevelAccessIvar(Test *a, Test *b) {
   use(a.strongProp.weakProp); // no-warning
 }
 
+// rdar://13942025
 @interface X
 @end
 
@@ -437,6 +438,7 @@ void doubleLevelAccessIvar(Test *a, Test *b) {
 }
 @end
 
+// rdar://19053620
 @interface NSNull
 + (NSNull *)null;
 @end

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// rdar: // 8353567
 // pr7726
 
 extern "C" int printf(...);
@@ -8,6 +9,7 @@ void test0() {
     printf("%p\n", (void *)0xdeadbeef ? : (void *)0xaaaaaa);
 }
 
+// rdar://8446940
 namespace radar8446940 {
 extern "C" void abort();
 

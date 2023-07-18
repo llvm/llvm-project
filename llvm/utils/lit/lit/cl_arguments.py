@@ -190,14 +190,6 @@ def parse_args():
         action="store_true",
         help="Exit with status zero even if some tests fail",
     )
-    execution_group.add_argument(
-        "--no-indirectly-run-check",
-        dest="indirectlyRunCheck",
-        help="Do not error if a test would not be run if the user had "
-        "specified the containing directory instead of naming the "
-        "test directly.",
-        action="store_false",
-    )
 
     selection_group = parser.add_argument_group("Test Selection")
     selection_group.add_argument(

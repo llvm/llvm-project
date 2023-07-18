@@ -6021,25 +6021,90 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   AndOrSETCCFoldKind TargetPreference = TLI.isDesirableToCombineLogicOpOfSETCC(
       LogicOp, LHS.getNode(), RHS.getNode());
 
-  if (TargetPreference == AndOrSETCCFoldKind::None)
-    return SDValue();
-
-  ISD::CondCode CCL = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
-  ISD::CondCode CCR = cast<CondCodeSDNode>(RHS.getOperand(2))->get();
-
   SDValue LHS0 = LHS->getOperand(0);
   SDValue RHS0 = RHS->getOperand(0);
   SDValue LHS1 = LHS->getOperand(1);
   SDValue RHS1 = RHS->getOperand(1);
-
   // TODO: We don't actually need a splat here, for vectors we just need the
   // invariants to hold for each element.
   auto *LHS1C = isConstOrConstSplat(LHS1);
   auto *RHS1C = isConstOrConstSplat(RHS1);
-
+  ISD::CondCode CCL = cast<CondCodeSDNode>(LHS.getOperand(2))->get();
+  ISD::CondCode CCR = cast<CondCodeSDNode>(RHS.getOperand(2))->get();
   EVT VT = LogicOp->getValueType(0);
   EVT OpVT = LHS0.getValueType();
   SDLoc DL(LogicOp);
+
+  // Check if the operands of an and/or operation are comparisons and if they
+  // compare against the same value. Replace the and/or-cmp-cmp sequence with
+  // min/max cmp sequence. If LHS1 is equal to RHS1, then the or-cmp-cmp
+  // sequence will be replaced with min-cmp sequence:
+  // (LHS0 < LHS1) | (RHS0 < RHS1) -> min(LHS0, RHS0) < LHS1
+  // and and-cmp-cmp will be replaced with max-cmp sequence:
+  // (LHS0 < LHS1) & (RHS0 < RHS1) -> max(LHS0, RHS0) < LHS1
+  if (OpVT.isInteger() && TLI.isOperationLegal(ISD::UMAX, OpVT) &&
+      TLI.isOperationLegal(ISD::SMAX, OpVT) &&
+      TLI.isOperationLegal(ISD::UMIN, OpVT) &&
+      TLI.isOperationLegal(ISD::SMIN, OpVT)) {
+    SDValue CommonValue;
+    SDValue Operand1;
+    SDValue Operand2;
+    ISD::CondCode CC = ISD::SETCC_INVALID;
+    if (LHS->getOpcode() == ISD::SETCC && RHS->getOpcode() == ISD::SETCC &&
+        LHS->hasOneUse() && RHS->hasOneUse() &&
+        // The two comparisons should have either the same predicate or the
+        // predicate of one of the comparisons is the opposite of the other one.
+        (CCL == CCR || CCL == ISD::getSetCCSwappedOperands(CCR)) &&
+        // The optimization does not work for `==` or `!=` .
+        !ISD::isIntEqualitySetCC(CCL) && !ISD::isIntEqualitySetCC(CCR)) {
+      if (CCL == CCR) {
+        if (LHS0 == RHS0) {
+          CommonValue = LHS0;
+          Operand1 = LHS1;
+          Operand2 = RHS1;
+          CC = ISD::getSetCCSwappedOperands(CCL);
+        } else if (LHS1 == RHS1) {
+          CommonValue = LHS1;
+          Operand1 = LHS0;
+          Operand2 = RHS0;
+          CC = CCL;
+        }
+      } else if (CCL == ISD::getSetCCSwappedOperands(CCR)) {
+        if (LHS0 == RHS1) {
+          CommonValue = LHS0;
+          Operand1 = LHS1;
+          Operand2 = RHS0;
+          CC = ISD::getSetCCSwappedOperands(CCL);
+        } else if (RHS0 == LHS1) {
+          CommonValue = LHS1;
+          Operand1 = LHS0;
+          Operand2 = RHS1;
+          CC = CCL;
+        }
+      }
+
+      if (CC != ISD::SETCC_INVALID) {
+        unsigned NewOpcode;
+        bool IsSigned = isSignedIntSetCC(CC);
+        if (((CC == ISD::SETLE || CC == ISD::SETULE || CC == ISD::SETLT ||
+              CC == ISD::SETULT) &&
+             (LogicOp->getOpcode() == ISD::OR)) ||
+            ((CC == ISD::SETGE || CC == ISD::SETUGE || CC == ISD::SETGT ||
+              CC == ISD::SETUGT) &&
+             (LogicOp->getOpcode() == ISD::AND)))
+          NewOpcode = IsSigned ? ISD::SMIN : ISD::UMIN;
+        else
+          NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
+
+        SDValue MinMaxValue =
+            DAG.getNode(NewOpcode, DL, OpVT, Operand1, Operand2);
+        return DAG.getSetCC(DL, VT, MinMaxValue, CommonValue, CC);
+      }
+    }
+  }
+
+  if (TargetPreference == AndOrSETCCFoldKind::None)
+    return SDValue();
 
   if (CCL == CCR &&
       CCL == (LogicOp->getOpcode() == ISD::AND ? ISD::SETNE : ISD::SETEQ) &&

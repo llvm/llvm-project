@@ -137,6 +137,7 @@ namespace test2 {
   }
 }
 
+// rdar://problem/8537391
 namespace test3 {
   struct Foo {
     template <void F(char)> static inline void foo();

@@ -28,6 +28,7 @@ struct unarchive_list {
 
 @end
 
+// rdar://10191569
 @interface I
 {
   struct S {

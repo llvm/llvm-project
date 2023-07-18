@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -fblocks -fobjc-exceptions -verify -Wno-objc-root-class %s
+// rdar://9309489
 
 @interface MyClass {
         id __weak myString; // expected-error {{existing instance variable 'myString' for strong property 'myString' may not be __weak}}
@@ -27,6 +28,7 @@
 
 @end
 
+// rdar://9340692
 @interface Foo {
 @public
     id __unsafe_unretained x; // expected-error {{existing instance variable 'x' for __weak property 'x' must be __weak}}
@@ -44,6 +46,7 @@
 @synthesize z;  // suppressed
 @end
 
+// rdar://problem/10904479
 // Don't crash.
 @interface Test2
 // Minor FIXME: kill the redundant error
@@ -53,6 +56,7 @@
 @synthesize test2;
 @end
 
+// rdar://problem/11144407
 @interface Test3
 @property (strong) id exception;
 @end

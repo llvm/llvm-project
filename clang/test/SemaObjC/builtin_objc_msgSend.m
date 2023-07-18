@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify
 // expected-no-diagnostics
+// rdar://8632525
 extern id objc_msgSend(id self, SEL op, ...);
 
+// rdar://12489098
 struct objc_super {
   id receiver;
   Class super_class;

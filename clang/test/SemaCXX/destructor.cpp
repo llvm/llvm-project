@@ -85,6 +85,7 @@ struct G {
 
 G::~G() { }
 
+// <rdar://problem/6841210>
 struct H {
   ~H(void) { } 
 };

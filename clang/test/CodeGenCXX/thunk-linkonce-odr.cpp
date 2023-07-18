@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple i386-unknown-unknown -emit-llvm -o - | FileCheck %s
+// <rdar://problem/7929157> & <rdar://problem/8104369>
 
 struct A {
   virtual int f() { return 1; }

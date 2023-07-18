@@ -18,6 +18,7 @@ int i = 2;
 N::S N::j = i;
 N::S N::j2(i);
 
+// <rdar://problem/13317030>
 namespace M {
   class X { };
   inline X operator-(int, X);
@@ -47,6 +48,7 @@ void Other::foo(YFloat a, YFloat b) {
   YFloat c = a - b;
 }
 
+// <rdar://problem/13540899>
 namespace Other {
   void other_foo();
 }

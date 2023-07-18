@@ -70,6 +70,7 @@ typedef char BOOL;
 
 - (id) dataSource;
 
+// rdar://15509831
 - (id)delegate;
 
 - (id)xxxdelegateYYY;
@@ -179,6 +180,7 @@ DEPRECATED
 - (void)setXxxdelegateYYY:(id)delegate DEPRECATED;
 @end
 
+// rdar://14987909
 #define NS_AVAILABLE __attribute__((availability(macosx,introduced=10.0)))
 #define NORETURN __attribute__((noreturn))
 #define ALIGNED __attribute__((aligned(16)))
@@ -217,6 +219,7 @@ DEPRECATED
 
 @end
 
+// rdar://15082818
 @class NSMutableDictionary;
 
 @interface NSArray
@@ -228,6 +231,7 @@ DEPRECATED
 - (void) setMyFuncptr : (id (*)(id, NSArray *, NSMutableDictionary *)) bl;
 @end
 
+// rdar://15231241
 @interface rdar15231241
 @property (nonatomic, readonly) double Ddelegate;
 @property (nonatomic, readonly) float Fdelegate;
@@ -235,6 +239,7 @@ DEPRECATED
 @property (nonatomic, readonly) BOOL Bdelegate;
 @end
 
+// rdar://19372798
 @protocol NSObject @end
 @protocol MyProtocol <NSObject>
 - (id)readonlyProperty;

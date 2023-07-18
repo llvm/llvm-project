@@ -44,7 +44,7 @@ def main(builtin_params={}):
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
-        lit_config, opts.test_paths, opts.indirectlyRunCheck
+        lit_config, opts.test_paths
     )
     if not discovered_tests:
         sys.stderr.write("error: did not discover any tests for provided path(s)\n")

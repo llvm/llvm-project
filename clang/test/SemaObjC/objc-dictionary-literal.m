@@ -1,5 +1,7 @@
 // RUN: %clang_cc1  -fsyntax-only -verify %s
+// rdar://11062080
 // RUN: %clang_cc1  -fsyntax-only -triple i386-apple-macosx10.9.0 -fobjc-runtime=macosx-fragile-10.9.0 -fobjc-subscripting-legacy-runtime -verify %s
+// rdar://15363492
 
 #define nil ((void *)0)
 
@@ -47,6 +49,7 @@ int main(void) {
 
         dict["name"] = @666; // expected-error {{indexing expression is invalid because subscript type 'char *' is not an Objective-C pointer}}
 
+        // rdar://18254621
         [@{@"foo" : @"bar"} objectForKeyedSubscript:nil];
         (void)@{@"foo" : @"bar"}[nil];
         [@{@"foo" : @"bar"} objectForKeyedSubscript:pvoid];

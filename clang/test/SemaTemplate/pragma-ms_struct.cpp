@@ -3,6 +3,7 @@
 
 #pragma ms_struct on
 
+// <rdar://problem/10791194>
 template<int x> struct foo {
   long long a;
   int b;

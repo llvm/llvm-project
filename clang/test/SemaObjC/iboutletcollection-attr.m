@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -x objective-c++ -fsyntax-only -verify %s
+// rdar://8308053
 
 @class NSObject;
 
@@ -30,6 +31,7 @@ typedef void *PV;
 @property __attribute__((iboutletcollection(BAD))) int prop3; // expected-warning {{property with 'iboutletcollection' attribute must be an object type (invalid 'int')}}
 @end
 
+// rdar://10296078
 @interface ParentRDar10296078 @end
 @class NSArray;
 @protocol RDar10296078_Protocol;
@@ -40,6 +42,7 @@ typedef void *PV;
   __attribute__((iboutletcollection(RDar10296078_OtherClass<RDar10296078_Protocol>))) NSArray *stuff; 
 @end
 
+// rdar://14212998
 @class UILabel;
 @class NSArray;
 @interface OCTViewController

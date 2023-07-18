@@ -214,6 +214,7 @@ typedef enum {
   Random6
 } UIP8_3;
 
+// rdar://15200602
 #define NS_AVAILABLE_MAC(X)  __attribute__((availability(macosx,introduced=X)))
 #define NS_ENUM_AVAILABLE_MAC(X) __attribute__((availability(macosx,introduced=X)))
 
@@ -224,8 +225,10 @@ enum {
 } NS_ENUM_AVAILABLE_MAC(10.9);
 typedef NSInteger NSModalResponse NS_AVAILABLE_MAC(10.9);
 
+// rdar://15201056
 typedef NSUInteger FarFarAwayOptions;
 
+// rdar://15200915
 typedef NSUInteger FarAwayOptions;
 enum {
      NSWorkspaceLaunchAndPrint =                 0x00000002,
@@ -278,6 +281,7 @@ enum {
   FarFarAway2    = 1 << 2
 };
 
+// rdar://15200915
 typedef NS_OPTIONS(NSUInteger, NSWindowOcclusionState) {
     NSWindowOcclusionStateVisible = 1UL << 1,
 };
@@ -300,12 +304,14 @@ enum {
     NSWindowDocumentIconButton
 };
 
+// rdar://18262255
 typedef enum : NSUInteger {
    ThingOne,
    ThingTwo,
    ThingThree,
 } Thing;
 
+// rdar://18498539
 typedef enum {
     one = 1
 } NumericEnum;
@@ -325,6 +331,7 @@ typedef enum {
 
   NumericEnum4;
 
+// rdar://18532199
 enum
 {
   UI8one = 1
@@ -357,6 +364,7 @@ enum
 };
 typedef uint8_t UI8Type;
 
+// rdar://19352510
 typedef enum : NSInteger {zero} MyEnum;
 
 typedef enum : NSUInteger {two} MyEnumNSUInteger;
@@ -372,6 +380,7 @@ typedef enum : unsigned long long {
   ll4
 } MyEnumunsignedlonglong;
 
+// rdar://19994496
 typedef enum : int8_t {int8_one} MyOneEnum;
 
 typedef enum : int16_t {
