@@ -37,6 +37,7 @@
 #include <__iterator/iterator_traits.h> // iter_value_t
 #include <__variant/monostate.h>
 #include <array>
+#include <string>
 #include <string_view>
 
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
