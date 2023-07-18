@@ -668,6 +668,7 @@ public:
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
   bool handleUnreachableFrom(Instruction *I);
+  bool handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
   void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
 };
 
