@@ -5903,7 +5903,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (isNullConstant(FalseV))
         // (select (riscv_setne c), t, 0) -> (czero_eqz t, c)
         return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, NewCondV);
-      else if (isNullConstant(TrueV))
+      if (isNullConstant(TrueV))
         // (select (riscv_setne c), 0, f) -> (czero_nez f, c)
         return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, FalseV, NewCondV);
       // (select (riscv_setne c), t, f) -> (or (czero_eqz t, c), (czero_nez f,
@@ -5917,7 +5917,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       if (isNullConstant(FalseV))
         // (select (riscv_seteq c), t, 0) -> (czero_nez t, c)
         return DAG.getNode(RISCVISD::CZERO_NEZ, DL, VT, TrueV, NewCondV);
-      else if (isNullConstant(TrueV))
+      if (isNullConstant(TrueV))
         // (select (riscv_seteq c), 0, f) -> (czero_eqz f, c)
         return DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, FalseV, NewCondV);
       // (select (riscv_seteq c), t, f) -> (or (czero_eqz f, c), (czero_nez t,
