@@ -76,14 +76,14 @@
 // Second, IR rewriting in Step 2 also needs to be circular. For example,
 // converting %y to addrspace(3) requires the compiler to know the converted
 // %y2, but converting %y2 needs the converted %y. To address this complication,
-// we break these cycles using "undef" placeholders. When converting an
+// we break these cycles using "poison" placeholders. When converting an
 // instruction `I` to a new address space, if its operand `Op` is not converted
-// yet, we let `I` temporarily use `undef` and fix all the uses of undef later.
+// yet, we let `I` temporarily use `poison` and fix all the uses later.
 // For instance, our algorithm first converts %y to
-//   %y' = phi float addrspace(3)* [ %input, undef ]
+//   %y' = phi float addrspace(3)* [ %input, poison ]
 // Then, it converts %y2 to
 //   %y2' = getelementptr %y', 1
-// Finally, it fixes the undef in %y' so that
+// Finally, it fixes the poison in %y' so that
 //   %y' = phi float addrspace(3)* [ %input, %y2' ]
 //
 //===----------------------------------------------------------------------===//
@@ -206,7 +206,7 @@ class InferAddressSpacesImpl {
       Instruction *I, unsigned NewAddrSpace,
       const ValueToValueMapTy &ValueWithNewAddrSpace,
       const PredicatedAddrSpaceMapTy &PredicatedAS,
-      SmallVectorImpl<const Use *> *UndefUsesToFix) const;
+      SmallVectorImpl<const Use *> *PoisonUsesToFix) const;
 
   // Changes the flat address expressions in function F to point to specific
   // address spaces if InferredAddrSpace says so. Postorder is the postorder of
@@ -233,7 +233,7 @@ class InferAddressSpacesImpl {
       Value *V, unsigned NewAddrSpace,
       const ValueToValueMapTy &ValueWithNewAddrSpace,
       const PredicatedAddrSpaceMapTy &PredicatedAS,
-      SmallVectorImpl<const Use *> *UndefUsesToFix) const;
+      SmallVectorImpl<const Use *> *PoisonUsesToFix) const;
   unsigned joinAddressSpaces(unsigned AS1, unsigned AS2) const;
 
   unsigned getPredicatedAddrSpace(const Value &V, Value *Opnd) const;
@@ -550,12 +550,12 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
 
 // A helper function for cloneInstructionWithNewAddressSpace. Returns the clone
 // of OperandUse.get() in the new address space. If the clone is not ready yet,
-// returns an undef in the new address space as a placeholder.
-static Value *operandWithNewAddressSpaceOrCreateUndef(
+// returns poison in the new address space as a placeholder.
+static Value *operandWithNewAddressSpaceOrCreatePoison(
     const Use &OperandUse, unsigned NewAddrSpace,
     const ValueToValueMapTy &ValueWithNewAddrSpace,
     const PredicatedAddrSpaceMapTy &PredicatedAS,
-    SmallVectorImpl<const Use *> *UndefUsesToFix) {
+    SmallVectorImpl<const Use *> *PoisonUsesToFix) {
   Value *Operand = OperandUse.get();
 
   Type *NewPtrTy = getPtrOrVecOfPtrsWithNewAS(Operand->getType(), NewAddrSpace);
@@ -578,15 +578,15 @@ static Value *operandWithNewAddressSpaceOrCreateUndef(
     return NewI;
   }
 
-  UndefUsesToFix->push_back(&OperandUse);
-  return UndefValue::get(NewPtrTy);
+  PoisonUsesToFix->push_back(&OperandUse);
+  return PoisonValue::get(NewPtrTy);
 }
 
 // Returns a clone of `I` with its operands converted to those specified in
 // ValueWithNewAddrSpace. Due to potential cycles in the data flow graph, an
 // operand whose address space needs to be modified might not exist in
-// ValueWithNewAddrSpace. In that case, uses undef as a placeholder operand and
-// adds that operand use to UndefUsesToFix so that caller can fix them later.
+// ValueWithNewAddrSpace. In that case, uses poison as a placeholder operand and
+// adds that operand use to PoisonUsesToFix so that caller can fix them later.
 //
 // Note that we do not necessarily clone `I`, e.g., if it is an addrspacecast
 // from a pointer whose type already matches. Therefore, this function returns a
@@ -598,7 +598,7 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     Instruction *I, unsigned NewAddrSpace,
     const ValueToValueMapTy &ValueWithNewAddrSpace,
     const PredicatedAddrSpaceMapTy &PredicatedAS,
-    SmallVectorImpl<const Use *> *UndefUsesToFix) const {
+    SmallVectorImpl<const Use *> *PoisonUsesToFix) const {
   Type *NewPtrType = getPtrOrVecOfPtrsWithNewAS(I->getType(), NewAddrSpace);
 
   if (I->getOpcode() == Instruction::AddrSpaceCast) {
@@ -616,9 +616,9 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     // Technically the intrinsic ID is a pointer typed argument, so specially
     // handle calls early.
     assert(II->getIntrinsicID() == Intrinsic::ptrmask);
-    Value *NewPtr = operandWithNewAddressSpaceOrCreateUndef(
+    Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
         II->getArgOperandUse(0), NewAddrSpace, ValueWithNewAddrSpace,
-        PredicatedAS, UndefUsesToFix);
+        PredicatedAS, PoisonUsesToFix);
     Value *Rewrite =
         TTI->rewriteIntrinsicWithAddressSpace(II, II->getArgOperand(0), NewPtr);
     if (Rewrite) {
@@ -645,9 +645,9 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     if (!OperandUse.get()->getType()->isPtrOrPtrVectorTy())
       NewPointerOperands.push_back(nullptr);
     else
-      NewPointerOperands.push_back(operandWithNewAddressSpaceOrCreateUndef(
+      NewPointerOperands.push_back(operandWithNewAddressSpaceOrCreatePoison(
           OperandUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS,
-          UndefUsesToFix));
+          PoisonUsesToFix));
   }
 
   switch (I->getOpcode()) {
@@ -771,19 +771,19 @@ static Value *cloneConstantExprWithNewAddressSpace(
 // ValueWithNewAddrSpace. This function is called on every flat address
 // expression whose address space needs to be modified, in postorder.
 //
-// See cloneInstructionWithNewAddressSpace for the meaning of UndefUsesToFix.
+// See cloneInstructionWithNewAddressSpace for the meaning of PoisonUsesToFix.
 Value *InferAddressSpacesImpl::cloneValueWithNewAddressSpace(
     Value *V, unsigned NewAddrSpace,
     const ValueToValueMapTy &ValueWithNewAddrSpace,
     const PredicatedAddrSpaceMapTy &PredicatedAS,
-    SmallVectorImpl<const Use *> *UndefUsesToFix) const {
+    SmallVectorImpl<const Use *> *PoisonUsesToFix) const {
   // All values in Postorder are flat address expressions.
   assert(V->getType()->getPointerAddressSpace() == FlatAddrSpace &&
          isAddressExpression(*V, *DL, TTI));
 
   if (Instruction *I = dyn_cast<Instruction>(V)) {
     Value *NewV = cloneInstructionWithNewAddressSpace(
-        I, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS, UndefUsesToFix);
+        I, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS, PoisonUsesToFix);
     if (Instruction *NewI = dyn_cast_or_null<Instruction>(NewV)) {
       if (NewI->getParent() == nullptr) {
         NewI->insertBefore(I);
@@ -1127,7 +1127,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   // operands are converted, the clone is naturally in the new address space by
   // construction.
   ValueToValueMapTy ValueWithNewAddrSpace;
-  SmallVector<const Use *, 32> UndefUsesToFix;
+  SmallVector<const Use *, 32> PoisonUsesToFix;
   for (Value* V : Postorder) {
     unsigned NewAddrSpace = InferredAddrSpace.lookup(V);
 
@@ -1139,7 +1139,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
     if (V->getType()->getPointerAddressSpace() != NewAddrSpace) {
       Value *New =
           cloneValueWithNewAddressSpace(V, NewAddrSpace, ValueWithNewAddrSpace,
-                                        PredicatedAS, &UndefUsesToFix);
+                                        PredicatedAS, &PoisonUsesToFix);
       if (New)
         ValueWithNewAddrSpace[V] = New;
     }
@@ -1148,16 +1148,16 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   if (ValueWithNewAddrSpace.empty())
     return false;
 
-  // Fixes all the undef uses generated by cloneInstructionWithNewAddressSpace.
-  for (const Use *UndefUse : UndefUsesToFix) {
-    User *V = UndefUse->getUser();
+  // Fixes all the poison uses generated by cloneInstructionWithNewAddressSpace.
+  for (const Use *PoisonUse : PoisonUsesToFix) {
+    User *V = PoisonUse->getUser();
     User *NewV = cast_or_null<User>(ValueWithNewAddrSpace.lookup(V));
     if (!NewV)
       continue;
 
-    unsigned OperandNo = UndefUse->getOperandNo();
-    assert(isa<UndefValue>(NewV->getOperand(OperandNo)));
-    NewV->setOperand(OperandNo, ValueWithNewAddrSpace.lookup(UndefUse->get()));
+    unsigned OperandNo = PoisonUse->getOperandNo();
+    assert(isa<PoisonValue>(NewV->getOperand(OperandNo)));
+    NewV->setOperand(OperandNo, ValueWithNewAddrSpace.lookup(PoisonUse->get()));
   }
 
   SmallVector<Instruction *, 16> DeadInstructions;
