@@ -257,21 +257,37 @@ static DbgValueLoc getDebugLocValue(const MachineInstr *MI) {
   return DbgValueLoc(Expr, DbgValueLocEntries, IsVariadic);
 }
 
-void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
-  assert(FrameIndexExprs.empty() && "Already initialized?");
-  assert(!ValueLoc.get() && "Already initialized?");
+/// Initialize from the MMI table.
+void DbgVariable::initializeMMI(const DIExpression *E, int FI) {
+  assert(holds<std::monostate>() && "Already initialized");
+  assert((!E || E->isValid()) && "Expected valid expression");
+  assert(FI != std::numeric_limits<int>::max() && "Expected valid index");
+  emplace<MMILoc>().FrameIndexExprs.push_back({FI, E});
+}
 
+void DbgVariable::initializeDbgValue(DbgValueLoc Value) {
+  assert(holds<std::monostate>() && "Already initialized");
+  assert(!Value.getExpression()->isFragment() && "Fragments not supported");
+  emplace<SingleLoc>(Value);
+}
+
+void DbgVariable::initializeDbgValue(const MachineInstr *DbgValue) {
+  assert(holds<std::monostate>() && "Already initialized");
   assert(getVariable() == DbgValue->getDebugVariable() && "Wrong variable");
   assert(getInlinedAt() == DbgValue->getDebugLoc()->getInlinedAt() &&
          "Wrong inlined-at");
-
-  ValueLoc = std::make_unique<DbgValueLoc>(getDebugLocValue(DbgValue));
-  if (auto *E = DbgValue->getDebugExpression())
-    if (E->getNumElements())
-      FrameIndexExprs.push_back({0, E});
+  emplace<SingleLoc>(getDebugLocValue(DbgValue));
 }
 
-ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
+void DbgVariable::initializeEntryValue(MCRegister Reg,
+                                       const DIExpression &Expr) {
+  assert(holds<std::monostate>() && "Already initialized?");
+  emplace<EntryValueLoc>(Reg, Expr);
+}
+
+ArrayRef<FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
+  auto &FrameIndexExprs = get<MMILoc>().FrameIndexExprs;
+
   if (FrameIndexExprs.size() == 1)
     return FrameIndexExprs;
 
@@ -290,13 +306,11 @@ ArrayRef<DbgVariable::FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
 }
 
 void DbgVariable::addMMIEntry(const DbgVariable &V) {
-  assert(DebugLocListIndex == ~0U && !ValueLoc.get() && "not an MMI entry");
-  assert(V.DebugLocListIndex == ~0U && !V.ValueLoc.get() && "not an MMI entry");
   assert(V.getVariable() == getVariable() && "conflicting variable");
   assert(V.getInlinedAt() == getInlinedAt() && "conflicting inlined-at location");
 
-  assert(!FrameIndexExprs.empty() && "Expected an MMI entry");
-  assert(!V.FrameIndexExprs.empty() && "Expected an MMI entry");
+  auto &FrameIndexExprs = get<MMILoc>().FrameIndexExprs;
+  auto &VFrameIndexExprs = V.get<MMILoc>().FrameIndexExprs;
 
   // FIXME: This logic should not be necessary anymore, as we now have proper
   // deduplication. However, without it, we currently run into the assertion
@@ -308,7 +322,7 @@ void DbgVariable::addMMIEntry(const DbgVariable &V) {
       return;
   }
 
-  for (const auto &FIE : V.FrameIndexExprs)
+  for (const auto &FIE : VFrameIndexExprs)
     // Ignore duplicate entries.
     if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
           return FIE.FI == Other.FI && FIE.Expr == Other.Expr;
@@ -1573,7 +1587,7 @@ void DwarfDebug::collectVariableInfoFromMFTable(
       if (DbgVar->hasFrameIndexExprs())
         DbgVar->addMMIEntry(*RegVar);
       else
-        DbgVar->getEntryValue()->addExpr(VI.getEntryValueRegister(), *VI.Expr);
+        DbgVar->addEntryValueExpr(VI.getEntryValueRegister(), *VI.Expr);
     } else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
       MFVars.insert({Var, RegVar.get()});
       ConcreteEntities.push_back(std::move(RegVar));
