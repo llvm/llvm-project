@@ -20,7 +20,7 @@ define <4 x float> @multiply_2x2(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    [[SPLAT_SPLAT6:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT5]], <1 x float> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = call contract <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK4]], <1 x float> [[SPLAT_SPLAT6]], <1 x float> [[TMP1]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <1 x float> [[TMP3]], <1 x float> poison, <2 x i32> <i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> undef, <2 x float> [[TMP4]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> poison, <2 x float> [[TMP4]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[BLOCK7:%.*]] = shufflevector <2 x float> [[SPLIT]], <2 x float> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[SPLIT2]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT8:%.*]] = insertelement <1 x float> poison, float [[TMP6]], i64 0
@@ -44,7 +44,7 @@ define <4 x float> @multiply_2x2(<4 x float> %a, <4 x float> %b) {
 ; CHECK-NEXT:    [[SPLAT_SPLAT18:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT17]], <1 x float> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = call contract <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK16]], <1 x float> [[SPLAT_SPLAT18]], <1 x float> [[TMP13]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <1 x float> [[TMP15]], <1 x float> poison, <2 x i32> <i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> undef, <2 x float> [[TMP16]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> poison, <2 x float> [[TMP16]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[BLOCK19:%.*]] = shufflevector <2 x float> [[SPLIT]], <2 x float> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[SPLIT3]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT20:%.*]] = insertelement <1 x float> poison, float [[TMP18]], i64 0
