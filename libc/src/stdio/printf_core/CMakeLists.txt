@@ -53,10 +53,10 @@ add_object_library(
   HDRS
     string_writer.h
   DEPENDS
-    libc.src.__support.CPP.string_view
-    libc.src.string.memory_utils.memcpy_implementation
-    libc.src.string.memory_utils.memset_implementation
     .core_structs
+    libc.src.__support.CPP.string_view
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
 )
 
 add_object_library(
@@ -130,11 +130,11 @@ add_header_library(
   HDRS
     file_writer.h
   DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.CPP.string_view
-    libc.src.string.memory_utils.memset_implementation
     .core_structs
+    libc.include.stdio
+    libc.src.__support.CPP.string_view
+    libc.src.__support.File.file
+    libc.src.string.memory_utils.inline_memset
 )
 
 add_header_library(
