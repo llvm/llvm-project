@@ -33,6 +33,7 @@ define void @test_prefetch_read_locality_0(ptr %a) nounwind {
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_read_locality_0:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
+; RV64ZICBOPZIHINTNTL-NEXT:    ntl.all
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.r 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 0, i32 0, i32 1)
@@ -60,6 +61,7 @@ define void @test_prefetch_write_locality_0(ptr %a) nounwind {
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_write_locality_0:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
+; RV64ZICBOPZIHINTNTL-NEXT:    ntl.all
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.w 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 1, i32 0, i32 1)
@@ -87,6 +89,7 @@ define void @test_prefetch_instruction_locality_0(ptr %a) nounwind {
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_instruction_locality_0:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
+; RV64ZICBOPZIHINTNTL-NEXT:    ntl.all
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.i 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 0, i32 0, i32 0)
@@ -114,6 +117,7 @@ define void @test_prefetch_read_locality_1(ptr %a) nounwind {
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_read_locality_1:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
+; RV64ZICBOPZIHINTNTL-NEXT:    ntl.pall
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.r 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 0, i32 1, i32 1)
@@ -141,6 +145,7 @@ define void @test_prefetch_write_locality_1(ptr %a) nounwind {
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_write_locality_1:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
+; RV64ZICBOPZIHINTNTL-NEXT:    ntl.pall
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.w 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 1, i32 1, i32 1)
@@ -168,6 +173,7 @@ define void @test_prefetch_instruction_locality_1(ptr %a) nounwind {
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_instruction_locality_1:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
+; RV64ZICBOPZIHINTNTL-NEXT:    ntl.pall
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.i 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 0, i32 1, i32 0)
@@ -195,6 +201,7 @@ define void @test_prefetch_read_locality_2(ptr %a) nounwind {
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_read_locality_2:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
+; RV64ZICBOPZIHINTNTL-NEXT:    ntl.p1
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.r 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 0, i32 2, i32 1)
@@ -222,6 +229,7 @@ define void @test_prefetch_write_locality_2(ptr %a) nounwind {
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_write_locality_2:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
+; RV64ZICBOPZIHINTNTL-NEXT:    ntl.p1
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.w 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 1, i32 2, i32 1)
@@ -249,6 +257,7 @@ define void @test_prefetch_instruction_locality_2(ptr %a) nounwind {
 ;
 ; RV64ZICBOPZIHINTNTL-LABEL: test_prefetch_instruction_locality_2:
 ; RV64ZICBOPZIHINTNTL:       # %bb.0:
+; RV64ZICBOPZIHINTNTL-NEXT:    ntl.p1
 ; RV64ZICBOPZIHINTNTL-NEXT:    prefetch.i 0(a0)
 ; RV64ZICBOPZIHINTNTL-NEXT:    ret
   call void @llvm.prefetch(ptr %a, i32 0, i32 2, i32 0)
