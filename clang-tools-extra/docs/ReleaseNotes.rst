@@ -238,17 +238,17 @@ New check aliases
 
 - New alias :doc:`cppcoreguidelines-noexcept-destructor
   <clang-tidy/checks/cppcoreguidelines/noexcept-destructor>` to
-  :doc`performance-noexcept-destructor
+  :doc:`performance-noexcept-destructor
   <clang-tidy/checks/performance/noexcept-destructor>` was added.
 
 - New alias :doc:`cppcoreguidelines-noexcept-move-operations
   <clang-tidy/checks/cppcoreguidelines/noexcept-move-operations>` to
-  :doc`performance-noexcept-move-constructor
+  :doc:`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` was added.
 
 - New alias :doc:`cppcoreguidelines-noexcept-swap
   <clang-tidy/checks/cppcoreguidelines/noexcept-swap>` to
-  :doc`performance-noexcept-swap
+  :doc:`performance-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` was added.
 
 - New alias :doc:`cppcoreguidelines-use-default-member-init
