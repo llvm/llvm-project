@@ -87,7 +87,7 @@ void darwin::setTripleTypeForMachOArchName(llvm::Triple &T, StringRef Str,
       ArchKind == llvm::ARM::ArchKind::ARMV7EM) {
     // Don't reject -mios-version-min= if we have an iOS triple.
     if (T.isiOS())
-      if (Arg *A = Args.getLastArgNoClaim(options::OPT_mios_version_min_EQ))
+      for (Arg *A : Args.filtered(options::OPT_mios_version_min_EQ))
         A->ignoreTargetSpecific();
 
     T.setOS(llvm::Triple::UnknownOS);
