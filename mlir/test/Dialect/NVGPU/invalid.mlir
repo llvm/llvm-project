@@ -194,3 +194,30 @@ func.func @async_cp_zfill_f32_align1(
   %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 1, %srcElements {bypassL1} : memref<128x128xf32> to memref<3x16x128xf32, 3>
   return
 }
+
+// -----
+
+func.func @async_cp_size_invalid_f32(
+  %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index) {
+    // expected-error @+1 {{Requested copy elements is 3 with width 32. But copy elements could be one of 1, 2, 4.}}
+  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 3: memref<128x128xf32> to memref<3x16x128xf32, 3>
+  return
+}
+
+// -----
+
+func.func @async_cp_size_invalid_f16(
+  %src: memref<128x128xf16>, %dst: memref<3x16x128xf16, 3>, %i : index) {
+    // expected-error @+1 {{Requested copy elements is 3 with width 16. But copy elements could be one of 2, 4, 8.}}
+  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 3: memref<128x128xf16> to memref<3x16x128xf16, 3>
+  return
+}
+
+// -----
+
+func.func @async_cp_size_invalid_f64(
+  %src: memref<128x128xf64>, %dst: memref<3x16x128xf64, 3>, %i : index) {
+    // expected-error @+1 {{Requested copy elements is 3 with width 64. But copy elements could be one of 1, 2.}}
+  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 3: memref<128x128xf64> to memref<3x16x128xf64, 3>
+  return
+}
