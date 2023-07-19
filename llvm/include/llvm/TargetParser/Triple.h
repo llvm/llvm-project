@@ -289,6 +289,7 @@ public:
     SPIRV,
     Wasm,
     XCOFF,
+    SQELF,
   };
 
 private:

@@ -2,6 +2,7 @@ add_llvm_component_library(LLVMMC
   ConstantPools.cpp
   DXContainerPSVInfo.cpp
   ELFObjectWriter.cpp
+  SQELFObjectWriter.cpp
   MCAsmBackend.cpp
   MCAsmInfo.cpp
   MCAsmInfoCOFF.cpp
@@ -20,7 +21,9 @@ add_llvm_component_library(LLVMMC
   MCDXContainerStreamer.cpp
   MCDXContainerWriter.cpp
   MCELFObjectTargetWriter.cpp
+  MCSQELFObjectTargetWriter.cpp
   MCELFStreamer.cpp
+  MCSQELFStreamer.cpp
   MCExpr.cpp
   MCFragment.cpp
   MCInst.cpp

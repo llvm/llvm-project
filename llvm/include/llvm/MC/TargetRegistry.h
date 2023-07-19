@@ -94,6 +94,11 @@ MCStreamer *createELFStreamer(MCContext &Ctx,
                               std::unique_ptr<MCObjectWriter> &&OW,
                               std::unique_ptr<MCCodeEmitter> &&CE,
                               bool RelaxAll);
+MCStreamer *createSQELFStreamer(MCContext &Ctx,
+                              std::unique_ptr<MCAsmBackend> &&TAB,
+                              std::unique_ptr<MCObjectWriter> &&OW,
+                              std::unique_ptr<MCCodeEmitter> &&CE,
+                              bool RelaxAll);
 MCStreamer *createMachOStreamer(MCContext &Ctx,
                                 std::unique_ptr<MCAsmBackend> &&TAB,
                                 std::unique_ptr<MCObjectWriter> &&OW,
@@ -191,6 +196,11 @@ public:
   using MCCodeEmitterCtorTy = MCCodeEmitter *(*)(const MCInstrInfo &II,
                                                  MCContext &Ctx);
   using ELFStreamerCtorTy =
+      MCStreamer *(*)(const Triple &T, MCContext &Ctx,
+                      std::unique_ptr<MCAsmBackend> &&TAB,
+                      std::unique_ptr<MCObjectWriter> &&OW,
+                      std::unique_ptr<MCCodeEmitter> &&Emitter, bool RelaxAll);
+  using SQELFStreamerCtorTy =
       MCStreamer *(*)(const Triple &T, MCContext &Ctx,
                       std::unique_ptr<MCAsmBackend> &&TAB,
                       std::unique_ptr<MCObjectWriter> &&OW,
@@ -329,6 +339,7 @@ private:
   COFFStreamerCtorTy COFFStreamerCtorFn = nullptr;
   MachOStreamerCtorTy MachOStreamerCtorFn = nullptr;
   ELFStreamerCtorTy ELFStreamerCtorFn = nullptr;
+  SQELFStreamerCtorTy SQELFStreamerCtorFn = nullptr;
   WasmStreamerCtorTy WasmStreamerCtorFn = nullptr;
   XCOFFStreamerCtorTy XCOFFStreamerCtorFn = nullptr;
   SPIRVStreamerCtorTy SPIRVStreamerCtorFn = nullptr;
@@ -586,6 +597,14 @@ public:
                               std::move(Emitter), RelaxAll);
       else
         S = createELFStreamer(Ctx, std::move(TAB), std::move(OW),
+                              std::move(Emitter), RelaxAll);
+      break;
+    case Triple::SQELF:
+      if (SQELFStreamerCtorFn)
+        S = SQELFStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
+                              std::move(Emitter), RelaxAll);
+      else
+        S = createSQELFStreamer(Ctx, std::move(TAB), std::move(OW),
                               std::move(Emitter), RelaxAll);
       break;
     case Triple::Wasm:
@@ -1010,6 +1029,10 @@ struct TargetRegistry {
 
   static void RegisterELFStreamer(Target &T, Target::ELFStreamerCtorTy Fn) {
     T.ELFStreamerCtorFn = Fn;
+  }
+
+  static void RegisterSQELFStreamer(Target &T, Target::SQELFStreamerCtorTy Fn) {
+    T.SQELFStreamerCtorFn = Fn;
   }
 
   static void RegisterSPIRVStreamer(Target &T, Target::SPIRVStreamerCtorTy Fn) {
