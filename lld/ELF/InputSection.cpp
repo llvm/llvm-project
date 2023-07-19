@@ -1263,7 +1263,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> data,
 
   pieces.resize_for_overwrite(size / entSize);
   for (size_t i = 0, j = 0; i != size; i += entSize, j++)
-    pieces[j] = {i, (uint32_t)xxHash64(data.slice(i, entSize)), live};
+    pieces[j] = {i, (uint32_t)xxh3_64bits(data.slice(i, entSize)), live};
 }
 
 template <class ELFT>
