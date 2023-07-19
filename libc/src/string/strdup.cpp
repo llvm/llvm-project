@@ -9,7 +9,7 @@
 #include "src/string/strdup.h"
 #include "src/errno/libc_errno.h"
 #include "src/string/allocating_string_utils.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #include "src/__support/common.h"
 

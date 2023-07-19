@@ -51,10 +51,14 @@ void omp_assert_assume(bool condition) { __builtin_assume(condition); }
 
 void __assert_assume(bool condition) { impl::omp_assert_assume(condition); }
 
-void __assert_fail(const char *assertion, const char *file, unsigned line,
-                   const char *function) {
-  PRINTF("%s:%u: %s: Assertion `%s' failed.\n", file, line, function,
-         assertion);
+void __assert_fail(const char *expr, const char *msg, const char *file,
+                   unsigned line, const char *function) {
+  if (msg) {
+    PRINTF("%s:%u: %s: Assertion %s (`%s') failed.\n", file, line, function,
+           msg, expr);
+  } else {
+    PRINTF("%s:%u: %s: Assertion `%s' failed.\n", file, line, function, expr);
+  }
   __builtin_trap();
 }
 }

@@ -5,6 +5,7 @@
 define void @foo() noreturn nounwind {
 ; ALL-LABEL: foo:
 ; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    .p2align 4, , 16
 ; ALL-NEXT:  .LBB0_1: # %loop
 ; ALL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ALL-NEXT:    b .LBB0_1

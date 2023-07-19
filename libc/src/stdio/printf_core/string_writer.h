@@ -10,7 +10,6 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_WRITER_H
 
 #include "src/__support/CPP/string_view.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
 #include <stddef.h>
 
 namespace __llvm_libc {

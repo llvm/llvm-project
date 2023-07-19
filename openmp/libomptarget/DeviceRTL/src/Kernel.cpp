@@ -53,7 +53,7 @@ static void genericStateMachine(IdentTy *Ident) {
       return;
 
     if (IsActive) {
-      ASSERT(!mapping::isSPMDMode());
+      ASSERT(!mapping::isSPMDMode(), nullptr);
       ((void (*)(uint32_t, uint32_t))WorkFn)(0, TId);
       __kmpc_kernel_end_parallel();
     }
@@ -124,7 +124,7 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
     // ParallelRegionFn, which leads to bad results later on.
     ParallelRegionFnTy WorkFn = nullptr;
     __kmpc_kernel_parallel(&WorkFn);
-    ASSERT(WorkFn == nullptr);
+    ASSERT(WorkFn == nullptr, nullptr);
   }
 
   return mapping::getThreadIdInBlock();

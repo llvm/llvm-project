@@ -27,23 +27,28 @@ using __llvm_libc::fputil::FloatProperties;
 // This function calculates the effective precision for a given float type and
 // exponent. Subnormals have a lower effective precision since they don't
 // necessarily use all of the bits of the mantissa.
-template <typename F> inline int effective_precision(int exponent) {
-  int full_precision = FloatProperties<F>::MANTISSA_PRECISION;
+template <typename F> inline constexpr int effective_precision(int exponent) {
+  const int full_precision = FloatProperties<F>::MANTISSA_PRECISION;
 
   // This is intended to be 0 when the exponent is the lowest normal and
   // increase as the exponent's magnitude increases.
-  int bits_below_normal = (-exponent) - (FloatProperties<F>::EXPONENT_BIAS - 1);
+  const int bits_below_normal =
+      (-exponent) - (FloatProperties<F>::EXPONENT_BIAS - 1);
 
-  // This comparison is optimized out by the compiler.
-  if (bits_below_normal >= 0 && bits_below_normal < full_precision - 1) {
-    // The precision should be the normal, full precision, minus the bits lost
-    // by this being a subnormal, minus one for the implicit leading one.
-    return full_precision - bits_below_normal - 1;
+  // The precision should be the normal, full precision, minus the bits lost
+  // by this being a subnormal, minus one for the implicit leading one.
+  const int bits_if_subnormal = full_precision - bits_below_normal - 1;
+
+  if (bits_below_normal >= 0) {
+    return bits_if_subnormal;
   }
   return full_precision;
 }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+  // const char newstr[] = "123";
+  // data = reinterpret_cast<const uint8_t *>(newstr);
+  // size = sizeof(newstr);
   uint8_t *container = new uint8_t[size + 1];
   if (!container)
     __builtin_trap();
@@ -101,58 +106,62 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   // rounded down to 66336648. This means we have to compare against the correct
   // precision to get the correct result.
 
-  mpfr_t mpfr_float;
-  mpfr_init2(mpfr_float, effective_precision<float>(result_exp));
-
-  mpfr_t mpfr_double;
-  mpfr_init2(mpfr_double, effective_precision<double>(result_exp));
-
-  mpfr_t mpfr_long_double;
-  mpfr_init2(mpfr_long_double, effective_precision<long double>(result_exp));
-
   // TODO: Add support for other rounding modes.
-  mpfr_strtofr(mpfr_float, str_ptr, &out_ptr, base, MPFR_RNDN);
-  mpfr_strtofr(mpfr_double, str_ptr, &out_ptr, base, MPFR_RNDN);
-  mpfr_strtofr(mpfr_long_double, str_ptr, &out_ptr, base, MPFR_RNDN);
+  int float_precision = effective_precision<float>(result_exp);
+  if (float_precision >= 2) {
+    mpfr_t mpfr_float;
+    mpfr_init2(mpfr_float, float_precision);
+    mpfr_strtofr(mpfr_float, str_ptr, &out_ptr, base, MPFR_RNDN);
+    float volatile float_result = mpfr_get_flt(mpfr_float, MPFR_RNDN);
+    auto volatile strtof_result = __llvm_libc::strtof(str_ptr, &out_ptr);
+    ptrdiff_t strtof_strlen = out_ptr - str_ptr;
+    if (result_strlen != strtof_strlen)
+      __builtin_trap();
+    // If any result is NaN, all of them should be NaN. We can't use the usual
+    // comparisons because NaN != NaN.
+    if (isnan(float_result) ^ isnan(strtof_result))
+      __builtin_trap();
+    if (!isnan(float_result) && float_result != strtof_result)
+      __builtin_trap();
+    mpfr_clear(mpfr_float);
+  }
 
-  float volatile float_result = mpfr_get_flt(mpfr_float, MPFR_RNDN);
-  double volatile double_result = mpfr_get_d(mpfr_double, MPFR_RNDN);
-  long double volatile long_double_result =
-      mpfr_get_ld(mpfr_long_double, MPFR_RNDN);
+  int double_precision = effective_precision<double>(result_exp);
+  if (double_precision >= 2) {
+    mpfr_t mpfr_double;
+    mpfr_init2(mpfr_double, double_precision);
+    mpfr_strtofr(mpfr_double, str_ptr, &out_ptr, base, MPFR_RNDN);
+    double volatile double_result = mpfr_get_d(mpfr_double, MPFR_RNDN);
+    auto volatile strtod_result = __llvm_libc::strtod(str_ptr, &out_ptr);
+    auto volatile atof_result = __llvm_libc::atof(str_ptr);
+    ptrdiff_t strtod_strlen = out_ptr - str_ptr;
+    if (result_strlen != strtod_strlen)
+      __builtin_trap();
+    if (isnan(double_result) ^ isnan(strtod_result) ||
+        isnan(double_result) ^ isnan(atof_result))
+      __builtin_trap();
+    if (!isnan(double_result) &&
+        (double_result != strtod_result || double_result != atof_result))
+      __builtin_trap();
+    mpfr_clear(mpfr_double);
+  }
 
-  mpfr_clear(mpfr_float);
-  mpfr_clear(mpfr_double);
-  mpfr_clear(mpfr_long_double);
-
-  auto volatile atof_output = __llvm_libc::atof(str_ptr);
-  auto volatile strtof_output = __llvm_libc::strtof(str_ptr, &out_ptr);
-  ptrdiff_t strtof_strlen = out_ptr - str_ptr;
-  if (result_strlen != strtof_strlen)
-    __builtin_trap();
-  auto volatile strtod_output = __llvm_libc::strtod(str_ptr, &out_ptr);
-  ptrdiff_t strtod_strlen = out_ptr - str_ptr;
-  if (result_strlen != strtod_strlen)
-    __builtin_trap();
-  auto volatile strtold_output = __llvm_libc::strtold(str_ptr, &out_ptr);
-  ptrdiff_t strtold_strlen = out_ptr - str_ptr;
-  if (result_strlen != strtold_strlen)
-    __builtin_trap();
-
-  // If any result is NaN, all of them should be NaN. We can't use the usual
-  // comparisons because NaN != NaN.
-  if (isnan(float_result)) {
-    if (!(isnan(atof_output) && isnan(strtof_output) && isnan(strtod_output) &&
-          isnan(strtold_output)))
+  int long_double_precision = effective_precision<long double>(result_exp);
+  if (long_double_precision >= 2) {
+    mpfr_t mpfr_long_double;
+    mpfr_init2(mpfr_long_double, long_double_precision);
+    mpfr_strtofr(mpfr_long_double, str_ptr, &out_ptr, base, MPFR_RNDN);
+    long double volatile long_double_result =
+        mpfr_get_ld(mpfr_long_double, MPFR_RNDN);
+    auto volatile strtold_result = __llvm_libc::strtold(str_ptr, &out_ptr);
+    ptrdiff_t strtold_strlen = out_ptr - str_ptr;
+    if (result_strlen != strtold_strlen)
       __builtin_trap();
-  } else {
-    if (double_result != atof_output)
+    if (isnan(long_double_result) ^ isnan(strtold_result))
       __builtin_trap();
-    if (float_result != strtof_output)
+    if (!isnan(long_double_result) && long_double_result != strtold_result)
       __builtin_trap();
-    if (double_result != strtod_output)
-      __builtin_trap();
-    if (long_double_result != strtold_output)
-      __builtin_trap();
+    mpfr_clear(mpfr_long_double);
   }
 
   delete[] container;

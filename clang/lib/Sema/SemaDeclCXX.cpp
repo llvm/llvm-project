@@ -16447,15 +16447,18 @@ bool Sema::CheckLiteralOperatorDeclaration(FunctionDecl *FnDecl) {
     }
   }
 
-  StringRef LiteralName
-    = FnDecl->getDeclName().getCXXLiteralIdentifier()->getName();
-  if (LiteralName[0] != '_' &&
+  const IdentifierInfo *II = FnDecl->getDeclName().getCXXLiteralIdentifier();
+  ReservedLiteralSuffixIdStatus Status = II->isReservedLiteralSuffixId();
+  if (Status != ReservedLiteralSuffixIdStatus::NotReserved &&
       !getSourceManager().isInSystemHeader(FnDecl->getLocation())) {
-    // C++11 [usrlit.suffix]p1:
-    //   Literal suffix identifiers that do not start with an underscore
-    //   are reserved for future standardization.
+    // C++23 [usrlit.suffix]p1:
+    //   Literal suffix identifiers that do not start with an underscore are
+    //   reserved for future standardization. Literal suffix identifiers that
+    //   contain a double underscore __ are reserved for use by C++
+    //   implementations.
     Diag(FnDecl->getLocation(), diag::warn_user_literal_reserved)
-      << StringLiteralParser::isValidUDSuffix(getLangOpts(), LiteralName);
+        << static_cast<int>(Status)
+        << StringLiteralParser::isValidUDSuffix(getLangOpts(), II->getName());
   }
 
   return false;

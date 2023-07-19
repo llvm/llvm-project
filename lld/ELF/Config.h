@@ -96,6 +96,9 @@ enum class SeparateSegmentKind { None, Code, Loadable };
 // For -z *stack
 enum class GnuStackKind { None, Exec, NoExec };
 
+// For --lto=
+enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
+
 struct SymbolVersion {
   llvm::StringRef name;
   bool isExternCpp;
@@ -414,6 +417,9 @@ struct Config {
   // this means to map the primary and thread stacks as PROT_MTE. Note: This is
   // not supported on Android 11 & 12.
   bool androidMemtagStack;
+
+  // When using a unified pre-link LTO pipeline, specify the backend LTO mode.
+  LtoKind ltoKind = LtoKind::Default;
 
   unsigned threadCount;
 

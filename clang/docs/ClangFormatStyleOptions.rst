@@ -1687,7 +1687,7 @@ the configuration (without a prefix: ``Auto``).
     .. note::
 
      @autoreleasepool and @synchronized blocks are wrapped
-     according to `AfterControlStatement` flag.
+     according to ``AfterControlStatement`` flag.
 
   * ``bool AfterStruct`` Wrap struct definitions.
 
@@ -1803,9 +1803,10 @@ the configuration (without a prefix: ``Auto``).
 
   * ``bool SplitEmptyFunction`` If ``false``, empty function body can be put on a single line.
     This option is used only if the opening brace of the function has
-    already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
+    already been wrapped, i.e. the ``AfterFunction`` brace wrapping mode is
     set, and the function could/should not be put on a single line (as per
-    `AllowShortFunctionsOnASingleLine` and constructor formatting options).
+    ``AllowShortFunctionsOnASingleLine`` and constructor formatting
+    options).
 
     .. code-block:: c++
 
@@ -1816,7 +1817,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``bool SplitEmptyRecord`` If ``false``, empty record (e.g. class, struct or union) body
     can be put on a single line. This option is used only if the opening
-    brace of the record has already been wrapped, i.e. the `AfterClass`
+    brace of the record has already been wrapped, i.e. the ``AfterClass``
     (for classes) brace wrapping mode is set.
 
     .. code-block:: c++
@@ -1828,7 +1829,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``bool SplitEmptyNamespace`` If ``false``, empty namespace body can be put on a single line.
     This option is used only if the opening brace of the namespace has
-    already been wrapped, i.e. the `AfterNamespace` brace wrapping mode is
+    already been wrapped, i.e. the ``AfterNamespace`` brace wrapping mode is
     set.
 
     .. code-block:: c++
@@ -1926,9 +1927,9 @@ the configuration (without a prefix: ``Auto``).
 .. _BreakArrays:
 
 **BreakArrays** (``Boolean``) :versionbadge:`clang-format 16` :ref:`¶ <BreakArrays>`
-  If ``true``, clang-format will always break after a Json array `[`
-  otherwise it will scan until the closing `]` to determine if it should add
-  newlines between elements (prettier compatible).
+  If ``true``, clang-format will always break after a Json array ``[``
+  otherwise it will scan until the closing ``]`` to determine if it should
+  add newlines between elements (prettier compatible).
 
 
   .. note::
@@ -2445,7 +2446,7 @@ the configuration (without a prefix: ``Auto``).
       } // namespace N
 
   * ``BS_Custom`` (in configuration: ``Custom``)
-    Configure each individual brace in `BraceWrapping`.
+    Configure each individual brace in ``BraceWrapping``.
 
 
 
@@ -3336,9 +3337,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. warning::
 
-   Setting this option to `true` could lead to incorrect code formatting due
-   to clang-format's lack of complete semantic information. As such, extra
-   care should be taken to review code changes made by this option.
+   Setting this option to ``true`` could lead to incorrect code formatting
+   due to clang-format's lack of complete semantic information. As such,
+   extra care should be taken to review code changes made by this option.
 
   .. code-block:: c++
 
@@ -3746,7 +3747,7 @@ the configuration (without a prefix: ``Auto``).
     A(a*b);
 
   will usually be interpreted as a call to a function A, and the
-  multiplication expression will be formatted as `a * b`.
+  multiplication expression will be formatted as ``a * b``.
 
   If we specify the macro definition:
 
@@ -3756,7 +3757,7 @@ the configuration (without a prefix: ``Auto``).
     - A(x)=x
 
   the code will now be parsed as a declaration of the variable b of type a*,
-  and formatted as `a* b` (depending on pointer-binding rules).
+  and formatted as ``a* b`` (depending on pointer-binding rules).
 
   Features and restrictions:
    * Both function-like macros and object-like macros are supported.
@@ -4127,7 +4128,7 @@ the configuration (without a prefix: ``Auto``).
 
   .. warning::
 
-   Setting ``QualifierAlignment``  to something other than `Leave`, COULD
+   Setting ``QualifierAlignment``  to something other than ``Leave``, COULD
    lead to incorrect code formatting due to incorrect decisions made due to
    clang-formats lack of complete semantic information.
    As such extra care should be taken to review code changes made by the use
@@ -4311,9 +4312,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. warning::
 
-   Setting this option to `true` could lead to incorrect code formatting due
-   to clang-format's lack of complete semantic information. As such, extra
-   care should be taken to review code changes made by this option.
+   Setting this option to ``true`` could lead to incorrect code formatting
+   due to clang-format's lack of complete semantic information. As such,
+   extra care should be taken to review code changes made by this option.
 
   .. code-block:: c++
 
@@ -4408,9 +4409,9 @@ the configuration (without a prefix: ``Auto``).
 
   .. warning::
 
-   Setting this option to `true` could lead to incorrect code formatting due
-   to clang-format's lack of complete semantic information. As such, extra
-   care should be taken to review code changes made by this option.
+   Setting this option to ``true`` could lead to incorrect code formatting
+   due to clang-format's lack of complete semantic information. As such,
+   extra care should be taken to review code changes made by this option.
 
   .. code-block:: c++
 
@@ -4528,7 +4529,7 @@ the configuration (without a prefix: ``Auto``).
        }
 
   * ``REI_Keyword`` (in configuration: ``Keyword``)
-    Align requires expression body relative to the `requires` keyword.
+    Align requires expression body relative to the ``requires`` keyword.
 
     .. code-block:: c++
 
@@ -4965,7 +4966,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``SBPO_Custom`` (in configuration: ``Custom``)
     Configure each individual space before parentheses in
-    `SpaceBeforeParensOptions`.
+    ``SpaceBeforeParensOptions``.
 
 
 
@@ -5361,8 +5362,9 @@ the configuration (without a prefix: ``Auto``).
   A vector of non-keyword identifiers that should be interpreted as type
   names.
 
-  A `*`, `&`, or `&&` between a type name and another non-keyword identifier
-  is annotated as a pointer or reference token instead of a binary operator.
+  A ``*``, ``&``, or ``&&`` between a type name and another non-keyword
+  identifier is annotated as a pointer or reference token instead of a
+  binary operator.
 
 .. _TypenameMacros:
 

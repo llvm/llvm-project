@@ -644,8 +644,6 @@ class PointerType : public Type {
   explicit PointerType(Type *ElType, unsigned AddrSpace);
   explicit PointerType(LLVMContext &C, unsigned AddrSpace);
 
-  Type *PointeeTy;
-
 public:
   PointerType(const PointerType &) = delete;
   PointerType &operator=(const PointerType &) = delete;
@@ -674,14 +672,14 @@ public:
   /// given address space. This is only useful during the opaque pointer
   /// transition.
   /// TODO: remove after opaque pointer transition is complete.
+  [[deprecated("Use PointerType::get() with LLVMContext argument instead")]]
   static PointerType *getWithSamePointeeType(PointerType *PT,
                                              unsigned AddressSpace) {
-    if (PT->isOpaque())
-      return get(PT->getContext(), AddressSpace);
-    return get(PT->PointeeTy, AddressSpace);
+    return get(PT->getContext(), AddressSpace);
   }
 
-  bool isOpaque() const { return !PointeeTy; }
+  [[deprecated("Always returns true")]]
+  bool isOpaque() const { return true; }
 
   /// Return true if the specified type is valid as a element type.
   static bool isValidElementType(Type *ElemTy);
@@ -696,16 +694,18 @@ public:
   /// type matches Ty. Primarily used for checking if an instruction's pointer
   /// operands are valid types. Will be useless after non-opaque pointers are
   /// removed.
-  bool isOpaqueOrPointeeTypeMatches(Type *Ty) {
-    return isOpaque() || PointeeTy == Ty;
+  [[deprecated("Always returns true")]]
+  bool isOpaqueOrPointeeTypeMatches(Type *) {
+    return true;
   }
 
   /// Return true if both pointer types have the same element type. Two opaque
   /// pointers are considered to have the same element type, while an opaque
   /// and a non-opaque pointer have different element types.
   /// TODO: Remove after opaque pointer transition is complete.
+  [[deprecated("Always returns true")]]
   bool hasSameElementTypeAs(PointerType *Other) {
-    return PointeeTy == Other->PointeeTy;
+    return true;
   }
 
   /// Implement support type inquiry through isa, cast, and dyn_cast.
