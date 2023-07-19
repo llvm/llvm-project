@@ -3255,6 +3255,7 @@ static unsigned GetVMSetForLMul(RISCVII::VLMUL LMUL) {
   case RISCVII::LMUL_RESERVED:
     llvm_unreachable("Unexpected LMUL");
   }
+  llvm_unreachable("Unknown VLMUL enum");
 }
 
 // Try to fold away VMERGE_VVM instructions. We handle these cases:
