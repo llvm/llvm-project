@@ -762,7 +762,7 @@ public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     typename _ParseContext::iterator __result = __parser_.__parse(__ctx, __format_spec::__fields_floating_point);
-    __format_spec::__process_parsed_floating_point(__parser_);
+    __format_spec::__process_parsed_floating_point(__parser_, "a floating-point");
     return __result;
   }
 

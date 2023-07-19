@@ -97,33 +97,33 @@ void test_char_default(TestFunction check, ExceptionTest check_exception, auto&&
   check_exception("The format-spec fill field contains an invalid character", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("A sign field isn't allowed in this format-spec", SV("{::-}"), input);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{::+}"), input);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:: }"), input);
+  check_exception("The format specifier for a character does not allow the sign option", SV("{::-}"), input);
+  check_exception("The format specifier for a character does not allow the sign option", SV("{::+}"), input);
+  check_exception("The format specifier for a character does not allow the sign option", SV("{:: }"), input);
 
   check(SV("[72, 101, 108, 108, 111]"), SV("{::-d}"), input);
   check(SV("[+72, +101, +108, +108, +111]"), SV("{::+d}"), input);
   check(SV("[ 72,  101,  108,  108,  111]"), SV("{:: d}"), input);
 
   // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{::#}"), input);
+  check_exception("The format specifier for a character does not allow the alternate form option", SV("{::#}"), input);
 
   check(SV("[0x48, 0x65, 0x6c, 0x6c, 0x6f]"), SV("{::#x}"), input);
 
   // *** zero-padding ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{::05}"), input);
+  check_exception("The format specifier for a character does not allow the zero-padding option", SV("{::05}"), input);
 
   check(SV("[00110, 00145, 00154, 00154, 00157]"), SV("{::05o}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
   check(SV("[H, e, l, l, o]"), SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("bBcdoxX?"))
-    check_exception("The format-spec type has a type not supported for a char argument", fmt, input);
+    check_exception("The type option contains an invalid value for a character formatting argument", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^[:H, :e, :l, :l, :o]^^^"), SV("{:^^25::>2}"), input);
@@ -181,7 +181,7 @@ void test_char_string(TestFunction check, ExceptionTest check_exception, auto&& 
   // ***** Only underlying has a format-spec
   check_exception("Type s and an underlying format specification can't be used together", SV("{:s:}"), input);
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("bBcdoxX?"))
-    check_exception("The format-spec type has a type not supported for a char argument", fmt, input);
+    check_exception("The type option contains an invalid value for a character formatting argument", fmt, input);
 
   // ***** Both have a format-spec
   check_exception("Type s and an underlying format specification can't be used together", SV("{:5s:5}"), input);
@@ -355,33 +355,33 @@ void test_bool(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format-spec fill field contains an invalid character", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("A sign field isn't allowed in this format-spec", SV("{::-}"), input);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{::+}"), input);
-  check_exception("A sign field isn't allowed in this format-spec", SV("{:: }"), input);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{::-}"), input);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{::+}"), input);
+  check_exception("The format specifier for a bool does not allow the sign option", SV("{:: }"), input);
 
   check(SV("[1, 1, 0]"), SV("{::-d}"), input);
   check(SV("[+1, +1, +0]"), SV("{::+d}"), input);
   check(SV("[ 1,  1,  0]"), SV("{:: d}"), input);
 
   // *** alternate form ***
-  check_exception("An alternate form field isn't allowed in this format-spec", SV("{::#}"), input);
+  check_exception("The format specifier for a bool does not allow the alternate form option", SV("{::#}"), input);
 
   check(SV("[0x1, 0x1, 0x0]"), SV("{::#x}"), input);
 
   // *** zero-padding ***
-  check_exception("A zero-padding field isn't allowed in this format-spec", SV("{::05}"), input);
+  check_exception("The format specifier for a bool does not allow the zero-padding option", SV("{::05}"), input);
 
   check(SV("[00001, 00001, 00000]"), SV("{::05o}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
   check(SV("[true, true, false]"), SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("bBdosxX"))
-    check_exception("The format-spec type has a type not supported for a bool argument", fmt, input);
+    check_exception("The type option contains an invalid value for a bool formatting argument", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^[:::true, :::true, ::false]^^^"), SV("{:^^32::>7}"), input);
@@ -472,14 +472,14 @@ void test_int(TestFunction check, ExceptionTest check_exception, auto&& input) {
   check(SV("[0x001, 0x002, 0x02a, -0x2a]"), SV("{::#05x}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
   check(SV("[1, 2, 42, -42]"), SV("{::L}"), input); // does nothing in this test, but is accepted.
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("bBcdoxX"))
-    check_exception("The format-spec type has a type not supported for an integer argument", fmt, input);
+    check_exception("The type option contains an invalid value for an integer formatting argument", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^[::::1, ::::2, :::42, ::-42]^^^"), SV("{:^^33::>5}"), input);
@@ -603,7 +603,7 @@ void test_floating_point(TestFunction check, ExceptionTest check_exception, auto
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("aAeEfFgG"))
-    check_exception("The format-spec type has a type not supported for a floating-point argument", fmt, input);
+    check_exception("The type option contains an invalid value for a floating-point formatting argument", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^[-42.5, ::::0, :1.25, :42.5]^^^"), SV("{:^^33::>5}"), input);
@@ -694,10 +694,10 @@ void test_pointer(TestFunction check, ExceptionTest check_exception, auto&& inpu
   check_exception("The format-spec fill field contains an invalid character", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
   check(SV("[0x0000]"), SV("{::06}"), input);
@@ -705,14 +705,14 @@ void test_pointer(TestFunction check, ExceptionTest check_exception, auto&& inpu
   check(SV("[0X0000]"), SV("{::06P}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("pP"))
-    check_exception("The format-spec type has a type not supported for a pointer argument", fmt, input);
+    check_exception("The type option contains an invalid value for a pointer formatting argument", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^[::0x0]^^^"), SV("{:^^12::>5}"), input);
@@ -799,10 +799,10 @@ void test_string(TestFunction check, ExceptionTest check_exception, auto&& input
   check_exception("The format-spec fill field contains an invalid character", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
   check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
@@ -815,7 +815,7 @@ void test_string(TestFunction check, ExceptionTest check_exception, auto&& input
   check_exception("The format-spec precision field doesn't contain a value or arg-id", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("s?"))

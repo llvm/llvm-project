@@ -75,10 +75,10 @@ void test_string(TestFunction check, ExceptionTest check_exception, auto&& input
   check_exception("The format-spec fill field contains an invalid character", SV("{:{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
   check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
@@ -91,7 +91,7 @@ void test_string(TestFunction check, ExceptionTest check_exception, auto&& input
   check(SV("hel  "), SV("{:{}.{}}"), input, 5, 3);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** type ***
   check(SV("hello"), SV("{:s}"), input);
@@ -136,7 +136,7 @@ void test_range_string(TestFunction check, ExceptionTest check_exception, auto&&
   check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), input);
 
   // *** alternate form ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
@@ -176,10 +176,10 @@ void test_range_string(TestFunction check, ExceptionTest check_exception, auto&&
   check_exception("The format-spec fill field contains an invalid character", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
   check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
@@ -192,7 +192,7 @@ void test_range_string(TestFunction check, ExceptionTest check_exception, auto&&
   check_exception("The format-spec precision field doesn't contain a value or arg-id", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("s?"))
@@ -260,10 +260,10 @@ void test_debug_string(TestFunction check, ExceptionTest check_exception, auto&&
   check_exception("The format-spec fill field contains an invalid character", SV("{:{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
   check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
@@ -276,7 +276,7 @@ void test_debug_string(TestFunction check, ExceptionTest check_exception, auto&&
   check(SV("\"he  "), SV("{:{}.{}}"), input, 5, 3);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** type ***
   check(SV("\"hello\""), SV("{:s}"), input); // escape overrides the type option s
@@ -322,7 +322,7 @@ void test_range_debug_string(TestFunction check, ExceptionTest check_exception, 
   check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), input);
 
   // *** alternate form ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
@@ -362,10 +362,10 @@ void test_range_debug_string(TestFunction check, ExceptionTest check_exception, 
   check_exception("The format-spec fill field contains an invalid character", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
   check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
@@ -378,7 +378,7 @@ void test_range_debug_string(TestFunction check, ExceptionTest check_exception, 
   check_exception("The format-spec precision field doesn't contain a value or arg-id", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>("s?"))
