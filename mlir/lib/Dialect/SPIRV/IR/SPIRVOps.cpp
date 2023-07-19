@@ -36,6 +36,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <cassert>
 #include <numeric>
+#include <type_traits>
 
 using namespace mlir;
 
@@ -53,7 +54,9 @@ constexpr char kGroupOperationAttrName[] = "group_operation";
 constexpr char kIndicesAttrName[] = "indices";
 constexpr char kInitializerAttrName[] = "initializer";
 constexpr char kInterfaceAttrName[] = "interface";
+constexpr char kKhrCooperativeMatrixLayoutAttrName[] = "matrix_layout";
 constexpr char kMemoryAccessAttrName[] = "memory_access";
+constexpr char kMemoryOperandAttrName[] = "memory_operand";
 constexpr char kMemoryScopeAttrName[] = "memory_scope";
 constexpr char kPackedVectorFormatAttrName[] = "format";
 constexpr char kSemanticsAttrName[] = "semantics";
@@ -176,6 +179,7 @@ template <typename EnumClass>
 static ParseResult
 parseEnumStrAttr(EnumClass &value, OpAsmParser &parser,
                  StringRef attrName = spirv::attributeName<EnumClass>()) {
+  static_assert(std::is_enum_v<EnumClass>);
   Attribute attrVal;
   NamedAttrList attr;
   auto loc = parser.getCurrentLocation();
@@ -202,6 +206,7 @@ template <typename EnumAttrClass,
 static ParseResult
 parseEnumStrAttr(EnumClass &value, OpAsmParser &parser, OperationState &state,
                  StringRef attrName = spirv::attributeName<EnumClass>()) {
+  static_assert(std::is_enum_v<EnumClass>);
   if (parseEnumStrAttr(value, parser))
     return failure();
   state.addAttribute(attrName,
@@ -218,6 +223,7 @@ static ParseResult
 parseEnumKeywordAttr(EnumClass &value, OpAsmParser &parser,
                      OperationState &state,
                      StringRef attrName = spirv::attributeName<EnumClass>()) {
+  static_assert(std::is_enum_v<EnumClass>);
   if (parseEnumKeywordAttr(value, parser))
     return failure();
   state.addAttribute(attrName,
@@ -246,14 +252,15 @@ parseControlAttribute(OpAsmParser &parser, OperationState &state,
   return success();
 }
 
-/// Parses optional memory access attributes attached to a memory access
-/// operand/pointer. Specifically, parses the following syntax:
+/// Parses optional memory access (a.k.a. memory operand) attributes attached to
+/// a memory access operand/pointer. Specifically, parses the following syntax:
 ///     (`[` memory-access `]`)?
 /// where:
 ///     memory-access ::= `"None"` | `"Volatile"` | `"Aligned", `
 ///         integer-literal | `"NonTemporal"`
-static ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
-                                               OperationState &state) {
+static ParseResult
+parseMemoryAccessAttributes(OpAsmParser &parser, OperationState &state,
+                            StringRef attrName = kMemoryAccessAttrName) {
   // Parse an optional list of attributes staring with '['
   if (parser.parseOptionalLSquare()) {
     // Nothing to do
@@ -262,7 +269,7 @@ static ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
 
   spirv::MemoryAccess memoryAccessAttr;
   if (parseEnumStrAttr<spirv::MemoryAccessAttr>(memoryAccessAttr, parser, state,
-                                                kMemoryAccessAttrName))
+                                                attrName))
     return failure();
 
   if (spirv::bitEnumContainsAll(memoryAccessAttr,
@@ -4033,6 +4040,75 @@ LogicalResult spirv::KHRCooperativeMatrixLengthOp::verify() {
   }
 
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.KHR.CooperativeMatrixLoad
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::KHRCooperativeMatrixLoadOp::parse(OpAsmParser &parser,
+                                                     OperationState &result) {
+  std::array<OpAsmParser::UnresolvedOperand, 2> operandInfo = {};
+  if (parser.parseOperand(operandInfo[0]) || parser.parseComma())
+    return failure();
+  if (parser.parseOperand(operandInfo[1]) || parser.parseComma())
+    return failure();
+
+  spirv::CooperativeMatrixLayoutKHR layout;
+  if (::parseEnumKeywordAttr<spirv::CooperativeMatrixLayoutKHRAttr>(
+          layout, parser, result, kKhrCooperativeMatrixLayoutAttrName)) {
+    return failure();
+  }
+
+  if (parseMemoryAccessAttributes(parser, result, kMemoryOperandAttrName))
+    return failure();
+
+  Type ptrType;
+  Type elementType;
+  if (parser.parseColon() || parser.parseType(ptrType) ||
+      parser.parseKeywordType("as", elementType)) {
+    return failure();
+  }
+  result.addTypes(elementType);
+
+  Type strideType = parser.getBuilder().getIntegerType(32);
+  if (parser.resolveOperands(operandInfo, {ptrType, strideType},
+                             parser.getNameLoc(), result.operands)) {
+    return failure();
+  }
+
+  return success();
+}
+
+void spirv::KHRCooperativeMatrixLoadOp::print(OpAsmPrinter &printer) {
+  printer << " " << getPointer() << ", " << getStride() << ", "
+          << getMatrixLayout();
+  // Print optional memory operand attribute.
+  if (auto memOperand = getMemoryOperand())
+    printer << " [\"" << memOperand << "\"]";
+  printer << " : " << getPointer().getType() << " as " << getType();
+}
+
+static LogicalResult verifyPointerAndCoopMatrixType(Operation *op, Type pointer,
+                                                    Type coopMatrix) {
+  auto pointerType = cast<spirv::PointerType>(pointer);
+  Type pointeeType = pointerType.getPointeeType();
+  if (!isa<spirv::ScalarType, VectorType>(pointeeType)) {
+    return op->emitError(
+               "Pointer must point to a scalar or vector type but provided ")
+           << pointeeType;
+  }
+
+  // TODO: Verify the memory object behind the pointer:
+  // > If the Shader capability was declared, Pointer must point into an array
+  // > and any ArrayStride decoration on Pointer is ignored.
+
+  return success();
+}
+
+LogicalResult spirv::KHRCooperativeMatrixLoadOp::verify() {
+  return verifyPointerAndCoopMatrixType(*this, getPointer().getType(),
+                                        getResult().getType());
 }
 
 //===----------------------------------------------------------------------===//
