@@ -315,10 +315,9 @@ define <2 x i32> @not_cond_vec_undef(<2 x i1> %c, <2 x i32> %tv, <2 x i32> %fv) 
   ret <2 x i32> %r
 }
 
-; TODO: The metadata should be preserved.
 define i64 @select_add(i1 %cond, i64 %x, i64 %y) {
 ; CHECK-LABEL: @select_add(
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i64 [[Y:%.*]], i64 0
+; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i64 [[Y:%.*]], i64 0, !prof [[PROF0]], !unpredictable !2
 ; CHECK-NEXT:    [[RET:%.*]] = add i64 [[OP]], [[X:%.*]]
 ; CHECK-NEXT:    ret i64 [[RET]]
 ;
@@ -327,10 +326,9 @@ define i64 @select_add(i1 %cond, i64 %x, i64 %y) {
   ret i64 %ret
 }
 
-; TODO: The metadata should be preserved.
 define <2 x i32> @select_or(<2 x i1> %cond, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @select_or(
-; CHECK-NEXT:    [[OP:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[OP:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> zeroinitializer, !prof [[PROF0]], !unpredictable !2
 ; CHECK-NEXT:    [[RET:%.*]] = or <2 x i32> [[OP]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;
@@ -339,10 +337,9 @@ define <2 x i32> @select_or(<2 x i1> %cond, <2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %ret
 }
 
-; TODO: The metadata should be preserved.
 define i17 @select_sub(i1 %cond, i17 %x, i17 %y) {
 ; CHECK-LABEL: @select_sub(
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i17 [[Y:%.*]], i17 0
+; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i17 [[Y:%.*]], i17 0, !prof [[PROF0]], !unpredictable !2
 ; CHECK-NEXT:    [[RET:%.*]] = sub i17 [[X:%.*]], [[OP]]
 ; CHECK-NEXT:    ret i17 [[RET]]
 ;
@@ -351,10 +348,9 @@ define i17 @select_sub(i1 %cond, i17 %x, i17 %y) {
   ret i17 %ret
 }
 
-; TODO: The metadata should be preserved.
 define i128 @select_ashr(i1 %cond, i128 %x, i128 %y) {
 ; CHECK-LABEL: @select_ashr(
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i128 [[Y:%.*]], i128 0
+; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i128 [[Y:%.*]], i128 0, !prof [[PROF0]], !unpredictable !2
 ; CHECK-NEXT:    [[RET:%.*]] = ashr i128 [[X:%.*]], [[OP]]
 ; CHECK-NEXT:    ret i128 [[RET]]
 ;
@@ -363,10 +359,9 @@ define i128 @select_ashr(i1 %cond, i128 %x, i128 %y) {
   ret i128 %ret
 }
 
-; TODO: The metadata should be preserved.
 define double @select_fmul(i1 %cond, double %x, double %y) {
 ; CHECK-LABEL: @select_fmul(
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], double [[Y:%.*]], double 1.000000e+00
+; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], double [[Y:%.*]], double 1.000000e+00, !prof [[PROF0]], !unpredictable !2
 ; CHECK-NEXT:    [[RET:%.*]] = fmul double [[OP]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[RET]]
 ;
@@ -375,10 +370,9 @@ define double @select_fmul(i1 %cond, double %x, double %y) {
   ret double %ret
 }
 
-; TODO: The metadata should be preserved.
 define <2 x float> @select_fdiv(i1 %cond, <2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @select_fdiv(
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], <2 x float> [[Y:%.*]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], <2 x float> [[Y:%.*]], <2 x float> <float 1.000000e+00, float 1.000000e+00>, !prof [[PROF0]], !unpredictable !2
 ; CHECK-NEXT:    [[RET:%.*]] = fdiv <2 x float> [[X:%.*]], [[OP]]
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
@@ -397,4 +391,5 @@ define <2 x float> @select_fdiv(i1 %cond, <2 x float> %x, <2 x float> %y) {
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 2, i32 10}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 10, i32 2}
+; CHECK: [[META2:![0-9]+]] = !{}
 ;.
