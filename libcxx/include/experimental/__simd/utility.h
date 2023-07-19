@@ -13,8 +13,12 @@
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_constant_evaluated.h>
+#include <__type_traits/is_convertible.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_unsigned.h>
 #include <__type_traits/is_volatile.h>
+#include <__type_traits/void_t.h>
+#include <__utility/declval.h>
 #include <cstdint>
 #include <limits>
 
@@ -26,7 +30,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
 inline namespace parallelism_v2 {
 template <class _Tp>
-constexpr bool __is_vectorizable_v =
+inline constexpr bool __is_vectorizable_v =
     is_arithmetic_v<_Tp> && !is_const_v<_Tp> && !is_volatile_v<_Tp> && !is_same_v<_Tp, bool>;
 
 template <class _Tp>
@@ -53,6 +57,19 @@ template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI auto constexpr __set_all_bits(bool __v) {
   return __v ? (numeric_limits<decltype(__choose_mask_type<_Tp>())>::max()) : 0;
 }
+
+template <class _From, class _To, class = void>
+inline constexpr bool __is_non_narrowing_convertible_v = false;
+
+template <class _From, class _To>
+inline constexpr bool __is_non_narrowing_convertible_v<_From, _To, std::void_t<decltype(_To{std::declval<_From>()})>> =
+    true;
+
+template <class _Tp, class _Up>
+inline constexpr bool __can_broadcast_v =
+    (__is_vectorizable_v<_Up> && __is_non_narrowing_convertible_v<_Up, _Tp>) ||
+    (!__is_vectorizable_v<_Up> && is_convertible_v<_Up, _Tp>) || is_same_v<_Up, int> ||
+    (is_same_v<_Up, unsigned int> && is_unsigned_v<_Tp>);
 
 } // namespace parallelism_v2
 _LIBCPP_END_NAMESPACE_EXPERIMENTAL

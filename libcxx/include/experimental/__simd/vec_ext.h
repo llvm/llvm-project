@@ -48,11 +48,28 @@ template <class _Tp, int _Np>
 struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
   using _SimdStorage = __simd_storage<_Tp, simd_abi::__vec_ext<_Np>>;
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
+
+  static _SimdStorage __broadcast(_Tp __v) noexcept {
+    _SimdStorage __result;
+    for (int __i = 0; __i < _Np; ++__i) {
+      __result.__set(__i, __v);
+    }
+    return __result;
+  }
 };
 
 template <class _Tp, int _Np>
 struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
   using _MaskStorage = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
+
+  static _MaskStorage __broadcast(bool __v) noexcept {
+    _MaskStorage __result;
+    auto __all_bits_v = experimental::__set_all_bits<_Tp>(__v);
+    for (int __i = 0; __i < _Np; ++__i) {
+      __result.__set(__i, __all_bits_v);
+    }
+    return __result;
+  }
 };
 
 } // namespace parallelism_v2
