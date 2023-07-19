@@ -2117,16 +2117,12 @@ define i32 @bzhi32_c0(i32 %val, i32 %numlowbits, ptr %escape) nounwind {
 ;
 ; X86-BMI2-LABEL: bzhi32_c0:
 ; X86-BMI2:       # %bb.0:
-; X86-BMI2-NEXT:    pushl %esi
-; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-BMI2-NEXT:    bzhil %edx, {{[0-9]+}}(%esp), %eax
-; X86-BMI2-NEXT:    # kill: def $dl killed $dl killed $edx def $edx
-; X86-BMI2-NEXT:    negb %dl
-; X86-BMI2-NEXT:    movl $-1, %esi
-; X86-BMI2-NEXT:    shrxl %edx, %esi, %edx
-; X86-BMI2-NEXT:    movl %edx, (%ecx)
-; X86-BMI2-NEXT:    popl %esi
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    movl $-1, %edx
+; X86-BMI2-NEXT:    bzhil %ecx, %edx, %edx
+; X86-BMI2-NEXT:    movl %edx, (%eax)
+; X86-BMI2-NEXT:    bzhil %ecx, {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: bzhi32_c0:
@@ -2153,12 +2149,10 @@ define i32 @bzhi32_c0(i32 %val, i32 %numlowbits, ptr %escape) nounwind {
 ;
 ; X64-BMI2-LABEL: bzhi32_c0:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movl $-1, %eax
+; X64-BMI2-NEXT:    bzhil %esi, %eax, %eax
+; X64-BMI2-NEXT:    movl %eax, (%rdx)
 ; X64-BMI2-NEXT:    bzhil %esi, %edi, %eax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $esi def $esi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movl $-1, %ecx
-; X64-BMI2-NEXT:    shrxl %esi, %ecx, %ecx
-; X64-BMI2-NEXT:    movl %ecx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -2194,16 +2188,12 @@ define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits, ptr %escape) nounwind 
 ;
 ; X86-BMI2-LABEL: bzhi32_c1_indexzext:
 ; X86-BMI2:       # %bb.0:
-; X86-BMI2-NEXT:    pushl %esi
-; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-BMI2-NEXT:    bzhil %edx, {{[0-9]+}}(%esp), %eax
-; X86-BMI2-NEXT:    # kill: def $dl killed $dl killed $edx def $edx
-; X86-BMI2-NEXT:    negb %dl
-; X86-BMI2-NEXT:    movl $-1, %esi
-; X86-BMI2-NEXT:    shrxl %edx, %esi, %edx
-; X86-BMI2-NEXT:    movl %edx, (%ecx)
-; X86-BMI2-NEXT:    popl %esi
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    movl $-1, %edx
+; X86-BMI2-NEXT:    bzhil %ecx, %edx, %edx
+; X86-BMI2-NEXT:    movl %edx, (%eax)
+; X86-BMI2-NEXT:    bzhil %ecx, {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: bzhi32_c1_indexzext:
@@ -2230,12 +2220,10 @@ define i32 @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits, ptr %escape) nounwind 
 ;
 ; X64-BMI2-LABEL: bzhi32_c1_indexzext:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movl $-1, %eax
+; X64-BMI2-NEXT:    bzhil %esi, %eax, %eax
+; X64-BMI2-NEXT:    movl %eax, (%rdx)
 ; X64-BMI2-NEXT:    bzhil %esi, %edi, %eax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $esi def $esi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movl $-1, %ecx
-; X64-BMI2-NEXT:    shrxl %esi, %ecx, %ecx
-; X64-BMI2-NEXT:    movl %ecx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i8 32, %numlowbits
   %sh_prom = zext i8 %numhighbits to i32
@@ -2284,12 +2272,10 @@ define i32 @bzhi32_c2_load(ptr %w, i32 %numlowbits, ptr %escape) nounwind {
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-BMI2-NEXT:    bzhil %edx, (%eax), %eax
-; X86-BMI2-NEXT:    # kill: def $dl killed $dl killed $edx def $edx
-; X86-BMI2-NEXT:    negb %dl
 ; X86-BMI2-NEXT:    movl $-1, %esi
-; X86-BMI2-NEXT:    shrxl %edx, %esi, %edx
-; X86-BMI2-NEXT:    movl %edx, (%ecx)
+; X86-BMI2-NEXT:    bzhil %edx, %esi, %esi
+; X86-BMI2-NEXT:    bzhil %edx, (%eax), %eax
+; X86-BMI2-NEXT:    movl %esi, (%ecx)
 ; X86-BMI2-NEXT:    popl %esi
 ; X86-BMI2-NEXT:    retl
 ;
@@ -2319,11 +2305,9 @@ define i32 @bzhi32_c2_load(ptr %w, i32 %numlowbits, ptr %escape) nounwind {
 ;
 ; X64-BMI2-LABEL: bzhi32_c2_load:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movl $-1, %eax
+; X64-BMI2-NEXT:    bzhil %esi, %eax, %ecx
 ; X64-BMI2-NEXT:    bzhil %esi, (%rdi), %eax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $esi def $esi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movl $-1, %ecx
-; X64-BMI2-NEXT:    shrxl %esi, %ecx, %ecx
 ; X64-BMI2-NEXT:    movl %ecx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %val = load i32, ptr %w
@@ -2373,12 +2357,10 @@ define i32 @bzhi32_c3_load_indexzext(ptr %w, i8 %numlowbits, ptr %escape) nounwi
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-BMI2-NEXT:    bzhil %edx, (%eax), %eax
-; X86-BMI2-NEXT:    # kill: def $dl killed $dl killed $edx def $edx
-; X86-BMI2-NEXT:    negb %dl
 ; X86-BMI2-NEXT:    movl $-1, %esi
-; X86-BMI2-NEXT:    shrxl %edx, %esi, %edx
-; X86-BMI2-NEXT:    movl %edx, (%ecx)
+; X86-BMI2-NEXT:    bzhil %edx, %esi, %esi
+; X86-BMI2-NEXT:    bzhil %edx, (%eax), %eax
+; X86-BMI2-NEXT:    movl %esi, (%ecx)
 ; X86-BMI2-NEXT:    popl %esi
 ; X86-BMI2-NEXT:    retl
 ;
@@ -2408,11 +2390,9 @@ define i32 @bzhi32_c3_load_indexzext(ptr %w, i8 %numlowbits, ptr %escape) nounwi
 ;
 ; X64-BMI2-LABEL: bzhi32_c3_load_indexzext:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movl $-1, %eax
+; X64-BMI2-NEXT:    bzhil %esi, %eax, %ecx
 ; X64-BMI2-NEXT:    bzhil %esi, (%rdi), %eax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $esi def $esi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movl $-1, %ecx
-; X64-BMI2-NEXT:    shrxl %esi, %ecx, %ecx
 ; X64-BMI2-NEXT:    movl %ecx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %val = load i32, ptr %w
@@ -2451,16 +2431,12 @@ define i32 @bzhi32_c4_commutative(i32 %val, i32 %numlowbits, ptr %escape) nounwi
 ;
 ; X86-BMI2-LABEL: bzhi32_c4_commutative:
 ; X86-BMI2:       # %bb.0:
-; X86-BMI2-NEXT:    pushl %esi
-; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-BMI2-NEXT:    bzhil %edx, {{[0-9]+}}(%esp), %eax
-; X86-BMI2-NEXT:    # kill: def $dl killed $dl killed $edx def $edx
-; X86-BMI2-NEXT:    negb %dl
-; X86-BMI2-NEXT:    movl $-1, %esi
-; X86-BMI2-NEXT:    shrxl %edx, %esi, %edx
-; X86-BMI2-NEXT:    movl %edx, (%ecx)
-; X86-BMI2-NEXT:    popl %esi
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BMI2-NEXT:    movl $-1, %edx
+; X86-BMI2-NEXT:    bzhil %ecx, %edx, %edx
+; X86-BMI2-NEXT:    movl %edx, (%eax)
+; X86-BMI2-NEXT:    bzhil %ecx, {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    retl
 ;
 ; X64-NOBMI-LABEL: bzhi32_c4_commutative:
@@ -2487,12 +2463,10 @@ define i32 @bzhi32_c4_commutative(i32 %val, i32 %numlowbits, ptr %escape) nounwi
 ;
 ; X64-BMI2-LABEL: bzhi32_c4_commutative:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movl $-1, %eax
+; X64-BMI2-NEXT:    bzhil %esi, %eax, %eax
+; X64-BMI2-NEXT:    movl %eax, (%rdx)
 ; X64-BMI2-NEXT:    bzhil %esi, %edi, %eax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $esi def $esi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movl $-1, %ecx
-; X64-BMI2-NEXT:    shrxl %esi, %ecx, %ecx
-; X64-BMI2-NEXT:    movl %ecx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
@@ -2593,12 +2567,10 @@ define i64 @bzhi64_c0(i64 %val, i64 %numlowbits, ptr %escape) nounwind {
 ;
 ; X64-BMI2-LABEL: bzhi64_c0:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movq $-1, %rax
+; X64-BMI2-NEXT:    bzhiq %rsi, %rax, %rax
+; X64-BMI2-NEXT:    movq %rax, (%rdx)
 ; X64-BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $rsi def $rsi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movq $-1, %rcx
-; X64-BMI2-NEXT:    shrxq %rsi, %rcx, %rcx
-; X64-BMI2-NEXT:    movq %rcx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i64 64, %numlowbits
   %mask = lshr i64 -1, %numhighbits
@@ -2698,12 +2670,10 @@ define i64 @bzhi64_c1_indexzext(i64 %val, i8 %numlowbits, ptr %escape) nounwind 
 ; X64-BMI2-LABEL: bzhi64_c1_indexzext:
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-BMI2-NEXT:    movq $-1, %rax
+; X64-BMI2-NEXT:    bzhiq %rsi, %rax, %rax
+; X64-BMI2-NEXT:    movq %rax, (%rdx)
 ; X64-BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $rsi def $rsi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movq $-1, %rcx
-; X64-BMI2-NEXT:    shrxq %rsi, %rcx, %rcx
-; X64-BMI2-NEXT:    movq %rcx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i8 64, %numlowbits
   %sh_prom = zext i8 %numhighbits to i64
@@ -2824,11 +2794,9 @@ define i64 @bzhi64_c2_load(ptr %w, i64 %numlowbits, ptr %escape) nounwind {
 ;
 ; X64-BMI2-LABEL: bzhi64_c2_load:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movq $-1, %rax
+; X64-BMI2-NEXT:    bzhiq %rsi, %rax, %rcx
 ; X64-BMI2-NEXT:    bzhiq %rsi, (%rdi), %rax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $rsi def $rsi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movq $-1, %rcx
-; X64-BMI2-NEXT:    shrxq %rsi, %rcx, %rcx
 ; X64-BMI2-NEXT:    movq %rcx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %val = load i64, ptr %w
@@ -2951,11 +2919,9 @@ define i64 @bzhi64_c3_load_indexzext(ptr %w, i8 %numlowbits, ptr %escape) nounwi
 ; X64-BMI2-LABEL: bzhi64_c3_load_indexzext:
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-BMI2-NEXT:    movq $-1, %rax
+; X64-BMI2-NEXT:    bzhiq %rsi, %rax, %rcx
 ; X64-BMI2-NEXT:    bzhiq %rsi, (%rdi), %rax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $rsi def $rsi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movq $-1, %rcx
-; X64-BMI2-NEXT:    shrxq %rsi, %rcx, %rcx
 ; X64-BMI2-NEXT:    movq %rcx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %val = load i64, ptr %w
@@ -3057,12 +3023,10 @@ define i64 @bzhi64_c4_commutative(i64 %val, i64 %numlowbits, ptr %escape) nounwi
 ;
 ; X64-BMI2-LABEL: bzhi64_c4_commutative:
 ; X64-BMI2:       # %bb.0:
+; X64-BMI2-NEXT:    movq $-1, %rax
+; X64-BMI2-NEXT:    bzhiq %rsi, %rax, %rax
+; X64-BMI2-NEXT:    movq %rax, (%rdx)
 ; X64-BMI2-NEXT:    bzhiq %rsi, %rdi, %rax
-; X64-BMI2-NEXT:    # kill: def $sil killed $sil killed $rsi def $rsi
-; X64-BMI2-NEXT:    negb %sil
-; X64-BMI2-NEXT:    movq $-1, %rcx
-; X64-BMI2-NEXT:    shrxq %rsi, %rcx, %rcx
-; X64-BMI2-NEXT:    movq %rcx, (%rdx)
 ; X64-BMI2-NEXT:    retq
   %numhighbits = sub i64 64, %numlowbits
   %mask = lshr i64 -1, %numhighbits
