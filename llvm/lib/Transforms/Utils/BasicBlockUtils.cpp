@@ -1484,6 +1484,19 @@ Instruction *llvm::SplitBlockAndInsertIfThen(Value *Cond,
   return ThenBlock->getTerminator();
 }
 
+Instruction *llvm::SplitBlockAndInsertIfElse(Value *Cond,
+                                             Instruction *SplitBefore,
+                                             bool Unreachable,
+                                             MDNode *BranchWeights,
+                                             DomTreeUpdater *DTU, LoopInfo *LI,
+                                             BasicBlock *ElseBlock) {
+  SplitBlockAndInsertIfThenElse(
+      Cond, SplitBefore, /* ThenBlock */ nullptr, &ElseBlock,
+      /* UnreachableThen */ false,
+      /* UnreachableElse */ Unreachable, BranchWeights, DTU, LI);
+  return ElseBlock->getTerminator();
+}
+
 void llvm::SplitBlockAndInsertIfThenElse(Value *Cond, Instruction *SplitBefore,
                                          Instruction **ThenTerm,
                                          Instruction **ElseTerm,
