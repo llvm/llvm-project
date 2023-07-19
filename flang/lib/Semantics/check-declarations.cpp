@@ -277,6 +277,12 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckContiguous(symbol);
   }
   CheckGlobalName(symbol);
+  if (symbol.attrs().test(Attr::ASYNCHRONOUS) &&
+      !evaluate::IsVariable(symbol)) {
+    messages_.Say(
+        "An entity may not have the ASYNCHRONOUS attribute unless it is a variable"_err_en_US);
+  }
+
   if (isDone) {
     return; // following checks do not apply
   }
@@ -428,11 +434,6 @@ void CheckHelper::Check(const Symbol &symbol) {
           "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
           symbol.name());
     }
-  }
-  if (symbol.attrs().test(Attr::ASYNCHRONOUS) &&
-      !evaluate::IsVariable(symbol)) {
-    messages_.Say(
-        "An entity may not have the ASYNCHRONOUS attribute unless it is a variable"_err_en_US);
   }
 }
 
