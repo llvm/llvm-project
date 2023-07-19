@@ -15,7 +15,10 @@ load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 
 package(
     default_visibility = ["//visibility:public"],
-    features = ["-use_header_modules"],
+    features = [
+        "-use_header_modules",
+        "-layering_check",
+    ],
 )
 
 licenses(["notice"])
