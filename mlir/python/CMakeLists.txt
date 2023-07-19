@@ -148,6 +148,7 @@ declare_mlir_dialect_extension_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/GPUTransformOps.td
   SOURCES
+    dialects/_gpu_transform_ops_ext.py
     dialects/transform/gpu.py
   DIALECT_NAME transform
   EXTENSION_NAME gpu_transform)
