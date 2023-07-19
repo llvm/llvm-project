@@ -82,10 +82,10 @@ template <bool Invert, typename Packet> struct Process {
   LIBC_INLINE Process &operator=(Process &&) = default;
   LIBC_INLINE ~Process() = default;
 
-  uint64_t port_count;
-  cpp::Atomic<uint32_t> *inbox;
-  cpp::Atomic<uint32_t> *outbox;
-  Packet *packet;
+  uint64_t port_count = 0;
+  cpp::Atomic<uint32_t> *inbox = nullptr;
+  cpp::Atomic<uint32_t> *outbox = nullptr;
+  Packet *packet = nullptr;
 
   cpp::Atomic<uint32_t> lock[DEFAULT_PORT_COUNT] = {0};
 
