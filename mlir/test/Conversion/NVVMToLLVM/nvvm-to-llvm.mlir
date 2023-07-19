@@ -80,3 +80,23 @@ func.func @tma_load_5d(%tmaDescriptor: !llvm.ptr, %dest : !llvm.ptr<3>, %barrier
   nvvm.cp.async.bulk.tensor.shared.cluster.global %dest, %tmaDescriptor,  %barrier, box[%crd0,%crd1,%crd2,%crd3,%crd4] : !llvm.ptr<3>, !llvm.ptr, !llvm.ptr<3>, i32, i32, i32, i32, i32
   return
 }
+
+
+// CHECK-LABEL : @wgmma_execute
+func.func @wgmma_execute() {  
+  nvvm.wgmma.fence.aligned
+  nvvm.wgmma.commit.group.sync.aligned
+  nvvm.wgmma.wait.group.sync.aligned 0
+  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "wgmma.fence.sync.aligned;", ""
+  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "wgmma.commit_group.sync.aligned;", ""
+  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "wgmma.wait_group.sync.aligned %0;", "n" %{{.*}} : (i32)
+  
+
+  nvvm.wgmma.fence.aligned
+  nvvm.wgmma.commit.group.sync.aligned
+  nvvm.wgmma.wait.group.sync.aligned 1
+  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "wgmma.fence.sync.aligned;", ""
+  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "wgmma.commit_group.sync.aligned;", ""
+  // CHECK : llvm.inline_asm has_side_effects asm_dialect = att "wgmma.wait_group.sync.aligned %0;", "n" %{{.*}} : (i32)
+  return
+}

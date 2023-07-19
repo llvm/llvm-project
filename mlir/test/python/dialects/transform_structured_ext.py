@@ -58,6 +58,38 @@ def testInterchange():
 
 
 @run
+def testMatchOpNames():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMatchOpNames
+    # CHECK: transform.structured.match ops
+    # CHECK-SAME: ["test.dummy"]
+    # CHECK-SAME: (!transform.any_op) -> !transform.any_op
+
+
+@run
+def testMatchOpNamesTyped():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MatchOp.match_op_names(
+            transform.OperationType.get("test.dummy"),
+            sequence.bodyTarget,
+            ["test.dummy"],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMatchOpNamesTyped
+    # CHECK: transform.structured.match ops
+    # CHECK-SAME: ["test.dummy"]
+    # CHECK-SAME: (!transform.any_op) -> !transform.op<"test.dummy">
+
+
+@run
 def testMultitileSizes():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()

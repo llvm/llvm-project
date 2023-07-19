@@ -1531,6 +1531,7 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, s2, -v0, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %a = select i1 %z, double %x, double %y
