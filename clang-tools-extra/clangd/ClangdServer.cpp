@@ -68,11 +68,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
   UpdateIndexCallbacks(FileIndex *FIndex,
                        ClangdServer::Callbacks *ServerCallbacks,
                        const ThreadsafeFS &TFS, AsyncTaskRunner *Tasks,
-                       bool CollectInactiveRegions,
-                       const ClangdServer::Options &Opts)
+                       bool CollectInactiveRegions)
       : FIndex(FIndex), ServerCallbacks(ServerCallbacks), TFS(TFS),
         Stdlib{std::make_shared<StdLibSet>()}, Tasks(Tasks),
-        CollectInactiveRegions(CollectInactiveRegions), Opts(Opts) {}
+        CollectInactiveRegions(CollectInactiveRegions) {}
 
   void onPreambleAST(
       PathRef Path, llvm::StringRef Version, CapturedASTCtx ASTCtx,
@@ -94,7 +93,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
                              ASTCtx.getPreprocessor(), *PI);
     };
 
-    if (Opts.AsyncPreambleIndexing && Tasks) {
+    if (Tasks) {
       Tasks->runAsync("Preamble indexing for:" + Path + Version,
                       std::move(Task));
     } else
@@ -164,7 +163,6 @@ private:
   std::shared_ptr<StdLibSet> Stdlib;
   AsyncTaskRunner *Tasks;
   bool CollectInactiveRegions;
-  const ClangdServer::Options &Opts;
 };
 
 class DraftStoreFS : public ThreadsafeFS {
@@ -229,7 +227,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                         std::make_unique<UpdateIndexCallbacks>(
                             DynamicIdx.get(), Callbacks, TFS,
                             IndexTasks ? &*IndexTasks : nullptr,
-                            PublishInactiveRegions, Opts));
+                            PublishInactiveRegions));
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
     if (this->Index != nullptr) {
