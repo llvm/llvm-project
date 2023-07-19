@@ -314,11 +314,11 @@ def testTileToForallMixedDynamic():
         transform.YieldOp()
     # CHECK-LABEL: TEST: testTileToForallMixedDynamic
     # CHECK: = transform.structured.tile_to_forall_op
-    # CHECK-SAME: num_threads [%{{.*}} : !pdl.operation, 3, 4]
+    # CHECK-SAME: num_threads [%{{.*}} : !transform.any_op, 3, 4]
 
 
 @run
-def testTileToForallMPackedDynamic():
+def testTileToForallPackedDynamic():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
     )
@@ -326,9 +326,9 @@ def testTileToForallMPackedDynamic():
         n = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
         structured.TileToForallOp(sequence.bodyTarget, num_threads=n)
         transform.YieldOp()
-    # CHECK-LABEL: TEST: testTileToForallMPackedDynamic
+    # CHECK-LABEL: TEST: testTileToForallPackedDynamic
     # CHECK: = transform.structured.tile_to_forall_op
-    # CHECK-SAME: num_threads *(%0 : !pdl.operation)
+    # CHECK-SAME: num_threads *(%0 : !transform.any_op)
 
 
 @run
