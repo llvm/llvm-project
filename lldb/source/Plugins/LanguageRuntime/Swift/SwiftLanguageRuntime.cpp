@@ -476,61 +476,67 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
 
   // The global ABI bit is read by the Swift runtime library.
   SetupABIBit();
-  
-  std::lock_guard<std::recursive_mutex> lock(m_add_module_mutex);
-  if (m_initialized_reflection_ctx)
-    return;
+
+  // A copy of the modules that should be added, to prevent mutating the list
+  // while iterating over it.
+  ModuleList modules_snapshot;
 
   auto &target = m_process.GetTarget();
   auto exe_module = target.GetExecutableModule();
+  {
+    std::lock_guard<std::recursive_mutex> lock(m_add_module_mutex);
+    if (m_initialized_reflection_ctx)
+      return;
 
-  if (!exe_module) {
-    LLDB_LOGF(GetLog(LLDBLog::Types), "%s: Failed to get executable module",
-              LLVM_PRETTY_FUNCTION);
-    m_initialized_reflection_ctx = false;
-    return;
+    if (!exe_module) {
+      LLDB_LOGF(GetLog(LLDBLog::Types), "%s: Failed to get executable module",
+                LLVM_PRETTY_FUNCTION);
+      m_initialized_reflection_ctx = false;
+      return;
+    }
+
+    bool objc_interop = (bool)findRuntime(m_process, RuntimeKind::ObjC);
+    const char *objc_interop_msg =
+        objc_interop ? "with Objective-C interopability" : "Swift only";
+
+    auto &triple = exe_module->GetArchitecture().GetTriple();
+    if (triple.isArch64Bit()) {
+      LLDB_LOGF(GetLog(LLDBLog::Types),
+                "Initializing a 64-bit reflection context (%s) for \"%s\"",
+                triple.str().c_str(), objc_interop_msg);
+      m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
+          this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
+    } else if (triple.isArch32Bit()) {
+      LLDB_LOGF(GetLog(LLDBLog::Types),
+                "Initializing a 32-bit reflection context (%s) for \"%s\"",
+                triple.str().c_str(), objc_interop_msg);
+      m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
+          this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
+    } else {
+      LLDB_LOGF(GetLog(LLDBLog::Types),
+                "Could not initialize reflection context for \"%s\"",
+                triple.str().c_str());
+    }
+
+    modules_snapshot = std::move(m_modules_to_add);
+    m_modules_to_add.Clear();
+    m_initialized_reflection_ctx = true;
   }
-
-  bool objc_interop = (bool)findRuntime(m_process, RuntimeKind::ObjC);
-  const char *objc_interop_msg =
-      objc_interop ? "with Objective-C interopability" : "Swift only";
-
-  auto &triple = exe_module->GetArchitecture().GetTriple();
-  if (triple.isArch64Bit()) {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "Initializing a 64-bit reflection context (%s) for \"%s\"",
-              triple.str().c_str(), objc_interop_msg);
-    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
-        this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
-  } else if (triple.isArch32Bit()) {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "Initializing a 32-bit reflection context (%s) for \"%s\"",
-              triple.str().c_str(), objc_interop_msg);
-    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
-        this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
-  } else {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "Could not initialize reflection context for \"%s\"",
-              triple.str().c_str());
-  }
-
-  m_initialized_reflection_ctx = true;
 
   Progress progress(
       llvm::formatv("Setting up Swift reflection for '{0}'",
                     exe_module->GetFileSpec().GetFilename().AsCString()),
-      m_modules_to_add.GetSize());
+      modules_snapshot.GetSize());
 
   size_t completion = 0;
 
   // Add all defered modules to reflection context that were added to
   // the target since this SwiftLanguageRuntime was created.
-  m_modules_to_add.ForEach([&](const ModuleSP &module_sp) -> bool {
+  modules_snapshot.ForEach([&](const ModuleSP &module_sp) -> bool {
     AddModuleToReflectionContext(module_sp);
     progress.Increment(++completion);
     return true;
   });
-  m_modules_to_add.Clear();
 }
 
 bool SwiftLanguageRuntimeImpl::IsABIStable() {
