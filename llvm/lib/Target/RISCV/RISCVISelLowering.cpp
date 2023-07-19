@@ -12963,6 +12963,24 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return performTRUNCATECombine(N, DAG, Subtarget);
   case ISD::SELECT:
     return performSELECTCombine(N, DAG, Subtarget);
+  case RISCVISD::CZERO_EQZ:
+  case RISCVISD::CZERO_NEZ:
+    // czero_eq X, (xor Y, 1) -> czero_ne X, Y if Y is 0 or 1.
+    // czero_ne X, (xor Y, 1) -> czero_eq X, Y if Y is 0 or 1.
+    if (N->getOperand(1).getOpcode() == ISD::XOR &&
+        isOneConstant(N->getOperand(1).getOperand(1))) {
+      SDValue Cond = N->getOperand(1).getOperand(0);
+      APInt Mask = APInt::getBitsSetFrom(Cond.getValueSizeInBits(), 1);
+      if (DAG.MaskedValueIsZero(Cond, Mask)) {
+        unsigned NewOpc = N->getOpcode() == RISCVISD::CZERO_EQZ
+                              ? RISCVISD::CZERO_NEZ
+                              : RISCVISD::CZERO_EQZ;
+        return DAG.getNode(NewOpc, SDLoc(N), N->getValueType(0),
+                           N->getOperand(0), Cond);
+      }
+    }
+    return SDValue();
+
   case RISCVISD::SELECT_CC: {
     // Transform
     SDValue LHS = N->getOperand(0);
