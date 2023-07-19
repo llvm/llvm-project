@@ -26789,6 +26789,19 @@ static SDValue LowerEXTEND_VECTOR_INREG(SDValue Op,
   // We should only get here for sign extend.
   assert(Opc == ISD::SIGN_EXTEND_VECTOR_INREG && "Unexpected opcode!");
   assert(VT.is128BitVector() && InVT.is128BitVector() && "Unexpected VTs");
+  unsigned InNumElts = InVT.getVectorNumElements();
+
+  // If the source elements are already all-signbits, we don't need to extend,
+  // just splat the elements.
+  APInt DemandedElts = APInt::getLowBitsSet(InNumElts, NumElts);
+  if (DAG.ComputeNumSignBits(In, DemandedElts) == InVT.getScalarSizeInBits()) {
+    unsigned Scale = InNumElts / NumElts;
+    SmallVector<int, 16> ShuffleMask;
+    for (unsigned I = 0; I != NumElts; ++I)
+      ShuffleMask.append(Scale, I);
+    return DAG.getBitcast(VT,
+                          DAG.getVectorShuffle(InVT, dl, In, In, ShuffleMask));
+  }
 
   // pre-SSE41 targets unpack lower lanes and then sign-extend using SRAI.
   SDValue Curr = In;
@@ -26801,8 +26814,6 @@ static SDValue LowerEXTEND_VECTOR_INREG(SDValue Op,
 
     unsigned DestWidth = DestVT.getScalarSizeInBits();
     unsigned Scale = DestWidth / InSVT.getSizeInBits();
-
-    unsigned InNumElts = InVT.getVectorNumElements();
     unsigned DestElts = DestVT.getVectorNumElements();
 
     // Build a shuffle mask that takes each input element and places it in the
