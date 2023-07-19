@@ -295,6 +295,21 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
 }
 
 //===----------------------------------------------------------------------===//
+// ClientInfo
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value, ClientInfo &result,
+                         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  if (!o || !o.map("name", result.name))
+    return false;
+
+  // Don't fail if we can't parse version.
+  o.map("version", result.version);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
 // InitializeParams
 //===----------------------------------------------------------------------===//
 
@@ -325,6 +340,8 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
   // We deliberately don't fail if we can't parse individual fields.
   o.map("capabilities", result.capabilities);
   o.map("trace", result.trace);
+  mapOptOrNull(value, "clientInfo", result.clientInfo, path);
+
   return true;
 }
 

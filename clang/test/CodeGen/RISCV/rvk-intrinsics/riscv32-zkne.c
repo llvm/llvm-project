@@ -16,7 +16,7 @@
 // RV32ZKNE-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t aes32esi(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_aes32esi_32(rs1, rs2, 3);
+  return __builtin_riscv_aes32esi(rs1, rs2, 3);
 }
 
 // RV32ZKNE-LABEL: @aes32esmi(
@@ -31,5 +31,5 @@ uint32_t aes32esi(uint32_t rs1, uint32_t rs2) {
 // RV32ZKNE-NEXT:    ret i32 [[TMP2]]
 //
 uint32_t aes32esmi(uint32_t rs1, uint32_t rs2) {
-  return __builtin_riscv_aes32esmi_32(rs1, rs2, 3);
+  return __builtin_riscv_aes32esmi(rs1, rs2, 3);
 }

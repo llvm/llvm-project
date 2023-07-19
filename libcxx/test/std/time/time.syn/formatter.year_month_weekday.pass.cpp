@@ -143,127 +143,127 @@ template <class CharT>
 static void test_invalid_values() {
   // Test that %a, %A, %b, %B, %h, %j, %u, %U, %V, %w, %W, %Ou, %OU, %OV, %Ow, and %OW throw an exception.
   check_exception(
-      "formatting a weekday name needs a valid weekday",
+      "Formatting a weekday name needs a valid weekday",
       SV("{:%a}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{13}, 1}});
 
   check_exception(
-      "formatting a weekday name needs a valid weekday",
+      "Formatting a weekday name needs a valid weekday",
       SV("{:%A}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{13}, 1}});
 
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%b}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
 
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%B}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
 
   check_exception(
-      "formatting a month name from an invalid month number",
+      "Formatting a month name from an invalid month number",
       SV("{:%h}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
 
   check_exception(
-      "formatting a day of year needs a valid date",
+      "Formatting a day of year needs a valid date",
       SV("{:%j}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 7}});
   check_exception(
-      "formatting a day of year needs a valid date",
+      "Formatting a day of year needs a valid date",
       SV("{:%j}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{13}, 1}});
   check_exception(
-      "formatting a day of year needs a valid date",
+      "Formatting a day of year needs a valid date",
       SV("{:%j}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
   check_exception(
-      "formatting a day of year needs a valid date",
+      "Formatting a day of year needs a valid date",
       SV("{:%j}"),
       std::chrono::year_month_weekday{
           std::chrono::year{-32768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
 
   check_exception(
-      "formatting a weekday needs a valid weekday",
+      "Formatting a weekday needs a valid weekday",
       SV("{:%u}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{13}, 1}});
 
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%U}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 7}});
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%U}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{13}, 1}});
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%U}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%U}"),
       std::chrono::year_month_weekday{
           std::chrono::year{-32768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
 
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%V}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 7}});
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%V}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{13}, 1}});
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%V}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%V}"),
       std::chrono::year_month_weekday{
           std::chrono::year{-32768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
 
   check_exception(
-      "formatting a weekday needs a valid weekday",
+      "Formatting a weekday needs a valid weekday",
       SV("{:%w}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{13}, 1}});
 
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%W}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 7}});
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%W}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{13}, 1}});
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%W}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
   check_exception(
-      "formatting a week of year needs a valid date",
+      "Formatting a week of year needs a valid date",
       SV("{:%W}"),
       std::chrono::year_month_weekday{
           std::chrono::year{-32768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
@@ -693,17 +693,17 @@ static void test() {
           std::chrono::year{1970}, std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
 
   check_exception(
-      "Expected '%' or '}' in the chrono format-string",
+      "The format specifier expects a '%' or a '}'",
       SV("{:A"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
   check_exception(
-      "The chrono-specs contains a '{'",
+      "The chrono specifiers contain a '{'",
       SV("{:%%{"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
   check_exception(
-      "End of input while parsing the modifier chrono conversion-spec",
+      "End of input while parsing a conversion specifier",
       SV("{:%"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});
@@ -720,7 +720,7 @@ static void test() {
 
   // Precision not allowed
   check_exception(
-      "Expected '%' or '}' in the chrono format-string",
+      "The format specifier expects a '%' or a '}'",
       SV("{:.3}"),
       std::chrono::year_month_weekday{
           std::chrono::year{1970}, std::chrono::January, std::chrono::weekday_indexed{std::chrono::weekday{1}, 1}});

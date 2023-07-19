@@ -127,13 +127,13 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __arg_t arg(size_t __id) const {
     if (__id >= __size_)
-      std::__throw_format_error("Argument index out of bounds");
+      std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
     return __args_[__id];
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const __compile_time_handle<_CharT>& __handle(size_t __id) const {
     if (__id >= __size_)
-      std::__throw_format_error("Argument index out of bounds");
+      std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
     return __handles_[__id];
   }
 
@@ -256,13 +256,13 @@ __handle_replacement_field(_Iterator __begin, _Iterator __end,
     __parse_ctx.advance_to(__r.__last);
     break;
   default:
-    std::__throw_format_error("The replacement field arg-id should terminate at a ':' or '}'");
+    std::__throw_format_error("The argument index should end with a ':' or a '}'");
   }
 
   if constexpr (same_as<_Ctx, __compile_time_basic_format_context<_CharT>>) {
     __arg_t __type = __ctx.arg(__r.__value);
     if (__type == __arg_t::__none)
-      std::__throw_format_error("Argument index out of bounds");
+      std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
     else if (__type == __arg_t::__handle)
       __ctx.__handle(__r.__value).__parse(__parse_ctx);
     else if (__parse)
@@ -271,7 +271,7 @@ __handle_replacement_field(_Iterator __begin, _Iterator __end,
     _VSTD::__visit_format_arg(
         [&](auto __arg) {
           if constexpr (same_as<decltype(__arg), monostate>)
-            std::__throw_format_error("Argument index out of bounds");
+            std::__throw_format_error("The argument index value is too large for the number of arguments supplied");
           else if constexpr (same_as<decltype(__arg), typename basic_format_arg<_Ctx>::handle>)
             __arg.format(__parse_ctx, __ctx);
           else {

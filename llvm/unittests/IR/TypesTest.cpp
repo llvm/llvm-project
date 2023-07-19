@@ -35,19 +35,6 @@ TEST(TypesTest, LayoutIdenticalEmptyStructs) {
   EXPECT_TRUE(Foo->isLayoutIdentical(Bar));
 }
 
-TEST(TypesTest, CopyPointerType) {
-  LLVMContext C;
-
-  PointerType *P1 = PointerType::get(C, 1);
-  EXPECT_TRUE(P1->isOpaque());
-  PointerType *P1C = PointerType::getWithSamePointeeType(P1, 1);
-  EXPECT_EQ(P1, P1C);
-  EXPECT_TRUE(P1C->isOpaque());
-  PointerType *P1C0 = PointerType::getWithSamePointeeType(P1, 0);
-  EXPECT_NE(P1, P1C0);
-  EXPECT_TRUE(P1C0->isOpaque());
-}
-
 TEST(TypesTest, TargetExtType) {
   LLVMContext Context;
   Type *A = TargetExtType::get(Context, "typea");

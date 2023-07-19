@@ -350,4 +350,23 @@ TEST(SolverTest, LowTimeoutResultsInTimedOut) {
   EXPECT_EQ(solver.solve({A, B}).getStatus(), Solver::Result::Status::TimedOut);
 }
 
+TEST(SolverTest, ReachedLimitsReflectsTimeouts) {
+  WatchedLiteralsSolver solver(10);
+  ConstraintContext Ctx;
+  auto X = Ctx.atom();
+  auto Y = Ctx.atom();
+  auto Z = Ctx.atom();
+  auto W = Ctx.atom();
+
+  // !(X v Y) <=> !X ^ !Y
+  auto A = Ctx.iff(Ctx.neg(Ctx.disj(X, Y)), Ctx.conj(Ctx.neg(X), Ctx.neg(Y)));
+
+  // !(Z ^ W) <=> !Z v !W
+  auto B = Ctx.iff(Ctx.neg(Ctx.conj(Z, W)), Ctx.disj(Ctx.neg(Z), Ctx.neg(W)));
+
+  // A ^ B
+  ASSERT_EQ(solver.solve({A, B}).getStatus(), Solver::Result::Status::TimedOut);
+  EXPECT_TRUE(solver.reachedLimit());
+}
+
 } // namespace

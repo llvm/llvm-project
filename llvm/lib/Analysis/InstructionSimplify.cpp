@@ -4256,12 +4256,15 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (V == Op)
     return RepOp;
 
+  if (!MaxRecurse--)
+    return nullptr;
+
   // We cannot replace a constant, and shouldn't even try.
   if (isa<Constant>(Op))
     return nullptr;
 
   auto *I = dyn_cast<Instruction>(V);
-  if (!I || !is_contained(I->operands(), Op))
+  if (!I)
     return nullptr;
 
   // The arguments of a phi node might refer to a value from a previous
@@ -4272,15 +4275,26 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   if (Op->getType()->isVectorTy()) {
     // For vector types, the simplification must hold per-lane, so forbid
     // potentially cross-lane operations like shufflevector.
-    assert(I->getType()->isVectorTy() && "Vector type mismatch");
-    if (isa<ShuffleVectorInst>(I) || isa<CallBase>(I))
+    if (!I->getType()->isVectorTy() || isa<ShuffleVectorInst>(I) ||
+        isa<CallBase>(I))
       return nullptr;
   }
 
   // Replace Op with RepOp in instruction operands.
-  SmallVector<Value *, 8> NewOps(I->getNumOperands());
-  transform(I->operands(), NewOps.begin(),
-            [&](Value *V) { return V == Op ? RepOp : V; });
+  SmallVector<Value *, 8> NewOps;
+  bool AnyReplaced = false;
+  for (Value *InstOp : I->operands()) {
+    if (Value *NewInstOp = simplifyWithOpReplaced(
+            InstOp, Op, RepOp, Q, AllowRefinement, MaxRecurse)) {
+      NewOps.push_back(NewInstOp);
+      AnyReplaced = InstOp != NewInstOp;
+    } else {
+      NewOps.push_back(InstOp);
+    }
+  }
+
+  if (!AnyReplaced)
+    return nullptr;
 
   if (!AllowRefinement) {
     // General InstSimplify functions may refine the result, e.g. by returning
@@ -4305,10 +4319,8 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       // by assumption and this case never wraps, so nowrap flags can be
       // ignored.
       if ((Opcode == Instruction::Sub || Opcode == Instruction::Xor) &&
-          NewOps[0] == NewOps[1]) {
-        assert(NewOps[0] == RepOp && "Precondition for non-poison assumption");
+          NewOps[0] == RepOp && NewOps[1] == RepOp)
         return Constant::getNullValue(I->getType());
-      }
 
       // If we are substituting an absorber constant into a binop and extra
       // poison can't leak if we remove the select -- because both operands of
@@ -4317,9 +4329,11 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       // (Op == 0) ? 0 : (Op & -Op)            --> Op & -Op
       // (Op == 0) ? 0 : (Op * (binop Op, C))  --> Op * (binop Op, C)
       // (Op == -1) ? -1 : (Op | (binop C, Op) --> Op | (binop C, Op)
-      if (RepOp == ConstantExpr::getBinOpAbsorber(Opcode, I->getType()) &&
+      Constant *Absorber =
+          ConstantExpr::getBinOpAbsorber(Opcode, I->getType());
+      if ((NewOps[0] == Absorber || NewOps[1] == Absorber) &&
           impliesPoison(BO, Op))
-        return RepOp;
+        return Absorber;
     }
 
     if (isa<GetElementPtrInst>(I)) {
@@ -4328,7 +4342,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       if (NewOps.size() == 2 && match(NewOps[1], m_Zero()))
         return NewOps[0];
     }
-  } else if (MaxRecurse) {
+  } else {
     // The simplification queries below may return the original value. Consider:
     //   %div = udiv i32 %arg, %arg2
     //   %mul = mul nsw i32 %div, %arg2
@@ -4343,7 +4357,7 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
     };
 
     return PreventSelfSimplify(
-        ::simplifyInstructionWithOperands(I, NewOps, Q, MaxRecurse - 1));
+        ::simplifyInstructionWithOperands(I, NewOps, Q, MaxRecurse));
   }
 
   // If all operands are constant after substituting Op for RepOp then we can

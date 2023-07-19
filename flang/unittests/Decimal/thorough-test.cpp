@@ -51,7 +51,8 @@ void testReadback(float x, int flags) {
       if (*q == '-' || *q == '+') {
         ++expo;
       }
-      std::snprintf(q + result.length, sizeof buffer, "e%d", expo);
+      std::snprintf(q + result.length,
+          buffer + sizeof buffer - (q + result.length), "e%d", expo);
     }
     const char *p{q};
     auto rflags{ConvertDecimalToFloat(&p, &y, RoundNearest)};

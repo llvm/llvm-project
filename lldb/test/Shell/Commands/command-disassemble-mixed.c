@@ -1,6 +1,6 @@
 // invalid mixed disassembly line
 
-// RUN: %clang -g %s -o %t
+// RUN: %clang_host -g %s -o %t
 // RUN: %lldb %t -o "dis -m -n main" -o "exit" | FileCheck %s
 
 // CHECK: int main

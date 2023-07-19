@@ -960,8 +960,24 @@ entry:
   ret void
 }
 
+define <vscale x 1 x i16> @test_vaaddu(<vscale x 1 x i16> %var_11, i16 zeroext %var_9, <vscale x 1 x i1> %var_5, <vscale x 1 x i16> %var_0) {
+; CHECK-LABEL: test_vaaddu:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 3, e16, mf4, ta, mu
+; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    vaaddu.vx v9, v8, a0, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    ret
+entry:
+  %0 = tail call <vscale x 1 x i16> @llvm.riscv.vaaddu.nxv1i16.i16.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> %var_11, i16 %var_9, i64 0, i64 3)
+  %1 = tail call <vscale x 1 x i16> @llvm.riscv.vmerge.nxv1i16.nxv1i16.i64(<vscale x 1 x i16> poison, <vscale x 1 x i16> %var_0, <vscale x 1 x i16> %0, <vscale x 1 x i1> %var_5, i64 3)
+  ret <vscale x 1 x i16> %1
+}
+
 declare <vscale x 32 x i16> @llvm.riscv.vle.nxv32i16.i64(<vscale x 32 x i16>, <vscale x 32 x i16>* nocapture, i64)
 declare <vscale x 32 x i8> @llvm.riscv.vssubu.mask.nxv32i8.i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i8, <vscale x 32 x i1>, i64, i64 immarg)
 declare <vscale x 32 x i1> @llvm.riscv.vmseq.nxv32i8.nxv32i8.i64(<vscale x 32 x i8>, <vscale x 32 x i8>, i64)
 declare <vscale x 32 x i16> @llvm.riscv.vmerge.nxv32i16.nxv32i16.i64(<vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i1>, i64)
 declare void @llvm.riscv.vse.nxv32i16.i64(<vscale x 32 x i16>, <vscale x 32 x i16>* nocapture, i64)
+declare <vscale x 1 x i16> @llvm.riscv.vaaddu.nxv1i16.i16.i64(<vscale x 1 x i16>, <vscale x 1 x i16>, i16, i64 immarg, i64)
+declare <vscale x 1 x i16> @llvm.riscv.vmerge.nxv1i16.nxv1i16.i64(<vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i1>, i64)

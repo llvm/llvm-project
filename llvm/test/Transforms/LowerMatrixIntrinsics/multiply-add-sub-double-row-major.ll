@@ -47,7 +47,7 @@ define void @multiply_sub_add_2x3_3x2(ptr %a.ptr, ptr %b.ptr, ptr %c.ptr) {
 ; RM-NEXT:    [[TMP11:%.*]] = fmul <1 x double> [[SPLAT_SPLAT15]], [[BLOCK13]]
 ; RM-NEXT:    [[TMP12:%.*]] = fadd <1 x double> [[TMP9]], [[TMP11]]
 ; RM-NEXT:    [[TMP13:%.*]] = shufflevector <1 x double> [[TMP12]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
-; RM-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> undef, <2 x double> [[TMP13]], <2 x i32> <i32 2, i32 1>
+; RM-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP13]], <2 x i32> <i32 2, i32 1>
 ; RM-NEXT:    [[BLOCK16:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP15:%.*]] = extractelement <3 x double> [[TMP0]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT17:%.*]] = insertelement <1 x double> poison, double [[TMP15]], i64 0
@@ -85,7 +85,7 @@ define void @multiply_sub_add_2x3_3x2(ptr %a.ptr, ptr %b.ptr, ptr %c.ptr) {
 ; RM-NEXT:    [[TMP31:%.*]] = fmul <1 x double> [[SPLAT_SPLAT33]], [[BLOCK31]]
 ; RM-NEXT:    [[TMP32:%.*]] = fadd <1 x double> [[TMP29]], [[TMP31]]
 ; RM-NEXT:    [[TMP33:%.*]] = shufflevector <1 x double> [[TMP32]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
-; RM-NEXT:    [[TMP34:%.*]] = shufflevector <2 x double> undef, <2 x double> [[TMP33]], <2 x i32> <i32 2, i32 1>
+; RM-NEXT:    [[TMP34:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP33]], <2 x i32> <i32 2, i32 1>
 ; RM-NEXT:    [[BLOCK34:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP35:%.*]] = extractelement <3 x double> [[TMP1]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT35:%.*]] = insertelement <1 x double> poison, double [[TMP35]], i64 0

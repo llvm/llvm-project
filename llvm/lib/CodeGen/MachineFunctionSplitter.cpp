@@ -106,16 +106,24 @@ static void finishAdjustingBasicBlocksAndLandingPads(MachineFunction &MF) {
 
 static bool isColdBlock(const MachineBasicBlock &MBB,
                         const MachineBlockFrequencyInfo *MBFI,
-                        ProfileSummaryInfo *PSI, bool HasAccurateProfile) {
+                        ProfileSummaryInfo *PSI) {
   std::optional<uint64_t> Count = MBFI->getBlockProfileCount(&MBB);
-  // If using accurate profile, no count means cold.
-  // If no accurate profile, no count means "do not judge
-  // coldness".
-  if (!Count)
-    return HasAccurateProfile;
+  // For instrumentation profiles and sample profiles, we use different ways
+  // to judge whether a block is cold and should be split.
+  if (PSI->hasInstrumentationProfile() || PSI->hasCSInstrumentationProfile()) {
+    // If using instrument profile, which is deemed "accurate", no count means
+    // cold.
+    if (!Count)
+      return true;
+    if (PercentileCutoff > 0)
+      return PSI->isColdCountNthPercentile(PercentileCutoff, *Count);
+    // Fallthrough to end of function.
+  } else if (PSI->hasSampleProfile()) {
+    // For sample profile, no count means "do not judege coldness".
+    if (!Count)
+      return false;
+  }
 
-  if (PercentileCutoff > 0)
-    return PSI->isColdCountNthPercentile(PercentileCutoff, *Count);
   return (*Count < ColdCountThreshold);
 }
 
@@ -152,22 +160,14 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
   MachineBlockFrequencyInfo *MBFI = nullptr;
   ProfileSummaryInfo *PSI = nullptr;
-  // Whether this pass is using FSAFDO profile (not accurate) or IRPGO
-  // (accurate). HasAccurateProfile is only used when UseProfileData is true,
-  // but giving it a default value to silent any possible warning.
-  bool HasAccurateProfile = false;
   if (UseProfileData) {
     MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
     PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-    // "HasAccurateProfile" is false for FSAFDO, true when using IRPGO
-    // (traditional instrumented FDO) or CSPGO profiles.
-    HasAccurateProfile =
-        PSI->hasInstrumentationProfile() || PSI->hasCSInstrumentationProfile();
-    // If HasAccurateProfile is false, we only trust hot functions,
-    // which have many samples, and consider them as split
-    // candidates. On the other hand, if HasAccurateProfile (likeIRPGO), we
-    // trust both cold and hot functions.
-    if (!HasAccurateProfile && !PSI->isFunctionHotInCallGraph(&MF, *MBFI)) {
+    // If we don't have a good profile (sample profile is not deemed
+    // as a "good profile") and the function is not hot, then early
+    // return. (Because we can only trust hot functions when profile
+    // quality is not good.)
+    if (PSI->hasSampleProfile() && !PSI->isFunctionHotInCallGraph(&MF, *MBFI)) {
       // Split all EH code and it's descendant statically by default.
       if (SplitAllEHCode)
         setDescendantEHBlocksCold(MF);
@@ -183,8 +183,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
 
     if (MBB.isEHPad())
       LandingPads.push_back(&MBB);
-    else if (UseProfileData &&
-             isColdBlock(MBB, MBFI, PSI, HasAccurateProfile) && !SplitAllEHCode)
+    else if (UseProfileData && isColdBlock(MBB, MBFI, PSI) && !SplitAllEHCode)
       MBB.setSectionID(MBBSectionID::ColdSectionID);
   }
 
@@ -196,7 +195,7 @@ bool MachineFunctionSplitter::runOnMachineFunction(MachineFunction &MF) {
     // Here we have UseProfileData == true.
     bool HasHotLandingPads = false;
     for (const MachineBasicBlock *LP : LandingPads) {
-      if (!isColdBlock(*LP, MBFI, PSI, HasAccurateProfile))
+      if (!isColdBlock(*LP, MBFI, PSI))
         HasHotLandingPads = true;
     }
     if (!HasHotLandingPads) {

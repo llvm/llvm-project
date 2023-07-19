@@ -42,9 +42,30 @@ static void test_no_chrono_specs() {
   std::locale::global(std::locale(LOCALE_fr_FR_UTF_8));
 
   // Non localized output
+
+  // [time.syn]
+  //   using nanoseconds  = duration<signed integer type of at least 64 bits, nano>;
+  //   using microseconds = duration<signed integer type of at least 55 bits, micro>;
+  //   using milliseconds = duration<signed integer type of at least 45 bits, milli>;
+  //   using seconds      = duration<signed integer type of at least 35 bits>;
+  //   using minutes      = duration<signed integer type of at least 29 bits, ratio<  60>>;
+  //   using hours        = duration<signed integer type of at least 23 bits, ratio<3600>>;
+  check(
+      SV("1425-08-04 22:06:56"), SV("{}"), std::chrono::local_seconds(-17'179'869'184s)); // Minimum value for 35 bits.
+  check(SV("1901-12-13 20:45:52"), SV("{}"), std::chrono::local_seconds(-2'147'483'648s));
+
+  check(SV("1969-12-31 00:00:00"), SV("{}"), std::chrono::local_seconds(-24h));
+  check(SV("1969-12-31 06:00:00"), SV("{}"), std::chrono::local_seconds(-18h));
+  check(SV("1969-12-31 12:00:00"), SV("{}"), std::chrono::local_seconds(-12h));
+  check(SV("1969-12-31 18:00:00"), SV("{}"), std::chrono::local_seconds(-6h));
+  check(SV("1969-12-31 23:59:59"), SV("{}"), std::chrono::local_seconds(-1s));
+
   check(SV("1970-01-01 00:00:00"), SV("{}"), std::chrono::local_seconds(0s));
   check(SV("2000-01-01 00:00:00"), SV("{}"), std::chrono::local_seconds(946'684'800s));
   check(SV("2000-01-01 01:02:03"), SV("{}"), std::chrono::local_seconds(946'688'523s));
+
+  check(SV("2038-01-19 03:14:07"), SV("{}"), std::chrono::local_seconds(2'147'483'647s));
+  check(SV("2514-05-30 01:53:03"), SV("{}"), std::chrono::local_seconds(17'179'869'183s)); // Maximum value for 35 bits.
 
   check(SV("2000-01-01 01:02:03.123"), SV("{}"), std::chrono::local_time<std::chrono::milliseconds>(946'688'523'123ms));
 
@@ -886,15 +907,14 @@ static void test() {
       },
       std::chrono::local_seconds(0s));
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::local_seconds(0s));
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::local_seconds(0s));
-  check_exception(
-      "End of input while parsing the modifier chrono conversion-spec", SV("{:%"), std::chrono::local_seconds(0s));
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::local_seconds(0s));
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::local_seconds(0s));
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), std::chrono::local_seconds(0s));
   check_exception("End of input while parsing the modifier E", SV("{:%E"), std::chrono::local_seconds(0s));
   check_exception("End of input while parsing the modifier O", SV("{:%O"), std::chrono::local_seconds(0s));
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), std::chrono::local_seconds(0s));
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::local_seconds(0s));
 }
 
 int main(int, char**) {

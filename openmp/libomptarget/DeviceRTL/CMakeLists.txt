@@ -184,7 +184,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       COMMENT "Building LLVM bitcode ${outfile}"
       VERBATIM
     )
-    if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
+    if(TARGET clang)
       # Add a target-level dependency to ensure that clang is up-to-date.
       # By default, add_custom_target only builds clang if the
       # executable is missing.
@@ -315,19 +315,19 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
   # Add a target-level dependency to ensure that llvm-link and opt are up-to-date.
   # By default, add_custom_target only builds the tool if the executable is missing
-  if("${LINK_TOOL}" STREQUAL "$<TARGET_FILE:llvm-link>")
+  if(TARGET llvm-link)
     add_dependencies(linked_${bclib_name} llvm-link)
   endif()
-  if("${OPT_TOOL}" STREQUAL "$<TARGET_FILE:opt>")
+  if(TARGET opt)
     add_dependencies(${bclib_name} opt)
   endif()
   if("${EXTRACT_TOOL}" STREQUAL "$<TARGET_FILE:llvm-extract>")
     add_dependencies(extracted_${bclib_name} llvm-extract)
   endif()
-  if("${PACKAGER_TOOL}" STREQUAL "$<TARGET_FILE:clang-offload-packager>")
+   if(TARGET clang-offload-packager) 
     add_dependencies(packaged_${bclib_name} clang-offload-packager)
   endif()
-  if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
+  if(TARGET clang)  
     add_dependencies(embedded_${target_name}-${target_cpu} clang)
   endif()
 

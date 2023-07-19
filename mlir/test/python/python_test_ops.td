@@ -10,7 +10,6 @@
 #define PYTHON_TEST_OPS
 
 include "mlir/IR/AttrTypeBase.td"
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 

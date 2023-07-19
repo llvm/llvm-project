@@ -473,4 +473,47 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
   let hasCanonicalizer = 1;
 }
 
+def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<InferTypeOpInterface>
+  ]> {
+  let summary = "deallocates the given memrefs if no alias is retained";
+  let description = [{
+    This operation deallocates each of the given memrefs if there is no alias
+    to that memref in the list of retained memrefs and the corresponding
+    condition value is set. This condition can be used to indicate and pass on
+    ownership of memref values (or in other words, the responsibility of
+    deallocating that memref). If two memrefs alias each other, only one will be
+    deallocated to avoid double free situations.
+
+    The memrefs to be deallocated must be the originally allocated memrefs,
+    however, the memrefs to be retained may be arbitrary memrefs.
+
+    Returns a list of conditions corresponding to the list of memrefs which
+    indicates the new ownerships, i.e., if the memref was deallocated the
+    ownership was dropped (set to 'false') and otherwise will be the same as the
+    input condition.
+
+    Example:
+    ```mlir
+    %0:2 = bufferization.dealloc %a0, %a1 if %cond0, %cond1 retain %r0, %r1 :
+      memref<2xf32>, memref<4xi32> retain memref<?xf32>, memref<f64>
+    ```
+    Deallocation will be called on `%a0` if `%cond0` is 'true' and neither `%r0`
+    or `%r1` are aliases of `%a0`. `%a1` will be deallocated when `%cond1` is
+    set to 'true' and none of `%r0`, %r1` and `%a0` are aliases.
+  }];
+
+  let arguments = (ins Variadic<AnyRankedOrUnrankedMemRef>:$memrefs,
+                       Variadic<I1>:$conditions,
+                       Variadic<AnyRankedOrUnrankedMemRef>:$retained);
+  let results = (outs Variadic<I1>:$updatedConditions);
+
+  let assemblyFormat = [{
+    (` ``(` $memrefs^ `:` type($memrefs) `)` `if` ` ` `(` $conditions `)` )?
+    (`retain` ` ` `(` $retained^ `:` type($retained) `)` )? attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif // BUFFERIZATION_OPS

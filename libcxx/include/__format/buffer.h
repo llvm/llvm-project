@@ -529,6 +529,7 @@ public:
 
   struct __iterator {
     using difference_type = ptrdiff_t;
+    using value_type      = _CharT;
 
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(__retarget_buffer& __buffer)
         : __buffer_(std::addressof(__buffer)) {}
@@ -551,7 +552,14 @@ public:
   __retarget_buffer& operator=(const __retarget_buffer&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI explicit __retarget_buffer(size_t __size_hint) {
-    auto __result = std::__allocate_at_least(__alloc_, __size_hint ? __size_hint : 256 / sizeof(_CharT));
+    // When the initial size is very small a lot of resizes happen
+    // when elements added. So use a hard-coded minimum size.
+    //
+    // Note a size < 2 will not work
+    // - 0 there is no buffer, while push_back requires 1 empty element.
+    // - 1 multiplied by the grow factor is 1 and thus the buffer never
+    //   grows.
+    auto __result = std::__allocate_at_least(__alloc_, std::max(__size_hint, 256 / sizeof(_CharT)));
     __ptr_        = __result.ptr;
     __capacity_   = __result.count;
   }
