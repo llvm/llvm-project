@@ -4726,9 +4726,12 @@ static unsigned getRISCVVLOp(SDValue Op) {
 /// Return true if a RISC-V target specified op has a merge operand.
 static bool hasMergeOp(unsigned Opcode) {
   assert(Opcode > RISCVISD::FIRST_NUMBER &&
-         Opcode <= RISCVISD::STRICT_VFROUND_NOEXCEPT_VL &&
+         Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
-  assert(RISCVISD::STRICT_VFROUND_NOEXCEPT_VL - RISCVISD::FIRST_NUMBER == 421 &&
+  assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 122 &&
+         RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
+                 ISD::FIRST_TARGET_STRICTFP_OPCODE ==
+             21 &&
          "adding target specific op should update this function");
   if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::FMAXNUM_VL)
     return true;
@@ -4744,9 +4747,12 @@ static bool hasMergeOp(unsigned Opcode) {
 /// Return true if a RISC-V target specified op has a mask operand.
 static bool hasMaskOp(unsigned Opcode) {
   assert(Opcode > RISCVISD::FIRST_NUMBER &&
-         Opcode <= RISCVISD::STRICT_VFROUND_NOEXCEPT_VL &&
+         Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
-  assert(RISCVISD::STRICT_VFROUND_NOEXCEPT_VL - RISCVISD::FIRST_NUMBER == 421 &&
+  assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP == 122 &&
+         RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
+                 ISD::FIRST_TARGET_STRICTFP_OPCODE ==
+             21 &&
          "adding target specific op should update this function");
   if (Opcode >= RISCVISD::TRUNCATE_VECTOR_VL && Opcode <= RISCVISD::SETCC_VL)
     return true;

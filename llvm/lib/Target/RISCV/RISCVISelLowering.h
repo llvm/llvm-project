@@ -143,10 +143,11 @@ enum NodeType : unsigned {
   SM3P0, SM3P1,
 
   // Vector Extension
+  FIRST_VL_VECTOR_OP,
   // VMV_V_V_VL matches the semantics of vmv.v.v but includes an extra operand
   // for the VL value to be used for the operation. The first operand is
   // passthru operand.
-  VMV_V_V_VL,
+  VMV_V_V_VL = FIRST_VL_VECTOR_OP,
   // VMV_V_X_VL matches the semantics of vmv.v.x but includes an extra operand
   // for the VL value to be used for the operation. The first operand is
   // passthru operand.
@@ -166,8 +167,6 @@ enum NodeType : unsigned {
   // expanded late to two scalar stores and a stride 0 vector load.
   // The first operand is passthru operand.
   SPLAT_VECTOR_SPLIT_I64_VL,
-  // Read VLENB CSR
-  READ_VLENB,
   // Truncates a RVV integer vector by one power-of-two. Carries both an extra
   // mask and VL operand.
   TRUNCATE_VECTOR_VL,
@@ -360,6 +359,10 @@ enum NodeType : unsigned {
   //  vfirst.m with additional mask and VL operands.
   VFIRST_VL,
 
+  LAST_VL_VECTOR_OP = VFIRST_VL,
+
+  // Read VLENB CSR
+  READ_VLENB,
   // Reads value of CSR.
   // The first operand is a chain pointer. The second specifies address of the
   // required CSR. Two results are produced, the read value and the new chain
@@ -405,6 +408,7 @@ enum NodeType : unsigned {
   STRICT_FSETCC_VL,
   STRICT_FSETCCS_VL,
   STRICT_VFROUND_NOEXCEPT_VL,
+  LAST_RISCV_STRICTFP_OPCODE = STRICT_VFROUND_NOEXCEPT_VL,
 
   // WARNING: Do not add anything in the end unless you want the node to
   // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
