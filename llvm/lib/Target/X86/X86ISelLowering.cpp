@@ -8825,6 +8825,29 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     Mask.append(NumElts, 0);
     return true;
   }
+  case ISD::SIGN_EXTEND_VECTOR_INREG: {
+    SDValue Src = N.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    unsigned NumBitsPerSrcElt = SrcVT.getScalarSizeInBits();
+
+    // Extended source must be a simple vector.
+    if (!SrcVT.isSimple() || (SrcVT.getSizeInBits() % 128) != 0 ||
+        (NumBitsPerSrcElt % 8) != 0)
+      return false;
+
+    // We can only handle all-signbits extensions.
+    APInt DemandedSrcElts =
+        DemandedElts.zextOrTrunc(SrcVT.getVectorNumElements());
+    if (DAG.ComputeNumSignBits(Src, DemandedSrcElts) != NumBitsPerSrcElt)
+      return false;
+
+    assert((NumBitsPerElt % NumBitsPerSrcElt) == 0 && "Unexpected extension");
+    unsigned Scale = NumBitsPerElt / NumBitsPerSrcElt;
+    for (unsigned I = 0; I != NumElts; ++I)
+      Mask.append(Scale, I);
+    Ops.push_back(Src);
+    return true;
+  }
   case ISD::ZERO_EXTEND:
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND_VECTOR_INREG:
@@ -58086,9 +58109,7 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
   }
 
   // Attempt to combine as a shuffle on SSE41+ targets.
-  if ((Opcode == ISD::ANY_EXTEND_VECTOR_INREG ||
-       Opcode == ISD::ZERO_EXTEND_VECTOR_INREG) &&
-      Subtarget.hasSSE41()) {
+  if (Subtarget.hasSSE41()) {
     SDValue Op(N, 0);
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getValueType()))
       if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
