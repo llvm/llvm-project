@@ -424,6 +424,15 @@ Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
                                        LoopInfo *LI = nullptr,
                                        BasicBlock *ThenBlock = nullptr);
 
+/// Similar to SplitBlockAndInsertIfThen, but the inserted block is on the false
+/// path of the branch.
+Instruction *SplitBlockAndInsertIfElse(Value *Cond, Instruction *SplitBefore,
+                                       bool Unreachable,
+                                       MDNode *BranchWeights = nullptr,
+                                       DomTreeUpdater *DTU = nullptr,
+                                       LoopInfo *LI = nullptr,
+                                       BasicBlock *ElseBlock = nullptr);
+
 /// SplitBlockAndInsertIfThenElse is similar to SplitBlockAndInsertIfThen,
 /// but also creates the ElseBlock.
 /// Before:
