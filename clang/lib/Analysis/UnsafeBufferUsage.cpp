@@ -1385,8 +1385,18 @@ getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
   TypeLoc PteTyLoc = TyLoc.getUnqualifiedLoc().getNextTypeLoc();
   SourceLocation VDNameStartLoc = VD->getLocation();
 
-  if (!SM.isBeforeInTranslationUnit(PteTyLoc.getSourceRange().getEnd(),
-                                    VDNameStartLoc)) {
+  if (!(VDNameStartLoc.isValid() && PteTyLoc.getSourceRange().isValid())) {
+    // We are expecting these locations to be valid. But in some cases, they are
+    // not all valid. It is a Clang bug to me and we are not responsible for
+    // fixing it.  So we will just give up for now when it happens.
+    return std::nullopt;
+  }
+
+  // Note that TypeLoc.getEndLoc() returns the begin location of the last token:
+  SourceLocation PteEndOfTokenLoc =
+      Lexer::getLocForEndOfToken(PteTyLoc.getEndLoc(), 0, SM, LangOpts);
+
+  if (!SM.isBeforeInTranslationUnit(PteEndOfTokenLoc, VDNameStartLoc)) {
     // We only deal with the cases where the source text of the pointee type
     // appears on the left-hand side of the variable identifier completely,
     // including the following forms:
@@ -1401,13 +1411,8 @@ getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
     // `PteTy` via source ranges.
     *QualifiersToAppend = PteTy.getQualifiers();
   }
-
-  // Note that TypeLoc.getEndLoc() returns the begin location of the last token:
-  SourceRange CSR{
-      PteTyLoc.getBeginLoc(),
-      Lexer::getLocForEndOfToken(PteTyLoc.getEndLoc(), 0, SM, LangOpts)};
-
-  return getRangeText(CSR, SM, LangOpts)->str();
+  return getRangeText({PteTyLoc.getBeginLoc(), PteEndOfTokenLoc}, SM, LangOpts)
+      ->str();
 }
 
 // Returns the text of the name (with qualifiers) of a `FunctionDecl`.
