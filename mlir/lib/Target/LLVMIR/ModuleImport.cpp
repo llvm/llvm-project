@@ -76,12 +76,6 @@ static constexpr StringRef getGlobalDtorsVarName() {
   return "llvm.global_dtors";
 }
 
-/// Returns the symbol name for the module-level metadata operation. It must not
-/// conflict with the user namespace.
-static constexpr StringRef getGlobalMetadataOpName() {
-  return "__llvm_global_metadata";
-}
-
 /// Returns the symbol name for the module-level comdat operation. It must not
 /// conflict with the user namespace.
 static constexpr StringRef getGlobalComdatOpName() {
@@ -166,18 +160,6 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
-MetadataOp ModuleImport::getGlobalMetadataOp() {
-  if (globalMetadataOp)
-    return globalMetadataOp;
-
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(mlirModule.getBody());
-  globalMetadataOp = builder.create<MetadataOp>(mlirModule.getLoc(),
-                                                getGlobalMetadataOpName());
-  globalInsertionOp = globalMetadataOp;
-  return globalMetadataOp;
-}
-
 ComdatOp ModuleImport::getGlobalComdatOp() {
   if (globalComdatOp)
     return globalComdatOp;
@@ -192,34 +174,21 @@ ComdatOp ModuleImport::getGlobalComdatOp() {
 
 LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   Location loc = mlirModule.getLoc();
-  SmallVector<const llvm::MDNode *> workList;
-  SetVector<const llvm::MDNode *> nodesToConvert;
-  workList.push_back(node);
-  while (!workList.empty()) {
-    const llvm::MDNode *current = workList.pop_back_val();
-    if (tbaaMapping.contains(current))
-      continue;
-    // Allow cycles in TBAA metadata. Just import it as-is,
-    // and diagnose the problem during LLVMIR dialect verification.
-    if (!nodesToConvert.insert(current))
-      continue;
-    for (const llvm::MDOperand &operand : current->operands())
-      if (auto *opNode = dyn_cast_or_null<const llvm::MDNode>(operand.get()))
-        workList.push_back(opNode);
-  }
 
-  // If `node` is a valid TBAA root node, then return its identity
-  // string, otherwise return std::nullopt.
+  // If `node` is a valid TBAA root node, then return its optional identity
+  // string, otherwise return failure.
   auto getIdentityIfRootNode =
-      [&](const llvm::MDNode *node) -> std::optional<StringRef> {
+      [&](const llvm::MDNode *node) -> FailureOr<std::optional<StringRef>> {
     // Root node, e.g.:
     //   !0 = !{!"Simple C/C++ TBAA"}
-    if (node->getNumOperands() != 1)
-      return std::nullopt;
+    //   !1 = !{}
+    if (node->getNumOperands() > 1)
+      return failure();
     // If the operand is MDString, then assume that this is a root node.
-    if (const auto *op0 = dyn_cast<const llvm::MDString>(node->getOperand(0)))
-      return op0->getString();
-    return std::nullopt;
+    if (node->getNumOperands() == 1)
+      if (const auto *op0 = dyn_cast<const llvm::MDString>(node->getOperand(0)))
+        return std::optional<StringRef>{op0->getString()};
+    return std::optional<StringRef>{};
   };
 
   // If `node` looks like a TBAA type descriptor metadata,
@@ -229,11 +198,10 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   // If `identity` and `memberTypes/Offsets` are non-null, then they will
   // contain the converted metadata operands for a valid TBAA node (i.e. when
   // true is returned).
-  auto isTypeDescriptorNode =
-      [&](const llvm::MDNode *node, StringRef *identity = nullptr,
-          SmallVectorImpl<Attribute> *memberTypes = nullptr,
-          SmallVectorImpl<int64_t> *memberOffsets =
-              nullptr) -> std::optional<bool> {
+  auto isTypeDescriptorNode = [&](const llvm::MDNode *node,
+                                  StringRef *identity = nullptr,
+                                  SmallVectorImpl<TBAAMemberAttr> *members =
+                                      nullptr) -> std::optional<bool> {
     unsigned numOperands = node->getNumOperands();
     // Type descriptor, e.g.:
     //   !1 = !{!"int", !0, /*optional*/i64 0} /* scalar int type */
@@ -280,10 +248,9 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
         offset = offsetCI->getZExtValue();
       }
 
-      if (memberTypes)
-        memberTypes->push_back(tbaaMapping.lookup(memberNode));
-      if (memberOffsets)
-        memberOffsets->push_back(offset);
+      if (members)
+        members->push_back(TBAAMemberAttr::get(
+            cast<TBAANodeAttr>(tbaaMapping.lookup(memberNode)), offset));
     }
 
     return true;
@@ -296,10 +263,11 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
   // If the other arguments are non-null, then they will contain
   // the converted metadata operands for a valid TBAA node (i.e. when true is
   // returned).
-  auto isTagNode =
-      [&](const llvm::MDNode *node, SymbolRefAttr *baseSymRef = nullptr,
-          SymbolRefAttr *accessSymRef = nullptr, int64_t *offset = nullptr,
-          bool *isConstant = nullptr) -> std::optional<bool> {
+  auto isTagNode = [&](const llvm::MDNode *node,
+                       TBAATypeDescriptorAttr *baseAttr = nullptr,
+                       TBAATypeDescriptorAttr *accessAttr = nullptr,
+                       int64_t *offset = nullptr,
+                       bool *isConstant = nullptr) -> std::optional<bool> {
     // Access tag, e.g.:
     //   !3 = !{!1, !1, i64 0} /* scalar int access */
     //   !4 = !{!2, !1, i64 0} /* agg_t::x access */
@@ -335,10 +303,10 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
       }
       isConst = isConstantCI->getValue()[0];
     }
-    if (baseSymRef)
-      *baseSymRef = tbaaMapping.lookup(baseMD);
-    if (accessSymRef)
-      *accessSymRef = tbaaMapping.lookup(accessMD);
+    if (baseAttr)
+      *baseAttr = cast<TBAATypeDescriptorAttr>(tbaaMapping.lookup(baseMD));
+    if (accessAttr)
+      *accessAttr = cast<TBAATypeDescriptorAttr>(tbaaMapping.lookup(accessMD));
     if (offset)
       *offset = offsetCI->getZExtValue();
     if (isConstant)
@@ -346,88 +314,84 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
     return true;
   };
 
-  // Helper to compute a unique symbol name that includes the given `baseName`.
-  // Uses the size of the mapping to unique the symbol name.
-  auto getUniqueSymbolName = [&](StringRef baseName) {
-    return (Twine("tbaa_") + Twine(baseName) + Twine('_') +
-            Twine(tbaaMapping.size()))
-        .str();
-  };
+  // Do a post-order walk over the TBAA Graph. Since a correct TBAA Graph is a
+  // DAG, a post-order walk guarantees that we convert any metadata node we
+  // depend on, prior to converting the current node.
+  DenseSet<const llvm::MDNode *> seen;
+  SmallVector<const llvm::MDNode *> workList;
+  workList.push_back(node);
+  while (!workList.empty()) {
+    const llvm::MDNode *current = workList.back();
+    if (tbaaMapping.contains(current)) {
+      // Already converted. Just pop from the worklist.
+      workList.pop_back();
+      continue;
+    }
 
-  // Insert new operations at the end of the MetadataOp.
-  OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPointToEnd(&getGlobalMetadataOp().getBody().back());
-  StringAttr metadataOpName = SymbolTable::getSymbolName(getGlobalMetadataOp());
+    // If any child of this node is not yet converted, don't pop the current
+    // node from the worklist but push the not-yet-converted children in the
+    // front of the worklist.
+    bool anyChildNotConverted = false;
+    for (const llvm::MDOperand &operand : current->operands())
+      if (auto *childNode = dyn_cast_or_null<const llvm::MDNode>(operand.get()))
+        if (!tbaaMapping.contains(childNode)) {
+          workList.push_back(childNode);
+          anyChildNotConverted = true;
+        }
 
-  // On the first walk, create SymbolRefAttr's and map them
-  // to nodes in `nodesToConvert`.
-  for (const auto *current : nodesToConvert) {
-    if (std::optional<StringRef> identity = getIdentityIfRootNode(current)) {
-      if (identity.value().empty())
-        return emitError(loc) << "TBAA root node must have non-empty identity: "
+    if (anyChildNotConverted) {
+      // If this is the second time we failed to convert an element in the
+      // worklist it must be because a child is dependent on it being converted
+      // and we have a cycle in the graph. Cycles are not allowed in TBAA
+      // graphs.
+      if (!seen.insert(current).second)
+        return emitError(loc) << "has cycle in TBAA graph: "
                               << diagMD(current, llvmModule.get());
 
+      continue;
+    }
+
+    // Otherwise simply import the current node.
+    workList.pop_back();
+
+    FailureOr<std::optional<StringRef>> rootNodeIdentity =
+        getIdentityIfRootNode(current);
+    if (succeeded(rootNodeIdentity)) {
+      StringAttr stringAttr = *rootNodeIdentity
+                                  ? builder.getStringAttr(**rootNodeIdentity)
+                                  : nullptr;
       // The root nodes do not have operands, so we can create
       // the TBAARootMetadataOp on the first walk.
-      auto rootNode = builder.create<TBAARootMetadataOp>(
-          loc, getUniqueSymbolName("root"), identity.value());
-      tbaaMapping.try_emplace(current, FlatSymbolRefAttr::get(rootNode));
+      tbaaMapping.insert({current, builder.getAttr<TBAARootAttr>(stringAttr)});
       continue;
     }
-    if (std::optional<bool> isValid = isTypeDescriptorNode(current)) {
-      if (!isValid.value())
-        return failure();
-      tbaaMapping.try_emplace(
-          current, FlatSymbolRefAttr::get(builder.getContext(),
-                                          getUniqueSymbolName("type_desc")));
+
+    StringRef identity;
+    SmallVector<TBAAMemberAttr> members;
+    if (std::optional<bool> isValid =
+            isTypeDescriptorNode(current, &identity, &members)) {
+      assert(isValid.value() && "type descriptor node must be valid");
+
+      tbaaMapping.insert({current, builder.getAttr<TBAATypeDescriptorAttr>(
+                                       identity, members)});
       continue;
     }
-    if (std::optional<bool> isValid = isTagNode(current)) {
-      if (!isValid.value())
-        return failure();
-      // TBAATagOp symbols must be referred by their fully qualified
-      // names, so create a path to TBAATagOp symbol.
-      tbaaMapping.try_emplace(
-          current, SymbolRefAttr::get(
-                       builder.getContext(), metadataOpName,
-                       FlatSymbolRefAttr::get(builder.getContext(),
-                                              getUniqueSymbolName("tag"))));
+
+    TBAATypeDescriptorAttr baseAttr, accessAttr;
+    int64_t offset;
+    bool isConstant;
+    if (std::optional<bool> isValid =
+            isTagNode(current, &baseAttr, &accessAttr, &offset, &isConstant)) {
+      assert(isValid.value() && "access tag node must be valid");
+      tbaaMapping.insert(
+          {current, builder.getAttr<TBAATagAttr>(baseAttr, accessAttr, offset,
+                                                 isConstant)});
       continue;
     }
+
     return emitError(loc) << "unsupported TBAA node format: "
                           << diagMD(current, llvmModule.get());
   }
-
-  // On the second walk, create TBAA operations using the symbol names from the
-  // map.
-  for (const auto *current : nodesToConvert) {
-    StringRef identity;
-    SmallVector<Attribute> memberTypes;
-    SmallVector<int64_t> memberOffsets;
-    if (std::optional<bool> isValid = isTypeDescriptorNode(
-            current, &identity, &memberTypes, &memberOffsets)) {
-      assert(isValid.value() && "type descriptor node must be valid");
-
-      builder.create<TBAATypeDescriptorOp>(
-          loc, tbaaMapping.lookup(current).getLeafReference(),
-          builder.getStringAttr(identity), builder.getArrayAttr(memberTypes),
-          memberOffsets);
-      continue;
-    }
-    SymbolRefAttr baseSymRef, accessSymRef;
-    int64_t offset;
-    bool isConstant;
-    if (std::optional<bool> isValid = isTagNode(
-            current, &baseSymRef, &accessSymRef, &offset, &isConstant)) {
-      assert(isValid.value() && "access tag node must be valid");
-      builder.create<TBAATagOp>(
-          loc, tbaaMapping.lookup(current).getLeafReference(),
-          baseSymRef.getLeafReference(), accessSymRef.getLeafReference(),
-          offset, isConstant);
-      continue;
-    }
-  }
-
   return success();
 }
 
