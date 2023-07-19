@@ -418,6 +418,23 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
 
+  if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
+    add("-mllvm:-mcpu=" + StringRef(arg->getValue()));
+
+  for (auto *a : args.filtered(OPT_plugin_opt_eq_minus))
+    add("-mllvm:-" + StringRef(a->getValue()));
+
+  // GCC collect2 passes -plugin-opt=path/to/lto-wrapper with an absolute or
+  // relative path. Just ignore. If not ended with "lto-wrapper" (or
+  // "lto-wrapper.exe" for GCC cross-compiled for Windows), consider it an
+  // unsupported LLVMgold.so option and error.
+  for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq)) {
+    StringRef v(arg->getValue());
+    if (!v.ends_with("lto-wrapper") && !v.ends_with("lto-wrapper.exe"))
+      error(arg->getSpelling() + ": unknown plugin option '" + arg->getValue() +
+            "'");
+  }
+
   for (auto *a : args.filtered(OPT_Xlink))
     add(a->getValue());
 
