@@ -701,22 +701,18 @@ public:
     // Accesses from a function use the amdgcn_lds_kernel_id intrinsic which
     // lowers to a read from a live in register. Emit it once in the entry
     // block to spare deduplicating it later.
-    if (tableKernelIndexCache.count(F) == 0) {
-      LLVMContext &Ctx = M.getContext();
-      IRBuilder<> Builder(Ctx);
-      FunctionType *FTy = FunctionType::get(Type::getInt32Ty(Ctx), {});
+    auto [It, Inserted] = tableKernelIndexCache.try_emplace(F);
+    if (Inserted) {
       Function *Decl =
           Intrinsic::getDeclaration(&M, Intrinsic::amdgcn_lds_kernel_id, {});
 
-      BasicBlock::iterator it =
-          F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
-      Instruction &i = *it;
-      Builder.SetInsertPoint(&i);
+      auto InsertAt = F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca();
+      IRBuilder<> Builder(&*InsertAt);
 
-      tableKernelIndexCache[F] = Builder.CreateCall(FTy, Decl, {});
+      It->second = Builder.CreateCall(Decl, {});
     }
 
-    return tableKernelIndexCache[F];
+    return It->second;
   }
 
   static std::vector<Function *> assignLDSKernelIDToEachKernel(
