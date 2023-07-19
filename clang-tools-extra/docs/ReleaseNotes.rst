@@ -325,6 +325,11 @@ Changes in existing checks
 - Deprecated :doc:`cert-dcl21-cpp
   <clang-tidy/checks/cert/dcl21-cpp>` check.
 
+- Fixed :doc:`cppcoreguidelines-avoid-const-or-ref-data-members
+  <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check
+  to emit warnings only on classes that are copyable/movable, as required by the
+  corresponding rule.
+
 - Deprecated C.48 enforcement from :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`. Please use
   :doc:`cppcoreguidelines-use-default-member-init
