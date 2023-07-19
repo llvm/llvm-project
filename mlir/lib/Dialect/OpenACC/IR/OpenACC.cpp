@@ -387,10 +387,10 @@ static LogicalResult verifyInitLikeSingleArgRegion(
   if (region.empty())
     return op->emitOpError() << "expects non-empty " << regionName << " region";
   Block &firstBlock = region.front();
-  if (firstBlock.getNumArguments() != 1 ||
+  if (firstBlock.getNumArguments() < 1 ||
       firstBlock.getArgument(0).getType() != type)
     return op->emitOpError() << "expects " << regionName
-                             << " region with one "
+                             << " region first "
                                 "argument of the "
                              << regionType << " type";
 
@@ -463,11 +463,11 @@ LogicalResult acc::ReductionRecipeOp::verifyRegions() {
     return emitOpError() << "expects non-empty combiner region";
 
   Block &reductionBlock = getCombinerRegion().front();
-  if (reductionBlock.getNumArguments() != 2 ||
+  if (reductionBlock.getNumArguments() < 2 ||
       reductionBlock.getArgument(0).getType() != getType() ||
       reductionBlock.getArgument(1).getType() != getType())
-    return emitOpError() << "expects combiner region with two arguments of "
-                         << "the reduction type";
+    return emitOpError() << "expects combiner region with the first two "
+                         << "arguments of the reduction type";
 
   for (YieldOp yieldOp : getCombinerRegion().getOps<YieldOp>()) {
     if (yieldOp.getOperands().size() != 1 ||
