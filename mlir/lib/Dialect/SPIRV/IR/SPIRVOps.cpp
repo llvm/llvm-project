@@ -4112,6 +4112,58 @@ LogicalResult spirv::KHRCooperativeMatrixLoadOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.KHR.CooperativeMatrixStore
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::KHRCooperativeMatrixStoreOp::parse(OpAsmParser &parser,
+                                                      OperationState &result) {
+  std::array<OpAsmParser::UnresolvedOperand, 3> operandInfo = {};
+  for (auto &op : operandInfo) {
+    if (parser.parseOperand(op) || parser.parseComma())
+      return failure();
+  }
+
+  spirv::CooperativeMatrixLayoutKHR layout;
+  if (::parseEnumKeywordAttr<spirv::CooperativeMatrixLayoutKHRAttr>(
+          layout, parser, result, kKhrCooperativeMatrixLayoutAttrName)) {
+    return failure();
+  }
+
+  if (parseMemoryAccessAttributes(parser, result, kMemoryOperandAttrName))
+    return failure();
+
+  Type ptrType;
+  Type objectType;
+  if (parser.parseColon() || parser.parseType(ptrType) || parser.parseComma() ||
+      parser.parseType(objectType)) {
+    return failure();
+  }
+
+  Type strideType = parser.getBuilder().getIntegerType(32);
+  if (parser.resolveOperands(operandInfo, {ptrType, objectType, strideType},
+                             parser.getNameLoc(), result.operands)) {
+    return failure();
+  }
+
+  return success();
+}
+
+void spirv::KHRCooperativeMatrixStoreOp::print(OpAsmPrinter &printer) {
+  printer << " " << getPointer() << ", " << getObject() << ", " << getStride()
+          << ", " << getMatrixLayout();
+
+  // Print optional memory operand attribute.
+  if (auto memOperand = getMemoryOperand())
+    printer << " [\"" << *memOperand << "\"]";
+  printer << " : " << getPointer().getType() << ", " << getObject().getType();
+}
+
+LogicalResult spirv::KHRCooperativeMatrixStoreOp::verify() {
+  return verifyPointerAndCoopMatrixType(*this, getPointer().getType(),
+                                        getObject().getType());
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.NV.CooperativeMatrixLength
 //===----------------------------------------------------------------------===//
 
