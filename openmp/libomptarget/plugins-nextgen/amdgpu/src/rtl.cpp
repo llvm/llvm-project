@@ -3501,39 +3501,19 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return false;
   }
 
-#define ALDEBARAN_MAJOR 9
-#define ALDEBARAN_STEPPING 10
-
   bool hasGfx90aDevice() override final {
-    CHECK_KMT_ERROR(hsaKmtOpenKFD());
+    char name[64];
+    const auto &KernelAgents = Plugin::get<AMDGPUPluginTy>().getKernelAgents();
 
-    HsaSystemProperties sp;
-    int errSys = CHECK_KMT_ERROR(hsaKmtAcquireSystemProperties(&sp));
-    if (errSys) return false;
+    for (const auto &agent : KernelAgents) {
+      memset(&name, 0, sizeof(char) * 64);
+      hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
 
-    for (int i = 0; i < sp.NumNodes; ++i) {
-
-      HsaNodeProperties props;
-      CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, &props));
-
-      // Ignoring CPUs
-      if (props.NumCPUCores) {
-        continue;
-      }
-
-      // Checking for Aldebaran arch
-      // Values are taken from:
-      // https://confluence.amd.com/display/ASLC/AMDGPU+Target+Names
-      if (props.EngineId.ui32.Major == ALDEBARAN_MAJOR &&
-          props.EngineId.ui32.Stepping == ALDEBARAN_STEPPING) {
-        CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
-        CHECK_KMT_ERROR(hsaKmtCloseKFD());
+      llvm::StringRef srName(name);
+      if (srName.equals_insensitive("gfx90a")) {
         return true;
       }
     }
-
-    CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
-    CHECK_KMT_ERROR(hsaKmtCloseKFD());
     return false;
   }
 
