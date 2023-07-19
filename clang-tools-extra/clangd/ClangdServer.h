@@ -185,6 +185,10 @@ public:
     /// regions in the document.
     bool PublishInactiveRegions = false;
 
+    /// Whether to run preamble indexing asynchronously in an independent
+    /// thread.
+    bool AsyncPreambleIndexing = false;
+
     explicit operator TUScheduler::Options() const;
   };
   // Sensible default options for use in tests.
