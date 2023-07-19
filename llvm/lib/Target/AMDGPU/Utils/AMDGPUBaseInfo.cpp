@@ -1073,12 +1073,21 @@ unsigned getAddressableLocalMemorySize(const MCSubtargetInfo *STI) {
 
 unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
   // "Per CU" really means "per whatever functional block the waves of a
-  // workgroup must share". For gfx10 in CU mode this is the CU, which contains
+  // workgroup must share".
+
+  // GFX12.1 only supports CU mode, which contains four SIMDs.
+  if (isGFX12_10(*STI)) {
+    assert(STI->getFeatureBits().test(FeatureCuMode));
+    return 4;
+  }
+
+  // For gfx10 in CU mode the functional block is the CU, which contains
   // two SIMDs.
   if (isGFX10Plus(*STI) && STI->getFeatureBits().test(FeatureCuMode))
     return 2;
-  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP contains
-  // two CUs, so a total of four SIMDs.
+
+  // Pre-gfx10 a CU contains four SIMDs. For gfx10 in WGP mode the WGP
+  // contains two CUs, so a total of four SIMDs.
   return 4;
 }
 
@@ -1405,15 +1414,17 @@ amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
                     amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32,
                     STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1 : 0);
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_WGP_MODE,
-                    STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
-    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
                     amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED, 1);
   }
   if (AMDGPU::isGFX90A(*STI)) {
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc3,
                     amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT,
                     STI->getFeatureBits().test(FeatureTgSplit) ? 1 : 0);
+  }
+  if (AMDGPU::supportsWGP(*STI)) {
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
+                    amdhsa::COMPUTE_PGM_RSRC1_WGP_MODE,
+                    STI->getFeatureBits().test(FeatureCuMode) ? 0 : 1);
   }
   return KD;
 }
@@ -2395,6 +2406,12 @@ bool isNotGFX12Plus(const MCSubtargetInfo &STI) {
 
 bool isGFX12_10(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12_10Insts];
+}
+
+bool supportsWGP(const MCSubtargetInfo &STI) {
+  if (isGFX12_10(STI))
+    return false;
+  return isGFX10Plus(STI);
 }
 
 bool isNotGFX11Plus(const MCSubtargetInfo &STI) {

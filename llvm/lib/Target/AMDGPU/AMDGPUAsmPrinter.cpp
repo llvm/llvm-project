@@ -904,8 +904,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.ScratchBlocks = divideCeil(
       ProgInfo.ScratchSize * STM.getWavefrontSize(), 1ULL << ScratchAlignShift);
 
-  if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
+  if (STM.supportsWGP()) {
     ProgInfo.WgpMode = STM.isCuModeEnabled() ? 0 : 1;
+  }
+
+  if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
     ProgInfo.MemOrdered = 1;
   }
 

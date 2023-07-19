@@ -464,10 +464,11 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
     PRINT_FIELD(OS, ".amdhsa_tg_split", KD,
                 compute_pgm_rsrc3,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX90A_TG_SPLIT);
-  if (IVersion.Major >= 10) {
+  if (AMDGPU::supportsWGP(STI))
     PRINT_FIELD(OS, ".amdhsa_workgroup_processor_mode", KD,
                 compute_pgm_rsrc1,
                 amdhsa::COMPUTE_PGM_RSRC1_WGP_MODE);
+  if (IVersion.Major >= 10) {
     PRINT_FIELD(OS, ".amdhsa_memory_ordered", KD,
                 compute_pgm_rsrc1,
                 amdhsa::COMPUTE_PGM_RSRC1_MEM_ORDERED);
