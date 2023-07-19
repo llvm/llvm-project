@@ -170,26 +170,29 @@ void RTLsTy::loadRTLs() {
     PM->RTLs.IsGfx90aDevice |= RTL.has_gfx90a_device();
   }
 
-  if (PM->RTLs.IsAPUDevice || PM->RTLs.IsGfx90aDevice) {
-    auto *ApuMaps = getenv("OMPX_APU_MAPS");
-    auto *hsaXnack =
-        getenv("HSA_XNACK"); // TODO: Use ROCt API to query
-                             // xnack status. (requires merge of SWDEV-405757)
-    if (ApuMaps && hsaXnack) {
-      auto ApuMapsVal = std::stoi(ApuMaps);
-      auto hsaXnackVal = std::stoi(hsaXnack);
+  auto *APUMaps = getenv("OMPX_APU_MAPS");
+  // TODO: Use ROCt API to query xnack status. (requires merge of SWDEV-405757)
+  auto *HSAXnack = getenv("HSA_XNACK");
+  auto APUMapsVal = 0;
+  auto HSAXnackVal = 0;
+  if (APUMaps && HSAXnack) {
+    APUMapsVal = std::stoi(APUMaps);
+    HSAXnackVal = std::stoi(HSAXnack);
+  }
 
-      // OMPX_APU_MAPS is a temporary env variable
-      // that should always be used with HSA_XNACK=1:
-      // error if it is not. Once this is made default behavior
-      // for USM=OFF, HSA_XNACK=1, then we can remove the error
-      // as the behavior is only triggered by HSA_XNACK value
-      if (ApuMapsVal > 0 && hsaXnackVal == 0) {
-        FATAL_MESSAGE0(1, "OMPX_APU_MAPS behavior requires HSA_XNACK=1");
-      }
-      if (ApuMapsVal > 0 && hsaXnackVal > 0)
-        DisableAllocationsForMapsOnApus = true;
+  if (PM->RTLs.IsAPUDevice || PM->RTLs.IsGfx90aDevice) {
+    // OMPX_APU_MAPS is a temporary env variable
+    // that should always be used with HSA_XNACK=1:
+    // error if it is not. Once this is made default behavior
+    // for USM=OFF, HSA_XNACK=1, then we can remove the error
+    // as the behavior is only triggered by HSA_XNACK value
+    if (APUMapsVal > 0 && HSAXnackVal == 0) {
+      FATAL_MESSAGE0(1, "OMPX_APU_MAPS behavior requires HSA_XNACK=1");
     }
+    if (APUMapsVal > 0 && HSAXnackVal > 0)
+      DisableAllocationsForMapsOnApus = true;
+  } else if (APUMapsVal > 0 && HSAXnackVal > 0) {
+    FATAL_MESSAGE0(1, "OMPX_APU_MAPS and HSA_XNACK enabled on non-APU system");
   }
 }
 
@@ -459,13 +462,6 @@ void RTLsTy::disableAPUMapsForUSM(int64_t RequiresFlags) {
     DisableAllocationsForMapsOnApus = false;
 }
 
-bool RTLsTy::requiresAllocForGlobal(const void *HstPtr) {
-  auto It =
-      std::find_if(HostPtrsRequireAlloc.begin(), HostPtrsRequireAlloc.end(),
-                   [=](const void *Arg) { return Arg == HstPtr; });
-  return It != HostPtrsRequireAlloc.end();
-}
-
 void RTLsTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
   // Minimal check: only set requires flags if previous value
@@ -598,14 +594,6 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
       PM->TrlTblMtx.lock();
       if (!PM->HostEntriesBeginToTransTable.count(Desc->HostEntriesBegin)) {
         PM->HostEntriesBeginRegistrationOrder.push_back(Desc->HostEntriesBegin);
-        // Add all globals to the list of globals in this image, so later
-        // look-ups for globals are faster.
-        for (auto *Entry : PM->HostEntriesBeginRegistrationOrder)
-          if (Entry->size > 0) // globals have a size larger than 0
-            HostPtrsRequireAlloc.insert(Entry->addr);
-        DP("USM_SPECIAL: Marked %i pointers for alloc handling\n",
-           HostPtrsRequireAlloc.size());
-
         TranslationTable &TransTable =
             (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
         TransTable.HostTable.EntriesBegin = Desc->HostEntriesBegin;

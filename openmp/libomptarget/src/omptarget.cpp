@@ -709,9 +709,9 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // when HasPresentModifier.
       PointerTpr = Device.getTargetPointer(
           HDTTMap, HstPtrBase, HstPtrBase, /*TgtPadding=*/0, sizeof(void *),
-          /*HstPtrName=*/nullptr,
-          /*HasFlagTo=*/false, /*HasFlagAlways=*/false, IsImplicit, UpdateRef,
-          HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo,
+          /*HstPtrName=*/nullptr, /*HasFlagTo=*/false, /*HasFlagAlways=*/false,
+          IsImplicit, UpdateRef, HasCloseModifier, HasPresentModifier,
+          HasHoldModifier, AsyncInfo,
           /* OwnedTPR */ nullptr, /* ReleaseHDTTMap */ false);
       PointerTgtPtrBegin = PointerTpr.TargetPointer;
       IsHostPtr = PointerTpr.Flags.IsHostPointer;
@@ -730,8 +730,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       HstPtrBase = *(void **)HstPtrBase;
       // No need to update pointee ref count for the first element of the
       // subelement that comes from mapper.
-      UpdateRef =
-          (!FromMapper || I != 0); // subsequently update ref count of pointee
+      // subsequently update ref count of pointee
+      UpdateRef = (!FromMapper || I != 0);
     }
 
     const bool HasFlagTo = ArgTypes[I] & OMP_TGT_MAPTYPE_TO;
@@ -763,42 +763,12 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       ArgsBase[I] = TgtPtrBase;
     }
 
-    if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
+    if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr)
       if (prepareAndSubmitData(Device, HstPtrBegin, HstPtrBase, TgtPtrBegin,
                                PointerTpr, PointerHstPtrBegin,
                                PointerTgtPtrBegin,
                                AsyncInfo) != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
-    } else if (!(PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
-      // XXX Temporary for running a non-USM application on USM-enabled machine
-      // The latter causes the runtime to not copy the data from host to device
-      // although the application will not be able to access the data via the
-      // double indirection that the omp requires unified_shared_memory
-      // clause implies. Therefore, we under the cover perform these transfers
-      // manually for such instances.
-      // TODO: Can this condition be simplified?
-      if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && IsHostPtr &&
-          !FromMapper && PM->RTLs.requiresAllocForGlobal(PointerHstPtrBegin)) {
-        // Get accessor
-        DeviceTy::HDTTMapAccessorTy HDTTMap =
-            Device.HostDataToTargetMap.getExclusiveAccessor();
-        // Get pointer on target device
-        // allocate memory on the target device
-        auto LocalTPR = Device.getTargetPointer(
-            HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
-            HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
-            HasPresentModifier, HasHoldModifier, AsyncInfo,
-            PointerTpr.getEntry());
-        // Prepare things so we can copy data to the device.
-        void *LocalTgtPtrBegin = LocalTPR.TargetPointer;
-
-        if (prepareAndSubmitData(Device, HstPtrBegin, HstPtrBase,
-                                 LocalTgtPtrBegin, LocalTPR, PointerHstPtrBegin,
-                                 PointerTgtPtrBegin,
-                                 AsyncInfo) != OFFLOAD_SUCCESS)
-          return OFFLOAD_FAIL;
-      }
-    }
 
     // Check if variable can be used on the device:
     bool IsStructMember = ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF;

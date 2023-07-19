@@ -653,7 +653,29 @@ Error GenericDeviceTy::registerGlobalOffloadEntry(
   // can either be link or to. This means that once unified
   // memory is activated via the requires directive, the variable
   // can be used directly from the host in both cases.
-  if (Plugin.getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY) {
+
+  // Check if the HSA_XNACK and OMPX_APU_MAPS are enabled. If unified memory is
+  // not enabled but both HSA_XNACK and OMPX_APU_MAPS are enabled then we can
+  // also use globals directly from the host.
+  bool EnableHostGlobals = false;
+  auto *APUMaps = getenv("OMPX_APU_MAPS");
+  auto *HSAXnack = getenv("HSA_XNACK");
+  if (APUMaps && HSAXnack)
+    EnableHostGlobals = std::stoi(APUMaps) > 0 && std::stoi(HSAXnack) > 0;
+
+  // Check if we are on a system that has an APU or on a non-APU system
+  // where unified shared memory can be enabled:
+  bool IsAPUSystem =
+      Plugin::get().hasAPUDevice() || Plugin::get().hasGfx90aDevice();
+
+  // Fail if there is a mismatch between the user request and the system
+  // architecture:
+  if (EnableHostGlobals && !IsAPUSystem)
+    return Plugin::error("OMPX_APU_MAPS and HSA_XNACK enabled on system that"
+                         " does not support unified shared memory");
+
+  if (Plugin.getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY ||
+      (IsAPUSystem && EnableHostGlobals)) {
     // If unified memory is present any target link or to variables
     // can access host addresses directly. There is no longer a
     // need for device copies.
