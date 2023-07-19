@@ -1677,7 +1677,7 @@ void DeduplicatedCStringSection::writeTo(uint8_t *buf) const {
 DeduplicatedCStringSection::StringOffset
 DeduplicatedCStringSection::getStringOffset(StringRef str) const {
   // StringPiece uses 31 bits to store the hashes, so we replicate that
-  uint32_t hash = xxHash64(str) & 0x7fffffff;
+  uint32_t hash = xxh3_64bits(str) & 0x7fffffff;
   auto offset = stringOffsetMap.find(CachedHashStringRef(str, hash));
   assert(offset != stringOffsetMap.end() &&
          "Looked-up strings should always exist in section");
