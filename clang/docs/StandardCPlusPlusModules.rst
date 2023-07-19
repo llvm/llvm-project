@@ -554,6 +554,7 @@ the compilation of ``use.cpp`` may be slower than
 the following style significantly:
 
 .. code-block:: c++
+
   module;
   #include "big.header.h"
   export module m:big.header.wrapper;
