@@ -138,6 +138,7 @@ on support follow.
      ``Zve64x``       Supported
      ``Zve64f``       Supported
      ``Zve64d``       Supported
+     ``Zvfh``         Supported
      ``Zvl32b``       (`Partially <#riscv-vlen-32-note>`__) Supported
      ``Zvl64b``       Supported
      ``Zvl128b``      Supported
@@ -208,9 +209,6 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 ``experimental-ztso``
   LLVM implements the `v0.1 proposed specification <https://github.com/riscv/riscv-isa-manual/releases/download/draft-20220723-10eea63/riscv-spec.pdf>`__ (see Chapter 25).  The mapping from the C/C++ memory model to Ztso has not yet been ratified in any standards document.  There are multiple possible mappings, and they are *not* mutually ABI compatible.  The mapping LLVM implements is ABI compatible with the default WMO mapping.  This mapping may change and there is *explicitly* no ABI stability offered while the extension remains in experimental status.  User beware.
-
-``experimental-zvfh``
-  LLVM implements `this draft text <https://github.com/riscv/riscv-v-spec/pull/780>`__.
 
 ``experimental-zvbb``, ``experimental-zvbc``, ``experimental-zvkg``, ``experimental-zvkn``, ``experimental-zvknc``, ``experimental-zvkned``, ``experimental-zvkng``, ``experimental-zvknha``, ``experimental-zvknhb``, ``experimental-zvks``, ``experimental-zvksc``, ``experimental-zvksed``, ``experimental-zvksg``, ``experimental-zvksh``, ``experimental-zvkt``
   LLVM implements the `1.0.0-rc1 specification <https://github.com/riscv/riscv-crypto/releases/download/v20230620/riscv-crypto-spec-vector.pdf>`__. Note that current vector crypto extension version can be found in: <https://github.com/riscv/riscv-crypto>.
