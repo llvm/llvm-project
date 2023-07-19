@@ -17,7 +17,7 @@ void fun() {}
 // CHECK: [[LABEL1]]:
 // CHECK: getelementptr <{ i32, i32 }>, ptr {{.*}}, i32 -1, i32 1, !nosanitize
 // CHECK: load i32, ptr {{.*}}, align {{.*}}, !nosanitize
-// CHECK: icmp eq i32 {{.*}}, -1522505972, !nosanitize
+// CHECK: icmp eq i32 {{.*}}, 905068220, !nosanitize
 // CHECK: br i1 {{.*}}, label %[[LABEL3:.*]], label %[[LABEL2:[^,]*]], {{.*}}!nosanitize
 // CHECK: [[LABEL2]]:
 // 64:    call void @__ubsan_handle_function_type_mismatch_abort(ptr @[[#]], i64 %[[#]]) #[[#]], !nosanitize
@@ -32,4 +32,4 @@ void fun() {}
 // CHECK-NEXT:   ret void
 void caller(void (*f)()) { f(); }
 
-// CHECK: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1522505972}
+// CHECK: ![[FUNCSAN]] = !{i32 -1056584962, i32 905068220}
