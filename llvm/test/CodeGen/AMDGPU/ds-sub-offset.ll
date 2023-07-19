@@ -118,6 +118,7 @@ define amdgpu_kernel void @write_ds_sub0_offset0_global_clamp_bit(float %dummy.v
 ; GFX11-NEXT:    v_div_fmas_f32 v4, s0, s0, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -199,6 +200,7 @@ define amdgpu_kernel void @write_ds_sub_max_offset_global_clamp_bit(float %dummy
 ; GFX11-NEXT:    v_div_fmas_f32 v4, s0, s0, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -594,6 +596,7 @@ define amdgpu_kernel void @add_x_shl_neg_to_sub_misaligned_i64_max_offset_clamp_
 ; GFX11-NEXT:    v_div_fmas_f32 v5, s0, s0, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v5, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %x.i = call i32 @llvm.amdgcn.workitem.id.x() #0

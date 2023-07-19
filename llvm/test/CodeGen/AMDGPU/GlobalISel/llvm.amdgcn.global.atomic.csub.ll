@@ -123,6 +123,7 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(ptr addrspace(1) 
 ; GFX11-NEXT:    global_atomic_csub_u32 v0, v1, v0, s[0:1] glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024

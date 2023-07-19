@@ -1352,6 +1352,14 @@ public:
   // \returns the number of address arguments from which to enable MIMG NSA
   // on supported architectures.
   unsigned getNSAThreshold(const MachineFunction &MF) const;
+
+  // \returns true if the subtarget has a hazard requiring an "s_nop 0"
+  // instruction before "s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)".
+  bool requiresNopBeforeDeallocVGPRs() const {
+    // Currently all targets that support the dealloc VGPRs message also require
+    // the nop.
+    return true;
+  }
 };
 
 } // end namespace llvm

@@ -22,6 +22,7 @@ define amdgpu_ps void @s_test_minmax_i32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[4:5]
+; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -33,6 +34,7 @@ define amdgpu_ps void @s_test_minmax_i32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; GISEL-NEXT:    s_mov_b32 s7, s4
 ; GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, 0
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[6:7]
+; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
   %smax = call i32 @llvm.smax.i32(i32 %a, i32 %b)
@@ -109,6 +111,7 @@ define amdgpu_ps void @s_test_minmax_u32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; SDAG-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
 ; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    global_store_b32 v0, v1, s[4:5]
+; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -120,6 +123,7 @@ define amdgpu_ps void @s_test_minmax_u32(i32 inreg %a, i32 inreg %b, i32 inreg %
 ; GISEL-NEXT:    s_mov_b32 s7, s4
 ; GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, 0
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[6:7]
+; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
   %smax = call i32 @llvm.umax.i32(i32 %a, i32 %b)
@@ -205,6 +209,7 @@ define amdgpu_ps void @s_test_minmax_f32_ieee_false(float inreg %a, float inreg 
 ; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    v_maxmin_f32 v0, s0, s1, v0
 ; SDAG-NEXT:    global_store_b32 v1, v0, s[4:5]
+; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -215,6 +220,7 @@ define amdgpu_ps void @s_test_minmax_f32_ieee_false(float inreg %a, float inreg 
 ; GISEL-NEXT:    s_mov_b32 s7, s4
 ; GISEL-NEXT:    v_maxmin_f32 v0, s0, s1, v0
 ; GISEL-NEXT:    global_store_b32 v1, v0, s[6:7]
+; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
   %smax = call float @llvm.maxnum.f32(float %a, float %b)
@@ -297,6 +303,7 @@ define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b
 ; SDAG-NEXT:    s_mov_b32 s4, s3
 ; SDAG-NEXT:    v_maxmin_f16 v0, s0, s1, v0
 ; SDAG-NEXT:    global_store_b16 v1, v0, s[4:5]
+; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 ;
@@ -307,6 +314,7 @@ define amdgpu_ps void @s_test_minmax_f16_ieee_false(half inreg %a, half inreg %b
 ; GISEL-NEXT:    s_mov_b32 s7, s4
 ; GISEL-NEXT:    v_maxmin_f16 v0, s0, s1, v0
 ; GISEL-NEXT:    global_store_b16 v1, v0, s[6:7]
+; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
   %smax = call half @llvm.maxnum.f16(half %a, half %b)

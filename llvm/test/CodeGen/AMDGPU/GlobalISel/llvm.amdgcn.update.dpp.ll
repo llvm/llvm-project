@@ -36,6 +36,7 @@ define amdgpu_kernel void @dpp_test(ptr addrspace(1) %out, i32 %in1, i32 %in2) {
 ; GFX11-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tmp0 = call i32 @llvm.amdgcn.update.dpp.i32(i32 %in1, i32 %in2, i32 1, i32 1, i32 1, i1 false)
@@ -86,6 +87,7 @@ define amdgpu_kernel void @update_dpp64_test(ptr addrspace(1) %arg, i64 %in1, i6
 ; GFX11-NEXT:    v_mov_b32_dpp v2, v0 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX11-NEXT:    v_mov_b32_dpp v3, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX11-NEXT:    global_store_b64 v4, v[2:3], s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()

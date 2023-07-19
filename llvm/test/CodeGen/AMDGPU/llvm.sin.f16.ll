@@ -79,6 +79,7 @@ define amdgpu_kernel void @sin_f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sin_f16_e32 v1, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %a.val = load half, ptr addrspace(1) %a
@@ -188,6 +189,7 @@ define amdgpu_kernel void @sin_v2f16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_pack_b32_f16 v1, v1, v2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %a.val = load <2 x half>, ptr addrspace(1) %a
