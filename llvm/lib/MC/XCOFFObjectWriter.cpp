@@ -1194,9 +1194,8 @@ void XCOFFObjectWriter::finalizeSectionInfo() {
     }
   }
 
-  if (hasExceptionSection()) {
+  if (hasExceptionSection())
     RawPointer = ExceptionSection.advanceFileOffset(MaxRawDataSize, RawPointer);
-  }
 
   for (auto *Sec : Sections) {
     if (Sec->Index != SectionEntry::UninitializedIndex)
