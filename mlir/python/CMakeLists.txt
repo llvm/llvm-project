@@ -518,6 +518,19 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
 )
 
 ################################################################################
+# Custom targets.
+################################################################################
+
+_flatten_mlir_python_targets(mlir_python_sources_deps MLIRPythonSources)
+add_custom_target("mlir-python-sources" DEPENDS ${mlir_python_sources_deps})
+if(NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(install-mlir-python-sources
+    DEPENDS mlir-python-sources
+    COMPONENT mlir-python-sources
+  )
+endif()
+
+################################################################################
 # The fully assembled package of modules.
 # This must come last.
 ################################################################################
