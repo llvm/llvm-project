@@ -1683,7 +1683,7 @@ let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress in {
 defm VCOMPRESS_V : VCPR_MV_Mask<"vcompress", 0b010111>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isMoveReg = 1,
     RVVConstraint = NoConstraint in {
 // A future extension may relax the vector register alignment restrictions.
 foreach n = [1, 2, 4, 8] in {

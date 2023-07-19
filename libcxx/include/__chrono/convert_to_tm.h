@@ -78,7 +78,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _Date& __date, chrono::weekday _
 
 template <class _Tm, class _Duration>
 _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const chrono::sys_time<_Duration> __tp) {
-  chrono::sys_days __days = chrono::time_point_cast<chrono::days>(__tp);
+  chrono::sys_days __days = chrono::floor<chrono::days>(__tp);
   chrono::year_month_day __ymd{__days};
 
   _Tm __result = std::__convert_to_tm<_Tm>(chrono::year_month_day{__ymd}, chrono::weekday{__days});

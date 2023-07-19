@@ -277,8 +277,7 @@ define void @insert_vec_v16i8_uaddlv_from_v8i8(ptr %0) {
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    uaddlv.8b h2, v0
 ; CHECK-NEXT:    stp q0, q0, [x0, #32]
-; CHECK-NEXT:    mov.b v1[0], v2[0]
-; CHECK-NEXT:    zip1.8b v1, v1, v0
+; CHECK-NEXT:    mov.h v1[0], v2[0]
 ; CHECK-NEXT:    bic.4h v1, #255, lsl #8
 ; CHECK-NEXT:    ushll.4s v1, v1, #0
 ; CHECK-NEXT:    ucvtf.4s v1, v1
@@ -452,14 +451,13 @@ define void @insert_vec_v16i8_uaddlv_from_v4i32(ptr %0) {
 ; CHECK-NEXT:    movi.2d v0, #0000000000000000
 ; CHECK-NEXT:    movi.2d v1, #0000000000000000
 ; CHECK-NEXT:    uaddlv.4s d0, v0
-; CHECK-NEXT:    mov.b v1[0], v0[0]
-; CHECK-NEXT:    zip1.8b v0, v1, v0
-; CHECK-NEXT:    movi.2d v1, #0000000000000000
-; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    ushll.4s v0, v0, #0
-; CHECK-NEXT:    stp q1, q1, [x0, #32]
-; CHECK-NEXT:    ucvtf.4s v0, v0
-; CHECK-NEXT:    stp q0, q1, [x0]
+; CHECK-NEXT:    mov.h v1[0], v0[0]
+; CHECK-NEXT:    movi.2d v0, #0000000000000000
+; CHECK-NEXT:    bic.4h v1, #255, lsl #8
+; CHECK-NEXT:    ushll.4s v1, v1, #0
+; CHECK-NEXT:    stp q0, q0, [x0, #32]
+; CHECK-NEXT:    ucvtf.4s v1, v1
+; CHECK-NEXT:    stp q1, q0, [x0]
 ; CHECK-NEXT:    ret
 
 entry:

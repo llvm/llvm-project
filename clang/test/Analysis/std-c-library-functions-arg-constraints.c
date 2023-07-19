@@ -35,8 +35,7 @@ void test_alnum_concrete(int v) {
 }
 
 void test_alnum_symbolic(int x) {
-  int ret = isalnum(x); // \
-  // bugpath-note{{Assuming the character is non-alphanumeric}}
+  int ret = isalnum(x);
   (void)ret;
 
   clang_analyzer_eval(EOF <= x && x <= 255); // \
@@ -317,6 +316,7 @@ void test_file_fd_at_functions() {
   // bugpath-note{{The 1st argument to 'linkat' is -22 but should be a valid file descriptor or AT_FDCWD}}
 
   // no warning for these functions if the AT_FDCWD value is used
+  (void)openat(AT_FDCWD, "path", 0);
   (void)linkat(AT_FDCWD, "from", AT_FDCWD, "to", 0);
   (void)faccessat(AT_FDCWD, "path", 0, 0);
   (void)symlinkat("oldpath", AT_FDCWD, "newpath");

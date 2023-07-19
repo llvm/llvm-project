@@ -3470,8 +3470,7 @@ template <typename BaseTy, typename ToTy>
 struct CachedReachabilityAA : public BaseTy {
   using RQITy = ReachabilityQueryInfo<ToTy>;
 
-  CachedReachabilityAA<BaseTy, ToTy>(const IRPosition &IRP, Attributor &A)
-      : BaseTy(IRP, A) {}
+  CachedReachabilityAA(const IRPosition &IRP, Attributor &A) : BaseTy(IRP, A) {}
 
   /// See AbstractAttribute::isQueryAA.
   bool isQueryAA() const override { return true; }
@@ -11926,9 +11925,8 @@ struct AAAddressSpaceImpl : public AAAddressSpace {
             getAssociatedType()->getPointerAddressSpace())
       return ChangeStatus::UNCHANGED;
 
-    Type *NewPtrTy = PointerType::getWithSamePointeeType(
-        cast<PointerType>(getAssociatedType()),
-        static_cast<uint32_t>(getAddressSpace()));
+    Type *NewPtrTy = PointerType::get(getAssociatedType()->getContext(),
+                                      static_cast<uint32_t>(getAddressSpace()));
     bool UseOriginalValue =
         OriginalValue->getType()->getPointerAddressSpace() ==
         static_cast<uint32_t>(getAddressSpace());

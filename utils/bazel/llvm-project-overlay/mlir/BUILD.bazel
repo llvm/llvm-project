@@ -1831,6 +1831,7 @@ cc_library(
         ":LLVMDialect",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":VectorDialect",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -1851,6 +1852,7 @@ cc_library(
         ":LLVMDialect",
         ":Pass",
         ":SCFDialect",
+        ":Transforms",
         ":VectorDialect",
     ],
 )
@@ -2848,6 +2850,7 @@ cc_library(
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVGPUTransformOpsIncGen",
+        ":NVGPUTransforms",
         ":SCFDialect",
         ":SCFTransforms",
         ":Support",
@@ -3333,6 +3336,7 @@ cc_library(
         ":TosaToLinalg",
         ":TosaToSCF",
         ":TosaToTensor",
+        ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
         ":VectorToSCF",
@@ -9857,6 +9861,26 @@ cc_library(
 )
 
 cc_library(
+    name = "VectorToArmSME",
+    srcs = glob([
+        "lib/Conversion/VectorToArmSME/*.cpp",
+        "lib/Conversion/VectorToArmSME/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/VectorToArmSME/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArmSMEDialect",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":Pass",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "VectorToGPU",
     srcs = glob([
         "lib/Conversion/VectorToGPU/*.cpp",
@@ -10881,6 +10905,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithDialect",
+        ":ComplexDialect",
         ":IR",
         "//llvm:Support",
     ],

@@ -465,6 +465,7 @@ set(files
   __iterator/permutable.h
   __iterator/prev.h
   __iterator/projected.h
+  __iterator/ranges_iterator_traits.h
   __iterator/readable_traits.h
   __iterator/reverse_access.h
   __iterator/reverse_iterator.h

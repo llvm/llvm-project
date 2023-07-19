@@ -4265,6 +4265,15 @@ struct FormatStyle {
   /// \version 3.7
   unsigned TabWidth;
 
+  /// A vector of non-keyword identifiers that should be interpreted as type
+  /// names.
+  ///
+  /// A `*`, `&`, or `&&` between a type name and another non-keyword identifier
+  /// is annotated as a pointer or reference token instead of a binary operator.
+  ///
+  /// \version 17
+  std::vector<std::string> TypeNames;
+
   /// \brief A vector of macros that should be interpreted as type declarations
   /// instead of as function calls.
   ///
@@ -4492,7 +4501,8 @@ struct FormatStyle {
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
            StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
-           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
+           TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
+           UseTab == R.UseTab &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;

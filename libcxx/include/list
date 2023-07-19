@@ -46,6 +46,8 @@ public:
         list(Iter first, Iter last);
     template <class Iter>
         list(Iter first, Iter last, const allocator_type& a);
+    template<container-compatible-range<T> R>
+      list(from_range_t, R&& rg, const Allocator& = Allocator()); // C++23
     list(const list& x);
     list(const list&, const allocator_type& a);
     list(list&& x)
@@ -64,6 +66,8 @@ public:
     list& operator=(initializer_list<value_type>);
     template <class Iter>
         void assign(Iter first, Iter last);
+    template<container-compatible-range<T> R>
+      void assign_range(R&& rg); // C++23
     void assign(size_type n, const value_type& t);
     void assign(initializer_list<value_type>);
 
@@ -99,8 +103,12 @@ public:
     void pop_back();
     void push_front(const value_type& x);
     void push_front(value_type&& x);
+    template<container-compatible-range<T> R>
+      void prepend_range(R&& rg); // C++23
     void push_back(const value_type& x);
     void push_back(value_type&& x);
+    template<container-compatible-range<T> R>
+      void append_range(R&& rg); // C++23
     template <class... Args>
         iterator emplace(const_iterator position, Args&&... args);
     iterator insert(const_iterator position, const value_type& x);
@@ -108,6 +116,8 @@ public:
     iterator insert(const_iterator position, size_type n, const value_type& x);
     template <class Iter>
         iterator insert(const_iterator position, Iter first, Iter last);
+    template<container-compatible-range<T> R>
+      iterator insert_range(const_iterator position, R&& rg); // C++23
     iterator insert(const_iterator position, initializer_list<value_type> il);
 
     iterator erase(const_iterator position);
@@ -151,6 +161,10 @@ public:
 template <class InputIterator, class Allocator = allocator<typename iterator_traits<InputIterator>::value_type>>
     list(InputIterator, InputIterator, Allocator = Allocator())
     -> list<typename iterator_traits<InputIterator>::value_type, Allocator>;  // C++17
+
+template<ranges::input_range R, class Allocator = allocator<ranges::range_value_t<R>>>
+  list(from_range_t, R&&, Allocator = Allocator())
+    -> list<ranges::range_value_t<R>, Allocator>; // C++23
 
 template <class T, class Alloc>
     bool operator==(const list<T,Alloc>& x, const list<T,Alloc>& y);
@@ -207,6 +221,10 @@ template <class T, class Allocator, class Predicate>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
 #include <__memory_resource/polymorphic_allocator.h>
+#include <__ranges/access.h>
+#include <__ranges/concepts.h>
+#include <__ranges/container_compatible_range.h>
+#include <__ranges/from_range.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/is_nothrow_default_constructible.h>
@@ -761,6 +779,14 @@ public:
     _LIBCPP_HIDE_FROM_ABI list(_InpIter __f, _InpIter __l, const allocator_type& __a,
              __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
 
+#if _LIBCPP_STD_VER >= 23
+    template <_ContainerCompatibleRange<_Tp> _Range>
+    _LIBCPP_HIDE_FROM_ABI list(from_range_t, _Range&& __range,
+        const allocator_type& __a = allocator_type()) : base(__a) {
+      prepend_range(std::forward<_Range>(__range));
+    }
+#endif
+
     _LIBCPP_HIDE_FROM_ABI list(const list& __c);
     _LIBCPP_HIDE_FROM_ABI list(const list& __c, const __type_identity_t<allocator_type>& __a);
     _LIBCPP_INLINE_VISIBILITY
@@ -792,6 +818,15 @@ public:
     template <class _InpIter>
     _LIBCPP_HIDE_FROM_ABI void assign(_InpIter __f, _InpIter __l,
                     __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
+
+#if _LIBCPP_STD_VER >= 23
+    template <_ContainerCompatibleRange<_Tp> _Range>
+    _LIBCPP_HIDE_FROM_ABI
+    void assign_range(_Range&& __range) {
+      __assign_with_sentinel(ranges::begin(__range), ranges::end(__range));
+    }
+#endif
+
     _LIBCPP_HIDE_FROM_ABI void assign(size_type __n, const value_type& __x);
 
     _LIBCPP_INLINE_VISIBILITY
@@ -870,6 +905,20 @@ public:
     _LIBCPP_HIDE_FROM_ABI void push_front(value_type&& __x);
     _LIBCPP_HIDE_FROM_ABI void push_back(value_type&& __x);
 
+#if _LIBCPP_STD_VER >= 23
+    template <_ContainerCompatibleRange<_Tp> _Range>
+    _LIBCPP_HIDE_FROM_ABI
+    void prepend_range(_Range&& __range) {
+      insert_range(begin(), std::forward<_Range>(__range));
+    }
+
+    template <_ContainerCompatibleRange<_Tp> _Range>
+    _LIBCPP_HIDE_FROM_ABI
+    void append_range(_Range&& __range) {
+      insert_range(end(), std::forward<_Range>(__range));
+    }
+#endif
+
     template <class... _Args>
 #if _LIBCPP_STD_VER >= 17
     _LIBCPP_HIDE_FROM_ABI reference emplace_front(_Args&&... __args);
@@ -909,6 +958,14 @@ public:
     template <class _InpIter>
     _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __p, _InpIter __f, _InpIter __l,
                         __enable_if_t<__has_input_iterator_category<_InpIter>::value>* = 0);
+
+#if _LIBCPP_STD_VER >= 23
+    template <_ContainerCompatibleRange<_Tp> _Range>
+    _LIBCPP_HIDE_FROM_ABI
+    iterator insert_range(const_iterator __position, _Range&& __range) {
+      return __insert_with_sentinel(__position, ranges::begin(__range), ranges::end(__range));
+    }
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     void swap(list& __c)
@@ -986,6 +1043,14 @@ public:
     }
 
 private:
+    template <class _Iterator, class _Sentinel>
+    _LIBCPP_HIDE_FROM_ABI
+    void __assign_with_sentinel(_Iterator __f, _Sentinel __l);
+
+    template <class _Iterator, class _Sentinel>
+    _LIBCPP_HIDE_FROM_ABI
+    iterator __insert_with_sentinel(const_iterator __p, _Iterator __f, _Sentinel __l);
+
     _LIBCPP_INLINE_VISIBILITY
     static void __link_nodes  (__link_pointer __p, __link_pointer __f, __link_pointer __l);
     _LIBCPP_INLINE_VISIBILITY
@@ -1018,6 +1083,15 @@ template<class _InputIterator,
          >
 list(_InputIterator, _InputIterator, _Alloc)
   -> list<__iter_value_type<_InputIterator>, _Alloc>;
+#endif
+
+#if _LIBCPP_STD_VER >= 23
+template <ranges::input_range _Range,
+          class _Alloc = allocator<ranges::range_value_t<_Range>>,
+          class = enable_if_t<__is_allocator<_Alloc>::value>
+          >
+list(from_range_t, _Range&&, _Alloc = _Alloc())
+  -> list<ranges::range_value_t<_Range>, _Alloc>;
 #endif
 
 // Link in nodes [__f, __l] just prior to __p
@@ -1225,12 +1299,19 @@ void
 list<_Tp, _Alloc>::assign(_InpIter __f, _InpIter __l,
                           __enable_if_t<__has_input_iterator_category<_InpIter>::value>*)
 {
+  __assign_with_sentinel(__f, __l);
+}
+
+template <class _Tp, class _Alloc>
+template <class _Iterator, class _Sentinel>
+_LIBCPP_HIDE_FROM_ABI
+void list<_Tp, _Alloc>::__assign_with_sentinel(_Iterator __f, _Sentinel __l) {
     iterator __i = begin();
     iterator __e = end();
     for (; __f != __l && __i != __e; ++__f, (void) ++__i)
         *__i = *__f;
     if (__i == __e)
-        insert(__e, __f, __l);
+        __insert_with_sentinel(__e, std::move(__f), std::move(__l));
     else
         erase(__i, __e);
 }
@@ -1324,6 +1405,14 @@ typename list<_Tp, _Alloc>::iterator
 list<_Tp, _Alloc>::insert(const_iterator __p, _InpIter __f, _InpIter __l,
                           __enable_if_t<__has_input_iterator_category<_InpIter>::value>*)
 {
+    return __insert_with_sentinel(__p, __f, __l);
+}
+
+template <class _Tp, class _Alloc>
+template <class _Iterator, class _Sentinel>
+_LIBCPP_HIDE_FROM_ABI
+typename list<_Tp, _Alloc>::iterator
+list<_Tp, _Alloc>::__insert_with_sentinel(const_iterator __p, _Iterator __f, _Sentinel __l) {
     iterator __r(__p.__ptr_);
     if (__f != __l)
     {

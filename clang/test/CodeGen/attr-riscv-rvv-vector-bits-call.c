@@ -38,11 +38,7 @@ fixed_int32m1_t fixed_callee(fixed_int32m1_t x) {
 
 // CHECK-LABEL: @sizeless_caller(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[COERCE1:%.*]] = alloca <8 x i32>, align 8
-// CHECK-NEXT:    store <vscale x 2 x i32> [[X:%.*]], ptr [[COERCE1]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[COERCE1]], align 8, !tbaa [[TBAA4:![0-9]+]]
-// CHECK-NEXT:    [[CASTSCALABLESVE2:%.*]] = tail call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[TMP0]], i64 0)
-// CHECK-NEXT:    ret <vscale x 2 x i32> [[CASTSCALABLESVE2]]
+// CHECK-NEXT:    ret <vscale x 2 x i32> [[X:%.*]]
 //
 vint32m1_t sizeless_caller(vint32m1_t x) {
   return fixed_callee(x);

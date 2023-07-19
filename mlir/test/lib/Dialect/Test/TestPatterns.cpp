@@ -485,6 +485,8 @@ struct TestReturnTypeDriver
         // output would be in reverse order underneath `op` from which
         // the attributes and regions are used.
         invokeCreateWithInferredReturnType<OpWithInferTypeInterfaceOp>(op);
+        invokeCreateWithInferredReturnType<OpWithInferTypeAdaptorInterfaceOp>(
+            op);
         invokeCreateWithInferredReturnType<
             OpWithShapedTypeInferTypeInterfaceOp>(op);
       };

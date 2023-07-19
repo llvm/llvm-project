@@ -274,13 +274,10 @@ Changes in existing checks
   Global options of the same name should be used instead.
 
 - Improved :doc:`bugprone-exception-escape
-  <clang-tidy/checks/bugprone/exception-escape>` to not emit warnings for
-  forward declarations of functions and additionally modified it to skip
-  ``noexcept`` functions during call stack analysis.
-
-- Fixed :doc:`bugprone-exception-escape<clang-tidy/checks/bugprone/exception-escape>`
-  for coroutines where previously a warning would be emitted with coroutines
-  throwing exceptions in their bodies.
+  <clang-tidy/checks/bugprone/exception-escape>` check to not emit warnings for
+  forward declarations of functions, explicitly declared throwing functions,
+  coroutines throwing exceptions in their bodies and skip ``noexcept``
+  functions during call stack analysis.
 
 - Improved :doc:`bugprone-fold-init-type
   <clang-tidy/checks/bugprone/fold-init-type>` to handle iterators that do not

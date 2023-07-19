@@ -1093,10 +1093,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
   Value *TID = Builder.CreateAdd(Tmp0, Tmp1);
   TID = Builder.CreateAdd(TID, TIdZ);
 
-  Value *Indices[] = {
-    Constant::getNullValue(Type::getInt32Ty(Mod->getContext())),
-    TID
-  };
+  LLVMContext &Context = Mod->getContext();
+  Value *Indices[] = {Constant::getNullValue(Type::getInt32Ty(Context)), TID};
 
   Value *Offset = Builder.CreateInBoundsGEP(GVTy, GV, Indices);
   I.mutateType(Offset->getType());
@@ -1109,9 +1107,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
     CallInst *Call = dyn_cast<CallInst>(V);
     if (!Call) {
       if (ICmpInst *CI = dyn_cast<ICmpInst>(V)) {
-        Value *Src0 = CI->getOperand(0);
-        PointerType *NewTy = PointerType::getWithSamePointeeType(
-            cast<PointerType>(Src0->getType()), AMDGPUAS::LOCAL_ADDRESS);
+        PointerType *NewTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
 
         if (isa<ConstantPointerNull>(CI->getOperand(0)))
           CI->setOperand(0, ConstantPointerNull::get(NewTy));
@@ -1127,8 +1123,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
       if (isa<AddrSpaceCastInst>(V))
         continue;
 
-      PointerType *NewTy = PointerType::getWithSamePointeeType(
-          cast<PointerType>(V->getType()), AMDGPUAS::LOCAL_ADDRESS);
+      PointerType *NewTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
 
       // FIXME: It doesn't really make sense to try to do this for all
       // instructions.
@@ -1188,8 +1183,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
       Function *ObjectSize = Intrinsic::getDeclaration(
           Mod, Intrinsic::objectsize,
           {Intr->getType(),
-           PointerType::getWithSamePointeeType(
-               cast<PointerType>(Src->getType()), AMDGPUAS::LOCAL_ADDRESS)});
+           PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS)});
 
       CallInst *NewCall = Builder.CreateCall(
           ObjectSize,

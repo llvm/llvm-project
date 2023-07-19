@@ -294,3 +294,8 @@ int test() {
 }
 
 }
+
+namespace gh63758 {
+  struct S {} s;
+  auto words = (char[])s; // expected-error {{C-style cast from 'struct S' to 'char[]' is not allowed}}
+};

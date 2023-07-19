@@ -73,3 +73,11 @@
 
 // UNKNOWN_VERSION: CUDA version is newer than the latest{{.*}} supported version
 // UNKNOWN_VERSION_CXX-NOT: unknown CUDA version
+
+// Check to make sure we do not emit these warnings for OpenMP or cross-compilation.
+// RUN: %clang --target=x86_64-linux -v -### -fopenmp -nogpulib --offload-arch=sm_60 --cuda-path=%S/Inputs/CUDA-new/usr/local/cuda 2>&1 -x c %s | \
+// RUN:    FileCheck %s --check-prefix=VERSION
+// RUN: %clang --target=nvptx64-nvidia-cuda -v -### -nogpulib -march=sm_60 --cuda-path=%S/Inputs/CUDA-new/usr/local/cuda 2>&1 -x c %s | \
+// RUN:    FileCheck %s --check-prefix=VERSION
+// VERSION-NOT: CUDA version is newer than the latest{{.*}} supported version
+

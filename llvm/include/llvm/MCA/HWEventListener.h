@@ -59,7 +59,10 @@ public:
   const InstRef &IR;
 };
 
+// ResourceRef::first is the index of the associated Resource.
+// ResourceRef::second is a bitmask of the referenced sub-unit of the resource.
 using ResourceRef = std::pair<uint64_t, uint64_t>;
+
 using ResourceUse = std::pair<ResourceRef, ResourceCycles>;
 
 class HWInstructionIssuedEvent : public HWInstructionEvent {

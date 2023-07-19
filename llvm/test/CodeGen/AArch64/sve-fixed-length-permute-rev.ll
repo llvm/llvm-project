@@ -165,7 +165,7 @@ define void @test_revwv8i32v8i32(ptr %a, ptr %b) #0 {
 define void @test_revhv32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: test_revhv32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
@@ -468,16 +468,16 @@ define void @test_revv8i16v8i16(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-NEXT:    st1 { v1.h }[4], [x9]
 ; CHECK-NEXT:    orr x9, x8, #0x4
 ; CHECK-NEXT:    st1 { v1.h }[5], [x10]
-; CHECK-NEXT:    mov w10, #26
+; CHECK-NEXT:    mov w10, #26 // =0x1a
 ; CHECK-NEXT:    orr x10, x8, x10
 ; CHECK-NEXT:    st1 { v0.h }[3], [x12]
 ; CHECK-NEXT:    st1 { v1.h }[1], [x9]
 ; CHECK-NEXT:    orr x9, x8, #0x2
 ; CHECK-NEXT:    st1 { v1.h }[7], [x11]
-; CHECK-NEXT:    mov w11, #20
-; CHECK-NEXT:    mov w12, #18
+; CHECK-NEXT:    mov w11, #20 // =0x14
+; CHECK-NEXT:    mov w12, #18 // =0x12
 ; CHECK-NEXT:    st1 { v0.h }[6], [x10]
-; CHECK-NEXT:    mov w10, #10
+; CHECK-NEXT:    mov w10, #10 // =0xa
 ; CHECK-NEXT:    orr x11, x8, x11
 ; CHECK-NEXT:    st1 { v1.h }[2], [x9]
 ; CHECK-NEXT:    orr x9, x8, x12

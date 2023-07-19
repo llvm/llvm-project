@@ -292,13 +292,15 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
-                                   bool StreamingSVEModeDisabled)
+                                   bool StreamingSVEMode,
+                                   bool StreamingCompatibleSVEMode)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian),
-      StreamingSVEModeDisabled(StreamingSVEModeDisabled),
+      StreamingSVEMode(StreamingSVEMode),
+      StreamingCompatibleSVEMode(StreamingCompatibleSVEMode),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)),
@@ -479,5 +481,10 @@ bool AArch64Subtarget::isNeonAvailable() const {
   if (!hasNEON())
     return false;
 
-  return !ForceStreamingCompatibleSVE;
+  // The 'force-streaming-comaptible-sve' flag overrides the streaming
+  // function attributes.
+  if (ForceStreamingCompatibleSVE.getNumOccurrences() > 0)
+    return !ForceStreamingCompatibleSVE;
+
+  return !isStreaming() && !isStreamingCompatible();
 }

@@ -12,12 +12,10 @@ module;
 
 export module std:print;
 export namespace std {
-#if 0
   // [print.fun], print functions
   using std::print;
   using std::println;
 
   using std::vprint_nonunicode;
   using std::vprint_unicode;
-#endif
 } // namespace std

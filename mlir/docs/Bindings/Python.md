@@ -919,7 +919,6 @@ the `Func` (which is assigned the namespace `func` as a special case):
 #ifndef PYTHON_BINDINGS_FUNC_OPS
 #define PYTHON_BINDINGS_FUNC_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/Func/IR/FuncOps.td"
 
 #endif // PYTHON_BINDINGS_FUNC_OPS
@@ -1125,14 +1124,10 @@ Dialect operations are provided in Python by wrapping the generic
 properties. Therefore, there is no need to implement a separate C API for them.
 For operations defined in ODS, `mlir-tblgen -gen-python-op-bindings
 -bind-dialect=<dialect-namespace>` generates the Python API from the declarative
-description. If the build API uses specific attribute types, such as
-`::mlir::IntegerAttr` or `::mlir::DenseIntElementsAttr`, for its arguments, the
-mapping to the corresponding Python types should be provided in ODS definition.
-For built-in attribute types, this mapping is available in
-[`include/mlir/Bindings/Python/Attributes.td`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/Attributes.td);
-it is sufficient to create a new `.td` file that includes this file and the
-original ODS definition and use it as source for the `mlir-tblgen` call. Such
-`.td` files reside in
+description.
+It is sufficient to create a new `.td` file that includes the original ODS
+definition and use it as source for the `mlir-tblgen` call.
+Such `.td` files reside in
 [`python/mlir/dialects/`](https://github.com/llvm/llvm-project/tree/main/mlir/python/mlir/dialects).
 The results of `mlir-tblgen` are expected to produce a file named
 `_<dialect-namespace>_ops_gen.py` by convention. The generated operation classes

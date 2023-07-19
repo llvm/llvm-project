@@ -386,7 +386,8 @@ public:
 };
 // We don't actually require this, since `VarInfo` is a proper struct
 // rather than a newtype.  But it passes, so for now we'll keep it around.
-static_assert(IsZeroCostAbstraction<VarInfo>);
+// TODO: Uncomment the static assert, it fails the build with gcc7 right now.
+// static_assert(IsZeroCostAbstraction<VarInfo>);
 
 //===----------------------------------------------------------------------===//
 enum class CreationPolicy { MustNot, May, Must };

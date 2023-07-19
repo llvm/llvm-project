@@ -1146,9 +1146,9 @@ static void test() {
        SV("R"), SV("S"), SV("t"), SV("T"), SV("X"), SV("EX"), SV("OH"), SV("OI"), SV("OM"), SV("OS")},
       0ms);
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), 0ms);
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), 0ms);
-  check_exception("End of input while parsing the modifier chrono conversion-spec", SV("{:%"), 0ms);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), 0ms);
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), 0ms);
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), 0ms);
   check_exception("End of input while parsing the modifier E", SV("{:%E"), 0ms);
   check_exception("End of input while parsing the modifier O", SV("{:%O"), 0ms);
 
@@ -1169,7 +1169,7 @@ static void test() {
   check(SV("05:42:00"), SV("{:%T}"), std::chrono::years{0xffff});                            // 17 bit signed value max
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), 0ms);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), 0ms);
 }
 
 int main(int, char**) {

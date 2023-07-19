@@ -1354,7 +1354,7 @@ void ExtractAlignedPointerAsIndexOp::getAsmResultNames(
 
 /// The number and type of the results are inferred from the
 /// shape of the source.
-LogicalResult ExtractStridedMetadataOp::inferReturnTypesAdaptor(
+LogicalResult ExtractStridedMetadataOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location,
     ExtractStridedMetadataOp::Adaptor adaptor,
     SmallVectorImpl<Type> &inferredReturnTypes) {
