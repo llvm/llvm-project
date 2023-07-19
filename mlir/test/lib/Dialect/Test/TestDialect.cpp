@@ -26,6 +26,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Support/LogicalResult.h"
@@ -2012,6 +2013,37 @@ static bool parseSumProperty(OpAsmParser &parser, int64_t &second,
 static void printSumProperty(OpAsmPrinter &printer, Operation *op,
                              int64_t second, int64_t first) {
   printer << second << " = " << (second + first);
+}
+
+//===----------------------------------------------------------------------===//
+// Test Dataflow
+//===----------------------------------------------------------------------===//
+
+CallInterfaceCallable TestCallAndStoreOp::getCallableForCallee() {
+  return getCallee();
+}
+
+void TestCallAndStoreOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  setCalleeAttr(callee.get<SymbolRefAttr>());
+}
+
+Operation::operand_range TestCallAndStoreOp::getArgOperands() {
+  return getCalleeOperands();
+}
+
+void TestStoreWithARegion::getSuccessorRegions(
+    std::optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!index) {
+    regions.emplace_back(&getBody(), getBody().front().getArguments());
+  } else {
+    regions.emplace_back();
+  }
+}
+
+MutableOperandRange TestStoreWithARegionTerminator::getMutableSuccessorOperands(
+    std::optional<unsigned> index) {
+  return MutableOperandRange(getOperation());
 }
 
 #include "TestOpEnums.cpp.inc"
