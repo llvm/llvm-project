@@ -103,8 +103,7 @@ namespace LambdaParams {
 
     return a;
   }
-  /// FIXME: This should work in the new interpreter.
-  static_assert(foo() == 1); // expected-error {{not an integral constant expression}}
+  static_assert(foo() == 1);
 }
 
 namespace StaticInvoker {
@@ -136,10 +135,6 @@ namespace StaticInvoker {
   }
   static_assert(sv4(12) == 12);
 
-
-
-  /// FIXME: This is broken for lambda-unrelated reasons.
-#if 0
   constexpr int sv5(int i) {
     struct F { int a; float f; };
     auto l = [](int m, F f) { return m; };
@@ -147,7 +142,6 @@ namespace StaticInvoker {
     return fp(i, F{12, 14.0});
   }
   static_assert(sv5(12) == 12);
-#endif
 
   constexpr int sv6(int i) {
     struct F { int a;
@@ -161,4 +155,27 @@ namespace StaticInvoker {
     return fp(i).a;
   }
   static_assert(sv6(12) == 12);
+}
+
+namespace LambdasAsParams {
+  template<typename F>
+  constexpr auto call(F f) {
+    return f();
+  }
+  static_assert(call([](){ return 1;}) == 1);
+  static_assert(call([](){ return 2;}) == 2);
+
+
+  constexpr unsigned L = call([](){ return 12;});
+  static_assert(L == 12);
+
+
+  constexpr float heh() {
+    auto a = []() {
+      return 1.0;
+    };
+
+    return static_cast<float>(a());
+  }
+  static_assert(heh() == 1.0);
 }
