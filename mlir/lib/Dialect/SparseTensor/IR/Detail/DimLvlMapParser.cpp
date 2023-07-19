@@ -29,7 +29,7 @@ using namespace mlir::sparse_tensor::ir_detail;
 
 // Our variation on `AffineParser::{parseBareIdExpr,parseIdentifierDefinition}`
 OptionalParseResult DimLvlMapParser::parseVar(VarKind vk, bool isOptional,
-                                              CreationPolicy creationPolicy,
+                                              Policy creationPolicy,
                                               VarInfo::ID &varID,
                                               bool &didCreate) {
   // Save the current location so that we can have error messages point to
@@ -70,21 +70,21 @@ OptionalParseResult DimLvlMapParser::parseVar(VarKind vk, bool isOptional,
   // TODO(wrengr): these error messages make sense for our intended usage,
   // but not in general; but it's unclear how best to factor that part out.
   switch (creationPolicy) {
-  case CreationPolicy::MustNot:
+  case Policy::MustNot:
     return parser.emitError(loc, "use of undeclared identifier '" + name + "'");
-  case CreationPolicy::May:
-    llvm_unreachable("got nullopt for CreationPolicy::May");
-  case CreationPolicy::Must:
+  case Policy::May:
+    llvm_unreachable("got nullopt for Policy::May");
+  case Policy::Must:
     return parser.emitError(loc, "redefinition of identifier '" + name + "'");
   }
-  llvm_unreachable("unknown CreationPolicy");
+  llvm_unreachable("unknown Policy");
 }
 
 FailureOr<VarInfo::ID> DimLvlMapParser::parseVarUsage(VarKind vk) {
   VarInfo::ID varID;
   bool didCreate;
-  const auto res = parseVar(vk, /*isOptional=*/false, CreationPolicy::MustNot,
-                            varID, didCreate);
+  const auto res =
+      parseVar(vk, /*isOptional=*/false, Policy::MustNot, varID, didCreate);
   if (!res.has_value() || failed(*res))
     return failure();
   return varID;
@@ -94,8 +94,7 @@ FailureOr<std::pair<Var, bool>>
 DimLvlMapParser::parseVarBinding(VarKind vk, bool isOptional) {
   VarInfo::ID id;
   bool didCreate;
-  const auto res =
-      parseVar(vk, isOptional, CreationPolicy::Must, id, didCreate);
+  const auto res = parseVar(vk, isOptional, Policy::Must, id, didCreate);
   if (res.has_value()) {
     FAILURE_IF_FAILED(*res)
     return std::make_pair(env.bindVar(id), true);

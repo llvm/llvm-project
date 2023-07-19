@@ -43,7 +43,7 @@ public:
 
 private:
   OptionalParseResult parseVar(VarKind vk, bool isOptional,
-                               CreationPolicy creationPolicy, VarInfo::ID &id,
+                               Policy creationPolicy, VarInfo::ID &id,
                                bool &didCreate);
   FailureOr<VarInfo::ID> parseVarUsage(VarKind vk);
   FailureOr<std::pair<Var, bool>> parseVarBinding(VarKind vk, bool isOptional);
