@@ -231,16 +231,16 @@ static void test_valid_values() {
 template <class CharT>
 static void test_invalid_values() {
   // Test that %a and %A throw an exception.
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%a}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(8), 1});
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%a}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(255), 1});
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%A}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(8), 1});
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%A}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(255), 1});
 
@@ -398,12 +398,12 @@ static void test() {
   check_invalid_types<CharT>({SV("a"), SV("A"), SV("t"), SV("u"), SV("w"), SV("Ou"), SV("Ow")},
                              std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
 
-  check_exception("Expected '%' or '}' in the chrono format-string",
+  check_exception("The format specifier expects a '%' or a '}'",
                   SV("{:A"),
                   std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
   check_exception(
-      "The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
-  check_exception("End of input while parsing the modifier chrono conversion-spec",
+      "The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
+  check_exception("End of input while parsing a conversion specifier",
                   SV("{:%"),
                   std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
   check_exception("End of input while parsing the modifier E",
@@ -414,7 +414,7 @@ static void test() {
                   std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string",
+  check_exception("The format specifier expects a '%' or a '}'",
                   SV("{:.3}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
 }

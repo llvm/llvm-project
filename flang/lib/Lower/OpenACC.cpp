@@ -680,9 +680,24 @@ static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
   llvm_unreachable("OpenACC reduction unsupported type");
 }
 
-static mlir::Value genReductionInitValue(fir::FirOpBuilder &builder,
-                                         mlir::Location loc, mlir::Type ty,
-                                         mlir::acc::ReductionOperator op) {
+/// Determine if the bounds represent a dynamic shape.
+bool hasDynamicShape(llvm::SmallVector<mlir::Value> &bounds) {
+  if (bounds.empty())
+    return false;
+  for (auto b : bounds) {
+    auto op = mlir::dyn_cast<mlir::acc::DataBoundsOp>(b.getDefiningOp());
+    if (((op.getLowerbound() && !fir::getIntIfConstant(op.getLowerbound())) ||
+         (op.getUpperbound() && !fir::getIntIfConstant(op.getUpperbound()))) &&
+        op.getExtent() && !fir::getIntIfConstant(op.getExtent()))
+      return true;
+  }
+  return false;
+}
+
+static mlir::Value
+genReductionInitValue(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Type ty, mlir::acc::ReductionOperator op,
+                      llvm::SmallVector<mlir::Value> &bounds) {
   if (op == mlir::acc::ReductionOperator::AccLand ||
       op == mlir::acc::ReductionOperator::AccLor ||
       op == mlir::acc::ReductionOperator::AccEqv ||
@@ -861,7 +876,8 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
 
 mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
     fir::FirOpBuilder &builder, llvm::StringRef recipeName, mlir::Location loc,
-    mlir::Type ty, mlir::acc::ReductionOperator op) {
+    mlir::Type ty, mlir::acc::ReductionOperator op,
+    llvm::SmallVector<mlir::Value> &bounds) {
   mlir::ModuleOp mod =
       builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
   if (auto recipe = mod.lookupSymbol<mlir::acc::ReductionRecipeOp>(recipeName))
@@ -874,7 +890,7 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
                       {ty}, {loc});
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-  mlir::Value initValue = genReductionInitValue(builder, loc, ty, op);
+  mlir::Value initValue = genReductionInitValue(builder, loc, ty, op, bounds);
   builder.create<mlir::acc::YieldOp>(loc, initValue);
 
   builder.createBlock(&recipe.getCombinerRegion(),
@@ -886,20 +902,6 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   builder.create<mlir::acc::YieldOp>(loc, combinedValue);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
-}
-
-/// Determine if the bounds represent a dynamic shape.
-bool hasDynamicShape(llvm::SmallVector<mlir::Value> &bounds) {
-  if (bounds.empty())
-    return false;
-  for (auto b : bounds) {
-    auto op = mlir::dyn_cast<mlir::acc::DataBoundsOp>(b.getDefiningOp());
-    if (((op.getLowerbound() && !fir::getIntIfConstant(op.getLowerbound())) ||
-         (op.getUpperbound() && !fir::getIntIfConstant(op.getUpperbound()))) &&
-        op.getExtent() && !fir::getIntIfConstant(op.getExtent()))
-      return true;
-  }
-  return false;
 }
 
 static void
@@ -935,19 +937,19 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
          !bounds.empty()))
       TODO(operandLocation, "reduction with unsupported type");
 
+    mlir::Type retTy = getTypeFromBounds(bounds, baseAddr.getType());
     auto op = createDataEntryOp<mlir::acc::ReductionOp>(
         builder, operandLocation, baseAddr, asFortran, bounds,
-        /*structured=*/true, mlir::acc::DataClause::acc_reduction,
-        baseAddr.getType());
+        /*structured=*/true, mlir::acc::DataClause::acc_reduction, retTy);
     mlir::Type ty = fir::unwrapRefType(op.getAccPtr().getType());
     if (!fir::isa_trivial(ty))
-      ty = baseAddr.getType();
+      ty = retTy;
     std::string recipeName = fir::getTypeAsString(
         ty, converter.getKindMap(),
         ("reduction_" + stringifyReductionOperator(mlirOp)).str());
     mlir::acc::ReductionRecipeOp recipe =
-        Fortran::lower::createOrGetReductionRecipe(builder, recipeName,
-                                                   operandLocation, ty, mlirOp);
+        Fortran::lower::createOrGetReductionRecipe(
+            builder, recipeName, operandLocation, ty, mlirOp, bounds);
     reductionRecipes.push_back(mlir::SymbolRefAttr::get(
         builder.getContext(), recipe.getSymName().str()));
     reductionOperands.push_back(op.getAccPtr());

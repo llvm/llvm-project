@@ -301,15 +301,11 @@ void RISCVDAGToDAGISel::addVectorLoadStoreOperands(
   // none of the others do.  All have passthru operands.  For our pseudos,
   // all loads have policy operands.
   if (IsLoad) {
-    if (IsMasked) {
-      uint64_t Policy = Node->getConstantOperandVal(CurOp++);
-      SDValue PolicyOp = CurDAG->getTargetConstant(Policy, DL, XLenVT);
-      Operands.push_back(PolicyOp);
-    } else {
-      uint64_t Policy = RISCVII::MASK_AGNOSTIC;
-      SDValue PolicyOp = CurDAG->getTargetConstant(Policy, DL, XLenVT);
-      Operands.push_back(PolicyOp);
-    }
+    uint64_t Policy = RISCVII::MASK_AGNOSTIC;
+    if (IsMasked)
+      Policy = Node->getConstantOperandVal(CurOp++);
+    SDValue PolicyOp = CurDAG->getTargetConstant(Policy, DL, XLenVT);
+    Operands.push_back(PolicyOp);
   }
 
   Operands.push_back(Chain); // Chain.
@@ -3178,10 +3174,8 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
     return false;
 
   unsigned MaskOpIdx = I->MaskOpIdx;
-
   if (!usesAllOnesMask(N, MaskOpIdx))
     return false;
-
 
   // There are two classes of pseudos in the table - compares and
   // everything else.  See the comment on RISCVMaskedPseudo for details.

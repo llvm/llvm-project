@@ -60,8 +60,6 @@ namespace {
     }
 
   private:
-    void TransferImpOps(MachineInstr &OldMI,
-                        MachineInstrBuilder &UseMI, MachineInstrBuilder &DefMI);
     bool ExpandMI(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MBBI,
                   MachineBasicBlock::iterator &NextMBBI);
@@ -122,22 +120,6 @@ namespace {
 
 INITIALIZE_PASS(ARMExpandPseudo, DEBUG_TYPE, ARM_EXPAND_PSEUDO_NAME, false,
                 false)
-
-/// TransferImpOps - Transfer implicit operands on the pseudo instruction to
-/// the instructions created from the expansion.
-void ARMExpandPseudo::TransferImpOps(MachineInstr &OldMI,
-                                     MachineInstrBuilder &UseMI,
-                                     MachineInstrBuilder &DefMI) {
-  const MCInstrDesc &Desc = OldMI.getDesc();
-  for (const MachineOperand &MO :
-       llvm::drop_begin(OldMI.operands(), Desc.getNumOperands())) {
-    assert(MO.isReg() && MO.getReg());
-    if (MO.isUse())
-      UseMI.add(MO);
-    else
-      DefMI.add(MO);
-  }
-}
 
 namespace {
   // Constants for register spacing in NEON load/store instructions.
@@ -678,7 +660,7 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
   }
   // Add an implicit def for the super-register.
   MIB.addReg(DstReg, RegState::ImplicitDefine | getDeadRegState(DstIsDead));
-  TransferImpOps(MI, MIB, MIB);
+  MIB.copyImplicitOps(MI);
 
   // Transfer memoperands.
   MIB.cloneMemRefs(MI);
@@ -754,7 +736,7 @@ void ARMExpandPseudo::ExpandVST(MachineBasicBlock::iterator &MBBI) {
     MIB->addRegisterKilled(SrcReg, TRI, true);
   else if (!SrcIsUndef)
     MIB.addReg(SrcReg, RegState::Implicit); // Add implicit uses for src reg.
-  TransferImpOps(MI, MIB, MIB);
+  MIB.copyImplicitOps(MI);
 
   // Transfer memoperands.
   MIB.cloneMemRefs(MI);
@@ -846,7 +828,7 @@ void ARMExpandPseudo::ExpandLaneOp(MachineBasicBlock::iterator &MBBI) {
   if (TableEntry->IsLoad)
     // Add an implicit def for the super-register.
     MIB.addReg(DstReg, RegState::ImplicitDefine | getDeadRegState(DstIsDead));
-  TransferImpOps(MI, MIB, MIB);
+  MIB.copyImplicitOps(MI);
   // Transfer memoperands.
   MIB.cloneMemRefs(MI);
   MI.eraseFromParent();
@@ -886,7 +868,7 @@ void ARMExpandPseudo::ExpandVTBL(MachineBasicBlock::iterator &MBBI,
 
   // Add an implicit kill and use for the super-reg.
   MIB.addReg(SrcReg, RegState::Implicit | getKillRegState(SrcIsKill));
-  TransferImpOps(MI, MIB, MIB);
+  MIB.copyImplicitOps(MI);
   MI.eraseFromParent();
   LLVM_DEBUG(dbgs() << "To:        "; MIB.getInstr()->dump(););
 }
@@ -923,7 +905,7 @@ void ARMExpandPseudo::ExpandMQQPRLoadStore(MachineBasicBlock::iterator &MBBI) {
   if (NewOpc == ARM::VSTMDIA)
     MIB.addReg(SrcReg, RegState::Implicit);
 
-  TransferImpOps(MI, MIB, MIB);
+  MIB.copyImplicitOps(MI);
   MIB.cloneMemRefs(MI);
   MI.eraseFromParent();
 }
@@ -1132,7 +1114,8 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
     HI16.addImm(Pred).addReg(PredReg).add(condCodeOp());
     if (isCC)
       LO16.add(makeImplicit(MI.getOperand(1)));
-    TransferImpOps(MI, LO16, HI16);
+    LO16.copyImplicitOps(MI);
+    HI16.copyImplicitOps(MI);
     MI.eraseFromParent();
     return;
   }
@@ -1191,7 +1174,8 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
 
   if (isCC)
     LO16.add(makeImplicit(MI.getOperand(1)));
-  TransferImpOps(MI, LO16, HI16);
+  LO16.copyImplicitOps(MI);
+  HI16.copyImplicitOps(MI);
   MI.eraseFromParent();
   LLVM_DEBUG(dbgs() << "To:        "; LO16.getInstr()->dump(););
   LLVM_DEBUG(dbgs() << "And:       "; HI16.getInstr()->dump(););
@@ -2584,14 +2568,13 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     }
     case ARM::RRX: {
       // This encodes as "MOVs Rd, Rm, rrx
-      MachineInstrBuilder MIB =
-          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MOVsi),
-                  MI.getOperand(0).getReg())
-              .add(MI.getOperand(1))
-              .addImm(ARM_AM::getSORegOpc(ARM_AM::rrx, 0))
-              .add(predOps(ARMCC::AL))
-              .add(condCodeOp());
-      TransferImpOps(MI, MIB, MIB);
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::MOVsi),
+              MI.getOperand(0).getReg())
+          .add(MI.getOperand(1))
+          .addImm(ARM_AM::getSORegOpc(ARM_AM::rrx, 0))
+          .add(predOps(ARMCC::AL))
+          .add(condCodeOp())
+          .copyImplicitOps(MI);
       MI.eraseFromParent();
       return true;
     }
@@ -2631,7 +2614,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       }
 
       MIB.cloneMemRefs(MI);
-      TransferImpOps(MI, MIB, MIB);
+      MIB.copyImplicitOps(MI);
       // Update the call site info.
       if (MI.isCandidateForCallSiteEntry())
         MF->moveCallSiteInfo(&MI, &*MIB);
@@ -2644,17 +2627,16 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         ? ARM::tLDRpci : ARM::t2LDRpci;
       Register DstReg = MI.getOperand(0).getReg();
       bool DstIsDead = MI.getOperand(0).isDead();
-      MachineInstrBuilder MIB1 =
-          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewLdOpc), DstReg)
-              .add(MI.getOperand(1))
-              .add(predOps(ARMCC::AL));
-      MIB1.cloneMemRefs(MI);
-      MachineInstrBuilder MIB2 =
-          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tPICADD))
-              .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
-              .addReg(DstReg)
-              .add(MI.getOperand(2));
-      TransferImpOps(MI, MIB1, MIB2);
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewLdOpc), DstReg)
+          .add(MI.getOperand(1))
+          .add(predOps(ARMCC::AL))
+          .cloneMemRefs(MI)
+          .copyImplicitOps(MI);
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tPICADD))
+          .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
+          .addReg(DstReg)
+          .add(MI.getOperand(2))
+          .copyImplicitOps(MI);
       MI.eraseFromParent();
       return true;
     }
@@ -2739,15 +2721,16 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       unsigned PICAddOpc = isARM
         ? (Opcode == ARM::MOV_ga_pcrel_ldr ? ARM::PICLDR : ARM::PICADD)
         : ARM::tPICADD;
-      MachineInstrBuilder MIB1 = BuildMI(MBB, MBBI, MI.getDebugLoc(),
-                                         TII->get(LO16Opc), DstReg)
-        .addGlobalAddress(GV, MO1.getOffset(), TF | LO16TF)
-        .addImm(LabelId);
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(LO16Opc), DstReg)
+          .addGlobalAddress(GV, MO1.getOffset(), TF | LO16TF)
+          .addImm(LabelId)
+          .copyImplicitOps(MI);
 
       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(HI16Opc), DstReg)
-        .addReg(DstReg)
-        .addGlobalAddress(GV, MO1.getOffset(), TF | HI16TF)
-        .addImm(LabelId);
+          .addReg(DstReg)
+          .addGlobalAddress(GV, MO1.getOffset(), TF | HI16TF)
+          .addImm(LabelId)
+          .copyImplicitOps(MI);
 
       MachineInstrBuilder MIB3 = BuildMI(MBB, MBBI, MI.getDebugLoc(),
                                          TII->get(PICAddOpc))
@@ -2758,7 +2741,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         if (Opcode == ARM::MOV_ga_pcrel_ldr)
           MIB3.cloneMemRefs(MI);
       }
-      TransferImpOps(MI, MIB1, MIB3);
+      MIB3.copyImplicitOps(MI);
       MI.eraseFromParent();
       return true;
     }
@@ -2786,14 +2769,13 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       return true;
 
     case ARM::SUBS_PC_LR: {
-      MachineInstrBuilder MIB =
-          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::SUBri), ARM::PC)
-              .addReg(ARM::LR)
-              .add(MI.getOperand(0))
-              .add(MI.getOperand(1))
-              .add(MI.getOperand(2))
-              .addReg(ARM::CPSR, RegState::Undef);
-      TransferImpOps(MI, MIB, MIB);
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::SUBri), ARM::PC)
+          .addReg(ARM::LR)
+          .add(MI.getOperand(0))
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2))
+          .addReg(ARM::CPSR, RegState::Undef)
+          .copyImplicitOps(MI);
       MI.eraseFromParent();
       return true;
     }
@@ -2822,7 +2804,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
       // Add an implicit def for the super-register.
       MIB.addReg(DstReg, RegState::ImplicitDefine | getDeadRegState(DstIsDead));
-      TransferImpOps(MI, MIB, MIB);
+      MIB.copyImplicitOps(MI);
       MIB.cloneMemRefs(MI);
       MI.eraseFromParent();
       return true;
@@ -2855,7 +2837,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       if (SrcIsKill)      // Add an implicit kill for the Q register.
         MIB->addRegisterKilled(SrcReg, TRI, true);
 
-      TransferImpOps(MI, MIB, MIB);
+      MIB.copyImplicitOps(MI);
       MIB.cloneMemRefs(MI);
       MI.eraseFromParent();
       return true;

@@ -9,74 +9,28 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_IMPLEMENTATIONS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE_IMPLEMENTATIONS_H
 
-#include "src/__support/common.h"
-#include "src/__support/macros/optimization.h"
-#include "src/string/memory_utils/generic/byte_per_byte.h"
-#include "src/string/memory_utils/op_aarch64.h"
-#include "src/string/memory_utils/op_builtin.h"
-#include "src/string/memory_utils/op_generic.h"
-#include "src/string/memory_utils/op_x86.h"
 #include <stddef.h> // size_t, ptrdiff_t
+
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+#include "src/string/memory_utils/x86_64/memmove_implementations.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_x86
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#include "src/string/memory_utils/aarch64/memmove_implementations.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_aarch64
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
+#include "src/string/memory_utils/riscv/memmove_implementations.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_riscv
+#else
+// We may want to error instead of defaulting to suboptimal implementation.
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE inline_memmove_byte_per_byte
+#endif
 
 namespace __llvm_libc {
 
-LIBC_INLINE void inline_memmove(Ptr dst, CPtr src, size_t count) {
-#if defined(LIBC_TARGET_ARCH_IS_X86) || defined(LIBC_TARGET_ARCH_IS_AARCH64)
-#if defined(LIBC_TARGET_ARCH_IS_X86)
-#if defined(__AVX512F__)
-  using uint128_t = generic_v128;
-  using uint256_t = generic_v256;
-  using uint512_t = generic_v512;
-#elif defined(__AVX__)
-  using uint128_t = generic_v128;
-  using uint256_t = generic_v256;
-  using uint512_t = cpp::array<generic_v256, 2>;
-#elif defined(__SSE2__)
-  using uint128_t = generic_v128;
-  using uint256_t = cpp::array<generic_v128, 2>;
-  using uint512_t = cpp::array<generic_v128, 4>;
-#else
-  using uint128_t = cpp::array<uint64_t, 2>;
-  using uint256_t = cpp::array<uint64_t, 4>;
-  using uint512_t = cpp::array<uint64_t, 8>;
-#endif
-#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-  static_assert(aarch64::kNeon, "aarch64 supports vector types");
-  using uint128_t = generic_v128;
-  using uint256_t = generic_v256;
-  using uint512_t = generic_v512;
-#endif
-  if (count == 0)
-    return;
-  if (count == 1)
-    return generic::Memmove<uint8_t>::block(dst, src);
-  if (count <= 4)
-    return generic::Memmove<uint16_t>::head_tail(dst, src, count);
-  if (count <= 8)
-    return generic::Memmove<uint32_t>::head_tail(dst, src, count);
-  if (count <= 16)
-    return generic::Memmove<uint64_t>::head_tail(dst, src, count);
-  if (count <= 32)
-    return generic::Memmove<uint128_t>::head_tail(dst, src, count);
-  if (count <= 64)
-    return generic::Memmove<uint256_t>::head_tail(dst, src, count);
-  if (count <= 128)
-    return generic::Memmove<uint512_t>::head_tail(dst, src, count);
-  if (dst < src) {
-    generic::Memmove<uint256_t>::align_forward<Arg::Src>(dst, src, count);
-    return generic::Memmove<uint512_t>::loop_and_tail_forward(dst, src, count);
-  } else {
-    generic::Memmove<uint256_t>::align_backward<Arg::Src>(dst, src, count);
-    return generic::Memmove<uint512_t>::loop_and_tail_backward(dst, src, count);
-  }
-#else
-  return inline_memmove_byte_per_byte(dst, src, count);
-#endif
-}
-
 LIBC_INLINE void inline_memmove(void *dst, const void *src, size_t count) {
-  inline_memmove(reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src),
-                 count);
+  LIBC_SRC_STRING_MEMORY_UTILS_MEMMOVE(reinterpret_cast<Ptr>(dst),
+                                       reinterpret_cast<CPtr>(src), count);
 }
 
 } // namespace __llvm_libc
