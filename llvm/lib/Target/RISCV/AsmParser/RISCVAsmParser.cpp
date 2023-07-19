@@ -1546,15 +1546,6 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
   }
-  case Match_InvalidRnumArg_0_7: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 7);
-  }
-  case Match_InvalidRnumArg_1_10: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, 10);
-  }
-  case Match_InvalidRnumArg_2_14: {
-    return generateImmOutOfRangeError(Operands, ErrorInfo, 2, 14);
-  }
   }
 
   llvm_unreachable("Unknown match type detected!");
