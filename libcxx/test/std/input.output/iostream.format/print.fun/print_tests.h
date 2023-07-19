@@ -74,10 +74,10 @@ void print_tests(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format string contains an invalid escape sequence", "{:}-}", 42);
 
   check_exception("The format string contains an invalid escape sequence", "} ");
-  check_exception("The arg-id of the format-spec starts with an invalid character", "{-", 42);
-  check_exception("Argument index out of bounds", "hello {}");
-  check_exception("Argument index out of bounds", "hello {0}");
-  check_exception("Argument index out of bounds", "hello {1}", 42);
+  check_exception("The argument index starts with an invalid character", "{-", 42);
+  check_exception("The argument index value is too large for the number of arguments supplied", "hello {}");
+  check_exception("The argument index value is too large for the number of arguments supplied", "hello {0}");
+  check_exception("The argument index value is too large for the number of arguments supplied", "hello {1}", 42);
 }
 
 #endif // TEST_STD_INPUT_OUTPUT_IOSTREAM_FORMAT_PRINT_FUN_PRINT_TESTS_H
