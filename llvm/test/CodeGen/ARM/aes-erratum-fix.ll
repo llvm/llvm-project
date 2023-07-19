@@ -376,7 +376,7 @@ define arm_aapcs_vfpcc void @aese_set8_cond_via_val(i1 zeroext %0, i8 zeroext %1
 ; CHECK-FIX-NEXT:    beq .LBB13_4
 ; CHECK-FIX-NEXT:  @ %bb.3:
 ; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
-; CHECK-FIX-NEXT:  .LBB13_4: @ %select.end1
+; CHECK-FIX-NEXT:  .LBB13_4: @ %select.end2
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    aesmc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
@@ -620,7 +620,7 @@ define arm_aapcs_vfpcc void @aese_set16_cond_via_val(i1 zeroext %0, i16 zeroext 
 ; CHECK-FIX-NEXT:    beq .LBB19_4
 ; CHECK-FIX-NEXT:  @ %bb.3:
 ; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
-; CHECK-FIX-NEXT:  .LBB19_4: @ %select.end1
+; CHECK-FIX-NEXT:  .LBB19_4: @ %select.end2
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    aesmc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
@@ -872,7 +872,7 @@ define arm_aapcs_vfpcc void @aese_set32_cond_via_val(i1 zeroext %0, i32 %1, <16 
 ; CHECK-FIX-NEXT:    beq .LBB25_4
 ; CHECK-FIX-NEXT:  @ %bb.3:
 ; CHECK-FIX-NEXT:    vmov.32 d0[0], r1
-; CHECK-FIX-NEXT:  .LBB25_4: @ %select.end1
+; CHECK-FIX-NEXT:  .LBB25_4: @ %select.end2
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    aesmc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
@@ -1143,7 +1143,7 @@ define arm_aapcs_vfpcc void @aese_set64_cond_via_val(i1 zeroext %0, i64 %1, <16 
 ; CHECK-FIX-NEXT:  @ %bb.3:
 ; CHECK-FIX-NEXT:    vmov.32 d0[0], r2
 ; CHECK-FIX-NEXT:    vmov.32 d0[1], r3
-; CHECK-FIX-NEXT:  .LBB31_4: @ %select.end1
+; CHECK-FIX-NEXT:  .LBB31_4: @ %select.end2
 ; CHECK-FIX-NEXT:    aese.8 q8, q0
 ; CHECK-FIX-NEXT:    aesmc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r1]
@@ -2588,7 +2588,7 @@ define arm_aapcs_vfpcc void @aesd_set8_cond_via_val(i1 zeroext %0, i8 zeroext %1
 ; CHECK-FIX-NEXT:    beq .LBB59_4
 ; CHECK-FIX-NEXT:  @ %bb.3:
 ; CHECK-FIX-NEXT:    vmov.8 d0[0], r1
-; CHECK-FIX-NEXT:  .LBB59_4: @ %select.end1
+; CHECK-FIX-NEXT:  .LBB59_4: @ %select.end2
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
@@ -2832,7 +2832,7 @@ define arm_aapcs_vfpcc void @aesd_set16_cond_via_val(i1 zeroext %0, i16 zeroext 
 ; CHECK-FIX-NEXT:    beq .LBB65_4
 ; CHECK-FIX-NEXT:  @ %bb.3:
 ; CHECK-FIX-NEXT:    vmov.16 d0[0], r1
-; CHECK-FIX-NEXT:  .LBB65_4: @ %select.end1
+; CHECK-FIX-NEXT:  .LBB65_4: @ %select.end2
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
@@ -3084,7 +3084,7 @@ define arm_aapcs_vfpcc void @aesd_set32_cond_via_val(i1 zeroext %0, i32 %1, <16 
 ; CHECK-FIX-NEXT:    beq .LBB71_4
 ; CHECK-FIX-NEXT:  @ %bb.3:
 ; CHECK-FIX-NEXT:    vmov.32 d0[0], r1
-; CHECK-FIX-NEXT:  .LBB71_4: @ %select.end1
+; CHECK-FIX-NEXT:  .LBB71_4: @ %select.end2
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r2]
@@ -3355,7 +3355,7 @@ define arm_aapcs_vfpcc void @aesd_set64_cond_via_val(i1 zeroext %0, i64 %1, <16 
 ; CHECK-FIX-NEXT:  @ %bb.3:
 ; CHECK-FIX-NEXT:    vmov.32 d0[0], r2
 ; CHECK-FIX-NEXT:    vmov.32 d0[1], r3
-; CHECK-FIX-NEXT:  .LBB77_4: @ %select.end1
+; CHECK-FIX-NEXT:  .LBB77_4: @ %select.end2
 ; CHECK-FIX-NEXT:    aesd.8 q8, q0
 ; CHECK-FIX-NEXT:    aesimc.8 q8, q8
 ; CHECK-FIX-NEXT:    vst1.64 {d16, d17}, [r1]
