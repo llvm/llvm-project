@@ -305,12 +305,8 @@ ArrayRef<FrameIndexExpr> DbgVariable::getFrameIndexExprs() const {
   return FrameIndexExprs;
 }
 
-void DbgVariable::addMMIEntry(const DbgVariable &V) {
-  assert(V.getVariable() == getVariable() && "conflicting variable");
-  assert(V.getInlinedAt() == getInlinedAt() && "conflicting inlined-at location");
-
+void DbgVariable::addMMIEntry(const DIExpression *Expr, int FI) {
   auto &FrameIndexExprs = get<MMILoc>().FrameIndexExprs;
-  auto &VFrameIndexExprs = V.get<MMILoc>().FrameIndexExprs;
 
   // FIXME: This logic should not be necessary anymore, as we now have proper
   // deduplication. However, without it, we currently run into the assertion
@@ -322,12 +318,10 @@ void DbgVariable::addMMIEntry(const DbgVariable &V) {
       return;
   }
 
-  for (const auto &FIE : VFrameIndexExprs)
-    // Ignore duplicate entries.
-    if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
-          return FIE.FI == Other.FI && FIE.Expr == Other.Expr;
-        }))
-      FrameIndexExprs.push_back(FIE);
+  if (llvm::none_of(FrameIndexExprs, [&](const FrameIndexExpr &Other) {
+        return FI == Other.FI && Expr == Other.Expr;
+      }))
+    FrameIndexExprs.push_back({FI, Expr});
 
   assert((FrameIndexExprs.size() == 1 ||
           llvm::all_of(FrameIndexExprs,
@@ -1574,6 +1568,15 @@ void DwarfDebug::collectVariableInfoFromMFTable(
     }
 
     ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
+
+    if (DbgVariable *DbgVar = MFVars.lookup(Var)) {
+      if (DbgVar->hasFrameIndexExprs())
+        DbgVar->addMMIEntry(VI.Expr, VI.getStackSlot());
+      else
+        DbgVar->addEntryValueExpr(VI.getEntryValueRegister(), *VI.Expr);
+      continue;
+    }
+
     auto RegVar = std::make_unique<DbgVariable>(
                     cast<DILocalVariable>(Var.first), Var.second);
     if (VI.inStackSlot())
@@ -1582,16 +1585,9 @@ void DwarfDebug::collectVariableInfoFromMFTable(
       RegVar->initializeEntryValue(VI.getEntryValueRegister(), *VI.Expr);
     LLVM_DEBUG(dbgs() << "Created DbgVariable for " << VI.Var->getName()
                       << "\n");
-
-    if (DbgVariable *DbgVar = MFVars.lookup(Var)) {
-      if (DbgVar->hasFrameIndexExprs())
-        DbgVar->addMMIEntry(*RegVar);
-      else
-        DbgVar->addEntryValueExpr(VI.getEntryValueRegister(), *VI.Expr);
-    } else if (InfoHolder.addScopeVariable(Scope, RegVar.get())) {
-      MFVars.insert({Var, RegVar.get()});
-      ConcreteEntities.push_back(std::move(RegVar));
-    }
+    InfoHolder.addScopeVariable(Scope, RegVar.get());
+    MFVars.insert({Var, RegVar.get()});
+    ConcreteEntities.push_back(std::move(RegVar));
   }
 }
 
