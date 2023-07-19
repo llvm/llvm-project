@@ -58,7 +58,7 @@ struct TestLinalgDropUnitDims
 
     for (auto genericOp : genericOps) {
       rewriter.setInsertionPoint(genericOp);
-      dropOutermostUnitDims(rewriter, genericOp);
+      (void)dropOutermostUnitDims(rewriter, genericOp);
     }
   }
 };
