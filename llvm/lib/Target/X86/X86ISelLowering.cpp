@@ -39935,6 +39935,18 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
       return true;
     }
   }
+  // TODO: Can we handle this inside matchShuffleWithPACK?
+  if (MaskVT == MVT::v4i32 && Subtarget.hasSSE2() &&
+      isTargetShuffleEquivalent(MaskVT, Mask, {0, 2, 4, 6}, DAG)) {
+    if (V1.getScalarValueSizeInBits() == 64 &&
+        V2.getScalarValueSizeInBits() == 64 &&
+        DAG.ComputeNumSignBits(V1) == 64 && DAG.ComputeNumSignBits(V2) == 64) {
+      SrcVT = MVT::v4i32;
+      DstVT = MVT::v8i16;
+      Shuffle = X86ISD::PACKSS;
+      return true;
+    }
+  }
 
   // Attempt to match against either a unary or binary UNPCKL/UNPCKH shuffle.
   if ((MaskVT == MVT::v4f32 && Subtarget.hasSSE1()) ||
