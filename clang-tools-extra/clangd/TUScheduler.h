@@ -13,7 +13,7 @@
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "GlobalCompilationDatabase.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "support/Function.h"
 #include "support/MemoryTree.h"
 #include "support/Path.h"
@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <chrono>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -161,10 +162,9 @@ public:
   /// Called on the AST that was built for emitting the preamble. The built AST
   /// contains only AST nodes from the #include directives at the start of the
   /// file. AST node in the current file should be observed on onMainAST call.
-  virtual void onPreambleAST(PathRef Path, llvm::StringRef Version,
-                             CapturedASTCtx Ctx,
-                             const std::shared_ptr<const CanonicalIncludes>) {}
-
+  virtual void
+  onPreambleAST(PathRef Path, llvm::StringRef Version, CapturedASTCtx Ctx,
+                std::shared_ptr<const include_cleaner::PragmaIncludes>) {}
   /// The argument function is run under the critical section guarding against
   /// races when closing the files.
   using PublishFn = llvm::function_ref<void(llvm::function_ref<void()>)>;
