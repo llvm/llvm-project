@@ -47,7 +47,7 @@ extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
 _begin(int argc, char **argv, char **env, void *rpc_shared_buffer) {
   // We need to set up the RPC client first in case any of the constructors
   // require it.
-  __llvm_libc::rpc::client.reset(__llvm_libc::rpc::MAX_PORT_COUNT,
+  __llvm_libc::rpc::client.reset(__llvm_libc::rpc::DEFAULT_PORT_COUNT,
                                  rpc_shared_buffer);
 
   // We want the fini array callbacks to be run after other atexit
