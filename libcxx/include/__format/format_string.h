@@ -124,7 +124,7 @@ __parse_number(_Iterator __begin, _Iterator __end_input) {
     if (__v > __number_max ||
         (__begin != __end_input && *__begin >= _CharT('0') &&
          *__begin <= _CharT('9')))
-      std::__throw_format_error("The numeric value of the format-spec is too large");
+      std::__throw_format_error("The numeric value of the format specifier is too large");
 
     __value = __v;
   }
@@ -154,7 +154,7 @@ __parse_arg_id(_Iterator __begin, _Iterator __end, auto& __parse_ctx) {
     return __detail::__parse_automatic(__begin, __end, __parse_ctx);
   }
   if (*__begin < _CharT('0') || *__begin > _CharT('9'))
-    std::__throw_format_error("The arg-id of the format-spec starts with an invalid character");
+    std::__throw_format_error("The argument index starts with an invalid character");
 
   return __detail::__parse_manual(__begin, __end, __parse_ctx);
 }
