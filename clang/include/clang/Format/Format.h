@@ -1100,7 +1100,7 @@ struct FormatStyle {
     /// Wrap ObjC definitions (interfaces, implementations...).
     /// \note
     ///  @autoreleasepool and @synchronized blocks are wrapped
-    ///  according to `AfterControlStatement` flag.
+    ///  according to ``AfterControlStatement`` flag.
     /// \endnote
     bool AfterObjCDeclaration;
     /// Wrap struct definitions.
@@ -1210,9 +1210,10 @@ struct FormatStyle {
     bool IndentBraces;
     /// If ``false``, empty function body can be put on a single line.
     /// This option is used only if the opening brace of the function has
-    /// already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
+    /// already been wrapped, i.e. the ``AfterFunction`` brace wrapping mode is
     /// set, and the function could/should not be put on a single line (as per
-    /// `AllowShortFunctionsOnASingleLine` and constructor formatting options).
+    /// ``AllowShortFunctionsOnASingleLine`` and constructor formatting
+    /// options).
     /// \code
     ///   false:          true:
     ///   int f()   vs.   int f()
@@ -1223,7 +1224,7 @@ struct FormatStyle {
     bool SplitEmptyFunction;
     /// If ``false``, empty record (e.g. class, struct or union) body
     /// can be put on a single line. This option is used only if the opening
-    /// brace of the record has already been wrapped, i.e. the `AfterClass`
+    /// brace of the record has already been wrapped, i.e. the ``AfterClass``
     /// (for classes) brace wrapping mode is set.
     /// \code
     ///   false:           true:
@@ -1235,7 +1236,7 @@ struct FormatStyle {
     bool SplitEmptyRecord;
     /// If ``false``, empty namespace body can be put on a single line.
     /// This option is used only if the opening brace of the namespace has
-    /// already been wrapped, i.e. the `AfterNamespace` brace wrapping mode is
+    /// already been wrapped, i.e. the ``AfterNamespace`` brace wrapping mode is
     /// set.
     /// \code
     ///   false:               true:
@@ -1292,9 +1293,9 @@ struct FormatStyle {
   /// \version 16
   AttributeBreakingStyle BreakAfterAttributes;
 
-  /// If ``true``, clang-format will always break after a Json array `[`
-  /// otherwise it will scan until the closing `]` to determine if it should add
-  /// newlines between elements (prettier compatible).
+  /// If ``true``, clang-format will always break after a Json array ``[``
+  /// otherwise it will scan until the closing ``]`` to determine if it should
+  /// add newlines between elements (prettier compatible).
   ///
   /// \note
   ///  This is currently only for formatting JSON.
@@ -1793,7 +1794,7 @@ struct FormatStyle {
     ///   } // namespace N
     /// \endcode
     BS_WebKit,
-    /// Configure each individual brace in `BraceWrapping`.
+    /// Configure each individual brace in ``BraceWrapping``.
     BS_Custom
   };
 
@@ -2467,9 +2468,9 @@ struct FormatStyle {
   /// and ``while``) in C++ unless the control statements are inside macro
   /// definitions or the braces would enclose preprocessor directives.
   /// \warning
-  ///  Setting this option to `true` could lead to incorrect code formatting due
-  ///  to clang-format's lack of complete semantic information. As such, extra
-  ///  care should be taken to review code changes made by this option.
+  ///  Setting this option to ``true`` could lead to incorrect code formatting
+  ///  due to clang-format's lack of complete semantic information. As such,
+  ///  extra care should be taken to review code changes made by this option.
   /// \endwarning
   /// \code
   ///   false:                                    true:
@@ -2839,7 +2840,7 @@ struct FormatStyle {
   /// \endcode
   ///
   /// will usually be interpreted as a call to a function A, and the
-  /// multiplication expression will be formatted as `a * b`.
+  /// multiplication expression will be formatted as ``a * b``.
   ///
   /// If we specify the macro definition:
   /// \code{.yaml}
@@ -2848,7 +2849,7 @@ struct FormatStyle {
   /// \endcode
   ///
   /// the code will now be parsed as a declaration of the variable b of type a*,
-  /// and formatted as `a* b` (depending on pointer-binding rules).
+  /// and formatted as ``a* b`` (depending on pointer-binding rules).
   ///
   /// Features and restrictions:
   ///  * Both function-like macros and object-like macros are supported.
@@ -3189,7 +3190,7 @@ struct FormatStyle {
 
   /// Different ways to arrange specifiers and qualifiers (e.g. const/volatile).
   /// \warning
-  ///  Setting ``QualifierAlignment``  to something other than `Leave`, COULD
+  ///  Setting ``QualifierAlignment``  to something other than ``Leave``, COULD
   ///  lead to incorrect code formatting due to incorrect decisions made due to
   ///  clang-formats lack of complete semantic information.
   ///  As such extra care should be taken to review code changes made by the use
@@ -3335,9 +3336,9 @@ struct FormatStyle {
   ///  This option will be renamed and expanded to support other styles.
   /// \endwarning
   /// \warning
-  ///  Setting this option to `true` could lead to incorrect code formatting due
-  ///  to clang-format's lack of complete semantic information. As such, extra
-  ///  care should be taken to review code changes made by this option.
+  ///  Setting this option to ``true`` could lead to incorrect code formatting
+  ///  due to clang-format's lack of complete semantic information. As such,
+  ///  extra care should be taken to review code changes made by this option.
   /// \endwarning
   /// \code
   ///   false:                                     true:
@@ -3421,9 +3422,9 @@ struct FormatStyle {
 
   /// Remove semicolons after the closing brace of a non-empty function.
   /// \warning
-  ///  Setting this option to `true` could lead to incorrect code formatting due
-  ///  to clang-format's lack of complete semantic information. As such, extra
-  ///  care should be taken to review code changes made by this option.
+  ///  Setting this option to ``true`` could lead to incorrect code formatting
+  ///  due to clang-format's lack of complete semantic information. As such,
+  ///  extra care should be taken to review code changes made by this option.
   /// \endwarning
   /// \code
   ///   false:                                     true:
@@ -3529,7 +3530,7 @@ struct FormatStyle {
     ///    }
     /// \endcode
     REI_OuterScope,
-    /// Align requires expression body relative to the `requires` keyword.
+    /// Align requires expression body relative to the ``requires`` keyword.
     /// \code
     ///    template <typename T>
     ///    concept C = requires(T t) {
@@ -3900,7 +3901,7 @@ struct FormatStyle {
     /// \endcode
     SBPO_Always,
     /// Configure each individual space before parentheses in
-    /// `SpaceBeforeParensOptions`.
+    /// ``SpaceBeforeParensOptions``.
     SBPO_Custom,
   };
 
@@ -4085,7 +4086,7 @@ struct FormatStyle {
   /// \version 3.7
   unsigned SpacesBeforeTrailingComments;
 
-  /// Styles for adding spacing after ``<`` and before ``>`
+  /// Styles for adding spacing after ``<`` and before ``>``
   ///  in template argument lists.
   enum SpacesInAnglesStyle : int8_t {
     /// Remove spaces after ``<`` and before ``>``.
@@ -4268,8 +4269,9 @@ struct FormatStyle {
   /// A vector of non-keyword identifiers that should be interpreted as type
   /// names.
   ///
-  /// A `*`, `&`, or `&&` between a type name and another non-keyword identifier
-  /// is annotated as a pointer or reference token instead of a binary operator.
+  /// A ``*``, ``&``, or ``&&`` between a type name and another non-keyword
+  /// identifier is annotated as a pointer or reference token instead of a
+  /// binary operator.
   ///
   /// \version 17
   std::vector<std::string> TypeNames;
@@ -4647,7 +4649,7 @@ formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
 /// - If a replacement has offset UINT_MAX, length 1, and a replacement text
 ///   that is the name of the header to be removed, the header will be removed
 ///   from \p Code if it exists.
-/// The include manipulation is done via `tooling::HeaderInclude`, see its
+/// The include manipulation is done via ``tooling::HeaderInclude``, see its
 /// documentation for more details on how include insertion points are found and
 /// what edits are produced.
 llvm::Expected<tooling::Replacements>
@@ -4738,11 +4740,11 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style = getLLVMStyle());
 extern const char *StyleOptionHelpDescription;
 
 /// The suggested format style to use by default. This allows tools using
-/// `getStyle` to have a consistent default style.
+/// ``getStyle`` to have a consistent default style.
 /// Different builds can modify the value to the preferred styles.
 extern const char *DefaultFormatStyle;
 
-/// The suggested predefined style to use as the fallback style in `getStyle`.
+/// The suggested predefined style to use as the fallback style in ``getStyle``.
 /// Different builds can modify the value to the preferred styles.
 extern const char *DefaultFallbackStyle;
 

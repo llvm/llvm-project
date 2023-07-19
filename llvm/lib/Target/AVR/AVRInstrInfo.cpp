@@ -35,8 +35,9 @@
 
 namespace llvm {
 
-AVRInstrInfo::AVRInstrInfo()
-    : AVRGenInstrInfo(AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI() {}
+AVRInstrInfo::AVRInstrInfo(AVRSubtarget &STI)
+    : AVRGenInstrInfo(AVR::ADJCALLSTACKDOWN, AVR::ADJCALLSTACKUP), RI(),
+      STI(STI) {}
 
 void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
@@ -569,7 +570,10 @@ void AVRInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   // insertBranch or some hypothetical "insertDirectBranch".
   // See lib/CodeGen/RegisterRelaxation.cpp for details.
   // We end up here when a jump is too long for a RJMP instruction.
-  BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
+  if (STI.hasJMPCALL())
+    BuildMI(&MBB, DL, get(AVR::JMPk)).addMBB(&NewDestBB);
+  else
+    report_fatal_error("cannot create long jump without FeatureJMPCALL");
 }
 
 } // end of namespace llvm

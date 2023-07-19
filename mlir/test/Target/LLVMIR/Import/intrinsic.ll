@@ -850,6 +850,13 @@ define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x floa
   ret void
 }
 
+; CHECK-LABEL:  llvm.func @ssa_copy
+define float @ssa_copy(float %0) {
+  ; CHECK: %{{.*}} = llvm.intr.ssa.copy %{{.*}} : f32
+  %2 = call float @llvm.ssa.copy.f32(float %0)
+  ret float %2
+}
+
 declare float @llvm.fmuladd.f32(float, float, float)
 declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>)
 declare float @llvm.fma.f32(float, float, float)
@@ -1065,3 +1072,4 @@ declare <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64(<8 x i64>, <8 x i1>, i32)
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.assume(i1)
+declare float @llvm.ssa.copy.f32(float returned)

@@ -199,6 +199,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   // Function alignments.
   setMinFunctionAlignment(Align(4));
+  // Set preferred alignments.
+  setPrefFunctionAlignment(Subtarget.getPrefFunctionAlignment());
+  setPrefLoopAlignment(Subtarget.getPrefLoopAlignment());
+  setMaxBytesForAlignment(Subtarget.getMaxBytesForAlignment());
 
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);

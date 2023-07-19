@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_BCMP_IMPLEMENTATIONS_H
-#define LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_BCMP_IMPLEMENTATIONS_H
+#ifndef LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_BCMP_H
+#define LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_BCMP_H
 
 #include "src/__support/macros/attributes.h"   // LIBC_INLINE
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
@@ -67,4 +67,4 @@ namespace __llvm_libc {
 
 } // namespace __llvm_libc
 
-#endif // LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_BCMP_IMPLEMENTATIONS_H
+#endif // LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_BCMP_H

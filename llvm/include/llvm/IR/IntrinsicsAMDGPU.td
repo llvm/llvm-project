@@ -10,10 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-def flat_ptr_i32_ty : LLVMQualPointerType<0>;
-def global_ptr_i32_ty : LLVMQualPointerType<1>;
-def global_ptr_i64_ty : LLVMQualPointerType<1>;
-def local_ptr_i32_ty : LLVMQualPointerType<3>;
+def flat_ptr_ty : LLVMQualPointerType<0>;
+def global_ptr_ty : LLVMQualPointerType<1>;
+def local_ptr_ty : LLVMQualPointerType<3>;
 
 class AMDGPUReadPreloadRegisterIntrinsic
   : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
@@ -2719,11 +2718,11 @@ class AMDGPUAtomicCondSub<LLVMType vt, LLVMType pt> : Intrinsic <
     [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree], "",
     [SDNPMemOperand]>;
 
-def int_amdgcn_flat_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, flat_ptr_i32_ty>;
-def int_amdgcn_global_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, global_ptr_i32_ty>;
-def int_amdgcn_global_atomic_ordered_add_b64 : AMDGPUAtomicCondSub<llvm_i64_ty, global_ptr_i64_ty>;
+def int_amdgcn_flat_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, flat_ptr_ty>;
+def int_amdgcn_global_atomic_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, global_ptr_ty>;
+def int_amdgcn_global_atomic_ordered_add_b64 : AMDGPUAtomicCondSub<llvm_i64_ty, global_ptr_ty>;
 
-def int_amdgcn_ds_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, local_ptr_i32_ty>;
+def int_amdgcn_ds_cond_sub_u32 : AMDGPUAtomicCondSub<llvm_i32_ty, local_ptr_ty>;
 
 def int_amdgcn_flat_atomic_fmin_num   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 def int_amdgcn_flat_atomic_fmax_num   : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
@@ -2733,7 +2732,7 @@ def int_amdgcn_global_atomic_fmax_num : AMDGPUGlobalAtomicRtn<llvm_anyfloat_ty>;
 class AMDGPUGlobalLoadTr<LLVMType data_ty> :
   Intrinsic<
     [data_ty],
-    [global_ptr_i64_ty],
+    [global_ptr_ty],
     [IntrReadMem, IntrWillReturn, IntrConvergent, NoCapture<ArgIndex<0>>, IntrNoCallback, IntrNoFree],
     "",
     [SDNPMemOperand]

@@ -23,7 +23,7 @@
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/GPU/utils.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #include <stdint.h>
 
