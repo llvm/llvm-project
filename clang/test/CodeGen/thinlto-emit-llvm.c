@@ -1,5 +1,3 @@
-// XFAIL: target={{.*}}-aix{{.*}}
-
 // Test to ensure -emit-llvm and -emit-llvm-bc work when invoking the
 // ThinLTO backend path.
 // RUN: %clang -O2 %s -flto=thin -c -o %t.o
