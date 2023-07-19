@@ -32,15 +32,15 @@ define void @t2(ptr %dst, <3 x i64> %src1, <3 x i64> %src2) nounwind readonly {
 ; CHECK-NEXT:    movq %rcx, %xmm0
 ; CHECK-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    pxor %xmm4, %xmm4
-; CHECK-NEXT:    pcmpeqq %xmm4, %xmm0
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm2
-; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm0[0,2]
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pcmpeqq %xmm4, %xmm3
+; CHECK-NEXT:    pcmpeqq %xmm4, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm5, %xmm5
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm3[0,2]
-; CHECK-NEXT:    orps %xmm2, %xmm1
-; CHECK-NEXT:    xorps %xmm0, %xmm1
+; CHECK-NEXT:    por %xmm2, %xmm1
+; CHECK-NEXT:    pcmpeqq %xmm4, %xmm3
+; CHECK-NEXT:    por %xmm0, %xmm3
+; CHECK-NEXT:    packssdw %xmm3, %xmm1
+; CHECK-NEXT:    pxor %xmm5, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,2,2,2]
 ; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
