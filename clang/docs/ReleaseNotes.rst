@@ -725,6 +725,47 @@ Bug Fixes to C++ Support
 - Fix crash when emitting diagnostic for out of order designated initializers
   in C++.
   (`#63605 <https://github.com/llvm/llvm-project/issues/63605>`_)
+- Fix crash when using standard C++ modules with OpenMP.
+  (`#62359 <https://github.com/llvm/llvm-project/issues/62359>`_)
+- Fix crash when using consteval non static data member initialization in
+  standard C++ modules.
+  (`#60275 <https://github.com/llvm/llvm-project/issues/60275>`_)
+- Fix handling of ADL for dependent expressions in standard C++ modules.
+  (`#60488 <https://github.com/llvm/llvm-project/issues/60488>`_)
+- Fix crash when combining `-ftime-trace` within standard C++ modules.
+  (`#60544 <https://github.com/llvm/llvm-project/issues/60544>`_)
+- Don't generate template specializations when importing standard C++ modules.
+  (`#60693 <https://github.com/llvm/llvm-project/issues/60693>`_)
+- Fix the visibility of `initializer list` in the importer of standard C++
+  modules. This addresses
+  (`#60775 <https://github.com/llvm/llvm-project/issues/60775>`_)
+- Allow the use of constrained friend in standard C++ modules.
+  (`#60890 <https://github.com/llvm/llvm-project/issues/60890>`_)
+- Don't evaluate initializer of used variables in every importer of standard
+  C++ modules.
+  (`#61040 <https://github.com/llvm/llvm-project/issues/61040>`_)
+- Fix the issue that the default `operator==` in standard C++ modules will
+  cause duplicate symbol linker error.
+  (`#61067 <https://github.com/llvm/llvm-project/issues/61067>`_)
+- Fix the false positive ODR check for template names. This addresses the issue
+  that we can't include `<ranges>` in multiple module units.
+  (`#61317 <https://github.com/llvm/llvm-project/issues/61317>`_)
+- Fix crash for inconsistent exported declarations in standard C++ modules.
+  (`#61321 <https://github.com/llvm/llvm-project/issues/61321>`_)
+- Fix ignoring `#pragma comment` and `#pragma detect_mismatch` directives in
+  standard C++ modules.
+  (`#61733 <https://github.com/llvm/llvm-project/issues/61733>`_)
+- Don't generate virtual tables if the class is defined in another module units
+  for Itanium ABI.
+  (`#61940 <https://github.com/llvm/llvm-project/issues/61940>`_)
+- Fix false postive check for constrained satisfaction in standard C++ modules.
+  (`#62589 <https://github.com/llvm/llvm-project/issues/62589>`_)
+- Serialize the evaluated constant values for variable declarations in standard
+  C++ modules.
+  (`#62796 <https://github.com/llvm/llvm-project/issues/62796>`_)
+- Merge lambdas in require expressions in standard C++ modules.
+  (`#63544 <https://github.com/llvm/llvm-project/issues/63544>`_)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
