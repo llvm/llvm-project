@@ -110,7 +110,7 @@ public:
       // "the timestamp field is really a hash", or a 4-byte size field
       // followed by that many bytes containing a longer hash (with the
       // lowest 4 bytes usually being the timestamp in little-endian order).
-      // Consider storing the full 8 bytes computed by xxHash64 here.
+      // Consider storing the full 8 bytes computed by xxh3_64bits here.
       fillEntry(d, COFF::IMAGE_DEBUG_TYPE_REPRO, 0, 0, 0);
     }
   }
@@ -2001,7 +2001,7 @@ void Writer::writeBuildId() {
       config->mingw && config->debug && config->pdbPath.empty();
 
   if (config->repro || generateSyntheticBuildId)
-    hash = xxHash64(outputFileData);
+    hash = xxh3_64bits(outputFileData);
 
   if (config->repro)
     timestamp = static_cast<uint32_t>(hash);
