@@ -408,15 +408,6 @@ public:
 
   inline StringRef getTargetExtName() const;
 
-  /// This method is deprecated without replacement. Pointer element types are
-  /// not available with opaque pointers.
-  [[deprecated("Deprecated without replacement, see "
-               "https://llvm.org/docs/OpaquePointers.html for context and "
-               "migration instructions")]]
-  Type *getPointerElementType() const {
-    return getNonOpaquePointerElementType();
-  }
-
   /// Only use this method in code that is not reachable with opaque pointers,
   /// or part of deprecated methods that will be removed as part of the opaque
   /// pointers transition.
