@@ -20,8 +20,9 @@ class B {
 //--- module1.cppm
 // inside NS, using C = B<A>
 module;
-export module module1;
 #include "header.h"
+export module module1;
+
 namespace NS {
 using C = B<A>;
 }
@@ -30,8 +31,9 @@ export struct D : NS::C {};
 //--- module2.cppm
 // inside NS, using C = B<NS::A>
 module;
-export module module2;
 #include "header.h"
+export module module2;
+
 namespace NS {
 using C = B<NS::A>;
 }
