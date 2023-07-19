@@ -1010,7 +1010,8 @@ void mySource2(int*);
 void myScanf(const char*, ...);
 int myPropagator(int, int*);
 int mySnprintf(char*, size_t, const char*, ...);
-bool isOutOfRange(const int*);
+bool isOutOfRange(const int*); // const filter function
+void sanitizeCmd(char*); // non-const filter function
 void mySink(int, int, int);
 
 void testConfigurationSources1(void) {
@@ -1042,6 +1043,19 @@ void testConfigurationFilter(void) {
   if (isOutOfRange(&x)) // the filter function
     return;
   Buffer[x] = 1; // no-warning
+}
+
+void testConfigurationFilterNonConst(void) {
+  char buffer[1000];
+  myScanf("%s", buffer); // makes buffer tainted
+  system(buffer); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+void testConfigurationFilterNonConst2(void) {
+  char buffer[1000];
+  myScanf("%s", buffer); // makes buffer tainted
+  sanitizeCmd(buffer); // removes taintedness
+  system(buffer); // no-warning
 }
 
 void testConfigurationSinks(void) {
