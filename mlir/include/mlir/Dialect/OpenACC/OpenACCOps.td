@@ -615,12 +615,14 @@ def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
     mandatory regions.
 
       1. The initializer region specifies how to initialize the local reduction
-         value. The region has an argument that contains the value of the
+         value. The region has a first argument that contains the value of the
          reduction accumulator at the start of the reduction. It is expected to
-         `acc.yield` the new value.
+         `acc.yield` the new value. Extra arguments can be added to deal with
+         dynamic arrays.
       2. The reduction region contains a sequences of operations to combine two
-         values of the reduction type into one. It has two arguments and it is
-         expected to `acc.yield` the combined value.
+         values of the reduction type into one. It has at least two arguments
+         and it is expected to `acc.yield` the combined value. Extra arguments
+         can be added to deal with dynamic arrays.
 
     Example:
 
