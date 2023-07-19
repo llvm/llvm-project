@@ -671,8 +671,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(
         Twine(PluginOptPrefix) + "dwo_dir=" + Output.getFilename() + "_dwo"));
 
-  if (IsThinLTO)
+  if (IsThinLTO && !IsOSAIX)
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "thinlto"));
+  else if (IsThinLTO && IsOSAIX)
+    CmdArgs.push_back(Args.MakeArgString(Twine("-bdbg:thinlto")));
+
 
   StringRef Parallelism = getLTOParallelism(Args, D);
   if (!Parallelism.empty())
