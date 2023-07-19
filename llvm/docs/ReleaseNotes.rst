@@ -277,6 +277,7 @@ Changes to the X86 Backend
 
 * ``__builtin_unpredictable`` (unpredictable metadata in LLVM IR), is handled by X86 Backend.
   ``X86CmovConversion`` pass now respects this builtin and does not convert CMOVs to branches.
+* Add support for the ``PBNDKB`` instruction.
 
 
 Changes to the OCaml bindings

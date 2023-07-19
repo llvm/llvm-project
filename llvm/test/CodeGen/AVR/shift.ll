@@ -54,10 +54,36 @@ define i64 @shift_i64_i64(i64 %a, i64 %b) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    push r16
 ; CHECK-NEXT:    push r17
-; CHECK-NEXT:    mov r16, r10
-; CHECK-NEXT:    mov r17, r11
-; CHECK-NEXT:    andi r17, 0
-; CHECK-NEXT:    rcall __ashldi3
+; CHECK-NEXT:    mov r30, r10
+; CHECK-NEXT:    mov r31, r11
+; CHECK-NEXT:    cpi r30, 0
+; CHECK-NEXT:    breq .LBB3_3
+; CHECK-NEXT:  ; %bb.1: ; %shift.loop.preheader
+; CHECK-NEXT:    mov r27, r1
+; CHECK-NEXT:    mov r16, r1
+; CHECK-NEXT:    mov r17, r1
+; CHECK-NEXT:  .LBB3_2: ; %shift.loop
+; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    mov r31, r21
+; CHECK-NEXT:    lsl r31
+; CHECK-NEXT:    mov r26, r1
+; CHECK-NEXT:    rol r26
+; CHECK-NEXT:    lsl r22
+; CHECK-NEXT:    rol r23
+; CHECK-NEXT:    rol r24
+; CHECK-NEXT:    rol r25
+; CHECK-NEXT:    or r24, r16
+; CHECK-NEXT:    or r25, r17
+; CHECK-NEXT:    or r22, r26
+; CHECK-NEXT:    or r23, r27
+; CHECK-NEXT:    lsl r18
+; CHECK-NEXT:    rol r19
+; CHECK-NEXT:    rol r20
+; CHECK-NEXT:    rol r21
+; CHECK-NEXT:    dec r30
+; CHECK-NEXT:    cpi r30, 0
+; CHECK-NEXT:    brne .LBB3_2
+; CHECK-NEXT:  .LBB3_3: ; %shift.done
 ; CHECK-NEXT:    pop r17
 ; CHECK-NEXT:    pop r16
 ; CHECK-NEXT:    ret

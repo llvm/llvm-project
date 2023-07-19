@@ -963,7 +963,6 @@ define <4 x i1> @eq_or_to_abs_vec4x16(<4 x i16> %x) {
 ; SSE2-NEXT:    pcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    psrad $16, %xmm0
 ; SSE2-NEXT:    retq
   %cmp1 = icmp eq <4 x i16> %x, <i16 88, i16 88, i16 88, i16 88>
   %cmp2 = icmp eq <4 x i16> %x, <i16 -88, i16 -88, i16 -88, i16 -88>
@@ -1061,16 +1060,14 @@ define <4 x i1> @ne_and_to_abs_vec4x8(<4 x i8> %x) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = <88,88,88,88,u,u,u,u,u,u,u,u,u,u,u,u>
 ; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
-; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    psrad $24, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    retq
   %cmp1 = icmp ne <4 x i8> %x, <i8 88, i8 88, i8 88, i8 88>
   %cmp2 = icmp ne <4 x i8> %x, <i8 -88, i8 -88, i8 -88, i8 -88>

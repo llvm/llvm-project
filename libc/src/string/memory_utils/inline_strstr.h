@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_STRSTR_IMPLEMENTATIONS_H
-#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_STRSTR_IMPLEMENTATIONS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRSTR_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRSTR_H
 
-#include "src/string/memory_utils/memmem_implementations.h"
+#include "src/string/memory_utils/inline_memmem.h"
 #include "src/string/string_utils.h"
 #include <stddef.h>
 
 namespace __llvm_libc {
 
 template <typename Comp>
-LIBC_INLINE constexpr char *
-strstr_implementation(const char *haystack, const char *needle, Comp &&comp) {
-  void *result = memmem_implementation(
+LIBC_INLINE constexpr char *inline_strstr(const char *haystack,
+                                          const char *needle, Comp &&comp) {
+  void *result = inline_memmem(
       static_cast<const void *>(haystack), internal::string_length(haystack),
       static_cast<const void *>(needle), internal::string_length(needle), comp);
   return static_cast<char *>(result);
@@ -26,4 +26,4 @@ strstr_implementation(const char *haystack, const char *needle, Comp &&comp) {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_STRSTR_IMPLEMENTATIONS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRSTR_H
