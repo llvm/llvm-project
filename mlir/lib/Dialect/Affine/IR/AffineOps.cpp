@@ -1278,17 +1278,16 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
                                             ArrayRef<OpFoldResult> operands) {
   assert(map.getNumResults() == 1 && "building affine.apply with !=1 result");
 
-  // Temporarily disconnect the listener, so that no notification is triggered
-  // if the op is folded.
+  // Create new builder without a listener, so that no notification is
+  // triggered if the op is folded.
   // TODO: OpBuilder::createOrFold should return OpFoldResults, then this
   // workaround is no longer needed.
-  OpBuilder::Listener *listener = b.getListener();
-  b.setListener(nullptr);
-  auto listenerResetter =
-      llvm::make_scope_exit([listener, &b] { b.setListener(listener); });
+  OpBuilder newBuilder(b.getContext());
+  newBuilder.setInsertionPoint(b.getInsertionBlock(), b.getInsertionPoint());
 
   // Create op.
-  AffineApplyOp applyOp = makeComposedAffineApply(b, loc, map, operands);
+  AffineApplyOp applyOp =
+      makeComposedAffineApply(newBuilder, loc, map, operands);
 
   // Get constant operands.
   SmallVector<Attribute> constOperands(applyOp->getNumOperands());
@@ -1299,7 +1298,7 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
   SmallVector<OpFoldResult> foldResults;
   if (failed(applyOp->fold(constOperands, foldResults)) ||
       foldResults.empty()) {
-    if (listener)
+    if (OpBuilder::Listener *listener = b.getListener())
       listener->notifyOperationInserted(applyOp);
     return applyOp.getResult();
   }
@@ -1347,17 +1346,15 @@ template <typename OpTy>
 static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
                                              AffineMap map,
                                              ArrayRef<OpFoldResult> operands) {
-  // Temporarily disconnect the listener, so that no notification is triggered
-  // if the op is folded.
+  // Create new builder without a listener, so that no notification is
+  // triggered if the op is folded.
   // TODO: OpBuilder::createOrFold should return OpFoldResults, then this
   // workaround is no longer needed.
-  OpBuilder::Listener *listener = b.getListener();
-  b.setListener(nullptr);
-  auto listenerResetter =
-      llvm::make_scope_exit([listener, &b] { b.setListener(listener); });
+  OpBuilder newBuilder(b.getContext());
+  newBuilder.setInsertionPoint(b.getInsertionBlock(), b.getInsertionPoint());
 
   // Create op.
-  auto minMaxOp = makeComposedMinMax<OpTy>(b, loc, map, operands);
+  auto minMaxOp = makeComposedMinMax<OpTy>(newBuilder, loc, map, operands);
 
   // Get constant operands.
   SmallVector<Attribute> constOperands(minMaxOp->getNumOperands());
@@ -1368,7 +1365,7 @@ static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
   SmallVector<OpFoldResult> foldResults;
   if (failed(minMaxOp->fold(constOperands, foldResults)) ||
       foldResults.empty()) {
-    if (listener)
+    if (OpBuilder::Listener *listener = b.getListener())
       listener->notifyOperationInserted(minMaxOp);
     return minMaxOp.getResult();
   }
