@@ -123,6 +123,8 @@ public:
     return ST->useRVVForFixedLengthVectors() ? 16 : 0;
   }
 
+  InstructionCost getVRGatherVVCost(MVT VT);
+
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
