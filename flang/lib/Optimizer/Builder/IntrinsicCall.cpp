@@ -572,10 +572,10 @@ llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
     llvm::cl::init(fastVersion));
 
 static llvm::cl::opt<bool>
-    disableMlirComplex("disable-mlir-complex",
-                       llvm::cl::desc("Use libm instead of the MLIR complex "
-                                      "dialect to lower complex operations"),
-                       llvm::cl::init(false));
+    forceMlirComplex("force-mlir-complex",
+                     llvm::cl::desc("Force using MLIR complex operations "
+                                    "instead of libm complex operations"),
+                     llvm::cl::init(false));
 
 mlir::Value genLibCall(fir::FirOpBuilder &builder, mlir::Location loc,
                        llvm::StringRef libFuncName,
@@ -734,12 +734,19 @@ mlir::Value genComplexMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::FunctionType mathLibFuncType,
                              llvm::ArrayRef<mlir::Value> args) {
   mlir::Value result;
-  bool hasApproxFunc = mlir::arith::bitEnumContainsAny(
+  bool canUseApprox = mlir::arith::bitEnumContainsAny(
       builder.getFastMathFlags(), mlir::arith::FastMathFlags::afn);
-  if ((disableMlirComplex || !hasApproxFunc) && !mathLibFuncName.empty()) {
-    result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
-    LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
-    return result;
+
+  // If we have libm functions, we can attempt to generate the more precise
+  // version of the complex math operation.
+  if (!mathLibFuncName.empty()) {
+    // If we enabled MLIR complex or can use approximate operations, we should
+    // NOT use libm.
+    if (!forceMlirComplex && !canUseApprox) {
+      result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
+      LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
+      return result;
+    }
   }
 
   LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
