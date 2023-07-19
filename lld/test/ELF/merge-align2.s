@@ -16,8 +16,8 @@
 # SEC: Name  Type     {{.*}} Size   ES Flg Lk Inf Al
 # SEC: .cst8 PROGBITS {{.*}} 000018 08  AM  0   0  8
 
-# CHECK:      0x{{[0-9a-f]+}} 02000000 00000000 01000000 00000000
-# CHECK-NEXT: 0x{{[0-9a-f]+}} 03000000 00000000
+# CHECK:      [[#%x,]] 01000000 00000000 02000000 00000000
+# CHECK-NEXT: [[#%x,]] 03000000 00000000
 
 .section .cst8,"aM",@progbits,8,unique,0
 .align 4

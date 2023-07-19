@@ -29,6 +29,6 @@
 // CHECK-NEXT: AddressAlignment: 16
 // CHECK-NEXT: EntrySize: 1
 // CHECK-NEXT: SectionData (
-// CHECK-NEXT:   0000: 42000000 00000000 00000000 00000000  |
-// CHECK-NEXT:   0010: 41                                   |
+// CHECK-NEXT:   0000: 41000000 00000000 00000000 00000000  |
+// CHECK-NEXT:   0010: 42                                   |
 // CHECK-NEXT: )
