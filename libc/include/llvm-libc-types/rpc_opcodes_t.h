@@ -19,6 +19,7 @@ typedef enum : unsigned short {
   RPC_CLOSE_FILE = 6,
   RPC_MALLOC = 7,
   RPC_FREE = 8,
+  RPC_HOST_CALL = 9,
   // TODO: Move these out of here and handle then with custom handlers in the
   // loader.
   RPC_TEST_INCREMENT = 1000,
