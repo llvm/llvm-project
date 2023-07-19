@@ -10,14 +10,14 @@ define i1 @SwitchTest(i32 %x, i32 %y) {
 ; CHECK-NEXT:    i32 1, label [[BB3:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb1:
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ugt i32 [[Y]], 1
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[Y]], [[BB1]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i1 [ false, [[ENTRY:%.*]] ], [ [[TMP0]], [[BB1]] ]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[PHI1]], [[BB2]] ], [ 0, [[ENTRY]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[PHI2]], 1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i1 [ [[PHI1]], [[BB2]] ], [ false, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[PHI2]]
 ;
 entry:
   switch i32 %x, label %bb1 [
