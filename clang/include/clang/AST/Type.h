@@ -2450,6 +2450,8 @@ public:
   /// Check if the type is the CUDA device builtin texture type.
   bool isCUDADeviceBuiltinTextureType() const;
 
+  bool isRVVType(unsigned ElementCount) const;
+
   bool isRVVType() const;
 
   bool isRVVType(unsigned Bitwidth, bool IsFloat) const;
@@ -7340,6 +7342,16 @@ inline bool Type::isRVVType() const {
   return
 #include "clang/Basic/RISCVVTypes.def"
     false; // end of boolean or operation.
+}
+
+inline bool Type::isRVVType(unsigned ElementCount) const {
+  bool Ret = false;
+#define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
+                        IsFP)                                                  \
+  if (NumEls == ElementCount)                                                  \
+    Ret |= isSpecificBuiltinType(BuiltinType::Id);
+#include "clang/Basic/RISCVVTypes.def"
+  return Ret;
 }
 
 inline bool Type::isRVVType(unsigned Bitwidth, bool IsFloat) const {
