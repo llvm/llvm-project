@@ -3016,6 +3016,16 @@ bool RISCVDAGToDAGISel::selectVSplatUimm5(SDValue N, SDValue &SplatVal) {
   return true;
 }
 
+bool RISCVDAGToDAGISel::selectExtOneUseVSplat(SDValue N, SDValue &SplatVal) {
+  if (N->getOpcode() == ISD::SIGN_EXTEND ||
+      N->getOpcode() == ISD::ZERO_EXTEND) {
+    if (!N.hasOneUse())
+      return false;
+    N = N->getOperand(0);
+  }
+  return selectVSplat(N, SplatVal);
+}
+
 bool RISCVDAGToDAGISel::selectFPImm(SDValue N, SDValue &Imm) {
   ConstantFPSDNode *CFP = dyn_cast<ConstantFPSDNode>(N.getNode());
   if (!CFP)
