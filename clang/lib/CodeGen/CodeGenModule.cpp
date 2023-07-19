@@ -7155,7 +7155,7 @@ llvm::Constant *CodeGenModule::GetAddrOfRTTIDescriptor(QualType Ty,
   if ((!ForEH && !getLangOpts().RTTI) || getLangOpts().CUDAIsDevice ||
       (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
        getTriple().isNVPTX()))
-    return llvm::Constant::getNullValue(Int8PtrTy);
+    return llvm::Constant::getNullValue(GlobalsInt8PtrTy);
 
   if (ForEH && Ty->isObjCObjectPointerType() &&
       LangOpts.ObjCRuntime.isGNUFamily())
