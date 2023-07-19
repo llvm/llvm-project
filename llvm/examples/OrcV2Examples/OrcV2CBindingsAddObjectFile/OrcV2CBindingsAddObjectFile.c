@@ -55,12 +55,12 @@ LLVMModuleRef createDemoModule(LLVMContextRef Ctx) {
   return M;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 
   int MainResult = 0;
 
   // Parse command line arguments and initialize LLVM Core.
-  LLVMParseCommandLineOptions(argc, (const char **)argv, "");
+  LLVMParseCommandLineOptions(argc, argv, "");
 
   // Initialize native target codegen and asm printer.
   LLVMInitializeNativeTarget();
