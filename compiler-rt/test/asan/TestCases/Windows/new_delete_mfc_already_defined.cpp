@@ -16,7 +16,7 @@
 
 int AFX_CDECL AfxCriticalNewHandler(size_t nSize);
 
-int main(int argc, char* argv) {
+int main(int argc, char** argv) {
     AFX_MODULE_THREAD_STATE* pState = AfxGetModuleThreadState();
     _PNH pnhOldHandler = AfxSetNewHandler(&AfxCriticalNewHandler);
     AfxSetNewHandler(pnhOldHandler);
