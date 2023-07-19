@@ -361,7 +361,7 @@ static UnitExtentReplacementInfo dropUnitExtentFromOperandMetadata(
     return false;
   };
 
-  int64_t dim = 0;
+  unsigned dim = 0;
   while (dim < operandShape.size() && isUnitDim(dim))
     reassociationGroup.push_back(dim++);
   while (dim < operandShape.size()) {
@@ -409,7 +409,6 @@ LogicalResult linalg::dropUnitDims(RewriterBase &rewriter, GenericOp genericOp,
   llvm::SmallDenseSet<unsigned> unitDimsFilter(allowedUnitDims.begin(),
                                                allowedUnitDims.end());
   llvm::SmallDenseSet<unsigned> unitDims;
-  ArrayAttr iteratorTypes = genericOp.getIteratorTypes();
   for (const auto &expr : enumerate(invertedMap.getResults())) {
     if (AffineDimExpr dimExpr = expr.value().dyn_cast<AffineDimExpr>()) {
       if (dims[dimExpr.getPosition()] == 1 &&
