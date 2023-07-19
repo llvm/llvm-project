@@ -1,12 +1,12 @@
-//===-- Memcpy implementation for riscv -------------------------*- C++ -*-===//
+//===-- Memset implementation for riscv -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LIBC_SRC_STRING_MEMORY_UTILS_RISCV_MEMCPY_IMPLEMENTATIONS_H
-#define LIBC_SRC_STRING_MEMORY_UTILS_RISCV_MEMCPY_IMPLEMENTATIONS_H
+#ifndef LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMSET_H
+#define LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMSET_H
 
 #include "src/__support/macros/attributes.h"               // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_RISCV64
@@ -17,12 +17,12 @@
 
 namespace __llvm_libc {
 
-[[maybe_unused]] LIBC_INLINE void
-inline_memcpy_riscv(Ptr __restrict dst, CPtr __restrict src, size_t count) {
+LIBC_INLINE static void inline_memset_riscv(Ptr dst, uint8_t value,
+                                            size_t count) {
 #if defined(LIBC_TARGET_ARCH_IS_RISCV64)
-  return inline_memcpy_aligned_access_64bit(dst, src, count);
+  return inline_memset_aligned_access_64bit(dst, value, count);
 #elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
-  return inline_memcpy_aligned_access_32bit(dst, src, count);
+  return inline_memset_aligned_access_32bit(dst, value, count);
 #else
 #error "Unimplemented"
 #endif
@@ -30,4 +30,4 @@ inline_memcpy_riscv(Ptr __restrict dst, CPtr __restrict src, size_t count) {
 
 } // namespace __llvm_libc
 
-#endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_MEMCPY_IMPLEMENTATIONS_H
+#endif // LIBC_SRC_STRING_MEMORY_UTILS_RISCV_INLINE_MEMSET_H

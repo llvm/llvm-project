@@ -501,6 +501,96 @@ is attached to the global module fragments. For example:
 
 Now the linkage name of ``NS::foo()`` will be ``_ZN2NS3fooEv``.
 
+Performance Tips
+----------------
+
+Reduce duplications
+~~~~~~~~~~~~~~~~~~~
+
+While it is legal to have duplicated declarations in the global module fragments
+of different module units, it is not free for clang to deal with the duplicated
+declarations. In other word, for a translation unit, it will compile slower if the
+translation unit itself and its importing module units contains a lot duplicated
+declarations.
+
+For example,
+
+.. code-block:: c++
+
+  // M-partA.cppm
+  module;
+  #include "big.header.h"
+  export module M:partA;
+  ...
+
+  // M-partB.cppm
+  module;
+  #include "big.header.h"
+  export module M:partB;
+  ...
+
+  // other partitions
+  ...
+
+  // M-partZ.cppm
+  module;
+  #include "big.header.h"
+  export module M:partZ;
+  ...
+
+  // M.cppm
+  export module M;
+  export import :partA;
+  export import :partB;
+  ...
+  export import :partZ;
+
+  // use.cpp
+  import M;
+  ... // use declarations from module M.
+
+When ``big.header.h`` is big enough and there are a lot of partitions,
+the compilation of ``use.cpp`` may be slower than
+the following style significantly:
+
+.. code-block:: c++
+
+  module;
+  #include "big.header.h"
+  export module m:big.header.wrapper;
+  export ... // export the needed declarations
+
+  // M-partA.cppm
+  export module M:partA;
+  import :big.header.wrapper;
+  ...
+
+  // M-partB.cppm
+  export module M:partB;
+  import :big.header.wrapper;
+  ...
+
+  // other partitions
+  ...
+
+  // M-partZ.cppm
+  export module M:partZ;
+  import :big.header.wrapper;
+  ...
+
+  // M.cppm
+  export module M;
+  export import :partA;
+  export import :partB;
+  ...
+  export import :partZ;
+
+  // use.cpp
+  import M;
+  ... // use declarations from module M.
+
+The key part of the tip is to reduce the duplications from the text includes.
+
 Known Problems
 --------------
 

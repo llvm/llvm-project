@@ -932,6 +932,13 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @ssa_copy
+llvm.func @ssa_copy(%arg: f32) -> f32 {
+  // CHECK: call float @llvm.ssa.copy
+  %0 = llvm.intr.ssa.copy %arg : f32
+  llvm.return %0 : f32
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
@@ -1085,3 +1092,4 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 // CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)
