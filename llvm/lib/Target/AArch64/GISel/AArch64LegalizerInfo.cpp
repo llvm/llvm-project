@@ -707,7 +707,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalFor({{v8s8, s8},
                  {v16s8, s8},
-                 {v2s16, s16},
                  {v4s16, s16},
                  {v8s16, s16},
                  {v2s32, s32},
@@ -717,6 +716,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v4s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .minScalarOrElt(0, s8)
+      .minScalarOrEltIf(
+          [=](const LegalityQuery &Query) { return Query.Types[0] == v2s16; },
+          0, s32)
       .minScalarSameAs(1, 0);
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR_TRUNC).lower();
