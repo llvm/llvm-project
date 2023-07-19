@@ -1351,12 +1351,18 @@ DWARFVerifier::verifyNameIndexAbbrevs(const DWARFDebugNames::NameIndex &NI) {
   return NumErrors;
 }
 
-static SmallVector<StringRef, 2> getNames(const DWARFDie &DIE,
+static SmallVector<StringRef, 3> getNames(const DWARFDie &DIE,
+                                          bool IncludeStrippedTemplateNames,
                                           bool IncludeLinkageName = true) {
   SmallVector<StringRef, 2> Result;
-  if (const char *Str = DIE.getShortName())
+  if (const char *Str = DIE.getShortName()) {
     Result.emplace_back(Str);
-  else if (DIE.getTag() == dwarf::DW_TAG_namespace)
+    if (IncludeStrippedTemplateNames) {
+      if (std::optional<StringRef> StrippedName =
+              StripTemplateParameters(Result.back()))
+        Result.push_back(*StrippedName);
+    }
+  } else if (DIE.getTag() == dwarf::DW_TAG_namespace)
     Result.emplace_back("(anonymous namespace)");
 
   if (IncludeLinkageName) {
@@ -1423,7 +1429,12 @@ unsigned DWARFVerifier::verifyNameIndexEntries(
       ++NumErrors;
     }
 
-    auto EntryNames = getNames(DIE);
+    // We allow an extra name for functions: their name without any template
+    // parameters.
+    auto IncludeStrippedTemplateNames =
+        DIE.getTag() == DW_TAG_subprogram ||
+        DIE.getTag() == DW_TAG_inlined_subroutine;
+    auto EntryNames = getNames(DIE, IncludeStrippedTemplateNames);
     if (!is_contained(EntryNames, Str)) {
       error() << formatv("Name Index @ {0:x}: Entry @ {1:x}: mismatched Name "
                          "of DIE @ {2:x}: index - {3}; debug_info - {4}.\n",
@@ -1496,7 +1507,11 @@ unsigned DWARFVerifier::verifyNameIndexCompleteness(
   // the linkage name."
   auto IncludeLinkageName = Die.getTag() == DW_TAG_subprogram ||
                             Die.getTag() == DW_TAG_inlined_subroutine;
-  auto EntryNames = getNames(Die, IncludeLinkageName);
+  // We *allow* stripped template names as an extra entry into the template,
+  // but we don't *require* them to pass the completeness test.
+  auto IncludeStrippedTemplateNames = false;
+  auto EntryNames =
+      getNames(Die, IncludeStrippedTemplateNames, IncludeLinkageName);
   if (EntryNames.empty())
     return 0;
 

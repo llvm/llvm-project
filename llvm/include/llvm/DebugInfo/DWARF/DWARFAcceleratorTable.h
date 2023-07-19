@@ -743,6 +743,12 @@ public:
   const NameIndex *getCUNameIndex(uint64_t CUOffset);
 };
 
+/// If `Name` is the name of a templated function that includes template
+/// parameters, returns a substring of `Name` containing no template
+/// parameters.
+/// E.g.: StripTemplateParameters("foo<int>") = "foo".
+std::optional<StringRef> StripTemplateParameters(StringRef Name);
+
 } // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_DWARF_DWARFACCELERATORTABLE_H

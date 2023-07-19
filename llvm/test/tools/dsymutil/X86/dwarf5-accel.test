@@ -13,12 +13,10 @@
 ## $ clang -gdwarf-5 dwarf5-accel.cpp -c -o dwarf5-accel.o
 
 #RUN: dsymutil -accelerator=Dwarf -oso-prepend-path %p/Inputs -y %s -o %t.dSYM
-#COM: Uncomment next line when dwarfdump will handle stripped template names.
-#COM: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s --check-prefix VERIFY
+#RUN: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s --check-prefix VERIFY
 #RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s
 
-#COM: Uncomment next line when dwarfdump will handle stripped template names.
-#COM: #VERIFY: No errors.
+#VERIFY: No errors.
 
 #CHECK: .debug_names
 #CHECK: "foo"
