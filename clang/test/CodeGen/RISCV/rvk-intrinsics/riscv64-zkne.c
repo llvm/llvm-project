@@ -16,7 +16,7 @@
 // RV64ZKNE-NEXT:    ret i64 [[TMP2]]
 //
 uint64_t aes64es(uint64_t rs1, uint64_t rs2) {
-  return __builtin_riscv_aes64es_64(rs1, rs2);
+  return __builtin_riscv_aes64es(rs1, rs2);
 }
 
 
@@ -32,5 +32,5 @@ uint64_t aes64es(uint64_t rs1, uint64_t rs2) {
 // RV64ZKNE-NEXT:    ret i64 [[TMP2]]
 //
 uint64_t aes64esm(uint64_t rs1, uint64_t rs2) {
-  return __builtin_riscv_aes64esm_64(rs1, rs2);
+  return __builtin_riscv_aes64esm(rs1, rs2);
 }

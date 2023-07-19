@@ -13,7 +13,7 @@
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
 uint64_t sha512sig0(uint64_t rs1) {
-  return __builtin_riscv_sha512sig0_64(rs1);
+  return __builtin_riscv_sha512sig0(rs1);
 }
 
 
@@ -26,7 +26,7 @@ uint64_t sha512sig0(uint64_t rs1) {
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
 uint64_t sha512sig1(uint64_t rs1) {
-  return __builtin_riscv_sha512sig1_64(rs1);
+  return __builtin_riscv_sha512sig1(rs1);
 }
 
 
@@ -39,7 +39,7 @@ uint64_t sha512sig1(uint64_t rs1) {
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
 uint64_t sha512sum0(uint64_t rs1) {
-  return __builtin_riscv_sha512sum0_64(rs1);
+  return __builtin_riscv_sha512sum0(rs1);
 }
 
 
@@ -52,7 +52,7 @@ uint64_t sha512sum0(uint64_t rs1) {
 // RV64ZKNH-NEXT:    ret i64 [[TMP1]]
 //
 uint64_t sha512sum1(uint64_t rs1) {
-  return __builtin_riscv_sha512sum1_64(rs1);
+  return __builtin_riscv_sha512sum1(rs1);
 }
 
 
