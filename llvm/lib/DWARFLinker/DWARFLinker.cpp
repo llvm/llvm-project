@@ -1364,7 +1364,7 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
   std::optional<uint64_t> Addr = AddrAttribute->getAsAddress();
   if (!Addr) {
     Linker.reportWarning("Cann't read address attribute value.", ObjFile);
-    Addr = 0;
+    return 0;
   }
 
   if (InputDIE.getTag() == dwarf::DW_TAG_compile_unit &&
