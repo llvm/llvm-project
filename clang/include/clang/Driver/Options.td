@@ -53,10 +53,6 @@ def CC1AsOption : OptionFlag;
 // are made available when the driver is running in DXC compatibility mode.
 def DXCOption : OptionFlag;
 
-// CLDXCOption - This is a cl.exe/dxc.exe compatibility option. Options with this flag
-// are made available when the driver is running in CL/DXC compatibility mode.
-def CLDXCOption : OptionFlag;
-
 // NoDriverOption - This option should not be accepted by the driver.
 def NoDriverOption : OptionFlag;
 
@@ -6856,7 +6852,7 @@ def defsym : Separate<["-"], "defsym">,
 // clang-cl Options
 //===----------------------------------------------------------------------===//
 
-def cl_Group : OptionGroup<"<clang-cl options>">, Flags<[CLDXCOption]>,
+def cl_Group : OptionGroup<"<clang-cl options>">,
   HelpText<"CL.EXE COMPATIBILITY OPTIONS">;
 
 def cl_compile_Group : OptionGroup<"<clang-cl compile-only options>">,
@@ -6865,42 +6861,45 @@ def cl_compile_Group : OptionGroup<"<clang-cl compile-only options>">,
 def cl_ignored_Group : OptionGroup<"<clang-cl ignored options>">,
   Group<cl_Group>;
 
-class CLFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
-  Group<cl_Group>, Flags<[CLOption, NoXarchOption]>;
+class CLFlagOpts<list<OptionFlag> flags>
+  : Flags<!listconcat(flags, [NoXarchOption])>;
 
-class CLDXCFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
-  Group<cl_Group>, Flags<[CLDXCOption, NoXarchOption]>;
+class CLFlag<string name, list<OptionFlag> flags = [CLOption]>
+  : Option<["/", "-"], name, KIND_FLAG>,
+    Group<cl_Group>, CLFlagOpts<flags>;
 
-class CLCompileFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
-  Group<cl_compile_Group>, Flags<[CLOption, NoXarchOption]>;
+class CLCompileFlag<string name, list<OptionFlag> flags = [CLOption]>
+  : Option<["/", "-"], name, KIND_FLAG>,
+    Group<cl_compile_Group>, CLFlagOpts<flags>;
 
-class CLIgnoredFlag<string name> : Option<["/", "-"], name, KIND_FLAG>,
-  Group<cl_ignored_Group>, Flags<[CLOption, NoXarchOption]>;
+class CLIgnoredFlag<string name, list<OptionFlag> flags = [CLOption]>
+  : Option<["/", "-"], name, KIND_FLAG>,
+    Group<cl_ignored_Group>, CLFlagOpts<flags>;
 
-class CLJoined<string name> : Option<["/", "-"], name, KIND_JOINED>,
-  Group<cl_Group>, Flags<[CLOption, NoXarchOption]>;
+class CLJoined<string name, list<OptionFlag> flags = [CLOption]>
+  : Option<["/", "-"], name, KIND_JOINED>,
+    Group<cl_Group>, CLFlagOpts<flags>;
 
-class CLDXCJoined<string name> : Option<["/", "-"], name, KIND_JOINED>,
-  Group<cl_Group>, Flags<[CLDXCOption, NoXarchOption]>;
+class CLCompileJoined<string name, list<OptionFlag> flags = [CLOption]>
+  : Option<["/", "-"], name, KIND_JOINED>,
+    Group<cl_compile_Group>, CLFlagOpts<flags>;
 
-class CLCompileJoined<string name> : Option<["/", "-"], name, KIND_JOINED>,
-  Group<cl_compile_Group>, Flags<[CLOption, NoXarchOption]>;
+class CLIgnoredJoined<string name, list<OptionFlag> flags = [CLOption]>
+  : Option<["/", "-"], name, KIND_JOINED>,
+    Group<cl_ignored_Group>, CLFlagOpts<!listconcat(flags, [HelpHidden])>;
 
-class CLIgnoredJoined<string name> : Option<["/", "-"], name, KIND_JOINED>,
-  Group<cl_ignored_Group>, Flags<[CLOption, NoXarchOption, HelpHidden]>;
+class CLJoinedOrSeparate<string name, list<OptionFlag> flags = [CLOption]>
+  : Option<["/", "-"], name, KIND_JOINED_OR_SEPARATE>,
+    Group<cl_Group>, CLFlagOpts<flags>;
 
-class CLJoinedOrSeparate<string name> : Option<["/", "-"], name,
-  KIND_JOINED_OR_SEPARATE>, Group<cl_Group>, Flags<[CLOption, NoXarchOption]>;
+class CLCompileJoinedOrSeparate<string name,
+                                list<OptionFlag> flags = [CLOption]>
+  : Option<["/", "-"], name, KIND_JOINED_OR_SEPARATE>,
+    Group<cl_compile_Group>, CLFlagOpts<flags>;
 
-class CLDXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
-  KIND_JOINED_OR_SEPARATE>, Group<cl_Group>, Flags<[CLDXCOption, NoXarchOption]>;
-
-class CLCompileJoinedOrSeparate<string name> : Option<["/", "-"], name,
-  KIND_JOINED_OR_SEPARATE>, Group<cl_compile_Group>,
-  Flags<[CLOption, NoXarchOption]>;
-
-class CLRemainingArgsJoined<string name> : Option<["/", "-"], name,
-  KIND_REMAINING_ARGS_JOINED>, Group<cl_Group>, Flags<[CLOption, NoXarchOption]>;
+class CLRemainingArgsJoined<string name, list<OptionFlag> flags = [CLOption]>
+  : Option<["/", "-"], name, KIND_REMAINING_ARGS_JOINED>,
+    Group<cl_Group>, CLFlagOpts<flags>;
 
 // Aliases:
 // (We don't put any of these in cl_compile_Group as the options they alias are
@@ -6971,7 +6970,7 @@ def _SLASH_help : CLFlag<"help">, Alias<help>,
 def _SLASH_HELP : CLFlag<"HELP">, Alias<help>;
 def _SLASH_hotpatch : CLFlag<"hotpatch">, Alias<fms_hotpatch>,
   HelpText<"Create hotpatchable image">;
-def _SLASH_I : CLDXCJoinedOrSeparate<"I">,
+def _SLASH_I : CLJoinedOrSeparate<"I", [CLOption, DXCOption]>,
   HelpText<"Add directory to include search path">, MetaVarName<"<dir>">,
   Alias<I>;
 def _SLASH_J : CLFlag<"J">, HelpText<"Make char type unsigned">,
@@ -6979,7 +6978,7 @@ def _SLASH_J : CLFlag<"J">, HelpText<"Make char type unsigned">,
 
 // The _SLASH_O option handles all the /O flags, but we also provide separate
 // aliased options to provide separate help messages.
-def _SLASH_O : CLDXCJoined<"O">,
+def _SLASH_O : CLJoined<"O", [CLOption, DXCOption]>,
   HelpText<"Set multiple /O flags at once; e.g. '/O2y-' for '/O2 /Oy-'">,
   MetaVarName<"<flags>">;
 def : CLFlag<"O1">, Alias<_SLASH_O>, AliasArgs<["1"]>,
@@ -6992,7 +6991,7 @@ def : CLFlag<"Ob1">, Alias<_SLASH_O>, AliasArgs<["b1"]>,
   HelpText<"Only inline functions explicitly or implicitly marked inline">;
 def : CLFlag<"Ob2">, Alias<_SLASH_O>, AliasArgs<["b2"]>,
   HelpText<"Inline functions as deemed beneficial by the compiler">;
-def : CLDXCFlag<"Od">, Alias<_SLASH_O>, AliasArgs<["d"]>,
+def : CLFlag<"Od", [CLOption, DXCOption]>, Alias<_SLASH_O>, AliasArgs<["d"]>,
   HelpText<"Disable optimization">;
 def : CLFlag<"Og">, Alias<_SLASH_O>, AliasArgs<["g"]>,
   HelpText<"No effect">;

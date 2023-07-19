@@ -421,7 +421,8 @@ std::unique_ptr<Arg> OptTable::ParseOneArg(const ArgList &Args, unsigned &Index,
     if (FlagsToInclude && !Opt.hasFlag(FlagsToInclude))
       continue;
     if (Opt.hasFlag(FlagsToExclude))
-      continue;
+      if (!FlagsToInclude || !Opt.hasFlag(FlagsToInclude))
+        continue;
 
     // See if this option matches.
     if (std::unique_ptr<Arg> A =
@@ -650,7 +651,8 @@ void OptTable::printHelp(raw_ostream &OS, const char *Usage, const char *Title,
     if (FlagsToInclude && !(Flags & FlagsToInclude))
       continue;
     if (Flags & FlagsToExclude)
-      continue;
+      if (!FlagsToInclude || !(Flags & FlagsToInclude))
+        continue;
 
     // If an alias doesn't have a help text, show a help text for the aliased
     // option instead.
