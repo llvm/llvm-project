@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
-#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
 
 #include "src/__support/macros/config.h"                   // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
@@ -16,13 +16,13 @@
 #include <stddef.h> // size_t
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
-#include "src/string/memory_utils/x86_64/memset_implementations.h"
+#include "src/string/memory_utils/x86_64/inline_memset.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_x86
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-#include "src/string/memory_utils/aarch64/memset_implementations.h"
+#include "src/string/memory_utils/aarch64/inline_memset.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_aarch64
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-#include "src/string/memory_utils/riscv/memset_implementations.h"
+#include "src/string/memory_utils/riscv/inline_memset.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_riscv
 #elif defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/string/memory_utils/generic/byte_per_byte.h"
@@ -41,4 +41,4 @@ LIBC_INLINE static void inline_memset(void *dst, uint8_t value, size_t count) {
 
 #undef LIBC_SRC_STRING_MEMORY_UTILS_MEMSET
 
-#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H

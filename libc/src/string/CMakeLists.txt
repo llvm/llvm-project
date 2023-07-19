@@ -5,11 +5,11 @@ add_header_library(
   HDRS
     string_utils.h
   DEPENDS
+    .memory_utils.inline_bzero
+    .memory_utils.inline_memcpy
     libc.include.stdlib
-    libc.src.__support.CPP.bitset
     libc.src.__support.common
-    .memory_utils.memcpy_implementation
-    .memory_utils.bzero_implementation
+    libc.src.__support.CPP.bitset
 )
 
 add_header_library(
@@ -17,7 +17,7 @@ add_header_library(
   HDRS
     allocating_string_utils.h
   DEPENDS
-    .memory_utils.memcpy_implementation
+    .memory_utils.inline_memcpy
     libc.include.stdlib
     libc.src.__support.CPP.optional
     libc.src.__support.macros.config
@@ -56,7 +56,7 @@ add_entrypoint_object(
   HDRS
     mempcpy.h
   DEPENDS
-    .memory_utils.memcpy_implementation
+    .memory_utils.inline_memcpy
 )
 
 add_entrypoint_object(
@@ -66,7 +66,7 @@ add_entrypoint_object(
   HDRS
     memmem.h
   DEPENDS
-    .memory_utils.memmem_implementation
+    .memory_utils.inline_memmem
 )
 
 add_entrypoint_object(
@@ -115,7 +115,7 @@ add_entrypoint_object(
   HDRS
     stpncpy.h
   DEPENDS
-    .memory_utils.bzero_implementation
+    .memory_utils.inline_bzero
 )
 
 add_entrypoint_object(
@@ -156,7 +156,7 @@ add_entrypoint_object(
   HDRS
     strcmp.h
   DEPENDS
-    .memory_utils.strcmp_implementation
+    .memory_utils.inline_strcmp
 )
 
 add_entrypoint_object(
@@ -166,7 +166,7 @@ add_entrypoint_object(
   HDRS
     strcasecmp.h
   DEPENDS
-    .memory_utils.strcmp_implementation
+    .memory_utils.inline_strcmp
     libc.src.__support.ctype_utils
 )
 
@@ -177,7 +177,7 @@ add_entrypoint_object(
   HDRS
     strcasestr.h
   DEPENDS
-    .memory_utils.strstr_implementation
+    .memory_utils.inline_strstr
     libc.src.__support.ctype_utils
 )
 
@@ -196,7 +196,7 @@ add_entrypoint_object(
   HDRS
     strcpy.h
   DEPENDS
-    .memory_utils.memcpy_implementation
+    .memory_utils.inline_memcpy
     .string_utils
 )
 
@@ -217,7 +217,7 @@ add_entrypoint_object(
   HDRS
     strdup.h
   DEPENDS
-    .memory_utils.memcpy_implementation
+    .memory_utils.inline_memcpy
     .string_utils
     libc.include.stdlib
     libc.src.errno.errno
@@ -294,7 +294,7 @@ add_entrypoint_object(
   HDRS
     strncmp.h
   DEPENDS
-    .memory_utils.strcmp_implementation
+    .memory_utils.inline_strcmp
 )
 
 add_entrypoint_object(
@@ -304,7 +304,7 @@ add_entrypoint_object(
   HDRS
     strncasecmp.h
   DEPENDS
-    .memory_utils.strcmp_implementation
+    .memory_utils.inline_strcmp
     libc.src.__support.ctype_utils
 )
 
@@ -323,7 +323,7 @@ add_entrypoint_object(
   HDRS
     strndup.h
   DEPENDS
-    .memory_utils.memcpy_implementation
+    .memory_utils.inline_memcpy
     .string_utils
     libc.include.stdlib
     libc.src.__support.CPP.new
@@ -396,7 +396,7 @@ add_entrypoint_object(
   HDRS
     strstr.h
   DEPENDS
-    .memory_utils.strstr_implementation
+    .memory_utils.inline_strstr
 )
 
 add_entrypoint_object(
@@ -427,7 +427,7 @@ add_entrypoint_object(
     strxfrm.h
   DEPENDS
     .string_utils
-    .memory_utils.memcpy_implementation
+    .memory_utils.inline_memcpy
 )
 
 # Helper to define a function with multiple implementations
@@ -504,7 +504,7 @@ function(add_bzero bzero_name)
     SRCS ${LIBC_SOURCE_DIR}/src/string/bzero.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/bzero.h
     DEPENDS
-      .memory_utils.memset_implementation
+      .memory_utils.inline_memset
       libc.include.string
     ${ARGN}
   )
@@ -531,7 +531,7 @@ function(add_memcmp memcmp_name)
     SRCS ${LIBC_SOURCE_DIR}/src/string/memcmp.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memcmp.h
     DEPENDS
-      .memory_utils.memcmp_implementation
+      .memory_utils.inline_memcmp
       libc.include.string
     ${ARGN}
   )
@@ -561,7 +561,7 @@ function(add_memcpy memcpy_name)
     SRCS ${LIBC_SOURCE_DIR}/src/string/memcpy.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memcpy.h
     DEPENDS
-      .memory_utils.memcpy_implementation
+      .memory_utils.inline_memcpy
       libc.include.string
     ${ARGN}
   )
@@ -595,7 +595,7 @@ function(add_memmove memmove_name)
     SRCS ${LIBC_SOURCE_DIR}/src/string/memmove.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memmove.h
     DEPENDS
-      .memory_utils.memcpy_implementation
+      .memory_utils.inline_memcpy
       libc.include.string
     ${ARGN}
   )
@@ -627,7 +627,7 @@ function(add_memset memset_name)
     SRCS ${LIBC_SOURCE_DIR}/src/string/memset.cpp
     HDRS ${LIBC_SOURCE_DIR}/src/string/memset.h
     DEPENDS
-      .memory_utils.memset_implementation
+      .memory_utils.inline_memset
       libc.include.string
     ${ARGN}
   )

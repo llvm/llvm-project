@@ -10,7 +10,6 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/RPC/rpc_client.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
 
 namespace __llvm_libc {
 

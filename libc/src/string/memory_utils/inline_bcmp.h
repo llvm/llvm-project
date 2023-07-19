@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BCMP_IMPLEMENTATIONS_H
-#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BCMP_IMPLEMENTATIONS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BCMP_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BCMP_H
 
 #include "src/__support/common.h"
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
@@ -15,13 +15,13 @@
 #include <stddef.h> // size_t
 
 #if defined(LIBC_TARGET_ARCH_IS_X86)
-#include "src/string/memory_utils/x86_64/bcmp_implementations.h"
+#include "src/string/memory_utils/x86_64/inline_bcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_x86
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
-#include "src/string/memory_utils/aarch64/bcmp_implementations.h"
+#include "src/string/memory_utils/aarch64/inline_bcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_aarch64
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
-#include "src/string/memory_utils/riscv/bcmp_implementations.h"
+#include "src/string/memory_utils/riscv/inline_bcmp.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_BCMP inline_bcmp_riscv
 #elif defined(LIBC_TARGET_ARCH_IS_ARM) || defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/string/memory_utils/generic/byte_per_byte.h"
@@ -41,4 +41,4 @@ LIBC_INLINE int inline_bcmp(const void *p1, const void *p2, size_t count) {
 
 #undef LIBC_SRC_STRING_MEMORY_UTILS_BCMP
 
-#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BCMP_IMPLEMENTATIONS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BCMP_H
