@@ -304,4 +304,9 @@ TEST_F(FIRTypesTest, getTypeAsString) {
   components.emplace_back("p1", mlir::IntegerType::get(&context, 64));
   derivedTy.finalize({}, components);
   EXPECT_EQ("rec_derived", fir::getTypeAsString(derivedTy, *kindMap));
+  mlir::Type dynArrTy =
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent(),
+                                 fir::SequenceType::getUnknownExtent()},
+          ty);
+  EXPECT_EQ("?x?xi64", fir::getTypeAsString(dynArrTy, *kindMap));
 }
