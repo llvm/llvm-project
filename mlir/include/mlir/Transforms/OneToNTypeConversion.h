@@ -151,7 +151,9 @@ protected:
 /// conversions.
 class OneToNPatternRewriter : public PatternRewriter {
 public:
-  OneToNPatternRewriter(MLIRContext *context) : PatternRewriter(context) {}
+  OneToNPatternRewriter(MLIRContext *context,
+                        OpBuilder::Listener *listener = nullptr)
+      : PatternRewriter(context, listener) {}
 
   /// Replaces the results of the operation with the specified list of values
   /// mapped back to the original types as specified in the provided type
