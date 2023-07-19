@@ -278,7 +278,7 @@ public:
   /// Get the FI entries, sorted by fragment offset.
   ArrayRef<FrameIndexExpr> getFrameIndexExprs() const;
   bool hasFrameIndexExprs() const { return holds<MMILoc>(); }
-  void addMMIEntry(const DbgVariable &V);
+  void addMMIEntry(const DIExpression *Expr, int FI);
 
   // Translate tag to proper Dwarf tag.
   dwarf::Tag getTag() const {

@@ -102,21 +102,15 @@ void DwarfFile::emitStrings(MCSection *StrSection, MCSection *OffsetSection,
   StrPool.emit(*Asm, StrSection, OffsetSection, UseRelativeOffsets);
 }
 
-bool DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {
+void DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {
   auto &ScopeVars = ScopeVariables[LS];
   const DILocalVariable *DV = Var->getVariable();
   if (unsigned ArgNum = DV->getArg()) {
-    auto Cached = ScopeVars.Args.find(ArgNum);
-    if (Cached == ScopeVars.Args.end())
-      ScopeVars.Args[ArgNum] = Var;
-    else {
-      Cached->second->addMMIEntry(*Var);
-      return false;
-    }
+    auto Ret = ScopeVars.Args.insert({ArgNum, Var});
+    assert(Ret.second);
   } else {
     ScopeVars.Locals.push_back(Var);
   }
-  return true;
 }
 
 void DwarfFile::addScopeLabel(LexicalScope *LS, DbgLabel *Label) {
