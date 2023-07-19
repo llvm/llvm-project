@@ -795,3 +795,44 @@ namespace VirtualFunctionPointers {
 
 };
 #endif
+
+namespace CompositeDefaultArgs {
+  struct Foo {
+    int a;
+    int b;
+    constexpr Foo() : a(12), b(13) {}
+  };
+
+  class Bar {
+  public:
+    bool B = false;
+
+    constexpr int someFunc(Foo F = Foo()) {
+      this->B = true;
+      return 5;
+    }
+  };
+
+  constexpr bool testMe() {
+    Bar B;
+    B.someFunc();
+    return B.B;
+  }
+  static_assert(testMe(), "");
+}
+
+constexpr bool BPand(BoolPair bp) {
+  return bp.first && bp.second;
+}
+static_assert(BPand(BoolPair{true, false}) == false, "");
+
+namespace TemporaryObjectExpr {
+  struct F {
+    int a;
+    constexpr F() : a(12) {}
+  };
+  constexpr int foo(F f) {
+    return 0;
+  }
+  static_assert(foo(F()) == 0, "");
+}
