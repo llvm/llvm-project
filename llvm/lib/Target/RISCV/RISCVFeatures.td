@@ -67,33 +67,33 @@ def HasStdExtH : Predicate<"Subtarget->hasStdExtH()">,
 
 def FeatureStdExtZihintpause
     : SubtargetFeature<"zihintpause", "HasStdExtZihintpause", "true",
-                       "'zihintpause' (Pause Hint)">;
+                       "'Zihintpause' (Pause Hint)">;
 def HasStdExtZihintpause : Predicate<"Subtarget->hasStdExtZihintpause()">,
                                      AssemblerPredicate<(all_of FeatureStdExtZihintpause),
                                      "'Zihintpause' (Pause Hint)">;
 
 def FeatureStdExtZihintntl
     : SubtargetFeature<"experimental-zihintntl", "HasStdExtZihintntl", "true",
-                       "'zihintntl' (Non-Temporal Locality Hints)">;
+                       "'Zihintntl' (Non-Temporal Locality Hints)">;
 def HasStdExtZihintntl : Predicate<"Subtarget->hasStdExtZihintntl()">,
                                     AssemblerPredicate<(all_of FeatureStdExtZihintntl),
                                     "'Zihintntl' (Non-Temporal Locality Hints)">;
 
 def FeatureStdExtZifencei
     : SubtargetFeature<"zifencei", "HasStdExtZifencei", "true",
-                       "'zifencei' (fence.i)">;
+                       "'Zifencei' (fence.i)">;
 def HasStdExtZifencei : Predicate<"Subtarget->hasStdExtZifencei()">,
                                    AssemblerPredicate<(all_of FeatureStdExtZifencei),
                                    "'Zifencei' (fence.i)">;
 
 def FeatureStdExtZicntr
     : SubtargetFeature<"zicntr", "HasStdExtZicntr", "true",
-                       "'zicntr' (Base Counters and Timers)",
+                       "'Zicntr' (Base Counters and Timers)",
                        [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZihpm
     : SubtargetFeature<"zihpm", "HasStdExtZihpm", "true",
-                       "'zihpm' (Hardware Performance Counters)",
+                       "'Zihpm' (Hardware Performance Counters)",
                        [FeatureStdExtZicsr]>;
 
 def FeatureStdExtZfhmin
@@ -763,7 +763,7 @@ def HasVendorXTHeadVdot : Predicate<"Subtarget->hasVendorXTHeadVdot()">,
 
 def FeatureVendorXSfvcp
     : SubtargetFeature<"xsfvcp", "HasVendorXSfvcp", "true",
-                       "XSfvcp (SiFive Custom Vector Coprocessor Interface Instructions)",
+                       "'XSfvcp' (SiFive Custom Vector Coprocessor Interface Instructions)",
                        [FeatureStdExtZve32x]>;
 def HasVendorXSfvcp : Predicate<"Subtarget->hasVendorXSfvcp()">,
                                 AssemblerPredicate<(all_of FeatureVendorXSfvcp),
