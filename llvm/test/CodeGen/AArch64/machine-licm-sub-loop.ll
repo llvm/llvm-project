@@ -38,20 +38,20 @@ define void @foo(i32 noundef %limit, ptr %out, ptr %y) {
 ; CHECK-NEXT:    mov x16, x14
 ; CHECK-NEXT:    mov x17, x12
 ; CHECK-NEXT:    mov x18, x11
+; CHECK-NEXT:    dup v0.8h, w15
 ; CHECK-NEXT:  .LBB0_6: // %vector.body
 ; CHECK-NEXT:    // Parent Loop BB0_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldp q0, q1, [x16, #-16]
-; CHECK-NEXT:    dup v3.8h, w15
+; CHECK-NEXT:    ldp q1, q2, [x16, #-16]
 ; CHECK-NEXT:    subs x18, x18, #16
 ; CHECK-NEXT:    add x16, x16, #32
-; CHECK-NEXT:    ldp q4, q2, [x17, #-32]
-; CHECK-NEXT:    smlal v4.4s, v3.4h, v0.4h
+; CHECK-NEXT:    ldp q4, q3, [x17, #-32]
+; CHECK-NEXT:    smlal v4.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    ldp q6, q5, [x17]
-; CHECK-NEXT:    smlal2 v2.4s, v3.8h, v0.8h
-; CHECK-NEXT:    smlal v6.4s, v3.4h, v1.4h
-; CHECK-NEXT:    stp q4, q2, [x17, #-32]
-; CHECK-NEXT:    smlal2 v5.4s, v3.8h, v1.8h
+; CHECK-NEXT:    smlal2 v3.4s, v0.8h, v1.8h
+; CHECK-NEXT:    smlal v6.4s, v0.4h, v2.4h
+; CHECK-NEXT:    stp q4, q3, [x17, #-32]
+; CHECK-NEXT:    smlal2 v5.4s, v0.8h, v2.8h
 ; CHECK-NEXT:    stp q6, q5, [x17], #64
 ; CHECK-NEXT:    b.ne .LBB0_6
 ; CHECK-NEXT:  // %bb.7: // %middle.block
