@@ -368,6 +368,12 @@ class VALUVXNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let vm = 1;
 }
 
+// op vd, vs1, vs2
+class VALUMV<bits<7> funct7, bits<3> mask, string opcodestr>
+    : RVInstMV<funct7, mask, (outs VR:$vd),
+               (ins VR:$vs1, VR:$vs2),
+               opcodestr, "$vd, $vs1, $vs2">;
+
 // op vd, vs2, imm, vm
 class VALUVI<bits<6> funct6, string opcodestr, Operand optype = simm5>
     : RVInstIVI<funct6, (outs VR:$vd),
@@ -550,6 +556,12 @@ multiclass VALUNoVm_IV_V_X_I<string opcodestr, bits<6> funct6>
    : VALUNoVm_IV_V_X<opcodestr, funct6> {
   def I : VALUVINoVm<funct6, opcodestr # ".vi", simm5>,
           Sched<[WriteVICALUI_WorstCase, ReadVICALUV_WorstCase]>;
+}
+
+multiclass VALUMV_V<string opcodestr, bits<7> funct7> {
+  def V : VALUMV<funct7, 0b111, opcodestr # ".mv">,
+          Sched<[WriteVICALUV_WorstCase, ReadVICALUV_WorstCase,
+                 ReadVICALUV_WorstCase]>;
 }
 
 multiclass VALU_FV_F<string opcodestr, bits<6> funct6> {
@@ -1138,6 +1150,7 @@ defm VSBC_V : VALUm_IV_V_X<"vsbc", 0b010010>;
 let Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint in {
 defm VMSBC_V : VALUm_IV_V_X<"vmsbc", 0b010011>;
 defm VMSBC_V : VALUNoVm_IV_V_X<"vmsbc", 0b010011>;
+defm VMMV_V : VALUMV_V<"vmvp", 0b0001011>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = NoConstraint
 
 // Vector Bitwise Logical Instructions
