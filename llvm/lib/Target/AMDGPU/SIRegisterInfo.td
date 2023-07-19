@@ -591,7 +591,6 @@ def VGPR_LO16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
   let AllocationPriority = 0;
   let Size = 16;
   let GeneratePressureSet = 0;
-  let BaseClassOrder = 16;
 }
 
 def VGPR_HI16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
@@ -599,7 +598,32 @@ def VGPR_HI16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
   let AllocationPriority = 0;
   let Size = 16;
   let GeneratePressureSet = 0;
+}
+
+// VOP3 and VINTERP can access 256 lo and 256 hi registers.
+def VGPR_16 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
+                            (add (interleave (sequence "VGPR%u_LO16", 0, 255),
+                                             (sequence "VGPR%u_HI16", 0, 255)))> {
+  let AllocationPriority = 2;
+  let Size = 16;
+  let GeneratePressureSet = 0;
+
+  // This is the base class for VGPR{128..255}_{LO16,HI16}.
   let BaseClassOrder = 17;
+}
+
+// VOP1/2/C can access the First 128 lo and 128 hi registers.
+// The order of registers in the class determines order of allocation, so it is
+// important to interleave lo and hi registers.
+def VGPR_16_Lo128 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
+                            (add (interleave (sequence "VGPR%u_LO16", 0, 127),
+                                             (sequence "VGPR%u_HI16", 0, 127)))> {
+  let Size = 16;
+  let GeneratePressureSet = 0;
+  let isAllocatable = 0;
+
+  // This is the base class for VGPR{0..127}_{LO16,HI16}.
+  let BaseClassOrder = 16;
 }
 
 // VGPR 32-bit registers
@@ -1005,6 +1029,18 @@ let GeneratePressureSet = 0 in {
 // sorted to the end and not preferred over VGPR_32.
 def VReg_1 : SIRegisterClass<"AMDGPU", [i1], 32, (add)> {
   let Size = 1;
+  let HasVGPR = 1;
+}
+
+def VS_16 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
+                          (add VGPR_16, SReg_32, LDS_DIRECT_CLASS)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+}
+
+def VS_16_Lo128 : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
+                          (add VGPR_16_Lo128, SReg_32, LDS_DIRECT_CLASS)> {
+  let isAllocatable = 0;
   let HasVGPR = 1;
 }
 
