@@ -3504,9 +3504,11 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
 //   b) x & ~(-1 << nbits)
 //   c) x &  (-1 >> (32 - y))
 //   d) x << (32 - y) >> (32 - y)
+//   e) (1 << nbits) - 1
 bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   assert(
-      (Node->getOpcode() == ISD::AND || Node->getOpcode() == ISD::SRL) &&
+      (Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::AND ||
+       Node->getOpcode() == ISD::SRL) &&
       "Should be either an and-mask, or right-shift after clearing high bits.");
 
   // BEXTR is BMI instruction, BZHI is BMI2 instruction. We need at least one.
@@ -3692,6 +3694,8 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
       if (!matchLowBitMask(Mask))
         return false;
     }
+  } else if (matchLowBitMask(SDValue(Node, 0))) {
+    X = CurDAG->getAllOnesConstant(SDLoc(Node), NVT);
   } else if (!matchPatternD(Node))
     return false;
 
@@ -5067,6 +5071,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     [[fallthrough]];
   case ISD::ADD:
+    if (Opcode == ISD::ADD && matchBitExtract(Node))
+      return;
+    [[fallthrough]];
   case ISD::SUB: {
     // Try to avoid folding immediates with multiple uses for optsize.
     // This code tries to select to register form directly to avoid going
