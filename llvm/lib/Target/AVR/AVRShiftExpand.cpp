@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Expand 32-bit shift instructions (shl, lshr, ashr) to inline loops, just
-/// like avr-gcc. This must be done in IR because otherwise the type legalizer
-/// will turn 32-bit shifts into (non-existing) library calls such as __ashlsi3.
+/// Expand non-8-bit and non-16-bit shift instructions (shl, lshr, ashr) to
+/// inline loops, just like avr-gcc. This must be done in IR because otherwise
+/// the type legalizer will turn 32-bit shifts into (non-existing) library calls
+/// such as __ashlsi3.
 //
 //===----------------------------------------------------------------------===//
 
@@ -51,8 +52,9 @@ bool AVRShiftExpand::runOnFunction(Function &F) {
     if (!I.isShift())
       // Only expand shift instructions (shl, lshr, ashr).
       continue;
-    if (I.getType() != Type::getInt32Ty(Ctx))
-      // Only expand plain i32 types.
+    if (I.getType() == Type::getInt8Ty(Ctx) || I.getType() == Type::getInt16Ty(Ctx))
+      // Only expand non-8-bit and non-16-bit shifts, since those are expanded
+      // directly during isel.
       continue;
     if (isa<ConstantInt>(I.getOperand(1)))
       // Only expand when the shift amount is not known.
@@ -75,7 +77,7 @@ bool AVRShiftExpand::runOnFunction(Function &F) {
 void AVRShiftExpand::expand(BinaryOperator *BI) {
   auto &Ctx = BI->getContext();
   IRBuilder<> Builder(BI);
-  Type *Int32Ty = Type::getInt32Ty(Ctx);
+  Type *InputTy = cast<Instruction>(BI)->getType();
   Type *Int8Ty = Type::getInt8Ty(Ctx);
   Value *Int8Zero = ConstantInt::get(Int8Ty, 0);
 
@@ -101,7 +103,7 @@ void AVRShiftExpand::expand(BinaryOperator *BI) {
   Builder.SetInsertPoint(LoopBB);
   PHINode *ShiftAmountPHI = Builder.CreatePHI(Int8Ty, 2);
   ShiftAmountPHI->addIncoming(ShiftAmount, BB);
-  PHINode *ValuePHI = Builder.CreatePHI(Int32Ty, 2);
+  PHINode *ValuePHI = Builder.CreatePHI(InputTy, 2);
   ValuePHI->addIncoming(BI->getOperand(0), BB);
 
   // Subtract the shift amount by one, as we're shifting one this loop
@@ -116,13 +118,13 @@ void AVRShiftExpand::expand(BinaryOperator *BI) {
   Value *ValueShifted;
   switch (BI->getOpcode()) {
   case Instruction::Shl:
-    ValueShifted = Builder.CreateShl(ValuePHI, ConstantInt::get(Int32Ty, 1));
+    ValueShifted = Builder.CreateShl(ValuePHI, ConstantInt::get(InputTy, 1));
     break;
   case Instruction::LShr:
-    ValueShifted = Builder.CreateLShr(ValuePHI, ConstantInt::get(Int32Ty, 1));
+    ValueShifted = Builder.CreateLShr(ValuePHI, ConstantInt::get(InputTy, 1));
     break;
   case Instruction::AShr:
-    ValueShifted = Builder.CreateAShr(ValuePHI, ConstantInt::get(Int32Ty, 1));
+    ValueShifted = Builder.CreateAShr(ValuePHI, ConstantInt::get(InputTy, 1));
     break;
   default:
     llvm_unreachable("asked to expand an instruction that is not a shift");
@@ -137,7 +139,7 @@ void AVRShiftExpand::expand(BinaryOperator *BI) {
   // Collect the resulting value. This is necessary in the IR but won't produce
   // any actual instructions.
   Builder.SetInsertPoint(BI);
-  PHINode *Result = Builder.CreatePHI(Int32Ty, 2);
+  PHINode *Result = Builder.CreatePHI(InputTy, 2);
   Result->addIncoming(BI->getOperand(0), BB);
   Result->addIncoming(ValueShifted, LoopBB);
 
