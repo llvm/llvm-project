@@ -1008,15 +1008,12 @@ define <16 x i32> @umulo_v16i32(<16 x i32> %a0, <16 x i32> %a1, ptr %p2) nounwin
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm8 = ymm8[1,1,3,3,5,5,7,7]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm7 = ymm8[0],ymm7[1],ymm8[2],ymm7[3],ymm8[4],ymm7[5],ymm8[6],ymm7[7]
 ; AVX2-NEXT:    vpcmpeqd %ymm5, %ymm7, %ymm5
-; AVX2-NEXT:    vpxor %ymm6, %ymm5, %ymm5
-; AVX2-NEXT:    vextracti128 $1, %ymm5, %xmm6
-; AVX2-NEXT:    vpackssdw %xmm6, %xmm5, %xmm5
-; AVX2-NEXT:    vpacksswb %xmm5, %xmm5, %xmm5
 ; AVX2-NEXT:    vpmulld %ymm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpmulld %ymm3, %ymm1, %ymm3
-; AVX2-NEXT:    vpmovsxbd %xmm5, %ymm0
-; AVX2-NEXT:    vpacksswb %xmm4, %xmm4, %xmm1
-; AVX2-NEXT:    vpmovsxbd %xmm1, %ymm1
+; AVX2-NEXT:    vpacksswb %xmm4, %xmm4, %xmm0
+; AVX2-NEXT:    vpmovsxbd %xmm0, %ymm1
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm5[0,0,0,0,4,4,4,4,8,8,8,8,12,12,12,12,16,16,16,16,20,20,20,20,24,24,24,24,28,28,28,28]
+; AVX2-NEXT:    vpxor %ymm6, %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm3, 32(%rdi)
 ; AVX2-NEXT:    vmovdqa %ymm2, (%rdi)
 ; AVX2-NEXT:    retq
@@ -2408,8 +2405,7 @@ define <8 x i32> @umulo_v8i16(<8 x i16> %a0, <8 x i16> %a1, ptr %p2) nounwind {
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmovdqa %xmm2, (%rdi)
 ; AVX1-NEXT:    retq
