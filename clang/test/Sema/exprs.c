@@ -212,6 +212,10 @@ int test20(int x) {
                  // expected-note {{use '&' for a bitwise operation}} \
                  // expected-note {{remove constant to silence this warning}}
 
+  return 4 && x; // expected-warning {{use of logical '&&' with constant operand}} \
+                 // expected-note {{use '&' for a bitwise operation}} \
+                 // expected-note {{remove constant to silence this warning}}
+
   return x && sizeof(int) == 4;  // no warning, RHS is logical op.
   
   // no warning, this is an idiom for "true" in old C style.
@@ -223,6 +227,9 @@ int test20(int x) {
                   // expected-note {{use '|' for a bitwise operation}}
   return x || 5; // expected-warning {{use of logical '||' with constant operand}} \
                  // expected-note {{use '|' for a bitwise operation}}
+  return 5 || x; // expected-warning {{use of logical '||' with constant operand}} \
+                 // expected-note {{use '|' for a bitwise operation}}
+
   return x && 0;
   return x && 1;
   return x && -1; // expected-warning {{use of logical '&&' with constant operand}} \
