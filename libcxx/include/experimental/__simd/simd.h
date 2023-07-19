@@ -10,6 +10,7 @@
 #ifndef _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
 #define _LIBCPP_EXPERIMENTAL___SIMD_SIMD_H
 
+#include <__type_traits/remove_cvref.h>
 #include <experimental/__simd/abi_tag.h>
 #include <experimental/__simd/declaration.h>
 #include <experimental/__simd/reference.h>
@@ -38,6 +39,14 @@ public:
   using abi_type   = _Abi;
 
   static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return simd_size_v<value_type, abi_type>; }
+
+  // broadcast constructor
+  template <class _Up, enable_if_t<__can_broadcast_v<value_type, __remove_cvref_t<_Up>>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI simd(_Up&& __v) noexcept : __s_(_Impl::__broadcast(static_cast<value_type>(__v))) {}
+
+  // scalar access [simd.subscr]
+  // Add operator[] temporarily to test braodcast. Add test for it in later patch.
+  _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const { return __s_.__get(__i); }
 };
 
 template <class _Tp>

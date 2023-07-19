@@ -37,6 +37,13 @@ public:
   using abi_type   = _Abi;
 
   static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return simd_type::size(); }
+
+  // broadcast constructor
+  _LIBCPP_HIDE_FROM_ABI explicit simd_mask(value_type __v) noexcept : __s_(_Impl::__broadcast(__v)) {}
+
+  // scalar access [simd.mask.subscr]
+  // Add operator[] temporarily to test braodcast. Add test for it in later patch.
+  _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const { return __s_.__get(__i); }
 };
 
 template <class _Tp>
