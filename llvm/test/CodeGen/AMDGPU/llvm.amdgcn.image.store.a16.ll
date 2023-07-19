@@ -17,6 +17,7 @@ define amdgpu_ps void @store_f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <4
 ; GFX11-LABEL: store_f32_1d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -39,6 +40,7 @@ define amdgpu_ps void @store_v2f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX11-LABEL: store_v2f32_1d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -61,6 +63,7 @@ define amdgpu_ps void @store_v3f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX11-LABEL: store_v3f32_1d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_1D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -83,6 +86,7 @@ define amdgpu_ps void @store_v4f32_1d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX11-LABEL: store_v4f32_1d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -105,6 +109,7 @@ define amdgpu_ps void @store_f32_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, <4
 ; GFX11-LABEL: store_f32_2d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -128,6 +133,7 @@ define amdgpu_ps void @store_v2f32_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX11-LABEL: store_v2f32_2d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -151,6 +157,7 @@ define amdgpu_ps void @store_v3f32_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX11-LABEL: store_v3f32_2d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -174,6 +181,7 @@ define amdgpu_ps void @store_v4f32_2d(<8 x i32> inreg %rsrc, <2 x i16> %coords, 
 ; GFX11-LABEL: store_v4f32_2d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[1:4], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -197,6 +205,7 @@ define amdgpu_ps void @store_f32_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_lo,
 ; GFX11-LABEL: store_f32_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_3D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -221,6 +230,7 @@ define amdgpu_ps void @store_v2f32_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ; GFX11-LABEL: store_v2f32_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_3D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -245,6 +255,7 @@ define amdgpu_ps void @store_v3f32_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ; GFX11-LABEL: store_v3f32_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_3D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
@@ -269,6 +280,7 @@ define amdgpu_ps void @store_v4f32_3d(<8 x i32> inreg %rsrc, <2 x i16> %coords_l
 ; GFX11-LABEL: store_v4f32_3d:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_3D unorm a16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
