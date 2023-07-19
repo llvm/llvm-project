@@ -8,7 +8,7 @@
 
 #include "src/string/bzero.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/bzero_implementations.h"
+#include "src/string/memory_utils/inline_bzero.h"
 
 namespace __llvm_libc {
 

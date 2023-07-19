@@ -308,7 +308,9 @@ void dr489(void) {
   case (int){ 2 }: break;   /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
                                c89only-warning {{compound literals are a C99-specific feature}}
                              */
-  case 12 || main(): break; /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}} */
+  case 12 || main(): break; /* expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                               expected-warning {{use of logical '||' with constant operand}} \
+                               expected-note {{use '|' for a bitwise operation}} */
   }
 }
 

@@ -403,6 +403,53 @@ class StdLibraryFunctionsChecker
     }
   };
 
+  /// Check null or non-null-ness of an argument that is of pointer type.
+  /// The argument is meant to be a buffer that has a size constraint, and it
+  /// is allowed to have a NULL value if the size is 0. The size can depend on
+  /// 1 or 2 additional arguments, if one of these is 0 the buffer is allowed to
+  /// be NULL. This is useful for functions like `fread` which have this special
+  /// property.
+  class NotNullBufferConstraint : public ValueConstraint {
+    using ValueConstraint::ValueConstraint;
+    ArgNo SizeArg1N;
+    std::optional<ArgNo> SizeArg2N;
+    // This variable has a role when we negate the constraint.
+    bool CannotBeNull = true;
+
+  public:
+    NotNullBufferConstraint(ArgNo ArgN, ArgNo SizeArg1N,
+                            std::optional<ArgNo> SizeArg2N,
+                            bool CannotBeNull = true)
+        : ValueConstraint(ArgN), SizeArg1N(SizeArg1N), SizeArg2N(SizeArg2N),
+          CannotBeNull(CannotBeNull) {}
+
+    ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
+                          const Summary &Summary,
+                          CheckerContext &C) const override;
+
+    void describe(DescriptionKind DK, const CallEvent &Call,
+                  ProgramStateRef State, const Summary &Summary,
+                  llvm::raw_ostream &Out) const override;
+
+    bool describeArgumentValue(const CallEvent &Call, ProgramStateRef State,
+                               const Summary &Summary,
+                               llvm::raw_ostream &Out) const override;
+
+    ValueConstraintPtr negate() const override {
+      NotNullBufferConstraint Tmp(*this);
+      Tmp.CannotBeNull = !this->CannotBeNull;
+      return std::make_shared<NotNullBufferConstraint>(Tmp);
+    }
+
+  protected:
+    bool checkSpecificValidity(const FunctionDecl *FD) const override {
+      const bool ValidArg = getArgType(FD, ArgN)->isPointerType();
+      assert(ValidArg &&
+             "This constraint should be applied only on a pointer type");
+      return ValidArg;
+    }
+  };
+
   // Represents a buffer argument with an additional size constraint. The
   // constraint may be a concrete value, or a symbolic value in an argument.
   // Example 1. Concrete value as the minimum buffer size.
@@ -1140,6 +1187,54 @@ bool StdLibraryFunctionsChecker::NotNullConstraint::describeArgumentValue(
   return true;
 }
 
+ProgramStateRef StdLibraryFunctionsChecker::NotNullBufferConstraint::apply(
+    ProgramStateRef State, const CallEvent &Call, const Summary &Summary,
+    CheckerContext &C) const {
+  SVal V = getArgSVal(Call, getArgNo());
+  if (V.isUndef())
+    return State;
+  DefinedOrUnknownSVal L = V.castAs<DefinedOrUnknownSVal>();
+  if (!isa<Loc>(L))
+    return State;
+
+  std::optional<DefinedOrUnknownSVal> SizeArg1 =
+      getArgSVal(Call, SizeArg1N).getAs<DefinedOrUnknownSVal>();
+  std::optional<DefinedOrUnknownSVal> SizeArg2;
+  if (SizeArg2N)
+    SizeArg2 = getArgSVal(Call, *SizeArg2N).getAs<DefinedOrUnknownSVal>();
+
+  auto IsArgZero = [State](std::optional<DefinedOrUnknownSVal> Val) {
+    if (!Val)
+      return false;
+    auto [IsNonNull, IsNull] = State->assume(*Val);
+    return IsNull && !IsNonNull;
+  };
+
+  if (IsArgZero(SizeArg1) || IsArgZero(SizeArg2))
+    return State;
+
+  return State->assume(L, CannotBeNull);
+}
+
+void StdLibraryFunctionsChecker::NotNullBufferConstraint::describe(
+    DescriptionKind DK, const CallEvent &Call, ProgramStateRef State,
+    const Summary &Summary, llvm::raw_ostream &Out) const {
+  assert(CannotBeNull &&
+         "Describe should not be used when the value must be NULL");
+  if (DK == Violation)
+    Out << "should not be NULL";
+  else
+    Out << "is not NULL";
+}
+
+bool StdLibraryFunctionsChecker::NotNullBufferConstraint::describeArgumentValue(
+    const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
+    llvm::raw_ostream &Out) const {
+  assert(!CannotBeNull && "This function is used when the value is NULL");
+  Out << "is NULL";
+  return true;
+}
+
 ProgramStateRef StdLibraryFunctionsChecker::BufferSizeConstraint::apply(
     ProgramStateRef State, const CallEvent &Call, const Summary &Summary,
     CheckerContext &C) const {
@@ -1681,6 +1776,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
   auto IsNull = [&](ArgNo ArgN) {
     return std::make_shared<NotNullConstraint>(ArgN, false);
   };
+  auto NotNullBuffer = [&](ArgNo ArgN, ArgNo SizeArg1N, ArgNo SizeArg2N) {
+    return std::make_shared<NotNullBufferConstraint>(ArgN, SizeArg1N,
+                                                     SizeArg2N);
+  };
 
   std::optional<QualType> FileTy = lookupTy("FILE");
   std::optional<QualType> FilePtrTy = getPointerTy(FileTy);
@@ -1935,11 +2034,8 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
           .Case({ArgumentCondition(1U, WithinRange, SingleValue(0)),
                  ReturnValueCondition(WithinRange, SingleValue(0))},
                 ErrnoMustNotBeChecked, GenericSuccessMsg)
-          .ArgConstraint(NotNull(ArgNo(0)))
+          .ArgConstraint(NotNullBuffer(ArgNo(0), ArgNo(1), ArgNo(2)))
           .ArgConstraint(NotNull(ArgNo(3)))
-          // FIXME: It should be allowed to have a null buffer if any of
-          // args 1 or 2 are zero. Remove NotNull check of arg 0, add a check
-          // for non-null buffer if non-zero size to BufferSizeConstraint?
           .ArgConstraint(BufferSize(/*Buffer=*/ArgNo(0), /*BufSize=*/ArgNo(1),
                                     /*BufSizeMultiplier=*/ArgNo(2)));
 
@@ -3451,6 +3547,12 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     addToFunctionSummaryMap(
         "__not_null", Signature(ArgTypes{IntPtrTy}, RetType{IntTy}),
         Summary(EvalCallAsPure).ArgConstraint(NotNull(ArgNo(0))));
+
+    addToFunctionSummaryMap(
+        "__not_null_buffer",
+        Signature(ArgTypes{VoidPtrTy, IntTy, IntTy}, RetType{IntTy}),
+        Summary(EvalCallAsPure)
+            .ArgConstraint(NotNullBuffer(ArgNo(0), ArgNo(1), ArgNo(2))));
 
     // Test inside range constraints.
     addToFunctionSummaryMap(
