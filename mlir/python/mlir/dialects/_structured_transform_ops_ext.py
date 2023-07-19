@@ -93,6 +93,70 @@ class DecomposeOp:
         )
 
 
+class FuseIntoContainingOp:
+    """Specialization for FuseIntoContainingOp class."""
+
+    @overload
+    def __init__(
+        self,
+        fused_op_type: Type,
+        new_containing_op_type: Type,
+        producer_op: Union[Operation, OpView, Value],
+        containing_op: Union[Operation, OpView, Value],
+        *,
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self,
+        producer_op: Union[Operation, OpView, Value],
+        containing_op: Union[Operation, OpView, Value],
+        *,
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    def __init__(
+        self,
+        fused_op_type_or_producer_op: Union[Operation, OpView, Type, Value],
+        new_containing_op_type_or_containing_op: Union[Operation, OpView, Type, Value],
+        producer_op_or_none: Optional[Union[Operation, OpView, Value]] = None,
+        containing_op_or_none: Optional[Union[Operation, OpView, Value]] = None,
+        *,
+        loc=None,
+        ip=None,
+    ):
+        if isinstance(fused_op_type_or_producer_op, Type):
+            if not isinstance(new_containing_op_type_or_containing_op, Type):
+                raise TypeError(
+                    "If 'fused_op_type_or_producer_op' is a type, then "
+                    "'new_containing_op_type_or_containing_op' is expected "
+                    "to be one as well."
+                )
+            fused_op_type = fused_op_type_or_producer_op
+            new_containing_op_type = new_containing_op_type_or_containing_op
+            producer_op = producer_op_or_none
+            containing_op = containing_op_or_none
+        else:
+            fused_op_type = transform.AnyOpType.get()
+            new_containing_op_type = transform.AnyOpType.get()
+            producer_op = fused_op_type_or_producer_op
+            containing_op = new_containing_op_type_or_containing_op
+
+        super().__init__(
+            fused_op_type,
+            new_containing_op_type,
+            producer_op,
+            containing_op,
+            loc=loc,
+            ip=ip,
+        )
+
+
 class GeneralizeOp:
     """Specialization for GeneralizeOp class."""
 

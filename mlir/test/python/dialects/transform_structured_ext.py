@@ -31,6 +31,45 @@ def testDecompose():
 
 
 @run
+def testFuseIntoContainingOpTypes():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        fused = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        containing = structured.MatchOp.match_op_names(
+            sequence.bodyTarget, ["test.dummy"]
+        )
+        structured.FuseIntoContainingOp(
+            transform.OperationType.get("test.dummy"),
+            transform.OperationType.get("test.dummy"),
+            fused,
+            containing,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testFuseIntoContainingOpTypes
+    # CHECK: = transform.structured.fuse_into_containing_op
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.op<"test.dummy">, !transform.op<"test.dummy">)
+
+
+@run
+def testFuseIntoContainingOpCompact():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        fused = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        containing = structured.MatchOp.match_op_names(
+            sequence.bodyTarget, ["test.dummy"]
+        )
+        structured.FuseIntoContainingOp(fused, containing)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testFuseIntoContainingOpCompact
+    # CHECK: = transform.structured.fuse_into_containing_op
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
 def testGeneralize():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
