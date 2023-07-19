@@ -2,8 +2,18 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/merge.s -o %t2.o
 // RUN: ld.lld %t.o %t2.o -o %t
-// RUN: llvm-readobj -S --section-data --symbols %t | FileCheck %s
+// RUN: llvm-readelf -S -s -x .mysec %t | FileCheck %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck --check-prefix=DISASM %s
+
+// CHECK:      Name     Type     Address          Off    Size   ES Flg Lk Inf Al
+// CHECK:      .mysec   PROGBITS 0000000000200120 000120 000008 04  AM  0   0  4
+
+// CHECK-DAG:  0000000000200124     0 NOTYPE  LOCAL  DEFAULT     1 bar
+// CHECK-DAG:  0000000000200124     0 NOTYPE  LOCAL  DEFAULT     1 zed
+// CHECK-DAG:  0000000000200124     0 NOTYPE  LOCAL  HIDDEN      1 foo
+
+// CHECK:      Hex dump of section '.mysec':
+// CHECK-NEXT: 0x00200120 10000000 42000000
 
         .section        .mysec,"aM",@progbits,4
         .align  4
@@ -16,57 +26,6 @@ bar:
         .long   0x42
 zed:
         .long   0x42
-
-// CHECK:      Name: .mysec
-// CHECK-NEXT: Type: SHT_PROGBITS
-// CHECK-NEXT:    Flags [
-// CHECK-NEXT:      SHF_ALLOC
-// CHECK-NEXT:      SHF_MERGE
-// CHECK-NEXT:    ]
-// CHECK-NEXT:    Address: 0x200120
-// CHECK-NEXT:    Offset: 0x120
-// CHECK-NEXT:    Size: 8
-// CHECK-NEXT:    Link: 0
-// CHECK-NEXT:    Info: 0
-// CHECK-NEXT:    AddressAlignment: 4
-// CHECK-NEXT:    EntrySize: 4
-// CHECK-NEXT:    SectionData (
-// CHECK-NEXT:      0000: 10000000 42000000
-// CHECK-NEXT:    )
-
-
-// Address of the constant 0x10 = 0x200120 = 2097440
-// Address of the constant 0x42 = 0x200124 = 2097444
-
-// CHECK:      Symbols [
-
-// CHECK:        Name: bar
-// CHECK-NEXT:   Value: 0x200124
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Loca
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 0
-// CHECK-NEXT:   Section: .mysec
-
-// CHECK:        Name: zed
-// CHECK-NEXT:   Value: 0x200124
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Local
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other: 0
-// CHECK-NEXT:   Section: .mysec
-
-// CHECK:        Name: foo
-// CHECK-NEXT:   Value: 0x200124
-// CHECK-NEXT:   Size: 0
-// CHECK-NEXT:   Binding: Local
-// CHECK-NEXT:   Type: None
-// CHECK-NEXT:   Other [ (0x2)
-// CHECK-NEXT:     STV_HIDDEN
-// CHECK-NEXT:   ]
-// CHECK-NEXT:   Section: .mysec
-
- // CHECK: ]
 
         .text
         .globl  _start
