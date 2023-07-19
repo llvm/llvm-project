@@ -38,6 +38,24 @@ end:
   ret void
 }
 
+define <4 x i64> @test_fullvec_out_of_bounds(<4 x i64> %arg) {
+; CHECK-LABEL: define <4 x i64> @test_fullvec_out_of_bounds
+; CHECK-SAME: (<4 x i64> [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i64> [[ARG]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> <i64 undef, i64 poison, i64 poison, i64 poison>, i64 [[TMP0]], i64 1
+; CHECK-NEXT:    ret <4 x i64> [[TMP2]]
+;
+entry:
+  %stack = alloca [4 x i64], align 4, addrspace(5)
+  %stack.2 = getelementptr inbounds [4 x i64], ptr addrspace(5) %stack, i32 0, i32 2
+  %stack.3 = getelementptr inbounds [4 x i64], ptr addrspace(5) %stack, i32 0, i32 3
+  store <4 x i64> %arg, ptr addrspace(5) %stack.3
+  %reload = load <4 x i64>, ptr addrspace(5) %stack.2
+  ret <4 x i64> %reload
+}
+
 define amdgpu_kernel void @test_no_overwrite(i64 %val, i1 %cond) {
 ; CHECK-LABEL: define amdgpu_kernel void @test_no_overwrite
 ; CHECK-SAME: (i64 [[VAL:%.*]], i1 [[COND:%.*]]) {
@@ -123,16 +141,40 @@ entry:
   ret <4 x ptr addrspace(3)> %tmp
 }
 
-; Currently rejected due to the store not being cast-able.
-; TODO: We should probably be able to vectorize this
+define <8 x i16> @ptralloca_load_store_ints_full(<2 x i64> %arg) {
+; CHECK-LABEL: define <8 x i16> @ptralloca_load_store_ints_full
+; CHECK-SAME: (<2 x i64> [[ARG:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[ARG]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr <4 x i32> [[TMP0]] to <4 x ptr addrspace(5)>
+; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <4 x ptr addrspace(5)> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <8 x i16>
+; CHECK-NEXT:    ret <8 x i16> [[TMP3]]
+;
+entry:
+  %stack = alloca [4 x ptr addrspace(5)], align 4, addrspace(5)
+  store <2 x i64> %arg, ptr addrspace(5) %stack
+  %reload = load <8 x i16>, ptr addrspace(5) %stack
+  ret <8 x i16> %reload
+}
+
 define void @alloca_load_store_ptr_mixed_ptrvec(<2 x ptr addrspace(3)> %arg) {
 ; CHECK-LABEL: define void @alloca_load_store_ptr_mixed_ptrvec
 ; CHECK-SAME: (<2 x ptr addrspace(3)> [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [8 x i32], align 8, addrspace(5)
-; CHECK-NEXT:    store <2 x ptr addrspace(3)> [[ARG]], ptr addrspace(5) [[ALLOCA]], align 8
-; CHECK-NEXT:    [[TMP:%.*]] = load <2 x ptr addrspace(3)>, ptr addrspace(5) [[ALLOCA]], align 8
-; CHECK-NEXT:    [[TMP_FULL:%.*]] = load <4 x ptr addrspace(3)>, ptr addrspace(5) [[ALLOCA]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint <2 x ptr addrspace(3)> [[ARG]] to <2 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> undef, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> [[TMP5]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr <2 x i32> [[TMP6]] to <2 x ptr addrspace(3)>
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> [[TMP8]], i32 [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP9]], i32 undef, i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 undef, i64 3
+; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr <4 x i32> [[TMP11]] to <4 x ptr addrspace(3)>
 ; CHECK-NEXT:    ret void
 ;
 entry:

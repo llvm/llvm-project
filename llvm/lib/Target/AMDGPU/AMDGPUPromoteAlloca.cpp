@@ -370,18 +370,17 @@ static Value *promoteAllocaUserToVector(
     return Dummy;
   };
 
-  const auto CreateTempPtrIntCast =
-      [&Builder, VecStoreSize](Value *Val, Type *PtrTy) -> Value * {
-    const unsigned TempIntSize = (VecStoreSize * 8);
+  const auto CreateTempPtrIntCast = [&Builder, DL](Value *Val,
+                                                   Type *PtrTy) -> Value * {
+    assert(DL.getTypeStoreSize(Val->getType()) == DL.getTypeStoreSize(PtrTy));
+    const unsigned Size = DL.getTypeStoreSizeInBits(PtrTy);
     if (!PtrTy->isVectorTy())
-      return Builder.CreateBitOrPointerCast(Val,
-                                            Builder.getIntNTy(TempIntSize));
+      return Builder.CreateBitOrPointerCast(Val, Builder.getIntNTy(Size));
     const unsigned NumPtrElts = cast<FixedVectorType>(PtrTy)->getNumElements();
     // If we want to cast to cast, e.g. a <2 x ptr> into a <4 x i32>, we need to
     // first cast the ptr vector to <2 x i64>.
-    assert(alignTo(TempIntSize, NumPtrElts) == TempIntSize &&
-           "Vector size not divisble");
-    Type *EltTy = Builder.getIntNTy(TempIntSize / NumPtrElts);
+    assert((Size % NumPtrElts == 0) && "Vector size not divisble");
+    Type *EltTy = Builder.getIntNTy(Size / NumPtrElts);
     return Builder.CreateBitOrPointerCast(
         Val, FixedVectorType::get(EltTy, NumPtrElts));
   };
@@ -399,21 +398,46 @@ static Value *promoteAllocaUserToVector(
         cast<LoadInst>(Inst)->getPointerOperand(), GEPVectorIdx);
 
     // We're loading the full vector.
-    if (DL.getTypeStoreSize(Inst->getType()) == VecStoreSize) {
-      assert(cast<Constant>(Index)->isZeroValue());
-      Type *InstTy = Inst->getType();
-      if (InstTy->isPtrOrPtrVectorTy())
-        CurVal = CreateTempPtrIntCast(CurVal, InstTy);
-      Value *NewVal = Builder.CreateBitOrPointerCast(CurVal, InstTy);
+    Type *AccessTy = Inst->getType();
+    TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
+    if (AccessSize == VecStoreSize && cast<Constant>(Index)->isZeroValue()) {
+      if (AccessTy->isPtrOrPtrVectorTy())
+        CurVal = CreateTempPtrIntCast(CurVal, AccessTy);
+      else if (CurVal->getType()->isPtrOrPtrVectorTy())
+        CurVal = CreateTempPtrIntCast(CurVal, CurVal->getType());
+      Value *NewVal = Builder.CreateBitOrPointerCast(CurVal, AccessTy);
       Inst->replaceAllUsesWith(NewVal);
+      return nullptr;
+    }
+
+    // Loading a subvector.
+    if (isa<FixedVectorType>(AccessTy)) {
+      assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
+      const unsigned NumElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
+      auto *SubVecTy = FixedVectorType::get(VecEltTy, NumElts);
+      assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
+
+      unsigned IndexVal = cast<ConstantInt>(Index)->getZExtValue();
+      Value *SubVec = PoisonValue::get(SubVecTy);
+      for (unsigned K = 0; K < NumElts; ++K) {
+        SubVec = Builder.CreateInsertElement(
+            SubVec, Builder.CreateExtractElement(CurVal, IndexVal + K), K);
+      }
+
+      if (AccessTy->isPtrOrPtrVectorTy())
+        SubVec = CreateTempPtrIntCast(SubVec, AccessTy);
+      else if (SubVecTy->isPtrOrPtrVectorTy())
+        SubVec = CreateTempPtrIntCast(SubVec, SubVecTy);
+
+      SubVec = Builder.CreateBitOrPointerCast(SubVec, AccessTy);
+      Inst->replaceAllUsesWith(SubVec);
       return nullptr;
     }
 
     // We're loading one element.
     Value *ExtractElement = Builder.CreateExtractElement(CurVal, Index);
-    if (Inst->getType() != VecEltTy)
-      ExtractElement =
-          Builder.CreateBitOrPointerCast(ExtractElement, Inst->getType());
+    if (AccessTy != VecEltTy)
+      ExtractElement = Builder.CreateBitOrPointerCast(ExtractElement, AccessTy);
 
     Inst->replaceAllUsesWith(ExtractElement);
     return nullptr;
@@ -428,12 +452,37 @@ static Value *promoteAllocaUserToVector(
     Value *Val = SI->getValueOperand();
 
     // We're storing the full vector, we can handle this without knowing CurVal.
-    if (DL.getTypeStoreSize(Val->getType()) == VecStoreSize) {
-      assert(cast<Constant>(Index)->isZeroValue());
-      Type *SrcTy = Val->getType();
-      if (SrcTy->isPtrOrPtrVectorTy())
-        Val = CreateTempPtrIntCast(Val, SrcTy);
+    Type *AccessTy = Val->getType();
+    TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
+    if (AccessSize == VecStoreSize && cast<Constant>(Index)->isZeroValue()) {
+      if (AccessTy->isPtrOrPtrVectorTy())
+        Val = CreateTempPtrIntCast(Val, AccessTy);
+      else if (VectorTy->isPtrOrPtrVectorTy())
+        Val = CreateTempPtrIntCast(Val, VectorTy);
       return Builder.CreateBitOrPointerCast(Val, VectorTy);
+    }
+
+    // Storing a subvector.
+    if (isa<FixedVectorType>(AccessTy)) {
+      assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
+      const unsigned NumElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
+      auto *SubVecTy = FixedVectorType::get(VecEltTy, NumElts);
+      assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
+
+      if (SubVecTy->isPtrOrPtrVectorTy())
+        Val = CreateTempPtrIntCast(Val, SubVecTy);
+      else if (AccessTy->isPtrOrPtrVectorTy())
+        Val = CreateTempPtrIntCast(Val, AccessTy);
+
+      Val = Builder.CreateBitOrPointerCast(Val, SubVecTy);
+
+      unsigned IndexVal = cast<ConstantInt>(Index)->getZExtValue();
+      Value *CurVec = GetOrLoadCurrentVectorValue();
+      for (unsigned K = 0; (IndexVal + K) < NumElts; ++K) {
+        CurVec = Builder.CreateInsertElement(
+            CurVec, Builder.CreateExtractElement(Val, K), IndexVal + K);
+      }
+      return CurVec;
     }
 
     if (Val->getType() != VecEltTy)
@@ -483,6 +532,29 @@ static Value *promoteAllocaUserToVector(
   }
 
   llvm_unreachable("Did not return after promoting instruction!");
+}
+
+static bool isSupportedAccessType(FixedVectorType *VecTy, Type *AccessTy,
+                                  const DataLayout &DL) {
+  // Access as a vector type can work if the size of the access vector is a
+  // multiple of the size of the alloca's vector element type.
+  //
+  // Examples:
+  //    - VecTy = <8 x float>, AccessTy = <4 x float> -> OK
+  //    - VecTy = <4 x double>, AccessTy = <2 x float> -> OK
+  //    - VecTy = <4 x double>, AccessTy = <3 x float> -> NOT OK
+  //        - 3*32 is not a multiple of 64
+  //
+  // We could handle more complicated cases, but it'd make things a lot more
+  // complicated.
+  if (isa<FixedVectorType>(AccessTy)) {
+    TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
+    TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
+    return AccTS.isKnownMultipleOf(VecTS);
+  }
+
+  return CastInst::isBitOrNoopPointerCastable(VecTy->getElementType(), AccessTy,
+                                              DL);
 }
 
 /// Iterates over an instruction worklist that may contain multiple instructions
@@ -615,10 +687,10 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToVector(AllocaInst &Alloca) {
       // Check that this is a simple access of a vector element.
       bool IsSimple = isa<LoadInst>(Inst) ? cast<LoadInst>(Inst)->isSimple()
                                           : cast<StoreInst>(Inst)->isSimple();
-      if (!IsSimple ||
-          !CastInst::isBitOrNoopPointerCastable(VecEltTy, AccessTy, *DL))
-        return RejectUser(Inst, "not simple and/or vector element type not "
-                                "castable to access type");
+      if (!IsSimple)
+        return RejectUser(Inst, "not a simple load or store");
+      if (!isSupportedAccessType(VectorTy, AccessTy, *DL))
+        return RejectUser(Inst, "not a supported access type");
 
       WorkList.push_back(Inst);
       continue;
