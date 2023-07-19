@@ -54,6 +54,7 @@ public:
   /// Discards the top value from the stack.
   template <typename T> void discard() {
 #ifndef NDEBUG
+    assert(!ItemTypes.empty());
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
