@@ -38,7 +38,7 @@ public:
 
   void unmapTestOnly() { TSDRegistry.unmapTestOnly(this); }
   void initCache(CacheT *Cache) { *Cache = {}; }
-  void commitBack(scudo::TSD<MockAllocator> *TSD) {}
+  void commitBack(UNUSED scudo::TSD<MockAllocator> *TSD) {}
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
   void callPostInitCallback() {}
 
