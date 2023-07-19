@@ -3511,6 +3511,11 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
     Block = Succ = TransitionBlock = createBlock(false);
     TransitionBlock->setLoopTarget(F);
 
+
+    // Loop iteration (after increment) should end with destructor of Condition
+    // variable (if any).
+    addAutomaticObjHandling(ScopePos, LoopBeginScopePos, F);
+
     if (Stmt *I = F->getInc()) {
       // Generate increment code in its own basic block.  This is the target of
       // continue statements.
@@ -3530,8 +3535,6 @@ CFGBlock *CFGBuilder::VisitForStmt(ForStmt *F) {
    ContinueJumpTarget = JumpTarget(Succ, ContinueScopePos);
    ContinueJumpTarget.block->setLoopTarget(F);
 
-    // Loop body should end with destructor of Condition variable (if any).
-   addAutomaticObjHandling(ScopePos, LoopBeginScopePos, F);
 
     // If body is not a compound statement create implicit scope
     // and add destructors.
