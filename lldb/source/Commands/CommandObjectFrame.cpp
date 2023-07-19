@@ -480,6 +480,25 @@ protected:
     return llvm::StringRef();
   }
 
+  /// Returns true if `scope` matches any of the options in `m_option_variable`.
+  bool ScopeRequested(lldb::ValueType scope) {
+    switch (scope) {
+    case eValueTypeVariableGlobal:
+    case eValueTypeVariableStatic:
+      return m_option_variable.show_globals;
+    case eValueTypeVariableArgument:
+      return m_option_variable.show_args;
+    case eValueTypeVariableLocal:
+      return m_option_variable.show_locals;
+    case eValueTypeInvalid:
+    case eValueTypeRegister:
+    case eValueTypeRegisterSet:
+    case eValueTypeConstResult:
+    case eValueTypeVariableThreadLocal:
+      return false;
+    }
+  }
+
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "frame" for validity as eCommandRequiresFrame ensures
     // it is valid
@@ -630,27 +649,8 @@ protected:
         if (num_variables > 0) {
           for (size_t i = 0; i < num_variables; i++) {
             var_sp = variable_list->GetVariableAtIndex(i);
-            switch (var_sp->GetScope()) {
-            case eValueTypeVariableGlobal:
-              if (!m_option_variable.show_globals)
+            if (!ScopeRequested(var_sp->GetScope()))
                 continue;
-              break;
-            case eValueTypeVariableStatic:
-              if (!m_option_variable.show_globals)
-                continue;
-              break;
-            case eValueTypeVariableArgument:
-              if (!m_option_variable.show_args)
-                continue;
-              break;
-            case eValueTypeVariableLocal:
-              if (!m_option_variable.show_locals)
-                continue;
-              break;
-            default:
-              continue;
-              break;
-            }
             std::string scope_string;
             if (m_option_variable.show_scope)
               scope_string = GetScopeString(var_sp).str();
