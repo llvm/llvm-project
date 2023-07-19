@@ -713,9 +713,8 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
 
 def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds"]>,
-    DeclareOpInterfaceMethods<InferTypeOpInterface>,
-    SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveMemoryEffects,
-    NoRegionArguments]> {
+    InferTypeOpAdaptor, SingleBlockImplicitTerminator<"scf::YieldOp">,
+    RecursiveMemoryEffects, NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     The `scf.if` operation represents an if-then-else construct for
