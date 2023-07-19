@@ -1137,6 +1137,7 @@ void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
                                        const fir::ExtendedValue &lhs,
                                        const fir::ExtendedValue &rhs,
+                                       bool needFinalization,
                                        bool isTemporaryLHS) {
   assert(lhs.rank() == 0 && rhs.rank() == 0 && "must be scalars");
   auto type = fir::unwrapSequenceType(
@@ -1149,8 +1150,8 @@ void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
     helper.createAssign(fir::ExtendedValue{*toChar},
                         fir::ExtendedValue{*fromChar});
   } else if (type.isa<fir::RecordType>()) {
-    fir::factory::genRecordAssignment(
-        builder, loc, lhs, rhs, /*needFinalization=*/false, isTemporaryLHS);
+    fir::factory::genRecordAssignment(builder, loc, lhs, rhs, needFinalization,
+                                      isTemporaryLHS);
   } else {
     assert(!fir::hasDynamicSize(type));
     auto rhsVal = fir::getBase(rhs);
@@ -1230,7 +1231,12 @@ static void genComponentByComponentAssignment(fir::FirOpBuilder &builder,
       auto from =
           fir::factory::componentToExtendedValue(builder, loc, fromCoor);
       auto to = fir::factory::componentToExtendedValue(builder, loc, toCoor);
-      fir::factory::genScalarAssignment(builder, loc, to, from, isTemporaryLHS);
+      // If LHS finalization is needed it is expected to be done
+      // for the parent record, so that component-by-component
+      // assignments may avoid finalization calls.
+      fir::factory::genScalarAssignment(builder, loc, to, from,
+                                        /*needFinalization=*/false,
+                                        isTemporaryLHS);
     }
     if (outerLoop)
       builder.setInsertionPointAfter(*outerLoop);
