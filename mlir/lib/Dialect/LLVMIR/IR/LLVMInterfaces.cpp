@@ -62,4 +62,43 @@ mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
   return isArrayOf<TBAATagAttr>(op, tags);
 }
 
+SmallVector<Value> mlir::LLVM::AtomicCmpXchgOp::getAccessedOperands() {
+  return {getPtr()};
+}
+
+SmallVector<Value> mlir::LLVM::AtomicRMWOp::getAccessedOperands() {
+  return {getPtr()};
+}
+
+SmallVector<Value> mlir::LLVM::LoadOp::getAccessedOperands() {
+  return {getAddr()};
+}
+
+SmallVector<Value> mlir::LLVM::StoreOp::getAccessedOperands() {
+  return {getAddr()};
+}
+
+SmallVector<Value> mlir::LLVM::MemcpyOp::getAccessedOperands() {
+  return {getDst(), getSrc()};
+}
+
+SmallVector<Value> mlir::LLVM::MemcpyInlineOp::getAccessedOperands() {
+  return {getDst(), getSrc()};
+}
+
+SmallVector<Value> mlir::LLVM::MemmoveOp::getAccessedOperands() {
+  return {getDst(), getSrc()};
+}
+
+SmallVector<Value> mlir::LLVM::MemsetOp::getAccessedOperands() {
+  return {getDst()};
+}
+
+SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {
+  return llvm::to_vector(
+      llvm::make_filter_range(getArgOperands(), [](Value arg) {
+        return isa<LLVMPointerType>(arg.getType());
+      }));
+}
+
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc"
