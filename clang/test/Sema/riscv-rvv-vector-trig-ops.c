@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +f -target-feature +d \
-// RUN:   -target-feature +v -target-feature +zfh -target-feature +experimental-zvfh \
+// RUN:   -target-feature +v -target-feature +zfh -target-feature +zvfh \
 // RUN:   -disable-O0-optnone -o - -fsyntax-only %s -verify 
 // REQUIRES: riscv-registered-target
 
