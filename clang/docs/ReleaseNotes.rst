@@ -114,6 +114,8 @@ C++20 Feature Support
 - Clang now defines `__cpp_consteval` macro.
 - Implemented `P1816R0: <https://wg21.link/p1816r0>`_ and `P2082R1: <https://wg21.link/p2082r1>`_,
   which allows CTAD for aggregates.
+- Clang now supports to export declarations within language linkage in standard c++ modules.
+  This addresses `https://github.com/llvm/llvm-project/issues/60405`_.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -725,6 +727,47 @@ Bug Fixes to C++ Support
 - Fix crash when emitting diagnostic for out of order designated initializers
   in C++.
   (`#63605 <https://github.com/llvm/llvm-project/issues/63605>`_)
+- Fix crash when using standard C++ modules with OpenMP.
+  (`https://github.com/llvm/llvm-project/issues/62359`_)
+- Fix crash when using consteval non static data member initialization in
+  standard C++ modules.
+  (`https://github.com/llvm/llvm-project/issues/60275`_)
+- Fix handling of ADL for dependent expressions in standard C++ modules.
+  (`https://github.com/llvm/llvm-project/issues/60488`_)
+- Fix crash when combining `-ftime-trace` within standard C++ modules.
+  (`https://github.com/llvm/llvm-project/issues/60544`_)
+- Don't generate template specializations when importing standard C++ modules.
+  This addresses (`https://github.com/llvm/llvm-project/issues/60693`_)
+- Fix the visibility of `initializer list` in the importer of standard C++
+  modules. This addresses
+  (`https://github.com/llvm/llvm-project/issues/60775`_)
+- Allow the use of constrained friend in standard C++ modules.
+  This addresses (`https://github.com/llvm/llvm-project/issues/60890`_)
+- Don't evaluate initializer of used variables in every importer of standard
+  C++ modules.
+  (`https://github.com/llvm/llvm-project/issues/61040`_)
+- Fix the issue that the default `operator==` in standard C++ modules will
+  cause duplicate symbol linker error.
+  (`https://github.com/llvm/llvm-project/issues/61067`_)
+- Fix the false positive ODR check for template names. This addresses the issue
+  that we can't include `<ranges>` in multiple module units.
+  (`https://github.com/llvm/llvm-project/issues/61317`_)
+- Fix crash for inconsistent exported declarations in standard C++ modules.
+  (`https://github.com/llvm/llvm-project/issues/61321`_)
+- Fix ignoring `#pragma comment` and `#pragma detect_mismatch` directives in
+  standard C++ modules.
+  (`https://github.com/llvm/llvm-project/issues/61733`_)
+- Don't generate virtual tables if the class is defined in another module units
+  for Itanium ABI.
+  (`https://github.com/llvm/llvm-project/issues/61940`_)
+- Fix false postive check for constrained satisfaction in standard C++ modules.
+  (`https://github.com/llvm/llvm-project/issues/62589`_)
+- Serialize the evaluated constant values for variable declarations in standard
+  C++ modules.
+  (`https://github.com/llvm/llvm-project/issues/62796`_)
+- Merge lambdas in require expressions in standard C++ modules.
+  (`https://github.com/llvm/llvm-project/issues/63544`_)
+
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
