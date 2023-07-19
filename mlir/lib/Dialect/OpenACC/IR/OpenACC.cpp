@@ -387,10 +387,10 @@ static LogicalResult verifyInitLikeSingleArgRegion(
   if (region.empty())
     return op->emitOpError() << "expects non-empty " << regionName << " region";
   Block &firstBlock = region.front();
-  if (firstBlock.getNumArguments() != 1 ||
+  if (firstBlock.getNumArguments() < 1 ||
       firstBlock.getArgument(0).getType() != type)
     return op->emitOpError() << "expects " << regionName
-                             << " region with one "
+                             << " region first "
                                 "argument of the "
                              << regionType << " type";
 
@@ -463,11 +463,11 @@ LogicalResult acc::ReductionRecipeOp::verifyRegions() {
     return emitOpError() << "expects non-empty combiner region";
 
   Block &reductionBlock = getCombinerRegion().front();
-  if (reductionBlock.getNumArguments() != 2 ||
+  if (reductionBlock.getNumArguments() < 2 ||
       reductionBlock.getArgument(0).getType() != getType() ||
       reductionBlock.getArgument(1).getType() != getType())
-    return emitOpError() << "expects combiner region with two arguments of "
-                         << "the reduction type";
+    return emitOpError() << "expects combiner region with the first two "
+                         << "arguments of the reduction type";
 
   for (YieldOp yieldOp : getCombinerRegion().getOps<YieldOp>()) {
     if (yieldOp.getOperands().size() != 1 ||
@@ -987,7 +987,7 @@ static LogicalResult checkDeclareOperands(Op &op,
         op->getLoc(),
         "at least one operand must appear on the declare operation");
 
-  for (mlir::Value operand : operands)
+  for (mlir::Value operand : operands) {
     if (!mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
                    acc::DevicePtrOp, acc::GetDevicePtrOp, acc::PresentOp,
                    acc::DeclareDeviceResidentOp, acc::DeclareLinkOp>(
@@ -995,6 +995,32 @@ static LogicalResult checkDeclareOperands(Op &op,
       return op.emitError(
           "expect valid declare data entry operation or acc.getdeviceptr "
           "as defining op");
+
+    mlir::Value varPtr{getVarPtr(operand.getDefiningOp())};
+    assert(varPtr && "declare operands can only be data entry operations which "
+                     "must have varPtr");
+    std::optional<mlir::acc::DataClause> dataClauseOptional{
+        getDataClause(operand.getDefiningOp())};
+    assert(dataClauseOptional.has_value() &&
+           "declare operands can only be data entry operations which must have "
+           "dataClause");
+
+    // If varPtr has no defining op - there is nothing to check further.
+    if (!varPtr.getDefiningOp())
+      continue;
+
+    // Check that the varPtr has a declare attribute.
+    auto declareAttribute{
+        varPtr.getDefiningOp()->getAttr(mlir::acc::getDeclareAttrName())};
+    if (!declareAttribute)
+      return op.emitError(
+          "expect declare attribute on variable in declare operation");
+    if (llvm::cast<DataClauseAttr>(declareAttribute).getValue() !=
+        dataClauseOptional.value())
+      return op.emitError(
+          "expect matching declare attribute on variable in declare operation");
+  }
+
   return success();
 }
 
@@ -1106,3 +1132,26 @@ LogicalResult acc::WaitOp::verify() {
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsTypes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// acc dialect utilities
+//===----------------------------------------------------------------------===//
+
+mlir::Value mlir::acc::getVarPtr(mlir::Operation *accDataEntryOp) {
+  auto varPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataEntryOp)
+                  .Case<ACC_DATA_ENTRY_OPS>(
+                      [&](auto entry) { return entry.getVarPtr(); })
+                  .Default([&](mlir::Operation *) { return mlir::Value(); })};
+  return varPtr;
+}
+
+std::optional<mlir::acc::DataClause>
+mlir::acc::getDataClause(mlir::Operation *accDataEntryOp) {
+  auto dataClause{
+      llvm::TypeSwitch<mlir::Operation *, std::optional<mlir::acc::DataClause>>(
+          accDataEntryOp)
+          .Case<ACC_DATA_ENTRY_OPS>(
+              [&](auto entry) { return entry.getDataClause(); })
+          .Default([&](mlir::Operation *) { return std::nullopt; })};
+  return dataClause;
+}

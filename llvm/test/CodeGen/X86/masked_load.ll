@@ -180,8 +180,7 @@ define <4 x double> @load_v4f64_v4i32(<4 x i32> %trigger, <4 x double>* %addr, <
 ; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm2
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; AVX1-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm2
 ; AVX1-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
@@ -266,8 +265,7 @@ define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, <4 x double>* %ad
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    vmaskmovpd (%rdi), %ymm0, %ymm0
 ; AVX1-NEXT:    retq

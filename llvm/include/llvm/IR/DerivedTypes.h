@@ -641,7 +641,6 @@ inline ElementCount VectorType::getElementCount() const {
 
 /// Class to represent pointers.
 class PointerType : public Type {
-  explicit PointerType(Type *ElType, unsigned AddrSpace);
   explicit PointerType(LLVMContext &C, unsigned AddrSpace);
 
 public:

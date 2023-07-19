@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
-#include "mlir/Dialect/SPIRV/IR/ParserUtils.h"
+
+#include "SPIRVParsingUtils.h"
+
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
@@ -341,11 +343,13 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
     return {};
 
   Scope scope;
-  if (parser.parseComma() || parseEnumKeywordAttr(scope, parser, "scope <id>"))
+  if (parser.parseComma() ||
+      spirv::parseEnumKeywordAttr(scope, parser, "scope <id>"))
     return {};
 
   CooperativeMatrixUseKHR use;
-  if (parser.parseComma() || parseEnumKeywordAttr(use, parser, "use <id>"))
+  if (parser.parseComma() ||
+      spirv::parseEnumKeywordAttr(use, parser, "use <id>"))
     return {};
 
   if (parser.parseGreater())
@@ -376,7 +380,8 @@ static Type parseCooperativeMatrixNVType(SPIRVDialect const &dialect,
     return Type();
 
   Scope scope;
-  if (parser.parseComma() || parseEnumKeywordAttr(scope, parser, "scope <id>"))
+  if (parser.parseComma() ||
+      spirv::parseEnumKeywordAttr(scope, parser, "scope <id>"))
     return Type();
 
   if (parser.parseGreater())
@@ -407,10 +412,11 @@ static Type parseJointMatrixType(SPIRVDialect const &dialect,
     return Type();
   MatrixLayout matrixLayout;
   if (parser.parseComma() ||
-      parseEnumKeywordAttr(matrixLayout, parser, "matrixLayout <id>"))
+      spirv::parseEnumKeywordAttr(matrixLayout, parser, "matrixLayout <id>"))
     return Type();
   Scope scope;
-  if (parser.parseComma() || parseEnumKeywordAttr(scope, parser, "scope <id>"))
+  if (parser.parseComma() ||
+      spirv::parseEnumKeywordAttr(scope, parser, "scope <id>"))
     return Type();
   if (parser.parseGreater())
     return Type();

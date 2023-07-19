@@ -19,6 +19,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -28,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -394,54 +396,6 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
   Value *Sat = Builder.CreateCall(Fn, In);
   I.replaceAllUsesWith(Builder.CreateSExt(Sat, IntTy));
   return true;
-}
-
-/// Try to replace a mathlib call to sqrt with the LLVM intrinsic. This avoids
-/// pessimistic codegen that has to account for setting errno and can enable
-/// vectorization.
-static bool foldSqrt(Instruction &I, TargetTransformInfo &TTI,
-                     TargetLibraryInfo &TLI, AssumptionCache &AC,
-                     DominatorTree &DT) {
-  // Match a call to sqrt mathlib function.
-  auto *Call = dyn_cast<CallInst>(&I);
-  if (!Call)
-    return false;
-
-  Module *M = Call->getModule();
-  LibFunc Func;
-  if (!TLI.getLibFunc(*Call, Func) || !isLibFuncEmittable(M, &TLI, Func))
-    return false;
-
-  if (Func != LibFunc_sqrt && Func != LibFunc_sqrtf && Func != LibFunc_sqrtl)
-    return false;
-
-  // If (1) this is a sqrt libcall, (2) we can assume that NAN is not created
-  // (because NNAN or the operand arg must not be less than -0.0) and (2) we
-  // would not end up lowering to a libcall anyway (which could change the value
-  // of errno), then:
-  // (1) errno won't be set.
-  // (2) it is safe to convert this to an intrinsic call.
-  Type *Ty = Call->getType();
-  Value *Arg = Call->getArgOperand(0);
-  if (TTI.haveFastSqrt(Ty) &&
-      (Call->hasNoNaNs() ||
-       cannotBeOrderedLessThanZero(Arg, M->getDataLayout(), &TLI, 0, &AC, &I,
-                                   &DT))) {
-    IRBuilder<> Builder(&I);
-    IRBuilderBase::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(Call->getFastMathFlags());
-
-    Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, Ty);
-    Value *NewSqrt = Builder.CreateCall(Sqrt, Arg, "sqrt");
-    I.replaceAllUsesWith(NewSqrt);
-
-    // Explicitly erase the old call because a call with side effects is not
-    // trivially dead.
-    I.eraseFromParent();
-    return true;
-  }
-
-  return false;
 }
 
 // Check if this array of constants represents a cttz table.
@@ -915,13 +869,159 @@ static bool foldPatternedLoads(Instruction &I, const DataLayout &DL) {
   return true;
 }
 
+/// Try to replace a mathlib call to sqrt with the LLVM intrinsic. This avoids
+/// pessimistic codegen that has to account for setting errno and can enable
+/// vectorization.
+static bool foldSqrt(CallInst *Call, TargetTransformInfo &TTI,
+                     TargetLibraryInfo &TLI, AssumptionCache &AC,
+                     DominatorTree &DT) {
+  Module *M = Call->getModule();
+
+  // If (1) this is a sqrt libcall, (2) we can assume that NAN is not created
+  // (because NNAN or the operand arg must not be less than -0.0) and (2) we
+  // would not end up lowering to a libcall anyway (which could change the value
+  // of errno), then:
+  // (1) errno won't be set.
+  // (2) it is safe to convert this to an intrinsic call.
+  Type *Ty = Call->getType();
+  Value *Arg = Call->getArgOperand(0);
+  if (TTI.haveFastSqrt(Ty) &&
+      (Call->hasNoNaNs() ||
+       cannotBeOrderedLessThanZero(Arg, M->getDataLayout(), &TLI, 0, &AC, Call,
+                                   &DT))) {
+    IRBuilder<> Builder(Call);
+    IRBuilderBase::FastMathFlagGuard Guard(Builder);
+    Builder.setFastMathFlags(Call->getFastMathFlags());
+
+    Function *Sqrt = Intrinsic::getDeclaration(M, Intrinsic::sqrt, Ty);
+    Value *NewSqrt = Builder.CreateCall(Sqrt, Arg, "sqrt");
+    Call->replaceAllUsesWith(NewSqrt);
+
+    // Explicitly erase the old call because a call with side effects is not
+    // trivially dead.
+    Call->eraseFromParent();
+    return true;
+  }
+
+  return false;
+}
+
+/// Try to expand strcmp(P, "x") calls.
+static bool expandStrcmp(CallInst *CI, DominatorTree &DT, bool &MadeCFGChange) {
+  Value *Str1P = CI->getArgOperand(0), *Str2P = CI->getArgOperand(1);
+
+  // Trivial cases are optimized during inst combine
+  if (Str1P == Str2P)
+    return false;
+
+  StringRef Str1, Str2;
+  bool HasStr1 = getConstantStringInfo(Str1P, Str1);
+  bool HasStr2 = getConstantStringInfo(Str2P, Str2);
+
+  Value *NonConstantP = nullptr;
+  StringRef ConstantStr;
+
+  if (!HasStr1 && HasStr2 && Str2.size() == 1) {
+    NonConstantP = Str1P;
+    ConstantStr = Str2;
+  } else if (!HasStr2 && HasStr1 && Str1.size() == 1) {
+    NonConstantP = Str2P;
+    ConstantStr = Str1;
+  } else {
+    return false;
+  }
+
+  // Check if strcmp result is only used in a comparison with zero
+  if (!isOnlyUsedInZeroComparison(CI))
+    return false;
+
+  // For strcmp(P, "x") do the following transformation:
+  //
+  // (before)
+  // dst = strcmp(P, "x")
+  //
+  // (after)
+  // v0 = P[0] - 'x'
+  // [if v0 == 0]
+  //   v1 = P[1]
+  // dst = phi(v0, v1)
+  //
+
+  IRBuilder<> B(CI->getParent());
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+
+  Type *RetType = CI->getType();
+
+  B.SetInsertPoint(CI);
+  BasicBlock *InitialBB = B.GetInsertBlock();
+  Value *Str1FirstCharacterValue =
+      B.CreateZExt(B.CreateLoad(B.getInt8Ty(), NonConstantP), RetType);
+  Value *Str2FirstCharacterValue =
+      ConstantInt::get(RetType, static_cast<unsigned char>(ConstantStr[0]));
+  Value *FirstCharacterSub =
+      B.CreateNSWSub(Str1FirstCharacterValue, Str2FirstCharacterValue);
+  Value *IsFirstCharacterSubZero =
+      B.CreateICmpEQ(FirstCharacterSub, ConstantInt::get(RetType, 0));
+  Instruction *IsFirstCharacterSubZeroBBTerminator = SplitBlockAndInsertIfThen(
+      IsFirstCharacterSubZero, CI, /*Unreachable*/ false,
+      /*BranchWeights*/ nullptr, &DTU);
+
+  B.SetInsertPoint(IsFirstCharacterSubZeroBBTerminator);
+  B.GetInsertBlock()->setName("strcmp_expand_sub_is_zero");
+  BasicBlock *IsFirstCharacterSubZeroBB = B.GetInsertBlock();
+  Value *Str1SecondCharacterValue = B.CreateZExt(
+      B.CreateLoad(B.getInt8Ty(), B.CreateConstInBoundsGEP1_64(
+                                      B.getInt8Ty(), NonConstantP, 1)),
+      RetType);
+
+  B.SetInsertPoint(CI);
+  B.GetInsertBlock()->setName("strcmp_expand_sub_join");
+
+  PHINode *Result = B.CreatePHI(RetType, 2);
+  Result->addIncoming(FirstCharacterSub, InitialBB);
+  Result->addIncoming(Str1SecondCharacterValue, IsFirstCharacterSubZeroBB);
+
+  CI->replaceAllUsesWith(Result);
+  CI->eraseFromParent();
+
+  MadeCFGChange = true;
+
+  return true;
+}
+
+static bool foldLibraryCalls(Instruction &I, TargetTransformInfo &TTI,
+                             TargetLibraryInfo &TLI, DominatorTree &DT,
+                             AssumptionCache &AC, bool &MadeCFGChange) {
+  CallInst *CI = dyn_cast<CallInst>(&I);
+  if (!CI)
+    return false;
+
+  LibFunc Func;
+  Module *M = I.getModule();
+  if (!TLI.getLibFunc(*CI, Func) || !isLibFuncEmittable(M, &TLI, Func))
+    return false;
+
+  switch (Func) {
+  case LibFunc_sqrt:
+  case LibFunc_sqrtf:
+  case LibFunc_sqrtl:
+    return foldSqrt(CI, TTI, TLI, AC, DT);
+  case LibFunc_strcmp:
+    return expandStrcmp(CI, DT, MadeCFGChange);
+  default:
+    break;
+  }
+
+  return false;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
 static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
                                 TargetTransformInfo &TTI,
                                 TargetLibraryInfo &TLI, AliasAnalysis &AA,
-                                AssumptionCache &AC) {
+                                AssumptionCache &AC, bool &MadeCFGChange) {
   bool MadeChange = false;
   for (BasicBlock &BB : F) {
     // Ignore unreachable basic blocks.
@@ -946,7 +1046,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       // NOTE: This function introduces erasing of the instruction `I`, so it
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
-      MadeChange |= foldSqrt(I, TTI, TLI, AC, DT);
+      MadeChange |= foldLibraryCalls(I, TTI, TLI, DT, AC, MadeCFGChange);
     }
   }
 
@@ -962,12 +1062,12 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
 /// handled in the callers of this function.
 static bool runImpl(Function &F, AssumptionCache &AC, TargetTransformInfo &TTI,
                     TargetLibraryInfo &TLI, DominatorTree &DT,
-                    AliasAnalysis &AA) {
+                    AliasAnalysis &AA, bool &ChangedCFG) {
   bool MadeChange = false;
   const DataLayout &DL = F.getParent()->getDataLayout();
   TruncInstCombine TIC(AC, TLI, DL, DT);
   MadeChange |= TIC.run(F);
-  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC);
+  MadeChange |= foldUnusualPatterns(F, DT, TTI, TLI, AA, AC, ChangedCFG);
   return MadeChange;
 }
 
@@ -978,12 +1078,21 @@ PreservedAnalyses AggressiveInstCombinePass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  if (!runImpl(F, AC, TTI, TLI, DT, AA)) {
+
+  bool MadeCFGChange = false;
+
+  if (!runImpl(F, AC, TTI, TLI, DT, AA, MadeCFGChange)) {
     // No changes, all analyses are preserved.
     return PreservedAnalyses::all();
   }
+
   // Mark all the analyses that instcombine updates as preserved.
   PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+
+  if (MadeCFGChange)
+    PA.preserve<DominatorTreeAnalysis>();
+  else
+    PA.preserveSet<CFGAnalyses>();
+
   return PA;
 }

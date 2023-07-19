@@ -156,4 +156,9 @@ void macroIdentifier(int *MACRO_NAME) { // The fix-it ends with a macro. It will
   if (++MyName){}
 }
 
+// CHECK-NOT: fix-it:{{.*}}:
+void parmHasNoName(int *p, int *) { // cannot fix the function because there is one parameter has no name.
+  p[5] = 5;
+}
+
 #endif

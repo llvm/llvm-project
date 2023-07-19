@@ -94,20 +94,7 @@ define void @foo() {
 ; // -----
 
 ; CHECK:      import-failure.ll
-; CHECK-SAME: error: TBAA root node must have non-empty identity: !2 = !{!""}
-define dso_local void @tbaa(ptr %0) {
-  store i8 1, ptr %0, align 4, !tbaa !2
-  ret void
-}
-
-!0 = !{!""}
-!1 = !{!"omnipotent char", !0, i64 0}
-!2 = !{!1, !1, i64 0}
-
-; // -----
-
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: unsupported TBAA node format: !0 = !{!1, !1, i64 0, i64 4}
+; CHECK-SAME: error: unsupported TBAA node format: !{{.*}} = !{!{{.*}}, i64 1, !"omnipotent char"}
 define dso_local void @tbaa(ptr %0) {
   store i32 1, ptr %0, align 4, !tbaa !2
   ret void
@@ -117,6 +104,18 @@ define dso_local void @tbaa(ptr %0) {
 !3 = !{!4, i64 4, !"int"}
 !4 = !{!5, i64 1, !"omnipotent char"}
 !5 = !{!"Simple C++ TBAA"}
+
+; // -----
+
+; CHECK:      import-failure.ll
+; CHECK-SAME: error: has cycle in TBAA graph: ![[ID:.*]] = distinct !{![[ID]], i64 4, !"int"}
+define dso_local void @tbaa(ptr %0) {
+  store i32 1, ptr %0, align 4, !tbaa !2
+  ret void
+}
+
+!2 = !{!3, !3, i64 0, i64 4}
+!3 = !{!3, i64 4, !"int"}
 
 ; // -----
 

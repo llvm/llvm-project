@@ -3,9 +3,10 @@
 cppcoreguidelines-avoid-const-or-ref-data-members
 =================================================
 
-This check warns when structs or classes have const-qualified or reference
-(lvalue or rvalue) data members. Having such members is rarely useful, and
-makes the class only copy-constructible but not copy-assignable.
+This check warns when structs or classes that are copyable or movable, and have
+const-qualified or reference (lvalue or rvalue) data members. Having such
+members is rarely useful, and makes the class only copy-constructible but not
+copy-assignable.
 
 Examples:
 

@@ -1,9 +1,10 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-FAST"
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
 ! RUN: bbc -emit-fir --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
-! RUN: bbc --disable-mlir-complex -emit-fir %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-FAST"
+! RUN: bbc --force-mlir-complex -emit-fir %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
+! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
 ! RUN: %flang_fc1 -emit-fir -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-fir -mllvm --disable-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
+! RUN: %flang_fc1 -emit-fir -mllvm --force-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
+! RUN: %flang_fc1 -fapprox-func -emit-fir %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
 
 ! Test abs intrinsic for various types (int, float, complex)
 

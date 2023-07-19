@@ -1190,14 +1190,14 @@ void Writer::writeUuid() {
   threadFutures.reserve(chunks.size());
   for (size_t i = 0; i < chunks.size(); ++i)
     threadFutures.emplace_back(threadPool.async(
-        [&](size_t j) { hashes[j] = xxHash64(chunks[j]); }, i));
+        [&](size_t j) { hashes[j] = xxh3_64bits(chunks[j]); }, i));
   for (std::shared_future<void> &future : threadFutures)
     future.wait();
   // Append the output filename so that identical binaries with different names
   // don't get the same UUID.
-  hashes[chunks.size()] = xxHash64(sys::path::filename(config->finalOutput));
-  uint64_t digest = xxHash64({reinterpret_cast<uint8_t *>(hashes.data()),
-                              hashes.size() * sizeof(uint64_t)});
+  hashes[chunks.size()] = xxh3_64bits(sys::path::filename(config->finalOutput));
+  uint64_t digest = xxh3_64bits({reinterpret_cast<uint8_t *>(hashes.data()),
+                                 hashes.size() * sizeof(uint64_t)});
   uuidCommand->writeUuid(digest);
 }
 

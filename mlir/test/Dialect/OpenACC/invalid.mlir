@@ -267,7 +267,7 @@ acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
 
 // -----
 
-// expected-error@+1 {{expects init region with one argument of the privatization type}}
+// expected-error@+1 {{expects init region first argument of the privatization type}}
 acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
 ^bb0(%arg0 : !llvm.ptr<f32>):
   %c1 = arith.constant 1 : i32
@@ -291,7 +291,7 @@ acc.private.recipe @privatization_i32 : !llvm.ptr<f32> init {
 
 // -----
 
-// expected-error@+1 {{expects destroy region with one argument of the privatization type}}
+// expected-error@+1 {{expects destroy region first argument of the privatization type}}
 acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
 ^bb0(%arg0 : !llvm.ptr<i32>):
   %c1 = arith.constant 1 : i32
@@ -312,7 +312,7 @@ acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
 
 // -----
 
-// expected-error@+1 {{expects init region with one argument of the privatization type}}
+// expected-error@+1 {{expects init region first argument of the privatization type}}
 acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
 ^bb0(%arg0 : !llvm.ptr<f32>):
   %c1 = arith.constant 1 : i32
@@ -379,7 +379,7 @@ acc.firstprivate.recipe @privatization_i32 : !llvm.ptr<i32> init {
 
 // -----
 
-// expected-error@+1 {{destroy region with one argument of the privatization type}}
+// expected-error@+1 {{expects destroy region first argument of the privatization type}}
 acc.firstprivate.recipe @privatization_i32 : i32 init {
 ^bb0(%arg0 : i32):
   %0 = arith.constant 1 : i32
@@ -409,7 +409,7 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
-// expected-error@+1 {{expects init region with one argument of the reduction type}}
+// expected-error@+1 {{expects init region first argument of the reduction type}}
 acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 ^bb0(%0: i32):
   %1 = arith.constant 0 : i64
@@ -427,7 +427,7 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
-// expected-error@+1 {{expects combiner region with two arguments of the reduction type}}
+// expected-error@+1 {{expects combiner region with the first two arguments of the reduction type}}
 acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 ^bb0(%0: i64):
   %1 = arith.constant 0 : i64
@@ -439,7 +439,7 @@ acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 
 // -----
 
-// expected-error@+1 {{expects combiner region with two arguments of the reduction type}}
+// expected-error@+1 {{expects combiner region with the first two arguments of the reduction type}}
 acc.reduction.recipe @reduction_i64 : i64 reduction_operator<add> init {
 ^bb0(%0: i64):
   %1 = arith.constant 0 : i64

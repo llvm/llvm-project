@@ -43,6 +43,22 @@
 
 // expected-no-diagnostics
 
+// Check handling of overriden, implicitly __host__ dtor (should emit as a
+// nullptr to global)
+
+struct vbase {
+    virtual ~vbase();
+};
+
+template<typename T>
+struct vderived : public vbase {
+    ~vderived();
+};
+
+template struct vderived<void>;
+
+// CHECK: @_ZTV8vderivedIvE = weak_odr unnamed_addr addrspace(1) constant { [4 x ptr addrspace(1)] } zeroinitializer, comdat, align 8
+
 // Check support for pure and deleted virtual functions
 struct base {
   __host__
@@ -60,9 +76,8 @@ struct derived:base {
 __device__ void test_vf() {
     derived d;
 }
-// CHECK: @_ZTV7derived = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @_ZN7derived2pvEv, ptr @__cxa_deleted_virtual] }, comdat, align 8
-// CHECK: @_ZTV4base = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @__cxa_pure_virtual, ptr @__cxa_deleted_virtual] }, comdat, align 8
-
+// CHECK: @_ZTV7derived = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr addrspace(1)] } { [4 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @_ZN7derived2pvEv to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_deleted_virtual to ptr addrspace(1))] }, comdat, align 8
+// CHECK: @_ZTV4base = linkonce_odr unnamed_addr addrspace(1) constant { [4 x ptr addrspace(1)] } { [4 x ptr addrspace(1)] [ptr addrspace(1) null, ptr addrspace(1) null, ptr addrspace(1) addrspacecast (ptr @__cxa_pure_virtual to ptr addrspace(1)), ptr addrspace(1) addrspacecast (ptr @__cxa_deleted_virtual to ptr addrspace(1))] }, comdat, align 8
 // CHECK: define{{.*}}void @__cxa_pure_virtual()
 // CHECK: define{{.*}}void @__cxa_deleted_virtual()
 

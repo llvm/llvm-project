@@ -10,7 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
-class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
+class TestVSCode_completions(lldbvscode_testcase.VSCodeTestCaseBase):
     def verify_completions(self, actual_list, expected_list, not_expected_list=[]):
         for expected_item in expected_list:
             self.assertIn(expected_item, actual_list)
@@ -43,7 +43,13 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                     "label": "var -- vector<basic_string<char>> &",
                 }
             ],
-            [{"text": "var1", "label": "var1 -- int &"}],
+            [
+                {
+                    "text": "var",
+                    "label": "var -- Show variables for the current stack frame. Defaults to all arguments and local variables in scope. Names of argument, local, file static and file global variables can be specified.",
+                },
+                {"text": "var1", "label": "var1 -- int &"},
+            ],
         )
 
         # should see global keywords but not variables inside main

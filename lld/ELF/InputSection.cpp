@@ -1241,13 +1241,13 @@ void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
     // Optimize the common case.
     do {
       size_t size = strlen(p);
-      pieces.emplace_back(p - s.begin(), xxHash64(StringRef(p, size)), live);
+      pieces.emplace_back(p - s.begin(), xxh3_64bits(StringRef(p, size)), live);
       p += size + 1;
     } while (p != end);
   } else {
     do {
       size_t size = findNull(StringRef(p, end - p), entSize);
-      pieces.emplace_back(p - s.begin(), xxHash64(StringRef(p, size)), live);
+      pieces.emplace_back(p - s.begin(), xxh3_64bits(StringRef(p, size)), live);
       p += size + entSize;
     } while (p != end);
   }
@@ -1263,7 +1263,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> data,
 
   pieces.resize_for_overwrite(size / entSize);
   for (size_t i = 0, j = 0; i != size; i += entSize, j++)
-    pieces[j] = {i, (uint32_t)xxHash64(data.slice(i, entSize)), live};
+    pieces[j] = {i, (uint32_t)xxh3_64bits(data.slice(i, entSize)), live};
 }
 
 template <class ELFT>

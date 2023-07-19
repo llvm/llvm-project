@@ -8,7 +8,6 @@
 
 #include "src/__support/File/file.h"
 
-#include "llvm-libc-types/rpc_opcodes_t.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/errno/libc_errno.h" // For error macros
 #include "src/string/string_utils.h"

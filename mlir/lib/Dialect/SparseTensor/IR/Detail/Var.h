@@ -390,8 +390,9 @@ public:
 // static_assert(IsZeroCostAbstraction<VarInfo>);
 
 //===----------------------------------------------------------------------===//
-enum class CreationPolicy { MustNot, May, Must };
+enum class Policy { MustNot, May, Must };
 
+//===----------------------------------------------------------------------===//
 class VarEnv final {
   /// Map from `VarKind` to the next free `Var::Num`; used by `bindVar`.
   VarKindArray<Var::Num> nextNum;
@@ -448,7 +449,7 @@ public:
                                       VarKind vk, bool verifyUsage = false);
 
   /// Attempts to lookup or create a variable according to the given
-  /// `CreationPolicy`.  Returns nullopt in one of two circumstances:
+  /// `Policy`.  Returns nullopt in one of two circumstances:
   /// (1) the policy says we `Must` create, yet the variable already exists;
   /// (2) the policy says we `MustNot` create, yet no such variable exists.
   /// Otherwise, if the variable already exists then it is validated against
@@ -458,7 +459,7 @@ public:
   // TODO(wrengr): Prolly want to rename this to `create` and move the
   // current method of that name to being a private `createImpl`.
   std::optional<std::pair<VarInfo::ID, bool>>
-  lookupOrCreate(CreationPolicy policy, StringRef name, llvm::SMLoc loc,
+  lookupOrCreate(Policy creationPolicy, StringRef name, llvm::SMLoc loc,
                  VarKind vk);
 
   /// Binds the given variable to the next free `Var::Num` for its `VarKind`.

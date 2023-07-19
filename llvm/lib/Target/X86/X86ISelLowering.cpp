@@ -6224,11 +6224,19 @@ static bool isUndefOrEqual(int Val, int CmpVal) {
 }
 
 /// Return true if every element in Mask is the undef sentinel value or equal to
-/// the specified value..
+/// the specified value.
 static bool isUndefOrEqual(ArrayRef<int> Mask, int CmpVal) {
   return llvm::all_of(Mask, [CmpVal](int M) {
     return (M == SM_SentinelUndef) || (M == CmpVal);
   });
+}
+
+/// Return true if every element in Mask, beginning from position Pos and ending
+/// in Pos+Size is the undef sentinel value or equal to the specified value.
+static bool isUndefOrEqualInRange(ArrayRef<int> Mask, int CmpVal, unsigned Pos,
+                                  unsigned Size) {
+  return llvm::all_of(Mask.slice(Pos, Size),
+                      [CmpVal](int M) { return isUndefOrEqual(M, CmpVal); });
 }
 
 /// Val is either the undef or zero sentinel value.
@@ -8791,6 +8799,29 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     }
     Ops.push_back(Src);
     Mask.append(NumElts, 0);
+    return true;
+  }
+  case ISD::SIGN_EXTEND_VECTOR_INREG: {
+    SDValue Src = N.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    unsigned NumBitsPerSrcElt = SrcVT.getScalarSizeInBits();
+
+    // Extended source must be a simple vector.
+    if (!SrcVT.isSimple() || (SrcVT.getSizeInBits() % 128) != 0 ||
+        (NumBitsPerSrcElt % 8) != 0)
+      return false;
+
+    // We can only handle all-signbits extensions.
+    APInt DemandedSrcElts =
+        DemandedElts.zextOrTrunc(SrcVT.getVectorNumElements());
+    if (DAG.ComputeNumSignBits(Src, DemandedSrcElts) != NumBitsPerSrcElt)
+      return false;
+
+    assert((NumBitsPerElt % NumBitsPerSrcElt) == 0 && "Unexpected extension");
+    unsigned Scale = NumBitsPerElt / NumBitsPerSrcElt;
+    for (unsigned I = 0; I != NumElts; ++I)
+      Mask.append(Scale, I);
+    Ops.push_back(Src);
     return true;
   }
   case ISD::ZERO_EXTEND:
@@ -39412,31 +39443,41 @@ static bool matchUnaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
     }
   }
 
-  // Match against a ANY/ZERO_EXTEND_VECTOR_INREG instruction.
+  // Match against a ANY/SIGN/ZERO_EXTEND_VECTOR_INREG instruction.
   // TODO: Add 512-bit vector support (split AVX512F and AVX512BW).
   if (AllowIntDomain && ((MaskVT.is128BitVector() && Subtarget.hasSSE41()) ||
                          (MaskVT.is256BitVector() && Subtarget.hasInt256()))) {
     unsigned MaxScale = 64 / MaskEltSize;
+    bool UseSign = V1.getScalarValueSizeInBits() == MaskEltSize &&
+                   DAG.ComputeNumSignBits(V1) == MaskEltSize;
     for (unsigned Scale = 2; Scale <= MaxScale; Scale *= 2) {
       bool MatchAny = true;
       bool MatchZero = true;
+      bool MatchSign = UseSign;
       unsigned NumDstElts = NumMaskElts / Scale;
-      for (unsigned i = 0; i != NumDstElts && (MatchAny || MatchZero); ++i) {
+      for (unsigned i = 0;
+           i != NumDstElts && (MatchAny || MatchSign || MatchZero); ++i) {
         if (!isUndefOrEqual(Mask[i * Scale], (int)i)) {
-          MatchAny = MatchZero = false;
+          MatchAny = MatchSign = MatchZero = false;
           break;
         }
-        MatchAny &= isUndefInRange(Mask, (i * Scale) + 1, Scale - 1);
-        MatchZero &= isUndefOrZeroInRange(Mask, (i * Scale) + 1, Scale - 1);
+        unsigned Pos = (i * Scale) + 1;
+        unsigned Len = Scale - 1;
+        MatchAny &= isUndefInRange(Mask, Pos, Len);
+        MatchZero &= isUndefOrZeroInRange(Mask, Pos, Len);
+        MatchSign &= isUndefOrEqualInRange(Mask, (int)i, Pos, Len);
       }
-      if (MatchAny || MatchZero) {
-        assert(MatchZero && "Failed to match zext but matched aext?");
+      if (MatchAny || MatchSign || MatchZero) {
+        assert((MatchSign || MatchZero) &&
+               "Failed to match sext/zext but matched aext?");
         unsigned SrcSize = std::max(128u, NumDstElts * MaskEltSize);
-        MVT ScalarTy = MaskVT.isInteger() ? MaskVT.getScalarType() :
-                                            MVT::getIntegerVT(MaskEltSize);
+        MVT ScalarTy = MaskVT.isInteger() ? MaskVT.getScalarType()
+                                          : MVT::getIntegerVT(MaskEltSize);
         SrcVT = MVT::getVectorVT(ScalarTy, SrcSize / MaskEltSize);
 
-        Shuffle = unsigned(MatchAny ? ISD::ANY_EXTEND : ISD::ZERO_EXTEND);
+        Shuffle = unsigned(
+            MatchAny ? ISD::ANY_EXTEND
+                     : (MatchSign ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND));
         if (SrcVT.getVectorNumElements() != NumDstElts)
           Shuffle = DAG.getOpcode_EXTEND_VECTOR_INREG(Shuffle);
 
@@ -39737,6 +39778,19 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
     if (matchShuffleWithPACK(MaskVT, SrcVT, V1, V2, Shuffle, Mask, DAG,
                              Subtarget)) {
       DstVT = MaskVT;
+      return true;
+    }
+  }
+  // TODO: Can we handle this inside matchShuffleWithPACK?
+  if (MaskVT == MVT::v4i32 && Subtarget.hasSSE2() &&
+      isTargetShuffleEquivalent(MaskVT, Mask, {0, 2, 4, 6}, DAG) &&
+      V1.getScalarValueSizeInBits() == 64 &&
+      V2.getScalarValueSizeInBits() == 64) {
+    // Use PACKSSWD if the signbits extend to the lowest 16-bits.
+    if (DAG.ComputeNumSignBits(V1) > 48 && DAG.ComputeNumSignBits(V2) > 48) {
+      SrcVT = MVT::v4i32;
+      DstVT = MVT::v8i16;
+      Shuffle = X86ISD::PACKSS;
       return true;
     }
   }
@@ -57918,9 +57972,7 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
   }
 
   // Attempt to combine as a shuffle on SSE41+ targets.
-  if ((Opcode == ISD::ANY_EXTEND_VECTOR_INREG ||
-       Opcode == ISD::ZERO_EXTEND_VECTOR_INREG) &&
-      Subtarget.hasSSE41()) {
+  if (Subtarget.hasSSE41()) {
     SDValue Op(N, 0);
     if (TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getValueType()))
       if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))

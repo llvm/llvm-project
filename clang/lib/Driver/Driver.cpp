@@ -5405,8 +5405,6 @@ void Driver::BuildJobs(Compilation &C) const {
   }
 
   const llvm::Triple &RawTriple = C.getDefaultToolChain().getTriple();
-  if (RawTriple.isOSAIX() && LTOMode == LTOK_Thin)
-    Diag(diag::err_drv_clang_unsupported) << "thinLTO on AIX";
 
   // Collect the list of architectures.
   llvm::StringSet<> ArchNames;
@@ -7110,7 +7108,6 @@ Driver::getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const {
   if (IsClCompatMode) {
     // Include CL and Core options.
     IncludedFlagsBitmask |= options::CLOption;
-    IncludedFlagsBitmask |= options::CLDXCOption;
     IncludedFlagsBitmask |= options::CoreOption;
   } else {
     ExcludedFlagsBitmask |= options::CLOption;
@@ -7118,13 +7115,10 @@ Driver::getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const {
   if (IsDXCMode()) {
     // Include DXC and Core options.
     IncludedFlagsBitmask |= options::DXCOption;
-    IncludedFlagsBitmask |= options::CLDXCOption;
     IncludedFlagsBitmask |= options::CoreOption;
   } else {
     ExcludedFlagsBitmask |= options::DXCOption;
   }
-  if (!IsClCompatMode && !IsDXCMode())
-    ExcludedFlagsBitmask |= options::CLDXCOption;
 
   return std::make_pair(IncludedFlagsBitmask, ExcludedFlagsBitmask);
 }

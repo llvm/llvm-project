@@ -11,7 +11,7 @@ import lldbvscode_testcase
 
 class TestVSCode_console(lldbvscode_testcase.VSCodeTestCaseBase):
     def check_lldb_command(self, lldb_command, contains_string, assert_msg):
-        response = self.vscode.request_evaluate("`%s" % (lldb_command))
+        response = self.vscode.request_evaluate("`%s" % (lldb_command), context="repl")
         output = response["body"]["result"]
         self.assertIn(
             contains_string,

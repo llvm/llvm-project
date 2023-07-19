@@ -260,6 +260,7 @@ Changes to the RISC-V Backend
   widening mul-add) extensions.
 * Added assembler/disassembler support for the experimental Zacas (atomic
   compare-and-swap) extension.
+* Zvfh extension version was upgraded to 1.0 and is no longer experimental.
 
 Changes to the WebAssembly Backend
 ----------------------------------
