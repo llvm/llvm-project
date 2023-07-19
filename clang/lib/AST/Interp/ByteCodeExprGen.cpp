@@ -1006,6 +1006,15 @@ bool ByteCodeExprGen<Emitter>::VisitCXXReinterpretCastExpr(
   return this->emitInvalidCast(CastKind::Reinterpret, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
+  assert(E->getType()->isBooleanType());
+
+  if (DiscardResult)
+    return true;
+  return this->emitConstBool(E->getValue(), E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
