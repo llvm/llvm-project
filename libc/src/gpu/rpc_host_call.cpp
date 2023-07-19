@@ -8,7 +8,6 @@
 
 #include "src/gpu/rpc_host_call.h"
 
-#include "llvm-libc-types/rpc_opcodes_t.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/common.h"
