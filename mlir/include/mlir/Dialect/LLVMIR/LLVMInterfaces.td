@@ -199,6 +199,13 @@ def AliasAnalysisOpInterface : OpInterface<"AliasAnalysisOpInterface"> {
         auto op = cast<ConcreteOp>(this->getOperation());
         op.setTbaaAttr(attr);
       }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Returns a list of all pointer operands accessed by the "
+                       "operation",
+      /*returnType=*/  "::llvm::SmallVector<::mlir::Value>",
+      /*methodName=*/  "getAccessedOperands",
+      /*args=*/        (ins)
       >
   ];
 }
