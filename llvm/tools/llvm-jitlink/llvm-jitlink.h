@@ -88,20 +88,6 @@ private:
   Session(std::unique_ptr<orc::ExecutorProcessControl> EPC, Error &Err);
 };
 
-class LLVMJITLinkStatistics {
-public:
-  LLVMJITLinkStatistics(Session &S);
-  void print(raw_ostream &OS);
-
-private:
-  Error recordPrePruneStats(jitlink::LinkGraph &G);
-  Error recordPostFixupStats(jitlink::LinkGraph &G);
-
-  std::mutex M;
-  std::optional<uint64_t> PrePruneTotalBlockSize;
-  std::optional<uint64_t> PostFixupTotalBlockSize;
-};
-
 /// Record symbols, GOT entries, stubs, and sections for ELF file.
 Error registerELFGraphInfo(Session &S, jitlink::LinkGraph &G);
 
@@ -110,6 +96,9 @@ Error registerMachOGraphInfo(Session &S, jitlink::LinkGraph &G);
 
 /// Record symbols, GOT entries, stubs, and sections for COFF file.
 Error registerCOFFGraphInfo(Session &S, jitlink::LinkGraph &G);
+
+/// Adds a statistics gathering plugin if any stats options are used.
+void enableStatistics(Session &S, bool UsingOrcRuntime);
 
 } // end namespace llvm
 
