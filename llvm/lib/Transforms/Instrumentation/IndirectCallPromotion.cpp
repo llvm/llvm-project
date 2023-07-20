@@ -104,9 +104,9 @@ static cl::opt<bool>
 
 namespace {
 
-// The class for main data structure to promote indirect calls to conditional
-// direct calls.
-class ICallPromotionFunc {
+// Promote indirect calls to conditional direct calls, keeping track of
+// thresholds.
+class IndirectCallPromoter {
 private:
   Function &F;
 
@@ -142,11 +142,11 @@ private:
                         uint64_t &TotalCount);
 
 public:
-  ICallPromotionFunc(Function &Func, InstrProfSymtab *Symtab, bool SamplePGO,
-                     OptimizationRemarkEmitter &ORE)
+  IndirectCallPromoter(Function &Func, InstrProfSymtab *Symtab, bool SamplePGO,
+                       OptimizationRemarkEmitter &ORE)
       : F(Func), Symtab(Symtab), SamplePGO(SamplePGO), ORE(ORE) {}
-  ICallPromotionFunc(const ICallPromotionFunc &) = delete;
-  ICallPromotionFunc &operator=(const ICallPromotionFunc &) = delete;
+  IndirectCallPromoter(const IndirectCallPromoter &) = delete;
+  IndirectCallPromoter &operator=(const IndirectCallPromoter &) = delete;
 
   bool processFunction(ProfileSummaryInfo *PSI);
 };
@@ -155,8 +155,8 @@ public:
 
 // Indirect-call promotion heuristic. The direct targets are sorted based on
 // the count. Stop at the first target that is not promoted.
-std::vector<ICallPromotionFunc::PromotionCandidate>
-ICallPromotionFunc::getPromotionCandidatesForCallSite(
+std::vector<IndirectCallPromoter::PromotionCandidate>
+IndirectCallPromoter::getPromotionCandidatesForCallSite(
     const CallBase &CB, const ArrayRef<InstrProfValueData> &ValueDataRef,
     uint64_t TotalCount, uint32_t NumCandidates) {
   std::vector<PromotionCandidate> Ret;
@@ -275,7 +275,7 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
 }
 
 // Promote indirect-call to conditional direct-call for one callsite.
-uint32_t ICallPromotionFunc::tryToPromote(
+uint32_t IndirectCallPromoter::tryToPromote(
     CallBase &CB, const std::vector<PromotionCandidate> &Candidates,
     uint64_t &TotalCount) {
   uint32_t NumPromoted = 0;
@@ -294,7 +294,7 @@ uint32_t ICallPromotionFunc::tryToPromote(
 
 // Traverse all the indirect-call callsite and get the value profile
 // annotation to perform indirect-call promotion.
-bool ICallPromotionFunc::processFunction(ProfileSummaryInfo *PSI) {
+bool IndirectCallPromoter::processFunction(ProfileSummaryInfo *PSI) {
   bool Changed = false;
   ICallPromotionAnalysis ICallAnalysis;
   for (auto *CB : findIndirectCalls(F)) {
@@ -344,8 +344,8 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
         MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-    ICallPromotionFunc ICallPromotion(F, &Symtab, SamplePGO, ORE);
-    bool FuncChanged = ICallPromotion.processFunction(PSI);
+    IndirectCallPromoter CallPromoter(F, &Symtab, SamplePGO, ORE);
+    bool FuncChanged = CallPromoter.processFunction(PSI);
     if (ICPDUMPAFTER && FuncChanged) {
       LLVM_DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));
       LLVM_DEBUG(dbgs() << "\n");
