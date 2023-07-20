@@ -290,7 +290,7 @@ void Writer::writeBuildId() {
   case BuildIdKind::Fast: {
     std::vector<uint8_t> fileHash(8);
     computeHash(fileHash, buf, [](uint8_t *dest, ArrayRef<uint8_t> arr) {
-      support::endian::write64le(dest, xxHash64(arr));
+      support::endian::write64le(dest, xxh3_64bits(arr));
     });
     makeUUID(5, fileHash, buildId);
     break;
