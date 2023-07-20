@@ -156,8 +156,14 @@ def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
 def OPC_OP_P      : RISCVOpcode<"OP_P",      0b1110111>;
 def OPC_CUSTOM_3  : RISCVOpcode<"CUSTOM_3",  0b1111011>;
 
-class RVInstCommon<InstFormat format> : Instruction {
+class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
+                   list<dag> pattern, InstFormat format> : Instruction {
   let Namespace = "RISCV";
+
+  dag OutOperandList = outs;
+  dag InOperandList = ins;
+  let AsmString = opcodestr # "\t" # argstr;
+  let Pattern = pattern;
 
   let TSFlags{4-0} = format.Value;
 
@@ -210,7 +216,7 @@ class RVInstCommon<InstFormat format> : Instruction {
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
              list<dag> pattern, InstFormat format>
-    : RVInstCommon<format> {
+    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<32> Inst;
   // SoftFail is a field the disassembler can use to provide a way for
   // instructions to not match without killing the whole decode process. It is
@@ -222,11 +228,6 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   bits<7> Opcode = 0;
 
   let Inst{6-0} = Opcode;
-
-  dag OutOperandList = outs;
-  dag InOperandList = ins;
-  let AsmString = opcodestr # "\t" # argstr;
-  let Pattern = pattern;
 }
 
 // Pseudo instructions
