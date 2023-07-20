@@ -121,6 +121,7 @@ use lib "$base_dir/";
 
 use hipvars;
 $isWindows      =   $hipvars::isWindows;
+$doubleQuote    =   $hipvars::doubleQuote;
 $HIP_RUNTIME    =   $hipvars::HIP_RUNTIME;
 $HIP_PLATFORM   =   $hipvars::HIP_PLATFORM;
 $HIP_COMPILER   =   $hipvars::HIP_COMPILER;
@@ -130,6 +131,14 @@ $HIP_PATH       =   $hipvars::HIP_PATH;
 $ROCM_PATH      =   $hipvars::ROCM_PATH;
 $HIP_VERSION    =   $hipvars::HIP_VERSION;
 $HIP_ROCCLR_HOME =   $hipvars::HIP_ROCCLR_HOME;
+
+sub get_normalized_path {
+    if ($isWindows) {
+      return $doubleQuote . $_[0] . $doubleQuote;
+    } else {
+      return $_[0];
+    }
+}
 
 if ($HIP_PLATFORM eq "amd") {
   $HIP_INCLUDE_PATH = "$HIP_ROCCLR_HOME/include";
@@ -155,17 +164,17 @@ if ($HIP_PLATFORM eq "amd") {
     if($isWindows) {
         $execExtension = ".exe";
     }
-    $HIPCC="\"$HIP_CLANG_PATH/clang++" . $execExtension . "\"";
+    $HIPCC=get_normalized_path("$HIP_CLANG_PATH/clang++" . $execExtension);
 
     # If $HIPCC clang++ is not compiled, use clang instead
     if ( ! -e $HIPCC ) {
-        $HIPCC="\"$HIP_CLANG_PATH/clang" . $execExtension . "\"";
+        $HIPCC=get_normalized_path("$HIP_CLANG_PATH/clang" . $execExtension);
         $HIPLDFLAGS = "--driver-mode=g++";
     }
     # to avoid using dk linker or MSVC linker
     if($isWindows) {
         $HIPLDFLAGS .= " -fuse-ld=lld";
-        $HIPLDFLAGS .= " --ld-path=\"$HIP_CLANG_PATH/lld-link.exe\"";
+        $HIPLDFLAGS .= " --ld-path=" . get_normalized_path("$HIP_CLANG_PATH/lld-link.exe");
     }
 
     # get Clang RT Builtin path 
@@ -201,12 +210,12 @@ if ($HIP_PLATFORM eq "amd") {
         print ("CUDA_PATH=$CUDA_PATH\n");
     }
 
-    $HIPCC="\"$CUDA_PATH/bin/nvcc\"";
+    $HIPCC=get_normalized_path("$CUDA_PATH/bin/nvcc");
     $HIPCXXFLAGS .= " -Wno-deprecated-gpu-targets ";
-    $HIPCXXFLAGS .= " -isystem \"$CUDA_PATH/include\"";
-    $HIPCFLAGS .= " -isystem \"$CUDA_PATH/include\"";
+    $HIPCXXFLAGS .= " -isystem " . get_normalized_path("$CUDA_PATH/include");
+    $HIPCFLAGS .= " -isystem " . get_normalized_path("$CUDA_PATH/include");
 
-    $HIPLDFLAGS = " -Wno-deprecated-gpu-targets -lcuda -lcudart -L\"$CUDA_PATH/lib64\"";
+    $HIPLDFLAGS = " -Wno-deprecated-gpu-targets -lcuda -lcudart -L" . get_normalized_path("$CUDA_PATH/lib64");
 } else {
     printf ("error: unknown HIP_PLATFORM = '$HIP_PLATFORM'");
     printf ("       or HIP_COMPILER = '$HIP_COMPILER'");
@@ -214,8 +223,8 @@ if ($HIP_PLATFORM eq "amd") {
 }
 
 # Add paths to common HIP includes:
-$HIPCXXFLAGS .= " -isystem \"$HIP_INCLUDE_PATH\"" ;
-$HIPCFLAGS .= " -isystem \"$HIP_INCLUDE_PATH\"" ;
+$HIPCXXFLAGS .= " -isystem " . get_normalized_path("$HIP_INCLUDE_PATH");
+$HIPCFLAGS .= " -isystem " . get_normalized_path("$HIP_INCLUDE_PATH");
 
 my $compileOnly = 0;
 my $needCXXFLAGS = 0;  # need to add CXX flags to compile step
@@ -294,7 +303,7 @@ foreach $arg (@ARGV)
 
     if ($skipOutputFile) {
 	# TODO: handle filename with shell metacharacters
-        $toolArgs .= " \"$arg\"";
+        $toolArgs .= " " . get_normalized_path("$arg");
         $prevArg = $arg;
         $skipOutputFile = 0;
         next;
@@ -466,7 +475,7 @@ foreach $arg (@ARGV)
     if (not $isWindows and $escapeArg) {
         $arg =~ s/[^-a-zA-Z0-9_=+,.\/]/\\$&/g;
     }
-    $toolArgs .= " \"$arg\"" unless $swallowArg;
+    $toolArgs .= " " . get_normalized_path("$arg") unless $swallowArg;
     $prevArg = $arg;
 }
 
@@ -561,14 +570,14 @@ if ($HIP_PLATFORM eq "amd") {
 
     # If the HIP_PATH env var is defined, pass that path to Clang
     if ($ENV{'HIP_PATH'}) {
-        my $hip_path_flag = " --hip-path=\"$HIP_PATH\"";
+        my $hip_path_flag = " --hip-path=" . get_normalized_path("$HIP_PATH");
         $HIPCXXFLAGS .= $hip_path_flag;
         $HIPLDFLAGS .= $hip_path_flag;
     }
 
     if ($hasHIP) {
         if (defined $DEVICE_LIB_PATH) {
-            $HIPCXXFLAGS .= " --hip-device-lib-path=\"$DEVICE_LIB_PATH\"";
+            $HIPCXXFLAGS .= " --hip-device-lib-path=" . get_normalized_path("$DEVICE_LIB_PATH");
         }
     }
 

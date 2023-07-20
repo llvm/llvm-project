@@ -61,6 +61,10 @@ sub can_run {
 }
 
 $isWindows =  ($^O eq 'MSWin32' or $^O eq 'msys');
+$doubleQuote = "";
+if ($isWindows) {
+  $doubleQuote = "\"";
+}
 
 #
 # TODO: Fix rpath LDFLAGS settings
@@ -124,7 +128,7 @@ if (defined $HIP_RUNTIME and $HIP_RUNTIME eq "rocclr" and !defined $HIP_ROCCLR_H
 }
 
 if (not defined $HIP_PLATFORM) {
-    if (can_run("\"$HIP_CLANG_PATH/clang++\"") or can_run("clang++")) {
+    if (can_run($doubleQuote . "$HIP_CLANG_PATH/clang++" . $doubleQuote) or can_run("clang++")) {
         $HIP_PLATFORM = "amd";
     } elsif (can_run("$CUDA_PATH/bin/nvcc") or can_run("nvcc")) {
         $HIP_PLATFORM = "nvidia";
