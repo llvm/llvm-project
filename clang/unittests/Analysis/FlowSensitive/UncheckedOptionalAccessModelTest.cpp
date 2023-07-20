@@ -1267,6 +1267,12 @@ struct OptionalTypeIdentifier {
   std::string TypeName;
 };
 
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const OptionalTypeIdentifier &TypeId) {
+  OS << TypeId.NamespaceName << "::" << TypeId.TypeName;
+  return OS;
+}
+
 class UncheckedOptionalAccessTest
     : public ::testing::TestWithParam<OptionalTypeIdentifier> {
 protected:
