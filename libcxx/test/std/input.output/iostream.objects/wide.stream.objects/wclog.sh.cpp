@@ -8,7 +8,7 @@
 
 // <iostream>
 
-// istream wclog;
+// wostream wclog;
 
 // XFAIL: no-wide-characters
 
