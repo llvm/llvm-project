@@ -1923,13 +1923,13 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     }
     unit.SetDwoError(Status::FromErrorStringWithFormatv(
         "unable to locate .dwo debug file \"{0}\" for skeleton DIE "
-        "{1:x16}",
+        "{1:x16} (troubleshoot with https://fburl.com/missing_dwo)",
         error_dwo_path.GetPath().c_str(), cu_die.GetOffset()));
 
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
           "unable to locate separate debug file (dwo, dwp). Debugging will be "
-          "degraded.");
+          "degraded. (troubleshoot with https://fburl.com/missing_dwo)");
     }
     return nullptr;
   }
