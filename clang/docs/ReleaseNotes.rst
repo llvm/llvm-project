@@ -886,9 +886,6 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
-- Clang has been updated to align its default language standard for CUDA/HIP with
-  that of C++. The standard has now been enhanced to gnu++17, supplanting the
-  previously used c++14.
 
 CUDA Support
 ^^^^^^^^^^^^
