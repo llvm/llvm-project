@@ -2565,6 +2565,10 @@ bool X86InstrInfo::findCommutedOpIndices(const MachineInstr &MI,
   case X86::VPDPWSSDrr:
   case X86::VPDPWSSDSYrr:
   case X86::VPDPWSSDSrr:
+  case X86::VPDPWUUDrr:
+  case X86::VPDPWUUDYrr:
+  case X86::VPDPWUUDSrr:
+  case X86::VPDPWUUDSYrr:
   case X86::VPDPBSSDSrr:
   case X86::VPDPBSSDSYrr:
   case X86::VPDPBSSDrr:

@@ -824,6 +824,10 @@ X86 Support
 - Support ISA of ``SM4``.
   * Support intrinsic of ``_mm(256)_sm4key4_epi32``.
   * Support intrinsic of ``_mm(256)_sm4rnds4_epi32``.
+- Support ISA of ``AVX-VNNI-INT16``.
+  * Support intrinsic of ``_mm(256)_dpwsud(s)_epi32``.
+  * Support intrinsic of ``_mm(256)_dpwusd(s)_epi32``.
+  * Support intrinsic of ``_mm(256)_dpwuud(s)_epi32``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

@@ -282,6 +282,7 @@ Changes to the X86 Backend
 * Support ISA of ``SHA512``.
 * Support ISA of ``SM3``.
 * Support ISA of ``SM4``.
+* Support ISA of ``AVX-VNNI-INT16``.
 
 Changes to the OCaml bindings
 -----------------------------
