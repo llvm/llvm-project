@@ -265,6 +265,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSHA512 = true;
     } else if (Feature == "+shstk") {
       HasSHSTK = true;
+    } else if (Feature == "+sm3") {
+      HasSM3 = true;
     } else if (Feature == "+movbe") {
       HasMOVBE = true;
     } else if (Feature == "+sgx") {
@@ -776,6 +778,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__SHSTK__");
   if (HasSGX)
     Builder.defineMacro("__SGX__");
+  if (HasSM3)
+    Builder.defineMacro("__SM3__");
   if (HasPREFETCHI)
     Builder.defineMacro("__PREFETCHI__");
   if (HasPREFETCHWT1)
@@ -1005,6 +1009,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("sha", true)
       .Case("sha512", true)
       .Case("shstk", true)
+      .Case("sm3", true)
       .Case("sse", true)
       .Case("sse2", true)
       .Case("sse3", true)
@@ -1111,6 +1116,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sha", HasSHA)
       .Case("sha512", HasSHA512)
       .Case("shstk", HasSHSTK)
+      .Case("sm3", HasSM3)
       .Case("sse", SSELevel >= SSE1)
       .Case("sse2", SSELevel >= SSE2)
       .Case("sse3", SSELevel >= SSE3)

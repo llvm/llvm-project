@@ -969,6 +969,7 @@ def HasADX       : Predicate<"Subtarget->hasADX()">;
 def HasSHA       : Predicate<"Subtarget->hasSHA()">;
 def HasSHA512    : Predicate<"Subtarget->hasSHA512()">;
 def HasSGX       : Predicate<"Subtarget->hasSGX()">;
+def HasSM3       : Predicate<"Subtarget->hasSM3()">;
 def HasRDSEED    : Predicate<"Subtarget->hasRDSEED()">;
 def HasSSEPrefetch : Predicate<"Subtarget->hasSSEPrefetch()">;
 def NoSSEPrefetch : Predicate<"!Subtarget->hasSSEPrefetch()">;

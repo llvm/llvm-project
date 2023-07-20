@@ -206,6 +206,7 @@ set(x86_files
   sgxintrin.h
   sha512intrin.h
   shaintrin.h
+  sm3intrin.h
   smmintrin.h
   tbmintrin.h
   tmmintrin.h
