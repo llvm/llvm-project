@@ -247,13 +247,12 @@ NSSymbolMap *Recognizer::namespaceSymbols(const DeclContext *DC, Lang L) {
 
 std::optional<Symbol> Recognizer::operator()(const Decl *D) {
   Lang L;
-  if (D->getLangOpts().CPlusPlus) {
+  if (D->getLangOpts().CPlusPlus)
     L = Lang::CXX;
-  } else if (D->getLangOpts().C11) {
+  else if (D->getLangOpts().C99)
     L = Lang::C;
-  } else {
+  else
     return std::nullopt; // not a supported language.
-  }
 
   // If D is std::vector::iterator, `vector` is the outer symbol to look up.
   // We keep all the candidate DCs as some may turn out to be anon enums.
