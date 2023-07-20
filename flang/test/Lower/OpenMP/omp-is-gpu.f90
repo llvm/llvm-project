@@ -1,3 +1,5 @@
+!REQUIRES: amdgpu-registered-target
+
 !RUN: %flang_fc1 -triple amdgcn-amd-amdhsa -emit-fir -fopenmp -fopenmp-is-target-device %s -o - | FileCheck %s
 !RUN: bbc -fopenmp -fopenmp-is-target-device -fopenmp-is-gpu -emit-fir -o - %s | FileCheck %s
 
