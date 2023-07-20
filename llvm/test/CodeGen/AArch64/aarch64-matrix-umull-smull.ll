@@ -657,20 +657,19 @@ exit:
 define void @sink_v16s16_8(i32 *%p, i32 *%d, i64 %n, <16 x i8> %a) {
 ; CHECK-LABEL: sink_v16s16_8:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v1.8b, v0.b[10]
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    dup v0.16b, v0.b[10]
 ; CHECK-NEXT:  .LBB9_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr q2, [x0]
+; CHECK-NEXT:    ldr q1, [x0]
 ; CHECK-NEXT:    add x8, x8, #8
 ; CHECK-NEXT:    subs x2, x2, #8
-; CHECK-NEXT:    smull2 v3.8h, v2.16b, v0.16b
-; CHECK-NEXT:    smull v2.8h, v2.8b, v1.8b
-; CHECK-NEXT:    cmlt v3.8h, v3.8h, #0
+; CHECK-NEXT:    smull2 v2.8h, v1.16b, v0.16b
+; CHECK-NEXT:    smull v1.8h, v1.8b, v0.8b
 ; CHECK-NEXT:    cmlt v2.8h, v2.8h, #0
-; CHECK-NEXT:    uzp1 v2.16b, v2.16b, v3.16b
-; CHECK-NEXT:    str q2, [x0], #32
+; CHECK-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    str q1, [x0], #32
 ; CHECK-NEXT:    b.ne .LBB9_1
 ; CHECK-NEXT:  // %bb.2: // %exit
 ; CHECK-NEXT:    ret
