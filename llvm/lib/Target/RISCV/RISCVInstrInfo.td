@@ -1929,22 +1929,35 @@ def : Pat<(binop_allwusers<add> GPR:$rs1, (AddiPair:$rs2)),
 // Standard extensions
 //===----------------------------------------------------------------------===//
 
+// Multiply and Division
 include "RISCVInstrInfoM.td"
+
+// Atomic
 include "RISCVInstrInfoA.td"
+
+// Scalar FP
 include "RISCVInstrInfoF.td"
 include "RISCVInstrInfoD.td"
-include "RISCVInstrInfoC.td"
+include "RISCVInstrInfoZfh.td"
+include "RISCVInstrInfoZfbfmin.td"
+include "RISCVInstrInfoZfa.td"
+
+// Scalar bitmanip and cryptography
 include "RISCVInstrInfoZb.td"
-include "RISCVInstrInfoZc.td"
 include "RISCVInstrInfoZk.td"
+
+// Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvfbf.td"
 include "RISCVInstrInfoZvk.td"
-include "RISCVInstrInfoZfa.td"
-include "RISCVInstrInfoZfbfmin.td"
-include "RISCVInstrInfoZfh.td"
+
+// Integer
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
+
+// Compressed
+include "RISCVInstrInfoC.td"
+include "RISCVInstrInfoZc.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
