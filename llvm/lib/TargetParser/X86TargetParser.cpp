@@ -614,6 +614,7 @@ constexpr FeatureBitset ImpliedFeaturesSHA = FeatureSSE2;
 constexpr FeatureBitset ImpliedFeaturesVAES = FeatureAES | FeatureAVX;
 constexpr FeatureBitset ImpliedFeaturesVPCLMULQDQ = FeatureAVX | FeaturePCLMUL;
 constexpr FeatureBitset ImpliedFeaturesSM3 = FeatureAVX;
+constexpr FeatureBitset ImpliedFeaturesSM4 = FeatureAVX;
 
 // AVX512 features.
 constexpr FeatureBitset ImpliedFeaturesAVX512CD = FeatureAVX512F;

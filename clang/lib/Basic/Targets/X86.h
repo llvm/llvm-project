@@ -116,6 +116,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasSHSTK = false;
   bool HasSM3 = false;
   bool HasSGX = false;
+  bool HasSM4 = false;
   bool HasCX8 = false;
   bool HasCX16 = false;
   bool HasFXSR = false;

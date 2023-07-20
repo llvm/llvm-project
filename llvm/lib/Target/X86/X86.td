@@ -248,6 +248,9 @@ def FeatureSHSTK   : SubtargetFeature<"shstk", "HasSHSTK", "true",
 def FeatureSM3     : SubtargetFeature<"sm3", "HasSM3", "true",
                                       "Support SM3 instructions",
                                       [FeatureAVX]>;
+def FeatureSM4     : SubtargetFeature<"sm4", "HasSM4", "true",
+                                      "Support SM4 instructions",
+                                      [FeatureAVX]>;
 def FeaturePRFCHW  : SubtargetFeature<"prfchw", "HasPRFCHW", "true",
                                       "Support PRFCHW instructions">;
 def FeatureRDSEED  : SubtargetFeature<"rdseed", "HasRDSEED", "true",

@@ -821,6 +821,9 @@ X86 Support
   * Support intrinsic of ``_mm_sm3msg1_epi32``.
   * Support intrinsic of ``_mm_sm3msg2_epi32``.
   * Support intrinsic of ``_mm_sm3rnds2_epi32``.
+- Support ISA of ``SM4``.
+  * Support intrinsic of ``_mm(256)_sm4key4_epi32``.
+  * Support intrinsic of ``_mm(256)_sm4rnds4_epi32``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
