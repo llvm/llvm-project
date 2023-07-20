@@ -23113,14 +23113,16 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
     }
 
-    // Pre-AVX512 see if we can make use of PACKSS/PACKUS.
-    if (!Subtarget.hasAVX512()) {
+    // Pre-AVX512 (or prefer-256bit) see if we can make use of PACKSS/PACKUS.
+    if (!Subtarget.hasAVX512() ||
+        (InVT.is512BitVector() && VT.is256BitVector()))
       if (SDValue SignPack =
               LowerTruncateVecPackWithSignBits(VT, In, DL, Subtarget, DAG))
         return SignPack;
 
+    // Pre-AVX512 see if we can make use of PACKSS/PACKUS.
+    if (!Subtarget.hasAVX512())
       return LowerTruncateVecPack(VT, In, DL, Subtarget, DAG);
-    }
 
     // Otherwise let default legalization handle it.
     return SDValue();
