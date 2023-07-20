@@ -1688,16 +1688,6 @@ LLVMValueRef LLVMConstNUWMul(LLVMValueRef LHSConstant,
                                       unwrap<Constant>(RHSConstant)));
 }
 
-LLVMValueRef LLVMConstAnd(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getAnd(unwrap<Constant>(LHSConstant),
-                                   unwrap<Constant>(RHSConstant)));
-}
-
-LLVMValueRef LLVMConstOr(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
-  return wrap(ConstantExpr::getOr(unwrap<Constant>(LHSConstant),
-                                  unwrap<Constant>(RHSConstant)));
-}
-
 LLVMValueRef LLVMConstXor(LLVMValueRef LHSConstant, LLVMValueRef RHSConstant) {
   return wrap(ConstantExpr::getXor(unwrap<Constant>(LHSConstant),
                                    unwrap<Constant>(RHSConstant)));
