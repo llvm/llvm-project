@@ -238,6 +238,7 @@ copy("Headers") {
     "sha512intrin.h",
     "shaintrin.h",
     "sifive_vector.h",
+    "sm3intrin.h",
     "smmintrin.h",
     "stdalign.h",
     "stdarg.h",
