@@ -117,11 +117,6 @@ static Init *QualifyName(Record &CurRec, MultiClass *CurMultiClass, Init *Name,
   Init *NewName = BinOpInit::getStrConcat(CurRec.getNameInit(),
                                           StringInit::get(RK, Scoper));
   NewName = BinOpInit::getStrConcat(NewName, Name);
-  if (CurMultiClass && Scoper != "::") {
-    Init *Prefix = BinOpInit::getStrConcat(CurMultiClass->Rec.getNameInit(),
-                                           StringInit::get(RK, "::"));
-    NewName = BinOpInit::getStrConcat(Prefix, NewName);
-  }
 
   if (BinOpInit *BinOp = dyn_cast<BinOpInit>(NewName))
     NewName = BinOp->Fold(&CurRec);
