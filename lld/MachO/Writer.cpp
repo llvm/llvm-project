@@ -813,8 +813,10 @@ template <class LP> void Writer::createLoadCommands() {
     llvm_unreachable("unhandled output file type");
   }
 
-  uuidCommand = make<LCUuid>();
-  in.header->addLoadCommand(uuidCommand);
+  if (config->generateUuid) {
+    uuidCommand = make<LCUuid>();
+    in.header->addLoadCommand(uuidCommand);
+  }
 
   if (useLCBuildVersion(config->platformInfo))
     in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
@@ -1264,7 +1266,8 @@ void Writer::writeOutputFile() {
   writeSections();
   applyOptimizationHints();
   buildFixupChains();
-  writeUuid();
+  if (config->generateUuid)
+    writeUuid();
   writeCodeSignature();
 
   if (auto e = buffer->commit())
