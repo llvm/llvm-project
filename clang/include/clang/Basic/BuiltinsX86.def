@@ -2132,6 +2132,11 @@ TARGET_BUILTIN(__builtin_ia32_vcvtneoph2ps256, "V8fV16xC*", "nV:256:", "avxnecon
 TARGET_BUILTIN(__builtin_ia32_vcvtneps2bf16128, "V8yV4f", "nV:128:", "avx512bf16,avx512vl|avxneconvert")
 TARGET_BUILTIN(__builtin_ia32_vcvtneps2bf16256, "V8yV8f", "nV:256:", "avx512bf16,avx512vl|avxneconvert")
 
+// SHA512
+TARGET_BUILTIN(__builtin_ia32_vsha512msg1, "V4ULLiV4ULLiV2ULLi", "nV:256:", "sha512")
+TARGET_BUILTIN(__builtin_ia32_vsha512msg2, "V4ULLiV4ULLiV4ULLi", "nV:256:", "sha512")
+TARGET_BUILTIN(__builtin_ia32_vsha512rnds2, "V4ULLiV4ULLiV4ULLiV2ULLi", "nV:256:", "sha512")
+
 TARGET_HEADER_BUILTIN(_InterlockedAnd64,         "WiWiD*Wi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedDecrement64,   "WiWiD*",   "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_InterlockedExchange64,    "WiWiD*Wi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
