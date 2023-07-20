@@ -2828,6 +2828,8 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   //    q = r + (r^2)/2! + (r^3)/3! + (r^4)/4! + (r^5)/5!
   //
   //    e^x = (2^m) * ( (2^(j/64)) + q*(2^(j/64)) )
+  SDNodeFlags FlagsNoContract = Flags;
+  FlagsNoContract.setAllowContract(false);
 
   SDValue PH, PL;
   if (Subtarget->hasFastFMAF32()) {
@@ -2867,7 +2869,10 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
   }
 
   SDValue E = DAG.getNode(ISD::FRINT, SL, VT, PH, Flags);
-  SDValue PHSubE = DAG.getNode(ISD::FSUB, SL, VT, PH, E, Flags);
+
+  // It is unsafe to contract this fsub into the PH multiply.
+  SDValue PHSubE = DAG.getNode(ISD::FSUB, SL, VT, PH, E, FlagsNoContract);
+
   SDValue A = DAG.getNode(ISD::FADD, SL, VT, PHSubE, PL, Flags);
   SDValue IntE = DAG.getNode(ISD::FP_TO_SINT, SL, MVT::i32, E);
   SDValue Exp2 = DAG.getNode(AMDGPUISD::EXP, SL, VT, A, Flags);
