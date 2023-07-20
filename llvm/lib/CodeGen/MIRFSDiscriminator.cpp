@@ -80,8 +80,8 @@ static uint64_t getCallStackHash(const DILocation *DIL) {
   };
   uint64_t Ret = 0;
   for (DIL = DIL->getInlinedAt(); DIL; DIL = DIL->getInlinedAt()) {
-    Ret = hashCombine(Ret, xxHash64(ArrayRef<uint8_t>(DIL->getLine())));
-    Ret = hashCombine(Ret, xxHash64(DIL->getSubprogramLinkageName()));
+    Ret = hashCombine(Ret, xxh3_64bits(ArrayRef<uint8_t>(DIL->getLine())));
+    Ret = hashCombine(Ret, xxh3_64bits(DIL->getSubprogramLinkageName()));
   }
   return Ret;
 }
