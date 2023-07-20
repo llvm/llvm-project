@@ -181,10 +181,20 @@ static cl::opt<std::string> ShowLinkGraphs(
              "matching that regex after fixups have been applied"),
     cl::Optional, cl::cat(JITLinkCategory));
 
-static cl::opt<bool> ShowSizes(
-    "show-sizes",
-    cl::desc("Show sizes pre- and post-dead stripping, and allocations"),
-    cl::init(false), cl::cat(JITLinkCategory));
+enum class JITLinkStats {
+  PrePruneTotalBlockSize,
+  PostFixupTotalBlockSize
+};
+
+static cl::list<JITLinkStats> ShowStats(
+    cl::desc("Statistics:"),
+    cl::values(
+        clEnumValN(JITLinkStats::PrePruneTotalBlockSize,
+                   "pre-prune-total-block-size",
+                   "Total size of all blocks in all graphs (pre-pruning)"),
+        clEnumValN(JITLinkStats::PostFixupTotalBlockSize,
+                   "post-fixup-total-block-size",
+                   "Tatal size of all blocks in all graphs (post-fixup)")));
 
 static cl::opt<bool> ShowTimes("show-times",
                                cl::desc("Show times for llvm-jitlink phases"),
@@ -386,13 +396,6 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
     G.makeExternal(*Sym);
 
   return Error::success();
-}
-
-static uint64_t computeTotalBlockSizes(LinkGraph &G) {
-  uint64_t TotalSize = 0;
-  for (auto *B : G.blocks())
-    TotalSize += B->getSize();
-  return TotalSize;
 }
 
 static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
@@ -1105,17 +1108,6 @@ void Session::modifyPassConfig(const Triple &TT,
 
   PassConfig.PrePrunePasses.push_back(
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
-
-  if (ShowSizes) {
-    PassConfig.PrePrunePasses.push_back([this](LinkGraph &G) -> Error {
-      SizeBeforePruning += computeTotalBlockSizes(G);
-      return Error::success();
-    });
-    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
-      SizeAfterFixups += computeTotalBlockSizes(G);
-      return Error::success();
-    });
-  }
 
   if (ShowRelocatedSectionContents)
     PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
@@ -1934,17 +1926,87 @@ static Error addSelfRelocations(LinkGraph &G) {
   return Error::success();
 }
 
-static void dumpSessionStats(Session &S) {
-  if (!ShowSizes)
-    return;
+LLVMJITLinkStatistics::LLVMJITLinkStatistics(Session &S) {
+
+  class StatisticsPlugin : public ObjectLinkingLayer::Plugin {
+  public:
+    StatisticsPlugin(LLVMJITLinkStatistics &Stats) : Stats(Stats) {}
+
+    void modifyPassConfig(MaterializationResponsibility &MR, LinkGraph &G,
+                          PassConfiguration &PassConfig) override {
+      PassConfig.PrePrunePasses.push_back(
+          [this](LinkGraph &G) { return Stats.recordPrePruneStats(G); });
+      PassConfig.PostFixupPasses.push_back(
+          [this](LinkGraph &G) { return Stats.recordPostFixupStats(G); });
+    }
+
+    Error notifyFailed(MaterializationResponsibility &MR) override {
+      return Error::success();
+    }
+
+    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
+      return Error::success();
+    }
+
+    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
+                                     ResourceKey SrcKey) override {}
+
+  private:
+    LLVMJITLinkStatistics &Stats;
+  };
+
+  S.ObjLayer.addPlugin(std::make_unique<StatisticsPlugin>(*this));
+
+  // Walk command line option and enable requested stats.
+  for (auto &Stat : ShowStats) {
+    switch (Stat) {
+    case JITLinkStats::PrePruneTotalBlockSize:
+      PrePruneTotalBlockSize = 0;
+      break;
+    case JITLinkStats::PostFixupTotalBlockSize:
+      PostFixupTotalBlockSize = 0;
+      break;
+    }
+  }
+}
+
+void LLVMJITLinkStatistics::print(raw_ostream &OS) {
+
   if (!OrcRuntime.empty())
-    outs() << "Note: Session stats include runtime and entry point lookup, but "
-              "not JITDylib initialization/deinitialization.\n";
-  if (ShowSizes)
-    outs() << "  Total size of all blocks before pruning: "
-           << S.SizeBeforePruning
-           << "\n  Total size of all blocks after fixups: " << S.SizeAfterFixups
-           << "\n";
+    OS << "Note: Session stats include runtime and entry point lookup, but "
+          "not JITDylib initialization/deinitialization.\n";
+
+  OS << "Statistics:\n";
+  if (PrePruneTotalBlockSize)
+    OS << "  Total size of all blocks before pruning: "
+       << *PrePruneTotalBlockSize << "\n";
+
+  if (PostFixupTotalBlockSize)
+    OS << "  Total size of all blocks after fixups: "
+       << *PostFixupTotalBlockSize << "\n";
+}
+
+static uint64_t computeTotalBlockSizes(LinkGraph &G) {
+  uint64_t TotalSize = 0;
+  for (auto *B : G.blocks())
+    TotalSize += B->getSize();
+  return TotalSize;
+}
+
+Error LLVMJITLinkStatistics::recordPrePruneStats(LinkGraph &G) {
+  std::lock_guard<std::mutex> Lock(M);
+
+  if (PrePruneTotalBlockSize)
+    *PrePruneTotalBlockSize += computeTotalBlockSizes(G);
+  return Error::success();
+}
+
+Error LLVMJITLinkStatistics::recordPostFixupStats(LinkGraph &G) {
+  std::lock_guard<std::mutex> Lock(M);
+
+  if (PostFixupTotalBlockSize)
+    *PostFixupTotalBlockSize += computeTotalBlockSizes(G);
+  return Error::success();
 }
 
 static Expected<ExecutorSymbolDef> getMainEntryPoint(Session &S) {
@@ -2038,6 +2100,10 @@ int main(int argc, char *argv[]) {
 
   auto S = ExitOnErr(Session::Create(std::move(TT), std::move(Features)));
 
+  std::unique_ptr<LLVMJITLinkStatistics> Stats;
+  if (!ShowStats.empty())
+    Stats = std::make_unique<LLVMJITLinkStatistics>(*S);
+
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
     ExitOnErr(addSessionInputs(*S));
@@ -2063,7 +2129,8 @@ int main(int argc, char *argv[]) {
   if (ShowAddrs)
     S->dumpSessionInfo(outs());
 
-  dumpSessionStats(*S);
+  if (Stats)
+    Stats->print(outs());
 
   if (!EntryPoint) {
     if (Timers)
