@@ -1885,9 +1885,12 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
       const ParmVarDecl *Parm = FD->getParamDecl(i);
 
       if (Parm->isImplicit())
-        continue;
-      assert(Parm->getIdentifier() &&
-             "A parameter of a function definition has no name");
+        continue;      
+      // FIXME: If a parameter has no name, it is unused in the
+      // definition. So we could just leave it as it is.
+      if (!Parm->getIdentifier()) 
+	// If a parameter of a function definition has no name:
+        return std::nullopt;
       if (i == ParmIdx)
         // This is our spanified paramter!
         SS << NewTypeText.str() << "(" << Parm->getIdentifier()->getName().str() << ", "
