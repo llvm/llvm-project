@@ -199,7 +199,11 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     }
 
     // If the element is masked, handle it.
-    if (AndCst) Elt = ConstantExpr::getAnd(Elt, AndCst);
+    if (AndCst) {
+      Elt = ConstantFoldBinaryOpOperands(Instruction::And, Elt, AndCst, DL);
+      if (!Elt)
+        return nullptr;
+    }
 
     // Find out if the comparison would be true or false for the i'th element.
     Constant *C = ConstantFoldCompareInstOperands(ICI.getPredicate(), Elt,
