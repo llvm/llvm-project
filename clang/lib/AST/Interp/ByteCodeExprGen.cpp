@@ -1806,6 +1806,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXMemberCallExpr(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXDefaultInitExpr(
     const CXXDefaultInitExpr *E) {
+  assert(classify(E->getType()));
   return this->visit(E->getExpr());
 }
 
