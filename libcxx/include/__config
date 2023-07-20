@@ -233,9 +233,27 @@
 //
 // #define _LIBCPP_ENABLE_DEBUG_MODE 1
 
-// Available checks:
-
-// TODO(hardening): add documentation for different checks here.
+// Inside the library, assertions are categorized so they can be cherry-picked based on the chosen hardening mode. These
+// macros are only for internal use -- users should only pick one of the high-level hardening modes described above.
+//
+// - `_LIBCPP_ASSERT_VALID_INPUT_RANGE` -- checks that ranges (whether expressed as an iterator pair, an iterator and
+//   a sentinel, an iterator and a count, or a `std::range`) given as input to library functions are valid:
+//   - the sentinel is reachable from the begin iterator;
+//   - TODO(hardening): where applicable, the input range and the output range do not overlap;
+//   - TODO(hardening): both iterators refer to the same container.
+//
+// - `_LIBCPP_ASSERT_VALID_ELEMENT_ACCESS` -- checks that any attempts to access a container element, whether through
+//   the container object or through an iterator, are valid and do not attempt to go out of bounds or otherwise access
+//   a non-existent element. For iterator checks to work, bounded iterators must be enabled in the ABI. Types like
+//   `optional` and `function` are considered one-element containers for the purposes of this check.
+//
+// - `_LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR` -- checks any operations that exchange nodes between containers to make sure
+//   the containers have compatible allocators.
+//
+// - `_LIBCPP_ASSERT_INTERNAL` -- checks that internal invariants of the library hold. These assertions don't depend on
+//   user input.
+//
+// - `_LIBCPP_ASSERT_UNCATEGORIZED` -- for assertions that haven't been properly classified yet.
 
 #  ifndef _LIBCPP_ENABLE_HARDENED_MODE
 #    define _LIBCPP_ENABLE_HARDENED_MODE _LIBCPP_ENABLE_HARDENED_MODE_DEFAULT
@@ -256,26 +274,43 @@
 #  endif
 
 // Hardened mode checks.
+
+// clang-format off
 #  if _LIBCPP_ENABLE_HARDENED_MODE
 
-// TODO(hardening): Once we categorize assertions, only enable the ones that we really want here.
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message) _LIBCPP_ASSERT(expression, message)
-// TODO(hardening): more checks to be added here...
+// Enabled checks.
+#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)   _LIBCPP_ASSERT(expression, message)
+// TODO(hardening): Don't enable uncategorized assertions in the hardened mode.
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)          _LIBCPP_ASSERT(expression, message)
+// Disabled checks.
+#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)   _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_INTERNAL(expression, message)               _LIBCPP_ASSUME(expression)
 
 // Debug mode checks.
+
 #  elif _LIBCPP_ENABLE_DEBUG_MODE
 
-// TODO(hardening): Once we categorize assertions, only enable the ones that we really want here.
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message) _LIBCPP_ASSERT(expression, message)
-// TODO(hardening): more checks to be added here...
+// All checks enabled.
+#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)       _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)    _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)    _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)           _LIBCPP_ASSERT(expression, message)
 
-// Disable all checks if neither the hardened mode nor the debug mode is enabled.
+// Disable all checks if hardening is not enabled.
+
 #  else
 
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message) _LIBCPP_ASSUME(expression)
-// TODO: more checks to be added here...
+// All checks disabled.
+#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)       _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)    _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)    _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)           _LIBCPP_ASSUME(expression)
 
 #  endif // _LIBCPP_ENABLE_HARDENED_MODE
+// clang-format on
 
 // } HARDENING
 

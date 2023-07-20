@@ -119,9 +119,6 @@ public:
       return true;
     if (!match(*Node))
       return false;
-    // To skip callables:
-    if (isa<LambdaExpr>(Node))
-      return true;
     return VisitorBase::TraverseStmt(Node);
   }
 
@@ -467,7 +464,9 @@ public:
       return stmt(arraySubscriptExpr(
             hasBase(ignoringParenImpCasts(
               anyOf(hasPointerType(), hasArrayType()))),
-            unless(hasIndex(integerLiteral(equals(0)))))
+            unless(hasIndex(
+                anyOf(integerLiteral(equals(0)), arrayInitIndexExpr())
+             )))
             .bind(ArraySubscrTag));
     // clang-format on
   }
@@ -2209,6 +2208,13 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
                                    bool EmitSuggestions) {
   assert(D && D->getBody());
+  
+  // We do not want to visit a Lambda expression defined inside a method independently.
+  // Instead, it should be visited along with the outer method.
+  if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
+    if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
+      return;
+  }
 
   // Do not emit fixit suggestions for functions declared in an
   // extern "C" block.
@@ -2254,7 +2260,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
        it != FixablesForAllVars.byVar.cend();) {
       // FIXME: need to deal with global variables later
       if ((!it->first->isLocalVarDecl() && !isa<ParmVarDecl>(it->first)) ||
-          Tracker.hasUnclaimedUses(it->first)) {
+          Tracker.hasUnclaimedUses(it->first) || it->first->isInitCapture()) {
       it = FixablesForAllVars.byVar.erase(it);
     } else {
       ++it;

@@ -377,6 +377,11 @@ llvm::Expected<lldb::TypeSP>
 SymbolFileCTF::ParseModifierType(lldb::offset_t &offset, lldb::user_id_t uid,
                                  uint32_t kind, uint32_t type) {
   TypeSP ref_type = GetTypeForUID(type);
+  if (!ref_type)
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Could not find modified type: {0}", type),
+        llvm::inconvertibleErrorCode());
+
   CompilerType compiler_type;
 
   switch (kind) {
@@ -410,6 +415,11 @@ llvm::Expected<lldb::TypeSP> SymbolFileCTF::ParseTypedef(lldb::offset_t &offset,
                                                          llvm::StringRef name,
                                                          uint32_t type) {
   TypeSP underlying_type = GetTypeForUID(type);
+  if (!underlying_type)
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Could not find typedef underlying type: {0}", type),
+        llvm::inconvertibleErrorCode());
+
   CompilerType target_ast_type = underlying_type->GetFullCompilerType();
   clang::DeclContext *decl_ctx = m_ast->GetTranslationUnitDecl();
   CompilerType ast_typedef = target_ast_type.CreateTypedef(
@@ -430,6 +440,12 @@ llvm::Expected<lldb::TypeSP> SymbolFileCTF::ParseArray(lldb::offset_t &offset,
   ctf_array.nelems = m_data.GetU32(&offset);
 
   TypeSP element_type = GetTypeForUID(ctf_array.contents);
+  if (!element_type)
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Could not find array element type: {0}",
+                      ctf_array.contents),
+        llvm::inconvertibleErrorCode());
+
   std::optional<uint64_t> element_size = element_type->GetByteSize(nullptr);
   if (!element_size)
     return llvm::make_error<llvm::StringError>(
@@ -495,8 +511,8 @@ SymbolFileCTF::ParseFunction(lldb::offset_t &offset, lldb::user_id_t uid,
       break;
     }
 
-    TypeSP arg_type = GetTypeForUID(arg_uid);
-    arg_types.push_back(arg_type->GetFullCompilerType());
+    if (TypeSP arg_type = GetTypeForUID(arg_uid))
+      arg_types.push_back(arg_type->GetFullCompilerType());
   }
 
   // If the number of arguments is odd, a single uint32_t of padding is inserted
@@ -505,6 +521,11 @@ SymbolFileCTF::ParseFunction(lldb::offset_t &offset, lldb::user_id_t uid,
     m_data.GetU32(&offset);
 
   TypeSP ret_type = GetTypeForUID(type);
+  if (!ret_type)
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("Could not find function return type: {0}", type),
+        llvm::inconvertibleErrorCode());
+
   CompilerType func_type = m_ast->CreateFunctionType(
       ret_type->GetFullCompilerType(), arg_types.data(), arg_types.size(),
       is_variadic, 0, clang::CallingConv::CC_C);
@@ -537,11 +558,13 @@ SymbolFileCTF::ParseRecord(lldb::offset_t &offset, lldb::user_id_t uid,
     llvm::StringRef member_name = ReadString(ctf_member.name);
     const uint32_t member_type_uid = ctf_member.type;
 
-    TypeSP member_type = GetTypeForUID(member_type_uid);
-    const uint32_t member_size = member_type->GetByteSize(nullptr).value_or(0);
-    TypeSystemClang::AddFieldToRecordType(union_type, member_name,
-                                          member_type->GetFullCompilerType(),
-                                          eAccessPublic, member_size);
+    if (TypeSP member_type = GetTypeForUID(member_type_uid)) {
+      const uint32_t member_size =
+          member_type->GetByteSize(nullptr).value_or(0);
+      TypeSystemClang::AddFieldToRecordType(union_type, member_name,
+                                            member_type->GetFullCompilerType(),
+                                            eAccessPublic, member_size);
+    }
   }
   m_ast->CompleteTagDeclarationDefinition(union_type);
 
@@ -620,7 +643,8 @@ size_t SymbolFileCTF::ParseTypes(CompileUnit &cu) {
         type_offset, type_uid, name, kind, variable_length, type, size);
     if (!type_or_error) {
       LLDB_LOG_ERROR(log, type_or_error.takeError(),
-                     "Failed to parse type at offset {1}: {0}", type_offset);
+                     "Failed to parse type {1} at offset {2}: {0}", type_uid,
+                     type_offset);
     } else {
       type_sp = *type_or_error;
       if (log) {
@@ -634,7 +658,15 @@ size_t SymbolFileCTF::ParseTypes(CompileUnit &cu) {
     AddTypeForUID(type_uid++, type_sp);
   }
 
-  LLDB_LOG(log, "Parsed {0} CTF types", m_types.size());
+  if (log) {
+    size_t skipped_types = 0;
+    for (auto &type : m_types) {
+      if (!type)
+        skipped_types++;
+    }
+    LLDB_LOG(log, "Parsed {0} CTF types ({1} skipped)", m_types.size(),
+             skipped_types);
+  }
 
   return m_types.size();
 }
