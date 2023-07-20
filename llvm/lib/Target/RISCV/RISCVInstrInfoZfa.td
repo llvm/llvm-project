@@ -89,8 +89,8 @@ def FLI_S : FPUnaryOp_imm<0b1111000, 0b00001, 0b000, OPC_OP_FP, (outs FPR32:$rd)
             Sched<[WriteFLI32]>;
 
 let SchedRW = [WriteFMinMax32, ReadFMinMax32, ReadFMinMax32] in {
-def FMINM_S: FPALU_rr<0b0010100, 0b010, "fminm.s", FPR32, /*Commutable*/ 1>;
-def FMAXM_S: FPALU_rr<0b0010100, 0b011, "fmaxm.s", FPR32, /*Commutable*/ 1>;
+def FMINM_S: FPALU_rr<0b0010100, 0b010, "fminm.s", FPR32, Commutable=1>;
+def FMAXM_S: FPALU_rr<0b0010100, 0b011, "fmaxm.s", FPR32, Commutable=1>;
 }
 
 def FROUND_S : FPUnaryOp_r_frm<0b0100000, 0b00100, FPR32, FPR32, "fround.s">,
@@ -111,8 +111,8 @@ def FLI_D : FPUnaryOp_imm<0b1111001, 0b00001, 0b000, OPC_OP_FP, (outs FPR64:$rd)
             Sched<[WriteFLI64]>;
 
 let SchedRW = [WriteFMinMax64, ReadFMinMax64, ReadFMinMax64] in {
-def FMINM_D: FPALU_rr<0b0010101, 0b010, "fminm.d", FPR64, /*Commutable*/ 1>;
-def FMAXM_D: FPALU_rr<0b0010101, 0b011, "fmaxm.d", FPR64, /*Commutable*/ 1>;
+def FMINM_D: FPALU_rr<0b0010101, 0b010, "fminm.d", FPR64, Commutable=1>;
+def FMAXM_D: FPALU_rr<0b0010101, 0b011, "fmaxm.d", FPR64, Commutable=1>;
 }
 
 def FROUND_D : FPUnaryOp_r_frm<0b0100001, 0b00100, FPR64, FPR64, "fround.d">,
@@ -152,8 +152,8 @@ def FLI_H : FPUnaryOp_imm<0b1111010, 0b00001, 0b000, OPC_OP_FP, (outs FPR16:$rd)
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
 let SchedRW = [WriteFMinMax16, ReadFMinMax16, ReadFMinMax16] in {
-def FMINM_H: FPALU_rr<0b0010110, 0b010, "fminm.h", FPR16, /*Commutable*/ 1>;
-def FMAXM_H: FPALU_rr<0b0010110, 0b011, "fmaxm.h", FPR16, /*Commutable*/ 1>;
+def FMINM_H: FPALU_rr<0b0010110, 0b010, "fminm.h", FPR16, Commutable=1>;
+def FMAXM_H: FPALU_rr<0b0010110, 0b011, "fmaxm.h", FPR16, Commutable=1>;
 }
 
 def FROUND_H : FPUnaryOp_r_frm<0b0100010, 0b00100, FPR16, FPR16, "fround.h">,

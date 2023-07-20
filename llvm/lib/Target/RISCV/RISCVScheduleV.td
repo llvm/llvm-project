@@ -170,21 +170,21 @@ multiclass LMULSEWReadAdvance<string name, int val, list<SchedWrite> writes = []
   : LMULSEWReadAdvanceImpl<name, val, writes, SchedMxList>;
 
 multiclass LMULSEWSchedWritesWRed<string name>
-    : LMULSEWSchedWritesImpl<name, SchedMxListWRed, 0, 1>;
+    : LMULSEWSchedWritesImpl<name, SchedMxListWRed, isWidening=1>;
 multiclass LMULSEWWriteResWRed<string name, list<ProcResourceKind> resources>
-    : LMULSEWWriteResImpl<name, resources, SchedMxListWRed, 0, 1>;
+    : LMULSEWWriteResImpl<name, resources, SchedMxListWRed, isWidening=1>;
 
 multiclass LMULSEWSchedWritesFWRed<string name>
-    : LMULSEWSchedWritesImpl<name, SchedMxListFWRed, 1, 1>;
+    : LMULSEWSchedWritesImpl<name, SchedMxListFWRed, isF=1, isWidening=1>;
 multiclass LMULSEWWriteResFWRed<string name, list<ProcResourceKind> resources>
-    : LMULSEWWriteResImpl<name, resources, SchedMxListFWRed, 1, 1>;
+    : LMULSEWWriteResImpl<name, resources, SchedMxListFWRed, isF=1, isWidening=1>;
 
-multiclass LMULSEWSchedWritesF<string name> : LMULSEWSchedWritesImpl<name, SchedMxListF, 1>;
-multiclass LMULSEWSchedReadsF<string name> : LMULSEWSchedReadsImpl<name, SchedMxListF, 1>;
+multiclass LMULSEWSchedWritesF<string name> : LMULSEWSchedWritesImpl<name, SchedMxListF, isF=1>;
+multiclass LMULSEWSchedReadsF<string name> : LMULSEWSchedReadsImpl<name, SchedMxListF, isF=1>;
 multiclass LMULSEWWriteResF<string name, list<ProcResourceKind> resources>
-  : LMULSEWWriteResImpl<name, resources, SchedMxListF, 1>;
+  : LMULSEWWriteResImpl<name, resources, SchedMxListF, isF=1>;
 multiclass LMULSEWReadAdvanceF<string name, int val, list<SchedWrite> writes = []>
-  : LMULSEWReadAdvanceImpl<name, val, writes, SchedMxListF, 1>;
+  : LMULSEWReadAdvanceImpl<name, val, writes, SchedMxListF, isF=1>;
 
 multiclass LMULSchedWritesW<string name> : LMULSchedWritesImpl<name, SchedMxListW>;
 multiclass LMULSchedReadsW<string name> : LMULSchedReadsImpl<name, SchedMxListW>;
