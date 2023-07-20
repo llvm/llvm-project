@@ -5,7 +5,9 @@
 // RUN: %run %t %t.dll 2>&1 | FileCheck %s
 
 #include "operator_new_delete_replacement_macros.h"
-#define DEFINED_REPLACEMENTS (SCALAR_NEW | ARRAY_NEW | SCALAR_ALIGNED_NEW | ARRAY_ALIGNED_NEW | ALL_DELETE | ALL_ALIGNED_DELETE)
+#define DEFINED_REPLACEMENTS                                                   \
+  (SCALAR_NEW | ARRAY_NEW | SCALAR_ALIGNED_NEW | ARRAY_ALIGNED_NEW |           \
+   ALL_DELETE | ALL_ALIGNED_DELETE)
 #include "operator_new_delete_replacement_common.h"
 
 // Covers:

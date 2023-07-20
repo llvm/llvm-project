@@ -8,18 +8,18 @@
 // Address Sanitizer error: mismatch between allocation and deallocation APis
 
 #ifdef _DLL
-#define _AFXDLL
+#  define _AFXDLL
 #endif
 
 #include <SDKDDKVer.h>
 #include <afxglobals.h>
 
 int main() {
-    int * normal = new int;
-    int * debug = DEBUG_NEW int;
+  int *normal = new int;
+  int *debug = DEBUG_NEW int;
 
-    delete normal;
-    delete debug;
+  delete normal;
+  delete debug;
 
-    return 0;
+  return 0;
 }

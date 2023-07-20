@@ -31,49 +31,60 @@
 // 22. aligned array nothrow (asan)    -> aligned array (asan)    -> aligned scalar (custom)
 
 #ifdef VERBOSE
-#define PRINTF(...) printf(__VA_ARGS__)
+#  define PRINTF(...) printf(__VA_ARGS__)
 #else
-#define PRINTF(...)
+#  define PRINTF(...)
 #endif
 
-template <size_t N>
-class arena {
+template <size_t N> class arena {
 public:
   void *alloc(const size_t size, const std::align_val_t al) {
     return alloc(size, static_cast<size_t>(al));
   }
 
-  void *alloc(const size_t size, const size_t requested_alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-    if (requested_alignment == 0 || (requested_alignment & (requested_alignment - 1))) {
+  void *
+  alloc(const size_t size,
+        const size_t requested_alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
+    if (requested_alignment == 0 ||
+        (requested_alignment & (requested_alignment - 1))) {
       // Alignment must be non-zero and power of two.
-      PRINTF("Allocation of size '%zu' alignment '%zu' failed due to bad arguments.\n", size, requested_alignment);
+      PRINTF("Allocation of size '%zu' alignment '%zu' failed due to bad "
+             "arguments.\n",
+             size, requested_alignment);
       throw std::bad_alloc{};
     }
 
-    const size_t alignment = (requested_alignment <= __STDCPP_DEFAULT_NEW_ALIGNMENT__) ? __STDCPP_DEFAULT_NEW_ALIGNMENT__ : requested_alignment;
+    const size_t alignment =
+        (requested_alignment <= __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+            ? __STDCPP_DEFAULT_NEW_ALIGNMENT__
+            : requested_alignment;
 
     // Adjust for alignment
     const size_t alignment_mask = alignment - 1;
-    m_cur = reinterpret_cast<char *>(reinterpret_cast<unsigned __int64>(m_cur + alignment_mask) & ~alignment_mask);
+    m_cur = reinterpret_cast<char *>(
+        reinterpret_cast<unsigned __int64>(m_cur + alignment_mask) &
+        ~alignment_mask);
     const size_t memory_block_size = (size + alignment_mask) & ~alignment_mask;
 
     if (m_cur + memory_block_size > m_buffer + N) {
-      PRINTF("Allocation of size '%zu' alignment '%zu' failed due to out of memory.\n", size, requested_alignment);
+      PRINTF("Allocation of size '%zu' alignment '%zu' failed due to out of "
+             "memory.\n",
+             size, requested_alignment);
       throw std::bad_alloc{};
     }
 
     char *const returned_memory_block = m_cur;
     m_cur += memory_block_size;
 
-    PRINTF("Allocated '0x%p' of size '%zu' (requested '%zu') with alignment '%zu' (requested '%zu')\n",
-           returned_memory_block, memory_block_size, size, alignment, requested_alignment);
+    PRINTF("Allocated '0x%p' of size '%zu' (requested '%zu') with alignment "
+           "'%zu' (requested '%zu')\n",
+           returned_memory_block, memory_block_size, size, alignment,
+           requested_alignment);
 
     return returned_memory_block;
   }
 
-  void free(const void *ptr) {
-    PRINTF("Deallocated '0x%p'\n", ptr);
-  }
+  void free(const void *ptr) { PRINTF("Deallocated '0x%p'\n", ptr); }
 
 private:
   char m_buffer[N];
@@ -160,7 +171,8 @@ void *operator new(const size_t sz, const std::align_val_t al) {
 #endif // MISSING_SCALAR_ALIGNED_NEW
 
 #if (DEFINED_REPLACEMENTS & SCALAR_ALIGNED_NEW_NOTHROW)
-void *operator new(const size_t sz, const std::align_val_t al, const std::nothrow_t &) noexcept {
+void *operator new(const size_t sz, const std::align_val_t al,
+                   const std::nothrow_t &) noexcept {
   puts("new_scalar_align_nothrow");
   try {
     return mem.alloc(sz, al);
@@ -178,7 +190,8 @@ void *operator new[](const size_t sz, const std::align_val_t al) {
 #endif // MISSING_ARRAY_ALIGNED_NEW
 
 #if (DEFINED_REPLACEMENTS & ARRAY_ALIGNED_NEW_NOTHROW)
-void *operator new[](const size_t sz, const std::align_val_t al, const std::nothrow_t &) noexcept {
+void *operator new[](const size_t sz, const std::align_val_t al,
+                     const std::nothrow_t &) noexcept {
   puts("new_array_align_nothrow");
   try {
     return mem.alloc(sz, al);
@@ -283,28 +296,32 @@ void operator delete[](void *const ptr, const std::align_val_t) noexcept {
 #endif // MISSING_ARRAY_DELETE
 
 #if (DEFINED_REPLACEMENTS & ARRAY_SIZED_ALIGNED_DELETE)
-void operator delete[](void *const ptr, const size_t sz, const std::align_val_t) noexcept {
+void operator delete[](void *const ptr, const size_t sz,
+                       const std::align_val_t) noexcept {
   puts("delete_array_size_align");
   mem.free(ptr);
 }
 #endif // MISSING_ARRAY_SIZED_DELETE
 
 #if (DEFINED_REPLACEMENTS & ARRAY_ALIGNED_DELETE_NOTHROW)
-void operator delete[](void *const ptr, const std::align_val_t, const std::nothrow_t &) noexcept {
+void operator delete[](void *const ptr, const std::align_val_t,
+                       const std::nothrow_t &) noexcept {
   puts("delete_array_align_nothrow");
   mem.free(ptr);
 }
 #endif // MISSING_ARRAY_DELETE_NOTHROW
 
 #if (DEFINED_REPLACEMENTS & SCALAR_SIZED_ALIGNED_DELETE)
-void operator delete(void *const ptr, const size_t sz, const std::align_val_t) noexcept {
+void operator delete(void *const ptr, const size_t sz,
+                     const std::align_val_t) noexcept {
   puts("delete_scalar_size_align");
   mem.free(ptr);
 }
 #endif // MISSING_SCALAR_SIZED_DELETE
 
 #if (DEFINED_REPLACEMENTS & SCALAR_ALIGNED_DELETE_NOTHROW)
-void operator delete(void *const ptr, const std::align_val_t, const std::nothrow_t &) noexcept {
+void operator delete(void *const ptr, const std::align_val_t,
+                     const std::nothrow_t &) noexcept {
   puts("delete_scalar_align_nothrow");
   mem.free(ptr);
 }
@@ -312,17 +329,15 @@ void operator delete(void *const ptr, const std::align_val_t, const std::nothrow
 
 // Explicitly call delete so we can explicitly choose sized vs non-sized versions of each.
 // Also provide explicit nothrow version, since that can't be implicitly invoked.
-template <typename T>
-void op_delete_scalar(T *ptr) {
+template <typename T> void op_delete_scalar(T *ptr) {
   if (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-    operator delete (ptr, std::align_val_t{alignof(T)});
+    operator delete(ptr, std::align_val_t{alignof(T)});
   } else {
     operator delete(ptr);
   }
 }
 
-template <typename T>
-void op_delete_array(T *ptr) {
+template <typename T> void op_delete_array(T *ptr) {
   if (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
     operator delete[](ptr, std::align_val_t{alignof(T)});
   } else {
@@ -330,17 +345,15 @@ void op_delete_array(T *ptr) {
   }
 }
 
-template <typename T>
-void op_delete_scalar_nothrow(T *ptr) {
+template <typename T> void op_delete_scalar_nothrow(T *ptr) {
   if (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-    operator delete (ptr, std::align_val_t{alignof(T)}, std::nothrow_t{});
+    operator delete(ptr, std::align_val_t{alignof(T)}, std::nothrow_t{});
   } else {
-    operator delete (ptr, std::nothrow_t{});
+    operator delete(ptr, std::nothrow_t{});
   }
 }
 
-template <typename T>
-void op_delete_array_nothrow(T *ptr) {
+template <typename T> void op_delete_array_nothrow(T *ptr) {
   if (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
     operator delete[](ptr, std::align_val_t{alignof(T)}, std::nothrow_t{});
   } else {
@@ -348,17 +361,15 @@ void op_delete_array_nothrow(T *ptr) {
   }
 }
 
-template <typename T>
-void op_delete_scalar_size(T *ptr) {
+template <typename T> void op_delete_scalar_size(T *ptr) {
   if (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
-    operator delete (ptr, sizeof(T), std::align_val_t{alignof(T)});
+    operator delete(ptr, sizeof(T), std::align_val_t{alignof(T)});
   } else {
     operator delete(ptr, sizeof(T));
   }
 }
 
-template <size_t N, typename T>
-void op_delete_array_size(T *ptr) {
+template <size_t N, typename T> void op_delete_array_size(T *ptr) {
   if (alignof(T) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
     operator delete[](ptr, sizeof(T) * N, std::align_val_t{alignof(T)});
   } else {
@@ -366,8 +377,7 @@ void op_delete_array_size(T *ptr) {
   }
 }
 
-template <typename T>
-void test_allocations() {
+template <typename T> void test_allocations() {
   T *scalar = new T();
   T *array = new T[5];
 

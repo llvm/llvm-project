@@ -9,17 +9,17 @@
 // nafxcw.lib(afxmem.obj) : warning LNK4006: "void __cdecl operator delete(void *)" (??3@YAXPAX@Z) already defined in clang_rt.asan_cxx-i386.lib(asan_win_delete_scalar_thunk.cpp.obj); second definition ignored
 
 #ifdef _DLL
-#define _AFXDLL
+#  define _AFXDLL
 #endif
 
 #include "afxglobals.h"
 
 int AFX_CDECL AfxCriticalNewHandler(size_t nSize);
 
-int main(int argc, char** argv) {
-    AFX_MODULE_THREAD_STATE* pState = AfxGetModuleThreadState();
-    _PNH pnhOldHandler = AfxSetNewHandler(&AfxCriticalNewHandler);
-    AfxSetNewHandler(pnhOldHandler);
-    puts("Pass");
-    return 0;
+int main(int argc, char **argv) {
+  AFX_MODULE_THREAD_STATE *pState = AfxGetModuleThreadState();
+  _PNH pnhOldHandler = AfxSetNewHandler(&AfxCriticalNewHandler);
+  AfxSetNewHandler(pnhOldHandler);
+  puts("Pass");
+  return 0;
 }

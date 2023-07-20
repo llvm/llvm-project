@@ -49,7 +49,7 @@ u32 GetMallocContextSize();
 
 #define GET_STACK_TRACE_EXPLICIT(max_size, fast, pc, bp, caller_pc, \
                                  extra_context)                     \
-  UNINITIALIZED __sanitizer::BufferedStackTrace stack;                            \
+  UNINITIALIZED __sanitizer::BufferedStackTrace stack;              \
   if (max_size <= 2) {                                              \
     stack.size = max_size;                                          \
     if (max_size > 0) {                                             \
