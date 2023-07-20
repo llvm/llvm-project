@@ -289,7 +289,8 @@ private:  // Parser methods.
   void ParseValueList(SmallVectorImpl<llvm::Init*> &Result,
                       Record *CurRec, RecTy *ItemType = nullptr);
   bool ParseTemplateArgValueList(SmallVectorImpl<llvm::ArgumentInit *> &Result,
-                                 Record *CurRec, Record *ArgsRec);
+                                 Record *CurRec, Record *ArgsRec,
+                                 bool IsDefm = false);
   void ParseDagArgList(
       SmallVectorImpl<std::pair<llvm::Init*, StringInit*>> &Result,
       Record *CurRec);

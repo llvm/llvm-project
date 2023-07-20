@@ -367,17 +367,24 @@ Init *UnsetInit::convertInitializerTo(RecTy *Ty) const {
   return const_cast<UnsetInit *>(this);
 }
 
-static void ProfileArgumentInit(FoldingSetNodeID &ID, Init *Value) {
+static void ProfileArgumentInit(FoldingSetNodeID &ID, Init *Value,
+                                ArgAuxType Aux) {
+  auto I = Aux.index();
+  ID.AddInteger(I);
+  if (I == ArgumentInit::Positional)
+    ID.AddInteger(std::get<ArgumentInit::Positional>(Aux));
+  if (I == ArgumentInit::Named)
+    ID.AddPointer(std::get<ArgumentInit::Named>(Aux));
   ID.AddPointer(Value);
 }
 
 void ArgumentInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileArgumentInit(ID, Value);
+  ProfileArgumentInit(ID, Value, Aux);
 }
 
-ArgumentInit *ArgumentInit::get(Init *Value) {
+ArgumentInit *ArgumentInit::get(Init *Value, ArgAuxType Aux) {
   FoldingSetNodeID ID;
-  ProfileArgumentInit(ID, Value);
+  ProfileArgumentInit(ID, Value, Aux);
 
   RecordKeeper &RK = Value->getRecordKeeper();
   detail::RecordKeeperImpl &RKImpl = RK.getImpl();
@@ -385,7 +392,7 @@ ArgumentInit *ArgumentInit::get(Init *Value) {
   if (ArgumentInit *I = RKImpl.TheArgumentInitPool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  ArgumentInit *I = new (RKImpl.Allocator) ArgumentInit(Value);
+  ArgumentInit *I = new (RKImpl.Allocator) ArgumentInit(Value, Aux);
   RKImpl.TheArgumentInitPool.InsertNode(I, IP);
   return I;
 }
@@ -393,7 +400,7 @@ ArgumentInit *ArgumentInit::get(Init *Value) {
 Init *ArgumentInit::resolveReferences(Resolver &R) const {
   Init *NewValue = Value->resolveReferences(R);
   if (NewValue != Value)
-    return ArgumentInit::get(NewValue);
+    return cloneWithValue(NewValue);
 
   return const_cast<ArgumentInit *>(this);
 }
@@ -2219,13 +2226,16 @@ DefInit *VarDefInit::instantiate() {
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     MapResolver R(NewRec);
 
-    for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
-      if (i < args_size())
-        R.set(TArgs[i], getArg(i)->getValue());
-      else
-        R.set(TArgs[i], NewRec->getValue(TArgs[i])->getValue());
+    for (unsigned I = 0, E = TArgs.size(); I != E; ++I) {
+      R.set(TArgs[I], NewRec->getValue(TArgs[I])->getValue());
+      NewRec->removeValue(TArgs[I]);
+    }
 
-      NewRec->removeValue(TArgs[i]);
+    for (auto *Arg : args()) {
+      if (Arg->isPositional())
+        R.set(TArgs[Arg->getIndex()], Arg->getValue());
+      if (Arg->isNamed())
+        R.set(Arg->getName(), Arg->getValue());
     }
 
     NewRec->resolveReferences(R);
