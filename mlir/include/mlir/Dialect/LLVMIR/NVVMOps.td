@@ -372,53 +372,59 @@ def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.
 }
 
 def NVVM_MBarrierArriveExpectTxOp : NVVM_Op<"mbarrier.arrive.expect_tx",
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Results<(outs LLVM_Type:$res)>,
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
   Arguments<(ins LLVM_i64ptr_any:$addr, I32:$txcount)> {
-  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) `->` type($res)";
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
   let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.b64 %0, [%1], %2;"); }
+    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.b64 _, [%0], %1;"); }
   }];
 }
 
 def NVVM_MBarrierArriveExpectTxSharedOp : NVVM_Op<"mbarrier.arrive.expect_tx.shared", 
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Results<(outs LLVM_Type:$res)>,
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
   Arguments<(ins LLVM_i64ptr_shared:$addr, I32:$txcount)> {    
-  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) `->` type($res)";
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
   let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.shared.b64 %0, [%1], %2;"); }
+    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.shared.b64 _, [%0], %1;"); }
   }];
 }
 
 def NVVM_MBarrierTryWaitParityOp : NVVM_Op<"mbarrier.try_wait.parity", 
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_i64ptr_any:$addr, LLVM_Type:$token)> {
-  let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
+  Arguments<(ins LLVM_i64ptr_any:$addr, I32:$phase, I32:$ticks)> {  
+  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
-      return std::string("{\n\t"
-              ".reg .pred P1; \n\t"
-              "mbarrier.try_wait.parity.b64 P1, [%1], %2; \n\t"
-              "selp.b32 %0, 1, 0, P1; \n\t"
-              "}"); 
+      return std::string(
+        "{\n\t"
+        ".reg .pred       P1; \n\t"
+        "LAB_WAIT: \n\t"
+        "mbarrier.try_wait.parity.b64 P1, [%0], %1, %2; \n\t"
+        "@P1 bra.uni DONE; \n\t"
+        "bra.uni     LAB_WAIT; \n\t"
+        "DONE: \n\t"
+        "}"
+      ); 
     }
   }];
 }
 
 def NVVM_MBarrierTryWaitParitySharedOp : NVVM_Op<"mbarrier.try_wait.parity.shared", 
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_i64ptr_shared:$addr, LLVM_Type:$token)> {  
-  let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
+  Arguments<(ins LLVM_i64ptr_shared:$addr, I32:$phase, I32:$ticks)> {  
+  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
-      return std::string("{\n\t"
-              ".reg .pred P1; \n\t"
-              "mbarrier.try_wait.parity.shared.b64 P1, [%1], %2; \n\t"
-              "selp.b32 %0, 1, 0, P1; \n\t"
-              "}"); 
+      return std::string(
+        "{\n\t"
+        ".reg .pred       P1; \n\t"
+        "LAB_WAIT: \n\t"
+        "mbarrier.try_wait.parity.shared.b64 P1, [%0], %1, %2; \n\t"
+        "@P1 bra.uni DONE; \n\t"
+        "bra.uni     LAB_WAIT; \n\t"
+        "DONE: \n\t"
+        "}"
+      ); 
     }
   }];
 }
