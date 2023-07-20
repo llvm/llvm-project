@@ -8,7 +8,7 @@
 
 // FIXME: In MSVC mode, even "std::function<int(int)> f(aref);" causes
 // allocations.
-// XFAIL: target=x86_64-pc-windows-msvc && stdlib=libc++ && libcxx-abi-version-1
+// XFAIL: target=x86_64-pc-windows-msvc && stdlib=libc++
 
 // UNSUPPORTED: c++03
 
