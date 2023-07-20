@@ -664,9 +664,9 @@ void AccelTableBase::HashData::print(raw_ostream &OS) const {
 void AccelTableBase::print(raw_ostream &OS) const {
   // Print Content.
   OS << "Entries: \n";
-  for (const auto &Entry : Entries) {
-    OS << "Name: " << Entry.first() << "\n";
-    for (auto *V : Entry.second.Values)
+  for (const auto &[Name, Data] : Entries) {
+    OS << "Name: " << Name << "\n";
+    for (auto *V : Data.Values)
       V->print(OS);
   }
 
