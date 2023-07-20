@@ -166,6 +166,8 @@ template void test_builtin_complex(double, double);
 template void test_builtin_complex(float, double); // expected-note {{instantiation of}}
 template void test_builtin_complex(int, double); // expected-note {{instantiation of}}
 
+#ifdef __x86_64__
 // This previously would cause an assertion when emitting the note diagnostic.
-static void _mm_sfence(); // expected-error {{static declaration of '_mm_sfence' follows non-static declaration}} \
-                             expected-note {{'_mm_sfence' is a builtin with type 'void () noexcept'}}
+static void __builtin_cpu_init(); // expected-error {{static declaration of '__builtin_cpu_init' follows non-static declaration}} \
+                                     expected-note {{'__builtin_cpu_init' is a builtin with type 'void () noexcept'}}
+#endif
