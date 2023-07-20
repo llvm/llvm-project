@@ -778,25 +778,8 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN) {
     // Process the block
     SpeculationState = SpeculateUnknown;
     for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
-      if (!Hoist(&MI, Preheader)) {
-        // We have failed to hoist MI to outmost loop's preheader. If MI is in
-        // subloop, try to hoist it to subloop's preheader.
-        MachineLoop *InnerMostLoop = MLI->getLoopFor(MI.getParent());
-        MachineBasicBlock *InnerMostLoopPreheader =
-            InnerMostLoop->getLoopPreheader();
-        if (CurLoop != InnerMostLoop && InnerMostLoopPreheader) {
-          std::swap(CurLoop, InnerMostLoop);
-          std::swap(CurPreheader, InnerMostLoopPreheader);
-          Hoist(&MI, CurPreheader);
-          std::swap(CurLoop, InnerMostLoop);
-          std::swap(CurPreheader, InnerMostLoopPreheader);
-        }
-        // When MI is hoisted to inner-most loop's preheader, we need to update
-        // reg pressure because we have already visited inner-most loop's
-        // preheader.
+      if (!Hoist(&MI, Preheader))
         UpdateRegPressure(&MI);
-      }
-
       // If we have hoisted an instruction that may store, it can only be a
       // constant store.
     }
