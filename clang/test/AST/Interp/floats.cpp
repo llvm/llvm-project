@@ -86,6 +86,22 @@ namespace compound {
     return f;
   }
   static_assert(f2() == __FLT_MAX__, "");
+
+  constexpr float ff() {
+    float a[] = {1,2};
+    int i = 0;
+
+    // RHS should be evaluated before LHS, so this should
+    // write to a[1];
+    a[i++] += ++i;
+#if __cplusplus <= 201402L
+                  // expected-warning@-2 {{multiple unsequenced modifications}} \
+                  // ref-warning@-2 {{multiple unsequenced modifications}}
+#endif
+
+    return a[1];
+  }
+  static_assert(ff() == 3, "");
 }
 
 namespace unary {
@@ -125,3 +141,7 @@ namespace ZeroInit {
   constexpr A<double> b{12};
   static_assert(a.f == 0.0, "");
 };
+
+namespace LongDouble {
+  constexpr long double ld = 3.1425926539;
+}

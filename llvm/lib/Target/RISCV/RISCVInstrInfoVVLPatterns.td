@@ -2197,10 +2197,10 @@ let Predicates = [HasVInstructionsFullMultiply] in {
 }
 
 // 11.11. Vector Integer Divide Instructions
-defm : VPatBinaryVL_VV_VX<riscv_udiv_vl, "PseudoVDIVU", AllIntegerVectors, /*isSEWAware*/ 1>;
-defm : VPatBinaryVL_VV_VX<riscv_sdiv_vl, "PseudoVDIV", AllIntegerVectors, /*isSEWAware*/ 1>;
-defm : VPatBinaryVL_VV_VX<riscv_urem_vl, "PseudoVREMU", AllIntegerVectors, /*isSEWAware*/ 1>;
-defm : VPatBinaryVL_VV_VX<riscv_srem_vl, "PseudoVREM", AllIntegerVectors, /*isSEWAware*/ 1>;
+defm : VPatBinaryVL_VV_VX<riscv_udiv_vl, "PseudoVDIVU", isSEWAware=1>;
+defm : VPatBinaryVL_VV_VX<riscv_sdiv_vl, "PseudoVDIV", isSEWAware=1>;
+defm : VPatBinaryVL_VV_VX<riscv_urem_vl, "PseudoVREMU", isSEWAware=1>;
+defm : VPatBinaryVL_VV_VX<riscv_srem_vl, "PseudoVREM", isSEWAware=1>;
 
 // 11.12. Vector Widening Integer Multiply Instructions
 defm : VPatBinaryWVL_VV_VX<riscv_vwmul_vl, "PseudoVWMUL">;
@@ -2327,8 +2327,8 @@ defm : VPatBinaryFPWVL_VV_VF_WV_WF_RM<riscv_vfwsub_vl, riscv_vfwsub_w_vl, "Pseud
 
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fmul_vl, "PseudoVFMUL">;
-defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fdiv_vl, "PseudoVFDIV", /*isSEWAware*/ 1>;
-defm : VPatBinaryFPVL_R_VF_RM<any_riscv_fdiv_vl, "PseudoVFRDIV", /*isSEWAware*/ 1>;
+defm : VPatBinaryFPVL_VV_VF_RM<any_riscv_fdiv_vl, "PseudoVFDIV", isSEWAware=1>;
+defm : VPatBinaryFPVL_R_VF_RM<any_riscv_fdiv_vl, "PseudoVFRDIV", isSEWAware=1>;
 
 // 13.5. Vector Widening Floating-Point Multiply Instructions
 defm : VPatBinaryFPWVL_VV_VF_RM<riscv_vfwmul_vl, "PseudoVFWMUL">;
@@ -2617,39 +2617,39 @@ foreach fvtiToFWti = AllWidenableFloatVectors in {
 // 14. Vector Reduction Operations
 
 // 14.1. Vector Single-Width Integer Reduction Instructions
-defm : VPatReductionVL<rvv_vecreduce_ADD_vl,  "PseudoVREDSUM", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_UMAX_vl, "PseudoVREDMAXU", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_SMAX_vl, "PseudoVREDMAX", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_UMIN_vl, "PseudoVREDMINU", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", /*is_float*/0>;
-defm : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", /*is_float*/0>;
+defm : VPatReductionVL<rvv_vecreduce_ADD_vl,  "PseudoVREDSUM", is_float=0>;
+defm : VPatReductionVL<rvv_vecreduce_UMAX_vl, "PseudoVREDMAXU", is_float=0>;
+defm : VPatReductionVL<rvv_vecreduce_SMAX_vl, "PseudoVREDMAX", is_float=0>;
+defm : VPatReductionVL<rvv_vecreduce_UMIN_vl, "PseudoVREDMINU", is_float=0>;
+defm : VPatReductionVL<rvv_vecreduce_SMIN_vl, "PseudoVREDMIN", is_float=0>;
+defm : VPatReductionVL<rvv_vecreduce_AND_vl,  "PseudoVREDAND", is_float=0>;
+defm : VPatReductionVL<rvv_vecreduce_OR_vl,   "PseudoVREDOR", is_float=0>;
+defm : VPatReductionVL<rvv_vecreduce_XOR_vl,  "PseudoVREDXOR", is_float=0>;
 
 // 14.2. Vector Widening Integer Reduction Instructions
-defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, anyext_oneuse, "PseudoVWREDSUMU", /*is_float*/0>;
-defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, zext_oneuse, "PseudoVWREDSUMU", /*is_float*/0>;
-defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_zext_vl_oneuse, "PseudoVWREDSUMU", /*is_float*/0>;
-defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, sext_oneuse, "PseudoVWREDSUM", /*is_float*/0>;
-defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_sext_vl_oneuse, "PseudoVWREDSUM", /*is_float*/0>;
+defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, anyext_oneuse, "PseudoVWREDSUMU", is_float=0>;
+defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, zext_oneuse, "PseudoVWREDSUMU", is_float=0>;
+defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_zext_vl_oneuse, "PseudoVWREDSUMU", is_float=0>;
+defm : VPatWidenReductionVL<rvv_vecreduce_ADD_vl, sext_oneuse, "PseudoVWREDSUM", is_float=0>;
+defm : VPatWidenReductionVL_Ext_VL<rvv_vecreduce_ADD_vl, riscv_sext_vl_oneuse, "PseudoVWREDSUM", is_float=0>;
 
 // 14.3. Vector Single-Width Floating-Point Reduction Instructions
-defm : VPatReductionVL_RM<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", /*is_float*/1>;
-defm : VPatReductionVL_RM<rvv_vecreduce_FADD_vl,     "PseudoVFREDUSUM", /*is_float*/1>;
-defm : VPatReductionVL<rvv_vecreduce_FMIN_vl,     "PseudoVFREDMIN", /*is_float*/1>;
-defm : VPatReductionVL<rvv_vecreduce_FMAX_vl,     "PseudoVFREDMAX", /*is_float*/1>;
+defm : VPatReductionVL_RM<rvv_vecreduce_SEQ_FADD_vl, "PseudoVFREDOSUM", is_float=1>;
+defm : VPatReductionVL_RM<rvv_vecreduce_FADD_vl,     "PseudoVFREDUSUM", is_float=1>;
+defm : VPatReductionVL<rvv_vecreduce_FMIN_vl,     "PseudoVFREDMIN", is_float=1>;
+defm : VPatReductionVL<rvv_vecreduce_FMAX_vl,     "PseudoVFREDMAX", is_float=1>;
 
 // 14.4. Vector Widening Floating-Point Reduction Instructions
 defm : VPatWidenReductionVL_RM<rvv_vecreduce_SEQ_FADD_vl, fpext_oneuse,
-                               "PseudoVFWREDOSUM", /*is_float*/1>;
+                               "PseudoVFWREDOSUM", is_float=1>;
 defm : VPatWidenReductionVL_Ext_VL_RM<rvv_vecreduce_SEQ_FADD_vl,
                                       riscv_fpextend_vl_oneuse,
-                                      "PseudoVFWREDOSUM", /*is_float*/1>;
+                                      "PseudoVFWREDOSUM", is_float=1>;
 defm : VPatWidenReductionVL_RM<rvv_vecreduce_FADD_vl, fpext_oneuse,
-                               "PseudoVFWREDUSUM", /*is_float*/1>;
+                               "PseudoVFWREDUSUM", is_float=1>;
 defm : VPatWidenReductionVL_Ext_VL_RM<rvv_vecreduce_FADD_vl,
                                       riscv_fpextend_vl_oneuse,
-                                      "PseudoVFWREDUSUM", /*is_float*/1>;
+                                      "PseudoVFWREDUSUM", is_float=1>;
 
 // 15. Vector Mask Instructions
 

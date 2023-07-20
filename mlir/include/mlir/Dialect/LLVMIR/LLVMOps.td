@@ -536,12 +536,14 @@ def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "FPTrunc",
 def LLVM_InvokeOp : LLVM_Op<"invoke", [
                       AttrSizedOperandSegments,
                       DeclareOpInterfaceMethods<BranchOpInterface>,
-                      DeclareOpInterfaceMethods<CallOpInterface>, Terminator]> {
+                      DeclareOpInterfaceMethods<CallOpInterface>,
+                      DeclareOpInterfaceMethods<BranchWeightOpInterface>,
+                      Terminator]> {
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
-                   OptionalAttr<ElementsAttr>:$branch_weights);
+                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights);
   let results = (outs Variadic<LLVM_Type>);
   let successors = (successor AnySuccessor:$normalDest,
                               AnySuccessor:$unwindDest);
@@ -582,7 +584,8 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                     [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                      DeclareOpInterfaceMethods<CallOpInterface>,
-                     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+                     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+                     DeclareOpInterfaceMethods<BranchWeightOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
     In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect
@@ -616,7 +619,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                   Variadic<LLVM_Type>,
                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                    "{}">:$fastmathFlags,
-                  OptionalAttr<ElementsAttr>:$branch_weights);
+                  OptionalAttr<DenseI32ArrayAttr>:$branch_weights);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -847,12 +850,14 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
   ];
 }
 def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
-    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<BranchOpInterface>,
+     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
      Pure]> {
   let arguments = (ins I1:$condition,
                    Variadic<LLVM_Type>:$trueDestOperands,
                    Variadic<LLVM_Type>:$falseDestOperands,
-                   OptionalAttr<ElementsAttr>:$branch_weights,
+                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
                    OptionalAttr<LoopAnnotationAttr>:$loop_annotation);
   let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
   let assemblyFormat = [{
@@ -874,7 +879,7 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
             falseOperands);
   }]>,
   OpBuilder<(ins "Value":$condition, "ValueRange":$trueOperands, "ValueRange":$falseOperands,
-    "ElementsAttr":$branchWeights, "Block *":$trueDest, "Block *":$falseDest),
+    "DenseI32ArrayAttr":$branchWeights, "Block *":$trueDest, "Block *":$falseDest),
   [{
       build($_builder, $_state, condition, trueOperands, falseOperands, branchWeights,
       {}, trueDest, falseDest);
@@ -934,7 +939,9 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
 }
 
 def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
-    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<BranchOpInterface>,
+     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
      Pure]> {
   let arguments = (ins
     AnyInteger:$value,
@@ -942,7 +949,7 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<AnyIntElementsAttr>:$case_values,
     DenseI32ArrayAttr:$case_operand_segments,
-    OptionalAttr<ElementsAttr>:$branch_weights
+    OptionalAttr<DenseI32ArrayAttr>:$branch_weights
   );
   let successors = (successor
     AnySuccessor:$defaultDestination,
@@ -1096,156 +1103,6 @@ def LLVM_MetadataOp : LLVM_Op<"metadata", [
   ];
 
   let hasCustomAssemblyFormat = 1;
-  let hasRegionVerifier = 1;
-}
-
-def LLVM_TBAARootMetadataOp : LLVM_Op<"tbaa_root", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    StrAttr:$identity
-  );
-  let summary = "LLVM dialect TBAA root node metadata.";
-  let description = [{
-    Defines a TBAA root node.
-
-    Example:
-    ```mlir
-    llvm.metadata @tbaa {
-      llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-    }
-    ```
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#tbaa-metadata
-  }];
-  let assemblyFormat = [{
-    $sym_name ` ` `{` `id` `=` $identity `}` attr-dict
-  }];
-  let hasVerifier = 1;
-}
-
-def LLVM_TBAATypeDescriptorOp : LLVM_Op<"tbaa_type_desc", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    OptionalAttr<StrAttr>:$identity,
-    FlatSymbolRefArrayAttr:$members,
-    DenseI64ArrayAttr:$offsets
-  );
-  let summary = "LLVM dialect TBAA node describing a type.";
-  let description = [{
-    Defines a TBAA node describing a type.
-
-    Example:
-    ```mlir
-    llvm.metadata @tbaa {
-      llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-      llvm.tbaa_type_desc @tbaa_type_desc_1 {
-          identity = "omnipotent char",
-          members = [@tbaa_root_0],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_2 {
-          identity = "long long",
-          members = [@tbaa_type_desc_1],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_3 {
-          identity = "agg2_t",
-          members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
-          offsets = array<i64: 0, 8>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_5 {
-          identity = "int",
-          members = [@tbaa_type_desc_1],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_6 {
-          identity = "agg1_t",
-          members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
-          offsets = array<i64: 0, 4>
-      }
-    }
-    ```
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#tbaa-metadata
-  }];
-
-  // Interleave member types and offsets for better matching
-  // LLVM IR text representation.
-  let assemblyFormat = [{
-    $sym_name ` ` `{`
-      ( `id` `=` $identity^ )? `,`
-      `members` `=` `{` custom<TBAAMembers>($members, $offsets) `}`
-    `}` attr-dict
-  }];
-  let hasVerifier = 1;
-}
-
-def LLVM_TBAATagOp : LLVM_Op<"tbaa_tag", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    FlatSymbolRefAttr:$base_type,
-    FlatSymbolRefAttr:$access_type,
-    I64Attr:$offset,
-    UnitAttr:$constant
-  );
-  let summary = "LLVM dialect TBAA node describing a memory access.";
-  let description = [{
-    Defines a TBAA node describing a memory access.
-
-    Example:
-    ```mlir
-    llvm.metadata @tbaa {
-      llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-      llvm.tbaa_type_desc @tbaa_type_desc_1 {
-          identity = "omnipotent char",
-          members = [@tbaa_root_0],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_2 {
-          identity = "long long",
-          members = [@tbaa_type_desc_1],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_3 {
-          identity = "agg2_t",
-          members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
-          offsets = array<i64: 0, 8>
-      }
-      llvm.tbaa_tag @tbaa_tag_4 {
-          access_type = @tbaa_type_desc_2,
-          base_type = @tbaa_type_desc_3,
-          offset = 8 : i64
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_5 {
-          identity = "int",
-          members = [@tbaa_type_desc_1],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_6 {
-          identity = "agg1_t",
-          members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
-          offsets = array<i64: 0, 4>
-      }
-      llvm.tbaa_tag @tbaa_tag_7 {
-          access_type = @tbaa_type_desc_5,
-          base_type = @tbaa_type_desc_6,
-          offset = 0 : i64
-      }
-    }
-    ```
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#tbaa-metadata
-  }];
-  let assemblyFormat = "$sym_name attr-dict";
 }
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",

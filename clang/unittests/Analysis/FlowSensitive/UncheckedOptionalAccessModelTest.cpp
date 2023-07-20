@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1266,6 +1267,12 @@ struct OptionalTypeIdentifier {
   std::string TypeName;
 };
 
+static raw_ostream &operator<<(raw_ostream &OS,
+                               const OptionalTypeIdentifier &TypeId) {
+  OS << TypeId.NamespaceName << "::" << TypeId.TypeName;
+  return OS;
+}
+
 class UncheckedOptionalAccessTest
     : public ::testing::TestWithParam<OptionalTypeIdentifier> {
 protected:
@@ -1334,7 +1341,17 @@ protected:
           auto &SrcMgr = AO.ASTCtx.getSourceManager();
           llvm::DenseSet<unsigned> DiagnosticLines;
           for (SourceLocation &Loc : Diagnostics) {
-            DiagnosticLines.insert(SrcMgr.getPresumedLineNumber(Loc));
+            unsigned Line = SrcMgr.getPresumedLineNumber(Loc);
+            DiagnosticLines.insert(Line);
+            if (!AnnotationLines.contains(Line)) {
+              IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(
+                  new DiagnosticOptions());
+              TextDiagnostic TD(llvm::errs(), AO.ASTCtx.getLangOpts(),
+                                DiagOpts.get());
+              TD.emitDiagnostic(
+                  FullSourceLoc(Loc, SrcMgr), DiagnosticsEngine::Error,
+                  "unexpected diagnostic", std::nullopt, std::nullopt);
+            }
           }
 
           EXPECT_THAT(DiagnosticLines, ContainerEq(AnnotationLines));

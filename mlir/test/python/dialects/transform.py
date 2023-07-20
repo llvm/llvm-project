@@ -172,6 +172,37 @@ def testMergeHandlesOp():
 
 
 @run
+def testApplyPatternsOpCompact():
+  sequence = transform.SequenceOp(
+      transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+  )
+  with InsertionPoint(sequence.body):
+    with InsertionPoint(transform.ApplyPatternsOp(sequence.bodyTarget).patterns):
+      transform.ApplyCanonicalizationPatternsOp()
+    transform.YieldOp()
+    # CHECK-LABEL: TEST: testApplyPatternsOpCompact
+    # CHECK: apply_patterns to
+    # CHECK: transform.apply_patterns.canonicalization
+    # CHECK: !transform.any_op
+
+
+@run
+def testApplyPatternsOpWithType():
+  sequence = transform.SequenceOp(
+      transform.FailurePropagationMode.PROPAGATE, [],
+      transform.OperationType.get('test.dummy')
+  )
+  with InsertionPoint(sequence.body):
+    with InsertionPoint(transform.ApplyPatternsOp(sequence.bodyTarget).patterns):
+      transform.ApplyCanonicalizationPatternsOp()
+    transform.YieldOp()
+    # CHECK-LABEL: TEST: testApplyPatternsOp
+    # CHECK: apply_patterns to
+    # CHECK: transform.apply_patterns.canonicalization
+    # CHECK: !transform.op<"test.dummy">
+
+
+@run
 def testReplicateOp():
     with_pdl = transform_pdl.WithPDLPatternsOp(transform.AnyOpType.get())
     with InsertionPoint(with_pdl.body):

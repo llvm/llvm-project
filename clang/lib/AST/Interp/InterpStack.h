@@ -54,6 +54,7 @@ public:
   /// Discards the top value from the stack.
   template <typename T> void discard() {
 #ifndef NDEBUG
+    assert(!ItemTypes.empty());
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
@@ -85,8 +86,11 @@ public:
   /// Clears the stack without calling any destructors.
   void clear();
 
-  // Returns whether the stack is empty.
+  /// Returns whether the stack is empty.
   bool empty() const { return StackSize == 0; }
+
+  /// dump the stack contents to stderr.
+  void dump() const;
 
 private:
   /// All stack slots are aligned to the native pointer alignment for storage.

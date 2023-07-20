@@ -242,10 +242,10 @@ std::pair<VarInfo::ID, bool> VarEnv::create(StringRef name, llvm::SMLoc loc,
 }
 
 std::optional<std::pair<VarInfo::ID, bool>>
-VarEnv::lookupOrCreate(CreationPolicy policy, StringRef name, llvm::SMLoc loc,
+VarEnv::lookupOrCreate(Policy creationPolicy, StringRef name, llvm::SMLoc loc,
                        VarKind vk) {
-  switch (policy) {
-  case CreationPolicy::MustNot: {
+  switch (creationPolicy) {
+  case Policy::MustNot: {
     const auto oid = lookup(name);
     if (!oid)
       return std::nullopt; // Doesn't exist, but must not create.
@@ -254,9 +254,9 @@ VarEnv::lookupOrCreate(CreationPolicy policy, StringRef name, llvm::SMLoc loc,
 #endif // NDEBUG
     return std::make_pair(*oid, false);
   }
-  case CreationPolicy::May:
+  case Policy::May:
     return create(name, loc, vk, /*verifyUsage=*/true);
-  case CreationPolicy::Must: {
+  case Policy::Must: {
     const auto res = create(name, loc, vk, /*verifyUsage=*/false);
     // const auto id = res.first;
     const auto didCreate = res.second;
@@ -265,7 +265,7 @@ VarEnv::lookupOrCreate(CreationPolicy policy, StringRef name, llvm::SMLoc loc,
     return res;
   }
   }
-  llvm_unreachable("unknown CreationPolicy");
+  llvm_unreachable("unknown Policy");
 }
 
 Var VarEnv::bindUnusedVar(VarKind vk) { return Var(vk, nextNum[vk]++); }

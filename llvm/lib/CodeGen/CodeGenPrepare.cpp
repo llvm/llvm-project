@@ -6997,96 +6997,88 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // first branch will point directly to select.end, and the corresponding PHI
   // predecessor block will be the start block.
 
-  // First, we split the block containing the select into 2 blocks.
+  // Collect values that go on the true side and the values that go on the false
+  // side.
+  SmallVector<Instruction *> TrueInstrs, FalseInstrs;
+  for (SelectInst *SI : ASI) {
+    if (Value *V = SI->getTrueValue(); sinkSelectOperand(TTI, V))
+      TrueInstrs.push_back(cast<Instruction>(V));
+    if (Value *V = SI->getFalseValue(); sinkSelectOperand(TTI, V))
+      FalseInstrs.push_back(cast<Instruction>(V));
+  }
+
+  // Split the select block, according to how many (if any) values go on each
+  // side.
   BasicBlock *StartBlock = SI->getParent();
   BasicBlock::iterator SplitPt = ++(BasicBlock::iterator(LastSI));
-  BasicBlock *EndBlock = StartBlock->splitBasicBlock(SplitPt, "select.end");
-  if (IsHugeFunc)
-    FreshBBs.insert(EndBlock);
-  Loop *L = LI->getLoopFor(StartBlock);
-  if (L)
-    L->addBasicBlockToLoop(EndBlock, *LI);
-  BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock).getFrequency());
-  // Delete the unconditional branch that was just created by the split.
-  StartBlock->getTerminator()->eraseFromParent();
 
-  // These are the new basic blocks for the conditional branch.
-  // At least one will become an actual new basic block.
+  IRBuilder<> IB(SI);
+  auto *CondFr = IB.CreateFreeze(SI->getCondition(), SI->getName() + ".frozen");
+
   BasicBlock *TrueBlock = nullptr;
   BasicBlock *FalseBlock = nullptr;
+  BasicBlock *EndBlock = nullptr;
   BranchInst *TrueBranch = nullptr;
   BranchInst *FalseBranch = nullptr;
+  if (TrueInstrs.size() == 0) {
+    FalseBranch = cast<BranchInst>(SplitBlockAndInsertIfElse(
+        CondFr, &*SplitPt, false, nullptr, nullptr, LI));
+    FalseBlock = FalseBranch->getParent();
+    EndBlock = cast<BasicBlock>(FalseBranch->getOperand(0));
+  } else if (FalseInstrs.size() == 0) {
+    TrueBranch = cast<BranchInst>(SplitBlockAndInsertIfThen(
+        CondFr, &*SplitPt, false, nullptr, nullptr, LI));
+    TrueBlock = TrueBranch->getParent();
+    EndBlock = cast<BasicBlock>(TrueBranch->getOperand(0));
+  } else {
+    Instruction *ThenTerm = nullptr;
+    Instruction *ElseTerm = nullptr;
+    SplitBlockAndInsertIfThenElse(CondFr, &*SplitPt, &ThenTerm, &ElseTerm,
+                                  nullptr, nullptr, LI);
+    TrueBranch = cast<BranchInst>(ThenTerm);
+    FalseBranch = cast<BranchInst>(ElseTerm);
+    TrueBlock = TrueBranch->getParent();
+    FalseBlock = FalseBranch->getParent();
+    EndBlock = cast<BasicBlock>(TrueBranch->getOperand(0));
+  }
+
+  EndBlock->setName("select.end");
+  if (TrueBlock)
+    TrueBlock->setName("select.true.sink");
+  if (FalseBlock)
+    FalseBlock->setName(FalseInstrs.size() == 0 ? "select.false"
+                                                : "select.false.sink");
+
+  if (IsHugeFunc) {
+    if (TrueBlock)
+      FreshBBs.insert(TrueBlock);
+    if (FalseBlock)
+      FreshBBs.insert(FalseBlock);
+    FreshBBs.insert(EndBlock);
+  }
+
+  BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock).getFrequency());
+
+  static const unsigned MD[] = {
+      LLVMContext::MD_prof, LLVMContext::MD_unpredictable,
+      LLVMContext::MD_make_implicit, LLVMContext::MD_dbg};
+  StartBlock->getTerminator()->copyMetadata(*SI, MD);
 
   // Sink expensive instructions into the conditional blocks to avoid executing
   // them speculatively.
-  for (SelectInst *SI : ASI) {
-    if (sinkSelectOperand(TTI, SI->getTrueValue())) {
-      if (TrueBlock == nullptr) {
-        TrueBlock = BasicBlock::Create(SI->getContext(), "select.true.sink",
-                                       EndBlock->getParent(), EndBlock);
-        TrueBranch = BranchInst::Create(EndBlock, TrueBlock);
-        if (IsHugeFunc)
-          FreshBBs.insert(TrueBlock);
-        if (L)
-          L->addBasicBlockToLoop(TrueBlock, *LI);
-        TrueBranch->setDebugLoc(SI->getDebugLoc());
-      }
-      auto *TrueInst = cast<Instruction>(SI->getTrueValue());
-      TrueInst->moveBefore(TrueBranch);
-    }
-    if (sinkSelectOperand(TTI, SI->getFalseValue())) {
-      if (FalseBlock == nullptr) {
-        FalseBlock = BasicBlock::Create(SI->getContext(), "select.false.sink",
-                                        EndBlock->getParent(), EndBlock);
-        if (IsHugeFunc)
-          FreshBBs.insert(FalseBlock);
-        if (L)
-          L->addBasicBlockToLoop(FalseBlock, *LI);
-        FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
-        FalseBranch->setDebugLoc(SI->getDebugLoc());
-      }
-      auto *FalseInst = cast<Instruction>(SI->getFalseValue());
-      FalseInst->moveBefore(FalseBranch);
-    }
-  }
+  for (Instruction *I : TrueInstrs)
+    I->moveBefore(TrueBranch);
+  for (Instruction *I : FalseInstrs)
+    I->moveBefore(FalseBranch);
 
-  // If there was nothing to sink, then arbitrarily choose the 'false' side
-  // for a new input value to the PHI.
-  if (TrueBlock == FalseBlock) {
-    assert(TrueBlock == nullptr &&
-           "Unexpected basic block transform while optimizing select");
-
-    FalseBlock = BasicBlock::Create(SI->getContext(), "select.false",
-                                    EndBlock->getParent(), EndBlock);
-    if (IsHugeFunc)
-      FreshBBs.insert(FalseBlock);
-    if (L)
-      L->addBasicBlockToLoop(FalseBlock, *LI);
-    auto *FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
-    FalseBranch->setDebugLoc(SI->getDebugLoc());
-  }
-
-  // Insert the real conditional branch based on the original condition.
   // If we did not create a new block for one of the 'true' or 'false' paths
   // of the condition, it means that side of the branch goes to the end block
   // directly and the path originates from the start block from the point of
   // view of the new PHI.
-  BasicBlock *TT, *FT;
-  if (TrueBlock == nullptr) {
-    TT = EndBlock;
-    FT = FalseBlock;
+  if (TrueBlock == nullptr)
     TrueBlock = StartBlock;
-  } else if (FalseBlock == nullptr) {
-    TT = TrueBlock;
-    FT = EndBlock;
+  else if (FalseBlock == nullptr)
     FalseBlock = StartBlock;
-  } else {
-    TT = TrueBlock;
-    FT = FalseBlock;
-  }
-  IRBuilder<> IB(SI);
-  auto *CondFr = IB.CreateFreeze(SI->getCondition(), SI->getName() + ".frozen");
-  IB.CreateCondBr(CondFr, TT, FT, SI);
 
   SmallPtrSet<const Instruction *, 2> INS;
   INS.insert(ASI.begin(), ASI.end());

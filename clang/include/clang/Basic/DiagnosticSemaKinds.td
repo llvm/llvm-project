@@ -83,8 +83,8 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|explicit specifier argument|noexcept specifier argument}0 "
-  "is not a constant expression">;
+  "array size|explicit specifier argument|noexcept specifier argument|"
+  "call to 'size()'|call to 'data()'}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
   "%select{case value|enumerator value|non-type template argument|"
   "array size|explicit specifier argument|noexcept specifier argument}0 "
@@ -1545,6 +1545,24 @@ def err_static_assert_requirement_failed : Error<
   "static assertion failed due to requirement '%0'%select{: %2|}1">;
 def note_expr_evaluates_to : Note<
   "expression evaluates to '%0 %1 %2'">;
+def err_static_assert_invalid_message : Error<
+  "the message in a static assertion must be a string literal or an "
+  "object with 'data()' and 'size()' member functions">;
+def err_static_assert_missing_member_function : Error<
+  "the message object in this static assertion is missing %select{"
+  "a 'size()' member function|"
+  "a 'data()' member function|"
+  "'data()' and 'size()' member functions}0">;
+def err_static_assert_invalid_mem_fn_ret_ty : Error<
+  "the message in a static assertion must have a '%select{size|data}0()' member "
+  "function returning an object convertible to '%select{std::size_t|const char *}0'">;
+def warn_static_assert_message_constexpr : Warning<
+  "the message in this static assertion is not a "
+  "constant expression">,
+  DefaultError, InGroup<DiagGroup<"invalid-static-assert-message">>;
+def err_static_assert_message_constexpr : Error<
+  "the message in a static assertion must be produced by a "
+  "constant expression">;
 
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,

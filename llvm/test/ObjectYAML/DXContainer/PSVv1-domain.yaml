@@ -26,6 +26,7 @@ Parts:
       SigPatchConstOrPrimElements: 32
       SigInputVectors: 64
       SigOutputVectors: [ 8, 16, 32, 64 ]
+      ResourceStride:       16
       Resources:
         - Type:            1
           Space:           2
@@ -63,6 +64,7 @@ Parts:
 # CHECK-NEXT: SigPatchConstOrPrimElements: 32
 # CHECK-NEXT: SigInputVectors: 64
 # CHECK-NEXT: SigOutputVectors: [ 8, 16, 32, 64 ]
+# CHECK-NEXT: ResourceStride: 16
 # CHECK-NEXT: Resources:
 # CHECK-NEXT: - Type:            1
 # CHECK-NEXT: Space:           2

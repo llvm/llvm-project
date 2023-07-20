@@ -67,7 +67,7 @@ Implemented Papers
 - P2494R2 - Relaxing range adaptors to allow for move only types
 - P2585R0 - Improving default container formatting
 - P0408R7 - Efficient Access to ``basic_stringbuf``'s Buffer
-
+- P2474R2 - ``views::repeat``
 
 Improvements and New Features
 -----------------------------

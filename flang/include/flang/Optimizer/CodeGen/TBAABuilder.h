@@ -164,7 +164,7 @@ namespace fir {
 //   < `<any data access>`, `<any data access>`, 0 >
 class TBAABuilder {
 public:
-  TBAABuilder(mlir::ModuleOp module, bool applyTBAA);
+  TBAABuilder(mlir::MLIRContext *context, bool applyTBAA);
   TBAABuilder(TBAABuilder const &) = delete;
   TBAABuilder &operator=(TBAABuilder const &) = delete;
 
@@ -175,95 +175,74 @@ public:
                      mlir::LLVM::GEPOp gep);
 
 private:
-  // Return unique string name based on `basename`.
-  std::string getNewTBAANodeName(llvm::StringRef basename);
+  // Find or create TBAATagAttr attribute (TBAA access tag) with the specified
+  // components and return it.
+  mlir::LLVM::TBAATagAttr
+  getAccessTag(mlir::LLVM::TBAATypeDescriptorAttr baseTypeDesc,
+               mlir::LLVM::TBAATypeDescriptorAttr accessTypeDesc,
+               int64_t offset);
 
-  // Find or create TBAATagOp operation (TBAA access tag) with the specified
-  // components and return the symbol it defines.
-  mlir::SymbolRefAttr getAccessTag(mlir::SymbolRefAttr baseTypeDesc,
-                                   mlir::SymbolRefAttr accessTypeDesc,
-                                   int64_t offset);
-  // Returns symbol of TBAATagOp representing access tag:
+  // Returns TBAATagAttr representing access tag:
   //   < <descriptor member>, <descriptor member>, 0 >
-  mlir::SymbolRefAttr getAnyBoxAccessTag();
-  // Returns symbol of TBAATagOp representing access tag:
+  mlir::LLVM::TBAATagAttr getAnyBoxAccessTag();
+  // Returns TBAATagAttr representing access tag:
   //   < <any data access>, <any data access>, 0 >
-  mlir::SymbolRefAttr getAnyDataAccessTag();
+  mlir::LLVM::TBAATagAttr getAnyDataAccessTag();
 
-  // Returns symbol of TBAATagOp representing access tag
-  // described by the base and access FIR types and the LLVM::GepOp
-  // representing the access in terms of the FIR types converted
-  // to LLVM types. The base type must be derivative of fir::BaseBoxType.
-  mlir::SymbolRefAttr getBoxAccessTag(mlir::Type baseFIRType,
-                                      mlir::Type accessFIRType,
-                                      mlir::LLVM::GEPOp gep);
+  // Returns TBAATagAttr representing access tag described by the base and
+  // access FIR types and the LLVM::GepOp representing the access in terms of
+  // the FIR types converted to LLVM types. The base type must be derivative of
+  // fir::BaseBoxType.
+  mlir::LLVM::TBAATagAttr getBoxAccessTag(mlir::Type baseFIRType,
+                                          mlir::Type accessFIRType,
+                                          mlir::LLVM::GEPOp gep);
 
-  // Returns symbol of TBAATagOp representing access tag
-  // described by the base and access FIR types and the LLVM::GepOp
-  // representing the access in terms of the FIR types converted
-  // to LLVM types. The FIR types must describe the "data" access,
-  // i.e. not an access of any box/descriptor member.
-  mlir::SymbolRefAttr getDataAccessTag(mlir::Type baseFIRType,
-                                       mlir::Type accessFIRType,
-                                       mlir::LLVM::GEPOp gep);
+  // Returns TBAATagAttr representing access tag described by the base and
+  // access FIR types and the LLVM::GepOp representing the access in terms of
+  // the FIR types converted to LLVM types. The FIR types must describe the
+  // "data" access, i.e. not an access of any box/descriptor member.
+  mlir::LLVM::TBAATagAttr getDataAccessTag(mlir::Type baseFIRType,
+                                           mlir::Type accessFIRType,
+                                           mlir::LLVM::GEPOp gep);
 
   // Set to true, if TBAA builder is active, otherwise, all public
   // methods are no-ops.
   bool enableTBAA;
 
-  // LLVM::MetadataOp holding the TBAA operations.
-  mlir::LLVM::MetadataOp tbaaMetaOp;
-  // Symbol name of tbaaMetaOp.
-  static constexpr llvm::StringRef tbaaMetaOpName = "__flang_tbaa";
-
-  // Base names for TBAA operations:
-  //   TBAARootMetadataOp:
-  static constexpr llvm::StringRef kRootSymBasename = "root";
-  //   TBAATypeDescriptorOp:
-  static constexpr llvm::StringRef kTypeDescSymBasename = "type_desc";
-  //   TBAATagOp:
-  static constexpr llvm::StringRef kTagSymBasename = "tag";
-
-  // Symbol defined by the LLVM::TBAARootMetadataOp identifying
-  // Flang's TBAA root.
-  mlir::SymbolRefAttr flangTBAARoot;
+  // LLVM::TBAARootAttr identifying Flang's TBAA root.
+  mlir::LLVM::TBAARootAttr flangTBAARoot;
   // Identity string for Flang's TBAA root.
   static constexpr llvm::StringRef flangTBAARootId = "Flang Type TBAA Root";
 
-  // Symbol defined by LLVM::TBAATypeDescriptorOp identifying
-  // "any access".
-  mlir::SymbolRefAttr anyAccessTypeDesc;
+  // LLVM::TBAATypeDescriptorAttr identifying "any access".
+  mlir::LLVM::TBAATypeDescriptorAttr anyAccessTypeDesc;
   // Identity string for "any access" type descriptor.
   static constexpr llvm::StringRef anyAccessTypeDescId = "any access";
 
-  // Symbol defined by LLVM::TBAATypeDescriptorOp identifying
-  // "any data access" (i.e. non-box memory access).
-  mlir::SymbolRefAttr anyDataAccessTypeDesc;
+  // LLVM::TBAATypeDescriptorAttr identifying "any data access" (i.e. non-box
+  // memory access).
+  mlir::LLVM::TBAATypeDescriptorAttr anyDataAccessTypeDesc;
   // Identity string for "any data access" type descriptor.
   static constexpr llvm::StringRef anyDataAccessTypeDescId = "any data access";
 
-  // Symbol defined by LLVM::TBAATypeDescriptorOp identifying
-  // "descriptor member" access, i.e. any access within the bounds
-  // of a box/descriptor.
-  mlir::SymbolRefAttr boxMemberTypeDesc;
+  // LLVM::TBAATypeDescriptorAttr identifying "descriptor member" access, i.e.
+  // any access within the bounds of a box/descriptor.
+  mlir::LLVM::TBAATypeDescriptorAttr boxMemberTypeDesc;
   // Identity string for "descriptor member" type descriptor.
   static constexpr llvm::StringRef boxMemberTypeDescId = "descriptor member";
-
-  // Counter for unique naming of TBAA operations' symbols.
-  unsigned tbaaNodeCounter = 0;
 
   // Number of attached TBAA tags (used for debugging).
   unsigned tagAttachmentCounter = 0;
 
-  // Mapping from a FIR type to the symbol defined by the corresponding
-  // TBAATypeDescriptorOp. It must be populated during the type conversion.
-  // Currently unused.
-  llvm::DenseMap<mlir::Type, mlir::SymbolRefAttr> typeDescMap;
+  // Mapping from a FIR type to the corresponding TBAATypeDescriptorAttr. It
+  // must be populated during the type conversion. Currently unused.
+  llvm::DenseMap<mlir::Type, mlir::LLVM::TBAATypeDescriptorAttr> typeDescMap;
 
   // Each TBAA tag is a tuple of <baseTypeSym, accessTypeSym, offset>.
-  // This map holds TBAATagOp symbol for each unique tuple.
-  llvm::DenseMap<std::tuple<mlir::SymbolRefAttr, mlir::SymbolRefAttr, int64_t>,
-                 mlir::SymbolRefAttr>
+  // This map holds a TBAATagAttr for each unique tuple.
+  llvm::DenseMap<
+      std::tuple<mlir::LLVM::TBAANodeAttr, mlir::LLVM::TBAANodeAttr, int64_t>,
+      mlir::LLVM::TBAATagAttr>
       tagsMap;
 };
 

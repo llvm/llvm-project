@@ -152,4 +152,39 @@ namespace shifts {
   constexpr signed int R = (sizeof(unsigned) * 8) + 1;
   constexpr decltype(L) M  = (R > 32 && R < 64) ?  L << R : 0;
   constexpr decltype(L) M2 = (R > 32 && R < 64) ?  L >> R : 0;
+
+
+  constexpr int signedShift() { // cxx17-error {{never produces a constant expression}} \
+                                // ref-cxx17-error {{never produces a constant expression}}
+    return 1024 << 31; // cxx17-warning {{signed shift result}} \
+                       // ref-cxx17-warning {{signed shift result}} \
+                       // cxx17-note {{signed left shift discards bits}} \
+                       // ref-cxx17-note {{signed left shift discards bits}}
+  }
+
+  constexpr int negativeShift() { // cxx17-error {{never produces a constant expression}} \
+                                  // ref-cxx17-error {{never produces a constant expression}}
+    return -1 << 2; // cxx17-warning {{shifting a negative signed value is undefined}} \
+                    // ref-cxx17-warning {{shifting a negative signed value is undefined}} \
+                    // cxx17-note {{left shift of negative value -1}} \
+                    // ref-cxx17-note {{left shift of negative value -1}}
+  }
+
+  constexpr int foo(int a) {
+    return -a << 2; // cxx17-note {{left shift of negative value -10}} \
+                    // ref-cxx17-note {{left shift of negative value -10}} \
+                    // cxx17-note {{left shift of negative value -2}} \
+                    // ref-cxx17-note {{left shift of negative value -2}}
+  }
+  static_assert(foo(10)); // cxx17-error {{not an integral constant expression}} \
+                          // cxx17-note {{in call to 'foo(10)'}} \
+                          // ref-cxx17-error {{not an integral constant expression}} \
+                          // ref-cxx17-note {{in call to 'foo(10)'}}
+
+  constexpr int a = -2;
+  static_assert(foo(a));
+  static_assert(foo(-a)); // cxx17-error {{not an integral constant expression}} \
+                          // cxx17-note {{in call to 'foo(2)'}} \
+                          // ref-cxx17-error {{not an integral constant expression}} \
+                          // ref-cxx17-note {{in call to 'foo(2)'}}
 };

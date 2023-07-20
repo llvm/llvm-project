@@ -1706,6 +1706,13 @@ struct Attributor {
         IRP.isAnyCallSitePosition())
       return false;
 
+    // Check if we require a calles but we can't see all.
+    if (AAType::requiresCallersForArgOrFunction())
+      if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION ||
+          IRP.getPositionKind() == IRPosition::IRP_ARGUMENT)
+        if (!AssociatedFn->hasLocalLinkage())
+          return false;
+
     if (!AAType::isValidIRPositionForUpdate(*this, IRP))
       return false;
 
@@ -3236,6 +3243,10 @@ struct AbstractAttribute : public IRPosition, public AADepGraphNode {
   /// a call site positon. Default is optimistic to minimize AAs.
   static bool requiresCalleeForCallBase() { return true; }
 
+  /// Return true if this AA requires all callees for an argument or function
+  /// positon.
+  static bool requiresCallersForArgOrFunction() { return false; }
+
   /// Return false if an AA should not be created for \p IRP.
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {
     return true;
@@ -3742,6 +3753,9 @@ struct AANoAlias
 
   /// See AbstractAttribute::requiresCalleeForCallBase
   static bool requiresCalleeForCallBase() { return false; }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
 
   /// Return true if we assume that the underlying value is alias.
   bool isAssumedNoAlias() const { return getAssumed(); }
@@ -4462,6 +4476,9 @@ struct AAPrivatizablePtr
   /// Returns true if pointer privatization is known to be possible.
   bool isKnownPrivatizablePtr() const { return getKnown(); }
 
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
   /// Return the type we can choose for a private copy of the underlying
   /// value. std::nullopt means it is not clear yet, nullptr means there is
   /// none.
@@ -4758,6 +4775,9 @@ struct AAValueConstantRange
     return AbstractAttribute::isValidIRPositionForInit(A, IRP);
   }
 
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
   /// See AbstractAttribute::getState(...).
   IntegerRangeState &getState() override { return *this; }
   const IntegerRangeState &getState() const override { return *this; }
@@ -5027,6 +5047,9 @@ struct AAPotentialConstantValues
     return AbstractAttribute::isValidIRPositionForInit(A, IRP);
   }
 
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
   /// See AbstractAttribute::getState(...).
   PotentialConstantIntValuesState &getState() override { return *this; }
   const PotentialConstantIntValuesState &getState() const override {
@@ -5079,6 +5102,9 @@ struct AAPotentialValues
     : public StateWrapper<PotentialLLVMValuesState, AbstractAttribute> {
   using Base = StateWrapper<PotentialLLVMValuesState, AbstractAttribute>;
   AAPotentialValues(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
 
   /// See AbstractAttribute::getState(...).
   PotentialLLVMValuesState &getState() override { return *this; }
@@ -5957,6 +5983,9 @@ struct AAUnderlyingObjects : AbstractAttribute {
     return AbstractAttribute::isValidIRPositionForInit(A, IRP);
   }
 
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
+
   /// Create an abstract attribute biew for the position \p IRP.
   static AAUnderlyingObjects &createForPosition(const IRPosition &IRP,
                                                 Attributor &A);
@@ -5996,6 +6025,9 @@ struct AAAddressSpace : public StateWrapper<BooleanState, AbstractAttribute> {
       return false;
     return AbstractAttribute::isValidIRPositionForInit(A, IRP);
   }
+
+  /// See AbstractAttribute::requiresCallersForArgOrFunction
+  static bool requiresCallersForArgOrFunction() { return true; }
 
   /// Return the address space of the associated value. \p NoAddressSpace is
   /// returned if the associated value is dead. This functions is not supposed

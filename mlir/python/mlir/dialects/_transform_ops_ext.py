@@ -29,6 +29,32 @@ class CastOp:
     )
 
 
+class ApplyPatternsOp:
+
+  def __init__(
+      self,
+      target: Union[Operation, Value, OpView],
+      *,
+      loc=None,
+      ip=None,
+  ):
+    operands = []
+    operands.append(_get_op_result_or_value(target))
+    super().__init__(
+        self.build_generic(attributes={},
+                           results=[],
+                           operands=operands,
+                           successors=None,
+                           regions=None,
+                           loc=loc,
+                           ip=ip))
+    self.regions[0].blocks.append()
+
+  @property
+  def patterns(self) -> Block:
+    return self.regions[0].blocks[0]
+
+
 class testGetParentOp:
 
   def __init__(

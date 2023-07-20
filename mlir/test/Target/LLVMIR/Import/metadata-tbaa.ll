@@ -1,19 +1,18 @@
 ; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
 
-; CHECK-LABEL: llvm.metadata @__llvm_global_metadata {
-; CHECK-DAG:    llvm.tbaa_root @[[R0:tbaa_root_[0-9]+]] {id = "Simple C/C++ TBAA"}
-; CHECK-DAG:    llvm.tbaa_type_desc @[[D0:tbaa_type_desc_[0-9]+]] {id = "scalar type", members = {<@[[R0]], 0>}}
-; CHECK-DAG:    llvm.tbaa_tag @[[T0:tbaa_tag_[0-9]+]] {access_type = @[[D0]], base_type = @[[D0]], offset = 0 : i64}
-; CHECK-DAG:    llvm.tbaa_root @[[R1:tbaa_root_[0-9]+]] {id = "Other language TBAA"}
-; CHECK-DAG:    llvm.tbaa_type_desc @[[D1:tbaa_type_desc_[0-9]+]] {id = "other scalar type", members = {<@[[R1]], 0>}}
-; CHECK-DAG:    llvm.tbaa_tag @[[T1:tbaa_tag_[0-9]+]] {access_type = @[[D1]], base_type = @[[D1]], offset = 0 : i64}
-; CHECK-NEXT:  }
-; CHECK:       llvm.func @tbaa1
+; CHECK-DAG: #[[R0:.*]] = #llvm.tbaa_root<id = "Simple C/C++ TBAA">
+; CHECK-DAG: #[[D0:.*]] = #llvm.tbaa_type_desc<id = "scalar type", members = {<#[[R0]], 0>}>
+; CHECK-DAG: #[[$T0:.*]] = #llvm.tbaa_tag<base_type = #[[D0]], access_type = #[[D0]], offset = 0>
+; CHECK-DAG: #[[R1:.*]] = #llvm.tbaa_root<id = "Other language TBAA">
+; CHECK-DAG: #[[D1:.*]] = #llvm.tbaa_type_desc<id = "other scalar type", members = {<#[[R1]], 0>}>
+; CHECK-DAG: #[[$T1:.*]] = #llvm.tbaa_tag<base_type = #[[D1]], access_type = #[[D1]], offset = 0>
+
+; CHECK-LABEL: llvm.func @tbaa1
 ; CHECK:         llvm.store %{{.*}}, %{{.*}} {
-; CHECK-SAME:        tbaa = [@__llvm_global_metadata::@[[T0]]]
+; CHECK-SAME:        tbaa = [#[[$T0]]]
 ; CHECK-SAME:    } : i8, !llvm.ptr
 ; CHECK:         llvm.store %{{.*}}, %{{.*}} {
-; CHECK-SAME:        tbaa = [@__llvm_global_metadata::@[[T1]]]
+; CHECK-SAME:        tbaa = [#[[$T1]]]
 ; CHECK-SAME:    } : i8, !llvm.ptr
 define dso_local void @tbaa1(ptr %0, ptr %1) {
   store i8 1, ptr %0, align 4, !tbaa !0
@@ -31,22 +30,21 @@ define dso_local void @tbaa1(ptr %0, ptr %1) {
 
 ; // -----
 
-; CHECK-LABEL: llvm.metadata @__llvm_global_metadata {
-; CHECK-NEXT:    llvm.tbaa_root @[[R0:tbaa_root_[0-9]+]] {id = "Simple C/C++ TBAA"}
-; CHECK-NEXT:    llvm.tbaa_tag @[[T0:tbaa_tag_[0-9]+]] {access_type = @[[D1:tbaa_type_desc_[0-9]+]], base_type = @[[D2:tbaa_type_desc_[0-9]+]], offset = 8 : i64}
-; CHECK-NEXT:    llvm.tbaa_type_desc @[[D1]] {id = "long long", members = {<@[[D0:tbaa_type_desc_[0-9]+]], 0>}}
-; CHECK-NEXT:    llvm.tbaa_type_desc @[[D0]] {id = "omnipotent char", members = {<@[[R0]], 0>}}
-; CHECK-NEXT:    llvm.tbaa_type_desc @[[D2]] {id = "agg2_t", members = {<@[[D1]], 0>, <@[[D1]], 8>}}
-; CHECK-NEXT:    llvm.tbaa_tag @[[T1:tbaa_tag_[0-9]+]] {access_type = @[[D3:tbaa_type_desc_[0-9]+]], base_type = @[[D4:tbaa_type_desc_[0-9]+]], offset = 0 : i64}
-; CHECK-NEXT:    llvm.tbaa_type_desc @[[D3]] {id = "int", members = {<@[[D0]], 0>}}
-; CHECK-NEXT:    llvm.tbaa_type_desc @[[D4]] {id = "agg1_t", members = {<@[[D3]], 0>, <@[[D3]], 4>}}
-; CHECK-NEXT:  }
-; CHECK:       llvm.func @tbaa2
+; CHECK-DAG: #[[R0:.*]] = #llvm.tbaa_root<id = "Simple C/C++ TBAA">
+; CHECK-DAG: #[[$T0:.*]] = #llvm.tbaa_tag<base_type = #[[D2:.*]], access_type = #[[D1:.*]], offset = 8>
+; CHECK-DAG: #[[D1]] = #llvm.tbaa_type_desc<id = "long long", members = {<#[[D0:.*]], 0>}>
+; CHECK-DAG: #[[D0]] = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#[[R0]], 0>}>
+; CHECK-DAG: #[[D2]] = #llvm.tbaa_type_desc<id = "agg2_t", members = {<#[[D1]], 0>, <#[[D1]], 8>}>
+; CHECK-DAG: #[[$T1:.*]] = #llvm.tbaa_tag<base_type = #[[D4:.*]], access_type = #[[D3:.*]], offset = 0>
+; CHECK-DAG: #[[D3]] = #llvm.tbaa_type_desc<id = "int", members = {<#[[D0]], 0>}>
+; CHECK-DAG: #[[D4]] = #llvm.tbaa_type_desc<id = "agg1_t", members = {<#[[D3]], 0>, <#[[D3]], 4>}>
+
+; CHECK-LABEL: llvm.func @tbaa2
 ; CHECK:         llvm.load %{{.*}} {
-; CHECK-SAME:        tbaa = [@__llvm_global_metadata::@[[T0]]]
+; CHECK-SAME:        tbaa = [#[[$T0]]]
 ; CHECK-SAME:    } : !llvm.ptr -> i64
 ; CHECK:         llvm.store %{{.*}}, %{{.*}} {
-; CHECK-SAME:        tbaa = [@__llvm_global_metadata::@[[T1]]]
+; CHECK-SAME:        tbaa = [#[[$T1]]]
 ; CHECK-SAME:    } : i32, !llvm.ptr
 %struct.agg2_t = type { i64, i64 }
 %struct.agg1_t = type { i32, i32 }
@@ -97,3 +95,20 @@ declare void @foo(ptr %arg1)
 !0 = !{!1, !1, i64 0}
 !1 = !{!"scalar type", !2, i64 0}
 !2 = !{!"Simple C/C++ TBAA"}
+
+; // -----
+
+; CHECK: #llvm.tbaa_root
+; CHECK-NOT: <{{.*}}>
+; CHECK: {{[[:space:]]}}
+
+define void @nameless_root(ptr %arg1) {
+  ; CHECK: llvm.load {{.*}}tbaa =
+  %1 = load i32, ptr %arg1, !tbaa !0
+  ret void
+}
+
+!0 = !{!1, !1, i64 0}
+!1 = !{!"scalar type", !2, i64 0}
+!2 = !{}
+

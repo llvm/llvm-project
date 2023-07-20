@@ -167,7 +167,8 @@ def ConvertAsyncToLLVMPass : Pass<"convert-async-to-llvm", "ModuleOp"> {
 // BufferizationToMemRef
 //===----------------------------------------------------------------------===//
 
-def ConvertBufferizationToMemRef : Pass<"convert-bufferization-to-memref"> {
+def ConvertBufferizationToMemRef : Pass<"convert-bufferization-to-memref",
+                                        "mlir::ModuleOp"> {
   let summary = "Convert operations from the Bufferization dialect to the "
                 "MemRef dialect";
   let description = [{
@@ -195,7 +196,10 @@ def ConvertBufferizationToMemRef : Pass<"convert-bufferization-to-memref"> {
 
   }];
   let constructor = "mlir::createBufferizationToMemRefPass()";
-  let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect"];
+  let dependentDialects = [
+    "arith::ArithDialect", "memref::MemRefDialect", "scf::SCFDialect",
+    "func::FuncDialect"
+  ];
 }
 
 //===----------------------------------------------------------------------===//

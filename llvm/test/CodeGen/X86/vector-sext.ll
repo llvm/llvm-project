@@ -1863,8 +1863,7 @@ define <4 x i64> @load_sext_4i1_to_4i64(ptr%ptr) {
 ; AVX1-NEXT:    negl %eax
 ; AVX1-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -3218,8 +3217,7 @@ define <4 x i64> @sext_4i1_to_4i64(<4 x i1> %mask) {
 ; SSE41-NEXT:    pslld $31, %xmm0
 ; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    pmovsxdq %xmm0, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; SSE41-NEXT:    pmovsxdq %xmm0, %xmm1
+; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    retq
 ;
@@ -3228,8 +3226,7 @@ define <4 x i64> @sext_4i1_to_4i64(<4 x i1> %mask) {
 ; AVX1-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm0
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm1
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
 ;
@@ -3261,8 +3258,7 @@ define <4 x i64> @sext_4i1_to_4i64(<4 x i1> %mask) {
 ; X86-SSE41-NEXT:    pslld $31, %xmm0
 ; X86-SSE41-NEXT:    psrad $31, %xmm0
 ; X86-SSE41-NEXT:    pmovsxdq %xmm0, %xmm2
-; X86-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; X86-SSE41-NEXT:    pmovsxdq %xmm0, %xmm1
+; X86-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,2,3,3]
 ; X86-SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; X86-SSE41-NEXT:    retl
   %extmask = sext <4 x i1> %mask to <4 x i64>

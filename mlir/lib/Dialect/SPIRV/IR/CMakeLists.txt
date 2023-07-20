@@ -3,12 +3,19 @@ mlir_tablegen(SPIRVCanonicalization.inc -gen-rewriters)
 add_public_tablegen_target(MLIRSPIRVCanonicalizationIncGen)
 
 add_mlir_dialect_library(MLIRSPIRVDialect
+  AtomicOps.cpp
+  CastOps.cpp
+  CooperativeMatrixOps.cpp
+  GroupOps.cpp
+  IntegerDotProductOps.cpp
+  JointMatrixOps.cpp
   SPIRVAttributes.cpp
   SPIRVCanonicalization.cpp
   SPIRVGLCanonicalization.cpp
   SPIRVDialect.cpp
   SPIRVEnums.cpp
   SPIRVOps.cpp
+  SPIRVParsingUtils.cpp
   SPIRVTypes.cpp
   TargetAndABI.cpp
 

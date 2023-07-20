@@ -37,7 +37,8 @@ class TestVSCode_module(lldbvscode_testcase.VSCodeTestCaseBase):
         )
         symbols_path = self.getBuildArtifact(symbol_basename)
         self.vscode.request_evaluate(
-            "`%s" % ('target symbols add -s "%s" "%s"' % (program, symbols_path))
+            "`%s" % ('target symbols add -s "%s" "%s"' % (program, symbols_path)),
+            context="repl",
         )
 
         def checkSymbolsLoadedWithSize():

@@ -458,9 +458,6 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer,
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS deque
 {
-private:
-  using __default_allocator_type = allocator<_Tp>;
-
 public:
     // types:
 
@@ -981,7 +978,7 @@ public:
         const void* __old_con_end,
         const void* __new_con_beg,
         const void* __new_con_end) const {
-        if (__beg && is_same<allocator_type, __default_allocator_type>::value)
+        if (__beg != nullptr && __asan_annotate_container_with_allocator<_Allocator>::value)
             __sanitizer_annotate_double_ended_contiguous_container(
                 __beg, __end, __old_con_beg, __old_con_end, __new_con_beg, __new_con_end);
     }

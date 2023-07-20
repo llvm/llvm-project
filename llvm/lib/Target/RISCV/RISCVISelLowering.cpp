@@ -12522,8 +12522,72 @@ static SDValue tryFoldSelectIntoOp(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(TrueVal.getOpcode(), DL, VT, FalseVal, NewSel);
 }
 
+// This tries to get rid of `select` and `icmp` that are being used to handle
+// `Targets` that do not support `cttz(0)`/`ctlz(0)`.
+static SDValue foldSelectOfCTTZOrCTLZ(SDNode *N, SelectionDAG &DAG) {
+  SDValue Cond = N->getOperand(0);
+
+  // This represents either CTTZ or CTLZ instruction.
+  SDValue CountZeroes;
+
+  SDValue ValOnZero;
+
+  if (Cond.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  if (!isNullConstant(Cond->getOperand(1)))
+    return SDValue();
+
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
+  if (CCVal == ISD::CondCode::SETEQ) {
+    CountZeroes = N->getOperand(2);
+    ValOnZero = N->getOperand(1);
+  } else if (CCVal == ISD::CondCode::SETNE) {
+    CountZeroes = N->getOperand(1);
+    ValOnZero = N->getOperand(2);
+  } else {
+    return SDValue();
+  }
+
+  if (CountZeroes.getOpcode() == ISD::TRUNCATE ||
+      CountZeroes.getOpcode() == ISD::ZERO_EXTEND)
+    CountZeroes = CountZeroes.getOperand(0);
+
+  if (CountZeroes.getOpcode() != ISD::CTTZ &&
+      CountZeroes.getOpcode() != ISD::CTTZ_ZERO_UNDEF &&
+      CountZeroes.getOpcode() != ISD::CTLZ &&
+      CountZeroes.getOpcode() != ISD::CTLZ_ZERO_UNDEF)
+    return SDValue();
+
+  if (!isNullConstant(ValOnZero))
+    return SDValue();
+
+  SDValue CountZeroesArgument = CountZeroes->getOperand(0);
+  if (Cond->getOperand(0) != CountZeroesArgument)
+    return SDValue();
+
+  if (CountZeroes.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
+    CountZeroes = DAG.getNode(ISD::CTTZ, SDLoc(CountZeroes),
+                              CountZeroes.getValueType(), CountZeroesArgument);
+  } else if (CountZeroes.getOpcode() == ISD::CTLZ_ZERO_UNDEF) {
+    CountZeroes = DAG.getNode(ISD::CTLZ, SDLoc(CountZeroes),
+                              CountZeroes.getValueType(), CountZeroesArgument);
+  }
+
+  unsigned BitWidth = CountZeroes.getValueSizeInBits();
+  SDValue BitWidthMinusOne =
+      DAG.getConstant(BitWidth - 1, SDLoc(N), CountZeroes.getValueType());
+
+  auto AndNode = DAG.getNode(ISD::AND, SDLoc(N), CountZeroes.getValueType(),
+                             CountZeroes, BitWidthMinusOne);
+  return DAG.getZExtOrTrunc(AndNode, SDLoc(N), N->getValueType(0));
+}
+
 static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
                                     const RISCVSubtarget &Subtarget) {
+  if (SDValue Folded = foldSelectOfCTTZOrCTLZ(N, DAG))
+    return Folded;
+
   if (Subtarget.hasShortForwardBranchOpt())
     return SDValue();
 
@@ -12899,6 +12963,24 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     return performTRUNCATECombine(N, DAG, Subtarget);
   case ISD::SELECT:
     return performSELECTCombine(N, DAG, Subtarget);
+  case RISCVISD::CZERO_EQZ:
+  case RISCVISD::CZERO_NEZ:
+    // czero_eq X, (xor Y, 1) -> czero_ne X, Y if Y is 0 or 1.
+    // czero_ne X, (xor Y, 1) -> czero_eq X, Y if Y is 0 or 1.
+    if (N->getOperand(1).getOpcode() == ISD::XOR &&
+        isOneConstant(N->getOperand(1).getOperand(1))) {
+      SDValue Cond = N->getOperand(1).getOperand(0);
+      APInt Mask = APInt::getBitsSetFrom(Cond.getValueSizeInBits(), 1);
+      if (DAG.MaskedValueIsZero(Cond, Mask)) {
+        unsigned NewOpc = N->getOpcode() == RISCVISD::CZERO_EQZ
+                              ? RISCVISD::CZERO_NEZ
+                              : RISCVISD::CZERO_EQZ;
+        return DAG.getNode(NewOpc, SDLoc(N), N->getValueType(0),
+                           N->getOperand(0), Cond);
+      }
+    }
+    return SDValue();
+
   case RISCVISD::SELECT_CC: {
     // Transform
     SDValue LHS = N->getOperand(0);

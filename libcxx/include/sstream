@@ -283,6 +283,14 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 
+// TODO(LLVM-19): Remove this once we drop support for Clang 16,
+// which had this bug: https://github.com/llvm/llvm-project/issues/40363
+#ifdef _WIN32
+#define _LIBCPP_HIDE_FROM_ABI_SSTREAM _LIBCPP_ALWAYS_INLINE
+#else
+#define _LIBCPP_HIDE_FROM_ABI_SSTREAM _LIBCPP_HIDE_FROM_ABI
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Class template basic_stringbuf [stringbuf]
@@ -388,15 +396,9 @@ public:
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
     string_type str() const;
 #else
-    _LIBCPP_HIDE_FROM_ABI string_type str() const & { return str(__str_.get_allocator()); }
+    _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() const & { return str(__str_.get_allocator()); }
 
-    template <class _SAlloc>
-      requires __is_allocator<_SAlloc>::value
-    _LIBCPP_HIDE_FROM_ABI basic_string<char_type, traits_type, _SAlloc> str(const _SAlloc& __sa) const {
-        return basic_string<_CharT, _Traits, _SAlloc>(view(), __sa);
-    }
-
-    _LIBCPP_HIDE_FROM_ABI string_type str() && {
+    _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() && {
         const basic_string_view<_CharT, _Traits> __view = view();
         string_type __result(std::move(__str_), __view.data() - __str_.data(), __view.size());
         __str_.clear();
@@ -406,6 +408,12 @@ public:
 #endif // _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_BUILDING_LIBRARY)
 
 #if _LIBCPP_STD_VER >= 20
+    template <class _SAlloc>
+      requires __is_allocator<_SAlloc>::value
+    _LIBCPP_HIDE_FROM_ABI basic_string<char_type, traits_type, _SAlloc> str(const _SAlloc& __sa) const {
+        return basic_string<_CharT, _Traits, _SAlloc>(view(), __sa);
+    }
+
     _LIBCPP_HIDE_FROM_ABI basic_string_view<char_type, traits_type> view() const noexcept;
 #endif
 

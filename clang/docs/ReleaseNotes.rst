@@ -137,6 +137,7 @@ C++2c Feature Support
 - Implemented `P2738R1: constexpr cast from void* <https://wg21.link/P2738R1>`_.
 - Partially implemented `P2361R6: Unevaluated strings <https://wg21.link/P2361R6>`_.
   The changes to attributes declarations are not part of this release.
+- Implemented `P2741R3: user-generated static_assert messages  <https://wg21.link/P2741R3>`_.
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -813,6 +814,21 @@ X86 Support
 
 - Add ISA of ``AMX-COMPLEX`` which supports ``tcmmimfp16ps`` and
   ``tcmmrlfp16ps``.
+- Support ISA of ``SHA512``.
+  * Support intrinsic of ``_mm256_sha512msg1_epi64``.
+  * Support intrinsic of ``_mm256_sha512msg2_epi64``.
+  * Support intrinsic of ``_mm256_sha512rnds2_epi64``.
+- Support ISA of ``SM3``.
+  * Support intrinsic of ``_mm_sm3msg1_epi32``.
+  * Support intrinsic of ``_mm_sm3msg2_epi32``.
+  * Support intrinsic of ``_mm_sm3rnds2_epi32``.
+- Support ISA of ``SM4``.
+  * Support intrinsic of ``_mm(256)_sm4key4_epi32``.
+  * Support intrinsic of ``_mm(256)_sm4rnds4_epi32``.
+- Support ISA of ``AVX-VNNI-INT16``.
+  * Support intrinsic of ``_mm(256)_dpwsud(s)_epi32``.
+  * Support intrinsic of ``_mm(256)_dpwusd(s)_epi32``.
+  * Support intrinsic of ``_mm(256)_dpwuud(s)_epi32``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -870,6 +886,9 @@ RISC-V Support
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Clang has been updated to align its default language standard for CUDA/HIP with
+  that of C++. The standard has now been enhanced to gnu++17, supplanting the
+  previously used c++14.
 
 CUDA Support
 ^^^^^^^^^^^^
