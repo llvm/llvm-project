@@ -190,9 +190,9 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
   let arguments = (ins
     TransformHandleTypeInterface:$target);
   let results = (outs);
-  let regions = (region MaxSizedRegion<1>:$region);
+  let regions = (region MaxSizedRegion<1>:$patterns);
 
-  let assemblyFormat = "`to` $target $region attr-dict `:` type($target)";
+  let assemblyFormat = "`to` $target $patterns attr-dict `:` type($target)";
   let hasVerifier = 1;
 
   let skipDefaultBuilders = 1;
