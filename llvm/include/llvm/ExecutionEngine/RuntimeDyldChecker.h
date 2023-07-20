@@ -62,6 +62,7 @@ class raw_ostream;
 ///            | 'next_pc'        '(' symbol ')'
 ///            | 'stub_addr' '(' stub-container-name ',' symbol ')'
 ///            | 'got_addr' '(' stub-container-name ',' symbol ')'
+///            | 'section_addr' '(' stub-container-name ',' symbol ')'
 ///            | symbol
 ///
 /// binary_expr = expr '+' expr
