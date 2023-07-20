@@ -813,8 +813,10 @@ template <class LP> void Writer::createLoadCommands() {
     llvm_unreachable("unhandled output file type");
   }
 
-  uuidCommand = make<LCUuid>();
-  in.header->addLoadCommand(uuidCommand);
+  if (config->generateUuid) {
+    uuidCommand = make<LCUuid>();
+    in.header->addLoadCommand(uuidCommand);
+  }
 
   if (useLCBuildVersion(config->platformInfo))
     in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
@@ -1180,10 +1182,7 @@ void Writer::writeUuid() {
   TimeTraceScope timeScope("Computing UUID");
 
   ArrayRef<uint8_t> data{buffer->getBufferStart(), buffer->getBufferEnd()};
-  unsigned chunkCount = parallel::strategy.compute_thread_count() * 10;
-  // Round-up integer division
-  size_t chunkSize = (data.size() + chunkCount - 1) / chunkCount;
-  std::vector<ArrayRef<uint8_t>> chunks = split(data, chunkSize);
+  std::vector<ArrayRef<uint8_t>> chunks = split(data, 1024 * 1024);
   // Leave one slot for filename
   std::vector<uint64_t> hashes(chunks.size() + 1);
   SmallVector<std::shared_future<void>> threadFutures;
@@ -1264,7 +1263,8 @@ void Writer::writeOutputFile() {
   writeSections();
   applyOptimizationHints();
   buildFixupChains();
-  writeUuid();
+  if (config->generateUuid)
+    writeUuid();
   writeCodeSignature();
 
   if (auto e = buffer->commit())

@@ -52,6 +52,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
@@ -237,6 +238,19 @@ static bool isBitcode(MemoryBufferRef mb) {
   return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
 }
 
+bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
+                                    uint64_t offsetInArchive, bool lazy) {
+  if (!config->fatLTOObjects)
+    return false;
+  Expected<MemoryBufferRef> fatLTOData =
+      IRObjectFile::findBitcodeInMemBuffer(mb);
+  if (errorToBool(fatLTOData.takeError()))
+    return false;
+  files.push_back(
+      make<BitcodeFile>(*fatLTOData, archiveName, offsetInArchive, lazy));
+  return true;
+}
+
 // Opens a file and create a file object. Path has to be resolved already.
 void LinkerDriver::addFile(StringRef path, bool withLOption) {
   using namespace sys::fs;
@@ -261,7 +275,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
         if (isBitcode(p.first))
           files.push_back(make<BitcodeFile>(p.first, path, p.second, false));
-        else
+        else if (!tryAddFatLTOFile(p.first, path, p.second, false))
           files.push_back(createObjFile(p.first, path));
       }
       return;
@@ -285,9 +299,10 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     InputFile::isInGroup = true;
     for (const std::pair<MemoryBufferRef, uint64_t> &p : members) {
       auto magic = identify_magic(p.first.getBuffer());
-      if (magic == file_magic::elf_relocatable)
-        files.push_back(createObjFile(p.first, path, true));
-      else if (magic == file_magic::bitcode)
+      if (magic == file_magic::elf_relocatable) {
+        if (!tryAddFatLTOFile(p.first, path, p.second, true))
+          files.push_back(createObjFile(p.first, path, true));
+      } else if (magic == file_magic::bitcode)
         files.push_back(make<BitcodeFile>(p.first, path, p.second, true));
       else
         warn(path + ": archive member '" + p.first.getBufferIdentifier() +
@@ -319,7 +334,8 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     files.push_back(make<BitcodeFile>(mbref, "", 0, inLib));
     break;
   case file_magic::elf_relocatable:
-    files.push_back(createObjFile(mbref, "", inLib));
+    if (!tryAddFatLTOFile(mbref, "", 0, inLib))
+      files.push_back(createObjFile(mbref, "", inLib));
     break;
   default:
     error(path + ": unknown file type");
@@ -1138,6 +1154,8 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_android_memtag_heap, OPT_no_android_memtag_heap, false);
   config->androidMemtagStack = args.hasFlag(OPT_android_memtag_stack,
                                             OPT_no_android_memtag_stack, false);
+  config->fatLTOObjects =
+      args.hasFlag(OPT_fat_lto_objects, OPT_no_fat_lto_objects, false);
   config->androidMemtagMode = getMemtagMode(args);
   config->auxiliaryList = args::getStrings(args, OPT_auxiliary);
   config->armBe8 = args.hasArg(OPT_be8);

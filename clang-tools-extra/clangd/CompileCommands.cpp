@@ -238,10 +238,13 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   ArgList = OptTable.ParseArgs(
       llvm::ArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
       /*FlagsToInclude=*/
-      IsCLMode ? (driver::options::CLOption | driver::options::CoreOption)
+      IsCLMode ? (driver::options::CLOption | driver::options::CoreOption |
+                  driver::options::CLDXCOption)
                : /*everything*/ 0,
       /*FlagsToExclude=*/driver::options::NoDriverOption |
-          (IsCLMode ? 0 : driver::options::CLOption));
+          (IsCLMode
+               ? 0
+               : (driver::options::CLOption | driver::options::CLDXCOption)));
 
   llvm::SmallVector<unsigned, 1> IndicesToDrop;
   // Having multiple architecture options (e.g. when building fat binaries)
@@ -445,6 +448,8 @@ unsigned char getModes(const llvm::opt::Option &Opt) {
     Result |= DM_CC1;
   if (!Opt.hasFlag(driver::options::NoDriverOption)) {
     if (Opt.hasFlag(driver::options::CLOption)) {
+      Result |= DM_CL;
+    } else if (Opt.hasFlag(driver::options::CLDXCOption)) {
       Result |= DM_CL;
     } else {
       Result |= DM_GCC;

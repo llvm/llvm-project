@@ -1252,7 +1252,7 @@ static llvm::FunctionCallee getThrowFn(CodeGenModule &CGM) {
   // void __cxa_throw(void *thrown_exception, std::type_info *tinfo,
   //                  void (*dest) (void *));
 
-  llvm::Type *Args[3] = { CGM.Int8PtrTy, CGM.Int8PtrTy, CGM.Int8PtrTy };
+  llvm::Type *Args[3] = { CGM.Int8PtrTy, CGM.GlobalsInt8PtrTy, CGM.Int8PtrTy };
   llvm::FunctionType *FTy =
     llvm::FunctionType::get(CGM.VoidTy, Args, /*isVarArg=*/false);
 
