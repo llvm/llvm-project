@@ -120,6 +120,24 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
     return &A.makeBoolValue(MergedVal);
   }
 
+  Value *MergedVal = nullptr;
+  if (auto *StructVal1 = dyn_cast<StructValue>(&Val1)) {
+    auto *StructVal2 = cast<StructValue>(&Val2);
+
+    // Values to be merged are always associated with the same location in
+    // `LocToVal`. The location stored in `StructVal` should therefore also
+    // be the same.
+    assert(&StructVal1->getAggregateLoc() == &StructVal2->getAggregateLoc());
+
+    // `StructVal1` and `StructVal2` may have different properties associated
+    // with them. Create a new `StructValue` without any properties so that we
+    // soundly approximate both values. If a particular analysis needs to merge
+    // properties, it should do so in `DataflowAnalysis::merge()`.
+    MergedVal = &MergedEnv.create<StructValue>(StructVal1->getAggregateLoc());
+  } else {
+    MergedVal = MergedEnv.createValue(Type);
+  }
+
   // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
   // returns false to avoid storing unneeded values in `DACtx`.
   // FIXME: Creating the value based on the type alone creates misshapen values
@@ -127,7 +145,7 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
   // This issue will be resolved when `ReferenceValue` is eliminated as part
   // of the ongoing migration to strict handling of value categories (see
   // https://discourse.llvm.org/t/70086 for details).
-  if (Value *MergedVal = MergedEnv.createValue(Type))
+  if (MergedVal)
     if (Model.merge(Type, Val1, Env1, Val2, Env2, *MergedVal, MergedEnv))
       return MergedVal;
 
@@ -307,10 +325,8 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
     // FIXME: Initialize the ThisPointeeLoc of lambdas too.
     if (MethodDecl && !MethodDecl->isStatic()) {
       QualType ThisPointeeType = MethodDecl->getThisObjectType();
-      ThisPointeeLoc = &cast<AggregateStorageLocation>(
-          createStorageLocation(ThisPointeeType));
-      if (Value *ThisPointeeVal = createValue(ThisPointeeType))
-        setValue(*ThisPointeeLoc, *ThisPointeeVal);
+      ThisPointeeLoc =
+          &cast<StructValue>(createValue(ThisPointeeType))->getAggregateLoc();
     }
   }
 }
@@ -342,10 +358,7 @@ Environment Environment::pushCall(const CallExpr *Call) const {
 Environment Environment::pushCall(const CXXConstructExpr *Call) const {
   Environment Env(*this);
 
-  Env.ThisPointeeLoc = &cast<AggregateStorageLocation>(
-      Env.createStorageLocation(Call->getType()));
-  if (Value *Val = Env.createValue(Call->getType()))
-    Env.setValue(*Env.ThisPointeeLoc, *Val);
+  Env.ThisPointeeLoc = &Env.getResultObjectLocation(*Call);
 
   Env.pushCallInternal(Call->getConstructor(),
                        llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
@@ -385,7 +398,6 @@ void Environment::popCall(const CallExpr *Call, const Environment &CalleeEnv) {
   // these maps capture information from the local scope, so when popping that
   // scope, we do not propagate the maps.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
-  this->MemberLocToStruct = std::move(CalleeEnv.MemberLocToStruct);
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
 
   if (Call->isGLValue()) {
@@ -401,7 +413,6 @@ void Environment::popCall(const CXXConstructExpr *Call,
                           const Environment &CalleeEnv) {
   // See also comment in `popCall(const CallExpr *, const Environment &)` above.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
-  this->MemberLocToStruct = std::move(CalleeEnv.MemberLocToStruct);
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
 
   if (Value *Val = CalleeEnv.getValue(*CalleeEnv.ThisPointeeLoc)) {
@@ -466,15 +477,8 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
   // block. For `DeclToLoc` and `ExprToLoc`, join guarantees that these maps are
   // subsets of the maps in `PrevEnv`. So, as long as we maintain this property
   // here, we don't need change their current values to widen.
-  //
-  // FIXME: `MemberLocToStruct` does not share the above property, because
-  // `join` can cause the map size to increase (when we add fresh data in places
-  // of conflict). Once this issue with join is resolved, re-enable the
-  // assertion below or replace with something that captures the desired
-  // invariant.
   assert(DeclToLoc.size() <= PrevEnv.DeclToLoc.size());
   assert(ExprToLoc.size() <= PrevEnv.ExprToLoc.size());
-  // assert(MemberLocToStruct.size() <= PrevEnv.MemberLocToStruct.size());
 
   llvm::MapVector<const StorageLocation *, Value *> WidenedLocToVal;
   for (auto &Entry : LocToVal) {
@@ -501,12 +505,9 @@ LatticeJoinEffect Environment::widen(const Environment &PrevEnv,
       Effect = LatticeJoinEffect::Changed;
   }
   LocToVal = std::move(WidenedLocToVal);
-  // FIXME: update the equivalence calculation for `MemberLocToStruct`, once we
-  // have a systematic way of soundly comparing this map.
   if (DeclToLoc.size() != PrevEnv.DeclToLoc.size() ||
       ExprToLoc.size() != PrevEnv.ExprToLoc.size() ||
-      LocToVal.size() != PrevEnv.LocToVal.size() ||
-      MemberLocToStruct.size() != PrevEnv.MemberLocToStruct.size())
+      LocToVal.size() != PrevEnv.LocToVal.size())
     Effect = LatticeJoinEffect::Changed;
 
   return Effect;
@@ -558,9 +559,6 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   JoinedEnv.DeclToLoc = intersectDenseMaps(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
   JoinedEnv.ExprToLoc = intersectDenseMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
-
-  JoinedEnv.MemberLocToStruct =
-      intersectDenseMaps(EnvA.MemberLocToStruct, EnvB.MemberLocToStruct);
 
   // FIXME: update join to detect backedges and simplify the flow condition
   // accordingly.
@@ -671,63 +669,45 @@ AggregateStorageLocation *Environment::getThisPointeeStorageLocation() const {
   return ThisPointeeLoc;
 }
 
+AggregateStorageLocation &
+Environment::getResultObjectLocation(const Expr &RecordPRValue) {
+  assert(RecordPRValue.getType()->isRecordType());
+  assert(RecordPRValue.isPRValue());
+
+  if (StorageLocation *ExistingLoc =
+          getStorageLocation(RecordPRValue, SkipPast::None))
+    return *cast<AggregateStorageLocation>(ExistingLoc);
+  auto &Loc = cast<AggregateStorageLocation>(
+      DACtx->getStableStorageLocation(RecordPRValue));
+  setStorageLocation(RecordPRValue, Loc);
+  return Loc;
+}
+
 PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {
   return DACtx->getOrCreateNullPointerValue(PointeeType);
 }
 
 void Environment::setValue(const StorageLocation &Loc, Value &Val) {
+  assert(!isa<StructValue>(&Val) ||
+         &cast<StructValue>(&Val)->getAggregateLoc() == &Loc);
+
   LocToVal[&Loc] = &Val;
-
-  if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
-    auto &AggregateLoc = *cast<AggregateStorageLocation>(&Loc);
-
-    const QualType Type = AggregateLoc.getType();
-    assert(Type->isRecordType());
-
-    for (const FieldDecl *Field : DACtx->getModeledFields(Type)) {
-      assert(Field != nullptr);
-      StorageLocation &FieldLoc = AggregateLoc.getChild(*Field);
-      MemberLocToStruct[&FieldLoc] = std::make_pair(StructVal, Field);
-      if (auto *FieldVal = StructVal->getChild(*Field))
-        setValue(FieldLoc, *FieldVal);
-    }
-  }
-
-  auto It = MemberLocToStruct.find(&Loc);
-  if (It != MemberLocToStruct.end()) {
-    // `Loc` is the location of a struct member so we need to also update the
-    // value of the member in the corresponding `StructValue`.
-
-    assert(It->second.first != nullptr);
-    StructValue &StructVal = *It->second.first;
-
-    assert(It->second.second != nullptr);
-    const ValueDecl &Member = *It->second.second;
-
-    StructVal.setChild(Member, Val);
-  }
-}
-
-void Environment::clearValue(const StorageLocation &Loc) {
-  LocToVal.erase(&Loc);
-
-  if (auto It = MemberLocToStruct.find(&Loc); It != MemberLocToStruct.end()) {
-    // `Loc` is the location of a struct member so we need to also clear the
-    // member in the corresponding `StructValue`.
-
-    assert(It->second.first != nullptr);
-    StructValue &StructVal = *It->second.first;
-
-    assert(It->second.second != nullptr);
-    const ValueDecl &Member = *It->second.second;
-
-    StructVal.clearChild(Member);
-  }
 }
 
 void Environment::setValueStrict(const Expr &E, Value &Val) {
   assert(E.isPRValue());
   assert(!isa<ReferenceValue>(Val));
+
+  if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
+    if (auto *ExistingVal = cast_or_null<StructValue>(getValueStrict(E)))
+      assert(&ExistingVal->getAggregateLoc() == &StructVal->getAggregateLoc());
+    if (StorageLocation *ExistingLoc = getStorageLocation(E, SkipPast::None))
+      assert(ExistingLoc == &StructVal->getAggregateLoc());
+    else
+      setStorageLocation(E, StructVal->getAggregateLoc());
+    setValue(StructVal->getAggregateLoc(), Val);
+    return;
+  }
 
   StorageLocation *Loc = getStorageLocation(E, SkipPast::None);
   if (Loc == nullptr) {
@@ -802,16 +782,8 @@ Value *Environment::createValueUnlessSelfReferential(
   if (Type->isReferenceType() || Type->isPointerType()) {
     CreatedValuesCount++;
     QualType PointeeType = Type->getPointeeType();
-    auto &PointeeLoc = createStorageLocation(PointeeType);
-
-    if (Visited.insert(PointeeType.getCanonicalType()).second) {
-      Value *PointeeVal = createValueUnlessSelfReferential(
-          PointeeType, Visited, Depth, CreatedValuesCount);
-      Visited.erase(PointeeType.getCanonicalType());
-
-      if (PointeeVal != nullptr)
-        setValue(PointeeLoc, *PointeeVal);
-    }
+    StorageLocation &PointeeLoc =
+        createLocAndMaybeValue(PointeeType, Visited, Depth, CreatedValuesCount);
 
     if (Type->isReferenceType())
       return &arena().create<ReferenceValue>(PointeeLoc);
@@ -821,25 +793,52 @@ Value *Environment::createValueUnlessSelfReferential(
 
   if (Type->isRecordType()) {
     CreatedValuesCount++;
-    llvm::DenseMap<const ValueDecl *, Value *> FieldValues;
+    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
     for (const FieldDecl *Field : DACtx->getModeledFields(Type)) {
       assert(Field != nullptr);
 
       QualType FieldType = Field->getType();
-      if (Visited.contains(FieldType.getCanonicalType()))
-        continue;
 
-      Visited.insert(FieldType.getCanonicalType());
-      if (auto *FieldValue = createValueUnlessSelfReferential(
-              FieldType, Visited, Depth + 1, CreatedValuesCount))
-        FieldValues.insert({Field, FieldValue});
-      Visited.erase(FieldType.getCanonicalType());
+      FieldLocs.insert(
+          {Field, &createLocAndMaybeValue(FieldType, Visited, Depth + 1,
+                                          CreatedValuesCount)});
     }
 
-    return &arena().create<StructValue>(std::move(FieldValues));
+    AggregateStorageLocation &Loc =
+        arena().create<AggregateStorageLocation>(Type, std::move(FieldLocs));
+    StructValue &StructVal = create<StructValue>(Loc);
+
+    // As we already have a storage location for the `StructValue`, we can and
+    // should associate them in the environment.
+    setValue(Loc, StructVal);
+
+    return &StructVal;
   }
 
   return nullptr;
+}
+
+StorageLocation &
+Environment::createLocAndMaybeValue(QualType Ty,
+                                    llvm::DenseSet<QualType> &Visited,
+                                    int Depth, int &CreatedValuesCount) {
+  if (!Visited.insert(Ty.getCanonicalType()).second)
+    return createStorageLocation(Ty.getNonReferenceType());
+  Value *Val = createValueUnlessSelfReferential(
+      Ty.getNonReferenceType(), Visited, Depth, CreatedValuesCount);
+  Visited.erase(Ty.getCanonicalType());
+
+  Ty = Ty.getNonReferenceType();
+
+  if (Val == nullptr)
+    return createStorageLocation(Ty);
+
+  if (Ty->isRecordType())
+    return cast<StructValue>(Val)->getAggregateLoc();
+
+  StorageLocation &Loc = createStorageLocation(Ty);
+  setValue(Loc, *Val);
+  return Loc;
 }
 
 StorageLocation &Environment::createObjectInternal(const VarDecl *D,
@@ -880,6 +879,9 @@ StorageLocation &Environment::createObjectInternal(const VarDecl *D,
     Val = getValueStrict(*InitExpr);
   if (!Val)
     Val = createValue(Ty);
+
+  if (Ty->isRecordType())
+    return cast<StructValue>(Val)->getAggregateLoc();
 
   StorageLocation &Loc =
       D ? createStorageLocation(*D) : createStorageLocation(Ty);
@@ -989,7 +991,7 @@ std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
 
 StructValue &refreshStructValue(AggregateStorageLocation &Loc,
                                 Environment &Env) {
-  auto &NewVal = *cast<StructValue>(Env.createValue(Loc.getType()));
+  auto &NewVal = Env.create<StructValue>(Loc);
   Env.setValue(Loc, NewVal);
   return NewVal;
 }
@@ -997,19 +999,28 @@ StructValue &refreshStructValue(AggregateStorageLocation &Loc,
 StructValue &refreshStructValue(const Expr &Expr, Environment &Env) {
   assert(Expr.getType()->isRecordType());
 
-  auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
-
   if (Expr.isPRValue()) {
-    Env.setValueStrict(Expr, NewVal);
-  } else {
-    StorageLocation *Loc = Env.getStorageLocationStrict(Expr);
-    if (Loc == nullptr) {
-      Loc = &Env.createStorageLocation(Expr);
-      Env.setStorageLocation(Expr, *Loc);
+    if (auto *ExistingVal =
+            cast_or_null<StructValue>(Env.getValueStrict(Expr))) {
+      auto &NewVal = Env.create<StructValue>(ExistingVal->getAggregateLoc());
+      Env.setValueStrict(Expr, NewVal);
+      return NewVal;
     }
-    Env.setValue(*Loc, NewVal);
+
+    auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
+    Env.setValueStrict(Expr, NewVal);
+    return NewVal;
   }
 
+  if (auto *Loc = cast_or_null<AggregateStorageLocation>(
+          Env.getStorageLocationStrict(Expr))) {
+    auto &NewVal = Env.create<StructValue>(*Loc);
+    Env.setValue(*Loc, NewVal);
+    return NewVal;
+  }
+
+  auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
+  Env.setStorageLocationStrict(Expr, NewVal.getAggregateLoc());
   return NewVal;
 }
 

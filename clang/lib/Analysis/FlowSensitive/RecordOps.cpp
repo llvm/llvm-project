@@ -28,31 +28,32 @@ void clang::dataflow::copyRecord(AggregateStorageLocation &Src,
          Src.getType().getCanonicalType().getUnqualifiedType());
 
   for (auto [Field, SrcFieldLoc] : Src.children()) {
-    assert(SrcFieldLoc != nullptr);
+    StorageLocation *DstFieldLoc = Dst.getChild(*Field);
 
-    StorageLocation &DstFieldLoc = Dst.getChild(*Field);
+    assert(Field->getType()->isReferenceType() ||
+           (SrcFieldLoc != nullptr && DstFieldLoc != nullptr));
 
     if (Field->getType()->isRecordType()) {
       copyRecord(cast<AggregateStorageLocation>(*SrcFieldLoc),
-                 cast<AggregateStorageLocation>(DstFieldLoc), Env);
+                 cast<AggregateStorageLocation>(*DstFieldLoc), Env);
+    } else if (Field->getType()->isReferenceType()) {
+      Dst.setChild(*Field, SrcFieldLoc);
     } else {
       if (Value *Val = Env.getValue(*SrcFieldLoc))
-        Env.setValue(DstFieldLoc, *Val);
+        Env.setValue(*DstFieldLoc, *Val);
       else
-        Env.clearValue(DstFieldLoc);
+        Env.clearValue(*DstFieldLoc);
     }
   }
 
   StructValue *SrcVal = cast_or_null<StructValue>(Env.getValue(Src));
   StructValue *DstVal = cast_or_null<StructValue>(Env.getValue(Dst));
 
-  if (SrcVal == nullptr || DstVal == nullptr)
-    return;
-
-  auto DstChildren = DstVal->children();
-  DstVal = &Env.create<StructValue>(llvm::DenseMap<const ValueDecl *, Value *>(
-      DstChildren.begin(), DstChildren.end()));
+  DstVal = &Env.create<StructValue>(Dst);
   Env.setValue(Dst, *DstVal);
+
+  if (SrcVal == nullptr)
+    return;
 
   for (const auto &[Name, Value] : SrcVal->properties()) {
     if (Value != nullptr)
@@ -75,29 +76,20 @@ bool clang::dataflow::recordsEqual(const AggregateStorageLocation &Loc1,
          Loc1.getType().getCanonicalType().getUnqualifiedType());
 
   for (auto [Field, FieldLoc1] : Loc1.children()) {
-    assert(FieldLoc1 != nullptr);
+    StorageLocation *FieldLoc2 = Loc2.getChild(*Field);
 
-    StorageLocation &FieldLoc2 = Loc2.getChild(*Field);
+    assert(Field->getType()->isReferenceType() ||
+           (FieldLoc1 != nullptr && FieldLoc2 != nullptr));
 
     if (Field->getType()->isRecordType()) {
       if (!recordsEqual(cast<AggregateStorageLocation>(*FieldLoc1), Env1,
-                        cast<AggregateStorageLocation>(FieldLoc2), Env2))
+                        cast<AggregateStorageLocation>(*FieldLoc2), Env2))
         return false;
     } else if (Field->getType()->isReferenceType()) {
-      auto *RefVal1 = cast_or_null<ReferenceValue>(Env1.getValue(*FieldLoc1));
-      auto *RefVal2 = cast_or_null<ReferenceValue>(Env1.getValue(FieldLoc2));
-      if (RefVal1 && RefVal2) {
-        if (&RefVal1->getReferentLoc() != &RefVal2->getReferentLoc())
-          return false;
-      } else {
-        // If either of `RefVal1` and `RefVal2` is null, we only consider them
-        // equal if they're both null.
-        if (RefVal1 || RefVal2)
-          return false;
-      }
-    } else {
-      if (Env1.getValue(*FieldLoc1) != Env2.getValue(FieldLoc2))
+      if (FieldLoc1 != FieldLoc2)
         return false;
+    } else if (Env1.getValue(*FieldLoc1) != Env2.getValue(*FieldLoc2)) {
+      return false;
     }
   }
 

@@ -254,21 +254,14 @@ void setHasValue(Value &OptionalVal, BoolValue &HasValueVal) {
   OptionalVal.setProperty("has_value", HasValueVal);
 }
 
-/// Creates a symbolic value for an `optional` value using `HasValueVal` as the
-/// symbolic value of its "has_value" property.
-StructValue &createOptionalValue(BoolValue &HasValueVal, Environment &Env) {
-  auto &OptionalVal = Env.create<StructValue>();
-  setHasValue(OptionalVal, HasValueVal);
-  return OptionalVal;
-}
-
 /// Creates a symbolic value for an `optional` value at an existing storage
 /// location. Uses `HasValueVal` as the symbolic value of the "has_value"
 /// property.
 StructValue &createOptionalValue(AggregateStorageLocation &Loc,
                                  BoolValue &HasValueVal, Environment &Env) {
-  StructValue &OptionalVal = createOptionalValue(HasValueVal, Env);
+  auto &OptionalVal = Env.create<StructValue>(Loc);
   Env.setValue(Loc, OptionalVal);
+  setHasValue(OptionalVal, HasValueVal);
   return OptionalVal;
 }
 
@@ -324,37 +317,38 @@ StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
   if (auto *ValueProp = OptionalVal.getProperty("value")) {
     auto *ValuePtr = clang::cast<PointerValue>(ValueProp);
     auto &ValueLoc = ValuePtr->getPointeeLoc();
-    if (Env.getValue(ValueLoc) == nullptr) {
-      // The property was previously set, but the value has been lost. This can
-      // happen in various situations, for example:
-      // - Because of an environment merge (where the two environments mapped
-      //   the property to different values, which resulted in them both being
-      //   discarded).
-      // - When two blocks in the CFG, with neither a dominator of the other,
-      //   visit the same optional value. (FIXME: This is something we can and
-      //   should fix -- see also the lengthy FIXME below.)
-      // - Or even when a block is revisited during testing to collect
-      //   per-statement state.
-      //
-      // FIXME: This situation means that the optional contents are not shared
-      // between branches and the like. Practically, this lack of sharing
-      // reduces the precision of the model when the contents are relevant to
-      // the check, like another optional or a boolean that influences control
-      // flow.
+    if (Env.getValue(ValueLoc) != nullptr)
+      return &ValueLoc;
+
+    // The property was previously set, but the value has been lost. This can
+    // happen in various situations, for example:
+    // - Because of an environment merge (where the two environments mapped the
+    //   property to different values, which resulted in them both being
+    //   discarded).
+    // - When two blocks in the CFG, with neither a dominator of the other,
+    //   visit the same optional value. (FIXME: This is something we can and
+    //   should fix -- see also the lengthy FIXME below.)
+    // - Or even when a block is revisited during testing to collect
+    //   per-statement state.
+    // FIXME: This situation means that the optional contents are not shared
+    // between branches and the like. Practically, this lack of sharing
+    // reduces the precision of the model when the contents are relevant to
+    // the check, like another optional or a boolean that influences control
+    // flow.
+    if (ValueLoc.getType()->isRecordType()) {
+      refreshStructValue(cast<AggregateStorageLocation>(ValueLoc), Env);
+      return &ValueLoc;
+    } else {
       auto *ValueVal = Env.createValue(ValueLoc.getType());
       if (ValueVal == nullptr)
         return nullptr;
       Env.setValue(ValueLoc, *ValueVal);
+      return &ValueLoc;
     }
-    return &ValueLoc;
   }
 
   auto Ty = Q.getNonReferenceType();
-  auto *ValueVal = Env.createValue(Ty);
-  if (ValueVal == nullptr)
-    return nullptr;
-  auto &ValueLoc = Env.createStorageLocation(Ty);
-  Env.setValue(ValueLoc, *ValueVal);
+  auto &ValueLoc = Env.createObject(Ty);
   auto &ValuePtr = Env.create<PointerValue>(ValueLoc);
   // FIXME:
   // The change we make to the `value` property below may become visible to
@@ -467,10 +461,8 @@ void transferArrowOpCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
 void transferMakeOptionalCall(const CallExpr *E,
                               const MatchFinder::MatchResult &,
                               LatticeTransferState &State) {
-  auto &Loc = State.Env.createStorageLocation(*E);
-  State.Env.setStorageLocation(*E, Loc);
-  State.Env.setValue(
-      Loc, createOptionalValue(State.Env.getBoolLiteralValue(true), State.Env));
+  createOptionalValue(State.Env.getResultObjectLocation(*E),
+                      State.Env.getBoolLiteralValue(true), State.Env);
 }
 
 void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
@@ -545,15 +537,21 @@ void transferCallReturningOptional(const CallExpr *E,
   if (State.Env.getStorageLocation(*E, SkipPast::None) != nullptr)
     return;
 
-  auto &Loc = State.Env.createStorageLocation(*E);
-  State.Env.setStorageLocation(*E, Loc);
-  State.Env.setValue(
-      Loc, createOptionalValue(State.Env.makeAtomicBoolValue(), State.Env));
+  AggregateStorageLocation *Loc = nullptr;
+  if (E->isPRValue()) {
+    Loc = &State.Env.getResultObjectLocation(*E);
+  } else {
+    Loc = &cast<AggregateStorageLocation>(State.Env.createStorageLocation(*E));
+    State.Env.setStorageLocationStrict(*E, *Loc);
+  }
+
+  createOptionalValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
 }
 
 void constructOptionalValue(const Expr &E, Environment &Env,
                             BoolValue &HasValueVal) {
-  Env.setValueStrict(E, createOptionalValue(HasValueVal, Env));
+  AggregateStorageLocation &Loc = Env.getResultObjectLocation(E);
+  Env.setValueStrict(E, createOptionalValue(Loc, HasValueVal, Env));
 }
 
 /// Returns a symbolic value for the "has_value" property of an `optional<T>`
@@ -1032,7 +1030,8 @@ Value *UncheckedOptionalAccessModel::widen(QualType Type, Value &Prev,
       if (isa<TopBoolValue>(CurrentHasVal))
         return &Current;
     }
-    return &createOptionalValue(CurrentEnv.makeTopBoolValue(), CurrentEnv);
+    return &createOptionalValue(cast<StructValue>(Current).getAggregateLoc(),
+                                CurrentEnv.makeTopBoolValue(), CurrentEnv);
   case ComparisonResult::Unknown:
     return nullptr;
   }
