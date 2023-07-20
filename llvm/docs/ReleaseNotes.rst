@@ -281,6 +281,7 @@ Changes to the X86 Backend
 * Add support for the ``PBNDKB`` instruction.
 * Support ISA of ``SHA512``.
 * Support ISA of ``SM3``.
+* Support ISA of ``SM4``.
 
 Changes to the OCaml bindings
 -----------------------------

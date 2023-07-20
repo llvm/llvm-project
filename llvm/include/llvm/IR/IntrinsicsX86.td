@@ -5546,6 +5546,30 @@ let TargetPrefix = "x86" in {
         [ImmArg<ArgIndex<3>>, IntrNoMem]>;
 }
 //===----------------------------------------------------------------------===//
+// SM4 intrinsics
+let TargetPrefix = "x86" in {
+  def int_x86_vsm4key4128
+      : ClangBuiltin<"__builtin_ia32_vsm4key4128">,
+        DefaultAttrsIntrinsic<[llvm_v4i32_ty],
+        [llvm_v4i32_ty, llvm_v4i32_ty],
+        [IntrNoMem]>;
+  def int_x86_vsm4key4256
+      : ClangBuiltin<"__builtin_ia32_vsm4key4256">,
+        DefaultAttrsIntrinsic<[llvm_v8i32_ty],
+        [llvm_v8i32_ty, llvm_v8i32_ty],
+        [IntrNoMem]>;
+  def int_x86_vsm4rnds4128
+      : ClangBuiltin<"__builtin_ia32_vsm4rnds4128">,
+        DefaultAttrsIntrinsic<[llvm_v4i32_ty],
+        [llvm_v4i32_ty, llvm_v4i32_ty],
+        [IntrNoMem]>;
+  def int_x86_vsm4rnds4256
+      : ClangBuiltin<"__builtin_ia32_vsm4rnds4256">,
+        DefaultAttrsIntrinsic<[llvm_v8i32_ty],
+        [llvm_v8i32_ty, llvm_v8i32_ty],
+        [IntrNoMem]>;
+}
+//===----------------------------------------------------------------------===//
 // RAO-INT intrinsics
 let TargetPrefix = "x86" in {
   def int_x86_aadd32
