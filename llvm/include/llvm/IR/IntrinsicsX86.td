@@ -5527,6 +5527,25 @@ def int_x86_vcvtneps2bf16256
       DefaultAttrsIntrinsic<[llvm_v8bf16_ty], [llvm_v8f32_ty], [IntrNoMem]>;
 }
 //===----------------------------------------------------------------------===//
+// SM3 intrinsics
+let TargetPrefix = "x86" in {
+  def int_x86_vsm3msg1
+      : ClangBuiltin<"__builtin_ia32_vsm3msg1">,
+        DefaultAttrsIntrinsic<[llvm_v4i32_ty],
+        [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty],
+        [IntrNoMem]>;
+  def int_x86_vsm3msg2
+      : ClangBuiltin<"__builtin_ia32_vsm3msg2">,
+        DefaultAttrsIntrinsic<[llvm_v4i32_ty],
+        [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty],
+        [IntrNoMem]>;
+  def int_x86_vsm3rnds2
+      : ClangBuiltin<"__builtin_ia32_vsm3rnds2">,
+        DefaultAttrsIntrinsic<[llvm_v4i32_ty],
+        [llvm_v4i32_ty, llvm_v4i32_ty, llvm_v4i32_ty, llvm_i32_ty],
+        [ImmArg<ArgIndex<3>>, IntrNoMem]>;
+}
+//===----------------------------------------------------------------------===//
 // RAO-INT intrinsics
 let TargetPrefix = "x86" in {
   def int_x86_aadd32

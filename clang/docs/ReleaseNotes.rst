@@ -817,6 +817,10 @@ X86 Support
   * Support intrinsic of ``_mm256_sha512msg1_epi64``.
   * Support intrinsic of ``_mm256_sha512msg2_epi64``.
   * Support intrinsic of ``_mm256_sha512rnds2_epi64``.
+- Support ISA of ``SM3``.
+  * Support intrinsic of ``_mm_sm3msg1_epi32``.
+  * Support intrinsic of ``_mm_sm3msg2_epi32``.
+  * Support intrinsic of ``_mm_sm3rnds2_epi32``.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
