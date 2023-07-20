@@ -628,6 +628,15 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
   return interface->fold(this, operands, results);
 }
 
+LogicalResult Operation::fold(SmallVectorImpl<OpFoldResult> &results) {
+  // Check if any operands are constants.
+  SmallVector<Attribute> constants;
+  constants.assign(getNumOperands(), Attribute());
+  for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
+    matchPattern(getOperand(i), m_Constant(&constants[i]));
+  return fold(constants, results);
+}
+
 /// Emit an error with the op name prefixed, like "'dim' op " which is
 /// convenient for verifiers.
 InFlightDiagnostic Operation::emitOpError(const Twine &message) {
